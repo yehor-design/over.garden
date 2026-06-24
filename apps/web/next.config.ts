@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { NextConfig } from "next";
 
 // Security headers applied to every response.
@@ -19,11 +21,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Pin the workspace root to this app. Without this, Next infers the root from
-  // the nearest lockfile and can pick a stray one outside the repo, breaking
-  // file tracing on deploy. apps/web is a standalone app (own lockfile).
+  // Pin the workspace root to the MONOREPO root (two levels up from apps/web).
+  // This matches the `outputFileTracingRoot` Vercel forces to the repo clone
+  // root (otherwise Next warns they must be equal), and it also stops local
+  // builds from inferring the root from a stray lockfile outside the repo.
   turbopack: {
-    root: __dirname,
+    root: path.join(__dirname, "..", ".."),
   },
   async headers() {
     return [

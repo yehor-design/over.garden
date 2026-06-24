@@ -97,7 +97,11 @@ Meilisearch image `getmeili/meilisearch:v1.48.1`. Lockfiles committed.
   Meilisearch (`infra/docker-compose.yml`).
 - **pgmq round-trip** enqueue (TS) → consume (Python) on a live DB
   (`infra/sql/0001_pgmq.sql`).
-- **Vercel** preview deploy (SSR + HSTS on the deployed URL).
+- ~~**Vercel** preview deploy (SSR + HSTS on the deployed URL).~~ — **DONE,
+  verified live 2026-06-24**: requires Root Directory = `apps/web` in the Vercel
+  project. The deployed `/health` returns 200 with SSR content, Cyrillic, a
+  server-rendered shadcn Button, and `Strict-Transport-Security: max-age=63072000;
+  includeSubDomains; preload`.
 - **Railway** deploy of the Python service + Meilisearch; Next→Python
   service-to-service call; worker→Postgres direct; EU-region co-location.
 
