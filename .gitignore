@@ -18,3 +18,39 @@ Temporary Items
 
 # Local agent overrides — never commit secrets here
 CLAUDE.local.md
+
+# ── Secrets ────────────────────────────────────────────────────────────────
+# Never commit real env files. The committed template is `.env.example`.
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# ── Node / Next.js ───────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+.turbo/
+.vercel/
+.pnpm-store/
+
+# ── Python (matching service) ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ── Logs / editor ────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.idea/
+.vscode/
