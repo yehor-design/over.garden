@@ -1,0 +1,19 @@
+# Local Meilisearch for development + the Phase-7 Cyrillic typo-tolerance proof.
+# In production Meilisearch runs as a self-hosted container on Railway (EU).
+# Pin the version — Meilisearch's own docs warn against `latest` (host drift).
+services:
+  meilisearch:
+    image: getmeili/meilisearch:v1.48.1
+    container_name: overgarden-meilisearch
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      # Production mode REQUIRES a 32+ byte master key and disables the open dashboard.
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set a 32+ byte secret in infra/.env}
+      MEILI_ENV: production
+    volumes:
+      - meili_data:/meili_data
+
+volumes:
+  meili_data:
