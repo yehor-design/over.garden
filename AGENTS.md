@@ -1,43 +1,51 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents (and humans) working in this repo. Read this fully before any change. The authoritative, detailed decisions live in `docs/TECH_STACK_DECISIONS.md` and `docs/adr/`; read the governing ADR before touching the area it covers. If you believe a rule here or a decision in those docs is wrong, surface it to the maintainer — do not silently violate it.
+Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014. Older ADRs are historical if ADR-0014 supersedes them.
 
 ## Project
 
-OverGarden — a gardening journal + catalog-as-social-graph for Ukraine & Bulgaria. Zero-stage pre-MVP: the stack is decided and locked; application implementation has not started. The audience includes Ukrainian users under wartime risk, so the privacy rules below are safety-critical, not cosmetic.
+OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and Bulgaria. The audience includes Ukrainian users under wartime risk, so location privacy and image metadata handling are safety-critical.
 
-## Stack (do not substitute any of these without a superseding ADR)
+## Current Stack
 
-* Next.js (App Router) + TypeScript — SSR/ISR; the app backend is TS route handlers / server actions.
-* UI: shadcn/ui only — added via the shadcn CLI/MCP. Do not introduce another component library; do not hand-roll components.
-* ORM: Drizzle — NOT Prisma. Prisma was reversed (ADR-0011). Do not reintroduce Prisma.
-* DB/platform: PostgreSQL via Supabase (Auth + Storage + RLS). UTF-8 DB locale (required for Cyrillic matching).
-* Matching/dedup: an isolated Python service (Meilisearch · RapidFuzz · Splink · PyICU · CyrTranslit). Do not reimplement it in TypeScript.
-* Search: Meilisearch (self-hosted), a derived index over Postgres.
-* Realtime: Supabase Broadcast from Database (DB triggers) — not raw Postgres Changes, not client-to-client broadcast (ADR-0013).
-* Mobile: PWA (offline capture). Edge/DNS: Cloudflare. Product analytics: PostHog (first-party).
+- Next.js App Router + TypeScript on Vercel.
+- shadcn/ui only for UI primitives.
+- Better Auth for auth.
+- DigitalOcean Managed Postgres for production data; Docker Postgres locally.
+- Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
+- Cloudflare R2 for media: private quarantine bucket -> worker-created public derivative.
+- Meilisearch as a derived public search/typeahead index.
+- Python worker for RapidFuzz/Splink/PyICU/CyrTranslit matching, dedup, and reindex work.
+- Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
+- PWA offline capture with Dexie/IndexedDB and idempotency keys.
+- Cloudflare for DNS/edge/WAF/R2. Cloudflare must not cache HTML.
 
-## Hard rules (the binding invariants — non-negotiable)
+## Hard Rules
 
-1. No precise location anywhere. v0 stores no exact coordinates. Never put coordinates in a client payload, URL, query string, log, or analytics event. Region = ISO 3166-2 oblast/province only.
-2. EXIF-GPS is stripped server-side in the worker (sharp) before any photo is public. Serve only the stripped derivative; never fall back to the GPS-bearing original.
-3. Single-door data access. The browser never gets anon-key-wide direct DB access (no raw table reads, no Realtime on raw tables, no broad Storage). All data access goes through the server tier. Only exceptions: signed upload URLs; Broadcast-from-Database channels.
-4. App-tier authz is primary; RLS is a narrow floor on sensitive tables (location data, private objects, `proposed` lineage edges) via a least-privilege DB role — never connect as superuser/service-role for app queries.
-5. Privacy policies live in the Drizzle schema (versioned) and are covered by CI invariant tests proving user A cannot see user B's private data via any access path. No privacy/authz change ships without its test.
-6. Meilisearch indexes only public rows. Index correctness is a privacy boundary — a "reindex everything" job must not leak private objects. Covered by a test.
-7. Realtime is an enhancement layer, never the source of truth. Every live surface has a canonical server fetch path (Realtime delivery is not guaranteed).
-8. SSR every public page; no public content behind a client-only JS shell (AI crawlers don't run JS). No-index thin programmatic pages — index a variety×region page only once it carries real first-hand UGC.
-9. Cloudflare does not cache HTML (Vercel owns the ISR cache). Allow-list verified search/retrieval crawlers in any WAF/bot rule; SSL mode Full (Strict).
-10. No secrets in git. Use env vars / the platform secret store; `.env*` is git-ignored. Never hard-code keys. Personal/local overrides go in `CLAUDE.local.md` (git-ignored).
+1. No precise location anywhere in v0. Region-level only. No coordinates in payloads, URLs, logs, analytics, image metadata, search docs, or public pages.
+2. Public photos must be stripped derivatives. Upload originals only to private quarantine, re-encode/resize/strip with `sharp`, publish derivative only, delete the original after successful processing.
+3. Client-side EXIF stripping is an optimization, not a safety boundary. Never trust client processing as the only privacy control.
+4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Presigned upload URLs are narrow object-specific exceptions.
+5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.
+6. Scoped repositories are mandatory for user/private data. Types do not protect against missing `user_id`, visibility, or public/private predicates.
+7. Meilisearch indexes public rows only. Treat search indexing as a privacy boundary and test it.
+8. Realtime is not a source of truth. Add live updates only after the canonical server fetch path exists.
+9. Every public SEO page must be server-rendered and must stay noindex until it has real UGC depth.
+10. No secrets in git. Use env vars/platform secret stores. `.env*` is git-ignored except `.env.example`.
 
 ## Workflow
 
-* TDD: red → green → refactor. Write the failing test first. For any privacy/authz code, the invariant test (rule 5) is mandatory, not optional.
-* English for all code, comments, identifiers, commit messages, specs, and docs.
-* Conventional Commits. Keep changes scoped, and wire all affected surfaces in the same change (schema → types → queries → API → tests → docs).
-* Before changing data access, realtime, edge config, or the matching service, read the governing ADR in `docs/adr/` first.
+- Build a walking skeleton first, then vertical SDD slices.
+- Keep changes scoped and wire all affected surfaces together: SQL/types -> repository -> route/action -> UI -> tests -> docs.
+- Prefer machine-checkable guardrails over prose instructions: typecheck, lint, focused tests, privacy tests, SSR tests, media tests, search-index tests.
+- English for code, identifiers, comments, commit messages, and repository docs.
+- Conventional Commits.
 
-## Do not touch without explicit maintainer sign-off
+## Decision Changes
 
-* The decision records (`docs/TECH_STACK_DECISIONS.md`, `docs/adr/*`) are immutable. To change a decision, propose a superseding ADR — do not edit the existing one.
-* Irreversible/destructive ops: schema drops, bulk deletes, history rewrites, force-push.
+Existing ADRs are immutable historical records. To change a stack decision, add a superseding ADR and update the consolidated docs/instructions so future agents do not read contradictory canon.
+
+## Do Not Touch Without Explicit Maintainer Sign-off
+
+- Destructive database changes, schema drops, bulk deletes, history rewrites, force-push.
+- Weakening location privacy, media derivative guarantees, scoped repository rules, or search-index privacy boundaries.

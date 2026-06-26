@@ -1,28 +1,32 @@
 import "server-only";
 
-import { desc } from "drizzle-orm";
+import { sql } from "kysely";
 
 import { db } from "@/db";
-import { health, type Health, type NewHealth } from "@/db/schema";
+import type { Health } from "@/db/schema";
 
-/**
- * Server-tier data-access layer (Variant D — ADR-0012).
- *
- * This module is the SINGLE DOOR to the `health` table. Every read/write goes
- * through here so authorization is structurally impossible to forget — the path
- * IS the gate. `import "server-only"` guarantees this never ships to the browser
- * (the browser gets no direct DB access; that is the access-topology invariant).
- *
- * Real per-user repositories will scope every query by user + visibility. The
- * tracer below has no ownership dimension yet — it only proves the seam.
- */
+const MAX_HEALTH_ROWS = 20;
 
 export async function readRecentHealth(limit = 5): Promise<Health[]> {
-  return db.select().from(health).orderBy(desc(health.createdAt)).limit(limit);
+  const boundedLimit = Math.min(Math.max(limit, 1), MAX_HEALTH_ROWS);
+
+  return db
+    .selectFrom("health")
+    .selectAll()
+    .orderBy("created_at", "desc")
+    .limit(boundedLimit)
+    .execute();
 }
 
 export async function writeHealth(message: string): Promise<Health> {
-  const row: NewHealth = { message };
-  const [inserted] = await db.insert(health).values(row).returning();
-  return inserted;
+  return db
+    .insertInto("health")
+    .values({ message })
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+export async function pingDatabase(): Promise<boolean> {
+  const result = await sql<{ ok: number }>`select 1 as ok`.execute(db);
+  return result.rows[0]?.ok === 1;
 }

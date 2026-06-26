@@ -1,17 +1,13 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
-
-// Next 16 renamed Middleware to Proxy (same functionality). This refreshes the
-// Supabase auth session on navigations so RSCs read a valid session. It is an
-// optimistic refresh only — real authorization lives in the server-tier data
-// layer (Variant D), not here.
-export async function proxy(request: NextRequest) {
-  return updateSession(request);
+// Next 16 renamed Middleware to Proxy. Better Auth handles its own cookies in
+// the route handler via nextCookies(); this proxy stays deliberately light and
+// must not become the authorization layer.
+export function proxy(request: NextRequest) {
+  return NextResponse.next({ request });
 }
 
 export const config = {
-  // Run on everything except static assets and image files.
   matcher: [
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$|sw.js|manifest.webmanifest).*)",
   ],

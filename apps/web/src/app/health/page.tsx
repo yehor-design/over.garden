@@ -1,29 +1,25 @@
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
-import { readRecentHealth } from "@/server/health-repository";
+import { optionalServerEnv } from "@/lib/env";
+import { pingDatabase, readRecentHealth } from "@/server/health-repository";
 
-// Always render on the server, per request — this is the SSR seam proof and
-// avoids static execution at build time (when Supabase/DB are not wired).
 export const dynamic = "force-dynamic";
 
 async function getAuthStatus(): Promise<string> {
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.auth.getClaims();
-    if (error) return `auth error: ${error.message}`;
-    if (!data?.claims) return "RSC session read OK — no active session (anon)";
-    return `RSC session read OK — sub=${data.claims.sub}`;
-  } catch (e) {
-    return `Supabase not wired yet (deferred): ${(e as Error).message}`;
+  if (!optionalServerEnv("BETTER_AUTH_SECRET")) {
+    return "Better Auth route mounted — local development secret fallback is active";
   }
+  return "Better Auth route mounted — secret configured";
 }
 
 async function getDbStatus(): Promise<string> {
   try {
-    const rows = await readRecentHealth(3);
-    return `Drizzle read OK — ${rows.length} health row(s)`;
+    const [isReachable, rows] = await Promise.all([
+      pingDatabase(),
+      readRecentHealth(3),
+    ]);
+    return `Kysely read OK — ping=${String(isReachable)} · ${rows.length} health row(s)`;
   } catch (e) {
-    return `Database not wired yet (deferred): ${(e as Error).message}`;
+    return `Postgres not wired yet (deferred): ${(e as Error).message}`;
   }
 }
 
@@ -43,16 +39,15 @@ export default async function HealthPage() {
           Infrastructure health
         </h1>
         <p className="text-muted-foreground">
-          Server-rendered tracer that proves the runtime seams are live. This is
-          not product UI — it is deleted when the design system arrives.
+          Server-rendered tracer for the current stack. This is not product UI.
         </p>
       </header>
 
       <dl className="grid grid-cols-1 gap-3">
         <Row label="Rendered on server at" value={renderedAt} />
         <Row label="UTF-8 / Cyrillic" value={cyrillic} />
-        <Row label="Auth (RSC getClaims)" value={authStatus} />
-        <Row label="Database (Drizzle / Supavisor)" value={dbStatus} />
+        <Row label="Auth (Better Auth)" value={authStatus} />
+        <Row label="Database (Kysely / Postgres)" value={dbStatus} />
       </dl>
 
       <div className="flex items-center gap-3">

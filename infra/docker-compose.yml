@@ -1,7 +1,22 @@
-# Local Meilisearch for development + the Phase-7 Cyrillic typo-tolerance proof.
-# In production Meilisearch runs as a self-hosted container on Railway (EU).
-# Pin the version — Meilisearch's own docs warn against `latest` (host drift).
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: overgarden-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-overgarden}
+      POSTGRES_USER: ${POSTGRES_USER:-overgarden}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-overgarden}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   meilisearch:
     image: getmeili/meilisearch:v1.48.1
     container_name: overgarden-meilisearch
@@ -9,11 +24,26 @@ services:
     ports:
       - "7700:7700"
     environment:
-      # Production mode REQUIRES a 32+ byte master key and disables the open dashboard.
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?set a 32+ byte secret in infra/.env}
       MEILI_ENV: production
     volumes:
       - meili_data:/meili_data
 
+  minio:
+    image: minio/minio:latest
+    container_name: overgarden-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-overgarden}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-overgarden-local-secret}
+    volumes:
+      - minio_data:/data
+
 volumes:
+  postgres_data:
   meili_data:
+  minio_data:
