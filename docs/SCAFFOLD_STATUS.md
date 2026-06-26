@@ -1,6 +1,6 @@
 # Runtime Scaffold — Status & Verification
 
-Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
 
 ## Proven Locally
 
@@ -14,6 +14,7 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.
 - `/garden` first-entry flow can attach one processed photo asset and `/garden/objects/[objectId]` renders only the stripped public derivative.
+- `/garden` first-entry flow can queue title/body/date/object/photo intent while offline, show queued/syncing/failed/synced local states, retry through `/api/garden/entries`, and read back exactly one authenticated server entry.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - R2 quarantine upload and public derivative processing work against the configured Cloudflare R2 buckets and `media.over.garden`.
 - Media processor tests prove the quarantine original is deleted before the public derivative is written.
@@ -59,14 +60,14 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
 - iOS Safari offline capture spike on a real device.
-- Offline sync, public SSR publication, 410 deletion, and H1 event slices.
+- Public SSR publication, 410 deletion, and H1 event slices.
 
 ## Next Build Step
 
-Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` after reviewing the one-photo entry implementation.
+Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` with the publication safety slice after reviewing the offline entry/photo-intent implementation.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 
-The next vertical issue should be the offline entry/photo-intent slice: create entry offline -> queue with idempotency -> regain connection -> sync to the same server path -> authenticated readback -> failed/retry states. Do not open standalone IndexedDB, sync API, or queue-worker tasks outside that vertical path.
+The next vertical issue should be the publication safety slice: publish entry -> SSR public page -> `noindex` -> public-safe search document -> derivative-only media -> privacy tests. Do not open standalone public route, search, disclosure, or metadata tasks outside that vertical path.
 
 Before implementing the next issue, run the Product Thinking Gate in `docs/product-research/README.md` and include the selected research files in the Linear context.

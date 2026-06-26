@@ -1,11 +1,9 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
 import { getCurrentSession } from "@/server/auth-session";
 import { listMyPlantObjects } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { createFirstPlantEntryAction } from "./actions";
-import { EntryPhotoInput } from "./entry-photo-input";
+import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 
 export const dynamic = "force-dynamic";
@@ -54,88 +52,10 @@ export default async function GardenPage() {
               </p>
             </div>
 
-            <form action={createFirstPlantEntryAction} className="grid gap-4">
-              <input
-                type="hidden"
-                name="clientMutationId"
-                value={crypto.randomUUID()}
-              />
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                  Space
-                  <input
-                    name="spaceName"
-                    required
-                    maxLength={120}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    placeholder="Balcony"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                  Plant
-                  <input
-                    name="plantName"
-                    required
-                    maxLength={120}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    placeholder="Cherry tomato"
-                  />
-                </label>
-              </div>
-
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                Variety
-                <input
-                  name="varietyText"
-                  maxLength={120}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  placeholder="Unknown"
-                />
-              </label>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-                  Entry title
-                  <input
-                    name="title"
-                    required
-                    maxLength={140}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    placeholder="First flowers"
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                  Date
-                  <input
-                    type="date"
-                    name="entryDate"
-                    defaultValue={today}
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  />
-                </label>
-              </div>
-
-              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-                Note
-                <textarea
-                  name="body"
-                  required
-                  minLength={1}
-                  maxLength={2000}
-                  className="min-h-36 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                  placeholder="The plant recovered after repotting and has two new flower clusters."
-                />
-              </label>
-
-              <EntryPhotoInput />
-
-              <Button type="submit" className="self-start">
-                Save first entry
-              </Button>
-            </form>
+            <FirstEntryComposer
+              today={today}
+              initialClientMutationId={crypto.randomUUID()}
+            />
           </section>
 
           <aside className="flex flex-col gap-3">

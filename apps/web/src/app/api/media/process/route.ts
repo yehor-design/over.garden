@@ -31,7 +31,14 @@ export async function POST(request: Request) {
       derivative.derivativeKey,
     );
 
-    return Response.json({ mediaAsset: updated, ...derivative });
+    return Response.json({
+      mediaAsset: {
+        id: updated.id,
+        status: updated.status,
+        derivative_key: updated.derivative_key,
+      },
+      ...derivative,
+    });
   } catch {
     await markMediaAssetFailed(scope, asset.id);
     return Response.json(
