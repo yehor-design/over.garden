@@ -3,7 +3,7 @@
 Status: living execution roadmap
 Date: 2026-06-26
 Owner: founder
-Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`
+Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
 This is not the full product backlog. It is the living execution roadmap for the next product-learning slices after the walking skeleton. The skeleton proved the stack; it is not product UI and it is not the final product data model.
 
@@ -35,6 +35,8 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 7. Public SEO pages stay `noindex` until there is enough real UGC depth and explicit index-promotion logic.
 8. Offline capture is honest: queue locally, show queued/syncing/failed/synced states, allow retry, and do not promise iOS background sync reliability.
 9. Each Linear task must carry context files, invariants, data contract, target files, non-goals, acceptance criteria, and verification commands.
+10. Linear tasks that touch media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` and update it if provider values change.
+11. User-facing Linear tasks must run the Product Thinking Gate in `docs/product-research/README.md`, include the relevant research files in `Context files`, and state the product assumption being tested.
 
 ## SDD Slice Test
 
@@ -48,6 +50,7 @@ Required:
 4. Does it prove privacy/media/search/offline invariants through executable tests, not prose?
 5. Does it declare what existing skeleton code it replaces or reuses?
 6. Does it include a failure gate that would stop the slice from being marked done?
+7. Does it cite the relevant product research and name the user job, motivation, trust concern, growth mechanism, or market assumption behind the behavior?
 
 Allowed exceptions:
 
@@ -200,6 +203,8 @@ Why this is first: it replaces the skeleton with the smallest H1 journal loop. I
 Context files:
 
 - `AGENTS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
 - `docs/TECH_STACK_DECISIONS.md`
 - `docs/adr/ADR-0014-agentic-stack-realignment.md`
 - `docs/WALKING_SKELETON.md`
@@ -293,6 +298,9 @@ Why this is second: photo is core to gardening evidence, but it is safety-critic
 Context files:
 
 - `docs/TECH_STACK_DECISIONS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
+- `docs/INFRASTRUCTURE_REGISTRY.md`
 - `docs/WALKING_SKELETON.md`
 - `apps/web/src/server/media/derivatives.ts`
 - `apps/web/src/server/media/derivatives.test.ts`
@@ -369,6 +377,9 @@ Why this is third: offline capture matters only if it returns to the same canoni
 Context files:
 
 - `docs/TECH_STACK_DECISIONS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
+- `docs/INFRASTRUCTURE_REGISTRY.md`
 - `docs/WALKING_SKELETON.md`
 - `apps/web/src/lib/offline/queue.ts`
 - `apps/web/src/lib/offline/queue.test.ts`
@@ -438,6 +449,9 @@ Context files:
 
 - `AGENTS.md`
 - `docs/TECH_STACK_DECISIONS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
+- `docs/INFRASTRUCTURE_REGISTRY.md`
 - `docs/adr/ADR-0014-agentic-stack-realignment.md`
 - `docs/WALKING_SKELETON.md`
 - `apps/web/src/server/search/documents.ts`
@@ -506,6 +520,9 @@ Context files:
 
 - `AGENTS.md`
 - `docs/TECH_STACK_DECISIONS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
+- `docs/INFRASTRUCTURE_REGISTRY.md`
 - `docs/WALKING_SKELETON.md`
 - Public route/search files from issue 4
 - Product repository/action files from issues 1-4
@@ -569,6 +586,8 @@ Why this is sixth: the first save is not H1. The H1 proxy requires return behavi
 Context files:
 
 - `docs/TECH_STACK_DECISIONS.md`
+- `docs/product-research/README.md`
+- relevant files selected through the Product Thinking Gate
 - `docs/WALKING_SKELETON.md`
 - Product route/action/repository files from issues 1-5
 

@@ -41,6 +41,8 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 10. **Every public SEO page is server-rendered.** No important public content behind a client-only shell. Thin programmatic pages stay noindex until they carry real UGC.
 11. **Agents follow vertical SDD slices after the skeleton.** Do not build “all DB then all auth then all UI,” and do not create standalone Linear issues for schema, UI, media, search, analytics, or public pages. Each execution issue must start from a concrete user behavior and integrate the needed layers end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Use the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` before creating or accepting future Linear issues.
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
+13. **Live infra values are centralized.** Non-secret provider IDs, bucket names, public domains, env contracts, and operational links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Agents must not rediscover or guess those values in each task.
+14. **Product research is repo-local.** ICP, JTBD, positioning, IA, SEO/content, growth, trust/privacy, and business-model context lives in `docs/product-research/`. User-facing implementation must run the Product Thinking Gate in `docs/product-research/README.md` before Linear task creation or execution.
 
 ## Launch topology
 
@@ -48,6 +50,8 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - **DigitalOcean Managed Postgres:** primary durable data store.
 - **DigitalOcean Droplet:** Python worker + Meilisearch container at launch. Add memory limits, swap, health checks, and make Meili indexes rebuildable.
 - **Cloudflare:** DNS, WAF/bot controls, R2 object storage, CDN for public derivatives. Cloudflare must not cache HTML.
+- **Infrastructure registry:** `docs/INFRASTRUCTURE_REGISTRY.md` records the non-secret production values and dashboard links. Keep it updated with every external-provider change.
+- **Product research corpus:** `docs/product-research/` is the repo-local product-thinking source. It informs what should be built and why; current root stack docs remain the implementation authority.
 
 ## Local topology
 
@@ -55,6 +59,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Docker Meilisearch for search proof and index integration.
 - MinIO as local S3/R2 emulator.
 - `apps/web/.env.example` and `infra/.env.example` are the canonical local env templates.
+- `docs/INFRASTRUCTURE_REGISTRY.md` records production-equivalent non-secret values; env files remain the only place for local secrets.
 
 ## ADR index
 

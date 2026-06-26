@@ -1,6 +1,6 @@
 # AGENTS.md — OverGarden
 
-Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014. Older ADRs are historical if ADR-0014 supersedes them.
+Operating guide for AI agents and humans working in this repo. Read this before any change. Current stack authority is `docs/TECH_STACK_DECISIONS.md` plus ADR-0014. Live non-secret infrastructure values and provider links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Product-thinking research lives in `docs/product-research/`. Older ADRs are historical if ADR-0014 supersedes them.
 
 ## Project
 
@@ -32,14 +32,24 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 8. Realtime is not a source of truth. Add live updates only after the canonical server fetch path exists.
 9. Every public SEO page must be server-rendered and must stay noindex until it has real UGC depth.
 10. No secrets in git. Use env vars/platform secret stores. `.env*` is git-ignored except `.env.example`.
+11. Do not guess external service values. Read `docs/INFRASTRUCTURE_REGISTRY.md` before touching DNS, R2, media URLs, deployment env, or external service wiring, then verify live provider state when drift would matter.
+12. Do not make product decisions from implementation convenience alone. Before shaping a feature, UI flow, public page, analytics event, onboarding step, or Linear issue, run the Product Thinking Gate in `docs/product-research/README.md`.
 
 ## Workflow
 
 - Build a walking skeleton first, then vertical SDD slices.
 - Keep changes scoped and wire all affected surfaces together: SQL/types -> repository -> route/action -> UI -> tests -> docs.
 - Prefer machine-checkable guardrails over prose instructions: typecheck, lint, focused tests, privacy tests, SSR tests, media tests, search-index tests.
+- Any Linear SDD issue touching media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` in its context files and update it when external values change.
+- Any Linear SDD issue with user-facing behavior must include `docs/product-research/README.md` plus the relevant 2-5 research files selected by the Product Thinking Gate.
 - English for code, identifiers, comments, commit messages, and repository docs.
 - Conventional Commits.
+
+## Product Research
+
+`docs/product-research/` is the duplicated research corpus from the original Startups research folder. Treat it as the repo-local product memory for ICP, JTBD, positioning, brand, IA, UX, SEO/content, growth, business model, trust/privacy, and validation evidence.
+
+Do not treat copied research files as the current technical stack authority when they conflict with root repo docs. Product facts come from the research corpus; implementation facts come from `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, ADR-0014, the SDD roadmap, and live code.
 
 ## Linear SDD Task Rule
 

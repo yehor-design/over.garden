@@ -21,6 +21,18 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Python worker consumes the Postgres-backed queue and marks jobs `done`.
 - Meilisearch Cyrillic typo proof passes against local Docker Meilisearch.
 
+## External Infra Provisioned
+
+- Cloudflare zone `over.garden` is active under account `cb03b15042adc74edfe2d8201636300a`.
+- R2 buckets `overgarden-quarantine` and `overgarden-public` exist.
+- R2 custom domain `media.over.garden` is attached to `overgarden-public` with ownership and SSL active.
+- Live non-secret infrastructure values are recorded in `docs/INFRASTRUCTURE_REGISTRY.md`.
+
+## Product Research Imported
+
+- The original Startups research folder is duplicated into `docs/product-research/`.
+- `docs/product-research/README.md` defines the Product Thinking Gate and routes agents to relevant research by task type.
+
 ## Verification Commands
 
 ```bash
@@ -40,7 +52,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 ## Still Deferred
 
 - Production DigitalOcean Managed Postgres provisioning and backups/PITR checks.
-- Production Cloudflare R2 bucket creation, lifecycle rules, and CDN/domain binding.
+- Production R2 S3 access key installation in local/deployment env.
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
@@ -54,3 +66,5 @@ Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` after revie
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 
 The next vertical issue is `OVE-12`: one-photo entry, quarantine upload, stripped derivative processing, and derivative-only readback inside the real `/garden` entry flow. Do not open a standalone media pipeline task.
+
+Before implementing the next issue, run the Product Thinking Gate in `docs/product-research/README.md` and include the selected research files in the Linear context.
