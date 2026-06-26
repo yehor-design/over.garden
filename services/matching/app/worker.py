@@ -62,33 +62,35 @@ def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
 
 
 def _mark_done(conn: psycopg.Connection, job_id: str) -> None:
-    conn.execute(
-        """
-        update job_queue
-        set status = 'done',
-            locked_at = null,
-            locked_by = null,
-            updated_at = now()
-        where id = %s
-        """,
-        (job_id,),
-    )
+    with conn.transaction():
+        conn.execute(
+            """
+            update job_queue
+            set status = 'done',
+                locked_at = null,
+                locked_by = null,
+                updated_at = now()
+            where id = %s
+            """,
+            (job_id,),
+        )
 
 
 def _mark_failed(conn: psycopg.Connection, job_id: str, error: str) -> None:
-    conn.execute(
-        """
-        update job_queue
-        set status = 'failed',
-            locked_at = null,
-            locked_by = null,
-            last_error = %s,
-            available_at = now() + (%s || ' seconds')::interval,
-            updated_at = now()
-        where id = %s
-        """,
-        (error[:4000], VISIBILITY_TIMEOUT_SECONDS, job_id),
-    )
+    with conn.transaction():
+        conn.execute(
+            """
+            update job_queue
+            set status = 'failed',
+                locked_at = null,
+                locked_by = null,
+                last_error = %s,
+                available_at = now() + (%s || ' seconds')::interval,
+                updated_at = now()
+            where id = %s
+            """,
+            (error[:4000], VISIBILITY_TIMEOUT_SECONDS, job_id),
+        )
 
 
 def run() -> None:

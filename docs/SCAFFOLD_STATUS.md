@@ -1,56 +1,50 @@
 # Runtime Scaffold — Status & Verification
 
-The scaffold now reflects the 2026-06-26 stack realignment in ADR-0014.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. See `docs/WALKING_SKELETON.md` for commands and smoke paths.
 
-## Landed in Code
+## Proven Locally
 
-- Next.js App Router + TypeScript remains the app/runtime base.
-- shadcn/ui remains the UI base.
-- Supabase clients and Drizzle scaffold were removed.
-- Better Auth is installed and mounted at `/api/auth/[...all]`.
-- Kysely + `pg` are installed and wired as the server-side database access layer.
-- SQL migrations are represented as plain SQL; generated DB types are produced by `kysely-codegen` once a database is available.
-- R2 presigned quarantine uploads are wired through the S3-compatible AWS SDK.
-- `sharp` derivative generation is present for worker-side resize/re-encode/metadata stripping.
-- Dexie offline queue is present for browser-side capture buffering.
-- Meilisearch JS client seam remains present.
-- Plain Postgres `job_queue` producer exists in TypeScript; Python worker consumes the same table with `FOR UPDATE SKIP LOCKED`.
-- Local `docker-compose` now includes Postgres, Meilisearch, and MinIO.
-
-## Still Deferred
-
-- Real Better Auth DB migration/table generation and sign-in UI.
-- Live DigitalOcean Managed Postgres connection.
-- R2 bucket creation, lifecycle rules, and worker that moves quarantine originals to public derivatives.
-- Privacy tests for scoped repositories, media derivatives, and search indexing.
-- iOS offline capture spike.
-- Meilisearch reindex worker and public-only index tests.
-- Vercel/Cloudflare/DO production wiring.
+- Next.js App Router + TypeScript builds successfully.
+- shadcn/ui renders inside SSR pages.
+- Better Auth route is mounted at `/api/auth/[...all]`; live sign-up returns a session cookie.
+- Kysely + `pg` connect to local Docker Postgres.
+- Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
+- SQL app schema creates `health`, `journal_entries`, `media_assets`, and `job_queue`.
+- `kysely-codegen` generated `src/db/generated.ts` from 8 live tables.
+- `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
+- R2/MinIO quarantine upload and public derivative processing work locally.
+- `sharp` derivative tests prove WebP output without EXIF metadata.
+- Dexie offline queue is test-covered with IndexedDB shim.
+- Search document privacy test proves private journal entries are not indexed.
+- Python worker consumes the Postgres-backed queue and marks jobs `done`.
+- Meilisearch Cyrillic typo proof passes against local Docker Meilisearch.
 
 ## Verification Commands
 
-Run from `apps/web`:
-
 ```bash
+cd infra && docker compose up -d
+cd ../apps/web
+pnpm local:bootstrap
+pnpm db:types
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
+cd ../../services/matching
+uv run python -m py_compile app/main.py app/search.py app/worker.py
+MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' uv run python -m app.search
 ```
 
-Run from `infra` when Docker is available:
+## Still Deferred
 
-```bash
-docker compose up -d
-```
+- Production DigitalOcean Managed Postgres provisioning and backups/PITR checks.
+- Production Cloudflare R2 bucket creation, lifecycle rules, and CDN/domain binding.
+- Production worker process manager/health checks on the DigitalOcean droplet.
+- Real auth UX, email delivery, password reset, OAuth decisions.
+- Full privacy invariant suite for cross-user access paths.
+- iOS Safari offline capture spike on a real device.
+- Product data model beyond the walking skeleton tables.
 
-Run from `services/matching` when Python deps are installed:
+## Next Build Step
 
-```bash
-uv sync --frozen
-uv run uvicorn app.main:app --reload
-uv run python -m app.worker
-```
-
-## Notes
-
-This scaffold is still infrastructure proof, not product UI. The next correct build step is a walking skeleton that sends one trivial authenticated action through: UI -> server action/route -> scoped repository -> Postgres -> optional queue -> SSR health/readback. After that, work should be sliced vertically by product behavior, not by layers.
+Start the first product SDD slice only after this skeleton stays green. The first real slice should be narrow and vertical: authenticated journal capture with one photo, offline queue fallback, sync, stripped derivative, and SSR readback.

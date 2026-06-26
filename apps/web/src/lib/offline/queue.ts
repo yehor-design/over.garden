@@ -27,13 +27,13 @@ class OverGardenOfflineDb extends Dexie {
 }
 
 export const offlineDb =
-  typeof window === "undefined" ? undefined : new OverGardenOfflineDb();
+  typeof indexedDB === "undefined" ? undefined : new OverGardenOfflineDb();
 
 export async function enqueueOfflineMutation(
   input: Pick<OfflineMutation, "kind" | "payload"> & { idempotencyKey?: string },
 ): Promise<OfflineMutation> {
   if (!offlineDb) {
-    throw new Error("Offline queue is only available in the browser.");
+    throw new Error("Offline queue is only available when IndexedDB exists.");
   }
 
   const now = Date.now();

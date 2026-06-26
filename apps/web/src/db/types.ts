@@ -1,43 +1,26 @@
-import type { ColumnType, Generated, Insertable, Selectable } from "kysely";
+import type { Insertable, Selectable } from "kysely";
 
-export type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
-export type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue };
+import type {
+  DB,
+  Health as HealthTable,
+  JobQueue as JobQueueTable,
+  JournalEntries as JournalEntriesTable,
+  JsonValue,
+  MediaAssets as MediaAssetsTable,
+} from "./generated";
 
-export interface HealthTable {
-  id: Generated<string>;
-  message: string;
-  created_at: Timestamp;
-}
+export type Database = DB;
+export type { JsonValue };
 
+export type EntryVisibility = "private" | "public";
+export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
-
-export interface JobQueueTable {
-  id: Generated<string>;
-  queue_name: string;
-  payload: JsonValue;
-  status: Generated<JobStatus>;
-  idempotency_key: string | null;
-  available_at: Timestamp;
-  locked_at: Timestamp | null;
-  locked_by: string | null;
-  attempts: Generated<number>;
-  last_error: string | null;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-}
-
-export interface Database {
-  health: HealthTable;
-  job_queue: JobQueueTable;
-}
 
 export type Health = Selectable<HealthTable>;
 export type NewHealth = Insertable<HealthTable>;
+export type JournalEntry = Selectable<JournalEntriesTable>;
+export type NewJournalEntry = Insertable<JournalEntriesTable>;
+export type MediaAsset = Selectable<MediaAssetsTable>;
+export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type JobQueueJob = Selectable<JobQueueTable>;
 export type NewJobQueueJob = Insertable<JobQueueTable>;

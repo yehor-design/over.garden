@@ -2,7 +2,7 @@
 
 A gardening journal that doubles as a catalog-as-social-graph for Ukraine and Bulgaria. Users keep a growing journal; public variety/region pages aggregate real first-hand experience; a later lineage layer traces where plants came from.
 
-Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, and explicit privacy/media guardrails. See `docs/TECH_STACK_DECISIONS.md` and ADR-0014.
+Status: pre-MVP. The stack has been realigned for agentic development: fewer hidden platform assumptions, stronger type feedback, and explicit privacy/media guardrails. See `docs/TECH_STACK_DECISIONS.md`, ADR-0014, and `docs/WALKING_SKELETON.md`.
 
 ## Stack
 
