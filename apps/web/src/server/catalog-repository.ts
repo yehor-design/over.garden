@@ -5,17 +5,37 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { CatalogItemStatus, Database, JsonValue } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
+import { meiliSearchClient } from "@/server/search/client";
+import {
+  CATALOG_TYPEAHEAD_INDEX,
+  catalogTypeaheadHitToSuggestion,
+  dedupeCatalogTypeaheadSuggestions,
+  toCatalogTypeaheadDocument,
+  type CatalogTypeaheadRow,
+} from "@/server/search/catalog-documents";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
 const MAX_CATALOG_SUGGESTIONS = 8;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 const DEFAULT_USER_ADDED_LOCALE = "und";
 const CATALOG_CURATION_QUEUE = "catalog_curation";
+const MATCHING_QUEUE = "matching";
+const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
+const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type SelectableCatalogStatus = (typeof SELECTABLE_CATALOG_STATUSES)[number];
+
+interface CatalogSearchClient {
+  index(indexName: string): {
+    search(
+      query: string,
+      options: { limit: number },
+    ): Promise<{ hits?: unknown[] }>;
+  };
+}
 
 export interface CatalogSuggestion {
   id: string;
@@ -45,6 +65,29 @@ export interface UserAddedCatalogCandidate {
 
 interface CreateUserAddedCatalogCandidateInput {
   displayName: string;
+}
+
+export async function searchCatalogSuggestionsWithMeili(
+  query: string,
+  limit = MAX_CATALOG_SUGGESTIONS,
+  client: CatalogSearchClient = meiliSearchClient(),
+): Promise<CatalogSuggestion[]> {
+  const normalizedQuery = normalizeCatalogQuery(query);
+  if (normalizedQuery.length < MIN_CATALOG_QUERY_LENGTH) return [];
+
+  const normalizedLimit = normalizeCatalogLimit(limit);
+  const result = await client
+    .index(CATALOG_TYPEAHEAD_INDEX)
+    .search(normalizedQuery, {
+      limit: normalizedLimit * 3,
+    });
+
+  const hits = Array.isArray(result.hits) ? result.hits : [];
+  return dedupeCatalogTypeaheadSuggestions(
+    hits
+      .map(catalogTypeaheadHitToSuggestion)
+      .filter((suggestion) => suggestion !== null),
+  ).slice(0, normalizedLimit);
 }
 
 export async function searchCatalogSuggestions(
@@ -77,6 +120,16 @@ export async function searchCatalogSuggestions(
   }
 
   return [...suggestions.values()];
+}
+
+export async function buildCatalogTypeaheadDocuments(
+  executor: QueryExecutor = db,
+) {
+  const rows = await buildCatalogTypeaheadReindexRowsQuery(executor).execute();
+
+  return rows
+    .map((row) => toCatalogTypeaheadDocument(row))
+    .filter((document) => document !== null);
 }
 
 export async function findSelectableCatalogItem(
@@ -176,6 +229,34 @@ export function buildCatalogTypeaheadQuery(
     .orderBy("catalog_item_names.is_primary", "desc")
     .orderBy("catalog_item_names.display_name", "asc")
     .limit(normalizeCatalogLimit(limit));
+}
+
+export function buildCatalogTypeaheadReindexRowsQuery(executor: QueryExecutor) {
+  return executor
+    .selectFrom("catalog_item_names")
+    .innerJoin(
+      "catalog_items",
+      "catalog_items.id",
+      "catalog_item_names.catalog_item_id",
+    )
+    .select([
+      "catalog_items.id as id",
+      "catalog_items.canonical_name as canonicalName",
+      "catalog_items.normalized_name as normalizedName",
+      "catalog_items.status as status",
+      "catalog_items.source as source",
+      "catalog_items.created_by_user_id as createdByUserId",
+      "catalog_items.locale as itemLocale",
+      "catalog_item_names.display_name as displayName",
+      "catalog_item_names.normalized_name as aliasNormalizedName",
+      "catalog_item_names.locale as aliasLocale",
+      "catalog_item_names.is_primary as isPrimary",
+    ])
+    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.created_by_user_id", "is", null)
+    .orderBy("catalog_item_names.is_primary", "desc")
+    .orderBy("catalog_item_names.display_name", "asc")
+    .$castTo<CatalogTypeaheadRow>();
 }
 
 export function buildFindSelectableCatalogItemQuery(
@@ -279,6 +360,28 @@ export function buildEnqueueCatalogCurationJobQuery(
       queue_name: CATALOG_CURATION_QUEUE,
       payload,
       idempotency_key: input.idempotencyKey,
+    })
+    .onConflict((oc) =>
+      oc.column("idempotency_key").doUpdateSet({
+        updated_at: new Date(),
+      }),
+    )
+    .returningAll();
+}
+
+export function buildEnqueueCatalogTypeaheadReindexJobQuery(
+  executor: QueryExecutor,
+) {
+  const payload = {
+    kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
+  } satisfies JsonValue;
+
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: MATCHING_QUEUE,
+      payload,
+      idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
     })
     .onConflict((oc) =>
       oc.column("idempotency_key").doUpdateSet({

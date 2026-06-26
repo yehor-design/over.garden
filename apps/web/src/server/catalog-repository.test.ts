@@ -15,12 +15,15 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
+  buildCatalogTypeaheadReindexRowsQuery,
   buildEnqueueCatalogCurationJobQuery,
+  buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildCatalogTypeaheadQuery,
   buildFindSelectableCatalogItemQuery,
   buildInsertCatalogItemNameQuery,
   buildUpsertUserAddedCatalogItemQuery,
   normalizeCatalogQuery,
+  searchCatalogSuggestionsWithMeili,
 } from "./catalog-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -65,6 +68,69 @@ describe("catalog repository query contracts", () => {
     expect(compiled.parameters).toEqual(["seeded", "confirmed", "%чері%", 5]);
   });
 
+  it("queries the dedicated Meili index and filters unsafe hits", async () => {
+    const calls: Array<{ indexName: string; query: string; limit: number }> =
+      [];
+    const client = {
+      index(indexName: string) {
+        return {
+          async search(query: string, options: { limit: number }) {
+            calls.push({ indexName, query, limit: options.limit });
+            return {
+              hits: [
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000000101",
+                  displayName: "Помідор чері",
+                  canonicalName: "Помідор чері",
+                  locale: "uk",
+                  status: "seeded",
+                  source: "internal_seed",
+                },
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000000101",
+                  displayName: "Томат чері",
+                  canonicalName: "Помідор чері",
+                  locale: "uk",
+                  status: "seeded",
+                  source: "internal_seed",
+                },
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000000201",
+                  displayName: "Бабусин перець",
+                  canonicalName: "Бабусин перець",
+                  locale: "und",
+                  status: "provisional",
+                  source: "user_added",
+                  createdByUserId: "00000000-0000-0000-0000-000000000001",
+                },
+              ],
+            };
+          },
+        };
+      },
+    };
+
+    await expect(
+      searchCatalogSuggestionsWithMeili("  ПОМДОР  ", 5, client),
+    ).resolves.toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000101",
+        displayName: "Помідор чері",
+        canonicalName: "Помідор чері",
+        locale: "uk",
+        status: "seeded",
+        source: "internal_seed",
+      },
+    ]);
+    expect(calls).toEqual([
+      {
+        indexName: "catalog_typeahead",
+        query: "помдор",
+        limit: 15,
+      },
+    ]);
+  });
+
   it("validates selected catalog IDs against selectable statuses", () => {
     const compiled = buildFindSelectableCatalogItemQuery(
       testDb,
@@ -79,6 +145,22 @@ describe("catalog repository query contracts", () => {
       "seeded",
       "confirmed",
     ]);
+  });
+
+  it("builds a reindex row query that excludes owner-scoped catalog items", () => {
+    const compiled = buildCatalogTypeaheadReindexRowsQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('from "catalog_item_names"');
+    expect(compiled.sql).toContain(
+      'inner join "catalog_items" on "catalog_items"."id" = "catalog_item_names"."catalog_item_id"',
+    );
+    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.parameters).toEqual(["seeded", "confirmed"]);
   });
 
   it("upserts user-added candidates by owner, normalized name, and locale", () => {
@@ -151,6 +233,22 @@ describe("catalog repository query contracts", () => {
         locale: "und",
       },
       "catalog-curation:00000000-0000-0000-0000-000000000001:und:бабусин перець",
+      expect.any(Date),
+    ]);
+  });
+
+  it("enqueues catalog typeahead reindex work on the matching worker queue", () => {
+    const compiled =
+      buildEnqueueCatalogTypeaheadReindexJobQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('insert into "job_queue"');
+    expect(compiled.sql).toContain('on conflict ("idempotency_key") do update');
+    expect(JSON.stringify(compiled.parameters)).not.toContain("owner");
+    expect(JSON.stringify(compiled.parameters)).not.toContain("journal");
+    expect(compiled.parameters).toEqual([
+      "matching",
+      { kind: "catalog_typeahead_reindex" },
+      "catalog-typeahead-reindex",
       expect.any(Date),
     ]);
   });

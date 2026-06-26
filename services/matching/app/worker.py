@@ -16,15 +16,18 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
+from app.search import CATALOG_TYPEAHEAD_REINDEX_KIND, reindex_catalog_typeahead
+
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get("WORKER_ID", f"matching-worker-{socket.gethostname()}")
 POLL_INTERVAL_SECONDS = float(os.environ.get("WORKER_POLL_SECONDS", "1.0"))
 VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 
 
-def _handle(payload: Any) -> None:
-    """Process one job. TODO: real matching / dedup / reindex logic."""
-    _ = payload
+def _handle(conn: psycopg.Connection, payload: Any) -> None:
+    """Process one job without making request paths depend on worker success."""
+    if isinstance(payload, dict) and payload.get("kind") == CATALOG_TYPEAHEAD_REINDEX_KIND:
+        reindex_catalog_typeahead(conn)
 
 
 def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
@@ -103,7 +106,7 @@ def run() -> None:
                 continue
 
             try:
-                _handle(job["payload"])
+                _handle(conn, job["payload"])
             except Exception:
                 _mark_failed(conn, job["id"], traceback.format_exc())
             else:
