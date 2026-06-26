@@ -1,6 +1,7 @@
 import type { EntrySyncStatus } from "@/db/schema";
 
 export type ActivationSource = "public_variety";
+export type JournalEntryTarget = "first_plant_entry" | "plant_object_entry";
 
 export interface FirstEntryCatalogSelection {
   id: string;
@@ -12,8 +13,10 @@ export interface FirstEntryCatalogSelection {
 }
 
 export interface FirstPlantEntryRequest {
-  spaceName: string;
-  plantName: string;
+  target?: JournalEntryTarget;
+  plantObjectId?: string | null;
+  spaceName?: string;
+  plantName?: string;
   catalogItemId?: string | null;
   userAddedCatalogName?: string | null;
   varietyText?: string | null;

@@ -17,7 +17,10 @@ import {
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
 import { requireCurrentRequestScope } from "@/server/auth-session";
-import { createFirstPlantEntry } from "@/server/journal-repository";
+import {
+  createFirstPlantEntry,
+  createPlantObjectJournalEntry,
+} from "@/server/journal-repository";
 
 export const runtime = "nodejs";
 
@@ -37,28 +40,43 @@ export async function POST(request: Request) {
   try {
     const syncStatus = normalizeSyncStatus(body.syncStatus);
     const activationSource = normalizeActivationSource(body.activationSource);
-    const result = await createFirstPlantEntry(scope, {
-      spaceName: body.spaceName ?? "",
-      plantName: body.plantName ?? "",
-      catalogItemId: body.catalogItemId ?? "",
-      userAddedCatalogName: body.userAddedCatalogName ?? "",
-      varietyText: body.varietyText ?? "",
-      title: body.title ?? "",
-      body: body.body ?? "",
-      entryDate: body.entryDate ?? "",
-      locationVisibility: body.locationVisibility ?? "",
-      coarseRegionCode: body.coarseRegionCode ?? "",
-      clientMutationId: body.clientMutationId ?? "",
-      mediaAssetId: body.mediaAssetId ?? "",
-    });
+    const target = normalizeTarget(body.target, body.plantObjectId);
+    const result =
+      target === "plant_object_entry"
+        ? await createPlantObjectJournalEntry(scope, {
+            plantObjectId: body.plantObjectId ?? "",
+            title: body.title ?? "",
+            body: body.body ?? "",
+            entryDate: body.entryDate ?? "",
+            clientMutationId: body.clientMutationId ?? "",
+            mediaAssetId: body.mediaAssetId ?? "",
+          })
+        : await createFirstPlantEntry(scope, {
+            spaceName: body.spaceName ?? "",
+            plantName: body.plantName ?? "",
+            catalogItemId: body.catalogItemId ?? "",
+            userAddedCatalogName: body.userAddedCatalogName ?? "",
+            varietyText: body.varietyText ?? "",
+            title: body.title ?? "",
+            body: body.body ?? "",
+            entryDate: body.entryDate ?? "",
+            locationVisibility: body.locationVisibility ?? "",
+            coarseRegionCode: body.coarseRegionCode ?? "",
+            clientMutationId: body.clientMutationId ?? "",
+            mediaAssetId: body.mediaAssetId ?? "",
+          });
     const readbackUrl = `/garden/objects/${result.plantObject.id}`;
 
-    await recordFirstPlantEntryEvents(
-      scope,
-      result,
-      syncStatus,
-      activationSource,
-    );
+    if (target === "plant_object_entry") {
+      await recordPlantObjectEntryEvents(scope, result, syncStatus);
+    } else {
+      await recordFirstPlantEntryEvents(
+        scope,
+        result,
+        syncStatus,
+        activationSource,
+      );
+    }
 
     revalidatePath("/garden");
     revalidatePath(readbackUrl);
@@ -114,6 +132,12 @@ function normalizeActivationSource(value: unknown): ActivationSource | null {
   return value === "public_variety" ? value : null;
 }
 
+function normalizeTarget(target: unknown, plantObjectId: unknown) {
+  return target === "plant_object_entry" || typeof plantObjectId === "string"
+    ? "plant_object_entry"
+    : "first_plant_entry";
+}
+
 async function recordFirstPlantEntryEvents(
   scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
@@ -162,6 +186,64 @@ async function recordFirstPlantEntryEvents(
     spaceId: result.space.id,
     plantObjectId: result.plantObject.id,
   });
+  await recordEntryLoggedEventSafely(scope, {
+    properties: sharedEntryProperties,
+    ...eventTarget,
+  });
+
+  if (result.mediaAttached) {
+    await recordAnalyticsEventSafely(scope, {
+      eventName: "entry_photo_attached",
+      properties: sharedEntryProperties,
+      ...eventTarget,
+    });
+  }
+
+  if (syncStatus === "offline_synced") {
+    await recordAnalyticsEventSafely(scope, {
+      eventName: "offline_entry_queued",
+      properties: {
+        ...sharedEntryProperties,
+        sync_status: "offline_queued",
+      },
+      ...eventTarget,
+    });
+    await recordAnalyticsEventSafely(scope, {
+      eventName: "offline_entry_synced",
+      properties: sharedEntryProperties,
+      ...eventTarget,
+    });
+  }
+
+  await recordAnalyticsEventSafely(scope, {
+    eventName: "progress_screen_shown",
+    properties: sharedEntryProperties,
+    ...eventTarget,
+  });
+}
+
+async function recordPlantObjectEntryEvents(
+  scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
+  result: Awaited<ReturnType<typeof createPlantObjectJournalEntry>>,
+  syncStatus: EntrySyncStatus,
+) {
+  if (!result.isNewEntry) return;
+
+  const sharedEntryProperties = {
+    entry_scope: result.entry.entry_scope as EntryScope,
+    has_photo: result.mediaAttached,
+    is_backdated: isBackdatedEntryDate(result.entry.entry_date),
+    location_visibility_level: result.plantObject
+      .location_visibility as LocationVisibility,
+    sync_status: syncStatus,
+    variety_state: result.plantObject.variety_state as VarietyState,
+  };
+  const eventTarget = {
+    spaceId: result.space.id,
+    plantObjectId: result.plantObject.id,
+    journalEntryId: result.entry.id,
+  };
+
   await recordEntryLoggedEventSafely(scope, {
     properties: sharedEntryProperties,
     ...eventTarget,

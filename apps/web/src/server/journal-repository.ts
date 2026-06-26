@@ -64,6 +64,7 @@ export interface CreatePlantObjectJournalEntryInput {
   body: string;
   entryDate?: string | null;
   clientMutationId: string;
+  mediaAssetId?: string | null;
 }
 
 export interface PublishJournalEntryInput {
@@ -209,6 +210,7 @@ export interface PlantObjectJournalEntryResult {
   plantObject: PlantObjectPage["plantObject"];
   entry: JournalEntry;
   isNewEntry: boolean;
+  mediaAttached: boolean;
   priorObjectEntryCount: number;
 }
 
@@ -473,6 +475,12 @@ export async function createPlantObjectJournalEntry(
       );
     }
 
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+      db,
+      scope,
+      normalized.mediaAssetId,
+      existing.id,
+    );
     const page = await getPlantObjectPage(scope, existing.plant_object_id);
     if (!page)
       throw new Error("Existing journal entry is outside the request scope.");
@@ -482,6 +490,7 @@ export async function createPlantObjectJournalEntry(
       plantObject: page.plantObject,
       entry: existing,
       isNewEntry: false,
+      mediaAttached,
       priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
     };
   }
@@ -515,6 +524,13 @@ export async function createPlantObjectJournalEntry(
     });
 
     if (entry) {
+      const mediaAttached = await attachMediaAssetToEntryIfPresent(
+        trx,
+        scope,
+        normalized.mediaAssetId,
+        entry.id,
+      );
+
       return {
         space: {
           id: target.spaceId,
@@ -533,6 +549,7 @@ export async function createPlantObjectJournalEntry(
         },
         entry,
         isNewEntry: true,
+        mediaAttached,
         priorObjectEntryCount,
       };
     }
@@ -555,6 +572,13 @@ export async function createPlantObjectJournalEntry(
       );
     }
 
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+      trx,
+      scope,
+      normalized.mediaAssetId,
+      existingAfterConflict.id,
+    );
+
     return {
       space: {
         id: target.spaceId,
@@ -573,6 +597,7 @@ export async function createPlantObjectJournalEntry(
       },
       entry: existingAfterConflict,
       isNewEntry: false,
+      mediaAttached,
       priorObjectEntryCount,
     };
   });
@@ -1324,6 +1349,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
       "Client mutation id",
       200,
     ),
+    mediaAssetId: normalizeOptionalText(input.mediaAssetId, "Media asset id", 200),
   };
 }
 

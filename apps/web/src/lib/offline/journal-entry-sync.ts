@@ -111,7 +111,22 @@ export function buildJournalEntryRequestBodyForSync(
   idempotencyKey: string,
   mediaAssetId?: string | null,
 ): FirstPlantEntryRequest {
+  if (payload.target === "plant_object_entry") {
+    return {
+      target: "plant_object_entry",
+      plantObjectId: payload.plantObjectId,
+      title: payload.title,
+      body: payload.body,
+      entryDate: payload.entryDate,
+      clientMutationId: idempotencyKey,
+      mediaAssetId: mediaAssetId ?? "",
+      syncStatus:
+        payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
+    };
+  }
+
   return {
+    target: "first_plant_entry",
     spaceName: payload.spaceName,
     plantName: payload.plantName,
     catalogItemId: payload.catalogItemId ?? null,

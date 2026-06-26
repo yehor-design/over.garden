@@ -33,6 +33,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const objects = userId
     ? await listMyPlantObjects(scopedToUser(userId), 12)
     : [];
+  const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -45,8 +46,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               Garden journal
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Capture one real plant record with its place, object, and first
-              dated note.
+              {hasObjects
+                ? "Continue the living record for plants you already started."
+                : "Capture one real plant record with its place, object, and first dated note."}
             </p>
           </div>
           {session?.user?.email ? (
@@ -63,14 +65,60 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
       {userId ? (
         <div className="grid gap-6 lg:grid-cols-3">
-          <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
+          {hasObjects ? (
+            <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
+              <div className="flex flex-col gap-1">
+                <h2 className="text-lg font-semibold text-foreground">
+                  Continue a plant
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Open an existing object to add the next dated entry, including
+                  offline retry and optional photo.
+                </p>
+              </div>
+
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {objects.map((object) => (
+                  <li key={object.id}>
+                    <Link
+                      href={`/garden/objects/${object.id}`}
+                      className="flex h-full flex-col justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
+                    >
+                      <span className="flex flex-col gap-1">
+                        <span className="text-base font-semibold text-foreground">
+                          {object.displayName}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {object.spaceDisplayName}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {object.varietyText ?? "Unknown variety"} ·{" "}
+                          {object.varietyState}
+                        </span>
+                      </span>
+                      <span className="text-sm font-medium text-primary">
+                        Add follow-up
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <section
+            className={`flex flex-col gap-4 rounded-lg border border-border p-4 ${
+              hasObjects ? "" : "lg:col-span-2"
+            }`}
+          >
             <div className="flex flex-col gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                First plant entry
+                {hasObjects ? "Start another plant" : "First plant entry"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                Save the first object-level note with a catalog match or
-                Unknown.
+                {hasObjects
+                  ? "Create a new object only when you are starting a new plant record."
+                  : "Save the first object-level note with a catalog match or Unknown."}
               </p>
             </div>
 
@@ -87,7 +135,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             <h2 className="text-base font-semibold text-foreground">
               Plant objects
             </h2>
-            {objects.length === 0 ? (
+            {!hasObjects ? (
               <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
                 No plant objects yet. Save the first entry to create one.
               </p>

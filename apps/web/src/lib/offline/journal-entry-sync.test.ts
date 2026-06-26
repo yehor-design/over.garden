@@ -53,6 +53,34 @@ describe("offline journal entry sync", () => {
     expect(body.syncStatus).toBe("offline_synced");
   });
 
+  it("builds existing-object follow-up requests without creating a new space or plant", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        target: "plant_object_entry",
+        plantObjectId: "object-1",
+        title: "Second flowering wave",
+        body: "The same plant has stronger new leaves.",
+        entryDate: "2026-06-27",
+        clientMutationId: "payload-entry-id",
+        syncStatus: "offline_queued",
+      },
+      "queue-entry-id",
+      "media-1",
+    );
+
+    expect(body.target).toBe("plant_object_entry");
+    expect(body.plantObjectId).toBe("object-1");
+    expect(body.clientMutationId).toBe("queue-entry-id");
+    expect(body.mediaAssetId).toBe("media-1");
+    expect(body.syncStatus).toBe("offline_synced");
+    expect(body.spaceName).toBeUndefined();
+    expect(body.plantName).toBeUndefined();
+    expect(body.catalogItemId).toBeUndefined();
+    expect(JSON.stringify(body)).not.toContain("latitude");
+    expect(JSON.stringify(body)).not.toContain("longitude");
+    expect(JSON.stringify(body)).not.toContain("referrer");
+  });
+
   it("keeps user-added catalog names in retry requests", () => {
     const body = buildJournalEntryRequestBodyForSync(
       {
@@ -144,6 +172,67 @@ describe("offline journal entry sync", () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
+    expect(result.readbackUrl).toBe("/garden/objects/object-1");
+    expect(synced?.status).toBe("synced");
+    expect(synced?.syncResult).toEqual(result);
+  });
+
+  it("syncs a queued existing-object follow-up through the canonical endpoint", async () => {
+    const requests: FirstPlantEntryRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe("/api/garden/entries");
+        requests.push(JSON.parse(String(init?.body)) as FirstPlantEntryRequest);
+        return Response.json({
+          space: {
+            id: "space-1",
+            displayName: "Balcony",
+            locationVisibility: "hidden",
+          },
+          plantObject: {
+            id: "object-1",
+            displayName: "Cherry tomato",
+            catalogItemId: "00000000-0000-4000-8000-000000000101",
+            varietyText: "Помідор чері",
+            varietyState: "selected",
+            locationVisibility: "hidden",
+          },
+          entry: {
+            id: "entry-2",
+            title: "Second flowering wave",
+            body: "The same plant has stronger new leaves.",
+            entryDate: "2026-06-27",
+            clientMutationId: "queue-entry-id",
+          },
+          readbackUrl: "/garden/objects/object-1",
+        });
+      }),
+    );
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: {
+        target: "plant_object_entry",
+        plantObjectId: "object-1",
+        title: "Second flowering wave",
+        body: "The same plant has stronger new leaves.",
+        entryDate: "2026-06-27",
+        clientMutationId: "payload-entry-id",
+        syncStatus: "offline_queued",
+      },
+      idempotencyKey: "queue-entry-id",
+    });
+
+    const result = await syncOfflineJournalEntryMutation(mutation);
+    const synced = await getOfflineMutation(mutation.id);
+
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.target).toBe("plant_object_entry");
+    expect(requests[0]?.plantObjectId).toBe("object-1");
+    expect(requests[0]?.spaceName).toBeUndefined();
+    expect(requests[0]?.plantName).toBeUndefined();
+    expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
+    expect(requests[0]?.syncStatus).toBe("offline_synced");
     expect(result.readbackUrl).toBe("/garden/objects/object-1");
     expect(synced?.status).toBe("synced");
     expect(synced?.syncResult).toEqual(result);

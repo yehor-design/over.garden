@@ -34,6 +34,7 @@ export async function createPlantObjectJournalEntryAction(formData: FormData) {
     body: String(formData.get("body") ?? ""),
     entryDate: String(formData.get("entryDate") ?? ""),
     clientMutationId: String(formData.get("clientMutationId") ?? ""),
+    mediaAssetId: String(formData.get("mediaAssetId") ?? ""),
   });
 
   await recordPlantObjectJournalEntryEvents(scope, result);
@@ -151,7 +152,7 @@ async function recordPlantObjectJournalEntryEvents(
 
   const properties = {
     entry_scope: result.entry.entry_scope as EntryScope,
-    has_photo: false,
+    has_photo: result.mediaAttached,
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.plantObject
       .location_visibility as LocationVisibility,

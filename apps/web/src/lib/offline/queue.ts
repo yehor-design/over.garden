@@ -3,7 +3,10 @@
 import Dexie, { type Table } from "dexie";
 
 import type { EntrySyncStatus } from "@/db/schema";
-import type { ActivationSource } from "@/lib/garden/entry-contracts";
+import type {
+  ActivationSource,
+  JournalEntryTarget,
+} from "@/lib/garden/entry-contracts";
 
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
@@ -16,23 +19,39 @@ export interface OfflinePhotoIntent {
   blob?: Blob;
 }
 
-export interface OfflineJournalEntryPayload {
+interface OfflineJournalEntryPayloadBase {
+  target?: JournalEntryTarget;
+  title: string;
+  body: string;
+  entryDate: string;
+  clientMutationId: string;
+  syncStatus?: EntrySyncStatus;
+  photoIntent?: OfflinePhotoIntent | null;
+  processedMediaAssetId?: string | null;
+}
+
+export interface OfflineFirstPlantEntryPayload
+  extends OfflineJournalEntryPayloadBase {
+  target?: "first_plant_entry";
   spaceName: string;
   plantName: string;
   catalogItemId?: string | null;
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
-  title: string;
-  body: string;
-  entryDate: string;
   locationVisibility?: string | null;
   coarseRegionCode?: string | null;
-  clientMutationId: string;
-  syncStatus?: EntrySyncStatus;
   activationSource?: ActivationSource | null;
-  photoIntent?: OfflinePhotoIntent | null;
-  processedMediaAssetId?: string | null;
 }
+
+export interface OfflinePlantObjectEntryPayload
+  extends OfflineJournalEntryPayloadBase {
+  target: "plant_object_entry";
+  plantObjectId: string;
+}
+
+export type OfflineJournalEntryPayload =
+  | OfflineFirstPlantEntryPayload
+  | OfflinePlantObjectEntryPayload;
 
 export type OfflineMutationPayload = OfflineJournalEntryPayload | unknown;
 

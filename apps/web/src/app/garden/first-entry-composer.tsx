@@ -30,6 +30,7 @@ import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
+  type OfflineFirstPlantEntryPayload,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
 } from "@/lib/offline/queue";
@@ -249,6 +250,7 @@ export function FirstEntryComposer({
 
   function buildPayload(): OfflineJournalEntryPayload {
     return {
+      target: "first_plant_entry",
       ...draft,
       catalogItemId: selectedCatalogItem?.id ?? null,
       userAddedCatalogName:
@@ -692,19 +694,32 @@ function mutationTitle(mutation: OfflineMutation) {
 
 function mutationSubtitle(mutation: OfflineMutation) {
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
+  if (payload.target === "plant_object_entry") {
+    const parts = [
+      mutation.status,
+      "existing plant",
+      payload.entryDate,
+      payload.photoIntent ? "photo intent" : null,
+    ].filter(Boolean);
+
+    return parts.join(" · ");
+  }
+
+  const firstEntryPayload = payload as Partial<OfflineFirstPlantEntryPayload>;
   const parts = [
     mutation.status,
-    payload.plantName,
-    payload.locationVisibility === "region" && payload.coarseRegionCode
-      ? payload.coarseRegionCode
+    firstEntryPayload.plantName,
+    firstEntryPayload.locationVisibility === "region" &&
+    firstEntryPayload.coarseRegionCode
+      ? firstEntryPayload.coarseRegionCode
       : "location hidden",
-    payload.catalogItemId
+    firstEntryPayload.catalogItemId
       ? "catalog selected"
-      : payload.userAddedCatalogName
+      : firstEntryPayload.userAddedCatalogName
         ? "missing name"
         : "unknown variety",
-    payload.entryDate,
-    payload.photoIntent ? "photo intent" : null,
+    firstEntryPayload.entryDate,
+    firstEntryPayload.photoIntent ? "photo intent" : null,
   ].filter(Boolean);
 
   return parts.join(" · ");

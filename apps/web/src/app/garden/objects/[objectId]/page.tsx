@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PlusCircle } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility, VarietyState } from "@/db/schema";
@@ -17,12 +16,12 @@ import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
-  createPlantObjectJournalEntryAction,
   publishJournalEntryAction,
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
 } from "./actions";
 import { CatalogResolveControl } from "./catalog-resolve-control";
+import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { LocationPrivacyControl } from "./location-privacy-control";
 
 export const dynamic = "force-dynamic";
@@ -121,59 +120,11 @@ export default async function PlantObjectReadbackPage({
           </p>
         </div>
 
-        <form
-          action={createPlantObjectJournalEntryAction}
-          className="grid gap-4"
-        >
-          <input type="hidden" name="objectId" value={objectId} />
-          <input
-            type="hidden"
-            name="clientMutationId"
-            value={crypto.randomUUID()}
-          />
-          <div className="grid gap-3 sm:grid-cols-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-              Entry title
-              <input
-                name="title"
-                required
-                maxLength={140}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                placeholder="Second flowering wave"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              Date
-              <input
-                type="date"
-                name="entryDate"
-                defaultValue={today}
-                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              />
-            </label>
-          </div>
-
-          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-            Note
-            <textarea
-              name="body"
-              required
-              minLength={1}
-              maxLength={2000}
-              className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Compared with the previous entry, the new leaves are stronger and the soil stayed moist longer."
-            />
-          </label>
-
-          <button
-            type="submit"
-            className={buttonVariants({ className: "self-start" })}
-          >
-            <PlusCircle className="size-4" />
-            Add entry
-          </button>
-        </form>
+        <FollowUpEntryComposer
+          objectId={objectId}
+          today={today}
+          initialClientMutationId={crypto.randomUUID()}
+        />
       </section>
 
       <section className="flex flex-col gap-4">
