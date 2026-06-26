@@ -30,6 +30,9 @@ create table if not exists catalog_items (
   source text not null default 'internal_seed',
   source_id text,
   created_by_user_id uuid,
+  reviewed_at timestamptz,
+  reviewed_by_user_id uuid,
+  merged_into_catalog_item_id uuid references catalog_items(id) on delete set null,
   locale text not null default 'und',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -37,7 +40,10 @@ create table if not exists catalog_items (
 
 alter table catalog_items
   add column if not exists normalized_name text,
-  add column if not exists created_by_user_id uuid;
+  add column if not exists created_by_user_id uuid,
+  add column if not exists reviewed_at timestamptz,
+  add column if not exists reviewed_by_user_id uuid,
+  add column if not exists merged_into_catalog_item_id uuid references catalog_items(id) on delete set null;
 
 update catalog_items
 set normalized_name = lower(canonical_name)
@@ -45,6 +51,10 @@ where normalized_name is null;
 
 create index if not exists catalog_items_status_created_idx
   on catalog_items (status, created_at desc);
+
+create index if not exists catalog_items_merged_into_idx
+  on catalog_items (merged_into_catalog_item_id)
+  where merged_into_catalog_item_id is not null;
 
 create unique index if not exists catalog_items_owner_normalized_locale_uidx
   on catalog_items (created_by_user_id, normalized_name, locale);

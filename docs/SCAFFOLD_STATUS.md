@@ -1,6 +1,6 @@
 # Runtime Scaffold — Status & Verification
 
-Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. SDD Slice 1 / Issue 5 adds recoverable entry archive/public-gone state -> authenticated archive UI -> public `410 Gone` tombstone -> search-document exclusion guard. SDD Slice 1 / Issue 6 adds object revisit -> second dated entry on the same object -> first-party H1-safe event rows with privacy payload tests. SDD Slice 2 / OVE-13 adds minimal seeded catalog tables -> signed-in catalog typeahead API -> first-entry selected/unknown catalog state -> object readback/offline payload/event enum tests. SDD Slice 2 / OVE-14 adds explicit missing-name capture -> provisional user-added catalog item -> curation queue job contract -> first-entry user_added state without treating raw text as canonical. SDD Slice 2 / OVE-15 adds a Meilisearch-derived catalog typeahead index contract -> Cyrillic-tolerant catalog search path -> Postgres fallback -> matching-worker reindex job path without leaking provisional/user-owned rows. SDD Slice 2 / OVE-16 adds revisit-time catalog resolution for Unknown/user-added objects -> selected catalog identity -> unchanged journal history -> public SSR revalidation for already-public entries. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. SDD Slice 1 / Issue 5 adds recoverable entry archive/public-gone state -> authenticated archive UI -> public `410 Gone` tombstone -> search-document exclusion guard. SDD Slice 1 / Issue 6 adds object revisit -> second dated entry on the same object -> first-party H1-safe event rows with privacy payload tests. SDD Slice 2 / OVE-13 adds minimal seeded catalog tables -> signed-in catalog typeahead API -> first-entry selected/unknown catalog state -> object readback/offline payload/event enum tests. SDD Slice 2 / OVE-14 adds explicit missing-name capture -> provisional user-added catalog item -> curation queue job contract -> first-entry user_added state without treating raw text as canonical. SDD Slice 2 / OVE-15 adds a Meilisearch-derived catalog typeahead index contract -> Cyrillic-tolerant catalog search path -> Postgres fallback -> matching-worker reindex job path without leaking provisional/user-owned rows. SDD Slice 2 / OVE-16 adds revisit-time catalog resolution for Unknown/user-added objects -> selected catalog identity -> unchanged journal history -> public SSR revalidation for already-public entries. SDD Slice 2 / OVE-17 adds an internal catalog curation scaffold -> pending provisional list -> confirm/merge/reject decisions -> affected object identity updates -> typeahead reindex job enqueue. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
 
 ## Proven Locally
 
@@ -20,6 +20,8 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Provisional user-added catalog rows remain out of the global typeahead index until a later curation path promotes safe public identity.
 - `/garden/objects/[objectId]` lets a signed-in owner resolve an existing Unknown or user-added object to a seeded/confirmed catalog item via the same app API typeahead, without moving, duplicating, or rewriting existing journal entries.
 - Catalog resolution is object-level only: the server validates the selected catalog item, scopes the object update to the current owner, permits only Unknown/user-added -> selected transitions, revalidates affected public SSR entry paths, and leaves public entries `noindex`.
+- `/garden/catalog/curation` provides a minimal internal scaffold for provisional catalog names. It shows only candidate display name, locale/status/source, created date, and aggregate object count; it does not show journal title/body, precise location, media metadata, email, IP, user agent, or private media URLs.
+- Catalog curation can confirm a provisional row into a global `confirmed` catalog item, merge it into an existing seeded/confirmed item while moving affected objects to `selected`, or reject it without making it canonical. Confirm/merge enqueue the existing catalog typeahead reindex job.
 - `/garden` first-entry flow can attach one processed photo asset and `/garden/objects/[objectId]` renders only the stripped public derivative.
 - `/garden` first-entry flow can queue title/body/date/object/photo intent while offline, show queued/syncing/failed/synced local states, retry through `/api/garden/entries`, and read back exactly one authenticated server entry.
 - `/garden/objects/[objectId]` can publish an existing entry through a signed-in server action after explicit disclosure, and `/journal/[slug]` renders a public SSR page that stays `noindex`.
@@ -29,6 +31,7 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Catalog selection event properties remain enum-only through `variety_state`; raw catalog query text and selected display strings are not analytics properties.
 - Catalog repository contract tests prove typeahead reads only safe catalog tables, selectable IDs are limited to seeded/confirmed statuses, Meili hits are deduped and filtered, reindex rows exclude owner-scoped catalog items, provisional candidates are upserted by owner/normalized name/locale, and curation/reindex job payloads exclude journal title/body content.
 - Journal repository contract tests prove catalog resolution is owner-scoped, limited to Unknown/user-added states, does not update `journal_entries`, and revalidates only active public slugs without selecting private entry fields.
+- Catalog curation repository tests prove pending lists expose aggregate-safe metadata only, confirm clears owner scope and makes the item index-eligible, merge updates affected objects without moving entries, reject keeps candidates non-canonical, and public revalidation queries avoid private entry fields.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Analytics event tests prove event payload allowlists, owner/session/object linkage, same-session revisit follow-up marking, and non-blocking event failure logging.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
@@ -62,6 +65,12 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Event properties are limited to booleans and enums such as `entry_scope`, `has_photo`, `is_backdated`, `location_visibility_level`, `sync_status`, `variety_state`, and `followed_by_action`.
 - Do not add title, body, exact location, EXIF, raw media metadata, email, IP, user agent, or address fields to analytics properties.
 
+## Catalog Curation Scaffold
+
+- `CATALOG_CURATOR_USER_IDS` may contain a comma-separated Better Auth user-id allowlist for `/garden/catalog/curation`.
+- Until a real admin/role model exists, an empty allowlist falls back to the existing authenticated-user boundary. This is a temporary MVP scaffold, not production-grade role management.
+- The curation surface is intentionally narrow: pending provisional names, aggregate affected-object counts, confirm, merge, and reject. It is not a public moderation product.
+
 ## Verification Commands
 
 ```bash
@@ -85,13 +94,13 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
-- Internal curation review.
+- Production-grade admin roles and audit UI beyond the minimal catalog curation scaffold.
 - iOS Safari offline capture spike on a real device.
 - PostHog integration, analytics dashboards, and full cohort reporting.
 
 ## Next Build Step
 
-Continue `SDD Slice 2 - Catalog Typeahead And Unknown Fallback` in Linear from the next queued vertical issue after OVE-16.
+Review `SDD Slice 2 - Catalog Typeahead And Unknown Fallback` after OVE-17 before opening the next execution batch.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 

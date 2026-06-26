@@ -70,7 +70,10 @@ export interface CatalogItems {
   created_by_user_id: string | null;
   id: Generated<string>;
   locale: Generated<string>;
+  merged_into_catalog_item_id: string | null;
   normalized_name: string | null;
+  reviewed_at: Timestamp | null;
+  reviewed_by_user_id: string | null;
   source: Generated<string>;
   source_id: string | null;
   status: Generated<string>;
