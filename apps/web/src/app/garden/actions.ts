@@ -20,6 +20,7 @@ export async function createFirstPlantEntryAction(formData: FormData) {
     clientMutationId: String(
       formData.get("clientMutationId") || crypto.randomUUID(),
     ),
+    mediaAssetId: String(formData.get("mediaAssetId") ?? ""),
   });
 
   revalidatePath("/garden");

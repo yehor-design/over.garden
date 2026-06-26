@@ -18,7 +18,9 @@ import {
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryQuery,
   buildPlantObjectPageObjectQuery,
+  buildProcessedMediaForEntriesQuery,
 } from "./journal-repository";
+import { buildAttachProcessedMediaAssetToEntryQuery } from "./media/media-repository";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -89,6 +91,55 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
+  it("attaches only owner-scoped processed media to an entry", () => {
+    const compiled = buildAttachProcessedMediaAssetToEntryQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        mediaAssetId: "00000000-0000-0000-0000-000000000010",
+        journalEntryId: "00000000-0000-0000-0000-000000000020",
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "media_assets"');
+    expect(compiled.sql).toContain('"id" = $3');
+    expect(compiled.sql).toContain('"owner_user_id" = $4');
+    expect(compiled.sql).toContain('"status" = $5');
+    expect(compiled.sql).toContain('"journal_entry_id" is null');
+    expect(compiled.sql).toContain('"journal_entry_id" = $6');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000020",
+      expect.any(Date),
+      "00000000-0000-0000-0000-000000000010",
+      "00000000-0000-0000-0000-000000000001",
+      "processed",
+      "00000000-0000-0000-0000-000000000020",
+    ]);
+  });
+
+  it("selects derivative-only media readback inside owner scope", () => {
+    const compiled = buildProcessedMediaForEntriesQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      [
+        "00000000-0000-0000-0000-000000000020",
+        "00000000-0000-0000-0000-000000000021",
+      ],
+    ).compile();
+
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"journal_entry_id" in ($2, $3)');
+    expect(compiled.sql).toContain('"status" = $4');
+    expect(compiled.sql).toContain('"derivative_key" is not null');
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000021",
+      "processed",
     ]);
   });
 });

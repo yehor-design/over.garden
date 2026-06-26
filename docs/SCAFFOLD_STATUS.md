@@ -1,6 +1,6 @@
 # Runtime Scaffold — Status & Verification
 
-Current status: the 2026-06-26 walking skeleton is implemented and locally verified, and SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
 
 ## Proven Locally
 
@@ -13,8 +13,10 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - `kysely-codegen` generated `src/db/generated.ts` from 10 live tables.
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.
+- `/garden` first-entry flow can attach one processed photo asset and `/garden/objects/[objectId]` renders only the stripped public derivative.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
-- R2/MinIO quarantine upload and public derivative processing work locally.
+- R2 quarantine upload and public derivative processing work against the configured Cloudflare R2 buckets and `media.over.garden`.
+- Media processor tests prove the quarantine original is deleted before the public derivative is written.
 - `sharp` derivative tests prove WebP output without EXIF metadata.
 - Dexie offline queue is test-covered with IndexedDB shim.
 - Search document privacy test proves private journal entries are not indexed.
@@ -52,19 +54,19 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 ## Still Deferred
 
 - Production DigitalOcean Managed Postgres provisioning and backups/PITR checks.
-- Production R2 S3 access key installation in local/deployment env.
+- Production R2 S3 access key installation in deployment env.
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
 - iOS Safari offline capture spike on a real device.
-- Photo attachment, offline sync, public SSR publication, 410 deletion, and H1 event slices.
+- Offline sync, public SSR publication, 410 deletion, and H1 event slices.
 
 ## Next Build Step
 
-Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` after reviewing the first product slice implementation.
+Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` after reviewing the one-photo entry implementation.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 
-The next vertical issue is `OVE-12`: one-photo entry, quarantine upload, stripped derivative processing, and derivative-only readback inside the real `/garden` entry flow. Do not open a standalone media pipeline task.
+The next vertical issue should be the offline entry/photo-intent slice: create entry offline -> queue with idempotency -> regain connection -> sync to the same server path -> authenticated readback -> failed/retry states. Do not open standalone IndexedDB, sync API, or queue-worker tasks outside that vertical path.
 
 Before implementing the next issue, run the Product Thinking Gate in `docs/product-research/README.md` and include the selected research files in the Linear context.

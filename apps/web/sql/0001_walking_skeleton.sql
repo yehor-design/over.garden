@@ -53,8 +53,142 @@ create table if not exists journal_entries (
   client_mutation_id text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (owner_user_id, client_mutation_id)
+  constraint journal_entries_owner_client_mutation_uidx unique (owner_user_id, client_mutation_id)
 );
+
+-- Older local walking-skeleton databases had journal_entries.user_id/body only.
+-- Keep bootstrap repeatable so agents can move between schema slices without a
+-- manual destructive reset.
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'journal_entries'
+      and column_name = 'user_id'
+  ) and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'journal_entries'
+      and column_name = 'owner_user_id'
+  ) then
+    alter table journal_entries rename column user_id to owner_user_id;
+  end if;
+end $$;
+
+alter table journal_entries
+  add column if not exists owner_user_id uuid,
+  add column if not exists space_id uuid,
+  add column if not exists plant_object_id uuid,
+  add column if not exists title text,
+  add column if not exists entry_scope text default 'object',
+  add column if not exists entry_date date default current_date;
+
+update journal_entries
+set
+  title = coalesce(title, 'Skeleton journal entry'),
+  entry_scope = coalesce(entry_scope, 'object'),
+  entry_date = coalesce(entry_date, current_date)
+where title is null
+   or entry_scope is null
+   or entry_date is null;
+
+with owners as (
+  select distinct owner_user_id
+  from journal_entries
+  where owner_user_id is not null
+    and (space_id is null or plant_object_id is null)
+),
+existing_spaces as (
+  select distinct on (owner_user_id) owner_user_id, id
+  from spaces
+  where display_name = 'Local skeleton space'
+  order by owner_user_id, created_at
+),
+inserted_spaces as (
+  insert into spaces (owner_user_id, display_name)
+  select owners.owner_user_id, 'Local skeleton space'
+  from owners
+  left join existing_spaces using (owner_user_id)
+  where existing_spaces.id is null
+  returning owner_user_id, id
+),
+space_map as (
+  select owner_user_id, id from existing_spaces
+  union all
+  select owner_user_id, id from inserted_spaces
+),
+existing_objects as (
+  select distinct on (owner_user_id, space_id) owner_user_id, space_id, id
+  from plant_objects
+  where display_name = 'Skeleton plant'
+  order by owner_user_id, space_id, created_at
+),
+inserted_objects as (
+  insert into plant_objects (owner_user_id, space_id, display_name)
+  select space_map.owner_user_id, space_map.id, 'Skeleton plant'
+  from space_map
+  left join existing_objects
+    on existing_objects.owner_user_id = space_map.owner_user_id
+   and existing_objects.space_id = space_map.id
+  where existing_objects.id is null
+  returning owner_user_id, space_id, id
+),
+object_map as (
+  select owner_user_id, space_id, id from existing_objects
+  union all
+  select owner_user_id, space_id, id from inserted_objects
+)
+update journal_entries
+set
+  space_id = coalesce(journal_entries.space_id, space_map.id),
+  plant_object_id = coalesce(journal_entries.plant_object_id, object_map.id)
+from space_map
+inner join object_map
+  on object_map.owner_user_id = space_map.owner_user_id
+ and object_map.space_id = space_map.id
+where journal_entries.owner_user_id = space_map.owner_user_id
+  and (journal_entries.space_id is null or journal_entries.plant_object_id is null);
+
+alter table journal_entries
+  alter column owner_user_id set not null,
+  alter column space_id set not null,
+  alter column plant_object_id set not null,
+  alter column title set not null,
+  alter column entry_scope set default 'object',
+  alter column entry_scope set not null,
+  alter column entry_date set default current_date,
+  alter column entry_date set not null;
+
+create unique index if not exists journal_entries_owner_client_mutation_uidx
+  on journal_entries (owner_user_id, client_mutation_id);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_space_id_fkey'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      add constraint journal_entries_space_id_fkey
+      foreign key (space_id) references spaces(id) on delete cascade;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_plant_object_id_fkey'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      add constraint journal_entries_plant_object_id_fkey
+      foreign key (plant_object_id) references plant_objects(id) on delete cascade;
+  end if;
+end $$;
 
 create index if not exists journal_entries_owner_object_date_idx
   on journal_entries (owner_user_id, plant_object_id, entry_date desc, created_at desc);
@@ -77,6 +211,10 @@ create table if not exists media_assets (
 
 create index if not exists media_assets_owner_created_idx
   on media_assets (owner_user_id, created_at desc);
+
+create unique index if not exists media_assets_one_per_entry_uidx
+  on media_assets (journal_entry_id)
+  where journal_entry_id is not null;
 
 create table if not exists job_queue (
   id uuid primary key default gen_random_uuid(),

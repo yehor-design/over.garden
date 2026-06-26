@@ -92,6 +92,7 @@ R2 API token requirement:
 - Permission: Object Read and Write
 - Scope: `overgarden-quarantine` and `overgarden-public`
 - Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
+- Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
 ### Quarantine Bucket
 

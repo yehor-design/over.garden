@@ -21,6 +21,12 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "media.over.garden" },
+      { protocol: "http", hostname: "localhost", port: "9000" },
+    ],
+  },
   // Pin the workspace root to the MONOREPO root (two levels up from apps/web).
   // This matches the `outputFileTracingRoot` Vercel forces to the repo clone
   // root (otherwise Next warns they must be equal), and it also stops local

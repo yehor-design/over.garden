@@ -16,12 +16,12 @@ export async function processQuarantinedImage(asset: MediaAsset) {
     .replace(/^quarantine\//, "derivatives/")
     .replace(/\.[^.]+$/, `.${derivative.extension}`);
 
+  await deleteQuarantineObject(asset.quarantine_key);
   await putPublicDerivativeObject(
     derivativeKey,
     derivative.buffer,
     derivative.contentType,
   );
-  await deleteQuarantineObject(asset.quarantine_key);
 
   return {
     derivativeKey,

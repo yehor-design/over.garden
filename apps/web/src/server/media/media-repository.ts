@@ -1,8 +1,12 @@
 import "server-only";
 
+import type { Kysely, Transaction } from "kysely";
+
 import { db } from "@/db";
-import type { MediaAsset } from "@/db/schema";
+import type { Database, MediaAsset } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
+
+type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export async function createQuarantinedMediaAsset(
   scope: RequestScope,
@@ -49,4 +53,64 @@ export async function markMediaAssetProcessed(
     .where("owner_user_id", "=", scope.userId)
     .returningAll()
     .executeTakeFirstOrThrow();
+}
+
+export async function markMediaAssetFailed(
+  scope: RequestScope,
+  id: string,
+): Promise<MediaAsset> {
+  return db
+    .updateTable("media_assets")
+    .set({
+      status: "failed",
+      updated_at: new Date(),
+    })
+    .where("id", "=", id)
+    .where("owner_user_id", "=", scope.userId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+}
+
+export async function attachProcessedMediaAssetToEntry(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    mediaAssetId: string;
+    journalEntryId: string;
+  },
+): Promise<MediaAsset | undefined> {
+  return buildAttachProcessedMediaAssetToEntryQuery(
+    executor,
+    scope,
+    input,
+  ).executeTakeFirst();
+}
+
+export function buildAttachProcessedMediaAssetToEntryQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  {
+    mediaAssetId,
+    journalEntryId,
+  }: {
+    mediaAssetId: string;
+    journalEntryId: string;
+  },
+) {
+  return executor
+    .updateTable("media_assets")
+    .set({
+      journal_entry_id: journalEntryId,
+      updated_at: new Date(),
+    })
+    .where("id", "=", mediaAssetId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("status", "=", "processed")
+    .where((eb) =>
+      eb.or([
+        eb("journal_entry_id", "is", null),
+        eb("journal_entry_id", "=", journalEntryId),
+      ]),
+    )
+    .returningAll();
 }

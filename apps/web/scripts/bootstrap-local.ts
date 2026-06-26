@@ -1,7 +1,12 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CreateBucketCommand, HeadBucketCommand, PutBucketPolicyCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  HeadBucketCommand,
+  PutBucketPolicyCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
 import { config as loadEnv } from "dotenv";
@@ -37,7 +42,10 @@ const authOptions = {
 } satisfies BetterAuthOptions;
 
 async function main() {
-  const appSql = await readFile(path.join(process.cwd(), "sql/0001_walking_skeleton.sql"), "utf8");
+  const appSql = await readFile(
+    path.join(process.cwd(), "sql/0001_walking_skeleton.sql"),
+    "utf8",
+  );
   await pool.query(appSql);
 
   // Constructing auth validates the options against the installed Better Auth API.
@@ -85,7 +93,6 @@ main()
     process.exitCode = 1;
   });
 
-
 async function allowPublicReads(bucket: string) {
   const client = new S3Client({
     region: "auto",
@@ -97,20 +104,40 @@ async function allowPublicReads(bucket: string) {
     },
   });
 
-  await client.send(
-    new PutBucketPolicyCommand({
-      Bucket: bucket,
-      Policy: JSON.stringify({
-        Version: "2012-10-17",
-        Statement: [
-          {
-            Effect: "Allow",
-            Principal: "*",
-            Action: ["s3:GetObject"],
-            Resource: [`arn:aws:s3:::${bucket}/*`],
-          },
-        ],
+  await client
+    .send(
+      new PutBucketPolicyCommand({
+        Bucket: bucket,
+        Policy: JSON.stringify({
+          Version: "2012-10-17",
+          Statement: [
+            {
+              Effect: "Allow",
+              Principal: "*",
+              Action: ["s3:GetObject"],
+              Resource: [`arn:aws:s3:::${bucket}/*`],
+            },
+          ],
+        }),
       }),
-    }),
+    )
+    .catch((error: unknown) => {
+      if (isS3NotImplemented(error)) {
+        console.warn(
+          `Skipping bucket policy for ${bucket}; this endpoint does not support PutBucketPolicy.`,
+        );
+        return;
+      }
+
+      throw error;
+    });
+}
+
+function isS3NotImplemented(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "Code" in error &&
+    error.Code === "NotImplemented"
   );
 }

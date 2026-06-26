@@ -12,6 +12,8 @@ import type {
   Space,
   VarietyState,
 } from "@/db/schema";
+import { getPublicDerivativeUrl } from "@/lib/storage";
+import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
 
 const MAX_BODY_LENGTH = 2000;
@@ -33,6 +35,7 @@ export interface CreateFirstPlantEntryInput {
   body: string;
   entryDate?: string | null;
   clientMutationId: string;
+  mediaAssetId?: string | null;
 }
 
 export interface CreateJournalEntryInput {
@@ -54,10 +57,24 @@ export interface PlantObjectPage {
   space: Pick<Space, "id" | "display_name" | "location_visibility">;
   plantObject: Pick<
     PlantObject,
-    "id" | "display_name" | "variety_text" | "variety_state" | "location_visibility"
+    | "id"
+    | "display_name"
+    | "variety_text"
+    | "variety_state"
+    | "location_visibility"
   >;
-  entries: JournalEntry[];
+  entries: JournalEntryReadback[];
 }
+
+export interface EntryMediaReadback {
+  id: string;
+  derivativeKey: string;
+  publicUrl: string;
+}
+
+export type JournalEntryReadback = JournalEntry & {
+  media: EntryMediaReadback | null;
+};
 
 export interface FirstPlantEntryResult {
   space: PlantObjectPage["space"];
@@ -76,8 +93,16 @@ export async function createFirstPlantEntry(
   );
 
   if (existing) {
+    await attachMediaAssetToEntryIfPresent(
+      db,
+      scope,
+      normalized.mediaAssetId,
+      existing.id,
+    );
+
     const page = await getPlantObjectPage(scope, existing.plant_object_id);
-    if (!page) throw new Error("Existing journal entry is outside the request scope.");
+    if (!page)
+      throw new Error("Existing journal entry is outside the request scope.");
 
     return {
       space: page.space,
@@ -123,6 +148,13 @@ export async function createFirstPlantEntry(
     });
 
     if (entry) {
+      await attachMediaAssetToEntryIfPresent(
+        trx,
+        scope,
+        normalized.mediaAssetId,
+        entry.id,
+      );
+
       return {
         space: {
           id: space.id,
@@ -147,8 +179,17 @@ export async function createFirstPlantEntry(
     );
 
     if (!existingAfterConflict) {
-      throw new Error("Journal entry idempotency conflict could not be resolved.");
+      throw new Error(
+        "Journal entry idempotency conflict could not be resolved.",
+      );
     }
+
+    await attachMediaAssetToEntryIfPresent(
+      trx,
+      scope,
+      normalized.mediaAssetId,
+      existingAfterConflict.id,
+    );
 
     const page = await getPlantObjectPage(
       scope,
@@ -209,7 +250,7 @@ export async function getPlantObjectPage(
 
   if (!objectRow) return null;
 
-  const entries = await executor
+  const entryRows = await executor
     .selectFrom("journal_entries")
     .selectAll("journal_entries")
     .where("owner_user_id", "=", scope.userId)
@@ -217,6 +258,11 @@ export async function getPlantObjectPage(
     .orderBy("entry_date", "desc")
     .orderBy("created_at", "desc")
     .execute();
+  const mediaByEntryId = await getProcessedMediaByEntryId(
+    executor,
+    scope,
+    entryRows.map((entry) => entry.id),
+  );
 
   return {
     space: {
@@ -231,7 +277,10 @@ export async function getPlantObjectPage(
       variety_state: objectRow.varietyState,
       location_visibility: objectRow.objectLocationVisibility,
     },
-    entries,
+    entries: entryRows.map((entry) => ({
+      ...entry,
+      media: mediaByEntryId.get(entry.id) ?? null,
+    })),
   };
 }
 
@@ -321,6 +370,24 @@ export function buildPlantObjectPageObjectQuery(
     .where("spaces.owner_user_id", "=", scope.userId);
 }
 
+export function buildProcessedMediaForEntriesQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: readonly string[],
+) {
+  return executor
+    .selectFrom("media_assets")
+    .select([
+      "id",
+      "journal_entry_id as journalEntryId",
+      "derivative_key as derivativeKey",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "in", entryIds)
+    .where("status", "=", "processed")
+    .where("derivative_key", "is not", null);
+}
+
 async function insertJournalEntry(
   executor: QueryExecutor,
   row: NewJournalEntryRow,
@@ -340,14 +407,35 @@ async function findJournalEntryByClientMutation(
   ).executeTakeFirst();
 }
 
-function normalizeCreateFirstPlantEntryInput(input: CreateFirstPlantEntryInput) {
-  const varietyText = normalizeOptionalText(input.varietyText, "Variety", MAX_NAME_LENGTH);
+function normalizeCreateFirstPlantEntryInput(
+  input: CreateFirstPlantEntryInput,
+) {
+  const varietyText = normalizeOptionalText(
+    input.varietyText,
+    "Variety",
+    MAX_NAME_LENGTH,
+  );
+  const mediaAssetId = normalizeOptionalText(
+    input.mediaAssetId,
+    "Media asset id",
+    200,
+  );
 
   return {
-    spaceName: normalizeRequiredText(input.spaceName, "Space name", MAX_NAME_LENGTH),
-    plantName: normalizeRequiredText(input.plantName, "Plant name", MAX_NAME_LENGTH),
+    spaceName: normalizeRequiredText(
+      input.spaceName,
+      "Space name",
+      MAX_NAME_LENGTH,
+    ),
+    plantName: normalizeRequiredText(
+      input.plantName,
+      "Plant name",
+      MAX_NAME_LENGTH,
+    ),
     varietyText,
-    varietyState: (varietyText ? "free_text" : "unknown") satisfies VarietyState,
+    varietyState: (varietyText
+      ? "free_text"
+      : "unknown") satisfies VarietyState,
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
     body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
     entryDate: normalizeEntryDate(input.entryDate),
@@ -356,10 +444,15 @@ function normalizeCreateFirstPlantEntryInput(input: CreateFirstPlantEntryInput) 
       "Client mutation id",
       200,
     ),
+    mediaAssetId,
   };
 }
 
-function normalizeRequiredText(value: string, label: string, maxLength: number) {
+function normalizeRequiredText(
+  value: string,
+  label: string,
+  maxLength: number,
+) {
   const normalized = value.trim();
   if (!normalized) throw new Error(`${label} is required.`);
   if (normalized.length > maxLength) {
@@ -388,4 +481,48 @@ function normalizeEntryDate(value: string | null | undefined) {
     throw new Error("Entry date must use YYYY-MM-DD format.");
   }
   return normalized;
+}
+
+async function attachMediaAssetToEntryIfPresent(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  mediaAssetId: string | null,
+  journalEntryId: string,
+) {
+  if (!mediaAssetId) return;
+
+  const mediaAsset = await attachProcessedMediaAssetToEntry(executor, scope, {
+    mediaAssetId,
+    journalEntryId,
+  });
+
+  if (!mediaAsset) {
+    throw new Error("Processed media asset is unavailable for this entry.");
+  }
+}
+
+async function getProcessedMediaByEntryId(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: string[],
+) {
+  const mediaByEntryId = new Map<string, EntryMediaReadback>();
+  if (entryIds.length === 0) return mediaByEntryId;
+
+  const mediaRows = await buildProcessedMediaForEntriesQuery(
+    executor,
+    scope,
+    entryIds,
+  ).execute();
+
+  for (const media of mediaRows) {
+    if (!media.journalEntryId || !media.derivativeKey) continue;
+    mediaByEntryId.set(media.journalEntryId, {
+      id: media.id,
+      derivativeKey: media.derivativeKey,
+      publicUrl: getPublicDerivativeUrl(media.derivativeKey),
+    });
+  }
+
+  return mediaByEntryId;
 }

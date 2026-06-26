@@ -295,6 +295,8 @@ User behavior: a signed-in gardener adds one photo to a journal entry, the origi
 
 Why this is second: photo is core to gardening evidence, but it is safety-critical. This slice must prove the full media path inside the real entry flow, not as a standalone media demo.
 
+Implementation status (2026-06-26): implemented by `OVE-12` in the real `/garden` entry path. Verified with Cloudflare R2 upload/process/public-fetch smoke, derivative-only authenticated SSR readback, desktop/mobile browser checks, repository contract tests, media processor order test, lint, typecheck, full tests, and production build.
+
 Context files:
 
 - `docs/TECH_STACK_DECISIONS.md`
@@ -313,7 +315,7 @@ Context files:
 Invariants:
 
 - Public photo is only the stripped derivative.
-- Quarantine original is deleted after successful processing.
+- Quarantine original is deleted before the public derivative is written.
 - Client-side stripping is optional optimization, never the safety boundary.
 - Public URLs must never expose quarantine keys.
 - Media reads/writes remain scoped to the owner.
@@ -347,7 +349,7 @@ Acceptance criteria:
 
 - User can attach one photo while creating or editing an entry in the real product path.
 - Processing creates WebP derivative without EXIF metadata.
-- Original object is deleted after successful derivative write.
+- Original object is deleted before the derivative is exposed publicly.
 - Entry readback renders only the derivative URL.
 - Failed processing leaves a recoverable failed state, not a broken public image.
 - User A cannot attach/read User B's media asset.

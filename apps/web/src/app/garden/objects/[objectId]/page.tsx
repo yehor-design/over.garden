@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -44,7 +45,10 @@ export default async function PlantObjectReadbackPage({
       <header className="flex flex-col gap-4 border-b border-border pb-5">
         <Link
           href="/garden"
-          className={buttonVariants({ variant: "outline", className: "self-start" })}
+          className={buttonVariants({
+            variant: "outline",
+            className: "self-start",
+          })}
         >
           Back to journal
         </Link>
@@ -68,7 +72,9 @@ export default async function PlantObjectReadbackPage({
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-foreground">Journal entries</h2>
+          <h2 className="text-lg font-semibold text-foreground">
+            Journal entries
+          </h2>
           <p className="text-sm text-muted-foreground">
             {page.entries.length === 1
               ? "1 entry saved for this object."
@@ -83,7 +89,10 @@ export default async function PlantObjectReadbackPage({
         ) : (
           <ol className="flex flex-col gap-3">
             {page.entries.map((entry) => (
-              <li key={entry.id} className="rounded-lg border border-border p-4">
+              <li
+                key={entry.id}
+                className="rounded-lg border border-border p-4"
+              >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                   <h3 className="text-base font-semibold text-foreground">
                     {entry.title}
@@ -92,11 +101,23 @@ export default async function PlantObjectReadbackPage({
                     {formatDate(entry.entry_date)}
                   </time>
                 </div>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-foreground">
+                <p className="mt-3 text-sm leading-6 whitespace-pre-wrap text-foreground">
                   {entry.body}
                 </p>
+                {entry.media ? (
+                  <Image
+                    src={entry.media.publicUrl}
+                    alt={`${entry.title} photo`}
+                    width={960}
+                    height={540}
+                    sizes="(min-width: 640px) 36rem, 100vw"
+                    unoptimized
+                    className="mt-4 aspect-video w-full max-w-xl rounded-md border border-border object-cover"
+                  />
+                ) : null}
                 <p className="mt-3 text-xs text-muted-foreground">
                   {entry.entry_scope} · {entry.visibility}
+                  {entry.media ? " · stripped photo derivative" : ""}
                 </p>
               </li>
             ))}

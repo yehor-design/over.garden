@@ -5,6 +5,7 @@ import { getCurrentSession } from "@/server/auth-session";
 import { listMyPlantObjects } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { createFirstPlantEntryAction } from "./actions";
+import { EntryPhotoInput } from "./entry-photo-input";
 import { GardenAuthPanel } from "./garden-auth-panel";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,9 @@ export const dynamic = "force-dynamic";
 export default async function GardenPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
-  const objects = userId ? await listMyPlantObjects(scopedToUser(userId), 12) : [];
+  const objects = userId
+    ? await listMyPlantObjects(scopedToUser(userId), 12)
+    : [];
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -25,12 +28,14 @@ export default async function GardenPage() {
               Garden journal
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              Capture one real plant record with its place, object, and first dated
-              note.
+              Capture one real plant record with its place, object, and first
+              dated note.
             </p>
           </div>
           {session?.user?.email ? (
-            <p className="text-sm text-muted-foreground">{session.user.email}</p>
+            <p className="text-sm text-muted-foreground">
+              {session.user.email}
+            </p>
           ) : null}
         </div>
       </header>
@@ -125,6 +130,8 @@ export default async function GardenPage() {
                 />
               </label>
 
+              <EntryPhotoInput />
+
               <Button type="submit" className="self-start">
                 Save first entry
               </Button>
@@ -132,7 +139,9 @@ export default async function GardenPage() {
           </section>
 
           <aside className="flex flex-col gap-3">
-            <h2 className="text-base font-semibold text-foreground">Plant objects</h2>
+            <h2 className="text-base font-semibold text-foreground">
+              Plant objects
+            </h2>
             {objects.length === 0 ? (
               <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
                 No plant objects yet. Save the first entry to create one.
