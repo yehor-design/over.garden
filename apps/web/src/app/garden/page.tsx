@@ -1,9 +1,7 @@
 import Link from "next/link";
 
-import type {
-  ActivationSource,
-  FirstEntryCatalogSelection,
-} from "@/lib/garden/entry-contracts";
+import { normalizeActivationSourceParam } from "@/lib/garden/activation";
+import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import { getCurrentSession } from "@/server/auth-session";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import { listMyPlantObjects } from "@/server/journal-repository";
@@ -27,9 +25,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   ]);
   const userId = session?.user?.id;
   const initialCatalogItem = await resolveInitialCatalogSelection(params);
-  const activationSource = initialCatalogItem
-    ? normalizeActivationSource(params.source)
-    : null;
+  const activationSource = normalizeActivationSourceParam(params.source, {
+    hasResolvedCatalogSelection: Boolean(initialCatalogItem),
+  });
   const objects = userId
     ? await listMyPlantObjects(scopedToUser(userId), 12)
     : [];
@@ -60,7 +58,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       </header>
 
       {!userId ? (
-        <GardenAuthPanel catalogName={initialCatalogItem?.displayName} />
+        <GardenAuthPanel
+          activationSource={activationSource}
+          catalogName={initialCatalogItem?.displayName}
+        />
       ) : null}
 
       {userId ? (
@@ -183,14 +184,6 @@ async function resolveInitialCatalogSelection(
     status: item.status,
     source: item.source,
   };
-}
-
-function normalizeActivationSource(
-  value: string | string[] | undefined,
-): ActivationSource | null {
-  return normalizeFirstParam(value) === "public-variety"
-    ? "public_variety"
-    : null;
 }
 
 function normalizeFirstParam(value: string | string[] | undefined) {

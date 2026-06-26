@@ -117,13 +117,13 @@ describe("offline journal entry sync", () => {
     const body = buildJournalEntryRequestBodyForSync(
       {
         ...payload,
-        activationSource: "public_variety",
+        activationSource: "homepage",
       },
       "queue-entry-id",
       null,
     );
 
-    expect(body.activationSource).toBe("public_variety");
+    expect(body.activationSource).toBe("homepage");
     expect(JSON.stringify(body)).not.toContain("referrer");
     expect(JSON.stringify(body)).not.toContain("user_agent");
     expect(JSON.stringify(body)).not.toContain("public_url");

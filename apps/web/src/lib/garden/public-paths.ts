@@ -6,6 +6,10 @@ export function publicVarietyPath(publicSlug: string): string {
   return `/variety/${encodeURIComponent(publicSlug)}`;
 }
 
+export function gardenFirstEntryHomepagePath(): string {
+  return "/garden?source=homepage";
+}
+
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,

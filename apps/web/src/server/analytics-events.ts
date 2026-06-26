@@ -3,7 +3,10 @@ import "server-only";
 import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { ActivationSource } from "@/lib/garden/entry-contracts";
+import type {
+  ActivationSource,
+  ActivationSurfaceKind,
+} from "@/lib/garden/entry-contracts";
 import type {
   AnalyticsEvent,
   AnalyticsEventName,
@@ -25,7 +28,7 @@ export interface AnalyticsEventProperties {
   has_photo?: boolean;
   is_backdated?: boolean;
   location_visibility_level?: LocationVisibility;
-  source_surface_kind?: "variety";
+  source_surface_kind?: ActivationSurfaceKind;
   sync_status?: EntrySyncStatus;
   variety_state?: VarietyState;
   followed_by_action?: boolean;
@@ -290,7 +293,13 @@ function normalizeAnalyticsEventPropertyValue(
 ) {
   switch (key) {
     case "activation_source":
-      if (value === "public_variety") return value;
+      if (
+        value === "homepage" ||
+        value === "public_variety" ||
+        value === "direct_garden"
+      ) {
+        return value;
+      }
       break;
     case "entry_scope":
       if (value === "object") return value;
@@ -304,7 +313,9 @@ function normalizeAnalyticsEventPropertyValue(
       if (value === "region" || value === "hidden") return value;
       break;
     case "source_surface_kind":
-      if (value === "variety") return value;
+      if (value === "homepage" || value === "variety" || value === "garden") {
+        return value;
+      }
       break;
     case "sync_status":
       if (

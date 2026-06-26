@@ -4,15 +4,20 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { ActivationSource } from "@/lib/garden/entry-contracts";
 
 const defaultEmail = "gardener@over.garden";
 const defaultPassword = "overgarden-local-gardener";
 
 interface GardenAuthPanelProps {
+  activationSource?: ActivationSource;
   catalogName?: string | null;
 }
 
-export function GardenAuthPanel({ catalogName }: GardenAuthPanelProps) {
+export function GardenAuthPanel({
+  activationSource = "direct_garden",
+  catalogName,
+}: GardenAuthPanelProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
@@ -48,9 +53,7 @@ export function GardenAuthPanel({ catalogName }: GardenAuthPanelProps) {
           Garden workspace
         </h2>
         <p className="text-sm text-muted-foreground">
-          {catalogName
-            ? `Use the local gardener account to start a private journal entry for ${catalogName}.`
-            : "Use the local gardener account to start a journal."}
+          {authPrompt({ activationSource, catalogName })}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -69,4 +72,22 @@ export function GardenAuthPanel({ catalogName }: GardenAuthPanelProps) {
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
     </section>
   );
+}
+
+function authPrompt({
+  activationSource,
+  catalogName,
+}: {
+  activationSource: ActivationSource;
+  catalogName?: string | null;
+}) {
+  if (activationSource === "public_variety" && catalogName) {
+    return `Use the local gardener account to start a private journal entry for ${catalogName}.`;
+  }
+
+  if (activationSource === "homepage") {
+    return "Use the local gardener account when you are ready to save the first private plant record.";
+  }
+
+  return "Use the local gardener account to start or continue a journal.";
 }

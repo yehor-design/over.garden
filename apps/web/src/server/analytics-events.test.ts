@@ -48,26 +48,47 @@ describe("analytics event privacy contracts", () => {
   it("normalizes only privacy-safe boolean and enum properties", () => {
     expect(
       normalizeAnalyticsEventProperties({
-        activation_source: "public_variety",
+        activation_source: "homepage",
         entry_scope: "object",
         has_photo: true,
         is_backdated: false,
         location_visibility_level: "hidden",
-        source_surface_kind: "variety",
+        source_surface_kind: "homepage",
         sync_status: "offline_synced",
         variety_state: "selected",
         followed_by_action: false,
       }),
     ).toEqual({
-      activation_source: "public_variety",
+      activation_source: "homepage",
       entry_scope: "object",
       has_photo: true,
       is_backdated: false,
       location_visibility_level: "hidden",
-      source_surface_kind: "variety",
+      source_surface_kind: "homepage",
       sync_status: "offline_synced",
       variety_state: "selected",
       followed_by_action: false,
+    });
+  });
+
+  it("allows only bounded activation and source surface enums", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        activation_source: "public_variety",
+        source_surface_kind: "variety",
+      }),
+    ).toEqual({
+      activation_source: "public_variety",
+      source_surface_kind: "variety",
+    });
+    expect(
+      normalizeAnalyticsEventProperties({
+        activation_source: "direct_garden",
+        source_surface_kind: "garden",
+      }),
+    ).toEqual({
+      activation_source: "direct_garden",
+      source_surface_kind: "garden",
     });
   });
 
@@ -142,6 +163,11 @@ describe("analytics event privacy contracts", () => {
         activation_source: "https://over.garden/variety/x",
       } as never),
     ).toThrow("Unsafe analytics event value for activation_source.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        source_surface_kind: "https://over.garden/",
+      } as never),
+    ).toThrow("Unsafe analytics event value for source_surface_kind.");
   });
 
   it("builds event inserts with pseudonymous scope and no raw title/body fields", () => {

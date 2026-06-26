@@ -1,5 +1,9 @@
 import { revalidatePath } from "next/cache";
 
+import {
+  activationSurfaceKindForSource,
+  normalizeActivationSourceValue,
+} from "@/lib/garden/activation";
 import type {
   ActivationSource,
   FirstPlantEntryRequest,
@@ -129,7 +133,7 @@ function normalizeSyncStatus(value: unknown): EntrySyncStatus {
 }
 
 function normalizeActivationSource(value: unknown): ActivationSource | null {
-  return value === "public_variety" ? value : null;
+  return normalizeActivationSourceValue(value);
 }
 
 function normalizeTarget(target: unknown, plantObjectId: unknown) {
@@ -149,7 +153,7 @@ async function recordFirstPlantEntryEvents(
   const activationProperties = activationSource
     ? {
         activation_source: activationSource,
-        source_surface_kind: "variety" as const,
+        source_surface_kind: activationSurfaceKindForSource(activationSource),
       }
     : {};
   const sharedEntryProperties = {
