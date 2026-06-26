@@ -15,12 +15,34 @@ create table if not exists spaces (
   owner_user_id uuid not null,
   display_name text not null check (char_length(display_name) between 1 and 120),
   location_visibility text not null default 'hidden' check (location_visibility in ('region', 'hidden')),
+  coarse_region_code text check (coarse_region_code is null or coarse_region_code ~ '^(UA|BG)-[0-9]{2}$'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table spaces
+  add column if not exists coarse_region_code text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'spaces_coarse_region_code_check'
+      and conrelid = 'spaces'::regclass
+  ) then
+    alter table spaces
+      add constraint spaces_coarse_region_code_check
+      check (coarse_region_code is null or coarse_region_code ~ '^(UA|BG)-[0-9]{2}$');
+  end if;
+end $$;
+
 create index if not exists spaces_owner_created_idx
   on spaces (owner_user_id, created_at desc);
+
+create index if not exists spaces_owner_coarse_region_idx
+  on spaces (owner_user_id, coarse_region_code)
+  where coarse_region_code is not null;
 
 create table if not exists catalog_items (
   id uuid primary key default gen_random_uuid(),
@@ -116,12 +138,14 @@ create table if not exists plant_objects (
   variety_text text check (variety_text is null or char_length(variety_text) between 1 and 120),
   variety_state text not null default 'unknown' check (variety_state in ('selected', 'unknown', 'user_added', 'free_text')),
   location_visibility text not null default 'hidden' check (location_visibility in ('region', 'hidden')),
+  coarse_region_code text check (coarse_region_code is null or coarse_region_code ~ '^(UA|BG)-[0-9]{2}$'),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table plant_objects
-  add column if not exists catalog_item_id uuid;
+  add column if not exists catalog_item_id uuid,
+  add column if not exists coarse_region_code text;
 
 do $$
 begin
@@ -149,6 +173,17 @@ begin
   if not exists (
     select 1
     from pg_constraint
+    where conname = 'plant_objects_coarse_region_code_check'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_coarse_region_code_check
+      check (coarse_region_code is null or coarse_region_code ~ '^(UA|BG)-[0-9]{2}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
     where conname = 'plant_objects_catalog_item_id_fkey'
       and conrelid = 'plant_objects'::regclass
   ) then
@@ -163,6 +198,10 @@ create index if not exists plant_objects_owner_created_idx
 
 create index if not exists plant_objects_owner_space_idx
   on plant_objects (owner_user_id, space_id);
+
+create index if not exists plant_objects_owner_coarse_region_idx
+  on plant_objects (owner_user_id, coarse_region_code)
+  where coarse_region_code is not null;
 
 create index if not exists plant_objects_catalog_item_idx
   on plant_objects (catalog_item_id)

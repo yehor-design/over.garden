@@ -9,6 +9,8 @@ export interface FirstPlantEntryRequest {
   title: string;
   body: string;
   entryDate?: string | null;
+  locationVisibility?: string | null;
+  coarseRegionCode?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
   syncStatus?: EntrySyncStatus;
@@ -19,6 +21,7 @@ export interface FirstPlantEntryResponse {
     id: string;
     displayName: string;
     locationVisibility: string;
+    coarseRegionCode: string | null;
   };
   plantObject: {
     id: string;
@@ -27,6 +30,7 @@ export interface FirstPlantEntryResponse {
     varietyText: string | null;
     varietyState: string;
     locationVisibility: string;
+    coarseRegionCode: string | null;
   };
   entry: {
     id: string;

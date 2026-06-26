@@ -44,6 +44,8 @@ export async function POST(request: Request) {
       title: body.title ?? "",
       body: body.body ?? "",
       entryDate: body.entryDate ?? "",
+      locationVisibility: body.locationVisibility ?? "",
+      coarseRegionCode: body.coarseRegionCode ?? "",
       clientMutationId: body.clientMutationId ?? "",
       mediaAssetId: body.mediaAssetId ?? "",
     });
@@ -59,6 +61,7 @@ export async function POST(request: Request) {
         id: result.space.id,
         displayName: result.space.display_name,
         locationVisibility: result.space.location_visibility,
+        coarseRegionCode: result.space.coarse_region_code,
       },
       plantObject: {
         id: result.plantObject.id,
@@ -67,6 +70,7 @@ export async function POST(request: Request) {
         varietyText: result.plantObject.variety_text,
         varietyState: result.plantObject.variety_state,
         locationVisibility: result.plantObject.location_visibility,
+        coarseRegionCode: result.plantObject.coarse_region_code,
       },
       entry: {
         id: result.entry.id,

@@ -11,6 +11,7 @@ export type {
   CatalogItem,
   CatalogItemName,
   CatalogItemStatus,
+  CoarseRegionCode,
   EntrySyncStatus,
   Health,
   JobQueueJob,

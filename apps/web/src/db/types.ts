@@ -21,6 +21,7 @@ export type EntryVisibility = "private" | "public";
 export type EntryLifecycleState = "active" | "archived";
 export type EntryScope = "object";
 export type LocationVisibility = "region" | "hidden";
+export type { CoarseRegionCode } from "@/lib/garden/regions";
 export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
 export type CatalogItemStatus =
   | "seeded"

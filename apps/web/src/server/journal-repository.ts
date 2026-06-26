@@ -13,6 +13,7 @@ import type {
   Space,
   VarietyState,
 } from "@/db/schema";
+import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
@@ -44,6 +45,8 @@ export interface CreateFirstPlantEntryInput {
   title: string;
   body: string;
   entryDate?: string | null;
+  locationVisibility?: string | null;
+  coarseRegionCode?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
 }
@@ -88,10 +91,22 @@ export interface ResolvePlantObjectCatalogInput {
   catalogItemId: string;
 }
 
+export interface UpdatePlantObjectLocationInput {
+  plantObjectId: string;
+  locationVisibility?: string | null;
+  coarseRegionCode?: string | null;
+}
+
 export interface PlantObjectCatalogResolutionResult {
   space: PlantObjectPage["space"];
   plantObject: PlantObjectPage["plantObject"];
   entryCount: number;
+  publicEntryPaths: string[];
+}
+
+export interface PlantObjectLocationUpdateResult {
+  space: PlantObjectPage["space"];
+  plantObject: PlantObjectPage["plantObject"];
   publicEntryPaths: string[];
 }
 
@@ -106,7 +121,10 @@ export interface PlantObjectSummary {
 }
 
 export interface PlantObjectPage {
-  space: Pick<Space, "id" | "display_name" | "location_visibility">;
+  space: Pick<
+    Space,
+    "id" | "display_name" | "location_visibility" | "coarse_region_code"
+  >;
   plantObject: Pick<
     PlantObject,
     | "id"
@@ -115,6 +133,7 @@ export interface PlantObjectPage {
     | "variety_text"
     | "variety_state"
     | "location_visibility"
+    | "coarse_region_code"
   >;
   entries: JournalEntryReadback[];
 }
@@ -142,12 +161,14 @@ export interface PublicJournalEntryPage {
   space: {
     displayName: string;
     locationVisibility: LocationVisibility;
+    coarseRegionCode: string | null;
   };
   plantObject: {
     displayName: string;
     varietyText: string | null;
     varietyState: VarietyState;
     locationVisibility: LocationVisibility;
+    coarseRegionCode: string | null;
   };
   media: EntryMediaReadback | null;
 }
@@ -226,7 +247,8 @@ export async function createFirstPlantEntry(
       .values({
         owner_user_id: scope.userId,
         display_name: normalized.spaceName,
-        location_visibility: DEFAULT_LOCATION_VISIBILITY,
+        location_visibility: normalized.locationVisibility,
+        coarse_region_code: normalized.coarseRegionCode,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -263,7 +285,8 @@ export async function createFirstPlantEntry(
           : userAddedCatalogItem
             ? "user_added"
             : "unknown",
-        location_visibility: DEFAULT_LOCATION_VISIBILITY,
+        location_visibility: normalized.locationVisibility,
+        coarse_region_code: normalized.coarseRegionCode,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
@@ -293,6 +316,7 @@ export async function createFirstPlantEntry(
           id: space.id,
           display_name: space.display_name,
           location_visibility: space.location_visibility,
+          coarse_region_code: space.coarse_region_code,
         },
         plantObject: {
           id: plantObject.id,
@@ -301,6 +325,7 @@ export async function createFirstPlantEntry(
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state,
           location_visibility: plantObject.location_visibility,
+          coarse_region_code: plantObject.coarse_region_code,
         },
         entry,
         isNewEntry: true,
@@ -410,6 +435,7 @@ export async function getPlantObjectPage(
       id: objectRow.spaceId,
       display_name: objectRow.spaceDisplayName,
       location_visibility: objectRow.spaceLocationVisibility,
+      coarse_region_code: objectRow.spaceCoarseRegionCode,
     },
     plantObject: {
       id: objectRow.objectId,
@@ -418,6 +444,7 @@ export async function getPlantObjectPage(
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState,
       location_visibility: objectRow.objectLocationVisibility,
+      coarse_region_code: objectRow.objectCoarseRegionCode,
     },
     entries: entryRows.map((entry) => ({
       ...entry,
@@ -490,6 +517,7 @@ export async function createPlantObjectJournalEntry(
           id: target.spaceId,
           display_name: target.spaceDisplayName,
           location_visibility: target.spaceLocationVisibility,
+          coarse_region_code: target.spaceCoarseRegionCode,
         },
         plantObject: {
           id: target.objectId,
@@ -498,6 +526,7 @@ export async function createPlantObjectJournalEntry(
           variety_text: target.varietyText,
           variety_state: target.varietyState,
           location_visibility: target.objectLocationVisibility,
+          coarse_region_code: target.objectCoarseRegionCode,
         },
         entry,
         isNewEntry: true,
@@ -528,6 +557,7 @@ export async function createPlantObjectJournalEntry(
         id: target.spaceId,
         display_name: target.spaceDisplayName,
         location_visibility: target.spaceLocationVisibility,
+        coarse_region_code: target.spaceCoarseRegionCode,
       },
       plantObject: {
         id: target.objectId,
@@ -536,6 +566,7 @@ export async function createPlantObjectJournalEntry(
         variety_text: target.varietyText,
         variety_state: target.varietyState,
         location_visibility: target.objectLocationVisibility,
+        coarse_region_code: target.objectCoarseRegionCode,
       },
       entry: existingAfterConflict,
       isNewEntry: false,
@@ -597,6 +628,7 @@ export async function resolvePlantObjectCatalog(
         id: target.spaceId,
         display_name: target.spaceDisplayName,
         location_visibility: target.spaceLocationVisibility,
+        coarse_region_code: target.spaceCoarseRegionCode,
       },
       plantObject: {
         id: resolved.id,
@@ -605,6 +637,7 @@ export async function resolvePlantObjectCatalog(
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state,
         location_visibility: resolved.location_visibility,
+        coarse_region_code: resolved.coarse_region_code,
       },
       entryCount,
       publicEntryPaths: publicSlugs.flatMap((row) =>
@@ -612,6 +645,41 @@ export async function resolvePlantObjectCatalog(
       ),
     };
   });
+}
+
+export async function updatePlantObjectLocation(
+  scope: RequestScope,
+  input: UpdatePlantObjectLocationInput,
+): Promise<PlantObjectLocationUpdateResult> {
+  const normalized = normalizeUpdatePlantObjectLocationInput(input);
+  const updated = await buildUpdatePlantObjectLocationQuery(
+    db,
+    scope,
+    normalized,
+  ).executeTakeFirst();
+
+  if (!updated) {
+    throw new Error("Plant object was not found in this garden.");
+  }
+
+  const page = await getPlantObjectPage(scope, updated.id);
+  if (!page) {
+    throw new Error("Plant object was not found in this garden.");
+  }
+
+  const publicSlugs = await buildPublicEntrySlugsForObjectQuery(
+    db,
+    scope,
+    updated.id,
+  ).execute();
+
+  return {
+    space: page.space,
+    plantObject: page.plantObject,
+    publicEntryPaths: publicSlugs.flatMap((row) =>
+      row.publicSlug ? [publicJournalEntryPath(row.publicSlug)] : [],
+    ),
+  };
 }
 
 export async function createJournalEntry(
@@ -766,12 +834,14 @@ export async function getPublicJournalEntryLookup(
       space: {
         displayName: row.spaceDisplayName,
         locationVisibility: row.spaceLocationVisibility as LocationVisibility,
+        coarseRegionCode: row.spaceCoarseRegionCode,
       },
       plantObject: {
         displayName: row.objectDisplayName,
         varietyText: row.varietyText,
         varietyState: row.varietyState as VarietyState,
         locationVisibility: row.objectLocationVisibility as LocationVisibility,
+        coarseRegionCode: row.objectCoarseRegionCode,
       },
       media: media?.derivativeKey
         ? {
@@ -969,6 +1039,28 @@ export function buildResolvePlantObjectCatalogQuery(
     .returningAll();
 }
 
+export function buildUpdatePlantObjectLocationQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    plantObjectId: string;
+    locationVisibility: LocationVisibility;
+    coarseRegionCode: string | null;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("plant_objects")
+    .set({
+      location_visibility: input.locationVisibility,
+      coarse_region_code: input.coarseRegionCode,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.plantObjectId)
+    .where("owner_user_id", "=", scope.userId)
+    .returningAll();
+}
+
 export function buildPublicEntrySlugsForObjectQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -1000,9 +1092,11 @@ export function buildPlantObjectPageObjectQuery(
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
+      "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "spaces.id as spaceId",
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
+      "spaces.coarse_region_code as spaceCoarseRegionCode",
     ])
     .where("plant_objects.id", "=", objectId)
     .where("plant_objects.owner_user_id", "=", scope.userId)
@@ -1044,11 +1138,13 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.public_gone_at as publicGoneAt",
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
+      "spaces.coarse_region_code as spaceCoarseRegionCode",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
+      "plant_objects.coarse_region_code as objectCoarseRegionCode",
     ])
     .where("journal_entries.public_slug", "=", publicSlug);
 }
@@ -1184,6 +1280,10 @@ function normalizeCreateFirstPlantEntryInput(
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
     body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
     entryDate: normalizeEntryDate(input.entryDate),
+    ...normalizeLocationSelection({
+      locationVisibility: input.locationVisibility,
+      coarseRegionCode: input.coarseRegionCode,
+    }),
     clientMutationId: normalizeRequiredText(
       input.clientMutationId,
       "Client mutation id",
@@ -1211,6 +1311,51 @@ function normalizeCreatePlantObjectJournalEntryInput(
       200,
     ),
   };
+}
+
+function normalizeUpdatePlantObjectLocationInput(
+  input: UpdatePlantObjectLocationInput,
+) {
+  return {
+    plantObjectId: normalizeRequiredText(
+      input.plantObjectId,
+      "Plant object id",
+      200,
+    ),
+    ...normalizeLocationSelection({
+      locationVisibility: input.locationVisibility,
+      coarseRegionCode: input.coarseRegionCode,
+    }),
+    now: new Date(),
+  };
+}
+
+function normalizeLocationSelection(input: {
+  locationVisibility?: string | null;
+  coarseRegionCode?: string | null;
+}) {
+  const locationVisibility = normalizeLocationVisibility(
+    input.locationVisibility,
+  );
+  const coarseRegionCode = normalizeCoarseRegionCode(input.coarseRegionCode);
+
+  if (locationVisibility === "region" && !coarseRegionCode) {
+    throw new Error("Choose a supported coarse region or hide location.");
+  }
+
+  return {
+    locationVisibility,
+    coarseRegionCode: locationVisibility === "region" ? coarseRegionCode : null,
+  };
+}
+
+function normalizeLocationVisibility(
+  value: string | null | undefined,
+): LocationVisibility {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) return DEFAULT_LOCATION_VISIBILITY;
+  if (normalized === "region" || normalized === "hidden") return normalized;
+  throw new Error("Location visibility must be region or hidden.");
 }
 
 function normalizeResolvePlantObjectCatalogInput(

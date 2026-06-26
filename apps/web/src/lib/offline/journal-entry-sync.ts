@@ -120,6 +120,8 @@ export function buildJournalEntryRequestBodyForSync(
     title: payload.title,
     body: payload.body,
     entryDate: payload.entryDate,
+    locationVisibility: payload.locationVisibility ?? "hidden",
+    coarseRegionCode: payload.coarseRegionCode ?? null,
     clientMutationId: idempotencyKey,
     mediaAssetId: mediaAssetId ?? "",
     syncStatus:

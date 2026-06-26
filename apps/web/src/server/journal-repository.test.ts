@@ -29,6 +29,7 @@ import {
   buildPublicProcessedMediaForEntryQuery,
   buildPublishJournalEntryQuery,
   buildResolvePlantObjectCatalogQuery,
+  buildUpdatePlantObjectLocationQuery,
 } from "./journal-repository";
 import { buildAttachProcessedMediaAssetToEntryQuery } from "./media/media-repository";
 
@@ -211,6 +212,8 @@ describe("journal repository query contracts", () => {
 
     expect(compiled.sql).toContain('"plant_objects"."id" = $1');
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
+    expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
+    expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
     expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
     expect(compiled.sql).toContain('"spaces"."owner_user_id" = $3');
     expect(compiled.parameters).toEqual([
@@ -270,6 +273,39 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
+  it("updates object location only inside owner scope with coarse code", () => {
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    const compiled = buildUpdatePlantObjectLocationQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        plantObjectId: "00000000-0000-0000-0000-000000000003",
+        locationVisibility: "region",
+        coarseRegionCode: "UA-30",
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "plant_objects"');
+    expect(compiled.sql).toContain('"location_visibility" = $1');
+    expect(compiled.sql).toContain('"coarse_region_code" = $2');
+    expect(compiled.sql).toContain('"updated_at" = $3');
+    expect(compiled.sql).toContain('"id" = $4');
+    expect(compiled.sql).toContain('"owner_user_id" = $5');
+    expect(compiled.sql).toContain("returning *");
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
+    expect(compiled.parameters).toEqual([
+      "region",
+      "UA-30",
+      now,
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
   it("finds active public entry paths for object revalidation without private fields", () => {
     const compiled = buildPublicEntrySlugsForObjectQuery(
       testDb,
@@ -307,6 +343,8 @@ describe("journal repository query contracts", () => {
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
+    expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
+    expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');
@@ -316,6 +354,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
       "first-flowers-abc123",
       "public",

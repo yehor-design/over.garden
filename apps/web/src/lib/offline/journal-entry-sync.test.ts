@@ -70,6 +70,21 @@ describe("offline journal entry sync", () => {
     expect(body.varietyText).toBe("Бабусин перець");
   });
 
+  it("keeps coarse region selection in retry requests", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        ...payload,
+        locationVisibility: "region",
+        coarseRegionCode: "UA-30",
+      },
+      "queue-entry-id",
+      null,
+    );
+
+    expect(body.locationVisibility).toBe("region");
+    expect(body.coarseRegionCode).toBe("UA-30");
+  });
+
   it("syncs a queued entry through the canonical create endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(

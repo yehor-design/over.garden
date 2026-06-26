@@ -5,10 +5,9 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> =
-  T extends ColumnType<infer S, infer I, infer U>
-    ? ColumnType<S, I | undefined, U>
-    : ColumnType<T, T | undefined, T>;
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
+  ? ColumnType<S, I | undefined, U>
+  : ColumnType<T, T | undefined, T>;
 
 export type Json = JsonValue;
 
@@ -138,6 +137,7 @@ export interface MediaAssets {
 
 export interface PlantObjects {
   catalog_item_id: string | null;
+  coarse_region_code: string | null;
   created_at: Generated<Timestamp>;
   display_name: string;
   id: Generated<string>;
@@ -161,6 +161,7 @@ export interface Session {
 }
 
 export interface Spaces {
+  coarse_region_code: string | null;
   created_at: Generated<Timestamp>;
   display_name: string;
   id: Generated<string>;

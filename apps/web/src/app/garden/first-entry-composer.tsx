@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
@@ -64,6 +65,8 @@ export function FirstEntryComposer({
     title: "",
     body: "",
     entryDate: today,
+    locationVisibility: "hidden",
+    coarseRegionCode: "",
   });
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSuggestions, setCatalogSuggestions] = useState<
@@ -250,6 +253,9 @@ export function FirstEntryComposer({
           ? userAddedCatalogName
           : null,
       varietyText: selectedCatalogItem?.displayName ?? userAddedCatalogName,
+      locationVisibility: draft.locationVisibility,
+      coarseRegionCode:
+        draft.locationVisibility === "region" ? draft.coarseRegionCode : null,
       clientMutationId,
       syncStatus: isOnline ? "online" : "offline_queued",
       photoIntent: photoFile
@@ -266,6 +272,14 @@ export function FirstEntryComposer({
 
   function updateDraft(field: keyof typeof draft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateLocationVisibility(value: string) {
+    setDraft((current) => ({
+      ...current,
+      locationVisibility: value === "region" ? "region" : "hidden",
+      coarseRegionCode: value === "region" ? current.coarseRegionCode : "",
+    }));
   }
 
   function updateCatalogQuery(value: string) {
@@ -370,6 +384,42 @@ export function FirstEntryComposer({
             className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             placeholder="Cherry tomato"
           />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Location
+          <select
+            name="locationVisibility"
+            value={draft.locationVisibility}
+            onChange={(event) => updateLocationVisibility(event.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <option value="hidden">Hidden</option>
+            <option value="region">Region</option>
+          </select>
+        </label>
+
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Coarse region
+          <select
+            name="coarseRegionCode"
+            required={draft.locationVisibility === "region"}
+            disabled={draft.locationVisibility === "hidden"}
+            value={draft.coarseRegionCode}
+            onChange={(event) =>
+              updateDraft("coarseRegionCode", event.target.value)
+            }
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none disabled:opacity-60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            <option value="">Choose region</option>
+            {COARSE_REGION_OPTIONS.map((region) => (
+              <option key={region.value} value={region.value}>
+                {region.label}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 
@@ -641,6 +691,9 @@ function mutationSubtitle(mutation: OfflineMutation) {
   const parts = [
     mutation.status,
     payload.plantName,
+    payload.locationVisibility === "region" && payload.coarseRegionCode
+      ? payload.coarseRegionCode
+      : "location hidden",
     payload.catalogItemId
       ? "catalog selected"
       : payload.userAddedCatalogName

@@ -20,6 +20,7 @@ import {
   type PlantObjectJournalEntryResult,
   type PublishJournalEntryResult,
   resolvePlantObjectCatalog,
+  updatePlantObjectLocation,
 } from "@/server/journal-repository";
 import { enqueueJob } from "@/server/queue";
 import { scopedToUser } from "@/server/request-scope";
@@ -46,6 +47,21 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
   const result = await resolvePlantObjectCatalog(scope, {
     plantObjectId: String(formData.get("objectId") ?? ""),
     catalogItemId: String(formData.get("catalogItemId") ?? ""),
+  });
+
+  revalidatePath("/garden");
+  revalidatePath(`/garden/objects/${result.plantObject.id}`);
+  for (const publicEntryPath of result.publicEntryPaths) {
+    revalidatePath(publicEntryPath);
+  }
+}
+
+export async function updatePlantObjectLocationAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  const result = await updatePlantObjectLocation(scope, {
+    plantObjectId: String(formData.get("objectId") ?? ""),
+    locationVisibility: String(formData.get("locationVisibility") ?? ""),
+    coarseRegionCode: String(formData.get("coarseRegionCode") ?? ""),
   });
 
   revalidatePath("/garden");

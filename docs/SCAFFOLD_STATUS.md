@@ -27,6 +27,7 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - `/garden/objects/[objectId]` can publish an existing entry through a signed-in server action after explicit disclosure, and `/journal/[slug]` renders a public SSR page that stays `noindex`.
 - `/garden/objects/[objectId]` can archive a published entry privately; the old `/journal/[slug]` public URL returns HTTP `410 Gone` and search document conversion refuses archived/public-gone rows.
 - `/garden/objects/[objectId]` can emit an owner-scoped revisit event, show prior entries, and append another dated title/body entry to the same plant object.
+- `/garden` and `/garden/objects/[objectId]` now use a controlled coarse-region contract for UA/BG ISO 3166-2 subdivision codes. Default visibility remains `hidden`; public `/journal/[slug]` renders a region label only when the object is explicitly `region` visible.
 - Product writes emit first-party event rows for activation, photo attachment, offline sync, progress readback, and same-object return loops without title/body text, precise location, raw media metadata, email, or IP-derived location in event properties.
 - Catalog selection event properties remain enum-only through `variety_state`; raw catalog query text and selected display strings are not analytics properties.
 - Catalog repository contract tests prove typeahead reads only safe catalog tables, selectable IDs are limited to seeded/confirmed statuses, Meili hits are deduped and filtered, reindex rows exclude owner-scoped catalog items, provisional candidates are upserted by owner/normalized name/locale, and curation/reindex job payloads exclude journal title/body content.
@@ -42,6 +43,7 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Dexie offline queue is test-covered with IndexedDB shim.
 - Search document privacy tests prove private/unpublished entries are not indexed and public documents exclude owner-private fields, quarantine keys, precise location, and rows without public slugs.
 - Catalog search document tests prove the `catalog_typeahead` document shape excludes provisional/user-owned rows and rejects unsafe Meili hits before they can appear in the picker.
+- Coarse-region contract tests prove supported UA/BG subdivision codes normalize predictably, free-form/precise-location strings are rejected, and the SQL schema does not add exact-location columns.
 - Python worker consumes the Postgres-backed queue and marks jobs `done`.
 - Meilisearch Cyrillic typo proof passes against local Docker Meilisearch, and `app.search` includes a catalog-specific Cyrillic typo proof for the `catalog_typeahead` index.
 
@@ -70,6 +72,17 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - `CATALOG_CURATOR_USER_IDS` may contain a comma-separated Better Auth user-id allowlist for `/garden/catalog/curation`.
 - Until a real admin/role model exists, an empty allowlist falls back to the existing authenticated-user boundary. This is a temporary MVP scaffold, not production-grade role management.
 - The curation surface is intentionally narrow: pending provisional names, aggregate affected-object counts, confirm, merge, and reject. It is not a public moderation product.
+
+## Conservative Region Decision
+
+- Current implementation uses a conservative controlled vocabulary: ISO 3166-2 subdivision codes for Ukraine and Bulgaria only, exposed through `coarse_region_code`.
+- `hidden` is still the default. When the current create/edit forms submit `hidden`, the server stores `coarse_region_code = null` instead of retaining a private region value. This minimizes stored location data for v0.
+- Revisit before public variety-region pages or launch localization: whether hidden objects should retain a private coarse region for later toggles, whether labels should be localized, and whether any climate-zone grouping should sit beside the ISO code rather than replace it.
+
+## Legal Placeholder Decision
+
+- GDPR/privacy, erasure-request, and first-publication disclosure copy may remain placeholder copy during MVP scaffolding. Before public release, replace these placeholders with reviewed legal text and update the disclosure version if user-facing wording changes materially.
+- Placeholder routes exist at `/privacy`, `/erasure`, and `/first-publication-disclosure`; they are `noindex` until real reviewed copy replaces them.
 
 ## Verification Commands
 

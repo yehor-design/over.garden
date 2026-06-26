@@ -6,6 +6,7 @@ import { PlusCircle } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility, VarietyState } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import {
@@ -19,8 +20,10 @@ import {
   createPlantObjectJournalEntryAction,
   publishJournalEntryAction,
   resolvePlantObjectCatalogAction,
+  updatePlantObjectLocationAction,
 } from "./actions";
 import { CatalogResolveControl } from "./catalog-resolve-control";
+import { LocationPrivacyControl } from "./location-privacy-control";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +60,7 @@ export default async function PlantObjectReadbackPage({
   await recordOwnRecordRevisited(scope, page);
 
   const today = new Date().toISOString().slice(0, 10);
+  const locationLabel = getObjectLocationLabel(page);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -79,7 +83,7 @@ export default async function PlantObjectReadbackPage({
           </h1>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Location: {page.plantObject.location_visibility}
+              {locationLabel}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               Variety: {page.plantObject.variety_text ?? "Unknown"}
@@ -90,6 +94,13 @@ export default async function PlantObjectReadbackPage({
           </div>
         </div>
       </header>
+
+      <LocationPrivacyControl
+        objectId={objectId}
+        currentLocationVisibility={page.plantObject.location_visibility}
+        currentCoarseRegionCode={page.plantObject.coarse_region_code}
+        action={updatePlantObjectLocationAction}
+      />
 
       {canResolveCatalogState(page.plantObject.variety_state) ? (
         <CatalogResolveControl
@@ -336,4 +347,15 @@ function formatDate(value: Date | string) {
 
 function canResolveCatalogState(value: string) {
   return value === "unknown" || value === "user_added";
+}
+
+function getObjectLocationLabel(page: PlantObjectPage) {
+  if (page.plantObject.location_visibility !== "region") {
+    return "Location: Hidden";
+  }
+
+  return `Region: ${
+    getCoarseRegionLabel(page.plantObject.coarse_region_code) ??
+    "Unsupported region"
+  }`;
 }

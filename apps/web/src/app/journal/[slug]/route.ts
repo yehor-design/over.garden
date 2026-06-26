@@ -1,4 +1,5 @@
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import {
   getPublicJournalEntryLookup,
   type PublicJournalEntryPage,
@@ -34,10 +35,7 @@ function renderEntryPage(page: PublicJournalEntryPage) {
   const robots = page.entry.publicNoindex
     ? "noindex, nofollow"
     : "index, follow";
-  const locationLabel =
-    page.plantObject.locationVisibility === "region"
-      ? "Region-level location"
-      : "Location hidden";
+  const locationLabel = getPublicLocationLabel(page);
 
   return renderShell({
     title,
@@ -52,7 +50,7 @@ function renderEntryPage(page: PublicJournalEntryPage) {
           <h1>${escapeHtml(page.entry.title)}</h1>
           <div class="meta">
             <time>${escapeHtml(formatDate(page.entry.entryDate))}</time>
-            <span>${escapeHtml(locationLabel)}</span>
+            ${locationLabel ? `<span>${escapeHtml(locationLabel)}</span>` : ""}
           </div>
         </header>
         <article class="article">
@@ -66,6 +64,19 @@ function renderEntryPage(page: PublicJournalEntryPage) {
       </main>
     `,
   });
+}
+
+function getPublicLocationLabel(page: PublicJournalEntryPage) {
+  if (page.plantObject.locationVisibility !== "region") return null;
+
+  const code =
+    page.plantObject.coarseRegionCode ??
+    (page.space.locationVisibility === "region"
+      ? page.space.coarseRegionCode
+      : null);
+  const label = getCoarseRegionLabel(code);
+
+  return label ? `Region: ${label}` : null;
 }
 
 function renderGonePage(publicSlug: string) {

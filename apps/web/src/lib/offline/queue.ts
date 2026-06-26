@@ -24,6 +24,8 @@ export interface OfflineJournalEntryPayload {
   title: string;
   body: string;
   entryDate: string;
+  locationVisibility?: string | null;
+  coarseRegionCode?: string | null;
   clientMutationId: string;
   syncStatus?: EntrySyncStatus;
   photoIntent?: OfflinePhotoIntent | null;

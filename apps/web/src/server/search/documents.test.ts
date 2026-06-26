@@ -20,6 +20,7 @@ function entry(
     visibility,
     lifecycle_state: "active",
     location_visibility: "hidden",
+    coarse_region_code: null,
     created_at: new Date("2026-06-26T00:00:00.000Z"),
     ...overrides,
   };
@@ -62,6 +63,17 @@ describe("journal entry search documents", () => {
     ).toBeNull();
   });
 
+  it("does not index region-visible entries without a supported coarse region", () => {
+    expect(
+      toJournalEntrySearchDocument(
+        entry("public", {
+          location_visibility: "region",
+          coarse_region_code: "Kyiv apartment address",
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("indexes public entries with a narrow payload", () => {
     const document = toJournalEntrySearchDocument(entry("public"));
 
@@ -80,5 +92,20 @@ describe("journal entry search documents", () => {
     expect(document).not.toHaveProperty("ownerUserId");
     expect(document).not.toHaveProperty("plantObjectId");
     expect(document).not.toHaveProperty("quarantineKey");
+    expect(document).not.toHaveProperty("coarseRegionCode");
+  });
+
+  it("indexes supported coarse region code only when visibility is region", () => {
+    const document = toJournalEntrySearchDocument(
+      entry("public", {
+        location_visibility: "region",
+        coarse_region_code: "UA-30",
+      }),
+    );
+
+    expect(document).toMatchObject({
+      locationVisibility: "region",
+      coarseRegionCode: "UA-30",
+    });
   });
 });
