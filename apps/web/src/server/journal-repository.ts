@@ -12,6 +12,7 @@ import type {
   Space,
   VarietyState,
 } from "@/db/schema";
+import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -20,6 +21,8 @@ const MAX_BODY_LENGTH = 2000;
 const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
+const MAX_PUBLIC_SLUG_LENGTH = 96;
+const PUBLICATION_DISCLOSURE_VERSION = "first-publication-v1";
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -42,6 +45,17 @@ export interface CreateJournalEntryInput {
   body: string;
   visibility: EntryVisibility;
   clientMutationId: string;
+}
+
+export interface PublishJournalEntryInput {
+  entryId: string;
+  disclosureAccepted: boolean;
+}
+
+export interface PublishJournalEntryResult {
+  entry: JournalEntry;
+  publicUrl: string;
+  disclosureLogged: boolean;
 }
 
 export interface PlantObjectSummary {
@@ -75,6 +89,29 @@ export interface EntryMediaReadback {
 export type JournalEntryReadback = JournalEntry & {
   media: EntryMediaReadback | null;
 };
+
+export interface PublicJournalEntryPage {
+  entry: {
+    id: string;
+    title: string;
+    body: string;
+    entryDate: Date | string;
+    publicSlug: string;
+    publicNoindex: boolean;
+    publishedAt: Date | string | null;
+  };
+  space: {
+    displayName: string;
+    locationVisibility: LocationVisibility;
+  };
+  plantObject: {
+    displayName: string;
+    varietyText: string | null;
+    varietyState: VarietyState;
+    locationVisibility: LocationVisibility;
+  };
+  media: EntryMediaReadback | null;
+}
 
 export interface FirstPlantEntryResult {
   space: PlantObjectPage["space"];
@@ -322,6 +359,104 @@ export async function listMyRecentJournalEntries(
     .execute();
 }
 
+export async function publishJournalEntry(
+  scope: RequestScope,
+  input: PublishJournalEntryInput,
+): Promise<PublishJournalEntryResult> {
+  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
+  const existing = await findJournalEntryById(scope, entryId);
+
+  if (!existing) {
+    throw new Error("Journal entry was not found in this garden.");
+  }
+
+  if (existing.visibility === "public" && existing.public_slug) {
+    return {
+      entry: existing,
+      publicUrl: publicJournalEntryPath(existing.public_slug),
+      disclosureLogged: false,
+    };
+  }
+
+  const priorDisclosure = await buildPriorPublicationDisclosureQuery(
+    db,
+    scope,
+  ).executeTakeFirst();
+  const needsDisclosure = !priorDisclosure;
+
+  if (needsDisclosure && !input.disclosureAccepted) {
+    throw new Error("First-publication disclosure must be accepted.");
+  }
+
+  const now = new Date();
+  const publicSlug =
+    existing.public_slug ??
+    createPublicSlug(existing.title, MAX_PUBLIC_SLUG_LENGTH);
+  const publishedAt = existing.published_at ?? now;
+
+  const published = await buildPublishJournalEntryQuery(db, scope, {
+    entryId,
+    publicSlug,
+    publishedAt,
+    now,
+    disclosureLogged: needsDisclosure,
+  }).executeTakeFirstOrThrow();
+
+  return {
+    entry: published,
+    publicUrl: publicJournalEntryPath(publicSlug),
+    disclosureLogged: needsDisclosure,
+  };
+}
+
+export async function getPublicJournalEntryPage(
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<PublicJournalEntryPage | null> {
+  const slug = normalizePublicSlug(publicSlug);
+  if (!slug) return null;
+
+  const row = await buildPublicJournalEntryPageQuery(
+    executor,
+    slug,
+  ).executeTakeFirst();
+  if (!row?.publicSlug) return null;
+
+  const media = await buildPublicProcessedMediaForEntryQuery(
+    executor,
+    row.entryId,
+  ).executeTakeFirst();
+
+  return {
+    entry: {
+      id: row.entryId,
+      title: row.title,
+      body: row.body,
+      entryDate: row.entryDate,
+      publicSlug: row.publicSlug,
+      publicNoindex: row.publicNoindex,
+      publishedAt: row.publishedAt,
+    },
+    space: {
+      displayName: row.spaceDisplayName,
+      locationVisibility: row.spaceLocationVisibility as LocationVisibility,
+    },
+    plantObject: {
+      displayName: row.objectDisplayName,
+      varietyText: row.varietyText,
+      varietyState: row.varietyState as VarietyState,
+      locationVisibility: row.objectLocationVisibility as LocationVisibility,
+    },
+    media: media?.derivativeKey
+      ? {
+          id: media.id,
+          derivativeKey: media.derivativeKey,
+          publicUrl: getPublicDerivativeUrl(media.derivativeKey),
+        }
+      : null,
+  };
+}
+
 export function buildFindExistingEntryByClientMutationQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -334,6 +469,18 @@ export function buildFindExistingEntryByClientMutationQuery(
     .where("client_mutation_id", "=", clientMutationId);
 }
 
+export function buildFindJournalEntryByIdQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .selectAll("journal_entries")
+    .where("id", "=", entryId)
+    .where("owner_user_id", "=", scope.userId);
+}
+
 export function buildInsertJournalEntryQuery(
   executor: QueryExecutor,
   row: NewJournalEntryRow,
@@ -344,6 +491,50 @@ export function buildInsertJournalEntryQuery(
     .onConflict((oc) =>
       oc.columns(["owner_user_id", "client_mutation_id"]).doNothing(),
     )
+    .returningAll();
+}
+
+export function buildPriorPublicationDisclosureQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .select("id")
+    .where("owner_user_id", "=", scope.userId)
+    .where("first_publication_disclosed_at", "is not", null)
+    .limit(1);
+}
+
+export function buildPublishJournalEntryQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    entryId: string;
+    publicSlug: string;
+    publishedAt: Date;
+    now: Date;
+    disclosureLogged: boolean;
+  },
+) {
+  return executor
+    .updateTable("journal_entries")
+    .set({
+      visibility: "public",
+      public_slug: input.publicSlug,
+      public_noindex: true,
+      published_at: input.publishedAt,
+      first_publication_disclosure_version: input.disclosureLogged
+        ? PUBLICATION_DISCLOSURE_VERSION
+        : undefined,
+      first_publication_disclosed_at: input.disclosureLogged
+        ? input.now
+        : undefined,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.entryId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("visibility", "=", "private")
     .returningAll();
 }
 
@@ -370,6 +561,37 @@ export function buildPlantObjectPageObjectQuery(
     .where("spaces.owner_user_id", "=", scope.userId);
 }
 
+export function buildPublicJournalEntryPageQuery(
+  executor: QueryExecutor,
+  publicSlug: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .innerJoin(
+      "plant_objects",
+      "plant_objects.id",
+      "journal_entries.plant_object_id",
+    )
+    .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .select([
+      "journal_entries.id as entryId",
+      "journal_entries.title as title",
+      "journal_entries.body as body",
+      "journal_entries.entry_date as entryDate",
+      "journal_entries.public_slug as publicSlug",
+      "journal_entries.public_noindex as publicNoindex",
+      "journal_entries.published_at as publishedAt",
+      "spaces.display_name as spaceDisplayName",
+      "spaces.location_visibility as spaceLocationVisibility",
+      "plant_objects.display_name as objectDisplayName",
+      "plant_objects.variety_text as varietyText",
+      "plant_objects.variety_state as varietyState",
+      "plant_objects.location_visibility as objectLocationVisibility",
+    ])
+    .where("journal_entries.public_slug", "=", publicSlug)
+    .where("journal_entries.visibility", "=", "public");
+}
+
 export function buildProcessedMediaForEntriesQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -388,6 +610,27 @@ export function buildProcessedMediaForEntriesQuery(
     .where("derivative_key", "is not", null);
 }
 
+export function buildPublicProcessedMediaForEntryQuery(
+  executor: QueryExecutor,
+  entryId: string,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "media_assets.journal_entry_id",
+    )
+    .select([
+      "media_assets.id as id",
+      "media_assets.derivative_key as derivativeKey",
+    ])
+    .where("journal_entries.id", "=", entryId)
+    .where("journal_entries.visibility", "=", "public")
+    .where("media_assets.status", "=", "processed")
+    .where("media_assets.derivative_key", "is not", null);
+}
+
 async function insertJournalEntry(
   executor: QueryExecutor,
   row: NewJournalEntryRow,
@@ -404,6 +647,18 @@ async function findJournalEntryByClientMutation(
     executor,
     scope,
     clientMutationId,
+  ).executeTakeFirst();
+}
+
+async function findJournalEntryById(
+  scope: RequestScope,
+  entryId: string,
+  executor: QueryExecutor = db,
+): Promise<JournalEntry | undefined> {
+  return buildFindJournalEntryByIdQuery(
+    executor,
+    scope,
+    entryId,
   ).executeTakeFirst();
 }
 
@@ -481,6 +736,25 @@ function normalizeEntryDate(value: string | null | undefined) {
     throw new Error("Entry date must use YYYY-MM-DD format.");
   }
   return normalized;
+}
+
+function normalizePublicSlug(value: string) {
+  const normalized = value.trim();
+  if (!normalized || normalized.length > MAX_PUBLIC_SLUG_LENGTH) return null;
+  if (!/^[\p{Letter}\p{Number}-]+$/u.test(normalized)) return null;
+  return normalized;
+}
+
+function createPublicSlug(title: string, maxLength: number) {
+  const randomSuffix = crypto.randomUUID().replaceAll("-", "").slice(0, 10);
+  const base = title
+    .toLocaleLowerCase("en")
+    .normalize("NFKD")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, Math.max(1, maxLength - randomSuffix.length - 1));
+
+  return `${base || "entry"}-${randomSuffix}`;
 }
 
 async function attachMediaAssetToEntryIfPresent(

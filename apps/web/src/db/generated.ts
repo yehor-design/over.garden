@@ -66,9 +66,14 @@ export interface JournalEntries {
   created_at: Generated<Timestamp>;
   entry_date: Generated<Timestamp>;
   entry_scope: Generated<string>;
+  first_publication_disclosed_at: Timestamp | null;
+  first_publication_disclosure_version: string | null;
   id: Generated<string>;
   owner_user_id: string;
   plant_object_id: string;
+  public_noindex: Generated<boolean>;
+  public_slug: string | null;
+  published_at: Timestamp | null;
   space_id: string;
   title: string;
   updated_at: Generated<Timestamp>;

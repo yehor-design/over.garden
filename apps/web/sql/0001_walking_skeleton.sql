@@ -50,6 +50,11 @@ create table if not exists journal_entries (
   entry_scope text not null default 'object' check (entry_scope = 'object'),
   entry_date date not null default current_date,
   visibility text not null default 'private' check (visibility in ('private', 'public')),
+  public_slug text,
+  public_noindex boolean not null default true,
+  published_at timestamptz,
+  first_publication_disclosure_version text,
+  first_publication_disclosed_at timestamptz,
   client_mutation_id text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -84,7 +89,12 @@ alter table journal_entries
   add column if not exists plant_object_id uuid,
   add column if not exists title text,
   add column if not exists entry_scope text default 'object',
-  add column if not exists entry_date date default current_date;
+  add column if not exists entry_date date default current_date,
+  add column if not exists public_slug text,
+  add column if not exists public_noindex boolean default true,
+  add column if not exists published_at timestamptz,
+  add column if not exists first_publication_disclosure_version text,
+  add column if not exists first_publication_disclosed_at timestamptz;
 
 update journal_entries
 set
@@ -94,6 +104,10 @@ set
 where title is null
    or entry_scope is null
    or entry_date is null;
+
+update journal_entries
+set public_noindex = true
+where public_noindex is null;
 
 with owners as (
   select distinct owner_user_id
@@ -160,7 +174,9 @@ alter table journal_entries
   alter column entry_scope set default 'object',
   alter column entry_scope set not null,
   alter column entry_date set default current_date,
-  alter column entry_date set not null;
+  alter column entry_date set not null,
+  alter column public_noindex set default true,
+  alter column public_noindex set not null;
 
 create unique index if not exists journal_entries_owner_client_mutation_uidx
   on journal_entries (owner_user_id, client_mutation_id);
@@ -196,6 +212,10 @@ create index if not exists journal_entries_owner_object_date_idx
 create index if not exists journal_entries_public_created_idx
   on journal_entries (created_at desc)
   where visibility = 'public';
+
+create unique index if not exists journal_entries_public_slug_uidx
+  on journal_entries (public_slug)
+  where public_slug is not null;
 
 create table if not exists media_assets (
   id uuid primary key default gen_random_uuid(),

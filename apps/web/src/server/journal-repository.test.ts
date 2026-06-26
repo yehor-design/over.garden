@@ -15,10 +15,15 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
+  buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryQuery,
   buildPlantObjectPageObjectQuery,
+  buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
+  buildPublicJournalEntryPageQuery,
+  buildPublicProcessedMediaForEntryQuery,
+  buildPublishJournalEntryQuery,
 } from "./journal-repository";
 import { buildAttachProcessedMediaAssetToEntryQuery } from "./media/media-repository";
 
@@ -77,6 +82,78 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
+  it("looks up entries by id only inside the request scope", () => {
+    const compiled = buildFindJournalEntryByIdQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "00000000-0000-0000-0000-000000000020",
+    ).compile();
+
+    expect(compiled.sql).toContain('"id" = $1');
+    expect(compiled.sql).toContain('"owner_user_id" = $2');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
+  it("checks first-publication disclosure inside owner scope", () => {
+    const compiled = buildPriorPublicationDisclosureQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+    ).compile();
+
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain(
+      '"first_publication_disclosed_at" is not null',
+    );
+    expect(compiled.sql).toContain("limit $2");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      1,
+    ]);
+  });
+
+  it("publishes only private entries inside owner scope", () => {
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    const compiled = buildPublishJournalEntryQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        entryId: "00000000-0000-0000-0000-000000000020",
+        publicSlug: "first-flowers-abc123",
+        publishedAt: now,
+        now,
+        disclosureLogged: true,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "journal_entries"');
+    expect(compiled.sql).toContain('"visibility" = $1');
+    expect(compiled.sql).toContain('"public_slug" = $2');
+    expect(compiled.sql).toContain('"public_noindex" = $3');
+    expect(compiled.sql).toContain(
+      '"first_publication_disclosure_version" = $5',
+    );
+    expect(compiled.sql).toContain('"first_publication_disclosed_at" = $6');
+    expect(compiled.sql).toContain('"id" = $8');
+    expect(compiled.sql).toContain('"owner_user_id" = $9');
+    expect(compiled.sql).toContain('"visibility" = $10');
+    expect(compiled.sql).toContain("returning *");
+    expect(compiled.parameters).toEqual([
+      "public",
+      "first-flowers-abc123",
+      true,
+      now,
+      "first-publication-v1",
+      now,
+      now,
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000001",
+      "private",
+    ]);
+  });
+
   it("requires owner scope on object and space readback", () => {
     const compiled = buildPlantObjectPageObjectQuery(
       testDb,
@@ -92,6 +169,26 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
     ]);
+  });
+
+  it("reads public entries by slug without owner-private fields", () => {
+    const compiled = buildPublicJournalEntryPageQuery(
+      testDb,
+      "first-flowers-abc123",
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      'inner join "plant_objects" on "plant_objects"."id" = "journal_entries"."plant_object_id"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
+    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.parameters).toEqual(["first-flowers-abc123", "public"]);
   });
 
   it("attaches only owner-scoped processed media to an entry", () => {
@@ -117,6 +214,29 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000001",
       "processed",
       "00000000-0000-0000-0000-000000000020",
+    ]);
+  });
+
+  it("selects derivative-only public media for a published entry", () => {
+    const compiled = buildPublicProcessedMediaForEntryQuery(
+      testDb,
+      "00000000-0000-0000-0000-000000000020",
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      'inner join "journal_entries" on "journal_entries"."id" = "media_assets"."journal_entry_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."id" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
+    expect(compiled.sql).toContain('"media_assets"."status" = $3');
+    expect(compiled.sql).toContain(
+      '"media_assets"."derivative_key" is not null',
+    );
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000020",
+      "public",
+      "processed",
     ]);
   });
 

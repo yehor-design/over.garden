@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCurrentSession } from "@/server/auth-session";
 import { getPlantObjectPage } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
+import { publishJournalEntryAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -119,6 +121,46 @@ export default async function PlantObjectReadbackPage({
                   {entry.entry_scope} · {entry.visibility}
                   {entry.media ? " · stripped photo derivative" : ""}
                 </p>
+                {entry.visibility === "public" && entry.public_slug ? (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                    <span className="text-xs text-muted-foreground">
+                      Public · noindex
+                    </span>
+                    <Link
+                      href={publicJournalEntryPath(entry.public_slug)}
+                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Open public page
+                    </Link>
+                  </div>
+                ) : (
+                  <form
+                    action={publishJournalEntryAction}
+                    className="mt-4 flex flex-col gap-3 border-t border-border pt-3"
+                  >
+                    <input type="hidden" name="entryId" value={entry.id} />
+                    <input type="hidden" name="objectId" value={objectId} />
+                    <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        name="publicationDisclosureAccepted"
+                        required
+                        className="mt-1 size-4 rounded border-border"
+                      />
+                      <span>
+                        Publish this entry as a public, noindex page. Only the
+                        stripped photo derivative can appear publicly; precise
+                        location and the original photo file stay private.
+                      </span>
+                    </label>
+                    <button
+                      type="submit"
+                      className={buttonVariants({ className: "self-start" })}
+                    >
+                      Publish entry
+                    </button>
+                  </form>
+                )}
               </li>
             ))}
           </ol>
