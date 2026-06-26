@@ -18,6 +18,10 @@ import {
   PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
   type PublicVarietyIndexState,
 } from "@/server/public-variety-indexing";
+import {
+  buildPublishedVarietySeedProofByCatalogItemIdQuery,
+  type PublicVarietySeedProof,
+} from "@/server/variety-seed-proof-repository";
 
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_PUBLIC_VARIETY_ENTRIES = 20;
@@ -36,6 +40,7 @@ export interface PublicVarietyPage {
   photoCount: number;
   aggregateBodyLength: number;
   indexState: PublicVarietyIndexState;
+  seedProof: PublicVarietySeedProof | null;
   entries: PublicVarietyEntry[];
 }
 
@@ -76,10 +81,13 @@ export async function getPublicVarietyPage(
 
   if (!summary?.catalogPublicSlug) return null;
 
-  const entries = await buildPublicVarietyEntriesQuery(
-    executor,
-    slug,
-  ).execute();
+  const [entries, seedProof] = await Promise.all([
+    buildPublicVarietyEntriesQuery(executor, slug).execute(),
+    buildPublishedVarietySeedProofByCatalogItemIdQuery(
+      executor,
+      summary.catalogItemId,
+    ).executeTakeFirst(),
+  ]);
   const entryCount = Number(summary.entryCount);
   const aggregateBodyLength = Number(summary.aggregateBodyLength);
 
@@ -101,6 +109,7 @@ export async function getPublicVarietyPage(
       entryCount,
       aggregateBodyLength,
     }),
+    seedProof: seedProof ?? null,
     entries: entries.map((entry) => ({
       id: entry.entryId,
       title: entry.entryTitle,
@@ -161,6 +170,7 @@ export function buildPublicVarietySummaryQuery(
         .on("media_assets.derivative_key", "is not", null),
     )
     .select(({ fn }) => [
+      "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       "catalog_items.status as catalogStatus",
@@ -188,6 +198,7 @@ export function buildPublicVarietySummaryQuery(
     .where("journal_entries.public_slug", "is not", null)
     .groupBy([
       "catalog_items.canonical_name",
+      "catalog_items.id",
       "catalog_items.public_slug",
       "catalog_items.status",
       "catalog_items.source",

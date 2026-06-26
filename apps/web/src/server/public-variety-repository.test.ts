@@ -60,6 +60,7 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       'coalesce(sum(char_length("journal_entries"."body")), 0)',
     );
+    expect(compiled.sql).toContain('"catalog_items"."id"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
     expect(compiled.sql).toContain(
@@ -183,6 +184,7 @@ describe("public variety repository query contracts", () => {
       'having count("journal_entries"."id") >= $6 and coalesce(sum(char_length("journal_entries"."body")), 0) >= $7',
     );
     expect(compiled.sql).not.toContain('join "media_assets"');
+    expect(compiled.sql).not.toContain("variety_seed_proofs");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("original_deleted_at");

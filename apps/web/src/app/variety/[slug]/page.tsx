@@ -95,6 +95,30 @@ export default async function PublicVarietyRoute({
         </div>
       </header>
 
+      {page.seedProof ? (
+        <section className="grid gap-4 border-b border-border pb-6">
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-medium text-muted-foreground">
+              Growing note
+            </p>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+              {page.seedProof.title}
+            </h2>
+            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+              {page.seedProof.summary}
+            </p>
+          </div>
+          <p className="max-w-3xl text-sm leading-6 whitespace-pre-wrap text-foreground">
+            {page.seedProof.body}
+          </p>
+          {page.seedProof.sourceLabel ? (
+            <p className="text-xs text-muted-foreground">
+              {page.seedProof.sourceLabel}
+            </p>
+          ) : null}
+        </section>
+      ) : null}
+
       <ol className="grid gap-4">
         {page.entries.map((entry) => (
           <li

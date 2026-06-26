@@ -5,13 +5,16 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   confirmCatalogCandidateAction,
   mergeCatalogCandidateAction,
   rejectCatalogCandidateAction,
+  upsertVarietySeedProofAction,
 } from "./actions";
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
+import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +67,10 @@ export default async function CatalogCurationPage() {
     );
   }
 
-  const candidates = await listPendingCatalogCurationCandidates();
+  const [candidates, seedProofs] = await Promise.all([
+    listPendingCatalogCurationCandidates(),
+    listVarietySeedProofsForCuration(),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -87,11 +93,19 @@ export default async function CatalogCurationPage() {
               Pending: {candidates.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Seed proofs: {seedProofs.length}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Gate: {accessMode === "allowlist" ? "allowlist" : "auth-only"}
             </span>
           </div>
         </div>
       </header>
+
+      <VarietySeedProofEditor
+        seedProofs={seedProofs}
+        upsertAction={upsertVarietySeedProofAction}
+      />
 
       <CatalogCurationCandidateList
         candidates={candidates}

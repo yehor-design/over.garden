@@ -12,6 +12,7 @@ import type {
   MediaAssets as MediaAssetsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
+  VarietySeedProofs as VarietySeedProofsTable,
 } from "./generated";
 
 export type Database = DB;
@@ -31,6 +32,7 @@ export type CatalogItemStatus =
   | "rejected";
 export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
+export type VarietySeedProofStatus = "draft" | "published";
 export type AnalyticsEventName =
   | "space_created"
   | "object_created"
@@ -60,3 +62,5 @@ export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type JobQueueJob = Selectable<JobQueueTable>;
 export type NewJobQueueJob = Insertable<JobQueueTable>;
+export type VarietySeedProof = Selectable<VarietySeedProofsTable>;
+export type NewVarietySeedProof = Insertable<VarietySeedProofsTable>;

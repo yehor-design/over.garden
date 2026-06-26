@@ -5,10 +5,9 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> =
-  T extends ColumnType<infer S, infer I, infer U>
-    ? ColumnType<S, I | undefined, U>
-    : ColumnType<T, T | undefined, T>;
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
+  ? ColumnType<S, I | undefined, U>
+  : ColumnType<T, T | undefined, T>;
 
 export type Json = JsonValue;
 
@@ -182,6 +181,20 @@ export interface User {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface VarietySeedProofs {
+  author_user_id: string;
+  body: string;
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  published_at: Timestamp | null;
+  source_label: string | null;
+  status: Generated<string>;
+  summary: string;
+  title: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Verification {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -204,5 +217,6 @@ export interface DB {
   session: Session;
   spaces: Spaces;
   user: User;
+  variety_seed_proofs: VarietySeedProofs;
   verification: Verification;
 }

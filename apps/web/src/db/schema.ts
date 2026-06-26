@@ -21,6 +21,7 @@ export type {
   LocationVisibility,
   MediaAsset,
   MediaAssetStatus,
+  NewVarietySeedProof,
   NewHealth,
   NewAnalyticsEvent,
   NewCatalogItem,
@@ -32,5 +33,7 @@ export type {
   NewSpace,
   PlantObject,
   Space,
+  VarietySeedProof,
+  VarietySeedProofStatus,
   VarietyState,
 } from "./types";

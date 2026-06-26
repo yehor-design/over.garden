@@ -85,6 +85,7 @@ function buildPage({
       entryCount,
       aggregateBodyLength,
     }),
+    seedProof: null,
     entries: [
       {
         id: "entry-1",

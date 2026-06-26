@@ -117,6 +117,117 @@ create unique index if not exists catalog_item_names_item_normalized_locale_uidx
 create index if not exists catalog_item_names_normalized_idx
   on catalog_item_names (normalized_name);
 
+create table if not exists variety_seed_proofs (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  title text not null,
+  summary text not null,
+  body text not null,
+  source_label text,
+  status text not null default 'draft',
+  author_user_id uuid not null,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint variety_seed_proofs_title_length_check
+    check (char_length(title) between 1 and 120),
+  constraint variety_seed_proofs_summary_length_check
+    check (char_length(summary) between 1 and 280),
+  constraint variety_seed_proofs_body_length_check
+    check (char_length(body) between 80 and 1600),
+  constraint variety_seed_proofs_source_label_length_check
+    check (source_label is null or char_length(source_label) between 1 and 160),
+  constraint variety_seed_proofs_status_check
+    check (status in ('draft', 'published'))
+);
+
+alter table variety_seed_proofs
+  add column if not exists catalog_item_id uuid,
+  add column if not exists title text,
+  add column if not exists summary text,
+  add column if not exists body text,
+  add column if not exists source_label text,
+  add column if not exists status text default 'draft',
+  add column if not exists author_user_id uuid,
+  add column if not exists published_at timestamptz,
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_catalog_item_id_fkey'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_catalog_item_id_fkey
+      foreign key (catalog_item_id) references catalog_items(id) on delete cascade;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_title_length_check'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_title_length_check
+      check (char_length(title) between 1 and 120);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_summary_length_check'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_summary_length_check
+      check (char_length(summary) between 1 and 280);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_body_length_check'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_body_length_check
+      check (char_length(body) between 80 and 1600);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_source_label_length_check'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_source_label_length_check
+      check (source_label is null or char_length(source_label) between 1 and 160);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'variety_seed_proofs_status_check'
+      and conrelid = 'variety_seed_proofs'::regclass
+  ) then
+    alter table variety_seed_proofs
+      add constraint variety_seed_proofs_status_check
+      check (status in ('draft', 'published'));
+  end if;
+end $$;
+
+create unique index if not exists variety_seed_proofs_catalog_item_uidx
+  on variety_seed_proofs (catalog_item_id);
+
+create index if not exists variety_seed_proofs_status_updated_idx
+  on variety_seed_proofs (status, updated_at desc);
+
 insert into catalog_items (
   id,
   canonical_name,
