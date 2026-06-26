@@ -35,3 +35,7 @@ pnpm db:types
 ```
 
 The product UI has not started; `/health` is only an infrastructure tracer.
+
+## Walking Skeleton
+
+Run `pnpm local:bootstrap`, then visit `/skeleton`. The page exercises Better Auth, scoped Kysely repositories, Postgres, queueing, and SSR readback.

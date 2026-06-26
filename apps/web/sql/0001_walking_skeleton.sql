@@ -10,6 +10,39 @@ create table if not exists health (
   created_at timestamptz not null default now()
 );
 
+create table if not exists journal_entries (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  body text not null check (char_length(body) between 1 and 2000),
+  visibility text not null default 'private' check (visibility in ('private', 'public')),
+  client_mutation_id text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, client_mutation_id)
+);
+
+create index if not exists journal_entries_user_created_idx
+  on journal_entries (user_id, created_at desc);
+
+create index if not exists journal_entries_public_created_idx
+  on journal_entries (created_at desc)
+  where visibility = 'public';
+
+create table if not exists media_assets (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  journal_entry_id uuid references journal_entries(id) on delete cascade,
+  quarantine_key text not null unique,
+  derivative_key text unique,
+  status text not null default 'quarantined' check (status in ('quarantined', 'processed', 'failed')),
+  original_deleted_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists media_assets_owner_created_idx
+  on media_assets (owner_user_id, created_at desc);
+
 create table if not exists job_queue (
   id uuid primary key default gen_random_uuid(),
   queue_name text not null,

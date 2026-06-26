@@ -1,6 +1,6 @@
 import "server-only";
 
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import {
@@ -61,6 +61,36 @@ export async function createQuarantineUploadUrl({
     bucket,
     expiresInSeconds,
   };
+}
+
+
+export async function getQuarantineObjectBuffer(objectKey: string): Promise<Buffer> {
+  const response = await r2Client().send(
+    new GetObjectCommand({
+      Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
+      Key: objectKey,
+    }),
+  );
+
+  const bytes = await response.Body?.transformToByteArray();
+  if (!bytes) throw new Error(`Quarantine object ${objectKey} has no body.`);
+  return Buffer.from(bytes);
+}
+
+export async function putPublicDerivativeObject(
+  objectKey: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
+  await r2Client().send(
+    new PutObjectCommand({
+      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
+      Key: objectKey,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
 }
 
 export async function deleteQuarantineObject(objectKey: string): Promise<void> {
