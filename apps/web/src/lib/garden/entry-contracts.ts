@@ -1,3 +1,5 @@
+import type { EntrySyncStatus } from "@/db/schema";
+
 export interface FirstPlantEntryRequest {
   spaceName: string;
   plantName: string;
@@ -7,6 +9,7 @@ export interface FirstPlantEntryRequest {
   entryDate?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  syncStatus?: EntrySyncStatus;
 }
 
 export interface FirstPlantEntryResponse {

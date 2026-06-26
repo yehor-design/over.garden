@@ -247,6 +247,39 @@ create index if not exists journal_entries_public_gone_idx
   on journal_entries (public_slug, public_gone_at)
   where public_slug is not null and public_gone_at is not null;
 
+create table if not exists analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  session_id text,
+  event_name text not null check (
+    event_name in (
+      'space_created',
+      'object_created',
+      'entry_logged',
+      'entry_photo_attached',
+      'offline_entry_queued',
+      'offline_entry_synced',
+      'progress_screen_shown',
+      'own_record_revisited'
+    )
+  ),
+  properties jsonb not null default '{}'::jsonb
+    check (jsonb_typeof(properties) = 'object'),
+  space_id uuid references spaces(id) on delete set null,
+  plant_object_id uuid references plant_objects(id) on delete set null,
+  journal_entry_id uuid references journal_entries(id) on delete set null,
+  related_event_id uuid references analytics_events(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists analytics_events_owner_event_created_idx
+  on analytics_events (owner_user_id, event_name, created_at desc);
+
+create index if not exists analytics_events_owner_session_object_idx
+  on analytics_events (owner_user_id, session_id, plant_object_id, created_at desc)
+  where session_id is not null and plant_object_id is not null;
+
 create table if not exists media_assets (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

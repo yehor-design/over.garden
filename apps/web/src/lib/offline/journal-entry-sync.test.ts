@@ -37,7 +37,18 @@ describe("offline journal entry sync", () => {
 
     expect(body.clientMutationId).toBe("queue-entry-id");
     expect(body.mediaAssetId).toBe("media-1");
+    expect(body.syncStatus).toBe("online");
     expect(body.title).toBe("First flowers");
+  });
+
+  it("marks queued offline payloads as offline synced on the canonical request", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      { ...payload, syncStatus: "offline_queued" },
+      "queue-entry-id",
+      null,
+    );
+
+    expect(body.syncStatus).toBe("offline_synced");
   });
 
   it("syncs a queued entry through the canonical create endpoint", async () => {

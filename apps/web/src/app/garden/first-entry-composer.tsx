@@ -182,6 +182,7 @@ export function FirstEntryComposer({
     return {
       ...draft,
       clientMutationId,
+      syncStatus: isOnline ? "online" : "offline_queued",
       photoIntent: photoFile
         ? {
             fileName: photoFile.name,

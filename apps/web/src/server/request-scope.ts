@@ -1,8 +1,12 @@
 export interface RequestScope {
   userId: string;
+  sessionId?: string | null;
 }
 
-export function scopedToUser(userId: string): RequestScope {
+export function scopedToUser(
+  userId: string,
+  sessionId?: string | null,
+): RequestScope {
   if (!userId) throw new Error("A scoped repository requires a user id.");
-  return { userId };
+  return { userId, sessionId: sessionId ?? null };
 }

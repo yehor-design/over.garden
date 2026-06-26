@@ -1,15 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PlusCircle } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { LocationVisibility, VarietyState } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
-import { getCurrentSession } from "@/server/auth-session";
-import { getPlantObjectPage } from "@/server/journal-repository";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { recordAnalyticsEventSafely } from "@/server/analytics-events";
+import {
+  getPlantObjectPage,
+  type PlantObjectPage,
+} from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
+  createPlantObjectJournalEntryAction,
   publishJournalEntryAction,
 } from "./actions";
 
@@ -42,8 +49,12 @@ export default async function PlantObjectReadbackPage({
     );
   }
 
-  const page = await getPlantObjectPage(scopedToUser(userId), objectId);
+  const scope = scopedToUser(userId, getSessionId(session));
+  const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
+  await recordOwnRecordRevisited(scope, page);
+
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -74,6 +85,71 @@ export default async function PlantObjectReadbackPage({
           </div>
         </div>
       </header>
+
+      <section className="grid gap-4 rounded-lg border border-border p-4">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-lg font-semibold text-foreground">
+            Add dated entry
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Keep this object history in one place.
+          </p>
+        </div>
+
+        <form
+          action={createPlantObjectJournalEntryAction}
+          className="grid gap-4"
+        >
+          <input type="hidden" name="objectId" value={objectId} />
+          <input
+            type="hidden"
+            name="clientMutationId"
+            value={crypto.randomUUID()}
+          />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
+              Entry title
+              <input
+                name="title"
+                required
+                maxLength={140}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                placeholder="Second flowering wave"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+              Date
+              <input
+                type="date"
+                name="entryDate"
+                defaultValue={today}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+            Note
+            <textarea
+              name="body"
+              required
+              minLength={1}
+              maxLength={2000}
+              className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="Compared with the previous entry, the new leaves are stronger and the soil stayed moist longer."
+            />
+          </label>
+
+          <button
+            type="submit"
+            className={buttonVariants({ className: "self-start" })}
+          >
+            <PlusCircle className="size-4" />
+            Add entry
+          </button>
+        </form>
+      </section>
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -212,6 +288,27 @@ export default async function PlantObjectReadbackPage({
       </section>
     </main>
   );
+}
+
+async function recordOwnRecordRevisited(
+  scope: Parameters<typeof getPlantObjectPage>[0],
+  page: PlantObjectPage,
+) {
+  const latestEntry = page.entries[0];
+  if (!latestEntry) return;
+
+  await recordAnalyticsEventSafely(scope, {
+    eventName: "own_record_revisited",
+    properties: {
+      followed_by_action: false,
+      location_visibility_level: page.plantObject
+        .location_visibility as LocationVisibility,
+      variety_state: page.plantObject.variety_state as VarietyState,
+    },
+    spaceId: page.space.id,
+    plantObjectId: page.plantObject.id,
+    journalEntryId: latestEntry.id,
+  });
 }
 
 function formatDate(value: Date | string) {

@@ -48,6 +48,14 @@ export interface CreateJournalEntryInput {
   clientMutationId: string;
 }
 
+export interface CreatePlantObjectJournalEntryInput {
+  plantObjectId: string;
+  title: string;
+  body: string;
+  entryDate?: string | null;
+  clientMutationId: string;
+}
+
 export interface PublishJournalEntryInput {
   entryId: string;
   disclosureAccepted: boolean;
@@ -147,6 +155,17 @@ export interface FirstPlantEntryResult {
   space: PlantObjectPage["space"];
   plantObject: PlantObjectPage["plantObject"];
   entry: JournalEntry;
+  isNewEntry: boolean;
+  mediaAttached: boolean;
+  priorObjectEntryCount: number;
+}
+
+export interface PlantObjectJournalEntryResult {
+  space: PlantObjectPage["space"];
+  plantObject: PlantObjectPage["plantObject"];
+  entry: JournalEntry;
+  isNewEntry: boolean;
+  priorObjectEntryCount: number;
 }
 
 export async function createFirstPlantEntry(
@@ -160,7 +179,7 @@ export async function createFirstPlantEntry(
   );
 
   if (existing) {
-    await attachMediaAssetToEntryIfPresent(
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
       db,
       scope,
       normalized.mediaAssetId,
@@ -175,6 +194,9 @@ export async function createFirstPlantEntry(
       space: page.space,
       plantObject: page.plantObject,
       entry: existing,
+      isNewEntry: false,
+      mediaAttached,
+      priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
     };
   }
 
@@ -215,7 +237,7 @@ export async function createFirstPlantEntry(
     });
 
     if (entry) {
-      await attachMediaAssetToEntryIfPresent(
+      const mediaAttached = await attachMediaAssetToEntryIfPresent(
         trx,
         scope,
         normalized.mediaAssetId,
@@ -236,6 +258,9 @@ export async function createFirstPlantEntry(
           location_visibility: plantObject.location_visibility,
         },
         entry,
+        isNewEntry: true,
+        mediaAttached,
+        priorObjectEntryCount: 0,
       };
     }
 
@@ -251,7 +276,7 @@ export async function createFirstPlantEntry(
       );
     }
 
-    await attachMediaAssetToEntryIfPresent(
+    const mediaAttached = await attachMediaAssetToEntryIfPresent(
       trx,
       scope,
       normalized.mediaAssetId,
@@ -272,6 +297,9 @@ export async function createFirstPlantEntry(
       space: page.space,
       plantObject: page.plantObject,
       entry: existingAfterConflict,
+      isNewEntry: false,
+      mediaAttached,
+      priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
     };
   });
 }
@@ -349,6 +377,122 @@ export async function getPlantObjectPage(
       media: mediaByEntryId.get(entry.id) ?? null,
     })),
   };
+}
+
+export async function createPlantObjectJournalEntry(
+  scope: RequestScope,
+  input: CreatePlantObjectJournalEntryInput,
+): Promise<PlantObjectJournalEntryResult> {
+  const normalized = normalizeCreatePlantObjectJournalEntryInput(input);
+  const existing = await findJournalEntryByClientMutation(
+    scope,
+    normalized.clientMutationId,
+  );
+
+  if (existing) {
+    if (existing.plant_object_id !== normalized.plantObjectId) {
+      throw new Error(
+        "Client mutation id already belongs to another plant object.",
+      );
+    }
+
+    const page = await getPlantObjectPage(scope, existing.plant_object_id);
+    if (!page)
+      throw new Error("Existing journal entry is outside the request scope.");
+
+    return {
+      space: page.space,
+      plantObject: page.plantObject,
+      entry: existing,
+      isNewEntry: false,
+      priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
+    };
+  }
+
+  return db.transaction().execute(async (trx) => {
+    const target = await buildPlantObjectPageObjectQuery(
+      trx,
+      scope,
+      normalized.plantObjectId,
+    ).executeTakeFirst();
+
+    if (!target) {
+      throw new Error("Plant object was not found in this garden.");
+    }
+
+    const priorObjectEntryCount = await countJournalEntriesForObject(
+      trx,
+      scope,
+      normalized.plantObjectId,
+    );
+    const entry = await insertJournalEntry(trx, {
+      owner_user_id: scope.userId,
+      space_id: target.spaceId,
+      plant_object_id: target.objectId,
+      title: normalized.title,
+      body: normalized.body,
+      entry_scope: "object",
+      entry_date: normalized.entryDate,
+      visibility: DEFAULT_ENTRY_VISIBILITY,
+      client_mutation_id: normalized.clientMutationId,
+    });
+
+    if (entry) {
+      return {
+        space: {
+          id: target.spaceId,
+          display_name: target.spaceDisplayName,
+          location_visibility: target.spaceLocationVisibility,
+        },
+        plantObject: {
+          id: target.objectId,
+          display_name: target.objectDisplayName,
+          variety_text: target.varietyText,
+          variety_state: target.varietyState,
+          location_visibility: target.objectLocationVisibility,
+        },
+        entry,
+        isNewEntry: true,
+        priorObjectEntryCount,
+      };
+    }
+
+    const existingAfterConflict = await findJournalEntryByClientMutation(
+      scope,
+      normalized.clientMutationId,
+      trx,
+    );
+
+    if (!existingAfterConflict) {
+      throw new Error(
+        "Journal entry idempotency conflict could not be resolved.",
+      );
+    }
+
+    if (existingAfterConflict.plant_object_id !== normalized.plantObjectId) {
+      throw new Error(
+        "Client mutation id already belongs to another plant object.",
+      );
+    }
+
+    return {
+      space: {
+        id: target.spaceId,
+        display_name: target.spaceDisplayName,
+        location_visibility: target.spaceLocationVisibility,
+      },
+      plantObject: {
+        id: target.objectId,
+        display_name: target.objectDisplayName,
+        variety_text: target.varietyText,
+        variety_state: target.varietyState,
+        location_visibility: target.objectLocationVisibility,
+      },
+      entry: existingAfterConflict,
+      isNewEntry: false,
+      priorObjectEntryCount,
+    };
+  });
 }
 
 export async function createJournalEntry(
@@ -584,6 +728,18 @@ export function buildFindJournalEntryByIdQuery(
     .where("owner_user_id", "=", scope.userId);
 }
 
+export function buildObjectJournalEntryCountQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .select(({ fn }) => fn.countAll<number>().as("entryCount"))
+    .where("owner_user_id", "=", scope.userId)
+    .where("plant_object_id", "=", plantObjectId);
+}
+
 export function buildInsertJournalEntryQuery(
   executor: QueryExecutor,
   row: NewJournalEntryRow,
@@ -808,6 +964,20 @@ async function findJournalEntryById(
   ).executeTakeFirst();
 }
 
+async function countJournalEntriesForObject(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectId: string,
+): Promise<number> {
+  const row = await buildObjectJournalEntryCountQuery(
+    executor,
+    scope,
+    plantObjectId,
+  ).executeTakeFirst();
+
+  return Number(row?.entryCount ?? 0);
+}
+
 function normalizeCreateFirstPlantEntryInput(
   input: CreateFirstPlantEntryInput,
 ) {
@@ -846,6 +1016,26 @@ function normalizeCreateFirstPlantEntryInput(
       200,
     ),
     mediaAssetId,
+  };
+}
+
+function normalizeCreatePlantObjectJournalEntryInput(
+  input: CreatePlantObjectJournalEntryInput,
+) {
+  return {
+    plantObjectId: normalizeRequiredText(
+      input.plantObjectId,
+      "Plant object id",
+      200,
+    ),
+    title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
+    body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
+    entryDate: normalizeEntryDate(input.entryDate),
+    clientMutationId: normalizeRequiredText(
+      input.clientMutationId,
+      "Client mutation id",
+      200,
+    ),
   };
 }
 
@@ -927,7 +1117,7 @@ async function attachMediaAssetToEntryIfPresent(
   mediaAssetId: string | null,
   journalEntryId: string,
 ) {
-  if (!mediaAssetId) return;
+  if (!mediaAssetId) return false;
 
   const mediaAsset = await attachProcessedMediaAssetToEntry(executor, scope, {
     mediaAssetId,
@@ -937,6 +1127,8 @@ async function attachMediaAssetToEntryIfPresent(
   if (!mediaAsset) {
     throw new Error("Processed media asset is unavailable for this entry.");
   }
+
+  return true;
 }
 
 async function getProcessedMediaByEntryId(

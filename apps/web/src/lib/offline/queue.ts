@@ -2,6 +2,8 @@
 
 import Dexie, { type Table } from "dexie";
 
+import type { EntrySyncStatus } from "@/db/schema";
+
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
 
@@ -21,6 +23,7 @@ export interface OfflineJournalEntryPayload {
   body: string;
   entryDate: string;
   clientMutationId: string;
+  syncStatus?: EntrySyncStatus;
   photoIntent?: OfflinePhotoIntent | null;
   processedMediaAssetId?: string | null;
 }

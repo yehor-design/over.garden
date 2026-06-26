@@ -40,6 +40,20 @@ export interface Account {
   userId: string;
 }
 
+export interface AnalyticsEvents {
+  created_at: Generated<Timestamp>;
+  event_name: string;
+  id: Generated<string>;
+  journal_entry_id: string | null;
+  owner_user_id: string;
+  plant_object_id: string | null;
+  properties: Generated<Json>;
+  related_event_id: string | null;
+  session_id: string | null;
+  space_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Health {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -149,6 +163,7 @@ export interface Verification {
 
 export interface DB {
   account: Account;
+  analytics_events: AnalyticsEvents;
   health: Health;
   job_queue: JobQueue;
   journal_entries: JournalEntries;

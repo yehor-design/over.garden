@@ -19,6 +19,7 @@ import {
   buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryQuery,
+  buildObjectJournalEntryCountQuery,
   buildPlantObjectPageObjectQuery,
   buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
@@ -213,6 +214,21 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
+  it("counts object journal entries only inside owner scope", () => {
+    const compiled = buildObjectJournalEntryCountQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "00000000-0000-0000-0000-000000000003",
+    ).compile();
+
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"plant_object_id" = $2');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000003",
     ]);
   });
 

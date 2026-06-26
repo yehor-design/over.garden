@@ -120,6 +120,8 @@ export function buildJournalEntryRequestBodyForSync(
     entryDate: payload.entryDate,
     clientMutationId: idempotencyKey,
     mediaAssetId: mediaAssetId ?? "",
+    syncStatus:
+      payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
   };
 }
 
