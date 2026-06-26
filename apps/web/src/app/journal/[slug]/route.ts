@@ -1,4 +1,7 @@
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  publicJournalEntryPath,
+  publicVarietyPath,
+} from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import {
   getPublicJournalEntryLookup,
@@ -36,6 +39,7 @@ function renderEntryPage(page: PublicJournalEntryPage) {
     ? "noindex, nofollow"
     : "index, follow";
   const locationLabel = getPublicLocationLabel(page);
+  const varietyLink = getPublicVarietyLink(page);
 
   return renderShell({
     title,
@@ -46,7 +50,10 @@ function renderEntryPage(page: PublicJournalEntryPage) {
       <main class="page">
         <header class="header">
           <a class="button" href="/">OverGarden</a>
-          <p class="eyebrow">${escapeHtml(page.plantObject.displayName)}${page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}</p>
+          <p class="eyebrow">
+            ${escapeHtml(page.plantObject.displayName)}
+            ${varietyLink ? ` · ${varietyLink}` : page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}
+          </p>
           <h1>${escapeHtml(page.entry.title)}</h1>
           <div class="meta">
             <time>${escapeHtml(formatDate(page.entry.entryDate))}</time>
@@ -64,6 +71,17 @@ function renderEntryPage(page: PublicJournalEntryPage) {
       </main>
     `,
   });
+}
+
+function getPublicVarietyLink(page: PublicJournalEntryPage) {
+  if (!page.plantObject.catalogPublicSlug) return null;
+
+  const label =
+    page.plantObject.catalogCanonicalName ??
+    page.plantObject.varietyText ??
+    "Variety";
+
+  return `<a class="inline-link" href="${escapeAttribute(publicVarietyPath(page.plantObject.catalogPublicSlug))}">${escapeHtml(label)}</a>`;
 }
 
 function getPublicLocationLabel(page: PublicJournalEntryPage) {
@@ -174,6 +192,14 @@ function renderShell({
         text-decoration: none;
         font-size: 0.9rem;
         background: var(--panel);
+      }
+      .inline-link {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      .inline-link:hover {
+        text-decoration: underline;
+        text-underline-offset: 0.18rem;
       }
       .eyebrow,
       .meta,

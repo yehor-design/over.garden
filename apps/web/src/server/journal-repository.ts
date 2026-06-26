@@ -17,6 +17,7 @@ import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
+  SELECTABLE_CATALOG_STATUSES,
   createUserAddedCatalogCandidate,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
@@ -165,6 +166,8 @@ export interface PublicJournalEntryPage {
   };
   plantObject: {
     displayName: string;
+    catalogCanonicalName: string | null;
+    catalogPublicSlug: string | null;
     varietyText: string | null;
     varietyState: VarietyState;
     locationVisibility: LocationVisibility;
@@ -838,6 +841,8 @@ export async function getPublicJournalEntryLookup(
       },
       plantObject: {
         displayName: row.objectDisplayName,
+        catalogCanonicalName: row.catalogCanonicalName,
+        catalogPublicSlug: row.catalogPublicSlug,
         varietyText: row.varietyText,
         varietyState: row.varietyState as VarietyState,
         locationVisibility: row.objectLocationVisibility as LocationVisibility,
@@ -1125,6 +1130,13 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.plant_object_id",
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.created_by_user_id", "is", null)
+        .on("catalog_items.public_slug", "is not", null),
+    )
     .select([
       "journal_entries.id as entryId",
       "journal_entries.title as title",
@@ -1141,6 +1153,8 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.coarse_region_code as spaceCoarseRegionCode",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.catalog_item_id as catalogItemId",
+      "catalog_items.canonical_name as catalogCanonicalName",
+      "catalog_items.public_slug as catalogPublicSlug",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",

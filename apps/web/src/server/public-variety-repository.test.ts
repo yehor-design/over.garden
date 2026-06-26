@@ -1,0 +1,142 @@
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+  type DatabaseIntrospector,
+  type Dialect,
+  type DialectAdapter,
+  type Driver,
+  type QueryCompiler,
+} from "kysely";
+import { describe, expect, it } from "vitest";
+
+import type { Database } from "@/db/schema";
+import {
+  buildPublicVarietyEntriesQuery,
+  buildPublicVarietySummaryQuery,
+} from "./public-variety-repository";
+
+class TestPostgresDialect implements Dialect {
+  createDriver(): Driver {
+    return new DummyDriver();
+  }
+
+  createQueryCompiler(): QueryCompiler {
+    return new PostgresQueryCompiler();
+  }
+
+  createAdapter(): DialectAdapter {
+    return new PostgresAdapter();
+  }
+
+  createIntrospector(db: Kysely<unknown>): DatabaseIntrospector {
+    return new PostgresIntrospector(db);
+  }
+}
+
+const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
+
+describe("public variety repository query contracts", () => {
+  it("counts only safe public entries for global seeded or confirmed catalog identity", () => {
+    const compiled = buildPublicVarietySummaryQuery(
+      testDb,
+      "pomidor-cheri-0000000101",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_items"');
+    expect(compiled.sql).toContain(
+      'inner join "plant_objects" on "plant_objects"."catalog_item_id" = "catalog_items"."id"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "journal_entries" on "journal_entries"."plant_object_id" = "plant_objects"."id"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
+    );
+    expect(compiled.sql).toContain('left join "media_assets"');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
+    expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $5');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).not.toContain("original_deleted_at");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
+    expect(compiled.parameters).toEqual([
+      "processed",
+      "pomidor-cheri-0000000101",
+      "seeded",
+      "confirmed",
+      "selected",
+      "public",
+      "active",
+    ]);
+  });
+
+  it("selects bounded entry readback with derivative media only", () => {
+    const compiled = buildPublicVarietyEntriesQuery(
+      testDb,
+      "pomidor-cheri-0000000101",
+      99,
+    ).compile();
+
+    expect(compiled.sql).toContain('"journal_entries"."title"');
+    expect(compiled.sql).toContain('"journal_entries"."body"');
+    expect(compiled.sql).toContain('"journal_entries"."entry_date"');
+    expect(compiled.sql).toContain('"media_assets"."derivative_key"');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
+    expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).toContain(
+      'order by "journal_entries"."entry_date" desc',
+    );
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).not.toContain("original_deleted_at");
+    expect(compiled.sql).not.toContain("email");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
+    expect(compiled.parameters).toEqual([
+      "processed",
+      "pomidor-cheri-0000000101",
+      "seeded",
+      "confirmed",
+      "selected",
+      "public",
+      "active",
+      20,
+    ]);
+  });
+});

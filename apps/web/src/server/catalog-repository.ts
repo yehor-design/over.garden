@@ -23,7 +23,7 @@ const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 
-const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
+export const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type SelectableCatalogStatus = (typeof SELECTABLE_CATALOG_STATUSES)[number];
@@ -49,6 +49,7 @@ export interface CatalogSuggestion {
 export interface SelectableCatalogItem {
   id: string;
   canonicalName: string;
+  publicSlug: string | null;
   locale: string;
   status: SelectableCatalogStatus;
   source: string;
@@ -149,6 +150,7 @@ export async function findSelectableCatalogItem(
   return {
     id: row.id,
     canonicalName: row.canonicalName,
+    publicSlug: row.publicSlug,
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
     source: row.source,
@@ -268,12 +270,14 @@ export function buildFindSelectableCatalogItemQuery(
     .select([
       "id",
       "canonical_name as canonicalName",
+      "public_slug as publicSlug",
       "locale",
       "status",
       "source",
     ])
     .where("id", "=", itemId)
-    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES]);
+    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("created_by_user_id", "is", null);
 }
 
 export function buildUpsertUserAddedCatalogItemQuery(

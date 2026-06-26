@@ -140,6 +140,7 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain('from "catalog_items"');
     expect(compiled.sql).toContain('"id" = $1');
     expect(compiled.sql).toContain('"status" in ($2, $3)');
+    expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000101",
       "seeded",

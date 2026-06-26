@@ -5,9 +5,10 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U>
+    ? ColumnType<S, I | undefined, U>
+    : ColumnType<T, T | undefined, T>;
 
 export type Json = JsonValue;
 
@@ -71,6 +72,7 @@ export interface CatalogItems {
   locale: Generated<string>;
   merged_into_catalog_item_id: string | null;
   normalized_name: string | null;
+  public_slug: string | null;
   reviewed_at: Timestamp | null;
   reviewed_by_user_id: string | null;
   source: Generated<string>;

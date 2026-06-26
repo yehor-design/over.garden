@@ -76,23 +76,26 @@ describe("catalog curation repository query contracts", () => {
     const compiled = buildConfirmCatalogCurationCandidateQuery(testDb, scope, {
       candidateId: "00000000-0000-4000-8000-000000000201",
       now,
+      publicSlug: "babusyn-perets-0000000201",
     }).compile();
 
     expect(compiled.sql).toContain('update "catalog_items"');
     expect(compiled.sql).toContain('"status" = $1');
     expect(compiled.sql).toContain('"source" = $2');
-    expect(compiled.sql).toContain('"created_by_user_id" = $3');
-    expect(compiled.sql).toContain('"reviewed_at" = $4');
-    expect(compiled.sql).toContain('"reviewed_by_user_id" = $5');
-    expect(compiled.sql).toContain('"merged_into_catalog_item_id" = $6');
-    expect(compiled.sql).toContain('"updated_at" = $7');
-    expect(compiled.sql).toContain('"id" = $8');
-    expect(compiled.sql).toContain('"status" = $9');
-    expect(compiled.sql).toContain('"source" = $10');
+    expect(compiled.sql).toContain('"public_slug" = $3');
+    expect(compiled.sql).toContain('"created_by_user_id" = $4');
+    expect(compiled.sql).toContain('"reviewed_at" = $5');
+    expect(compiled.sql).toContain('"reviewed_by_user_id" = $6');
+    expect(compiled.sql).toContain('"merged_into_catalog_item_id" = $7');
+    expect(compiled.sql).toContain('"updated_at" = $8');
+    expect(compiled.sql).toContain('"id" = $9');
+    expect(compiled.sql).toContain('"status" = $10');
+    expect(compiled.sql).toContain('"source" = $11');
     expect(compiled.sql).toContain('"created_by_user_id" is not null');
     expect(compiled.parameters).toEqual([
       "confirmed",
       "curated_user",
+      "babusyn-perets-0000000201",
       null,
       now,
       "00000000-0000-0000-0000-000000000001",

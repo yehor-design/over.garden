@@ -48,6 +48,7 @@ create table if not exists catalog_items (
   id uuid primary key default gen_random_uuid(),
   canonical_name text not null check (char_length(canonical_name) between 1 and 120),
   normalized_name text check (normalized_name is null or char_length(normalized_name) between 1 and 120),
+  public_slug text check (public_slug is null or public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   status text not null default 'seeded' check (status in ('seeded', 'confirmed', 'provisional', 'merged', 'rejected')),
   source text not null default 'internal_seed',
   source_id text,
@@ -62,6 +63,7 @@ create table if not exists catalog_items (
 
 alter table catalog_items
   add column if not exists normalized_name text,
+  add column if not exists public_slug text,
   add column if not exists created_by_user_id uuid,
   add column if not exists reviewed_at timestamptz,
   add column if not exists reviewed_by_user_id uuid,
@@ -71,8 +73,26 @@ update catalog_items
 set normalized_name = lower(canonical_name)
 where normalized_name is null;
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_items_public_slug_check'
+      and conrelid = 'catalog_items'::regclass
+  ) then
+    alter table catalog_items
+      add constraint catalog_items_public_slug_check
+      check (public_slug is null or public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$');
+  end if;
+end $$;
+
 create index if not exists catalog_items_status_created_idx
   on catalog_items (status, created_at desc);
+
+create unique index if not exists catalog_items_public_slug_uidx
+  on catalog_items (public_slug)
+  where public_slug is not null;
 
 create index if not exists catalog_items_merged_into_idx
   on catalog_items (merged_into_catalog_item_id)
@@ -101,16 +121,28 @@ insert into catalog_items (
   id,
   canonical_name,
   normalized_name,
+  public_slug,
   status,
   source,
   source_id,
   locale
 )
 values
-  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
-  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
-  ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
+  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'pomidor-cheri-0000000101', 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
+  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'nizhyn-cucumber-0000000102', 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
+  ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'domat-cheri-0000000103', 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
 on conflict (id) do nothing;
+
+update catalog_items
+set public_slug = seed_slugs.public_slug
+from (
+  values
+    ('00000000-0000-4000-8000-000000000101'::uuid, 'pomidor-cheri-0000000101'),
+    ('00000000-0000-4000-8000-000000000102'::uuid, 'nizhyn-cucumber-0000000102'),
+    ('00000000-0000-4000-8000-000000000103'::uuid, 'domat-cheri-0000000103')
+) as seed_slugs(id, public_slug)
+where catalog_items.id = seed_slugs.id
+  and catalog_items.public_slug is null;
 
 insert into catalog_item_names (
   catalog_item_id,

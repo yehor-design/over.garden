@@ -4,6 +4,7 @@ import { type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { CatalogItem, Database } from "@/db/schema";
+import { createCatalogPublicSlug } from "@/lib/garden/public-paths";
 import {
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   findSelectableCatalogItem,
@@ -70,7 +71,10 @@ export async function confirmCatalogCurationCandidate(
   const now = new Date();
 
   return db.transaction().execute(async (trx) => {
-    await requirePendingCatalogCurationCandidate(trx, candidateId);
+    const pendingCandidate = await requirePendingCatalogCurationCandidate(
+      trx,
+      candidateId,
+    );
     const publicEntryPaths = await publicEntryPathsForCandidate(
       trx,
       candidateId,
@@ -82,6 +86,10 @@ export async function confirmCatalogCurationCandidate(
       {
         candidateId,
         now,
+        publicSlug: createCatalogPublicSlug(
+          pendingCandidate.canonical_name,
+          pendingCandidate.id,
+        ),
       },
     ).executeTakeFirstOrThrow();
 
@@ -244,6 +252,7 @@ export function buildConfirmCatalogCurationCandidateQuery(
   input: {
     candidateId: string;
     now: Date;
+    publicSlug: string;
   },
 ) {
   return executor
@@ -251,6 +260,7 @@ export function buildConfirmCatalogCurationCandidateQuery(
     .set({
       status: "confirmed",
       source: CURATED_USER_SOURCE,
+      public_slug: input.publicSlug,
       created_by_user_id: null,
       reviewed_at: input.now,
       reviewed_by_user_id: scope.userId,

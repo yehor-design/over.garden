@@ -1,0 +1,126 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { getPublicVarietyPage } from "@/server/public-variety-repository";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Variety | OverGarden",
+  description: "Public garden journal entries for a catalog variety.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+interface PublicVarietyRouteProps {
+  params: Promise<{ slug: string }>;
+}
+
+export default async function PublicVarietyRoute({
+  params,
+}: PublicVarietyRouteProps) {
+  const { slug } = await params;
+  const page = await getPublicVarietyPage(slug);
+
+  if (!page) notFound();
+
+  return (
+    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+      <header className="flex flex-col gap-5 border-b border-border pb-6">
+        <Link
+          href="/"
+          className="self-start rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+        >
+          OverGarden
+        </Link>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium text-muted-foreground">
+            Public variety
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            {page.catalog.canonicalName}
+          </h1>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-md border border-border px-2 py-1">
+              {formatCount(page.entryCount, "entry", "entries")}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              {formatCount(page.photoCount, "photo", "photos")}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              {page.catalog.status}
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <ol className="grid gap-4">
+        {page.entries.map((entry) => (
+          <li
+            key={entry.id}
+            className={`grid gap-4 rounded-lg border border-border p-4 ${
+              entry.media ? "sm:grid-cols-3" : ""
+            }`}
+          >
+            <article
+              className={`flex min-w-0 flex-col gap-3 ${
+                entry.media ? "sm:col-span-2" : ""
+              }`}
+            >
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <time>{formatDate(entry.entryDate)}</time>
+                  {entry.safeLocationLabel ? (
+                    <span>{entry.safeLocationLabel}</span>
+                  ) : null}
+                  <span>{entry.varietyText ?? page.catalog.canonicalName}</span>
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {entry.title}
+                </h2>
+              </div>
+              <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
+                {entry.body}
+              </p>
+              <Link
+                href={entry.publicPath}
+                className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Open source entry
+              </Link>
+            </article>
+
+            {entry.media ? (
+              <Image
+                src={entry.media.publicUrl}
+                alt={`${entry.title} photo`}
+                width={448}
+                height={252}
+                sizes="(min-width: 640px) 14rem, 100vw"
+                unoptimized
+                className="aspect-video w-full rounded-md border border-border object-cover sm:w-56"
+              />
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </main>
+  );
+}
+
+function formatDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toLocaleDateString("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function formatCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
+}

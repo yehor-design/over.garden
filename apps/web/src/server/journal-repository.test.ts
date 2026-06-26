@@ -342,12 +342,17 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
+    expect(compiled.sql).toContain('left join "catalog_items"');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug"');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -358,6 +363,8 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
       "first-flowers-abc123",
       "public",
       "active",
@@ -370,7 +377,9 @@ describe("journal repository query contracts", () => {
       "first-flowers-abc123",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
+    expect(compiled.sql).toContain('left join "catalog_items"');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug"');
     expect(compiled.sql).toContain(
       '"journal_entries"."lifecycle_state" as "lifecycleState"',
     );
@@ -380,7 +389,11 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
-    expect(compiled.parameters).toEqual(["first-flowers-abc123"]);
+    expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
+      "first-flowers-abc123",
+    ]);
   });
 
   it("attaches only owner-scoped processed media to an entry", () => {
