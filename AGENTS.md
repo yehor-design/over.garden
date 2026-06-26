@@ -41,6 +41,14 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - English for code, identifiers, comments, commit messages, and repository docs.
 - Conventional Commits.
 
+## Linear SDD Task Rule
+
+All future Linear execution issues must be vertical SDD slices, not layer tickets. A valid issue starts from a concrete user behavior and owns every layer needed to prove that behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs.
+
+Do not create standalone issues such as "build schema", "build UI", "add media pipeline", "add analytics", "build public pages", or "wire search" unless that work is inside the same issue as a user-visible path. Before creating or accepting a Linear issue, run the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. If it fails the test, rewrite the issue before implementation.
+
+The roadmap is not the full backlog. Only the current execution batch in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is ready for Linear. Later horizon slices must be rewritten into fresh vertical SDD issues after the current batch is reviewed.
+
 ## Decision Changes
 
 Existing ADRs are immutable historical records. To change a stack decision, add a superseding ADR and update the consolidated docs/instructions so future agents do not read contradictory canon.

@@ -64,4 +64,8 @@ MEILISEARCH_HOST='http://localhost:7700' \
 
 ## Next SDD Rule
 
-From here, product work should be vertical. A valid Linear task should name the end-to-end user behavior and touch only the necessary layers. Do not build all database schema, all UI, or all worker logic as isolated horizontal phases.
+From here, product work must be vertical. `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is the living execution roadmap, not a full backlog.
+
+A valid Linear task must name the end-to-end user behavior and touch the necessary layers together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not build all database schema, all UI, all media, all analytics, all public pages, or all worker logic as isolated horizontal phases.
+
+Before creating or accepting a Linear issue, run the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. If the task only proves one layer in isolation, rewrite it before implementation.

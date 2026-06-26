@@ -47,4 +47,8 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 
 ## Next Build Step
 
-Start the first product SDD slice only after this skeleton stays green. The first real slice should be narrow and vertical: authenticated journal capture with one photo, offline queue fallback, sync, stripped derivative, and SSR readback.
+Start the first product SDD slice only after this skeleton stays green. Use `docs/SDD_VERTICAL_SLICE_ROADMAP.md` as the living execution roadmap.
+
+Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
+
+The first real product path is narrow and vertical: authenticated journal capture with one photo, offline queue fallback, sync, stripped derivative readback, SSR public noindex publication, 410 delete, and privacy-safe H1 return-loop instrumentation.

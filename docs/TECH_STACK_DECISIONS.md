@@ -25,7 +25,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Realtime | Deferred; canonical server fetch path first |
 | Edge/DNS | Cloudflare in front of Vercel; do not cache HTML at Cloudflare |
 | Analytics | PostHog / first-party analytics later, after privacy event review |
-| Build method | Walking skeleton first, then vertical SDD slices |
+| Build method | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches |
 
 ## Binding invariants
 
@@ -39,7 +39,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 8. **Offline capture must be honest.** Queue locally, sync when possible, show unsynced state, support retry. Do not assume iOS background sync will run reliably.
 9. **Python is a worker, not a product dependency.** Typeahead uses Meilisearch. Dedup/matching can lag; SEO canonicalization must prevent thin duplicate public pages from being indexed before merge.
 10. **Every public SEO page is server-rendered.** No important public content behind a client-only shell. Thin programmatic pages stay noindex until they carry real UGC.
-11. **Agents follow vertical slices after the skeleton.** Avoid building “all DB then all auth then all UI”; each SDD slice must integrate the user path end to end.
+11. **Agents follow vertical SDD slices after the skeleton.** Do not build “all DB then all auth then all UI,” and do not create standalone Linear issues for schema, UI, media, search, analytics, or public pages. Each execution issue must start from a concrete user behavior and integrate the needed layers end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Use the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` before creating or accepting future Linear issues.
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
 
 ## Launch topology
