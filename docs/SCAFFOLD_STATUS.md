@@ -1,6 +1,6 @@
 # Runtime Scaffold — Status & Verification
 
-Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. SDD Slice 1 / Issue 5 adds recoverable entry archive/public-gone state -> authenticated archive UI -> public `410 Gone` tombstone -> search-document exclusion guard. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
 
 ## Proven Locally
 
@@ -16,8 +16,10 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - `/garden` first-entry flow can attach one processed photo asset and `/garden/objects/[objectId]` renders only the stripped public derivative.
 - `/garden` first-entry flow can queue title/body/date/object/photo intent while offline, show queued/syncing/failed/synced local states, retry through `/api/garden/entries`, and read back exactly one authenticated server entry.
 - `/garden/objects/[objectId]` can publish an existing entry through a signed-in server action after explicit disclosure, and `/journal/[slug]` renders a public SSR page that stays `noindex`.
+- `/garden/objects/[objectId]` can archive a published entry privately; the old `/journal/[slug]` public URL returns HTTP `410 Gone` and search document conversion refuses archived/public-gone rows.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
+- Repository contract tests prove owner-scoped archive, public-gone tombstone lookup, active-only public readback, and active-only derivative media selection.
 - R2 quarantine upload and public derivative processing work against the configured Cloudflare R2 buckets and `media.over.garden`.
 - Media processor tests prove the quarantine original is deleted before the public derivative is written.
 - `sharp` derivative tests prove WebP output without EXIF metadata.
@@ -62,14 +64,14 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
 - iOS Safari offline capture spike on a real device.
-- 410 deletion/archive and H1 event slices.
+- H1 return-loop/event slice.
 
 ## Next Build Step
 
-Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` with the deletion/archive safety slice after reviewing the publication implementation.
+Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` with the return-loop and privacy-safe event slice after reviewing the deletion/archive implementation.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 
-The next vertical issue should be the deletion safety slice: delete/archive published entry -> authenticated archive state -> public `410 Gone` -> search/index removal guard -> derivative/privacy invariants -> tests. Do not open standalone delete, public route, search, or metadata tasks outside that vertical path.
+The next vertical issue should be the return-loop slice: revisit object -> read prior entry -> add second entry -> emit H1-safe events -> privacy-safe event tests. Do not open standalone analytics/event, UI, or repository tasks outside that vertical path.
 
 Before implementing the next issue, run the Product Thinking Gate in `docs/product-research/README.md` and include the selected research files in the Linear context.

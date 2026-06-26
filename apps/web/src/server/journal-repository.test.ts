@@ -15,12 +15,14 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
+  buildArchiveJournalEntryQuery,
   buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryQuery,
   buildPlantObjectPageObjectQuery,
   buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
+  buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
   buildPublicProcessedMediaForEntryQuery,
   buildPublishJournalEntryQuery,
@@ -129,28 +131,71 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('update "journal_entries"');
-    expect(compiled.sql).toContain('"visibility" = $1');
-    expect(compiled.sql).toContain('"public_slug" = $2');
-    expect(compiled.sql).toContain('"public_noindex" = $3');
+    expect(compiled.sql).toContain('"lifecycle_state" = $1');
+    expect(compiled.sql).toContain('"visibility" = $2');
+    expect(compiled.sql).toContain('"public_slug" = $3');
+    expect(compiled.sql).toContain('"public_noindex" = $4');
+    expect(compiled.sql).toContain('"published_at" = $5');
+    expect(compiled.sql).toContain('"archived_at" = $6');
+    expect(compiled.sql).toContain('"public_gone_at" = $7');
     expect(compiled.sql).toContain(
-      '"first_publication_disclosure_version" = $5',
+      '"first_publication_disclosure_version" = $8',
     );
-    expect(compiled.sql).toContain('"first_publication_disclosed_at" = $6');
-    expect(compiled.sql).toContain('"id" = $8');
-    expect(compiled.sql).toContain('"owner_user_id" = $9');
-    expect(compiled.sql).toContain('"visibility" = $10');
+    expect(compiled.sql).toContain('"first_publication_disclosed_at" = $9');
+    expect(compiled.sql).toContain('"id" = $11');
+    expect(compiled.sql).toContain('"owner_user_id" = $12');
+    expect(compiled.sql).toContain('"visibility" = $13');
+    expect(compiled.sql).toContain('"lifecycle_state" = $14');
     expect(compiled.sql).toContain("returning *");
     expect(compiled.parameters).toEqual([
+      "active",
       "public",
       "first-flowers-abc123",
       true,
       now,
+      null,
+      null,
       "first-publication-v1",
       now,
       now,
       "00000000-0000-0000-0000-000000000020",
       "00000000-0000-0000-0000-000000000001",
       "private",
+      "active",
+    ]);
+  });
+
+  it("archives entries only inside owner scope and records public gone state", () => {
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    const compiled = buildArchiveJournalEntryQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        entryId: "00000000-0000-0000-0000-000000000020",
+        now,
+        publicGoneAt: now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "journal_entries"');
+    expect(compiled.sql).toContain('"lifecycle_state" = $1');
+    expect(compiled.sql).toContain('"visibility" = $2');
+    expect(compiled.sql).toContain('"public_noindex" = $3');
+    expect(compiled.sql).toContain('"archived_at" = $4');
+    expect(compiled.sql).toContain('"public_gone_at" = $5');
+    expect(compiled.sql).toContain('"id" = $7');
+    expect(compiled.sql).toContain('"owner_user_id" = $8');
+    expect(compiled.sql).toContain('"lifecycle_state" = $9');
+    expect(compiled.parameters).toEqual([
+      "archived",
+      "private",
+      true,
+      now,
+      now,
+      now,
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000001",
+      "active",
     ]);
   });
 
@@ -185,10 +230,37 @@ describe("journal repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
-    expect(compiled.parameters).toEqual(["first-flowers-abc123", "public"]);
+    expect(compiled.parameters).toEqual([
+      "first-flowers-abc123",
+      "public",
+      "active",
+    ]);
+  });
+
+  it("can look up a public slug tombstone without owner-private fields", () => {
+    const compiled = buildPublicJournalEntryLookupQuery(
+      testDb,
+      "first-flowers-abc123",
+    ).compile();
+
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."lifecycle_state" as "lifecycleState"',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" as "publicGoneAt"',
+    );
+    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.parameters).toEqual(["first-flowers-abc123"]);
   });
 
   it("attaches only owner-scoped processed media to an entry", () => {
@@ -228,7 +300,11 @@ describe("journal repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"journal_entries"."id" = $1');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
-    expect(compiled.sql).toContain('"media_assets"."status" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain('"media_assets"."status" = $4');
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
@@ -236,6 +312,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       "public",
+      "active",
       "processed",
     ]);
   });

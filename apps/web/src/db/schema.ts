@@ -3,6 +3,7 @@
 // database exists). This file preserves a stable import path for app code.
 export type {
   Database,
+  EntryLifecycleState,
   EntryScope,
   EntryVisibility,
   Health,

@@ -8,7 +8,10 @@ import { getCurrentSession } from "@/server/auth-session";
 import { getPlantObjectPage } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
-import { publishJournalEntryAction } from "./actions";
+import {
+  archiveJournalEntryAction,
+  publishJournalEntryAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -118,10 +121,23 @@ export default async function PlantObjectReadbackPage({
                   />
                 ) : null}
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {entry.entry_scope} · {entry.visibility}
+                  {entry.entry_scope} · {entry.visibility} ·{" "}
+                  {entry.lifecycle_state}
                   {entry.media ? " · stripped photo derivative" : ""}
+                  {entry.public_gone_at ? " · public URL gone" : ""}
                 </p>
-                {entry.visibility === "public" && entry.public_slug ? (
+                {entry.lifecycle_state === "archived" ? (
+                  <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
+                    <span className="text-sm font-medium text-muted-foreground">
+                      Archived privately
+                    </span>
+                    {entry.public_gone_at ? (
+                      <span className="text-xs text-muted-foreground">
+                        The previous public URL now returns 410 Gone.
+                      </span>
+                    ) : null}
+                  </div>
+                ) : entry.visibility === "public" && entry.public_slug ? (
                   <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
                     <span className="text-xs text-muted-foreground">
                       Public · noindex
@@ -132,6 +148,34 @@ export default async function PlantObjectReadbackPage({
                     >
                       Open public page
                     </Link>
+                    <form
+                      action={archiveJournalEntryAction}
+                      className="flex w-full flex-col gap-3 pt-1"
+                    >
+                      <input type="hidden" name="entryId" value={entry.id} />
+                      <input type="hidden" name="objectId" value={objectId} />
+                      <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          name="archiveAccepted"
+                          required
+                          className="mt-1 size-4 rounded border-border"
+                        />
+                        <span>
+                          Archive this entry privately and make its public URL
+                          return 410 Gone.
+                        </span>
+                      </label>
+                      <button
+                        type="submit"
+                        className={buttonVariants({
+                          variant: "destructive",
+                          className: "self-start",
+                        })}
+                      >
+                        Archive public entry
+                      </button>
+                    </form>
                   </div>
                 ) : (
                   <form

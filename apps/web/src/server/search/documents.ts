@@ -6,9 +6,11 @@ export interface JournalEntrySearchRow {
   body: string;
   public_slug: string | null;
   public_noindex: boolean;
+  public_gone_at: Date | string | null;
   entry_date: Date | string;
   created_at: Date | string;
   visibility: "private" | "public" | string;
+  lifecycle_state: "active" | "archived" | string;
   location_visibility: "region" | "hidden" | string;
 }
 
@@ -29,6 +31,8 @@ export function toJournalEntrySearchDocument(
   entry: JournalEntrySearchRow,
 ): JournalEntrySearchDocument | null {
   if (entry.visibility !== "public") return null;
+  if (entry.lifecycle_state !== "active") return null;
+  if (entry.public_gone_at !== null) return null;
   if (!entry.public_slug) return null;
   if (!isPublicLocationVisibility(entry.location_visibility)) return null;
 

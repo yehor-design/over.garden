@@ -5,9 +5,10 @@
 
 import type { ColumnType } from "kysely";
 
-export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
-  ? ColumnType<S, I | undefined, U>
-  : ColumnType<T, T | undefined, T>;
+export type Generated<T> =
+  T extends ColumnType<infer S, infer I, infer U>
+    ? ColumnType<S, I | undefined, U>
+    : ColumnType<T, T | undefined, T>;
 
 export type Json = JsonValue;
 
@@ -61,6 +62,7 @@ export interface JobQueue {
 }
 
 export interface JournalEntries {
+  archived_at: Timestamp | null;
   body: string;
   client_mutation_id: string;
   created_at: Generated<Timestamp>;
@@ -69,8 +71,10 @@ export interface JournalEntries {
   first_publication_disclosed_at: Timestamp | null;
   first_publication_disclosure_version: string | null;
   id: Generated<string>;
+  lifecycle_state: Generated<string>;
   owner_user_id: string;
   plant_object_id: string;
+  public_gone_at: Timestamp | null;
   public_noindex: Generated<boolean>;
   public_slug: string | null;
   published_at: Timestamp | null;

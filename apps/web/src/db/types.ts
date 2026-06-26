@@ -15,6 +15,7 @@ export type Database = DB;
 export type { JsonValue };
 
 export type EntryVisibility = "private" | "public";
+export type EntryLifecycleState = "active" | "archived";
 export type EntryScope = "object";
 export type LocationVisibility = "region" | "hidden";
 export type VarietyState = "unknown" | "free_text";

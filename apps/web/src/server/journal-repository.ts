@@ -5,6 +5,7 @@ import type { Insertable, Kysely, Transaction } from "kysely";
 import { db } from "@/db";
 import type {
   Database,
+  EntryLifecycleState,
   EntryVisibility,
   JournalEntry,
   LocationVisibility,
@@ -56,6 +57,16 @@ export interface PublishJournalEntryResult {
   entry: JournalEntry;
   publicUrl: string;
   disclosureLogged: boolean;
+}
+
+export interface ArchiveJournalEntryInput {
+  entryId: string;
+}
+
+export interface ArchiveJournalEntryResult {
+  entry: JournalEntry;
+  publicUrl: string | null;
+  publicGone: boolean;
 }
 
 export interface PlantObjectSummary {
@@ -112,6 +123,25 @@ export interface PublicJournalEntryPage {
   };
   media: EntryMediaReadback | null;
 }
+
+export interface GonePublicJournalEntryPage {
+  publicSlug: string;
+  publicGoneAt: Date | string;
+  publicNoindex: boolean;
+}
+
+export type PublicJournalEntryLookup =
+  | {
+      status: "active";
+      page: PublicJournalEntryPage;
+    }
+  | {
+      status: "gone";
+      entry: GonePublicJournalEntryPage;
+    }
+  | {
+      status: "not_found";
+    };
 
 export interface FirstPlantEntryResult {
   space: PlantObjectPage["space"];
@@ -370,6 +400,10 @@ export async function publishJournalEntry(
     throw new Error("Journal entry was not found in this garden.");
   }
 
+  if (existing.lifecycle_state !== "active") {
+    throw new Error("Archived journal entries cannot be published.");
+  }
+
   if (existing.visibility === "public" && existing.public_slug) {
     return {
       entry: existing,
@@ -413,14 +447,41 @@ export async function getPublicJournalEntryPage(
   publicSlug: string,
   executor: QueryExecutor = db,
 ): Promise<PublicJournalEntryPage | null> {
-  const slug = normalizePublicSlug(publicSlug);
-  if (!slug) return null;
+  const lookup = await getPublicJournalEntryLookup(publicSlug, executor);
+  return lookup.status === "active" ? lookup.page : null;
+}
 
-  const row = await buildPublicJournalEntryPageQuery(
+export async function getPublicJournalEntryLookup(
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<PublicJournalEntryLookup> {
+  const slug = normalizePublicSlug(publicSlug);
+  if (!slug) return { status: "not_found" };
+
+  const row = await buildPublicJournalEntryLookupQuery(
     executor,
     slug,
   ).executeTakeFirst();
-  if (!row?.publicSlug) return null;
+  if (!row?.publicSlug) return { status: "not_found" };
+
+  if (isGonePublicEntry(row)) {
+    return {
+      status: "gone",
+      entry: {
+        publicSlug: row.publicSlug,
+        publicGoneAt: row.publicGoneAt,
+        publicNoindex: row.publicNoindex,
+      },
+    };
+  }
+
+  if (
+    row.visibility !== "public" ||
+    row.lifecycleState !== "active" ||
+    row.publicGoneAt !== null
+  ) {
+    return { status: "not_found" };
+  }
 
   const media = await buildPublicProcessedMediaForEntryQuery(
     executor,
@@ -428,32 +489,74 @@ export async function getPublicJournalEntryPage(
   ).executeTakeFirst();
 
   return {
-    entry: {
-      id: row.entryId,
-      title: row.title,
-      body: row.body,
-      entryDate: row.entryDate,
-      publicSlug: row.publicSlug,
-      publicNoindex: row.publicNoindex,
-      publishedAt: row.publishedAt,
+    status: "active",
+    page: {
+      entry: {
+        id: row.entryId,
+        title: row.title,
+        body: row.body,
+        entryDate: row.entryDate,
+        publicSlug: row.publicSlug,
+        publicNoindex: row.publicNoindex,
+        publishedAt: row.publishedAt,
+      },
+      space: {
+        displayName: row.spaceDisplayName,
+        locationVisibility: row.spaceLocationVisibility as LocationVisibility,
+      },
+      plantObject: {
+        displayName: row.objectDisplayName,
+        varietyText: row.varietyText,
+        varietyState: row.varietyState as VarietyState,
+        locationVisibility: row.objectLocationVisibility as LocationVisibility,
+      },
+      media: media?.derivativeKey
+        ? {
+            id: media.id,
+            derivativeKey: media.derivativeKey,
+            publicUrl: getPublicDerivativeUrl(media.derivativeKey),
+          }
+        : null,
     },
-    space: {
-      displayName: row.spaceDisplayName,
-      locationVisibility: row.spaceLocationVisibility as LocationVisibility,
-    },
-    plantObject: {
-      displayName: row.objectDisplayName,
-      varietyText: row.varietyText,
-      varietyState: row.varietyState as VarietyState,
-      locationVisibility: row.objectLocationVisibility as LocationVisibility,
-    },
-    media: media?.derivativeKey
-      ? {
-          id: media.id,
-          derivativeKey: media.derivativeKey,
-          publicUrl: getPublicDerivativeUrl(media.derivativeKey),
-        }
+  };
+}
+
+export async function archiveJournalEntry(
+  scope: RequestScope,
+  input: ArchiveJournalEntryInput,
+): Promise<ArchiveJournalEntryResult> {
+  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
+  const existing = await findJournalEntryById(scope, entryId);
+
+  if (!existing) {
+    throw new Error("Journal entry was not found in this garden.");
+  }
+
+  if (existing.lifecycle_state === "archived") {
+    return {
+      entry: existing,
+      publicUrl: existing.public_slug
+        ? publicJournalEntryPath(existing.public_slug)
+        : null,
+      publicGone: existing.public_gone_at !== null,
+    };
+  }
+
+  const now = new Date();
+  const hadPublicUrl =
+    existing.visibility === "public" && existing.public_slug !== null;
+  const archived = await buildArchiveJournalEntryQuery(db, scope, {
+    entryId,
+    now,
+    publicGoneAt: hadPublicUrl ? now : null,
+  }).executeTakeFirstOrThrow();
+
+  return {
+    entry: archived,
+    publicUrl: archived.public_slug
+      ? publicJournalEntryPath(archived.public_slug)
       : null,
+    publicGone: archived.public_gone_at !== null,
   };
 }
 
@@ -520,10 +623,13 @@ export function buildPublishJournalEntryQuery(
   return executor
     .updateTable("journal_entries")
     .set({
+      lifecycle_state: "active",
       visibility: "public",
       public_slug: input.publicSlug,
       public_noindex: true,
       published_at: input.publishedAt,
+      archived_at: null,
+      public_gone_at: null,
       first_publication_disclosure_version: input.disclosureLogged
         ? PUBLICATION_DISCLOSURE_VERSION
         : undefined,
@@ -535,6 +641,32 @@ export function buildPublishJournalEntryQuery(
     .where("id", "=", input.entryId)
     .where("owner_user_id", "=", scope.userId)
     .where("visibility", "=", "private")
+    .where("lifecycle_state", "=", "active")
+    .returningAll();
+}
+
+export function buildArchiveJournalEntryQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    entryId: string;
+    now: Date;
+    publicGoneAt: Date | null;
+  },
+) {
+  return executor
+    .updateTable("journal_entries")
+    .set({
+      lifecycle_state: "archived",
+      visibility: "private",
+      public_noindex: true,
+      archived_at: input.now,
+      public_gone_at: input.publicGoneAt ?? undefined,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.entryId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("lifecycle_state", "=", "active")
     .returningAll();
 }
 
@@ -565,6 +697,16 @@ export function buildPublicJournalEntryPageQuery(
   executor: QueryExecutor,
   publicSlug: string,
 ) {
+  return buildPublicJournalEntryLookupQuery(executor, publicSlug)
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null);
+}
+
+export function buildPublicJournalEntryLookupQuery(
+  executor: QueryExecutor,
+  publicSlug: string,
+) {
   return executor
     .selectFrom("journal_entries")
     .innerJoin(
@@ -578,9 +720,12 @@ export function buildPublicJournalEntryPageQuery(
       "journal_entries.title as title",
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
+      "journal_entries.visibility as visibility",
+      "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
       "journal_entries.public_noindex as publicNoindex",
       "journal_entries.published_at as publishedAt",
+      "journal_entries.public_gone_at as publicGoneAt",
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
       "plant_objects.display_name as objectDisplayName",
@@ -588,8 +733,7 @@ export function buildPublicJournalEntryPageQuery(
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
     ])
-    .where("journal_entries.public_slug", "=", publicSlug)
-    .where("journal_entries.visibility", "=", "public");
+    .where("journal_entries.public_slug", "=", publicSlug);
 }
 
 export function buildProcessedMediaForEntriesQuery(
@@ -627,6 +771,8 @@ export function buildPublicProcessedMediaForEntryQuery(
     ])
     .where("journal_entries.id", "=", entryId)
     .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null);
 }
@@ -755,6 +901,24 @@ function createPublicSlug(title: string, maxLength: number) {
     .slice(0, Math.max(1, maxLength - randomSuffix.length - 1));
 
   return `${base || "entry"}-${randomSuffix}`;
+}
+
+function isGonePublicEntry(row: {
+  publicSlug: string | null;
+  publicGoneAt: Date | string | null;
+  lifecycleState: EntryLifecycleState | string;
+  publicNoindex: boolean;
+}): row is {
+  publicSlug: string;
+  publicGoneAt: Date | string;
+  lifecycleState: "archived";
+  publicNoindex: boolean;
+} {
+  return (
+    row.publicSlug !== null &&
+    row.publicGoneAt !== null &&
+    row.lifecycleState === "archived"
+  );
 }
 
 async function attachMediaAssetToEntryIfPresent(

@@ -15,8 +15,10 @@ function entry(
     body: "Помідори чері",
     public_slug: "first-flowers-abc123",
     public_noindex: true,
+    public_gone_at: null,
     entry_date: new Date("2026-06-25T00:00:00.000Z"),
     visibility,
+    lifecycle_state: "active",
     location_visibility: "hidden",
     created_at: new Date("2026-06-26T00:00:00.000Z"),
     ...overrides,
@@ -31,6 +33,24 @@ describe("journal entry search documents", () => {
   it("does not index public entries until a public slug exists", () => {
     expect(
       toJournalEntrySearchDocument(entry("public", { public_slug: null })),
+    ).toBeNull();
+  });
+
+  it("does not index archived public entries", () => {
+    expect(
+      toJournalEntrySearchDocument(
+        entry("public", { lifecycle_state: "archived" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("does not index public-gone entries", () => {
+    expect(
+      toJournalEntrySearchDocument(
+        entry("public", {
+          public_gone_at: new Date("2026-06-26T12:00:00.000Z"),
+        }),
+      ),
     ).toBeNull();
   });
 
