@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -13,6 +13,11 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import {
+  evaluatePublicVarietyIndexState,
+  PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
+  type PublicVarietyIndexState,
+} from "@/server/public-variety-indexing";
 
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_PUBLIC_VARIETY_ENTRIES = 20;
@@ -29,7 +34,16 @@ export interface PublicVarietyPage {
   };
   entryCount: number;
   photoCount: number;
+  aggregateBodyLength: number;
+  indexState: PublicVarietyIndexState;
   entries: PublicVarietyEntry[];
+}
+
+export interface PublicVarietySitemapEntry {
+  publicSlug: string;
+  lastModified: Date | string;
+  entryCount: number;
+  aggregateBodyLength: number;
 }
 
 export interface PublicVarietyEntry {
@@ -66,6 +80,8 @@ export async function getPublicVarietyPage(
     executor,
     slug,
   ).execute();
+  const entryCount = Number(summary.entryCount);
+  const aggregateBodyLength = Number(summary.aggregateBodyLength);
 
   return {
     catalog: {
@@ -78,8 +94,13 @@ export async function getPublicVarietyPage(
       source: summary.catalogSource,
       locale: summary.catalogLocale,
     },
-    entryCount: Number(summary.entryCount),
+    entryCount,
     photoCount: Number(summary.photoCount),
+    aggregateBodyLength,
+    indexState: evaluatePublicVarietyIndexState({
+      entryCount,
+      aggregateBodyLength,
+    }),
     entries: entries.map((entry) => ({
       id: entry.entryId,
       title: entry.entryTitle,
@@ -99,6 +120,21 @@ export async function getPublicVarietyPage(
           : null,
     })),
   };
+}
+
+export async function listIndexablePublicVarietySitemapEntries(
+  executor: QueryExecutor = db,
+): Promise<PublicVarietySitemapEntry[]> {
+  const rows = await buildIndexablePublicVarietySitemapRowsQuery(
+    executor,
+  ).execute();
+
+  return rows.map((row) => ({
+    publicSlug: row.publicSlug,
+    lastModified: row.lastModified,
+    entryCount: Number(row.entryCount),
+    aggregateBodyLength: Number(row.aggregateBodyLength),
+  }));
 }
 
 export function buildPublicVarietySummaryQuery(
@@ -132,6 +168,9 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.locale as catalogLocale",
       fn.count<number>("journal_entries.id").as("entryCount"),
       fn.count<number>("media_assets.id").as("photoCount"),
+      sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
+        "aggregateBodyLength",
+      ),
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
@@ -154,6 +193,55 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.source",
       "catalog_items.locale",
     ]);
+}
+
+export function buildIndexablePublicVarietySitemapRowsQuery(
+  executor: QueryExecutor,
+) {
+  return executor
+    .selectFrom("catalog_items")
+    .innerJoin(
+      "plant_objects",
+      "plant_objects.catalog_item_id",
+      "catalog_items.id",
+    )
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.plant_object_id",
+      "plant_objects.id",
+    )
+    .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .select(({ fn }) => [
+      "catalog_items.public_slug as publicSlug",
+      fn.max<Date | string>("journal_entries.updated_at").as("lastModified"),
+      fn.count<number>("journal_entries.id").as("entryCount"),
+      sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
+        "aggregateBodyLength",
+      ),
+    ])
+    .where("catalog_items.public_slug", "is not", null)
+    .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.created_by_user_id", "is", null)
+    .where("plant_objects.variety_state", "=", "selected")
+    .whereRef(
+      "journal_entries.owner_user_id",
+      "=",
+      "plant_objects.owner_user_id",
+    )
+    .whereRef("journal_entries.owner_user_id", "=", "spaces.owner_user_id")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .groupBy("catalog_items.public_slug")
+    .having(
+      sql<boolean>`count(${sql.ref("journal_entries.id")}) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount}`,
+    )
+    .having(
+      sql<boolean>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength}`,
+    )
+    .orderBy("catalog_items.public_slug", "asc")
+    .$narrowType<{ publicSlug: string }>();
 }
 
 export function buildPublicVarietyEntriesQuery(

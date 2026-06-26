@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  buildIndexablePublicVarietySitemapRowsQuery,
   buildPublicVarietyEntriesQuery,
   buildPublicVarietySummaryQuery,
 } from "./public-variety-repository";
@@ -56,6 +57,9 @@ describe("public variety repository query contracts", () => {
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
     expect(compiled.sql).toContain('left join "media_assets"');
+    expect(compiled.sql).toContain(
+      'coalesce(sum(char_length("journal_entries"."body")), 0)',
+    );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
     expect(compiled.sql).toContain(
@@ -137,6 +141,63 @@ describe("public variety repository query contracts", () => {
       "public",
       "active",
       20,
+    ]);
+  });
+
+  it("lists sitemap rows only for threshold-passing public variety pages", () => {
+    const compiled =
+      buildIndexablePublicVarietySitemapRowsQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('from "catalog_items"');
+    expect(compiled.sql).toContain(
+      'inner join "plant_objects" on "plant_objects"."catalog_item_id" = "catalog_items"."id"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "journal_entries" on "journal_entries"."plant_object_id" = "plant_objects"."id"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
+    );
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" is not null');
+    expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $3');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).toContain('group by "catalog_items"."public_slug"');
+    expect(compiled.sql).toContain(
+      'having count("journal_entries"."id") >= $6 and coalesce(sum(char_length("journal_entries"."body")), 0) >= $7',
+    );
+    expect(compiled.sql).not.toContain('join "media_assets"');
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.sql).not.toContain("original_deleted_at");
+    expect(compiled.sql).not.toContain("email");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
+    expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
+      "selected",
+      "public",
+      "active",
+      3,
+      600,
     ]);
   });
 });

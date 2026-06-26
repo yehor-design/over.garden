@@ -2,34 +2,71 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 
+import { publicVarietyPath } from "@/lib/garden/public-paths";
+import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Variety | OverGarden",
-  description: "Public garden journal entries for a catalog variety.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
 interface PublicVarietyRouteProps {
   params: Promise<{ slug: string }>;
+}
+
+const getCachedPublicVarietyPage = cache((slug: string) =>
+  getPublicVarietyPage(slug),
+);
+
+export async function generateMetadata({
+  params,
+}: PublicVarietyRouteProps): Promise<Metadata> {
+  const { slug } = await params;
+  const page = await getCachedPublicVarietyPage(slug);
+
+  if (!page) {
+    return {
+      title: "Variety | OverGarden",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    };
+  }
+
+  const description = `Public garden journal entries for ${page.catalog.canonicalName}.`;
+
+  return {
+    title: `${page.catalog.canonicalName} | OverGarden`,
+    description,
+    alternates: {
+      canonical: publicVarietyPath(page.catalog.publicSlug),
+    },
+    robots: {
+      index: page.indexState.isIndexable,
+      follow: page.indexState.isIndexable,
+    },
+  };
 }
 
 export default async function PublicVarietyRoute({
   params,
 }: PublicVarietyRouteProps) {
   const { slug } = await params;
-  const page = await getPublicVarietyPage(slug);
+  const page = await getCachedPublicVarietyPage(slug);
 
   if (!page) notFound();
 
+  const jsonLd = buildPublicVarietyJsonLd(page);
+
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+      {jsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      ) : null}
       <header className="flex flex-col gap-5 border-b border-border pb-6">
         <Link
           href="/"
