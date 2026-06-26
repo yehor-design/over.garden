@@ -23,10 +23,12 @@ import {
   buildPlantObjectPageObjectQuery,
   buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
+  buildPublicEntrySlugsForObjectQuery,
   buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
   buildPublicProcessedMediaForEntryQuery,
   buildPublishJournalEntryQuery,
+  buildResolvePlantObjectCatalogQuery,
 } from "./journal-repository";
 import { buildAttachProcessedMediaAssetToEntryQuery } from "./media/media-repository";
 
@@ -230,6 +232,65 @@ describe("journal repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
+    ]);
+  });
+
+  it("resolves object catalog identity only inside owner scope and allowed states", () => {
+    const now = new Date("2026-06-26T12:00:00.000Z");
+    const compiled = buildResolvePlantObjectCatalogQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        plantObjectId: "00000000-0000-0000-0000-000000000003",
+        catalogItemId: "00000000-0000-4000-8000-000000000101",
+        varietyText: "Помідор чері",
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "plant_objects"');
+    expect(compiled.sql).toContain('"catalog_item_id" = $1');
+    expect(compiled.sql).toContain('"variety_text" = $2');
+    expect(compiled.sql).toContain('"variety_state" = $3');
+    expect(compiled.sql).toContain('"updated_at" = $4');
+    expect(compiled.sql).toContain('"id" = $5');
+    expect(compiled.sql).toContain('"owner_user_id" = $6');
+    expect(compiled.sql).toContain('"variety_state" in ($7, $8)');
+    expect(compiled.sql).toContain("returning *");
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-4000-8000-000000000101",
+      "Помідор чері",
+      "selected",
+      now,
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "unknown",
+      "user_added",
+    ]);
+  });
+
+  it("finds active public entry paths for object revalidation without private fields", () => {
+    const compiled = buildPublicEntrySlugsForObjectQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "00000000-0000-0000-0000-000000000003",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"plant_object_id" = $2');
+    expect(compiled.sql).toContain('"visibility" = $3');
+    expect(compiled.sql).toContain('"lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"public_gone_at" is null');
+    expect(compiled.sql).toContain('"public_slug" is not null');
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("body");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000003",
+      "public",
+      "active",
     ]);
   });
 

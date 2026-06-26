@@ -19,6 +19,7 @@ import {
   publishJournalEntry,
   type PlantObjectJournalEntryResult,
   type PublishJournalEntryResult,
+  resolvePlantObjectCatalog,
 } from "@/server/journal-repository";
 import { enqueueJob } from "@/server/queue";
 import { scopedToUser } from "@/server/request-scope";
@@ -38,6 +39,20 @@ export async function createPlantObjectJournalEntryAction(formData: FormData) {
 
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${result.plantObject.id}`);
+}
+
+export async function resolvePlantObjectCatalogAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  const result = await resolvePlantObjectCatalog(scope, {
+    plantObjectId: String(formData.get("objectId") ?? ""),
+    catalogItemId: String(formData.get("catalogItemId") ?? ""),
+  });
+
+  revalidatePath("/garden");
+  revalidatePath(`/garden/objects/${result.plantObject.id}`);
+  for (const publicEntryPath of result.publicEntryPaths) {
+    revalidatePath(publicEntryPath);
+  }
 }
 
 export async function publishJournalEntryAction(formData: FormData) {

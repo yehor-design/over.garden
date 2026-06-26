@@ -83,6 +83,18 @@ export interface ArchiveJournalEntryResult {
   publicGone: boolean;
 }
 
+export interface ResolvePlantObjectCatalogInput {
+  plantObjectId: string;
+  catalogItemId: string;
+}
+
+export interface PlantObjectCatalogResolutionResult {
+  space: PlantObjectPage["space"];
+  plantObject: PlantObjectPage["plantObject"];
+  entryCount: number;
+  publicEntryPaths: string[];
+}
+
 export interface PlantObjectSummary {
   id: string;
   displayName: string;
@@ -532,6 +544,76 @@ export async function createPlantObjectJournalEntry(
   });
 }
 
+export async function resolvePlantObjectCatalog(
+  scope: RequestScope,
+  input: ResolvePlantObjectCatalogInput,
+): Promise<PlantObjectCatalogResolutionResult> {
+  const normalized = normalizeResolvePlantObjectCatalogInput(input);
+
+  return db.transaction().execute(async (trx) => {
+    const target = await buildPlantObjectPageObjectQuery(
+      trx,
+      scope,
+      normalized.plantObjectId,
+    ).executeTakeFirst();
+
+    if (!target) {
+      throw new Error("Plant object was not found in this garden.");
+    }
+
+    if (!isResolvableVarietyState(target.varietyState)) {
+      throw new Error("Only unknown or user-added objects can be resolved.");
+    }
+
+    const selectedCatalogItem = await findSelectableCatalogItem(
+      trx,
+      normalized.catalogItemId,
+    );
+
+    if (!selectedCatalogItem) {
+      throw new Error("Selected catalog item was not found.");
+    }
+
+    const resolved = await buildResolvePlantObjectCatalogQuery(trx, scope, {
+      plantObjectId: target.objectId,
+      catalogItemId: selectedCatalogItem.id,
+      varietyText: selectedCatalogItem.canonicalName,
+      now: new Date(),
+    }).executeTakeFirstOrThrow();
+
+    const entryCount = await countJournalEntriesForObject(
+      trx,
+      scope,
+      resolved.id,
+    );
+    const publicSlugs = await buildPublicEntrySlugsForObjectQuery(
+      trx,
+      scope,
+      resolved.id,
+    ).execute();
+
+    return {
+      space: {
+        id: target.spaceId,
+        display_name: target.spaceDisplayName,
+        location_visibility: target.spaceLocationVisibility,
+      },
+      plantObject: {
+        id: resolved.id,
+        display_name: resolved.display_name,
+        catalog_item_id: resolved.catalog_item_id,
+        variety_text: resolved.variety_text,
+        variety_state: resolved.variety_state,
+        location_visibility: resolved.location_visibility,
+      },
+      entryCount,
+      publicEntryPaths: publicSlugs.flatMap((row) =>
+        row.publicSlug ? [publicJournalEntryPath(row.publicSlug)] : [],
+      ),
+    };
+  });
+}
+
 export async function createJournalEntry(
   scope: RequestScope,
   input: CreateJournalEntryInput,
@@ -863,6 +945,46 @@ export function buildArchiveJournalEntryQuery(
     .returningAll();
 }
 
+export function buildResolvePlantObjectCatalogQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    plantObjectId: string;
+    catalogItemId: string;
+    varietyText: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("plant_objects")
+    .set({
+      catalog_item_id: input.catalogItemId,
+      variety_text: input.varietyText,
+      variety_state: "selected",
+      updated_at: input.now,
+    })
+    .where("id", "=", input.plantObjectId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("variety_state", "in", ["unknown", "user_added"])
+    .returningAll();
+}
+
+export function buildPublicEntrySlugsForObjectQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .select("public_slug as publicSlug")
+    .where("owner_user_id", "=", scope.userId)
+    .where("plant_object_id", "=", plantObjectId)
+    .where("visibility", "=", "public")
+    .where("lifecycle_state", "=", "active")
+    .where("public_gone_at", "is", null)
+    .where("public_slug", "is not", null);
+}
+
 export function buildPlantObjectPageObjectQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -1091,6 +1213,23 @@ function normalizeCreatePlantObjectJournalEntryInput(
   };
 }
 
+function normalizeResolvePlantObjectCatalogInput(
+  input: ResolvePlantObjectCatalogInput,
+) {
+  return {
+    plantObjectId: normalizeRequiredText(
+      input.plantObjectId,
+      "Plant object id",
+      200,
+    ),
+    catalogItemId: normalizeRequiredText(
+      input.catalogItemId,
+      "Catalog item id",
+      200,
+    ),
+  };
+}
+
 function normalizeRequiredText(
   value: string,
   label: string,
@@ -1131,6 +1270,12 @@ function normalizePublicSlug(value: string) {
   if (!normalized || normalized.length > MAX_PUBLIC_SLUG_LENGTH) return null;
   if (!/^[\p{Letter}\p{Number}-]+$/u.test(normalized)) return null;
   return normalized;
+}
+
+function isResolvableVarietyState(
+  value: string,
+): value is "unknown" | "user_added" {
+  return value === "unknown" || value === "user_added";
 }
 
 function createPublicSlug(title: string, maxLength: number) {

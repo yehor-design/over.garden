@@ -18,7 +18,9 @@ import {
   archiveJournalEntryAction,
   createPlantObjectJournalEntryAction,
   publishJournalEntryAction,
+  resolvePlantObjectCatalogAction,
 } from "./actions";
+import { CatalogResolveControl } from "./catalog-resolve-control";
 
 export const dynamic = "force-dynamic";
 
@@ -88,6 +90,15 @@ export default async function PlantObjectReadbackPage({
           </div>
         </div>
       </header>
+
+      {canResolveCatalogState(page.plantObject.variety_state) ? (
+        <CatalogResolveControl
+          objectId={page.plantObject.id}
+          currentVarietyText={page.plantObject.variety_text}
+          currentVarietyState={page.plantObject.variety_state as VarietyState}
+          action={resolvePlantObjectCatalogAction}
+        />
+      ) : null}
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="flex flex-col gap-1">
@@ -321,4 +332,8 @@ function formatDate(value: Date | string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function canResolveCatalogState(value: string) {
+  return value === "unknown" || value === "user_added";
 }
