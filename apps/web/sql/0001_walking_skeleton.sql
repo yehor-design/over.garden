@@ -10,19 +10,54 @@ create table if not exists health (
   created_at timestamptz not null default now()
 );
 
+create table if not exists spaces (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  display_name text not null check (char_length(display_name) between 1 and 120),
+  location_visibility text not null default 'hidden' check (location_visibility in ('region', 'hidden')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists spaces_owner_created_idx
+  on spaces (owner_user_id, created_at desc);
+
+create table if not exists plant_objects (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  space_id uuid not null references spaces(id) on delete cascade,
+  display_name text not null check (char_length(display_name) between 1 and 120),
+  variety_text text check (variety_text is null or char_length(variety_text) between 1 and 120),
+  variety_state text not null default 'unknown' check (variety_state in ('unknown', 'free_text')),
+  location_visibility text not null default 'hidden' check (location_visibility in ('region', 'hidden')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists plant_objects_owner_created_idx
+  on plant_objects (owner_user_id, created_at desc);
+
+create index if not exists plant_objects_owner_space_idx
+  on plant_objects (owner_user_id, space_id);
+
 create table if not exists journal_entries (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null,
+  owner_user_id uuid not null,
+  space_id uuid not null references spaces(id) on delete cascade,
+  plant_object_id uuid not null references plant_objects(id) on delete cascade,
+  title text not null check (char_length(title) between 1 and 140),
   body text not null check (char_length(body) between 1 and 2000),
+  entry_scope text not null default 'object' check (entry_scope = 'object'),
+  entry_date date not null default current_date,
   visibility text not null default 'private' check (visibility in ('private', 'public')),
   client_mutation_id text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique (user_id, client_mutation_id)
+  unique (owner_user_id, client_mutation_id)
 );
 
-create index if not exists journal_entries_user_created_idx
-  on journal_entries (user_id, created_at desc);
+create index if not exists journal_entries_owner_object_date_idx
+  on journal_entries (owner_user_id, plant_object_id, entry_date desc, created_at desc);
 
 create index if not exists journal_entries_public_created_idx
   on journal_entries (created_at desc)
