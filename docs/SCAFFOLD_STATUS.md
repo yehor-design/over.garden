@@ -1,6 +1,6 @@
 # Runtime Scaffold — Status & Verification
 
-Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. SDD Slice 1 / Issue 5 adds recoverable entry archive/public-gone state -> authenticated archive UI -> public `410 Gone` tombstone -> search-document exclusion guard. SDD Slice 1 / Issue 6 adds object revisit -> second dated entry on the same object -> first-party H1-safe event rows with privacy payload tests. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
+Current status: the 2026-06-26 walking skeleton is implemented and locally verified. SDD Slice 1 / Issue 1 adds the first real product path: authenticated space -> plant object -> journal entry -> object readback. SDD Slice 1 / Issue 2 adds one-photo entry upload -> quarantine -> stripped derivative processing -> original deletion -> derivative-only readback. SDD Slice 1 / Issue 3 adds offline first-entry capture with photo intent -> local queue -> manual retry -> canonical server create -> authenticated readback without duplicate entries. SDD Slice 1 / Issue 4 adds explicit entry publication -> first-publication disclosure logging -> SSR public readback -> `noindex` metadata -> derivative-only media -> public-safe search document conversion. SDD Slice 1 / Issue 5 adds recoverable entry archive/public-gone state -> authenticated archive UI -> public `410 Gone` tombstone -> search-document exclusion guard. SDD Slice 1 / Issue 6 adds object revisit -> second dated entry on the same object -> first-party H1-safe event rows with privacy payload tests. SDD Slice 2 / OVE-13 adds minimal seeded catalog tables -> signed-in catalog typeahead API -> first-entry selected/unknown catalog state -> object readback/offline payload/event enum tests. See `docs/WALKING_SKELETON.md` and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` for verification commands and slice rules.
 
 ## Proven Locally
 
@@ -9,16 +9,20 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 - Better Auth route is mounted at `/api/auth/[...all]`; live sign-up returns a session cookie.
 - Kysely + `pg` connect to local Docker Postgres.
 - Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
-- SQL app schema creates `health`, `spaces`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, and `job_queue`.
-- `kysely-codegen` generated `src/db/generated.ts` from 11 live tables.
+- SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, and `job_queue`.
+- `kysely-codegen` generated `src/db/generated.ts` from 13 live tables.
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.
+- `/garden` first-entry flow can select a seeded catalog item or explicitly keep the object Unknown; selected objects store server-validated `catalog_item_id`, `variety_state = selected`, and canonical catalog display text on the plant object.
+- `/api/garden/catalog/typeahead` provides a signed-in, bounded Postgres-backed seeded catalog suggestion path. Meilisearch-backed catalog indexing remains deferred to OVE-15.
 - `/garden` first-entry flow can attach one processed photo asset and `/garden/objects/[objectId]` renders only the stripped public derivative.
 - `/garden` first-entry flow can queue title/body/date/object/photo intent while offline, show queued/syncing/failed/synced local states, retry through `/api/garden/entries`, and read back exactly one authenticated server entry.
 - `/garden/objects/[objectId]` can publish an existing entry through a signed-in server action after explicit disclosure, and `/journal/[slug]` renders a public SSR page that stays `noindex`.
 - `/garden/objects/[objectId]` can archive a published entry privately; the old `/journal/[slug]` public URL returns HTTP `410 Gone` and search document conversion refuses archived/public-gone rows.
 - `/garden/objects/[objectId]` can emit an owner-scoped revisit event, show prior entries, and append another dated title/body entry to the same plant object.
 - Product writes emit first-party event rows for activation, photo attachment, offline sync, progress readback, and same-object return loops without title/body text, precise location, raw media metadata, email, or IP-derived location in event properties.
+- Catalog selection event properties remain enum-only through `variety_state`; raw catalog query text and selected display strings are not analytics properties.
+- Catalog repository contract tests prove typeahead reads only safe catalog tables, selectable IDs are limited to seeded/confirmed statuses, and no owner-private journal tables participate in suggestion queries.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Analytics event tests prove event payload allowlists, owner/session/object linkage, same-session revisit follow-up marking, and non-blocking event failure logging.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
@@ -74,15 +78,16 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
+- Provisional user-added catalog names, missing-name curation queue, Meilisearch-backed catalog typeahead, later unknown-to-selected resolution, and internal curation review.
 - iOS Safari offline capture spike on a real device.
 - PostHog integration, analytics dashboards, and full cohort reporting.
 
 ## Next Build Step
 
-Continue `Execution Batch 1` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` with the next vertical slice after reviewing the return-loop/event implementation.
+Continue `SDD Slice 2 - Catalog Typeahead And Unknown Fallback` in Linear. The next vertical slice is OVE-14: missing-name/user-added provisional fallback plus curation queue.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 
-The completed return-loop slice must not be split into standalone analytics/event, UI, or repository follow-ups unless a later user-visible path requires them.
+The completed catalog-select slice must not be split into standalone schema, typeahead UI, search, or repository follow-ups unless a later user-visible path requires them.
 
 Before implementing the next issue, run the Product Thinking Gate in `docs/product-research/README.md` and include the selected research files in the Linear context.

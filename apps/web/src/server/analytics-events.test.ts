@@ -42,10 +42,7 @@ class TestPostgresDialect implements Dialect {
 }
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
-const scope = scopedToUser(
-  "00000000-0000-0000-0000-000000000001",
-  "session-1",
-);
+const scope = scopedToUser("00000000-0000-0000-0000-000000000001", "session-1");
 
 describe("analytics event privacy contracts", () => {
   it("normalizes only privacy-safe boolean and enum properties", () => {
@@ -56,7 +53,7 @@ describe("analytics event privacy contracts", () => {
         is_backdated: false,
         location_visibility_level: "hidden",
         sync_status: "offline_synced",
-        variety_state: "free_text",
+        variety_state: "selected",
         followed_by_action: false,
       }),
     ).toEqual({
@@ -65,8 +62,18 @@ describe("analytics event privacy contracts", () => {
       is_backdated: false,
       location_visibility_level: "hidden",
       sync_status: "offline_synced",
-      variety_state: "free_text",
+      variety_state: "selected",
       followed_by_action: false,
+    });
+  });
+
+  it("keeps legacy free_text event values readable during catalog migration", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        variety_state: "free_text",
+      }),
+    ).toEqual({
+      variety_state: "free_text",
     });
   });
 
@@ -210,27 +217,18 @@ describe("analytics event privacy contracts", () => {
     );
 
     expect(result).toBeNull();
-    expect(logger.error).toHaveBeenCalledWith(
-      "Analytics event write failed.",
-      {
-        eventName: "entry_logged",
-        error: "database unavailable",
-      },
-    );
+    expect(logger.error).toHaveBeenCalledWith("Analytics event write failed.", {
+      eventName: "entry_logged",
+      error: "database unavailable",
+    });
   });
 
   it("flags dated entries earlier than today without sending raw dates in props", () => {
     expect(
-      isBackdatedEntryDate(
-        "2026-06-25",
-        new Date("2026-06-26T12:00:00.000Z"),
-      ),
+      isBackdatedEntryDate("2026-06-25", new Date("2026-06-26T12:00:00.000Z")),
     ).toBe(true);
     expect(
-      isBackdatedEntryDate(
-        "2026-06-26",
-        new Date("2026-06-26T12:00:00.000Z"),
-      ),
+      isBackdatedEntryDate("2026-06-26", new Date("2026-06-26T12:00:00.000Z")),
     ).toBe(false);
   });
 });

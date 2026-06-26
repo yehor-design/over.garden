@@ -18,6 +18,7 @@ export interface OfflinePhotoIntent {
 export interface OfflineJournalEntryPayload {
   spaceName: string;
   plantName: string;
+  catalogItemId?: string | null;
   varietyText?: string | null;
   title: string;
   body: string;

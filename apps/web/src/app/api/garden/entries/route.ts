@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     const result = await createFirstPlantEntry(scope, {
       spaceName: body.spaceName ?? "",
       plantName: body.plantName ?? "",
+      catalogItemId: body.catalogItemId ?? "",
       varietyText: body.varietyText ?? "",
       title: body.title ?? "",
       body: body.body ?? "",
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
       plantObject: {
         id: result.plantObject.id,
         displayName: result.plantObject.display_name,
+        catalogItemId: result.plantObject.catalog_item_id,
         varietyText: result.plantObject.variety_text,
         varietyState: result.plantObject.variety_state,
         locationVisibility: result.plantObject.location_visibility,

@@ -3,6 +3,8 @@ import type { Insertable, Selectable } from "kysely";
 import type {
   DB,
   AnalyticsEvents as AnalyticsEventsTable,
+  CatalogItemNames as CatalogItemNamesTable,
+  CatalogItems as CatalogItemsTable,
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
@@ -19,7 +21,13 @@ export type EntryVisibility = "private" | "public";
 export type EntryLifecycleState = "active" | "archived";
 export type EntryScope = "object";
 export type LocationVisibility = "region" | "hidden";
-export type VarietyState = "unknown" | "free_text";
+export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
+export type CatalogItemStatus =
+  | "seeded"
+  | "confirmed"
+  | "provisional"
+  | "merged"
+  | "rejected";
 export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 export type AnalyticsEventName =
@@ -34,7 +42,11 @@ export type AnalyticsEventName =
 export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
 
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
+export type CatalogItem = Selectable<CatalogItemsTable>;
+export type CatalogItemName = Selectable<CatalogItemNamesTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
+export type NewCatalogItem = Insertable<CatalogItemsTable>;
+export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
 export type Health = Selectable<HealthTable>;
 export type NewHealth = Insertable<HealthTable>;
 export type Space = Selectable<SpacesTable>;

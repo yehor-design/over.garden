@@ -3,6 +3,7 @@ import type { EntrySyncStatus } from "@/db/schema";
 export interface FirstPlantEntryRequest {
   spaceName: string;
   plantName: string;
+  catalogItemId?: string | null;
   varietyText?: string | null;
   title: string;
   body: string;
@@ -21,6 +22,7 @@ export interface FirstPlantEntryResponse {
   plantObject: {
     id: string;
     displayName: string;
+    catalogItemId: string | null;
     varietyText: string | null;
     varietyState: string;
     locationVisibility: string;

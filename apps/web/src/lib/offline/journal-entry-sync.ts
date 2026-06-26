@@ -114,6 +114,7 @@ export function buildJournalEntryRequestBodyForSync(
   return {
     spaceName: payload.spaceName,
     plantName: payload.plantName,
+    catalogItemId: payload.catalogItemId ?? null,
     varietyText: payload.varietyText ?? "",
     title: payload.title,
     body: payload.body,

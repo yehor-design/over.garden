@@ -22,23 +22,120 @@ create table if not exists spaces (
 create index if not exists spaces_owner_created_idx
   on spaces (owner_user_id, created_at desc);
 
+create table if not exists catalog_items (
+  id uuid primary key default gen_random_uuid(),
+  canonical_name text not null check (char_length(canonical_name) between 1 and 120),
+  status text not null default 'seeded' check (status in ('seeded', 'confirmed', 'provisional', 'merged', 'rejected')),
+  source text not null default 'internal_seed',
+  source_id text,
+  locale text not null default 'und',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists catalog_items_status_created_idx
+  on catalog_items (status, created_at desc);
+
+create table if not exists catalog_item_names (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  display_name text not null check (char_length(display_name) between 1 and 120),
+  normalized_name text not null check (char_length(normalized_name) between 1 and 120),
+  locale text not null default 'und',
+  is_primary boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create unique index if not exists catalog_item_names_item_normalized_locale_uidx
+  on catalog_item_names (catalog_item_id, normalized_name, locale);
+
+create index if not exists catalog_item_names_normalized_idx
+  on catalog_item_names (normalized_name);
+
+insert into catalog_items (id, canonical_name, status, source, source_id, locale)
+values
+  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
+  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
+  ('00000000-0000-4000-8000-000000000103', 'Домат чери', 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
+on conflict (id) do nothing;
+
+insert into catalog_item_names (
+  catalog_item_id,
+  display_name,
+  normalized_name,
+  locale,
+  is_primary
+)
+values
+  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'uk', true),
+  ('00000000-0000-4000-8000-000000000101', 'Томат чері', lower('Томат чері'), 'uk', false),
+  ('00000000-0000-4000-8000-000000000101', 'Cherry tomato', lower('Cherry tomato'), 'en', false),
+  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'uk', true),
+  ('00000000-0000-4000-8000-000000000102', 'Ніжинський огірок', lower('Ніжинський огірок'), 'uk', false),
+  ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'bg', true),
+  ('00000000-0000-4000-8000-000000000103', 'Чери домат', lower('Чери домат'), 'bg', false)
+on conflict (catalog_item_id, normalized_name, locale) do nothing;
+
 create table if not exists plant_objects (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,
   space_id uuid not null references spaces(id) on delete cascade,
   display_name text not null check (char_length(display_name) between 1 and 120),
+  catalog_item_id uuid references catalog_items(id) on delete set null,
   variety_text text check (variety_text is null or char_length(variety_text) between 1 and 120),
-  variety_state text not null default 'unknown' check (variety_state in ('unknown', 'free_text')),
+  variety_state text not null default 'unknown' check (variety_state in ('selected', 'unknown', 'user_added', 'free_text')),
   location_visibility text not null default 'hidden' check (location_visibility in ('region', 'hidden')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table plant_objects
+  add column if not exists catalog_item_id uuid;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_variety_state_check'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      drop constraint plant_objects_variety_state_check;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_variety_state_check'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_variety_state_check
+      check (variety_state in ('selected', 'unknown', 'user_added', 'free_text'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_catalog_item_id_fkey'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_catalog_item_id_fkey
+      foreign key (catalog_item_id) references catalog_items(id) on delete set null;
+  end if;
+end $$;
 
 create index if not exists plant_objects_owner_created_idx
   on plant_objects (owner_user_id, created_at desc);
 
 create index if not exists plant_objects_owner_space_idx
   on plant_objects (owner_user_id, space_id);
+
+create index if not exists plant_objects_catalog_item_idx
+  on plant_objects (catalog_item_id)
+  where catalog_item_id is not null;
 
 create table if not exists journal_entries (
   id uuid primary key default gen_random_uuid(),

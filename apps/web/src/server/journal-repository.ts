@@ -15,6 +15,7 @@ import type {
 } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { findSelectableCatalogItem } from "@/server/catalog-repository";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
 
@@ -34,6 +35,7 @@ type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
 export interface CreateFirstPlantEntryInput {
   spaceName: string;
   plantName: string;
+  catalogItemId?: string | null;
   varietyText?: string | null;
   title: string;
   body: string;
@@ -81,6 +83,7 @@ export interface PlantObjectSummary {
   id: string;
   displayName: string;
   spaceDisplayName: string;
+  catalogItemId: string | null;
   varietyText: string | null;
   varietyState: VarietyState;
   createdAt: Date;
@@ -92,6 +95,7 @@ export interface PlantObjectPage {
     PlantObject,
     | "id"
     | "display_name"
+    | "catalog_item_id"
     | "variety_text"
     | "variety_state"
     | "location_visibility"
@@ -211,14 +215,23 @@ export async function createFirstPlantEntry(
       .returningAll()
       .executeTakeFirstOrThrow();
 
+    const selectedCatalogItem = normalized.catalogItemId
+      ? await findSelectableCatalogItem(trx, normalized.catalogItemId)
+      : null;
+
+    if (normalized.catalogItemId && !selectedCatalogItem) {
+      throw new Error("Selected catalog item was not found.");
+    }
+
     const plantObject = await trx
       .insertInto("plant_objects")
       .values({
         owner_user_id: scope.userId,
         space_id: space.id,
         display_name: normalized.plantName,
-        variety_text: normalized.varietyText,
-        variety_state: normalized.varietyState,
+        catalog_item_id: selectedCatalogItem?.id ?? null,
+        variety_text: selectedCatalogItem?.canonicalName ?? null,
+        variety_state: selectedCatalogItem ? "selected" : "unknown",
         location_visibility: DEFAULT_LOCATION_VISIBILITY,
       })
       .returningAll()
@@ -253,6 +266,7 @@ export async function createFirstPlantEntry(
         plantObject: {
           id: plantObject.id,
           display_name: plantObject.display_name,
+          catalog_item_id: plantObject.catalog_item_id,
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state,
           location_visibility: plantObject.location_visibility,
@@ -315,6 +329,7 @@ export async function listMyPlantObjects(
     .select([
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
+      "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.created_at as createdAt",
@@ -368,6 +383,7 @@ export async function getPlantObjectPage(
     plantObject: {
       id: objectRow.objectId,
       display_name: objectRow.objectDisplayName,
+      catalog_item_id: objectRow.catalogItemId,
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState,
       location_visibility: objectRow.objectLocationVisibility,
@@ -447,6 +463,7 @@ export async function createPlantObjectJournalEntry(
         plantObject: {
           id: target.objectId,
           display_name: target.objectDisplayName,
+          catalog_item_id: target.catalogItemId,
           variety_text: target.varietyText,
           variety_state: target.varietyState,
           location_visibility: target.objectLocationVisibility,
@@ -484,6 +501,7 @@ export async function createPlantObjectJournalEntry(
       plantObject: {
         id: target.objectId,
         display_name: target.objectDisplayName,
+        catalog_item_id: target.catalogItemId,
         variety_text: target.varietyText,
         variety_state: target.varietyState,
         location_visibility: target.objectLocationVisibility,
@@ -837,6 +855,7 @@ export function buildPlantObjectPageObjectQuery(
     .select([
       "plant_objects.id as objectId",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -885,6 +904,7 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -981,10 +1001,10 @@ async function countJournalEntriesForObject(
 function normalizeCreateFirstPlantEntryInput(
   input: CreateFirstPlantEntryInput,
 ) {
-  const varietyText = normalizeOptionalText(
-    input.varietyText,
-    "Variety",
-    MAX_NAME_LENGTH,
+  const catalogItemId = normalizeOptionalText(
+    input.catalogItemId,
+    "Catalog item id",
+    200,
   );
   const mediaAssetId = normalizeOptionalText(
     input.mediaAssetId,
@@ -1003,9 +1023,10 @@ function normalizeCreateFirstPlantEntryInput(
       "Plant name",
       MAX_NAME_LENGTH,
     ),
-    varietyText,
-    varietyState: (varietyText
-      ? "free_text"
+    catalogItemId,
+    varietyText: null,
+    varietyState: (catalogItemId
+      ? "selected"
       : "unknown") satisfies VarietyState,
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
     body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),

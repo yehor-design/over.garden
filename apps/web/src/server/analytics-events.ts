@@ -93,8 +93,11 @@ export async function recordAnalyticsEvent(
   scope: RequestScope,
   input: RecordAnalyticsEventInput,
 ): Promise<AnalyticsEvent> {
-  return buildInsertAnalyticsEventQuery(db, scope, input)
-    .executeTakeFirstOrThrow();
+  return buildInsertAnalyticsEventQuery(
+    db,
+    scope,
+    input,
+  ).executeTakeFirstOrThrow();
 }
 
 export async function recordAnalyticsEventSafely(
@@ -299,7 +302,14 @@ function normalizeAnalyticsEventPropertyValue(
       }
       break;
     case "variety_state":
-      if (value === "unknown" || value === "free_text") return value;
+      if (
+        value === "selected" ||
+        value === "unknown" ||
+        value === "user_added" ||
+        value === "free_text"
+      ) {
+        return value;
+      }
       break;
   }
 

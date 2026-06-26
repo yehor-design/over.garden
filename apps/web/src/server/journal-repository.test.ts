@@ -208,6 +208,7 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('"plant_objects"."id" = $1');
+    expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
     expect(compiled.sql).toContain('"spaces"."owner_user_id" = $3');
     expect(compiled.parameters).toEqual([
@@ -244,6 +245,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
+    expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $3');

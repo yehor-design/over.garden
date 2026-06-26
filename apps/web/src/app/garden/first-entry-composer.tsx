@@ -13,9 +13,11 @@ import {
   CheckCircle2,
   Clock3,
   RefreshCw,
+  Search,
   UploadCloud,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -37,6 +39,16 @@ interface FirstEntryComposerProps {
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
+type CatalogStatus = "idle" | "loading" | "ready" | "failed";
+
+interface CatalogSuggestion {
+  id: string;
+  displayName: string;
+  canonicalName: string;
+  locale: string;
+  status: string;
+  source: string;
+}
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
@@ -49,11 +61,17 @@ export function FirstEntryComposer({
   const [draft, setDraft] = useState({
     spaceName: "",
     plantName: "",
-    varietyText: "",
     title: "",
     body: "",
     entryDate: today,
   });
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogSuggestions, setCatalogSuggestions] = useState<
+    CatalogSuggestion[]
+  >([]);
+  const [selectedCatalogItem, setSelectedCatalogItem] =
+    useState<CatalogSuggestion | null>(null);
+  const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() =>
@@ -103,6 +121,47 @@ export function FirstEntryComposer({
       window.removeEventListener("offline", handleOffline);
     };
   }, [refreshQueue]);
+
+  useEffect(() => {
+    const query = catalogQuery.trim();
+
+    if (
+      query.length < 2 ||
+      (selectedCatalogItem && query === selectedCatalogItem.displayName)
+    ) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setCatalogStatus("loading");
+
+      try {
+        const response = await fetch(
+          `/api/garden/catalog/typeahead?q=${encodeURIComponent(query)}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) throw new Error("Catalog suggestions unavailable.");
+
+        const body = (await response.json()) as unknown;
+        setCatalogSuggestions(parseCatalogSuggestions(body));
+        setCatalogStatus("ready");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setCatalogSuggestions([]);
+        setCatalogStatus("failed");
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [catalogQuery, selectedCatalogItem]);
 
   const photoHelp = useMemo(() => {
     if (photoError) return photoError;
@@ -181,6 +240,8 @@ export function FirstEntryComposer({
   function buildPayload(): OfflineJournalEntryPayload {
     return {
       ...draft,
+      catalogItemId: selectedCatalogItem?.id ?? null,
+      varietyText: selectedCatalogItem?.displayName ?? null,
       clientMutationId,
       syncStatus: isOnline ? "online" : "offline_queued",
       photoIntent: photoFile
@@ -197,6 +258,33 @@ export function FirstEntryComposer({
 
   function updateDraft(field: keyof typeof draft, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateCatalogQuery(value: string) {
+    setCatalogQuery(value);
+
+    if (selectedCatalogItem && value !== selectedCatalogItem.displayName) {
+      setSelectedCatalogItem(null);
+    }
+
+    if (value.trim().length < 2) {
+      setCatalogSuggestions([]);
+      setCatalogStatus("idle");
+    }
+  }
+
+  function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
+    setSelectedCatalogItem(suggestion);
+    setCatalogQuery(suggestion.displayName);
+    setCatalogSuggestions([]);
+    setCatalogStatus("idle");
+  }
+
+  function chooseUnknownCatalog() {
+    setSelectedCatalogItem(null);
+    setCatalogQuery("");
+    setCatalogSuggestions([]);
+    setCatalogStatus("idle");
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -260,17 +348,86 @@ export function FirstEntryComposer({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Variety
-        <input
-          name="varietyText"
-          maxLength={120}
-          value={draft.varietyText}
-          onChange={(event) => updateDraft("varietyText", event.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="Unknown"
-        />
-      </label>
+      <div className="flex flex-col gap-2">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Catalog match
+          <span className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              name="catalogQuery"
+              maxLength={120}
+              value={catalogQuery}
+              onChange={(event) => updateCatalogQuery(event.target.value)}
+              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              placeholder="Search seeded catalog or keep unknown"
+              autoComplete="off"
+            />
+            {catalogQuery ? (
+              <button
+                type="button"
+                onClick={chooseUnknownCatalog}
+                className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Clear catalog match"
+              >
+                <X className="size-4" />
+              </button>
+            ) : null}
+          </span>
+        </label>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {selectedCatalogItem ? (
+            <span className="rounded-md border border-border px-2 py-1 text-foreground">
+              Selected: {selectedCatalogItem.displayName}
+            </span>
+          ) : (
+            <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
+              Variety: Unknown
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={chooseUnknownCatalog}
+            className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
+          >
+            Use Unknown
+          </button>
+          {catalogStatus === "loading" ? (
+            <span className="text-muted-foreground">Searching...</span>
+          ) : null}
+          {catalogStatus === "failed" ? (
+            <span className="text-destructive">
+              Suggestions unavailable. Unknown still works.
+            </span>
+          ) : null}
+        </div>
+
+        {catalogSuggestions.length > 0 ? (
+          <ul className="grid gap-2">
+            {catalogSuggestions.map((suggestion) => (
+              <li key={suggestion.id}>
+                <button
+                  type="button"
+                  onClick={() => selectCatalogSuggestion(suggestion)}
+                  className="flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-foreground">
+                      {suggestion.displayName}
+                    </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {suggestion.canonicalName} · {suggestion.locale}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {suggestion.status}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
@@ -446,6 +603,7 @@ function mutationSubtitle(mutation: OfflineMutation) {
   const parts = [
     mutation.status,
     payload.plantName,
+    payload.catalogItemId ? "catalog selected" : "unknown variety",
     payload.entryDate,
     payload.photoIntent ? "photo intent" : null,
   ].filter(Boolean);
@@ -460,4 +618,38 @@ function mutationReadbackUrl(mutation: OfflineMutation) {
 
 function normalizeError(error: unknown) {
   return error instanceof Error ? error.message : "Sync failed.";
+}
+
+function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
+  if (!value || typeof value !== "object") return [];
+
+  const suggestions = (value as { suggestions?: unknown }).suggestions;
+  if (!Array.isArray(suggestions)) return [];
+
+  return suggestions.flatMap((suggestion) => {
+    if (!suggestion || typeof suggestion !== "object") return [];
+
+    const candidate = suggestion as Partial<CatalogSuggestion>;
+    if (
+      typeof candidate.id !== "string" ||
+      typeof candidate.displayName !== "string" ||
+      typeof candidate.canonicalName !== "string" ||
+      typeof candidate.locale !== "string" ||
+      typeof candidate.status !== "string" ||
+      typeof candidate.source !== "string"
+    ) {
+      return [];
+    }
+
+    return [
+      {
+        id: candidate.id,
+        displayName: candidate.displayName,
+        canonicalName: candidate.canonicalName,
+        locale: candidate.locale,
+        status: candidate.status,
+        source: candidate.source,
+      },
+    ];
+  });
 }

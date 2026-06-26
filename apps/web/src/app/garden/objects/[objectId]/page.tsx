@@ -80,7 +80,10 @@ export default async function PlantObjectReadbackPage({
               Location: {page.plantObject.location_visibility}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Variety: {page.plantObject.variety_text ?? "unknown"}
+              Variety: {page.plantObject.variety_text ?? "Unknown"}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              Catalog: {page.plantObject.variety_state}
             </span>
           </div>
         </div>

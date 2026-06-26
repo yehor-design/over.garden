@@ -54,6 +54,27 @@ export interface AnalyticsEvents {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogItemNames {
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  id: Generated<string>;
+  is_primary: Generated<boolean>;
+  locale: Generated<string>;
+  normalized_name: string;
+}
+
+export interface CatalogItems {
+  canonical_name: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  locale: Generated<string>;
+  source: Generated<string>;
+  source_id: string | null;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Health {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -111,6 +132,7 @@ export interface MediaAssets {
 }
 
 export interface PlantObjects {
+  catalog_item_id: string | null;
   created_at: Generated<Timestamp>;
   display_name: string;
   id: Generated<string>;
@@ -164,6 +186,8 @@ export interface Verification {
 export interface DB {
   account: Account;
   analytics_events: AnalyticsEvents;
+  catalog_item_names: CatalogItemNames;
+  catalog_items: CatalogItems;
   health: Health;
   job_queue: JobQueue;
   journal_entries: JournalEntries;

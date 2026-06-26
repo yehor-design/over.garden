@@ -48,7 +48,8 @@ export default async function GardenPage() {
                 First plant entry
               </h2>
               <p className="text-sm text-muted-foreground">
-                Save the first object-level note without catalog setup.
+                Save the first object-level note with a catalog match or
+                Unknown.
               </p>
             </div>
 
@@ -79,7 +80,7 @@ export default async function GardenPage() {
                       </span>
                       <span className="mt-1 block text-xs text-muted-foreground">
                         {object.spaceDisplayName}
-                        {object.varietyText ? ` · ${object.varietyText}` : ""}
+                        {` · ${object.varietyText ?? "Unknown"}`}
                       </span>
                     </Link>
                   </li>

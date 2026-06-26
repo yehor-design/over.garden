@@ -15,7 +15,8 @@ import {
 const payload: OfflineJournalEntryPayload = {
   spaceName: "Balcony",
   plantName: "Cherry tomato",
-  varietyText: "Black cherry",
+  catalogItemId: "00000000-0000-4000-8000-000000000101",
+  varietyText: "Помідор чері",
   title: "First flowers",
   body: "Two new flower clusters.",
   entryDate: "2026-06-26",
@@ -36,6 +37,7 @@ describe("offline journal entry sync", () => {
     );
 
     expect(body.clientMutationId).toBe("queue-entry-id");
+    expect(body.catalogItemId).toBe("00000000-0000-4000-8000-000000000101");
     expect(body.mediaAssetId).toBe("media-1");
     expect(body.syncStatus).toBe("online");
     expect(body.title).toBe("First flowers");
@@ -67,8 +69,9 @@ describe("offline journal entry sync", () => {
           plantObject: {
             id: "object-1",
             displayName: "Cherry tomato",
-            varietyText: "Black cherry",
-            varietyState: "free_text",
+            catalogItemId: "00000000-0000-4000-8000-000000000101",
+            varietyText: "Помідор чері",
+            varietyState: "selected",
             locationVisibility: "hidden",
           },
           entry: {
@@ -178,8 +181,9 @@ describe("offline journal entry sync", () => {
             plantObject: {
               id: "object-1",
               displayName: "Cherry tomato",
-              varietyText: "Black cherry",
-              varietyState: "free_text",
+              catalogItemId: "00000000-0000-4000-8000-000000000101",
+              varietyText: "Помідор чері",
+              varietyState: "selected",
               locationVisibility: "hidden",
             },
             entry: {
@@ -216,6 +220,9 @@ describe("offline journal entry sync", () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
+    expect(requests[0]?.catalogItemId).toBe(
+      "00000000-0000-4000-8000-000000000101",
+    );
     expect(requests[0]?.mediaAssetId).toBe("media-1");
     expect(
       (synced?.payload as OfflineJournalEntryPayload).processedMediaAssetId,
