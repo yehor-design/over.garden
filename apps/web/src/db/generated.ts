@@ -64,9 +64,14 @@ export interface JournalEntries {
   body: string;
   client_mutation_id: string;
   created_at: Generated<Timestamp>;
+  entry_date: Generated<Timestamp>;
+  entry_scope: Generated<string>;
   id: Generated<string>;
+  owner_user_id: string;
+  plant_object_id: string;
+  space_id: string;
+  title: string;
   updated_at: Generated<Timestamp>;
-  user_id: string;
   visibility: Generated<string>;
 }
 
@@ -82,6 +87,18 @@ export interface MediaAssets {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PlantObjects {
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  id: Generated<string>;
+  location_visibility: Generated<string>;
+  owner_user_id: string;
+  space_id: string;
+  updated_at: Generated<Timestamp>;
+  variety_state: Generated<string>;
+  variety_text: string | null;
+}
+
 export interface Session {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -91,6 +108,15 @@ export interface Session {
   updatedAt: Timestamp;
   userAgent: string | null;
   userId: string;
+}
+
+export interface Spaces {
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  id: Generated<string>;
+  location_visibility: Generated<string>;
+  owner_user_id: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface User {
@@ -118,7 +144,9 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   media_assets: MediaAssets;
+  plant_objects: PlantObjects;
   session: Session;
+  spaces: Spaces;
   user: User;
   verification: Verification;
 }
