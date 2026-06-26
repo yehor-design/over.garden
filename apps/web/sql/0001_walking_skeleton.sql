@@ -25,16 +25,29 @@ create index if not exists spaces_owner_created_idx
 create table if not exists catalog_items (
   id uuid primary key default gen_random_uuid(),
   canonical_name text not null check (char_length(canonical_name) between 1 and 120),
+  normalized_name text check (normalized_name is null or char_length(normalized_name) between 1 and 120),
   status text not null default 'seeded' check (status in ('seeded', 'confirmed', 'provisional', 'merged', 'rejected')),
   source text not null default 'internal_seed',
   source_id text,
+  created_by_user_id uuid,
   locale text not null default 'und',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
+alter table catalog_items
+  add column if not exists normalized_name text,
+  add column if not exists created_by_user_id uuid;
+
+update catalog_items
+set normalized_name = lower(canonical_name)
+where normalized_name is null;
+
 create index if not exists catalog_items_status_created_idx
   on catalog_items (status, created_at desc);
+
+create unique index if not exists catalog_items_owner_normalized_locale_uidx
+  on catalog_items (created_by_user_id, normalized_name, locale);
 
 create table if not exists catalog_item_names (
   id uuid primary key default gen_random_uuid(),
@@ -52,11 +65,19 @@ create unique index if not exists catalog_item_names_item_normalized_locale_uidx
 create index if not exists catalog_item_names_normalized_idx
   on catalog_item_names (normalized_name);
 
-insert into catalog_items (id, canonical_name, status, source, source_id, locale)
+insert into catalog_items (
+  id,
+  canonical_name,
+  normalized_name,
+  status,
+  source,
+  source_id,
+  locale
+)
 values
-  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
-  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
-  ('00000000-0000-4000-8000-000000000103', 'Домат чери', 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
+  ('00000000-0000-4000-8000-000000000101', 'Помідор чері', lower('Помідор чері'), 'seeded', 'internal_seed', 'ove-seed-uk-cherry-tomato', 'uk'),
+  ('00000000-0000-4000-8000-000000000102', 'Огірок Ніжинський', lower('Огірок Ніжинський'), 'seeded', 'internal_seed', 'ove-seed-uk-nizhyn-cucumber', 'uk'),
+  ('00000000-0000-4000-8000-000000000103', 'Домат чери', lower('Домат чери'), 'seeded', 'internal_seed', 'ove-seed-bg-cherry-tomato', 'bg')
 on conflict (id) do nothing;
 
 insert into catalog_item_names (

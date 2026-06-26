@@ -15,7 +15,10 @@ import type {
 } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getPublicDerivativeUrl } from "@/lib/storage";
-import { findSelectableCatalogItem } from "@/server/catalog-repository";
+import {
+  createUserAddedCatalogCandidate,
+  findSelectableCatalogItem,
+} from "@/server/catalog-repository";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
 
@@ -36,6 +39,7 @@ export interface CreateFirstPlantEntryInput {
   spaceName: string;
   plantName: string;
   catalogItemId?: string | null;
+  userAddedCatalogName?: string | null;
   varietyText?: string | null;
   title: string;
   body: string;
@@ -223,15 +227,30 @@ export async function createFirstPlantEntry(
       throw new Error("Selected catalog item was not found.");
     }
 
+    const userAddedCatalogItem =
+      !selectedCatalogItem && normalized.userAddedCatalogName
+        ? await createUserAddedCatalogCandidate(trx, scope, {
+            displayName: normalized.userAddedCatalogName,
+          })
+        : null;
+
     const plantObject = await trx
       .insertInto("plant_objects")
       .values({
         owner_user_id: scope.userId,
         space_id: space.id,
         display_name: normalized.plantName,
-        catalog_item_id: selectedCatalogItem?.id ?? null,
-        variety_text: selectedCatalogItem?.canonicalName ?? null,
-        variety_state: selectedCatalogItem ? "selected" : "unknown",
+        catalog_item_id:
+          selectedCatalogItem?.id ?? userAddedCatalogItem?.id ?? null,
+        variety_text:
+          selectedCatalogItem?.canonicalName ??
+          userAddedCatalogItem?.displayName ??
+          null,
+        variety_state: selectedCatalogItem
+          ? "selected"
+          : userAddedCatalogItem
+            ? "user_added"
+            : "unknown",
         location_visibility: DEFAULT_LOCATION_VISIBILITY,
       })
       .returningAll()
@@ -1006,6 +1025,15 @@ function normalizeCreateFirstPlantEntryInput(
     "Catalog item id",
     200,
   );
+  const userAddedCatalogName = normalizeOptionalText(
+    input.userAddedCatalogName,
+    "Missing catalog name",
+    MAX_NAME_LENGTH,
+  );
+  if (catalogItemId && userAddedCatalogName) {
+    throw new Error("Choose either a catalog match or a missing catalog name.");
+  }
+
   const mediaAssetId = normalizeOptionalText(
     input.mediaAssetId,
     "Media asset id",
@@ -1024,10 +1052,13 @@ function normalizeCreateFirstPlantEntryInput(
       MAX_NAME_LENGTH,
     ),
     catalogItemId,
+    userAddedCatalogName,
     varietyText: null,
     varietyState: (catalogItemId
       ? "selected"
-      : "unknown") satisfies VarietyState,
+      : userAddedCatalogName
+        ? "user_added"
+        : "unknown") satisfies VarietyState,
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
     body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
     entryDate: normalizeEntryDate(input.entryDate),

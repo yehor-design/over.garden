@@ -53,6 +53,23 @@ describe("offline journal entry sync", () => {
     expect(body.syncStatus).toBe("offline_synced");
   });
 
+  it("keeps user-added catalog names in retry requests", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        ...payload,
+        catalogItemId: null,
+        userAddedCatalogName: "Бабусин перець",
+        varietyText: "Бабусин перець",
+      },
+      "queue-entry-id",
+      null,
+    );
+
+    expect(body.catalogItemId).toBeNull();
+    expect(body.userAddedCatalogName).toBe("Бабусин перець");
+    expect(body.varietyText).toBe("Бабусин перець");
+  });
+
   it("syncs a queued entry through the canonical create endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(

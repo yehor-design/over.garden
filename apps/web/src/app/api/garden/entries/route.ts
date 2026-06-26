@@ -39,6 +39,7 @@ export async function POST(request: Request) {
       spaceName: body.spaceName ?? "",
       plantName: body.plantName ?? "",
       catalogItemId: body.catalogItemId ?? "",
+      userAddedCatalogName: body.userAddedCatalogName ?? "",
       varietyText: body.varietyText ?? "",
       title: body.title ?? "",
       body: body.body ?? "",

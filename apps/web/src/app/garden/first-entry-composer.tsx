@@ -71,6 +71,9 @@ export function FirstEntryComposer({
   >([]);
   const [selectedCatalogItem, setSelectedCatalogItem] =
     useState<CatalogSuggestion | null>(null);
+  const [userAddedCatalogName, setUserAddedCatalogName] = useState<
+    string | null
+  >(null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -127,7 +130,8 @@ export function FirstEntryComposer({
 
     if (
       query.length < 2 ||
-      (selectedCatalogItem && query === selectedCatalogItem.displayName)
+      (selectedCatalogItem && query === selectedCatalogItem.displayName) ||
+      (userAddedCatalogName && query === userAddedCatalogName)
     ) {
       return;
     }
@@ -161,7 +165,7 @@ export function FirstEntryComposer({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [catalogQuery, selectedCatalogItem]);
+  }, [catalogQuery, selectedCatalogItem, userAddedCatalogName]);
 
   const photoHelp = useMemo(() => {
     if (photoError) return photoError;
@@ -241,7 +245,11 @@ export function FirstEntryComposer({
     return {
       ...draft,
       catalogItemId: selectedCatalogItem?.id ?? null,
-      varietyText: selectedCatalogItem?.displayName ?? null,
+      userAddedCatalogName:
+        !selectedCatalogItem && userAddedCatalogName
+          ? userAddedCatalogName
+          : null,
+      varietyText: selectedCatalogItem?.displayName ?? userAddedCatalogName,
       clientMutationId,
       syncStatus: isOnline ? "online" : "offline_queued",
       photoIntent: photoFile
@@ -267,6 +275,10 @@ export function FirstEntryComposer({
       setSelectedCatalogItem(null);
     }
 
+    if (userAddedCatalogName && value !== userAddedCatalogName) {
+      setUserAddedCatalogName(null);
+    }
+
     if (value.trim().length < 2) {
       setCatalogSuggestions([]);
       setCatalogStatus("idle");
@@ -275,13 +287,26 @@ export function FirstEntryComposer({
 
   function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
     setSelectedCatalogItem(suggestion);
+    setUserAddedCatalogName(null);
     setCatalogQuery(suggestion.displayName);
+    setCatalogSuggestions([]);
+    setCatalogStatus("idle");
+  }
+
+  function addMissingCatalogName() {
+    const displayName = catalogQuery.trim().replace(/\s+/g, " ");
+    if (displayName.length < 1) return;
+
+    setSelectedCatalogItem(null);
+    setUserAddedCatalogName(displayName);
+    setCatalogQuery(displayName);
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
   }
 
   function chooseUnknownCatalog() {
     setSelectedCatalogItem(null);
+    setUserAddedCatalogName(null);
     setCatalogQuery("");
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
@@ -380,6 +405,10 @@ export function FirstEntryComposer({
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
               Selected: {selectedCatalogItem.displayName}
             </span>
+          ) : userAddedCatalogName ? (
+            <span className="rounded-md border border-border px-2 py-1 text-foreground">
+              Added missing: {userAddedCatalogName}
+            </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
               Variety: Unknown
@@ -392,6 +421,15 @@ export function FirstEntryComposer({
           >
             Use Unknown
           </button>
+          {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
+            <button
+              type="button"
+              onClick={addMissingCatalogName}
+              className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
+            >
+              Add missing name
+            </button>
+          ) : null}
           {catalogStatus === "loading" ? (
             <span className="text-muted-foreground">Searching...</span>
           ) : null}
@@ -603,7 +641,11 @@ function mutationSubtitle(mutation: OfflineMutation) {
   const parts = [
     mutation.status,
     payload.plantName,
-    payload.catalogItemId ? "catalog selected" : "unknown variety",
+    payload.catalogItemId
+      ? "catalog selected"
+      : payload.userAddedCatalogName
+        ? "missing name"
+        : "unknown variety",
     payload.entryDate,
     payload.photoIntent ? "photo intent" : null,
   ].filter(Boolean);

@@ -67,8 +67,10 @@ export interface CatalogItemNames {
 export interface CatalogItems {
   canonical_name: string;
   created_at: Generated<Timestamp>;
+  created_by_user_id: string | null;
   id: Generated<string>;
   locale: Generated<string>;
+  normalized_name: string | null;
   source: Generated<string>;
   source_id: string | null;
   status: Generated<string>;

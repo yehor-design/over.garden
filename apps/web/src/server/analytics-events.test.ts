@@ -77,6 +77,16 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
+  it("allows user-added variety state without raw catalog names", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        variety_state: "user_added",
+      }),
+    ).toEqual({
+      variety_state: "user_added",
+    });
+  });
+
   it("rejects raw content, precise location, media metadata, and PII fields", () => {
     expect(() =>
       normalizeAnalyticsEventProperties({ title: "First flowers" } as never),
