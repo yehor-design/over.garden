@@ -6,6 +6,15 @@ export function publicVarietyPath(publicSlug: string): string {
   return `/variety/${encodeURIComponent(publicSlug)}`;
 }
 
+export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
+  const params = new URLSearchParams({
+    catalog: publicSlug,
+    source: "public-variety",
+  });
+
+  return `/garden?${params.toString()}`;
+}
+
 export function createCatalogPublicSlug(
   canonicalName: string,
   catalogItemId: string,

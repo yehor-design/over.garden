@@ -15,6 +15,7 @@ import {
 } from "@/server/search/catalog-documents";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
+const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_CATALOG_SUGGESTIONS = 8;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 const DEFAULT_USER_ADDED_LOCALE = "und";
@@ -157,6 +158,30 @@ export async function findSelectableCatalogItem(
   };
 }
 
+export async function findSelectableCatalogItemByPublicSlug(
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<SelectableCatalogItem | null> {
+  const normalizedSlug = normalizeCatalogPublicSlug(publicSlug);
+  if (!normalizedSlug) return null;
+
+  const row = await buildFindSelectableCatalogItemByPublicSlugQuery(
+    executor,
+    normalizedSlug,
+  ).executeTakeFirst();
+
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    canonicalName: row.canonicalName,
+    publicSlug: row.publicSlug,
+    locale: row.locale,
+    status: row.status as SelectableCatalogStatus,
+    source: row.source,
+  };
+}
+
 export async function createUserAddedCatalogCandidate(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -278,6 +303,27 @@ export function buildFindSelectableCatalogItemQuery(
     .where("id", "=", itemId)
     .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
     .where("created_by_user_id", "is", null);
+}
+
+export function buildFindSelectableCatalogItemByPublicSlugQuery(
+  executor: QueryExecutor,
+  publicSlug: string,
+) {
+  return executor
+    .selectFrom("catalog_items")
+    .select([
+      "id",
+      "canonical_name as canonicalName",
+      "public_slug as publicSlug",
+      "locale",
+      "status",
+      "source",
+    ])
+    .where("public_slug", "=", publicSlug)
+    .where("public_slug", "is not", null)
+    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("created_by_user_id", "is", null)
+    .$narrowType<{ publicSlug: string }>();
 }
 
 export function buildUpsertUserAddedCatalogItemQuery(
@@ -418,6 +464,17 @@ export function normalizeCatalogItemId(value: string | null | undefined) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed.slice(0, 200) : null;
+}
+
+export function normalizeCatalogPublicSlug(value: string | null | undefined) {
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim();
+  if (!normalized || normalized.length > MAX_CATALOG_PUBLIC_SLUG_LENGTH) {
+    return null;
+  }
+
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(normalized) ? normalized : null;
 }
 
 function normalizeCatalogLimit(limit: number) {

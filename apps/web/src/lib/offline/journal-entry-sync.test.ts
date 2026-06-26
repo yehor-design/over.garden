@@ -85,6 +85,22 @@ describe("offline journal entry sync", () => {
     expect(body.coarseRegionCode).toBe("UA-30");
   });
 
+  it("keeps privacy-safe activation source in retry requests", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        ...payload,
+        activationSource: "public_variety",
+      },
+      "queue-entry-id",
+      null,
+    );
+
+    expect(body.activationSource).toBe("public_variety");
+    expect(JSON.stringify(body)).not.toContain("referrer");
+    expect(JSON.stringify(body)).not.toContain("user_agent");
+    expect(JSON.stringify(body)).not.toContain("public_url");
+  });
+
   it("syncs a queued entry through the canonical create endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(

@@ -3,8 +3,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { Sprout } from "lucide-react";
 
-import { publicVarietyPath } from "@/lib/garden/public-paths";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  gardenFirstEntryPreselectionPath,
+  publicVarietyPath,
+} from "@/lib/garden/public-paths";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
 
@@ -92,6 +97,16 @@ export default async function PublicVarietyRoute({
               {page.catalog.status}
             </span>
           </div>
+          <Link
+            href={gardenFirstEntryPreselectionPath(page.catalog.publicSlug)}
+            className={buttonVariants({
+              size: "lg",
+              className: "mt-2 self-start",
+            })}
+          >
+            <Sprout className="size-4" />
+            Log this variety
+          </Link>
         </div>
       </header>
 

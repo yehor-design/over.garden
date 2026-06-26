@@ -1,6 +1,11 @@
 import Link from "next/link";
 
+import type {
+  ActivationSource,
+  FirstEntryCatalogSelection,
+} from "@/lib/garden/entry-contracts";
 import { getCurrentSession } from "@/server/auth-session";
+import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import { listMyPlantObjects } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { FirstEntryComposer } from "./first-entry-composer";
@@ -8,9 +13,23 @@ import { GardenAuthPanel } from "./garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export default async function GardenPage() {
-  const session = await getCurrentSession();
+type GardenSearchParams = Record<string, string | string[] | undefined>;
+const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
+
+interface GardenPageProps {
+  searchParams?: Promise<GardenSearchParams>;
+}
+
+export default async function GardenPage({ searchParams }: GardenPageProps) {
+  const [session, params] = await Promise.all([
+    getCurrentSession(),
+    searchParams ?? Promise.resolve(EMPTY_GARDEN_SEARCH_PARAMS),
+  ]);
   const userId = session?.user?.id;
+  const initialCatalogItem = await resolveInitialCatalogSelection(params);
+  const activationSource = initialCatalogItem
+    ? normalizeActivationSource(params.source)
+    : null;
   const objects = userId
     ? await listMyPlantObjects(scopedToUser(userId), 12)
     : [];
@@ -38,7 +57,9 @@ export default async function GardenPage() {
         </div>
       </header>
 
-      {!userId ? <GardenAuthPanel /> : null}
+      {!userId ? (
+        <GardenAuthPanel catalogName={initialCatalogItem?.displayName} />
+      ) : null}
 
       {userId ? (
         <div className="grid gap-6 lg:grid-cols-3">
@@ -54,8 +75,11 @@ export default async function GardenPage() {
             </div>
 
             <FirstEntryComposer
+              key={initialCatalogItem?.id ?? "first-entry"}
               today={today}
               initialClientMutationId={crypto.randomUUID()}
+              initialCatalogItem={initialCatalogItem}
+              activationSource={activationSource}
             />
           </section>
 
@@ -92,4 +116,36 @@ export default async function GardenPage() {
       ) : null}
     </main>
   );
+}
+
+async function resolveInitialCatalogSelection(
+  searchParams: GardenSearchParams,
+): Promise<FirstEntryCatalogSelection | null> {
+  const publicSlug = normalizeFirstParam(searchParams.catalog);
+  if (!publicSlug) return null;
+
+  const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
+  if (!item) return null;
+
+  return {
+    id: item.id,
+    displayName: item.canonicalName,
+    canonicalName: item.canonicalName,
+    locale: item.locale,
+    status: item.status,
+    source: item.source,
+  };
+}
+
+function normalizeActivationSource(
+  value: string | string[] | undefined,
+): ActivationSource | null {
+  return normalizeFirstParam(value) === "public-variety"
+    ? "public_variety"
+    : null;
+}
+
+function normalizeFirstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0]?.trim() ?? "";
+  return typeof value === "string" ? value.trim() : "";
 }

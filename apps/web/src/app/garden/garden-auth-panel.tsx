@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 const defaultEmail = "gardener@over.garden";
 const defaultPassword = "overgarden-local-gardener";
 
-export function GardenAuthPanel() {
+interface GardenAuthPanelProps {
+  catalogName?: string | null;
+}
+
+export function GardenAuthPanel({ catalogName }: GardenAuthPanelProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
@@ -40,9 +44,13 @@ export function GardenAuthPanel() {
   return (
     <section className="flex max-w-xl flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">Garden workspace</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          Garden workspace
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Use the local gardener account to start a journal.
+          {catalogName
+            ? `Use the local gardener account to start a private journal entry for ${catalogName}.`
+            : "Use the local gardener account to start a journal."}
         </p>
       </div>
       <div className="flex flex-wrap gap-2">

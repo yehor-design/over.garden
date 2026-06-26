@@ -22,6 +22,10 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import type {
+  ActivationSource,
+  FirstEntryCatalogSelection,
+} from "@/lib/garden/entry-contracts";
 import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
 import {
   enqueueOfflineMutation,
@@ -37,25 +41,22 @@ import {
 interface FirstEntryComposerProps {
   today: string;
   initialClientMutationId: string;
+  initialCatalogItem?: FirstEntryCatalogSelection | null;
+  activationSource?: ActivationSource | null;
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
-interface CatalogSuggestion {
-  id: string;
-  displayName: string;
-  canonicalName: string;
-  locale: string;
-  status: string;
-  source: string;
-}
+type CatalogSuggestion = FirstEntryCatalogSelection;
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export function FirstEntryComposer({
   today,
   initialClientMutationId,
+  initialCatalogItem = null,
+  activationSource = null,
 }: FirstEntryComposerProps) {
   const router = useRouter();
   const [clientMutationId] = useState(initialClientMutationId);
@@ -68,12 +69,14 @@ export function FirstEntryComposer({
     locationVisibility: "hidden",
     coarseRegionCode: "",
   });
-  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogQuery, setCatalogQuery] = useState(
+    initialCatalogItem?.displayName ?? "",
+  );
   const [catalogSuggestions, setCatalogSuggestions] = useState<
     CatalogSuggestion[]
   >([]);
   const [selectedCatalogItem, setSelectedCatalogItem] =
-    useState<CatalogSuggestion | null>(null);
+    useState<CatalogSuggestion | null>(initialCatalogItem);
   const [userAddedCatalogName, setUserAddedCatalogName] = useState<
     string | null
   >(null);
@@ -257,6 +260,7 @@ export function FirstEntryComposer({
       coarseRegionCode:
         draft.locationVisibility === "region" ? draft.coarseRegionCode : null,
       clientMutationId,
+      activationSource,
       syncStatus: isOnline ? "online" : "offline_queued",
       photoIntent: photoFile
         ? {
@@ -730,7 +734,7 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
       typeof candidate.displayName !== "string" ||
       typeof candidate.canonicalName !== "string" ||
       typeof candidate.locale !== "string" ||
-      typeof candidate.status !== "string" ||
+      !isSelectableCatalogStatus(candidate.status) ||
       typeof candidate.source !== "string"
     ) {
       return [];
@@ -747,4 +751,10 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
       },
     ];
   });
+}
+
+function isSelectableCatalogStatus(
+  value: unknown,
+): value is CatalogSuggestion["status"] {
+  return value === "seeded" || value === "confirmed";
 }

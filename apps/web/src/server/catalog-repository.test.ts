@@ -19,9 +19,11 @@ import {
   buildEnqueueCatalogCurationJobQuery,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildCatalogTypeaheadQuery,
+  buildFindSelectableCatalogItemByPublicSlugQuery,
   buildFindSelectableCatalogItemQuery,
   buildInsertCatalogItemNameQuery,
   buildUpsertUserAddedCatalogItemQuery,
+  normalizeCatalogPublicSlug,
   normalizeCatalogQuery,
   searchCatalogSuggestionsWithMeili,
 } from "./catalog-repository";
@@ -143,6 +145,35 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain('"created_by_user_id" is null');
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000101",
+      "seeded",
+      "confirmed",
+    ]);
+  });
+
+  it("normalizes bounded public slugs for activation preselection", () => {
+    expect(normalizeCatalogPublicSlug(" pomidor-cheri-0000000101 ")).toBe(
+      "pomidor-cheri-0000000101",
+    );
+    expect(normalizeCatalogPublicSlug("../private")).toBeNull();
+    expect(normalizeCatalogPublicSlug("Помідор-чері")).toBeNull();
+    expect(normalizeCatalogPublicSlug("a".repeat(97))).toBeNull();
+  });
+
+  it("validates public slug preselection against global selectable catalog rows", () => {
+    const compiled = buildFindSelectableCatalogItemByPublicSlugQuery(
+      testDb,
+      "pomidor-cheri-0000000101",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_items"');
+    expect(compiled.sql).toContain('"public_slug" = $1');
+    expect(compiled.sql).toContain('"public_slug" is not null');
+    expect(compiled.sql).toContain('"status" in ($2, $3)');
+    expect(compiled.sql).toContain('"created_by_user_id" is null');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.parameters).toEqual([
+      "pomidor-cheri-0000000101",
       "seeded",
       "confirmed",
     ]);

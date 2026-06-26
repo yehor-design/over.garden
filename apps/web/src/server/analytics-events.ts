@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import type { ActivationSource } from "@/lib/garden/entry-contracts";
 import type {
   AnalyticsEvent,
   AnalyticsEventName,
@@ -19,10 +20,12 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewAnalyticsEventRow = Insertable<Database["analytics_events"]>;
 
 export interface AnalyticsEventProperties {
+  activation_source?: ActivationSource;
   entry_scope?: EntryScope;
   has_photo?: boolean;
   is_backdated?: boolean;
   location_visibility_level?: LocationVisibility;
+  source_surface_kind?: "variety";
   sync_status?: EntrySyncStatus;
   variety_state?: VarietyState;
   followed_by_action?: boolean;
@@ -55,10 +58,12 @@ const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
 ]);
 
 const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
+  "activation_source",
   "entry_scope",
   "has_photo",
   "is_backdated",
   "location_visibility_level",
+  "source_surface_kind",
   "sync_status",
   "variety_state",
   "followed_by_action",
@@ -83,9 +88,12 @@ const FORBIDDEN_PROPERTY_FRAGMENTS = [
   "media_metadata",
   "metadata",
   "quarantine",
+  "query",
   "raw",
+  "referrer",
   "text",
   "title",
+  "url",
   "user_agent",
 ];
 
@@ -281,6 +289,9 @@ function normalizeAnalyticsEventPropertyValue(
   value: unknown,
 ) {
   switch (key) {
+    case "activation_source":
+      if (value === "public_variety") return value;
+      break;
     case "entry_scope":
       if (value === "object") return value;
       break;
@@ -291,6 +302,9 @@ function normalizeAnalyticsEventPropertyValue(
       break;
     case "location_visibility_level":
       if (value === "region" || value === "hidden") return value;
+      break;
+    case "source_surface_kind":
+      if (value === "variety") return value;
       break;
     case "sync_status":
       if (

@@ -48,19 +48,23 @@ describe("analytics event privacy contracts", () => {
   it("normalizes only privacy-safe boolean and enum properties", () => {
     expect(
       normalizeAnalyticsEventProperties({
+        activation_source: "public_variety",
         entry_scope: "object",
         has_photo: true,
         is_backdated: false,
         location_visibility_level: "hidden",
+        source_surface_kind: "variety",
         sync_status: "offline_synced",
         variety_state: "selected",
         followed_by_action: false,
       }),
     ).toEqual({
+      activation_source: "public_variety",
       entry_scope: "object",
       has_photo: true,
       is_backdated: false,
       location_visibility_level: "hidden",
+      source_surface_kind: "variety",
       sync_status: "offline_synced",
       variety_state: "selected",
       followed_by_action: false,
@@ -105,6 +109,21 @@ describe("analytics event privacy contracts", () => {
     expect(() =>
       normalizeAnalyticsEventProperties({ raw_exif: true } as never),
     ).toThrow("Forbidden analytics event property: raw_exif.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        public_url_referrer: "/variety/pomidor-cheri-0000000101",
+      } as never),
+    ).toThrow("Forbidden analytics event property: public_url_referrer.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        raw_query: "catalog=pomidor-cheri-0000000101",
+      } as never),
+    ).toThrow("Forbidden analytics event property: raw_query.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        user_agent: "Mozilla/5.0",
+      } as never),
+    ).toThrow("Forbidden analytics event property: user_agent.");
   });
 
   it("rejects unsupported or non-enum property values", () => {
@@ -118,6 +137,11 @@ describe("analytics event privacy contracts", () => {
         has_photo: "yes",
       } as never),
     ).toThrow("Unsafe analytics event value for has_photo.");
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        activation_source: "https://over.garden/variety/x",
+      } as never),
+    ).toThrow("Unsafe analytics event value for activation_source.");
   });
 
   it("builds event inserts with pseudonymous scope and no raw title/body fields", () => {
@@ -128,6 +152,8 @@ describe("analytics event privacy contracts", () => {
         has_photo: false,
         is_backdated: true,
         location_visibility_level: "region",
+        activation_source: "public_variety",
+        source_surface_kind: "variety",
         sync_status: "online",
         variety_state: "unknown",
       },
@@ -146,6 +172,8 @@ describe("analytics event privacy contracts", () => {
         has_photo: false,
         is_backdated: true,
         location_visibility_level: "region",
+        activation_source: "public_variety",
+        source_surface_kind: "variety",
         sync_status: "online",
         variety_state: "unknown",
       },
@@ -156,6 +184,8 @@ describe("analytics event privacy contracts", () => {
     ]);
     expect(JSON.stringify(compiled.parameters)).not.toContain("title");
     expect(JSON.stringify(compiled.parameters)).not.toContain("body");
+    expect(JSON.stringify(compiled.parameters)).not.toContain("referrer");
+    expect(JSON.stringify(compiled.parameters)).not.toContain("user_agent");
   });
 
   it("links a second entry to the latest unclosed revisit in the same session and object", () => {

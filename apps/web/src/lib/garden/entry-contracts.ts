@@ -1,5 +1,16 @@
 import type { EntrySyncStatus } from "@/db/schema";
 
+export type ActivationSource = "public_variety";
+
+export interface FirstEntryCatalogSelection {
+  id: string;
+  displayName: string;
+  canonicalName: string;
+  locale: string;
+  status: "seeded" | "confirmed";
+  source: string;
+}
+
 export interface FirstPlantEntryRequest {
   spaceName: string;
   plantName: string;
@@ -14,6 +25,7 @@ export interface FirstPlantEntryRequest {
   clientMutationId: string;
   mediaAssetId?: string | null;
   syncStatus?: EntrySyncStatus;
+  activationSource?: ActivationSource | null;
 }
 
 export interface FirstPlantEntryResponse {

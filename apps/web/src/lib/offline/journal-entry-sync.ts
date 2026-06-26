@@ -126,6 +126,7 @@ export function buildJournalEntryRequestBodyForSync(
     mediaAssetId: mediaAssetId ?? "",
     syncStatus:
       payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
+    activationSource: payload.activationSource ?? null,
   };
 }
 

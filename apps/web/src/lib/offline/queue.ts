@@ -3,6 +3,7 @@
 import Dexie, { type Table } from "dexie";
 
 import type { EntrySyncStatus } from "@/db/schema";
+import type { ActivationSource } from "@/lib/garden/entry-contracts";
 
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
@@ -28,6 +29,7 @@ export interface OfflineJournalEntryPayload {
   coarseRegionCode?: string | null;
   clientMutationId: string;
   syncStatus?: EntrySyncStatus;
+  activationSource?: ActivationSource | null;
   photoIntent?: OfflinePhotoIntent | null;
   processedMediaAssetId?: string | null;
 }

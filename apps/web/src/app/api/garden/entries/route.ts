@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 import type {
+  ActivationSource,
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
@@ -35,6 +36,7 @@ export async function POST(request: Request) {
 
   try {
     const syncStatus = normalizeSyncStatus(body.syncStatus);
+    const activationSource = normalizeActivationSource(body.activationSource);
     const result = await createFirstPlantEntry(scope, {
       spaceName: body.spaceName ?? "",
       plantName: body.plantName ?? "",
@@ -51,7 +53,12 @@ export async function POST(request: Request) {
     });
     const readbackUrl = `/garden/objects/${result.plantObject.id}`;
 
-    await recordFirstPlantEntryEvents(scope, result, syncStatus);
+    await recordFirstPlantEntryEvents(
+      scope,
+      result,
+      syncStatus,
+      activationSource,
+    );
 
     revalidatePath("/garden");
     revalidatePath(readbackUrl);
@@ -103,13 +110,24 @@ function normalizeSyncStatus(value: unknown): EntrySyncStatus {
   return value === "offline_synced" ? "offline_synced" : "online";
 }
 
+function normalizeActivationSource(value: unknown): ActivationSource | null {
+  return value === "public_variety" ? value : null;
+}
+
 async function recordFirstPlantEntryEvents(
   scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
   syncStatus: EntrySyncStatus,
+  activationSource: ActivationSource | null,
 ) {
   if (!result.isNewEntry) return;
 
+  const activationProperties = activationSource
+    ? {
+        activation_source: activationSource,
+        source_surface_kind: "variety" as const,
+      }
+    : {};
   const sharedEntryProperties = {
     entry_scope: result.entry.entry_scope as EntryScope,
     has_photo: result.mediaAttached,
@@ -118,6 +136,7 @@ async function recordFirstPlantEntryEvents(
       .location_visibility as LocationVisibility,
     sync_status: syncStatus,
     variety_state: result.plantObject.variety_state as VarietyState,
+    ...activationProperties,
   };
   const eventTarget = {
     spaceId: result.space.id,
