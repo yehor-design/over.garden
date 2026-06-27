@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-06-27
+Last verified: 2026-06-28
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -203,9 +203,9 @@ Database invariants:
 
 ## Vercel
 
-Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
+Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the selected pilot URL.
 
-Last verified: 2026-06-27 through the connected Vercel app.
+Last verified: 2026-06-28 through the connected Vercel app plus a redacted browser smoke on the selected pilot alias.
 
 Team:
 
@@ -223,14 +223,15 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx`
-- Deployment URL: `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app`
+- Deployment ID: `dpl_FqkhwnHcjAvqwUoEpHGfJAch1kQh`
+- Deployment URL: `https://over-garden-l1r52noe7-yehors-projects-01221e2b.vercel.app`
 - Ready state: `READY`
 - Target: `production`
 - Source: GitHub integration
-- GitHub commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
-- GitHub commit message: `feat(garden): add pilot health readout`
+- GitHub commit: `27e95e76968b042c717b336ab99b1b5e156844a1`
+- GitHub commit message: `feat(garden): add production pilot smoke readiness`
 - Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
+- GitHub CI: run `28298598747`, completed successfully for the same commit on `main`
 
 Production aliases reported by Vercel:
 
@@ -249,6 +250,10 @@ Public access observation:
 - Response headers included `cache-control: no-store, max-age=0` and `x-robots-tag: noindex`.
 - This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
+- On 2026-06-28, `https://over-garden.vercel.app` was selected for the current-main pilot smoke. `/health`, `/`, and `/privacy` returned HTTP `200` without Vercel SSO. The app domain is still on Vercel, not Cloudflare, so no Cloudflare HTML cache header was present.
+- On 2026-06-28, a redacted browser smoke against `https://over-garden.vercel.app` proved sign-in, first-entry save, `media.over.garden` derivative readback, follow-up save, public journal SSR `200` with `noindex, nofollow`, public variety CTA activation, archive-to-`410`, and authenticated pilot-health readout. Smoke evidence intentionally did not record raw journal text, email, cookies, signed upload URLs, media object keys, IP/user-agent/referrer, or precise location.
+- A focused public-photo probe on 2026-06-28 proved a published photo entry rendered a public derivative from `media.over.garden` with no quarantine reference or precise-location marker, then returned `410 Gone` after archive and revalidation.
+- Current-main `/garden/pilot-smoke` still reports public journal search worker health as explicitly degraded because the current production revision only proves `catalog_typeahead_reindex`.
 
 Deployment env observation:
 

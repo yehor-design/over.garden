@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27
-Last updated: 2026-06-27
+Status: live smoke contract for OVE-31 current-main production pilot smoke
+Last updated: 2026-06-28
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -9,23 +9,27 @@ The smoke is a product-learning gate, not only a deployment check. If public vis
 
 ## Current Live Deployment Snapshot
 
-Verified through the connected Vercel app on 2026-06-27.
+Verified through the connected Vercel app and a redacted browser smoke on 2026-06-28.
 
 - Vercel team: `yehor's projects` / `team_vs3oQAk6OT4vVVvcL7Mf5m8t`
 - Vercel project: `over-garden` / `prj_Tm5HXFEPqc46StpIfsoKjU9GtHBy`
-- Latest production deployment: `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx`
-- Latest production URL: `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app`
-- Latest deployed commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
+- Latest production deployment: `dpl_FqkhwnHcjAvqwUoEpHGfJAch1kQh`
+- Latest production URL: `https://over-garden-l1r52noe7-yehors-projects-01221e2b.vercel.app`
+- Latest deployed commit: `27e95e76968b042c717b336ab99b1b5e156844a1`
+- GitHub CI for that commit: run `28298598747`, completed successfully on `main`
 - Reported aliases: `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
 - Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
+- On 2026-06-28, the selected production pilot alias `https://over-garden.vercel.app` returned HTTP `200` for `/health`, `/`, and `/privacy` without Vercel SSO. The selected app alias is Vercel-served; no Cloudflare HTML cache header was present.
 - Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
+- On 2026-06-28, current `main` passed the same selected-alias browser smoke on `https://over-garden.vercel.app`: sign-in, first-entry save, `media.over.garden` derivative readback, same-object follow-up, public SSR journal `200`, public variety CTA activation, archive-to-`410`, `/garden/pilot-health`, and `/garden/pilot-smoke`. Evidence was intentionally limited to route class, status, robots value, derivative host class, and aggregate/operator readout state.
+- A focused public-photo probe on 2026-06-28 proved a published photo entry rendered only a `media.over.garden` derivative publicly, contained no quarantine reference or precise-location marker, and returned `410 Gone` after archive and revalidation.
 
-Implication: the OVE-27 preview now proves the internal live-path contract against managed Postgres and R2. The remaining production closeout is to merge the deployed app version with the CA-aware database runtime and verify the same smoke on the public production alias selected for the pilot. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6.
+Implication: the selected public production alias now proves the current reviewed `main` revision for the first pilot path. Remaining launch caveats are no longer stale-preview deployment drift; they are the explicitly deferred production domain, production worker/search proof, production worker process management, and reviewed legal/erasure closeout.
 
 ## Product Assumption
 
