@@ -19,6 +19,8 @@ Verified through the connected Vercel app on 2026-06-27.
 - Reported aliases: `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
 - Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
 - Fetching `/health` on the latest production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
+- Production managed Postgres is still not proven: `DATABASE_URL` / `DIRECT_URL` are absent, provider URL aliases are empty, and the component fallback is incomplete. The smoke is blocked until a real managed Postgres connection pings successfully.
 
 Implication: OVE-27 is not Done until the selected pilot URL returns OverGarden HTML to the intended smoke audience. A protected preview may be acceptable for internal deployment inspection, but it does not validate public visitor/crawler behavior for H6.
 

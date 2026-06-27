@@ -111,6 +111,79 @@ describe("pilot smoke readiness", () => {
       summary: expect.stringContaining("journal_entry_index"),
     });
   });
+
+  it("accepts Vercel deployment URL as the effective public/auth URL", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        BETTER_AUTH_URL: undefined,
+        PUBLIC_SITE_URL: undefined,
+        VERCEL_URL: "over-garden-preview.vercel.app",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(findCheck(checks, "public-site-url")).toMatchObject({
+      severity: "pass",
+    });
+    expect(findCheck(checks, "better-auth-url")).toMatchObject({
+      severity: "pass",
+    });
+  });
+
+  it("blocks smoke when no explicit or Vercel deployment origin exists", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        BETTER_AUTH_URL: undefined,
+        PUBLIC_SITE_URL: undefined,
+        NEXT_PUBLIC_SITE_URL: undefined,
+        VERCEL_URL: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(readout.overall).toBe("blocked");
+    expect(findCheck(checks, "public-site-url")).toMatchObject({
+      severity: "fail",
+    });
+    expect(findCheck(checks, "better-auth-url")).toMatchObject({
+      severity: "fail",
+    });
+  });
+
+  it("treats missing search and worker env as degraded explicit state", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        MEILISEARCH_HOST: undefined,
+        MEILISEARCH_API_KEY: undefined,
+        MATCHING_SERVICE_URL: undefined,
+        MATCHING_SERVICE_TOKEN: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(findCheck(checks, "meilisearch-host")).toMatchObject({
+      severity: "warn",
+    });
+    expect(findCheck(checks, "meilisearch-api-key")).toMatchObject({
+      severity: "warn",
+    });
+    expect(findCheck(checks, "matching-service-url")).toMatchObject({
+      severity: "warn",
+    });
+    expect(findCheck(checks, "matching-service-token")).toMatchObject({
+      severity: "warn",
+    });
+    expect(readout.overall).toBe("degraded");
+  });
 });
 
 function findCheck(checks: PilotSmokeCheck[], id: string) {

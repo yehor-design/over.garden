@@ -82,6 +82,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Cloudflare zone `over.garden` is active under account `cb03b15042adc74edfe2d8201636300a`.
 - R2 buckets `overgarden-quarantine` and `overgarden-public` exist.
 - R2 custom domain `media.over.garden` is attached to `overgarden-public` with ownership and SSL active.
+- Vercel deployment env has the R2 runtime env family and `BETTER_AUTH_SECRET` installed for production, development, and the active OVE-27 branch preview. Secret values remain outside git.
 - Vercel project `over-garden` exists under team `team_vs3oQAk6OT4vVVvcL7Mf5m8t`; latest verified production deployment `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx` is READY from commit `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`.
 - Live non-secret infrastructure values are recorded in `docs/INFRASTRUCTURE_REGISTRY.md`.
 
@@ -144,7 +145,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 ## Still Deferred
 
 - Production DigitalOcean Managed Postgres provisioning and backups/PITR checks.
-- Production R2 S3 access key installation in deployment env.
+- Live production media derivative readback through the deployed app.
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Vercel public app domain binding for `over.garden` / `www.over.garden`.
 - Vercel deployment protection/public access decision for the selected pilot URL. The latest verified production deployment returned Vercel SSO for `/health`, so public visitor/crawler smoke is blocked until this is intentionally changed.

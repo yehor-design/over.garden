@@ -1,5 +1,7 @@
 import "server-only";
 
+import { resolveDatabaseConnection } from "@/db/connection";
+import { vercelUrl } from "@/lib/runtime-url";
 import { pingDatabase } from "@/server/health-repository";
 
 type EnvLike = Record<string, string | undefined>;
@@ -65,12 +67,14 @@ export function buildPilotSmokeReadiness({
           "PUBLIC_SITE_URL",
           "Public site URL",
           "The founder and crawlers need a canonical HTTPS public URL for pilot smoke.",
+          publicSmokeOrigin(env),
         ),
         checkConfiguredHttpsUrl(
           env,
           "BETTER_AUTH_URL",
           "Better Auth URL",
           "Auth callbacks and cookies must point at the same deployed origin used in the smoke.",
+          authSmokeOrigin(env),
         ),
         checkVercelRuntime(env),
         {
@@ -166,22 +170,26 @@ export function buildPilotSmokeReadiness({
           "MEILISEARCH_HOST",
           "Meilisearch host",
           "Catalog typeahead and public-safe derived indexes need a configured Meilisearch host.",
+          { degradedWhenMissing: true },
         ),
         checkRequiredSecretPresence(
           env,
           "MEILISEARCH_API_KEY",
           "Meilisearch API key",
+          { degradedWhenMissing: true },
         ),
         checkRequiredUrlPresence(
           env,
           "MATCHING_SERVICE_URL",
           "Matching service URL",
           "The Python health service should be reachable by operators, even though product writes do not block on it.",
+          { degradedWhenMissing: true },
         ),
         checkRequiredSecretPresence(
           env,
           "MATCHING_SERVICE_TOKEN",
           "Matching service token",
+          { degradedWhenMissing: true },
         ),
         {
           id: "journal-search-worker",
@@ -264,22 +272,23 @@ function checkDatabase(
   env: EnvLike,
   probe: PilotSmokeDatabaseProbe,
 ): PilotSmokeCheck {
-  const databaseUrl = env.DATABASE_URL;
-  const directUrl = env.DIRECT_URL;
+  const runtimeDatabase = resolveDatabaseConnection(env);
+  const directUrl =
+    env.DIRECT_URL ?? env.POSTGRES_URL_NON_POOLING ?? env.POSTGRES_URL;
 
-  if (!isConfigured(databaseUrl) || !isConfigured(directUrl)) {
+  if (!runtimeDatabase.connectionString) {
     return {
       id: "database-config",
       label: "Postgres runtime and direct URLs",
       severity: "fail",
       summary:
-        "DATABASE_URL and DIRECT_URL must be configured for deployed smoke.",
+        "A supported Postgres runtime connection must be configured for deployed smoke.",
       evidence:
-        "Report only configured/missing state. Never copy database URLs into evidence.",
+        "Accepted runtime sources: DATABASE_URL, POSTGRES_URL, POSTGRES_PRISMA_URL, or POSTGRES_HOST/USER/PASSWORD/DATABASE. Never copy database URLs into evidence.",
     };
   }
 
-  if (isLocalUrl(databaseUrl) || isLocalUrl(directUrl)) {
+  if (isLocalUrl(runtimeDatabase.connectionString)) {
     return {
       id: "database-config",
       label: "Postgres runtime and direct URLs",
@@ -306,9 +315,10 @@ function checkDatabase(
   return {
     id: "database-config",
     label: "Postgres runtime and direct URLs",
-    severity: "pass",
-    summary:
-      "Database config is present and the server-side probe reached Postgres.",
+    severity: isConfigured(directUrl) ? "pass" : "warn",
+    summary: isConfigured(directUrl)
+      ? "Database config is present and the server-side probe reached Postgres."
+      : "Runtime database config is present and reachable; direct migration URL is not configured.",
     evidence:
       "Evidence may say database ping passed. Do not include connection strings.",
   };
@@ -401,10 +411,11 @@ function checkConfiguredHttpsUrl(
   name: string,
   label: string,
   evidence: string,
+  effectiveValue = env[name],
 ): PilotSmokeCheck {
   const value = env[name];
 
-  if (!isConfigured(value)) {
+  if (!isConfigured(value) && !isConfigured(effectiveValue)) {
     return {
       id: envId(name),
       label,
@@ -414,7 +425,7 @@ function checkConfiguredHttpsUrl(
     };
   }
 
-  if (isLocalUrl(value)) {
+  if (isLocalUrl(effectiveValue)) {
     return {
       id: envId(name),
       label,
@@ -424,7 +435,7 @@ function checkConfiguredHttpsUrl(
     };
   }
 
-  if (!isHttpsUrl(value)) {
+  if (!isHttpsUrl(effectiveValue)) {
     return {
       id: envId(name),
       label,
@@ -448,6 +459,7 @@ function checkRequiredUrlPresence(
   name: string,
   label: string,
   evidence: string,
+  options: { degradedWhenMissing?: boolean } = {},
 ): PilotSmokeCheck {
   const value = env[name];
 
@@ -455,7 +467,7 @@ function checkRequiredUrlPresence(
     return {
       id: envId(name),
       label,
-      severity: "fail",
+      severity: options.degradedWhenMissing ? "warn" : "fail",
       summary: `${name} is missing or still uses a placeholder.`,
       evidence,
     };
@@ -476,6 +488,7 @@ function checkRequiredSecretPresence(
   env: EnvLike,
   name: string,
   label: string,
+  options: { degradedWhenMissing?: boolean } = {},
 ): PilotSmokeCheck {
   const value = env[name];
 
@@ -483,7 +496,7 @@ function checkRequiredSecretPresence(
     return {
       id: envId(name),
       label,
-      severity: "fail",
+      severity: options.degradedWhenMissing ? "warn" : "fail",
       summary: `${name} is missing or still uses a placeholder.`,
       evidence:
         "Evidence may say missing/present only. Never copy this value into docs, Linear, logs, or chat.",
@@ -501,9 +514,23 @@ function checkRequiredSecretPresence(
 }
 
 function isConfigured(value: string | undefined): value is string {
-  if (!value?.trim()) return false;
-  const normalized = value.toLowerCase();
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === '""' || trimmed === "''") return false;
+  const normalized = trimmed.toLowerCase();
   return !normalized.includes("change_me") && !normalized.includes("...");
+}
+
+function publicSmokeOrigin(env: EnvLike) {
+  return env.PUBLIC_SITE_URL ?? env.NEXT_PUBLIC_SITE_URL ?? vercelUrl(env);
+}
+
+function authSmokeOrigin(env: EnvLike) {
+  return (
+    env.BETTER_AUTH_URL ??
+    env.PUBLIC_SITE_URL ??
+    env.NEXT_PUBLIC_SITE_URL ??
+    vercelUrl(env)
+  );
 }
 
 function isHttpsUrl(value: string | undefined) {

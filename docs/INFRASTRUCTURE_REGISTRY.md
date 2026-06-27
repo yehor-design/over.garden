@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-06-26
+Last verified: 2026-06-27
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -84,7 +84,7 @@ R2_SECRET_ACCESS_KEY="..."
 Where secrets belong:
 
 - Local app development: `apps/web/.env.local`
-- Vercel/project deployment env: production, preview if needed
+- Vercel/project deployment env: production, development, and the active OVE-27 branch preview
 - Never in repository docs, source files, Linear comments, or chat
 
 R2 API token requirement:
@@ -208,6 +208,14 @@ Public access observation:
 - Response headers included `cache-control: no-store, max-age=0` and `x-robots-tag: noindex`.
 - This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
 
+Deployment env observation:
+
+- On 2026-06-27, the Vercel project had `BETTER_AUTH_SECRET` installed for production, development, and the branch preview `codex/ove-27-production-pilot-smoke`.
+- On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
+- On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
+- On 2026-06-27, production had `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to the public Vercel alias `https://over-garden.vercel.app`.
+- Do not infer database readiness from the presence of legacy `POSTGRES_*` variable names alone. The live smoke must prove a non-empty managed Postgres connection and a successful server-side database ping.
+
 Vercel invariants:
 
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
@@ -232,7 +240,6 @@ Local storage emulator:
 
 ## Open Operational Items
 
-- Create and install `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `apps/web/.env.local` and deployment env.
 - Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
 - Disable or intentionally bypass Vercel deployment protection for the public pilot smoke URL before measuring H6/public visitor behavior.
 - Provision DigitalOcean Managed Postgres and record non-secret cluster/project metadata here.
