@@ -1,15 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import {
+  FIRST_PUBLICATION_DISCLOSURE_LINES,
+  FIRST_PUBLICATION_DISCLOSURE_VERSION,
+  PILOT_LEGAL_COPY_STATUS,
+} from "@/lib/privacy/disclosures";
+
 export const metadata: Metadata = {
-  title: "First-publication disclosure placeholder | OverGarden",
+  title: "Pilot first-publication disclosure | OverGarden",
+  description:
+    "Pilot placeholder for OverGarden first-publication disclosure copy.",
   robots: {
     index: false,
     follow: false,
   },
 };
 
-export default function FirstPublicationDisclosurePlaceholderPage() {
+export default function FirstPublicationDisclosurePage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8">
       <Link href="/" className="text-sm text-muted-foreground">
@@ -17,18 +25,27 @@ export default function FirstPublicationDisclosurePlaceholderPage() {
       </Link>
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          First-publication disclosure placeholder
+          Pilot first-publication disclosure
         </h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
+          Version {FIRST_PUBLICATION_DISCLOSURE_VERSION}. Status:{" "}
+          {PILOT_LEGAL_COPY_STATUS}.
+        </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
         <p>
-          Placeholder disclosure text for the first time a gardener publishes a
-          journal entry.
+          This is the version logged when a gardener accepts the first
+          publication disclosure during the pilot. It is still placeholder
+          wording until legal review approves release copy.
         </p>
-        <p>
-          Reviewed public-content visibility, media derivative, location,
-          deletion, indexing, and data-use wording must be added before public
-          release.
+        <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+          {FIRST_PUBLICATION_DISCLOSURE_LINES.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        <p className="text-muted-foreground">
+          Material wording changes must create a new disclosure version before
+          publication logging is considered valid.
         </p>
       </div>
     </main>

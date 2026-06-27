@@ -80,6 +80,20 @@ export interface CatalogItems {
   updated_at: Generated<Timestamp>;
 }
 
+export interface ErasureRequests {
+  created_at: Generated<Timestamp>;
+  handled_at: Timestamp | null;
+  handled_by_user_id: string | null;
+  handled_status: string | null;
+  id: Generated<string>;
+  intake_disclosure_version: Generated<string>;
+  request_scope: Generated<string>;
+  requester_user_id: string;
+  status: Generated<string>;
+  submitted_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Health {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
@@ -209,6 +223,7 @@ export interface DB {
   analytics_events: AnalyticsEvents;
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
+  erasure_requests: ErasureRequests;
   health: Health;
   job_queue: JobQueue;
   journal_entries: JournalEntries;

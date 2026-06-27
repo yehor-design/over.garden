@@ -23,13 +23,13 @@ import {
 } from "@/server/catalog-repository";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
+import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 
 const MAX_BODY_LENGTH = 2000;
 const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
 const MAX_PUBLIC_SLUG_LENGTH = 96;
-const PUBLICATION_DISCLOSURE_VERSION = "first-publication-v1";
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -1006,7 +1006,7 @@ export function buildPublishJournalEntryQuery(
       archived_at: null,
       public_gone_at: null,
       first_publication_disclosure_version: input.disclosureLogged
-        ? PUBLICATION_DISCLOSURE_VERSION
+        ? FIRST_PUBLICATION_DISCLOSURE_VERSION
         : undefined,
       first_publication_disclosed_at: input.disclosureLogged
         ? input.now

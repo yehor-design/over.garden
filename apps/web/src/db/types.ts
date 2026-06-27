@@ -5,6 +5,7 @@ import type {
   AnalyticsEvents as AnalyticsEventsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
+  ErasureRequests as ErasureRequestsTable,
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
@@ -33,6 +34,17 @@ export type CatalogItemStatus =
 export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 export type VarietySeedProofStatus = "draft" | "published";
+export type ErasureRequestStatus =
+  | "submitted"
+  | "reviewing"
+  | "handled"
+  | "canceled";
+export type ErasureRequestScope = "account_data_erasure";
+export type ErasureRequestHandledStatus =
+  | "completed"
+  | "declined"
+  | "duplicate"
+  | "needs_identity_verification";
 export type AnalyticsEventName =
   | "space_created"
   | "object_created"
@@ -50,6 +62,8 @@ export type CatalogItemName = Selectable<CatalogItemNamesTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
 export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
+export type ErasureRequest = Selectable<ErasureRequestsTable>;
+export type NewErasureRequest = Insertable<ErasureRequestsTable>;
 export type Health = Selectable<HealthTable>;
 export type NewHealth = Insertable<HealthTable>;
 export type Space = Selectable<SpacesTable>;

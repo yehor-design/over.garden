@@ -557,6 +557,42 @@ create index if not exists journal_entries_public_gone_idx
   on journal_entries (public_slug, public_gone_at)
   where public_slug is not null and public_gone_at is not null;
 
+create table if not exists erasure_requests (
+  id uuid primary key default gen_random_uuid(),
+  requester_user_id uuid not null,
+  request_scope text not null default 'account_data_erasure' check (
+    request_scope in ('account_data_erasure')
+  ),
+  status text not null default 'submitted' check (
+    status in ('submitted', 'reviewing', 'handled', 'canceled')
+  ),
+  submitted_at timestamptz not null default now(),
+  handled_at timestamptz,
+  handled_status text check (
+    handled_status is null
+    or handled_status in (
+      'completed',
+      'declined',
+      'duplicate',
+      'needs_identity_verification'
+    )
+  ),
+  handled_by_user_id uuid,
+  intake_disclosure_version text not null default 'erasure-request-pilot-v1',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists erasure_requests_status_submitted_idx
+  on erasure_requests (status, submitted_at desc);
+
+create index if not exists erasure_requests_requester_submitted_idx
+  on erasure_requests (requester_user_id, submitted_at desc);
+
+create unique index if not exists erasure_requests_one_open_per_user_uidx
+  on erasure_requests (requester_user_id)
+  where status in ('submitted', 'reviewing');
+
 create table if not exists analytics_events (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

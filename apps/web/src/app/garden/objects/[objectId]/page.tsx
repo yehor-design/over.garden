@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility, VarietyState } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import {
@@ -244,9 +245,18 @@ export default async function PlantObjectReadbackPage({
                         className="mt-1 size-4 rounded border-border"
                       />
                       <span>
-                        Publish this entry as a public, noindex page. Only the
-                        stripped photo derivative can appear publicly; precise
-                        location and the original photo file stay private.
+                        Publish this entry as a public, noindex page under
+                        disclosure {FIRST_PUBLICATION_DISCLOSURE_VERSION}. Only
+                        the stripped photo derivative can appear publicly;
+                        precise location and the original photo file stay
+                        private.{" "}
+                        <Link
+                          href="/first-publication-disclosure"
+                          className="text-primary underline-offset-4 hover:underline"
+                        >
+                          Read disclosure
+                        </Link>
+                        .
                       </span>
                     </label>
                     <button

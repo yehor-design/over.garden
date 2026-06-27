@@ -13,6 +13,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildArchiveJournalEntryQuery,
@@ -159,7 +160,7 @@ describe("journal repository query contracts", () => {
       now,
       null,
       null,
-      "first-publication-v1",
+      FIRST_PUBLICATION_DISCLOSURE_VERSION,
       now,
       now,
       "00000000-0000-0000-0000-000000000020",
