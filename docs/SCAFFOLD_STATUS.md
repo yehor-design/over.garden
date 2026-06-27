@@ -4,6 +4,8 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 
 OVE-27 adds an operator production-smoke surface and live smoke contract: `/garden/pilot-smoke` checks deployed env readiness without exposing secrets, `docs/PRODUCTION_PILOT_SMOKE.md` defines the browser smoke and evidence rules, and `docs/INFRASTRUCTURE_REGISTRY.md` records the current Vercel project/deployment plus public-access blockers.
 
+OVE-30 hardens production auth startup: Better Auth uses a local fallback only outside production-like runtimes, deployed production/preview fails closed when `BETTER_AUTH_SECRET` is missing or placeholder-like, and pilot-smoke flags local-fallback auth config as a blocker without exposing secret values.
+
 ## Proven Locally
 
 - Next.js App Router + TypeScript builds successfully.
@@ -63,7 +65,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Analytics event tests prove event payload allowlists, enum-only homepage/public-variety/direct activation attribution, rejection of raw URL/referrer/query/user-agent fields, owner/session/object linkage, same-session revisit follow-up marking, and non-blocking event failure logging.
 - Pilot health tests prove operator access gating, safe aggregate SQL for journal/event/public-variety readouts, public-variety promoted/thin/de-promoted mapping, and non-blocking readout failure handling.
-- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder config blocks deployed smoke, and journal search indexing remains explicitly degraded until worker proof exists.
+- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder or local-fallback auth config blocks deployed smoke, and journal search indexing remains explicitly degraded until worker proof exists.
 - Erasure request tests prove the intake and operator readback queries use only bounded request metadata, do not join journal/media/auth-session tables, and reject raw content/location/request-header fields from the read model. Access tests prove unauthenticated operator readback resolves to a sign-in-required state.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
 - Repository contract tests prove owner-scoped archive, public-gone tombstone lookup, active-only public readback, and active-only derivative media selection.
@@ -140,7 +142,7 @@ pnpm db:types
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 cd ../../services/matching
 uv run python -m py_compile app/main.py app/search.py app/worker.py
 MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' uv run python -m app.search

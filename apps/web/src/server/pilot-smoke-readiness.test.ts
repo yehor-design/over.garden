@@ -93,6 +93,29 @@ describe("pilot smoke readiness", () => {
     });
   });
 
+  it("blocks deployed smoke when the auth secret is the local fallback", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        BETTER_AUTH_SECRET:
+          "local-development-only-overgarden-better-auth-secret",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+
+    expect(readout.overall).toBe("blocked");
+    expect(
+      findCheck(
+        readout.sections.flatMap((section) => section.checks),
+        "better-auth-secret",
+      ),
+    ).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("local development fallback"),
+    });
+  });
+
   it("marks journal search indexing as explicitly degraded until worker proof exists", () => {
     const readout = buildPilotSmokeReadiness({
       env: productionLikeEnv,

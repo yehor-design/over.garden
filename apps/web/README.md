@@ -25,7 +25,7 @@ Checks:
 ```bash
 pnpm lint
 pnpm typecheck
-pnpm build
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 ```
 
 Database type generation after a DB is available:

@@ -22,7 +22,7 @@ jobs:
         working-directory: apps/web
     env:
       BETTER_AUTH_URL: http://localhost:3000
-      BETTER_AUTH_SECRET: ci-overgarden-better-auth-secret-change-before-deploy
+      BETTER_AUTH_SECRET: ci-overgarden-auth-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.sha }}
       DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DIRECT_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DATABASE_POOL_MAX: "1"
