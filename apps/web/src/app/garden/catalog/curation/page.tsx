@@ -96,7 +96,8 @@ export default async function CatalogCurationPage() {
               Seed proofs: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: {accessMode === "allowlist" ? "allowlist" : "auth-only"}
+              Gate:{" "}
+              {accessMode === "allowlist" ? "allowlist" : "local-dev fallback"}
             </span>
           </div>
         </div>

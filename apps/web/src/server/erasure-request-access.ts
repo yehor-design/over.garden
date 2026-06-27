@@ -2,6 +2,7 @@ import "server-only";
 
 import {
   assertCatalogCuratorAccess,
+  type CatalogCuratorAccessOptions,
   type CatalogCuratorAccessMode,
 } from "@/server/catalog-curator-auth";
 import type { RequestScope } from "@/server/request-scope";
@@ -13,13 +14,15 @@ export type ErasureRequestOperatorAccess =
 
 export function resolveErasureRequestOperatorAccess(
   scope: RequestScope | null,
+  rawAllowedUserIds?: string,
+  options?: CatalogCuratorAccessOptions,
 ): ErasureRequestOperatorAccess {
   if (!scope) return { status: "sign_in_required" };
 
   try {
     return {
       status: "allowed",
-      mode: assertCatalogCuratorAccess(scope).mode,
+      mode: assertCatalogCuratorAccess(scope, rawAllowedUserIds, options).mode,
     };
   } catch {
     return { status: "denied" };

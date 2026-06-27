@@ -56,7 +56,8 @@ export default async function ErasureRequestsOperatorPage() {
             Requests: {requests.length}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Gate: {access.mode === "allowlist" ? "allowlist" : "auth-only"}
+            Gate:{" "}
+            {access.mode === "allowlist" ? "allowlist" : "local-dev fallback"}
           </span>
         </div>
 

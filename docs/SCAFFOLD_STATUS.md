@@ -107,7 +107,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 ## Catalog Curation Scaffold
 
 - `CATALOG_CURATOR_USER_IDS` may contain a comma-separated Better Auth user-id allowlist for `/garden/catalog/curation`.
-- Until a real admin/role model exists, an empty allowlist falls back to the existing authenticated-user boundary. This is a temporary MVP scaffold, not production-grade role management.
+- Empty allowlists now fail closed by default across catalog curation, pilot health, and erasure request operator readback. Local development can explicitly set `CATALOG_CURATOR_AUTHENTICATED_FALLBACK=true`; production and Vercel runtimes still deny an empty allowlist.
 - The curation surface is intentionally narrow: pending provisional names, aggregate affected-object counts, confirm, merge, and reject. It is not a public moderation product.
 
 ## Conservative Region Decision

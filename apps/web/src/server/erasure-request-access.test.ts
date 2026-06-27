@@ -10,11 +10,33 @@ describe("erasure request operator access", () => {
     });
   });
 
-  it("reuses the temporary authenticated-user operator gate when no allowlist exists", () => {
+  it("denies authenticated users when no operator allowlist exists", () => {
     expect(
       resolveErasureRequestOperatorAccess(
         scopedToUser("00000000-0000-0000-0000-000000000001"),
       ),
-    ).toEqual({ status: "allowed", mode: "authenticated_user" });
+    ).toEqual({ status: "denied" });
+  });
+
+  it("allows explicit local authenticated-user fallback for development", () => {
+    expect(
+      resolveErasureRequestOperatorAccess(
+        scopedToUser("00000000-0000-0000-0000-000000000001"),
+        "",
+        {
+          allowAuthenticatedUserFallback: true,
+          runtimeEnv: { NODE_ENV: "development" },
+        },
+      ),
+    ).toEqual({ status: "allowed", mode: "local_authenticated_user" });
+  });
+
+  it("allows users inside the configured operator allowlist", () => {
+    expect(
+      resolveErasureRequestOperatorAccess(
+        scopedToUser("00000000-0000-0000-0000-000000000001"),
+        "00000000-0000-0000-0000-000000000001",
+      ),
+    ).toEqual({ status: "allowed", mode: "allowlist" });
   });
 });

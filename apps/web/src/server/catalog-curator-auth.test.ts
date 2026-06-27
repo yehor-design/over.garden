@@ -20,10 +20,34 @@ describe("catalog curator auth gate", () => {
     ]);
   });
 
-  it("falls back to the temporary authenticated-user gate when no allowlist exists", () => {
-    expect(assertCatalogCuratorAccess(scope, undefined)).toEqual({
-      mode: "authenticated_user",
+  it("denies authenticated users when no allowlist exists by default", () => {
+    expect(() => assertCatalogCuratorAccess(scope, "")).toThrow(
+      "Catalog curation access denied.",
+    );
+  });
+
+  it("allows an explicit local authenticated-user fallback outside production-like runtimes", () => {
+    expect(
+      assertCatalogCuratorAccess(scope, "", {
+        allowAuthenticatedUserFallback: true,
+        runtimeEnv: { NODE_ENV: "development" },
+      }),
+    ).toEqual({
+      mode: "local_authenticated_user",
     });
+  });
+
+  it("denies the authenticated-user fallback in production-like runtimes", () => {
+    expect(() =>
+      assertCatalogCuratorAccess(scope, "", {
+        allowAuthenticatedUserFallback: true,
+        runtimeEnv: {
+          NODE_ENV: "production",
+          VERCEL: "1",
+          VERCEL_ENV: "production",
+        },
+      }),
+    ).toThrow("Catalog curation access denied.");
   });
 
   it("allows listed curator users", () => {

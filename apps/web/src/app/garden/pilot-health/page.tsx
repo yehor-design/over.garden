@@ -55,7 +55,8 @@ export default async function PilotHealthPage() {
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="rounded-md border border-border px-2 py-1">
-          Gate: {access.mode === "allowlist" ? "allowlist" : "auth-only"}
+          Gate:{" "}
+          {access.mode === "allowlist" ? "allowlist" : "local-dev fallback"}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
           Status: provisional pilot signals
