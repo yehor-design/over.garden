@@ -85,6 +85,8 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Vercel deployment env has the R2 runtime env family and `BETTER_AUTH_SECRET` installed for production, development, and the active OVE-27 branch preview. Secret values remain outside git.
 - DigitalOcean Managed PostgreSQL cluster `overgarden-postgres-prod-fra1` exists in `FRA1`; Vercel production and active OVE-27 branch preview have canonical `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL=true`, and `DATABASE_SSL_CA` installed.
 - Production database bootstrap has run against the managed cluster, creating the app schema and Better Auth tables.
+- The active OVE-27 branch preview has branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` and a matching temporary R2 quarantine CORS origin for browser upload smoke.
+- On 2026-06-27, the OVE-27 branch preview passed homepage first-entry with photo, derivative-only readback, same-object follow-up, public SSR journal page, public variety activation, archive-to-410, and authenticated pilot-health readout against the managed database and R2.
 - Vercel project `over-garden` exists under team `team_vs3oQAk6OT4vVVvcL7Mf5m8t`; latest verified production deployment `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx` is READY from commit `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`.
 - Live non-secret infrastructure values are recorded in `docs/INFRASTRUCTURE_REGISTRY.md`.
 

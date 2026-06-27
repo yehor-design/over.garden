@@ -108,6 +108,8 @@ CORS:
 - Rule ID: `overgarden-quarantine-browser-upload`
 - Origins:
   - `http://localhost:3000`
+  - `https://over-garden.vercel.app`
+  - `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`
   - `https://over.garden`
   - `https://www.over.garden`
 - Methods: `PUT`, `HEAD`
@@ -116,6 +118,7 @@ CORS:
 - Max age: `3600`
 - Dynamic Vercel preview deployment origins are intentionally not listed here by default. A full browser upload smoke should use an allowed app origin or an explicitly approved temporary preview origin; Node/API smoke alone does not exercise browser CORS preflight.
 - If `https://over-garden.vercel.app` remains the selected public pilot URL before `over.garden` is attached, add and verify that origin in the quarantine bucket CORS dashboard before browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
+- On 2026-06-27, the OVE-27 branch preview origin was explicitly added for the production pilot browser smoke. Remove or rotate temporary preview origins when the branch is closed or the pilot URL changes.
 
 Lifecycle:
 
@@ -254,6 +257,7 @@ Deployment env observation:
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
 - On 2026-06-27, production had `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to the public Vercel alias `https://over-garden.vercel.app`.
+- On 2026-06-27, the branch preview `codex/ove-27-production-pilot-smoke` had branch-specific `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`, then was redeployed so Better Auth accepted that preview origin during browser smoke.
 - On 2026-06-27, legacy production `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE_*`, and empty `POSTGRES_*` variables were removed from Vercel after canonical runtime env was installed.
 - On 2026-06-27, accidental trailing newlines were trimmed from the R2 runtime env family in production and the branch preview `codex/ove-27-production-pilot-smoke`.
 - Do not infer database readiness from the presence of env var names alone. The live smoke must prove a successful server-side database ping on the deployed app.

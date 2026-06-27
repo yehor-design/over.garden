@@ -22,8 +22,10 @@ Verified through the connected Vercel app on 2026-06-27.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
 - Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
+- OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
+- On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
 
-Implication: OVE-27 is not Done until the deployed app version with the CA-aware database runtime proves `/health` and the browser smoke path against the managed database. A protected preview may be acceptable for internal deployment inspection, but it does not validate public visitor/crawler behavior for H6.
+Implication: the OVE-27 preview now proves the internal live-path contract against managed Postgres and R2. The remaining production closeout is to merge the deployed app version with the CA-aware database runtime and verify the same smoke on the public production alias selected for the pilot. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6.
 
 ## Product Assumption
 
