@@ -10,6 +10,11 @@ interface DatabaseConnectionResolution {
     | "missing";
 }
 
+interface DatabaseSslConfig {
+  ca?: string;
+  rejectUnauthorized: boolean;
+}
+
 export function resolveDatabaseConnection(
   env: EnvLike = process.env,
 ): DatabaseConnectionResolution {
@@ -48,6 +53,28 @@ export function resolveDatabaseSsl(
   return resolution.source !== "DATABASE_URL";
 }
 
+export function resolveDatabaseSslConfig(
+  env: EnvLike = process.env,
+  resolution = resolveDatabaseConnection(env),
+): DatabaseSslConfig | undefined {
+  if (!resolveDatabaseSsl(env, resolution)) return undefined;
+
+  const ca = configuredMultiline(env.DATABASE_SSL_CA);
+  if (ca) return { ca, rejectUnauthorized: true };
+
+  return { rejectUnauthorized: true };
+}
+
+export function resolvePgConnectionString(
+  env: EnvLike = process.env,
+  resolution = resolveDatabaseConnection(env),
+) {
+  if (!resolution.connectionString) return undefined;
+  if (!configured(env.DATABASE_SSL_CA)) return resolution.connectionString;
+
+  return stripSslMode(resolution.connectionString);
+}
+
 function constructPostgresUrl(env: EnvLike): string | undefined {
   const host = configured(env.POSTGRES_HOST);
   const user = configured(env.POSTGRES_USER);
@@ -68,10 +95,25 @@ function configured(value: string | undefined): string | undefined {
   return trimmed;
 }
 
+function configuredMultiline(value: string | undefined): string | undefined {
+  return configured(value)?.replaceAll("\\n", "\n");
+}
+
 function isLocalConnectionString(value: string) {
   return (
     value.includes("localhost") ||
     value.includes("127.0.0.1") ||
     value.includes("0.0.0.0")
   );
+}
+
+function stripSslMode(connectionString: string) {
+  try {
+    const url = new URL(connectionString);
+    url.searchParams.delete("sslmode");
+
+    return url.toString();
+  } catch {
+    return connectionString;
+  }
 }

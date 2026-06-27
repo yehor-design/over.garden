@@ -18,11 +18,12 @@ Verified through the connected Vercel app on 2026-06-27.
 - Latest deployed commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
 - Reported aliases: `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
 - Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
-- Fetching `/health` on the latest production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
-- Production managed Postgres is still not proven: `DATABASE_URL` / `DIRECT_URL` are absent, provider URL aliases are empty, and the component fallback is incomplete. The smoke is blocked until a real managed Postgres connection pings successfully.
+- Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
+- Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
+- Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 
-Implication: OVE-27 is not Done until the selected pilot URL returns OverGarden HTML to the intended smoke audience. A protected preview may be acceptable for internal deployment inspection, but it does not validate public visitor/crawler behavior for H6.
+Implication: OVE-27 is not Done until the deployed app version with the CA-aware database runtime proves `/health` and the browser smoke path against the managed database. A protected preview may be acceptable for internal deployment inspection, but it does not validate public visitor/crawler behavior for H6.
 
 ## Product Assumption
 

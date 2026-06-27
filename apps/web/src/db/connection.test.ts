@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveDatabaseConnection, resolveDatabaseSsl } from "./connection";
+import {
+  resolveDatabaseConnection,
+  resolveDatabaseSsl,
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "./connection";
 
 describe("database connection resolution", () => {
   it("uses DATABASE_URL first", () => {
@@ -70,5 +75,43 @@ describe("database connection resolution", () => {
     expect(resolveDatabaseSsl({}, provider)).toBe(true);
     expect(resolveDatabaseSsl({ DATABASE_SSL: "false" }, provider)).toBe(false);
     expect(resolveDatabaseSsl({ DATABASE_SSL: "true" }, local)).toBe(true);
+  });
+
+  it("uses a configured CA certificate for strict provider TLS", () => {
+    const resolution = resolveDatabaseConnection({
+      DATABASE_URL:
+        "postgresql://app:secret@db.example.test:25060/app?sslmode=require",
+    });
+
+    expect(
+      resolveDatabaseSslConfig(
+        {
+          DATABASE_SSL: "true",
+          DATABASE_SSL_CA:
+            "-----BEGIN CERTIFICATE-----\\nexample\\n-----END CERTIFICATE-----",
+        },
+        resolution,
+      ),
+    ).toEqual({
+      ca: "-----BEGIN CERTIFICATE-----\nexample\n-----END CERTIFICATE-----",
+      rejectUnauthorized: true,
+    });
+  });
+
+  it("strips sslmode when a CA certificate is configured for node pg", () => {
+    const resolution = resolveDatabaseConnection({
+      DATABASE_URL:
+        "postgresql://app:secret@db.example.test:25060/app?sslmode=require",
+    });
+
+    expect(
+      resolvePgConnectionString(
+        {
+          DATABASE_SSL_CA:
+            "-----BEGIN CERTIFICATE-----\\nexample\\n-----END CERTIFICATE-----",
+        },
+        resolution,
+      ),
+    ).toBe("postgresql://app:secret@db.example.test:25060/app");
   });
 });

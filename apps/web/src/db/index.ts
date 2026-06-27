@@ -4,7 +4,11 @@ import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
 import { numberServerEnv } from "@/lib/env";
-import { resolveDatabaseConnection, resolveDatabaseSsl } from "./connection";
+import {
+  resolveDatabaseConnection,
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "./connection";
 import type { Database } from "./types";
 
 type GlobalWithDb = typeof globalThis & {
@@ -16,7 +20,7 @@ const globalForDb = globalThis as GlobalWithDb;
 
 function createPool() {
   const resolution = resolveDatabaseConnection();
-  const connectionString = resolution.connectionString;
+  const connectionString = resolvePgConnectionString(process.env, resolution);
 
   if (!connectionString) {
     console.warn(
@@ -27,9 +31,7 @@ function createPool() {
   return new Pool({
     connectionString,
     max: numberServerEnv("DATABASE_POOL_MAX", 10),
-    ssl: resolveDatabaseSsl(process.env, resolution)
-      ? { rejectUnauthorized: true }
-      : undefined,
+    ssl: resolveDatabaseSslConfig(process.env, resolution),
   });
 }
 

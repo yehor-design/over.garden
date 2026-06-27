@@ -160,9 +160,44 @@ Invariants:
 - Do not upload user originals here.
 - Derivative writes should use long-lived immutable cache headers only for content-addressed or otherwise immutable object keys.
 
+## DigitalOcean
+
+Status: production Managed PostgreSQL is provisioned for the pilot smoke.
+
+Last verified: 2026-06-27 through a direct TLS database ping and schema count.
+
+Project:
+
+- Project name: `overgarden-production`
+- Environment type: `Production`
+- Purpose: web application production infrastructure
+
+Managed PostgreSQL:
+
+- Cluster name: `overgarden-postgres-prod-fra1`
+- Region: Frankfurt, Datacenter 1, `FRA1`
+- Plan at creation: Basic Shared CPU, Regular SSD, 1 vCPU, 1 GB RAM, 10 GiB minimum storage
+- Public host: `overgarden-postgres-prod-fra1-do-user-39359942-0.j.db.ondigitalocean.com`
+- Port: `25060`
+- Default database: `defaultdb`
+- Runtime username at verification time: `doadmin`
+- SSL mode: required, with the DigitalOcean CA certificate passed to the app through `DATABASE_SSL_CA`
+
+Operational state:
+
+- On 2026-06-27, `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` were installed in Vercel production and in the active OVE-27 branch preview.
+- On 2026-06-27, the app schema and Better Auth tables were bootstrapped with `pnpm db:bootstrap -- --env-file /private/tmp/overgarden-db.env --ca-file /private/tmp/overgarden-db-ca.crt`.
+- On 2026-06-27, the managed database had 15 public base tables after bootstrap.
+
+Database invariants:
+
+- Do not store database passwords, full connection URLs, or CA certificate bodies in git, Linear, chat, or docs.
+- Vercel runtime should prefer canonical `DATABASE_URL` and `DIRECT_URL`; do not reintroduce legacy empty `POSTGRES_*` aliases as active production configuration.
+- `DATABASE_SSL_CA` may be multi-line in Vercel. The app runtime strips `sslmode` from the connection string when a CA is configured so Node `pg` uses the explicit CA with strict verification.
+
 ## Vercel
 
-Status: project exists; production deployment is created from GitHub `main`, but the public pilot smoke is blocked until deployment protection/public access and the canonical app domain are verified.
+Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
 Last verified: 2026-06-27 through the connected Vercel app.
 
@@ -207,14 +242,17 @@ Public access observation:
 - On 2026-06-27, fetching `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app/health` returned HTTP `302` to Vercel SSO instead of OverGarden HTML.
 - Response headers included `cache-control: no-store, max-age=0` and `x-robots-tag: noindex`.
 - This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
+- Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
 
 Deployment env observation:
 
 - On 2026-06-27, the Vercel project had `BETTER_AUTH_SECRET` installed for production, development, and the branch preview `codex/ove-27-production-pilot-smoke`.
 - On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
+- On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
 - On 2026-06-27, production had `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to the public Vercel alias `https://over-garden.vercel.app`.
-- Do not infer database readiness from the presence of legacy `POSTGRES_*` variable names alone. The live smoke must prove a non-empty managed Postgres connection and a successful server-side database ping.
+- On 2026-06-27, legacy production `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE_*`, and empty `POSTGRES_*` variables were removed from Vercel after canonical runtime env was installed.
+- Do not infer database readiness from the presence of env var names alone. The live smoke must prove a successful server-side database ping on the deployed app.
 
 Vercel invariants:
 
@@ -241,7 +279,5 @@ Local storage emulator:
 ## Open Operational Items
 
 - Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
-- Disable or intentionally bypass Vercel deployment protection for the public pilot smoke URL before measuring H6/public visitor behavior.
-- Provision DigitalOcean Managed Postgres and record non-secret cluster/project metadata here.
 - Provision the production worker/Meilisearch host and record non-secret host metadata here.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.
