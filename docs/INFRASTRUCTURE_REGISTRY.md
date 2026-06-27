@@ -114,6 +114,8 @@ CORS:
 - Headers: `*`
 - Exposed headers: `ETag`
 - Max age: `3600`
+- Dynamic Vercel preview deployment origins are intentionally not listed here by default. A full browser upload smoke should use an allowed app origin or an explicitly approved temporary preview origin; Node/API smoke alone does not exercise browser CORS preflight.
+- If `https://over-garden.vercel.app` remains the selected public pilot URL before `over.garden` is attached, add and verify that origin in the quarantine bucket CORS dashboard before browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
 
 Lifecycle:
 
