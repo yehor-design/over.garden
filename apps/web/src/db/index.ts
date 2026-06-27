@@ -3,7 +3,12 @@ import "server-only";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
-import { booleanServerEnv, numberServerEnv, optionalServerEnv } from "@/lib/env";
+import { numberServerEnv } from "@/lib/env";
+import {
+  resolveDatabaseConnection,
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "./connection";
 import type { Database } from "./types";
 
 type GlobalWithDb = typeof globalThis & {
@@ -14,20 +19,19 @@ type GlobalWithDb = typeof globalThis & {
 const globalForDb = globalThis as GlobalWithDb;
 
 function createPool() {
-  const connectionString = optionalServerEnv("DATABASE_URL");
+  const resolution = resolveDatabaseConnection();
+  const connectionString = resolvePgConnectionString(process.env, resolution);
 
   if (!connectionString) {
     console.warn(
-      "[db] DATABASE_URL is not set; database access will fail until Postgres is wired.",
+      "[db] No supported Postgres connection env is set; database access will fail until Postgres is wired.",
     );
   }
 
   return new Pool({
     connectionString,
     max: numberServerEnv("DATABASE_POOL_MAX", 10),
-    ssl: booleanServerEnv("DATABASE_SSL")
-      ? { rejectUnauthorized: true }
-      : undefined,
+    ssl: resolveDatabaseSslConfig(process.env, resolution),
   });
 }
 

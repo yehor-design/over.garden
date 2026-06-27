@@ -5,13 +5,14 @@ import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
 import { optionalServerEnv } from "@/lib/env";
+import { getAuthBaseUrl } from "@/lib/runtime-url";
 
 const developmentSecret =
   "development-only-overgarden-better-auth-secret-change-before-deploy";
 
 export const auth = betterAuth({
   appName: "OverGarden",
-  baseURL: optionalServerEnv("BETTER_AUTH_URL") ?? "http://localhost:3000",
+  baseURL: getAuthBaseUrl(),
   basePath: "/api/auth",
   secret: optionalServerEnv("BETTER_AUTH_SECRET") ?? developmentSecret,
   database: {
