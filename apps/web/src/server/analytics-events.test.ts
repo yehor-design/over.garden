@@ -92,6 +92,33 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
+  it("records activation starts without raw URL, referrer, or query values", () => {
+    const compiled = buildInsertAnalyticsEventQuery(testDb, scope, {
+      eventName: "activation_started",
+      properties: {
+        activation_source: "public_variety",
+        source_surface_kind: "variety",
+      },
+    }).compile();
+
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "session-1",
+      "activation_started",
+      {
+        activation_source: "public_variety",
+        source_surface_kind: "variety",
+      },
+      null,
+      null,
+      null,
+      null,
+    ]);
+    expect(JSON.stringify(compiled.parameters)).not.toContain("url");
+    expect(JSON.stringify(compiled.parameters)).not.toContain("referrer");
+    expect(JSON.stringify(compiled.parameters)).not.toContain("query");
+  });
+
   it("keeps legacy free_text event values readable during catalog migration", () => {
     expect(
       normalizeAnalyticsEventProperties({

@@ -1,8 +1,12 @@
 import Link from "next/link";
 
-import { normalizeActivationSourceParam } from "@/lib/garden/activation";
+import {
+  activationSurfaceKindForSource,
+  normalizeActivationSourceParam,
+} from "@/lib/garden/activation";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import { getCurrentSession } from "@/server/auth-session";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import { listMyPlantObjects } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
@@ -28,11 +32,20 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
-  const objects = userId
-    ? await listMyPlantObjects(scopedToUser(userId), 12)
-    : [];
+  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  const objects = scope ? await listMyPlantObjects(scope, 12) : [];
   const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
+
+  if (scope) {
+    await recordAnalyticsEventSafely(scope, {
+      eventName: "activation_started",
+      properties: {
+        activation_source: activationSource,
+        source_surface_kind: activationSurfaceKindForSource(activationSource),
+      },
+    });
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">

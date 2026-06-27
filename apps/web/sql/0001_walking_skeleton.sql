@@ -599,6 +599,7 @@ create table if not exists analytics_events (
   session_id text,
   event_name text not null check (
     event_name in (
+      'activation_started',
       'space_created',
       'object_created',
       'entry_logged',
@@ -618,6 +619,42 @@ create table if not exists analytics_events (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'analytics_events_event_name_check'
+      and conrelid = 'analytics_events'::regclass
+  ) then
+    alter table analytics_events
+      drop constraint analytics_events_event_name_check;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'analytics_events_event_name_check'
+      and conrelid = 'analytics_events'::regclass
+  ) then
+    alter table analytics_events
+      add constraint analytics_events_event_name_check
+      check (
+        event_name in (
+          'activation_started',
+          'space_created',
+          'object_created',
+          'entry_logged',
+          'entry_photo_attached',
+          'offline_entry_queued',
+          'offline_entry_synced',
+          'progress_screen_shown',
+          'own_record_revisited'
+        )
+      );
+  end if;
+end $$;
 
 create index if not exists analytics_events_owner_event_created_idx
   on analytics_events (owner_user_id, event_name, created_at desc);

@@ -50,6 +50,7 @@ type AnalyticsEventRecorder = (
 ) => Promise<AnalyticsEvent>;
 
 const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
+  "activation_started",
   "space_created",
   "object_created",
   "entry_logged",

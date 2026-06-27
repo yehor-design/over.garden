@@ -46,6 +46,7 @@ export type ErasureRequestHandledStatus =
   | "duplicate"
   | "needs_identity_verification";
 export type AnalyticsEventName =
+  | "activation_started"
   | "space_created"
   | "object_created"
   | "entry_logged"
