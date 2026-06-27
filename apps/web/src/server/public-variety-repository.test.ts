@@ -73,6 +73,9 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
     );
+    expect(compiled.sql).toContain(
+      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
     expect(compiled.sql).toContain(
@@ -109,6 +112,9 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entries"."body"');
     expect(compiled.sql).toContain('"journal_entries"."entry_date"');
     expect(compiled.sql).toContain('"media_assets"."derivative_key"');
+    expect(compiled.sql).toContain(
+      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
     expect(compiled.sql).toContain(

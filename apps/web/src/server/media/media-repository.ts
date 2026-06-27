@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, MediaAsset } from "@/db/schema";
@@ -11,14 +11,13 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export async function createQuarantinedMediaAsset(
   scope: RequestScope,
   quarantineKey: string,
-  journalEntryId?: string,
 ): Promise<MediaAsset> {
   return db
     .insertInto("media_assets")
     .values({
       owner_user_id: scope.userId,
       quarantine_key: quarantineKey,
-      journal_entry_id: journalEntryId ?? null,
+      journal_entry_id: null,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
@@ -111,6 +110,15 @@ export function buildAttachProcessedMediaAssetToEntryQuery(
         eb("journal_entry_id", "is", null),
         eb("journal_entry_id", "=", journalEntryId),
       ]),
+    )
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("journal_entries")
+          .select(sql`1`.as("one"))
+          .where("journal_entries.id", "=", journalEntryId)
+          .where("journal_entries.owner_user_id", "=", scope.userId),
+      ),
     )
     .returningAll();
 }

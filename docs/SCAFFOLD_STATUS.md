@@ -4,6 +4,8 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 
 OVE-27 adds an operator production-smoke surface and live smoke contract: `/garden/pilot-smoke` checks deployed env readiness without exposing secrets, `docs/PRODUCTION_PILOT_SMOKE.md` defines the browser smoke and evidence rules, and `docs/INFRASTRUCTURE_REGISTRY.md` records the current Vercel project/deployment plus public-access blockers.
 
+OVE-29 hardens owner-consistent media attachment: quarantine uploads cannot pre-bind an entry id, processed media can attach only when the target entry belongs to the same user, and public journal/variety read models require media owner equality before rendering derivative photos.
+
 ## Proven Locally
 
 - Next.js App Router + TypeScript builds successfully.
@@ -58,6 +60,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Journal repository contract tests prove catalog resolution is owner-scoped, limited to Unknown/user-added states, does not update `journal_entries`, and revalidates only active public slugs without selecting private entry fields.
 - Catalog curation repository tests prove pending lists expose aggregate-safe metadata only, confirm clears owner scope and makes the item index-eligible, merge updates affected objects without moving entries, reject keeps candidates non-canonical, and public revalidation queries avoid private entry fields.
 - Public variety repository tests prove aggregation is limited to global seeded/confirmed catalog rows, selected objects, active public non-gone entries, owner-consistent entry/object/space joins, and derivative-only media selection without quarantine keys, raw media metadata, precise location, or owner-private fields in the read model.
+- Media owner-boundary tests prove the upload API rejects direct `journalEntryId` pre-binding, processed media attachment requires target entry ownership, public journal media joins require owner equality, and public variety summary/readback excludes owner-mismatched derivatives.
 - Public variety indexing tests prove thin pages remain out of index/sitemap until both the entry-count and aggregate-text thresholds pass, and metadata tests prove JSON-LD stays bounded to public-safe fields.
 - Variety seed proof tests prove proof blocks attach only to global seeded/confirmed catalog rows with public slugs, public readback selects only published proof fields, sitemap/indexability does not depend on seed proofs, and validation rejects raw HTML plus obvious precise-location/private keys.
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
