@@ -16,7 +16,14 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
-from app.search import CATALOG_TYPEAHEAD_REINDEX_KIND, reindex_catalog_typeahead
+from app.search import (
+    CATALOG_TYPEAHEAD_REINDEX_KIND,
+    JOURNAL_ENTRY_INDEX_KIND,
+    JOURNAL_ENTRY_UNINDEX_KIND,
+    index_public_journal_entry,
+    reindex_catalog_typeahead,
+    unindex_public_journal_entry,
+)
 
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get("WORKER_ID", f"matching-worker-{socket.gethostname()}")
@@ -26,8 +33,28 @@ VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 
 def _handle(conn: psycopg.Connection, payload: Any) -> None:
     """Process one job without making request paths depend on worker success."""
-    if isinstance(payload, dict) and payload.get("kind") == CATALOG_TYPEAHEAD_REINDEX_KIND:
+    if not isinstance(payload, dict):
+        raise ValueError("Unsupported job payload.")
+
+    kind = payload.get("kind")
+    if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
         reindex_catalog_typeahead(conn)
+        return
+    if kind == JOURNAL_ENTRY_INDEX_KIND:
+        index_public_journal_entry(conn, _required_payload_text(payload, "journalEntryId"))
+        return
+    if kind == JOURNAL_ENTRY_UNINDEX_KIND:
+        unindex_public_journal_entry(_required_payload_text(payload, "journalEntryId"))
+        return
+
+    raise ValueError(f"Unsupported job kind: {kind}")
+
+
+def _required_payload_text(payload: dict[str, Any], key: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Missing required job payload field: {key}")
+    return value.strip()
 
 
 def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:

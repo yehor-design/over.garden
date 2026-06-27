@@ -194,11 +194,11 @@ export function buildPilotSmokeReadiness({
         {
           id: "journal-search-worker",
           label: "Journal search worker jobs",
-          severity: "warn",
+          severity: "manual",
           summary:
-            "The app enqueues journal_entry_index and journal_entry_unindex jobs, while the Python worker currently proves catalog_typeahead_reindex only.",
+            "The Python worker handles journal_entry_index and journal_entry_unindex; deployed smoke still needs live proof that journal jobs are processed against Meilisearch.",
           evidence:
-            "Treat public journal search indexing as explicitly degraded until a smoke run proves journal jobs are processed or a later slice wires them.",
+            "Record only job processed/deleted state and derived index presence/absence. Do not copy indexed document content, journal text, or Meilisearch keys.",
         },
       ],
     },
@@ -230,7 +230,7 @@ export function buildPilotSmokeReadiness({
       "Open the linked `/variety/[slug]`, use the CTA back into `/garden`, and save a second first-entry path with public-variety activation attribution.",
       "Archive the published entry and confirm the old public URL returns 410 Gone.",
       "Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 counts update without raw private data.",
-      "Verify catalog typeahead or matching service health, and record journal search indexing as degraded unless journal jobs are actually processed.",
+      "Verify catalog typeahead or matching service health, then publish/archive one public journal entry and record journal_entry_index / journal_entry_unindex processed state without copying indexed content.",
     ],
     references: [
       {

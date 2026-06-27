@@ -9,8 +9,8 @@ Python: RapidFuzz, Splink, PyICU, CyrTranslit, and Meilisearch tooling.
 - `app/main.py` — optional internal FastAPI health service; not a typeahead API.
 - `app/worker.py` — Postgres-backed worker. It claims rows from `job_queue`
   and runs matching/dedup/reindex work off the request path.
-- `app/search.py` — Meilisearch helpers, catalog typeahead reindexing, and the
-  Cyrillic typo-tolerance proofs.
+- `app/search.py` — Meilisearch helpers, catalog typeahead reindexing, public
+  journal index/unindex jobs, and the Cyrillic typo-tolerance proofs.
 
 ## Develop
 
@@ -36,3 +36,11 @@ The catalog typeahead rebuild job uses payload `{ "kind":
 `catalog_typeahead` index only from `seeded`/`confirmed` catalog rows with no
 `created_by_user_id`, so provisional user-added names stay out of global search
 until a later curation slice promotes them.
+
+Public journal publishing uses `{ "kind": "journal_entry_index",
+"journalEntryId": "..." }` and archiving uses `{ "kind":
+"journal_entry_unindex", "journalEntryId": "..." }`. The worker indexes only
+active public non-gone rows into `journal_entries`, writes a stripped public
+document shape, and deletes any stale document when the source row is no longer
+indexable. Unknown job kinds fail with `last_error`; they must not be marked
+done silently.

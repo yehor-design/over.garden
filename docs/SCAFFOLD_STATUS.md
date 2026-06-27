@@ -47,7 +47,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - `/garden/pilot-health` provides an authenticated operator readout for provisional H1/H4/H6 leading indicators: first-entry activations, same-object follow-ups, photo usage, offline queued/synced state, publish/archive/410 counts, homepage/public-variety/direct activation starts and saves, and public-variety promoted/thin/de-promoted counts.
 - Pilot health intentionally reports only aggregate counts/rates and provisional labels. It excludes journal title/body text, precise location, raw event properties, emails, IP/user-agent/referrer/query values, and media storage keys from the read model. Offline failed mutations remain client-local Dexie state and are labeled as not server-observable rather than treated as a healthy zero.
 - `/garden/pilot-smoke` provides an authenticated operator readiness readout for production/preview smoke. It reports configured/missing/placeholder state for public URL, auth URL, database, R2, Meilisearch, matching service, and Vercel runtime without echoing secrets. It also carries the manual smoke sequence and evidence redaction rules for auth -> journal -> media derivative -> public SSR -> 410 -> activation -> pilot-health verification.
-- Pilot smoke intentionally marks public journal search worker health as degraded until a live run proves `journal_entry_index` / `journal_entry_unindex` jobs are processed. The current Python worker still proves `catalog_typeahead_reindex` only.
+- Pilot smoke keeps public journal search worker health as a manual production proof: the Python worker now handles `journal_entry_index` / `journal_entry_unindex`, and deployed smoke must prove processing against Meilisearch without copying indexed journal content.
 - `/garden/objects/[objectId]` can archive a published entry privately; the old `/journal/[slug]` public URL returns HTTP `410 Gone` and search document conversion refuses archived/public-gone rows.
 - `/garden/objects/[objectId]` can emit an owner-scoped revisit event, show prior entries, and append another dated title/body entry to the same plant object.
 - `/garden` and `/garden/objects/[objectId]` now use a controlled coarse-region contract for UA/BG ISO 3166-2 subdivision codes. Default visibility remains `hidden`; public `/journal/[slug]` renders a region label only when the object is explicitly `region` visible.
@@ -63,7 +63,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Analytics event tests prove event payload allowlists, enum-only homepage/public-variety/direct activation attribution, rejection of raw URL/referrer/query/user-agent fields, owner/session/object linkage, same-session revisit follow-up marking, and non-blocking event failure logging.
 - Pilot health tests prove operator access gating, safe aggregate SQL for journal/event/public-variety readouts, public-variety promoted/thin/de-promoted mapping, and non-blocking readout failure handling.
-- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder config blocks deployed smoke, and journal search indexing remains explicitly degraded until worker proof exists.
+- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder config blocks deployed smoke, and journal search worker proof stays a manual smoke check after code-level job handling exists.
 - Erasure request tests prove the intake and operator readback queries use only bounded request metadata, do not join journal/media/auth-session tables, and reject raw content/location/request-header fields from the read model. Access tests prove unauthenticated operator readback resolves to a sign-in-required state.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
 - Repository contract tests prove owner-scoped archive, public-gone tombstone lookup, active-only public readback, and active-only derivative media selection.
@@ -152,7 +152,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Live production media derivative readback through the deployed app.
 - Production worker process manager/health checks on the DigitalOcean droplet.
 - Vercel public app domain binding for `over.garden` / `www.over.garden`.
-- Public journal search worker handling for `journal_entry_index` and `journal_entry_unindex`; catalog typeahead reindexing is the currently proven worker path.
+- Live production proof that deployed `journal_entry_index` and `journal_entry_unindex` jobs process against the selected Meilisearch instance without exposing indexed content in evidence.
 - Production auth UX, email delivery, password reset, OAuth decisions.
 - Reviewed legal copy, verified operator contact process, and a real irreversible erasure/anonymization workflow after maintainer sign-off.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
@@ -162,7 +162,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 
 ## Next Build Step
 
-Continue the current SDD Slice 4 execution batch from Linear. After `OVE-27`, the next strongest vertical issue is production public-access/domain/env closure or journal search worker indexing, depending on whether the founder wants to unblock live H6 smoke first or remove the explicit search/worker degradation first.
+Continue the current SDD Slice 4 execution batch from Linear. After OVE-32, the next strongest vertical issue is production public-access/domain/env closure or live journal-search smoke proof, depending on whether the founder wants to unblock real H6 smoke first or close the remaining deployed infrastructure risk first.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 

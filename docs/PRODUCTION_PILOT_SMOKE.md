@@ -118,16 +118,17 @@ Public visitor/crawler prerequisite:
 Catalog typeahead:
 
 - `/api/garden/catalog/typeahead` should work for authenticated users.
-- The Python worker's proven production-safe job kind is currently `catalog_typeahead_reindex`.
+- The Python worker handles `catalog_typeahead_reindex` and must keep indexing only curated catalog identity rows.
 - The `catalog_typeahead` document contract includes only catalog identity fields and excludes owner IDs, private journal text, precise location, media metadata, analytics payloads, email, IP, and user agent.
 
 Public journal search:
 
-- Publishing currently enqueues `journal_entry_index`.
-- Archiving currently enqueues `journal_entry_unindex`.
-- The current Python worker code does not yet process those journal job kinds.
+- Publishing enqueues and the Python worker processes `journal_entry_index`.
+- Archiving enqueues and the Python worker processes `journal_entry_unindex`.
+- Public journal indexing reads only active public non-gone rows, writes the derived public-safe document shape, and removes the Meilisearch document when the source row is no longer indexable.
+- Unknown job kinds must fail with `last_error`; they must not be marked done silently.
 
-Interpretation: until a live smoke proves those jobs are processed, public journal search indexing is explicitly degraded. This does not block the core first-user browser path, but it does block claiming production search health as green.
+Interpretation: code-level handling is no longer enqueue-only. Production search health is still not green until a live smoke proves the deployed worker processes both journal job kinds against the selected Meilisearch instance. Evidence must record job state and index presence/absence only; do not copy indexed document content, journal text, Meilisearch keys, private URLs, or raw payloads into docs.
 
 ## Done Gate
 
