@@ -107,21 +107,19 @@ export default async function PilotHealthPage() {
               <MetricTile
                 label="De-promoted by archive/410"
                 value={
-                  readout.publicVarietyIndexability
-                    .demotedByArchiveOrGoneCount
+                  readout.publicVarietyIndexability.demotedByArchiveOrGoneCount
                 }
               />
               <MetricTile
                 label="Current public varieties"
-                value={readout.publicVarietyIndexability.currentPublicVarietyCount}
+                value={
+                  readout.publicVarietyIndexability.currentPublicVarietyCount
+                }
               />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
               Current provisional threshold:{" "}
-              {
-                readout.publicVarietyIndexability.threshold
-                  .minPublicEntryCount
-              }{" "}
+              {readout.publicVarietyIndexability.threshold.minPublicEntryCount}{" "}
               active public entries and{" "}
               {
                 readout.publicVarietyIndexability.threshold
@@ -168,6 +166,15 @@ function PilotHealthHeader() {
         })}
       >
         Back to journal
+      </Link>
+      <Link
+        href="/garden/pilot-smoke"
+        className={buttonVariants({
+          variant: "outline",
+          className: "self-start",
+        })}
+      >
+        Pilot smoke
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -224,9 +231,18 @@ function WindowPanel({
         <MetricTile label="Offline queued" value={metrics.offlineQueued} />
         <MetricTile label="Offline synced" value={metrics.offlineSynced} />
         <MetricTile label="Offline failed" value="not server-observable" />
-        <MetricTile label="Published entries" value={metrics.publishedEntries} />
-        <MetricTile label="Publish rate" value={formatPercent(metrics.publishRate)} />
-        <MetricTile label="Archive/410 count" value={metrics.publicGoneEntries} />
+        <MetricTile
+          label="Published entries"
+          value={metrics.publishedEntries}
+        />
+        <MetricTile
+          label="Publish rate"
+          value={formatPercent(metrics.publishRate)}
+        />
+        <MetricTile
+          label="Archive/410 count"
+          value={metrics.publicGoneEntries}
+        />
       </div>
 
       <div className="grid gap-3 border-t border-border pt-4">
@@ -266,8 +282,8 @@ function MetricTile({
 }) {
   return (
     <dl className="grid min-h-20 gap-1 rounded-lg border border-border p-3">
-      <dt className="text-xs uppercase text-muted-foreground">{label}</dt>
-      <dd className="text-2xl font-semibold tabular-nums text-foreground">
+      <dt className="text-xs text-muted-foreground uppercase">{label}</dt>
+      <dd className="text-2xl font-semibold text-foreground tabular-nums">
         {value}
       </dd>
     </dl>

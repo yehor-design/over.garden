@@ -160,6 +160,60 @@ Invariants:
 - Do not upload user originals here.
 - Derivative writes should use long-lived immutable cache headers only for content-addressed or otherwise immutable object keys.
 
+## Vercel
+
+Status: project exists; production deployment is created from GitHub `main`, but the public pilot smoke is blocked until deployment protection/public access and the canonical app domain are verified.
+
+Last verified: 2026-06-27 through the connected Vercel app.
+
+Team:
+
+- Team name: `yehor's projects`
+- Team slug: `yehors-projects-01221e2b`
+- Team ID: `team_vs3oQAk6OT4vVVvcL7Mf5m8t`
+
+Project:
+
+- Project name: `over-garden`
+- Project ID: `prj_Tm5HXFEPqc46StpIfsoKjU9GtHBy`
+- Framework: `nextjs`
+- Vercel project live flag: `false` at verification time
+- Node version reported by project API: `24.x`
+
+Current production deployment at verification time:
+
+- Deployment ID: `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx`
+- Deployment URL: `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app`
+- Ready state: `READY`
+- Target: `production`
+- Source: GitHub integration
+- GitHub commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
+- GitHub commit message: `feat(garden): add pilot health readout`
+- Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
+
+Production aliases reported by Vercel:
+
+- `over-garden.vercel.app`
+- `over-garden-yehors-projects-01221e2b.vercel.app`
+- `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
+
+Domain status:
+
+- `over.garden` and `www.over.garden` are not listed as Vercel project domains at verification time.
+- The public media domain `media.over.garden` is Cloudflare R2-managed and separate from the app domain.
+
+Public access observation:
+
+- On 2026-06-27, fetching `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app/health` returned HTTP `302` to Vercel SSO instead of OverGarden HTML.
+- Response headers included `cache-control: no-store, max-age=0` and `x-robots-tag: noindex`.
+- This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
+
+Vercel invariants:
+
+- Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
+- Public H6 smoke must use an unauthenticated public URL that returns OverGarden SSR HTML, not Vercel SSO.
+- Keep Cloudflare from caching app HTML if the app domain is later proxied through Cloudflare. Vercel should own app HTML/ISR behavior.
+
 ## Local Development
 
 Local templates:
@@ -179,7 +233,8 @@ Local storage emulator:
 ## Open Operational Items
 
 - Create and install `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` in `apps/web/.env.local` and deployment env.
-- Bind the main app domain to the deployment platform and record the Vercel project/team IDs here.
+- Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
+- Disable or intentionally bypass Vercel deployment protection for the public pilot smoke URL before measuring H6/public visitor behavior.
 - Provision DigitalOcean Managed Postgres and record non-secret cluster/project metadata here.
 - Provision the production worker/Meilisearch host and record non-secret host metadata here.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.
