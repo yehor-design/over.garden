@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure
 Last updated: 2026-06-28
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -27,6 +27,28 @@ Verified through the connected Vercel app on 2026-06-27.
 - On 2026-06-28, OVE-36 provisioned the production worker/Meilisearch runtime at `matching.over.garden` and `meili.over.garden`, installed the production Vercel worker/search env names, and passed a redacted live journal index/unindex smoke against production Postgres and Meilisearch.
 
 Implication: the OVE-27 preview now proves the internal live-path contract against managed Postgres and R2. The remaining production closeout is to merge the deployed app version with the CA-aware database runtime and verify the same smoke on the public production alias selected for the pilot. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6.
+
+## OVE-37 Current-Main Public Pilot Closure
+
+Verified on 2026-06-28 against current `main`.
+
+- Selected public pilot URL: `https://over-garden.vercel.app`. Canonical `over.garden` / `www.over.garden` remain unattached to the Vercel project and are deferred to a follow-up domain-attach issue; the `.vercel.app` production alias is the pilot URL for this closure.
+- Production deployment serving the pilot URL: `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5`, target `production`, state `READY`, GitHub ref `main`, commit `a8cd3c95`, commit verification `verified` (connected Vercel app).
+- Public probes returned OverGarden HTML without Vercel SSO: `/` `200`, `/health` `200`, `/privacy` `200`.
+- Auth on the pilot origin succeeded without `INVALID_ORIGIN` (email sign-in `200`; browser sign-in also passed).
+- First plant entry and same-object follow-up both saved through the canonical create path with authenticated readback. Operator-entered title/body are not copied into this evidence.
+- Published `/journal/[slug]` (plant note, no photo): SSR `200`, robots `noindex, nofollow`, no region/precise-location label (object `hidden`), no media element, and no quarantine/original key in the HTML.
+- Public `/variety/[slug]`: SSR `200`, `cache-control: private, no-store`, robots `noindex, nofollow`, lists active public entries that link back to their `/journal/[slug]`, and the activation CTA carries only the public catalog slug plus the `public-variety` source enum into `/garden`.
+- Public-variety activation: the variety CTA opened `/garden` with the catalog match preselected from the safe slug, and a new first entry saved through the canonical path with `public_variety` activation attribution.
+- Archive: the previously published `/journal/[slug]` returned `410 Gone` with robots `noindex, nofollow` and a tombstone containing no private content; a sibling still-published entry on the same object stayed `200`.
+- Photo derivative path proven through the authenticated media API on current main (the agent browser cannot drive the OS file picker): presigned quarantine upload landed on the private quarantine R2 S3 host, server processing returned status `processed` with a `derivatives/...` key on public host class `media.over.garden`, the public derivative `GET` returned `200 image/webp` (RIFF/WEBP magic), and no quarantine/original key appeared in the public URL. A live CORS preflight to the quarantine bucket from `https://over-garden.vercel.app` returned `204` with `Access-Control-Allow-Origin` for that origin and `Access-Control-Allow-Methods: PUT, HEAD`, so a real pilot gardener's browser upload from the pilot origin passes preflight.
+- Search: publishing enqueues `journal_entry_index` and archiving (public-gone) enqueues `journal_entry_unindex`, code-confirmed in the publish/archive server actions. Live index/unindex round-trip remains proven by the standing OVE-36 canary and was not re-run for this closure.
+
+Scope and limitations recorded honestly:
+
+- Canonical `over.garden` domain attach is deferred to a later issue; the pilot URL is the `.vercel.app` production alias.
+- The OS file-picker upload click was not agent-driven; the photo derivative guarantee is proven via the authenticated media API plus a live CORS-preflight check for the pilot origin, not a browser file-picker run.
+- Worker/search index/unindex execution relies on the standing OVE-36 live proof rather than a fresh run for this closure.
 
 ## Product Assumption
 

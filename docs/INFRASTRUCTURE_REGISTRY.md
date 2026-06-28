@@ -119,6 +119,7 @@ CORS:
 - Dynamic Vercel preview deployment origins are intentionally not listed here by default. A full browser upload smoke should use an allowed app origin or an explicitly approved temporary preview origin; Node/API smoke alone does not exercise browser CORS preflight.
 - If `https://over-garden.vercel.app` remains the selected public pilot URL before `over.garden` is attached, add and verify that origin in the quarantine bucket CORS dashboard before browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
 - On 2026-06-27, the OVE-27 branch preview origin was explicitly added for the production pilot browser smoke. Remove or rotate temporary preview origins when the branch is closed or the pilot URL changes.
+- On 2026-06-28 (OVE-37), a live CORS preflight to the quarantine S3 host from `https://over-garden.vercel.app` returned `204` with `Access-Control-Allow-Origin` for that origin and `Access-Control-Allow-Methods: PUT, HEAD`, confirming a real pilot gardener's browser upload from the pilot origin passes preflight. `https://over.garden` returned the same allow result for the deferred canonical attach.
 
 Lifecycle:
 
@@ -228,7 +229,7 @@ Worker and search invariants:
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
-Last verified: 2026-06-27 through the connected Vercel app.
+Last verified: 2026-06-28 through the connected Vercel app (OVE-37 current-main closure; earlier OVE-27/OVE-36 checks were 2026-06-27 to 2026-06-28).
 
 Team:
 
@@ -246,14 +247,17 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx`
-- Deployment URL: `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app`
+- Deployment ID: `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5`
+- Deployment URL: `https://over-garden-bql7kx0kt-yehors-projects-01221e2b.vercel.app`
 - Ready state: `READY`
 - Target: `production`
 - Source: GitHub integration
-- GitHub commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
-- GitHub commit message: `feat(garden): add pilot health readout`
+- GitHub ref: `main`
+- GitHub commit: `a8cd3c95423bf2e8603a41065fbed6a73ef4fd90`
+- GitHub commit message: `fix(garden): require operator allowlist for internal surfaces`
+- GitHub commit verification: `verified`
 - Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
+- OVE-37 (2026-06-28): this is the current-main revision the public pilot URL `https://over-garden.vercel.app` serves; the full first-user smoke passed against it. Earlier verification snapshot was `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx` from commit `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`.
 
 Production aliases reported by Vercel:
 
@@ -272,6 +276,7 @@ Public access observation:
 - Response headers included `cache-control: no-store, max-age=0` and `x-robots-tag: noindex`.
 - This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
+- On 2026-06-28 (OVE-37, current main `a8cd3c95`), `https://over-garden.vercel.app/`, `/health`, and `/privacy` again returned HTTP `200` OverGarden HTML without Vercel SSO.
 
 Deployment env observation:
 

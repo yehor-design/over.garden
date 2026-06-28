@@ -10,6 +10,8 @@ OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-p
 
 OVE-35 hardens the pilot journal UX language for real users. `/garden`, first-entry capture, same-object follow-up capture, object readback, catalog resolution, publish/archive disclosure copy, `/privacy`, and `/first-publication-disclosure` now describe local recovery, catalog match state, publication, archive, search-engine visibility, and photo safety in user-facing language rather than exposing terms such as local queue, sync, photo intent, lifecycle state, noindex, or stripped derivative. The underlying canonical routes, idempotent offline sync payloads, publication/archive behavior, and privacy boundaries are unchanged.
 
+OVE-37 proves the full first-user smoke on current `main` at the selected public pilot URL `https://over-garden.vercel.app` (canonical `over.garden` attach deferred to a later issue). Against production deployment `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5` (commit `a8cd3c95`, ref `main`, verified), `/`, `/health`, and `/privacy` returned `200` OverGarden HTML without Vercel SSO; auth on the pilot origin, first entry, same-object follow-up, publish to SSR `/journal/[slug]` (`200`, `noindex, nofollow`, no precise location, no quarantine/original keys), public `/variety/[slug]` with a safe-slug `public-variety` activation CTA, the activation save through `/garden`, and archive to `410 Gone` all passed. The photo derivative path (presigned quarantine upload -> server strip/re-encode -> `media.over.garden` `image/webp` derivative-only readback, original deleted) was proven through the authenticated media API plus a verified quarantine CORS preflight for the pilot origin, because the agent browser cannot drive the OS file picker. Publish enqueues `journal_entry_index` and archive enqueues `journal_entry_unindex`; the live index/unindex round-trip remains proven by the standing OVE-36 canary. Redacted evidence is recorded in `docs/PRODUCTION_PILOT_SMOKE.md` and `docs/INFRASTRUCTURE_REGISTRY.md`.
+
 ## Proven Locally
 
 - Next.js App Router + TypeScript builds successfully.
@@ -95,7 +97,7 @@ OVE-35 hardens the pilot journal UX language for real users. `/garden`, first-en
 - Production database bootstrap has run against the managed cluster, creating the app schema and Better Auth tables.
 - The active OVE-27 branch preview has branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` and a matching temporary R2 quarantine CORS origin for browser upload smoke.
 - On 2026-06-27, the OVE-27 branch preview passed homepage first-entry with photo, derivative-only readback, same-object follow-up, public SSR journal page, public variety activation, archive-to-410, and authenticated pilot-health readout against the managed database and R2.
-- Vercel project `over-garden` exists under team `team_vs3oQAk6OT4vVVvcL7Mf5m8t`; latest verified production deployment `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx` is READY from commit `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`.
+- Vercel project `over-garden` exists under team `team_vs3oQAk6OT4vVVvcL7Mf5m8t`; latest verified production deployment `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5` is READY from `main` commit `a8cd3c95423bf2e8603a41065fbed6a73ef4fd90` and serves the public pilot URL `https://over-garden.vercel.app`.
 - Live non-secret infrastructure values are recorded in `docs/INFRASTRUCTURE_REGISTRY.md`.
 
 ## Product Research Imported
