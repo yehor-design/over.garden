@@ -197,6 +197,16 @@ Operational state:
 - On 2026-06-27, the managed database had 15 public base tables after bootstrap.
 - On 2026-06-28, `job_queue` journal index/unindex jobs were processed by the deployed worker against the production database during the OVE-36 redacted live smoke.
 
+Backup and PITR posture (OVE-39):
+
+- Status: `UNVERIFIED-NEEDS-OPERATOR` as of 2026-06-29. This repository/sandbox has no DigitalOcean credentials, so backup and point-in-time-recovery state for `overgarden-postgres-prod-fra1` was not machine-verified. Do not assume a pass.
+- Expected provider default (must be confirmed live, not assumed): DigitalOcean Managed PostgreSQL takes automatic daily backups and supports point-in-time recovery within the backup retention window. Confirm the actual enabled flag and window for this cluster.
+- Operator verification (dashboard): DigitalOcean Cloud -> Databases -> `overgarden-postgres-prod-fra1` -> Backups/Settings. Confirm automatic daily backups are enabled and note the PITR/retention window and the latest backup timestamp.
+- Operator verification (CLI/API, secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups list <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded here.
+- Recoverability validation must be non-destructive: create a fork / restore into a NEW cluster (`doctl databases fork ...`). Never restore over production. A restore-over-production drill requires explicit maintainer sign-off and is out of scope for the closed pilot.
+- Record only: backup-enabled boolean, retention/PITR window, latest backup date, and the check date. Never copy database URLs, the CA certificate body, credentials, or doctl/API tokens into this file, Linear, or chat.
+- Closed-pilot interpretation: an unconfirmed backup/PITR posture is a launch blocker for inviting real pilot users. Once an operator confirms daily backups plus a recovery window, record the status here as pass/degraded with the date.
+
 Database invariants:
 
 - Do not store database passwords, full connection URLs, or CA certificate bodies in git, Linear, chat, or docs.
@@ -224,6 +234,15 @@ Worker and search invariants:
 - `matching-worker` must process `journal_entry_index` and `journal_entry_unindex` idempotently and reclaim stale `processing` rows after the visibility timeout.
 - `journal_entries` index documents may contain only the public-safe field contract proven in OVE-36: `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`.
 - No owner/user IDs, space IDs, plant object IDs, precise location, media keys, quarantine/original keys, signed URLs, IPs, or user agents may enter Meilisearch documents.
+
+Process management and recovery (OVE-39):
+
+- Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1`, containers `meilisearch`, `matching-api`, `matching-worker`, `caddy` (Caddy terminates TLS).
+- Restart policy: each container should run with a Docker restart policy (`unless-stopped` or `always`) so the worker, API, and Meilisearch return automatically after a process crash or droplet reboot. Operator confirms live, e.g. `docker compose ps` and `docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' <container>`.
+- Health endpoints: matching `https://matching.over.garden/health` (status `ok`, ICU present) and Meilisearch `https://meili.over.garden/health` (status `available`).
+- Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims rows stuck in `processing` once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Handlers are idempotent (Meilisearch upsert by primary key / delete by id), so at-least-once re-delivery after a restart cannot duplicate or corrupt the public index. Failed jobs back off `WORKER_VT_SECONDS` and retry; unknown job kinds fail with `last_error` instead of being marked done.
+- Local recovery proof: `services/matching/tests/test_worker_recovery.py` deterministically proves reclaim-after-timeout, `journal_entry_index`/`journal_entry_unindex` reaching `done` after a simulated restart, the public-safe document contract, idempotent re-delivery, and fail-then-recover when Meilisearch is briefly unavailable. It runs with `uv run --frozen pytest` and needs no live services.
+- Live restart smoke (operator, redacted): restart the worker (`docker compose restart matching-worker`), then enqueue/publish a canary entry and confirm the `journal_entry_index` job reaches `done` with only the public-safe document keys, then archive and confirm `journal_entry_unindex` reaches `done`, the document is absent, and the old public URL returns `410`. Record only job-state classes, document presence/absence, document key names, and privacy booleans.
 
 ## Vercel
 
@@ -318,4 +337,6 @@ Local storage emulator:
 
 - Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
 - Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user.
+- Confirm managed Postgres backup/PITR for `overgarden-postgres-prod-fra1` (OVE-39). The redacted verification procedure is recorded above; the live check is `UNVERIFIED-NEEDS-OPERATOR` as of 2026-06-29 and is a pilot launch blocker until confirmed.
+- Run the live worker restart/recovery smoke on the droplet (OVE-39). Local recovery is proven deterministically in `services/matching/tests/test_worker_recovery.py`; the live droplet restart smoke remains an operator step.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.

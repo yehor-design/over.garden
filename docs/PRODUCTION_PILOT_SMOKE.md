@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof
-Last updated: 2026-06-28
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof
+Last updated: 2026-06-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -128,6 +128,85 @@ Do not mark OVE-38 Done if any of the following are true:
 - Authenticated readback shows raw (non-derivative) media or a non-recoverable media gap after a successful sync.
 - The evidence requires exposing private journal/media details: raw title/body, signed upload URLs, quarantine/original keys, EXIF, or precise location.
 
+## OVE-39 Durability And Recovery
+
+Goal: a founder/operator can run the first closed pilot knowing production journal data and the derived public search path are recoverable enough for a controlled cohort. This is an operational gate on the same pilot journal search path proven in OVE-36/OVE-37, not generic infra hardening. If a worker/process restart or a database incident could silently lose journal data or break `journal_entry_index`/`journal_entry_unindex`, then H1 (journal retention), H4 (publish), and H6 (organic/public discovery) become deployment noise instead of product evidence.
+
+Non-destructive only: this slice does not perform any restore-over-production, bulk delete, schema drop, or history rewrite. Those require explicit maintainer sign-off and are out of scope.
+
+### Backup and PITR status (managed Postgres)
+
+- Cluster: `overgarden-postgres-prod-fra1` (DigitalOcean Managed PostgreSQL, `FRA1`).
+- Status: `UNVERIFIED-NEEDS-OPERATOR` as of 2026-06-29. The repo/sandbox holds no DigitalOcean credentials, so backup/PITR state was not machine-verified. This is recorded honestly as needs-operator, not as a pass.
+- Closed-pilot interpretation: an unconfirmed backup/PITR posture is a launch blocker for inviting real users. Once confirmed, record pass/degraded with the date in `docs/INFRASTRUCTURE_REGISTRY.md`.
+- Operator verification (redacted):
+  1. Dashboard: DigitalOcean Cloud -> Databases -> `overgarden-postgres-prod-fra1` -> Backups/Settings. Confirm automatic daily backups are enabled; note the PITR/retention window and the latest backup timestamp.
+  2. CLI/API (secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups list <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded.
+  3. To validate recoverability, fork/restore into a NEW cluster (`doctl databases fork ...`). Never restore over production.
+- Allowed evidence: backup-enabled boolean, retention/PITR window, latest backup date, check date. Forbidden: database URLs, the CA body, credentials, doctl/API tokens.
+
+### Worker and Meilisearch process management
+
+- Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1` with containers `meilisearch`, `matching-api`, `matching-worker`, `caddy`.
+- Restart policy: containers run with a Docker restart policy (`unless-stopped`/`always`) so the worker, API, and Meilisearch return after a crash or droplet reboot. Operator confirms live via `docker compose ps` and a restart-policy inspect.
+- Health endpoints: matching `https://matching.over.garden/health` (`ok`, ICU present) and Meilisearch `https://meili.over.garden/health` (`available`).
+- Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims `processing` rows once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Handlers are idempotent (Meili upsert by primary key / delete by id), so a restart mid-job re-delivers the work at-least-once without duplicating or corrupting the public index. Failed jobs back off and retry; unknown kinds fail with `last_error` rather than being marked done.
+
+### Deterministic local recovery proof
+
+`services/matching/tests/test_worker_recovery.py` proves, with no live services, that:
+
+- a `processing` row is reclaimed only after the visibility timeout (and a freshly locked row is not), so a restarted worker recovers in-flight jobs;
+- after a simulated restart/crash, `journal_entry_index` and `journal_entry_unindex` still reach `done`;
+- the indexed document keeps exactly the public-safe OVE-36 contract (`body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, `title`) with no owner/user IDs, media keys, precise location, IPs, or user agents;
+- at-least-once re-delivery is idempotent (no duplicate document, identical safe shape);
+- a transient Meilisearch outage marks the job `failed` with a future retry and a later run recovers it to `done`.
+
+Run it with:
+
+```bash
+cd services/matching
+uv run --frozen pytest tests/test_worker_recovery.py
+```
+
+### Live worker restart/recovery smoke (operator, redacted)
+
+This is the live counterpart that requires the droplet; the local harness de-risks it but does not replace it.
+
+1. Confirm the worker restart policy and container health (`docker compose ps`; matching/meili `/health`).
+2. Restart the worker: `docker compose restart matching-worker` (or stop it, enqueue work, then start it to exercise stale-job reclaim).
+3. Publish a canary journal entry so the app enqueues `journal_entry_index`. Confirm the job reaches `done` and the Meilisearch `journal_entries` document exists with only the public-safe keys and `noindex = true`.
+4. Archive the canary so the app enqueues `journal_entry_unindex`. Confirm the job reaches `done`, the document returns `404`, and the old public journal URL returns `410`.
+5. Record only redacted job/document state per the rules below.
+
+### OVE-39 evidence template (redacted)
+
+```
+date: <YYYY-MM-DD>
+db_cluster_class: overgarden-postgres-prod-fra1 (DO managed, FRA1)
+backup_enabled: pass | fail | UNVERIFIED-NEEDS-OPERATOR
+pitr_window: <e.g. 7d> | unknown
+latest_backup_date: <YYYY-MM-DD> | unknown
+worker_restart_policy: unless-stopped | always | none | unknown
+worker_health: ok | degraded | unknown
+meili_health: available | degraded | unknown
+restart_recovery: index_done + unindex_done | partial | fail | not-run
+public_safe_contract: pass | fail
+stale_job_reclaim: pass(local-harness) | pass(live) | fail
+result: pass | degraded | blocker | UNVERIFIED-NEEDS-OPERATOR
+notes: <redacted; no DB URLs, CA body, credentials, tokens, journal text, Meili keys, or user-tied row IDs>
+```
+
+### OVE-39 Done gate
+
+Do not treat the durability slice as complete (and do not invite pilot users on durability grounds) if any of the following are true:
+
+- Backup/PITR status for `overgarden-postgres-prod-fra1` is unknown and not even recorded as `UNVERIFIED-NEEDS-OPERATOR` with a date.
+- Worker restart behavior is undocumented or unproven (no restart policy confirmed and no recovery proof).
+- Search jobs only reach `done` before a restart but not after recovery, or a recovered job drops the public-safe document contract.
+- Stale `processing` reclaim is neither proven by the local harness nor by a live canary.
+- Any evidence leaks secrets or private data: database URLs, CA body, credentials, doctl/API tokens, Meilisearch keys, worker env files, journal text, precise location, IPs, user agents, or user-tied row IDs.
+
 ## Product Assumption
 
 The live pilot must measure user behavior, not deployment fragility. The smoke proves that a real pilot user can traverse the deployed product path while privacy-critical boundaries hold:
@@ -239,6 +318,8 @@ Public journal search:
 
 Interpretation: public journal search/worker processing is no longer assumed. It is live-proven for the canary path, with evidence restricted to status codes, job states, document key names, and privacy booleans. Do not copy indexed title/body values, user identifiers, Meilisearch keys, database URLs, IPs, or canary row identifiers into evidence.
 
+Recovery and durability of this path (worker restart, stale-job reclaim, and managed Postgres backup/PITR) are covered in "OVE-39 Durability And Recovery" above.
+
 ## Done Gate
 
 Do not mark OVE-27 Done if any of the following are true:
@@ -266,9 +347,10 @@ pnpm test
 pnpm build
 ```
 
-Python worker compile gate:
+Python worker compile gate plus the worker recovery proof:
 
 ```bash
 cd services/matching
 uv run python -m py_compile app/__init__.py app/main.py app/search.py app/worker.py
+uv run --frozen pytest
 ```
