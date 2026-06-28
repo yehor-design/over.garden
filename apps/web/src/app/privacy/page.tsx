@@ -5,12 +5,14 @@ import {
   ERASURE_REQUEST_INTAKE_VERSION,
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
   PILOT_LEGAL_COPY_STATUS,
+  PILOT_LEGAL_COPY_STATUS_LABEL,
+  PILOT_PUBLIC_RELEASE_BLOCKERS,
 } from "@/lib/privacy/disclosures";
 
 export const metadata: Metadata = {
   title: "Pilot privacy notice | OverGarden",
   description:
-    "Pilot placeholder privacy notice for OverGarden privacy and erasure controls.",
+    "Closed-pilot privacy notice for OverGarden privacy, publication, and erasure controls.",
   robots: {
     index: false,
     follow: false,
@@ -28,15 +30,15 @@ export default function PrivacyNoticePage() {
           Pilot privacy notice
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          This is not final reviewed legal copy. It documents the current pilot
-          privacy gate so users can see what the product does today.
+          This closed-pilot notice documents the product behavior that is active
+          today. It is reviewed for supervised pilot use, while public release
+          remains blocked on final legal/process review.
         </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
         <p>
-          Status: <strong>{PILOT_LEGAL_COPY_STATUS}</strong>. Public release
-          still requires reviewed privacy policy text, contact details,
-          processor list, retention rules, and legal-basis wording.
+          Status: <strong>{PILOT_LEGAL_COPY_STATUS_LABEL}</strong> (
+          {PILOT_LEGAL_COPY_STATUS}).
         </p>
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
@@ -60,6 +62,16 @@ export default function PrivacyNoticePage() {
               Erasure requests use non-destructive intake version{" "}
               {ERASURE_REQUEST_INTAKE_VERSION}.
             </li>
+          </ul>
+        </section>
+        <section className="grid gap-2">
+          <h2 className="text-base font-semibold text-foreground">
+            Public release blockers
+          </h2>
+          <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+            {PILOT_PUBLIC_RELEASE_BLOCKERS.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
+            ))}
           </ul>
         </section>
         <section className="grid gap-2">

@@ -16,7 +16,10 @@ import type { Database } from "@/db/schema";
 import { ERASURE_REQUEST_INTAKE_VERSION } from "@/lib/privacy/disclosures";
 import {
   buildInsertErasureRequestQuery,
+  buildLatestErasureRequestForUserQuery,
   buildListOperatorErasureRequestsQuery,
+  buildMarkErasureRequestHandledQuery,
+  buildMarkErasureRequestReviewingQuery,
   buildOpenErasureRequestForUserQuery,
 } from "./erasure-request-repository";
 
@@ -95,6 +98,26 @@ describe("erasure request repository privacy contracts", () => {
     ]);
   });
 
+  it("finds latest request status by requester without selecting private content", () => {
+    const compiled = buildLatestErasureRequestForUserQuery(
+      testDb,
+      "00000000-0000-0000-0000-000000000001",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "erasure_requests"');
+    expect(compiled.sql).toContain('"requester_user_id" = $1');
+    expect(compiled.sql).toContain('order by "submitted_at" desc');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("media_assets");
+    expect(compiled.sql).not.toMatch(
+      /title|body|email|ip|user_agent|referrer|url|quarantine|derivative|coordinate|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      1,
+    ]);
+  });
+
   it("lists operator readback rows without joining journal content or auth session data", () => {
     const compiled = buildListOperatorErasureRequestsQuery(testDb, 20).compile();
 
@@ -109,5 +132,64 @@ describe("erasure request repository privacy contracts", () => {
       /title|body|email|ip|user_agent|referrer|url|quarantine|derivative|coordinate|latitude|longitude/i,
     );
     expect(compiled.parameters).toEqual([20]);
+  });
+
+  it("marks submitted requests as reviewing without reading private data", () => {
+    const now = new Date("2026-06-27T07:00:00.000Z");
+    const compiled = buildMarkErasureRequestReviewingQuery(testDb, {
+      requestId: "00000000-0000-4000-8000-000000000111",
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "erasure_requests"');
+    expect(compiled.sql).toContain('"status" = $1');
+    expect(compiled.sql).toContain('"status" = $4');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("media_assets");
+    expect(compiled.sql).not.toMatch(
+      /title|body|email|ip|user_agent|referrer|url|quarantine|derivative|coordinate|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "reviewing",
+      now,
+      "00000000-0000-4000-8000-000000000111",
+      "submitted",
+    ]);
+  });
+
+  it("marks open requests handled with a bounded operator outcome", () => {
+    const now = new Date("2026-06-27T08:00:00.000Z");
+    const compiled = buildMarkErasureRequestHandledQuery(
+      testDb,
+      {
+        userId: "00000000-0000-4000-8000-000000000999",
+        sessionId: "operator-session",
+      },
+      {
+        requestId: "00000000-0000-4000-8000-000000000111",
+        handledStatus: "needs_identity_verification",
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "erasure_requests"');
+    expect(compiled.sql).toContain('"handled_status" = $3');
+    expect(compiled.sql).toContain('"handled_by_user_id" = $4');
+    expect(compiled.sql).toContain('"status" in ($7, $8)');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("media_assets");
+    expect(compiled.sql).not.toMatch(
+      /title|body|email|ip|user_agent|referrer|url|quarantine|derivative|coordinate|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "handled",
+      now,
+      "needs_identity_verification",
+      "00000000-0000-4000-8000-000000000999",
+      now,
+      "00000000-0000-4000-8000-000000000111",
+      "submitted",
+      "reviewing",
+    ]);
   });
 });

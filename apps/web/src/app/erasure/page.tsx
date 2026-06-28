@@ -5,18 +5,20 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES,
   ERASURE_REQUEST_INTAKE_VERSION,
-  PILOT_LEGAL_COPY_STATUS,
+  formatErasureRequestReference,
+  getErasureRequestStatusCopy,
+  PILOT_LEGAL_COPY_STATUS_LABEL,
 } from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { getOpenErasureRequestForUser } from "@/server/erasure-request-repository";
+import { getLatestErasureRequestForUser } from "@/server/erasure-request-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../garden/garden-auth-panel";
 import { submitErasureRequestAction } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Pilot erasure request intake | OverGarden",
+  title: "Pilot erasure request | OverGarden",
   description:
-    "Pilot placeholder for non-destructive OverGarden data erasure request intake.",
+    "Closed-pilot OverGarden account erasure and anonymization request status.",
   robots: {
     index: false,
     follow: false,
@@ -26,11 +28,18 @@ export const metadata: Metadata = {
 export default async function ErasureRequestPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
-  const openRequest = userId
-    ? await getOpenErasureRequestForUser(
+  const latestRequest = userId
+    ? await getLatestErasureRequestForUser(
         scopedToUser(userId, getSessionId(session)),
       )
     : null;
+  const latestStatus = latestRequest
+    ? getErasureRequestStatusCopy(
+        latestRequest.status,
+        latestRequest.handledStatus,
+      )
+    : null;
+  const hasOpenRequest = latestStatus?.isOpen ?? false;
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8">
@@ -39,18 +48,19 @@ export default async function ErasureRequestPage() {
       </Link>
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Pilot erasure request intake
+          Pilot erasure request
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          This page is a pilot placeholder, not final reviewed legal copy. It
-          creates a non-destructive request for operator review.
+          Submit or review a closed-pilot operator request for account data
+          erasure or anonymization. This form does not automatically delete
+          anything.
         </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
         <p>
-          Status: <strong>{PILOT_LEGAL_COPY_STATUS}</strong>. Reviewed legal
-          wording, verified contact instructions, response timelines, and
-          erasure scope must be approved before this becomes launch-ready.
+          Status: <strong>{PILOT_LEGAL_COPY_STATUS_LABEL}</strong>. Final
+          public-release legal wording, contact instructions, response
+          timelines, and erasure scope still require approval.
         </p>
         <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
           {ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.map((line) => (
@@ -70,19 +80,34 @@ export default async function ErasureRequestPage() {
             </p>
           </div>
 
-          {openRequest ? (
+          {latestRequest && latestStatus ? (
             <div className="grid gap-2 rounded-md border border-border p-3 text-sm">
               <p className="font-medium text-foreground">
-                Request received for operator review.
+                {latestStatus.label}
               </p>
               <p className="text-muted-foreground">
-                Status: {openRequest.status}. Submitted{" "}
-                {formatDate(openRequest.submittedAt)}.
+                {latestStatus.description}
               </p>
               <p className="text-muted-foreground">
-                Request id: <span className="font-mono">{openRequest.id}</span>
+                Submitted {formatDate(latestRequest.submittedAt)}. Reference:{" "}
+                <span className="font-mono">
+                  {formatErasureRequestReference(latestRequest.id)}
+                </span>
               </p>
+              {latestStatus.handled ? (
+                <p className="text-muted-foreground">
+                  Outcome: {latestStatus.handled.label}.{" "}
+                  {latestStatus.handled.description}
+                </p>
+              ) : null}
             </div>
+          ) : null}
+
+          {hasOpenRequest ? (
+            <p className="text-sm text-muted-foreground">
+              You already have an open request. The operator must handle it
+              before a new request can be submitted.
+            </p>
           ) : (
             <form action={submitErasureRequestAction} className="grid gap-4">
               <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">

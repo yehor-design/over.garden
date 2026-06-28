@@ -2,11 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import {
+  ERASURE_REQUEST_HANDLED_STATUS_OPTIONS,
+  formatErasureRequestReference,
+  getErasureRequestStatusCopy,
+} from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
 import { listOperatorErasureRequests } from "@/server/erasure-request-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
+import {
+  markErasureRequestHandledAction,
+  markErasureRequestReviewingAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -79,13 +88,25 @@ export default async function ErasureRequestsOperatorPage() {
                     {formatDate(request.submittedAt)}
                   </time>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  {
+                    getErasureRequestStatusCopy(
+                      request.status,
+                      request.handledStatus,
+                    ).description
+                  }
+                </p>
                 <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
                   <div>
-                    <dt className="text-xs uppercase">Request</dt>
-                    <dd className="font-mono text-xs">{request.id}</dd>
+                    <dt className="text-xs uppercase">Request reference</dt>
+                    <dd className="font-mono text-xs">
+                      {formatErasureRequestReference(request.id)}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-xs uppercase">Requester user id</dt>
+                    <dt className="text-xs uppercase">
+                      Requester user id (operator only)
+                    </dt>
                     <dd className="font-mono text-xs">
                       {request.requesterUserId}
                     </dd>
@@ -98,7 +119,66 @@ export default async function ErasureRequestsOperatorPage() {
                     <dt className="text-xs uppercase">Intake version</dt>
                     <dd>{request.intakeDisclosureVersion}</dd>
                   </div>
+                  {request.handledStatus ? (
+                    <div>
+                      <dt className="text-xs uppercase">Handled status</dt>
+                      <dd>{request.handledStatus}</dd>
+                    </div>
+                  ) : null}
                 </dl>
+                {request.status === "submitted" ? (
+                  <form action={markErasureRequestReviewingAction}>
+                    <input
+                      type="hidden"
+                      name="requestId"
+                      value={request.id}
+                    />
+                    <button
+                      type="submit"
+                      className={buttonVariants({
+                        variant: "outline",
+                        className: "self-start",
+                      })}
+                    >
+                      Start review
+                    </button>
+                  </form>
+                ) : null}
+                {request.status === "submitted" ||
+                request.status === "reviewing" ? (
+                  <form
+                    action={markErasureRequestHandledAction}
+                    className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
+                  >
+                    <input
+                      type="hidden"
+                      name="requestId"
+                      value={request.id}
+                    />
+                    <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+                      Operator outcome
+                      <select
+                        name="handledStatus"
+                        required
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        {ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.map(
+                          (option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      className={buttonVariants({ className: "self-start" })}
+                    >
+                      Mark handled
+                    </button>
+                  </form>
+                ) : null}
               </li>
             ))}
           </ol>

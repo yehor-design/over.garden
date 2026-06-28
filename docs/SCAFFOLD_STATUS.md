@@ -6,6 +6,8 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 
 OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
 
+OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-pilot reviewed copy while keeping public release blocked. First-publication disclosure is now version `first-publication-v2`, erasure intake is `erasure-request-pilot-v2`, users can see the latest erasure request status, and the operator review surface can move requests through submitted -> reviewing -> handled without selecting journal text or media keys.
+
 ## Proven Locally
 
 - Next.js App Router + TypeScript builds successfully.
@@ -44,9 +46,9 @@ OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `p
 - `/garden/objects/[objectId]` now supports existing-object follow-up entries with title/body/date plus one optional photo intent, online submit or offline queue/retry, canonical `/api/garden/entries` sync, idempotent same-object creation, derivative-only media attachment, and authenticated readback.
 - `/` now acts as a pilot acquisition surface, not a scaffold dead end: its primary CTA opens `/garden?source=homepage`, keeping homepage intent through the local Better Auth wall into the same first-entry composer and canonical create/readback path.
 - First-entry activation attribution is bounded to enum-only `activation_source` and `source_surface_kind` values for homepage, public variety, and direct garden starts. Public-variety attribution is used only when the catalog slug resolves server-side to a selectable seeded/confirmed global catalog item.
-- `/erasure` now provides authenticated, non-destructive erasure request intake. It records only requester user id, request scope/status/timestamps, handler status fields, and the intake disclosure version; it does not delete or anonymize product data.
-- `/garden/privacy/erasure-requests` provides an authenticated operator readback surface using the same temporary curator/operator gate pattern. The read model intentionally excludes journal title/body, media keys, raw request metadata, precise location, email, IP, user agent, and referrer.
-- `/privacy` and `/first-publication-disclosure` now expose explicit pilot-placeholder copy status, versioned disclosure constants, and noindex metadata instead of generic scaffold text that could be mistaken for release-ready legal copy.
+- `/erasure` now provides authenticated, non-destructive erasure request intake plus latest-status readback. It records only requester user id, request scope/status/timestamps, handler status fields, and the intake disclosure version; it does not automatically delete or anonymize product data.
+- `/garden/privacy/erasure-requests` provides an authenticated operator review surface using the same temporary curator/operator gate pattern. The read model and status actions intentionally exclude journal title/body, media keys, raw request metadata, precise location, email, IP, user agent, and referrer.
+- `/privacy` and `/first-publication-disclosure` expose closed-pilot reviewed copy status, versioned disclosure constants, explicit public-release blockers, and noindex metadata instead of generic scaffold text that could be mistaken for release-ready legal copy.
 - `/garden/pilot-health` provides an authenticated operator readout for provisional H1/H4/H6 leading indicators: first-entry activations, same-object follow-ups, photo usage, offline queued/synced state, publish/archive/410 counts, homepage/public-variety/direct activation starts and saves, and public-variety promoted/thin/de-promoted counts.
 - Pilot health intentionally reports only aggregate counts/rates and provisional labels. It excludes journal title/body text, precise location, raw event properties, emails, IP/user-agent/referrer/query values, and media storage keys from the read model. Offline failed mutations remain client-local Dexie state and are labeled as not server-observable rather than treated as a healthy zero.
 - `/garden/pilot-smoke` provides an authenticated operator readiness readout for production/preview smoke. It reports configured/missing/placeholder state for public URL, auth URL, database, R2, Meilisearch, matching service, and Vercel runtime without echoing secrets. It also carries the manual smoke sequence and evidence redaction rules for auth -> journal -> media derivative -> public SSR -> 410 -> activation -> pilot-health verification.
@@ -119,11 +121,11 @@ OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `p
 - `hidden` is still the default. When the current create/edit forms submit `hidden`, the server stores `coarse_region_code = null` instead of retaining a private region value. This minimizes stored location data for v0.
 - Revisit before public variety-region pages or launch localization: whether hidden objects should retain a private coarse region for later toggles, whether labels should be localized, and whether any climate-zone grouping should sit beside the ISO code rather than replace it.
 
-## Legal Placeholder Decision
+## Closed-Pilot Privacy Copy Decision
 
-- GDPR/privacy, erasure-request, and first-publication disclosure copy remains pilot placeholder copy, but it is now explicit in-product and backed by non-destructive intake/readback. This is a launch gate, not legal approval.
-- Before public release, replace placeholder legal copy with reviewed text, record verified contact/processor/retention details, and update `FIRST_PUBLICATION_DISCLOSURE_VERSION` if user-facing disclosure wording changes materially.
-- Routes `/privacy`, `/erasure`, `/first-publication-disclosure`, and `/garden/privacy/erasure-requests` remain `noindex` until reviewed release copy and role gating are ready.
+- GDPR/privacy, erasure-request, and first-publication disclosure copy is reviewed for the closed pilot and no longer uses placeholder language. It is still not public-launch legal approval.
+- Public release remains blocked until final legal policy text, verified operator contact/response process, processor/retention/legal-basis wording, and a maintainer-approved irreversible erasure/anonymization workflow are complete.
+- Routes `/privacy`, `/erasure`, `/first-publication-disclosure`, and `/garden/privacy/erasure-requests` remain `noindex`.
 
 ## Conservative Public Variety Decision
 
@@ -158,7 +160,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 - Vercel public app domain binding for `over.garden` / `www.over.garden`.
 - Public journal search worker handling for `journal_entry_index` and `journal_entry_unindex`; catalog typeahead reindexing is the currently proven worker path.
 - Production auth UX, email delivery, password reset, OAuth decisions.
-- Reviewed legal copy, verified operator contact process, and a real irreversible erasure/anonymization workflow after maintainer sign-off.
+- Public-release legal policy, verified operator contact process, and a real irreversible erasure/anonymization workflow after maintainer sign-off.
 - Full privacy invariant suite for every cross-user access path beyond the first product repository contracts.
 - Production-grade admin roles and audit UI beyond the minimal catalog curation scaffold.
 - iOS Safari offline capture spike on a real device.
