@@ -48,3 +48,15 @@ worker scopes both jobs to the payload owner, indexes only active public non-gon
 rows into `journal_entries`, writes a public-safe document shape, and deletes any
 stale document when the source row is no longer indexable. Unknown job kinds fail
 with `last_error`; they must not be marked done silently.
+
+## Restart / recovery
+
+`tests/test_worker_recovery.py` is the durability proof for the pilot journal
+search path (OVE-39). It runs with `uv run --frozen pytest` and needs no live
+services. It proves that a `processing` row is reclaimed only after the
+visibility timeout, that `journal_entry_index`/`journal_entry_unindex` reach
+`done` after a simulated worker restart, that the public-safe document contract
+holds, that at-least-once re-delivery is idempotent, and that a transient
+Meilisearch outage fails-then-recovers. Run the worker droplet containers with a
+Docker restart policy so the process returns automatically after a crash or
+reboot.
