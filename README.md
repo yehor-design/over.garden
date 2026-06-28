@@ -38,16 +38,12 @@ docker compose up -d
 cd ../apps/web
 pnpm install
 cp .env.example .env.local
+pnpm local:bootstrap
+pnpm db:types
+pnpm db:types:check
 pnpm dev
 pnpm lint
 pnpm typecheck
-```
-
-Optional local DB bootstrap:
-
-```bash
-psql "$DATABASE_URL" -f sql/0001_walking_skeleton.sql
-pnpm db:types
 ```
 
 Python worker:

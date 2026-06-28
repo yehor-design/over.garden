@@ -17,6 +17,20 @@ jobs:
   web:
     name: Web app
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: overgarden
+          POSTGRES_USER: overgarden
+          POSTGRES_PASSWORD: overgarden
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U overgarden -d overgarden"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: apps/web
@@ -56,6 +70,32 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Start MinIO
+        run: |
+          docker run --detach --rm \
+            --name overgarden-ci-minio \
+            -p 9000:9000 \
+            -p 9001:9001 \
+            -e MINIO_ROOT_USER=overgarden-ci \
+            -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
+            minio/minio:latest server /data --console-address ":9001"
+
+          for attempt in {1..30}; do
+            if curl -fsS http://localhost:9000/minio/health/ready >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "MinIO did not become ready in time."
+          exit 1
+
+      - name: Bootstrap schema and object storage
+        run: pnpm local:bootstrap
+
+      - name: Check generated DB types
+        run: pnpm db:types:check
 
       - name: Lint
         run: pnpm lint

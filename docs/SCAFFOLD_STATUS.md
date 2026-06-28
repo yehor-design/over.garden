@@ -4,6 +4,8 @@ Current status: the 2026-06-26 walking skeleton is implemented and locally verif
 
 OVE-27 adds an operator production-smoke surface and live smoke contract: `/garden/pilot-smoke` checks deployed env readiness without exposing secrets, `docs/PRODUCTION_PILOT_SMOKE.md` defines the browser smoke and evidence rules, and `docs/INFRASTRUCTURE_REGISTRY.md` records the current Vercel project/deployment plus public-access blockers.
 
+OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
+
 ## Proven Locally
 
 - Next.js App Router + TypeScript builds successfully.
@@ -13,6 +15,7 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 - Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
 - SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, `erasure_requests`, `variety_seed_proofs`, and `job_queue`.
 - `kysely-codegen` generated `src/db/generated.ts` from 15 live tables.
+- CI runs a non-mutating `pnpm db:types:check` against the bootstrapped database and fails if `src/db/generated.ts` differs from the live schema.
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.
 - `/garden` first-entry flow can select a seeded catalog item or explicitly keep the object Unknown; selected objects store server-validated `catalog_item_id`, `variety_state = selected`, and canonical catalog display text on the plant object.
@@ -137,6 +140,7 @@ cd infra && docker compose up -d
 cd ../apps/web
 pnpm local:bootstrap
 pnpm db:types
+pnpm db:types:check
 pnpm lint
 pnpm typecheck
 pnpm test

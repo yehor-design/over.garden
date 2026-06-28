@@ -1,6 +1,6 @@
 # Walking Skeleton
 
-Status: implemented and locally verified on 2026-06-26.
+Status: implemented and locally verified on 2026-06-26. CI now repeats the fresh-checkout bootstrap contract by starting Postgres plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`.
 
 This is not product UI. It is the first end-to-end proof that the selected stack works together before agents start building product slices.
 
@@ -26,6 +26,7 @@ cp .env.example .env.local
 pnpm install
 pnpm local:bootstrap
 pnpm db:types
+pnpm db:types:check
 pnpm lint
 pnpm typecheck
 pnpm test
