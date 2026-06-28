@@ -4,9 +4,13 @@ import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility, VarietyState } from "@/db/schema";
+import {
+  entryPrivacyLabel,
+  entryScopeLabel,
+  varietyStateLabel,
+} from "@/lib/garden/pilot-ux-copy";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
-import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import {
@@ -89,7 +93,7 @@ export default async function PlantObjectReadbackPage({
               Variety: {page.plantObject.variety_text ?? "Unknown"}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Catalog: {page.plantObject.variety_state}
+              {varietyStateLabel(page.plantObject.variety_state)}
             </span>
           </div>
         </div>
@@ -174,10 +178,7 @@ export default async function PlantObjectReadbackPage({
                   />
                 ) : null}
                 <p className="mt-3 text-xs text-muted-foreground">
-                  {entry.entry_scope} · {entry.visibility} ·{" "}
-                  {entry.lifecycle_state}
-                  {entry.media ? " · stripped photo derivative" : ""}
-                  {entry.public_gone_at ? " · public URL gone" : ""}
+                  {entryTimelineSummary(entry)}
                 </p>
                 {entry.lifecycle_state === "archived" ? (
                   <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
@@ -186,14 +187,16 @@ export default async function PlantObjectReadbackPage({
                     </span>
                     {entry.public_gone_at ? (
                       <span className="text-xs text-muted-foreground">
-                        The previous public URL now returns 410 Gone.
+                        The old public page now shows 410 Gone and is removed
+                        from public discovery surfaces.
                       </span>
                     ) : null}
                   </div>
                 ) : entry.visibility === "public" && entry.public_slug ? (
                   <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
                     <span className="text-xs text-muted-foreground">
-                      Public · noindex
+                      Public page available. Not listed for search engines
+                      during the pilot.
                     </span>
                     <Link
                       href={publicJournalEntryPath(entry.public_slug)}
@@ -215,8 +218,9 @@ export default async function PlantObjectReadbackPage({
                           className="mt-1 size-4 rounded border-border"
                         />
                         <span>
-                          Archive this entry privately and make its public URL
-                          return 410 Gone.
+                          Archive this entry privately, remove it from public
+                          discovery surfaces, and make its old public page show
+                          410 Gone.
                         </span>
                       </label>
                       <button
@@ -245,11 +249,13 @@ export default async function PlantObjectReadbackPage({
                         className="mt-1 size-4 rounded border-border"
                       />
                       <span>
-                        Publish this entry as a public, noindex page under
-                        disclosure {FIRST_PUBLICATION_DISCLOSURE_VERSION}. Only
-                        the stripped photo derivative can appear publicly;
+                        Publish this entry as a public page. People with the
+                        link can read its title, note, date, plant name, variety
+                        text, and chosen region if one is visible. If a photo is
+                        attached, only a server-cleaned public copy can appear;
                         precise location and the original photo file stay
-                        private.{" "}
+                        private. Pilot public pages are not listed for search
+                        engines yet; that is not a secrecy guarantee.{" "}
                         <Link
                           href="/first-publication-disclosure"
                           className="text-primary underline-offset-4 hover:underline"
@@ -319,4 +325,18 @@ function getObjectLocationLabel(page: PlantObjectPage) {
     getCoarseRegionLabel(page.plantObject.coarse_region_code) ??
     "Unsupported region"
   }`;
+}
+
+function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
+  const parts = [
+    entryScopeLabel(entry.entry_scope),
+    entryPrivacyLabel({
+      visibility: entry.visibility,
+      isArchived: entry.lifecycle_state === "archived",
+    }),
+    entry.media ? "Server-cleaned photo copy" : null,
+    entry.public_gone_at ? "Old public page shows 410 Gone" : null,
+  ].filter(Boolean);
+
+  return parts.join(" · ");
 }

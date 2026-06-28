@@ -47,12 +47,12 @@ export default function PrivacyNoticePage() {
           <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
             <li>Precise location is not collected or rendered in v0.</li>
             <li>
-              Public media uses stripped derivatives; quarantine originals are
-              not public page assets.
+              Public media uses server-cleaned copies; original uploads are not
+              public page assets.
             </li>
             <li>
-              Public pages stay noindex unless explicit promotion rules allow
-              indexing.
+              Public pages are not listed for search engines unless explicit
+              promotion rules allow indexing.
             </li>
             <li>
               Archived public entries return 410 Gone at their previous public

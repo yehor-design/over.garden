@@ -14,17 +14,21 @@ import {
 
 describe("pilot privacy disclosure constants", () => {
   it("keeps first-publication disclosure version explicit and copy bounded", () => {
-    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe(
-      "first-publication-v2",
-    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v2");
     expect(PILOT_LEGAL_COPY_STATUS).toBe(
       "closed_pilot_reviewed_public_release_blocked",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "noindex",
+      "not listed for search engines",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
-      "noindex is not a secrecy guarantee",
+      "not a secrecy guarantee",
+    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
+      "server-cleaned copies",
+    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).not.toMatch(
+      /\b(noindex|stripped derivatives?)\b/i,
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).not.toMatch(
       /\b(address|coordinates?|latitude|longitude|email|ip_address|user[_ -]?agent)\b/i,
@@ -61,13 +65,14 @@ describe("pilot privacy disclosure constants", () => {
       getErasureRequestStatusCopy("handled", "needs_identity_verification")
         .handled?.label,
     ).toBe("Needs identity verification");
-    expect(ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.map((option) => option.value))
-      .toEqual([
-        "completed",
-        "declined",
-        "duplicate",
-        "needs_identity_verification",
-      ]);
+    expect(
+      ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.map((option) => option.value),
+    ).toEqual([
+      "completed",
+      "declined",
+      "duplicate",
+      "needs_identity_verification",
+    ]);
     expect(
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     ).toBe("request-0000abcd");

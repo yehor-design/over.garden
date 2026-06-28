@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from "react";
 import {
   AlertCircle,
   CheckCircle2,
@@ -14,6 +20,15 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  journalSaveErrorMessage,
+  journalSaveStateLabel,
+  localDuplicateMessage,
+  localSavedMessage,
+  offlineSaveActionLabel,
+  offlineSaveStatusSentence,
+  photoHelpText,
+} from "@/lib/garden/pilot-ux-copy";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
@@ -102,12 +117,11 @@ export function FollowUpEntryComposer({
   }, [refreshQueue]);
 
   const photoHelp = useMemo(() => {
-    if (photoError) return photoError;
-    if (!photoFile) return "Optional JPEG, PNG, or WebP.";
-    if (!isOnline) {
-      return `${photoFile.name} is queued as photo intent; upload starts after connection returns.`;
-    }
-    return `${photoFile.name} will upload to private quarantine on save.`;
+    return photoHelpText({
+      fileName: photoFile?.name ?? null,
+      isOnline,
+      photoError,
+    });
   }, [isOnline, photoError, photoFile]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -127,19 +141,19 @@ export function FollowUpEntryComposer({
     }
 
     setSubmitState("syncing");
-    setMessage("Saving follow-up...");
+    setMessage("Saving private follow-up...");
 
     try {
       const result = await submitJournalEntryPayload(payload, {
         idempotencyKey: clientMutationId,
       });
       setSubmitState("synced");
-      setMessage("Synced.");
+      setMessage("Saved to your garden.");
       router.push(result.readbackUrl);
       router.refresh();
     } catch (error) {
       setSubmitState("failed");
-      setMessage(normalizeError(error));
+      setMessage(journalSaveErrorMessage(error));
     }
   }
 
@@ -153,26 +167,26 @@ export function FollowUpEntryComposer({
     setSubmitState("queued");
     setMessage(
       mutation.status === "queued"
-        ? "Saved locally. Sync when connection returns."
-        : "This follow-up is already in the local queue.",
+        ? localSavedMessage("follow-up")
+        : localDuplicateMessage("follow-up"),
     );
     await refreshQueue();
   }
 
   async function handleSync(mutation: OfflineMutation) {
     setSubmitState("syncing");
-    setMessage("Syncing queued follow-up...");
+    setMessage("Sending saved follow-up to your garden...");
 
     try {
       const result = await syncOfflineJournalEntryMutation(mutation);
       setSubmitState("synced");
-      setMessage("Synced.");
+      setMessage("Saved to your garden.");
       await refreshQueue();
       router.push(result.readbackUrl);
       router.refresh();
     } catch (error) {
       setSubmitState("failed");
-      setMessage(normalizeError(error));
+      setMessage(journalSaveErrorMessage(error));
       await refreshQueue();
     }
   }
@@ -231,7 +245,7 @@ export function FollowUpEntryComposer({
           {isOnline ? "Online" : "Offline"}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          {statusLabel(submitState)}
+          {journalSaveStateLabel(submitState)}
         </span>
       </div>
 
@@ -301,7 +315,7 @@ export function FollowUpEntryComposer({
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>
           <UploadCloud className="size-4" />
-          {isOnline ? "Save follow-up" : "Queue follow-up"}
+          {isOnline ? "Save follow-up" : "Save on this device"}
         </Button>
         <p
           className={
@@ -317,7 +331,7 @@ export function FollowUpEntryComposer({
       {mutations.length > 0 ? (
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-foreground">
-            Local queue for this plant
+            Saved follow-ups on this device
           </h3>
           <ul className="flex flex-col gap-2">
             {mutations.map((mutation) => (
@@ -343,7 +357,10 @@ export function FollowUpEntryComposer({
                 <div className="flex shrink-0 items-center gap-2">
                   {mutation.status === "synced" ? (
                     <Link
-                      href={mutationReadbackUrl(mutation) ?? `/garden/objects/${objectId}`}
+                      href={
+                        mutationReadbackUrl(mutation) ??
+                        `/garden/objects/${objectId}`
+                      }
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
                       Open
@@ -360,7 +377,7 @@ export function FollowUpEntryComposer({
                       onClick={() => void handleSync(mutation)}
                     >
                       <RefreshCw className="size-4" />
-                      {mutation.status === "failed" ? "Retry" : "Sync"}
+                      {offlineSaveActionLabel(mutation.status)}
                     </Button>
                   )}
                 </div>
@@ -379,23 +396,9 @@ function isObjectEntryMutationForObject(
 ) {
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   return (
-    payload.target === "plant_object_entry" && payload.plantObjectId === objectId
+    payload.target === "plant_object_entry" &&
+    payload.plantObjectId === objectId
   );
-}
-
-function statusLabel(status: SubmitState) {
-  switch (status) {
-    case "queued":
-      return "Queued";
-    case "syncing":
-      return "Syncing";
-    case "synced":
-      return "Synced";
-    case "failed":
-      return "Failed";
-    default:
-      return "Ready";
-  }
 }
 
 function statusIcon(status: OfflineMutation["status"]) {
@@ -419,10 +422,10 @@ function mutationTitle(mutation: OfflineMutation) {
 function mutationSubtitle(mutation: OfflineMutation) {
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   const parts = [
-    mutation.status,
-    "existing plant",
+    offlineSaveStatusSentence(mutation.status),
+    "Follow-up for this plant",
     payload.entryDate,
-    payload.photoIntent ? "photo intent" : null,
+    payload.photoIntent ? "Photo will upload later" : null,
   ].filter(Boolean);
 
   return parts.join(" · ");
@@ -431,8 +434,4 @@ function mutationSubtitle(mutation: OfflineMutation) {
 function mutationReadbackUrl(mutation: OfflineMutation) {
   const result = mutation.syncResult as { readbackUrl?: unknown } | undefined;
   return typeof result?.readbackUrl === "string" ? result.readbackUrl : null;
-}
-
-function normalizeError(error: unknown) {
-  return error instanceof Error ? error.message : "Sync failed.";
 }

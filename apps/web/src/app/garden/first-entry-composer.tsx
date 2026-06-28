@@ -26,7 +26,22 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
-import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
+import {
+  catalogSuggestionStatusLabel,
+  journalSaveErrorMessage,
+  journalSaveStateLabel,
+  localDuplicateMessage,
+  localSavedMessage,
+  offlineSaveActionLabel,
+  offlineSaveStatusLabel,
+  offlineSaveStatusSentence,
+  photoHelpText,
+  varietyStateLabel,
+} from "@/lib/garden/pilot-ux-copy";
+import {
+  COARSE_REGION_OPTIONS,
+  getCoarseRegionLabel,
+} from "@/lib/garden/regions";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
@@ -89,7 +104,7 @@ export function FirstEntryComposer({
   );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(
-    "The server strips photo metadata before readback.",
+    "Private by default. You choose later whether an entry becomes public.",
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
 
@@ -175,12 +190,11 @@ export function FirstEntryComposer({
   }, [catalogQuery, selectedCatalogItem, userAddedCatalogName]);
 
   const photoHelp = useMemo(() => {
-    if (photoError) return photoError;
-    if (!photoFile) return "Optional JPEG, PNG, or WebP.";
-    if (!isOnline) {
-      return `${photoFile.name} is queued as photo intent; upload starts after connection returns.`;
-    }
-    return `${photoFile.name} will upload to private quarantine on save.`;
+    return photoHelpText({
+      fileName: photoFile?.name ?? null,
+      isOnline,
+      photoError,
+    });
   }, [isOnline, photoError, photoFile]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -200,18 +214,18 @@ export function FirstEntryComposer({
     }
 
     setSubmitState("syncing");
-    setMessage("Saving entry...");
+    setMessage("Saving private entry...");
 
     try {
       const result = await submitJournalEntryPayload(payload, {
         idempotencyKey: clientMutationId,
       });
       setSubmitState("synced");
-      setMessage("Synced.");
+      setMessage("Saved to your garden.");
       router.push(result.readbackUrl);
     } catch (error) {
       setSubmitState("failed");
-      setMessage(normalizeError(error));
+      setMessage(journalSaveErrorMessage(error));
     }
   }
 
@@ -225,25 +239,25 @@ export function FirstEntryComposer({
     setSubmitState("queued");
     setMessage(
       mutation.status === "queued"
-        ? "Saved locally. Sync when connection returns."
-        : "This entry is already in the local queue.",
+        ? localSavedMessage("entry")
+        : localDuplicateMessage("entry"),
     );
     await refreshQueue();
   }
 
   async function handleSync(mutation: OfflineMutation) {
     setSubmitState("syncing");
-    setMessage("Syncing queued entry...");
+    setMessage("Sending saved entry to your garden...");
 
     try {
       const result = await syncOfflineJournalEntryMutation(mutation);
       setSubmitState("synced");
-      setMessage("Synced.");
+      setMessage("Saved to your garden.");
       await refreshQueue();
       router.push(result.readbackUrl);
     } catch (error) {
       setSubmitState("failed");
-      setMessage(normalizeError(error));
+      setMessage(journalSaveErrorMessage(error));
       await refreshQueue();
     }
   }
@@ -361,7 +375,7 @@ export function FirstEntryComposer({
           {isOnline ? "Online" : "Offline"}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          {statusLabel(submitState)}
+          {journalSaveStateLabel(submitState)}
         </span>
       </div>
 
@@ -417,7 +431,7 @@ export function FirstEntryComposer({
             onChange={(event) =>
               updateDraft("coarseRegionCode", event.target.value)
             }
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none disabled:opacity-60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             <option value="">Choose region</option>
             {COARSE_REGION_OPTIONS.map((region) => (
@@ -440,7 +454,7 @@ export function FirstEntryComposer({
               value={catalogQuery}
               onChange={(event) => updateCatalogQuery(event.target.value)}
               className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Search seeded catalog or keep unknown"
+              placeholder="Search catalog or keep without match"
               autoComplete="off"
             />
             {catalogQuery ? (
@@ -459,15 +473,15 @@ export function FirstEntryComposer({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selectedCatalogItem ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Selected: {selectedCatalogItem.displayName}
+              Matched in catalog: {selectedCatalogItem.displayName}
             </span>
           ) : userAddedCatalogName ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Added missing: {userAddedCatalogName}
+              Saved with your variety name: {userAddedCatalogName}
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              Variety: Unknown
+              No variety match yet
             </span>
           )}
           <button
@@ -475,7 +489,7 @@ export function FirstEntryComposer({
             onClick={chooseUnknownCatalog}
             className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
           >
-            Use Unknown
+            Keep without match
           </button>
           {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
             <button
@@ -483,7 +497,7 @@ export function FirstEntryComposer({
               onClick={addMissingCatalogName}
               className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
             >
-              Add missing name
+              Use this name
             </button>
           ) : null}
           {catalogStatus === "loading" ? (
@@ -514,7 +528,7 @@ export function FirstEntryComposer({
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {suggestion.status}
+                    {catalogSuggestionStatusLabel(suggestion.status)}
                   </span>
                 </button>
               </li>
@@ -589,7 +603,7 @@ export function FirstEntryComposer({
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>
           <UploadCloud className="size-4" />
-          {isOnline ? "Save first entry" : "Queue first entry"}
+          {isOnline ? "Save first entry" : "Save on this device"}
         </Button>
         <p
           className={
@@ -604,7 +618,9 @@ export function FirstEntryComposer({
 
       {mutations.length > 0 ? (
         <div className="flex flex-col gap-2 border-t border-border pt-4">
-          <h3 className="text-sm font-semibold text-foreground">Local queue</h3>
+          <h3 className="text-sm font-semibold text-foreground">
+            Saved entries on this device
+          </h3>
           <ul className="flex flex-col gap-2">
             {mutations.map((mutation) => (
               <li
@@ -646,7 +662,7 @@ export function FirstEntryComposer({
                       onClick={() => void handleSync(mutation)}
                     >
                       <RefreshCw className="size-4" />
-                      {mutation.status === "failed" ? "Retry" : "Sync"}
+                      {offlineSaveActionLabel(mutation.status)}
                     </Button>
                   )}
                 </div>
@@ -657,21 +673,6 @@ export function FirstEntryComposer({
       ) : null}
     </form>
   );
-}
-
-function statusLabel(status: SubmitState) {
-  switch (status) {
-    case "queued":
-      return "Queued";
-    case "syncing":
-      return "Syncing";
-    case "synced":
-      return "Synced";
-    case "failed":
-      return "Failed";
-    default:
-      return "Ready";
-  }
 }
 
 function statusIcon(status: OfflineMutation["status"]) {
@@ -696,30 +697,32 @@ function mutationSubtitle(mutation: OfflineMutation) {
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   if (payload.target === "plant_object_entry") {
     const parts = [
-      mutation.status,
-      "existing plant",
+      offlineSaveStatusSentence(mutation.status),
+      "Follow-up for an existing plant",
       payload.entryDate,
-      payload.photoIntent ? "photo intent" : null,
+      payload.photoIntent ? "Photo will upload later" : null,
     ].filter(Boolean);
 
     return parts.join(" · ");
   }
 
   const firstEntryPayload = payload as Partial<OfflineFirstPlantEntryPayload>;
-  const parts = [
-    mutation.status,
-    firstEntryPayload.plantName,
+  const regionLabel =
     firstEntryPayload.locationVisibility === "region" &&
     firstEntryPayload.coarseRegionCode
-      ? firstEntryPayload.coarseRegionCode
-      : "location hidden",
+      ? getCoarseRegionLabel(firstEntryPayload.coarseRegionCode)
+      : null;
+  const parts = [
+    offlineSaveStatusLabel(mutation.status),
+    firstEntryPayload.plantName,
+    regionLabel ? `Region: ${regionLabel}` : "Location hidden",
     firstEntryPayload.catalogItemId
-      ? "catalog selected"
+      ? varietyStateLabel("selected")
       : firstEntryPayload.userAddedCatalogName
-        ? "missing name"
-        : "unknown variety",
+        ? varietyStateLabel("user_added")
+        : varietyStateLabel("unknown"),
     firstEntryPayload.entryDate,
-    firstEntryPayload.photoIntent ? "photo intent" : null,
+    firstEntryPayload.photoIntent ? "Photo will upload later" : null,
   ].filter(Boolean);
 
   return parts.join(" · ");
@@ -728,10 +731,6 @@ function mutationSubtitle(mutation: OfflineMutation) {
 function mutationReadbackUrl(mutation: OfflineMutation) {
   const result = mutation.syncResult as { readbackUrl?: unknown } | undefined;
   return typeof result?.readbackUrl === "string" ? result.readbackUrl : null;
-}
-
-function normalizeError(error: unknown) {
-  return error instanceof Error ? error.message : "Sync failed.";
 }
 
 function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {

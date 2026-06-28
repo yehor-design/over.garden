@@ -8,10 +8,14 @@ describe("/first-publication-disclosure", () => {
   it("renders the current logged disclosure without placeholder wording", () => {
     const html = renderToStaticMarkup(<FirstPublicationDisclosurePage />);
 
-    expect(metadata.description).toContain("Closed-pilot OverGarden disclosure");
+    expect(metadata.description).toContain(
+      "Closed-pilot OverGarden disclosure",
+    );
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
-    expect(html).toContain("noindex is not a secrecy guarantee");
+    expect(html).toContain("not listed for search engines");
+    expect(html).toContain("not a secrecy guarantee");
     expect(html).toContain("410 Gone");
     expect(html).not.toMatch(/placeholder/i);
+    expect(html).not.toMatch(/\b(noindex|stripped derivatives?)\b/i);
   });
 });

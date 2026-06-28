@@ -9,10 +9,10 @@ export const PILOT_LEGAL_COPY_STATUS_LABEL =
 
 export const FIRST_PUBLICATION_DISCLOSURE_LINES = [
   "Publishing makes this journal entry publicly readable by people with access to the public page.",
-  "Public pages remain noindex during the closed pilot unless explicit promotion rules allow indexing; noindex is not a secrecy guarantee.",
+  "Public pages are not listed for search engines during the closed pilot unless explicit promotion rules allow indexing; this is not a secrecy guarantee.",
   "Precise location is not collected or shown in v0; only supported coarse regions can appear when you choose region visibility.",
-  "Original photos stay in private quarantine and are deleted after successful processing; public pages can show only stripped derivatives.",
-  "You can archive a public entry so its old public URL returns 410 Gone, leaves sitemap/search surfaces, and stays noindex.",
+  "Original photos stay in private processing storage and are deleted after successful processing; public pages can show only server-cleaned copies.",
+  "You can archive a public entry so its old public URL returns 410 Gone and leaves public discovery surfaces.",
 ] as const;
 
 export const ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES = [

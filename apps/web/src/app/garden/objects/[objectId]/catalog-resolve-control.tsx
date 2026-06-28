@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { VarietyState } from "@/db/schema";
+import {
+  catalogSuggestionStatusLabel,
+  varietyStateLabel,
+} from "@/lib/garden/pilot-ux-copy";
 
 interface CatalogResolveControlProps {
   objectId: string;
@@ -107,10 +111,11 @@ export function CatalogResolveControl({
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">
-          Resolve catalog match
+          Match this plant to the catalog
         </h2>
         <p className="text-sm text-muted-foreground">
-          Current: {currentVarietyText ?? "Unknown"} · {currentVarietyState}
+          Current: {currentVarietyText ?? "No variety name yet"} ·{" "}
+          {varietyStateLabel(currentVarietyState)}
         </p>
       </div>
 
@@ -146,11 +151,11 @@ export function CatalogResolveControl({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selected ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Selected: {selected.displayName}
+              Matched in catalog: {selected.displayName}
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              No catalog match selected
+              No catalog match chosen yet
             </span>
           )}
           {status === "loading" ? (
@@ -181,7 +186,7 @@ export function CatalogResolveControl({
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
-                    {suggestion.status}
+                    {catalogSuggestionStatusLabel(suggestion.status)}
                   </span>
                 </button>
               </li>

@@ -5,6 +5,7 @@ import {
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
+import { varietyStateLabel } from "@/lib/garden/pilot-ux-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
@@ -87,7 +88,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 </h2>
                 <p className="text-sm text-muted-foreground">
                   Open an existing object to add the next dated entry, including
-                  offline retry and optional photo.
+                  recovery when the connection is unstable and an optional
+                  photo.
                 </p>
               </div>
 
@@ -107,7 +109,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {object.varietyText ?? "Unknown variety"} ·{" "}
-                          {object.varietyState}
+                          {varietyStateLabel(object.varietyState)}
                         </span>
                       </span>
                       <span className="text-sm font-medium text-primary">
@@ -132,7 +134,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               <p className="text-sm text-muted-foreground">
                 {hasObjects
                   ? "Create a new object only when you are starting a new plant record."
-                  : "Save the first object-level note with a catalog match or Unknown."}
+                  : "Save the first plant note with a catalog match, your own variety name, or no match yet."}
               </p>
             </div>
 
