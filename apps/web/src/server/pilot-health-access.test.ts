@@ -10,12 +10,11 @@ describe("pilot health operator access", () => {
     });
   });
 
-  it("allows authenticated users while the temporary allowlist is empty", () => {
+  it("denies authenticated users while the allowlist is empty", () => {
     const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
 
     expect(resolvePilotHealthOperatorAccess(scope, "")).toEqual({
-      status: "allowed",
-      mode: "authenticated_user",
+      status: "denied",
     });
   });
 
@@ -28,5 +27,16 @@ describe("pilot health operator access", () => {
         "00000000-0000-0000-0000-000000000002",
       ),
     ).toEqual({ status: "denied" });
+  });
+
+  it("allows authenticated users inside a configured allowlist", () => {
+    const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
+
+    expect(
+      resolvePilotHealthOperatorAccess(
+        scope,
+        "00000000-0000-0000-0000-000000000001",
+      ),
+    ).toEqual({ status: "allowed", mode: "allowlist" });
   });
 });

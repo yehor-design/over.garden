@@ -20,10 +20,13 @@ describe("catalog curator auth gate", () => {
     ]);
   });
 
-  it("falls back to the temporary authenticated-user gate when no allowlist exists", () => {
-    expect(assertCatalogCuratorAccess(scope, undefined)).toEqual({
-      mode: "authenticated_user",
-    });
+  it("denies authenticated users when no allowlist exists", () => {
+    expect(() => assertCatalogCuratorAccess(scope, undefined)).toThrow(
+      "Catalog curation access denied.",
+    );
+    expect(() => assertCatalogCuratorAccess(scope, "")).toThrow(
+      "Catalog curation access denied.",
+    );
   });
 
   it("allows listed curator users", () => {

@@ -10,11 +10,30 @@ describe("erasure request operator access", () => {
     });
   });
 
-  it("reuses the temporary authenticated-user operator gate when no allowlist exists", () => {
+  it("denies authenticated users when no operator allowlist exists", () => {
     expect(
       resolveErasureRequestOperatorAccess(
         scopedToUser("00000000-0000-0000-0000-000000000001"),
+        "",
       ),
-    ).toEqual({ status: "allowed", mode: "authenticated_user" });
+    ).toEqual({ status: "denied" });
+  });
+
+  it("denies authenticated users outside a configured operator allowlist", () => {
+    expect(
+      resolveErasureRequestOperatorAccess(
+        scopedToUser("00000000-0000-0000-0000-000000000001"),
+        "00000000-0000-0000-0000-000000000002",
+      ),
+    ).toEqual({ status: "denied" });
+  });
+
+  it("allows authenticated users inside a configured operator allowlist", () => {
+    expect(
+      resolveErasureRequestOperatorAccess(
+        scopedToUser("00000000-0000-0000-0000-000000000001"),
+        "00000000-0000-0000-0000-000000000001",
+      ),
+    ).toEqual({ status: "allowed", mode: "allowlist" });
   });
 });

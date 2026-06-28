@@ -290,6 +290,7 @@ Vercel invariants:
 
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Public H6 smoke must use an unauthenticated public URL that returns OverGarden SSR HTML, not Vercel SSO.
+- Internal operator surfaces require explicit `CATALOG_CURATOR_USER_IDS` in the selected environment. Missing or empty values fail closed for catalog curation, pilot health, pilot smoke, and erasure request operator readback/actions; do not record the actual user IDs in docs, Linear, logs, or chat.
 - Keep Cloudflare from caching app HTML if the app domain is later proxied through Cloudflare. Vercel should own app HTML/ISR behavior.
 
 ## Local Development

@@ -3,11 +3,13 @@ import "server-only";
 import { optionalServerEnv } from "@/lib/env";
 import type { RequestScope } from "@/server/request-scope";
 
-export type CatalogCuratorAccessMode = "allowlist" | "authenticated_user";
+export type CatalogCuratorAccessMode = "allowlist";
 
 export interface CatalogCuratorAccess {
   mode: CatalogCuratorAccessMode;
 }
+
+const ACCESS_DENIED_ERROR = "Catalog curation access denied.";
 
 export function assertCatalogCuratorAccess(
   scope: RequestScope,
@@ -15,12 +17,8 @@ export function assertCatalogCuratorAccess(
 ): CatalogCuratorAccess {
   const allowedUserIds = parseCatalogCuratorUserIds(rawAllowedUserIds);
 
-  if (allowedUserIds.length === 0) {
-    return { mode: "authenticated_user" };
-  }
-
   if (!allowedUserIds.includes(scope.userId)) {
-    throw new Error("Catalog curation access denied.");
+    throw new Error(ACCESS_DENIED_ERROR);
   }
 
   return { mode: "allowlist" };

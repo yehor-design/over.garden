@@ -13,13 +13,14 @@ export type ErasureRequestOperatorAccess =
 
 export function resolveErasureRequestOperatorAccess(
   scope: RequestScope | null,
+  rawAllowedUserIds?: string,
 ): ErasureRequestOperatorAccess {
   if (!scope) return { status: "sign_in_required" };
 
   try {
     return {
       status: "allowed",
-      mode: assertCatalogCuratorAccess(scope).mode,
+      mode: assertCatalogCuratorAccess(scope, rawAllowedUserIds).mode,
     };
   } catch {
     return { status: "denied" };

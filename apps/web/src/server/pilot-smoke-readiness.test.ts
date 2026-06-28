@@ -9,6 +9,7 @@ const productionLikeEnv = {
   BETTER_AUTH_URL: "https://over-garden.vercel.app",
   PUBLIC_SITE_URL: "https://over-garden.vercel.app",
   BETTER_AUTH_SECRET: "auth-secret-that-must-not-leak",
+  CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   DATABASE_URL:
     "postgresql://overgarden:database-secret@db.example.com:5432/overgarden",
   DIRECT_URL:
@@ -41,6 +42,7 @@ describe("pilot smoke readiness", () => {
     const serialized = JSON.stringify(readout);
 
     expect(serialized).not.toContain("auth-secret-that-must-not-leak");
+    expect(serialized).not.toContain("operator-user-id-that-must-not-leak");
     expect(serialized).not.toContain("database-secret");
     expect(serialized).not.toContain("direct-database-secret");
     expect(serialized).not.toContain("r2-access-key-that-must-not-leak");
@@ -109,6 +111,28 @@ describe("pilot smoke readiness", () => {
     ).toMatchObject({
       severity: "manual",
       summary: expect.stringContaining("journal_entry_index"),
+    });
+  });
+
+  it("blocks deployed smoke when the explicit operator allowlist is missing", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        CATALOG_CURATOR_USER_IDS: "",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+
+    expect(readout.overall).toBe("blocked");
+    expect(
+      findCheck(
+        readout.sections.flatMap((section) => section.checks),
+        "catalog-curator-user-ids",
+      ),
+    ).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("fail closed"),
     });
   });
 

@@ -2,6 +2,7 @@ import "server-only";
 
 import { resolveDatabaseConnection } from "@/db/connection";
 import { vercelUrl } from "@/lib/runtime-url";
+import { parseCatalogCuratorUserIds } from "@/server/catalog-curator-auth";
 import { pingDatabase } from "@/server/health-repository";
 
 type EnvLike = Record<string, string | undefined>;
@@ -107,6 +108,7 @@ export function buildPilotSmokeReadiness({
           "BETTER_AUTH_SECRET",
           "Better Auth secret",
         ),
+        checkOperatorAllowlist(env),
         checkR2Configuration(env),
         checkRequiredSecretPresence(
           env,
@@ -403,6 +405,30 @@ function checkR2Configuration(env: EnvLike): PilotSmokeCheck {
         : "R2 quarantine/public derivative boundary is configured.",
     evidence:
       "Evidence may mention the public derivative host only. Never include quarantine keys or signed upload URLs.",
+  };
+}
+
+function checkOperatorAllowlist(env: EnvLike): PilotSmokeCheck {
+  if (parseCatalogCuratorUserIds(env.CATALOG_CURATOR_USER_IDS).length === 0) {
+    return {
+      id: "catalog-curator-user-ids",
+      label: "Operator allowlist",
+      severity: "fail",
+      summary:
+        "CATALOG_CURATOR_USER_IDS is empty, so internal operator surfaces fail closed.",
+      evidence:
+        "Evidence may say missing/present only. Do not copy user IDs into docs, Linear, logs, or chat.",
+    };
+  }
+
+  return {
+    id: "catalog-curator-user-ids",
+    label: "Operator allowlist",
+    severity: "pass",
+    summary:
+      "CATALOG_CURATOR_USER_IDS is configured for explicit operator access.",
+    evidence:
+      "Evidence may say present only. Do not copy user IDs into docs, Linear, logs, or chat.",
   };
 }
 

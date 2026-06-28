@@ -20,7 +20,7 @@ Verified through the connected Vercel app on 2026-06-27.
 - Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
@@ -62,10 +62,11 @@ Forbidden evidence:
 1. Pick one smoke URL:
    - Production public URL once deployment protection is disabled for the pilot audience.
    - Protected preview only when the goal is internal deployment inspection, not public H6 validation.
-2. Open `/garden/pilot-smoke` as an operator.
-3. Treat any `fail` check as a blocker for live pilot.
-4. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
-5. Confirm Cloudflare is not caching app HTML if the app domain is routed through Cloudflare.
+2. Confirm `CATALOG_CURATOR_USER_IDS` is set to the intended Better Auth operator user ID in the selected environment. Do not copy the value into evidence.
+3. Open `/garden/pilot-smoke` as an allowlisted operator.
+4. Treat any `fail` check as a blocker for live pilot.
+5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
+6. Confirm Cloudflare is not caching app HTML if the app domain is routed through Cloudflare.
 
 Header probes:
 
@@ -144,6 +145,7 @@ Do not mark OVE-27 Done if any of the following are true:
 
 - The selected live URL only works locally or only behind Vercel SSO when the goal is public pilot validation.
 - Sign-up/sign-in fails on the deployed URL.
+- `CATALOG_CURATOR_USER_IDS` is missing or empty for the selected environment, leaving operator surfaces inaccessible by design.
 - The first-entry or follow-up flow bypasses canonical server routes/repositories.
 - A public page exposes precise location, raw private journal evidence, email, quarantine/original media keys, or signed upload URLs.
 - A public photo renders from anything other than a stripped derivative.
