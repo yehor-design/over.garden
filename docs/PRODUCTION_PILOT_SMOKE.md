@@ -137,19 +137,19 @@ Non-destructive only: this slice does not perform any restore-over-production, b
 ### Backup and PITR status (managed Postgres)
 
 - Cluster: `overgarden-postgres-prod-fra1` (DigitalOcean Managed PostgreSQL, `FRA1`).
-- Status: `UNVERIFIED-NEEDS-OPERATOR` as of 2026-06-29. The repo/sandbox holds no DigitalOcean credentials, so backup/PITR state was not machine-verified. This is recorded honestly as needs-operator, not as a pass.
-- Closed-pilot interpretation: an unconfirmed backup/PITR posture is a launch blocker for inviting real users. Once confirmed, record pass/degraded with the date in `docs/INFRASTRUCTURE_REGISTRY.md`.
+- Status: `pass` as of 2026-06-29. `doctl databases list` verified the production cluster online in `fra1`; `doctl databases backups <cluster-id>` returned managed backup rows, with the latest observed backup on 2026-06-28 17:33 UTC and a small backup size class (<0.1 GiB). The PITR/retention window is recorded as 7d per DigitalOcean Managed PostgreSQL docs/provider default; the provider output did not show a different window.
+- Closed-pilot interpretation: backup/PITR posture is no longer a launch blocker for the closed pilot. A destructive restore-over-production drill remains out of scope and still requires explicit maintainer sign-off.
 - Operator verification (redacted):
   1. Dashboard: DigitalOcean Cloud -> Databases -> `overgarden-postgres-prod-fra1` -> Backups/Settings. Confirm automatic daily backups are enabled; note the PITR/retention window and the latest backup timestamp.
-  2. CLI/API (secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups list <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded.
+  2. CLI/API (secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded.
   3. To validate recoverability, fork/restore into a NEW cluster (`doctl databases fork ...`). Never restore over production.
 - Allowed evidence: backup-enabled boolean, retention/PITR window, latest backup date, check date. Forbidden: database URLs, the CA body, credentials, doctl/API tokens.
 
 ### Worker and Meilisearch process management
 
 - Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1` with containers `meilisearch`, `matching-api`, `matching-worker`, `caddy`.
-- Restart policy: containers run with a Docker restart policy (`unless-stopped`/`always`) so the worker, API, and Meilisearch return after a crash or droplet reboot. Operator confirms live via `docker compose ps` and a restart-policy inspect.
-- Health endpoints: matching `https://matching.over.garden/health` (`ok`, ICU present) and Meilisearch `https://meili.over.garden/health` (`available`).
+- Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `meilisearch`, `matching-api`, `matching-worker`, and `caddy`, so the worker, API, and Meilisearch return after a crash or droplet reboot.
+- Health endpoints: live-confirmed on 2026-06-29: matching `https://matching.over.garden/health` returned `ok` with ICU present, and Meilisearch `https://meili.over.garden/health` returned `available`.
 - Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims `processing` rows once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Handlers are idempotent (Meili upsert by primary key / delete by id), so a restart mid-job re-delivers the work at-least-once without duplicating or corrupting the public index. Failed jobs back off and retry; unknown kinds fail with `last_error` rather than being marked done.
 
 ### Deterministic local recovery proof
@@ -195,6 +195,24 @@ public_safe_contract: pass | fail
 stale_job_reclaim: pass(local-harness) | pass(live) | fail
 result: pass | degraded | blocker | UNVERIFIED-NEEDS-OPERATOR
 notes: <redacted; no DB URLs, CA body, credentials, tokens, journal text, Meili keys, or user-tied row IDs>
+```
+
+### OVE-39 live evidence (redacted)
+
+```
+date: 2026-06-29
+db_cluster_class: overgarden-postgres-prod-fra1 (DO managed, FRA1; pg 18; db-s-1vcpu-1gb; online)
+backup_enabled: pass
+pitr_window: 7d per DO Managed PostgreSQL docs/provider default; provider output showed no override
+latest_backup_date: 2026-06-28 17:33 UTC
+worker_restart_policy: unless-stopped for matching-worker, matching-api, meilisearch, caddy
+worker_health: ok
+meili_health: available
+restart_recovery: index_done + unindex_done
+public_safe_contract: pass
+stale_job_reclaim: pass(local-harness)
+result: pass
+notes: redacted; only matching-worker was restarted; no restore/fork, schema drop, bulk delete, production DB restart, or all-container restart was performed; evidence recorded only job-state classes, public-safe document key names, privacy booleans, and HTTP status classes
 ```
 
 ### OVE-39 Done gate
