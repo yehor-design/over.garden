@@ -43,6 +43,7 @@ import {
   getCoarseRegionLabel,
 } from "@/lib/garden/regions";
 import {
+  createOfflinePhotoIntent,
   enqueueOfflineMutation,
   listOfflineMutations,
   type OfflineFirstPlantEntryPayload,
@@ -206,7 +207,14 @@ export function FirstEntryComposer({
       return;
     }
 
-    const payload = buildPayload();
+    let payload: OfflineJournalEntryPayload;
+    try {
+      payload = await buildPayload();
+    } catch {
+      setSubmitState("failed");
+      setMessage("We couldn't read that photo on this device. Choose it again.");
+      return;
+    }
 
     if (!isOnline) {
       await enqueuePayload(payload);
@@ -262,7 +270,11 @@ export function FirstEntryComposer({
     }
   }
 
-  function buildPayload(): OfflineJournalEntryPayload {
+  async function buildPayload(): Promise<OfflineJournalEntryPayload> {
+    const photoIntent = photoFile
+      ? await createOfflinePhotoIntent(photoFile)
+      : null;
+
     return {
       target: "first_plant_entry",
       ...draft,
@@ -278,15 +290,7 @@ export function FirstEntryComposer({
       clientMutationId,
       activationSource,
       syncStatus: isOnline ? "online" : "offline_queued",
-      photoIntent: photoFile
-        ? {
-            fileName: photoFile.name,
-            contentType: photoFile.type,
-            size: photoFile.size,
-            lastModified: photoFile.lastModified,
-            blob: photoFile,
-          }
-        : null,
+      photoIntent,
     };
   }
 

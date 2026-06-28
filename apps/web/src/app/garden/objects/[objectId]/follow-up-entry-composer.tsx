@@ -30,6 +30,7 @@ import {
   photoHelpText,
 } from "@/lib/garden/pilot-ux-copy";
 import {
+  createOfflinePhotoIntent,
   enqueueOfflineMutation,
   listOfflineMutations,
   type OfflineJournalEntryPayload,
@@ -133,7 +134,14 @@ export function FollowUpEntryComposer({
       return;
     }
 
-    const payload = buildPayload();
+    let payload: OfflineJournalEntryPayload;
+    try {
+      payload = await buildPayload();
+    } catch {
+      setSubmitState("failed");
+      setMessage("We couldn't read that photo on this device. Choose it again.");
+      return;
+    }
 
     if (!isOnline) {
       await enqueuePayload(payload);
@@ -191,7 +199,11 @@ export function FollowUpEntryComposer({
     }
   }
 
-  function buildPayload(): OfflineJournalEntryPayload {
+  async function buildPayload(): Promise<OfflineJournalEntryPayload> {
+    const photoIntent = photoFile
+      ? await createOfflinePhotoIntent(photoFile)
+      : null;
+
     return {
       target: "plant_object_entry",
       plantObjectId: objectId,
@@ -200,15 +212,7 @@ export function FollowUpEntryComposer({
       entryDate: draft.entryDate,
       clientMutationId,
       syncStatus: isOnline ? "online" : "offline_queued",
-      photoIntent: photoFile
-        ? {
-            fileName: photoFile.name,
-            contentType: photoFile.type,
-            size: photoFile.size,
-            lastModified: photoFile.lastModified,
-            blob: photoFile,
-          }
-        : null,
+      photoIntent,
     };
   }
 

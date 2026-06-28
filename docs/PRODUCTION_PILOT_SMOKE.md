@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof
 Last updated: 2026-06-28
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -49,6 +49,74 @@ Scope and limitations recorded honestly:
 - Canonical `over.garden` domain attach is deferred to a later issue; the pilot URL is the `.vercel.app` production alias.
 - The OS file-picker upload click was not agent-driven; the photo derivative guarantee is proven via the authenticated media API plus a live CORS-preflight check for the pilot origin, not a browser file-picker run.
 - Worker/search index/unindex execution relies on the standing OVE-36 live proof rather than a fresh run for this closure.
+
+## OVE-38 iOS Safari Offline Entry + Photo Field Proof
+
+Goal: prove that a real pilot gardener on iOS Safari can start a first or follow-up journal entry with one photo while offline or under forced network failure, see an honest saved-on-this-device state, restore connectivity, retry manually, and end with exactly one canonical server entry plus derivative-only authenticated readback, with no duplicate on repeated retries.
+
+This is a field-behavior gate. The acceptance bar is the offline path on a real iOS Safari device against the OVE-37 pilot URL. Automation that is not real iOS Safari can only de-risk, never satisfy, the gate.
+
+### Code hardening landed for this proof (2026-06-28)
+
+- The offline composers copy a picked photo's bytes into an in-memory `Blob` at capture time (`createOfflinePhotoIntent` in `apps/web/src/lib/offline/queue.ts`) so the queued photo intent is owned by IndexedDB rather than a file-backed `File` reference. iOS Safari/WebKit can drop a `File`'s backing store across reload or tab eviction, which is exactly the offline -> reconnect -> retry window for a queued photo.
+- First-entry and same-object follow-up composers build the payload asynchronously and fail closed with user-facing copy ("We couldn't read that photo on this device. Choose it again.") if the photo cannot be read, instead of silently queueing an unreadable intent.
+- Retry continues to reuse the stable offline idempotency key (`client_mutation_id`); `processPhotoIntent` throws an explicit user-facing error if a queued intent has no readable blob, and failed sync keeps title/body/date/photo intent for another retry.
+
+### Deterministic automated evidence (not a substitute for the device run)
+
+- Node + fake-indexeddb unit tests (`pnpm test`, 166 passing) prove: the photo bytes are copied (the persisted value is a `Blob`, not the `File`), the bytes stay readable after an IndexedDB round-trip, queue/retry is idempotent through `(owner_user_id, client_mutation_id)` with no duplicate, and failed sync retains content plus photo intent for retry.
+- Closest-available mobile WebKit field-equivalent: Playwright WebKit with the iPhone 13 device descriptor (`isWebKit === true`, `isMobile === true`). On the engine it confirmed an entry plus photo intent queue while `navigator.onLine === false` and that title/body/date persist in IndexedDB.
+
+### Field-equivalent limitations recorded honestly
+
+- This Playwright WebKit build cannot read an IDB-round-tripped blob's bytes back (`arrayBuffer()` raises `NotReadableError`) and crashes on any page load against an origin that already holds IndexedDB data. Both are automation-build artifacts, not iOS Safari behavior (production PWAs store and read IDB blobs on iOS), so the byte-level retry chain could not be completed in this automation engine and was proven in Node instead.
+- The mobile WebKit field-equivalent therefore de-risks the offline-capture half on the WebKit engine but does not satisfy the failure gate. A real iOS Safari device run is still required.
+
+### Required manual real-device smoke (iOS Safari)
+
+Run against the selected OVE-37 pilot URL. Record only redacted evidence per the rules below.
+
+1. On a real iOS device, open Safari (not an in-app/embedded webview) and load the pilot URL; sign in as the pilot smoke user.
+2. Start a first plant entry: enter space, plant, title/body, keep `hidden` or safe region-level location, choose catalog match / user-added / Unknown, and attach one photo from the library or camera.
+3. Put the device offline (enable Airplane Mode, or use a forced-failure network) before submitting.
+4. Submit. Confirm the UI shows an honest saved-on-this-device state and a queued item under "Saved entries on this device" that preserves title/body/date/object/catalog state and indicates a photo will upload later.
+5. Optionally background Safari and reopen it (or reload the tab) while still offline; confirm the queued item and its photo intent are still present.
+6. Restore connectivity. Tap retry. Confirm the state moves through syncing to synced (or to a failed state with an understandable retry path that did not lose content/photo intent).
+7. Tap retry again one or more times after success to probe duplication.
+8. Open the authenticated object readback. Confirm exactly one server entry exists for the mutation and that any media renders as a derivative-only (`media.over.garden` class) image, or shows a safe recoverable media-processing state. Do not copy the journal title/body into evidence.
+9. If logged in with an existing object, repeat steps 2-8 for a same-object follow-up entry.
+
+### OVE-38 evidence template (fill from the device run, redacted)
+
+```
+date: <YYYY-MM-DD>
+pilot_url_class: over-garden.vercel.app (OVE-37 pilot alias)
+device_class: <e.g. iPhone, iOS Safari major version class>
+runtime_class: mobile Safari (WebKit), real device
+path: first_entry | follow_up_entry
+offline_method: airplane_mode | forced_network_failure
+queued_offline: pass | fail              # navigator offline, saved-on-this-device state shown
+queued_fields_preserved: pass | fail     # title/body/date/object/catalog + one photo intent
+survived_reopen_offline: pass | fail | n/a
+retry_route: /api/garden/entries
+retry_result: synced | failed_recoverable
+server_entries_for_mutation: <count, must be 1>
+repeat_retry_duplicate: none | DUPLICATE
+media_readback_class: derivative_only(media.over.garden) | recoverable_processing | none
+failed_sync_retained_content: pass | fail | n/a
+result: pass | fail
+notes: <redacted; no journal text, no signed URLs, no quarantine/original keys, no EXIF, no precise location>
+```
+
+### OVE-38 Done gate
+
+Do not mark OVE-38 Done if any of the following are true:
+
+- Offline success is only proven on desktop or in a non-iOS engine; the real iOS Safari device run on the pilot URL has not passed.
+- A retry can create more than one server entry for the same mutation.
+- A failed sync loses body/title/photo intent or hides the retry path behind scaffold language.
+- Authenticated readback shows raw (non-derivative) media or a non-recoverable media gap after a successful sync.
+- The evidence requires exposing private journal/media details: raw title/body, signed upload URLs, quarantine/original keys, EXIF, or precise location.
 
 ## Product Assumption
 

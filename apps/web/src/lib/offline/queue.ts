@@ -195,3 +195,22 @@ export async function updateOfflineMutationPayload(
 
   return offlineDb.mutations.get(id);
 }
+
+// A File from <input type="file"> is backed by the on-disk file. iOS Safari and
+// other WebKit builds can drop that backing store across a reload or tab
+// eviction, which is exactly the offline -> reconnect -> retry window for a
+// queued photo. Copy the bytes into an in-memory Blob so the persisted intent is
+// owned by IndexedDB and survives that window instead of pointing at a file that
+// may no longer be readable.
+export async function createOfflinePhotoIntent(
+  file: File,
+): Promise<OfflinePhotoIntent> {
+  const bytes = await file.arrayBuffer();
+  return {
+    fileName: file.name,
+    contentType: file.type,
+    size: file.size,
+    lastModified: file.lastModified,
+    blob: new Blob([bytes], { type: file.type }),
+  };
+}

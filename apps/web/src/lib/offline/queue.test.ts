@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  createOfflinePhotoIntent,
   enqueueOfflineMutation,
   getOfflineMutation,
   listOfflineMutations,
@@ -83,6 +84,60 @@ describe("offline queue", () => {
     expect(failed?.lastError).toBe("Network failed.");
     expect(failed?.idempotencyKey).toBe("entry-1");
     expect(failed?.payload).toEqual(payload);
+  });
+
+  it("copies file bytes into an in-memory blob for the offline photo intent", async () => {
+    const bytes = new Uint8Array([1, 2, 3, 4, 5]);
+    const file = new File([bytes], "tomato.jpg", {
+      type: "image/jpeg",
+      lastModified: 1_700_000_000_000,
+    });
+
+    const intent = await createOfflinePhotoIntent(file);
+    const blob = intent.blob;
+    if (!blob) throw new Error("Expected a copied photo blob.");
+
+    expect(intent.fileName).toBe("tomato.jpg");
+    expect(intent.contentType).toBe("image/jpeg");
+    expect(intent.size).toBe(file.size);
+    expect(intent.lastModified).toBe(1_700_000_000_000);
+    expect(blob).toBeInstanceOf(Blob);
+    // The persisted blob must not be the file-backed File reference itself; iOS
+    // Safari/WebKit can lose that backing store across reload/tab eviction.
+    expect(blob).not.toBe(file);
+    expect(blob instanceof File).toBe(false);
+    expect(new Uint8Array(await blob.arrayBuffer())).toEqual(bytes);
+  });
+
+  it("keeps offline photo bytes readable after an IndexedDB round-trip", async () => {
+    const bytes = new Uint8Array([9, 8, 7, 6, 5, 4, 3, 2, 1, 0]);
+    const file = new File([bytes], "pepper.webp", { type: "image/webp" });
+    const payload: OfflineJournalEntryPayload = {
+      spaceName: "Greenhouse",
+      plantName: "Pepper",
+      title: "Offline with photo",
+      body: "Saved while connectivity dropped in the greenhouse.",
+      entryDate: "2026-06-28",
+      clientMutationId: "entry-photo-roundtrip",
+      photoIntent: await createOfflinePhotoIntent(file),
+    };
+
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload,
+      idempotencyKey: "entry-photo-roundtrip",
+    });
+
+    const stored = await getOfflineMutation(mutation.id);
+    const storedIntent = (stored?.payload as OfflineJournalEntryPayload)
+      .photoIntent;
+    const storedBlob = storedIntent?.blob;
+    if (!storedBlob) throw new Error("Expected a persisted photo blob.");
+
+    expect(storedIntent?.fileName).toBe("pepper.webp");
+    expect(storedBlob).toBeInstanceOf(Blob);
+    expect(storedBlob instanceof File).toBe(false);
+    expect(new Uint8Array(await storedBlob.arrayBuffer())).toEqual(bytes);
   });
 
   it("stores processed media asset id before the final entry sync", async () => {
