@@ -56,6 +56,8 @@ Goal: prove that a real pilot gardener on iOS Safari can start a first or follow
 
 This is a field-behavior gate. The acceptance bar is the offline path on a real iOS Safari device against the OVE-37 pilot URL. Automation that is not real iOS Safari can only de-risk, never satisfy, the gate.
 
+Result (2026-06-29): the maintainer ran the manual real-iOS-Safari smoke on the OVE-37 pilot URL and confirmed pass. The gate is satisfied and OVE-38 is closed. See "Manual device smoke result" below.
+
 ### Code hardening landed for this proof (2026-06-28)
 
 - The offline composers copy a picked photo's bytes into an in-memory `Blob` at capture time (`createOfflinePhotoIntent` in `apps/web/src/lib/offline/queue.ts`) so the queued photo intent is owned by IndexedDB rather than a file-backed `File` reference. iOS Safari/WebKit can drop a `File`'s backing store across reload or tab eviction, which is exactly the offline -> reconnect -> retry window for a queued photo.
@@ -70,11 +72,17 @@ This is a field-behavior gate. The acceptance bar is the offline path on a real 
 ### Field-equivalent limitations recorded honestly
 
 - This Playwright WebKit build cannot read an IDB-round-tripped blob's bytes back (`arrayBuffer()` raises `NotReadableError`) and crashes on any page load against an origin that already holds IndexedDB data. Both are automation-build artifacts, not iOS Safari behavior (production PWAs store and read IDB blobs on iOS), so the byte-level retry chain could not be completed in this automation engine and was proven in Node instead.
-- The mobile WebKit field-equivalent therefore de-risks the offline-capture half on the WebKit engine but does not satisfy the failure gate. A real iOS Safari device run is still required.
+- The mobile WebKit field-equivalent therefore de-risks the offline-capture half on the WebKit engine but does not satisfy the failure gate. A real iOS Safari device run was therefore still required; it was completed on 2026-06-29 (see next).
 
-### Required manual real-device smoke (iOS Safari)
+### Manual device smoke result (2026-06-29, maintainer-confirmed)
 
-Run against the selected OVE-37 pilot URL. Record only redacted evidence per the rules below.
+- The maintainer ran the manual real-iOS-Safari field smoke on the OVE-37 pilot URL on a real iOS device and confirmed the full offline path works: an entry with a photo queued while offline, manual retry after reconnect reached the canonical `/api/garden/entries` path, exactly one server entry resulted with no duplicate on repeated retries, and authenticated readback showed derivative-only media. The saved-on-this-device and retry states were understandable.
+- Result: pass. This satisfies the OVE-38 field-behavior gate, so OVE-38 is closed (Done).
+- Device/browser version specifics were maintainer-confirmed but not captured into this redacted record; the structured evidence template below can be filled in if a fuller redacted record is wanted later.
+
+### Manual real-device smoke procedure (iOS Safari)
+
+This is the procedure used for the 2026-06-29 pass and the standing re-run script. Run against the selected OVE-37 pilot URL. Record only redacted evidence per the rules below.
 
 1. On a real iOS device, open Safari (not an in-app/embedded webview) and load the pilot URL; sign in as the pilot smoke user.
 2. Start a first plant entry: enter space, plant, title/body, keep `hidden` or safe region-level location, choose catalog match / user-added / Unknown, and attach one photo from the library or camera.
@@ -109,6 +117,8 @@ notes: <redacted; no journal text, no signed URLs, no quarantine/original keys, 
 ```
 
 ### OVE-38 Done gate
+
+Result 2026-06-29: satisfied. The maintainer-confirmed manual real-iOS-Safari smoke passed, so none of the blocking conditions below hold and OVE-38 is Done. The conditions are retained as the standing regression bar for any future change to this offline path.
 
 Do not mark OVE-38 Done if any of the following are true:
 
