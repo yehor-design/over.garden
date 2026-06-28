@@ -204,6 +204,39 @@ export function buildPilotSmokeReadiness({
         },
       ],
     },
+    {
+      id: "durability-recovery",
+      title: "Backup and worker recovery",
+      checks: [
+        {
+          id: "database-backup-pitr",
+          label: "Managed Postgres backup and PITR",
+          severity: "manual",
+          summary:
+            "DigitalOcean managed Postgres backup/PITR for the production cluster is UNVERIFIED-NEEDS-OPERATOR (2026-06-29): this readout has no provider credentials, so an operator must confirm daily backups and a point-in-time window before inviting pilot users. Treat unconfirmed backups as a launch blocker.",
+          evidence:
+            "Verify in the DigitalOcean dashboard (Databases -> cluster -> Backups/Settings) or via `doctl databases backups list <cluster-id>`. Record only the cluster name class, backup-enabled boolean, retention/PITR window, and check date. Never copy database URLs, the CA body, credentials, or doctl tokens into evidence. See docs/INFRASTRUCTURE_REGISTRY.md.",
+        },
+        {
+          id: "worker-process-manager",
+          label: "Worker/Meili process manager",
+          severity: "manual",
+          summary:
+            "The worker/Meilisearch droplet runs Docker Compose with a restart policy and health endpoints; stale processing jobs are reclaimed after the worker visibility timeout. Confirm the live restart policy and container health before the pilot.",
+          evidence:
+            "Confirm `restart:` policy and container health on the droplet (e.g. `docker compose ps`, restart-policy inspect, matching `/health` and Meili `/health`). Record only container status classes and health booleans. Do not copy worker env files, Meilisearch keys, or database URLs.",
+        },
+        {
+          id: "worker-restart-recovery",
+          label: "Worker restart/recovery smoke",
+          severity: "manual",
+          summary:
+            "After restarting the matching-worker, a publish/archive search job must still reach done and keep the public-safe document contract. The deterministic local recovery harness (services/matching/tests/test_worker_recovery.py) proves stale-job reclaim, journal index/unindex to done, the public-safe contract, and idempotent re-delivery.",
+          evidence:
+            "For the live droplet smoke, record only job state transitions, document presence/absence, document field keys, and privacy booleans. Do not copy journal text, Meilisearch keys, or job payload identifiers tied to a user.",
+        },
+      ],
+    },
   ];
 
   const allChecks = sections.flatMap((section) => section.checks);
@@ -233,11 +266,16 @@ export function buildPilotSmokeReadiness({
       "Archive the published entry and confirm the old public URL returns 410 Gone.",
       "Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 counts update without raw private data.",
       "Verify catalog typeahead or matching service health, then prove journal_entry_index and journal_entry_unindex job processing with redacted job_queue and Meilisearch evidence.",
+      "Confirm durability before inviting users: managed Postgres backup/PITR status and a worker restart/recovery smoke that keeps the public-safe search contract. Record both with redacted evidence.",
     ],
     references: [
       {
         label: "SDD roadmap",
         path: "docs/SDD_VERTICAL_SLICE_ROADMAP.md",
+      },
+      {
+        label: "Production pilot smoke",
+        path: "docs/PRODUCTION_PILOT_SMOKE.md",
       },
       {
         label: "Infrastructure registry",

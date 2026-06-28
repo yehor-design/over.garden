@@ -114,6 +114,43 @@ describe("pilot smoke readiness", () => {
     });
   });
 
+  it("surfaces backup/PITR and worker recovery as explicit manual durability checks", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    const backup = findCheck(checks, "database-backup-pitr");
+    expect(backup).toMatchObject({ severity: "manual" });
+    expect(backup?.summary).toContain("UNVERIFIED-NEEDS-OPERATOR");
+
+    expect(findCheck(checks, "worker-process-manager")).toMatchObject({
+      severity: "manual",
+    });
+    expect(findCheck(checks, "worker-restart-recovery")).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("public-safe"),
+    });
+
+    // Manual durability work is explicit, but it does not by itself flip a
+    // production-like environment out of the ready state.
+    expect(readout.overall).toBe("ready");
+  });
+
+  it("never leaks the production cluster name or doctl tokens in durability evidence", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+    const serialized = JSON.stringify(readout);
+
+    expect(serialized).not.toContain("overgarden-postgres-prod-fra1");
+    expect(serialized).not.toContain("do-user-");
+  });
+
   it("blocks deployed smoke when the explicit operator allowlist is missing", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
