@@ -168,9 +168,9 @@ Invariants:
 
 ## DigitalOcean
 
-Status: production Managed PostgreSQL is provisioned for the pilot smoke.
+Status: production Managed PostgreSQL plus worker/Meilisearch Droplet are provisioned for the pilot smoke.
 
-Last verified: 2026-06-27 through a direct TLS database ping and schema count.
+Last verified: 2026-06-28 through a direct TLS database ping, schema count, worker health, and redacted journal index/unindex smoke.
 
 Project:
 
@@ -194,12 +194,35 @@ Operational state:
 - On 2026-06-27, `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` were installed in Vercel production and in the active OVE-27 branch preview.
 - On 2026-06-27, the app schema and Better Auth tables were bootstrapped with `pnpm db:bootstrap -- --env-file /private/tmp/overgarden-db.env --ca-file /private/tmp/overgarden-db-ca.crt`.
 - On 2026-06-27, the managed database had 15 public base tables after bootstrap.
+- On 2026-06-28, `job_queue` journal index/unindex jobs were processed by the deployed worker against the production database during the OVE-36 redacted live smoke.
 
 Database invariants:
 
 - Do not store database passwords, full connection URLs, or CA certificate bodies in git, Linear, chat, or docs.
 - Vercel runtime should prefer canonical `DATABASE_URL` and `DIRECT_URL`; do not reintroduce legacy empty `POSTGRES_*` aliases as active production configuration.
 - `DATABASE_SSL_CA` may be multi-line in Vercel. The app runtime strips `sslmode` from the connection string when a CA is configured so Node `pg` uses the explicit CA with strict verification.
+
+Worker and Meilisearch Droplet:
+
+- Droplet name: `overgarden-worker-prod-fra1`
+- Region: Frankfurt, Datacenter 1, `FRA1`
+- Current size: Basic 1 vCPU, 1 GB RAM
+- Runtime: Docker Compose under `/opt/overgarden`
+- Public matching health URL: `https://matching.over.garden/health`
+- Public Meilisearch URL: `https://meili.over.garden`
+- Reverse proxy/TLS: Caddy on the Droplet
+- Containers: `meilisearch`, `matching-api`, `matching-worker`, `caddy`
+- Matching API health returned status `ok` with ICU present on 2026-06-28.
+- Meilisearch health returned status `available` with authenticated access on 2026-06-28.
+
+Worker and search invariants:
+
+- Meilisearch is a derived public index only; Postgres remains the source of truth.
+- `MEILI_MASTER_KEY`, `MEILISEARCH_API_KEY`, and `MATCHING_SERVICE_TOKEN` must stay only in platform/env secret stores.
+- Do not expose Meilisearch keys, worker env files, database URLs, canary row identifiers, or indexed journal text in docs, Linear, or chat.
+- `matching-worker` must process `journal_entry_index` and `journal_entry_unindex` idempotently and reclaim stale `processing` rows after the visibility timeout.
+- `journal_entries` index documents may contain only the public-safe field contract proven in OVE-36: `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`.
+- No owner/user IDs, space IDs, plant object IDs, precise location, media keys, quarantine/original keys, signed URLs, IPs, or user agents may enter Meilisearch documents.
 
 ## Vercel
 
@@ -260,6 +283,7 @@ Deployment env observation:
 - On 2026-06-27, the branch preview `codex/ove-27-production-pilot-smoke` had branch-specific `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`, then was redeployed so Better Auth accepted that preview origin during browser smoke.
 - On 2026-06-27, legacy production `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE_*`, and empty `POSTGRES_*` variables were removed from Vercel after canonical runtime env was installed.
 - On 2026-06-27, accidental trailing newlines were trimmed from the R2 runtime env family in production and the branch preview `codex/ove-27-production-pilot-smoke`.
+- On 2026-06-28, production Vercel env gained `MEILISEARCH_HOST`, `MEILISEARCH_API_KEY`, `MATCHING_SERVICE_URL`, and `MATCHING_SERVICE_TOKEN` for the deployed worker/Meilisearch runtime. Values are intentionally not recorded here.
 - Do not infer database readiness from the presence of env var names alone. The live smoke must prove a successful server-side database ping on the deployed app.
 
 Vercel invariants:
@@ -287,5 +311,5 @@ Local storage emulator:
 ## Open Operational Items
 
 - Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
-- Provision the production worker/Meilisearch host and record non-secret host metadata here.
+- Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.

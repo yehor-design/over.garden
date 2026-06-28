@@ -16,34 +16,78 @@ from typing import Any
 import psycopg
 from psycopg.rows import dict_row
 
-from app.search import CATALOG_TYPEAHEAD_REINDEX_KIND, reindex_catalog_typeahead
+from app.search import (
+    CATALOG_TYPEAHEAD_REINDEX_KIND,
+    JOURNAL_ENTRY_INDEX_KIND,
+    JOURNAL_ENTRY_UNINDEX_KIND,
+    index_journal_entry,
+    reindex_catalog_typeahead,
+    unindex_journal_entry_for_owner,
+)
 
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get("WORKER_ID", f"matching-worker-{socket.gethostname()}")
 POLL_INTERVAL_SECONDS = float(os.environ.get("WORKER_POLL_SECONDS", "1.0"))
 VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 
+CLAIM_JOB_SQL = """
+select id, payload
+from job_queue
+where queue_name = %s
+  and (
+    (status in ('pending', 'failed') and available_at <= now())
+    or (
+      status = 'processing'
+      and locked_at <= now() - (%s || ' seconds')::interval
+    )
+  )
+order by created_at asc
+for update skip locked
+limit 1
+"""
+
 
 def _handle(conn: psycopg.Connection, payload: Any) -> None:
     """Process one job without making request paths depend on worker success."""
-    if isinstance(payload, dict) and payload.get("kind") == CATALOG_TYPEAHEAD_REINDEX_KIND:
+    if not isinstance(payload, dict):
+        raise ValueError("unsupported job payload")
+
+    kind = payload.get("kind")
+    if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
         reindex_catalog_typeahead(conn)
+        return
+
+    if kind == JOURNAL_ENTRY_INDEX_KIND:
+        index_journal_entry(
+            conn,
+            _payload_text(payload, "journalEntryId", JOURNAL_ENTRY_INDEX_KIND),
+            _payload_text(payload, "userId", JOURNAL_ENTRY_INDEX_KIND),
+        )
+        return
+
+    if kind == JOURNAL_ENTRY_UNINDEX_KIND:
+        unindex_journal_entry_for_owner(
+            conn,
+            _payload_text(payload, "journalEntryId", JOURNAL_ENTRY_UNINDEX_KIND),
+            _payload_text(payload, "userId", JOURNAL_ENTRY_UNINDEX_KIND),
+        )
+        return
+
+    raise ValueError("unsupported job kind")
+
+
+def _payload_text(payload: dict[str, Any], key: str, job_kind: str) -> str:
+    value = payload.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{key} is required for {job_kind}")
+    return value.strip()
 
 
 def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
     with conn.transaction():
         row = conn.execute(
-            """
-            select id, payload
-            from job_queue
-            where queue_name = %s
-              and status in ('pending', 'failed')
-              and available_at <= now()
-            order by created_at asc
-            for update skip locked
-            limit 1
-            """,
-            (QUEUE_NAME,),
+            CLAIM_JOB_SQL,
+            (QUEUE_NAME, VISIBILITY_TIMEOUT_SECONDS),
         ).fetchone()
 
         if row is None:
@@ -98,7 +142,7 @@ def _mark_failed(conn: psycopg.Connection, job_id: str, error: str) -> None:
 
 def run() -> None:
     dsn = os.environ["DIRECT_URL"]
-    with psycopg.connect(dsn, autocommit=False, row_factory=dict_row) as conn:
+    with psycopg.connect(dsn, autocommit=True, row_factory=dict_row) as conn:
         while True:
             job = _claim(conn)
             if job is None:

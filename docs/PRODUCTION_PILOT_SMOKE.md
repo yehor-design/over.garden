@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27
-Last updated: 2026-06-27
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof
+Last updated: 2026-06-28
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -24,6 +24,7 @@ Verified through the connected Vercel app on 2026-06-27.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
+- On 2026-06-28, OVE-36 provisioned the production worker/Meilisearch runtime at `matching.over.garden` and `meili.over.garden`, installed the production Vercel worker/search env names, and passed a redacted live journal index/unindex smoke against production Postgres and Meilisearch.
 
 Implication: the OVE-27 preview now proves the internal live-path contract against managed Postgres and R2. The remaining production closeout is to merge the deployed app version with the CA-aware database runtime and verify the same smoke on the public production alias selected for the pilot. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6.
 
@@ -118,16 +119,24 @@ Public visitor/crawler prerequisite:
 Catalog typeahead:
 
 - `/api/garden/catalog/typeahead` should work for authenticated users.
-- The Python worker's proven production-safe job kind is currently `catalog_typeahead_reindex`.
+- The Python worker supports `catalog_typeahead_reindex`.
 - The `catalog_typeahead` document contract includes only catalog identity fields and excludes owner IDs, private journal text, precise location, media metadata, analytics payloads, email, IP, and user agent.
 
 Public journal search:
 
-- Publishing currently enqueues `journal_entry_index`.
-- Archiving currently enqueues `journal_entry_unindex`.
-- The current Python worker code does not yet process those journal job kinds.
+- Publishing enqueues `journal_entry_index`.
+- Archiving enqueues `journal_entry_unindex`.
+- The deployed Python worker processes both journal job kinds, scopes them to the payload owner, and treats Meilisearch as a public privacy boundary.
+- On 2026-06-28, the OVE-36 redacted canary smoke proved:
+  - public canary URL returned `200` before archive,
+  - `journal_entry_index` reached `done` in one attempt,
+  - Meilisearch document existed with keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`,
+  - document `locationVisibility` was `hidden`, `noindex` was `true`, and forbidden field scan passed,
+  - `journal_entry_unindex` reached `done` in one attempt,
+  - the Meilisearch document returned `404` after archive,
+  - the old public journal URL returned `410`.
 
-Interpretation: until a live smoke proves those jobs are processed, public journal search indexing is explicitly degraded. This does not block the core first-user browser path, but it does block claiming production search health as green.
+Interpretation: public journal search/worker processing is no longer assumed. It is live-proven for the canary path, with evidence restricted to status codes, job states, document key names, and privacy booleans. Do not copy indexed title/body values, user identifiers, Meilisearch keys, database URLs, IPs, or canary row identifiers into evidence.
 
 ## Done Gate
 

@@ -93,21 +93,21 @@ describe("pilot smoke readiness", () => {
     });
   });
 
-  it("marks journal search indexing as explicitly degraded until worker proof exists", () => {
+  it("keeps journal search worker proof as a manual live smoke check", () => {
     const readout = buildPilotSmokeReadiness({
       env: productionLikeEnv,
       databaseProbe: { reachable: true },
       generatedAt: new Date("2026-06-27T00:00:00.000Z"),
     });
 
-    expect(readout.overall).toBe("degraded");
+    expect(readout.overall).toBe("ready");
     expect(
       findCheck(
         readout.sections.flatMap((section) => section.checks),
         "journal-search-worker",
       ),
     ).toMatchObject({
-      severity: "warn",
+      severity: "manual",
       summary: expect.stringContaining("journal_entry_index"),
     });
   });
