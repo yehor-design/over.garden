@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery
 Last updated: 2026-06-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -295,6 +295,35 @@ Do not treat invite-gated writes as complete if any of the following are true:
 - Public read routes are blocked unintentionally.
 - Invitation evidence stores raw invite URLs, tokens, referrers, emails, or query strings in analytics or grant tables.
 - Production invite links are signed with the dev fallback secret (`pilot-smoke` must fail the signing-secret check on deployed URLs).
+
+## OVE-48 Closed-Pilot Auth Recovery
+
+Goal: an invited pilot gardener who loses access or forgets how to sign in can recover through a documented operator-assisted path and return to the same `/garden` workspace with prior plant objects and entries intact. This is retention/support for a tiny closed pilot, not a full auth product expansion.
+
+### What landed
+
+- `/garden` auth panel accepts real email/password sign-in and sign-up instead of a hardcoded local-only account. Duplicate sign-up attempts map to calm recovery copy that steers the gardener back to sign-in on the existing account rather than creating a second garden.
+- Better Auth password reset is wired with `sendResetPassword`, but the closed pilot does not send email automatically. Operator CLI mode captures the one-time reset URL for private handoff.
+- `/auth/help` (`noindex`) explains the closed-pilot sign-in support flow and remaining limitations.
+- `/auth/reset-password` (`noindex`) lets a gardener set a new password from the operator-provided one-time link and return to `/garden`.
+- Founders generate reset URLs from `apps/web` with `pnpm pilot:reset-password -- --email <address>` after confirming the gardener already registered that email.
+
+### Founder recovery workflow (no secrets in git or Linear)
+
+1. Confirm the gardener already created an account with the email they want to recover. Do not create a second account for them.
+2. From `apps/web`, run `pnpm pilot:reset-password -- --email gardener@example.com` (optional: `--base-url https://over-garden.vercel.app`).
+3. Share the printed one-time reset URL privately. Do not paste reset URLs into Linear, git, analytics, or public channels.
+4. The gardener opens the link, sets a new password, signs in, and confirms existing plant objects/entries still appear on `/garden`.
+5. If the CLI prints no link, the email is not registered yet. Send a fresh invite link instead of forcing a duplicate account.
+
+### OVE-48 Done gate
+
+Do not treat auth recovery as complete if any of the following are true:
+
+- Recovery depends on manual database mutation rather than the operator reset path.
+- Reset links, tokens, or passwords appear in docs, Linear, logs, analytics, or UI evidence.
+- A recovered gardener lands in a duplicate account/garden instead of the original owner-scoped data.
+- Self-serve password reset promises automated email delivery during the closed pilot.
 
 ## Product Assumption
 

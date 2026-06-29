@@ -37,7 +37,15 @@ export function ClosedPilotWriteCallout({
       <p className="flex items-center gap-2 text-xs leading-5 text-muted-foreground">
         <MailWarning className="size-3.5 shrink-0" />
         If you were invited, use the link from your message. Expired or
-        incomplete links need a fresh invite from whoever invited you.
+        incomplete links need a fresh invite from whoever invited you. If you
+        already have an account but forgot your password, see{" "}
+        <Link
+          href="/auth/help"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          sign-in help
+        </Link>
+        .
       </p>
     </section>
   );

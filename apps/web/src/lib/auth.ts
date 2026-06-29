@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
+import { capturePilotPasswordResetLink } from "@/lib/auth/pilot-password-reset-delivery";
 import { optionalServerEnv } from "@/lib/env";
 import { getAuthBaseUrl } from "@/lib/runtime-url";
 
@@ -23,6 +24,10 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      void capturePilotPasswordResetLink({ email: user.email, url });
+    },
   },
   plugins: [nextCookies()],
   advanced: {

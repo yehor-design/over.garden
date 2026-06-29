@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",
-    "pilot:invite": "tsx scripts/generate-pilot-invite.ts"
+    "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
+    "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
