@@ -166,6 +166,11 @@ export function buildPublicVarietySummaryQuery(
     .leftJoin("media_assets", (join) =>
       join
         .onRef("media_assets.journal_entry_id", "=", "journal_entries.id")
+        .onRef(
+          "media_assets.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
         .on("media_assets.status", "=", "processed")
         .on("media_assets.derivative_key", "is not", null),
     )
@@ -276,6 +281,11 @@ export function buildPublicVarietyEntriesQuery(
     .leftJoin("media_assets", (join) =>
       join
         .onRef("media_assets.journal_entry_id", "=", "journal_entries.id")
+        .onRef(
+          "media_assets.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
         .on("media_assets.status", "=", "processed")
         .on("media_assets.derivative_key", "is not", null),
     )

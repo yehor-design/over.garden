@@ -413,6 +413,10 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"status" = $5');
     expect(compiled.sql).toContain('"journal_entry_id" is null');
     expect(compiled.sql).toContain('"journal_entry_id" = $6');
+    expect(compiled.sql).toContain("exists");
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain('"journal_entries"."id" = $7');
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $8');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       expect.any(Date),
@@ -420,6 +424,8 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000001",
       "processed",
       "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000001",
     ]);
   });
 
@@ -431,6 +437,9 @@ describe("journal repository query contracts", () => {
 
     expect(compiled.sql).toContain(
       'inner join "journal_entries" on "journal_entries"."id" = "media_assets"."journal_entry_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
     expect(compiled.sql).toContain('"journal_entries"."id" = $1');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $2');

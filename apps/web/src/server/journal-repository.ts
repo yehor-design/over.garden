@@ -1221,6 +1221,11 @@ export function buildPublicProcessedMediaForEntryQuery(
       "media_assets.id as id",
       "media_assets.derivative_key as derivativeKey",
     ])
+    .whereRef(
+      "media_assets.owner_user_id",
+      "=",
+      "journal_entries.owner_user_id",
+    )
     .where("journal_entries.id", "=", entryId)
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
