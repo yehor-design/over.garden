@@ -161,6 +161,15 @@ export function buildPilotSmokeReadiness({
           evidence:
             "Record source as enum class only: public-variety/homepage/direct. Do not record raw URLs, referrers, or query strings.",
         },
+        {
+          id: "invited-cohort-loop",
+          label: "Invited-cohort invite loop",
+          severity: "manual",
+          summary:
+            "`/join` must be noindex and absent from the sitemap; its action carries only `source=invited-cohort` into `/garden`, the source survives auth into a first-entry save, and `/garden/pilot-health` shows the invited-cohort loop as aggregate counts.",
+          evidence:
+            "Record robots value, enum source class (invited_cohort), and aggregate starts/saves/follow-ups/returning counts only. Never record invite recipients, links, tokens, names, or emails.",
+        },
       ],
     },
     {
@@ -263,6 +272,7 @@ export function buildPilotSmokeReadiness({
       "Add a follow-up entry to the same object and confirm it does not create a duplicate object.",
       "Publish the first entry after accepting the disclosure and confirm `/journal/[slug]` is SSR, noindex, location-safe, and derivative-only.",
       "Open the linked `/variety/[slug]`, use the CTA back into `/garden`, and save a second first-entry path with public-variety activation attribution.",
+      "Open the noindex `/join` invite, confirm it is absent from the sitemap, follow it into `/garden?source=invited-cohort`, save a first entry plus a same-object follow-up, and confirm `/garden/pilot-health` shows the invited-cohort loop as aggregate counts.",
       "Archive the published entry and confirm the old public URL returns 410 Gone.",
       "Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 counts update without raw private data.",
       "Verify catalog typeahead or matching service health, then prove journal_entry_index and journal_entry_unindex job processing with redacted job_queue and Meilisearch evidence.",

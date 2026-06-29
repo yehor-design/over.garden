@@ -76,13 +76,24 @@ export interface PilotHealthMetrics {
     homepage: number;
     publicVariety: number;
     directGarden: number;
+    invitedCohort: number;
   };
   entrySavesByActivationSource: {
     homepage: number;
     publicVariety: number;
     directGarden: number;
+    invitedCohort: number;
   };
   publicVarietySaveRate: number;
+  invitedCohort: PilotInvitedCohortMetrics;
+}
+
+export interface PilotInvitedCohortMetrics {
+  starts: number;
+  firstEntrySaves: number;
+  sameObjectFollowUpEntries: number;
+  returningGardeners: number;
+  firstEntrySaveRate: number;
 }
 
 export interface PilotPublicVarietyHealth {
@@ -98,6 +109,8 @@ interface PilotEntryMetricRow {
   archivedEntries: number | string | bigint | null;
   entriesWithProcessedPhoto: number | string | bigint | null;
   firstEntryActivations: number | string | bigint | null;
+  invitedCohortReturningGardeners: number | string | bigint | null;
+  invitedCohortSameObjectFollowUpEntries: number | string | bigint | null;
   publicGoneEntries: number | string | bigint | null;
   publishedEntries: number | string | bigint | null;
   sameObjectFollowUpEntries: number | string | bigint | null;
@@ -107,9 +120,11 @@ interface PilotEntryMetricRow {
 interface PilotAnalyticsMetricRow {
   activationStartedDirectGarden: number | string | bigint | null;
   activationStartedHomepage: number | string | bigint | null;
+  activationStartedInvitedCohort: number | string | bigint | null;
   activationStartedPublicVariety: number | string | bigint | null;
   entrySavedDirectGarden: number | string | bigint | null;
   entrySavedHomepage: number | string | bigint | null;
+  entrySavedInvitedCohort: number | string | bigint | null;
   entrySavedPublicVariety: number | string | bigint | null;
   offlineQueued: number | string | bigint | null;
   offlineSynced: number | string | bigint | null;
@@ -176,6 +191,7 @@ export async function getPilotHealthReadout(
       "All numbers are provisional pilot leading indicators, not validated OverGarden targets.",
       "Offline failed mutations are currently browser-local Dexie state and are not yet server-observable.",
       "H6 indexability shows thinness trajectory; it is not the same as organic acquisition or signup conversion.",
+      "Invited-cohort counts are the closed-pilot H1 loop: invite start, first-entry save, and a same-object follow-up return. Cohort membership is derived from the enum-only invited_cohort activation source, never from names, emails, or invite links.",
     ],
     references: PILOT_HEALTH_RESEARCH_REFERENCES,
   };
@@ -232,6 +248,36 @@ export function buildPilotEntryMetricsQuery(
           and previous_same_object_entry.plant_object_id = journal_entries.plant_object_id
           and previous_same_object_entry.created_at < journal_entries.created_at
       ) then journal_entries.id end)`.as("sameObjectFollowUpEntries"),
+      sql<number>`count(distinct case when exists (
+        select 1
+        from journal_entries as cohort_previous_same_object_entry
+        where cohort_previous_same_object_entry.owner_user_id = journal_entries.owner_user_id
+          and cohort_previous_same_object_entry.plant_object_id = journal_entries.plant_object_id
+          and cohort_previous_same_object_entry.created_at < journal_entries.created_at
+      ) and exists (
+        select 1
+        from analytics_events as cohort_first_save_event
+        where cohort_first_save_event.owner_user_id = journal_entries.owner_user_id
+          and cohort_first_save_event.event_name = 'entry_logged'
+          and cohort_first_save_event.properties ->> 'activation_source' = 'invited_cohort'
+      ) then journal_entries.id end)`.as(
+        "invitedCohortSameObjectFollowUpEntries",
+      ),
+      sql<number>`count(distinct case when exists (
+        select 1
+        from journal_entries as cohort_return_previous_entry
+        where cohort_return_previous_entry.owner_user_id = journal_entries.owner_user_id
+          and cohort_return_previous_entry.plant_object_id = journal_entries.plant_object_id
+          and cohort_return_previous_entry.created_at < journal_entries.created_at
+      ) and exists (
+        select 1
+        from analytics_events as cohort_return_first_save_event
+        where cohort_return_first_save_event.owner_user_id = journal_entries.owner_user_id
+          and cohort_return_first_save_event.event_name = 'entry_logged'
+          and cohort_return_first_save_event.properties ->> 'activation_source' = 'invited_cohort'
+      ) then journal_entries.owner_user_id end)`.as(
+        "invitedCohortReturningGardeners",
+      ),
       sql<number>`count(distinct case when media_assets.id is not null then journal_entries.id end)`.as(
         "entriesWithProcessedPhoto",
       ),
@@ -277,6 +323,10 @@ export function buildPilotAnalyticsMetricsQuery(
         where event_name = 'activation_started'
           and properties ->> 'activation_source' = 'direct_garden'
       )`.as("activationStartedDirectGarden"),
+      sql<number>`count(distinct session_id) filter (
+        where event_name = 'activation_started'
+          and properties ->> 'activation_source' = 'invited_cohort'
+      )`.as("activationStartedInvitedCohort"),
       sql<number>`count(*) filter (
         where event_name = 'entry_logged'
           and properties ->> 'activation_source' = 'homepage'
@@ -289,6 +339,10 @@ export function buildPilotAnalyticsMetricsQuery(
         where event_name = 'entry_logged'
           and properties ->> 'activation_source' = 'direct_garden'
       )`.as("entrySavedDirectGarden"),
+      sql<number>`count(*) filter (
+        where event_name = 'entry_logged'
+          and properties ->> 'activation_source' = 'invited_cohort'
+      )`.as("entrySavedInvitedCohort"),
     ])
     .where("analytics_events.created_at", ">=", since);
 }
@@ -431,16 +485,30 @@ function buildPilotHealthWindow(
     homepage: analyticsMetrics.activationStartedHomepage,
     publicVariety: analyticsMetrics.activationStartedPublicVariety,
     directGarden: analyticsMetrics.activationStartedDirectGarden,
+    invitedCohort: analyticsMetrics.activationStartedInvitedCohort,
   };
   const entrySavesByActivationSource = {
     homepage: analyticsMetrics.entrySavedHomepage,
     publicVariety: analyticsMetrics.entrySavedPublicVariety,
     directGarden: analyticsMetrics.entrySavedDirectGarden,
+    invitedCohort: analyticsMetrics.entrySavedInvitedCohort,
   };
   const activationStartedTotal =
     activationStarts.homepage +
     activationStarts.publicVariety +
-    activationStarts.directGarden;
+    activationStarts.directGarden +
+    activationStarts.invitedCohort;
+  const invitedCohort: PilotInvitedCohortMetrics = {
+    starts: activationStarts.invitedCohort,
+    firstEntrySaves: entrySavesByActivationSource.invitedCohort,
+    sameObjectFollowUpEntries:
+      entryMetrics.invitedCohortSameObjectFollowUpEntries,
+    returningGardeners: entryMetrics.invitedCohortReturningGardeners,
+    firstEntrySaveRate: safeRate(
+      entrySavesByActivationSource.invitedCohort,
+      activationStarts.invitedCohort,
+    ),
+  };
 
   return {
     key: window.key,
@@ -480,6 +548,7 @@ function buildPilotHealthWindow(
         entrySavesByActivationSource.publicVariety,
         activationStarts.publicVariety,
       ),
+      invitedCohort,
     },
   };
 }
@@ -495,6 +564,12 @@ function normalizeEntryMetricRow(row: PilotEntryMetricRow | undefined) {
     archivedEntries: toNumber(row?.archivedEntries),
     entriesWithProcessedPhoto: toNumber(row?.entriesWithProcessedPhoto),
     firstEntryActivations: toNumber(row?.firstEntryActivations),
+    invitedCohortReturningGardeners: toNumber(
+      row?.invitedCohortReturningGardeners,
+    ),
+    invitedCohortSameObjectFollowUpEntries: toNumber(
+      row?.invitedCohortSameObjectFollowUpEntries,
+    ),
     publicGoneEntries: toNumber(row?.publicGoneEntries),
     publishedEntries: toNumber(row?.publishedEntries),
     sameObjectFollowUpEntries: toNumber(row?.sameObjectFollowUpEntries),
@@ -508,11 +583,15 @@ function normalizeAnalyticsMetricRow(row: PilotAnalyticsMetricRow | undefined) {
       row?.activationStartedDirectGarden,
     ),
     activationStartedHomepage: toNumber(row?.activationStartedHomepage),
+    activationStartedInvitedCohort: toNumber(
+      row?.activationStartedInvitedCohort,
+    ),
     activationStartedPublicVariety: toNumber(
       row?.activationStartedPublicVariety,
     ),
     entrySavedDirectGarden: toNumber(row?.entrySavedDirectGarden),
     entrySavedHomepage: toNumber(row?.entrySavedHomepage),
+    entrySavedInvitedCohort: toNumber(row?.entrySavedInvitedCohort),
     entrySavedPublicVariety: toNumber(row?.entrySavedPublicVariety),
     offlineQueued: toNumber(row?.offlineQueued),
     offlineSynced: toNumber(row?.offlineSynced),

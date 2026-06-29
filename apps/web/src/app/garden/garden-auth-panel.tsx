@@ -89,5 +89,9 @@ function authPrompt({
     return "Use the local gardener account when you are ready to save the first private plant record.";
   }
 
+  if (activationSource === "invited_cohort") {
+    return "Welcome to the OverGarden invite. Use the local gardener account when you are ready to save your first private plant note.";
+  }
+
   return "Use the local gardener account to start or continue a journal.";
 }

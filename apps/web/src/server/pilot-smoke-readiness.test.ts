@@ -151,6 +151,25 @@ describe("pilot smoke readiness", () => {
     expect(serialized).not.toContain("do-user-");
   });
 
+  it("surfaces the invited-cohort invite loop as a redacted manual check", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    const cohort = findCheck(checks, "invited-cohort-loop");
+    expect(cohort).toMatchObject({ severity: "manual" });
+    expect(cohort?.summary).toContain("noindex");
+    expect(cohort?.summary).toContain("source=invited-cohort");
+    expect(cohort?.evidence).toContain("invited_cohort");
+    expect(readout.smokeSteps.some((step) => step.includes("/join"))).toBe(
+      true,
+    );
+    expect(readout.overall).toBe("ready");
+  });
+
   it("blocks deployed smoke when the explicit operator allowlist is missing", () => {
     const readout = buildPilotSmokeReadiness({
       env: {

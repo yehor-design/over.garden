@@ -18,6 +18,7 @@ import {
   buildPilotAnalyticsMetricsQuery,
   buildPilotEntryMetricsQuery,
   buildPilotPublicVarietyHealthRowsQuery,
+  getPilotHealthReadout,
   getPilotHealthReadoutSafely,
   summarizePublicVarietyHealthRows,
 } from "./pilot-health-repository";
@@ -82,6 +83,31 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).not.toContain("media_metadata");
   });
 
+  it("counts invited-cohort starts and first-entry saves with enum-only filters", () => {
+    const compiled = buildPilotAnalyticsMetricsQuery(testDb, since).compile();
+    const sql = compiled.sql.toLowerCase();
+
+    expect(sql).toContain("properties ->> 'activation_source' = 'invited_cohort'");
+    expect(sql).toContain('"activationstartedinvitedcohort"');
+    expect(sql).toContain('"entrysavedinvitedcohort"');
+    expect(sql).not.toContain("invite_token");
+    expect(sql).not.toContain("invite_email");
+  });
+
+  it("derives invited-cohort same-object follow-ups from membership, not raw entry text", () => {
+    const compiled = buildPilotEntryMetricsQuery(testDb, since).compile();
+    const sql = compiled.sql.toLowerCase();
+
+    expect(sql).toContain('"invitedcohortsameobjectfollowupentries"');
+    expect(sql).toContain('"invitedcohortreturninggardeners"');
+    expect(sql).toContain("cohort_first_save_event");
+    expect(sql).toContain("properties ->> 'activation_source' = 'invited_cohort'");
+    expect(sql).not.toContain('select "journal_entries"."title"');
+    expect(sql).not.toContain('select "journal_entries"."body"');
+    expect(sql).not.toContain("email");
+    expect(sql).not.toContain('"session"');
+  });
+
   it("summarizes public variety indexability through safe public filters", () => {
     const compiled = buildPilotPublicVarietyHealthRowsQuery(testDb).compile();
     const sql = compiled.sql.toLowerCase();
@@ -137,6 +163,30 @@ describe("pilot health privacy-safe aggregate contracts", () => {
       demotedByArchiveOrGoneCount: 2,
       currentPublicVarietyCount: 2,
     });
+  });
+
+  it("exposes the invited-cohort loop in the assembled readout shape", async () => {
+    const readout = await getPilotHealthReadout(testDb, new Date());
+
+    for (const window of readout.windows) {
+      expect(window.metrics.activationStarts).toMatchObject({
+        invitedCohort: 0,
+      });
+      expect(window.metrics.entrySavesByActivationSource).toMatchObject({
+        invitedCohort: 0,
+      });
+      expect(window.metrics.invitedCohort).toEqual({
+        starts: 0,
+        firstEntrySaves: 0,
+        sameObjectFollowUpEntries: 0,
+        returningGardeners: 0,
+        firstEntrySaveRate: 0,
+      });
+    }
+
+    expect(
+      readout.notes.some((note) => note.includes("Invited-cohort")),
+    ).toBe(true);
   });
 
   it("returns null instead of throwing when the readout query fails", async () => {

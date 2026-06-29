@@ -269,6 +269,35 @@ function WindowPanel({
           `/garden` intent events, not raw URLs or referrers.
         </p>
       </div>
+
+      <div className="grid gap-3 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-foreground">
+          Invited cohort loop
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetricTile
+            label="Invite starts -> first saves"
+            value={`${metrics.invitedCohort.starts} -> ${metrics.invitedCohort.firstEntrySaves}`}
+          />
+          <MetricTile
+            label="First-save rate"
+            value={formatPercent(metrics.invitedCohort.firstEntrySaveRate)}
+          />
+          <MetricTile
+            label="Same-object follow-ups"
+            value={metrics.invitedCohort.sameObjectFollowUpEntries}
+          />
+          <MetricTile
+            label="Returning gardeners"
+            value={metrics.invitedCohort.returningGardeners}
+          />
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Closed-pilot H1 loop: an invited gardener saves a first entry and
+          returns for a same-object follow-up. Membership is the enum-only
+          `invited_cohort` source, never invite links, names, or emails.
+        </p>
+      </div>
     </section>
   );
 }

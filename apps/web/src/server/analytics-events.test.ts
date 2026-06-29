@@ -92,6 +92,18 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
+  it("allows the invited-cohort activation source and invite surface enum", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        activation_source: "invited_cohort",
+        source_surface_kind: "invite",
+      }),
+    ).toEqual({
+      activation_source: "invited_cohort",
+      source_surface_kind: "invite",
+    });
+  });
+
   it("records activation starts without raw URL, referrer, or query values", () => {
     const compiled = buildInsertAnalyticsEventQuery(testDb, scope, {
       eventName: "activation_started",

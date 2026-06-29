@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop
 Last updated: 2026-06-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -225,6 +225,47 @@ Do not treat the durability slice as complete (and do not invite pilot users on 
 - Stale `processing` reclaim is neither proven by the local harness nor by a live canary.
 - Any evidence leaks secrets or private data: database URLs, CA body, credentials, doctl/API tokens, Meilisearch keys, worker env files, journal text, precise location, IPs, user agents, or user-tied row IDs.
 
+## OVE-41 Closed-Cohort Invite Loop
+
+Goal: an invited gardener can arrive through a private, unlisted invite path, save a first plant entry, and return for a same-object follow-up, and the operator can read that closed-cohort loop as privacy-safe aggregate counts. This is the H1 activation/retention loop measured for the specific people we deliberately invited, separated from homepage/public-variety/direct traffic, so a small closed pilot produces interpretable go/iterate/stop evidence instead of mixed-source noise.
+
+This slice does not add precise location, raw invite identity, or any per-person attribution. Cohort membership is derived only from the enum `invited_cohort` activation source already carried through `/garden`. The invite page is `noindex` and is never linked from public navigation or the sitemap.
+
+### What landed
+
+- A `noindex` invite landing page at `/join` with calm, non-technical copy. Its only forward action carries the enum source into `/garden?source=invited-cohort` (`gardenFirstEntryInvitePath`). The page is excluded from `sitemap.ts` (which lists indexable public variety pages only).
+- `invited_cohort` is an allowed `ActivationSource` and `invite` is an allowed `ActivationSurfaceKind`, validated by the same enum-only normalizers and analytics property allowlist used by the other sources. Raw URLs, hyphenated request values, invite tokens, names, and emails are rejected.
+- Intent persists through auth: a signed-out invited gardener keeps `?source=invited-cohort` across sign-up/sign-in (the garden auth panel shows invite-specific copy), so the first saved entry records `entry_logged` with `activation_source = invited_cohort`. That first save is what establishes cohort membership.
+- `/garden/pilot-health` shows an "Invited cohort loop" panel per window: invite starts, first-entry saves, first-save rate, same-object follow-ups, and returning gardeners. Follow-ups and returning gardeners are derived from cohort membership plus a prior same-object entry, never from raw entry text.
+
+### Closed-cohort smoke steps (operator, redacted)
+
+Run against the selected pilot URL. Record only enum class, aggregate counts, robots value, and pass/fail. Do not record invite recipients, links, names, emails, or journal text.
+
+1. Open `/join` and confirm OverGarden HTML, robots `noindex, nofollow`, non-technical copy, and that the primary action targets `/garden?source=invited-cohort`. Confirm `/join` is absent from `/sitemap.xml`.
+2. While signed out, follow the invite action into `/garden?source=invited-cohort`. Confirm the auth panel shows the invite welcome copy and the source survives sign-up/sign-in (URL still carries `source=invited-cohort`).
+3. Save a first plant entry through the canonical create path. Confirm authenticated readback shows exactly one entry.
+4. Open the new object and add a same-object follow-up entry. Confirm no duplicate object.
+5. Open `/garden/pilot-health`. In a window covering the run, confirm the Invited cohort loop panel shows starts >= 1, first saves >= 1, same-object follow-ups >= 1, and returning gardeners >= 1, with no raw private data anywhere in the readout.
+
+### Decision criteria (continue / iterate / stop)
+
+These are provisional closed-pilot calibrators, not validated OverGarden targets. Ground them in `docs/product-research/OverGarden_B2_METRICS_v0.md` (NSM/H1) and `docs/product-research/KILL_CRITERIA_PREREG_v2.md` (Flag Ж / pre-registered go/no-go). The closed cohort is the denominator: read rates against invited gardeners who actually started.
+
+- NSM/H1 for this loop = an invited gardener with >= 2 dated entries on the same object plus a return visit. The pilot-health "returning gardeners" count is the cohort-scoped proxy for that loop.
+- Continue: a clear majority of invited gardeners who start also save a first entry, and a meaningful share return for a same-object follow-up within the first weeks (provisional calibrator: first-save rate among starts at or above roughly two-thirds, and returning gardeners at or above roughly 30% of first savers). The loop is real and worth widening the invite.
+- Iterate: gardeners save a first entry but rarely return (follow-ups and returning gardeners stay low). Treat as an activation-to-retention problem: improve the return prompt and same-object follow-up path, not the invite, before inviting more people.
+- Stop / re-segment: invited gardeners do not even save a first entry (first-save rate among starts stays low) across a fair sample. This matches the pre-registered Flag Ж falsification posture: the closed cohort is not the right audience or the core loop is not wanted; pause inviting and revisit ICP/JTBD rather than scaling.
+
+### OVE-41 Done gate
+
+Do not treat the closed-cohort loop as complete if any of the following are true:
+
+- `/join` is indexable, appears in the sitemap, is linked from public navigation, or exposes anything beyond the enum source on its forward action.
+- The invite source is carried as a raw URL, referrer, token, name, or email instead of the `invited_cohort` enum, or the source is lost across auth so the first save is misattributed.
+- Pilot-health invited-cohort counts depend on raw journal text, invite identity, or any per-person attribution rather than the enum source plus aggregate membership.
+- The decision criteria are presented as validated targets rather than provisional calibrators grounded in the metrics and kill-criteria research.
+
 ## Product Assumption
 
 The live pilot must measure user behavior, not deployment fragility. The smoke proves that a real pilot user can traverse the deployed product path while privacy-critical boundaries hold:
@@ -245,7 +286,7 @@ Allowed evidence:
 - Route class, status code, robots value, high-level header facts, deployment ID, commit SHA, and pass/fail/degraded status.
 - Public derivative host class, for example `media.over.garden`, without object keys.
 - Aggregate metric counts from `/garden/pilot-health`.
-- Enum attribution classes: `homepage`, `public_variety`, `direct_garden`.
+- Enum attribution classes: `homepage`, `public_variety`, `direct_garden`, `invited_cohort`.
 
 Forbidden evidence:
 

@@ -10,6 +10,10 @@ export function gardenFirstEntryHomepagePath(): string {
   return "/garden?source=homepage";
 }
 
+export function gardenFirstEntryInvitePath(): string {
+  return "/garden?source=invited-cohort";
+}
+
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,

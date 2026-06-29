@@ -297,7 +297,8 @@ function normalizeAnalyticsEventPropertyValue(
       if (
         value === "homepage" ||
         value === "public_variety" ||
-        value === "direct_garden"
+        value === "direct_garden" ||
+        value === "invited_cohort"
       ) {
         return value;
       }
@@ -314,7 +315,12 @@ function normalizeAnalyticsEventPropertyValue(
       if (value === "region" || value === "hidden") return value;
       break;
     case "source_surface_kind":
-      if (value === "homepage" || value === "variety" || value === "garden") {
+      if (
+        value === "homepage" ||
+        value === "variety" ||
+        value === "garden" ||
+        value === "invite"
+      ) {
         return value;
       }
       break;

@@ -13,6 +13,9 @@ export function normalizeActivationSourceParam(
   const normalized = normalizeFirstParam(value);
 
   if (normalized === "homepage") return "homepage";
+  if (normalized === "invited-cohort" || normalized === "invited_cohort") {
+    return "invited_cohort";
+  }
   if (normalized === "direct-garden" || normalized === "direct_garden") {
     return DIRECT_GARDEN_ACTIVATION_SOURCE;
   }
@@ -31,7 +34,8 @@ export function normalizeActivationSourceValue(
   if (
     value === "homepage" ||
     value === "public_variety" ||
-    value === "direct_garden"
+    value === "direct_garden" ||
+    value === "invited_cohort"
   ) {
     return value;
   }
@@ -49,6 +53,8 @@ export function activationSurfaceKindForSource(
       return "variety";
     case "direct_garden":
       return "garden";
+    case "invited_cohort":
+      return "invite";
   }
 }
 

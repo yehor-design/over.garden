@@ -1,7 +1,15 @@
 import type { EntrySyncStatus } from "@/db/schema";
 
-export type ActivationSource = "homepage" | "public_variety" | "direct_garden";
-export type ActivationSurfaceKind = "homepage" | "variety" | "garden";
+export type ActivationSource =
+  | "homepage"
+  | "public_variety"
+  | "direct_garden"
+  | "invited_cohort";
+export type ActivationSurfaceKind =
+  | "homepage"
+  | "variety"
+  | "garden"
+  | "invite";
 export type JournalEntryTarget = "first_plant_entry" | "plant_object_entry";
 
 export interface FirstEntryCatalogSelection {
