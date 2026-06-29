@@ -93,6 +93,10 @@ export default async function CatalogCurationPage() {
               Pending: {candidates.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Pilot signals:{" "}
+              {candidates.filter((candidate) => candidate.pilotOrigin).length}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Seed proofs: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">

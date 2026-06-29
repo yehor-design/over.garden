@@ -70,6 +70,11 @@ function revalidateCatalogCurationPaths(result: CatalogCurationDecisionResult) {
   revalidatePath(CURATION_PATH);
   revalidatePath("/garden");
 
+  const publicSlug = result.candidate.public_slug;
+  if (publicSlug) {
+    revalidatePath(publicVarietyPath(publicSlug));
+  }
+
   for (const publicEntryPath of result.publicEntryPaths) {
     revalidatePath(publicEntryPath);
   }

@@ -66,6 +66,13 @@ describe("catalog curation actions", () => {
   });
 
   it("allows candidate confirmation for an allowlisted operator", async () => {
+    mocks.confirmCatalogCurationCandidate.mockResolvedValue({
+      candidate: {
+        public_slug: "babusyn-perets-0000000201",
+      },
+      publicEntryPaths: ["/journal/babusyn-perets-entry"],
+    });
+
     const { confirmCatalogCandidateAction } = await import("./actions");
     const formData = new FormData();
     formData.set("candidateId", "candidate-1");
@@ -75,6 +82,12 @@ describe("catalog curation actions", () => {
     expect(mocks.confirmCatalogCurationCandidate).toHaveBeenCalledOnce();
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/variety/babusyn-perets-0000000201",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/journal/babusyn-perets-entry",
     );
   });
 });
