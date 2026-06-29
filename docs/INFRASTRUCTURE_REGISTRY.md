@@ -200,6 +200,7 @@ Operational state:
 - On 2026-06-27, the app schema and Better Auth tables were bootstrapped with `pnpm db:bootstrap -- --env-file /private/tmp/overgarden-db.env --ca-file /private/tmp/overgarden-db-ca.crt`.
 - On 2026-06-27, the managed database had 15 public base tables after bootstrap.
 - On 2026-06-28, `job_queue` journal index/unindex jobs were processed by the deployed worker against the production database during the OVE-36 redacted live smoke.
+- On 2026-06-29 (OVE-51), production bootstrap was rerun non-destructively through the app bootstrap path after canonical-domain smoke exposed that `pilot_invite_grants` had not been applied to the live database. Post-bootstrap schema probe confirmed `pilot_invite_grants` exists with `user_id`, `cohort`, `granted_at`, `created_at`, and `updated_at`. No schema drop, bulk delete, restore-over-production, or user-data export was performed.
 
 Backup and PITR posture (OVE-39):
 
@@ -270,17 +271,17 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_3V97zCF2UobXHiqvHMgxLhZaFP2m`
-- Deployment URL: `https://over-garden-payshmr9k-yehors-projects-01221e2b.vercel.app`
+- Deployment ID: `dpl_AkMJozhSmood7NdvSkqvfUQDySKm`
+- Deployment URL: `https://over-garden-d49wqs9kc-yehors-projects-01221e2b.vercel.app`
 - Ready state: `READY`
 - Target: `production`
-- Source: GitHub integration
+- Source: redeploy of GitHub-integrated production deployment after OVE-51 env correction
 - GitHub ref: `main`
-- GitHub commit: `5e2989fd29f45003368e5adc32f45946dd718c17`
-- GitHub commit message: `chore(closeout): add mainline proof guard`
+- GitHub commit: `f46850dcba7ed529ad286390bafe3c18f6eab7aa`
+- GitHub commit message: `chore(pilot): canonicalize production pilot domain`
 - GitHub commit verification: `verified`
 - Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
-- OVE-50 (2026-06-29): this is the current-main revision before the OVE-51 domain-proof commit. OVE-37 proved the full first-user smoke on the previous public pilot alias; OVE-51 moves the pilot origin to the canonical app domain and requires the smoke to be rerun against `https://over.garden`.
+- OVE-51 (2026-06-29): this deployment served the canonical-domain browser smoke after `PUBLIC_SITE_URL`, `BETTER_AUTH_URL`, `PILOT_INVITE_SIGNING_SECRET`, and the missing `pilot_invite_grants` schema were corrected.
 
 Production aliases and domain bindings:
 
@@ -312,6 +313,7 @@ Deployment env observation:
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
 - On 2026-06-29 (OVE-51), production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` were updated to the canonical origin `https://over.garden`. Future production readiness checks fail if Vercel production uses the legacy `.vercel.app` alias for either value.
+- On 2026-06-29 (OVE-51), production `PILOT_INVITE_SIGNING_SECRET` was installed in Vercel env store after canonical smoke showed invited writes could not be proven without it. The value is intentionally not recorded. Authenticated CLI `vercel env run -e production` confirmed only boolean presence, and invite links/tokens remain private evidence.
 - On 2026-06-27, the branch preview `codex/ove-27-production-pilot-smoke` had branch-specific `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`, then was redeployed so Better Auth accepted that preview origin during browser smoke.
 - On 2026-06-27, legacy production `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE_*`, and empty `POSTGRES_*` variables were removed from Vercel after canonical runtime env was installed.
 - On 2026-06-27, accidental trailing newlines were trimmed from the R2 runtime env family in production and the branch preview `codex/ove-27-production-pilot-smoke`.
@@ -319,6 +321,7 @@ Deployment env observation:
 - Closed-pilot invite links (OVE-42) require `PILOT_INVITE_SIGNING_SECRET` in every environment that shares production invite URLs. Generate links from `apps/web` with `pnpm pilot:invite` after setting the secret in `.env.local` or Vercel. Never commit the secret or printed invite URLs.
 - Closed-pilot auth recovery (OVE-48) uses operator-assisted Better Auth password reset. Generate one-time reset URLs from `apps/web` with `pnpm pilot:reset-password -- --email <address>` against the target environment database. Share printed links privately; never commit reset URLs, tokens, or passwords.
 - Do not infer database readiness from the presence of env var names alone. The live smoke must prove a successful server-side database ping on the deployed app.
+- Do not infer invite readiness from `PILOT_INVITE_SIGNING_SECRET` presence alone. The live smoke must also prove `/join?invite=` sets an eligibility cookie, first authenticated write materializes `pilot_invite_grants`, and the user reaches the write composer.
 
 Vercel invariants:
 

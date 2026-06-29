@@ -13,15 +13,15 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 
 - Vercel team: `yehor's projects` / `team_vs3oQAk6OT4vVVvcL7Mf5m8t`
 - Vercel project: `over-garden` / `prj_Tm5HXFEPqc46StpIfsoKjU9GtHBy`
-- Latest verified pre-OVE-51 production deployment: `dpl_3V97zCF2UobXHiqvHMgxLhZaFP2m`
-- Latest verified pre-OVE-51 production URL: `https://over-garden-payshmr9k-yehors-projects-01221e2b.vercel.app`
-- Latest verified pre-OVE-51 deployed commit: `5e2989fd29f45003368e5adc32f45946dd718c17`
+- Latest verified OVE-51 production deployment: `dpl_AkMJozhSmood7NdvSkqvfUQDySKm`
+- Latest verified OVE-51 production URL: `https://over-garden-d49wqs9kc-yehors-projects-01221e2b.vercel.app`
+- Latest verified OVE-51 deployed commit: `f46850dcba7ed529ad286390bafe3c18f6eab7aa`
 - Production domains/aliases: `over.garden`, `www.over.garden`, `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
 - Canonical app domains `over.garden` and `www.over.garden` are attached to the Vercel project and point to Vercel through DNS-only Cloudflare A records.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
-- Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
+- Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables. OVE-51 reran the non-destructive app bootstrap and confirmed the closed-pilot `pilot_invite_grants` table exists before the canonical invited-gardener smoke.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
 - On 2026-06-28, OVE-36 provisioned the production worker/Meilisearch runtime at `matching.over.garden` and `meili.over.garden`, installed the production Vercel worker/search env names, and passed a redacted live journal index/unindex smoke against production Postgres and Meilisearch.
@@ -58,8 +58,22 @@ Provider state verified on 2026-06-29:
 
 - `over.garden` and `www.over.garden` are attached to Vercel project `over-garden` and resolve to Vercel through DNS-only Cloudflare A records. App HTML should therefore have no Cloudflare cache status; if Cloudflare proxying is enabled later, any HTML cache HIT blocks pilot traffic.
 - Vercel production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` are set to `https://over.garden`. The production readiness readout now fails closed if Vercel production uses the legacy `.vercel.app` alias for either value.
+- Vercel production `PILOT_INVITE_SIGNING_SECRET` is present in the env store; its value is never recorded. This was a live OVE-51 blocker discovered during smoke and fixed before the final pass.
+- Production DB schema includes `pilot_invite_grants`; this was another live OVE-51 blocker discovered during smoke and fixed through the existing non-destructive bootstrap path before the final pass.
 - R2 quarantine CORS includes `https://over.garden` and `https://www.over.garden`; a canonical-origin preflight to the quarantine S3 host returned the allowed origin and `PUT, HEAD` method class. Evidence records only origin/method class, never signed upload URLs or object keys.
 - Public probes on `https://over.garden/`, `/health`, and `/privacy` returned `200` OverGarden responses without Vercel SSO. `https://www.over.garden/` also returned `200`. App HTML had Vercel response IDs and no Cloudflare cache status because app DNS is DNS-only.
+
+Final canonical browser-smoke result on 2026-06-29:
+
+- Deployment `dpl_AkMJozhSmood7NdvSkqvfUQDySKm`, commit `f46850dc`, canonical alias `https://over.garden`: pass.
+- Invite claim: valid `/join?invite=` claim set a signed HTTP-only eligibility cookie; local verification was boolean-only and did not print the token or cookie value.
+- Auth: sign-up on `https://over.garden` reached the write composer without `INVALID_ORIGIN`.
+- First entry: saved through the canonical `/garden` UI to `/garden/objects/[objectId]`.
+- Photo: browser file input used a generated PNG buffer; upload/process/readback showed only `media.over.garden` derivative host class, with no quarantine/original key in evidence.
+- Follow-up: same-object follow-up saved and read back on the same object path.
+- Publish: `/journal/[slug]` returned `200`, stayed `noindex, nofollow`, and rendered derivative-only public media.
+- Public variety: `/variety/[slug]` returned `200`, stayed `noindex, nofollow`, and its CTA saved a second first-entry path with public-variety activation.
+- Archive: authenticated archive UI moved the published entry to archived state; the old `/journal/[slug]` returned `410` and stayed `noindex, nofollow`.
 
 Canonical smoke bar:
 
