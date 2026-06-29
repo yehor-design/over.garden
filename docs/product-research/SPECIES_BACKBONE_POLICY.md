@@ -1,0 +1,44 @@
+# Species Backbone Policy
+
+Status: OVE-58 bounded seed policy
+Scope: CoL/WFO/GBIF/EPPO/Wikidata species seed consumed by `pnpm catalog:sources:import-species-backbone`
+
+OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. It is not a full taxonomy import.
+
+## Source Precedence
+
+For the first species seed, OverGarden uses `Solanum lycopersicum L.` with these source roles:
+
+1. `catalogue-of-life-checklistbank` is the canonical accepted scientific-name authority for the product projection.
+2. `world-flora-online` corroborates plant taxonomy and WFO identity. A WFO candidate with conflicting authorship stays source-only until curation.
+3. `gbif-backbone` corroborates the species concept and preserves `gbif_taxon_key`. GBIF occurrence data is out of scope and remains raw/source-only.
+4. `eppo-codes` preserves `eppo_code` and exact synonym/code support. Distribution/native-range text remains raw/source-only.
+5. `wikidata` supplies safe vernacular aliases only after the species identity is corroborated by backbone sources.
+
+## Projection Rules
+
+The product catalog projection may include:
+
+- Accepted scientific name: `Solanum lycopersicum L.`
+- Source IDs: `col_id`, `wfo_id`, `gbif_taxon_key`, `eppo_code`, and `wikidata_id` inside internal allowed projection/provenance only.
+- Source-backed synonym aliases, currently `Lycopersicon esculentum`.
+- Small, gardener-facing vernacular aliases with permissive license/provenance, currently `Tomato`, `помідор`, `томати`, and `домат`.
+
+The product catalog projection must not include:
+
+- Raw source payload blobs.
+- Source-only fields.
+- GBIF occurrence records or coordinates.
+- EPPO distribution/native-range text.
+- Wikidata aliases that have not been reviewed for local gardener language fit.
+- Conditional or internal-validation-only sources such as PESI, EOL, or iNaturalist.
+
+## Conflict Handling
+
+When accepted names or authorship disagree, the importer keeps the conflicting value in `catalog_source_records` and does not project it to `catalog_items` or `catalog_item_names`. A later curator can promote, merge, or reject only after the source conflict is explicit in a follow-up SDD slice.
+
+If a source link disappears or a source license changes, new imports must stop before projection. Existing projected rows should remain stable until an explicit curation/remediation task changes catalog identity.
+
+## Runtime Boundary
+
+User typeahead, save, and readback paths do not call live external APIs. They read only OverGarden catalog tables and the derived Meilisearch typeahead index. Source refresh/import work is offline/operator-run and must keep raw fields quarantined in `catalog_source_records`.

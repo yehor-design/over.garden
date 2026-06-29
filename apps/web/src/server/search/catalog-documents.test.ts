@@ -59,6 +59,45 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("sourceRecordId");
   });
 
+  it("indexes species backbone aliases without source IDs or raw provenance", () => {
+    const document = toCatalogTypeaheadDocument(
+      catalogRow({
+        id: "00000000-0000-4000-8000-000000000301",
+        canonicalName: "Solanum lycopersicum L.",
+        normalizedName: "solanum lycopersicum l.",
+        source: "species_backbone",
+        itemLocale: "la",
+        displayName: "помідор",
+        aliasNormalizedName: "помідор",
+        aliasLocale: "uk",
+        isPrimary: false,
+      }),
+    );
+
+    expect(document).toEqual({
+      id: "00000000-0000-4000-8000-000000000301:uk:%D0%BF%D0%BE%D0%BC%D1%96%D0%B4%D0%BE%D1%80",
+      catalogItemId: "00000000-0000-4000-8000-000000000301",
+      displayName: "помідор",
+      canonicalName: "Solanum lycopersicum L.",
+      normalizedName: "помідор",
+      locale: "uk",
+      itemLocale: "la",
+      status: "seeded",
+      source: "species_backbone",
+      isPrimary: false,
+      rank: 10,
+      kind: "catalog_item",
+    });
+    expect(document).not.toHaveProperty("colId");
+    expect(document).not.toHaveProperty("wfoId");
+    expect(document).not.toHaveProperty("gbifTaxonKey");
+    expect(document).not.toHaveProperty("eppoCode");
+    expect(document).not.toHaveProperty("wikidataId");
+    expect(document).not.toHaveProperty("sourceRecordKey");
+    expect(document).not.toHaveProperty("coordinates");
+    expect(document).not.toHaveProperty("rawPayload");
+  });
+
   it("does not index provisional user-added catalog rows", () => {
     expect(
       toCatalogTypeaheadDocument(
@@ -130,6 +169,33 @@ describe("catalog typeahead search documents", () => {
         source: "ua_state_register",
         sourceRecordId: "00000000-0000-4000-8000-000000056003",
         rawPayloadSha256: "a".repeat(64),
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects species backbone hits that carry source IDs or occurrence fields", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000301",
+        displayName: "помідор",
+        canonicalName: "Solanum lycopersicum L.",
+        locale: "uk",
+        status: "seeded",
+        source: "species_backbone",
+        sourceRecordKey: "GBIF:species:2930137",
+        gbifTaxonKey: 2930137,
+        coordinates: [50.4501, 30.5234],
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000301",
+        displayName: "Tomato",
+        canonicalName: "Solanum lycopersicum L.",
+        locale: "en",
+        status: "seeded",
+        source: "species_backbone",
+        gbifTaxonKey: 2930137,
       }),
     ).toBeNull();
   });

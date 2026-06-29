@@ -63,6 +63,9 @@ describe("catalog repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
     expect(compiled.sql).toContain(
+      '"catalog_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).toContain(
       'lower("catalog_item_names"."display_name") like $3',
     );
     expect(compiled.sql).not.toContain("journal_entries");

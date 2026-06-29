@@ -97,6 +97,24 @@ function CatalogSourceProvenanceCard({
       </div>
 
       <dl className="grid gap-3 text-sm md:grid-cols-2">
+        {row.projectedAliases.length > 0 ? (
+          <div className="md:col-span-2">
+            <dt className="text-xs text-muted-foreground">
+              Projected typeahead aliases
+            </dt>
+            <dd className="mt-2 flex flex-wrap gap-2">
+              {row.projectedAliases.map((alias) => (
+                <span
+                  key={`${alias.locale}:${alias.displayName}`}
+                  className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground"
+                >
+                  {alias.displayName} · {alias.locale}
+                  {alias.isPrimary ? " · primary" : ""}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ) : null}
         <div>
           <dt className="text-xs text-muted-foreground">Source</dt>
           <dd className="mt-1 font-medium text-foreground">{row.sourceName}</dd>

@@ -250,6 +250,7 @@ export function buildCatalogTypeaheadQuery(
       "catalog_item_names.display_name as displayName",
     ])
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("catalog_items.created_by_user_id", "is", null)
     .where(
       sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
     )

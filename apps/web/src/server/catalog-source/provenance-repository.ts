@@ -28,6 +28,13 @@ export interface CatalogSourceProvenanceCurationRow {
   fetchedAt: Date | string;
   verifiedAt: Date | string;
   projectionStatus: string;
+  projectedAliases: CatalogSourceProjectedAlias[];
+}
+
+export interface CatalogSourceProjectedAlias {
+  displayName: string;
+  locale: string;
+  isPrimary: boolean;
 }
 
 export async function listCatalogSourceProvenanceForCuration(
@@ -38,6 +45,10 @@ export async function listCatalogSourceProvenanceForCuration(
     executor,
     limit,
   ).execute();
+  const aliasesByCatalogItemId = await readProjectedAliasesByCatalogItemId(
+    executor,
+    rows.map((row) => row.catalogItemId),
+  );
 
   return rows.map((row) => ({
     catalogItemId: row.catalogItemId,
@@ -57,6 +68,7 @@ export async function listCatalogSourceProvenanceForCuration(
     fetchedAt: row.fetchedAt,
     verifiedAt: row.verifiedAt,
     projectionStatus: row.projectionStatus,
+    projectedAliases: aliasesByCatalogItemId.get(row.catalogItemId) ?? [],
   }));
 }
 
@@ -108,7 +120,53 @@ export function buildCatalogSourceProvenanceForCurationQuery(
     .limit(normalizeSourceProvenanceLimit(limit));
 }
 
+export function buildCatalogSourceProjectedAliasesForCurationQuery(
+  executor: QueryExecutor,
+  catalogItemIds: string[],
+) {
+  return executor
+    .selectFrom("catalog_item_names")
+    .select([
+      "catalog_item_names.catalog_item_id as catalogItemId",
+      "catalog_item_names.display_name as displayName",
+      "catalog_item_names.locale as locale",
+      "catalog_item_names.is_primary as isPrimary",
+    ])
+    .where("catalog_item_names.catalog_item_id", "in", catalogItemIds)
+    .orderBy("catalog_item_names.is_primary", "desc")
+    .orderBy("catalog_item_names.display_name", "asc");
+}
+
 function normalizeSourceProvenanceLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_SOURCE_PROVENANCE_ROWS;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_SOURCE_PROVENANCE_ROWS);
+}
+
+async function readProjectedAliasesByCatalogItemId(
+  executor: QueryExecutor,
+  catalogItemIds: string[],
+) {
+  const uniqueCatalogItemIds = [...new Set(catalogItemIds)];
+  const aliasesByCatalogItemId = new Map<
+    string,
+    CatalogSourceProjectedAlias[]
+  >();
+  if (uniqueCatalogItemIds.length === 0) return aliasesByCatalogItemId;
+
+  const rows = await buildCatalogSourceProjectedAliasesForCurationQuery(
+    executor,
+    uniqueCatalogItemIds,
+  ).execute();
+
+  for (const row of rows) {
+    const aliases = aliasesByCatalogItemId.get(row.catalogItemId) ?? [];
+    aliases.push({
+      displayName: row.displayName,
+      locale: row.locale,
+      isPrimary: Boolean(row.isPrimary),
+    });
+    aliasesByCatalogItemId.set(row.catalogItemId, aliases);
+  }
+
+  return aliasesByCatalogItemId;
 }

@@ -13,7 +13,10 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
-import { buildCatalogSourceProvenanceForCurationQuery } from "./provenance-repository";
+import {
+  buildCatalogSourceProjectedAliasesForCurationQuery,
+  buildCatalogSourceProvenanceForCurationQuery,
+} from "./provenance-repository";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -59,6 +62,24 @@ describe("catalog source provenance repository", () => {
       "confirmed",
       "canonical_item",
       10,
+    ]);
+  });
+
+  it("reads projected aliases from catalog names without raw source records", () => {
+    const compiled = buildCatalogSourceProjectedAliasesForCurationQuery(
+      testDb,
+      ["00000000-0000-4000-8000-000000058003"],
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_item_names"');
+    expect(compiled.sql).toContain('"catalog_item_names"."catalog_item_id" in');
+    expect(compiled.sql).toContain('"catalog_item_names"."display_name"');
+    expect(compiled.sql).toContain('"catalog_item_names"."is_primary"');
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain("raw_payload");
+    expect(compiled.sql).not.toContain("source_only_fields");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-4000-8000-000000058003",
     ]);
   });
 });

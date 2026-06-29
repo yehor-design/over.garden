@@ -26,6 +26,18 @@ describe("CatalogSourceProvenanceList", () => {
             fetchedAt: "2026-06-29T00:00:00.000Z",
             verifiedAt: "2026-06-29T00:00:00.000Z",
             projectionStatus: "projected",
+            projectedAliases: [
+              {
+                displayName: "Ботсадівський",
+                locale: "uk",
+                isPrimary: true,
+              },
+              {
+                displayName: "Botsadivs`kyi",
+                locale: "uk",
+                isPrimary: false,
+              },
+            ],
           },
         ]}
       />,
@@ -36,6 +48,9 @@ describe("CatalogSourceProvenanceList", () => {
     expect(html).toContain("2025-07-15");
     expect(html).toContain("Creative Commons Attribution 4.0 International");
     expect(html).toContain("attribution required");
+    expect(html).toContain("Projected typeahead aliases");
+    expect(html).toContain("Ботсадівський");
+    expect(html).toContain("Botsadivs`kyi");
     expect(html).not.toContain("raw_payload");
     expect(html).not.toContain("source_only_fields");
     expect(html).not.toContain("varietyDescription");
