@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-06-29",
+  "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
+  "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
+  "requiredBeforeNextLinearIssues": ["OVE-51", "OVE-52", "OVE-53"],
+  "entries": [
+    {
+      "issueId": "OVE-29",
+      "title": "Owner-consistent media: photo can only attach to the user's own entry",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "4019df1bce770499c160fff4bca0c8603a2f2ee0",
+      "mainRef": "main",
+      "branchOnlyAuditCommit": "27fc5f56",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-29/owner-consistent-media-photo-can-only-attach-to-the-users-own-entry",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/28381089559",
+      "completedAt": "2026-06-29",
+      "verificationCommands": [
+        "git branch --contains 4019df1bce770499c160fff4bca0c8603a2f2ee0",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build"
+      ],
+      "notes": [
+        "Supersedes the branch-only audit proof by requiring the owner-consistent media fix to be contained in current main.",
+        "No secrets, invite URLs, journal text, media keys, or live user identifiers are included in this ledger entry."
+      ]
+    },
+    {
+      "issueId": "OVE-30",
+      "title": "Production auth fail-closed: no deployed app runs on development secret",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "e3bd3b4dfd4491d87529462ed1061bfb522b6e6a",
+      "mainRef": "main",
+      "branchOnlyAuditCommit": "d6d47350",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-30/production-auth-fail-closed-no-deployed-app-runs-on-development-secret",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/28386343926",
+      "completedAt": "2026-06-29",
+      "verificationCommands": [
+        "git branch --contains e3bd3b4dfd4491d87529462ed1061bfb522b6e6a",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build"
+      ],
+      "notes": [
+        "Supersedes the branch-only audit proof by requiring the fail-closed auth fix to be contained in current main.",
+        "Local production-like builds intentionally need a real non-placeholder BETTER_AUTH_SECRET."
+      ]
+    }
+  ]
+}

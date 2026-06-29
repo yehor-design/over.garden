@@ -2,12 +2,26 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
+Last operational update: 2026-06-29 (OVE-50)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
 This is not the full product backlog. It is the living execution roadmap for the next product-learning slices after the walking skeleton. The skeleton proved the stack; it is not product UI and it is not the final product data model.
 
 From this point forward, work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid execution slice unless it is embedded inside a user-visible path and proves integration through that path.
+
+## Current Execution State
+
+Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active queue now lives in Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`.
+
+Before selecting or starting any next Linear issue, run:
+
+```bash
+cd apps/web
+pnpm mainline:closeout:check
+```
+
+Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. After OVE-50, continue the active queue in order: OVE-51 -> OVE-52 -> OVE-53.
 
 ## Current Baseline
 
@@ -89,7 +103,7 @@ The fastest useful path is:
 
 ## Slice Roadmap
 
-This section is a horizon, not a backlog. Only `Execution Batch 1` is ready to create as Linear issues. Later slices are directional bets that must be rewritten into fresh vertical SDD tasks after the current batch is reviewed against real implementation friction and product learning.
+This section is a historical horizon and original roadmap reference, not the active queue by itself. Use `Current Execution State`, Linear, and `docs/MAINLINE_CLOSEOUT.md` before accepting the next issue. Later slices remain directional bets that must be rewritten into fresh vertical SDD tasks after current implementation friction and product learning are reviewed.
 
 ### Slice 1: Narrative Journal Capture
 
@@ -189,6 +203,8 @@ Includes:
 - Noindex full lineage graph.
 
 ## Execution Batch 1
+
+Historical note: Batch 1 has been superseded by later Linear slices. Keep this section for slice-shape reference only; do not restart from this batch or use it as the next active queue.
 
 Create the first Linear batch from the issues below. Keep them in one project or milestone named `SDD Slice 1 - Narrative Journal Capture`. These are vertical execution slices, not layer tickets. Every issue owns the schema/server/UI/test/doc changes needed for its own user behavior.
 

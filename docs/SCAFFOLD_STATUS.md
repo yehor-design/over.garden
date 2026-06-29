@@ -8,6 +8,8 @@ OVE-29 hardens owner-consistent media attachment: quarantine uploads cannot pre-
 
 OVE-30 hardens production auth startup: Better Auth uses a local fallback only outside production-like runtimes, deployed production/preview fails closed when `BETTER_AUTH_SECRET` is missing or placeholder-like, and pilot-smoke flags local-fallback auth config as a blocker without exposing secret values.
 
+OVE-50 adds the mainline closeout guard for agent execution quality: `docs/MAINLINE_CLOSEOUT.md` defines the required Linear closeout proof, `docs/mainline-closeout-ledger.json` records required current-main proofs for OVE-29 and OVE-30, `pnpm mainline:closeout:check` verifies those commits are contained in the checked-out `main` history, and CI runs the guard before the broader web app checks. This supersedes stale roadmap/status pointers that could send the next agent back to historical Execution Batch 1 or Slice 4 work.
+
 OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
 
 OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-pilot reviewed copy while keeping public release blocked. First-publication disclosure is now version `first-publication-v2`, erasure intake is `erasure-request-pilot-v2`, users can see the latest erasure request status, and the operator review surface can move requests through submitted -> reviewing -> handled without selecting journal text or media keys.
@@ -179,6 +181,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 ```bash
 cd infra && docker compose up -d
 cd ../apps/web
+pnpm mainline:closeout:check
 pnpm local:bootstrap
 pnpm db:types
 pnpm db:types:check
@@ -205,7 +208,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 
 ## Next Build Step
 
-Continue the current SDD Slice 4 execution batch from Linear. After `OVE-27`, the next strongest vertical issue is production public-access/domain/env closure or journal search worker indexing, depending on whether the founder wants to unblock live H6 smoke first or remove the explicit search/worker degradation first.
+Continue the active Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`. Before starting the next issue, read `docs/MAINLINE_CLOSEOUT.md` and run `cd apps/web && pnpm mainline:closeout:check`. After OVE-50, the intended order is OVE-51 -> OVE-52 -> OVE-53.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 

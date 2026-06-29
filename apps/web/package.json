@@ -14,6 +14,7 @@
     "db:bootstrap": "tsx scripts/bootstrap-db.ts",
     "db:types": "kysely-codegen --dialect postgres --env-file .env.local --out-file src/db/generated.ts",
     "db:types:check": "tsx scripts/check-generated-types.ts",
+    "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",

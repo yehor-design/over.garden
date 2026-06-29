@@ -40,6 +40,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Build a walking skeleton first, then vertical SDD slices.
 - Keep changes scoped and wire all affected surfaces together: SQL/types -> repository -> route/action -> UI -> tests -> docs.
 - Prefer machine-checkable guardrails over prose instructions: typecheck, lint, focused tests, privacy tests, SSR tests, media tests, search-index tests.
+- Before starting the next Linear issue after completed critical work, read `docs/MAINLINE_CLOSEOUT.md` and run `cd apps/web && pnpm mainline:closeout:check`. Linear `Done` is not accepted unless the fix is contained in current `main` or an explicitly named deployed commit.
 - Any Linear SDD issue touching media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` in its context files and update it when external values change.
 - Any Linear SDD issue with user-facing behavior must include `docs/product-research/README.md` plus the relevant 2-5 research files selected by the Product Thinking Gate.
 - English for code, identifiers, comments, commit messages, and repository docs.
@@ -57,7 +58,7 @@ All future Linear execution issues must be vertical SDD slices, not layer ticket
 
 Do not create standalone issues such as "build schema", "build UI", "add media pipeline", "add analytics", "build public pages", or "wire search" unless that work is inside the same issue as a user-visible path. Before creating or accepting a Linear issue, run the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. If it fails the test, rewrite the issue before implementation.
 
-The roadmap is not the full backlog. Only the current execution batch in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is ready for Linear. Later horizon slices must be rewritten into fresh vertical SDD issues after the current batch is reviewed.
+The roadmap is not the full backlog. Use the `Current Execution State` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` plus Linear as the active queue; older execution batch text is historical unless explicitly restated there. Later horizon slices must be rewritten into fresh vertical SDD issues after the current batch is reviewed.
 
 ## Decision Changes
 
