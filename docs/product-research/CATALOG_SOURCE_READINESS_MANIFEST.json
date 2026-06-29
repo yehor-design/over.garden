@@ -1,0 +1,727 @@
+{
+  "manifestVersion": 1,
+  "issue": "OVE-55",
+  "title": "Live catalog source readiness gate",
+  "verificationDate": "2026-06-29",
+  "generatedBy": "apps/web/scripts/verify-catalog-sources.ts",
+  "privacyBoundary": "External occurrence or distribution coordinates are raw/source-only metadata when a source license allows capture. They are not OverGarden user/product location data and must not enter canonical product projections, analytics, Meilisearch, logs, public pages, or UI without a later explicit ADR and SDD slice.",
+  "verdictLegend": {
+    "USE": "Current access and reuse basis are good enough for the named next ingestion slice, subject to attribution and field limits.",
+    "USE-WITH-CONDITIONS": "Technically reachable, but canonical product use is blocked until the listed legal, parser, license, or field-filter condition is satisfied.",
+    "INTERNAL-VALIDATION-ONLY": "May be used only to cross-check or validate internal decisions. Do not bulk ingest, redistribute, or expose in product projections.",
+    "REJECT": "Do not use for ingestion or validation without a new legal basis or explicit maintainer decision."
+  },
+  "operatorSummary": {
+    "firstApprovedIngestionSources": [
+      "ua-state-register",
+      "catalogue-of-life-checklistbank",
+      "world-flora-online",
+      "gbif-backbone",
+      "eppo-codes",
+      "wikidata",
+      "grin-global",
+      "vertebrate-breed-ontology"
+    ],
+    "conditionalOrBlockedSources": [
+      "iasas-bg-official-variety-list",
+      "eu-common-catalogue",
+      "pesi-euro-med",
+      "eol-vernaculars",
+      "inaturalist",
+      "dad-is-efabis",
+      "eurisco",
+      "genesys-pgr",
+      "vendor-marketplace-paths"
+    ],
+    "nextSliceGate": "OVE-56 may create raw/source snapshot quarantine only from USE sources. OVE-57, OVE-58, and OVE-60 may consume the explicitly named USE sources below. OVE-59, OVE-61, OVE-62, and marketplace/vendor paths must not promote conditional or internal-validation-only data until their blockers are closed."
+  },
+  "requiredCoverage": [
+    "UA State Register",
+    "CoL/ChecklistBank",
+    "WFO",
+    "GBIF Backbone",
+    "EPPO",
+    "Wikidata",
+    "GRIN",
+    "VBO",
+    "IASAS BG",
+    "EU Common Catalogue",
+    "PESI/Euro+Med",
+    "EOL/iNaturalist",
+    "DAD-IS/EFABIS",
+    "EURISCO/Genesys",
+    "vendor/marketplace paths"
+  ],
+  "sources": [
+    {
+      "slug": "ua-state-register",
+      "name": "Ukraine State Register of Plant Varieties",
+      "category": "official_varieties",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "data.gov.ua dataset landing page plus exact resource URL for 2025-07-15_registervarietis.csv; use one-time resource fetch, not portal crawling.",
+      "endpointUrls": [
+        "https://data.gov.ua/dataset/ccf95f4a-8238-4b18-a4d3-002444876325",
+        "https://data.gov.ua/dataset/eabd0bd2-2dc6-47e2-b748-9bd254da4956/resource/32ea0f72-86e4-490d-9ab9-4d64976187c6/download/2025-07-15_registervarietis.csv"
+      ],
+      "license": "Creative Commons Attribution 4.0 International",
+      "commercialUseBasis": "Open-data CC-BY reuse with attribution; previous API_VERIFY_RESULTS captured the license basis and OVE-55 verified the actual CSV resource responds.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Official variety fields only. No user data. Proposed zone or distribution-like source fields remain source provenance unless a later projection deliberately maps them.",
+      "coordinateTreatment": "no_precise_coordinates_observed",
+      "sourceVersionOrDate": "2025-07-15 resource set observed live on 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Byte-range request returned HTTP 206 from 2025-07-15_registervarietis.csv. The file begins with variety schema fields and a public official row for Prunus armeniaca / Bergeron 1. The file is octet-stream UTF-16LE, so OVE-57 must decode explicitly.",
+      "knownBlockers": [
+        "Confirm row count and full-file checksum inside raw/source quarantine before canonical projection.",
+        "Portal robots policy discourages automated crawling; fetch exact resource URLs or use an official channel."
+      ],
+      "nextAllowedIssue": "OVE-57",
+      "liveChecks": [
+        {
+          "id": "ua-register-landing",
+          "method": "GET",
+          "url": "https://data.gov.ua/dataset/ccf95f4a-8238-4b18-a4d3-002444876325",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "2025-07-15_RegisterVarietis.csv",
+            "Creative Commons Attribution"
+          ],
+          "notes": "Landing proof only; it does not import the dataset."
+        },
+        {
+          "id": "ua-register-byte-range",
+          "method": "GET",
+          "url": "https://data.gov.ua/dataset/eabd0bd2-2dc6-47e2-b748-9bd254da4956/resource/32ea0f72-86e4-490d-9ab9-4d64976187c6/download/2025-07-15_registervarietis.csv",
+          "range": "bytes=0-4095",
+          "expectStatus": [200, 206],
+          "expectBodyIncludes": ["varietyName", "Bergeron 1"],
+          "notes": "Small range request only; proves rows without bulk import."
+        }
+      ]
+    },
+    {
+      "slug": "catalogue-of-life-checklistbank",
+      "name": "Catalogue of Life / ChecklistBank",
+      "category": "species_backbone",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "Catalogue of Life API release alias 3LR and ChecklistBank download/API surfaces.",
+      "endpointUrls": [
+        "https://api.catalogueoflife.org/dataset/3LR",
+        "https://api.catalogueoflife.org/dataset/3LR/nameusage/search?q=Solanum%20lycopersicum&limit=1"
+      ],
+      "license": "CC BY",
+      "commercialUseBasis": "Live API metadata reports license cc by for the current Catalogue of Life release.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Taxonomic names, ranks, synonyms, classification, identifiers, and source provenance. No occurrence coordinates in this backbone use.",
+      "coordinateTreatment": "no_coordinates_in_source",
+      "sourceVersionOrDate": "COL26.6, key 315448, created 2026-06-12, modified 2026-06-16",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Live API dataset metadata returned alias COL26.6, license cc by, DOI 10.48580/dgy4k, and size 5,397,623; nameusage search returned Solanum lycopersicum.",
+      "knownBlockers": [
+        "Carry attribution and release DOI/version into source provenance.",
+        "Do not treat vernacular coverage as sufficient for UA/BG; this is a species backbone source."
+      ],
+      "nextAllowedIssue": "OVE-58",
+      "liveChecks": [
+        {
+          "id": "col-current-release",
+          "method": "GET",
+          "url": "https://api.catalogueoflife.org/dataset/3LR",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["COL26.6", "cc by", "10.48580/dgy4k"],
+          "notes": "Current release metadata proof."
+        },
+        {
+          "id": "col-nameusage-sample",
+          "method": "GET",
+          "url": "https://api.catalogueoflife.org/dataset/3LR/nameusage/search?q=Solanum%20lycopersicum&limit=1",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Solanum", "lycopersicum"],
+          "notes": "Small taxon lookup sample."
+        }
+      ]
+    },
+    {
+      "slug": "world-flora-online",
+      "name": "World Flora Online Plant List",
+      "category": "species_backbone",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "WFO Zenodo community release metadata and downloadable dumps; avoid relying on unstable app hostnames for automation.",
+      "endpointUrls": [
+        "https://zenodo.org/api/communities/wfo/records?q=&sort=newest&size=1"
+      ],
+      "license": "CC0",
+      "commercialUseBasis": "Zenodo metadata for the latest WFO community release reports license id cc-zero.",
+      "attributionRequired": false,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Plant taxonomic identifiers, scientific names, synonyms, ranks, and release provenance. No occurrence coordinates in this backbone use.",
+      "coordinateTreatment": "no_coordinates_in_source",
+      "sourceVersionOrDate": "World Flora Online Plant List June 2026, publication_date 2026-06-21, DOI 10.5281/zenodo.20782718",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Zenodo community metadata returned record 20782718 with CC0 license and files including plant_list_2026-06.sql.gz and plant_list_2026-06.json.zip.",
+      "knownBlockers": [
+        "Large dump import belongs in OVE-56/OVE-58 raw-source quarantine, not in this gate.",
+        "Do not infer UA/BG vernacular coverage from WFO; use it as plant taxonomic backbone."
+      ],
+      "nextAllowedIssue": "OVE-58",
+      "liveChecks": [
+        {
+          "id": "wfo-latest-zenodo-release",
+          "method": "GET",
+          "url": "https://zenodo.org/api/communities/wfo/records?q=&sort=newest&size=1",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "World Flora Online Plant List June 2026",
+            "cc-zero",
+            "10.5281/zenodo.20782718"
+          ],
+          "notes": "Metadata only; no dump download."
+        }
+      ]
+    },
+    {
+      "slug": "gbif-backbone",
+      "name": "GBIF Backbone Taxonomy",
+      "category": "species_backbone",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "GBIF public API and dataset metadata for the Backbone Taxonomy dataset.",
+      "endpointUrls": [
+        "https://api.gbif.org/v1/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c",
+        "https://api.gbif.org/v1/species/match?name=Solanum%20lycopersicum"
+      ],
+      "license": "CC BY 4.0 for the backbone dataset; occurrence datasets have independent licenses and must be filtered separately.",
+      "commercialUseBasis": "Backbone dataset metadata reports CC-BY 4.0 legalcode. Occurrence records are not approved by this source entry unless row-level license is CC0/CC-BY.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Backbone taxonomy fields only by default. Occurrence/distribution coordinates, if used later from separate GBIF datasets, are raw/source-only and require CC0/CC-BY filtering.",
+      "coordinateTreatment": "raw_source_only_for_any_occurrence_or_distribution_coordinates",
+      "sourceVersionOrDate": "GBIF Backbone dataset DOI 10.15468/39omei, pubDate 2023-08-28, modified 2023-11-17",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Dataset metadata returned title GBIF Backbone Taxonomy, CC-BY 4.0 license, and DOI 10.15468/39omei. Species match returned usageKey 2930137 for Solanum lycopersicum.",
+      "knownBlockers": [
+        "Do not ingest occurrence coordinates into product projections.",
+        "Filter non-commercial occurrence datasets if a later slice uses occurrence data at all."
+      ],
+      "nextAllowedIssue": "OVE-58",
+      "liveChecks": [
+        {
+          "id": "gbif-backbone-metadata",
+          "method": "GET",
+          "url": "https://api.gbif.org/v1/dataset/d7dddbf4-2cf0-4f39-9b2a-bb099caae36c",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "GBIF Backbone Taxonomy",
+            "creativecommons.org/licenses/by/4.0",
+            "10.15468/39omei"
+          ],
+          "notes": "Backbone dataset metadata proof."
+        },
+        {
+          "id": "gbif-species-match-sample",
+          "method": "GET",
+          "url": "https://api.gbif.org/v1/species/match?name=Solanum%20lycopersicum",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["usageKey", "Solanum lycopersicum"],
+          "notes": "Small species-match sample."
+        }
+      ]
+    },
+    {
+      "slug": "eppo-codes",
+      "name": "EPPO Codes and Global Database",
+      "category": "species_backbone_and_aliases",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "EPPO Data Services landing page, Open Licence PDF, and Global Database taxon pages.",
+      "endpointUrls": [
+        "https://data.eppo.int/",
+        "https://data.eppo.int/data/Open_Licence.pdf",
+        "https://gd.eppo.int/taxon/SOLLC"
+      ],
+      "license": "EPPO Codes Open Data Licence",
+      "commercialUseBasis": "Research corpus recorded explicit commercial-use wording; OVE-55 live checks confirm the current Open Data Licence surface and taxon pages remain reachable.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "EPPO code, scientific names, synonyms, common names, regulated-organism metadata, and source provenance. Distribution fields are raw/source-only unless a later safe aggregate projection is approved.",
+      "coordinateTreatment": "raw_source_only_for_distribution_metadata",
+      "sourceVersionOrDate": "Live access verified 2026-06-29; EPPO taxon page for SOLLC reachable",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "data.eppo.int returned Open Data Licence references. gd.eppo.int/taxon/SOLLC returned a live taxon page for Solanum laciniatum (SOLLC).",
+      "knownBlockers": [
+        "Attribution is mandatory.",
+        "Measure UA/BG common-name coverage before relying on EPPO as a vernacular source.",
+        "Do not project distribution data into product UI/search in v0."
+      ],
+      "nextAllowedIssue": "OVE-58",
+      "liveChecks": [
+        {
+          "id": "eppo-data-services",
+          "method": "GET",
+          "url": "https://data.eppo.int/",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Open Data Licence", "/data/Open_Licence.pdf"],
+          "notes": "Licence and data-services landing proof."
+        },
+        {
+          "id": "eppo-open-licence-pdf",
+          "method": "HEAD",
+          "url": "https://data.eppo.int/data/Open_Licence.pdf",
+          "expectStatus": 200,
+          "expectBodyIncludes": [],
+          "notes": "Checks the named licence document exists without downloading it."
+        },
+        {
+          "id": "eppo-taxon-sample",
+          "method": "GET",
+          "url": "https://gd.eppo.int/taxon/SOLLC",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Solanum laciniatum", "SOLLC"],
+          "notes": "Small taxon page sample."
+        }
+      ]
+    },
+    {
+      "slug": "wikidata",
+      "name": "Wikidata",
+      "category": "aliases_and_matching_support",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "Wikidata EntityData JSON and SPARQL/dumps for later bounded extraction.",
+      "endpointUrls": [
+        "https://www.wikidata.org/wiki/Special:EntityData/Q23501.json"
+      ],
+      "license": "CC0",
+      "commercialUseBasis": "Wikidata entity data is CC0. OVE-55 uses it only as supplemental alias/entity evidence, never as sole canonical truth.",
+      "attributionRequired": false,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Entity IDs, labels, aliases, taxon/cultivar claims, and source references. Ignore properties unrelated to catalog identity.",
+      "coordinateTreatment": "no_product_location_use_for_geographic_properties",
+      "sourceVersionOrDate": "Live EntityData access verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "EntityData JSON for Q23501 returned a live JSON entity payload.",
+      "knownBlockers": [
+        "Coverage is uneven; use as supplement only.",
+        "Filter claims to catalog identity fields and carry Wikidata QID provenance."
+      ],
+      "nextAllowedIssue": "OVE-59",
+      "liveChecks": [
+        {
+          "id": "wikidata-entity-sample",
+          "method": "GET",
+          "url": "https://www.wikidata.org/wiki/Special:EntityData/Q23501.json",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["entities", "Q23501"],
+          "notes": "Small EntityData sample."
+        }
+      ]
+    },
+    {
+      "slug": "grin-global",
+      "name": "USDA GRIN-Global Taxonomy",
+      "category": "species_backbone_and_matching_support",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "GRIN-Global public taxonomy web surface; later implementation should use official dumps or documented export path, not scrape interactive pages.",
+      "endpointUrls": [
+        "https://npgsweb.ars-grin.gov/gringlobal/taxon/taxonomysearch"
+      ],
+      "license": "US public-domain compatible federal data, with source-specific confirmation required for any non-US contributed records.",
+      "commercialUseBasis": "Research corpus classifies USDA GRIN as public domain; OVE-55 verifies the current official taxonomy search surface is reachable.",
+      "attributionRequired": false,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Taxonomy, economic-plant common names, synonyms, source IDs, and provenance. No product location.",
+      "coordinateTreatment": "no_product_location_use",
+      "sourceVersionOrDate": "Live taxonomy search surface verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "GRIN-Global taxonomy search page returned live HTML containing Search Taxonomy Data in GRIN-Global.",
+      "knownBlockers": [
+        "No modern public REST endpoint was approved by this gate; use official dump/export path in raw quarantine.",
+        "Confirm licensing on any non-US contributed subset before canonical projection."
+      ],
+      "nextAllowedIssue": "OVE-58",
+      "liveChecks": [
+        {
+          "id": "grin-taxonomy-search",
+          "method": "GET",
+          "url": "https://npgsweb.ars-grin.gov/gringlobal/taxon/taxonomysearch",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Search Taxonomy Data in GRIN-Global"],
+          "notes": "Reachability proof only; no page scraping approved."
+        }
+      ]
+    },
+    {
+      "slug": "vertebrate-breed-ontology",
+      "name": "Vertebrate Breed Ontology",
+      "category": "breeds",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "OBO/OLS ontology metadata and PURL downloads for vertebrate breed backbone.",
+      "endpointUrls": [
+        "https://www.ebi.ac.uk/ols4/api/ontologies/vbo",
+        "https://purl.obolibrary.org/obo/vbo.obo"
+      ],
+      "license": "CC BY 4.0",
+      "commercialUseBasis": "OVE-55 live OLS metadata confirms VBO is reachable; previous API_VERIFY_RESULTS confirmed CC-BY and version 2026-04-15.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "VBO IDs, English labels, romanized synonyms, NCBITaxon alignment, DAD-IS alignment metadata, and provenance.",
+      "coordinateTreatment": "no_coordinates_in_source",
+      "sourceVersionOrDate": "OLS reports VBO loaded 2026-04-15 with languages [en]",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "OLS API returned ontologyId vbo and languages [en]. This reconfirms no UA/BG labels and no bee coverage; VBO is a vertebrate backbone only.",
+      "knownBlockers": [
+        "Not a localized UA/BG label source.",
+        "Does not cover bees/Apis; bee identities must use the small official/manual path."
+      ],
+      "nextAllowedIssue": "OVE-60",
+      "liveChecks": [
+        {
+          "id": "vbo-ols-metadata",
+          "method": "GET",
+          "url": "https://www.ebi.ac.uk/ols4/api/ontologies/vbo",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "\"ontologyId\" : \"vbo\"",
+            "\"languages\"",
+            "\"en\""
+          ],
+          "notes": "Ontology metadata proof."
+        }
+      ]
+    },
+    {
+      "slug": "iasas-bg-official-variety-list",
+      "name": "IASAS BG Official Variety List",
+      "category": "official_varieties",
+      "verdict": "USE-WITH-CONDITIONS",
+      "deferred": true,
+      "currentAccessPath": "IASAS public official-variety-list HTML/PDF channel.",
+      "endpointUrls": [
+        "https://iasas.government.bg/cms/%D0%BE%D1%84%D0%B8%D1%86%D0%B8%D0%B0%D0%BB%D0%BD%D0%B0-%D1%81%D0%BE%D1%80%D1%82%D0%BE%D0%B2%D0%B0-%D0%BB%D0%B8%D1%81%D1%82%D0%B0"
+      ],
+      "license": "Reuse basis not explicit enough for automatic commercial projection",
+      "commercialUseBasis": "Technically reachable official list, but OVE-55 does not find a clean machine-readable export or explicit commercial reuse grant.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot"],
+      "allowedSensitiveFields": "Official variety-list fields extracted from PDF/HTML only after parser proof and attribution. No user data.",
+      "coordinateTreatment": "no_product_location_use",
+      "sourceVersionOrDate": "Live IASAS page verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "IASAS official-variety-list page returned HTTP 200 and contains OSL references.",
+      "knownBlockers": [
+        "PDF/HTML only; no approved API/CSV.",
+        "Commercial reuse basis must be captured from IASAS or legal review before canonical product projection.",
+        "Parser/OCR proof belongs in OVE-61."
+      ],
+      "nextAllowedIssue": "OVE-61 after legal/parser condition",
+      "liveChecks": [
+        {
+          "id": "iasas-official-list-page",
+          "method": "GET",
+          "url": "https://iasas.government.bg/cms/%D0%BE%D1%84%D0%B8%D1%86%D0%B8%D0%B0%D0%BB%D0%BD%D0%B0-%D1%81%D0%BE%D1%80%D1%82%D0%BE%D0%B2%D0%B0-%D0%BB%D0%B8%D1%81%D1%82%D0%B0",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Официална сортова листа", "OSL"],
+          "notes": "Reachability proof only; not permission proof."
+        }
+      ]
+    },
+    {
+      "slug": "eu-common-catalogue",
+      "name": "EU Common Catalogue / EU Plant Variety Portal",
+      "category": "official_varieties",
+      "verdict": "USE-WITH-CONDITIONS",
+      "deferred": true,
+      "currentAccessPath": "EU Plant Variety Portal and official catalogue/publication surfaces.",
+      "endpointUrls": [
+        "https://ec.europa.eu/food/plant-variety-portal/",
+        "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en"
+      ],
+      "license": "EU reuse likely available under Commission reuse rules, but dataset-specific basis and legal-value caveats must be captured before projection",
+      "commercialUseBasis": "Portal is reachable, but OVE-55 does not approve bulk canonical projection until exact dataset reuse basis and Official Journal/legal-value path are captured.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot"],
+      "allowedSensitiveFields": "Official EU variety fields only after source-version and reuse basis are captured. Trade names require extra care and provenance.",
+      "coordinateTreatment": "no_product_location_use",
+      "sourceVersionOrDate": "Live portal verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "EU Plant Variety Portal returned live application HTML containing Plant Variety Portal references.",
+      "knownBlockers": [
+        "API/export stability remains unresolved.",
+        "Capture exact reuse basis and legal-value caveat before canonical projection.",
+        "Do not treat CPVO/UPOV data as approved through this entry."
+      ],
+      "nextAllowedIssue": "OVE-61 after reuse/export condition",
+      "liveChecks": [
+        {
+          "id": "eu-plant-variety-portal",
+          "method": "GET",
+          "url": "https://ec.europa.eu/food/plant-variety-portal/",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Plant Variety Portal", "variety"],
+          "notes": "Portal reachability proof only."
+        }
+      ]
+    },
+    {
+      "slug": "pesi-euro-med",
+      "name": "PESI / Euro+Med",
+      "category": "aliases_and_matching_support",
+      "verdict": "INTERNAL-VALIDATION-ONLY",
+      "deferred": true,
+      "currentAccessPath": "PESI portal and services remain reachable, but license/commercial reuse basis is not captured.",
+      "endpointUrls": ["https://www.eu-nomen.eu/portal/"],
+      "license": "Unknown for OverGarden commercial product use",
+      "commercialUseBasis": "No approved commercial reuse basis captured in current docs.",
+      "attributionRequired": true,
+      "allowedUsage": ["internal_validation_only"],
+      "allowedSensitiveFields": "Use only aggregate/manual coverage checks until license is resolved. Do not persist vernacular rows into product source snapshots.",
+      "coordinateTreatment": "raw_source_only_for_distribution_metadata_if_license_is_later_resolved",
+      "sourceVersionOrDate": "Live PESI portal verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "PESI portal returned HTTP 200 and a PESI portal landing page.",
+      "knownBlockers": [
+        "Commercial reuse license is missing.",
+        "Actual UA/BG vernacular coverage must be measured after legal basis is resolved."
+      ],
+      "nextAllowedIssue": "OVE-59 only after license and coverage proof",
+      "liveChecks": [
+        {
+          "id": "pesi-portal",
+          "method": "GET",
+          "url": "https://www.eu-nomen.eu/portal/",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["PESI portal"],
+          "notes": "Reachability proof only; no reuse permission."
+        }
+      ]
+    },
+    {
+      "slug": "eol-vernaculars",
+      "name": "Encyclopedia of Life vernacular names",
+      "category": "aliases_and_matching_support",
+      "verdict": "USE-WITH-CONDITIONS",
+      "deferred": true,
+      "currentAccessPath": "Zenodo vernacular dump metadata is reachable; HTML docs may block automated checks.",
+      "endpointUrls": ["https://zenodo.org/api/records/13223288"],
+      "license": "Mixed or not specified at the dump metadata level; row-level licensing must be resolved before product use",
+      "commercialUseBasis": "Not approved for canonical projection until non-commercial rows are excluded and source license is machine-recorded.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot"],
+      "allowedSensitiveFields": "Vernacular names, taxon IDs, language, provider, preference flags, and per-row/provider license only after a license-filter pipeline exists.",
+      "coordinateTreatment": "no_coordinates_in_source",
+      "sourceVersionOrDate": "Zenodo record 13223288, publication_date 2024-08-05",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Zenodo API returned Vernacular names: vernacular names, May 2020, DOI 10.5281/zenodo.13223288, but license id is notspecified.",
+      "knownBlockers": [
+        "License is not specified at metadata level.",
+        "Must filter or reject non-commercial and share-alike rows before any canonical/public projection.",
+        "Do not rely on EOL as sole UA/BG alias source."
+      ],
+      "nextAllowedIssue": "OVE-59 after license-filter pipeline",
+      "liveChecks": [
+        {
+          "id": "eol-zenodo-vernaculars",
+          "method": "GET",
+          "url": "https://zenodo.org/api/records/13223288",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "Vernacular names",
+            "notspecified",
+            "10.5281/zenodo.13223288"
+          ],
+          "notes": "Metadata only; no dump download."
+        }
+      ]
+    },
+    {
+      "slug": "inaturalist",
+      "name": "iNaturalist taxa and vernacular names",
+      "category": "aliases_and_matching_support",
+      "verdict": "USE-WITH-CONDITIONS",
+      "deferred": true,
+      "currentAccessPath": "iNaturalist public taxa API.",
+      "endpointUrls": [
+        "https://api.inaturalist.org/v1/taxa?q=Solanum%20lycopersicum&per_page=1"
+      ],
+      "license": "API/content terms and per-field/per-media licenses require filtering; not treated as clean canonical source by OVE-55",
+      "commercialUseBasis": "Technically reachable, but no product projection until terms and row/license filtering are implemented.",
+      "attributionRequired": true,
+      "allowedUsage": ["raw_snapshot"],
+      "allowedSensitiveFields": "Taxon names and vernacular names only after license/terms filtering. Do not ingest observations, users, photos, or coordinates for product projection.",
+      "coordinateTreatment": "no_product_location_use_reject_observation_coordinates",
+      "sourceVersionOrDate": "Live taxa API verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Taxa API returned total_results for Solanum lycopersicum.",
+      "knownBlockers": [
+        "Do not ingest observation/user/photo data.",
+        "License/terms filtering needed before alias projection.",
+        "BG vernacular coverage is expected to be weak."
+      ],
+      "nextAllowedIssue": "OVE-59 after terms/license filtering",
+      "liveChecks": [
+        {
+          "id": "inat-taxa-sample",
+          "method": "GET",
+          "url": "https://api.inaturalist.org/v1/taxa?q=Solanum%20lycopersicum&per_page=1",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["total_results", "Solanum"],
+          "notes": "Small taxa API sample only."
+        }
+      ]
+    },
+    {
+      "slug": "dad-is-efabis",
+      "name": "DAD-IS / EFABIS",
+      "category": "breeds",
+      "verdict": "INTERNAL-VALIDATION-ONLY",
+      "deferred": true,
+      "currentAccessPath": "FAO DAD-IS public data pages; EFABIS alignment remains source-specific.",
+      "endpointUrls": ["https://www.fao.org/dad-is/data/en/"],
+      "license": "FAO/DAD-IS terms require legal confirmation before product ingestion or commercial promotion",
+      "commercialUseBasis": "Research corpus records commercial-promotion restrictions. OVE-55 therefore approves only internal validation unless a legal basis is captured.",
+      "attributionRequired": true,
+      "allowedUsage": ["internal_validation_only"],
+      "allowedSensitiveFields": "Use only for manual validation of small official breed/bee identity decisions. Do not bulk ingest.",
+      "coordinateTreatment": "no_product_location_use",
+      "sourceVersionOrDate": "Live DAD-IS data page verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "FAO DAD-IS data page returned HTTP 200 and DAD-IS content.",
+      "knownBlockers": [
+        "Commercial/product reuse not approved.",
+        "Bee and breed seed proof should use official UA/BG legal sources and VBO where allowed, with DAD-IS as validation only."
+      ],
+      "nextAllowedIssue": "OVE-60 internal validation only",
+      "liveChecks": [
+        {
+          "id": "dadis-data-page",
+          "method": "GET",
+          "url": "https://www.fao.org/dad-is/data/en/",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["DAD-IS", "data"],
+          "notes": "Reachability proof only."
+        }
+      ]
+    },
+    {
+      "slug": "eurisco",
+      "name": "EURISCO",
+      "category": "genebank",
+      "verdict": "INTERNAL-VALIDATION-ONLY",
+      "deferred": true,
+      "currentAccessPath": "EURISCO terms and full-dump page are reachable, but terms include competition/flow-down constraints.",
+      "endpointUrls": [
+        "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/terms-of-use",
+        "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/eurisco-full-dump"
+      ],
+      "license": "Custom EURISCO Terms of Use, not treated as CC-BY",
+      "commercialUseBasis": "Not approved for OverGarden product ingestion because anti-compete/flow-down terms require legal review.",
+      "attributionRequired": true,
+      "allowedUsage": ["internal_validation_only"],
+      "allowedSensitiveFields": "Internal validation only until legal review. Do not persist accession, donor, or location data into product snapshots.",
+      "coordinateTreatment": "raw_source_only_if_later_licensed; no_product_projection",
+      "sourceVersionOrDate": "Live terms and full-dump page verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "EURISCO terms page returned Terms of Use text including compete-related language.",
+      "knownBlockers": [
+        "Anti-compete/flow-down terms need legal review.",
+        "Accession and geospatial/donor metadata must not be projected into product surfaces without explicit approval."
+      ],
+      "nextAllowedIssue": "OVE-62 only after legal basis",
+      "liveChecks": [
+        {
+          "id": "eurisco-terms",
+          "method": "GET",
+          "url": "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/terms-of-use",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Terms of Use", "compete"],
+          "notes": "Terms proof only."
+        },
+        {
+          "id": "eurisco-full-dump-page",
+          "method": "GET",
+          "url": "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/eurisco-full-dump",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["EURISCO full dump"],
+          "notes": "Page proof only; no dump download."
+        }
+      ]
+    },
+    {
+      "slug": "genesys-pgr",
+      "name": "Genesys PGR",
+      "category": "genebank",
+      "verdict": "INTERNAL-VALIDATION-ONLY",
+      "deferred": true,
+      "currentAccessPath": "Genesys public terms page and API ecosystem; terms restrict redistribution.",
+      "endpointUrls": ["https://www.genesys-pgr.org/content/legal/terms"],
+      "license": "Genesys Terms and Conditions of Use",
+      "commercialUseBasis": "Not approved for product ingestion because live terms include a redistribution restriction.",
+      "attributionRequired": true,
+      "allowedUsage": ["internal_validation_only"],
+      "allowedSensitiveFields": "Internal validation only until legal basis. Do not persist accession, donor, or location data into product snapshots.",
+      "coordinateTreatment": "raw_source_only_if_later_licensed; no_product_projection",
+      "sourceVersionOrDate": "Live terms verified 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "Genesys terms page returned Terms and Conditions and text stating data cannot be redistributed to other users.",
+      "knownBlockers": [
+        "Redistribution restriction blocks OverGarden canonical/public projection.",
+        "Legal review or explicit permission required before OVE-62 can consume it."
+      ],
+      "nextAllowedIssue": "OVE-62 only after legal basis",
+      "liveChecks": [
+        {
+          "id": "genesys-terms",
+          "method": "GET",
+          "url": "https://www.genesys-pgr.org/content/legal/terms",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "Terms and Conditions of Use",
+            "cannot redistribute"
+          ],
+          "notes": "Terms proof only."
+        }
+      ]
+    },
+    {
+      "slug": "vendor-marketplace-paths",
+      "name": "Vendor and marketplace paths",
+      "category": "marketplace",
+      "verdict": "REJECT",
+      "deferred": true,
+      "currentAccessPath": "No approved endpoint. Use only written partner feeds, documented APIs, or explicit permission in a later issue.",
+      "endpointUrls": [],
+      "license": "No general reuse license",
+      "commercialUseBasis": "No current source path is safe to scrape or ingest. Marketplace/vendor content remains ToS- and database-right-dependent.",
+      "attributionRequired": true,
+      "allowedUsage": ["reject"],
+      "allowedSensitiveFields": "None. Do not collect vendor catalogue rows, product pages, prices, photos, or marketplace metadata through scraping.",
+      "coordinateTreatment": "not_allowed",
+      "sourceVersionOrDate": "Explicitly deferred by OVE-55 on 2026-06-29",
+      "verificationDate": "2026-06-29",
+      "sampleProof": "No live scrape or API probe was run because OVE-55 has no approved partner feed or written permission.",
+      "knownBlockers": [
+        "Written permission, partner feed, or official API contract required.",
+        "No scraping against marketplace/vendor Terms of Service.",
+        "Vendor names may be entered by OverGarden users only through UGC curation paths, not bulk copied."
+      ],
+      "nextAllowedIssue": "None until partner/legal basis",
+      "liveChecks": [
+        {
+          "id": "vendor-marketplace-manual-gate",
+          "method": "MANUAL",
+          "url": "",
+          "expectStatus": 0,
+          "expectBodyIncludes": [],
+          "notes": "Manual legal gate: no approved endpoint exists, so the verifier records this as intentionally deferred."
+        }
+      ]
+    }
+  ]
+}

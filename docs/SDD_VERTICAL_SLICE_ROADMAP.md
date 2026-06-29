@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-06-29 (OVE-54)
+Last operational update: 2026-06-29 (OVE-55-64)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -12,7 +12,7 @@ From this point forward, work must be shipped as narrow vertical SDD slices that
 
 ## Current Execution State
 
-Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active queue now lives in Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`.
+Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active pilot-decision queue now lives in Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`.
 
 Before selecting or starting any next Linear issue, run:
 
@@ -22,6 +22,10 @@ pnpm mainline:closeout:check
 ```
 
 Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 remains the real-user segmented field-run gate and must not be closed from internal smoke users. When external invites are unavailable, OVE-54 provides a founder-only pilot rehearsal path that proves operator readiness without contaminating OVE-53 decision evidence.
+
+Next queued Linear project after the pilot-decision handoff is `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64). It starts with OVE-55 live source verification, then proceeds through source snapshot quarantine, UA official varieties, species backbone, alias promotion, breed proof, BG official variety proof, genebank long-tail candidates, attribution, and refresh/diff slices.
+
+OVE-55 is the binding source-readiness gate for that project: later ingestion issues must link back to `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` and may only consume sources according to the manifest verdicts.
 
 ## Current Baseline
 
@@ -40,7 +44,7 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 
 ## Binding Execution Rules
 
-1. No precise location in v0. Do not store, send, log, index, render, or infer coordinates. Product UI may offer `region` or `hidden`; it must not offer exact location.
+1. User/product precise location stays locked in v0. Do not store, send, log, index, render, or infer coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI. Product UI may offer `region` or `hidden`; it must not offer exact location. External catalog/source ingestion may preserve legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must not enter product-facing projections without a later explicit ADR and SDD slice.
 2. Public photos are worker-created derivatives only. Originals go to private quarantine, are re-encoded/stripped/resized server-side, and are deleted after successful processing.
 3. Browser code never receives broad database access. All user/private data goes through server APIs/actions and scoped repositories.
 4. Kysely is the app data layer. SQL migrations are schema source of truth. Do not introduce Prisma, Drizzle, TypeORM, or a new ORM.

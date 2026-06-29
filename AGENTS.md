@@ -22,7 +22,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Hard Rules
 
-1. No precise location anywhere in v0. Region-level only. No coordinates in payloads, URLs, logs, analytics, image metadata, search docs, or public pages.
+1. User/product precise location remains locked in v0. Do not collect, store, send, log, index, render, or infer precise coordinates for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, or product UI; region-level or hidden only. External catalog/source ingestion may store legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields must stay out of user data, analytics, Meilisearch/public projections, logs, and product UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
 2. Public photos must be stripped derivatives. Upload originals only to private quarantine, re-encode/resize/strip with `sharp`, publish derivative only, delete the original after successful processing.
 3. Client-side EXIF stripping is an optimization, not a safety boundary. Never trust client processing as the only privacy control.
 4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Presigned upload URLs are narrow object-specific exceptions.

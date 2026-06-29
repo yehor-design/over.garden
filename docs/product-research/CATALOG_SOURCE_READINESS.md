@@ -1,0 +1,53 @@
+# Catalog Source Readiness Gate
+
+Status: OVE-55 live gate
+Verification date: 2026-06-29
+Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
+Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
+
+This gate decides which catalog sources later ingestion slices may consume. It is not a bulk import and it does not approve live product dependencies on external APIs.
+
+## Operator Decision
+
+Approved first ingestion sources:
+
+- `ua-state-register` - USE. Official UA plant varieties. Approved for raw snapshot and canonical product projection with CC-BY attribution. OVE-57 may consume it after raw snapshot quarantine confirms full-file checksum, row count, and UTF-16LE decoding.
+- `catalogue-of-life-checklistbank` - USE. Species backbone. Current live release proof: COL26.6, DOI `10.48580/dgy4k`, CC-BY.
+- `world-flora-online` - USE. Plant species backbone. Current live release proof: World Flora Online Plant List June 2026, DOI `10.5281/zenodo.20782718`, CC0.
+- `gbif-backbone` - USE. Species backbone. Current dataset proof: GBIF Backbone Taxonomy, DOI `10.15468/39omei`, CC-BY 4.0. Occurrence data is not approved for product projection by this gate.
+- `eppo-codes` - USE. Species/code backbone and possible common-name support. Attribution is mandatory; distribution metadata is raw/source-only.
+- `wikidata` - USE. Supplemental aliases/entity IDs under CC0. Use as corroborating source, not sole canonical truth.
+- `grin-global` - USE. Supplemental taxonomy/economic-plant backbone. Use official export/dump paths later; do not scrape interactive pages.
+- `vertebrate-breed-ontology` - USE. Vertebrate breed backbone only. It is English-only and does not cover bees.
+
+Conditional or blocked:
+
+- `iasas-bg-official-variety-list` - USE-WITH-CONDITIONS. Reachable official BG list, but PDF/HTML-only and commercial reuse basis must be captured before canonical projection.
+- `eu-common-catalogue` - USE-WITH-CONDITIONS. Portal reachable, but exact reuse/export/legal-value basis must be captured before product projection.
+- `pesi-euro-med` - INTERNAL-VALIDATION-ONLY. Technically reachable, but commercial reuse license is not captured.
+- `eol-vernaculars` - USE-WITH-CONDITIONS. Zenodo metadata is reachable, but license is not specified at dump level; needs license-filter pipeline.
+- `inaturalist` - USE-WITH-CONDITIONS. Taxa API reachable; do not ingest observations, users, photos, or coordinates.
+- `dad-is-efabis` - INTERNAL-VALIDATION-ONLY. Use only to validate small breed/bee decisions unless legal basis changes.
+- `eurisco` - INTERNAL-VALIDATION-ONLY. Terms/full-dump pages reachable, but anti-compete/flow-down terms block product ingestion without legal review.
+- `genesys-pgr` - INTERNAL-VALIDATION-ONLY. Terms page reachable and includes redistribution restriction; legal basis required before OVE-62.
+- `vendor-marketplace-paths` - REJECT. No scraping or bulk vendor ingestion without partner feed, official API contract, or written permission.
+
+## Privacy Boundary
+
+External occurrence or distribution coordinates are not OverGarden user/product location data. When a source license later allows capture, coordinates may exist only in isolated raw/source snapshots with provenance, license, checksum, and usage flags. They must not enter canonical product projections, public pages, Meilisearch, analytics, logs, or UI without a later explicit ADR and SDD slice.
+
+## Live Verification Summary
+
+`pnpm catalog:sources:verify` passed on 2026-06-29:
+
+- Live checks passed for UA State Register landing and byte-range CSV sample, CoL release metadata and nameusage sample, WFO Zenodo release, GBIF dataset metadata and species match, EPPO data services/licence/taxon pages, Wikidata EntityData, GRIN taxonomy page, VBO OLS metadata, IASAS official list page, EU Plant Variety Portal, PESI portal, EOL Zenodo vernacular metadata, iNaturalist taxa API, DAD-IS data page, EURISCO terms/full-dump pages, and Genesys terms.
+- Vendor/marketplace paths are intentionally manual-gated: no approved endpoint exists, so no scrape/API probe was run.
+- Result counts: 17 sources; USE=8; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
+
+## Downstream Gates
+
+- OVE-56 may build source snapshot quarantine from USE sources first.
+- OVE-57 may consume `ua-state-register`.
+- OVE-58 may consume CoL, WFO, GBIF Backbone, EPPO, GRIN, and Wikidata as bounded backbone/support sources.
+- OVE-60 may consume VBO for vertebrates and use DAD-IS/EFABIS only as internal validation.
+- OVE-59, OVE-61, OVE-62, and vendor/marketplace paths must not promote conditional/internal-only data until the specific blockers in the manifest are closed.

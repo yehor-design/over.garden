@@ -71,6 +71,8 @@ OverGarden — платформа доказових журналів: **кор�
 
 **Потік даних (високорівнево):** `Зовнішнє джерело → завантаження легальним каналом → парсинг → нормалізація назв (+ ключі матчингу) → дедуп проти наявного → запис у схему з провенансом і source-ID → індексація в пошуковий рушій → доступний для typeahead`. Паралельно: `Користувач/агент → створення з гейтом → статус «непідтверджено» → черга курування → підтвердження/злиття`.
 
+**External-source breadth.** Ingestion should capture the maximum legally reusable source payload into raw/source snapshots, including occurrence/distribution metadata and coordinates when source terms allow it. These fields are not canonical product location data by default: keep them isolated with provenance, license, source-version, checksum, and usage flags, then expose only deliberate safe projections. User-supplied garden/journal/media data remains governed by the v0 no-precise-user-location rule.
+
 ---
 
 ## §4. Модель шарів (build vs acquire по кожному)

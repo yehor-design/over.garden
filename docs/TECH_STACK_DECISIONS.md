@@ -29,7 +29,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Binding invariants
 
-1. **No precise location in v0.** Store region-level data only. Never put coordinates in payloads, URLs, logs, analytics, image metadata, or search indexes.
+1. **User/product precise location stays locked in v0.** Store only region-level or hidden location for OverGarden users, journal entries, media, analytics, public/search documents, operator evidence, and product UI. External catalog/source ingestion may preserve legally reusable occurrence/distribution coordinates only in isolated raw/source snapshot tables with provenance, license, and usage flags; those fields are not canonical product location data and must not enter payloads, URLs, logs, analytics, image metadata, Meilisearch/public projections, or UI unless a later explicit ADR and SDD slice promote a safe aggregate projection.
 2. **Public photos are derivatives only.** User uploads go to private quarantine. A worker re-encodes with `sharp`, strips metadata, stores a public derivative, and deletes the original immediately after successful processing.
 3. **Client EXIF stripping is not a trust boundary.** Client compression/metadata removal is useful for bandwidth, but server/worker processing is the guarantee.
 4. **No broad browser database access.** The browser talks to app APIs/server actions and receives narrow presigned upload URLs only.

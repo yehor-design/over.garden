@@ -9,6 +9,12 @@
 
 **Дисципліна (нагадування):** «технічно доступно» ≠ «юридично дозволено» — викладено окремо. UA ≠ BG. «Джерело існує» ≠ «джерело придатне». Несуче на одному джерелі → `[single-source-critical]`.
 
+## Operational live gate — OVE-55
+
+This registry remains the research synthesis baseline. The current execution gate for ingestion work is `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`, with the readable summary in `docs/product-research/CATALOG_SOURCE_READINESS.md` and the repeatable command `cd apps/web && pnpm catalog:sources:verify`.
+
+As of 2026-06-29, the approved first ingestion sources are: UA State Register, CoL/ChecklistBank, WFO, GBIF Backbone, EPPO, Wikidata, GRIN, and VBO. IASAS BG, EU Common Catalogue, EOL, and iNaturalist remain `USE-WITH-CONDITIONS`; PESI/Euro+Med, DAD-IS/EFABIS, EURISCO, and Genesys are `INTERNAL-VALIDATION-ONLY`; vendor/marketplace bulk ingestion is `REJECT` without a partner feed, official API contract, or written permission. Later ingestion slices must link back to the manifest and must not promote a conditional/internal-only source by reading this older registry alone.
+
 ---
 
 ## Група A. Офіційні реєстри сортів рослин (L2 — канонічний посів)
@@ -527,7 +533,6 @@
 32. **OLX.bg — заборона в ToS.** Підтверджено дослівно (B4-Ф2) vs припущено, не підтверджено (B4-Ф1). *Ф2 також знайшов легальний OLX Developer API.*
 
 **Кінець SOURCES_REGISTRY.**
-
 
 
 

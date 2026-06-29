@@ -113,3 +113,33 @@ URL: https://obofoundry.org/ontology/vbo · доступ 2026-06-06. → **CC BY
 ## Підсумок (2–3 рядки)
 
 Жодна з двох перевірок не дала чистого PASS, але обидві дали **рішення-релевантний факт**: (1) машиночитний CC-BY Держреєстр сортів UA **демонстровно існує** (ресурси + схема з `varietyName/Lan/TRL` + CC BY 4.0, дата 2025-07-15) — план «парсити PDF» відпадає, лишилось лише фактично зчитати рядки легальним каналом (PARTIAL через обмеження інструмента, не через брак даних); (2) VBO **англомовна** (0 uk, 0 bg, 0 кирилиці) і **без бджіл** — придатна лише як CC-BY кістяк хребетних-порід, який локалізуємо самі, а не як готовий локалізований посів. Для стека це означає: UA-сорти L2 = acquire (підтверджено); породні uk/bg-мітки й bee-wedge = build, як і планувалося.
+
+---
+
+## OVE-55 live source readiness gate — 2026-06-29
+
+OVE-55 supersedes the earlier two-check snapshot for execution planning. The old checks remain useful provenance, but the current go/no-go gate is now:
+
+- Human-readable result: `docs/product-research/CATALOG_SOURCE_READINESS.md`.
+- Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`.
+- Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`.
+
+The verifier ran live endpoint checks on 2026-06-29 and passed:
+
+- 17 source paths covered.
+- `USE`: 8 sources — UA State Register, CoL/ChecklistBank, WFO, GBIF Backbone, EPPO, Wikidata, GRIN, VBO.
+- `USE-WITH-CONDITIONS`: 4 sources — IASAS BG, EU Common Catalogue, EOL, iNaturalist.
+- `INTERNAL-VALIDATION-ONLY`: 4 sources — PESI/Euro+Med, DAD-IS/EFABIS, EURISCO, Genesys.
+- `REJECT`: 1 path — vendor/marketplace bulk ingestion without partner feed, official API contract, or written permission.
+
+Decision impact:
+
+- OVE-56 may build source snapshot quarantine from `USE` sources first.
+- OVE-57 may consume the UA State Register. OVE-55 now adds a real byte-range row proof: `2025-07-15_registervarietis.csv` responds with HTTP 206, UTF-16LE bytes, schema fields, and a public official sample row. OVE-57 must therefore handle octet-stream UTF-16LE explicitly and record checksum/row count before canonical projection.
+- OVE-58 may consume CoL, WFO, GBIF Backbone, EPPO, GRIN, and Wikidata as bounded species-backbone/support sources.
+- OVE-60 may consume VBO for vertebrate breeds only; bee identities remain a small official/manual path. DAD-IS/EFABIS is internal validation only.
+- OVE-59, OVE-61, OVE-62, and vendor/marketplace paths must not promote conditional or internal-validation-only data until the specific blockers in the manifest are closed.
+
+Privacy impact:
+
+- External occurrence/distribution coordinates are raw/source-only if a later source license allows capture. They are not OverGarden user/product location data and must not enter product projections, public pages, Meilisearch, analytics, logs, or UI without a later explicit ADR and SDD slice.
