@@ -11,80 +11,15 @@ import {
   isPilotInviteCohort,
   type PilotInviteCohort,
 } from "@/lib/garden/pilot-invite";
+import {
+  getPilotSegmentLabel,
+  normalizePilotSegment,
+  PILOT_SEGMENT_OPTIONS,
+} from "@/lib/pilot/segments";
 
 export const MAX_REDACTED_NOTE_LENGTH = 280;
 
-export const PILOT_INTERVIEW_SEGMENT_OPTIONS = [
-  {
-    value: "casual_micro_grower" as const,
-    label: "Casual — micro-grower / one-pot",
-    bucket: "casual-core",
-  },
-  {
-    value: "casual_gen_z" as const,
-    label: "Casual — Gen Z beginner",
-    bucket: "casual-core",
-  },
-  {
-    value: "casual_practical_beginner" as const,
-    label: "Casual — practical beginner with land",
-    bucket: "casual-core",
-  },
-  {
-    value: "casual_urban_balcony" as const,
-    label: "Casual — urban balcony / small space",
-    bucket: "casual-core",
-  },
-  {
-    value: "casual_food_self_reliance" as const,
-    label: "Casual — food self-reliance beginner",
-    bucket: "casual-core",
-  },
-  {
-    value: "power_burned_out_it" as const,
-    label: "Power — burned-out IT / knowledge worker",
-    bucket: "power-core",
-  },
-  {
-    value: "power_collector" as const,
-    label: "Power — plant collector",
-    bucket: "power-core",
-  },
-  {
-    value: "power_experienced" as const,
-    label: "Power — experienced practitioner",
-    bucket: "power-core",
-  },
-  {
-    value: "power_homestead" as const,
-    label: "Power — homestead aspirant (doing)",
-    bucket: "power-core",
-  },
-  {
-    value: "supply_expert_creator" as const,
-    label: "Supply — expert / creator",
-    bucket: "supply-side",
-  },
-  {
-    value: "supply_local_seller" as const,
-    label: "Supply — local seller",
-    bucket: "supply-side",
-  },
-  {
-    value: "channel_ally" as const,
-    label: "Channel ally — moderator / club leader",
-    bucket: "channel-ally",
-  },
-  {
-    value: "unknown_segment" as const,
-    label: "Unknown / not classified yet",
-    bucket: "unknown",
-  },
-] satisfies ReadonlyArray<{
-  value: PilotInterviewSegment;
-  label: string;
-  bucket: string;
-}>;
+export const PILOT_INTERVIEW_SEGMENT_OPTIONS = PILOT_SEGMENT_OPTIONS;
 
 export const PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS = [
   {
@@ -330,61 +265,74 @@ export interface NormalizedPilotInterviewLearningInput {
 export function normalizePilotInterviewSegment(
   value: unknown,
 ): PilotInterviewSegment | null {
-  return PILOT_INTERVIEW_SEGMENT_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return normalizePilotSegment(value);
 }
 
 export function normalizePilotInterviewActivationResult(
   value: unknown,
 ): PilotInterviewActivationResult | null {
-  return PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return (
+    PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS.find(
+      (option) => option.value === value,
+    )?.value ?? null
+  );
 }
 
 export function normalizePilotInterviewReturnReason(
   value: unknown,
 ): PilotInterviewReturnReason | null {
-  return PILOT_INTERVIEW_RETURN_REASON_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return (
+    PILOT_INTERVIEW_RETURN_REASON_OPTIONS.find(
+      (option) => option.value === value,
+    )?.value ?? null
+  );
 }
 
 export function normalizePilotInterviewMainObjection(
   value: unknown,
 ): PilotInterviewMainObjection | null {
-  return PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return (
+    PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS.find(
+      (option) => option.value === value,
+    )?.value ?? null
+  );
 }
 
 export function normalizePilotInterviewObservedValue(
   value: unknown,
 ): PilotInterviewObservedValue | null {
-  return PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return (
+    PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS.find(
+      (option) => option.value === value,
+    )?.value ?? null
+  );
 }
 
 export function normalizePilotInterviewNextAction(
   value: unknown,
 ): PilotInterviewNextAction | null {
-  return PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.find(
-    (option) => option.value === value,
-  )?.value ?? null;
+  return (
+    PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.find((option) => option.value === value)
+      ?.value ?? null
+  );
 }
 
 export function normalizePilotInterviewLearningInput(
   input: PilotInterviewLearningInput,
-): { ok: true; value: NormalizedPilotInterviewLearningInput } | { ok: false; error: string } {
+):
+  | { ok: true; value: NormalizedPilotInterviewLearningInput }
+  | { ok: false; error: string } {
   const segment = normalizePilotInterviewSegment(input.segment);
   const activationResult = normalizePilotInterviewActivationResult(
     input.activationResult,
   );
   const returnReason = normalizePilotInterviewReturnReason(input.returnReason);
-  const mainObjection = normalizePilotInterviewMainObjection(input.mainObjection);
-  const observedValue = normalizePilotInterviewObservedValue(input.observedValue);
+  const mainObjection = normalizePilotInterviewMainObjection(
+    input.mainObjection,
+  );
+  const observedValue = normalizePilotInterviewObservedValue(
+    input.observedValue,
+  );
   const nextAction = normalizePilotInterviewNextAction(input.nextAction);
 
   if (!segment) return { ok: false, error: "Invalid interview segment." };
@@ -459,11 +407,10 @@ export function findForbiddenInterviewCaptureContent(
   return null;
 }
 
-export function getPilotInterviewSegmentLabel(segment: PilotInterviewSegment) {
-  return (
-    PILOT_INTERVIEW_SEGMENT_OPTIONS.find((option) => option.value === segment)
-      ?.label ?? segment
-  );
+export function getPilotInterviewSegmentLabel(
+  segment: PilotInterviewSegment | string,
+) {
+  return getPilotSegmentLabel(segment);
 }
 
 export function getPilotInterviewActivationResultLabel(
@@ -490,15 +437,15 @@ export function getPilotInterviewNextActionLabel(
   value: PilotInterviewNextAction | string,
 ) {
   return (
-    PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.find(
-      (option) => option.value === value,
-    )?.label ?? value
+    PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.find((option) => option.value === value)
+      ?.label ?? value
   );
 }
 
-function normalizeRedactedNote(
-  value: string | null | undefined,
-): { value: string | null; error?: string } {
+function normalizeRedactedNote(value: string | null | undefined): {
+  value: string | null;
+  error?: string;
+} {
   if (value == null) return { value: null };
   const trimmed = value.trim();
   if (!trimmed) return { value: null };
@@ -511,9 +458,10 @@ function normalizeRedactedNote(
   return { value: trimmed };
 }
 
-function normalizeOptionalUserId(
-  value: string | null | undefined,
-): { value: string | null; error?: string } {
+function normalizeOptionalUserId(value: string | null | undefined): {
+  value: string | null;
+  error?: string;
+} {
   if (value == null) return { value: null };
   const trimmed = value.trim();
   if (!trimmed) return { value: null };
@@ -527,9 +475,10 @@ function normalizeOptionalUserId(
   return { value: trimmed };
 }
 
-function normalizeOptionalPilotCohort(
-  value: string | null | undefined,
-): { value: PilotInviteCohort | null; error?: string } {
+function normalizeOptionalPilotCohort(value: string | null | undefined): {
+  value: PilotInviteCohort | null;
+  error?: string;
+} {
   if (value == null) return { value: null };
   const trimmed = value.trim();
   if (!trimmed) return { value: null };

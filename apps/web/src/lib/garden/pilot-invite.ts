@@ -1,13 +1,19 @@
 // Signed closed-pilot invite tokens for OVE-42.
 //
 // The token is the ONLY thing a founder shares to grant write access. It is an
-// HMAC-SHA256-signed, time-bound carrier of an enum cohort and nothing else: no
-// email, phone, name, IP, referrer, raw URL, or query string. Verification is
-// pure (only `node:crypto` + an env/explicit secret), so this module is safe to
-// import from both Next.js server code and the standalone founder CLI without a
-// `server-only` boundary.
+// HMAC-SHA256-signed, time-bound carrier of enum cohort + segment metadata and
+// nothing else: no email, phone, name, IP, referrer, raw URL, or query string.
+// Verification is pure (only `node:crypto` + an env/explicit secret), so this
+// module is safe to import from both Next.js server code and the standalone
+// founder CLI without a `server-only` boundary.
 
 import { createHmac, timingSafeEqual } from "node:crypto";
+
+import {
+  DEFAULT_PILOT_SEGMENT,
+  isPilotSegment,
+  type PilotSegment,
+} from "@/lib/pilot/segments";
 
 export const PILOT_INVITE_COHORTS = ["closed_pilot"] as const;
 export type PilotInviteCohort = (typeof PILOT_INVITE_COHORTS)[number];
@@ -26,17 +32,20 @@ const DEFAULT_INVITE_TTL_SECONDS = 14 * 24 * 60 * 60; // 14 days.
 
 interface PilotInvitePayload {
   c: PilotInviteCohort;
+  s?: PilotSegment;
   iat: number;
   exp: number;
 }
 
 export interface PilotInviteVerification {
   cohort: PilotInviteCohort;
+  segment: PilotSegment;
   expiresAt: number;
 }
 
 export interface SignPilotInviteOptions {
   cohort?: PilotInviteCohort;
+  segment?: PilotSegment;
   ttlSeconds?: number;
   now?: number;
   secret?: string;
@@ -47,7 +56,9 @@ export interface VerifyPilotInviteOptions {
   secret?: string;
 }
 
-export function isPilotInviteCohort(value: unknown): value is PilotInviteCohort {
+export function isPilotInviteCohort(
+  value: unknown,
+): value is PilotInviteCohort {
   return (
     typeof value === "string" &&
     (PILOT_INVITE_COHORTS as readonly string[]).includes(value)
@@ -69,6 +80,7 @@ export function signPilotInviteToken(
   options: SignPilotInviteOptions = {},
 ): string {
   const cohort = options.cohort ?? DEFAULT_PILOT_INVITE_COHORT;
+  const segment = options.segment ?? DEFAULT_PILOT_SEGMENT;
   const nowSeconds = Math.floor((options.now ?? Date.now()) / 1000);
   const ttlSeconds = Math.max(
     1,
@@ -76,6 +88,7 @@ export function signPilotInviteToken(
   );
   const payload: PilotInvitePayload = {
     c: cohort,
+    s: segment,
     iat: nowSeconds,
     exp: nowSeconds + ttlSeconds,
   };
@@ -108,6 +121,13 @@ export function verifyPilotInviteToken(
   const payload = decodePayload(body);
   if (!payload) return null;
   if (!isPilotInviteCohort(payload.c)) return null;
+  const segment =
+    payload.s === undefined || payload.s === null
+      ? DEFAULT_PILOT_SEGMENT
+      : isPilotSegment(payload.s)
+        ? payload.s
+        : null;
+  if (!segment) return null;
   if (typeof payload.exp !== "number" || !Number.isFinite(payload.exp)) {
     return null;
   }
@@ -115,7 +135,7 @@ export function verifyPilotInviteToken(
   const nowSeconds = Math.floor((options.now ?? Date.now()) / 1000);
   if (payload.exp <= nowSeconds) return null;
 
-  return { cohort: payload.c, expiresAt: payload.exp };
+  return { cohort: payload.c, segment, expiresAt: payload.exp };
 }
 
 function decodePayload(body: string): PilotInvitePayload | null {
@@ -142,8 +162,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 function encodeBase64Url(input: Buffer | string): string {
-  const buffer =
-    typeof input === "string" ? Buffer.from(input, "utf8") : input;
+  const buffer = typeof input === "string" ? Buffer.from(input, "utf8") : input;
   return buffer.toString("base64url");
 }
 

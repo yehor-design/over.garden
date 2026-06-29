@@ -18,6 +18,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  buildCountPilotWriteEligibleGardenersBySegmentQuery,
   buildCountPilotWriteEligibleGardenersQuery,
   buildGrantPilotWriteAccessQuery,
   buildHasPilotWriteAccessQuery,
@@ -64,30 +65,46 @@ describe("pilot invite grant repository privacy contracts", () => {
     ]);
   });
 
-  it("grants write access with only a user id and enum cohort", () => {
+  it("grants write access with only a user id, enum cohort, and bounded segment", () => {
     const compiled = buildGrantPilotWriteAccessQuery(testDb, {
       userId: "00000000-0000-0000-0000-000000000001",
       cohort: "closed_pilot",
+      segment: "casual_practical_beginner",
     }).compile();
 
     expect(compiled.sql).toContain('insert into "pilot_invite_grants"');
     expect(compiled.sql).toContain('"user_id"');
     expect(compiled.sql).toContain('"cohort"');
+    expect(compiled.sql).toContain('"segment"');
     expect(compiled.sql).toContain("on conflict");
     expect(compiled.sql).toContain("do nothing");
     expect(compiled.sql).not.toMatch(PII_PATTERN);
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "closed_pilot",
+      "casual_practical_beginner",
     ]);
   });
 
   it("counts eligible gardeners as an aggregate without exposing identities", () => {
-    const compiled = buildCountPilotWriteEligibleGardenersQuery(testDb).compile();
+    const compiled =
+      buildCountPilotWriteEligibleGardenersQuery(testDb).compile();
 
     expect(compiled.sql).toContain('from "pilot_invite_grants"');
     expect(compiled.sql).toContain("count(*)");
     expect(compiled.sql).not.toContain('"user_id"');
+    expect(compiled.sql).not.toMatch(PII_PATTERN);
+    expect(compiled.parameters).toEqual([]);
+  });
+
+  it("counts eligible gardeners by bounded segment without exposing identities", () => {
+    const compiled =
+      buildCountPilotWriteEligibleGardenersBySegmentQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('from "pilot_invite_grants"');
+    expect(compiled.sql).toContain('"segment"');
+    expect(compiled.sql).toContain("count");
+    expect(compiled.sql).not.toContain('select "user_id"');
     expect(compiled.sql).not.toMatch(PII_PATTERN);
     expect(compiled.parameters).toEqual([]);
   });
@@ -107,7 +124,10 @@ describe("pilot invite grant repository privacy contracts", () => {
     const tableBody = (tableMatch?.[1] ?? "").toLowerCase();
     expect(tableBody).toContain("user_id uuid primary key");
     expect(tableBody).toContain("cohort text not null");
+    expect(tableBody).toContain("segment text not null");
     expect(tableBody).toContain("'closed_pilot'");
+    expect(tableBody).toContain("'casual_practical_beginner'");
+    expect(tableBody).toContain("'unknown_segment'");
     expect(tableBody).not.toMatch(
       /email|phone|\bip\b|ip_address|user_agent|referrer|invite_url|invite_link|invite_token|\btoken\b|query/,
     );

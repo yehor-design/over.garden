@@ -17,9 +17,11 @@ import {
   buildArchivedOrGonePublicVarietyRowsQuery,
   buildPilotAnalyticsMetricsQuery,
   buildPilotEntryMetricsQuery,
+  buildPilotSegmentMetricsQuery,
   buildPilotPublicVarietyHealthRowsQuery,
   getPilotHealthReadout,
   getPilotHealthReadoutSafely,
+  summarizePilotSegmentMetricRows,
   summarizePublicVarietyHealthRows,
 } from "./pilot-health-repository";
 
@@ -87,7 +89,9 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     const compiled = buildPilotAnalyticsMetricsQuery(testDb, since).compile();
     const sql = compiled.sql.toLowerCase();
 
-    expect(sql).toContain("properties ->> 'activation_source' = 'invited_cohort'");
+    expect(sql).toContain(
+      "properties ->> 'activation_source' = 'invited_cohort'",
+    );
     expect(sql).toContain('"activationstartedinvitedcohort"');
     expect(sql).toContain('"entrysavedinvitedcohort"');
     expect(sql).not.toContain("invite_token");
@@ -111,11 +115,73 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).toContain('"invitedcohortsameobjectfollowupentries"');
     expect(sql).toContain('"invitedcohortreturninggardeners"');
     expect(sql).toContain("cohort_first_save_event");
-    expect(sql).toContain("properties ->> 'activation_source' = 'invited_cohort'");
+    expect(sql).toContain(
+      "properties ->> 'activation_source' = 'invited_cohort'",
+    );
     expect(sql).not.toContain('select "journal_entries"."title"');
     expect(sql).not.toContain('select "journal_entries"."body"');
     expect(sql).not.toContain("email");
     expect(sql).not.toContain('"session"');
+  });
+
+  it("builds segment-scoped invited cohort aggregates without private fields", () => {
+    const compiled = buildPilotSegmentMetricsQuery(testDb, since).compile();
+    const sql = compiled.sql.toLowerCase();
+
+    expect(sql).toContain('from "pilot_invite_grants"');
+    expect(sql).toContain('"segment_grants"."segment"');
+    expect(sql).toContain(
+      "properties ->> 'activation_source' = 'invited_cohort'",
+    );
+    expect(sql).toContain("segment_previous_same_object_entry");
+    expect(sql).not.toContain('select "segment_follow_up_entries"."title"');
+    expect(sql).not.toContain('select "segment_follow_up_entries"."body"');
+    expect(sql).not.toContain("email");
+    expect(sql).not.toContain("invite_token");
+    expect(sql).not.toContain("referrer");
+    expect(sql).not.toContain("user_agent");
+    expect(sql).not.toContain("quarantine");
+    expect(sql).not.toContain("derivative_key");
+    expect(sql).not.toContain("latitude");
+    expect(sql).not.toContain("longitude");
+  });
+
+  it("summarizes segment rows with buckets, rates, unknown flags, and low-sample flags", () => {
+    expect(
+      summarizePilotSegmentMetricRows([
+        {
+          segment: "casual_practical_beginner",
+          writeEligibleGardeners: 2,
+          starts: 2,
+          firstEntrySaves: 1,
+          sameObjectFollowUpEntries: 1,
+          returningGardeners: 1,
+        },
+        {
+          segment: "unknown_segment",
+          writeEligibleGardeners: 1,
+          starts: 0,
+          firstEntrySaves: 0,
+          sameObjectFollowUpEntries: 0,
+          returningGardeners: 0,
+        },
+      ]),
+    ).toMatchObject([
+      {
+        segment: "casual_practical_beginner",
+        coreBucket: "casual_core",
+        diagnosticBucket: "land_practical",
+        firstEntrySaveRate: 0.5,
+        followUpRateAmongFirstSavers: 1,
+        isLowSample: true,
+      },
+      {
+        segment: "unknown_segment",
+        coreBucket: "unknown",
+        diagnosticBucket: "unknown",
+        isUnknownSegment: true,
+      },
+    ]);
   });
 
   it("summarizes public variety indexability through safe public filters", () => {
@@ -136,7 +202,8 @@ describe("pilot health privacy-safe aggregate contracts", () => {
   });
 
   it("detects archived or public-gone varieties without exposing entry content", () => {
-    const compiled = buildArchivedOrGonePublicVarietyRowsQuery(testDb).compile();
+    const compiled =
+      buildArchivedOrGonePublicVarietyRowsQuery(testDb).compile();
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain('"journal_entries"."lifecycle_state" = $');
@@ -191,6 +258,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
         sameObjectFollowUpEntries: 0,
         returningGardeners: 0,
         firstEntrySaveRate: 0,
+        segments: [],
       });
       expect(window.metrics.followUpValuePulse).toEqual({
         responses: 0,
@@ -204,9 +272,9 @@ describe("pilot health privacy-safe aggregate contracts", () => {
       });
     }
 
-    expect(
-      readout.notes.some((note) => note.includes("Invited-cohort")),
-    ).toBe(true);
+    expect(readout.notes.some((note) => note.includes("Invited-cohort"))).toBe(
+      true,
+    );
     expect(
       readout.notes.some((note) => note.includes("Follow-up value pulse")),
     ).toBe(true);

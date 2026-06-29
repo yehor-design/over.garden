@@ -8,10 +8,12 @@ import {
   DEFAULT_PILOT_INVITE_COHORT,
   type PilotInviteCohort,
 } from "@/lib/garden/pilot-invite";
+import { DEFAULT_PILOT_SEGMENT, type PilotSegment } from "@/lib/pilot/segments";
 
 // Scoped repository for closed-pilot write eligibility (OVE-42). Grants store
-// only a user id, an enum cohort, and timestamps. No invite link, token, email,
-// referrer, IP, user agent, or query string ever touches this table.
+// only a user id, enum cohort, enum segment, and timestamps. No invite link,
+// token, email, referrer, IP, user agent, or query string ever touches this
+// table.
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewPilotInviteGrantRow = Insertable<Database["pilot_invite_grants"]>;
@@ -29,11 +31,12 @@ export function buildHasPilotWriteAccessQuery(
 
 export function buildGrantPilotWriteAccessQuery(
   executor: QueryExecutor,
-  input: { userId: string; cohort: PilotInviteCohort },
+  input: { userId: string; cohort: PilotInviteCohort; segment?: PilotSegment },
 ) {
   const row: NewPilotInviteGrantRow = {
     user_id: input.userId,
     cohort: input.cohort,
+    segment: input.segment ?? DEFAULT_PILOT_SEGMENT,
   };
 
   return executor
@@ -50,27 +53,47 @@ export function buildCountPilotWriteEligibleGardenersQuery(
     .select((eb) => eb.fn.countAll<string>().as("count"));
 }
 
+export function buildCountPilotWriteEligibleGardenersBySegmentQuery(
+  executor: QueryExecutor = db,
+) {
+  return executor
+    .selectFrom("pilot_invite_grants")
+    .select(({ fn }) => ["segment", fn.count<string>("user_id").as("count")])
+    .groupBy("segment")
+    .orderBy("segment", "asc");
+}
+
 export async function hasPilotWriteAccess(userId: string): Promise<boolean> {
   if (!userId) return false;
-  const row = await buildHasPilotWriteAccessQuery(db, userId).executeTakeFirst();
+  const row = await buildHasPilotWriteAccessQuery(
+    db,
+    userId,
+  ).executeTakeFirst();
   return Boolean(row);
 }
 
 export async function grantPilotWriteAccess(
   userId: string,
   cohort: PilotInviteCohort = DEFAULT_PILOT_INVITE_COHORT,
+  segment: PilotSegment = DEFAULT_PILOT_SEGMENT,
 ): Promise<void> {
   if (!userId) {
     throw new Error("A pilot write grant requires a user id.");
   }
-  await buildGrantPilotWriteAccessQuery(db, { userId, cohort }).execute();
+  await buildGrantPilotWriteAccessQuery(db, {
+    userId,
+    cohort,
+    segment,
+  }).execute();
 }
 
 export async function countPilotWriteEligibleGardeners(
   executor: QueryExecutor = db,
 ): Promise<number> {
   const row =
-    await buildCountPilotWriteEligibleGardenersQuery(executor).executeTakeFirst();
+    await buildCountPilotWriteEligibleGardenersQuery(
+      executor,
+    ).executeTakeFirst();
   return toCount(row?.count);
 }
 

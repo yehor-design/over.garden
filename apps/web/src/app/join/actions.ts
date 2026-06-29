@@ -11,12 +11,14 @@ import { setPilotInviteCookie } from "@/server/pilot-write-access";
 // eligibility cookie. We never persist the raw invite link, referrer, or query
 // string. The redirect always lands on the canonical first-entry path with the
 // enum-only `source=invited-cohort` attribution.
-export async function claimPilotInviteAction(formData: FormData): Promise<void> {
+export async function claimPilotInviteAction(
+  formData: FormData,
+): Promise<void> {
   const token = String(formData.get("invite") ?? "");
   const verified = verifyPilotInviteToken(token);
 
   if (verified) {
-    await setPilotInviteCookie(verified.cohort);
+    await setPilotInviteCookie(verified.cohort, verified.segment);
   }
 
   redirect(gardenFirstEntryInvitePath());

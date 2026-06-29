@@ -152,14 +152,6 @@ export interface MediaAssets {
   updated_at: Generated<Timestamp>;
 }
 
-export interface PilotInviteGrants {
-  cohort: Generated<string>;
-  created_at: Generated<Timestamp>;
-  granted_at: Generated<Timestamp>;
-  updated_at: Generated<Timestamp>;
-  user_id: string;
-}
-
 export interface PilotInterviewLearnings {
   activation_result: string;
   created_at: Generated<Timestamp>;
@@ -175,6 +167,15 @@ export interface PilotInterviewLearnings {
   segment: string;
   subject_user_id: string | null;
   updated_at: Generated<Timestamp>;
+}
+
+export interface PilotInviteGrants {
+  cohort: Generated<string>;
+  created_at: Generated<Timestamp>;
+  granted_at: Generated<Timestamp>;
+  segment: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
 }
 
 export interface PlantObjects {
@@ -255,8 +256,8 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   media_assets: MediaAssets;
-  pilot_invite_grants: PilotInviteGrants;
   pilot_interview_learnings: PilotInterviewLearnings;
+  pilot_invite_grants: PilotInviteGrants;
   plant_objects: PlantObjects;
   session: Session;
   spaces: Spaces;

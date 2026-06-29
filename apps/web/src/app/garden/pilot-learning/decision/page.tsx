@@ -6,7 +6,12 @@ import {
   getPilotInterviewActivationResultLabel,
   getPilotInterviewNextActionLabel,
   getPilotInterviewObservedValueLabel,
+  getPilotInterviewSegmentLabel,
 } from "@/lib/pilot/interview-learning";
+import {
+  getPilotSegmentCoreBucketLabel,
+  getPilotSegmentDiagnosticBucketLabel,
+} from "@/lib/pilot/segments";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolvePilotHealthOperatorAccess } from "@/server/pilot-health-access";
 import {
@@ -129,9 +134,12 @@ export default async function PilotCohortDecisionPage() {
               />
               <MetricTile
                 label="Return rate / first savers"
-                value={formatPercent(readout.cohort.followUpRateAmongFirstSavers)}
+                value={formatPercent(
+                  readout.cohort.followUpRateAmongFirstSavers,
+                )}
               />
             </div>
+            <SegmentCohortPanel readout={readout} />
           </section>
 
           <section className="grid gap-4 rounded-lg border border-border p-4">
@@ -270,6 +278,9 @@ function DecisionPanel({ readout }: { readout: PilotCohortDecisionReadout }) {
           <span className="rounded-md border border-border px-2 py-1">
             Interview signal: {decision.qualitativeSignal}
           </span>
+          <span className="rounded-md border border-border px-2 py-1">
+            Segment signal: {decision.segmentSignal}
+          </span>
         </div>
       </div>
 
@@ -310,6 +321,11 @@ function InterviewCategoryPanel({
       </div>
 
       <CategoryGrid
+        title="Segments"
+        counts={interviews.bySegment}
+        labelFor={(value) => getPilotInterviewSegmentLabel(value)}
+      />
+      <CategoryGrid
         title="Activation results"
         counts={interviews.byActivationResult}
         labelFor={(value) => getPilotInterviewActivationResultLabel(value)}
@@ -325,6 +341,81 @@ function InterviewCategoryPanel({
         labelFor={(value) => getPilotInterviewNextActionLabel(value)}
       />
     </section>
+  );
+}
+
+function SegmentCohortPanel({
+  readout,
+}: {
+  readout: PilotCohortDecisionReadout;
+}) {
+  const segments = [...readout.cohort.segments].sort((left, right) =>
+    left.segment.localeCompare(right.segment),
+  );
+
+  return (
+    <div className="grid gap-3 border-t border-border pt-4">
+      <div className="grid gap-1">
+        <h3 className="text-sm font-semibold text-foreground">
+          Segment H1 slices
+        </h3>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Reads the closed-pilot loop by bounded segment. Unknown and low-sample
+          buckets are decision gaps, not neutral rows.
+        </p>
+      </div>
+
+      {segments.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No segment-scoped grants yet.
+        </p>
+      ) : (
+        <div className="grid gap-2">
+          {segments.map((segment) => (
+            <div
+              key={segment.segment}
+              className="grid gap-3 rounded-md border border-border p-3 text-sm lg:grid-cols-6"
+            >
+              <div className="grid gap-1">
+                <span className="font-medium text-foreground">
+                  {segment.label}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {getPilotSegmentCoreBucketLabel(segment.coreBucket)} /{" "}
+                  {getPilotSegmentDiagnosticBucketLabel(
+                    segment.diagnosticBucket,
+                  )}
+                </span>
+                {segment.isUnknownSegment || segment.isLowSample ? (
+                  <span className="text-xs font-medium text-amber-700">
+                    {segment.isUnknownSegment
+                      ? "unknown segment gap"
+                      : "low sample"}
+                  </span>
+                ) : null}
+              </div>
+              <InlineMetric label="Starts" value={segment.starts} />
+              <InlineMetric
+                label="First saves"
+                value={segment.firstEntrySaves}
+              />
+              <InlineMetric
+                label="Follow-ups"
+                value={segment.sameObjectFollowUpEntries}
+              />
+              <InlineMetric
+                label="Returning"
+                value={segment.returningGardeners}
+              />
+              <InlineMetric
+                label="Follow-up rate"
+                value={formatPercent(segment.followUpRateAmongFirstSavers)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -354,7 +445,7 @@ function CategoryGrid({
               className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm"
             >
               <span className="text-muted-foreground">{labelFor(value)}</span>
-              <span className="font-semibold tabular-nums text-foreground">
+              <span className="font-semibold text-foreground tabular-nums">
                 {count}
               </span>
             </div>
@@ -421,11 +512,11 @@ function PilotCohortDecisionHeader() {
           Pilot cohort decision
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Operator decision readout for the closed pilot: aggregate invited-cohort
-          behavior, follow-up value pulse, and structured interview categories in
-          one continue / iterate / stop frame. No raw journal text, transcripts,
-          emails, media keys, precise location, IP, user agent, referrer, or query
-          strings.
+          Operator decision readout for the closed pilot: aggregate
+          invited-cohort behavior, follow-up value pulse, and structured
+          interview categories in one continue / iterate / stop frame. No raw
+          journal text, transcripts, emails, media keys, precise location, IP,
+          user agent, referrer, or query strings.
         </p>
       </div>
     </header>
@@ -445,6 +536,21 @@ function MetricTile({
       <dd className="text-2xl font-semibold text-foreground tabular-nums">
         {value}
       </dd>
+    </dl>
+  );
+}
+
+function InlineMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <dl className="grid gap-1">
+      <dt className="text-xs text-muted-foreground uppercase">{label}</dt>
+      <dd className="font-semibold text-foreground tabular-nums">{value}</dd>
     </dl>
   );
 }

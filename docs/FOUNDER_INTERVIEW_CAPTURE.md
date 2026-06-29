@@ -41,6 +41,8 @@ Table: `pilot_interview_learnings` in `apps/web/sql/0001_walking_skeleton.sql`
 
 All structured fields are bounded enums enforced in SQL and TypeScript. The repository never joins journal entries, media assets, or analytics events.
 
+OVE-52 reuses the same bounded segment taxonomy for `pilot_invite_grants.segment` so behavioral H1 readouts and interview aggregates can be compared by segment. Invite/grant segment metadata remains enum-only and operator-facing; it must not contain contact details, free-form notes, raw invite URLs, referrers, IP/user-agent, precise location, or journal/media content.
+
 ## Verification
 
 ```bash

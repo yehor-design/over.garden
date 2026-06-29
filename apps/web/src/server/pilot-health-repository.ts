@@ -10,6 +10,16 @@ import {
 } from "@/server/public-variety-indexing";
 import { countPilotWriteEligibleGardeners } from "@/server/pilot-invite-repository";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import {
+  DEFAULT_PILOT_SEGMENT,
+  getPilotSegmentCoreBucket,
+  getPilotSegmentDiagnosticBucket,
+  getPilotSegmentLabel,
+  normalizePilotSegment,
+  type PilotSegment,
+  type PilotSegmentCoreBucket,
+  type PilotSegmentDiagnosticBucket,
+} from "@/lib/pilot/segments";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -112,6 +122,23 @@ export interface PilotInvitedCohortMetrics {
   sameObjectFollowUpEntries: number;
   returningGardeners: number;
   firstEntrySaveRate: number;
+  segments: PilotSegmentCohortMetrics[];
+}
+
+export interface PilotSegmentCohortMetrics {
+  segment: PilotSegment;
+  label: string;
+  coreBucket: PilotSegmentCoreBucket;
+  diagnosticBucket: PilotSegmentDiagnosticBucket;
+  writeEligibleGardeners: number;
+  starts: number;
+  firstEntrySaves: number;
+  sameObjectFollowUpEntries: number;
+  returningGardeners: number;
+  firstEntrySaveRate: number;
+  followUpRateAmongFirstSavers: number;
+  isUnknownSegment: boolean;
+  isLowSample: boolean;
 }
 
 export interface PilotPublicVarietyHealth {
@@ -156,6 +183,15 @@ interface PilotAnalyticsMetricRow {
   valuePulseWithReason: number | string | bigint | null;
 }
 
+interface PilotSegmentMetricRow {
+  firstEntrySaves: number | string | bigint | null;
+  returningGardeners: number | string | bigint | null;
+  sameObjectFollowUpEntries: number | string | bigint | null;
+  segment: string | null;
+  starts: number | string | bigint | null;
+  writeEligibleGardeners: number | string | bigint | null;
+}
+
 interface PilotPublicVarietyRow {
   aggregateBodyLength: number | string | bigint | null;
   entryCount: number | string | bigint | null;
@@ -179,6 +215,7 @@ export async function getPilotHealthReadout(
   const [
     entryMetricRows,
     analyticsMetricRows,
+    segmentMetricRows,
     publicVarietyRows,
     archivedPublicVarietyRows,
     writeEligibleGardeners,
@@ -196,6 +233,11 @@ export async function getPilotHealthReadout(
         ).executeTakeFirst(),
       ),
     ),
+    Promise.all(
+      windowDefinitions.map((window) =>
+        buildPilotSegmentMetricsQuery(executor, window.since).execute(),
+      ),
+    ),
     buildPilotPublicVarietyHealthRowsQuery(executor).execute(),
     buildArchivedOrGonePublicVarietyRowsQuery(executor).execute(),
     countPilotWriteEligibleGardeners(executor),
@@ -208,6 +250,7 @@ export async function getPilotHealthReadout(
         window,
         normalizeEntryMetricRow(entryMetricRows[index]),
         normalizeAnalyticsMetricRow(analyticsMetricRows[index]),
+        summarizePilotSegmentMetricRows(segmentMetricRows[index] ?? []),
       ),
     ),
     publicVarietyIndexability: summarizePublicVarietyHealthRows(
@@ -242,7 +285,8 @@ export async function getPilotHealthReadoutSafely(
     return await reader();
   } catch (error) {
     logger.error("Pilot health readout failed.", {
-      error: error instanceof Error ? error.message : "Unknown pilot health error.",
+      error:
+        error instanceof Error ? error.message : "Unknown pilot health error.",
     });
     return null;
   }
@@ -406,6 +450,74 @@ export function buildPilotAnalyticsMetricsQuery(
     .where("analytics_events.created_at", ">=", since);
 }
 
+export function buildPilotSegmentMetricsQuery(
+  executor: QueryExecutor,
+  since: Date,
+) {
+  return executor
+    .selectFrom("pilot_invite_grants as segment_grants")
+    .leftJoin("analytics_events as segment_starts", (join) =>
+      join
+        .onRef("segment_starts.owner_user_id", "=", "segment_grants.user_id")
+        .on("segment_starts.event_name", "=", "activation_started")
+        .on(
+          sql<boolean>`segment_starts.properties ->> 'activation_source' = 'invited_cohort'`,
+        )
+        .on("segment_starts.created_at", ">=", since),
+    )
+    .leftJoin("analytics_events as segment_entry_saves", (join) =>
+      join
+        .onRef(
+          "segment_entry_saves.owner_user_id",
+          "=",
+          "segment_grants.user_id",
+        )
+        .on("segment_entry_saves.event_name", "=", "entry_logged")
+        .on(
+          sql<boolean>`segment_entry_saves.properties ->> 'activation_source' = 'invited_cohort'`,
+        )
+        .on("segment_entry_saves.created_at", ">=", since),
+    )
+    .leftJoin("journal_entries as segment_follow_up_entries", (join) =>
+      join
+        .onRef(
+          "segment_follow_up_entries.owner_user_id",
+          "=",
+          "segment_grants.user_id",
+        )
+        .on("segment_follow_up_entries.created_at", ">=", since)
+        .on(
+          sql<boolean>`exists (
+            select 1
+            from journal_entries as segment_previous_same_object_entry
+            where segment_previous_same_object_entry.owner_user_id = segment_follow_up_entries.owner_user_id
+              and segment_previous_same_object_entry.plant_object_id = segment_follow_up_entries.plant_object_id
+              and segment_previous_same_object_entry.created_at < segment_follow_up_entries.created_at
+          )`,
+        ),
+    )
+    .select([
+      "segment_grants.segment as segment",
+      sql<number>`count(distinct ${sql.ref("segment_grants.user_id")})`.as(
+        "writeEligibleGardeners",
+      ),
+      sql<number>`count(distinct ${sql.ref("segment_starts.session_id")})`.as(
+        "starts",
+      ),
+      sql<number>`count(distinct ${sql.ref("segment_entry_saves.id")})`.as(
+        "firstEntrySaves",
+      ),
+      sql<number>`count(distinct ${sql.ref("segment_follow_up_entries.id")})`.as(
+        "sameObjectFollowUpEntries",
+      ),
+      sql<number>`count(distinct ${sql.ref("segment_follow_up_entries.owner_user_id")})`.as(
+        "returningGardeners",
+      ),
+    ])
+    .groupBy("segment_grants.segment")
+    .orderBy("segment_grants.segment", "asc");
+}
+
 export function buildPilotPublicVarietyHealthRowsQuery(
   executor: QueryExecutor,
 ) {
@@ -539,6 +651,7 @@ function buildPilotHealthWindow(
   window: (typeof PILOT_HEALTH_WINDOWS)[number] & { since: Date },
   entryMetrics: NormalizedEntryMetricRow,
   analyticsMetrics: NormalizedAnalyticsMetricRow,
+  segmentMetrics: PilotSegmentCohortMetrics[],
 ): PilotHealthWindow {
   const activationStarts = {
     homepage: analyticsMetrics.activationStartedHomepage,
@@ -567,6 +680,7 @@ function buildPilotHealthWindow(
       entrySavesByActivationSource.invitedCohort,
       activationStarts.invitedCohort,
     ),
+    segments: segmentMetrics,
   };
   const followUpValuePulse = buildFollowUpValuePulseMetrics(analyticsMetrics);
 
@@ -579,8 +693,7 @@ function buildPilotHealthWindow(
       totalEntries: entryMetrics.totalEntries,
       activeGardeners: entryMetrics.activeGardeners,
       sameObjectFollowUpEntries: entryMetrics.sameObjectFollowUpEntries,
-      sameSessionRevisitFollowUps:
-        analyticsMetrics.sameSessionRevisitFollowUps,
+      sameSessionRevisitFollowUps: analyticsMetrics.sameSessionRevisitFollowUps,
       entriesWithProcessedPhoto: entryMetrics.entriesWithProcessedPhoto,
       photoUsageRate: safeRate(
         entryMetrics.entriesWithProcessedPhoto,
@@ -631,6 +744,36 @@ function buildFollowUpValuePulseMetrics(
   };
 }
 
+export function summarizePilotSegmentMetricRows(
+  rows: PilotSegmentMetricRow[],
+): PilotSegmentCohortMetrics[] {
+  return rows.map((row) => {
+    const segment = normalizeSegment(row.segment);
+    const firstEntrySaves = toNumber(row.firstEntrySaves);
+    const starts = toNumber(row.starts);
+    const returningGardeners = toNumber(row.returningGardeners);
+
+    return {
+      segment,
+      label: getPilotSegmentLabel(segment),
+      coreBucket: getPilotSegmentCoreBucket(segment),
+      diagnosticBucket: getPilotSegmentDiagnosticBucket(segment),
+      writeEligibleGardeners: toNumber(row.writeEligibleGardeners),
+      starts,
+      firstEntrySaves,
+      sameObjectFollowUpEntries: toNumber(row.sameObjectFollowUpEntries),
+      returningGardeners,
+      firstEntrySaveRate: safeRate(firstEntrySaves, starts),
+      followUpRateAmongFirstSavers: safeRate(
+        returningGardeners,
+        firstEntrySaves,
+      ),
+      isUnknownSegment: segment === DEFAULT_PILOT_SEGMENT,
+      isLowSample: firstEntrySaves > 0 && firstEntrySaves < 2,
+    };
+  });
+}
+
 type NormalizedEntryMetricRow = ReturnType<typeof normalizeEntryMetricRow>;
 type NormalizedAnalyticsMetricRow = ReturnType<
   typeof normalizeAnalyticsMetricRow
@@ -657,9 +800,7 @@ function normalizeEntryMetricRow(row: PilotEntryMetricRow | undefined) {
 
 function normalizeAnalyticsMetricRow(row: PilotAnalyticsMetricRow | undefined) {
   return {
-    activationStartedDirectGarden: toNumber(
-      row?.activationStartedDirectGarden,
-    ),
+    activationStartedDirectGarden: toNumber(row?.activationStartedDirectGarden),
     activationStartedHomepage: toNumber(row?.activationStartedHomepage),
     activationStartedInvitedCohort: toNumber(
       row?.activationStartedInvitedCohort,
@@ -673,9 +814,7 @@ function normalizeAnalyticsMetricRow(row: PilotAnalyticsMetricRow | undefined) {
     entrySavedPublicVariety: toNumber(row?.entrySavedPublicVariety),
     offlineQueued: toNumber(row?.offlineQueued),
     offlineSynced: toNumber(row?.offlineSynced),
-    sameSessionRevisitFollowUps: toNumber(
-      row?.sameSessionRevisitFollowUps,
-    ),
+    sameSessionRevisitFollowUps: toNumber(row?.sameSessionRevisitFollowUps),
     valuePulseNotSure: toNumber(row?.valuePulseNotSure),
     valuePulseNotUseful: toNumber(row?.valuePulseNotUseful),
     valuePulseResponses: toNumber(row?.valuePulseResponses),
@@ -684,6 +823,10 @@ function normalizeAnalyticsMetricRow(row: PilotAnalyticsMetricRow | undefined) {
     valuePulseUseful: toNumber(row?.valuePulseUseful),
     valuePulseWithReason: toNumber(row?.valuePulseWithReason),
   };
+}
+
+function normalizeSegment(value: string | null | undefined): PilotSegment {
+  return normalizePilotSegment(value) ?? DEFAULT_PILOT_SEGMENT;
 }
 
 function safeRate(numerator: number, denominator: number) {

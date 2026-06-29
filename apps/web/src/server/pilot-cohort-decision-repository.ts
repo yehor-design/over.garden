@@ -15,6 +15,7 @@ import {
   PILOT_HEALTH_RESEARCH_REFERENCES,
   type PilotFollowUpValuePulseMetrics,
   type PilotHealthReadout,
+  type PilotSegmentCohortMetrics,
 } from "@/server/pilot-health-repository";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -36,6 +37,7 @@ export interface PilotCohortDecisionReadout {
     sameObjectFollowUps: number;
     returningGardeners: number;
     followUpRateAmongFirstSavers: number;
+    segments: PilotSegmentCohortMetrics[];
   };
   productSignals: {
     photoUsageRate: number;
@@ -57,6 +59,7 @@ interface InterviewAggregateRow {
   nextAction: string;
   observedValue: string;
   recordCount: number | string | bigint | null;
+  segment: string;
 }
 
 export async function getPilotCohortDecisionReadout(
@@ -102,16 +105,14 @@ export function buildPilotInterviewLearningAggregateQuery(
       "activation_result as activationResult",
       "next_action as nextAction",
       "observed_value as observedValue",
+      "segment",
       sql<number>`count(*)`.as("recordCount"),
     ])
-    .groupBy([
-      "activation_result",
-      "next_action",
-      "observed_value",
-    ])
+    .groupBy(["activation_result", "next_action", "observed_value", "segment"])
     .orderBy("activation_result", "asc")
     .orderBy("next_action", "asc")
-    .orderBy("observed_value", "asc");
+    .orderBy("observed_value", "asc")
+    .orderBy("segment", "asc");
 }
 
 export function assemblePilotCohortDecisionReadout(
@@ -120,8 +121,9 @@ export function assemblePilotCohortDecisionReadout(
   now = new Date(),
 ): PilotCohortDecisionReadout {
   const window =
-    healthReadout.windows.find((candidate) => candidate.key === DECISION_WINDOW_KEY) ??
-    healthReadout.windows[healthReadout.windows.length - 1]!;
+    healthReadout.windows.find(
+      (candidate) => candidate.key === DECISION_WINDOW_KEY,
+    ) ?? healthReadout.windows[healthReadout.windows.length - 1]!;
   const metrics = window.metrics;
   const interviews = flattenInterviewAggregateRows(interviewRows);
   const followUpRateAmongFirstSavers = safeRate(
@@ -142,6 +144,7 @@ export function assemblePilotCohortDecisionReadout(
     offlineQueued: metrics.offlineQueued,
     offlineSynced: metrics.offlineSynced,
     valuePulse: metrics.followUpValuePulse,
+    segments: metrics.invitedCohort.segments,
     interviews,
   });
 
@@ -160,6 +163,7 @@ export function assemblePilotCohortDecisionReadout(
       sameObjectFollowUps: metrics.invitedCohort.sameObjectFollowUpEntries,
       returningGardeners: metrics.invitedCohort.returningGardeners,
       followUpRateAmongFirstSavers,
+      segments: metrics.invitedCohort.segments,
     },
     productSignals: {
       photoUsageRate: metrics.photoUsageRate,
@@ -192,6 +196,7 @@ function flattenInterviewAggregateRows(
       activationResult: row.activationResult,
       nextAction: row.nextAction,
       observedValue: row.observedValue,
+      segment: row.segment,
     })),
   );
 

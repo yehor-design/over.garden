@@ -7,7 +7,9 @@ import {
   signPilotInviteToken,
   verifyPilotInviteToken,
   type PilotInviteCohort,
+  type PilotInviteVerification,
 } from "@/lib/garden/pilot-invite";
+import { DEFAULT_PILOT_SEGMENT, type PilotSegment } from "@/lib/pilot/segments";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
   grantPilotWriteAccess,
@@ -20,7 +22,7 @@ import type { RequestScope } from "@/server/request-scope";
 // trip without leaking the raw invite into analytics) and is materialized into a
 // persistent `pilot_invite_grants` row the first time an invited visitor is
 // authenticated. Reads/writes never persist raw invite links, emails, or query
-// strings; only the enum cohort and user id.
+// strings; only the enum cohort, enum segment, and user id.
 
 export const PILOT_INVITE_COOKIE_NAME = "overgarden_pilot_invite";
 
@@ -41,14 +43,23 @@ export class PilotWriteAccessError extends Error {
 
 export interface PilotWriteAccessDeps {
   hasAccess?: (userId: string) => Promise<boolean>;
-  readCookieCohort?: () => Promise<PilotInviteCohort | null>;
-  grantAccess?: (userId: string, cohort: PilotInviteCohort) => Promise<void>;
+  readCookieInvite?: () => Promise<PilotInviteVerification | null>;
+  grantAccess?: (
+    userId: string,
+    cohort: PilotInviteCohort,
+    segment: PilotSegment,
+  ) => Promise<void>;
 }
 
 export async function setPilotInviteCookie(
   cohort: PilotInviteCohort = DEFAULT_PILOT_INVITE_COHORT,
+  segment: PilotSegment = DEFAULT_PILOT_SEGMENT,
 ): Promise<void> {
-  const token = signPilotInviteToken({ cohort, ttlSeconds: COOKIE_TTL_SECONDS });
+  const token = signPilotInviteToken({
+    cohort,
+    segment,
+    ttlSeconds: COOKIE_TTL_SECONDS,
+  });
   const cookieStore = await cookies();
 
   cookieStore.set(PILOT_INVITE_COOKIE_NAME, token, {
@@ -61,9 +72,13 @@ export async function setPilotInviteCookie(
 }
 
 export async function readPilotInviteCohortFromCookie(): Promise<PilotInviteCohort | null> {
+  return (await readPilotInviteFromCookie())?.cohort ?? null;
+}
+
+export async function readPilotInviteFromCookie(): Promise<PilotInviteVerification | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(PILOT_INVITE_COOKIE_NAME)?.value ?? null;
-  return verifyPilotInviteToken(token)?.cohort ?? null;
+  return verifyPilotInviteToken(token);
 }
 
 // Resolves whether the authenticated scope may write. If a valid eligibility
@@ -74,16 +89,15 @@ export async function claimOrCheckPilotWriteAccess(
   deps: PilotWriteAccessDeps = {},
 ): Promise<boolean> {
   const hasAccess = deps.hasAccess ?? hasPilotWriteAccess;
-  const readCookieCohort =
-    deps.readCookieCohort ?? readPilotInviteCohortFromCookie;
+  const readCookieInvite = deps.readCookieInvite ?? readPilotInviteFromCookie;
   const grantAccess = deps.grantAccess ?? grantPilotWriteAccess;
 
   if (await hasAccess(scope.userId)) return true;
 
-  const cohort = await readCookieCohort();
-  if (!cohort) return false;
+  const invite = await readCookieInvite();
+  if (!invite) return false;
 
-  await grantAccess(scope.userId, cohort);
+  await grantAccess(scope.userId, invite.cohort, invite.segment);
   return true;
 }
 

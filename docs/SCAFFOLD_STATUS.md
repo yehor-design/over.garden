@@ -12,6 +12,8 @@ OVE-50 adds the mainline closeout guard for agent execution quality: `docs/MAINL
 
 OVE-51 moves the selected public pilot origin from the temporary Vercel production alias to canonical `https://over.garden`. The Vercel project now has `over.garden` and `www.over.garden` attached, Cloudflare DNS points both app hosts to Vercel through DNS-only A records, Vercel production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` are set to `https://over.garden`, and the pilot-smoke readiness guard fails Vercel production if either origin regresses to the legacy `.vercel.app` alias. During live smoke, two hidden production gaps were found and fixed before closeout: `PILOT_INVITE_SIGNING_SECRET` was missing from production env, and the production DB had not yet applied `pilot_invite_grants`; the existing non-destructive app bootstrap added the missing table. Final canonical browser smoke on deployment `dpl_AkMJozhSmood7NdvSkqvfUQDySKm` proved `/`, `/health`, `/privacy`, invite claim, auth, first entry, photo derivative readback on `media.over.garden`, same-object follow-up, publish to SSR `/journal/[slug]`, `/variety/[slug]` public-variety activation, and archive-to-410 on `https://over.garden`.
 
+OVE-52 adds segment-aware pilot decision quality before widening invites. Signed pilot invites can now carry one bounded pilot segment (`unknown_segment` by default); first authenticated write eligibility materializes that enum into `pilot_invite_grants.segment` without storing invite links, contact details, referrers, raw URLs, IP/user-agent, or free-form segment text. `/garden/pilot-learning/decision` now shows first-entry saves, same-object follow-ups, returning gardeners, and follow-up rate by segment, with explicit unknown/low-sample gaps. The provisional continue / iterate / stop evaluator can no longer claim a broad pilot pass from pooled cohort rates when the H1 signal is unknown, single-segment, only power-core, or land/practical without micro/balcony proof. Structured interview aggregates also include bounded segment counts while continuing to exclude raw transcripts, journal text, media keys, contact fields, and precise location.
+
 OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
 
 OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-pilot reviewed copy while keeping public release blocked. First-publication disclosure is now version `first-publication-v2`, erasure intake is `erasure-request-pilot-v2`, users can see the latest erasure request status, and the operator review surface can move requests through submitted -> reviewing -> handled without selecting journal text or media keys.
@@ -52,7 +54,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Kysely + `pg` connect to local Docker Postgres.
 - Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
 - SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, `erasure_requests`, `variety_seed_proofs`, and `job_queue`.
-- `kysely-codegen` generated `src/db/generated.ts` from 15 live tables.
+- `kysely-codegen` generated `src/db/generated.ts` from 17 live tables.
 - CI runs a non-mutating `pnpm db:types:check` against the bootstrapped database and fails if `src/db/generated.ts` differs from the live schema.
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.
@@ -209,7 +211,7 @@ MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_ma
 
 ## Next Build Step
 
-Continue the active Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`. Before starting the next issue, read `docs/MAINLINE_CLOSEOUT.md` and run `cd apps/web && pnpm mainline:closeout:check`. After OVE-50, the intended order is OVE-51 -> OVE-52 -> OVE-53.
+Continue the active Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`. Before starting the next issue, read `docs/MAINLINE_CLOSEOUT.md` and run `cd apps/web && pnpm mainline:closeout:check`. After OVE-52, continue with OVE-53.
 
 Every future Linear issue must be a vertical SDD slice, not a layer ticket. It must start from a user behavior and integrate the needed surfaces together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not create standalone tasks for "schema", "UI", "media", "analytics", "search", or "public pages" unless that work is inside the same issue as the user-visible path.
 

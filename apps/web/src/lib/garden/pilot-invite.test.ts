@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHmac } from "node:crypto";
 
 import {
   DEFAULT_PILOT_INVITE_COHORT,
@@ -14,11 +15,19 @@ const NOW = Date.UTC(2026, 5, 29, 12, 0, 0);
 
 describe("pilot invite token contract", () => {
   it("signs and verifies a bounded enum-only cohort token", () => {
-    const token = signPilotInviteToken({ now: NOW, secret: SECRET });
-    const verified = verifyPilotInviteToken(token, { now: NOW, secret: SECRET });
+    const token = signPilotInviteToken({
+      now: NOW,
+      secret: SECRET,
+      segment: "casual_practical_beginner",
+    });
+    const verified = verifyPilotInviteToken(token, {
+      now: NOW,
+      secret: SECRET,
+    });
 
     expect(verified).not.toBeNull();
     expect(verified?.cohort).toBe(DEFAULT_PILOT_INVITE_COHORT);
+    expect(verified?.segment).toBe("casual_practical_beginner");
     expect(verified?.expiresAt).toBeGreaterThan(Math.floor(NOW / 1000));
   });
 
@@ -30,6 +39,7 @@ describe("pilot invite token contract", () => {
     // Only the enum cohort plus issued/expiry seconds are encoded.
     expect(JSON.parse(decoded)).toEqual({
       c: "closed_pilot",
+      s: "unknown_segment",
       iat: Math.floor(NOW / 1000),
       exp: Math.floor(NOW / 1000) + 14 * 24 * 60 * 60,
     });
@@ -51,6 +61,7 @@ describe("pilot invite token contract", () => {
     const forgedBody = Buffer.from(
       JSON.stringify({
         c: "closed_pilot",
+        s: "unknown_segment",
         iat: Math.floor(NOW / 1000),
         exp: Math.floor(NOW / 1000) + 999999,
       }),
@@ -83,9 +94,35 @@ describe("pilot invite token contract", () => {
   it("rejects malformed, empty, or wrong-version tokens", () => {
     expect(verifyPilotInviteToken(null, { secret: SECRET })).toBeNull();
     expect(verifyPilotInviteToken("", { secret: SECRET })).toBeNull();
-    expect(verifyPilotInviteToken("not-a-token", { secret: SECRET })).toBeNull();
+    expect(
+      verifyPilotInviteToken("not-a-token", { secret: SECRET }),
+    ).toBeNull();
     expect(
       verifyPilotInviteToken("v2.body.signature", { secret: SECRET }),
+    ).toBeNull();
+  });
+
+  it("rejects forged free-form segment metadata", () => {
+    const version = "v1";
+    const forgedBody = Buffer.from(
+      JSON.stringify({
+        c: "closed_pilot",
+        s: "email@example.com",
+        iat: Math.floor(NOW / 1000),
+        exp: Math.floor(NOW / 1000) + 999999,
+      }),
+      "utf8",
+    ).toString("base64url");
+    const signature = createHmac("sha256", SECRET)
+      .update(`${version}.${forgedBody}`)
+      .digest()
+      .toString("base64url");
+
+    expect(
+      verifyPilotInviteToken(`${version}.${forgedBody}.${signature}`, {
+        now: NOW,
+        secret: SECRET,
+      }),
     ).toBeNull();
   });
 

@@ -42,7 +42,8 @@ const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 
 describe("pilot cohort decision repository privacy contracts", () => {
   it("aggregates interview learnings with enum-only groupings", () => {
-    const compiled = buildPilotInterviewLearningAggregateQuery(testDb).compile();
+    const compiled =
+      buildPilotInterviewLearningAggregateQuery(testDb).compile();
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain('from "pilot_interview_learnings"');
@@ -51,6 +52,7 @@ describe("pilot cohort decision repository privacy contracts", () => {
     expect(sql).toContain('"activation_result"');
     expect(sql).toContain('"next_action"');
     expect(sql).toContain('"observed_value"');
+    expect(sql).toContain('"segment"');
     expect(sql).not.toContain("journal_entries");
     expect(sql).not.toContain("media_assets");
     expect(sql).not.toContain("redacted_note");
@@ -68,18 +70,24 @@ describe("pilot cohort decision repository privacy contracts", () => {
       testDb,
       new Date("2026-06-29T12:00:00.000Z"),
     );
-    const readout = assemblePilotCohortDecisionReadout(healthReadout, [], new Date());
+    const readout = assemblePilotCohortDecisionReadout(
+      healthReadout,
+      [],
+      new Date(),
+    );
 
     expect(readout.evaluationWindow.key).toBe("last_30_days");
     expect(readout.decision.recommendation).toBe("insufficient_data");
     expect(readout.decision.dataGaps.length).toBeGreaterThan(0);
     expect(readout.cohort.writeEligibleGardeners).toBe(0);
-    expect(readout.caveats.some((note) => note.includes("decision support"))).toBe(
-      true,
-    );
+    expect(readout.cohort.segments).toEqual([]);
+    expect(
+      readout.caveats.some((note) => note.includes("decision support")),
+    ).toBe(true);
 
     expect(Object.keys(readout.interviews)).toEqual([
       "totalRecords",
+      "bySegment",
       "byActivationResult",
       "byNextAction",
       "byObservedValue",

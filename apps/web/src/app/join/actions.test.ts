@@ -23,12 +23,20 @@ describe("claimPilotInviteAction", () => {
   it("sets the eligibility cookie and redirects to the enum-only destination for a valid token", async () => {
     const { claimPilotInviteAction } = await import("./actions");
     const formData = new FormData();
-    formData.set("invite", signPilotInviteToken());
+    formData.set(
+      "invite",
+      signPilotInviteToken({ segment: "casual_practical_beginner" }),
+    );
 
     await claimPilotInviteAction(formData);
 
-    expect(mocks.setPilotInviteCookie).toHaveBeenCalledWith("closed_pilot");
-    expect(mocks.redirect).toHaveBeenCalledWith("/garden?source=invited-cohort");
+    expect(mocks.setPilotInviteCookie).toHaveBeenCalledWith(
+      "closed_pilot",
+      "casual_practical_beginner",
+    );
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/garden?source=invited-cohort",
+    );
   });
 
   it("never sets a grant cookie for an invalid token but still lands on a safe destination", async () => {
@@ -39,7 +47,9 @@ describe("claimPilotInviteAction", () => {
     await claimPilotInviteAction(formData);
 
     expect(mocks.setPilotInviteCookie).not.toHaveBeenCalled();
-    expect(mocks.redirect).toHaveBeenCalledWith("/garden?source=invited-cohort");
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/garden?source=invited-cohort",
+    );
   });
 
   it("does not leak the raw invite token into the redirect destination", async () => {
