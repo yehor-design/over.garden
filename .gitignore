@@ -54,4 +54,5 @@ npm-debug.log*
 pnpm-debug.log*
 .idea/
 .vscode/
+.cursor/
 .vercel
