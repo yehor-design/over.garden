@@ -1,0 +1,103 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  resolveFounderInterviewOperatorAccess: vi.fn(),
+  listFounderInterviewLearnings: vi.fn(),
+}));
+
+vi.mock("@/server/auth-session", () => ({
+  getCurrentSession: vi.fn(async () => ({
+    user: { id: "00000000-0000-4000-8000-000000000999" },
+  })),
+  getSessionId: vi.fn(() => "operator-session"),
+}));
+
+vi.mock("@/server/request-scope", () => ({
+  scopedToUser: vi.fn((userId: string, sessionId: string) => ({
+    userId,
+    sessionId,
+  })),
+}));
+
+vi.mock("@/server/founder-interview-access", () => ({
+  resolveFounderInterviewOperatorAccess:
+    mocks.resolveFounderInterviewOperatorAccess,
+}));
+
+vi.mock("@/server/founder-interview-repository", () => ({
+  listFounderInterviewLearnings: mocks.listFounderInterviewLearnings,
+  groupFounderInterviewLearningsBySegment: vi.fn((records) => {
+    const groups = new Map<string, typeof records>();
+    for (const record of records) {
+      const bucket = groups.get(record.segment) ?? [];
+      bucket.push(record);
+      groups.set(record.segment, bucket);
+    }
+    return [...groups.entries()].map(([segment, segmentRecords]) => ({
+      segment,
+      records: segmentRecords,
+    }));
+  }),
+}));
+
+vi.mock("./actions", () => ({
+  createFounderInterviewLearningAction: vi.fn(),
+}));
+
+describe("/garden/pilot-learning/interviews", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
+      status: "allowed",
+      mode: "allowlist",
+    });
+    mocks.listFounderInterviewLearnings.mockResolvedValue([
+      {
+        id: "00000000-0000-4000-8000-00000000abcd",
+        recordedByUserId: "00000000-0000-4000-8000-000000000999",
+        subjectUserId: "00000000-0000-4000-8000-000000000001",
+        pilotCohort: "closed_pilot",
+        segment: "casual_practical_beginner",
+        activationResult: "activated_with_follow_up",
+        returnReason: "same_object_follow_up",
+        mainObjection: "none_observed",
+        observedValue: "history_worth_keeping",
+        nextAction: "continue_pilot",
+        redactedNote: "Follow-up felt natural.",
+        recordedAt: new Date("2026-06-29T08:00:00.000Z"),
+      },
+    ]);
+  });
+
+  it("does not read interview records for a signed-in non-operator", async () => {
+    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
+      status: "denied",
+    });
+
+    const { default: FounderInterviewCapturePage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await FounderInterviewCapturePage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Access denied.");
+    expect(mocks.listFounderInterviewLearnings).not.toHaveBeenCalled();
+  });
+
+  it("renders grouped readback without private journal evidence", async () => {
+    const { default: FounderInterviewCapturePage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await FounderInterviewCapturePage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Gate: allowlist");
+    expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
+    expect(html).toContain("Activated — first entry plus follow-up");
+    expect(html).toContain("Follow-up felt natural.");
+    expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
+  });
+});

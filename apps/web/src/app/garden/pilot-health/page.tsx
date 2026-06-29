@@ -193,6 +193,15 @@ function PilotHealthHeader() {
       >
         Pilot smoke
       </Link>
+      <Link
+        href="/garden/pilot-learning/interviews"
+        className={buttonVariants({
+          variant: "outline",
+          className: "self-start",
+        })}
+      >
+        Founder interviews
+      </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Pilot health

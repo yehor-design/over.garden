@@ -158,6 +158,23 @@ export interface PilotInviteGrants {
   user_id: string;
 }
 
+export interface PilotInterviewLearnings {
+  activation_result: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  main_objection: string;
+  next_action: string;
+  observed_value: string;
+  pilot_cohort: string | null;
+  recorded_at: Generated<Timestamp>;
+  recorded_by_user_id: string;
+  redacted_note: string | null;
+  return_reason: string;
+  segment: string;
+  subject_user_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface PlantObjects {
   catalog_item_id: string | null;
   coarse_region_code: string | null;
@@ -237,6 +254,7 @@ export interface DB {
   journal_entries: JournalEntries;
   media_assets: MediaAssets;
   pilot_invite_grants: PilotInviteGrants;
+  pilot_interview_learnings: PilotInterviewLearnings;
   plant_objects: PlantObjects;
   session: Session;
   spaces: Spaces;

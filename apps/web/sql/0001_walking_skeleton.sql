@@ -720,3 +720,106 @@ create table if not exists pilot_invite_grants (
 
 create index if not exists pilot_invite_grants_granted_idx
   on pilot_invite_grants (granted_at desc);
+
+-- Founder interview capture (OVE-45). Operator-only structured pilot learnings.
+-- Stores bounded enum fields and an optional short redacted note. Never journal
+-- text, media keys, contact details, request metadata, or raw transcripts.
+create table if not exists pilot_interview_learnings (
+  id uuid primary key default gen_random_uuid(),
+  recorded_by_user_id uuid not null,
+  subject_user_id uuid,
+  pilot_cohort text check (pilot_cohort is null or pilot_cohort in ('closed_pilot')),
+  segment text not null check (
+    segment in (
+      'casual_micro_grower',
+      'casual_gen_z',
+      'casual_practical_beginner',
+      'casual_urban_balcony',
+      'casual_food_self_reliance',
+      'power_burned_out_it',
+      'power_collector',
+      'power_experienced',
+      'power_homestead',
+      'supply_expert_creator',
+      'supply_local_seller',
+      'channel_ally',
+      'unknown_segment'
+    )
+  ),
+  activation_result text not null check (
+    activation_result in (
+      'not_activated',
+      'activated_first_entry_only',
+      'activated_with_follow_up',
+      'started_no_save',
+      'dropped_after_first',
+      'not_in_cohort',
+      'unknown'
+    )
+  ),
+  return_reason text not null check (
+    return_reason in (
+      'same_object_follow_up',
+      'seasonal_return',
+      'never_returned',
+      'returned_no_save',
+      'privacy_concern',
+      'composer_friction',
+      'not_relevant_yet',
+      'unknown'
+    )
+  ),
+  main_objection text not null check (
+    main_objection in (
+      'no_journal_habit',
+      'too_much_effort',
+      'privacy_location',
+      'no_clear_value',
+      'prefers_paper_or_social',
+      'product_too_early',
+      'not_gardener_fit',
+      'none_observed',
+      'unknown'
+    )
+  ),
+  observed_value text not null check (
+    observed_value in (
+      'history_worth_keeping',
+      'photo_safe_capture',
+      'catalog_helpful',
+      'offline_queue_helpful',
+      'progress_moment_helpful',
+      'public_variety_hook',
+      'no_clear_value_yet',
+      'unknown'
+    )
+  ),
+  next_action text not null check (
+    next_action in (
+      'continue_pilot',
+      'iterate_composer',
+      'iterate_onboarding',
+      'iterate_privacy_copy',
+      'schedule_follow_up',
+      'pause_recruiting',
+      'close_track',
+      'none'
+    )
+  ),
+  redacted_note text check (
+    redacted_note is null or char_length(redacted_note) between 1 and 280
+  ),
+  recorded_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists pilot_interview_learnings_segment_recorded_idx
+  on pilot_interview_learnings (segment, recorded_at desc);
+
+create index if not exists pilot_interview_learnings_activation_recorded_idx
+  on pilot_interview_learnings (activation_result, recorded_at desc);
+
+create index if not exists pilot_interview_learnings_subject_recorded_idx
+  on pilot_interview_learnings (subject_user_id, recorded_at desc)
+  where subject_user_id is not null;
