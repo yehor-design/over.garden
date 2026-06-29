@@ -84,5 +84,30 @@ function runCodegen(outFile: string) {
 }
 
 function normalize(value: string) {
-  return value.replaceAll("\r\n", "\n").trimEnd();
+  const normalized = value.replaceAll("\r\n", "\n").trimEnd();
+  const headerMatch = normalized.match(/^[\s\S]*?(?=export interface )/);
+  const header = headerMatch?.[0] ?? "";
+  const body = normalized.slice(header.length);
+
+  const interfaceBlocks = [
+    ...body.matchAll(/export interface (\w+) \{[\s\S]*?\n\}\n/g),
+  ]
+    .map((match) => sortDbInterfaceKeys(match[0]))
+    .sort((left, right) => {
+      const leftName = left.match(/^export interface (\w+)/)?.[1] ?? "";
+      const rightName = right.match(/^export interface (\w+)/)?.[1] ?? "";
+      return leftName.localeCompare(rightName);
+    });
+
+  return header + interfaceBlocks.join("");
+}
+
+function sortDbInterfaceKeys(block: string) {
+  if (!block.startsWith("export interface DB")) {
+    return block;
+  }
+
+  const lines = block.split("\n");
+  const properties = lines.slice(1, -1).filter((line) => line.trim()).sort();
+  return [lines[0], ...properties, lines.at(-1) ?? "}"].join("\n");
 }

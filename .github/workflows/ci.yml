@@ -81,14 +81,18 @@ jobs:
             -e MINIO_ROOT_PASSWORD=overgarden-ci-secret \
             minio/minio:latest server /data --console-address ":9001"
 
+          sleep 2
+
           for attempt in {1..30}; do
-            if curl -fsS http://localhost:9000/minio/health/ready >/dev/null; then
+            if curl -fsS http://localhost:9000/minio/health/ready >/dev/null 2>&1; then
+              echo "MinIO is ready."
               exit 0
             fi
             sleep 2
           done
 
           echo "MinIO did not become ready in time."
+          docker logs overgarden-ci-minio || true
           exit 1
 
       - name: Bootstrap schema and object storage
