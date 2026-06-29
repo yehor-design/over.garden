@@ -1,6 +1,7 @@
 import "server-only";
 
 import { resolveDatabaseConnection } from "@/db/connection";
+import { isBlockedBetterAuthSecret } from "@/lib/auth-secret";
 import { vercelUrl } from "@/lib/runtime-url";
 import { parseCatalogCuratorUserIds } from "@/server/catalog-curator-auth";
 import { pingDatabase } from "@/server/health-repository";
@@ -105,11 +106,7 @@ export function buildPilotSmokeReadiness({
       title: "Auth, data, and media path",
       checks: [
         checkDatabase(env, databaseProbe),
-        checkRequiredSecretPresence(
-          env,
-          "BETTER_AUTH_SECRET",
-          "Better Auth secret",
-        ),
+        checkBetterAuthSecret(env),
         checkPilotInviteSigningSecret(env),
         checkOperatorAllowlist(env),
         checkR2Configuration(env),
@@ -613,6 +610,28 @@ function checkRequiredSecretPresence(
     evidence:
       "Evidence may say present only. Never copy this value into docs, Linear, logs, or chat.",
   };
+}
+
+function checkBetterAuthSecret(env: EnvLike): PilotSmokeCheck {
+  const value = env.BETTER_AUTH_SECRET;
+
+  if (isBlockedBetterAuthSecret(value)) {
+    return {
+      id: "better-auth-secret",
+      label: "Better Auth secret",
+      severity: "fail",
+      summary:
+        "BETTER_AUTH_SECRET is missing, placeholder-like, or uses a local development fallback.",
+      evidence:
+        "Evidence may say missing, placeholder-like, or local fallback only. Never copy this value into docs, Linear, logs, or chat.",
+    };
+  }
+
+  return checkRequiredSecretPresence(
+    env,
+    "BETTER_AUTH_SECRET",
+    "Better Auth secret",
+  );
 }
 
 function isConfigured(value: string | undefined): value is string {

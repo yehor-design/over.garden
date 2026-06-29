@@ -1,14 +1,22 @@
 import { Button } from "@/components/ui/button";
-import { optionalServerEnv } from "@/lib/env";
+import {
+  hasUsableBetterAuthSecret,
+  isProductionLikeRuntime,
+} from "@/lib/auth-secret";
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
 
 export const dynamic = "force-dynamic";
 
 async function getAuthStatus(): Promise<string> {
-  if (!optionalServerEnv("BETTER_AUTH_SECRET")) {
-    return "Better Auth route mounted — local development secret fallback is active";
+  if (hasUsableBetterAuthSecret()) {
+    return "Better Auth route mounted — secret configured";
   }
-  return "Better Auth route mounted — secret configured";
+
+  if (isProductionLikeRuntime()) {
+    return "Better Auth route mounted — secret missing or placeholder-like, auth fails closed";
+  }
+
+  return "Better Auth route mounted — local-only fallback active";
 }
 
 async function getDbStatus(): Promise<string> {

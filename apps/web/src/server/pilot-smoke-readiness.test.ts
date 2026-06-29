@@ -116,6 +116,52 @@ describe("pilot smoke readiness", () => {
     });
   });
 
+  it("blocks deployed smoke when the auth secret is a local fallback", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        BETTER_AUTH_SECRET:
+          "local-development-only-overgarden-better-auth-secret-fixed",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+
+    expect(readout.overall).toBe("blocked");
+    expect(
+      findCheck(
+        readout.sections.flatMap((section) => section.checks),
+        "better-auth-secret",
+      ),
+    ).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("local development fallback"),
+    });
+  });
+
+  it("blocks deployed smoke when the auth secret is still a placeholder", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        BETTER_AUTH_SECRET:
+          "ci-overgarden-better-auth-secret-change-before-deploy",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-27T00:00:00.000Z"),
+    });
+
+    expect(readout.overall).toBe("blocked");
+    expect(
+      findCheck(
+        readout.sections.flatMap((section) => section.checks),
+        "better-auth-secret",
+      ),
+    ).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("placeholder-like"),
+    });
+  });
+
   it("surfaces backup/PITR and worker recovery as explicit manual durability checks", () => {
     const readout = buildPilotSmokeReadiness({
       env: productionLikeEnv,

@@ -300,6 +300,7 @@ Public access observation:
 Deployment env observation:
 
 - On 2026-06-27, the Vercel project had `BETTER_AUTH_SECRET` installed for production, development, and the branch preview `codex/ove-27-production-pilot-smoke`.
+- Runtime auth is fail-closed for production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, or equal to the local development fallback. Do not rely on local/test fallback behavior for any deployed production or preview app.
 - On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
@@ -315,6 +316,7 @@ Deployment env observation:
 Vercel invariants:
 
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
+- Do not document or paste auth secret values. Evidence may say `BETTER_AUTH_SECRET` is present, missing, placeholder-like, or local-fallback only.
 - Public H6 smoke must use an unauthenticated public URL that returns OverGarden SSR HTML, not Vercel SSO.
 - Internal operator surfaces require explicit `CATALOG_CURATOR_USER_IDS` in the selected environment. Missing or empty values fail closed for catalog curation, pilot health, pilot smoke, and erasure request operator readback/actions; do not record the actual user IDs in docs, Linear, logs, or chat.
 - Keep Cloudflare from caching app HTML if the app domain is later proxied through Cloudflare. Vercel should own app HTML/ISR behavior.

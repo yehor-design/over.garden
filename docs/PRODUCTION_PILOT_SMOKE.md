@@ -20,7 +20,7 @@ Verified through the connected Vercel app on 2026-06-27.
 - Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, or equal to the local development fallback. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
@@ -353,6 +353,7 @@ Forbidden evidence:
 - Email addresses, signed cookies, session tokens, API keys, database URLs, Vercel SSO nonce/share URLs, or protected preview tokens.
 - Quarantine keys, signed upload URLs, original object keys, EXIF data, precise location, IP address, user agent, referrer, or raw query string.
 - Full private URLs from authenticated pages.
+- Auth secret values. Evidence may only say present, missing, placeholder-like, or local-fallback.
 
 ## Preflight
 

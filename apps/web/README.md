@@ -25,8 +25,12 @@ Checks:
 ```bash
 pnpm lint
 pnpm typecheck
-pnpm build
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 ```
+
+Production-like builds fail closed unless `BETTER_AUTH_SECRET` is configured.
+Local `pnpm dev` can use the local-only fallback after copying `.env.example`,
+but preview/production deployments must set an explicit platform secret.
 
 Database type generation after a DB is available:
 

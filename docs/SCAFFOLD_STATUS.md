@@ -6,6 +6,8 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 
 OVE-29 hardens owner-consistent media attachment: quarantine uploads cannot pre-bind an entry id, processed media can attach only when the target entry belongs to the same user, and public journal/variety read models require media owner equality before rendering derivative photos.
 
+OVE-30 hardens production auth startup: Better Auth uses a local fallback only outside production-like runtimes, deployed production/preview fails closed when `BETTER_AUTH_SECRET` is missing or placeholder-like, and pilot-smoke flags local-fallback auth config as a blocker without exposing secret values.
+
 OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
 
 OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-pilot reviewed copy while keeping public release blocked. First-publication disclosure is now version `first-publication-v2`, erasure intake is `erasure-request-pilot-v2`, users can see the latest erasure request status, and the operator review surface can move requests through submitted -> reviewing -> handled without selecting journal text or media keys.
@@ -102,7 +104,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Repository contract tests prove owner-scoped object readback and idempotent entry creation through `(owner_user_id, client_mutation_id)`.
 - Analytics event tests prove event payload allowlists, enum-only homepage/public-variety/direct activation attribution, rejection of raw URL/referrer/query/user-agent fields, owner/session/object linkage, same-session revisit follow-up marking, and non-blocking event failure logging.
 - Pilot health tests prove operator access gating, safe aggregate SQL for journal/event/public-variety readouts, public-variety promoted/thin/de-promoted mapping, and non-blocking readout failure handling.
-- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder config blocks deployed smoke, and journal search indexing remains explicitly degraded until worker proof exists.
+- Pilot smoke readiness tests prove secret values are not emitted in the operator readout, local placeholder or local-fallback auth config blocks deployed smoke, and journal search indexing remains explicitly degraded until worker proof exists.
 - Erasure request tests prove the intake and operator readback queries use only bounded request metadata, do not join journal/media/auth-session tables, and reject raw content/location/request-header fields from the read model. Access tests prove unauthenticated operator readback resolves to a sign-in-required state.
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
 - Repository contract tests prove owner-scoped archive, public-gone tombstone lookup, active-only public readback, and active-only derivative media selection.
@@ -183,7 +185,7 @@ pnpm db:types:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 cd ../../services/matching
 uv run python -m py_compile app/main.py app/search.py app/worker.py
 uv run --frozen pytest
