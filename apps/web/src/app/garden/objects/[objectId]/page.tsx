@@ -3,12 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
-import type { LocationVisibility, VarietyState } from "@/db/schema";
+import type {
+  EntryScope,
+  LocationVisibility,
+  VarietyState,
+} from "@/db/schema";
 import {
   entryPrivacyLabel,
   entryScopeLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
+import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -29,6 +34,7 @@ import { CatalogResolveControl } from "./catalog-resolve-control";
 import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
+import { ObjectProgressMoment } from "./object-progress-moment";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +73,10 @@ export default async function PlantObjectReadbackPage({
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   await recordOwnRecordRevisited(scope, page);
+  const showProgressMoment = isObjectProgressMomentEligible(page.entries.length);
+  if (showProgressMoment) {
+    await recordProgressMomentShown(scope, page);
+  }
 
   const today = new Date().toISOString().slice(0, 10);
   const locationLabel = getObjectLocationLabel(page);
@@ -135,6 +145,19 @@ export default async function PlantObjectReadbackPage({
         <FollowUpValuePulse
           objectId={objectId}
           journalEntryId={valuePulseJournalEntryId}
+        />
+      ) : null}
+
+      {showProgressMoment ? (
+        <ObjectProgressMoment
+          plantName={page.plantObject.display_name}
+          entries={page.entries.map((entry) => ({
+            id: entry.id,
+            title: entry.title,
+            body: entry.body,
+            entryDate: entry.entry_date,
+            mediaPublicUrl: entry.media?.publicUrl ?? null,
+          }))}
         />
       ) : null}
 
@@ -320,6 +343,28 @@ async function recordOwnRecordRevisited(
     eventName: "own_record_revisited",
     properties: {
       followed_by_action: false,
+      location_visibility_level: page.plantObject
+        .location_visibility as LocationVisibility,
+      variety_state: page.plantObject.variety_state as VarietyState,
+    },
+    spaceId: page.space.id,
+    plantObjectId: page.plantObject.id,
+    journalEntryId: latestEntry.id,
+  });
+}
+
+async function recordProgressMomentShown(
+  scope: Parameters<typeof getPlantObjectPage>[0],
+  page: PlantObjectPage,
+) {
+  const latestEntry = page.entries[0];
+  if (!latestEntry) return;
+
+  await recordAnalyticsEventSafely(scope, {
+    eventName: "progress_screen_shown",
+    properties: {
+      entry_scope: latestEntry.entry_scope as EntryScope,
+      has_photo: page.entries.some((entry) => entry.media !== null),
       location_visibility_level: page.plantObject
         .location_visibility as LocationVisibility,
       variety_state: page.plantObject.variety_state as VarietyState,
