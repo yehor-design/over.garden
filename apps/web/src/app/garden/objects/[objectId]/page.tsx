@@ -13,6 +13,7 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
+import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getPlantObjectPage, type PlantObjectPage } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
@@ -26,18 +27,22 @@ import {
 } from "./actions";
 import { CatalogResolveControl } from "./catalog-resolve-control";
 import { FollowUpEntryComposer } from "./follow-up-entry-composer";
+import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 
 export const dynamic = "force-dynamic";
 
 interface PlantObjectPageProps {
   params: Promise<{ objectId: string }>;
+  searchParams: Promise<{ valuePulse?: string; entryId?: string }>;
 }
 
 export default async function PlantObjectReadbackPage({
   params,
+  searchParams,
 }: PlantObjectPageProps) {
   const { objectId } = await params;
+  const query = await searchParams;
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
@@ -65,6 +70,17 @@ export default async function PlantObjectReadbackPage({
 
   const today = new Date().toISOString().slice(0, 10);
   const locationLabel = getObjectLocationLabel(page);
+  const valuePulseJournalEntryId =
+    query.valuePulse === "1" && typeof query.entryId === "string"
+      ? query.entryId.trim()
+      : "";
+  const valuePulsePrompt =
+    valuePulseJournalEntryId.length > 0
+      ? await resolveFollowUpValuePulsePrompt(scope, {
+          plantObjectId: objectId,
+          journalEntryId: valuePulseJournalEntryId,
+        })
+      : { eligible: false };
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -112,6 +128,13 @@ export default async function PlantObjectReadbackPage({
           currentVarietyText={page.plantObject.variety_text}
           currentVarietyState={page.plantObject.variety_state as VarietyState}
           action={resolvePlantObjectCatalogAction}
+        />
+      ) : null}
+
+      {valuePulsePrompt.eligible ? (
+        <FollowUpValuePulse
+          objectId={objectId}
+          journalEntryId={valuePulseJournalEntryId}
         />
       ) : null}
 

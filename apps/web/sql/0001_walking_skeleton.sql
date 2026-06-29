@@ -607,7 +607,8 @@ create table if not exists analytics_events (
       'offline_entry_queued',
       'offline_entry_synced',
       'progress_screen_shown',
-      'own_record_revisited'
+      'own_record_revisited',
+      'follow_up_value_pulse'
     )
   ),
   properties jsonb not null default '{}'::jsonb
@@ -650,7 +651,8 @@ begin
           'offline_entry_queued',
           'offline_entry_synced',
           'progress_screen_shown',
-          'own_record_revisited'
+          'own_record_revisited',
+          'follow_up_value_pulse'
         )
       );
   end if;

@@ -64,4 +64,7 @@ export interface FirstPlantEntryResponse {
     clientMutationId: string;
   };
   readbackUrl: string;
+  followUpValuePulse?: {
+    journalEntryId: string;
+  } | null;
 }

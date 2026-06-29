@@ -8,6 +8,11 @@ import type {
   ActivationSurfaceKind,
 } from "@/lib/garden/entry-contracts";
 import type {
+  FollowUpUsefulness,
+  FollowUpUsefulnessReason,
+  FollowUpValuePulseOutcome,
+} from "@/lib/garden/follow-up-value-pulse";
+import type {
   AnalyticsEvent,
   AnalyticsEventName,
   Database,
@@ -28,8 +33,11 @@ export interface AnalyticsEventProperties {
   has_photo?: boolean;
   is_backdated?: boolean;
   location_visibility_level?: LocationVisibility;
+  pulse_outcome?: FollowUpValuePulseOutcome;
   source_surface_kind?: ActivationSurfaceKind;
   sync_status?: EntrySyncStatus;
+  usefulness?: FollowUpUsefulness;
+  usefulness_reason?: FollowUpUsefulnessReason;
   variety_state?: VarietyState;
   followed_by_action?: boolean;
 }
@@ -59,6 +67,7 @@ const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
   "offline_entry_synced",
   "progress_screen_shown",
   "own_record_revisited",
+  "follow_up_value_pulse",
 ]);
 
 const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
@@ -71,6 +80,9 @@ const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "sync_status",
   "variety_state",
   "followed_by_action",
+  "pulse_outcome",
+  "usefulness",
+  "usefulness_reason",
 ]);
 
 const FORBIDDEN_PROPERTY_FRAGMENTS = [
@@ -339,6 +351,26 @@ function normalizeAnalyticsEventPropertyValue(
         value === "unknown" ||
         value === "user_added" ||
         value === "free_text"
+      ) {
+        return value;
+      }
+      break;
+    case "pulse_outcome":
+      if (value === "submitted" || value === "skipped") return value;
+      break;
+    case "usefulness":
+      if (value === "useful" || value === "not_sure" || value === "not_useful") {
+        return value;
+      }
+      break;
+    case "usefulness_reason":
+      if (
+        value === "history_felt_worth_keeping" ||
+        value === "easy_to_add_update" ||
+        value === "prior_entries_helped" ||
+        value === "felt_redundant" ||
+        value === "hard_to_find_what_i_needed" ||
+        value === "not_sure_why"
       ) {
         return value;
       }

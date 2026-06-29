@@ -92,6 +92,18 @@ export interface PilotHealthMetrics {
   };
   publicVarietySaveRate: number;
   invitedCohort: PilotInvitedCohortMetrics;
+  followUpValuePulse: PilotFollowUpValuePulseMetrics;
+}
+
+export interface PilotFollowUpValuePulseMetrics {
+  responses: number;
+  submitted: number;
+  skipped: number;
+  useful: number;
+  notSure: number;
+  notUseful: number;
+  withReason: number;
+  usefulRate: number;
 }
 
 export interface PilotInvitedCohortMetrics {
@@ -135,6 +147,13 @@ interface PilotAnalyticsMetricRow {
   offlineQueued: number | string | bigint | null;
   offlineSynced: number | string | bigint | null;
   sameSessionRevisitFollowUps: number | string | bigint | null;
+  valuePulseNotSure: number | string | bigint | null;
+  valuePulseNotUseful: number | string | bigint | null;
+  valuePulseResponses: number | string | bigint | null;
+  valuePulseSkipped: number | string | bigint | null;
+  valuePulseSubmitted: number | string | bigint | null;
+  valuePulseUseful: number | string | bigint | null;
+  valuePulseWithReason: number | string | bigint | null;
 }
 
 interface PilotPublicVarietyRow {
@@ -204,6 +223,7 @@ export async function getPilotHealthReadout(
       "H6 indexability shows thinness trajectory; it is not the same as organic acquisition or signup conversion.",
       "Invited-cohort counts are the closed-pilot H1 loop: invite start, first-entry save, and a same-object follow-up return. Cohort membership is derived from the enum-only invited_cohort activation source, never from names, emails, or invite links.",
       "Write-eligible gardeners are users with a durable pilot_invite_grants row. Direct/homepage/public-variety starts without a grant indicate non-invited write attempts that should not produce pilot data.",
+      "Follow-up value pulse counts are bounded usefulness feedback after same-object follow-ups. Properties are enum-only; no journal text, email, IP, user agent, referrer, or raw URL values are stored.",
     ],
     references: PILOT_HEALTH_RESEARCH_REFERENCES,
   };
@@ -355,6 +375,33 @@ export function buildPilotAnalyticsMetricsQuery(
         where event_name = 'entry_logged'
           and properties ->> 'activation_source' = 'invited_cohort'
       )`.as("entrySavedInvitedCohort"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+      )`.as("valuePulseResponses"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ->> 'pulse_outcome' = 'submitted'
+      )`.as("valuePulseSubmitted"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ->> 'pulse_outcome' = 'skipped'
+      )`.as("valuePulseSkipped"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ->> 'usefulness' = 'useful'
+      )`.as("valuePulseUseful"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ->> 'usefulness' = 'not_sure'
+      )`.as("valuePulseNotSure"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ->> 'usefulness' = 'not_useful'
+      )`.as("valuePulseNotUseful"),
+      sql<number>`count(*) filter (
+        where event_name = 'follow_up_value_pulse'
+          and properties ? 'usefulness_reason'
+      )`.as("valuePulseWithReason"),
     ])
     .where("analytics_events.created_at", ">=", since);
 }
@@ -521,6 +568,7 @@ function buildPilotHealthWindow(
       activationStarts.invitedCohort,
     ),
   };
+  const followUpValuePulse = buildFollowUpValuePulseMetrics(analyticsMetrics);
 
   return {
     key: window.key,
@@ -561,7 +609,25 @@ function buildPilotHealthWindow(
         activationStarts.publicVariety,
       ),
       invitedCohort,
+      followUpValuePulse,
     },
+  };
+}
+
+function buildFollowUpValuePulseMetrics(
+  analyticsMetrics: NormalizedAnalyticsMetricRow,
+): PilotFollowUpValuePulseMetrics {
+  const submitted = analyticsMetrics.valuePulseSubmitted;
+
+  return {
+    responses: analyticsMetrics.valuePulseResponses,
+    submitted,
+    skipped: analyticsMetrics.valuePulseSkipped,
+    useful: analyticsMetrics.valuePulseUseful,
+    notSure: analyticsMetrics.valuePulseNotSure,
+    notUseful: analyticsMetrics.valuePulseNotUseful,
+    withReason: analyticsMetrics.valuePulseWithReason,
+    usefulRate: safeRate(analyticsMetrics.valuePulseUseful, submitted),
   };
 }
 
@@ -610,6 +676,13 @@ function normalizeAnalyticsMetricRow(row: PilotAnalyticsMetricRow | undefined) {
     sameSessionRevisitFollowUps: toNumber(
       row?.sameSessionRevisitFollowUps,
     ),
+    valuePulseNotSure: toNumber(row?.valuePulseNotSure),
+    valuePulseNotUseful: toNumber(row?.valuePulseNotUseful),
+    valuePulseResponses: toNumber(row?.valuePulseResponses),
+    valuePulseSkipped: toNumber(row?.valuePulseSkipped),
+    valuePulseSubmitted: toNumber(row?.valuePulseSubmitted),
+    valuePulseUseful: toNumber(row?.valuePulseUseful),
+    valuePulseWithReason: toNumber(row?.valuePulseWithReason),
   };
 }
 

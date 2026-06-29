@@ -94,6 +94,16 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).not.toContain("invite_email");
   });
 
+  it("aggregates follow-up value pulse with enum-only usefulness filters", () => {
+    const compiled = buildPilotAnalyticsMetricsQuery(testDb, since).compile();
+    const sql = compiled.sql.toLowerCase();
+
+    expect(sql).toContain("follow_up_value_pulse");
+    expect(sql).toContain("properties ->> 'pulse_outcome'");
+    expect(sql).toContain("properties ->> 'usefulness'");
+    expect(sql).toContain("properties ? 'usefulness_reason'");
+  });
+
   it("derives invited-cohort same-object follow-ups from membership, not raw entry text", () => {
     const compiled = buildPilotEntryMetricsQuery(testDb, since).compile();
     const sql = compiled.sql.toLowerCase();
@@ -182,10 +192,23 @@ describe("pilot health privacy-safe aggregate contracts", () => {
         returningGardeners: 0,
         firstEntrySaveRate: 0,
       });
+      expect(window.metrics.followUpValuePulse).toEqual({
+        responses: 0,
+        submitted: 0,
+        skipped: 0,
+        useful: 0,
+        notSure: 0,
+        notUseful: 0,
+        withReason: 0,
+        usefulRate: 0,
+      });
     }
 
     expect(
       readout.notes.some((note) => note.includes("Invited-cohort")),
+    ).toBe(true);
+    expect(
+      readout.notes.some((note) => note.includes("Follow-up value pulse")),
     ).toBe(true);
     expect(readout.writeAccess).toEqual({ writeEligibleGardeners: 0 });
   });

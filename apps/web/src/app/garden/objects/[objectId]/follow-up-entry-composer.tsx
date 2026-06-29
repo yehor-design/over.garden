@@ -37,6 +37,9 @@ import {
   type OfflineMutation,
 } from "@/lib/offline/queue";
 import {
+  buildFollowUpValuePulseReadbackUrl,
+} from "@/lib/garden/follow-up-value-pulse";
+import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
@@ -157,7 +160,14 @@ export function FollowUpEntryComposer({
       });
       setSubmitState("synced");
       setMessage("Saved to your garden.");
-      router.push(result.readbackUrl);
+      router.push(
+        result.followUpValuePulse
+          ? buildFollowUpValuePulseReadbackUrl(
+              result.readbackUrl,
+              result.followUpValuePulse.journalEntryId,
+            )
+          : result.readbackUrl,
+      );
       router.refresh();
     } catch (error) {
       setSubmitState("failed");
@@ -190,7 +200,14 @@ export function FollowUpEntryComposer({
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
-      router.push(result.readbackUrl);
+      router.push(
+        result.followUpValuePulse
+          ? buildFollowUpValuePulseReadbackUrl(
+              result.readbackUrl,
+              result.followUpValuePulse.journalEntryId,
+            )
+          : result.readbackUrl,
+      );
       router.refresh();
     } catch (error) {
       setSubmitState("failed");

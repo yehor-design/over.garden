@@ -86,6 +86,12 @@ export async function POST(request: Request) {
             mediaAssetId: body.mediaAssetId ?? "",
           });
     const readbackUrl = `/garden/objects/${result.plantObject.id}`;
+    const followUpValuePulse =
+      target === "plant_object_entry" &&
+      result.isNewEntry &&
+      result.priorObjectEntryCount > 0
+        ? { journalEntryId: result.entry.id }
+        : null;
 
     if (target === "plant_object_entry") {
       await recordPlantObjectEntryEvents(scope, result, syncStatus);
@@ -125,6 +131,7 @@ export async function POST(request: Request) {
         clientMutationId: result.entry.client_mutation_id,
       },
       readbackUrl,
+      followUpValuePulse,
     };
 
     return Response.json(response);

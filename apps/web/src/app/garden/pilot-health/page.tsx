@@ -315,6 +315,38 @@ function WindowPanel({
           `invited_cohort` source, never invite links, names, or emails.
         </p>
       </div>
+
+      <div className="grid gap-3 border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-foreground">
+          Follow-up value pulse
+        </h3>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetricTile
+            label="Responses (submitted + skipped)"
+            value={metrics.followUpValuePulse.responses}
+          />
+          <MetricTile
+            label="Submitted -> skipped"
+            value={`${metrics.followUpValuePulse.submitted} -> ${metrics.followUpValuePulse.skipped}`}
+          />
+          <MetricTile
+            label="Useful / not sure / not useful"
+            value={`${metrics.followUpValuePulse.useful} / ${metrics.followUpValuePulse.notSure} / ${metrics.followUpValuePulse.notUseful}`}
+          />
+          <MetricTile
+            label="Useful rate (of submitted)"
+            value={formatPercent(metrics.followUpValuePulse.usefulRate)}
+          />
+          <MetricTile
+            label="With optional reason"
+            value={metrics.followUpValuePulse.withReason}
+          />
+        </div>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Private bounded feedback after a same-object follow-up save. Counts
+          are enum-only aggregates; no journal text or identity fields.
+        </p>
+      </div>
     </section>
   );
 }
