@@ -3,7 +3,7 @@
  *
  * Usage:
  *   pnpm pilot:invite
- *   pnpm pilot:invite -- --ttl-days 14 --base-url https://over-garden.vercel.app
+ *   pnpm pilot:invite -- --ttl-days 14 --base-url https://over.garden
  *
  * Requires PILOT_INVITE_SIGNING_SECRET in the environment (or .env.local via
  * --env-file). Production MUST use a real secret; the dev fallback is blocked

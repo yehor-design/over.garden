@@ -7,6 +7,7 @@ import { parseCatalogCuratorUserIds } from "@/server/catalog-curator-auth";
 import { pingDatabase } from "@/server/health-repository";
 
 const PILOT_INVITE_SIGNING_SECRET_ENV = "PILOT_INVITE_SIGNING_SECRET";
+const CANONICAL_PRODUCTION_ORIGIN = "https://over.garden";
 
 type EnvLike = Record<string, string | undefined>;
 
@@ -499,6 +500,17 @@ function checkConfiguredHttpsUrl(
     };
   }
 
+  if (isProductionVercel(env) && !isConfigured(value)) {
+    return {
+      id: envId(name),
+      label,
+      severity: "fail",
+      summary: `${name} must be explicitly configured as ${CANONICAL_PRODUCTION_ORIGIN} in the Vercel production environment.`,
+      evidence:
+        "Record only whether the explicit production env var is present and canonical. Do not copy cookies, auth callback URLs, or signed links.",
+    };
+  }
+
   if (isLocalUrl(effectiveValue)) {
     return {
       id: envId(name),
@@ -516,6 +528,20 @@ function checkConfiguredHttpsUrl(
       severity: "fail",
       summary: `${name} must use HTTPS for production or preview smoke.`,
       evidence,
+    };
+  }
+
+  if (
+    isProductionVercel(env) &&
+    originOf(effectiveValue) !== CANONICAL_PRODUCTION_ORIGIN
+  ) {
+    return {
+      id: envId(name),
+      label,
+      severity: "fail",
+      summary: `${name} must use ${CANONICAL_PRODUCTION_ORIGIN} in the Vercel production environment.`,
+      evidence:
+        "Record only the origin class and deployment environment. Do not copy cookies, auth callback URLs, or signed links.",
     };
   }
 
@@ -665,6 +691,19 @@ function isLocalUrl(value: string | undefined) {
     value.includes("127.0.0.1") ||
     value.includes("0.0.0.0")
   );
+}
+
+function isProductionVercel(env: EnvLike) {
+  return env.VERCEL === "1" && env.VERCEL_ENV === "production";
+}
+
+function originOf(value: string | undefined) {
+  if (!value) return "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
 }
 
 function envId(name: string) {

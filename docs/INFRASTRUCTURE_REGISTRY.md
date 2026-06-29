@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-06-27
+Last verified: 2026-06-29
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -50,6 +50,10 @@ DNS and edge invariants:
 - Cloudflare is authoritative DNS for `over.garden`.
 - Cloudflare may proxy DNS records, but must not cache app HTML. Vercel owns app HTML/ISR behavior.
 - Do not manually CNAME media traffic to the `r2.dev` public development URL. R2 custom domains must be attached through the R2 bucket custom-domain flow.
+- OVE-51 canonical app DNS:
+  - `over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
+  - `www.over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
+- Because the app DNS records are DNS-only, app HTML responses should not carry Cloudflare cache status. If the app domain is proxied later, any HTML `cf-cache-status: HIT` is a launch blocker and must be fixed before pilot traffic resumes.
 
 Dashboard links:
 
@@ -117,9 +121,9 @@ CORS:
 - Exposed headers: `ETag`
 - Max age: `3600`
 - Dynamic Vercel preview deployment origins are intentionally not listed here by default. A full browser upload smoke should use an allowed app origin or an explicitly approved temporary preview origin; Node/API smoke alone does not exercise browser CORS preflight.
-- If `https://over-garden.vercel.app` remains the selected public pilot URL before `over.garden` is attached, add and verify that origin in the quarantine bucket CORS dashboard before browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
+- The selected public pilot URL is now `https://over.garden` (OVE-51). Keep `https://over.garden` and `https://www.over.garden` in the quarantine CORS rule before any canonical-domain browser upload smoke. The current object-scoped R2 token can upload/read objects but cannot read or update bucket CORS configuration.
 - On 2026-06-27, the OVE-27 branch preview origin was explicitly added for the production pilot browser smoke. Remove or rotate temporary preview origins when the branch is closed or the pilot URL changes.
-- On 2026-06-28 (OVE-37), a live CORS preflight to the quarantine S3 host from `https://over-garden.vercel.app` returned `204` with `Access-Control-Allow-Origin` for that origin and `Access-Control-Allow-Methods: PUT, HEAD`, confirming a real pilot gardener's browser upload from the pilot origin passes preflight. `https://over.garden` returned the same allow result for the deferred canonical attach.
+- On 2026-06-28 (OVE-37), a live CORS preflight to the quarantine S3 host from `https://over-garden.vercel.app` returned `204` with `Access-Control-Allow-Origin` for that origin and `Access-Control-Allow-Methods: PUT, HEAD`. On 2026-06-29 (OVE-51), the canonical `https://over.garden` origin remained allowed with the same `PUT, HEAD` method class, confirming a real pilot gardener's browser upload from the canonical origin passes preflight.
 
 Lifecycle:
 
@@ -266,27 +270,29 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5`
-- Deployment URL: `https://over-garden-bql7kx0kt-yehors-projects-01221e2b.vercel.app`
+- Deployment ID: `dpl_3V97zCF2UobXHiqvHMgxLhZaFP2m`
+- Deployment URL: `https://over-garden-payshmr9k-yehors-projects-01221e2b.vercel.app`
 - Ready state: `READY`
 - Target: `production`
 - Source: GitHub integration
 - GitHub ref: `main`
-- GitHub commit: `a8cd3c95423bf2e8603a41065fbed6a73ef4fd90`
-- GitHub commit message: `fix(garden): require operator allowlist for internal surfaces`
+- GitHub commit: `5e2989fd29f45003368e5adc32f45946dd718c17`
+- GitHub commit message: `chore(closeout): add mainline proof guard`
 - GitHub commit verification: `verified`
 - Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
-- OVE-37 (2026-06-28): this is the current-main revision the public pilot URL `https://over-garden.vercel.app` serves; the full first-user smoke passed against it. Earlier verification snapshot was `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx` from commit `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`.
+- OVE-50 (2026-06-29): this is the current-main revision before the OVE-51 domain-proof commit. OVE-37 proved the full first-user smoke on the previous public pilot alias; OVE-51 moves the pilot origin to the canonical app domain and requires the smoke to be rerun against `https://over.garden`.
 
-Production aliases reported by Vercel:
+Production aliases and domain bindings:
 
+- `over.garden`
+- `www.over.garden`
 - `over-garden.vercel.app`
 - `over-garden-yehors-projects-01221e2b.vercel.app`
 - `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
 
 Domain status:
 
-- `over.garden` and `www.over.garden` are not listed as Vercel project domains at verification time.
+- `over.garden` and `www.over.garden` are attached to the Vercel project and point at Vercel through DNS-only Cloudflare A records.
 - The public media domain `media.over.garden` is Cloudflare R2-managed and separate from the app domain.
 
 Public access observation:
@@ -296,6 +302,7 @@ Public access observation:
 - This is acceptable for protected preview inspection, but it blocks public visitor/crawler H6 smoke until a public production URL or authenticated preview-share flow is intentionally selected and documented.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
 - On 2026-06-28 (OVE-37, current main `a8cd3c95`), `https://over-garden.vercel.app/`, `/health`, and `/privacy` again returned HTTP `200` OverGarden HTML without Vercel SSO.
+- On 2026-06-29 (OVE-51), `https://over.garden/`, `/health`, and `/privacy` returned HTTP `200` OverGarden responses without Vercel SSO. `https://www.over.garden/` also returned `200`. App HTML responses had Vercel response IDs and no Cloudflare cache status because app DNS is DNS-only; any future Cloudflare HTML `HIT` would be a launch blocker.
 
 Deployment env observation:
 
@@ -304,7 +311,7 @@ Deployment env observation:
 - On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
-- On 2026-06-27, production had `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to the public Vercel alias `https://over-garden.vercel.app`.
+- On 2026-06-29 (OVE-51), production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` were updated to the canonical origin `https://over.garden`. Future production readiness checks fail if Vercel production uses the legacy `.vercel.app` alias for either value.
 - On 2026-06-27, the branch preview `codex/ove-27-production-pilot-smoke` had branch-specific `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` set to `https://over-garden-git-codex-ove-27-pr-a698a5-yehors-projects-01221e2b.vercel.app`, then was redeployed so Better Auth accepted that preview origin during browser smoke.
 - On 2026-06-27, legacy production `SUPABASE_*`, `NEXT_PUBLIC_SUPABASE_*`, and empty `POSTGRES_*` variables were removed from Vercel after canonical runtime env was installed.
 - On 2026-06-27, accidental trailing newlines were trimmed from the R2 runtime env family in production and the branch preview `codex/ove-27-production-pilot-smoke`.
@@ -339,6 +346,5 @@ Local storage emulator:
 
 ## Open Operational Items
 
-- Bind `over.garden` and `www.over.garden` to the Vercel project when ready for public app traffic.
 - Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.

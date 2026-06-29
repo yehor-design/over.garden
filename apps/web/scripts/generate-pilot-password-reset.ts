@@ -3,7 +3,7 @@
  *
  * Usage:
  *   pnpm pilot:reset-password -- --email gardener@example.com
- *   pnpm pilot:reset-password -- --email gardener@example.com --base-url https://over-garden.vercel.app
+ *   pnpm pilot:reset-password -- --email gardener@example.com --base-url https://over.garden
  *
  * Requires DATABASE_URL and BETTER_AUTH_SECRET in the environment (or .env.local).
  * Prints the reset URL privately for operator handoff. Never commit printed links.

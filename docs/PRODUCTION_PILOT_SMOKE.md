@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin
 Last updated: 2026-06-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -9,30 +9,30 @@ The smoke is a product-learning gate, not only a deployment check. If public vis
 
 ## Current Live Deployment Snapshot
 
-Verified through the connected Vercel app on 2026-06-27.
+Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 
 - Vercel team: `yehor's projects` / `team_vs3oQAk6OT4vVVvcL7Mf5m8t`
 - Vercel project: `over-garden` / `prj_Tm5HXFEPqc46StpIfsoKjU9GtHBy`
-- Latest production deployment: `dpl_G37QZoqLHmt2dh6NUsEepKRH8ezx`
-- Latest production URL: `https://over-garden-fuscx66ir-yehors-projects-01221e2b.vercel.app`
-- Latest deployed commit: `9a6179bbfe2b8115e358a69e4a40cc98b5a25a36`
-- Reported aliases: `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
-- Canonical app domains `over.garden` and `www.over.garden` are not yet attached to the Vercel project.
+- Latest verified pre-OVE-51 production deployment: `dpl_3V97zCF2UobXHiqvHMgxLhZaFP2m`
+- Latest verified pre-OVE-51 production URL: `https://over-garden-payshmr9k-yehors-projects-01221e2b.vercel.app`
+- Latest verified pre-OVE-51 deployed commit: `5e2989fd29f45003368e5adc32f45946dd718c17`
+- Production domains/aliases: `over.garden`, `www.over.garden`, `over-garden.vercel.app`, `over-garden-yehors-projects-01221e2b.vercel.app`, `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
+- Canonical app domains `over.garden` and `www.over.garden` are attached to the Vercel project and point to Vercel through DNS-only Cloudflare A records.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and production `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, or equal to the local development fallback. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces additionally require `CATALOG_CURATOR_USER_IDS`; missing or empty values fail closed and block operator smoke access.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
 - On 2026-06-28, OVE-36 provisioned the production worker/Meilisearch runtime at `matching.over.garden` and `meili.over.garden`, installed the production Vercel worker/search env names, and passed a redacted live journal index/unindex smoke against production Postgres and Meilisearch.
 
-Implication: the OVE-27 preview now proves the internal live-path contract against managed Postgres and R2. The remaining production closeout is to merge the deployed app version with the CA-aware database runtime and verify the same smoke on the public production alias selected for the pilot. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6.
+Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
 
 ## OVE-37 Current-Main Public Pilot Closure
 
 Verified on 2026-06-28 against current `main`.
 
-- Selected public pilot URL: `https://over-garden.vercel.app`. Canonical `over.garden` / `www.over.garden` remain unattached to the Vercel project and are deferred to a follow-up domain-attach issue; the `.vercel.app` production alias is the pilot URL for this closure.
+- Historical OVE-37 selected public pilot URL: `https://over-garden.vercel.app`. This alias-based closure is superseded by OVE-51 for current pilot traffic; the selected pilot URL is now `https://over.garden`.
 - Production deployment serving the pilot URL: `dpl_5xY21uia8usEAdA7LoLwhYTXhUB5`, target `production`, state `READY`, GitHub ref `main`, commit `a8cd3c95`, commit verification `verified` (connected Vercel app).
 - Public probes returned OverGarden HTML without Vercel SSO: `/` `200`, `/health` `200`, `/privacy` `200`.
 - Auth on the pilot origin succeeded without `INVALID_ORIGIN` (email sign-in `200`; browser sign-in also passed).
@@ -46,9 +46,27 @@ Verified on 2026-06-28 against current `main`.
 
 Scope and limitations recorded honestly:
 
-- Canonical `over.garden` domain attach is deferred to a later issue; the pilot URL is the `.vercel.app` production alias.
+- OVE-51 supersedes the OVE-37 alias limitation: canonical `over.garden` domain attach is no longer deferred, and the selected pilot URL is now `https://over.garden`.
 - The OS file-picker upload click was not agent-driven; the photo derivative guarantee is proven via the authenticated media API plus a live CORS-preflight check for the pilot origin, not a browser file-picker run.
 - Worker/search index/unindex execution relies on the standing OVE-36 live proof rather than a fresh run for this closure.
+
+## OVE-51 Canonical over.garden Pilot URL Closure
+
+Goal: a real invited gardener's pilot path uses the canonical `https://over.garden` origin, not a temporary Vercel alias, while keeping the same privacy, media, auth, SSR, deletion, search-worker, and no-Cloudflare-HTML-cache boundaries.
+
+Provider state verified on 2026-06-29:
+
+- `over.garden` and `www.over.garden` are attached to Vercel project `over-garden` and resolve to Vercel through DNS-only Cloudflare A records. App HTML should therefore have no Cloudflare cache status; if Cloudflare proxying is enabled later, any HTML cache HIT blocks pilot traffic.
+- Vercel production `PUBLIC_SITE_URL` and `BETTER_AUTH_URL` are set to `https://over.garden`. The production readiness readout now fails closed if Vercel production uses the legacy `.vercel.app` alias for either value.
+- R2 quarantine CORS includes `https://over.garden` and `https://www.over.garden`; a canonical-origin preflight to the quarantine S3 host returned the allowed origin and `PUT, HEAD` method class. Evidence records only origin/method class, never signed upload URLs or object keys.
+- Public probes on `https://over.garden/`, `/health`, and `/privacy` returned `200` OverGarden responses without Vercel SSO. `https://www.over.garden/` also returned `200`. App HTML had Vercel response IDs and no Cloudflare cache status because app DNS is DNS-only.
+
+Canonical smoke bar:
+
+- `https://over.garden/`, `/health`, and `/privacy` return OverGarden responses without Vercel SSO.
+- A pilot user signs in or signs up on `https://over.garden`, creates a first entry, attaches one photo, reads back only a `media.over.garden` derivative, adds a same-object follow-up, publishes, opens the SSR `/journal/[slug]`, opens `/variety/[slug]`, saves through the public-variety activation CTA, and archives to a `410 Gone` tombstone.
+- Public journal and variety HTML stay `noindex, nofollow`, location-safe, and free of quarantine/original keys. The public derivative host class may be recorded as `media.over.garden`; derivative keys, signed URLs, raw journal text, EXIF, precise location, cookies, invite links, and emails must not be recorded.
+- Worker/search proof from OVE-36/OVE-39 remains valid unless worker, search, job payload, or worker env changes. A fresh live worker/search round-trip is required after such changes.
 
 ## OVE-38 iOS Safari Offline Entry + Photo Field Proof
 
@@ -98,7 +116,7 @@ This is the procedure used for the 2026-06-29 pass and the standing re-run scrip
 
 ```
 date: <YYYY-MM-DD>
-pilot_url_class: over-garden.vercel.app (OVE-37 pilot alias)
+pilot_url_class: over.garden (OVE-51 canonical pilot origin)
 device_class: <e.g. iPhone, iOS Safari major version class>
 runtime_class: mobile Safari (WebKit), real device
 path: first_entry | follow_up_entry
@@ -282,7 +300,7 @@ Goal: only invited gardeners can write pilot journal data. Non-invited visitors 
 ### Founder invite workflow (no secrets in git or Linear)
 
 1. Set `PILOT_INVITE_SIGNING_SECRET` in Vercel production (and locally in `.env.local` for dev links). Use `openssl rand -base64 32` or equivalent; never commit the value.
-2. From `apps/web`, run `pnpm pilot:invite` (optional: `--base-url https://over-garden.vercel.app --ttl-days 14`).
+2. From `apps/web`, run `pnpm pilot:invite` (optional: `--base-url https://over.garden --ttl-days 14`).
 3. Share the printed `/join?invite=...` URL privately with one gardener. Do not paste invite URLs into Linear, git, analytics, or public channels.
 4. The gardener opens the link, claims the invite, signs in, and writes through the existing `/garden` first-entry and follow-up flows.
 5. Confirm `/garden/pilot-smoke` reports `PILOT_INVITE_SIGNING_SECRET` as configured before inviting on production.
@@ -311,7 +329,7 @@ Goal: an invited pilot gardener who loses access or forgets how to sign in can r
 ### Founder recovery workflow (no secrets in git or Linear)
 
 1. Confirm the gardener already created an account with the email they want to recover. Do not create a second account for them.
-2. From `apps/web`, run `pnpm pilot:reset-password -- --email gardener@example.com` (optional: `--base-url https://over-garden.vercel.app`).
+2. From `apps/web`, run `pnpm pilot:reset-password -- --email gardener@example.com` (optional: `--base-url https://over.garden`).
 3. Share the printed one-time reset URL privately. Do not paste reset URLs into Linear, git, analytics, or public channels.
 4. The gardener opens the link, sets a new password, signs in, and confirms existing plant objects/entries still appear on `/garden`.
 5. If the CLI prints no link, the email is not registered yet. Send a fresh invite link instead of forcing a duplicate account.

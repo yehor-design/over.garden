@@ -6,8 +6,8 @@ import {
 } from "./pilot-smoke-readiness";
 
 const productionLikeEnv = {
-  BETTER_AUTH_URL: "https://over-garden.vercel.app",
-  PUBLIC_SITE_URL: "https://over-garden.vercel.app",
+  BETTER_AUTH_URL: "https://over.garden",
+  PUBLIC_SITE_URL: "https://over.garden",
   BETTER_AUTH_SECRET: "auth-secret-that-must-not-leak",
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   DATABASE_URL:
@@ -113,6 +113,48 @@ describe("pilot smoke readiness", () => {
     ).toMatchObject({
       severity: "manual",
       summary: expect.stringContaining("journal_entry_index"),
+    });
+  });
+
+  it("blocks Vercel production smoke on the legacy vercel.app origin", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        PUBLIC_SITE_URL: "https://over-garden.vercel.app",
+        BETTER_AUTH_URL: "https://over-garden.vercel.app",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(readout.overall).toBe("blocked");
+    expect(findCheck(checks, "public-site-url")).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("https://over.garden"),
+    });
+    expect(findCheck(checks, "better-auth-url")).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("https://over.garden"),
+    });
+  });
+
+  it("blocks Vercel production smoke when canonical origins are only inferred", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        PUBLIC_SITE_URL: "https://over.garden",
+        BETTER_AUTH_URL: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(readout.overall).toBe("blocked");
+    expect(findCheck(checks, "better-auth-url")).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("explicitly configured"),
     });
   });
 
@@ -259,13 +301,14 @@ describe("pilot smoke readiness", () => {
     });
   });
 
-  it("accepts Vercel deployment URL as the effective public/auth URL", () => {
+  it("accepts Vercel deployment URL as the effective public/auth URL outside production", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
         BETTER_AUTH_URL: undefined,
         PUBLIC_SITE_URL: undefined,
         VERCEL_URL: "over-garden-preview.vercel.app",
+        VERCEL_ENV: "preview",
       },
       databaseProbe: { reachable: true },
       generatedAt: new Date("2026-06-27T00:00:00.000Z"),
