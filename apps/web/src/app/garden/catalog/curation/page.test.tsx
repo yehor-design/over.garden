@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   assertCatalogCuratorAccess: vi.fn(),
   listPendingCatalogCurationCandidates: vi.fn(),
+  listCatalogSourceProvenanceForCuration: vi.fn(),
   listVarietySeedProofsForCuration: vi.fn(),
 }));
 
@@ -30,6 +31,11 @@ vi.mock("@/server/catalog-curation-repository", () => ({
     mocks.listPendingCatalogCurationCandidates,
 }));
 
+vi.mock("@/server/catalog-source/provenance-repository", () => ({
+  listCatalogSourceProvenanceForCuration:
+    mocks.listCatalogSourceProvenanceForCuration,
+}));
+
 vi.mock("@/server/variety-seed-proof-repository", () => ({
   listVarietySeedProofsForCuration: mocks.listVarietySeedProofsForCuration,
 }));
@@ -45,6 +51,10 @@ vi.mock("./catalog-curation-candidate-list", () => ({
   CatalogCurationCandidateList: () => "curation-candidates",
 }));
 
+vi.mock("./catalog-source-provenance-list", () => ({
+  CatalogSourceProvenanceList: () => "source-provenance-list",
+}));
+
 vi.mock("./variety-seed-proof-editor", () => ({
   VarietySeedProofEditor: () => "seed-proof-editor",
 }));
@@ -54,6 +64,7 @@ describe("/garden/catalog/curation", () => {
     vi.clearAllMocks();
     mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
+    mocks.listCatalogSourceProvenanceForCuration.mockResolvedValue([]);
     mocks.listVarietySeedProofsForCuration.mockResolvedValue([]);
   });
 
@@ -67,6 +78,7 @@ describe("/garden/catalog/curation", () => {
 
     expect(html).toContain("Access denied.");
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
+    expect(mocks.listCatalogSourceProvenanceForCuration).not.toHaveBeenCalled();
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
 
@@ -76,6 +88,7 @@ describe("/garden/catalog/curation", () => {
 
     expect(html).toContain("Gate: allowlist");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
+    expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();
   });
 });

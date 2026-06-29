@@ -15,6 +15,7 @@
     "db:types": "kysely-codegen --dialect postgres --env-file .env.local --out-file src/db/generated.ts",
     "db:types:check": "tsx scripts/check-generated-types.ts",
     "catalog:sources:import-sample": "tsx scripts/import-catalog-source-sample.ts",
+    "catalog:sources:import-ua-register-variety": "tsx scripts/import-ua-state-register-variety.ts",
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",

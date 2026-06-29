@@ -4,6 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
+import { listCatalogSourceProvenanceForCuration } from "@/server/catalog-source/provenance-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
@@ -14,6 +15,7 @@ import {
   upsertVarietySeedProofAction,
 } from "./actions";
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
+import { CatalogSourceProvenanceList } from "./catalog-source-provenance-list";
 import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
 
 export const dynamic = "force-dynamic";
@@ -67,9 +69,10 @@ export default async function CatalogCurationPage() {
     );
   }
 
-  const [candidates, seedProofs] = await Promise.all([
+  const [candidates, seedProofs, provenanceRows] = await Promise.all([
     listPendingCatalogCurationCandidates(),
     listVarietySeedProofsForCuration(),
+    listCatalogSourceProvenanceForCuration(),
   ]);
 
   return (
@@ -100,6 +103,9 @@ export default async function CatalogCurationPage() {
               Seed proofs: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Source rows: {provenanceRows.length}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Gate: {accessMode}
             </span>
           </div>
@@ -110,6 +116,8 @@ export default async function CatalogCurationPage() {
         seedProofs={seedProofs}
         upsertAction={upsertVarietySeedProofAction}
       />
+
+      <CatalogSourceProvenanceList provenanceRows={provenanceRows} />
 
       <CatalogCurationCandidateList
         candidates={candidates}

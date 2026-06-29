@@ -47,7 +47,7 @@ External occurrence or distribution coordinates are not OverGarden user/product 
 ## Downstream Gates
 
 - OVE-56 built the source snapshot quarantine contract from a tiny approved UA Register sample: raw/source records keep license, checksum, parser, and source-only fields; product-facing catalog/typeahead receives only the allowlisted `Bergeron 1` projection.
-- OVE-57 may consume `ua-state-register`.
+- OVE-57 consumes `ua-state-register` for the first official UA variety path: exact approved register file download, UTF-16LE decode, full-file checksum/row count, idempotent `RegisterVarietis:83070006` canonical projection, official Ukrainian/transliteration typeahead, selected garden readback, and operator provenance readback.
 - OVE-58 may consume CoL, WFO, GBIF Backbone, EPPO, GRIN, and Wikidata as bounded backbone/support sources.
 - OVE-60 may consume VBO for vertebrates and use DAD-IS/EFABIS only as internal validation.
 - OVE-59, OVE-61, OVE-62, and vendor/marketplace paths must not promote conditional/internal-only data until the specific blockers in the manifest are closed.

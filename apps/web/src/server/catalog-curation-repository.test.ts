@@ -206,6 +206,28 @@ describe("catalog curation repository query contracts", () => {
     ]);
   });
 
+  it("can merge a provisional user-added candidate into an imported official variety", () => {
+    const now = new Date("2026-06-29T12:00:00.000Z");
+    const compiled = buildUpdateObjectsForMergedCatalogCandidateQuery(testDb, {
+      candidateId: "00000000-0000-4000-8000-000000000201",
+      targetCatalogItemId: "00000000-0000-4000-8000-000000057003",
+      varietyText: "Ботсадівський",
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "plant_objects"');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-4000-8000-000000057003",
+      "Ботсадівський",
+      "selected",
+      now,
+      "00000000-0000-4000-8000-000000000201",
+      "user_added",
+    ]);
+  });
+
   it("rejects a provisional candidate without creating global eligibility", () => {
     const now = new Date("2026-06-26T12:00:00.000Z");
     const compiled = buildRejectCatalogCurationCandidateQuery(testDb, scope, {
