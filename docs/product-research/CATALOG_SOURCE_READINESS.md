@@ -46,7 +46,7 @@ External occurrence or distribution coordinates are not OverGarden user/product 
 
 ## Downstream Gates
 
-- OVE-56 may build source snapshot quarantine from USE sources first.
+- OVE-56 built the source snapshot quarantine contract from a tiny approved UA Register sample: raw/source records keep license, checksum, parser, and source-only fields; product-facing catalog/typeahead receives only the allowlisted `Bergeron 1` projection.
 - OVE-57 may consume `ua-state-register`.
 - OVE-58 may consume CoL, WFO, GBIF Backbone, EPPO, GRIN, and Wikidata as bounded backbone/support sources.
 - OVE-60 may consume VBO for vertebrates and use DAD-IS/EFABIS only as internal validation.

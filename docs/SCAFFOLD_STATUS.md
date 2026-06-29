@@ -18,6 +18,8 @@ OVE-54 adds a founder-only pilot rehearsal lane for periods when real external i
 
 OVE-55 adds the catalog source readiness gate for `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed`. `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` records the live go/no-go manifest for 17 source paths, `docs/product-research/CATALOG_SOURCE_READINESS.md` gives the operator-readable summary, and `pnpm catalog:sources:verify` validates the manifest plus live endpoint checks without bulk importing data or scraping vendor/marketplace paths. The approved first ingestion sources are UA State Register, CoL/ChecklistBank, WFO, GBIF Backbone, EPPO, Wikidata, GRIN, and VBO. Conditional/internal-only sources must not feed canonical projections until their blockers are closed. External occurrence/distribution coordinates remain raw/source-only and are not OverGarden user/product location data.
 
+OVE-56 adds the first catalog source snapshot quarantine proof. The app schema now has `catalog_source_snapshots`, `catalog_source_records`, and `catalog_source_links` so a legal source payload can be stored with source/version/license/checksum/parser provenance while only an allowlisted projection reaches `catalog_items` and `catalog_item_names`. `pnpm catalog:sources:import-sample` imports the OVE-55 UA Register `Bergeron 1` sample idempotently, queues the derived typeahead reindex, proves safe typeahead from catalog tables, and proves a temporary rollback-only garden readback with `variety_state = selected`. Raw/source-only poison fields stay confined to `catalog_source_records` and are rejected from catalog typeahead/Meili hit mapping.
+
 OVE-33 adds a fresh-checkout drift guard: CI starts Postgres plus MinIO, runs `pnpm local:bootstrap`, then runs `pnpm db:types:check` so SQL migrations, Better Auth bootstrap tables, object-storage bucket assumptions, and committed Kysely generated types cannot drift silently before lint/typecheck/test/build.
 
 OVE-34 replaces pilot-placeholder privacy/publication/erasure copy with closed-pilot reviewed copy while keeping public release blocked. First-publication disclosure is now version `first-publication-v2`, erasure intake is `erasure-request-pilot-v2`, users can see the latest erasure request status, and the operator review surface can move requests through submitted -> reviewing -> handled without selecting journal text or media keys.
@@ -57,8 +59,8 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Better Auth route is mounted at `/api/auth/[...all]`; live sign-up returns a session cookie.
 - Kysely + `pg` connect to local Docker Postgres.
 - Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
-- SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, `erasure_requests`, `variety_seed_proofs`, and `job_queue`.
-- `kysely-codegen` generated `src/db/generated.ts` from 17 live tables.
+- SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `catalog_source_snapshots`, `catalog_source_records`, `catalog_source_links`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, `erasure_requests`, `variety_seed_proofs`, and `job_queue`.
+- `kysely-codegen` generated `src/db/generated.ts` from 20 live tables.
 - CI runs a non-mutating `pnpm db:types:check` against the bootstrapped database and fails if `src/db/generated.ts` differs from the live schema.
 - `/skeleton` and `/api/skeleton/journal` prove auth -> scoped repository -> Postgres -> queue -> SSR readback.
 - `/garden` and `/garden/objects/[objectId]` prove the first product path outside `/skeleton`: authenticated create/readback for one space, one plant object, and one title/body entry.

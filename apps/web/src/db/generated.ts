@@ -80,6 +80,48 @@ export interface CatalogItems {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogSourceLinks {
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  projection_kind: Generated<string>;
+  source_record_id: string;
+  source_record_key: string;
+  source_slug: string;
+}
+
+export interface CatalogSourceRecords {
+  allowed_projection: Generated<Json>;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  projection_status: Generated<string>;
+  raw_payload: Json;
+  raw_payload_sha256: string;
+  source_only_fields: Generated<Json>;
+  source_record_id: string;
+  source_snapshot_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogSourceSnapshots {
+  allowed_usage: Generated<Json>;
+  attribution_required: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  fetched_at: Timestamp;
+  id: Generated<string>;
+  license: string;
+  parser_version: string;
+  payload_sha256: string;
+  source_category: string;
+  source_name: string;
+  source_slug: string;
+  source_url: string;
+  source_version: string;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  verified_at: Timestamp;
+}
+
 export interface ErasureRequests {
   created_at: Generated<Timestamp>;
   dry_run_reviewed_at: Timestamp | null;
@@ -251,6 +293,9 @@ export interface DB {
   analytics_events: AnalyticsEvents;
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
+  catalog_source_links: CatalogSourceLinks;
+  catalog_source_records: CatalogSourceRecords;
+  catalog_source_snapshots: CatalogSourceSnapshots;
   erasure_requests: ErasureRequests;
   health: Health;
   job_queue: JobQueue;

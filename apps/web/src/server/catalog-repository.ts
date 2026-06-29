@@ -412,9 +412,12 @@ export function buildEnqueueCatalogCurationJobQuery(
       idempotency_key: input.idempotencyKey,
     })
     .onConflict((oc) =>
-      oc.column("idempotency_key").doUpdateSet({
-        updated_at: new Date(),
-      }),
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doUpdateSet({
+          updated_at: new Date(),
+        }),
     )
     .returningAll();
 }
@@ -434,9 +437,12 @@ export function buildEnqueueCatalogTypeaheadReindexJobQuery(
       idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
     })
     .onConflict((oc) =>
-      oc.column("idempotency_key").doUpdateSet({
-        updated_at: new Date(),
-      }),
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doUpdateSet({
+          updated_at: new Date(),
+        }),
     )
     .returningAll();
 }

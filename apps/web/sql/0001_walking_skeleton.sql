@@ -101,6 +101,9 @@ create index if not exists catalog_items_merged_into_idx
 create unique index if not exists catalog_items_owner_normalized_locale_uidx
   on catalog_items (created_by_user_id, normalized_name, locale);
 
+create unique index if not exists catalog_items_source_source_id_uidx
+  on catalog_items (source, source_id);
+
 create table if not exists catalog_item_names (
   id uuid primary key default gen_random_uuid(),
   catalog_item_id uuid not null references catalog_items(id) on delete cascade,
@@ -116,6 +119,70 @@ create unique index if not exists catalog_item_names_item_normalized_locale_uidx
 
 create index if not exists catalog_item_names_normalized_idx
   on catalog_item_names (normalized_name);
+
+create table if not exists catalog_source_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  source_name text not null check (char_length(source_name) between 1 and 200),
+  source_category text not null check (char_length(source_category) between 1 and 80),
+  source_version text not null check (char_length(source_version) between 1 and 120),
+  source_url text not null check (char_length(source_url) between 1 and 1000),
+  license text not null check (char_length(license) between 1 and 240),
+  attribution_required boolean not null default true,
+  allowed_usage jsonb not null default '[]'::jsonb,
+  parser_version text not null check (char_length(parser_version) between 1 and 120),
+  payload_sha256 text not null check (payload_sha256 ~ '^[a-f0-9]{64}$'),
+  fetched_at timestamptz not null,
+  verified_at timestamptz not null,
+  status text not null default 'imported' check (status in ('imported', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_source_snapshots_slug_version_checksum_uidx unique (
+    source_slug,
+    source_version,
+    payload_sha256
+  )
+);
+
+create table if not exists catalog_source_records (
+  id uuid primary key default gen_random_uuid(),
+  source_snapshot_id uuid not null references catalog_source_snapshots(id) on delete cascade,
+  source_record_id text not null check (char_length(source_record_id) between 1 and 200),
+  raw_payload jsonb not null,
+  raw_payload_sha256 text not null check (raw_payload_sha256 ~ '^[a-f0-9]{64}$'),
+  source_only_fields jsonb not null default '{}'::jsonb,
+  allowed_projection jsonb not null default '{}'::jsonb,
+  projection_status text not null default 'projected' check (projection_status in ('projected', 'quarantined', 'rejected')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_source_records_snapshot_record_uidx unique (
+    source_snapshot_id,
+    source_record_id
+  )
+);
+
+create table if not exists catalog_source_links (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  source_record_id uuid not null references catalog_source_records(id) on delete restrict,
+  source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  source_record_key text not null check (char_length(source_record_key) between 1 and 200),
+  projection_kind text not null default 'canonical_item' check (projection_kind in ('canonical_item', 'alias')),
+  created_at timestamptz not null default now(),
+  constraint catalog_source_links_item_record_uidx unique (
+    catalog_item_id,
+    source_record_id
+  )
+);
+
+create index if not exists catalog_source_records_snapshot_idx
+  on catalog_source_records (source_snapshot_id);
+
+create index if not exists catalog_source_records_projection_status_idx
+  on catalog_source_records (projection_status, updated_at desc);
+
+create index if not exists catalog_source_links_catalog_item_idx
+  on catalog_source_links (catalog_item_id);
 
 create table if not exists variety_seed_proofs (
   id uuid primary key default gen_random_uuid(),

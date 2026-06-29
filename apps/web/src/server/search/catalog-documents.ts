@@ -26,6 +26,23 @@ const FORBIDDEN_TYPEAHEAD_HIT_KEYS = [
   "exif",
   "exifGps",
   "quarantineKey",
+  "sourceSnapshotId",
+  "sourceRecordId",
+  "sourceRecordKey",
+  "sourceOnlyFields",
+  "source_only_fields",
+  "rawPayload",
+  "raw_payload",
+  "rawPayloadSha256",
+  "raw_payload_sha256",
+  "payloadSha256",
+  "payload_sha256",
+  "allowedProjection",
+  "allowed_projection",
+  "allowedUsage",
+  "allowed_usage",
+  "parserVersion",
+  "parser_version",
 ];
 
 export type CatalogTypeaheadStatus =

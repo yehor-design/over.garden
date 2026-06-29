@@ -54,6 +54,9 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("journalText");
     expect(document).not.toHaveProperty("coordinates");
     expect(document).not.toHaveProperty("mediaMetadata");
+    expect(document).not.toHaveProperty("rawPayload");
+    expect(document).not.toHaveProperty("sourceOnlyFields");
+    expect(document).not.toHaveProperty("sourceRecordId");
   });
 
   it("does not index provisional user-added catalog rows", () => {
@@ -110,6 +113,23 @@ describe("catalog typeahead search documents", () => {
         source: "user_added",
         createdByUserId: "00000000-0000-0000-0000-000000000001",
         journalBody: "private note",
+        rawPayload: { varietyName: "Бабусин перець" },
+        sourceOnlyFields: { occurrenceCoordinates: [50.45, 30.52] },
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects raw catalog source fields even on otherwise selectable hits", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000101",
+        displayName: "Bergeron 1",
+        canonicalName: "Bergeron 1",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_state_register",
+        sourceRecordId: "00000000-0000-4000-8000-000000056003",
+        rawPayloadSha256: "a".repeat(64),
       }),
     ).toBeNull();
   });

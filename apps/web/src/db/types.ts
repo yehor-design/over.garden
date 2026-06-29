@@ -5,6 +5,9 @@ import type {
   AnalyticsEvents as AnalyticsEventsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
+  CatalogSourceLinks as CatalogSourceLinksTable,
+  CatalogSourceRecords as CatalogSourceRecordsTable,
+  CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
   ErasureRequests as ErasureRequestsTable,
   Health as HealthTable,
   JobQueue as JobQueueTable,
@@ -63,9 +66,15 @@ export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
+export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
+export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
+export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
 export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
+export type NewCatalogSourceLink = Insertable<CatalogSourceLinksTable>;
+export type NewCatalogSourceRecord = Insertable<CatalogSourceRecordsTable>;
+export type NewCatalogSourceSnapshot = Insertable<CatalogSourceSnapshotsTable>;
 export type ErasureRequest = Selectable<ErasureRequestsTable>;
 export type NewErasureRequest = Insertable<ErasureRequestsTable>;
 export type Health = Selectable<HealthTable>;
@@ -81,7 +90,8 @@ export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
 export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
-export type NewPilotInterviewLearning = Insertable<PilotInterviewLearningsTable>;
+export type NewPilotInterviewLearning =
+  Insertable<PilotInterviewLearningsTable>;
 export type PilotInterviewSegment =
   | "casual_micro_grower"
   | "casual_gen_z"

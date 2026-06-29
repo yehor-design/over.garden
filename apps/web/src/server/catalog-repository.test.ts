@@ -67,6 +67,8 @@ describe("catalog repository query contracts", () => {
     );
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.parameters).toEqual(["seeded", "confirmed", "%чері%", 5]);
   });
 
@@ -192,6 +194,8 @@ describe("catalog repository query contracts", () => {
     );
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.parameters).toEqual(["seeded", "confirmed"]);
   });
 
@@ -251,7 +255,9 @@ describe("catalog repository query contracts", () => {
     }).compile();
 
     expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain('on conflict ("idempotency_key") do update');
+    expect(compiled.sql).toContain(
+      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
+    );
     expect(compiled.sql).not.toContain("journal_entries");
     expect(JSON.stringify(compiled.parameters)).not.toContain("title");
     expect(JSON.stringify(compiled.parameters)).not.toContain("body");
@@ -274,7 +280,9 @@ describe("catalog repository query contracts", () => {
       buildEnqueueCatalogTypeaheadReindexJobQuery(testDb).compile();
 
     expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain('on conflict ("idempotency_key") do update');
+    expect(compiled.sql).toContain(
+      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
+    );
     expect(JSON.stringify(compiled.parameters)).not.toContain("owner");
     expect(JSON.stringify(compiled.parameters)).not.toContain("journal");
     expect(compiled.parameters).toEqual([
