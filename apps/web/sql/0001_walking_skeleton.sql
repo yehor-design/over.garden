@@ -593,6 +593,11 @@ create unique index if not exists erasure_requests_one_open_per_user_uidx
   on erasure_requests (requester_user_id)
   where status in ('submitted', 'reviewing');
 
+-- OVE-47 erasure dry-run review marker. Non-destructive operator checkpoint only.
+alter table erasure_requests
+  add column if not exists dry_run_reviewed_at timestamptz,
+  add column if not exists dry_run_reviewed_by_user_id uuid;
+
 create table if not exists analytics_events (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

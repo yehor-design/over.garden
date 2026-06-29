@@ -6,6 +6,7 @@ import { ERASURE_REQUEST_INTAKE_VERSION } from "@/lib/privacy/disclosures";
 const mocks = vi.hoisted(() => ({
   resolveErasureRequestOperatorAccess: vi.fn(),
   listOperatorErasureRequests: vi.fn(),
+  getErasureDryRunPreviewForRequest: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -30,9 +31,14 @@ vi.mock("@/server/erasure-request-repository", () => ({
   listOperatorErasureRequests: mocks.listOperatorErasureRequests,
 }));
 
+vi.mock("@/server/erasure-dry-run-repository", () => ({
+  getErasureDryRunPreviewForRequest: mocks.getErasureDryRunPreviewForRequest,
+}));
+
 vi.mock("./actions", () => ({
   markErasureRequestHandledAction: vi.fn(),
   markErasureRequestReviewingAction: vi.fn(),
+  markErasureRequestDryRunReviewedAction: vi.fn(),
 }));
 
 describe("/garden/privacy/erasure-requests", () => {
@@ -52,8 +58,29 @@ describe("/garden/privacy/erasure-requests", () => {
         handledAt: null,
         handledStatus: null,
         intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
+        dryRunReviewedAt: null,
+        dryRunReviewedByUserId: null,
       },
     ]);
+    mocks.getErasureDryRunPreviewForRequest.mockResolvedValue({
+      requestId: "00000000-0000-4000-8000-00000000abcd",
+      requesterUserId: "00000000-0000-4000-8000-000000000001",
+      generatedAt: new Date("2026-06-29T08:00:00.000Z"),
+      dataClasses: [
+        {
+          key: "journal_entries",
+          label: "Journal entries",
+          description: "Private and public entry rows grouped by lifecycle.",
+          counts: {
+            total: 2,
+            private_active: 1,
+            public_active: 1,
+            archived: 0,
+          },
+        },
+      ],
+      caveats: ["This preview is non-destructive and repeatable."],
+    });
   });
 
   it("does not read erasure requests for a signed-in non-operator", async () => {
@@ -66,14 +93,19 @@ describe("/garden/privacy/erasure-requests", () => {
 
     expect(html).toContain("Access denied.");
     expect(mocks.listOperatorErasureRequests).not.toHaveBeenCalled();
+    expect(mocks.getErasureDryRunPreviewForRequest).not.toHaveBeenCalled();
   });
 
-  it("renders the operator status controls without private journal evidence", async () => {
+  it("renders dry-run preview counts without private journal evidence", async () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
     expect(html).toContain("Gate: allowlist");
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();
+    expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
+    expect(html).toContain("Non-destructive dry-run preview");
+    expect(html).toContain("Journal entries");
+    expect(html).toContain("Mark dry-run reviewed");
     expect(html).toContain("request-0000abcd");
     expect(html).toContain("Mark handled");
     expect(html).toContain("Needs identity verification");

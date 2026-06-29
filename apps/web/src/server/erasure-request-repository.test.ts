@@ -18,6 +18,7 @@ import {
   buildInsertErasureRequestQuery,
   buildLatestErasureRequestForUserQuery,
   buildListOperatorErasureRequestsQuery,
+  buildMarkErasureRequestDryRunReviewedQuery,
   buildMarkErasureRequestHandledQuery,
   buildMarkErasureRequestReviewingQuery,
   buildOpenErasureRequestForUserQuery,
@@ -124,6 +125,7 @@ describe("erasure request repository privacy contracts", () => {
     expect(compiled.sql).toContain('from "erasure_requests"');
     expect(compiled.sql).toContain('"requester_user_id" as "requesterUserId"');
     expect(compiled.sql).toContain('"submitted_at" as "submittedAt"');
+    expect(compiled.sql).toContain('"dry_run_reviewed_at" as "dryRunReviewedAt"');
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("media_assets");
     expect(compiled.sql).not.toContain('"user"');
@@ -185,6 +187,39 @@ describe("erasure request repository privacy contracts", () => {
       "handled",
       now,
       "needs_identity_verification",
+      "00000000-0000-4000-8000-000000000999",
+      now,
+      "00000000-0000-4000-8000-000000000111",
+      "submitted",
+      "reviewing",
+    ]);
+  });
+
+  it("marks open requests dry-run reviewed without reading private data", () => {
+    const now = new Date("2026-06-29T08:00:00.000Z");
+    const compiled = buildMarkErasureRequestDryRunReviewedQuery(
+      testDb,
+      {
+        userId: "00000000-0000-4000-8000-000000000999",
+        sessionId: "operator-session",
+      },
+      {
+        requestId: "00000000-0000-4000-8000-000000000111",
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "erasure_requests"');
+    expect(compiled.sql).toContain('"dry_run_reviewed_at" = $1');
+    expect(compiled.sql).toContain('"dry_run_reviewed_by_user_id" = $2');
+    expect(compiled.sql).toContain('"status" in ($5, $6)');
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("media_assets");
+    expect(compiled.sql).not.toMatch(
+      /title|body|email|ip|user_agent|referrer|url|quarantine|derivative|coordinate|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual([
+      now,
       "00000000-0000-4000-8000-000000000999",
       now,
       "00000000-0000-4000-8000-000000000111",

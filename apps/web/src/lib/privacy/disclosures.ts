@@ -18,6 +18,7 @@ export const FIRST_PUBLICATION_DISCLOSURE_LINES = [
 export const ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES = [
   "Submitting this request records an operator-reviewed intake row for account data erasure or anonymization.",
   "No account, journal entry, media object, search document, or analytics row is deleted automatically by this form.",
+  "A closed-pilot operator can review a non-destructive dry-run preview of affected data classes before any maintainer-approved destructive workflow.",
   "A closed-pilot operator can move the request through submitted, reviewing, and handled statuses without reading private journal text.",
   "Irreversible erasure or anonymization still requires maintainer approval and a manual operator workflow.",
 ] as const;

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
 import {
+  markErasureRequestDryRunReviewed,
   markErasureRequestHandled,
   markErasureRequestReviewing,
 } from "@/server/erasure-request-repository";
@@ -30,6 +31,18 @@ export async function markErasureRequestHandledAction(formData: FormData) {
   await markErasureRequestHandled(scope, {
     requestId: String(formData.get("requestId") ?? ""),
     handledStatus: String(formData.get("handledStatus") ?? ""),
+  });
+
+  revalidatePath(ERASURE_REQUESTS_PATH);
+  revalidatePath("/erasure");
+}
+
+export async function markErasureRequestDryRunReviewedAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  assertOperator(scope);
+
+  await markErasureRequestDryRunReviewed(scope, {
+    requestId: String(formData.get("requestId") ?? ""),
   });
 
   revalidatePath(ERASURE_REQUESTS_PATH);

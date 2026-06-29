@@ -34,6 +34,8 @@ export interface ErasureRequestReadModel {
   handledAt: Date | string | null;
   handledStatus: ErasureRequestHandledStatus | null;
   intakeDisclosureVersion: string;
+  dryRunReviewedAt: Date | string | null;
+  dryRunReviewedByUserId: string | null;
 }
 
 export async function submitErasureRequest(
@@ -91,6 +93,22 @@ export async function listOperatorErasureRequests(
   return rows.map(mapErasureRequestRow);
 }
 
+export async function markErasureRequestDryRunReviewed(
+  scope: RequestScope,
+  input: {
+    requestId: string;
+  },
+): Promise<ErasureRequestReadModel> {
+  const requestId = normalizeErasureRequestId(input.requestId);
+  const now = new Date();
+  const request = await buildMarkErasureRequestDryRunReviewedQuery(db, scope, {
+    requestId,
+    now,
+  }).executeTakeFirstOrThrow();
+
+  return mapErasureRequestRow(request);
+}
+
 export async function markErasureRequestReviewing(input: {
   requestId: string;
 }): Promise<ErasureRequestReadModel> {
@@ -123,22 +141,26 @@ export async function markErasureRequestHandled(
   return mapErasureRequestRow(request);
 }
 
+const ERASURE_REQUEST_RETURNING = [
+  "id",
+  "requester_user_id as requesterUserId",
+  "request_scope as requestScope",
+  "status",
+  "submitted_at as submittedAt",
+  "handled_at as handledAt",
+  "handled_status as handledStatus",
+  "intake_disclosure_version as intakeDisclosureVersion",
+  "dry_run_reviewed_at as dryRunReviewedAt",
+  "dry_run_reviewed_by_user_id as dryRunReviewedByUserId",
+] as const;
+
 export function buildOpenErasureRequestForUserQuery(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
   return executor
     .selectFrom("erasure_requests")
-    .select([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ])
+    .select([...ERASURE_REQUEST_RETURNING])
     .where("requester_user_id", "=", requesterUserId)
     .where("status", "in", OPEN_REQUEST_STATUSES)
     .orderBy("submitted_at", "desc")
@@ -151,16 +173,7 @@ export function buildLatestErasureRequestForUserQuery(
 ) {
   return executor
     .selectFrom("erasure_requests")
-    .select([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ])
+    .select([...ERASURE_REQUEST_RETURNING])
     .where("requester_user_id", "=", requesterUserId)
     .orderBy("submitted_at", "desc")
     .limit(1);
@@ -173,16 +186,7 @@ export function buildInsertErasureRequestQuery(
   return executor
     .insertInto("erasure_requests")
     .values(row)
-    .returning([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ]);
+    .returning([...ERASURE_REQUEST_RETURNING]);
 }
 
 export function buildListOperatorErasureRequestsQuery(
@@ -196,16 +200,7 @@ export function buildListOperatorErasureRequestsQuery(
 
   return executor
     .selectFrom("erasure_requests")
-    .select([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ])
+    .select([...ERASURE_REQUEST_RETURNING])
     .orderBy("submitted_at", "desc")
     .limit(boundedLimit);
 }
@@ -225,16 +220,27 @@ export function buildMarkErasureRequestReviewingQuery(
     })
     .where("id", "=", input.requestId)
     .where("status", "=", "submitted")
-    .returning([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ]);
+    .returning([...ERASURE_REQUEST_RETURNING]);
+}
+
+export function buildMarkErasureRequestDryRunReviewedQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    requestId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("erasure_requests")
+    .set({
+      dry_run_reviewed_at: input.now,
+      dry_run_reviewed_by_user_id: scope.userId,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.requestId)
+    .where("status", "in", OPEN_REQUEST_STATUSES)
+    .returning([...ERASURE_REQUEST_RETURNING]);
 }
 
 export function buildMarkErasureRequestHandledQuery(
@@ -257,16 +263,7 @@ export function buildMarkErasureRequestHandledQuery(
     })
     .where("id", "=", input.requestId)
     .where("status", "in", OPEN_REQUEST_STATUSES)
-    .returning([
-      "id",
-      "requester_user_id as requesterUserId",
-      "request_scope as requestScope",
-      "status",
-      "submitted_at as submittedAt",
-      "handled_at as handledAt",
-      "handled_status as handledStatus",
-      "intake_disclosure_version as intakeDisclosureVersion",
-    ]);
+    .returning([...ERASURE_REQUEST_RETURNING]);
 }
 
 function mapErasureRequestRow(row: {
@@ -278,6 +275,8 @@ function mapErasureRequestRow(row: {
   handledAt: Date | string | null;
   handledStatus: string | null;
   intakeDisclosureVersion: string;
+  dryRunReviewedAt: Date | string | null;
+  dryRunReviewedByUserId: string | null;
 }): ErasureRequestReadModel {
   return {
     id: row.id,
@@ -288,6 +287,8 @@ function mapErasureRequestRow(row: {
     handledAt: row.handledAt,
     handledStatus: row.handledStatus as ErasureRequestHandledStatus | null,
     intakeDisclosureVersion: row.intakeDisclosureVersion,
+    dryRunReviewedAt: row.dryRunReviewedAt,
+    dryRunReviewedByUserId: row.dryRunReviewedByUserId,
   };
 }
 

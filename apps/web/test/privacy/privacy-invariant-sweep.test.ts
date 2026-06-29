@@ -23,6 +23,7 @@ import {
   normalizeAnalyticsEventProperties,
 } from "@/server/analytics-events";
 import { buildListOperatorErasureRequestsQuery } from "@/server/erasure-request-repository";
+import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-repository";
 import { buildListFounderInterviewLearningsQuery } from "@/server/founder-interview-repository";
 import { summarizePublicVarietyHealthRows } from "@/server/pilot-health-repository";
 import { buildPilotSmokeReadiness } from "@/server/pilot-smoke-readiness";
@@ -303,6 +304,36 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
       "quarantine_key",
       "derivative_key",
       "handled_by_user_id",
+      "email",
+      "ip_address",
+      "user_agent",
+      "coordinates",
+      "latitude",
+      "longitude",
+      "session_id",
+      "password",
+    ]) {
+      expect(sql).not.toContain(forbidden);
+    }
+  });
+
+  it("erasure dry-run counts journal rows without selecting private content", () => {
+    const { sql } = buildCountJournalEntriesQuery(
+      testDb,
+      POISON.ownerUserId,
+      { visibility: "private", lifecycleState: "active" },
+    ).compile();
+
+    expect(sql).toContain('"journal_entries"');
+    expect(sql).toContain('"owner_user_id" = $1');
+    expect(sql).toMatch(/count\(\*\)/i);
+
+    for (const forbidden of [
+      "title",
+      "body",
+      "public_slug",
+      "quarantine_key",
+      "derivative_key",
       "email",
       "ip_address",
       "user_agent",

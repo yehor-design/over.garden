@@ -1,0 +1,170 @@
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+  type DatabaseIntrospector,
+  type Dialect,
+  type DialectAdapter,
+  type Driver,
+  type QueryCompiler,
+} from "kysely";
+import { describe, expect, it } from "vitest";
+
+import type { Database } from "@/db/schema";
+import {
+  assembleErasureDryRunPreview,
+  ERASURE_DRY_RUN_CAVEATS,
+} from "./erasure-dry-run";
+import {
+  buildCountAuthAccountsQuery,
+  buildCountAuthSessionsQuery,
+  buildCountAuthUserPresentQuery,
+  buildCountCatalogProvisionalItemsQuery,
+  buildCountJournalEntriesQuery,
+  buildCountMediaAssetsQuery,
+  buildCountPendingJournalSearchJobsQuery,
+  buildCountPilotInterviewRecordsQuery,
+} from "./erasure-dry-run-repository";
+
+class TestPostgresDialect implements Dialect {
+  createDriver(): Driver {
+    return new DummyDriver();
+  }
+
+  createQueryCompiler(): QueryCompiler {
+    return new PostgresQueryCompiler();
+  }
+
+  createAdapter(): DialectAdapter {
+    return new PostgresAdapter();
+  }
+
+  createIntrospector(db: Kysely<unknown>): DatabaseIntrospector {
+    return new PostgresIntrospector(db);
+  }
+}
+
+const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
+const requesterUserId = "00000000-0000-4000-8000-000000000001";
+
+describe("erasure dry-run preview assembly", () => {
+  it("builds bounded data classes without embedding forbidden fields", () => {
+    const preview = assembleErasureDryRunPreview({
+      requestId: "00000000-0000-4000-8000-000000000111",
+      requesterUserId,
+      generatedAt: new Date("2026-06-29T08:00:00.000Z"),
+      counts: {
+        authUserPresent: 1,
+        authSessions: 2,
+        authAccounts: 1,
+        pilotInviteGrantPresent: 1,
+        spaces: 1,
+        plantObjects: 2,
+        journalEntriesTotal: 3,
+        journalEntriesPrivateActive: 2,
+        journalEntriesPublicActive: 1,
+        journalEntriesArchived: 0,
+        mediaAssetsTotal: 1,
+        mediaAssetsQuarantined: 0,
+        mediaAssetsProcessed: 1,
+        mediaAssetsFailed: 0,
+        publicSlugs: 1,
+        publicGoneTombstones: 0,
+        analyticsEvents: 5,
+        catalogProvisionalItems: 1,
+        plantObjectsUserAdded: 1,
+        searchPublicActiveEntries: 1,
+        searchPendingIndexJobs: 0,
+        searchPendingUnindexJobs: 0,
+        pilotInterviewRecords: 0,
+        erasureRequestsTotal: 1,
+      },
+    });
+
+    expect(preview.dataClasses).toHaveLength(9);
+    expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
+    expect(
+      JSON.stringify(preview.dataClasses.map((dataClass) => dataClass.counts)),
+    ).not.toMatch(
+      /quarantine_key|derivative_key|token|password|coordinate|latitude|longitude/i,
+    );
+  });
+});
+
+describe("erasure dry-run repository privacy contracts", () => {
+  it("counts auth rows without selecting email, token, or session metadata", () => {
+    const userSql = buildCountAuthUserPresentQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+    const sessionSql = buildCountAuthSessionsQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+    const accountSql = buildCountAuthAccountsQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+
+    for (const sql of [userSql, sessionSql, accountSql]) {
+      expect(sql).toMatch(/count\(\*\)/i);
+      expect(sql).not.toMatch(
+        /email|password|token|ipaddress|useragent|title|body|quarantine|derivative|referrer|coordinate|latitude|longitude/i,
+      );
+    }
+  });
+
+  it("counts journal and media rows without selecting private content or keys", () => {
+    const journalSql = buildCountJournalEntriesQuery(
+      testDb,
+      requesterUserId,
+      { visibility: "private", lifecycleState: "active" },
+    ).compile().sql;
+    const mediaSql = buildCountMediaAssetsQuery(
+      testDb,
+      requesterUserId,
+      "processed",
+    ).compile().sql;
+
+    expect(journalSql).toContain('"journal_entries"');
+    expect(journalSql).toContain('"owner_user_id" = $1');
+    expect(journalSql).not.toMatch(/title|body|public_slug|email|quarantine|derivative/i);
+
+    expect(mediaSql).toContain('"media_assets"');
+    expect(mediaSql).not.toMatch(/quarantine_key|derivative_key|title|body|email/i);
+  });
+
+  it("counts search jobs by payload kind without returning payload content", () => {
+    const compiled = buildCountPendingJournalSearchJobsQuery(
+      testDb,
+      requesterUserId,
+      "journal_entry_unindex",
+    ).compile();
+
+    expect(compiled.sql).toContain('"job_queue"');
+    expect(compiled.sql).toContain("payload->>'kind'");
+    expect(compiled.sql).toContain("payload->>'userId'");
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toContain("payload as");
+    expect(compiled.sql).not.toMatch(/title|body|email|quarantine|derivative/i);
+  });
+
+  it("counts provisional catalog and interview records without private text", () => {
+    const catalogSql = buildCountCatalogProvisionalItemsQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+    const interviewSql = buildCountPilotInterviewRecordsQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+
+    expect(catalogSql).toContain('"catalog_items"');
+    expect(catalogSql).not.toMatch(/canonical_name|normalized_name|title|body/i);
+
+    expect(interviewSql).toContain('"pilot_interview_learnings"');
+    expect(interviewSql).not.toMatch(/redacted_note|title|body|email/i);
+  });
+});

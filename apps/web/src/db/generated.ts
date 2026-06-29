@@ -82,6 +82,8 @@ export interface CatalogItems {
 
 export interface ErasureRequests {
   created_at: Generated<Timestamp>;
+  dry_run_reviewed_at: Timestamp | null;
+  dry_run_reviewed_by_user_id: string | null;
   handled_at: Timestamp | null;
   handled_by_user_id: string | null;
   handled_status: string | null;
