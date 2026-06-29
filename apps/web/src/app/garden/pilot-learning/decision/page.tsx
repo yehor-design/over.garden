@@ -107,14 +107,18 @@ export default async function PilotCohortDecisionPage() {
               <p className="text-sm leading-6 text-muted-foreground">
                 Evaluation window: {readout.evaluationWindow.label} (since{" "}
                 {formatDate(readout.evaluationWindow.since)}). Denominator is
-                invited gardeners who started through the enum-only
-                `invited_cohort` source.
+                closed-pilot gardeners with a durable `closed_pilot` grant who
+                started through the enum-only `invited_cohort` source.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <MetricTile
-                label="Write-eligible gardeners"
+                label="Closed-pilot writers"
                 value={readout.cohort.writeEligibleGardeners}
+              />
+              <MetricTile
+                label="Founder rehearsal"
+                value={readout.cohort.founderRehearsalGardeners}
               />
               <MetricTile
                 label="Invite starts -> first saves"
@@ -360,8 +364,9 @@ function SegmentCohortPanel({
           Segment H1 slices
         </h3>
         <p className="text-sm leading-6 text-muted-foreground">
-          Reads the closed-pilot loop by bounded segment. Unknown and low-sample
-          buckets are decision gaps, not neutral rows.
+          Reads the real closed-pilot loop by bounded segment. Founder rehearsal
+          runs are excluded; unknown and low-sample buckets are decision gaps,
+          not neutral rows.
         </p>
       </div>
 
@@ -514,7 +519,8 @@ function PilotCohortDecisionHeader() {
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
           Operator decision readout for the closed pilot: aggregate
           invited-cohort behavior, follow-up value pulse, and structured
-          interview categories in one continue / iterate / stop frame. No raw
+          interview categories in one continue / iterate / stop frame. Founder
+          rehearsal records are excluded from the decision signal. No raw
           journal text, transcripts, emails, media keys, precise location, IP,
           user agent, referrer, or query strings.
         </p>

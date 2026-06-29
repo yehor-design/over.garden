@@ -4,6 +4,7 @@
  * Usage:
  *   pnpm pilot:invite
  *   pnpm pilot:invite -- --ttl-days 14 --base-url https://over.garden --segment casual_practical_beginner
+ *   pnpm pilot:invite -- --cohort founder_rehearsal --base-url https://over.garden
  *
  * Requires PILOT_INVITE_SIGNING_SECRET in the environment (or .env.local via
  * --env-file). Production MUST use a real secret; the dev fallback is blocked
@@ -14,9 +15,14 @@ import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
 
 import {
+  FOUNDER_REHEARSAL_COHORT,
+  getPilotInviteCohortLabel,
+  isPilotInviteCohort,
   isUsingDevPilotInviteSecret,
   PILOT_INVITE_SIGNING_SECRET_ENV,
+  PILOT_INVITE_COHORTS,
   signPilotInviteToken,
+  type PilotInviteCohort,
 } from "../src/lib/garden/pilot-invite";
 import { pilotInviteJoinUrl } from "../src/lib/garden/public-paths";
 import {
@@ -31,6 +37,7 @@ loadEnv({ path: resolve(process.cwd(), ".env.local"), override: false });
 
 interface CliOptions {
   baseUrl: string;
+  cohort: PilotInviteCohort;
   segment: PilotSegment;
   ttlDays: number;
 }
@@ -40,6 +47,7 @@ function parseCliOptions(argv: string[]): CliOptions {
     process.env.PUBLIC_SITE_URL?.trim() ||
     process.env.BETTER_AUTH_URL?.trim() ||
     "http://localhost:3000";
+  let cohort: PilotInviteCohort = "closed_pilot";
   let segment = DEFAULT_PILOT_SEGMENT;
   let ttlDays = 14;
 
@@ -65,10 +73,21 @@ function parseCliOptions(argv: string[]): CliOptions {
       }
       segment = nextSegment;
       index += 1;
+      continue;
+    }
+    if (arg === "--cohort") {
+      const nextCohort = argv[index + 1]?.trim();
+      if (!isPilotInviteCohort(nextCohort)) {
+        throw new Error(
+          `Invalid --cohort value. Use one of: ${PILOT_INVITE_COHORTS.join(", ")}`,
+        );
+      }
+      cohort = nextCohort;
+      index += 1;
     }
   }
 
-  return { baseUrl, segment, ttlDays };
+  return { baseUrl, cohort, segment, ttlDays };
 }
 
 function main() {
@@ -87,6 +106,7 @@ function main() {
   }
 
   const token = signPilotInviteToken({
+    cohort: options.cohort,
     segment: options.segment,
     ttlSeconds: Math.floor(options.ttlDays * 24 * 60 * 60),
   });
@@ -96,6 +116,7 @@ function main() {
   console.log(inviteUrl);
   console.log("");
   console.log(`Link TTL: ${options.ttlDays} day(s)`);
+  console.log(`Pilot cohort: ${getPilotInviteCohortLabel(options.cohort)}`);
   console.log(`Pilot segment: ${getPilotSegmentLabel(options.segment)}`);
   console.log(
     `Signing secret: ${secretConfigured ? "from env" : "dev fallback"}`,
@@ -103,6 +124,11 @@ function main() {
   console.log(
     "Attribution stays enum-only (invited_cohort + bounded segment). No recipient identity is stored in the link.",
   );
+  if (options.cohort === FOUNDER_REHEARSAL_COHORT) {
+    console.log(
+      "Founder rehearsal is internal readiness evidence only; it is excluded from OVE-53 closed-pilot decision metrics.",
+    );
+  }
 }
 
 main();

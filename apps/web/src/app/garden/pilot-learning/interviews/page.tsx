@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   DEFAULT_PILOT_INTERVIEW_COHORT,
   PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS,
+  PILOT_INTERVIEW_COHORT_OPTIONS,
   PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS,
   PILOT_INTERVIEW_NEXT_ACTION_OPTIONS,
   PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS,
@@ -145,7 +146,7 @@ export default async function FounderInterviewCapturePage({
             />
           </div>
 
-          <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+          <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
             Optional subject user id (operator only)
             <input
               name="subjectUserId"
@@ -155,13 +156,14 @@ export default async function FounderInterviewCapturePage({
             />
           </label>
 
-          <input
-            type="hidden"
+          <SelectField
+            label="Pilot cohort"
             name="pilotCohort"
             value={DEFAULT_PILOT_INTERVIEW_COHORT}
+            options={PILOT_INTERVIEW_COHORT_OPTIONS}
           />
 
-          <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+          <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
             Optional redacted note ({MAX_REDACTED_NOTE_LENGTH} chars max)
             <textarea
               name="redactedNote"
@@ -172,7 +174,10 @@ export default async function FounderInterviewCapturePage({
             />
           </label>
 
-          <button type="submit" className={buttonVariants({ className: "self-start" })}>
+          <button
+            type="submit"
+            className={buttonVariants({ className: "self-start" })}
+          >
             Save interview record
           </button>
         </form>
@@ -263,9 +268,18 @@ export default async function FounderInterviewCapturePage({
                       </div>
 
                       <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
-                        <Field label="Return reason" value={record.returnReason} />
-                        <Field label="Main objection" value={record.mainObjection} />
-                        <Field label="Observed value" value={record.observedValue} />
+                        <Field
+                          label="Return reason"
+                          value={record.returnReason}
+                        />
+                        <Field
+                          label="Main objection"
+                          value={record.mainObjection}
+                        />
+                        <Field
+                          label="Observed value"
+                          value={record.observedValue}
+                        />
                         <Field label="Next action" value={record.nextAction} />
                         {record.subjectUserId ? (
                           <div>
@@ -278,7 +292,10 @@ export default async function FounderInterviewCapturePage({
                           </div>
                         ) : null}
                         {record.pilotCohort ? (
-                          <Field label="Pilot cohort" value={record.pilotCohort} />
+                          <Field
+                            label="Pilot cohort"
+                            value={record.pilotCohort}
+                          />
                         ) : null}
                       </dl>
 
@@ -357,7 +374,7 @@ function SelectField({
   options: ReadonlyArray<{ value: string; label: string }>;
 }) {
   return (
-    <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+    <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
       {label}
       <select
         name={name}

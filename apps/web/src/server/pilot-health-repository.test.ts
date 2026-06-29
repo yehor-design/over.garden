@@ -52,6 +52,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain('from "journal_entries"');
+    expect(sql).toContain("entry_closed_pilot_grant");
     expect(sql).toContain("count(distinct");
     expect(sql).toContain("previous_same_object_entry");
     expect(sql).not.toContain('select "journal_entries"."title"');
@@ -72,6 +73,8 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain('from "analytics_events"');
+    expect(sql).toContain("offline_queued_closed_pilot_grant");
+    expect(sql).toContain("offline_synced_closed_pilot_grant");
     expect(sql).toContain("properties ->> 'activation_source'");
     expect(sql).toContain("properties ->> 'followed_by_action'");
     expect(sql).not.toContain('select "analytics_events"."properties"');
@@ -92,6 +95,10 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).toContain(
       "properties ->> 'activation_source' = 'invited_cohort'",
     );
+    expect(sql).toContain("activation_closed_pilot_grant");
+    expect(sql).toContain("entry_closed_pilot_grant");
+    expect(sql).toContain("from pilot_invite_grants");
+    expect(sql).toContain("cohort = $");
     expect(sql).toContain('"activationstartedinvitedcohort"');
     expect(sql).toContain('"entrysavedinvitedcohort"');
     expect(sql).not.toContain("invite_token");
@@ -103,6 +110,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain("follow_up_value_pulse");
+    expect(sql).toContain("value_pulse_closed_pilot_grant");
     expect(sql).toContain("properties ->> 'pulse_outcome'");
     expect(sql).toContain("properties ->> 'usefulness'");
     expect(sql).toContain("properties ? 'usefulness_reason'");
@@ -115,6 +123,10 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).toContain('"invitedcohortsameobjectfollowupentries"');
     expect(sql).toContain('"invitedcohortreturninggardeners"');
     expect(sql).toContain("cohort_first_save_event");
+    expect(sql).toContain("cohort_closed_pilot_grant");
+    expect(sql).toContain("cohort_return_closed_pilot_grant");
+    expect(sql).toContain("from pilot_invite_grants");
+    expect(sql).toContain("cohort = $");
     expect(sql).toContain(
       "properties ->> 'activation_source' = 'invited_cohort'",
     );
@@ -129,6 +141,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     const sql = compiled.sql.toLowerCase();
 
     expect(sql).toContain('from "pilot_invite_grants"');
+    expect(sql).toContain('"segment_grants"."cohort" = $');
     expect(sql).toContain('"segment_grants"."segment"');
     expect(sql).toContain(
       "properties ->> 'activation_source' = 'invited_cohort'",
@@ -191,6 +204,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).toContain('"journal_entries"."visibility" = $');
     expect(sql).toContain('"journal_entries"."lifecycle_state" = $');
     expect(sql).toContain('"journal_entries"."public_gone_at" is null');
+    expect(sql).toContain("public_entry_closed_pilot_grant");
     expect(sql).toContain("char_length");
     expect(sql).not.toContain('"journal_entries"."title" as');
     expect(sql).not.toContain('"journal_entries"."body" as');
@@ -208,6 +222,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
 
     expect(sql).toContain('"journal_entries"."lifecycle_state" = $');
     expect(sql).toContain('"journal_entries"."public_gone_at" is not null');
+    expect(sql).toContain("archived_entry_closed_pilot_grant");
     expect(sql).not.toContain('"journal_entries"."title"');
     expect(sql).not.toContain('"journal_entries"."body"');
     expect(sql).not.toContain("quarantine_key");
@@ -278,7 +293,10 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(
       readout.notes.some((note) => note.includes("Follow-up value pulse")),
     ).toBe(true);
-    expect(readout.writeAccess).toEqual({ writeEligibleGardeners: 0 });
+    expect(readout.writeAccess).toEqual({
+      writeEligibleGardeners: 0,
+      founderRehearsalGardeners: 0,
+    });
   });
 
   it("returns null instead of throwing when the readout query fails", async () => {

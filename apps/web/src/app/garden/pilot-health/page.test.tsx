@@ -57,4 +57,34 @@ describe("/garden/pilot-health", () => {
     expect(html).toContain("Gate: allowlist");
     expect(mocks.getPilotHealthReadoutSafely).toHaveBeenCalledOnce();
   });
+
+  it("shows founder rehearsal grants separately from closed-pilot writers", async () => {
+    mocks.getPilotHealthReadoutSafely.mockResolvedValue({
+      generatedAt: new Date("2026-06-29T12:00:00.000Z"),
+      windows: [],
+      publicVarietyIndexability: {
+        promotedIndexableCount: 0,
+        thinNoindexCount: 0,
+        demotedByArchiveOrGoneCount: 0,
+        currentPublicVarietyCount: 0,
+        threshold: {
+          minPublicEntryCount: 3,
+          minAggregateBodyLength: 600,
+        },
+      },
+      writeAccess: {
+        writeEligibleGardeners: 2,
+        founderRehearsalGardeners: 1,
+      },
+      notes: [],
+      references: [],
+    });
+
+    const { default: PilotHealthPage } = await import("./page");
+    const html = renderToStaticMarkup(await PilotHealthPage());
+
+    expect(html).toContain("Closed-pilot writers");
+    expect(html).toContain("Founder rehearsal");
+    expect(html).toContain("excluded from OVE-53");
+  });
 });

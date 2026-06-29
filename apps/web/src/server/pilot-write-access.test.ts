@@ -49,6 +49,26 @@ describe("closed-pilot write gate", () => {
     );
   });
 
+  it("claims founder rehearsal grants without converting them into closed-pilot grants", async () => {
+    const grantAccess = vi.fn(async () => {});
+    const deps: PilotWriteAccessDeps = {
+      hasAccess: vi.fn(async () => false),
+      readCookieInvite: vi.fn(async () => ({
+        cohort: "founder_rehearsal" as const,
+        segment: "unknown_segment" as const,
+        expiresAt: 1,
+      })),
+      grantAccess,
+    };
+
+    expect(await claimOrCheckPilotWriteAccess(scope, deps)).toBe(true);
+    expect(grantAccess).toHaveBeenCalledWith(
+      scope.userId,
+      "founder_rehearsal",
+      "unknown_segment",
+    );
+  });
+
   it("denies a non-invited gardener with no grant and no cookie", async () => {
     const grantAccess = vi.fn(async () => {});
     const deps: PilotWriteAccessDeps = {

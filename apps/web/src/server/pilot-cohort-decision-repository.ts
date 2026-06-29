@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
+import { CLOSED_PILOT_COHORT } from "@/lib/garden/pilot-invite";
 import {
   evaluatePilotCohortDecision,
   summarizePilotInterviewAggregates,
@@ -31,6 +32,7 @@ export interface PilotCohortDecisionReadout {
   };
   cohort: {
     writeEligibleGardeners: number;
+    founderRehearsalGardeners: number;
     inviteStarts: number;
     firstEntrySaves: number;
     firstEntrySaveRate: number;
@@ -108,6 +110,12 @@ export function buildPilotInterviewLearningAggregateQuery(
       "segment",
       sql<number>`count(*)`.as("recordCount"),
     ])
+    .where((eb) =>
+      eb.or([
+        eb("pilot_cohort", "is", null),
+        eb("pilot_cohort", "=", CLOSED_PILOT_COHORT),
+      ]),
+    )
     .groupBy(["activation_result", "next_action", "observed_value", "segment"])
     .orderBy("activation_result", "asc")
     .orderBy("next_action", "asc")
@@ -157,6 +165,8 @@ export function assemblePilotCohortDecisionReadout(
     },
     cohort: {
       writeEligibleGardeners: healthReadout.writeAccess.writeEligibleGardeners,
+      founderRehearsalGardeners:
+        healthReadout.writeAccess.founderRehearsalGardeners,
       inviteStarts: metrics.invitedCohort.starts,
       firstEntrySaves: metrics.invitedCohort.firstEntrySaves,
       firstEntrySaveRate: metrics.invitedCohort.firstEntrySaveRate,
@@ -180,6 +190,7 @@ export function assemblePilotCohortDecisionReadout(
       "This panel is decision support, not an automated strategy engine.",
       "All numbers are provisional closed-pilot calibrators grounded in OverGarden_B2_METRICS_v0.md and KILL_CRITERIA_PREREG_v2.md — not statistically validated targets.",
       "Behavioral rates use the invited-cohort enum source only; they never expose journal text, invite identity, email, media keys, IP, user agent, referrer, or raw URLs.",
+      "Founder rehearsal grants and founder_rehearsal interview records are excluded from this closed-pilot decision frame; they prove operator readiness only, not OVE-53 field evidence.",
       "Interview categories are bounded enum aggregates; redacted notes and subject identifiers stay out of this readout.",
       "Offline failed mutations remain browser-local Dexie state and are not server-observable.",
       "Founder judgment still required: reconcile behavioral rates, value pulse, and interview categories before changing recruiting posture.",

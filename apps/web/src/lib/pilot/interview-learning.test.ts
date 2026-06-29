@@ -26,6 +26,15 @@ describe("founder interview capture validation", () => {
     expect(result.ok).toBe(true);
   });
 
+  it("accepts founder rehearsal as a bounded pilot cohort", () => {
+    const result = normalizePilotInterviewLearningInput({
+      ...baseInput,
+      pilotCohort: "founder_rehearsal",
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
   it("rejects journal body fragments in redacted notes", () => {
     const result = normalizePilotInterviewLearningInput({
       ...baseInput,
@@ -62,11 +71,11 @@ describe("founder interview capture validation", () => {
   });
 
   it("flags signed URLs and transcripts via forbidden fragment scan", () => {
-    expect(findForbiddenInterviewCaptureContent(["https://signed.example/url"])).toBe(
-      "https://",
-    );
-    expect(findForbiddenInterviewCaptureContent(["full transcript pasted here"])).toBe(
-      "transcript",
-    );
+    expect(
+      findForbiddenInterviewCaptureContent(["https://signed.example/url"]),
+    ).toBe("https://");
+    expect(
+      findForbiddenInterviewCaptureContent(["full transcript pasted here"]),
+    ).toBe("transcript");
   });
 });

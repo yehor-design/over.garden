@@ -91,10 +91,23 @@ describe("pilot invite grant repository privacy contracts", () => {
       buildCountPilotWriteEligibleGardenersQuery(testDb).compile();
 
     expect(compiled.sql).toContain('from "pilot_invite_grants"');
+    expect(compiled.sql).toContain('"cohort" = $1');
     expect(compiled.sql).toContain("count(*)");
     expect(compiled.sql).not.toContain('"user_id"');
     expect(compiled.sql).not.toMatch(PII_PATTERN);
-    expect(compiled.parameters).toEqual([]);
+    expect(compiled.parameters).toEqual(["closed_pilot"]);
+  });
+
+  it("can count founder rehearsal grants separately from real closed-pilot grants", () => {
+    const compiled = buildCountPilotWriteEligibleGardenersQuery(
+      testDb,
+      "founder_rehearsal",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "pilot_invite_grants"');
+    expect(compiled.sql).toContain('"cohort" = $1');
+    expect(compiled.sql).toContain("count(*)");
+    expect(compiled.parameters).toEqual(["founder_rehearsal"]);
   });
 
   it("counts eligible gardeners by bounded segment without exposing identities", () => {
@@ -102,11 +115,12 @@ describe("pilot invite grant repository privacy contracts", () => {
       buildCountPilotWriteEligibleGardenersBySegmentQuery(testDb).compile();
 
     expect(compiled.sql).toContain('from "pilot_invite_grants"');
+    expect(compiled.sql).toContain('"cohort" = $1');
     expect(compiled.sql).toContain('"segment"');
     expect(compiled.sql).toContain("count");
     expect(compiled.sql).not.toContain('select "user_id"');
     expect(compiled.sql).not.toMatch(PII_PATTERN);
-    expect(compiled.parameters).toEqual([]);
+    expect(compiled.parameters).toEqual(["closed_pilot"]);
   });
 
   it("models the grant table with no PII or invite-link columns in SQL source", () => {
@@ -126,6 +140,7 @@ describe("pilot invite grant repository privacy contracts", () => {
     expect(tableBody).toContain("cohort text not null");
     expect(tableBody).toContain("segment text not null");
     expect(tableBody).toContain("'closed_pilot'");
+    expect(tableBody).toContain("'founder_rehearsal'");
     expect(tableBody).toContain("'casual_practical_beginner'");
     expect(tableBody).toContain("'unknown_segment'");
     expect(tableBody).not.toMatch(

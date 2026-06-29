@@ -11,6 +11,10 @@ import {
 import { countPilotWriteEligibleGardeners } from "@/server/pilot-invite-repository";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import {
+  CLOSED_PILOT_COHORT,
+  FOUNDER_REHEARSAL_COHORT,
+} from "@/lib/garden/pilot-invite";
+import {
   DEFAULT_PILOT_SEGMENT,
   getPilotSegmentCoreBucket,
   getPilotSegmentDiagnosticBucket,
@@ -60,6 +64,7 @@ export interface PilotHealthReadout {
 
 export interface PilotWriteAccessHealth {
   writeEligibleGardeners: number;
+  founderRehearsalGardeners: number;
 }
 
 export interface PilotHealthWindow {
@@ -219,6 +224,7 @@ export async function getPilotHealthReadout(
     publicVarietyRows,
     archivedPublicVarietyRows,
     writeEligibleGardeners,
+    founderRehearsalGardeners,
   ] = await Promise.all([
     Promise.all(
       windowDefinitions.map((window) =>
@@ -240,7 +246,8 @@ export async function getPilotHealthReadout(
     ),
     buildPilotPublicVarietyHealthRowsQuery(executor).execute(),
     buildArchivedOrGonePublicVarietyRowsQuery(executor).execute(),
-    countPilotWriteEligibleGardeners(executor),
+    countPilotWriteEligibleGardeners(executor, CLOSED_PILOT_COHORT),
+    countPilotWriteEligibleGardeners(executor, FOUNDER_REHEARSAL_COHORT),
   ]);
 
   return {
@@ -259,13 +266,14 @@ export async function getPilotHealthReadout(
     ),
     writeAccess: {
       writeEligibleGardeners,
+      founderRehearsalGardeners,
     },
     notes: [
       "All numbers are provisional pilot leading indicators, not validated OverGarden targets.",
       "Offline failed mutations are currently browser-local Dexie state and are not yet server-observable.",
       "H6 indexability shows thinness trajectory; it is not the same as organic acquisition or signup conversion.",
-      "Invited-cohort counts are the closed-pilot H1 loop: invite start, first-entry save, and a same-object follow-up return. Cohort membership is derived from the enum-only invited_cohort activation source, never from names, emails, or invite links.",
-      "Write-eligible gardeners are users with a durable pilot_invite_grants row. Direct/homepage/public-variety starts without a grant indicate non-invited write attempts that should not produce pilot data.",
+      "Invited-cohort counts are the closed-pilot H1 loop: invite start, first-entry save, and a same-object follow-up return. Cohort membership requires a closed_pilot grant plus the enum-only invited_cohort activation source, never names, emails, or invite links.",
+      "Write-eligible gardeners are users with a durable closed_pilot pilot_invite_grants row. Founder rehearsal grants are counted separately and excluded from closed-pilot H1/OVE-53 decision metrics.",
       "Follow-up value pulse counts are bounded usefulness feedback after same-object follow-ups. Properties are enum-only; no journal text, email, IP, user agent, referrer, or raw URL values are stored.",
     ],
     references: PILOT_HEALTH_RESEARCH_REFERENCES,
@@ -336,6 +344,11 @@ export function buildPilotEntryMetricsQuery(
         where cohort_first_save_event.owner_user_id = journal_entries.owner_user_id
           and cohort_first_save_event.event_name = 'entry_logged'
           and cohort_first_save_event.properties ->> 'activation_source' = 'invited_cohort'
+      ) and exists (
+        select 1
+        from pilot_invite_grants as cohort_closed_pilot_grant
+        where cohort_closed_pilot_grant.user_id = journal_entries.owner_user_id
+          and cohort_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
       ) then journal_entries.id end)`.as(
         "invitedCohortSameObjectFollowUpEntries",
       ),
@@ -351,6 +364,11 @@ export function buildPilotEntryMetricsQuery(
         where cohort_return_first_save_event.owner_user_id = journal_entries.owner_user_id
           and cohort_return_first_save_event.event_name = 'entry_logged'
           and cohort_return_first_save_event.properties ->> 'activation_source' = 'invited_cohort'
+      ) and exists (
+        select 1
+        from pilot_invite_grants as cohort_return_closed_pilot_grant
+        where cohort_return_closed_pilot_grant.user_id = journal_entries.owner_user_id
+          and cohort_return_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
       ) then journal_entries.owner_user_id end)`.as(
         "invitedCohortReturningGardeners",
       ),
@@ -367,7 +385,15 @@ export function buildPilotEntryMetricsQuery(
         "publicGoneEntries",
       ),
     ])
-    .where("journal_entries.created_at", ">=", since);
+    .where("journal_entries.created_at", ">=", since)
+    .where(
+      sql<boolean>`exists (
+        select 1
+        from pilot_invite_grants as entry_closed_pilot_grant
+        where entry_closed_pilot_grant.user_id = journal_entries.owner_user_id
+          and entry_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+      )`,
+    );
 }
 
 export function buildPilotAnalyticsMetricsQuery(
@@ -379,9 +405,21 @@ export function buildPilotAnalyticsMetricsQuery(
     .select([
       sql<number>`count(*) filter (
         where event_name = 'offline_entry_queued'
+          and exists (
+            select 1
+            from pilot_invite_grants as offline_queued_closed_pilot_grant
+            where offline_queued_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and offline_queued_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("offlineQueued"),
       sql<number>`count(*) filter (
         where event_name = 'offline_entry_synced'
+          and exists (
+            select 1
+            from pilot_invite_grants as offline_synced_closed_pilot_grant
+            where offline_synced_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and offline_synced_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("offlineSynced"),
       sql<number>`count(*) filter (
         where event_name = 'own_record_revisited'
@@ -402,6 +440,12 @@ export function buildPilotAnalyticsMetricsQuery(
       sql<number>`count(distinct session_id) filter (
         where event_name = 'activation_started'
           and properties ->> 'activation_source' = 'invited_cohort'
+          and exists (
+            select 1
+            from pilot_invite_grants as activation_closed_pilot_grant
+            where activation_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and activation_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("activationStartedInvitedCohort"),
       sql<number>`count(*) filter (
         where event_name = 'entry_logged'
@@ -418,33 +462,81 @@ export function buildPilotAnalyticsMetricsQuery(
       sql<number>`count(*) filter (
         where event_name = 'entry_logged'
           and properties ->> 'activation_source' = 'invited_cohort'
+          and exists (
+            select 1
+            from pilot_invite_grants as entry_closed_pilot_grant
+            where entry_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and entry_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("entrySavedInvitedCohort"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_closed_pilot_grant
+            where value_pulse_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseResponses"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ->> 'pulse_outcome' = 'submitted'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_submitted_closed_pilot_grant
+            where value_pulse_submitted_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_submitted_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseSubmitted"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ->> 'pulse_outcome' = 'skipped'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_skipped_closed_pilot_grant
+            where value_pulse_skipped_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_skipped_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseSkipped"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ->> 'usefulness' = 'useful'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_useful_closed_pilot_grant
+            where value_pulse_useful_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_useful_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseUseful"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ->> 'usefulness' = 'not_sure'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_not_sure_closed_pilot_grant
+            where value_pulse_not_sure_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_not_sure_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseNotSure"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ->> 'usefulness' = 'not_useful'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_not_useful_closed_pilot_grant
+            where value_pulse_not_useful_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_not_useful_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseNotUseful"),
       sql<number>`count(*) filter (
         where event_name = 'follow_up_value_pulse'
           and properties ? 'usefulness_reason'
+          and exists (
+            select 1
+            from pilot_invite_grants as value_pulse_reason_closed_pilot_grant
+            where value_pulse_reason_closed_pilot_grant.user_id = analytics_events.owner_user_id
+              and value_pulse_reason_closed_pilot_grant.cohort = ${CLOSED_PILOT_COHORT}
+          )
       )`.as("valuePulseWithReason"),
     ])
     .where("analytics_events.created_at", ">=", since);
@@ -456,6 +548,7 @@ export function buildPilotSegmentMetricsQuery(
 ) {
   return executor
     .selectFrom("pilot_invite_grants as segment_grants")
+    .where("segment_grants.cohort", "=", CLOSED_PILOT_COHORT)
     .leftJoin("analytics_events as segment_starts", (join) =>
       join
         .onRef("segment_starts.owner_user_id", "=", "segment_grants.user_id")
@@ -534,6 +627,21 @@ export function buildPilotPublicVarietyHealthRowsQuery(
       "plant_objects.id",
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .innerJoin(
+      "pilot_invite_grants as public_entry_closed_pilot_grant",
+      (join) =>
+        join
+          .onRef(
+            "public_entry_closed_pilot_grant.user_id",
+            "=",
+            "journal_entries.owner_user_id",
+          )
+          .on(
+            "public_entry_closed_pilot_grant.cohort",
+            "=",
+            CLOSED_PILOT_COHORT,
+          ),
+    )
     .select(({ fn }) => [
       "catalog_items.public_slug as publicSlug",
       fn.count<number>("journal_entries.id").as("entryCount"),
@@ -576,6 +684,21 @@ export function buildArchivedOrGonePublicVarietyRowsQuery(
       "plant_objects.id",
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .innerJoin(
+      "pilot_invite_grants as archived_entry_closed_pilot_grant",
+      (join) =>
+        join
+          .onRef(
+            "archived_entry_closed_pilot_grant.user_id",
+            "=",
+            "journal_entries.owner_user_id",
+          )
+          .on(
+            "archived_entry_closed_pilot_grant.cohort",
+            "=",
+            CLOSED_PILOT_COHORT,
+          ),
+    )
     .select(({ fn }) => [
       "catalog_items.public_slug as publicSlug",
       fn.count<number>("journal_entries.id").as("archivedOrGoneEntryCount"),

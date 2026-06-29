@@ -5,6 +5,7 @@ import type { Insertable, Kysely, Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
 import {
+  CLOSED_PILOT_COHORT,
   DEFAULT_PILOT_INVITE_COHORT,
   type PilotInviteCohort,
 } from "@/lib/garden/pilot-invite";
@@ -47,17 +48,21 @@ export function buildGrantPilotWriteAccessQuery(
 
 export function buildCountPilotWriteEligibleGardenersQuery(
   executor: QueryExecutor = db,
+  cohort: PilotInviteCohort = CLOSED_PILOT_COHORT,
 ) {
   return executor
     .selectFrom("pilot_invite_grants")
+    .where("cohort", "=", cohort)
     .select((eb) => eb.fn.countAll<string>().as("count"));
 }
 
 export function buildCountPilotWriteEligibleGardenersBySegmentQuery(
   executor: QueryExecutor = db,
+  cohort: PilotInviteCohort = CLOSED_PILOT_COHORT,
 ) {
   return executor
     .selectFrom("pilot_invite_grants")
+    .where("cohort", "=", cohort)
     .select(({ fn }) => ["segment", fn.count<string>("user_id").as("count")])
     .groupBy("segment")
     .orderBy("segment", "asc");
@@ -89,11 +94,12 @@ export async function grantPilotWriteAccess(
 
 export async function countPilotWriteEligibleGardeners(
   executor: QueryExecutor = db,
+  cohort: PilotInviteCohort = CLOSED_PILOT_COHORT,
 ): Promise<number> {
-  const row =
-    await buildCountPilotWriteEligibleGardenersQuery(
-      executor,
-    ).executeTakeFirst();
+  const row = await buildCountPilotWriteEligibleGardenersQuery(
+    executor,
+    cohort,
+  ).executeTakeFirst();
   return toCount(row?.count);
 }
 

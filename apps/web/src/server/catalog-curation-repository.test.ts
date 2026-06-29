@@ -57,10 +57,12 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain('left join "pilot_invite_grants"');
     expect(compiled.sql).toContain("creator_pilot_grants");
     expect(compiled.sql).toContain("object_owner_pilot_grants");
+    expect(compiled.sql).toContain('"creator_pilot_grants"."cohort" = $2');
+    expect(compiled.sql).toContain('"object_owner_pilot_grants"."cohort" = $3');
     expect(compiled.sql).toContain("bool_or");
     expect(compiled.sql).toContain("count(distinct");
-    expect(compiled.sql).toContain('"catalog_items"."status" = $2');
-    expect(compiled.sql).toContain('"catalog_items"."source" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."status" = $4');
+    expect(compiled.sql).toContain('"catalog_items"."source" = $5');
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is not null',
     );
@@ -70,6 +72,8 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).not.toContain("email");
     expect(compiled.parameters).toEqual([
       "user_added",
+      "closed_pilot",
+      "closed_pilot",
       "provisional",
       "user_added",
       12,
@@ -77,7 +81,8 @@ describe("catalog curation repository query contracts", () => {
   });
 
   it("prioritizes pilot-origin candidates without selecting gardener identities", () => {
-    const compiled = buildPendingCatalogCurationCandidatesQuery(testDb).compile();
+    const compiled =
+      buildPendingCatalogCurationCandidatesQuery(testDb).compile();
 
     expect(compiled.sql).toContain("order by bool_or");
     expect(compiled.sql).toContain('"catalog_items"."created_at" asc');

@@ -15,9 +15,16 @@ import {
   type PilotSegment,
 } from "@/lib/pilot/segments";
 
-export const PILOT_INVITE_COHORTS = ["closed_pilot"] as const;
+export const CLOSED_PILOT_COHORT = "closed_pilot" as const;
+export const FOUNDER_REHEARSAL_COHORT = "founder_rehearsal" as const;
+
+export const PILOT_INVITE_COHORTS = [
+  CLOSED_PILOT_COHORT,
+  FOUNDER_REHEARSAL_COHORT,
+] as const;
 export type PilotInviteCohort = (typeof PILOT_INVITE_COHORTS)[number];
-export const DEFAULT_PILOT_INVITE_COHORT: PilotInviteCohort = "closed_pilot";
+export const DEFAULT_PILOT_INVITE_COHORT: PilotInviteCohort =
+  CLOSED_PILOT_COHORT;
 
 export const PILOT_INVITE_SIGNING_SECRET_ENV = "PILOT_INVITE_SIGNING_SECRET";
 
@@ -63,6 +70,19 @@ export function isPilotInviteCohort(
     typeof value === "string" &&
     (PILOT_INVITE_COHORTS as readonly string[]).includes(value)
   );
+}
+
+export function getPilotInviteCohortLabel(
+  cohort: PilotInviteCohort | string,
+): string {
+  switch (cohort) {
+    case CLOSED_PILOT_COHORT:
+      return "Closed pilot";
+    case FOUNDER_REHEARSAL_COHORT:
+      return "Founder rehearsal";
+    default:
+      return cohort;
+  }
 }
 
 export function resolvePilotInviteSecret(explicitSecret?: string): string {

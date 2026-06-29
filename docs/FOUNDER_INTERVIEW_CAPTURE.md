@@ -21,7 +21,7 @@ Quantitative first-save and follow-up metrics are not enough during closed pilot
 - Observed value enum (history worth keeping, photo-safe capture, catalog help, offline queue, progress moment, etc.)
 - Next operator action enum (continue pilot, iterate composer/onboarding/privacy copy, schedule follow-up, pause recruiting, close track)
 - Optional internal `subject_user_id` UUID for aggregate cohort interpretation
-- Optional `pilot_cohort` enum (`closed_pilot` only today)
+- Optional `pilot_cohort` enum (`closed_pilot` or `founder_rehearsal`)
 - Optional short redacted note (max 280 characters) with no names, addresses, or quoted journal text
 
 ## What must NOT be copied
@@ -42,6 +42,8 @@ Table: `pilot_interview_learnings` in `apps/web/sql/0001_walking_skeleton.sql`
 All structured fields are bounded enums enforced in SQL and TypeScript. The repository never joins journal entries, media assets, or analytics events.
 
 OVE-52 reuses the same bounded segment taxonomy for `pilot_invite_grants.segment` so behavioral H1 readouts and interview aggregates can be compared by segment. Invite/grant segment metadata remains enum-only and operator-facing; it must not contain contact details, free-form notes, raw invite URLs, referrers, IP/user-agent, precise location, or journal/media content.
+
+OVE-54 adds `founder_rehearsal` as an internal-only cohort for operator readiness runs. `founder_rehearsal` records may be stored for redacted rehearsal notes, but `/garden/pilot-learning/decision` excludes them from the real closed-pilot continue / iterate / stop evidence. OVE-53 must stay open until real external invited-gardener evidence exists.
 
 ## Verification
 

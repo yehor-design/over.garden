@@ -39,6 +39,28 @@ describe("claimPilotInviteAction", () => {
     );
   });
 
+  it("preserves founder rehearsal cohort metadata when claiming a rehearsal invite", async () => {
+    const { claimPilotInviteAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set(
+      "invite",
+      signPilotInviteToken({
+        cohort: "founder_rehearsal",
+        segment: "unknown_segment",
+      }),
+    );
+
+    await claimPilotInviteAction(formData);
+
+    expect(mocks.setPilotInviteCookie).toHaveBeenCalledWith(
+      "founder_rehearsal",
+      "unknown_segment",
+    );
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/garden?source=invited-cohort",
+    );
+  });
+
   it("never sets a grant cookie for an invalid token but still lands on a safe destination", async () => {
     const { claimPilotInviteAction } = await import("./actions");
     const formData = new FormData();

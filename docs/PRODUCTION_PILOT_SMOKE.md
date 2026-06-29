@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation
 Last updated: 2026-06-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -304,9 +304,9 @@ Goal: only invited gardeners can write pilot journal data. Non-invited visitors 
 
 ### What landed
 
-- Signed HMAC invite tokens (`pilot-invite.ts`) carry only an enum cohort plus issued/expiry seconds. No email, phone, name, IP, referrer, URL, or query string is encoded.
+- Signed HMAC invite tokens (`pilot-invite.ts`) carry only an enum cohort, bounded segment, and issued/expiry seconds. No email, phone, name, IP, referrer, URL, or query string is encoded.
 - `/join?invite=<token>` validates the token server-side, sets an HTTP-only eligibility cookie, and redirects to `/garden?source=invited-cohort` with enum-only attribution.
-- `pilot_invite_grants` stores one durable row per user (`user_id`, enum `cohort`, timestamps). No invite link, token, or recipient identity is persisted.
+- `pilot_invite_grants` stores one durable row per user (`user_id`, enum `cohort`, enum `segment`, timestamps). No invite link, token, or recipient identity is persisted.
 - Write paths (`/api/garden/entries`, follow-up actions, skeleton write routes) require `requireWriteEligibleRequestScope()`: authenticated plus invited grant or valid eligibility cookie that materializes the grant on first write.
 - Non-invited signed-in gardeners see a calm closed-pilot callout on `/garden` and object follow-up surfaces instead of broken composers.
 - `/garden/pilot-health` shows write-eligible gardener count from grant rows, separate from direct/homepage/public-variety starts that may be non-invited.
@@ -327,6 +327,34 @@ Do not treat invite-gated writes as complete if any of the following are true:
 - Public read routes are blocked unintentionally.
 - Invitation evidence stores raw invite URLs, tokens, referrers, emails, or query strings in analytics or grant tables.
 - Production invite links are signed with the dev fallback secret (`pilot-smoke` must fail the signing-secret check on deployed URLs).
+
+## OVE-54 Founder-Only Pilot Rehearsal
+
+Goal: when real external invited gardeners are unavailable, a founder/operator can rehearse the full closed-pilot product path internally without polluting OVE-53 field-run evidence.
+
+### What landed
+
+- Invite tokens and grant rows now distinguish `closed_pilot` from `founder_rehearsal`. The default remains `closed_pilot`; founders must opt in with `pnpm pilot:invite -- --cohort founder_rehearsal`.
+- Founder rehearsal grants can write through the same `/join` -> auth -> `/garden` path as a real invited gardener, so operator readiness can be tested end to end.
+- `/garden/pilot-health` counts real `closed_pilot` writers and `founder_rehearsal` writers separately. Core journal, value-pulse, segment, and public-variety health signals filter to real `closed_pilot` grants.
+- `/garden/pilot-learning/decision` excludes founder rehearsal grants and `founder_rehearsal` interview records from the continue / iterate / stop frame, while showing the rehearsal count as a separate warning marker.
+- Catalog curation pilot-origin signals require a `closed_pilot` grant, so provisional names created during rehearsal do not look like real pilot catalog demand.
+
+### Founder rehearsal workflow (redacted)
+
+1. Generate a private rehearsal invite with `pnpm pilot:invite -- --cohort founder_rehearsal --base-url https://over.garden`.
+2. Do not paste the printed invite URL, token, cookie, email, journal text, or media key into docs, Linear, logs, or chat.
+3. Claim the link, sign in, save a first entry, optionally attach a photo, add a same-object follow-up, and open `/garden/pilot-health` plus `/garden/pilot-learning/decision`.
+4. Record only: route classes, pass/fail, grant cohort class `founder_rehearsal`, aggregate counts, derivative host class if media was tested, and the statement that OVE-53 remains open.
+
+### OVE-54 Done gate
+
+Do not treat the founder-only rehearsal slice as complete if any of the following are true:
+
+- A `founder_rehearsal` grant increments real `closed_pilot` write-eligible, segment, H1, value-pulse, interview, catalog pilot-origin, or H6 public-variety decision metrics.
+- Operator readouts fail to explain that rehearsal is internal readiness evidence only.
+- Evidence contains invite URLs, raw tokens, cookies, journal text, media keys, contact details, precise location, IP addresses, user agents, referrers, or raw query strings.
+- OVE-53 is closed or described as satisfied from founder/internal rehearsal data.
 
 ## OVE-48 Closed-Pilot Auth Recovery
 

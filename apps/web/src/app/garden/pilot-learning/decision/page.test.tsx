@@ -70,6 +70,7 @@ describe("/garden/pilot-learning/decision", () => {
       },
       cohort: {
         writeEligibleGardeners: 3,
+        founderRehearsalGardeners: 1,
         inviteStarts: 3,
         firstEntrySaves: 2,
         firstEntrySaveRate: 2 / 3,
@@ -141,6 +142,7 @@ describe("/garden/pilot-learning/decision", () => {
     expect(html).toContain("Segment H1 slices");
     expect(html).toContain("Casual - practical beginner with land");
     expect(html).toContain("Segment signal: concentrated");
+    expect(html).toContain("Founder rehearsal");
     expect(html).toContain("low sample");
   });
 });

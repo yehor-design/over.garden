@@ -48,6 +48,8 @@ describe("pilot cohort decision repository privacy contracts", () => {
 
     expect(sql).toContain('from "pilot_interview_learnings"');
     expect(sql).toContain("count(*)");
+    expect(sql).toContain('"pilot_cohort" is null');
+    expect(sql).toContain('"pilot_cohort" = $1');
     expect(sql).toContain("group by");
     expect(sql).toContain('"activation_result"');
     expect(sql).toContain('"next_action"');
@@ -57,6 +59,7 @@ describe("pilot cohort decision repository privacy contracts", () => {
     expect(sql).not.toContain("media_assets");
     expect(sql).not.toContain("redacted_note");
     expect(sql).not.toContain("subject_user_id");
+    expect(sql).not.toContain("founder_rehearsal");
     expect(sql).not.toContain("email");
     expect(sql).not.toContain("title");
     expect(sql).not.toContain("body");
@@ -80,9 +83,13 @@ describe("pilot cohort decision repository privacy contracts", () => {
     expect(readout.decision.recommendation).toBe("insufficient_data");
     expect(readout.decision.dataGaps.length).toBeGreaterThan(0);
     expect(readout.cohort.writeEligibleGardeners).toBe(0);
+    expect(readout.cohort.founderRehearsalGardeners).toBe(0);
     expect(readout.cohort.segments).toEqual([]);
     expect(
       readout.caveats.some((note) => note.includes("decision support")),
+    ).toBe(true);
+    expect(
+      readout.caveats.some((note) => note.includes("Founder rehearsal")),
     ).toBe(true);
 
     expect(Object.keys(readout.interviews)).toEqual([

@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createHmac } from "node:crypto";
 
 import {
+  FOUNDER_REHEARSAL_COHORT,
   DEFAULT_PILOT_INVITE_COHORT,
   DEV_PILOT_INVITE_SECRET,
+  getPilotInviteCohortLabel,
   isPilotInviteCohort,
   isUsingDevPilotInviteSecret,
   signPilotInviteToken,
@@ -46,6 +48,26 @@ describe("pilot invite token contract", () => {
     expect(decoded).not.toMatch(
       /email|phone|name|ip|referrer|url|http|@|token/i,
     );
+  });
+
+  it("signs and verifies a founder rehearsal token without changing the default cohort", () => {
+    const token = signPilotInviteToken({
+      cohort: FOUNDER_REHEARSAL_COHORT,
+      now: NOW,
+      secret: SECRET,
+      segment: "unknown_segment",
+    });
+
+    const verified = verifyPilotInviteToken(token, {
+      now: NOW,
+      secret: SECRET,
+    });
+
+    expect(verified).toMatchObject({
+      cohort: FOUNDER_REHEARSAL_COHORT,
+      segment: "unknown_segment",
+    });
+    expect(DEFAULT_PILOT_INVITE_COHORT).toBe("closed_pilot");
   });
 
   it("rejects a token signed with a different secret", () => {
@@ -126,10 +148,18 @@ describe("pilot invite token contract", () => {
     ).toBeNull();
   });
 
-  it("recognizes the closed_pilot cohort and rejects unknown cohorts", () => {
+  it("recognizes bounded pilot cohorts and rejects unknown cohorts", () => {
     expect(isPilotInviteCohort("closed_pilot")).toBe(true);
+    expect(isPilotInviteCohort("founder_rehearsal")).toBe(true);
     expect(isPilotInviteCohort("open_pilot")).toBe(false);
     expect(isPilotInviteCohort(undefined)).toBe(false);
+  });
+
+  it("labels cohorts for operator surfaces without leaking invite data", () => {
+    expect(getPilotInviteCohortLabel("closed_pilot")).toBe("Closed pilot");
+    expect(getPilotInviteCohortLabel("founder_rehearsal")).toBe(
+      "Founder rehearsal",
+    );
   });
 
   it("flags when the insecure development fallback secret would be used", () => {

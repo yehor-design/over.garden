@@ -91,15 +91,27 @@ export default async function PilotHealthPage() {
                 Closed-pilot write access
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Distinguishes invited gardeners who can write from non-invited
-                visitors who may still read public pages. Counts durable grant
-                rows only; no invite links, tokens, or recipient identity.
+                Distinguishes real closed-pilot writers from founder rehearsal
+                runs and non-invited visitors who may still read public pages.
+                Counts durable grant rows only; no invite links, tokens, or
+                recipient identity.
               </p>
             </div>
-            <MetricTile
-              label="Write-eligible gardeners"
-              value={readout.writeAccess.writeEligibleGardeners}
-            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <MetricTile
+                label="Closed-pilot writers"
+                value={readout.writeAccess.writeEligibleGardeners}
+              />
+              <MetricTile
+                label="Founder rehearsal"
+                value={readout.writeAccess.founderRehearsalGardeners}
+              />
+            </div>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Founder rehearsal grants can exercise the full product path
+              internally, but they are excluded from OVE-53 closed-pilot H1
+              decision metrics.
+            </p>
           </section>
 
           <section className="grid gap-4 rounded-lg border border-border p-4">
@@ -329,8 +341,9 @@ function WindowPanel({
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
           Closed-pilot H1 loop: an invited gardener saves a first entry and
-          returns for a same-object follow-up. Membership is the enum-only
-          `invited_cohort` source, never invite links, names, or emails.
+          returns for a same-object follow-up. Membership requires a
+          `closed_pilot` grant plus the enum-only `invited_cohort` source, never
+          invite links, names, or emails.
         </p>
       </div>
 

@@ -711,14 +711,15 @@ create unique index if not exists job_queue_idempotency_key_uidx
 create index if not exists job_queue_claim_idx
   on job_queue (queue_name, status, available_at, created_at);
 
--- Closed-pilot write eligibility (OVE-42, OVE-52). One persistent grant per
+-- Closed-pilot write eligibility (OVE-42, OVE-52, OVE-54). One persistent grant per
 -- user that proves invited write access. It stores ONLY the user id, enum
 -- cohort, enum pilot segment, and timestamps: never the invite link, token,
 -- email, phone, referrer, IP, user agent, or query string. Cohort membership
--- and segment decision support stay enum-only.
+-- and segment decision support stay enum-only. Founder rehearsal grants can
+-- exercise the path internally but must stay excluded from real pilot decisions.
 create table if not exists pilot_invite_grants (
   user_id uuid primary key,
-  cohort text not null default 'closed_pilot' check (cohort in ('closed_pilot')),
+  cohort text not null default 'closed_pilot' check (cohort in ('closed_pilot', 'founder_rehearsal')),
   segment text not null default 'unknown_segment' check (
     segment in (
       'casual_micro_grower',
@@ -740,6 +741,26 @@ create table if not exists pilot_invite_grants (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table pilot_invite_grants
+  add column if not exists cohort text not null default 'closed_pilot';
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'pilot_invite_grants_cohort_check'
+      and conrelid = 'pilot_invite_grants'::regclass
+  ) then
+    alter table pilot_invite_grants
+      drop constraint pilot_invite_grants_cohort_check;
+  end if;
+
+  alter table pilot_invite_grants
+    add constraint pilot_invite_grants_cohort_check
+    check (cohort in ('closed_pilot', 'founder_rehearsal'));
+end $$;
 
 alter table pilot_invite_grants
   add column if not exists segment text not null default 'unknown_segment';
@@ -783,6 +804,9 @@ create index if not exists pilot_invite_grants_granted_idx
 create index if not exists pilot_invite_grants_segment_granted_idx
   on pilot_invite_grants (segment, granted_at desc);
 
+create index if not exists pilot_invite_grants_cohort_segment_granted_idx
+  on pilot_invite_grants (cohort, segment, granted_at desc);
+
 -- Founder interview capture (OVE-45). Operator-only structured pilot learnings.
 -- Stores bounded enum fields and an optional short redacted note. Never journal
 -- text, media keys, contact details, request metadata, or raw transcripts.
@@ -790,7 +814,7 @@ create table if not exists pilot_interview_learnings (
   id uuid primary key default gen_random_uuid(),
   recorded_by_user_id uuid not null,
   subject_user_id uuid,
-  pilot_cohort text check (pilot_cohort is null or pilot_cohort in ('closed_pilot')),
+  pilot_cohort text check (pilot_cohort is null or pilot_cohort in ('closed_pilot', 'founder_rehearsal')),
   segment text not null check (
     segment in (
       'casual_micro_grower',
@@ -875,6 +899,23 @@ create table if not exists pilot_interview_learnings (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'pilot_interview_learnings_pilot_cohort_check'
+      and conrelid = 'pilot_interview_learnings'::regclass
+  ) then
+    alter table pilot_interview_learnings
+      drop constraint pilot_interview_learnings_pilot_cohort_check;
+  end if;
+
+  alter table pilot_interview_learnings
+    add constraint pilot_interview_learnings_pilot_cohort_check
+    check (pilot_cohort is null or pilot_cohort in ('closed_pilot', 'founder_rehearsal'));
+end $$;
 
 create index if not exists pilot_interview_learnings_segment_recorded_idx
   on pilot_interview_learnings (segment, recorded_at desc);

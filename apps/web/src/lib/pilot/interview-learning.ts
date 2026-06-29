@@ -8,7 +8,9 @@ import type {
 } from "@/db/schema";
 import {
   DEFAULT_PILOT_INVITE_COHORT,
+  getPilotInviteCohortLabel,
   isPilotInviteCohort,
+  PILOT_INVITE_COHORTS,
   type PilotInviteCohort,
 } from "@/lib/garden/pilot-invite";
 import {
@@ -18,6 +20,16 @@ import {
 } from "@/lib/pilot/segments";
 
 export const MAX_REDACTED_NOTE_LENGTH = 280;
+
+export const PILOT_INTERVIEW_COHORT_OPTIONS = PILOT_INVITE_COHORTS.map(
+  (cohort) => ({
+    value: cohort,
+    label: getPilotInviteCohortLabel(cohort),
+  }),
+) satisfies ReadonlyArray<{
+  value: PilotInviteCohort;
+  label: string;
+}>;
 
 export const PILOT_INTERVIEW_SEGMENT_OPTIONS = PILOT_SEGMENT_OPTIONS;
 
