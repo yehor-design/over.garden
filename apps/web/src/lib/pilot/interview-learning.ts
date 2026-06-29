@@ -467,10 +467,30 @@ export function getPilotInterviewSegmentLabel(segment: PilotInterviewSegment) {
 }
 
 export function getPilotInterviewActivationResultLabel(
-  value: PilotInterviewActivationResult,
+  value: PilotInterviewActivationResult | string,
 ) {
   return (
     PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS.find(
+      (option) => option.value === value,
+    )?.label ?? value
+  );
+}
+
+export function getPilotInterviewObservedValueLabel(
+  value: PilotInterviewObservedValue | string,
+) {
+  return (
+    PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS.find(
+      (option) => option.value === value,
+    )?.label ?? value
+  );
+}
+
+export function getPilotInterviewNextActionLabel(
+  value: PilotInterviewNextAction | string,
+) {
+  return (
+    PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.find(
       (option) => option.value === value,
     )?.label ?? value
   );

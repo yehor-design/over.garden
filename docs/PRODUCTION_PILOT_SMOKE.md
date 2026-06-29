@@ -250,7 +250,7 @@ Run against the selected pilot URL. Record only enum class, aggregate counts, ro
 
 ### Decision criteria (continue / iterate / stop)
 
-These are provisional closed-pilot calibrators, not validated OverGarden targets. Ground them in `docs/product-research/OverGarden_B2_METRICS_v0.md` (NSM/H1) and `docs/product-research/KILL_CRITERIA_PREREG_v2.md` (Flag Ж / pre-registered go/no-go). The closed cohort is the denominator: read rates against invited gardeners who actually started.
+These are provisional closed-pilot calibrators, not validated OverGarden targets. Ground them in `docs/product-research/OverGarden_B2_METRICS_v0.md` (NSM/H1) and `docs/product-research/KILL_CRITERIA_PREREG_v2.md` (Flag Ж / pre-registered go/no-go). The closed cohort is the denominator: read rates against invited gardeners who actually started. Operators can read the combined behavioral + interview + value-pulse frame without SQL at `/garden/pilot-learning/decision`.
 
 - NSM/H1 for this loop = an invited gardener with >= 2 dated entries on the same object plus a return visit. The pilot-health "returning gardeners" count is the cohort-scoped proxy for that loop.
 - Continue: a clear majority of invited gardeners who start also save a first entry, and a meaningful share return for a same-object follow-up within the first weeks (provisional calibrator: first-save rate among starts at or above roughly two-thirds, and returning gardeners at or above roughly 30% of first savers). The loop is real and worth widening the invite.

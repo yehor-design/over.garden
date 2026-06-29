@@ -1,0 +1,214 @@
+import "server-only";
+
+import { sql, type Kysely, type Transaction } from "kysely";
+
+import { db } from "@/db";
+import type { Database } from "@/db/schema";
+import {
+  evaluatePilotCohortDecision,
+  summarizePilotInterviewAggregates,
+  type PilotCohortDecisionEvaluation,
+  type PilotCohortInterviewAggregates,
+} from "@/server/pilot-cohort-decision";
+import {
+  getPilotHealthReadout,
+  PILOT_HEALTH_RESEARCH_REFERENCES,
+  type PilotFollowUpValuePulseMetrics,
+  type PilotHealthReadout,
+} from "@/server/pilot-health-repository";
+
+type QueryExecutor = Kysely<Database> | Transaction<Database>;
+
+const DECISION_WINDOW_KEY = "last_30_days" as const;
+
+export interface PilotCohortDecisionReadout {
+  generatedAt: Date;
+  evaluationWindow: {
+    key: typeof DECISION_WINDOW_KEY;
+    label: string;
+    since: Date;
+  };
+  cohort: {
+    writeEligibleGardeners: number;
+    inviteStarts: number;
+    firstEntrySaves: number;
+    firstEntrySaveRate: number;
+    sameObjectFollowUps: number;
+    returningGardeners: number;
+    followUpRateAmongFirstSavers: number;
+  };
+  productSignals: {
+    photoUsageRate: number;
+    publishRate: number;
+    publishedEntries: number;
+    offlineQueued: number;
+    offlineSynced: number;
+    offlineFailedObservability: "client_only_not_server_observable";
+  };
+  valuePulse: PilotFollowUpValuePulseMetrics;
+  interviews: PilotCohortInterviewAggregates;
+  decision: PilotCohortDecisionEvaluation;
+  caveats: string[];
+  references: typeof PILOT_HEALTH_RESEARCH_REFERENCES;
+}
+
+interface InterviewAggregateRow {
+  activationResult: string;
+  nextAction: string;
+  observedValue: string;
+  recordCount: number | string | bigint | null;
+}
+
+export async function getPilotCohortDecisionReadout(
+  executor: QueryExecutor = db,
+  now = new Date(),
+): Promise<PilotCohortDecisionReadout> {
+  const [healthReadout, interviewRows] = await Promise.all([
+    getPilotHealthReadout(executor, now),
+    buildPilotInterviewLearningAggregateQuery(executor).execute(),
+  ]);
+
+  return assemblePilotCohortDecisionReadout(healthReadout, interviewRows, now);
+}
+
+export async function getPilotCohortDecisionReadoutSafely(
+  options: {
+    reader?: () => Promise<PilotCohortDecisionReadout>;
+    logger?: Pick<Console, "error">;
+  } = {},
+): Promise<PilotCohortDecisionReadout | null> {
+  const reader = options.reader ?? (() => getPilotCohortDecisionReadout());
+  const logger = options.logger ?? console;
+
+  try {
+    return await reader();
+  } catch (error) {
+    logger.error("Pilot cohort decision readout failed.", {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown pilot cohort decision error.",
+    });
+    return null;
+  }
+}
+
+export function buildPilotInterviewLearningAggregateQuery(
+  executor: QueryExecutor,
+) {
+  return executor
+    .selectFrom("pilot_interview_learnings")
+    .select([
+      "activation_result as activationResult",
+      "next_action as nextAction",
+      "observed_value as observedValue",
+      sql<number>`count(*)`.as("recordCount"),
+    ])
+    .groupBy([
+      "activation_result",
+      "next_action",
+      "observed_value",
+    ])
+    .orderBy("activation_result", "asc")
+    .orderBy("next_action", "asc")
+    .orderBy("observed_value", "asc");
+}
+
+export function assemblePilotCohortDecisionReadout(
+  healthReadout: PilotHealthReadout,
+  interviewRows: InterviewAggregateRow[],
+  now = new Date(),
+): PilotCohortDecisionReadout {
+  const window =
+    healthReadout.windows.find((candidate) => candidate.key === DECISION_WINDOW_KEY) ??
+    healthReadout.windows[healthReadout.windows.length - 1]!;
+  const metrics = window.metrics;
+  const interviews = flattenInterviewAggregateRows(interviewRows);
+  const followUpRateAmongFirstSavers = safeRate(
+    metrics.invitedCohort.returningGardeners,
+    metrics.invitedCohort.firstEntrySaves,
+  );
+
+  const decision = evaluatePilotCohortDecision({
+    writeEligibleGardeners: healthReadout.writeAccess.writeEligibleGardeners,
+    inviteStarts: metrics.invitedCohort.starts,
+    firstEntrySaves: metrics.invitedCohort.firstEntrySaves,
+    firstEntrySaveRate: metrics.invitedCohort.firstEntrySaveRate,
+    sameObjectFollowUps: metrics.invitedCohort.sameObjectFollowUpEntries,
+    returningGardeners: metrics.invitedCohort.returningGardeners,
+    photoUsageRate: metrics.photoUsageRate,
+    publishRate: metrics.publishRate,
+    publishedEntries: metrics.publishedEntries,
+    offlineQueued: metrics.offlineQueued,
+    offlineSynced: metrics.offlineSynced,
+    valuePulse: metrics.followUpValuePulse,
+    interviews,
+  });
+
+  return {
+    generatedAt: now,
+    evaluationWindow: {
+      key: DECISION_WINDOW_KEY,
+      label: window.label,
+      since: window.since,
+    },
+    cohort: {
+      writeEligibleGardeners: healthReadout.writeAccess.writeEligibleGardeners,
+      inviteStarts: metrics.invitedCohort.starts,
+      firstEntrySaves: metrics.invitedCohort.firstEntrySaves,
+      firstEntrySaveRate: metrics.invitedCohort.firstEntrySaveRate,
+      sameObjectFollowUps: metrics.invitedCohort.sameObjectFollowUpEntries,
+      returningGardeners: metrics.invitedCohort.returningGardeners,
+      followUpRateAmongFirstSavers,
+    },
+    productSignals: {
+      photoUsageRate: metrics.photoUsageRate,
+      publishRate: metrics.publishRate,
+      publishedEntries: metrics.publishedEntries,
+      offlineQueued: metrics.offlineQueued,
+      offlineSynced: metrics.offlineSynced,
+      offlineFailedObservability: metrics.offlineFailed.observability,
+    },
+    valuePulse: metrics.followUpValuePulse,
+    interviews,
+    decision,
+    caveats: [
+      "This panel is decision support, not an automated strategy engine.",
+      "All numbers are provisional closed-pilot calibrators grounded in OverGarden_B2_METRICS_v0.md and KILL_CRITERIA_PREREG_v2.md — not statistically validated targets.",
+      "Behavioral rates use the invited-cohort enum source only; they never expose journal text, invite identity, email, media keys, IP, user agent, referrer, or raw URLs.",
+      "Interview categories are bounded enum aggregates; redacted notes and subject identifiers stay out of this readout.",
+      "Offline failed mutations remain browser-local Dexie state and are not server-observable.",
+      "Founder judgment still required: reconcile behavioral rates, value pulse, and interview categories before changing recruiting posture.",
+    ],
+    references: healthReadout.references,
+  };
+}
+
+function flattenInterviewAggregateRows(
+  rows: InterviewAggregateRow[],
+): PilotCohortInterviewAggregates {
+  const flattened = rows.flatMap((row) =>
+    Array.from({ length: toNumber(row.recordCount) }, () => ({
+      activationResult: row.activationResult,
+      nextAction: row.nextAction,
+      observedValue: row.observedValue,
+    })),
+  );
+
+  return summarizePilotInterviewAggregates(flattened);
+}
+
+function safeRate(numerator: number, denominator: number) {
+  if (denominator <= 0) return 0;
+  return numerator / denominator;
+}
+
+function toNumber(value: number | string | bigint | null | undefined) {
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+}
