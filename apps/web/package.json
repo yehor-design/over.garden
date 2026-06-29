@@ -16,7 +16,8 @@
     "db:types:check": "tsx scripts/check-generated-types.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "local:bootstrap": "tsx scripts/bootstrap-local.ts"
+    "local:bootstrap": "tsx scripts/bootstrap-local.ts",
+    "pilot:invite": "tsx scripts/generate-pilot-invite.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",

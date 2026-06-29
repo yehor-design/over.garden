@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Leaf, Lock, NotebookPen } from "lucide-react";
+import { ArrowRight, Leaf, Lock, MailWarning, NotebookPen } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { gardenFirstEntryInvitePath } from "@/lib/garden/public-paths";
+import { verifyPilotInviteToken } from "@/lib/garden/pilot-invite";
+import { claimPilotInviteAction } from "./actions";
 
 export const metadata: Metadata = {
   title: "Your OverGarden invite",
@@ -15,7 +16,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function JoinPage() {
+type JoinSearchParams = Record<string, string | string[] | undefined>;
+const EMPTY_JOIN_SEARCH_PARAMS: JoinSearchParams = {};
+
+interface JoinPageProps {
+  searchParams?: Promise<JoinSearchParams>;
+}
+
+export default async function JoinPage({ searchParams }: JoinPageProps) {
+  const params = await (searchParams ?? Promise.resolve(EMPTY_JOIN_SEARCH_PARAMS));
+  const token = normalizeFirstParam(params.invite);
+  const hasValidInvite = token.length > 0 && verifyPilotInviteToken(token) !== null;
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8">
       <Link href="/" className="text-sm text-muted-foreground">
@@ -35,22 +47,27 @@ export default function JoinPage() {
           same plant when something changes, so the useful details are never
           lost in chat threads again.
         </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href={gardenFirstEntryInvitePath()}
-            className={buttonVariants({ size: "lg" })}
-          >
-            <Leaf className="size-4" />
-            Open my garden
-            <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="/privacy"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
-          >
-            How your privacy is handled
-          </Link>
-        </div>
+
+        {hasValidInvite ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <form action={claimPilotInviteAction}>
+              <input type="hidden" name="invite" value={token} />
+              <button type="submit" className={buttonVariants({ size: "lg" })}>
+                <Leaf className="size-4" />
+                Open my garden
+                <ArrowRight className="size-4" />
+              </button>
+            </form>
+            <Link
+              href="/privacy"
+              className={buttonVariants({ variant: "outline", size: "lg" })}
+            >
+              How your privacy is handled
+            </Link>
+          </div>
+        ) : (
+          <InviteNeededCallout />
+        )}
       </header>
 
       <section className="grid gap-4">
@@ -100,13 +117,57 @@ export default function JoinPage() {
           nothing public here yet, no pressure to post, and no audience to
           perform for. Save your first plant note whenever it suits you.
         </p>
-        <Link
-          href={gardenFirstEntryInvitePath()}
-          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Save my first plant note
-        </Link>
+        {hasValidInvite ? (
+          <form action={claimPilotInviteAction}>
+            <input type="hidden" name="invite" value={token} />
+            <button
+              type="submit"
+              className="text-left text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Save my first plant note
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm leading-6 text-muted-foreground">
+            Writing opens once you follow a personal invitation. Until then you
+            can still read everything that’s public.
+          </p>
+        )}
       </section>
     </main>
   );
+}
+
+function InviteNeededCallout() {
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
+      <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <MailWarning className="size-4" />
+        This invitation link isn’t active.
+      </p>
+      <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+        Your personal invitation may have expired or the link is incomplete. Ask
+        whoever invited you for a fresh link. You can still explore everything
+        that’s public in the meantime.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/" className={buttonVariants({ size: "lg" })}>
+          <Leaf className="size-4" />
+          Explore what’s public
+          <ArrowRight className="size-4" />
+        </Link>
+        <Link
+          href="/privacy"
+          className={buttonVariants({ variant: "outline", size: "lg" })}
+        >
+          How your privacy is handled
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function normalizeFirstParam(value: string | string[] | undefined): string {
+  if (Array.isArray(value)) return value[0]?.trim() ?? "";
+  return typeof value === "string" ? value.trim() : "";
 }

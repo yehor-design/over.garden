@@ -5,6 +5,8 @@ import { vercelUrl } from "@/lib/runtime-url";
 import { parseCatalogCuratorUserIds } from "@/server/catalog-curator-auth";
 import { pingDatabase } from "@/server/health-repository";
 
+const PILOT_INVITE_SIGNING_SECRET_ENV = "PILOT_INVITE_SIGNING_SECRET";
+
 type EnvLike = Record<string, string | undefined>;
 
 export type PilotSmokeSeverity = "pass" | "warn" | "fail" | "manual";
@@ -108,6 +110,7 @@ export function buildPilotSmokeReadiness({
           "BETTER_AUTH_SECRET",
           "Better Auth secret",
         ),
+        checkPilotInviteSigningSecret(env),
         checkOperatorAllowlist(env),
         checkR2Configuration(env),
         checkRequiredSecretPresence(
@@ -555,6 +558,31 @@ function checkRequiredUrlPresence(
       ? `${name} points at a local service; deployed smoke needs the production service.`
       : `${name} is configured.`,
     evidence,
+  };
+}
+
+function checkPilotInviteSigningSecret(env: EnvLike): PilotSmokeCheck {
+  const secret = env[PILOT_INVITE_SIGNING_SECRET_ENV];
+  const deployed = isHttpsUrl(publicSmokeOrigin(env));
+
+  if (!isConfigured(secret)) {
+    return {
+      id: "pilot-invite-signing-secret",
+      label: "Pilot invite signing secret",
+      severity: deployed ? "fail" : "warn",
+      summary: `${PILOT_INVITE_SIGNING_SECRET_ENV} is missing; invite links would use the insecure dev fallback.`,
+      evidence:
+        "Set a strong secret in Vercel before sharing production invite links. Generate URLs with `pnpm pilot:invite` from apps/web. Never commit secrets or printed links.",
+    };
+  }
+
+  return {
+    id: "pilot-invite-signing-secret",
+    label: "Pilot invite signing secret",
+    severity: "pass",
+    summary: `${PILOT_INVITE_SIGNING_SECRET_ENV} is configured.`,
+    evidence:
+      "Founder generates invite URLs with `pnpm pilot:invite`. Evidence may say present only; never copy the secret or printed links.",
   };
 }
 

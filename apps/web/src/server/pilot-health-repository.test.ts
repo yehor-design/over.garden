@@ -187,6 +187,7 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(
       readout.notes.some((note) => note.includes("Invited-cohort")),
     ).toBe(true);
+    expect(readout.writeAccess).toEqual({ writeEligibleGardeners: 0 });
   });
 
   it("returns null instead of throwing when the readout query fails", async () => {

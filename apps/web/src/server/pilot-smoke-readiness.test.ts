@@ -27,6 +27,7 @@ const productionLikeEnv = {
   MEILISEARCH_API_KEY: "meili-secret-that-must-not-leak",
   MATCHING_SERVICE_URL: "https://matching.example.com",
   MATCHING_SERVICE_TOKEN: "matching-token-that-must-not-leak",
+  PILOT_INVITE_SIGNING_SECRET: "pilot-invite-secret-that-must-not-leak",
   VERCEL: "1",
   VERCEL_ENV: "production",
 };
@@ -49,6 +50,7 @@ describe("pilot smoke readiness", () => {
     expect(serialized).not.toContain("r2-secret-that-must-not-leak");
     expect(serialized).not.toContain("meili-secret-that-must-not-leak");
     expect(serialized).not.toContain("matching-token-that-must-not-leak");
+    expect(serialized).not.toContain("pilot-invite-secret-that-must-not-leak");
   });
 
   it("blocks deployed smoke when local placeholders are still configured", () => {
@@ -168,6 +170,25 @@ describe("pilot smoke readiness", () => {
       true,
     );
     expect(readout.overall).toBe("ready");
+  });
+
+  it("blocks deployed smoke when the pilot invite signing secret is missing", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        PILOT_INVITE_SIGNING_SECRET: "",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-06-29T00:00:00.000Z"),
+    });
+
+    expect(
+      findCheck(
+        readout.sections.flatMap((section) => section.checks),
+        "pilot-invite-signing-secret",
+      ),
+    ).toMatchObject({ severity: "fail" });
+    expect(readout.overall).toBe("blocked");
   });
 
   it("blocks deployed smoke when the explicit operator allowlist is missing", () => {

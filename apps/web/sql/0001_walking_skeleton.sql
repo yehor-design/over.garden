@@ -703,3 +703,18 @@ create unique index if not exists job_queue_idempotency_key_uidx
 
 create index if not exists job_queue_claim_idx
   on job_queue (queue_name, status, available_at, created_at);
+
+-- Closed-pilot write eligibility (OVE-42). One persistent grant per user that
+-- proves invited write access. It stores ONLY the user id, an enum cohort, and
+-- timestamps: never the invite link, token, email, phone, referrer, IP, user
+-- agent, or query string. Cohort membership for analytics stays enum-only.
+create table if not exists pilot_invite_grants (
+  user_id uuid primary key,
+  cohort text not null default 'closed_pilot' check (cohort in ('closed_pilot')),
+  granted_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists pilot_invite_grants_granted_idx
+  on pilot_invite_grants (granted_at desc);

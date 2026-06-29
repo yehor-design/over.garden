@@ -10,7 +10,9 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import { listMyPlantObjects } from "@/server/journal-repository";
+import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
+import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 
@@ -34,6 +36,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  const writeAccess = scope
+    ? await resolvePilotWriteAccess(scope)
+    : { invited: false };
   const objects = scope ? await listMyPlantObjects(scope, 12) : [];
   const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
@@ -79,6 +84,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       ) : null}
 
       {userId ? (
+        writeAccess.invited ? (
         <div className="grid gap-6 lg:grid-cols-3">
           {hasObjects ? (
             <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
@@ -177,6 +183,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             )}
           </aside>
         </div>
+        ) : (
+          <ClosedPilotWriteCallout />
+        )
       ) : null}
     </main>
   );

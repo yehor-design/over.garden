@@ -22,11 +22,12 @@ import {
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
+import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 import { enqueueJob } from "@/server/queue";
 import { scopedToUser } from "@/server/request-scope";
 
 export async function createPlantObjectJournalEntryAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const scope = await requireWriteEligibleRequestScope();
   const objectId = String(formData.get("objectId") ?? "");
   const result = await createPlantObjectJournalEntry(scope, {
     plantObjectId: objectId,

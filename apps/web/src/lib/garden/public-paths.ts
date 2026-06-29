@@ -14,6 +14,16 @@ export function gardenFirstEntryInvitePath(): string {
   return "/garden?source=invited-cohort";
 }
 
+export function pilotInviteJoinPath(token: string): string {
+  const params = new URLSearchParams({ invite: token });
+  return `/join?${params.toString()}`;
+}
+
+export function pilotInviteJoinUrl(token: string, baseUrl: string): string {
+  const normalizedBase = baseUrl.replace(/\/$/, "");
+  return `${normalizedBase}${pilotInviteJoinPath(token)}`;
+}
+
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,

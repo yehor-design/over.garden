@@ -4,6 +4,8 @@ import {
   gardenFirstEntryHomepagePath,
   gardenFirstEntryInvitePath,
   gardenFirstEntryPreselectionPath,
+  pilotInviteJoinPath,
+  pilotInviteJoinUrl,
 } from "./public-paths";
 
 describe("garden public paths", () => {
@@ -30,5 +32,20 @@ describe("garden public paths", () => {
     expect(path).not.toContain("referrer");
     expect(path).not.toContain("display");
     expect(path).not.toContain("title");
+  });
+
+  it("builds a join invite path with only the signed token query param", () => {
+    const token = "v1.payload.signature";
+    const path = pilotInviteJoinPath(token);
+
+    expect(path).toBe(`/join?invite=${encodeURIComponent(token)}`);
+    expect(path).not.toContain("email");
+    expect(path).not.toContain("referrer");
+  });
+
+  it("builds a full invite URL from a base origin and token", () => {
+    const url = pilotInviteJoinUrl("v1.payload.signature", "https://over.garden");
+
+    expect(url).toBe("https://over.garden/join?invite=v1.payload.signature");
   });
 });

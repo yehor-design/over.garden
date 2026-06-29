@@ -266,5 +266,6 @@ export function poisonOperatorEnv(): Record<string, string> {
     MEILISEARCH_API_KEY: POISON.meilisearchApiKey,
     MATCHING_SERVICE_URL: "https://match.over.garden",
     MATCHING_SERVICE_TOKEN: POISON.matchingServiceToken,
+    PILOT_INVITE_SIGNING_SECRET: POISON.betterAuthSecret,
   };
 }

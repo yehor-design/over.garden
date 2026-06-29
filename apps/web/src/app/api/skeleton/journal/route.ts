@@ -1,6 +1,10 @@
 import { createJournalEntry, listMyRecentJournalEntries } from "@/server/journal-repository";
 import { enqueueJob } from "@/server/queue";
 import { requireCurrentUserId } from "@/server/auth-session";
+import {
+  PilotWriteAccessError,
+  requireWriteEligibleRequestScope,
+} from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 
 export const runtime = "nodejs";
@@ -12,8 +16,19 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentUserId();
-  const scope = scopedToUser(userId);
+  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
+  try {
+    scope = await requireWriteEligibleRequestScope();
+  } catch (error) {
+    if (error instanceof PilotWriteAccessError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
+    return Response.json(
+      { error: "Sign in to save an entry." },
+      { status: 401 },
+    );
+  }
+
   const input = (await request.json()) as {
     body?: string;
     visibility?: "private" | "public";

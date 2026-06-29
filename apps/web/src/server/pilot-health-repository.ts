@@ -8,6 +8,7 @@ import {
   evaluatePublicVarietyIndexState,
   PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
 } from "@/server/public-variety-indexing";
+import { countPilotWriteEligibleGardeners } from "@/server/pilot-invite-repository";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -42,8 +43,13 @@ export interface PilotHealthReadout {
   generatedAt: Date;
   windows: PilotHealthWindow[];
   publicVarietyIndexability: PilotPublicVarietyHealth;
+  writeAccess: PilotWriteAccessHealth;
   notes: string[];
   references: typeof PILOT_HEALTH_RESEARCH_REFERENCES;
+}
+
+export interface PilotWriteAccessHealth {
+  writeEligibleGardeners: number;
 }
 
 export interface PilotHealthWindow {
@@ -156,6 +162,7 @@ export async function getPilotHealthReadout(
     analyticsMetricRows,
     publicVarietyRows,
     archivedPublicVarietyRows,
+    writeEligibleGardeners,
   ] = await Promise.all([
     Promise.all(
       windowDefinitions.map((window) =>
@@ -172,6 +179,7 @@ export async function getPilotHealthReadout(
     ),
     buildPilotPublicVarietyHealthRowsQuery(executor).execute(),
     buildArchivedOrGonePublicVarietyRowsQuery(executor).execute(),
+    countPilotWriteEligibleGardeners(executor),
   ]);
 
   return {
@@ -187,11 +195,15 @@ export async function getPilotHealthReadout(
       publicVarietyRows,
       archivedPublicVarietyRows,
     ),
+    writeAccess: {
+      writeEligibleGardeners,
+    },
     notes: [
       "All numbers are provisional pilot leading indicators, not validated OverGarden targets.",
       "Offline failed mutations are currently browser-local Dexie state and are not yet server-observable.",
       "H6 indexability shows thinness trajectory; it is not the same as organic acquisition or signup conversion.",
       "Invited-cohort counts are the closed-pilot H1 loop: invite start, first-entry save, and a same-object follow-up return. Cohort membership is derived from the enum-only invited_cohort activation source, never from names, emails, or invite links.",
+      "Write-eligible gardeners are users with a durable pilot_invite_grants row. Direct/homepage/public-variety starts without a grant indicate non-invited write attempts that should not produce pilot data.",
     ],
     references: PILOT_HEALTH_RESEARCH_REFERENCES,
   };

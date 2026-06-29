@@ -20,7 +20,11 @@ import {
   recordAnalyticsEventSafely,
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  PilotWriteAccessError,
+  requireWriteEligibleRequestScope,
+} from "@/server/pilot-write-access";
+import type { RequestScope } from "@/server/request-scope";
 import {
   createFirstPlantEntry,
   createPlantObjectJournalEntry,
@@ -29,7 +33,19 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const scope = await requireCurrentRequestScope();
+  let scope: RequestScope;
+  try {
+    scope = await requireWriteEligibleRequestScope();
+  } catch (error) {
+    if (error instanceof PilotWriteAccessError) {
+      return Response.json({ error: error.message }, { status: 403 });
+    }
+    return Response.json(
+      { error: "Sign in to save an entry." },
+      { status: 401 },
+    );
+  }
+
   const body = (await request
     .json()
     .catch(() => null)) as Partial<FirstPlantEntryRequest> | null;
@@ -143,7 +159,7 @@ function normalizeTarget(target: unknown, plantObjectId: unknown) {
 }
 
 async function recordFirstPlantEntryEvents(
-  scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
+  scope: RequestScope,
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
   syncStatus: EntrySyncStatus,
   activationSource: ActivationSource | null,
@@ -227,7 +243,7 @@ async function recordFirstPlantEntryEvents(
 }
 
 async function recordPlantObjectEntryEvents(
-  scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>,
+  scope: RequestScope,
   result: Awaited<ReturnType<typeof createPlantObjectJournalEntry>>,
   syncStatus: EntrySyncStatus,
 ) {

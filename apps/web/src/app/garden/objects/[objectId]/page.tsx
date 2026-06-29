@@ -13,11 +13,10 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
-import {
-  getPlantObjectPage,
-  type PlantObjectPage,
-} from "@/server/journal-repository";
+import { getPlantObjectPage, type PlantObjectPage } from "@/server/journal-repository";
+import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
+import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
@@ -59,6 +58,7 @@ export default async function PlantObjectReadbackPage({
   }
 
   const scope = scopedToUser(userId, getSessionId(session));
+  const writeAccess = await resolvePilotWriteAccess(scope);
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   await recordOwnRecordRevisited(scope, page);
@@ -125,11 +125,15 @@ export default async function PlantObjectReadbackPage({
           </p>
         </div>
 
-        <FollowUpEntryComposer
-          objectId={objectId}
-          today={today}
-          initialClientMutationId={crypto.randomUUID()}
-        />
+        {writeAccess.invited ? (
+          <FollowUpEntryComposer
+            objectId={objectId}
+            today={today}
+            initialClientMutationId={crypto.randomUUID()}
+          />
+        ) : (
+          <ClosedPilotWriteCallout context="follow-up" />
+        )}
       </section>
 
       <section className="flex flex-col gap-4">

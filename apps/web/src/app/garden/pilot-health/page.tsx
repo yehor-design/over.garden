@@ -88,6 +88,23 @@ export default async function PilotHealthPage() {
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
+                Closed-pilot write access
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Distinguishes invited gardeners who can write from non-invited
+                visitors who may still read public pages. Counts durable grant
+                rows only; no invite links, tokens, or recipient identity.
+              </p>
+            </div>
+            <MetricTile
+              label="Write-eligible gardeners"
+              value={readout.writeAccess.writeEligibleGardeners}
+            />
+          </section>
+
+          <section className="grid gap-4 rounded-lg border border-border p-4">
+            <div className="grid gap-1">
+              <h2 className="text-lg font-semibold text-foreground">
                 Public variety indexability
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">

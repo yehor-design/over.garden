@@ -266,6 +266,36 @@ Do not treat the closed-cohort loop as complete if any of the following are true
 - Pilot-health invited-cohort counts depend on raw journal text, invite identity, or any per-person attribution rather than the enum source plus aggregate membership.
 - The decision criteria are presented as validated targets rather than provisional calibrators grounded in the metrics and kill-criteria research.
 
+## OVE-42 Invite-Gated Closed Pilot Writes
+
+Goal: only invited gardeners can write pilot journal data. Non-invited visitors can still read public pages, but cannot accidentally create account-driven pilot data through `/garden` write paths.
+
+### What landed
+
+- Signed HMAC invite tokens (`pilot-invite.ts`) carry only an enum cohort plus issued/expiry seconds. No email, phone, name, IP, referrer, URL, or query string is encoded.
+- `/join?invite=<token>` validates the token server-side, sets an HTTP-only eligibility cookie, and redirects to `/garden?source=invited-cohort` with enum-only attribution.
+- `pilot_invite_grants` stores one durable row per user (`user_id`, enum `cohort`, timestamps). No invite link, token, or recipient identity is persisted.
+- Write paths (`/api/garden/entries`, follow-up actions, skeleton write routes) require `requireWriteEligibleRequestScope()`: authenticated plus invited grant or valid eligibility cookie that materializes the grant on first write.
+- Non-invited signed-in gardeners see a calm closed-pilot callout on `/garden` and object follow-up surfaces instead of broken composers.
+- `/garden/pilot-health` shows write-eligible gardener count from grant rows, separate from direct/homepage/public-variety starts that may be non-invited.
+
+### Founder invite workflow (no secrets in git or Linear)
+
+1. Set `PILOT_INVITE_SIGNING_SECRET` in Vercel production (and locally in `.env.local` for dev links). Use `openssl rand -base64 32` or equivalent; never commit the value.
+2. From `apps/web`, run `pnpm pilot:invite` (optional: `--base-url https://over-garden.vercel.app --ttl-days 14`).
+3. Share the printed `/join?invite=...` URL privately with one gardener. Do not paste invite URLs into Linear, git, analytics, or public channels.
+4. The gardener opens the link, claims the invite, signs in, and writes through the existing `/garden` first-entry and follow-up flows.
+5. Confirm `/garden/pilot-smoke` reports `PILOT_INVITE_SIGNING_SECRET` as configured before inviting on production.
+
+### OVE-42 Done gate
+
+Do not treat invite-gated writes as complete if any of the following are true:
+
+- Non-invited signed-in users can save first or follow-up journal entries through UI or API.
+- Public read routes are blocked unintentionally.
+- Invitation evidence stores raw invite URLs, tokens, referrers, emails, or query strings in analytics or grant tables.
+- Production invite links are signed with the dev fallback secret (`pilot-smoke` must fail the signing-secret check on deployed URLs).
+
 ## Product Assumption
 
 The live pilot must measure user behavior, not deployment fragility. The smoke proves that a real pilot user can traverse the deployed product path while privacy-critical boundaries hold:

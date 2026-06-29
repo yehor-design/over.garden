@@ -150,6 +150,14 @@ export interface MediaAssets {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PilotInviteGrants {
+  cohort: Generated<string>;
+  created_at: Generated<Timestamp>;
+  granted_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface PlantObjects {
   catalog_item_id: string | null;
   coarse_region_code: string | null;
@@ -228,6 +236,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   media_assets: MediaAssets;
+  pilot_invite_grants: PilotInviteGrants;
   plant_objects: PlantObjects;
   session: Session;
   spaces: Spaces;

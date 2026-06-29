@@ -11,6 +11,7 @@ import type {
   JournalEntries as JournalEntriesTable,
   JsonValue,
   MediaAssets as MediaAssetsTable,
+  PilotInviteGrants as PilotInviteGrantsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
   VarietySeedProofs as VarietySeedProofsTable,
@@ -75,6 +76,8 @@ export type JournalEntry = Selectable<JournalEntriesTable>;
 export type NewJournalEntry = Insertable<JournalEntriesTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
+export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
+export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type JobQueueJob = Selectable<JobQueueTable>;
 export type NewJobQueueJob = Insertable<JobQueueTable>;
 export type VarietySeedProof = Selectable<VarietySeedProofsTable>;
