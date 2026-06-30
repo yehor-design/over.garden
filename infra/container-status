@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/container-common"
+
+require_container_cli
+require_curl
+load_env
+
+info "Apple Container system:"
+container system status
+
+info ""
+info "OverGarden containers:"
+container list --all | grep -E "($POSTGRES_CONTAINER|$MEILI_CONTAINER|$MINIO_CONTAINER)" || true
+
+info ""
+info "OverGarden volumes:"
+container volume list | grep -E "($POSTGRES_VOLUME|$MEILI_VOLUME|$MINIO_VOLUME)" || true
+
+info ""
+failed=0
+
+if postgres_ready; then
+  info "Postgres: ready on 127.0.0.1:5432"
+else
+  info "Postgres: not ready"
+  failed=1
+fi
+
+if meili_ready; then
+  info "Meilisearch: ready on http://127.0.0.1:7700/health"
+else
+  info "Meilisearch: not ready"
+  failed=1
+fi
+
+if minio_ready; then
+  info "MinIO: ready on http://127.0.0.1:9000/minio/health/ready"
+else
+  info "MinIO: not ready"
+  failed=1
+fi
+
+exit "$failed"

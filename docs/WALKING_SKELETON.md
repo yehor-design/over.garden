@@ -7,7 +7,7 @@ This is not product UI. It is the first end-to-end proof that the selected stack
 ## What It Proves
 
 1. **Stack baseline is committed separately.** `86d902b8 Realign stack to Kysely / Better Auth & R2` is the stack realignment baseline.
-2. **Local infra works.** The original walking-skeleton proof used Docker Compose to start Postgres, Meilisearch, and MinIO. Current runtime policy is Apple Container-first for supported local Macs, with Docker Compose retained as fallback until OVE-72/OVE-77 replace the local bootstrap path. `pnpm local:bootstrap` applies app SQL, creates Better Auth tables through Better Auth's migration helper, creates R2/MinIO buckets, and applies local public-read policy to the derivative bucket.
+2. **Local infra works.** The original walking-skeleton proof used Docker Compose to start Postgres, Meilisearch, and MinIO. Current runtime policy is Apple Container-first for supported local Macs: `infra/container-up` starts the same service trio on the same local ports, with Docker Compose retained as fallback for unsupported hosts or verified feature gaps. `pnpm local:bootstrap` applies app SQL, creates Better Auth tables through Better Auth's migration helper, creates R2/MinIO buckets, and applies local public-read policy to the derivative bucket.
 3. **Better Auth round-trip works.** `/api/auth/sign-up/email` creates a user and returns `overgarden.session_token`.
 4. **Vertical journal slice works.** `/skeleton` and `/api/skeleton/journal` go through auth -> scoped repository -> Kysely -> Postgres -> queue -> SSR readback.
 5. **Media quarantine pipeline works.** `/api/media/uploads` creates a presigned quarantine upload URL; `/api/media/process` reads the quarantine object, re-encodes a metadata-stripped WebP derivative with `sharp`, writes it to the public bucket, deletes the original, and marks the row processed.
@@ -16,14 +16,13 @@ This is not product UI. It is the first end-to-end proof that the selected stack
 
 ## Commands
 
-These commands record the original local proof and remain a Docker fallback path. For new local runtime work, start from `docs/CONTAINER_RUNTIME_POLICY.md` and prefer Apple Container.
+These commands use the current Apple Container-first local runtime. Docker Compose remains documented in `infra/README.md` only as fallback.
 
 ```bash
-cd infra
-cp .env.example .env
-docker compose up -d
+infra/container-up
+infra/container-status
 
-cd ../apps/web
+cd apps/web
 cp .env.example .env.local
 pnpm install
 pnpm local:bootstrap

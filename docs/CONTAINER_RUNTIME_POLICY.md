@@ -10,11 +10,11 @@ This policy does not delete every Docker reference immediately. It classifies th
 
 | Surface | Apple Container target | Docker retained | Reason Docker may remain | Owner |
 | --- | --- | --- | --- | --- |
-| Supported local Mac development | Yes | Fallback only | Apple Container is the desired runtime for local containers after OVE-72/OVE-73 prove the path. Docker Desktop should not be required for normal local work once that proof lands. | OVE-72, OVE-73, OVE-77 |
+| Supported local Mac development | Yes | Fallback only | OVE-72 provides the Apple Container service trio start/status/down path. Docker Desktop should not be required for normal local infra work on supported Macs; OVE-73 still needs to prove the fresh-checkout web bootstrap against that path. | OVE-72, OVE-73, OVE-77 |
 | Unsupported developer machines | No | Yes | Apple Container is macOS/Apple Silicon scoped. Docker remains the practical fallback for unsupported hosts or older macOS versions. | OVE-77 |
-| Local Postgres | Yes | Temporary fallback | Current scripts still use Docker Compose until the Apple Container service start/check/bootstrap path is implemented and verified. | OVE-72 |
-| Local Meilisearch | Yes | Temporary fallback | Needed for local search/typeahead proof; migrate to Apple Container service commands before removing Docker-first instructions. | OVE-72 |
-| Local MinIO/S3 emulator | Yes | Temporary fallback | Needed for R2-compatible media development; migrate to Apple Container service commands before removing Docker-first instructions. | OVE-72 |
+| Local Postgres | Yes | Fallback only | `infra/container-up` starts Postgres on `127.0.0.1:5432` with a named Apple Container volume. Docker Compose remains for unsupported hosts or verified feature gaps. | OVE-72 |
+| Local Meilisearch | Yes | Fallback only | `infra/container-up` starts Meilisearch on `127.0.0.1:7700` with a named Apple Container volume and `infra/container-status` checks `/health`. | OVE-72 |
+| Local MinIO/S3 emulator | Yes | Fallback only | `infra/container-up` starts MinIO on `127.0.0.1:9000` and console `127.0.0.1:9001` with a named Apple Container volume and readiness check. | OVE-72 |
 | Matching image build and local worker/search smoke | Yes | Fallback only | Dockerfile syntax can remain an OCI image recipe, but the local build/run proof should use Apple Container where possible. | OVE-74 |
 | GitHub Actions Ubuntu CI | No | Yes | Apple Container is not an Ubuntu CI service-container runtime. Docker is acceptable in CI where the runner requires it. | OVE-75 |
 | Production DigitalOcean Linux worker droplet | No | Yes | Apple Container is not a Linux production process manager. Current worker/search durability depends on Docker Compose restart policy and health/recovery proof until a separate Linux deployment decision replaces it. | OVE-76 |
@@ -46,7 +46,7 @@ Use these labels when touching docs or Linear issues that still mention Docker:
 
 ## Current Migration Boundary
 
-OVE-71 changes doctrine and documentation only. It should make future work Apple Container-first, but it does not by itself prove that local Postgres, Meilisearch, MinIO, matching image builds, GitHub Actions, or the production worker droplet run without Docker.
+OVE-71 changed doctrine and documentation only. OVE-72 adds the supported-Mac Apple Container path for the local Postgres, Meilisearch, and MinIO service trio. It still does not prove the fresh-checkout web bootstrap, matching image builds, GitHub Actions, or the production worker droplet without Docker.
 
 The correct end state is not "delete every Docker file." The correct end state is:
 

@@ -31,14 +31,13 @@ User-facing issues must also run the Product Thinking Gate in `docs/product-rese
 
 ## Getting Started
 
-Apple Container is the target local runtime on supported Apple Silicon/macOS 26 machines. Until the migration scripts land, the current Docker Compose path remains the fallback bootstrap path; see `docs/CONTAINER_RUNTIME_POLICY.md` for the fallback matrix.
+Apple Container is the primary local runtime on supported Apple Silicon/macOS 26 machines. Docker Compose remains available only as a documented fallback; see `docs/CONTAINER_RUNTIME_POLICY.md` and `infra/README.md`.
 
 ```bash
-cd infra
-cp .env.example .env
-docker compose up -d
+infra/container-up
+infra/container-status
 
-cd ../apps/web
+cd apps/web
 pnpm install
 cp .env.example .env.local
 pnpm local:bootstrap

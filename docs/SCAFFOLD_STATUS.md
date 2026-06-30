@@ -18,7 +18,7 @@ OVE-54 adds a founder-only pilot rehearsal lane for periods when real external i
 
 OVE-55 adds the catalog source readiness gate for `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed`. `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` records the live go/no-go manifest for 17 source paths, `docs/product-research/CATALOG_SOURCE_READINESS.md` gives the operator-readable summary, and `pnpm catalog:sources:verify` validates the manifest plus live endpoint checks without bulk importing data or scraping vendor/marketplace paths. The approved first ingestion sources are UA State Register, CoL/ChecklistBank, WFO, GBIF Backbone, EPPO, Wikidata, GRIN, and VBO. Conditional/internal-only sources must not feed canonical projections until their blockers are closed. External occurrence/distribution coordinates remain raw/source-only and are not OverGarden user/product location data.
 
-OVE-71 establishes the Apple Container-first runtime doctrine for local containerized development. Current runtime authority is `docs/CONTAINER_RUNTIME_POLICY.md`: supported local Mac work should move Postgres, Meilisearch, MinIO, and matching smoke to Apple Container; Docker remains only as a documented fallback for unsupported hosts, temporary migration gaps, Ubuntu CI, and the current Linux production worker/search droplet.
+OVE-71 establishes the Apple Container-first runtime doctrine for local containerized development. OVE-72 adds the repo-local Apple Container service path: `infra/container-up`, `infra/container-status`, and `infra/container-down` manage local Postgres, Meilisearch, and MinIO on the same ports and env contracts as the prior Docker Compose scaffold, with named Apple Container volumes for persistence. Current runtime authority is `docs/CONTAINER_RUNTIME_POLICY.md`: supported local Mac work should use Apple Container first; Docker remains only as a documented fallback for unsupported hosts, temporary migration gaps, Ubuntu CI, and the current Linux production worker/search droplet.
 
 OVE-56 adds the first catalog source snapshot quarantine proof. The app schema now has `catalog_source_snapshots`, `catalog_source_records`, and `catalog_source_links` so a legal source payload can be stored with source/version/license/checksum/parser provenance while only an allowlisted projection reaches `catalog_items` and `catalog_item_names`. `pnpm catalog:sources:import-sample` imports the OVE-55 UA Register `Bergeron 1` sample idempotently, queues the derived typeahead reindex, proves safe typeahead from catalog tables, and proves a temporary rollback-only garden readback with `variety_state = selected`. Raw/source-only poison fields stay confined to `catalog_source_records` and are rejected from catalog typeahead/Meili hit mapping.
 
@@ -75,7 +75,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Next.js App Router + TypeScript builds successfully.
 - shadcn/ui renders inside SSR pages.
 - Better Auth route is mounted at `/api/auth/[...all]`; live sign-up returns a session cookie.
-- Kysely + `pg` connected to local Docker Postgres in the original walking-skeleton proof; current runtime policy makes Apple Container the supported-Mac target and treats Docker as fallback until OVE-72/OVE-77.
+- Kysely + `pg` connected to local Docker Postgres in the original walking-skeleton proof; current supported-Mac local infra starts Postgres through `infra/container-up`, with Docker retained as fallback.
 - Better Auth tables are created through Better Auth's migration helper during `pnpm local:bootstrap`.
 - SQL app schema creates `health`, `spaces`, `catalog_items`, `catalog_item_names`, `catalog_source_snapshots`, `catalog_source_records`, `catalog_source_links`, `plant_objects`, `journal_entries`, `analytics_events`, `media_assets`, `erasure_requests`, `variety_seed_proofs`, and `job_queue`.
 - `kysely-codegen` generated `src/db/generated.ts` from 23 live tables.
@@ -150,7 +150,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Static OVE-40 schema invariants assert the SQL schema and generated Kysely types contain no precise-location columns, keep the UA/BG coarse-region controlled vocabulary, separate quarantine vs public derivative media keys, and bound analytics properties to a jsonb object.
 - Python worker consumes the Postgres-backed queue and marks jobs `done`.
 - Worker restart/recovery is proven deterministically: stale `processing` jobs are reclaimed only after the visibility timeout, `journal_entry_index`/`journal_entry_unindex` reach `done` after a simulated restart, the public-safe document contract holds, re-delivery is idempotent, and a transient Meilisearch outage fails-then-recovers (`services/matching/tests/test_worker_recovery.py`).
-- Meilisearch Cyrillic typo proof passed against local Docker Meilisearch in the original scaffold; current local runtime work should prefer Apple Container while preserving the same `app.search` catalog-specific Cyrillic typo proof for the `catalog_typeahead` index.
+- Meilisearch Cyrillic typo proof passed against local Docker Meilisearch in the original scaffold; current supported-Mac local infra starts Meilisearch through `infra/container-up` while preserving the same `app.search` catalog-specific Cyrillic typo proof for the `catalog_typeahead` index.
 
 ## External Infra Provisioned
 
@@ -207,11 +207,12 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 
 ## Verification Commands
 
-The Docker Compose start below is a fallback command from the existing scaffold. New local runtime verification should prefer Apple Container and cite `docs/CONTAINER_RUNTIME_POLICY.md`.
+The Apple Container start below is the primary supported-Mac local runtime path. Docker Compose remains documented in `infra/README.md` only as fallback.
 
 ```bash
-cd infra && docker compose up -d
-cd ../apps/web
+infra/container-up
+infra/container-status
+cd apps/web
 pnpm mainline:closeout:check
 pnpm local:bootstrap
 pnpm db:types

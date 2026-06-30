@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/container-common"
+
+DELETE_VOLUMES=0
+if [[ "${1:-}" == "--volumes" ]]; then
+  DELETE_VOLUMES=1
+elif [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  cat <<'USAGE'
+Usage: infra/container-down [--volumes]
+
+Stops and deletes the OverGarden Apple Container service containers.
+Named volumes are preserved by default. Pass --volumes to delete local data.
+USAGE
+  exit 0
+elif [[ -n "${1:-}" ]]; then
+  fail "Unknown argument: $1"
+fi
+
+require_container_cli
+
+for name in "$POSTGRES_CONTAINER" "$MEILI_CONTAINER" "$MINIO_CONTAINER"; do
+  if container_running "$name"; then
+    info "Stopping container: $name"
+    container stop "$name" >/dev/null
+  fi
+
+  if container_exists "$name"; then
+    info "Deleting container: $name"
+    container delete "$name" >/dev/null
+  else
+    info "Container absent: $name"
+  fi
+done
+
+if (( DELETE_VOLUMES == 1 )); then
+  for volume in "$POSTGRES_VOLUME" "$MEILI_VOLUME" "$MINIO_VOLUME"; do
+    if volume_exists "$volume"; then
+      info "Deleting volume: $volume"
+      container volume delete "$volume" >/dev/null
+    else
+      info "Volume absent: $volume"
+    fi
+  done
+else
+  info "Named volumes preserved. Rerun with --volumes to delete local data."
+fi

@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/container-common"
+
+RECREATE=0
+if [[ "${1:-}" == "--recreate" ]]; then
+  RECREATE=1
+elif [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  cat <<'USAGE'
+Usage: infra/container-up [--recreate]
+
+Starts OverGarden local services with Apple Container:
+  - Postgres on 127.0.0.1:5432
+  - Meilisearch on 127.0.0.1:7700
+  - MinIO on 127.0.0.1:9000 and console on 127.0.0.1:9001
+
+Named Apple Container volumes persist data across restarts.
+USAGE
+  exit 0
+elif [[ -n "${1:-}" ]]; then
+  fail "Unknown argument: $1"
+fi
+
+require_container_cli
+require_curl
+load_env
+ensure_container_system
+
+if ps aux | grep -E '[D]ocker Desktop|[c]om\.docker' >/dev/null 2>&1; then
+  info "Warning: Docker Desktop/com.docker appears to be running, but this Apple Container path does not depend on it."
+fi
+
+for volume in "$POSTGRES_VOLUME" "$MEILI_VOLUME" "$MINIO_VOLUME"; do
+  ensure_volume "$volume"
+done
+
+recreate_if_requested() {
+  local name="$1"
+
+  if (( RECREATE == 1 )) && container_exists "$name"; then
+    info "Recreating container: $name"
+    container delete --force "$name" >/dev/null
+  fi
+}
+
+start_or_create() {
+  local name="$1"
+  shift
+
+  recreate_if_requested "$name"
+
+  if container_running "$name"; then
+    info "Container running: $name"
+  elif container_exists "$name"; then
+    info "Starting existing container: $name"
+    container start "$name" >/dev/null
+  else
+    info "Creating and starting container: $name"
+    "$@"
+  fi
+}
+
+start_or_create "$POSTGRES_CONTAINER" \
+  container run --detach \
+    --name "$POSTGRES_CONTAINER" \
+    --publish 127.0.0.1:5432:5432 \
+    --env "POSTGRES_DB=$POSTGRES_DB" \
+    --env "POSTGRES_USER=$POSTGRES_USER" \
+    --env "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
+    --env "PGDATA=/var/lib/postgresql/data/pgdata" \
+    --volume "$POSTGRES_VOLUME:/var/lib/postgresql/data" \
+    "$POSTGRES_IMAGE"
+
+start_or_create "$MEILI_CONTAINER" \
+  container run --detach \
+    --name "$MEILI_CONTAINER" \
+    --publish 127.0.0.1:7700:7700 \
+    --env "MEILI_MASTER_KEY=$MEILI_MASTER_KEY" \
+    --env "MEILI_ENV=production" \
+    --volume "$MEILI_VOLUME:/meili_data" \
+    "$MEILI_IMAGE"
+
+start_or_create "$MINIO_CONTAINER" \
+  container run --detach \
+    --name "$MINIO_CONTAINER" \
+    --publish 127.0.0.1:9000:9000 \
+    --publish 127.0.0.1:9001:9001 \
+    --env "MINIO_ROOT_USER=$MINIO_ROOT_USER" \
+    --env "MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD" \
+    --volume "$MINIO_VOLUME:/data" \
+    "$MINIO_IMAGE" server /data --console-address ":9001"
+
+wait_for "Postgres" 90 postgres_ready
+wait_for "Meilisearch" 90 meili_ready
+wait_for "MinIO" 90 minio_ready
+
+info "OverGarden Apple Container local infra is ready."

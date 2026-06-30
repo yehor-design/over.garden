@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${OVERGARDEN_INFRA_ENV_FILE:-$SCRIPT_DIR/.env}"
+EXAMPLE_ENV_FILE="$SCRIPT_DIR/.env.example"
+
+POSTGRES_CONTAINER="overgarden-postgres"
+MEILI_CONTAINER="overgarden-meilisearch"
+MINIO_CONTAINER="overgarden-minio"
+
+POSTGRES_VOLUME="overgarden-postgres-data"
+MEILI_VOLUME="overgarden-meili-data"
+MINIO_VOLUME="overgarden-minio-data"
+
+POSTGRES_IMAGE="${OVERGARDEN_POSTGRES_IMAGE:-docker.io/library/postgres:16-alpine}"
+MEILI_IMAGE="${OVERGARDEN_MEILI_IMAGE:-docker.io/getmeili/meilisearch:v1.48.1}"
+MINIO_IMAGE="${OVERGARDEN_MINIO_IMAGE:-docker.io/minio/minio:latest}"
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+info() {
+  printf '%s\n' "$*"
+}
+
+require_container_cli() {
+  command -v container >/dev/null 2>&1 || fail "Apple Container CLI is not installed or not on PATH. Install Apple Container first, then rerun this command."
+}
+
+require_curl() {
+  command -v curl >/dev/null 2>&1 || fail "curl is required for Meilisearch and MinIO readiness checks."
+}
+
+load_env() {
+  local source_file="$ENV_FILE"
+
+  if [[ ! -f "$source_file" ]]; then
+    source_file="$EXAMPLE_ENV_FILE"
+    info "Using infra/.env.example defaults. Create infra/.env to override local credentials."
+  fi
+
+  [[ -f "$source_file" ]] || fail "Missing infra env file. Expected $ENV_FILE or $EXAMPLE_ENV_FILE."
+
+  set -a
+  # shellcheck disable=SC1090
+  source "$source_file"
+  set +a
+
+  : "${POSTGRES_DB:=overgarden}"
+  : "${POSTGRES_USER:=overgarden}"
+  : "${POSTGRES_PASSWORD:=overgarden}"
+  : "${MEILI_MASTER_KEY:=CHANGE_ME_to_a_32+_byte_secret}"
+  : "${MINIO_ROOT_USER:=overgarden}"
+  : "${MINIO_ROOT_PASSWORD:=overgarden-local-secret}"
+
+  if (( ${#MEILI_MASTER_KEY} < 16 )); then
+    fail "MEILI_MASTER_KEY must be at least 16 bytes. Set it in infra/.env."
+  fi
+}
+
+ensure_container_system() {
+  if container system status >/dev/null 2>&1; then
+    return 0
+  fi
+
+  info "Apple Container system is not running; starting it now."
+  container system start --enable-kernel-install --timeout 120
+}
+
+container_exists() {
+  container inspect "$1" >/dev/null 2>&1
+}
+
+container_running() {
+  container inspect "$1" 2>/dev/null | grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"|"status"[[:space:]]*:[[:space:]]*"running"'
+}
+
+volume_exists() {
+  container volume inspect "$1" >/dev/null 2>&1
+}
+
+ensure_volume() {
+  local volume="$1"
+
+  if volume_exists "$volume"; then
+    info "Volume exists: $volume"
+  else
+    info "Creating volume: $volume"
+    container volume create "$volume" >/dev/null
+  fi
+}
+
+port_open() {
+  local port="$1"
+
+  if command -v nc >/dev/null 2>&1; then
+    nc -z 127.0.0.1 "$port" >/dev/null 2>&1
+  else
+    : >"/dev/tcp/127.0.0.1/$port" 2>/dev/null
+  fi
+}
+
+postgres_ready() {
+  container_running "$POSTGRES_CONTAINER" &&
+    container exec "$POSTGRES_CONTAINER" pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB" >/dev/null 2>&1 &&
+    port_open 5432
+}
+
+meili_ready() {
+  container_running "$MEILI_CONTAINER" &&
+    curl -fsS http://127.0.0.1:7700/health >/dev/null
+}
+
+minio_ready() {
+  container_running "$MINIO_CONTAINER" &&
+    curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null
+}
+
+wait_for() {
+  local label="$1"
+  local timeout_seconds="$2"
+  local check_name="$3"
+  local deadline=$((SECONDS + timeout_seconds))
+
+  until "$check_name"; do
+    if (( SECONDS >= deadline )); then
+      fail "$label did not become ready within ${timeout_seconds}s."
+    fi
+    sleep 2
+  done
+
+  info "$label is ready."
+}

@@ -57,9 +57,9 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Local topology
 
-- Apple Container-first local Postgres for database development on supported Macs.
-- Apple Container-first Meilisearch for search proof and index integration on supported Macs.
-- Apple Container-first MinIO as local S3/R2 emulator on supported Macs.
+- Apple Container-first local Postgres for database development on supported Macs, started by `infra/container-up`.
+- Apple Container-first Meilisearch for search proof and index integration on supported Macs, started by `infra/container-up`.
+- Apple Container-first MinIO as local S3/R2 emulator on supported Macs, started by `infra/container-up`.
 - Docker remains an allowed fallback only when Apple Container cannot run or does not support the required local behavior. Fallback docs must name the gap instead of treating Docker Desktop as the default.
 - `apps/web/.env.example` and `infra/.env.example` are the canonical local env templates.
 - `docs/INFRASTRUCTURE_REGISTRY.md` records production-equivalent non-secret values; env files remain the only place for local secrets.
