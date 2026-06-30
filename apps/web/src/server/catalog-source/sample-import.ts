@@ -12,6 +12,7 @@ import {
   catalogSourceSampleSourceOnlyFields,
 } from "@/lib/catalog/source-sample";
 import type { Database, JsonValue } from "@/db/schema";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -299,6 +300,15 @@ export function buildUpsertCatalogSourceCatalogItemQuery(
   executor: QueryExecutor,
   projection = catalogSourceSampleAllowedProjection(),
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: CATALOG_SOURCE_SAMPLE.source.slug,
+    sourceVersion: CATALOG_SOURCE_SAMPLE.source.version,
+    sourceRecordKey: CATALOG_SOURCE_SAMPLE.record.id,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   const now = new Date();
 
   return executor
@@ -341,6 +351,15 @@ export function buildUpsertCatalogSourceCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: CATALOG_SOURCE_SAMPLE.source.slug,
+    sourceVersion: CATALOG_SOURCE_SAMPLE.source.version,
+    sourceRecordKey: CATALOG_SOURCE_SAMPLE.record.id,
+    productSurface: "catalog_item_names",
+    productSource: CATALOG_SOURCE_SAMPLE.projection.source,
+    productSourceId: CATALOG_SOURCE_SAMPLE.projection.sourceId,
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

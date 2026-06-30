@@ -14,6 +14,7 @@ import {
   uaStateRegisterSourceOnlyFields,
   type UaStateRegisterVarietyImportDefinition,
 } from "@/lib/catalog/ua-state-register-variety";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -390,6 +391,14 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
   executor: QueryExecutor,
   projection = uaStateRegisterAllowedProjection(),
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_STATE_REGISTER_SOURCE.slug,
+    sourceVersion: UA_STATE_REGISTER_SOURCE.version,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   const now = new Date();
 
   return executor
@@ -432,6 +441,13 @@ export function buildUpsertUaStateRegisterCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_STATE_REGISTER_SOURCE.slug,
+    sourceVersion: UA_STATE_REGISTER_SOURCE.version,
+    productSurface: "catalog_item_names",
+    productSource: UA_STATE_REGISTER_SOURCE.slug.replaceAll("-", "_"),
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

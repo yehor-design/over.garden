@@ -12,6 +12,7 @@ import {
   type BgOfficialVarietyImportDefinition,
   type BgOfficialVarietySourceRecordDefinition,
 } from "@/lib/catalog/bg-official-variety";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -20,6 +21,11 @@ const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000061000";
+const BG_OFFICIAL_VARIETY_PROJECTION_GATE = {
+  issueKey: "OVE-61",
+  gateId: "ove-61-bg-official-variety-reviewed-subset",
+  scope: "reviewed_subset",
+} as const;
 
 export interface BgOfficialVarietyImportSummary {
   sourceSnapshotId: string;
@@ -440,6 +446,16 @@ export function buildUpsertBgOfficialVarietyCatalogItemQuery(
   executor: QueryExecutor,
   projection = bgOfficialVarietyAllowedProjection(),
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: EU_COMMON_CATALOGUE_BG_SOURCE.slug,
+    sourceVersion: EU_COMMON_CATALOGUE_BG_SOURCE.version,
+    sourceRecordKey: projection.sourceId,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+    explicitGate: BG_OFFICIAL_VARIETY_PROJECTION_GATE,
+  });
+
   const now = new Date();
 
   return executor
@@ -484,6 +500,17 @@ export function buildUpsertBgOfficialVarietyCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  const projection = bgOfficialVarietyAllowedProjection();
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: EU_COMMON_CATALOGUE_BG_SOURCE.slug,
+    sourceVersion: EU_COMMON_CATALOGUE_BG_SOURCE.version,
+    sourceRecordKey: projection.sourceId,
+    productSurface: "catalog_item_names",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+    explicitGate: BG_OFFICIAL_VARIETY_PROJECTION_GATE,
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

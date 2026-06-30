@@ -13,6 +13,7 @@ import {
   type GenebankLongTailProjection,
   type GenebankLongTailSourceRecordDefinition,
 } from "@/lib/catalog/genebank-long-tail";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -506,6 +507,15 @@ export function buildUpsertGenebankCatalogItemQuery(
   executor: QueryExecutor,
   projection: GenebankLongTailProjection = genebankLongTailPromotionProjection(),
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: GRIN_GENEBANK_SOURCE.slug,
+    sourceVersion: GRIN_GENEBANK_SOURCE.version,
+    sourceRecordKey: projection.sourceId,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   const now = new Date();
 
   return executor
@@ -550,6 +560,16 @@ export function buildUpsertGenebankCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  const projection = genebankLongTailPromotionProjection();
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: GRIN_GENEBANK_SOURCE.slug,
+    sourceVersion: GRIN_GENEBANK_SOURCE.version,
+    sourceRecordKey: projection.sourceId,
+    productSurface: "catalog_item_names",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

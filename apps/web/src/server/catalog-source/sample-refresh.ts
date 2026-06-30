@@ -2,6 +2,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import type { Database, JsonValue } from "@/db/schema";
 import {
+  CATALOG_SOURCE_REFRESH_SOURCE,
   CATALOG_SOURCE_REFRESH_PARSER_VERSION,
   catalogSourceRefreshAllowedProjectionJson,
   catalogSourceRefreshAllowedUsage,
@@ -17,6 +18,7 @@ import {
   type CatalogSourceRefreshRecordDefinition,
   type CatalogSourceRefreshSnapshotDefinition,
 } from "@/lib/catalog/source-refresh-sample";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -330,6 +332,13 @@ export function buildUpsertCatalogSourceRefreshCatalogItemQuery(
   executor: QueryExecutor,
   projection: CatalogSourceRefreshProjection,
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: CATALOG_SOURCE_REFRESH_SOURCE.slug,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   const now = new Date();
 
   return executor
@@ -372,6 +381,12 @@ export function buildUpsertCatalogSourceRefreshCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: CATALOG_SOURCE_REFRESH_SOURCE.slug,
+    productSurface: "catalog_item_names",
+    productSource: "ua_state_register",
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

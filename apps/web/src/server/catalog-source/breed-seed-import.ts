@@ -16,6 +16,7 @@ import {
   type BreedSeedImportDefinition,
   type BreedSeedProjection,
 } from "@/lib/catalog/breed-seed";
+import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -24,6 +25,12 @@ const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000060000";
+const BREED_SEED_SOURCE_RECORD_KEY = "ua-law-1492-iii:bee-breed:carpathian";
+const BREED_SEED_PROJECTION_GATE = {
+  issueKey: "OVE-60",
+  gateId: "ove-60-ua-official-bee-breed-manual-seed",
+  scope: "manual_seed",
+} as const;
 
 export interface BreedSeedImportSummary {
   sourceSnapshotId: string;
@@ -471,6 +478,16 @@ export function buildUpsertBreedSeedCatalogItemQuery(
   executor: QueryExecutor,
   projection = breedSeedAllowedProjection(),
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_OFFICIAL_BEE_BREED_SOURCE.slug,
+    sourceVersion: UA_OFFICIAL_BEE_BREED_SOURCE.version,
+    sourceRecordKey: BREED_SEED_SOURCE_RECORD_KEY,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+    explicitGate: BREED_SEED_PROJECTION_GATE,
+  });
+
   const now = new Date();
 
   return executor
@@ -515,6 +532,16 @@ export function buildUpsertBreedSeedCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_OFFICIAL_BEE_BREED_SOURCE.slug,
+    sourceVersion: UA_OFFICIAL_BEE_BREED_SOURCE.version,
+    sourceRecordKey: BREED_SEED_SOURCE_RECORD_KEY,
+    productSurface: "catalog_item_names",
+    productSource: "ua_official_bee_breed",
+    productSourceId: "ua-official-bee-breeds:carpathian",
+    explicitGate: BREED_SEED_PROJECTION_GATE,
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({

@@ -16,6 +16,7 @@ import {
   type SpeciesBackboneProjection,
   type SpeciesBackboneSourceRecordDefinition,
 } from "@/lib/catalog/species-backbone-seed";
+import { assertCatalogSourcesProductProjectionAllowed } from "./source-projection-guard";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -24,6 +25,13 @@ const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000058000";
+const SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS = [
+  "catalogue-of-life-checklistbank",
+  "world-flora-online",
+  "gbif-backbone",
+  "eppo-codes",
+  "wikidata",
+] as const;
 
 export interface SpeciesBackboneImportSummary {
   sourceSnapshotIds: Record<string, string>;
@@ -499,6 +507,13 @@ export function buildUpsertSpeciesBackboneCatalogItemQuery(
   executor: QueryExecutor,
   projection = speciesBackboneAllowedProjection(),
 ) {
+  assertCatalogSourcesProductProjectionAllowed({
+    sourceSlugs: SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+
   const now = new Date();
 
   return executor
@@ -541,6 +556,12 @@ export function buildUpsertSpeciesBackboneCatalogNameQuery(
     isPrimary: boolean;
   },
 ) {
+  assertCatalogSourcesProductProjectionAllowed({
+    sourceSlugs: SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS,
+    productSurface: "catalog_item_names",
+    productSource: "species_backbone",
+  });
+
   return executor
     .insertInto("catalog_item_names")
     .values({
