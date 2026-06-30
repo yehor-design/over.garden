@@ -381,6 +381,36 @@ describe("catalog typeahead search documents", () => {
     ).toBeNull();
   });
 
+  it("rejects genebank candidate hits that carry accession or review metadata", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000621",
+        displayName: "Red Cherry",
+        canonicalName: "Red Cherry tomato",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "grin_genebank_candidate",
+        accessionIdentifier: "GRIN curated proof row OVE62-001",
+        candidateKind: "accession",
+        reviewStatus: "candidate_review",
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000621",
+        displayName: "Solanum lycopersicum Red Cherry",
+        canonicalName: "Red Cherry tomato",
+        catalogKind: "plant_variety",
+        locale: "la",
+        status: "seeded",
+        source: "grin_genebank_candidate",
+        germplasm_distribution_policy: "source-only distribution caveat",
+        genesys_eurisco_blocker: "internal-validation-only",
+      }),
+    ).toBeNull();
+  });
+
   it("dedupes aliases by catalog item ID to keep the picker stable", () => {
     expect(
       dedupeCatalogTypeaheadSuggestions([
