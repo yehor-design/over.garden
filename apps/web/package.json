@@ -18,6 +18,7 @@
     "catalog:sources:import-ua-register-variety": "tsx scripts/import-ua-state-register-variety.ts",
     "catalog:sources:import-species-backbone": "tsx scripts/import-species-backbone-seed.ts",
     "catalog:sources:import-breed-seed": "tsx scripts/import-breed-seed.ts",
+    "catalog:sources:import-bg-official-variety": "tsx scripts/import-bg-official-variety.ts",
     "catalog:sources:refresh-sample": "tsx scripts/refresh-catalog-source-sample.ts",
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",

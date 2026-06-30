@@ -351,6 +351,36 @@ describe("catalog typeahead search documents", () => {
     ).toBeNull();
   });
 
+  it("rejects BG/EU official variety hits that carry parser or legal metadata", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000611",
+        displayName: "Садово 1",
+        canonicalName: "Садово 1",
+        catalogKind: "plant_variety",
+        locale: "bg",
+        status: "seeded",
+        source: "eu_common_catalogue_bg",
+        sourceId: "EU-PVP:BG:SADOVO-1",
+        parserConfidence: 0.9825,
+        sourceRowReference: "Country / Org BG; Denomination Sadovo 1",
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000611",
+        displayName: "Sadovo 1",
+        canonicalName: "Садово 1",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "eu_common_catalogue_bg",
+        legal_value_caveat: "information only",
+        iasas_parser_blocker: "PDF-only",
+      }),
+    ).toBeNull();
+  });
+
   it("dedupes aliases by catalog item ID to keep the picker stable", () => {
     expect(
       dedupeCatalogTypeaheadSuggestions([
