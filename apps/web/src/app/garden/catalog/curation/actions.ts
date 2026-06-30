@@ -10,6 +10,12 @@ import {
   rejectCatalogCurationCandidate,
   type CatalogCurationDecisionResult,
 } from "@/server/catalog-curation-repository";
+import {
+  holdCatalogSourceCandidate,
+  promoteCatalogSourceCandidate,
+  rejectCatalogSourceCandidate,
+  type CatalogSourceCandidateDecisionResult,
+} from "@/server/catalog-source/candidate-review-repository";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { upsertVarietySeedProof } from "@/server/variety-seed-proof-repository";
 
@@ -66,6 +72,39 @@ export async function upsertVarietySeedProofAction(formData: FormData) {
   revalidatePath(publicVarietyPath(result.catalog.publicSlug));
 }
 
+export async function promoteCatalogSourceCandidateAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  assertCatalogCuratorAccess(scope);
+
+  const result = await promoteCatalogSourceCandidate(scope, {
+    sourceRecordId: String(formData.get("sourceRecordId") ?? ""),
+  });
+
+  revalidateCatalogSourceCandidatePaths(result);
+}
+
+export async function holdCatalogSourceCandidateAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  assertCatalogCuratorAccess(scope);
+
+  const result = await holdCatalogSourceCandidate(scope, {
+    sourceRecordId: String(formData.get("sourceRecordId") ?? ""),
+  });
+
+  revalidateCatalogSourceCandidatePaths(result);
+}
+
+export async function rejectCatalogSourceCandidateAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  assertCatalogCuratorAccess(scope);
+
+  const result = await rejectCatalogSourceCandidate(scope, {
+    sourceRecordId: String(formData.get("sourceRecordId") ?? ""),
+  });
+
+  revalidateCatalogSourceCandidatePaths(result);
+}
+
 function revalidateCatalogCurationPaths(result: CatalogCurationDecisionResult) {
   revalidatePath(CURATION_PATH);
   revalidatePath("/garden");
@@ -77,5 +116,16 @@ function revalidateCatalogCurationPaths(result: CatalogCurationDecisionResult) {
 
   for (const publicEntryPath of result.publicEntryPaths) {
     revalidatePath(publicEntryPath);
+  }
+}
+
+function revalidateCatalogSourceCandidatePaths(
+  result: CatalogSourceCandidateDecisionResult,
+) {
+  revalidatePath(CURATION_PATH);
+  revalidatePath("/garden");
+
+  if (result.catalogPublicSlug) {
+    revalidatePath(publicVarietyPath(result.catalogPublicSlug));
   }
 }

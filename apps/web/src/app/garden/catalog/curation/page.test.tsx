@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   assertCatalogCuratorAccess: vi.fn(),
   listPendingCatalogCurationCandidates: vi.fn(),
+  listCatalogSourceCandidatesForReview: vi.fn(),
   listCatalogSourceProvenanceForCuration: vi.fn(),
   listVarietySeedProofsForCuration: vi.fn(),
 }));
@@ -31,6 +32,11 @@ vi.mock("@/server/catalog-curation-repository", () => ({
     mocks.listPendingCatalogCurationCandidates,
 }));
 
+vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
+  listCatalogSourceCandidatesForReview:
+    mocks.listCatalogSourceCandidatesForReview,
+}));
+
 vi.mock("@/server/catalog-source/provenance-repository", () => ({
   listCatalogSourceProvenanceForCuration:
     mocks.listCatalogSourceProvenanceForCuration,
@@ -42,13 +48,20 @@ vi.mock("@/server/variety-seed-proof-repository", () => ({
 
 vi.mock("./actions", () => ({
   confirmCatalogCandidateAction: vi.fn(),
+  holdCatalogSourceCandidateAction: vi.fn(),
   mergeCatalogCandidateAction: vi.fn(),
+  promoteCatalogSourceCandidateAction: vi.fn(),
   rejectCatalogCandidateAction: vi.fn(),
+  rejectCatalogSourceCandidateAction: vi.fn(),
   upsertVarietySeedProofAction: vi.fn(),
 }));
 
 vi.mock("./catalog-curation-candidate-list", () => ({
   CatalogCurationCandidateList: () => "curation-candidates",
+}));
+
+vi.mock("./catalog-source-candidate-review-list", () => ({
+  CatalogSourceCandidateReviewList: () => "source-candidate-review",
 }));
 
 vi.mock("./catalog-source-provenance-list", () => ({
@@ -64,6 +77,7 @@ describe("/garden/catalog/curation", () => {
     vi.clearAllMocks();
     mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
+    mocks.listCatalogSourceCandidatesForReview.mockResolvedValue([]);
     mocks.listCatalogSourceProvenanceForCuration.mockResolvedValue([]);
     mocks.listVarietySeedProofsForCuration.mockResolvedValue([]);
   });
@@ -78,6 +92,7 @@ describe("/garden/catalog/curation", () => {
 
     expect(html).toContain("Access denied.");
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
+    expect(mocks.listCatalogSourceCandidatesForReview).not.toHaveBeenCalled();
     expect(mocks.listCatalogSourceProvenanceForCuration).not.toHaveBeenCalled();
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
@@ -87,7 +102,9 @@ describe("/garden/catalog/curation", () => {
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
     expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("source-candidate-review");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
+    expect(mocks.listCatalogSourceCandidatesForReview).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();
   });

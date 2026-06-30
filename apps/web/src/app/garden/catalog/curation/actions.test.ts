@@ -6,6 +6,9 @@ const mocks = vi.hoisted(() => ({
   confirmCatalogCurationCandidate: vi.fn(),
   mergeCatalogCurationCandidate: vi.fn(),
   rejectCatalogCurationCandidate: vi.fn(),
+  promoteCatalogSourceCandidate: vi.fn(),
+  holdCatalogSourceCandidate: vi.fn(),
+  rejectCatalogSourceCandidate: vi.fn(),
   upsertVarietySeedProof: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -28,6 +31,12 @@ vi.mock("@/server/catalog-curation-repository", () => ({
   rejectCatalogCurationCandidate: mocks.rejectCatalogCurationCandidate,
 }));
 
+vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
+  promoteCatalogSourceCandidate: mocks.promoteCatalogSourceCandidate,
+  holdCatalogSourceCandidate: mocks.holdCatalogSourceCandidate,
+  rejectCatalogSourceCandidate: mocks.rejectCatalogSourceCandidate,
+}));
+
 vi.mock("@/server/variety-seed-proof-repository", () => ({
   upsertVarietySeedProof: mocks.upsertVarietySeedProof,
 }));
@@ -46,6 +55,27 @@ describe("catalog curation actions", () => {
     mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
       publicEntryPaths: [],
+    });
+    mocks.promoteCatalogSourceCandidate.mockResolvedValue({
+      sourceRecordId: "00000000-0000-4000-8000-000000066001",
+      sourceRecordKey: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+      status: "projected",
+      catalogItemId: "00000000-0000-4000-8000-000000066002",
+      catalogPublicSlug: "red-cherry-tomato-grin-genebank-candidate",
+    });
+    mocks.holdCatalogSourceCandidate.mockResolvedValue({
+      sourceRecordId: "00000000-0000-4000-8000-000000066003",
+      sourceRecordKey: "GRIN:NPGS:OVE62:UNREVIEWED-LANDRACE",
+      status: "review_needed",
+      catalogItemId: null,
+      catalogPublicSlug: null,
+    });
+    mocks.rejectCatalogSourceCandidate.mockResolvedValue({
+      sourceRecordId: "00000000-0000-4000-8000-000000066003",
+      sourceRecordKey: "GRIN:NPGS:OVE62:UNREVIEWED-LANDRACE",
+      status: "rejected",
+      catalogItemId: null,
+      catalogPublicSlug: null,
     });
   });
 
@@ -88,6 +118,84 @@ describe("catalog curation actions", () => {
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/journal/babusyn-perets-entry",
+    );
+  });
+
+  it("rejects source candidate promotion before repository writes for a non-operator", async () => {
+    mocks.assertCatalogCuratorAccess.mockImplementation(() => {
+      throw new Error("Catalog curation access denied.");
+    });
+
+    const { promoteCatalogSourceCandidateAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("sourceRecordId", "00000000-0000-4000-8000-000000066001");
+
+    await expect(promoteCatalogSourceCandidateAction(formData)).rejects.toThrow(
+      "Catalog curation access denied.",
+    );
+    expect(mocks.promoteCatalogSourceCandidate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("rejects source hold and reject before repository writes for a non-operator", async () => {
+    mocks.assertCatalogCuratorAccess.mockImplementation(() => {
+      throw new Error("Catalog curation access denied.");
+    });
+
+    const {
+      holdCatalogSourceCandidateAction,
+      rejectCatalogSourceCandidateAction,
+    } = await import("./actions");
+    const formData = new FormData();
+    formData.set("sourceRecordId", "00000000-0000-4000-8000-000000066003");
+
+    await expect(holdCatalogSourceCandidateAction(formData)).rejects.toThrow(
+      "Catalog curation access denied.",
+    );
+    await expect(rejectCatalogSourceCandidateAction(formData)).rejects.toThrow(
+      "Catalog curation access denied.",
+    );
+    expect(mocks.holdCatalogSourceCandidate).not.toHaveBeenCalled();
+    expect(mocks.rejectCatalogSourceCandidate).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("allows source candidate promotion for an allowlisted operator", async () => {
+    const { promoteCatalogSourceCandidateAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("sourceRecordId", "00000000-0000-4000-8000-000000066001");
+
+    await promoteCatalogSourceCandidateAction(formData);
+
+    expect(mocks.promoteCatalogSourceCandidate).toHaveBeenCalledOnce();
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/variety/red-cherry-tomato-grin-genebank-candidate",
+    );
+  });
+
+  it("keeps source hold and reject actions on the internal curation surface", async () => {
+    const {
+      holdCatalogSourceCandidateAction,
+      rejectCatalogSourceCandidateAction,
+    } = await import("./actions");
+    const formData = new FormData();
+    formData.set("sourceRecordId", "00000000-0000-4000-8000-000000066003");
+
+    await holdCatalogSourceCandidateAction(formData);
+    await rejectCatalogSourceCandidateAction(formData);
+
+    expect(mocks.holdCatalogSourceCandidate).toHaveBeenCalledOnce();
+    expect(mocks.rejectCatalogSourceCandidate).toHaveBeenCalledOnce();
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith(
+      "/variety/red-cherry-tomato-grin-genebank-candidate",
     );
   });
 });

@@ -4,17 +4,22 @@ import { buttonVariants } from "@/components/ui/button";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
+import { listCatalogSourceCandidatesForReview } from "@/server/catalog-source/candidate-review-repository";
 import { listCatalogSourceProvenanceForCuration } from "@/server/catalog-source/provenance-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   confirmCatalogCandidateAction,
+  holdCatalogSourceCandidateAction,
   mergeCatalogCandidateAction,
+  promoteCatalogSourceCandidateAction,
   rejectCatalogCandidateAction,
+  rejectCatalogSourceCandidateAction,
   upsertVarietySeedProofAction,
 } from "./actions";
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
+import { CatalogSourceCandidateReviewList } from "./catalog-source-candidate-review-list";
 import { CatalogSourceProvenanceList } from "./catalog-source-provenance-list";
 import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
 
@@ -69,11 +74,13 @@ export default async function CatalogCurationPage() {
     );
   }
 
-  const [candidates, seedProofs, provenanceRows] = await Promise.all([
-    listPendingCatalogCurationCandidates(),
-    listVarietySeedProofsForCuration(),
-    listCatalogSourceProvenanceForCuration(),
-  ]);
+  const [candidates, seedProofs, sourceCandidates, provenanceRows] =
+    await Promise.all([
+      listPendingCatalogCurationCandidates(),
+      listVarietySeedProofsForCuration(),
+      listCatalogSourceCandidatesForReview(),
+      listCatalogSourceProvenanceForCuration(),
+    ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -103,6 +110,9 @@ export default async function CatalogCurationPage() {
               Seed proofs: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Source candidates: {sourceCandidates.length}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Source rows: {provenanceRows.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
@@ -115,6 +125,13 @@ export default async function CatalogCurationPage() {
       <VarietySeedProofEditor
         seedProofs={seedProofs}
         upsertAction={upsertVarietySeedProofAction}
+      />
+
+      <CatalogSourceCandidateReviewList
+        candidates={sourceCandidates}
+        promoteAction={promoteCatalogSourceCandidateAction}
+        holdAction={holdCatalogSourceCandidateAction}
+        rejectAction={rejectCatalogSourceCandidateAction}
       />
 
       <CatalogSourceProvenanceList provenanceRows={provenanceRows} />
