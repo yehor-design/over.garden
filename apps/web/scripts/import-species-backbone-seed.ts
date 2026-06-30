@@ -116,6 +116,7 @@ async function main() {
       throw new Error(`Missing provenance row for ${slug}.`);
     }
   }
+  assertRequiredAttributionProof(provenanceProof);
 
   if (
     !scientificTypeaheadProof.some(
@@ -262,6 +263,28 @@ function assertAliasCurationProof(
     generatedAlias.projectedToTypeahead
   ) {
     throw new Error("Generated alias curation proof is invalid.");
+  }
+}
+
+function assertRequiredAttributionProof(
+  rows: Array<{
+    sourceSlug: string;
+    attributionRequired: boolean;
+    licenseUrl: string | null;
+    attributionText: string | null;
+  }>,
+) {
+  const missingCreditRows = rows.filter(
+    (row) =>
+      row.attributionRequired && (!row.licenseUrl || !row.attributionText),
+  );
+
+  if (missingCreditRows.length > 0) {
+    throw new Error(
+      `Attribution-required source provenance is missing credits for ${missingCreditRows
+        .map((row) => row.sourceSlug)
+        .join(", ")}.`,
+    );
   }
 }
 

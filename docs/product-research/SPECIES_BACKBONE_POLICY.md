@@ -1,9 +1,9 @@
 # Species Backbone Policy
 
-Status: OVE-59 bounded seed and alias-promotion policy
+Status: OVE-59 bounded seed and alias-promotion policy, with OVE-63 attribution path
 Scope: CoL/WFO/GBIF/EPPO/Wikidata species seed consumed by `pnpm catalog:sources:import-species-backbone`
 
-OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. OVE-59 adds explicit vernacular alias promotion states for that same path. This is not a full taxonomy import.
+OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. OVE-59 adds explicit vernacular alias promotion states for that same path. OVE-63 adds required source credits for attribution-required imported facts. This is not a full taxonomy import.
 
 ## Source Precedence
 
@@ -53,3 +53,5 @@ If a source link disappears or a source license changes, new imports must stop b
 User typeahead, save, and readback paths do not call live external APIs. They read only OverGarden catalog tables and the derived Meilisearch typeahead index. Source refresh/import work is offline/operator-run and must keep raw fields quarantined in `catalog_source_records`.
 
 Typeahead is fed by `catalog_item_names`; alias review metadata is stored separately in `catalog_alias_projections`. A non-accepted alias can support operator review without becoming a public/product lookup term because it has no `catalog_item_name_id` link. Meilisearch catalog hits must also reject alias curation metadata (`aliasStatus`, source method, confidence, license, attribution, projection notes) if those fields appear accidentally.
+
+Source credits are a separate read model, not a typeahead/search document expansion. `catalog_source_snapshots` must carry source name, source URL, source version, license, `license_url`, `attribution_required`, and `attribution_text` for attribution-required sources such as CoL, GBIF, and EPPO. `/variety/[slug]` may render those safe credit fields when the page relies on projected canonical source facts, but it must not render raw payloads, source-only fields, source record keys, external source IDs, checksums, occurrence/distribution coordinates, or restricted source fields.

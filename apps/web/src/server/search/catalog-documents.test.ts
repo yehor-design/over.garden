@@ -98,7 +98,10 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("sourceMethod");
     expect(document).not.toHaveProperty("confidence");
     expect(document).not.toHaveProperty("license");
+    expect(document).not.toHaveProperty("licenseUrl");
     expect(document).not.toHaveProperty("attributionRequired");
+    expect(document).not.toHaveProperty("attributionText");
+    expect(document).not.toHaveProperty("sourceCredits");
     expect(document).not.toHaveProperty("sourceRecordKey");
     expect(document).not.toHaveProperty("coordinates");
     expect(document).not.toHaveProperty("rawPayload");
@@ -233,6 +236,41 @@ describe("catalog typeahead search documents", () => {
         source: "species_backbone",
         alias_status: "review_needed",
         projection_notes: "held for curator review",
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects source attribution credits if they appear in typeahead hits", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000301",
+        displayName: "Solanum lycopersicum L.",
+        canonicalName: "Solanum lycopersicum L.",
+        locale: "la",
+        status: "seeded",
+        source: "species_backbone",
+        sourceName: "GBIF Backbone Taxonomy",
+        sourceUrl: "https://api.gbif.org/v1/species/match",
+        sourceVersion: "Backbone pubDate 2023-08-28",
+        licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+        attributionText:
+          "GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International.",
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000057",
+        displayName: "Ботсадівський",
+        canonicalName: "Ботсадівський",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_state_register",
+        sourceCredits: [
+          {
+            sourceName: "Ukraine State Register of Plant Varieties",
+            license: "Creative Commons Attribution 4.0 International",
+          },
+        ],
       }),
     ).toBeNull();
   });

@@ -12,6 +12,7 @@ import {
 } from "@/lib/garden/public-paths";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
+import { PublicVarietySourceCredits } from "./source-credits";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,8 @@ export default async function PublicVarietyRoute({
           ) : null}
         </section>
       ) : null}
+
+      <PublicVarietySourceCredits credits={page.sourceCredits} />
 
       <ol className="grid gap-4">
         {page.entries.map((entry) => (

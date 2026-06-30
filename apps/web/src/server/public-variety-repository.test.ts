@@ -16,6 +16,7 @@ import type { Database } from "@/db/schema";
 import {
   buildIndexablePublicVarietySitemapRowsQuery,
   buildPublicVarietyEntriesQuery,
+  buildPublicVarietySourceCreditsQuery,
   buildPublicVarietySummaryQuery,
 } from "./public-variety-repository";
 
@@ -148,6 +149,45 @@ describe("public variety repository query contracts", () => {
       "public",
       "active",
       20,
+    ]);
+  });
+
+  it("reads public source credits without raw source payload or source-only fields", () => {
+    const catalogItemId = "00000000-0000-4000-8000-000000063001";
+    const compiled = buildPublicVarietySourceCreditsQuery(
+      testDb,
+      catalogItemId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_source_links"');
+    expect(compiled.sql).toContain('inner join "catalog_source_records"');
+    expect(compiled.sql).toContain('inner join "catalog_source_snapshots"');
+    expect(compiled.sql).toContain('"catalog_source_snapshots"."source_name"');
+    expect(compiled.sql).toContain('"catalog_source_snapshots"."source_url"');
+    expect(compiled.sql).toContain('"catalog_source_snapshots"."license"');
+    expect(compiled.sql).toContain('"catalog_source_snapshots"."license_url"');
+    expect(compiled.sql).toContain(
+      '"catalog_source_snapshots"."attribution_text"',
+    );
+    expect(compiled.sql).toContain(
+      '"catalog_source_snapshots"."attribution_required" = $4',
+    );
+    expect(compiled.sql).not.toContain('"catalog_source_records"."raw_payload"');
+    expect(compiled.sql).not.toContain(
+      '"catalog_source_records"."source_only_fields"',
+    );
+    expect(compiled.sql).not.toContain(
+      '"catalog_source_links"."source_record_key"',
+    );
+    expect(compiled.sql).not.toContain("payload_sha256");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.sql).not.toContain("latitude");
+    expect(compiled.sql).not.toContain("longitude");
+    expect(compiled.parameters).toEqual([
+      catalogItemId,
+      "canonical_item",
+      "projected",
+      true,
     ]);
   });
 

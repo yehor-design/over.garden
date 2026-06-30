@@ -127,6 +127,7 @@ async function main() {
   if (provenanceProof.sourceRecordKey !== imported.sourceRecordKey) {
     throw new Error("Provenance readback source row key mismatch.");
   }
+  assertRequiredAttributionProof(provenanceProof);
   if (gardenReadbackProof.catalogItemId !== imported.catalogItemId) {
     throw new Error("Garden readback proof did not preserve catalog identity.");
   }
@@ -188,6 +189,19 @@ function assertNoForbiddenOutput(output: unknown) {
     if (text.includes(marker)) {
       throw new Error(`Unsafe source-only marker reached output: ${marker}`);
     }
+  }
+}
+
+function assertRequiredAttributionProof(row: {
+  attributionRequired: boolean;
+  licenseUrl: string | null;
+  attributionText: string | null;
+}) {
+  if (!row.attributionRequired) return;
+  if (!row.licenseUrl || !row.attributionText) {
+    throw new Error(
+      "Attribution-required source provenance is missing license URL or attribution text.",
+    );
   }
 }
 

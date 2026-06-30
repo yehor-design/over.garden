@@ -19,7 +19,10 @@ describe("CatalogSourceProvenanceList", () => {
             sourceVersion: "2025-07-15",
             sourceUrl: "https://data.gov.ua/example.csv",
             license: "Creative Commons Attribution 4.0 International",
+            licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
             attributionRequired: true,
+            attributionText:
+              "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
             allowedUsage: ["raw_snapshot", "canonical_product_projection"],
             sourceRecordKey: "RegisterVarietis:83070006",
             parserVersion: "ove-57.ua-state-register.variety.v1",
@@ -69,7 +72,10 @@ describe("CatalogSourceProvenanceList", () => {
     expect(html).toContain("Ботсадівський");
     expect(html).toContain("RegisterVarietis:83070006");
     expect(html).toContain("2025-07-15");
+    expect(html).toContain("https://data.gov.ua/example.csv");
     expect(html).toContain("Creative Commons Attribution 4.0 International");
+    expect(html).toContain("https://creativecommons.org/licenses/by/4.0/");
+    expect(html).toContain("Ukraine State Register of Plant Varieties");
     expect(html).toContain("attribution required");
     expect(html).toContain("Alias review states");
     expect(html).toContain("Ботсадівський");

@@ -13,7 +13,10 @@ export const CATALOG_SOURCE_SAMPLE = {
     version: "2025-07-15",
     url: "https://data.gov.ua/dataset/eabd0bd2-2dc6-47e2-b748-9bd254da4956/resource/32ea0f72-86e4-490d-9ab9-4d64976187c6/download/2025-07-15_registervarietis.csv",
     license: "Creative Commons Attribution 4.0 International",
+    licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
     attributionRequired: true,
+    attributionText:
+      "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
     allowedUsage: ["raw_snapshot", "canonical_product_projection"],
     fetchedAt: "2026-06-29T00:00:00.000Z",
     verifiedAt: "2026-06-29T00:00:00.000Z",

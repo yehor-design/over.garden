@@ -21,7 +21,9 @@ export interface CatalogSourceProvenanceCurationRow {
   sourceVersion: string;
   sourceUrl: string;
   license: string;
+  licenseUrl: string | null;
   attributionRequired: boolean;
+  attributionText: string | null;
   allowedUsage: JsonValue;
   sourceRecordKey: string;
   parserVersion: string;
@@ -72,7 +74,9 @@ export async function listCatalogSourceProvenanceForCuration(
     sourceVersion: row.sourceVersion,
     sourceUrl: row.sourceUrl,
     license: row.license,
+    licenseUrl: row.licenseUrl,
     attributionRequired: Boolean(row.attributionRequired),
+    attributionText: row.attributionText,
     allowedUsage: row.allowedUsage,
     sourceRecordKey: row.sourceRecordKey,
     parserVersion: row.parserVersion,
@@ -115,7 +119,9 @@ export function buildCatalogSourceProvenanceForCurationQuery(
       "catalog_source_snapshots.source_version as sourceVersion",
       "catalog_source_snapshots.source_url as sourceUrl",
       "catalog_source_snapshots.license as license",
+      "catalog_source_snapshots.license_url as licenseUrl",
       "catalog_source_snapshots.attribution_required as attributionRequired",
+      "catalog_source_snapshots.attribution_text as attributionText",
       "catalog_source_snapshots.allowed_usage as allowedUsage",
       "catalog_source_links.source_record_key as sourceRecordKey",
       "catalog_source_snapshots.parser_version as parserVersion",

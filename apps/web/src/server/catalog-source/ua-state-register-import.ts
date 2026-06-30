@@ -68,7 +68,9 @@ export interface UaStateRegisterSourceProvenanceProof {
   sourceVersion: string;
   sourceUrl: string;
   license: string;
+  licenseUrl: string | null;
   attributionRequired: boolean;
+  attributionText: string | null;
   allowedUsage: JsonValue;
   sourceRecordKey: string;
   sourceRecordId: string;
@@ -190,7 +192,9 @@ export async function readUaStateRegisterSourceProvenanceProof(
     sourceVersion: row.sourceVersion,
     sourceUrl: row.sourceUrl,
     license: row.license,
+    licenseUrl: row.licenseUrl,
     attributionRequired: Boolean(row.attributionRequired),
+    attributionText: row.attributionText,
     allowedUsage: row.allowedUsage,
     sourceRecordKey: row.sourceRecordKey,
     sourceRecordId: row.sourceRecordId,
@@ -307,7 +311,9 @@ export function buildUpsertUaStateRegisterSnapshotQuery(
       source_version: definition.source.version,
       source_url: definition.source.url,
       license: definition.source.license,
+      license_url: definition.source.licenseUrl,
       attribution_required: definition.source.attributionRequired,
+      attribution_text: definition.source.attributionText,
       allowed_usage: jsonbParam(uaStateRegisterAllowedUsage(definition)),
       parser_version: UA_STATE_REGISTER_VARIETY_PARSER_VERSION,
       payload_sha256: input.payloadSha256,
@@ -323,7 +329,9 @@ export function buildUpsertUaStateRegisterSnapshotQuery(
           source_category: definition.source.category,
           source_url: definition.source.url,
           license: definition.source.license,
+          license_url: definition.source.licenseUrl,
           attribution_required: definition.source.attributionRequired,
+          attribution_text: definition.source.attributionText,
           allowed_usage: jsonbParam(uaStateRegisterAllowedUsage(definition)),
           parser_version: UA_STATE_REGISTER_VARIETY_PARSER_VERSION,
           fetched_at: definition.fileProof.fetchedAt,
@@ -553,7 +561,9 @@ export function buildUaStateRegisterSourceProvenanceProofQuery(
       "catalog_source_snapshots.source_version as sourceVersion",
       "catalog_source_snapshots.source_url as sourceUrl",
       "catalog_source_snapshots.license as license",
+      "catalog_source_snapshots.license_url as licenseUrl",
       "catalog_source_snapshots.attribution_required as attributionRequired",
+      "catalog_source_snapshots.attribution_text as attributionText",
       "catalog_source_snapshots.allowed_usage as allowedUsage",
       "catalog_source_links.source_record_key as sourceRecordKey",
       "catalog_source_records.id as sourceRecordId",

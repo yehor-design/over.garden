@@ -91,6 +91,12 @@ describe("catalog source sample import", () => {
     expect(compiled.sql).toContain("returning");
     expect(compiled.parameters).toContain("ua-state-register");
     expect(compiled.parameters).toContain(snapshotSha256);
+    expect(compiled.parameters).toContain(
+      "https://creativecommons.org/licenses/by/4.0/",
+    );
+    expect(compiled.parameters).toContain(
+      "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
+    );
     expect(JSON.stringify(compiled.parameters)).not.toContain(
       "occurrenceCoordinates",
     );

@@ -128,7 +128,9 @@ create table if not exists catalog_source_snapshots (
   source_version text not null check (char_length(source_version) between 1 and 120),
   source_url text not null check (char_length(source_url) between 1 and 1000),
   license text not null check (char_length(license) between 1 and 240),
+  license_url text check (license_url is null or char_length(license_url) between 1 and 1000),
   attribution_required boolean not null default true,
+  attribution_text text check (attribution_text is null or char_length(attribution_text) between 1 and 500),
   allowed_usage jsonb not null default '[]'::jsonb,
   parser_version text not null check (char_length(parser_version) between 1 and 120),
   payload_sha256 text not null check (payload_sha256 ~ '^[a-f0-9]{64}$'),
@@ -143,6 +145,91 @@ create table if not exists catalog_source_snapshots (
     payload_sha256
   )
 );
+
+alter table catalog_source_snapshots
+  add column if not exists license_url text,
+  add column if not exists attribution_text text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_source_snapshots_license_url_check'
+      and conrelid = 'catalog_source_snapshots'::regclass
+  ) then
+    alter table catalog_source_snapshots
+      add constraint catalog_source_snapshots_license_url_check
+      check (license_url is null or char_length(license_url) between 1 and 1000);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_source_snapshots_attribution_text_check'
+      and conrelid = 'catalog_source_snapshots'::regclass
+  ) then
+    alter table catalog_source_snapshots
+      add constraint catalog_source_snapshots_attribution_text_check
+      check (attribution_text is null or char_length(attribution_text) between 1 and 500);
+  end if;
+end $$;
+
+update catalog_source_snapshots
+set
+  license_url = coalesce(license_url, 'https://creativecommons.org/licenses/by/4.0/'),
+  attribution_text = coalesce(
+    attribution_text,
+    'Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.'
+  ),
+  updated_at = now()
+where source_slug = 'ua-state-register'
+  and attribution_required = true
+  and (license_url is null or attribution_text is null);
+
+update catalog_source_snapshots
+set
+  license_url = coalesce(license_url, 'https://creativecommons.org/licenses/by/4.0/'),
+  attribution_text = coalesce(
+    attribution_text,
+    'Catalogue of Life / ChecklistBank, Creative Commons Attribution 4.0 International.'
+  ),
+  updated_at = now()
+where source_slug = 'catalogue-of-life-checklistbank'
+  and attribution_required = true
+  and (license_url is null or attribution_text is null);
+
+update catalog_source_snapshots
+set
+  license_url = coalesce(license_url, 'https://creativecommons.org/licenses/by/4.0/'),
+  attribution_text = coalesce(
+    attribution_text,
+    'GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International.'
+  ),
+  updated_at = now()
+where source_slug = 'gbif-backbone'
+  and attribution_required = true
+  and (license_url is null or attribution_text is null);
+
+update catalog_source_snapshots
+set
+  license_url = coalesce(license_url, 'https://data.eppo.int/documentation/opendata'),
+  attribution_text = coalesce(
+    attribution_text,
+    'EPPO Codes, EPPO Codes Open Data Licence.'
+  ),
+  updated_at = now()
+where source_slug = 'eppo-codes'
+  and attribution_required = true
+  and (license_url is null or attribution_text is null);
+
+update catalog_source_snapshots
+set
+  license_url = coalesce(license_url, 'https://creativecommons.org/publicdomain/zero/1.0/'),
+  updated_at = now()
+where source_slug in ('world-flora-online', 'wikidata')
+  and attribution_required = false
+  and license_url is null;
 
 create table if not exists catalog_source_records (
   id uuid primary key default gen_random_uuid(),

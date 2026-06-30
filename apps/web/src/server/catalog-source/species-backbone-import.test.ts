@@ -172,6 +172,12 @@ describe("species backbone seed import", () => {
       'on conflict ("source_slug", "source_version", "payload_sha256") do update',
     );
     expect(compiled.parameters).toContain("catalogue-of-life-checklistbank");
+    expect(compiled.parameters).toContain(
+      "https://creativecommons.org/licenses/by/4.0/",
+    );
+    expect(compiled.parameters).toContain(
+      "Catalogue of Life / ChecklistBank, Creative Commons Attribution 4.0 International.",
+    );
     expect(compiled.parameters).toContain(snapshotSha256);
     expect(JSON.stringify(compiled.parameters)).not.toContain("raw_payload");
     expect(JSON.stringify(compiled.parameters)).not.toContain(
@@ -351,6 +357,8 @@ describe("species backbone seed import", () => {
     expect(compiled.sql).toContain('inner join "catalog_source_snapshots"');
     expect(compiled.sql).toContain("source_record_key");
     expect(compiled.sql).toContain("license");
+    expect(compiled.sql).toContain("license_url");
+    expect(compiled.sql).toContain("attribution_text");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([

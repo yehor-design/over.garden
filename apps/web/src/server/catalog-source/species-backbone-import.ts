@@ -71,7 +71,9 @@ export interface SpeciesBackboneSourceProvenanceProof {
   sourceVersion: string;
   sourceUrl: string;
   license: string;
+  licenseUrl: string | null;
   attributionRequired: boolean;
+  attributionText: string | null;
   allowedUsage: JsonValue;
   sourceRecordKey: string;
   sourceRecordId: string;
@@ -272,7 +274,9 @@ export async function readSpeciesBackboneSourceProvenanceProof(
     sourceVersion: row.sourceVersion,
     sourceUrl: row.sourceUrl,
     license: row.license,
+    licenseUrl: row.licenseUrl,
     attributionRequired: Boolean(row.attributionRequired),
+    attributionText: row.attributionText,
     allowedUsage: row.allowedUsage,
     sourceRecordKey: row.sourceRecordKey,
     sourceRecordId: row.sourceRecordId,
@@ -415,7 +419,9 @@ export function buildUpsertSpeciesBackboneSnapshotQuery(
       source_version: sourceRecord.source.version,
       source_url: sourceRecord.source.url,
       license: sourceRecord.source.license,
+      license_url: sourceRecord.source.licenseUrl,
       attribution_required: sourceRecord.source.attributionRequired,
+      attribution_text: sourceRecord.source.attributionText,
       allowed_usage: jsonbParam(speciesBackboneAllowedUsage(sourceRecord)),
       parser_version: SPECIES_BACKBONE_PARSER_VERSION,
       payload_sha256: input.payloadSha256,
@@ -431,7 +437,9 @@ export function buildUpsertSpeciesBackboneSnapshotQuery(
           source_category: sourceRecord.source.category,
           source_url: sourceRecord.source.url,
           license: sourceRecord.source.license,
+          license_url: sourceRecord.source.licenseUrl,
           attribution_required: sourceRecord.source.attributionRequired,
+          attribution_text: sourceRecord.source.attributionText,
           allowed_usage: jsonbParam(speciesBackboneAllowedUsage(sourceRecord)),
           parser_version: SPECIES_BACKBONE_PARSER_VERSION,
           fetched_at: sourceRecord.source.fetchedAt,
@@ -719,7 +727,9 @@ export function buildSpeciesBackboneSourceProvenanceProofQuery(
       "catalog_source_snapshots.source_version as sourceVersion",
       "catalog_source_snapshots.source_url as sourceUrl",
       "catalog_source_snapshots.license as license",
+      "catalog_source_snapshots.license_url as licenseUrl",
       "catalog_source_snapshots.attribution_required as attributionRequired",
+      "catalog_source_snapshots.attribution_text as attributionText",
       "catalog_source_snapshots.allowed_usage as allowedUsage",
       "catalog_source_links.source_record_key as sourceRecordKey",
       "catalog_source_records.id as sourceRecordId",

@@ -60,6 +60,10 @@ describe("public variety metadata", () => {
     expect(serialized).not.toContain("derivative");
     expect(serialized).not.toContain("media");
     expect(serialized).not.toContain("email");
+    expect(serialized).not.toContain("Ukraine State Register");
+    expect(serialized).not.toContain("Creative Commons Attribution");
+    expect(serialized).not.toContain("data.gov.ua");
+    expect(serialized).not.toContain("creativecommons.org");
   });
 });
 
@@ -86,6 +90,19 @@ function buildPage({
       aggregateBodyLength,
     }),
     seedProof: null,
+    sourceCredits: [
+      {
+        sourceSlug: "ua-state-register",
+        sourceName: "Ukraine State Register of Plant Varieties",
+        sourceVersion: "2025-07-15",
+        sourceUrl: "https://data.gov.ua/example-register.csv",
+        license: "Creative Commons Attribution 4.0 International",
+        licenseUrl: "https://creativecommons.org/licenses/by/4.0/",
+        attributionRequired: true,
+        attributionText:
+          "Ukraine State Register of Plant Varieties, Creative Commons Attribution 4.0 International.",
+      },
+    ],
     entries: [
       {
         id: "entry-1",

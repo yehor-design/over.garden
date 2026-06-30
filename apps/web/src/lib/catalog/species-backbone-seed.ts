@@ -16,6 +16,10 @@ export const SPECIES_BACKBONE_SOURCE_IDS = {
 } as const;
 
 const VERIFIED_AT = "2026-06-29T21:35:00.000Z";
+const CC_BY_4_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/";
+const CC0_1_LICENSE_URL = "https://creativecommons.org/publicdomain/zero/1.0/";
+const EPPO_OPEN_DATA_LICENSE_URL =
+  "https://data.eppo.int/documentation/opendata";
 
 export interface SpeciesBackboneSourceDefinition {
   slug: string;
@@ -24,7 +28,9 @@ export interface SpeciesBackboneSourceDefinition {
   version: string;
   url: string;
   license: string;
+  licenseUrl: string | null;
   attributionRequired: boolean;
+  attributionText: string | null;
   allowedUsage: readonly ["raw_snapshot", "canonical_product_projection"];
   fetchedAt: string;
   verifiedAt: string;
@@ -212,7 +218,10 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
         version: "COL26.6 dataset 3LR key 315448",
         url: "https://api.catalogueoflife.org/dataset/3LR/nameusage/search?q=Solanum%20lycopersicum&limit=3",
         license: "Creative Commons Attribution 4.0 International",
+        licenseUrl: CC_BY_4_LICENSE_URL,
         attributionRequired: true,
+        attributionText:
+          "Catalogue of Life / ChecklistBank, Creative Commons Attribution 4.0 International.",
         allowedUsage: ["raw_snapshot", "canonical_product_projection"],
         fetchedAt: VERIFIED_AT,
         verifiedAt: VERIFIED_AT,
@@ -252,7 +261,9 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
         version: "2026-06",
         url: "https://list.worldfloraonline.org/matching_rest.php?input_string=Solanum%20lycopersicum",
         license: "CC0 1.0 Universal",
+        licenseUrl: CC0_1_LICENSE_URL,
         attributionRequired: false,
+        attributionText: null,
         allowedUsage: ["raw_snapshot", "canonical_product_projection"],
         fetchedAt: VERIFIED_AT,
         verifiedAt: VERIFIED_AT,
@@ -292,7 +303,10 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
         version: "Backbone pubDate 2023-08-28 modified 2023-11-17",
         url: "https://api.gbif.org/v1/species/match?name=Solanum%20lycopersicum",
         license: "Creative Commons Attribution 4.0 International",
+        licenseUrl: CC_BY_4_LICENSE_URL,
         attributionRequired: true,
+        attributionText:
+          "GBIF Backbone Taxonomy, Creative Commons Attribution 4.0 International.",
         allowedUsage: ["raw_snapshot", "canonical_product_projection"],
         fetchedAt: VERIFIED_AT,
         verifiedAt: VERIFIED_AT,
@@ -337,7 +351,9 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
         version: "LYPES taxon page verified 2026-06-29",
         url: "https://gd.eppo.int/taxon/LYPES",
         license: "EPPO Codes Open Data Licence",
+        licenseUrl: EPPO_OPEN_DATA_LICENSE_URL,
         attributionRequired: true,
+        attributionText: "EPPO Codes, EPPO Codes Open Data Licence.",
         allowedUsage: ["raw_snapshot", "canonical_product_projection"],
         fetchedAt: VERIFIED_AT,
         verifiedAt: VERIFIED_AT,
@@ -369,7 +385,9 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
         version: "Q23501 live EntityData verified 2026-06-29",
         url: "https://www.wikidata.org/wiki/Special:EntityData/Q23501.json",
         license: "CC0 1.0 Universal",
+        licenseUrl: CC0_1_LICENSE_URL,
         attributionRequired: false,
+        attributionText: null,
         allowedUsage: ["raw_snapshot", "canonical_product_projection"],
         fetchedAt: VERIFIED_AT,
         verifiedAt: VERIFIED_AT,

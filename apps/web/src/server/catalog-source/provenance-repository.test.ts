@@ -51,8 +51,11 @@ describe("catalog source provenance repository", () => {
     expect(compiled.sql).toContain('inner join "catalog_source_snapshots"');
     expect(compiled.sql).toContain("source_record_key");
     expect(compiled.sql).toContain("source_version");
+    expect(compiled.sql).toContain("source_url");
     expect(compiled.sql).toContain("license");
+    expect(compiled.sql).toContain("license_url");
     expect(compiled.sql).toContain("attribution_required");
+    expect(compiled.sql).toContain("attribution_text");
     expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.sql).not.toContain("journal_entries");

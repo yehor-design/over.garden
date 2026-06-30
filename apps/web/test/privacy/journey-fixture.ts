@@ -222,6 +222,7 @@ export function publicVarietyPage(
       aggregateBodyLength,
     }),
     seedProof: null,
+    sourceCredits: [],
     entries: [
       {
         id: JOURNEY.entryId,

@@ -41,6 +41,7 @@ export interface PublicVarietyPage {
   aggregateBodyLength: number;
   indexState: PublicVarietyIndexState;
   seedProof: PublicVarietySeedProof | null;
+  sourceCredits: PublicCatalogSourceCredit[];
   entries: PublicVarietyEntry[];
 }
 
@@ -49,6 +50,17 @@ export interface PublicVarietySitemapEntry {
   lastModified: Date | string;
   entryCount: number;
   aggregateBodyLength: number;
+}
+
+export interface PublicCatalogSourceCredit {
+  sourceSlug: string;
+  sourceName: string;
+  sourceVersion: string;
+  sourceUrl: string;
+  license: string;
+  licenseUrl: string | null;
+  attributionRequired: boolean;
+  attributionText: string | null;
 }
 
 export interface PublicVarietyEntry {
@@ -81,12 +93,16 @@ export async function getPublicVarietyPage(
 
   if (!summary?.catalogPublicSlug) return null;
 
-  const [entries, seedProof] = await Promise.all([
+  const [entries, seedProof, sourceCredits] = await Promise.all([
     buildPublicVarietyEntriesQuery(executor, slug).execute(),
     buildPublishedVarietySeedProofByCatalogItemIdQuery(
       executor,
       summary.catalogItemId,
     ).executeTakeFirst(),
+    buildPublicVarietySourceCreditsQuery(
+      executor,
+      summary.catalogItemId,
+    ).execute(),
   ]);
   const entryCount = Number(summary.entryCount);
   const aggregateBodyLength = Number(summary.aggregateBodyLength);
@@ -110,6 +126,16 @@ export async function getPublicVarietyPage(
       aggregateBodyLength,
     }),
     seedProof: seedProof ?? null,
+    sourceCredits: sourceCredits.map((credit) => ({
+      sourceSlug: credit.sourceSlug,
+      sourceName: credit.sourceName,
+      sourceVersion: credit.sourceVersion,
+      sourceUrl: credit.sourceUrl,
+      license: credit.license,
+      licenseUrl: credit.licenseUrl,
+      attributionRequired: Boolean(credit.attributionRequired),
+      attributionText: credit.attributionText,
+    })),
     entries: entries.map((entry) => ({
       id: entry.entryId,
       title: entry.entryTitle,
@@ -129,6 +155,50 @@ export async function getPublicVarietyPage(
           : null,
     })),
   };
+}
+
+export function buildPublicVarietySourceCreditsQuery(
+  executor: QueryExecutor,
+  catalogItemId: string,
+) {
+  return executor
+    .selectFrom("catalog_source_links")
+    .innerJoin(
+      "catalog_source_records",
+      "catalog_source_records.id",
+      "catalog_source_links.source_record_id",
+    )
+    .innerJoin(
+      "catalog_source_snapshots",
+      "catalog_source_snapshots.id",
+      "catalog_source_records.source_snapshot_id",
+    )
+    .select([
+      "catalog_source_links.source_slug as sourceSlug",
+      "catalog_source_snapshots.source_name as sourceName",
+      "catalog_source_snapshots.source_version as sourceVersion",
+      "catalog_source_snapshots.source_url as sourceUrl",
+      "catalog_source_snapshots.license as license",
+      "catalog_source_snapshots.license_url as licenseUrl",
+      "catalog_source_snapshots.attribution_required as attributionRequired",
+      "catalog_source_snapshots.attribution_text as attributionText",
+    ])
+    .where("catalog_source_links.catalog_item_id", "=", catalogItemId)
+    .where("catalog_source_links.projection_kind", "=", "canonical_item")
+    .where("catalog_source_records.projection_status", "=", "projected")
+    .where("catalog_source_snapshots.attribution_required", "=", true)
+    .groupBy([
+      "catalog_source_links.source_slug",
+      "catalog_source_snapshots.source_name",
+      "catalog_source_snapshots.source_version",
+      "catalog_source_snapshots.source_url",
+      "catalog_source_snapshots.license",
+      "catalog_source_snapshots.license_url",
+      "catalog_source_snapshots.attribution_required",
+      "catalog_source_snapshots.attribution_text",
+    ])
+    .orderBy("catalog_source_snapshots.source_name", "asc")
+    .orderBy("catalog_source_snapshots.source_version", "asc");
 }
 
 export async function listIndexablePublicVarietySitemapEntries(

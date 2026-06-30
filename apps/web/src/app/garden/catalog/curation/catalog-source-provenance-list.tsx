@@ -114,15 +114,45 @@ function CatalogSourceProvenanceCard({
         ) : null}
         <div>
           <dt className="text-xs text-muted-foreground">Source</dt>
-          <dd className="mt-1 font-medium text-foreground">{row.sourceName}</dd>
+          <dd className="mt-1">
+            <a
+              href={row.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              <span className="truncate">{row.sourceName}</span>
+              <ExternalLink className="size-3 shrink-0" />
+            </a>
+          </dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">License</dt>
           <dd className="mt-1 font-medium text-foreground">
-            {row.license}
+            {row.licenseUrl ? (
+              <a
+                href={row.licenseUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-w-0 items-center gap-1 underline-offset-4 hover:underline"
+              >
+                <span className="truncate">{row.license}</span>
+                <ExternalLink className="size-3 shrink-0" />
+              </a>
+            ) : (
+              row.license
+            )}
             {row.attributionRequired ? " · attribution required" : ""}
           </dd>
         </div>
+        {row.attributionText ? (
+          <div className="md:col-span-2">
+            <dt className="text-xs text-muted-foreground">Attribution</dt>
+            <dd className="mt-1 font-medium text-foreground">
+              {row.attributionText}
+            </dd>
+          </div>
+        ) : null}
         <div>
           <dt className="text-xs text-muted-foreground">Parser</dt>
           <dd className="mt-1 font-medium text-foreground">

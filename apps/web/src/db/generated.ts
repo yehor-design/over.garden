@@ -130,10 +130,12 @@ export interface CatalogSourceRecords {
 export interface CatalogSourceSnapshots {
   allowed_usage: Generated<Json>;
   attribution_required: Generated<boolean>;
+  attribution_text: string | null;
   created_at: Generated<Timestamp>;
   fetched_at: Timestamp;
   id: Generated<string>;
   license: string;
+  license_url: string | null;
   parser_version: string;
   payload_sha256: string;
   source_category: string;
