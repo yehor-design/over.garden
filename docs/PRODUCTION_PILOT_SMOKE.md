@@ -179,12 +179,14 @@ Non-destructive only: this slice does not perform any restore-over-production, b
 
 ### Worker and Meilisearch process management
 
-Runtime classification: this section is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. OVE-74 proves the matching image build and local health/worker/search smoke on Apple Container for supported Macs, but Apple Container is not the current Linux droplet process manager. Keep Docker Compose here until OVE-76 records a production-specific replacement or confirms the boundary.
+Runtime classification: this section is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. OVE-74 proves the matching image build and local health/worker/search smoke on Apple Container for supported Macs, but Apple Container is not the DigitalOcean Linux droplet process manager. OVE-76 confirms Docker Compose remains the current production process manager until a separate non-Apple Linux replacement is live-proven.
 
 - Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1` with containers `meilisearch`, `matching-api`, `matching-worker`, `caddy`.
 - Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `meilisearch`, `matching-api`, `matching-worker`, and `caddy`, so the worker, API, and Meilisearch return after a crash or droplet reboot.
 - Health endpoints: live-confirmed on 2026-06-29: matching `https://matching.over.garden/health` returned `ok` with ICU present, and Meilisearch `https://meili.over.garden/health` returned `available`.
 - Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims `processing` rows once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Handlers are idempotent (Meili upsert by primary key / delete by id), so a restart mid-job re-delivers the work at-least-once without duplicating or corrupting the public index. Failed jobs back off and retry; unknown kinds fail with `last_error` rather than being marked done.
+
+Do not remove or rewrite these production Docker Compose instructions for Apple Container. A non-Docker production path is a separate production migration, not a local Apple Container follow-up. Acceptable replacement candidates include systemd units, managed Meilisearch plus a separately managed worker, or another Linux runtime, but only after live redacted proof shows equivalent process restart/reboot recovery, matching and Meilisearch health, `journal_entry_index`/`journal_entry_unindex` completion, and the same public-safe Meilisearch document contract proven by OVE-39.
 
 ### Deterministic local recovery proof
 
@@ -206,7 +208,7 @@ uv run --frozen pytest tests/test_worker_recovery.py
 ### Live worker restart/recovery smoke (operator, redacted)
 
 This is the live counterpart that requires the droplet; the local harness de-risks it but does not replace it.
-Docker Compose commands in this section are production-only evidence commands, not local development prerequisites.
+Docker Compose commands in this section are production-only evidence commands for the current Linux droplet process manager, not local development prerequisites.
 
 1. Confirm the worker restart policy and container health (`docker compose ps`; matching/meili `/health`).
 2. Restart the worker: `docker compose restart matching-worker` (or stop it, enqueue work, then start it to exercise stale-job reclaim).

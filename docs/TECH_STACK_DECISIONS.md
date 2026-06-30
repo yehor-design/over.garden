@@ -44,7 +44,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
 13. **Live infra values are centralized.** Non-secret provider IDs, bucket names, public domains, env contracts, and operational links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Agents must not rediscover or guess those values in each task.
 14. **Product research is repo-local.** ICP, JTBD, positioning, IA, SEO/content, growth, trust/privacy, and business-model context lives in `docs/product-research/`. User-facing implementation must run the Product Thinking Gate in `docs/product-research/README.md` before Linear task creation or execution.
-15. **Apple Container is the preferred local container runtime.** Future local runtime work should use Apple Container before Docker. Keep Docker only for explicitly documented gaps such as GitHub Actions Ubuntu service containers, Linux production process management, mature Compose restart policy behavior, or unsupported developer machines. OVE-75 confirms GitHub Actions Docker usage as a CI runner exception only; it must not be treated as a local Docker Desktop requirement. `docs/CONTAINER_RUNTIME_POLICY.md` is the fallback matrix for these gaps.
+15. **Apple Container is the preferred local container runtime.** Future local runtime work should use Apple Container before Docker. Keep Docker only for explicitly documented gaps such as GitHub Actions Ubuntu service containers, Linux production process management, mature Compose restart policy behavior, or unsupported developer machines. OVE-75 confirms GitHub Actions Docker usage as a CI runner exception only; it must not be treated as a local Docker Desktop requirement. OVE-76 confirms the DigitalOcean Linux worker/search droplet as a production Docker Compose boundary until a separate non-Apple Linux process-manager migration is live-proven. `docs/CONTAINER_RUNTIME_POLICY.md` is the fallback matrix for these gaps.
 
 ## Launch topology
 
@@ -69,6 +69,10 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 GitHub Actions currently runs on `ubuntu-latest`. Its Postgres service container and MinIO `docker run` path are a `ci-required` Docker exception because Apple Container is not an Ubuntu service-container runtime. This keeps bootstrap, generated-type drift, lint, typecheck, test, and build coverage intact without reintroducing Docker Desktop as a supported-Mac local prerequisite.
 
 Do not migrate CI to Apple Container unless the replacement change documents runner support, runner cost/availability/concurrency, complete service-contract proof commands, and fallback behavior in `docs/CONTAINER_RUNTIME_POLICY.md`.
+
+## Production runtime boundary
+
+The DigitalOcean Linux worker/search droplet currently uses Docker Compose under `/opt/overgarden` for `matching-worker`, `matching-api`, `meilisearch`, and `caddy`. OVE-76 keeps that production process manager because OVE-39 live-proved restart policy, service health, and journal publish/index plus archive/unindex recovery there. Apple Container remains a supported-Mac local runtime, not the production Linux process manager. Any non-Docker production replacement must be a separate live-proven Linux migration with the restart, health, public-safe search-document, and redacted-evidence gates in `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ## ADR index
 

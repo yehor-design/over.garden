@@ -218,7 +218,15 @@ describe("pilot smoke readiness", () => {
 
     expect(findCheck(checks, "worker-process-manager")).toMatchObject({
       severity: "manual",
+      summary: expect.stringContaining("production Linux"),
+      evidence: expect.stringContaining("production droplet"),
     });
+    expect(findCheck(checks, "worker-process-manager")?.summary).toContain(
+      "Apple Container is not the droplet runtime",
+    );
+    expect(findCheck(checks, "worker-process-manager")?.evidence).not.toContain(
+      "local Docker Desktop",
+    );
     expect(findCheck(checks, "worker-restart-recovery")).toMatchObject({
       severity: "manual",
       summary: expect.stringContaining("public-safe"),

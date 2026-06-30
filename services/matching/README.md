@@ -57,6 +57,15 @@ changes, so per-job read queries cannot trap status updates in an uncommitted
 outer transaction. It also reclaims stale `processing` rows after
 `WORKER_VT_SECONDS`; job handlers must remain idempotent.
 
+Production runtime is intentionally separate from the local Apple Container
+smoke. On the current DigitalOcean Linux worker droplet, Docker Compose remains
+the OVE-76-confirmed process manager for `matching-worker`, `matching-api`,
+`meilisearch`, and `caddy` because OVE-39 live-proved restart policy, health,
+and journal index/unindex recovery there. Do not replace the droplet runtime
+with Apple Container. A non-Docker production replacement must be a separate
+Linux process-manager migration with equivalent live restart/recovery proof and
+redacted evidence.
+
 The catalog typeahead rebuild job uses payload `{ "kind":
 "catalog_typeahead_reindex" }` on the `matching` queue. The worker rebuilds the
 `catalog_typeahead` index only from `seeded`/`confirmed` catalog rows with no
@@ -80,8 +89,9 @@ visibility timeout, that `journal_entry_index`/`journal_entry_unindex` reach
 `done` after a simulated worker restart, that the public-safe document contract
 holds, that at-least-once re-delivery is idempotent, and that a transient
 Meilisearch outage fails-then-recovers. Run the worker droplet containers with a
-Docker restart policy so the process returns automatically after a crash or
-reboot.
+Docker Compose restart policy so the process returns automatically after a crash
+or reboot. This production instruction is not a local Docker Desktop
+prerequisite.
 
 ## Local Apple Container smoke
 

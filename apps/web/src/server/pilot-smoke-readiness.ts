@@ -232,9 +232,9 @@ export function buildPilotSmokeReadiness({
           label: "Worker/Meili process manager",
           severity: "manual",
           summary:
-            "The worker/Meilisearch droplet runs Docker Compose with a restart policy and health endpoints; stale processing jobs are reclaimed after the worker visibility timeout. Confirm the live restart policy and container health before the pilot.",
+            "The production Linux worker/Meilisearch droplet currently runs Docker Compose as its process manager; Apple Container is not the droplet runtime. Keep this boundary unless a separate Linux replacement live-proves restart policy, health, and journal index/unindex recovery.",
           evidence:
-            "Confirm `restart:` policy and container health on the droplet (e.g. `docker compose ps`, restart-policy inspect, matching `/health` and Meili `/health`). Record only container status classes and health booleans. Do not copy worker env files, Meilisearch keys, or database URLs.",
+            "Confirm `restart:` policy and container health on the production droplet (e.g. `docker compose ps`, restart-policy inspect, matching `/health`, and Meili `/health`). Record only process-manager class, container status classes, and health booleans. Do not copy worker env files, Meilisearch keys, database URLs, or local runtime assumptions.",
         },
         {
           id: "worker-restart-recovery",
