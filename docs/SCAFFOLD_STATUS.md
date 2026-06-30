@@ -22,6 +22,8 @@ OVE-71 establishes the Apple Container-first runtime doctrine for local containe
 
 OVE-73 proves the fresh-checkout web bootstrap against the Apple Container local service trio with Docker Desktop stopped. A supported-Mac agent can start or reuse `infra/container-up`, copy `apps/web/.env.example` to `apps/web/.env.local`, run the normal web setup/check path, and pass `pnpm local:bootstrap`, `pnpm db:types:check`, lint, typecheck, tests, and build without relying on Docker Desktop. Older Docker Compose walking-skeleton notes are historical proof/fallback context, not the default local runtime path.
 
+OVE-74 proves the matching-tier local image and worker/search smoke against Apple Container. `container build -t overgarden/matching:local .` succeeds for `services/matching/Dockerfile`, the FastAPI health process starts from the Apple Container-built image with ICU/PyICU loaded, native worker recovery tests pass, and the Meilisearch Cyrillic/catalog typeahead proof runs against Apple Container Meili. The OVE-74 run also fixed the catalog typeahead document id to use a Meilisearch-safe ASCII key for Cyrillic aliases; the searchable alias fields remain Cyrillic-safe and public/curated only. Docker remains fallback-only for unsupported local hosts or verified feature gaps, and remains production-Linux tooling until OVE-76.
+
 OVE-56 adds the first catalog source snapshot quarantine proof. The app schema now has `catalog_source_snapshots`, `catalog_source_records`, and `catalog_source_links` so a legal source payload can be stored with source/version/license/checksum/parser provenance while only an allowlisted projection reaches `catalog_items` and `catalog_item_names`. `pnpm catalog:sources:import-sample` imports the OVE-55 UA Register `Bergeron 1` sample idempotently, queues the derived typeahead reindex, proves safe typeahead from catalog tables, and proves a temporary rollback-only garden readback with `variety_state = selected`. Raw/source-only poison fields stay confined to `catalog_source_records` and are rejected from catalog typeahead/Meili hit mapping.
 
 OVE-57 adds the first official UA State Register variety projection. `pnpm catalog:sources:import-ua-register-variety` downloads the exact approved `2025-07-15_registervarietis.csv` file, decodes UTF-16LE, records full-file checksum/byte length/row count, imports `RegisterVarietis:83070006` (`Ботсадівський`) idempotently, projects only the official Ukrainian display name plus official transliteration aliases to catalog/typeahead, queues the derived catalog reindex, proves Ukrainian and transliteration typeahead, proves rollback-only selected garden readback, and proves operator provenance readback from `/garden/catalog/curation` without exposing raw payload/source-only fields. Existing provisional catalog curation can merge a user-added candidate into the imported official item without moving journal entries.
@@ -225,6 +227,7 @@ pnpm typecheck
 pnpm test
 BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 cd ../../services/matching
+container build -t overgarden/matching:local .
 uv run python -m py_compile app/main.py app/search.py app/worker.py
 uv run --frozen pytest
 MEILISEARCH_HOST='http://localhost:7700' MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' uv run python -m app.search

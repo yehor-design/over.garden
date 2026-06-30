@@ -15,7 +15,7 @@ This policy does not delete every Docker reference immediately. It classifies th
 | Local Postgres | Yes | Fallback only | `infra/container-up` starts Postgres on `127.0.0.1:5432` with a named Apple Container volume. Docker Compose remains for unsupported hosts or verified feature gaps. | OVE-72 |
 | Local Meilisearch | Yes | Fallback only | `infra/container-up` starts Meilisearch on `127.0.0.1:7700` with a named Apple Container volume and `infra/container-status` checks `/health`. | OVE-72 |
 | Local MinIO/S3 emulator | Yes | Fallback only | `infra/container-up` starts MinIO on `127.0.0.1:9000` and console `127.0.0.1:9001` with a named Apple Container volume and readiness check. | OVE-72 |
-| Matching image build and local worker/search smoke | Yes | Fallback only | Dockerfile syntax can remain an OCI image recipe, but the local build/run proof should use Apple Container where possible. | OVE-74 |
+| Matching image build and local worker/search smoke | Yes | Fallback only | OVE-74 proves `container build` for `services/matching/Dockerfile`, starts the FastAPI health process from the Apple Container-built image, and runs native worker/search proofs against Apple Container Postgres/Meilisearch. Dockerfile syntax remains a portable OCI recipe. | OVE-74 |
 | GitHub Actions Ubuntu CI | No | Yes | Apple Container is not an Ubuntu CI service-container runtime. Docker is acceptable in CI where the runner requires it. | OVE-75 |
 | Production DigitalOcean Linux worker droplet | No | Yes | Apple Container is not a Linux production process manager. Current worker/search durability depends on Docker Compose restart policy and health/recovery proof until a separate Linux deployment decision replaces it. | OVE-76 |
 | Historical ADRs, scaffold notes, copied research, and old proof logs | Not operational | Yes, as history | Historical files may describe the runtime that existed when the proof was captured. Current operational instructions must point back to this policy. | OVE-71 |
@@ -46,7 +46,7 @@ Use these labels when touching docs or Linear issues that still mention Docker:
 
 ## Current Migration Boundary
 
-OVE-71 changed doctrine and documentation only. OVE-72 adds the supported-Mac Apple Container path for the local Postgres, Meilisearch, and MinIO service trio. OVE-73 proves the fresh-checkout web bootstrap and test path against those Apple Container services with Docker Desktop stopped. The migration still does not prove matching image builds, GitHub Actions, or the production worker droplet without Docker.
+OVE-71 changed doctrine and documentation only. OVE-72 adds the supported-Mac Apple Container path for the local Postgres, Meilisearch, and MinIO service trio. OVE-73 proves the fresh-checkout web bootstrap and test path against those Apple Container services with Docker Desktop stopped. OVE-74 proves the local matching image build, health process, worker tests, and Meilisearch Cyrillic/search proof on the Apple Container local service path. The migration still does not prove GitHub Actions or the production worker droplet without Docker.
 
 The correct end state is not "delete every Docker file." The correct end state is:
 

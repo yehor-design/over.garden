@@ -1,6 +1,10 @@
+import re
 from datetime import date, datetime, timezone
 
-from app.search import journal_entry_search_document_from_row
+from app.search import (
+    catalog_typeahead_document_from_row,
+    journal_entry_search_document_from_row,
+)
 
 
 def journal_row(**overrides):
@@ -107,3 +111,26 @@ def test_journal_entry_document_refuses_unsafe_public_shape():
         )
         is None
     )
+
+
+def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
+    document = catalog_typeahead_document_from_row(
+        {
+            "catalog_item_id": "00000000-0000-4000-8000-000000000101",
+            "canonical_name": "Помідор чері",
+            "status": "seeded",
+            "source": "internal_seed",
+            "created_by_user_id": None,
+            "item_locale": "uk",
+            "display_name": "Помідор чері",
+            "alias_normalized_name": "помідор чері",
+            "alias_locale": "uk",
+            "is_primary": True,
+        }
+    )
+
+    assert document is not None
+    assert document["catalogItemId"] == "00000000-0000-4000-8000-000000000101"
+    assert document["displayName"] == "Помідор чері"
+    assert document["normalizedName"] == "помідор чері"
+    assert re.fullmatch(r"[A-Za-z0-9_-]+", str(document["id"]))

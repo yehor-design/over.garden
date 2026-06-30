@@ -179,7 +179,7 @@ Non-destructive only: this slice does not perform any restore-over-production, b
 
 ### Worker and Meilisearch process management
 
-Runtime classification: this section is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container is the preferred local Mac runtime, but it is not the current Linux droplet process manager. Keep Docker Compose here until OVE-76 records a production-specific replacement or confirms the boundary.
+Runtime classification: this section is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. OVE-74 proves the matching image build and local health/worker/search smoke on Apple Container for supported Macs, but Apple Container is not the current Linux droplet process manager. Keep Docker Compose here until OVE-76 records a production-specific replacement or confirms the boundary.
 
 - Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1` with containers `meilisearch`, `matching-api`, `matching-worker`, `caddy`.
 - Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `meilisearch`, `matching-api`, `matching-worker`, and `caddy`, so the worker, API, and Meilisearch return after a crash or droplet reboot.

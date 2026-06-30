@@ -27,10 +27,25 @@ the Docker image this is handled by `libicu-dev`.
 
 ## Container runtime
 
-For supported local Macs, matching image build and worker/search smoke should
-move to Apple Container first under `docs/CONTAINER_RUNTIME_POLICY.md` and
-OVE-74. The Docker image remains a portable OCI recipe and a fallback path where
-Apple Container is unavailable or misses a required runtime feature.
+For supported local Macs, build and smoke the matching image with Apple
+Container first under `docs/CONTAINER_RUNTIME_POLICY.md`. OVE-74 proves this
+path without Docker Desktop:
+
+```bash
+cd services/matching
+container build -t overgarden/matching:local .
+container run --detach \
+  --name overgarden-matching-local \
+  --publish 127.0.0.1:8000:8000 \
+  overgarden/matching:local
+curl -fsS http://127.0.0.1:8000/health
+container stop overgarden-matching-local
+container delete overgarden-matching-local
+```
+
+The Dockerfile remains a portable OCI image recipe. Use Docker only as a named
+fallback when Apple Container is unavailable on the host or a verified Apple
+Container feature gap blocks the local smoke.
 
 ## Runtime
 
@@ -67,3 +82,24 @@ holds, that at-least-once re-delivery is idempotent, and that a transient
 Meilisearch outage fails-then-recovers. Run the worker droplet containers with a
 Docker restart policy so the process returns automatically after a crash or
 reboot.
+
+## Local Apple Container smoke
+
+With `infra/container-up` running the local Postgres and Meilisearch services,
+the matching-tier regression smoke is:
+
+```bash
+cd services/matching
+container build -t overgarden/matching:local .
+uv run python -m py_compile app/main.py app/search.py app/worker.py
+uv run --frozen pytest
+MEILISEARCH_HOST='http://localhost:7700' \
+  MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' \
+  uv run python -m app.search
+```
+
+The Meilisearch proof indexes only tracer and catalog typeahead proof documents.
+Catalog typeahead document ids are Meilisearch-safe ASCII keys derived from the
+catalog item id plus a hash of the alias locale and normalized alias; the
+searchable Cyrillic alias stays in `displayName`, `canonicalName`, and
+`normalizedName`.

@@ -14,11 +14,11 @@ Run the proof against a live Meilisearch:
 
 from __future__ import annotations
 
+import hashlib
 import os
 from datetime import date, datetime, timezone
 from collections.abc import Iterable, Mapping
 from typing import Any
-from urllib.parse import quote
 
 import meilisearch
 
@@ -524,9 +524,9 @@ def _catalog_typeahead_document_id(
     locale: str,
     normalized_name: str,
 ) -> str:
-    encoded_locale = quote(locale, safe="")
-    encoded_name = quote(normalized_name, safe="")
-    return f"{catalog_item_id}:{encoded_locale}:{encoded_name}"
+    alias_key = f"{locale}\0{normalized_name}".encode()
+    alias_digest = hashlib.sha256(alias_key).hexdigest()[:24]
+    return f"{catalog_item_id}-{alias_digest}"
 
 
 if __name__ == "__main__":
