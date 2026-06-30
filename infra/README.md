@@ -1,6 +1,6 @@
 # OverGarden Local Infra
 
-Apple Container is the primary local runtime on supported Apple Silicon/macOS 26 machines. Docker Compose is retained only as a fallback for unsupported hosts or verified feature gaps.
+Apple Container is the primary local runtime on supported Apple Silicon/macOS 26 machines. Docker Desktop is not required on those machines after the OVE-77 closeout proof. Docker Compose is retained only as a fallback for unsupported hosts or verified feature gaps.
 
 ## Apple Container
 
@@ -44,7 +44,13 @@ Postgres uses `PGDATA=/var/lib/postgresql/data/pgdata` inside the mounted volume
 
 ## Docker Fallback
 
-Use Docker Compose only when Apple Container is unavailable or lacks a required feature on the current machine:
+Use Docker Compose only when one of these named gaps applies:
+
+- the developer machine is not an Apple Silicon/macOS 26 host supported by Apple Container;
+- Apple Container is not installed or `container system status` cannot be made healthy on that machine;
+- a specific Apple Container feature gap blocks the local service trio or matching-image smoke, and the gap is recorded in the issue/docs before using Docker.
+
+Fallback command:
 
 ```bash
 cd infra

@@ -1,6 +1,6 @@
 # Fallback-only local runtime. Apple Container is the preferred runtime on
 # supported local Macs; keep this file for unsupported hosts and explicit
-# feature gaps until OVE-77 completes fallback cleanup.
+# feature gaps. Docker Desktop is not required for supported-Mac local proof.
 services:
   postgres:
     image: postgres:16-alpine

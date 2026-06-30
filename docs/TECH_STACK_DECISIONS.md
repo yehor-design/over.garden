@@ -26,7 +26,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Edge/DNS | Cloudflare in front of Vercel; do not cache HTML at Cloudflare |
 | Analytics | PostHog / first-party analytics later, after privacy event review |
 | Build method | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches |
-| Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker only where Apple Container is unavailable or lacks a required feature. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
+| Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker Desktop is not required after OVE-77, except as a fallback for unsupported hosts or verified Apple Container feature gaps. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
 
 ## Binding invariants
 
@@ -44,7 +44,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
 13. **Live infra values are centralized.** Non-secret provider IDs, bucket names, public domains, env contracts, and operational links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Agents must not rediscover or guess those values in each task.
 14. **Product research is repo-local.** ICP, JTBD, positioning, IA, SEO/content, growth, trust/privacy, and business-model context lives in `docs/product-research/`. User-facing implementation must run the Product Thinking Gate in `docs/product-research/README.md` before Linear task creation or execution.
-15. **Apple Container is the preferred local container runtime.** Future local runtime work should use Apple Container before Docker. Keep Docker only for explicitly documented gaps such as GitHub Actions Ubuntu service containers, Linux production process management, mature Compose restart policy behavior, or unsupported developer machines. OVE-75 confirms GitHub Actions Docker usage as a CI runner exception only; it must not be treated as a local Docker Desktop requirement. OVE-76 confirms the DigitalOcean Linux worker/search droplet as a production Docker Compose boundary until a separate non-Apple Linux process-manager migration is live-proven. `docs/CONTAINER_RUNTIME_POLICY.md` is the fallback matrix for these gaps.
+15. **Apple Container is the preferred local container runtime.** Future local runtime work should use Apple Container before Docker. Keep Docker only for explicitly documented gaps such as GitHub Actions Ubuntu service containers, Linux production process management, mature Compose restart policy behavior, or unsupported developer machines. OVE-75 confirms GitHub Actions Docker usage as a CI runner exception only; it must not be treated as a local Docker Desktop requirement. OVE-76 confirms the DigitalOcean Linux worker/search droplet as a production Docker Compose boundary until a separate non-Apple Linux process-manager migration is live-proven. OVE-77 confirms Docker Desktop can be removed locally on supported Macs after the Apple Container closeout proof passes. `docs/CONTAINER_RUNTIME_POLICY.md` is the fallback matrix for these gaps.
 
 ## Launch topology
 
@@ -60,7 +60,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Apple Container-first local Postgres for database development on supported Macs, started by `infra/container-up`.
 - Apple Container-first Meilisearch for search proof and index integration on supported Macs, started by `infra/container-up`.
 - Apple Container-first MinIO as local S3/R2 emulator on supported Macs, started by `infra/container-up`.
-- Docker remains an allowed fallback only when Apple Container cannot run or does not support the required local behavior. Fallback docs must name the gap instead of treating Docker Desktop as the default.
+- Docker remains an allowed fallback only when Apple Container cannot run or does not support the required local behavior. Fallback docs must name the gap instead of treating Docker Desktop as the default. Supported Apple Silicon/macOS 26 machines do not need Docker Desktop for the OVE-77-proven local path.
 - `apps/web/.env.example` and `infra/.env.example` are the canonical local env templates.
 - `docs/INFRASTRUCTURE_REGISTRY.md` records production-equivalent non-secret values; env files remain the only place for local secrets.
 

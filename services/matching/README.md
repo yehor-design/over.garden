@@ -45,7 +45,9 @@ container delete overgarden-matching-local
 
 The Dockerfile remains a portable OCI image recipe. Use Docker only as a named
 fallback when Apple Container is unavailable on the host or a verified Apple
-Container feature gap blocks the local smoke.
+Container feature gap blocks the local smoke. After OVE-77, a supported
+Apple Silicon/macOS 26 local machine does not need Docker Desktop for the
+matching image or worker/search proof path.
 
 ## Runtime
 
