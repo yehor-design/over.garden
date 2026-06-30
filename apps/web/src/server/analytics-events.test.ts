@@ -53,6 +53,7 @@ describe("analytics event privacy contracts", () => {
         has_photo: true,
         is_backdated: false,
         location_visibility_level: "hidden",
+        object_kind: "bee_colony",
         source_surface_kind: "homepage",
         sync_status: "offline_synced",
         variety_state: "selected",
@@ -64,11 +65,30 @@ describe("analytics event privacy contracts", () => {
       has_photo: true,
       is_backdated: false,
       location_visibility_level: "hidden",
+      object_kind: "bee_colony",
       source_surface_kind: "homepage",
       sync_status: "offline_synced",
       variety_state: "selected",
       followed_by_action: false,
     });
+  });
+
+  it("allows all bounded living object kinds in analytics", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        object_kind: "plant",
+      }),
+    ).toEqual({ object_kind: "plant" });
+    expect(
+      normalizeAnalyticsEventProperties({
+        object_kind: "bee_colony",
+      }),
+    ).toEqual({ object_kind: "bee_colony" });
+    expect(
+      normalizeAnalyticsEventProperties({
+        object_kind: "animal",
+      }),
+    ).toEqual({ object_kind: "animal" });
   });
 
   it("allows only bounded activation and source surface enums", () => {

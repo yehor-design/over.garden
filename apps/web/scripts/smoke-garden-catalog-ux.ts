@@ -1,0 +1,471 @@
+import { randomUUID } from "node:crypto";
+import process from "node:process";
+
+import { config as loadEnv } from "dotenv";
+
+import {
+  signPilotInviteToken,
+  type PilotInviteCohort,
+} from "../src/lib/garden/pilot-invite";
+
+loadEnv({ path: ".env.local", override: false });
+
+const PILOT_INVITE_COOKIE_NAME = "overgarden_pilot_invite";
+const DEFAULT_BASE_URL = "http://localhost:3000";
+const TEST_PASSWORD = "overgarden-ove67-smoke-password";
+const FORBIDDEN_EVIDENCE_MARKERS = [
+  "rawPayload",
+  "raw_payload",
+  "sourceOnlyFields",
+  "source_only_fields",
+  "sourceRecordId",
+  "source_record_id",
+  "sourceRecordKey",
+  "source_record_key",
+  "allowedProjection",
+  "allowed_projection",
+  "ownerUserId",
+  "owner_user_id",
+  "journalBody",
+  "journalTitle",
+  "quarantineKey",
+  "derivativeKey",
+  "coordinates",
+  "latitude",
+  "longitude",
+  "gps",
+  "exif",
+  "operator",
+];
+
+type CatalogKind = "plant_variety" | "species" | "breed";
+
+interface CatalogSuggestion {
+  id: string;
+  displayName: string;
+  canonicalName: string;
+  catalogKind: CatalogKind;
+  locale: string;
+  status: "seeded" | "confirmed";
+  source: string;
+}
+
+interface TypeaheadResponse {
+  suggestions?: CatalogSuggestion[];
+}
+
+interface EntryResponse {
+  plantObject: {
+    objectKind: "plant" | "bee_colony" | "animal";
+    catalogItemId: string | null;
+    varietyText: string | null;
+    varietyState: string;
+  };
+  readbackUrl: string;
+}
+
+interface SmokeCase {
+  query: string;
+  expectedCanonicalName: string;
+  expectedCatalogKind: CatalogKind;
+  expectedObjectKind: "plant" | "bee_colony";
+  expectedIdentityLabel: "Plant variety" | "Plant species" | "Bee breed";
+  plantName: string;
+}
+
+const SMOKE_CASES: SmokeCase[] = [
+  {
+    query: "Ботсадівський",
+    expectedCanonicalName: "Ботсадівський",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-67 Botsadivskyi apricot",
+  },
+  {
+    query: "помідор",
+    expectedCanonicalName: "Solanum lycopersicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-67 tomato species",
+  },
+  {
+    query: "домат",
+    expectedCanonicalName: "Solanum lycopersicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-67 domat species",
+  },
+  {
+    query: "Карпатська",
+    expectedCanonicalName: "Карпатська бджола",
+    expectedCatalogKind: "breed",
+    expectedObjectKind: "bee_colony",
+    expectedIdentityLabel: "Bee breed",
+    plantName: "OVE-67 Carpathian colony",
+  },
+  {
+    query: "Садово 1",
+    expectedCanonicalName: "Садово 1",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-67 Sadovo wheat",
+  },
+  {
+    query: "Red Cherry",
+    expectedCanonicalName: "Red Cherry tomato",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-67 Red Cherry tomato",
+  },
+];
+
+class CookieJar {
+  private readonly cookies = new Map<string, string>();
+
+  set(name: string, value: string) {
+    this.cookies.set(name, value);
+  }
+
+  addFromResponse(response: Response) {
+    for (const cookie of getSetCookieHeaders(response.headers)) {
+      const pair = cookie.split(";")[0];
+      const separator = pair.indexOf("=");
+      if (separator <= 0) continue;
+      this.cookies.set(pair.slice(0, separator), pair.slice(separator + 1));
+    }
+  }
+
+  header() {
+    return [...this.cookies.entries()]
+      .map(([name, value]) => `${name}=${value}`)
+      .join("; ");
+  }
+}
+
+async function main() {
+  const options = parseOptions(process.argv.slice(2));
+  const baseUrl = normalizeBaseUrl(options.baseUrl);
+  const jar = new CookieJar();
+  const invite = signPilotInviteToken({
+    cohort: "founder_rehearsal" satisfies PilotInviteCohort,
+    ttlSeconds: 60 * 60,
+  });
+  jar.set(PILOT_INVITE_COOKIE_NAME, invite);
+
+  const email = `ove67-smoke-${Date.now()}-${randomUUID()}@example.test`;
+  await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
+    email,
+    password: TEST_PASSWORD,
+    name: "OVE-67 smoke user",
+  });
+  await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
+    email,
+    password: TEST_PASSWORD,
+  });
+
+  const gardenHtml = await textRequest(baseUrl, jar, "/garden");
+  assertIncludes(
+    gardenHtml,
+    "Catalog match",
+    "Garden page missing catalog UI.",
+  );
+  assertIncludes(
+    gardenHtml,
+    "Keep without match",
+    "Garden page missing catalog fallback UI.",
+  );
+
+  const evidence = [];
+  for (const smokeCase of SMOKE_CASES) {
+    const typeahead = await jsonRequest<TypeaheadResponse>(
+      baseUrl,
+      jar,
+      `/api/garden/catalog/typeahead?q=${encodeURIComponent(smokeCase.query)}`,
+    );
+    const suggestions = Array.isArray(typeahead.suggestions)
+      ? typeahead.suggestions
+      : [];
+    assertNoDuplicateConcepts(smokeCase.query, suggestions);
+
+    const selected = suggestions.find(
+      (suggestion) =>
+        suggestion.canonicalName === smokeCase.expectedCanonicalName &&
+        suggestion.catalogKind === smokeCase.expectedCatalogKind,
+    );
+    if (!selected) {
+      throw new Error(
+        `Missing intended suggestion for ${smokeCase.query}: ${smokeCase.expectedCanonicalName} (${smokeCase.expectedCatalogKind}).`,
+      );
+    }
+
+    const entry = await jsonRequest<EntryResponse>(
+      baseUrl,
+      jar,
+      "/api/garden/entries",
+      {
+        method: "POST",
+        body: {
+          target: "first_plant_entry",
+          spaceName: "OVE-67 catalog UX smoke",
+          plantName: smokeCase.plantName,
+          objectKind: selected.catalogKind === "breed" ? "bee_colony" : "plant",
+          catalogItemId: selected.id,
+          userAddedCatalogName: null,
+          varietyText: selected.displayName,
+          title: `OVE-67 ${smokeCase.query}`,
+          body: "Catalog UX smoke entry. No personal garden details.",
+          entryDate: "2026-06-30",
+          locationVisibility: "hidden",
+          coarseRegionCode: null,
+          clientMutationId: randomUUID(),
+          syncStatus: "online",
+          activationSource: "direct_garden",
+        },
+      },
+    );
+
+    assertEqual(
+      entry.plantObject.catalogItemId,
+      selected.id,
+      `${smokeCase.query} readback did not preserve selected catalog id.`,
+    );
+    assertEqual(
+      entry.plantObject.objectKind,
+      smokeCase.expectedObjectKind,
+      `${smokeCase.query} readback object kind mismatch.`,
+    );
+    assertEqual(
+      entry.plantObject.varietyText,
+      smokeCase.expectedCanonicalName,
+      `${smokeCase.query} readback canonical identity mismatch.`,
+    );
+    assertEqual(
+      entry.plantObject.varietyState,
+      "selected",
+      `${smokeCase.query} readback variety state mismatch.`,
+    );
+
+    const readbackText = visiblePageText(
+      await textRequest(baseUrl, jar, entry.readbackUrl),
+    );
+    assertIncludes(
+      readbackText,
+      smokeCase.plantName,
+      `${smokeCase.query} readback page missing object name.`,
+    );
+    assertMatches(
+      readbackText,
+      new RegExp(
+        `${escapeRegExp(smokeCase.expectedIdentityLabel)}\\s*:\\s*${escapeRegExp(
+          smokeCase.expectedCanonicalName,
+        )}`,
+      ),
+      `${smokeCase.query} readback page missing kind-specific catalog label. Text snippet: ${snippetAround(
+        readbackText,
+        smokeCase.expectedCanonicalName,
+      )}`,
+    );
+
+    evidence.push({
+      query: smokeCase.query,
+      suggestionCount: suggestions.length,
+      selectedResultText: selected.displayName,
+      canonicalName: selected.canonicalName,
+      catalogKind: selected.catalogKind,
+      objectKind: entry.plantObject.objectKind,
+      varietyState: entry.plantObject.varietyState,
+      duplicateSameConceptSuggestionsAbsent: true,
+      readbackIdentityPreserved: true,
+      readbackPageStatus: 200,
+    });
+  }
+
+  const output = {
+    baseUrl,
+    cases: evidence,
+    leakCheck: "passed",
+  };
+  assertNoForbiddenEvidence(output);
+  console.log(JSON.stringify(output, null, 2));
+}
+
+function parseOptions(argv: string[]) {
+  let baseUrl =
+    process.env.OVE67_SMOKE_BASE_URL ??
+    process.env.PUBLIC_SITE_URL ??
+    process.env.BETTER_AUTH_URL ??
+    DEFAULT_BASE_URL;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--base-url") {
+      baseUrl = argv[index + 1] ?? baseUrl;
+      index += 1;
+    }
+  }
+
+  return { baseUrl };
+}
+
+function normalizeBaseUrl(value: string) {
+  const url = new URL(value);
+  url.pathname = "";
+  url.search = "";
+  url.hash = "";
+  return url.toString().replace(/\/$/, "");
+}
+
+async function authRequest(
+  baseUrl: string,
+  jar: CookieJar,
+  path: string,
+  body: Record<string, string>,
+) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Origin: baseUrl,
+      Cookie: jar.header(),
+    },
+    body: JSON.stringify(body),
+    redirect: "manual",
+  });
+  jar.addFromResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      `Auth request failed at ${path}: ${response.status} ${await response.text()}`,
+    );
+  }
+}
+
+async function jsonRequest<T>(
+  baseUrl: string,
+  jar: CookieJar,
+  path: string,
+  init: { method?: string; body?: unknown } = {},
+): Promise<T> {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: init.method ?? "GET",
+    headers: {
+      Accept: "application/json",
+      ...(init.method && init.method !== "GET" ? { Origin: baseUrl } : {}),
+      ...(init.body ? { "Content-Type": "application/json" } : {}),
+      Cookie: jar.header(),
+    },
+    body: init.body ? JSON.stringify(init.body) : undefined,
+    redirect: "manual",
+  });
+  jar.addFromResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      `Request failed at ${path}: ${response.status} ${await response.text()}`,
+    );
+  }
+
+  return (await response.json()) as T;
+}
+
+async function textRequest(baseUrl: string, jar: CookieJar, path: string) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    headers: {
+      Accept: "text/html",
+      Cookie: jar.header(),
+    },
+    redirect: "manual",
+  });
+  jar.addFromResponse(response);
+
+  if (!response.ok) {
+    throw new Error(
+      `Page request failed at ${path}: ${response.status} ${await response.text()}`,
+    );
+  }
+
+  return response.text();
+}
+
+function assertNoDuplicateConcepts(
+  query: string,
+  suggestions: CatalogSuggestion[],
+) {
+  const seen = new Set<string>();
+
+  for (const suggestion of suggestions) {
+    const key = [
+      suggestion.catalogKind,
+      suggestion.canonicalName.trim().replace(/\s+/g, " ").toLowerCase(),
+    ].join(":");
+
+    if (seen.has(key)) {
+      throw new Error(
+        `${query} returned duplicate same-concept suggestion for ${suggestion.canonicalName} (${suggestion.catalogKind}).`,
+      );
+    }
+    seen.add(key);
+  }
+}
+
+function assertNoForbiddenEvidence(output: unknown) {
+  const serialized = JSON.stringify(output);
+  for (const marker of FORBIDDEN_EVIDENCE_MARKERS) {
+    if (serialized.toLowerCase().includes(marker.toLowerCase())) {
+      throw new Error(`Smoke evidence contains forbidden marker: ${marker}.`);
+    }
+  }
+}
+
+function assertIncludes(value: string, expected: string, message: string) {
+  if (!value.includes(expected)) throw new Error(message);
+}
+
+function assertMatches(value: string, expected: RegExp, message: string) {
+  if (!expected.test(value)) throw new Error(message);
+}
+
+function assertEqual<T>(actual: T, expected: T, message: string) {
+  if (actual !== expected) {
+    throw new Error(`${message} Expected ${expected}; received ${actual}.`);
+  }
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function snippetAround(value: string, needle: string) {
+  const index = value.indexOf(needle);
+  if (index === -1) return value.slice(0, 240);
+  return value.slice(Math.max(0, index - 120), index + needle.length + 120);
+}
+
+function visiblePageText(html: string) {
+  return html
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getSetCookieHeaders(headers: Headers): string[] {
+  const withGetter = headers as Headers & { getSetCookie?: () => string[] };
+  const fromGetter = withGetter.getSetCookie?.();
+  if (fromGetter && fromGetter.length > 0) return fromGetter;
+
+  const combined = headers.get("set-cookie");
+  return combined ? combined.split(/,(?=\s*[^;,]+=)/) : [];
+}
+
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
+  catalogIdentityLabel,
   entryPrivacyLabel,
   entryScopeLabel,
   plantObjectKindLabel,
@@ -121,7 +122,9 @@ export default async function PlantObjectReadbackPage({
               {plantObjectKindLabel(page.plantObject.object_kind)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Variety: {page.plantObject.variety_text ?? "Unknown"}
+              {`${catalogIdentityLabel(page.plantObject.catalog_kind)}: ${
+                page.plantObject.variety_text ?? "Unknown"
+              }`}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {varietyStateLabel(page.plantObject.variety_state)}

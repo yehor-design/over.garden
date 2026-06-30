@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  catalogIdentityLabel,
+  catalogKindLabel,
   catalogSuggestionStatusLabel,
   entryPrivacyLabel,
   entryScopeLabel,
@@ -70,6 +72,12 @@ describe("pilot UX copy", () => {
       varietyStateLabel("selected"),
       varietyStateLabel("user_added"),
       varietyStateLabel("unknown"),
+      catalogKindLabel("plant_variety"),
+      catalogKindLabel("species"),
+      catalogKindLabel("breed"),
+      catalogIdentityLabel("plant_variety"),
+      catalogIdentityLabel("species"),
+      catalogIdentityLabel("breed"),
       catalogSuggestionStatusLabel("seeded"),
       entryScopeLabel("object"),
       entryPrivacyLabel({ visibility: "public", isArchived: false }),
@@ -79,6 +87,12 @@ describe("pilot UX copy", () => {
     expect(copy).toContain("Matched to catalog");
     expect(copy).toContain("Saved with your catalog name");
     expect(copy).toContain("No catalog match yet");
+    expect(copy).toContain("Plant variety");
+    expect(copy).toContain("Plant species");
+    expect(copy).toContain("Bee breed");
+    expect(catalogIdentityLabel("plant_variety")).toBe("Plant variety");
+    expect(catalogIdentityLabel("species")).toBe("Plant species");
+    expect(catalogIdentityLabel("breed")).toBe("Bee breed");
     expect(copy).not.toMatch(/\b(selected|user_added|unknown|lifecycle)\b/i);
   });
 });

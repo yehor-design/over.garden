@@ -129,11 +129,26 @@ export function catalogSuggestionStatusLabel(status: string) {
 export function catalogKindLabel(value: string | null | undefined) {
   switch (value) {
     case "breed":
-      return "Breed";
+      return "Bee breed";
     case "species":
-      return "Species";
+      return "Plant species";
+    case "plant_variety":
+      return "Plant variety";
     default:
-      return "Variety";
+      return "Catalog match";
+  }
+}
+
+export function catalogIdentityLabel(value: string | null | undefined) {
+  switch (value) {
+    case "breed":
+      return "Bee breed";
+    case "species":
+      return "Plant species";
+    case "plant_variety":
+      return "Plant variety";
+    default:
+      return "Catalog";
   }
 }
 

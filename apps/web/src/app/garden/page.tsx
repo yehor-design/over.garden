@@ -6,6 +6,7 @@ import {
 } from "@/lib/garden/activation";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
+  catalogIdentityLabel,
   plantObjectKindLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
@@ -118,8 +119,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                           </span>
                           <span className="text-xs text-muted-foreground">
                             {plantObjectKindLabel(object.objectKind)} ·{" "}
-                            {object.varietyText ?? "Unknown catalog match"} ·{" "}
-                            {varietyStateLabel(object.varietyState)}
+                            {object.varietyText
+                              ? `${catalogIdentityLabel(object.catalogKind)}: ${
+                                  object.varietyText
+                                }`
+                              : "Unknown catalog match"}{" "}
+                            · {varietyStateLabel(object.varietyState)}
                           </span>
                         </span>
                         <span className="text-sm font-medium text-primary">
@@ -179,7 +184,13 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                         <span className="mt-1 block text-xs text-muted-foreground">
                           {plantObjectKindLabel(object.objectKind)} ·{" "}
                           {object.spaceDisplayName}
-                          {` · ${object.varietyText ?? "Unknown"}`}
+                          {` · ${
+                            object.varietyText
+                              ? `${catalogIdentityLabel(object.catalogKind)}: ${
+                                  object.varietyText
+                                }`
+                              : "Unknown"
+                          }`}
                         </span>
                       </Link>
                     </li>

@@ -211,13 +211,19 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"plant_objects"."id" = $1');
+    expect(compiled.sql).toContain('"plant_objects"."id" = $3');
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
+    expect(compiled.sql).toContain(
+      'left join "catalog_items" on "catalog_items"."id" = "plant_objects"."catalog_item_id"',
+    );
+    expect(compiled.sql).toContain('"catalog_items"."catalog_kind"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
-    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $3');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $4');
+    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $5');
     expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",

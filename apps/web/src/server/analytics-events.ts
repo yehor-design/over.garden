@@ -329,6 +329,11 @@ function normalizeAnalyticsEventPropertyValue(
     case "location_visibility_level":
       if (value === "region" || value === "hidden") return value;
       break;
+    case "object_kind":
+      if (value === "plant" || value === "bee_colony" || value === "animal") {
+        return value;
+      }
+      break;
     case "source_surface_kind":
       if (
         value === "homepage" ||

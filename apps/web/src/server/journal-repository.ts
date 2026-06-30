@@ -5,6 +5,7 @@ import type { Insertable, Kysely, Transaction } from "kysely";
 import { db } from "@/db";
 import type {
   Database,
+  CatalogKind,
   EntryLifecycleState,
   EntryVisibility,
   JournalEntry,
@@ -120,6 +121,7 @@ export interface PlantObjectSummary {
   objectKind: PlantObjectKind;
   spaceDisplayName: string;
   catalogItemId: string | null;
+  catalogKind: CatalogKind | null;
   varietyText: string | null;
   varietyState: VarietyState;
   createdAt: Date;
@@ -135,6 +137,7 @@ export interface PlantObjectPage {
     display_name: PlantObject["display_name"];
     object_kind: PlantObjectKind;
     catalog_item_id: PlantObject["catalog_item_id"];
+    catalog_kind: CatalogKind | null;
     variety_text: PlantObject["variety_text"];
     variety_state: PlantObject["variety_state"];
     location_visibility: PlantObject["location_visibility"];
@@ -336,6 +339,7 @@ export async function createFirstPlantEntry(
           display_name: plantObject.display_name,
           object_kind: plantObject.object_kind as PlantObjectKind,
           catalog_item_id: plantObject.catalog_item_id,
+          catalog_kind: selectedCatalogItem?.catalogKind ?? null,
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state,
           location_visibility: plantObject.location_visibility,
@@ -396,11 +400,18 @@ export async function listMyPlantObjects(
   const rows = await db
     .selectFrom("plant_objects")
     .innerJoin("spaces", "spaces.id", "plant_objects.space_id")
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.created_by_user_id", "is", null),
+    )
     .select([
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
+      "catalog_items.catalog_kind as catalogKind",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.created_at as createdAt",
@@ -415,6 +426,7 @@ export async function listMyPlantObjects(
   return rows.map((row) => ({
     ...row,
     objectKind: row.objectKind as PlantObjectKind,
+    catalogKind: row.catalogKind as CatalogKind | null,
     varietyState: row.varietyState as VarietyState,
   }));
 }
@@ -458,6 +470,7 @@ export async function getPlantObjectPage(
       display_name: objectRow.objectDisplayName,
       object_kind: objectRow.objectKind as PlantObjectKind,
       catalog_item_id: objectRow.catalogItemId,
+      catalog_kind: objectRow.catalogKind as CatalogKind | null,
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState,
       location_visibility: objectRow.objectLocationVisibility,
@@ -555,6 +568,7 @@ export async function createPlantObjectJournalEntry(
           display_name: target.objectDisplayName,
           object_kind: target.objectKind as PlantObjectKind,
           catalog_item_id: target.catalogItemId,
+          catalog_kind: target.catalogKind as CatalogKind | null,
           variety_text: target.varietyText,
           variety_state: target.varietyState,
           location_visibility: target.objectLocationVisibility,
@@ -604,6 +618,7 @@ export async function createPlantObjectJournalEntry(
         display_name: target.objectDisplayName,
         object_kind: target.objectKind as PlantObjectKind,
         catalog_item_id: target.catalogItemId,
+        catalog_kind: target.catalogKind as CatalogKind | null,
         variety_text: target.varietyText,
         variety_state: target.varietyState,
         location_visibility: target.objectLocationVisibility,
@@ -681,6 +696,7 @@ export async function resolvePlantObjectCatalog(
         display_name: resolved.display_name,
         object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
+        catalog_kind: selectedCatalogItem.catalogKind,
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state,
         location_visibility: resolved.location_visibility,
@@ -1137,11 +1153,18 @@ export function buildPlantObjectPageObjectQuery(
   return executor
     .selectFrom("plant_objects")
     .innerJoin("spaces", "spaces.id", "plant_objects.space_id")
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.created_by_user_id", "is", null),
+    )
     .select([
       "plant_objects.id as objectId",
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
+      "catalog_items.catalog_kind as catalogKind",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",

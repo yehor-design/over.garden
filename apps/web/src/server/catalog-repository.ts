@@ -77,6 +77,37 @@ interface CreateUserAddedCatalogCandidateInput {
   displayName: string;
 }
 
+interface CatalogTypeaheadSearchDeps {
+  searchWithMeili?: (
+    query: string,
+    limit?: number,
+  ) => Promise<CatalogSuggestion[]>;
+  searchWithPostgres?: (
+    query: string,
+    limit?: number,
+  ) => Promise<CatalogSuggestion[]>;
+}
+
+export async function searchCatalogSuggestionsForTypeahead(
+  query: string,
+  limit = MAX_CATALOG_SUGGESTIONS,
+  deps: CatalogTypeaheadSearchDeps = {},
+): Promise<CatalogSuggestion[]> {
+  const searchWithMeili =
+    deps.searchWithMeili ?? searchCatalogSuggestionsWithMeili;
+  const searchWithPostgres =
+    deps.searchWithPostgres ?? searchCatalogSuggestions;
+
+  try {
+    const suggestions = await searchWithMeili(query, limit);
+    if (suggestions.length > 0) return suggestions;
+  } catch {
+    // Meilisearch is derived state; Postgres remains the canonical fallback.
+  }
+
+  return searchWithPostgres(query, limit);
+}
+
 export async function searchCatalogSuggestionsWithMeili(
   query: string,
   limit = MAX_CATALOG_SUGGESTIONS,
@@ -503,10 +534,7 @@ function normalizeCatalogLimit(limit: number) {
 
 function normalizeCatalogTypeaheadRowLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_CATALOG_SUGGESTIONS;
-  return Math.min(
-    Math.max(Math.trunc(limit), 1),
-    MAX_CATALOG_TYPEAHEAD_ROWS,
-  );
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_CATALOG_TYPEAHEAD_ROWS);
 }
 
 function catalogCurationIdempotencyKey(

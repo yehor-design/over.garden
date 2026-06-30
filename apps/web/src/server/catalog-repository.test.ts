@@ -25,6 +25,7 @@ import {
   buildUpsertUserAddedCatalogItemQuery,
   normalizeCatalogPublicSlug,
   normalizeCatalogQuery,
+  searchCatalogSuggestionsForTypeahead,
   searchCatalogSuggestionsWithMeili,
 } from "./catalog-repository";
 
@@ -205,6 +206,82 @@ describe("catalog repository query contracts", () => {
         source: "ua_state_register",
       },
     ]);
+  });
+
+  it("falls back to canonical catalog rows when the derived Meili index is empty", async () => {
+    const fallback = [
+      {
+        id: "00000000-0000-4000-8000-000000000301",
+        displayName: "помідор",
+        canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species" as const,
+        locale: "uk",
+        status: "seeded" as const,
+        source: "species_backbone",
+      },
+    ];
+    const calls: string[] = [];
+
+    await expect(
+      searchCatalogSuggestionsForTypeahead("помідор", 8, {
+        searchWithMeili: async () => {
+          calls.push("meili");
+          return [];
+        },
+        searchWithPostgres: async () => {
+          calls.push("postgres");
+          return fallback;
+        },
+      }),
+    ).resolves.toEqual(fallback);
+    expect(calls).toEqual(["meili", "postgres"]);
+  });
+
+  it("falls back to canonical catalog rows when the derived Meili index is unavailable", async () => {
+    const fallback = [
+      {
+        id: "00000000-0000-4000-8000-000000000601",
+        displayName: "Карпатська",
+        canonicalName: "Карпатська бджола",
+        catalogKind: "breed" as const,
+        locale: "uk",
+        status: "seeded" as const,
+        source: "ua_official_bee_breed",
+      },
+    ];
+
+    await expect(
+      searchCatalogSuggestionsForTypeahead("Карпатська", 8, {
+        searchWithMeili: async () => {
+          throw new Error("index not found");
+        },
+        searchWithPostgres: async () => fallback,
+      }),
+    ).resolves.toEqual(fallback);
+  });
+
+  it("keeps non-empty derived Meili suggestions as the first choice", async () => {
+    const meiliSuggestion = {
+      id: "00000000-0000-4000-8000-000000000621",
+      displayName: "Red Cherry",
+      canonicalName: "Red Cherry tomato",
+      catalogKind: "plant_variety" as const,
+      locale: "en",
+      status: "seeded" as const,
+      source: "grin_genebank_candidate",
+    };
+    let postgresCalled = false;
+
+    await expect(
+      searchCatalogSuggestionsForTypeahead("Red Cherry", 8, {
+        searchWithMeili: async () => [meiliSuggestion],
+        searchWithPostgres: async () => {
+          postgresCalled = true;
+          return [];
+        },
+      }),
+    ).resolves.toEqual([meiliSuggestion]);
+    expect(postgresCalled).toBe(false);
   });
 
   it("validates selected catalog IDs against selectable statuses", () => {
