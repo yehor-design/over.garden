@@ -12,8 +12,9 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 
 - `apps/web/` — Next.js app and app backend.
 - `services/matching/` — Python health service + background worker skeleton.
-- `infra/` — local Docker services and SQL helpers.
+- `infra/` — local runtime services and SQL helpers. Apple Container is the preferred local container runtime; Docker is fallback-only where Apple Container is unavailable or lacks a required feature.
 - `docs/TECH_STACK_DECISIONS.md` — current consolidated stack decisions.
+- `docs/CONTAINER_RUNTIME_POLICY.md` — Apple Container-first runtime policy plus Docker fallback matrix.
 - `docs/SDD_VERTICAL_SLICE_ROADMAP.md` — living roadmap for vertical SDD execution slices; not a full backlog.
 - `docs/INFRASTRUCTURE_REGISTRY.md` — live non-secret infrastructure values, provider IDs, bucket/domain names, env contracts, and dashboard links.
 - `docs/product-research/` — duplicated product research corpus for ICP, JTBD, positioning, IA, SEO/content, trust/privacy, GTM, and validation evidence.
@@ -29,6 +30,8 @@ Issues that touch DNS, R2, production env, media URLs, deployment, storage, or e
 User-facing issues must also run the Product Thinking Gate in `docs/product-research/README.md` and include the relevant research files in their context.
 
 ## Getting Started
+
+Apple Container is the target local runtime on supported Apple Silicon/macOS 26 machines. Until the migration scripts land, the current Docker Compose path remains the fallback bootstrap path; see `docs/CONTAINER_RUNTIME_POLICY.md` for the fallback matrix.
 
 ```bash
 cd infra

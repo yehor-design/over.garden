@@ -179,6 +179,8 @@ Non-destructive only: this slice does not perform any restore-over-production, b
 
 ### Worker and Meilisearch process management
 
+Runtime classification: this section is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container is the preferred local Mac runtime, but it is not the current Linux droplet process manager. Keep Docker Compose here until OVE-76 records a production-specific replacement or confirms the boundary.
+
 - Process manager: Docker Compose under `/opt/overgarden` on `overgarden-worker-prod-fra1` with containers `meilisearch`, `matching-api`, `matching-worker`, `caddy`.
 - Restart policy: live-confirmed on 2026-06-29 as `unless-stopped` for `meilisearch`, `matching-api`, `matching-worker`, and `caddy`, so the worker, API, and Meilisearch return after a crash or droplet reboot.
 - Health endpoints: live-confirmed on 2026-06-29: matching `https://matching.over.garden/health` returned `ok` with ICU present, and Meilisearch `https://meili.over.garden/health` returned `available`.
@@ -204,6 +206,7 @@ uv run --frozen pytest tests/test_worker_recovery.py
 ### Live worker restart/recovery smoke (operator, redacted)
 
 This is the live counterpart that requires the droplet; the local harness de-risks it but does not replace it.
+Docker Compose commands in this section are production-only evidence commands, not local development prerequisites.
 
 1. Confirm the worker restart policy and container health (`docker compose ps`; matching/meili `/health`).
 2. Restart the worker: `docker compose restart matching-worker` (or stop it, enqueue work, then start it to exercise stale-job reclaim).

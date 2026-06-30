@@ -220,6 +220,8 @@ Database invariants:
 
 Worker and Meilisearch Droplet:
 
+Runtime classification: this production worker/search surface is `production-linux-required` under `docs/CONTAINER_RUNTIME_POLICY.md`. Apple Container remains the preferred local Mac runtime, but the current DigitalOcean Linux droplet uses Docker Compose until OVE-76 changes or confirms that boundary.
+
 - Droplet name: `overgarden-worker-prod-fra1`
 - Region: Frankfurt, Datacenter 1, `FRA1`
 - Current size: Basic 1 vCPU, 1 GB RAM

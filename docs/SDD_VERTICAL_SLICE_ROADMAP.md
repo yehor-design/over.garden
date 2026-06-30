@@ -27,6 +27,8 @@ Next queued Linear project after the pilot-decision handoff is `SDD Slice 9 - Ca
 
 OVE-55 is the binding source-readiness gate for that project: later ingestion issues must link back to `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` and may only consume sources according to the manifest verdicts.
 
+Maintainer-requested operational runtime queue: Linear project `SDD Slice 11 - Apple Container Runtime Migration` (OVE-71-77) moves local containerized development to Apple Container first while retaining Docker only for documented CI/Linux/feature gaps. Treat this as an operational SDD exception: the behavior is founder/agent runtime proof, not a user-facing product path, and every remaining Docker surface must name why Apple Container does not fit. The binding fallback matrix is `docs/CONTAINER_RUNTIME_POLICY.md`.
+
 ## Current Baseline
 
 The implemented skeleton already proves:
@@ -55,6 +57,7 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 9. Each Linear task must carry context files, invariants, data contract, target files, non-goals, acceptance criteria, and verification commands.
 10. Linear tasks that touch media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` and update it if provider values change.
 11. User-facing Linear tasks must run the Product Thinking Gate in `docs/product-research/README.md`, include the relevant research files in `Context files`, and state the product assumption being tested.
+12. Runtime tasks must prefer Apple Container over Docker for local containerized development on supported Macs. Docker is allowed only when Apple Container is unavailable or lacks the required feature, and the issue must name that gap using `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ## SDD Slice Test
 
@@ -294,6 +297,8 @@ Acceptance criteria:
 
 Verification commands:
 
+Current runtime note: this historical Docker Compose command is a fallback path. New local runtime work should prefer Apple Container per `docs/CONTAINER_RUNTIME_POLICY.md`.
+
 ```bash
 cd infra && docker compose up -d
 cd ../apps/web
@@ -375,6 +380,8 @@ Acceptance criteria:
 - User A cannot attach/read User B's media asset.
 
 Verification commands:
+
+Current runtime note: this historical Docker Compose command is a fallback path. New local runtime work should prefer Apple Container per `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ```bash
 cd infra && docker compose up -d

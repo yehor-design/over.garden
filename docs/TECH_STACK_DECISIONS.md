@@ -13,7 +13,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Web/app runtime | Next.js App Router + TypeScript on Vercel |
 | UI | shadcn/ui only |
 | Auth | Better Auth |
-| Database | DigitalOcean Managed Postgres in production; Docker Postgres locally |
+| Database | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback |
 | Type-safe data access | Kysely typed SQL builder; SQL migrations are schema source of truth |
 | Data-access safety | Scoped repository functions + invariant tests; no browser-direct broad DB access |
 | Object storage | Cloudflare R2 with private quarantine bucket and public derivative bucket/CDN |
@@ -26,6 +26,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 | Edge/DNS | Cloudflare in front of Vercel; do not cache HTML at Cloudflare |
 | Analytics | PostHog / first-party analytics later, after privacy event review |
 | Build method | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches |
+| Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker only where Apple Container is unavailable or lacks a required feature. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
 
 ## Binding invariants
 
@@ -43,6 +44,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 12. **CI gates are part of the stack.** Typecheck, lint, focused tests, privacy tests, SSR tests, media derivative tests, and search-index privacy tests should be added before expanding product surface area.
 13. **Live infra values are centralized.** Non-secret provider IDs, bucket names, public domains, env contracts, and operational links live in `docs/INFRASTRUCTURE_REGISTRY.md`. Agents must not rediscover or guess those values in each task.
 14. **Product research is repo-local.** ICP, JTBD, positioning, IA, SEO/content, growth, trust/privacy, and business-model context lives in `docs/product-research/`. User-facing implementation must run the Product Thinking Gate in `docs/product-research/README.md` before Linear task creation or execution.
+15. **Apple Container is the preferred local container runtime.** Future local runtime work should use Apple Container before Docker. Keep Docker only for explicitly documented gaps such as GitHub Actions Ubuntu service containers, Linux production process management, mature Compose restart policy behavior, or unsupported developer machines. `docs/CONTAINER_RUNTIME_POLICY.md` is the fallback matrix for these gaps.
 
 ## Launch topology
 
@@ -55,9 +57,10 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Local topology
 
-- Docker Postgres for database development.
-- Docker Meilisearch for search proof and index integration.
-- MinIO as local S3/R2 emulator.
+- Apple Container-first local Postgres for database development on supported Macs.
+- Apple Container-first Meilisearch for search proof and index integration on supported Macs.
+- Apple Container-first MinIO as local S3/R2 emulator on supported Macs.
+- Docker remains an allowed fallback only when Apple Container cannot run or does not support the required local behavior. Fallback docs must name the gap instead of treating Docker Desktop as the default.
 - `apps/web/.env.example` and `infra/.env.example` are the canonical local env templates.
 - `docs/INFRASTRUCTURE_REGISTRY.md` records production-equivalent non-secret values; env files remain the only place for local secrets.
 

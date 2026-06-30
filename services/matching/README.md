@@ -25,6 +25,13 @@ uv run python -m app.search            # needs MEILISEARCH_HOST/API key
 PyICU compiles against system ICU. On macOS install `pkg-config` and `icu4c`; in
 the Docker image this is handled by `libicu-dev`.
 
+## Container runtime
+
+For supported local Macs, matching image build and worker/search smoke should
+move to Apple Container first under `docs/CONTAINER_RUNTIME_POLICY.md` and
+OVE-74. The Docker image remains a portable OCI recipe and a fallback path where
+Apple Container is unavailable or misses a required runtime feature.
+
 ## Runtime
 
 Run the FastAPI health service and the worker as separate processes from the

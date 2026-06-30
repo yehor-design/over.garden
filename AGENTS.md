@@ -11,7 +11,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Next.js App Router + TypeScript on Vercel.
 - shadcn/ui only for UI primitives.
 - Better Auth for auth.
-- DigitalOcean Managed Postgres for production data; Docker Postgres locally.
+- DigitalOcean Managed Postgres for production data; Apple Container-first local Postgres on supported Macs, with Docker only as fallback.
 - Kysely as the typed SQL builder. SQL migrations are schema source of truth. No ORM.
 - Cloudflare R2 for media: private quarantine bucket -> worker-created public derivative.
 - Meilisearch as a derived public search/typeahead index.
@@ -19,6 +19,14 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Plain Postgres `job_queue` table for TS -> Python background work. No Redis, no pgmq, no Python-only queue framework.
 - PWA offline capture with Dexie/IndexedDB and idempotency keys.
 - Cloudflare for DNS/edge/WAF/R2. Cloudflare must not cache HTML.
+
+## Container Runtime Policy
+
+- Runtime authority lives in `docs/CONTAINER_RUNTIME_POLICY.md`.
+- Prefer Apple Container for local containerized development on supported Apple Silicon/macOS 26 machines.
+- Use Docker only as a fallback when Apple Container is unavailable or does not provide a required feature, such as GitHub Actions Ubuntu service containers, Linux production droplet process management, mature Compose restart policies, or another explicitly verified gap.
+- Do not assume Docker Desktop is required for local OverGarden work after the Apple Container migration is proven. Local Postgres, Meilisearch, MinIO, and matching-image smoke should move to Apple Container-first scripts.
+- When Docker remains in CI, production, or fallback docs, state why Apple Container does not fit that specific surface.
 
 ## Hard Rules
 

@@ -78,6 +78,8 @@ jobs:
 
       - name: Start MinIO
         run: |
+          # GitHub Actions runs this job on Ubuntu, where Apple Container is not
+          # the service-container runtime. See docs/CONTAINER_RUNTIME_POLICY.md.
           docker run --detach --rm \
             --name overgarden-ci-minio \
             -p 9000:9000 \

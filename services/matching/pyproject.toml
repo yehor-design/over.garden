@@ -9,7 +9,7 @@ dependencies = [
     "rapidfuzz==3.14.5",
     "splink==4.0.16",
     # PyICU is sdist-only on PyPI — it compiles against the system libicu.
-    # The Docker image installs libicu-dev/pkg-config/build-essential for this.
+    # The container image installs libicu-dev/pkg-config/build-essential for this.
     "PyICU==2.16.2",
     "cyrtranslit==1.2.0",
     "meilisearch==0.41.1",
