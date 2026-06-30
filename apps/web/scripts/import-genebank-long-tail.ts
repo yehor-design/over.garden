@@ -12,6 +12,7 @@ import {
 import type { Database } from "../src/db/types";
 import { genebankLongTailDefinition } from "../src/lib/catalog/genebank-long-tail";
 import {
+  buildGenebankProofHarnessIsolation,
   importGenebankLongTailCandidates,
   promoteGenebankLongTailCandidate,
   proveGenebankGardenReadback,
@@ -51,6 +52,7 @@ const pool = new Pool({
   ssl: resolveDatabaseSslConfig(process.env, resolution),
 });
 const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
+const requireCleanState = process.argv.includes("--require-clean-state");
 
 async function main() {
   const definition = genebankLongTailDefinition();
@@ -60,25 +62,12 @@ async function main() {
     db,
     "Red Cherry",
   );
-
-  if (
-    !candidateQueueBeforePromotion.some(
-      (row) => row.sourceRecordKey === imported.promotableRecordKey,
-    ) &&
-    imported.promotableProjectionStatus !== "projected"
-  ) {
-    throw new Error(
-      "Promotable genebank candidate is missing from review queue.",
-    );
-  }
-  if (
-    typeaheadBeforePromotion.some(
-      (row) => row.source === "grin_genebank_candidate",
-    ) &&
-    imported.promotableProjectionStatus !== "projected"
-  ) {
-    throw new Error("Genebank candidate reached typeahead before promotion.");
-  }
+  const proofHarnessIsolation = buildGenebankProofHarnessIsolation({
+    imported,
+    candidateQueueBeforePromotion,
+    typeaheadBeforePromotion,
+    requireCleanState,
+  });
 
   const promoted = await promoteGenebankLongTailCandidate(
     db,
@@ -188,6 +177,7 @@ async function main() {
 
   const output = {
     imported,
+    proofHarnessIsolation,
     promoted,
     idempotencyProof: {
       promotedAgainCatalogItemId: promotedAgain.catalogItemId,
@@ -196,11 +186,11 @@ async function main() {
       rerunHeldSourceRecordId: rerunImport.heldSourceRecordId,
       rerunPromotableProjectionStatus: rerunImport.promotableProjectionStatus,
     },
-    candidateQueueBeforePromotion,
-    typeaheadBeforePromotion,
-    typeaheadByCandidateName,
-    typeaheadBySpeciesAlias,
-    heldTypeaheadProof,
+    promotionVisibilityProof: {
+      typeaheadByCandidateName,
+      typeaheadBySpeciesAlias,
+      heldTypeaheadProof,
+    },
     candidateQueueAfterPromotion,
     provenanceProof,
     gardenReadbackProof,

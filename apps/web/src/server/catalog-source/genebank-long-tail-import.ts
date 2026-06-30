@@ -105,6 +105,34 @@ export interface GenebankGardenReadbackProof {
   catalogSource: string | null;
 }
 
+export type GenebankProofHarnessIsolation =
+  | {
+      cleanStateProof: {
+        status: "passed";
+        candidateQueueBeforePromotion: GenebankCandidateQueueRow[];
+        cleanStateTypeaheadBeforePromotion: GenebankTypeaheadProof[];
+      };
+      rerunExistingProjection: null;
+    }
+  | {
+      cleanStateProof: {
+        status: "skipped_existing_projection";
+        reason: string;
+      };
+      rerunExistingProjection: {
+        status: "existing_projection_before_this_run";
+        promotableProjectionStatus: string;
+        existingTypeaheadBeforeThisRun: GenebankTypeaheadProof[];
+      };
+    };
+
+export interface GenebankProofHarnessIsolationInput {
+  imported: GenebankLongTailImportSummary;
+  candidateQueueBeforePromotion: GenebankCandidateQueueRow[];
+  typeaheadBeforePromotion: GenebankTypeaheadProof[];
+  requireCleanState?: boolean;
+}
+
 export async function importGenebankLongTailCandidates(
   executor: Kysely<Database>,
   definition = genebankLongTailDefinition(),
@@ -164,6 +192,57 @@ export async function importGenebankLongTailCandidates(
       parserVersion: GENEBANK_LONG_TAIL_PARSER_VERSION,
     };
   });
+}
+
+export function buildGenebankProofHarnessIsolation(
+  input: GenebankProofHarnessIsolationInput,
+): GenebankProofHarnessIsolation {
+  const existingProjectionVisible =
+    input.imported.promotableProjectionStatus === "projected";
+  const existingProductTypeahead = input.typeaheadBeforePromotion.filter(
+    (row) => row.source === "grin_genebank_candidate",
+  );
+
+  if (existingProjectionVisible || existingProductTypeahead.length > 0) {
+    const reason =
+      "Promotable GRIN candidate already has a product projection before this script run; clean-state pre-promotion absence is not claimed on reruns.";
+    if (input.requireCleanState) {
+      throw new Error(
+        `${reason} Re-run against a clean database or omit --require-clean-state to validate idempotency separately.`,
+      );
+    }
+
+    return {
+      cleanStateProof: {
+        status: "skipped_existing_projection",
+        reason,
+      },
+      rerunExistingProjection: {
+        status: "existing_projection_before_this_run",
+        promotableProjectionStatus: input.imported.promotableProjectionStatus,
+        existingTypeaheadBeforeThisRun: input.typeaheadBeforePromotion,
+      },
+    };
+  }
+
+  if (
+    !input.candidateQueueBeforePromotion.some(
+      (row) => row.sourceRecordKey === input.imported.promotableRecordKey,
+    )
+  ) {
+    throw new Error(
+      "Promotable genebank candidate is missing from review queue.",
+    );
+  }
+
+  return {
+    cleanStateProof: {
+      status: "passed",
+      candidateQueueBeforePromotion: input.candidateQueueBeforePromotion,
+      cleanStateTypeaheadBeforePromotion: input.typeaheadBeforePromotion,
+    },
+    rerunExistingProjection: null,
+  };
 }
 
 export async function promoteGenebankLongTailCandidate(

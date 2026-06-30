@@ -21,6 +21,7 @@ import {
   genebankLongTailSnapshotChecksum,
 } from "@/lib/catalog/genebank-long-tail";
 import {
+  buildGenebankProofHarnessIsolation,
   buildEnqueueGenebankTypeaheadReindexJobQuery,
   buildGenebankCandidateQueueQuery,
   buildGenebankSourceProvenanceProofQuery,
@@ -59,6 +60,8 @@ const heldRecord = definition.records[1];
 const sourceSnapshotId = "00000000-0000-4000-8000-000000062001";
 const sourceRecordId = "00000000-0000-4000-8000-000000062002";
 const catalogItemId = "00000000-0000-4000-8000-000000062003";
+const promotableSourceRecordId = "00000000-0000-4000-8000-000000062004";
+const heldSourceRecordId = "00000000-0000-4000-8000-000000062005";
 
 const forbiddenProjectionMarkers = [
   "rawPayload",
@@ -75,6 +78,132 @@ const forbiddenProjectionMarkers = [
 ];
 
 describe("genebank long-tail candidate import", () => {
+  it("labels clean-state absence separately from rerun idempotency", () => {
+    const proof = buildGenebankProofHarnessIsolation({
+      imported: {
+        sourceSnapshotId,
+        promotableSourceRecordId,
+        heldSourceRecordId,
+        promotableRecordKey: definition.promotableRecordKey,
+        heldRecordKey: definition.heldRecordKey,
+        promotableProjectionStatus: "quarantined",
+        heldProjectionStatus: "quarantined",
+        sourceSlug: definition.source.slug,
+        sourceVersion: definition.source.version,
+        snapshotSha256: genebankLongTailSnapshotChecksum(),
+        promotableRawPayloadSha256:
+          genebankLongTailPayloadChecksum(promotableRecord),
+        heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
+        parserVersion: "ove-62.genebank-long-tail.proof.v1",
+      },
+      candidateQueueBeforePromotion: [
+        {
+          sourceRecordKey: definition.promotableRecordKey,
+          projectionStatus: "quarantined",
+          allowedProjection: { reviewQueue: { displayName: "Red Cherry" } },
+        },
+      ],
+      typeaheadBeforePromotion: [],
+      requireCleanState: true,
+    });
+
+    expect(proof.cleanStateProof.status).toBe("passed");
+    expect(proof.rerunExistingProjection).toBeNull();
+    if (proof.cleanStateProof.status !== "passed") {
+      throw new Error("Expected passed clean-state proof.");
+    }
+    expect(proof.cleanStateProof.cleanStateTypeaheadBeforePromotion).toEqual(
+      [],
+    );
+  });
+
+  it("does not label a rerun's existing projection as pre-promotion clean state", () => {
+    const proof = buildGenebankProofHarnessIsolation({
+      imported: {
+        sourceSnapshotId,
+        promotableSourceRecordId,
+        heldSourceRecordId,
+        promotableRecordKey: definition.promotableRecordKey,
+        heldRecordKey: definition.heldRecordKey,
+        promotableProjectionStatus: "projected",
+        heldProjectionStatus: "quarantined",
+        sourceSlug: definition.source.slug,
+        sourceVersion: definition.source.version,
+        snapshotSha256: genebankLongTailSnapshotChecksum(),
+        promotableRawPayloadSha256:
+          genebankLongTailPayloadChecksum(promotableRecord),
+        heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
+        parserVersion: "ove-62.genebank-long-tail.proof.v1",
+      },
+      candidateQueueBeforePromotion: [
+        {
+          sourceRecordKey: definition.heldRecordKey,
+          projectionStatus: "quarantined",
+          allowedProjection: { reviewQueue: { displayName: "Held row" } },
+        },
+      ],
+      typeaheadBeforePromotion: [
+        {
+          catalogItemId,
+          displayName: "Red Cherry",
+          canonicalName: "Red Cherry tomato",
+          catalogKind: "plant_variety",
+          locale: "en",
+          status: "seeded",
+          source: "grin_genebank_candidate",
+        },
+      ],
+    });
+
+    expect(proof.cleanStateProof.status).toBe("skipped_existing_projection");
+    expect(proof.rerunExistingProjection).not.toBeNull();
+    expect(JSON.stringify(proof)).not.toContain(
+      "cleanStateTypeaheadBeforePromotion",
+    );
+    expect(proof.rerunExistingProjection?.status).toBe(
+      "existing_projection_before_this_run",
+    );
+    expect(
+      proof.rerunExistingProjection?.existingTypeaheadBeforeThisRun,
+    ).toHaveLength(1);
+  });
+
+  it("fails loudly when clean-state proof is required but the projection already exists", () => {
+    expect(() =>
+      buildGenebankProofHarnessIsolation({
+        imported: {
+          sourceSnapshotId,
+          promotableSourceRecordId,
+          heldSourceRecordId,
+          promotableRecordKey: definition.promotableRecordKey,
+          heldRecordKey: definition.heldRecordKey,
+          promotableProjectionStatus: "projected",
+          heldProjectionStatus: "quarantined",
+          sourceSlug: definition.source.slug,
+          sourceVersion: definition.source.version,
+          snapshotSha256: genebankLongTailSnapshotChecksum(),
+          promotableRawPayloadSha256:
+            genebankLongTailPayloadChecksum(promotableRecord),
+          heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
+          parserVersion: "ove-62.genebank-long-tail.proof.v1",
+        },
+        candidateQueueBeforePromotion: [],
+        typeaheadBeforePromotion: [
+          {
+            catalogItemId,
+            displayName: "Red Cherry",
+            canonicalName: "Red Cherry tomato",
+            catalogKind: "plant_variety",
+            locale: "en",
+            status: "seeded",
+            source: "grin_genebank_candidate",
+          },
+        ],
+        requireCleanState: true,
+      }),
+    ).toThrow("--require-clean-state");
+  });
+
   it("keeps accession source-only fields out of the promotion projection", () => {
     const rawPayload = JSON.stringify(promotableRecord.rawPayload);
     const sourceOnlyFields = JSON.stringify(promotableRecord.sourceOnlyFields);
