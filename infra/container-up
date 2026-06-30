@@ -30,8 +30,8 @@ require_curl
 load_env
 ensure_container_system
 
-if ps aux | grep -E '[D]ocker Desktop|[c]om\.docker' >/dev/null 2>&1; then
-  info "Warning: Docker Desktop/com.docker appears to be running, but this Apple Container path does not depend on it."
+if ps -axo comm,args | grep -E '[D]ocker Desktop|[D]ocker\.app|[c]om\.docker\.(backend|virtualization|hyperkit|vpnkit|driver)' >/dev/null 2>&1; then
+  info "Warning: Docker Desktop appears to be running, but this Apple Container path does not depend on it."
 fi
 
 for volume in "$POSTGRES_VOLUME" "$MEILI_VOLUME" "$MINIO_VOLUME"; do
