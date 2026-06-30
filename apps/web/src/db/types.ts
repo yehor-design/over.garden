@@ -8,6 +8,8 @@ import type {
   CatalogItems as CatalogItemsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
   CatalogSourceRecords as CatalogSourceRecordsTable,
+  CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
+  CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
   ErasureRequests as ErasureRequestsTable,
   Health as HealthTable,
@@ -82,6 +84,10 @@ export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
 export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
+export type CatalogSourceRefreshEvent =
+  Selectable<CatalogSourceRefreshEventsTable>;
+export type CatalogSourceRefreshRecord =
+  Selectable<CatalogSourceRefreshRecordsTable>;
 export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
 export type NewCatalogAliasProjection =
@@ -90,6 +96,10 @@ export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
 export type NewCatalogSourceLink = Insertable<CatalogSourceLinksTable>;
 export type NewCatalogSourceRecord = Insertable<CatalogSourceRecordsTable>;
+export type NewCatalogSourceRefreshEvent =
+  Insertable<CatalogSourceRefreshEventsTable>;
+export type NewCatalogSourceRefreshRecord =
+  Insertable<CatalogSourceRefreshRecordsTable>;
 export type NewCatalogSourceSnapshot = Insertable<CatalogSourceSnapshotsTable>;
 export type ErasureRequest = Selectable<ErasureRequestsTable>;
 export type NewErasureRequest = Insertable<ErasureRequestsTable>;

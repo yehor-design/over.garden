@@ -271,6 +271,72 @@ create index if not exists catalog_source_records_projection_status_idx
 create index if not exists catalog_source_links_catalog_item_idx
   on catalog_source_links (catalog_item_id);
 
+create table if not exists catalog_source_refresh_events (
+  id uuid primary key default gen_random_uuid(),
+  source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  previous_snapshot_id uuid not null references catalog_source_snapshots(id) on delete restrict,
+  refreshed_snapshot_id uuid not null references catalog_source_snapshots(id) on delete restrict,
+  refresh_label text not null check (char_length(refresh_label) between 1 and 240),
+  payload_sha256 text not null check (payload_sha256 ~ '^[a-f0-9]{64}$'),
+  summary jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_source_refresh_events_source_snapshot_uidx unique (
+    source_slug,
+    refreshed_snapshot_id
+  )
+);
+
+create table if not exists catalog_source_refresh_records (
+  id uuid primary key default gen_random_uuid(),
+  refresh_event_id uuid not null references catalog_source_refresh_events(id) on delete cascade,
+  source_record_key text not null check (char_length(source_record_key) between 1 and 200),
+  previous_source_record_id uuid references catalog_source_records(id) on delete set null,
+  refreshed_source_record_id uuid references catalog_source_records(id) on delete set null,
+  catalog_item_id uuid references catalog_items(id) on delete set null,
+  diff_status text not null check (
+    diff_status in (
+      'new',
+      'unchanged',
+      'changed',
+      'removed_upstream',
+      'parser_reject',
+      'review_needed',
+      'projection_blocked'
+    )
+  ),
+  projection_action text not null check (
+    projection_action in (
+      'project_new',
+      'link_existing',
+      'project_safe_aliases',
+      'retain_without_upstream',
+      'reject_parser_row',
+      'queue_curator_review',
+      'block_projection'
+    )
+  ),
+  safe_diff jsonb not null default '{}'::jsonb,
+  review_reason text check (review_reason is null or char_length(review_reason) between 1 and 500),
+  reindex_required boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_source_refresh_records_event_record_uidx unique (
+    refresh_event_id,
+    source_record_key
+  )
+);
+
+create index if not exists catalog_source_refresh_events_source_created_idx
+  on catalog_source_refresh_events (source_slug, created_at desc);
+
+create index if not exists catalog_source_refresh_records_event_status_idx
+  on catalog_source_refresh_records (refresh_event_id, diff_status);
+
+create index if not exists catalog_source_refresh_records_catalog_item_idx
+  on catalog_source_refresh_records (catalog_item_id)
+  where catalog_item_id is not null;
+
 create table if not exists catalog_alias_projections (
   id uuid primary key default gen_random_uuid(),
   catalog_item_id uuid not null references catalog_items(id) on delete cascade,

@@ -127,6 +127,34 @@ export interface CatalogSourceRecords {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogSourceRefreshEvents {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  payload_sha256: string;
+  previous_snapshot_id: string;
+  refresh_label: string;
+  refreshed_snapshot_id: string;
+  source_slug: string;
+  summary: Generated<Json>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogSourceRefreshRecords {
+  catalog_item_id: string | null;
+  created_at: Generated<Timestamp>;
+  diff_status: string;
+  id: Generated<string>;
+  previous_source_record_id: string | null;
+  projection_action: string;
+  refresh_event_id: string;
+  refreshed_source_record_id: string | null;
+  reindex_required: Generated<boolean>;
+  review_reason: string | null;
+  safe_diff: Generated<Json>;
+  source_record_key: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogSourceSnapshots {
   allowed_usage: Generated<Json>;
   attribution_required: Generated<boolean>;
@@ -322,6 +350,8 @@ export interface DB {
   catalog_items: CatalogItems;
   catalog_source_links: CatalogSourceLinks;
   catalog_source_records: CatalogSourceRecords;
+  catalog_source_refresh_events: CatalogSourceRefreshEvents;
+  catalog_source_refresh_records: CatalogSourceRefreshRecords;
   catalog_source_snapshots: CatalogSourceSnapshots;
   erasure_requests: ErasureRequests;
   health: Health;
