@@ -55,6 +55,20 @@ const FORBIDDEN_TYPEAHEAD_HIT_KEYS = [
   "allowed_usage",
   "parserVersion",
   "parser_version",
+  "catalogAliasProjectionId",
+  "catalog_alias_projection_id",
+  "aliasStatus",
+  "alias_status",
+  "aliasKind",
+  "alias_kind",
+  "sourceMethod",
+  "source_method",
+  "confidence",
+  "license",
+  "attributionRequired",
+  "attribution_required",
+  "projectionNotes",
+  "projection_notes",
 ];
 
 export type CatalogTypeaheadStatus =

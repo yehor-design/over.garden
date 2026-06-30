@@ -14,6 +14,7 @@ import { speciesBackboneSeedDefinition } from "../src/lib/catalog/species-backbo
 import {
   importSpeciesBackboneSeed,
   proveSpeciesBackboneGardenReadback,
+  readSpeciesBackboneAliasCurationProof,
   readSpeciesBackboneSourceProvenanceProof,
   readSpeciesBackboneTypeaheadProof,
 } from "../src/server/catalog-source/species-backbone-import";
@@ -80,7 +81,21 @@ async function main() {
     db,
     "Lycopersicon esculentum",
   );
+  const reviewNeededAliasTypeaheadProof =
+    await readSpeciesBackboneTypeaheadProof(db, "garden tomato");
+  const rejectedAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
+    db,
+    "love apple",
+  );
+  const generatedAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
+    db,
+    "помидор",
+  );
   const provenanceProof = await readSpeciesBackboneSourceProvenanceProof(
+    db,
+    imported.catalogItemId,
+  );
+  const aliasCurationProof = await readSpeciesBackboneAliasCurationProof(
     db,
     imported.catalogItemId,
   );
@@ -130,12 +145,28 @@ async function main() {
   ) {
     throw new Error("Imported species is missing by source-backed synonym.");
   }
+  assertNoCatalogItemMatch(
+    reviewNeededAliasTypeaheadProof,
+    imported.catalogItemId,
+    "review-needed alias reached typeahead",
+  );
+  assertNoCatalogItemMatch(
+    rejectedAliasTypeaheadProof,
+    imported.catalogItemId,
+    "rejected alias reached typeahead",
+  );
+  assertNoCatalogItemMatch(
+    generatedAliasTypeaheadProof,
+    imported.catalogItemId,
+    "generated alias reached typeahead",
+  );
   if (gardenReadbackProof.catalogItemId !== imported.catalogItemId) {
     throw new Error("Garden readback proof did not preserve catalog identity.");
   }
   if (gardenReadbackProof.catalogSource !== "species_backbone") {
     throw new Error("Garden readback proof did not preserve species source.");
   }
+  assertAliasCurationProof(aliasCurationProof, imported.catalogItemId);
 
   const output = {
     imported,
@@ -147,7 +178,13 @@ async function main() {
     englishAliasTypeaheadProof,
     ukrainianAliasTypeaheadProof,
     synonymTypeaheadProof,
+    blockedAliasTypeaheadProof: {
+      reviewNeededAliasTypeaheadProof,
+      rejectedAliasTypeaheadProof,
+      generatedAliasTypeaheadProof,
+    },
     provenanceProof,
+    aliasCurationProof,
     gardenReadbackProof,
     leakCheck: "passed",
   };
@@ -162,6 +199,69 @@ function assertNoForbiddenOutput(output: unknown) {
     if (text.includes(marker)) {
       throw new Error(`Unsafe source-only marker reached output: ${marker}`);
     }
+  }
+}
+
+function assertNoCatalogItemMatch(
+  rows: Array<{ catalogItemId: string }>,
+  catalogItemId: string,
+  message: string,
+) {
+  if (rows.some((row) => row.catalogItemId === catalogItemId)) {
+    throw new Error(message);
+  }
+}
+
+function assertAliasCurationProof(
+  rows: Array<{
+    catalogItemId: string;
+    displayName: string;
+    status: string;
+    sourceSlug: string;
+    sourceMethod: string;
+    projectedToTypeahead: boolean;
+  }>,
+  catalogItemId: string,
+) {
+  const byName = new Map(rows.map((row) => [row.displayName, row]));
+  const acceptedUkrainianAlias = byName.get("помідор");
+  const reviewNeededAlias = byName.get("garden tomato");
+  const rejectedAlias = byName.get("love apple");
+  const generatedAlias = byName.get("помидор");
+
+  if (!acceptedUkrainianAlias) {
+    throw new Error("Missing accepted Ukrainian alias curation proof.");
+  }
+  if (
+    acceptedUkrainianAlias.catalogItemId !== catalogItemId ||
+    acceptedUkrainianAlias.status !== "accepted" ||
+    acceptedUkrainianAlias.sourceSlug !== "wikidata" ||
+    acceptedUkrainianAlias.sourceMethod !== "source_backed" ||
+    !acceptedUkrainianAlias.projectedToTypeahead
+  ) {
+    throw new Error("Accepted Ukrainian alias curation proof is invalid.");
+  }
+  if (
+    !reviewNeededAlias ||
+    reviewNeededAlias.status !== "review_needed" ||
+    reviewNeededAlias.projectedToTypeahead
+  ) {
+    throw new Error("Review-needed alias curation proof is invalid.");
+  }
+  if (
+    !rejectedAlias ||
+    rejectedAlias.status !== "rejected" ||
+    rejectedAlias.projectedToTypeahead
+  ) {
+    throw new Error("Rejected alias curation proof is invalid.");
+  }
+  if (
+    !generatedAlias ||
+    generatedAlias.status !== "generated" ||
+    generatedAlias.sourceMethod !== "generated" ||
+    generatedAlias.projectedToTypeahead
+  ) {
+    throw new Error("Generated alias curation proof is invalid.");
   }
 }
 

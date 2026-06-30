@@ -110,6 +110,7 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain('"status" = $10');
     expect(compiled.sql).toContain('"source" = $11');
     expect(compiled.sql).toContain('"created_by_user_id" is not null');
+    expect(compiled.sql).not.toContain("catalog_alias_projections");
     expect(compiled.parameters).toEqual([
       "confirmed",
       "curated_user",
@@ -167,6 +168,7 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain('"merged_into_catalog_item_id" = $4');
     expect(compiled.sql).toContain('"updated_at" = $5');
     expect(compiled.sql).toContain('"created_by_user_id" is not null');
+    expect(compiled.sql).not.toContain("catalog_alias_projections");
     expect(compiled.parameters).toEqual([
       "merged",
       now,
@@ -218,6 +220,7 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain('update "plant_objects"');
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain("catalog_alias_projections");
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000057003",
       "Ботсадівський",

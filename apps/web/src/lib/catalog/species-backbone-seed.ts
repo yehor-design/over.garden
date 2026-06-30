@@ -69,9 +69,42 @@ export interface SpeciesBackboneProjection {
   }>;
 }
 
+export interface SpeciesBackboneAliasCandidate {
+  displayName: string;
+  normalizedName: string;
+  locale: string;
+  script: "Latin" | "Cyrillic";
+  isPrimary: boolean;
+  aliasKind:
+    | "accepted_scientific_name"
+    | "synonym"
+    | "vernacular_alias"
+    | "generated_variant"
+    | "user_provisional";
+  status:
+    | "accepted"
+    | "review_needed"
+    | "rejected"
+    | "generated"
+    | "user_provisional";
+  sourceSlug: string;
+  sourceRecordKey: string | null;
+  sourceMethod:
+    | "source_backed"
+    | "generated"
+    | "manual_seed"
+    | "user_provisional"
+    | "curator";
+  confidence: number;
+  license: string;
+  attributionRequired: boolean;
+  projectionNotes: string;
+}
+
 export interface SpeciesBackboneImportDefinition {
   sourceRecords: SpeciesBackboneSourceRecordDefinition[];
   projection: SpeciesBackboneProjection;
+  aliasCandidates: SpeciesBackboneAliasCandidate[];
 }
 
 export function speciesBackboneSeedDefinition(): SpeciesBackboneImportDefinition {
@@ -80,6 +113,7 @@ export function speciesBackboneSeedDefinition(): SpeciesBackboneImportDefinition
   return {
     sourceRecords: buildSpeciesBackboneSourceRecords(),
     projection,
+    aliasCandidates: buildSpeciesBackboneAliasCandidates(projection),
   };
 }
 
@@ -381,6 +415,189 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
   ];
 }
 
+export function buildSpeciesBackboneAliasCandidates(
+  projection = buildSpeciesBackboneProjection(),
+): SpeciesBackboneAliasCandidate[] {
+  const acceptedAliases: SpeciesBackboneAliasCandidate[] = [
+    {
+      displayName: "Solanum lycopersicum L.",
+      normalizedName: normalizeCatalogName("Solanum lycopersicum L."),
+      locale: "la",
+      script: "Latin",
+      isPrimary: true,
+      aliasKind: "accepted_scientific_name",
+      status: "accepted",
+      sourceSlug: "catalogue-of-life-checklistbank",
+      sourceRecordKey: "CoL:3LR:4Y369",
+      sourceMethod: "source_backed",
+      confidence: 1,
+      license: "Creative Commons Attribution 4.0 International",
+      attributionRequired: true,
+      projectionNotes:
+        "Canonical accepted scientific name from CoL, corroborated by GBIF and EPPO.",
+    },
+    {
+      displayName: "Solanum lycopersicum",
+      normalizedName: normalizeCatalogName("Solanum lycopersicum"),
+      locale: "la",
+      script: "Latin",
+      isPrimary: false,
+      aliasKind: "accepted_scientific_name",
+      status: "accepted",
+      sourceSlug: "world-flora-online",
+      sourceRecordKey: "WFO:2026-06:wfo-0001029216",
+      sourceMethod: "source_backed",
+      confidence: 0.99,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Authorship-free scientific alias accepted for search only; canonical display remains CoL-backed.",
+    },
+    {
+      displayName: "Lycopersicon esculentum",
+      normalizedName: normalizeCatalogName("Lycopersicon esculentum"),
+      locale: "la",
+      script: "Latin",
+      isPrimary: false,
+      aliasKind: "synonym",
+      status: "accepted",
+      sourceSlug: "eppo-codes",
+      sourceRecordKey: "EPPO:LYPES",
+      sourceMethod: "source_backed",
+      confidence: 0.94,
+      license: "EPPO Codes Open Data Licence",
+      attributionRequired: true,
+      projectionNotes:
+        "EPPO-backed synonym that resolves to the canonical species without changing canonical truth.",
+    },
+    {
+      displayName: "Tomato",
+      normalizedName: normalizeCatalogName("Tomato"),
+      locale: "en",
+      script: "Latin",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.98,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Common English gardener-facing alias from Wikidata EntityData.",
+    },
+    {
+      displayName: "помідор",
+      normalizedName: normalizeCatalogName("помідор"),
+      locale: "uk",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.98,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Ukrainian local gardener-facing alias from Wikidata EntityData.",
+    },
+    {
+      displayName: "томати",
+      normalizedName: normalizeCatalogName("томати"),
+      locale: "uk",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.92,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Ukrainian plural alias accepted because it is source-backed and common in gardener search.",
+    },
+    {
+      displayName: "домат",
+      normalizedName: normalizeCatalogName("домат"),
+      locale: "bg",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.98,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Bulgarian local gardener-facing alias from Wikidata EntityData.",
+    },
+  ];
+
+  assertAcceptedAliasesMatchProjection(acceptedAliases, projection);
+
+  return [
+    ...acceptedAliases,
+    {
+      displayName: "garden tomato",
+      normalizedName: normalizeCatalogName("garden tomato"),
+      locale: "en",
+      script: "Latin",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "review_needed",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.62,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Source-backed but held for review because it is redundant and less likely to be a UA/BG gardener query.",
+    },
+    {
+      displayName: "love apple",
+      normalizedName: normalizeCatalogName("love apple"),
+      locale: "en",
+      script: "Latin",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "rejected",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.2,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "Historical/ambiguous alias rejected from product typeahead for the first catalog seed.",
+    },
+    {
+      displayName: "помидор",
+      normalizedName: normalizeCatalogName("помидор"),
+      locale: "uk",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "generated_variant",
+      status: "generated",
+      sourceSlug: "overgarden-generated",
+      sourceRecordKey: null,
+      sourceMethod: "generated",
+      confidence: 0.55,
+      license: "OverGarden generated candidate",
+      attributionRequired: false,
+      projectionNotes:
+        "Generated spelling variant kept visible to curators, not source-backed and not projected to typeahead.",
+    },
+  ];
+}
+
 export function speciesBackbonePayloadChecksum(
   sourceRecord: SpeciesBackboneSourceRecordDefinition,
 ) {
@@ -471,6 +688,22 @@ function dedupeAliases(
 
 function normalizeCatalogName(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function assertAcceptedAliasesMatchProjection(
+  acceptedAliases: SpeciesBackboneAliasCandidate[],
+  projection: SpeciesBackboneProjection,
+) {
+  const acceptedKeys = acceptedAliases.map(
+    (alias) => `${alias.locale}:${alias.normalizedName}`,
+  );
+  const projectionKeys = projection.aliases.map(
+    (alias) => `${alias.locale}:${alias.normalizedName}`,
+  );
+
+  if (acceptedKeys.join("|") !== projectionKeys.join("|")) {
+    throw new Error("Accepted alias metadata must match projected aliases.");
+  }
 }
 
 function sha256Hex(value: string) {

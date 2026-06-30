@@ -3,6 +3,7 @@ import type { Insertable, Selectable } from "kysely";
 import type {
   DB,
   AnalyticsEvents as AnalyticsEventsTable,
+  CatalogAliasProjections as CatalogAliasProjectionsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
@@ -62,14 +63,29 @@ export type AnalyticsEventName =
   | "own_record_revisited"
   | "follow_up_value_pulse";
 export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
+export type CatalogAliasStatus =
+  | "accepted"
+  | "review_needed"
+  | "rejected"
+  | "generated"
+  | "user_provisional";
+export type CatalogAliasSourceMethod =
+  | "source_backed"
+  | "generated"
+  | "manual_seed"
+  | "user_provisional"
+  | "curator";
 
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
+export type CatalogAliasProjection = Selectable<CatalogAliasProjectionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
 export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
 export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
+export type NewCatalogAliasProjection =
+  Insertable<CatalogAliasProjectionsTable>;
 export type NewCatalogItem = Insertable<CatalogItemsTable>;
 export type NewCatalogItemName = Insertable<CatalogItemNamesTable>;
 export type NewCatalogSourceLink = Insertable<CatalogSourceLinksTable>;

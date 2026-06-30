@@ -184,6 +184,44 @@ create index if not exists catalog_source_records_projection_status_idx
 create index if not exists catalog_source_links_catalog_item_idx
   on catalog_source_links (catalog_item_id);
 
+create table if not exists catalog_alias_projections (
+  id uuid primary key default gen_random_uuid(),
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  catalog_item_name_id uuid references catalog_item_names(id) on delete cascade,
+  display_name text not null check (char_length(display_name) between 1 and 120),
+  normalized_name text not null check (char_length(normalized_name) between 1 and 120),
+  locale text not null default 'und',
+  script text not null default 'und' check (char_length(script) between 1 and 40),
+  alias_kind text not null check (alias_kind in ('accepted_scientific_name', 'synonym', 'vernacular_alias', 'generated_variant', 'user_provisional')),
+  status text not null check (status in ('accepted', 'review_needed', 'rejected', 'generated', 'user_provisional')),
+  source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  source_method text not null check (source_method in ('source_backed', 'generated', 'manual_seed', 'user_provisional', 'curator')),
+  source_record_id uuid references catalog_source_records(id) on delete set null,
+  source_record_key text check (source_record_key is null or char_length(source_record_key) between 1 and 200),
+  confidence numeric(5,4) not null check (confidence >= 0 and confidence <= 1),
+  license text not null check (char_length(license) between 1 and 240),
+  attribution_required boolean not null default true,
+  projection_notes text check (projection_notes is null or char_length(projection_notes) between 1 and 500),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists catalog_alias_projections_item_alias_source_uidx
+  on catalog_alias_projections (
+    catalog_item_id,
+    normalized_name,
+    locale,
+    source_slug,
+    source_method
+  );
+
+create index if not exists catalog_alias_projections_item_status_idx
+  on catalog_alias_projections (catalog_item_id, status, locale);
+
+create index if not exists catalog_alias_projections_name_idx
+  on catalog_alias_projections (catalog_item_name_id)
+  where catalog_item_name_id is not null;
+
 create table if not exists variety_seed_proofs (
   id uuid primary key default gen_random_uuid(),
   catalog_item_id uuid not null references catalog_items(id) on delete cascade,

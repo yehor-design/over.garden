@@ -21,6 +21,8 @@ export type JsonPrimitive = boolean | number | string | null;
 
 export type JsonValue = JsonArray | JsonObject | JsonPrimitive;
 
+export type Numeric = ColumnType<string, number | string, number | string>;
+
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
 export interface Account {
@@ -50,6 +52,28 @@ export interface AnalyticsEvents {
   related_event_id: string | null;
   session_id: string | null;
   space_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CatalogAliasProjections {
+  alias_kind: string;
+  attribution_required: Generated<boolean>;
+  catalog_item_id: string;
+  catalog_item_name_id: string | null;
+  confidence: Numeric;
+  created_at: Generated<Timestamp>;
+  display_name: string;
+  id: Generated<string>;
+  license: string;
+  locale: Generated<string>;
+  normalized_name: string;
+  projection_notes: string | null;
+  script: Generated<string>;
+  source_method: string;
+  source_record_id: string | null;
+  source_record_key: string | null;
+  source_slug: string;
+  status: string;
   updated_at: Generated<Timestamp>;
 }
 
@@ -291,6 +315,7 @@ export interface Verification {
 export interface DB {
   account: Account;
   analytics_events: AnalyticsEvents;
+  catalog_alias_projections: CatalogAliasProjections;
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
   catalog_source_links: CatalogSourceLinks;

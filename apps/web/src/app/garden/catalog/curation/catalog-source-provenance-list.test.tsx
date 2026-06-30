@@ -30,12 +30,35 @@ describe("CatalogSourceProvenanceList", () => {
               {
                 displayName: "Ботсадівський",
                 locale: "uk",
+                script: "Cyrillic",
+                aliasKind: "vernacular_alias",
+                status: "accepted",
+                sourceSlug: "ua-state-register",
+                sourceMethod: "source_backed",
+                sourceRecordKey: "RegisterVarietis:83070006",
+                confidence: 1,
+                license: "Creative Commons Attribution 4.0 International",
+                attributionRequired: true,
+                projectedToTypeahead: true,
                 isPrimary: true,
+                projectionNotes:
+                  "Official UA register projection for product typeahead.",
               },
               {
                 displayName: "Botsadivs`kyi",
                 locale: "uk",
-                isPrimary: false,
+                script: "Latin",
+                aliasKind: "generated_variant",
+                status: "generated",
+                sourceSlug: "overgarden-generated",
+                sourceMethod: "generated",
+                sourceRecordKey: null,
+                confidence: 0.52,
+                license: "OverGarden generated candidate",
+                attributionRequired: false,
+                projectedToTypeahead: false,
+                isPrimary: null,
+                projectionNotes: "Generated transliteration held for review.",
               },
             ],
           },
@@ -48,9 +71,14 @@ describe("CatalogSourceProvenanceList", () => {
     expect(html).toContain("2025-07-15");
     expect(html).toContain("Creative Commons Attribution 4.0 International");
     expect(html).toContain("attribution required");
-    expect(html).toContain("Projected typeahead aliases");
+    expect(html).toContain("Alias review states");
     expect(html).toContain("Ботсадівський");
     expect(html).toContain("Botsadivs`kyi");
+    expect(html).toContain("accepted");
+    expect(html).toContain("generated");
+    expect(html).toContain("typeahead");
+    expect(html).toContain("confidence 1.00");
+    expect(html).toContain("confidence 0.52");
     expect(html).not.toContain("raw_payload");
     expect(html).not.toContain("source_only_fields");
     expect(html).not.toContain("varietyDescription");

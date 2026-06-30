@@ -93,6 +93,12 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("gbifTaxonKey");
     expect(document).not.toHaveProperty("eppoCode");
     expect(document).not.toHaveProperty("wikidataId");
+    expect(document).not.toHaveProperty("aliasStatus");
+    expect(document).not.toHaveProperty("aliasKind");
+    expect(document).not.toHaveProperty("sourceMethod");
+    expect(document).not.toHaveProperty("confidence");
+    expect(document).not.toHaveProperty("license");
+    expect(document).not.toHaveProperty("attributionRequired");
     expect(document).not.toHaveProperty("sourceRecordKey");
     expect(document).not.toHaveProperty("coordinates");
     expect(document).not.toHaveProperty("rawPayload");
@@ -196,6 +202,37 @@ describe("catalog typeahead search documents", () => {
         status: "seeded",
         source: "species_backbone",
         gbifTaxonKey: 2930137,
+      }),
+    ).toBeNull();
+  });
+
+  it("rejects species backbone hits that carry alias curation metadata", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000301",
+        displayName: "помідор",
+        canonicalName: "Solanum lycopersicum L.",
+        locale: "uk",
+        status: "seeded",
+        source: "species_backbone",
+        aliasStatus: "accepted",
+        aliasKind: "vernacular_alias",
+        sourceMethod: "source_backed",
+        confidence: 0.98,
+        license: "CC0 1.0 Universal",
+        attributionRequired: false,
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000301",
+        displayName: "garden tomato",
+        canonicalName: "Solanum lycopersicum L.",
+        locale: "en",
+        status: "seeded",
+        source: "species_backbone",
+        alias_status: "review_needed",
+        projection_notes: "held for curator review",
       }),
     ).toBeNull();
   });

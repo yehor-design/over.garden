@@ -100,17 +100,14 @@ function CatalogSourceProvenanceCard({
         {row.projectedAliases.length > 0 ? (
           <div className="md:col-span-2">
             <dt className="text-xs text-muted-foreground">
-              Projected typeahead aliases
+              Alias review states
             </dt>
-            <dd className="mt-2 flex flex-wrap gap-2">
+            <dd className="mt-2 grid gap-2 md:grid-cols-2">
               {row.projectedAliases.map((alias) => (
-                <span
-                  key={`${alias.locale}:${alias.displayName}`}
-                  className="rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground"
-                >
-                  {alias.displayName} · {alias.locale}
-                  {alias.isPrimary ? " · primary" : ""}
-                </span>
+                <AliasReviewState
+                  key={`${alias.sourceSlug}:${alias.locale}:${alias.displayName}:${alias.status}`}
+                  alias={alias}
+                />
               ))}
             </dd>
           </div>
@@ -143,10 +140,61 @@ function CatalogSourceProvenanceCard({
   );
 }
 
+function AliasReviewState({
+  alias,
+}: {
+  alias: CatalogSourceProvenanceCurationRow["projectedAliases"][number];
+}) {
+  return (
+    <div className="rounded-md border border-border px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-medium text-foreground">{alias.displayName}</span>
+        <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground uppercase">
+          {alias.locale}
+        </span>
+        <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+          {alias.status}
+        </span>
+        {alias.projectedToTypeahead ? (
+          <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+            typeahead
+          </span>
+        ) : null}
+        {alias.isPrimary ? (
+          <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
+            primary
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        <span>{alias.aliasKind}</span>
+        <span>{alias.sourceSlug}</span>
+        <span>{alias.sourceMethod}</span>
+        <span>confidence {formatConfidence(alias.confidence)}</span>
+        <span>
+          {alias.license}
+          {alias.attributionRequired ? " · attribution required" : ""}
+        </span>
+        {alias.sourceRecordKey ? <span>{alias.sourceRecordKey}</span> : null}
+      </div>
+      {alias.projectionNotes ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {alias.projectionNotes}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function formatDate(value: Date | string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Unknown";
   return new Intl.DateTimeFormat("en", {
     dateStyle: "medium",
   }).format(date);
+}
+
+function formatConfidence(value: number) {
+  if (!Number.isFinite(value)) return "unknown";
+  return value.toFixed(2);
 }

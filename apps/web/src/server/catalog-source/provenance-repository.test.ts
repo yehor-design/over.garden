@@ -65,16 +65,27 @@ describe("catalog source provenance repository", () => {
     ]);
   });
 
-  it("reads projected aliases from catalog names without raw source records", () => {
+  it("reads alias curation states without raw source records", () => {
     const compiled = buildCatalogSourceProjectedAliasesForCurationQuery(
       testDb,
       ["00000000-0000-4000-8000-000000058003"],
     ).compile();
 
-    expect(compiled.sql).toContain('from "catalog_item_names"');
-    expect(compiled.sql).toContain('"catalog_item_names"."catalog_item_id" in');
-    expect(compiled.sql).toContain('"catalog_item_names"."display_name"');
-    expect(compiled.sql).toContain('"catalog_item_names"."is_primary"');
+    expect(compiled.sql).toContain('from "catalog_alias_projections"');
+    expect(compiled.sql).toContain('left join "catalog_item_names"');
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."catalog_item_id" in',
+    );
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."display_name"',
+    );
+    expect(compiled.sql).toContain('"catalog_alias_projections"."status"');
+    expect(compiled.sql).toContain('"catalog_alias_projections"."source_slug"');
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."source_method"',
+    );
+    expect(compiled.sql).toContain('"catalog_alias_projections"."confidence"');
+    expect(compiled.sql).toContain('"catalog_alias_projections"."license"');
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain("raw_payload");
     expect(compiled.sql).not.toContain("source_only_fields");

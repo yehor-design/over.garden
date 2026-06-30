@@ -23,8 +23,10 @@ import {
 import {
   buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery,
   buildInsertSpeciesBackboneSourceLinkQuery,
+  buildSpeciesBackboneAliasCurationProofQuery,
   buildSpeciesBackboneSourceProvenanceProofQuery,
   buildSpeciesBackboneTypeaheadProofQuery,
+  buildUpsertSpeciesBackboneAliasProjectionQuery,
   buildUpsertSpeciesBackboneCatalogItemQuery,
   buildUpsertSpeciesBackboneCatalogNameQuery,
   buildUpsertSpeciesBackboneRecordQuery,
@@ -95,6 +97,8 @@ describe("species backbone seed import", () => {
     expect(projection).toContain("Solanum lycopersicum L.");
     expect(projection).toContain("Tomato");
     expect(projection).toContain("помідор");
+    expect(projection).not.toContain("garden tomato");
+    expect(projection).not.toContain("помидор");
 
     for (const marker of forbiddenProjectionMarkers) {
       expect(projection).not.toContain(marker);
@@ -121,6 +125,34 @@ describe("species backbone seed import", () => {
       "томати",
       "домат",
     ]);
+    expect(definition.aliasCandidates.map((row) => row.status)).toEqual([
+      "accepted",
+      "accepted",
+      "accepted",
+      "accepted",
+      "accepted",
+      "accepted",
+      "accepted",
+      "review_needed",
+      "rejected",
+      "generated",
+    ]);
+    expect(
+      definition.aliasCandidates.find((row) => row.displayName === "помідор"),
+    ).toMatchObject({
+      sourceSlug: "wikidata",
+      sourceMethod: "source_backed",
+      license: "CC0 1.0 Universal",
+      confidence: 0.98,
+    });
+    expect(
+      definition.aliasCandidates.find((row) => row.displayName === "помидор"),
+    ).toMatchObject({
+      status: "generated",
+      sourceSlug: "overgarden-generated",
+      sourceRecordKey: null,
+      sourceMethod: "generated",
+    });
     expect(projection.conflictBehavior).toContain("Conflicting accepted names");
   });
 
@@ -197,6 +229,36 @@ describe("species backbone seed import", () => {
     ]);
   });
 
+  it("records alias status, source, license, and confidence separately from typeahead names", () => {
+    const alias = definition.aliasCandidates.find(
+      (row) => row.displayName === "помідор",
+    );
+    if (!alias) throw new Error("Missing Ukrainian alias fixture");
+
+    const compiled = buildUpsertSpeciesBackboneAliasProjectionQuery(testDb, {
+      catalogItemId,
+      catalogItemNameId: "00000000-0000-4000-8000-000000058004",
+      sourceRecordId,
+      alias,
+    }).compile();
+
+    expect(compiled.sql).toContain('insert into "catalog_alias_projections"');
+    expect(compiled.sql).toContain(
+      'on conflict ("catalog_item_id", "normalized_name", "locale", "source_slug", "source_method") do update',
+    );
+    expect(compiled.parameters).toContain("помідор");
+    expect(compiled.parameters).toContain("accepted");
+    expect(compiled.parameters).toContain("wikidata");
+    expect(compiled.parameters).toContain("source_backed");
+    expect(compiled.parameters).toContain("Wikidata:Q23501");
+    expect(compiled.parameters).toContain(0.98);
+    expect(compiled.parameters).toContain("CC0 1.0 Universal");
+    expect(JSON.stringify(compiled.parameters)).not.toContain(
+      "poisonCoordinateSentinel",
+    );
+    expect(JSON.stringify(compiled.parameters)).not.toContain("raw_payload");
+  });
+
   it("links the catalog item to every approved source record", () => {
     const eppo = sourceRecord("eppo-codes");
     const compiled = buildInsertSpeciesBackboneSourceLinkQuery(testDb, {
@@ -226,6 +288,7 @@ describe("species backbone seed import", () => {
 
     expect(compiled.sql).toContain('from "catalog_item_names"');
     expect(compiled.sql).toContain('inner join "catalog_items"');
+    expect(compiled.sql).not.toContain("catalog_alias_projections");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -253,6 +316,28 @@ describe("species backbone seed import", () => {
       "%помідор%",
       8,
     ]);
+  });
+
+  it("reads alias curation proof without raw payload fields", () => {
+    const compiled = buildSpeciesBackboneAliasCurationProofQuery(
+      testDb,
+      catalogItemId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_alias_projections"');
+    expect(compiled.sql).toContain('inner join "catalog_items"');
+    expect(compiled.sql).toContain('"catalog_alias_projections"."status"');
+    expect(compiled.sql).toContain('"catalog_alias_projections"."source_slug"');
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."source_method"',
+    );
+    expect(compiled.sql).toContain('"catalog_alias_projections"."confidence"');
+    expect(compiled.sql).toContain('"catalog_alias_projections"."license"');
+    expect(compiled.sql).toContain("projectedToTypeahead");
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain('"raw_payload"');
+    expect(compiled.sql).not.toContain("source_only_fields");
+    expect(compiled.parameters).toEqual([catalogItemId, "species_backbone"]);
   });
 
   it("reads source provenance rows without selecting raw payload fields", () => {

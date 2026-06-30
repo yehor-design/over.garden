@@ -11,6 +11,7 @@ import {
   speciesBackboneSeedDefinition,
   speciesBackboneSnapshotChecksum,
   speciesBackboneSourceOnlyFields,
+  type SpeciesBackboneAliasCandidate,
   type SpeciesBackboneImportDefinition,
   type SpeciesBackboneProjection,
   type SpeciesBackboneSourceRecordDefinition,
@@ -38,6 +39,8 @@ export interface SpeciesBackboneImportSummary {
   publicSlug: string;
   sourceIds: SpeciesBackboneProjection["sourceIds"];
   aliasesProjected: number;
+  aliasesRecorded: number;
+  aliasStatusCounts: Record<SpeciesBackboneAliasCandidate["status"], number>;
   reindexQueued: boolean;
 }
 
@@ -80,6 +83,25 @@ export interface SpeciesBackboneSourceProvenanceProof {
   projectionStatus: string;
 }
 
+export interface SpeciesBackboneAliasCurationProof {
+  catalogItemId: string;
+  catalogItemNameId: string | null;
+  canonicalName: string;
+  displayName: string;
+  locale: string;
+  script: string;
+  aliasKind: string;
+  status: string;
+  sourceSlug: string;
+  sourceMethod: string;
+  sourceRecordKey: string | null;
+  confidence: number;
+  license: string;
+  attributionRequired: boolean;
+  projectedToTypeahead: boolean;
+  projectionNotes: string | null;
+}
+
 export async function importSpeciesBackboneSeed(
   executor: Kysely<Database>,
   definition = speciesBackboneSeedDefinition(),
@@ -88,6 +110,7 @@ export async function importSpeciesBackboneSeed(
     const projection = speciesBackboneAllowedProjection(definition);
     const sourceSnapshotIds: Record<string, string> = {};
     const sourceRecordIds: Record<string, string> = {};
+    const sourceRecordIdsByKey = new Map<string, string>();
     const rawPayloadSha256BySource: Record<string, string> = {};
     const snapshotSha256BySource: Record<string, string> = {};
     const linkedSourceRecords: Array<{
@@ -119,6 +142,7 @@ export async function importSpeciesBackboneSeed(
 
       sourceSnapshotIds[sourceRecord.source.slug] = snapshot.id;
       sourceRecordIds[sourceRecord.source.slug] = record.id;
+      sourceRecordIdsByKey.set(sourceRecord.record.id, record.id);
       rawPayloadSha256BySource[sourceRecord.source.slug] = rawPayloadSha256;
       snapshotSha256BySource[sourceRecord.source.slug] = snapshotSha256;
       linkedSourceRecords.push({
@@ -132,11 +156,48 @@ export async function importSpeciesBackboneSeed(
       projection,
     ).executeTakeFirstOrThrow();
 
+    const catalogItemNameIdsByAliasKey = new Map<string, string>();
     for (const alias of projection.aliases) {
-      await buildUpsertSpeciesBackboneCatalogNameQuery(trx, {
+      const catalogItemName = await buildUpsertSpeciesBackboneCatalogNameQuery(
+        trx,
+        {
+          catalogItemId: catalogItem.id,
+          ...alias,
+        },
+      ).executeTakeFirstOrThrow();
+
+      catalogItemNameIdsByAliasKey.set(
+        buildAliasKey(alias.locale, alias.normalizedName),
+        catalogItemName.id,
+      );
+    }
+
+    const aliasStatusCounts = emptyAliasStatusCounts();
+    for (const alias of definition.aliasCandidates) {
+      const sourceRecordId = resolveAliasSourceRecordId(
+        alias,
+        sourceRecordIdsByKey,
+      );
+      const catalogItemNameId =
+        alias.status === "accepted"
+          ? catalogItemNameIdsByAliasKey.get(
+              buildAliasKey(alias.locale, alias.normalizedName),
+            )
+          : null;
+
+      if (alias.status === "accepted" && !catalogItemNameId) {
+        throw new Error(
+          `Accepted alias ${alias.locale}:${alias.normalizedName} is missing from catalog_item_names.`,
+        );
+      }
+
+      await buildUpsertSpeciesBackboneAliasProjectionQuery(trx, {
         catalogItemId: catalogItem.id,
-        ...alias,
+        catalogItemNameId: catalogItemNameId ?? null,
+        sourceRecordId,
+        alias,
       }).execute();
+      aliasStatusCounts[alias.status] += 1;
     }
 
     for (const linked of linkedSourceRecords) {
@@ -166,6 +227,8 @@ export async function importSpeciesBackboneSeed(
       publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
       sourceIds: projection.sourceIds,
       aliasesProjected: projection.aliases.length,
+      aliasesRecorded: definition.aliasCandidates.length,
+      aliasStatusCounts,
       reindexQueued: reindexJob.id.length > 0,
     };
   });
@@ -222,6 +285,35 @@ export async function readSpeciesBackboneSourceProvenanceProof(
   }));
 }
 
+export async function readSpeciesBackboneAliasCurationProof(
+  executor: QueryExecutor,
+  catalogItemId: string,
+): Promise<SpeciesBackboneAliasCurationProof[]> {
+  const rows = await buildSpeciesBackboneAliasCurationProofQuery(
+    executor,
+    catalogItemId,
+  ).execute();
+
+  return rows.map((row) => ({
+    catalogItemId: row.catalogItemId,
+    catalogItemNameId: row.catalogItemNameId,
+    canonicalName: row.canonicalName,
+    displayName: row.displayName,
+    locale: row.locale,
+    script: row.script,
+    aliasKind: row.aliasKind,
+    status: row.status,
+    sourceSlug: row.sourceSlug,
+    sourceMethod: row.sourceMethod,
+    sourceRecordKey: row.sourceRecordKey,
+    confidence: Number(row.confidence),
+    license: row.license,
+    attributionRequired: Boolean(row.attributionRequired),
+    projectedToTypeahead: Boolean(row.projectedToTypeahead),
+    projectionNotes: row.projectionNotes,
+  }));
+}
+
 export async function proveSpeciesBackboneGardenReadback(
   executor: Kysely<Database>,
   catalogItemId: string,
@@ -233,7 +325,7 @@ export async function proveSpeciesBackboneGardenReadback(
         .insertInto("spaces")
         .values({
           owner_user_id: PROOF_OWNER_USER_ID,
-          display_name: "OVE-58 species backbone proof",
+          display_name: "OVE-59 alias promotion proof",
           location_visibility: "hidden",
           coarse_region_code: null,
         })
@@ -261,12 +353,12 @@ export async function proveSpeciesBackboneGardenReadback(
           owner_user_id: PROOF_OWNER_USER_ID,
           space_id: space.id,
           plant_object_id: plantObject.id,
-          title: "OVE-58 species backbone proof",
-          body: "Canonical species backbone projection can be selected and read back without raw source fields.",
+          title: "OVE-59 alias promotion proof",
+          body: "Local alias selection reads back the canonical species identity without raw source fields.",
           entry_scope: "object",
           entry_date: "2026-06-30",
           visibility: "private",
-          client_mutation_id: "ove-58-species-backbone-proof",
+          client_mutation_id: "ove-59-alias-promotion-proof",
         })
         .executeTakeFirstOrThrow();
 
@@ -455,7 +547,66 @@ export function buildUpsertSpeciesBackboneCatalogNameQuery(
         display_name: input.displayName,
         is_primary: input.isPrimary,
       }),
-    );
+    )
+    .returning("id");
+}
+
+export function buildUpsertSpeciesBackboneAliasProjectionQuery(
+  executor: QueryExecutor,
+  input: {
+    catalogItemId: string;
+    catalogItemNameId: string | null;
+    sourceRecordId: string | null;
+    alias: SpeciesBackboneAliasCandidate;
+  },
+) {
+  const now = new Date();
+
+  return executor
+    .insertInto("catalog_alias_projections")
+    .values({
+      catalog_item_id: input.catalogItemId,
+      catalog_item_name_id: input.catalogItemNameId,
+      display_name: input.alias.displayName,
+      normalized_name: input.alias.normalizedName,
+      locale: input.alias.locale,
+      script: input.alias.script,
+      alias_kind: input.alias.aliasKind,
+      status: input.alias.status,
+      source_slug: input.alias.sourceSlug,
+      source_method: input.alias.sourceMethod,
+      source_record_id: input.sourceRecordId,
+      source_record_key: input.alias.sourceRecordKey,
+      confidence: input.alias.confidence,
+      license: input.alias.license,
+      attribution_required: input.alias.attributionRequired,
+      projection_notes: input.alias.projectionNotes,
+    })
+    .onConflict((oc) =>
+      oc
+        .columns([
+          "catalog_item_id",
+          "normalized_name",
+          "locale",
+          "source_slug",
+          "source_method",
+        ])
+        .doUpdateSet({
+          catalog_item_name_id: input.catalogItemNameId,
+          display_name: input.alias.displayName,
+          script: input.alias.script,
+          alias_kind: input.alias.aliasKind,
+          status: input.alias.status,
+          source_record_id: input.sourceRecordId,
+          source_record_key: input.alias.sourceRecordKey,
+          confidence: input.alias.confidence,
+          license: input.alias.license,
+          attribution_required: input.alias.attributionRequired,
+          projection_notes: input.alias.projectionNotes,
+          updated_at: now,
+        }),
+    )
+    .returning("id");
 }
 
 export function buildInsertSpeciesBackboneSourceLinkQuery(
@@ -586,12 +737,99 @@ export function buildSpeciesBackboneSourceProvenanceProofQuery(
     .orderBy("catalog_source_links.source_slug", "asc");
 }
 
+export function buildSpeciesBackboneAliasCurationProofQuery(
+  executor: QueryExecutor,
+  catalogItemId: string,
+) {
+  return executor
+    .selectFrom("catalog_alias_projections")
+    .innerJoin(
+      "catalog_items",
+      "catalog_items.id",
+      "catalog_alias_projections.catalog_item_id",
+    )
+    .select([
+      "catalog_items.id as catalogItemId",
+      "catalog_alias_projections.catalog_item_name_id as catalogItemNameId",
+      "catalog_items.canonical_name as canonicalName",
+      "catalog_alias_projections.display_name as displayName",
+      "catalog_alias_projections.locale as locale",
+      "catalog_alias_projections.script as script",
+      "catalog_alias_projections.alias_kind as aliasKind",
+      "catalog_alias_projections.status as status",
+      "catalog_alias_projections.source_slug as sourceSlug",
+      "catalog_alias_projections.source_method as sourceMethod",
+      "catalog_alias_projections.source_record_key as sourceRecordKey",
+      "catalog_alias_projections.confidence as confidence",
+      "catalog_alias_projections.license as license",
+      "catalog_alias_projections.attribution_required as attributionRequired",
+      sql<boolean>`(${sql.ref("catalog_alias_projections.catalog_item_name_id")} is not null)`.as(
+        "projectedToTypeahead",
+      ),
+      "catalog_alias_projections.projection_notes as projectionNotes",
+    ])
+    .where("catalog_items.id", "=", catalogItemId)
+    .where("catalog_items.created_by_user_id", "is", null)
+    .where("catalog_items.source", "=", "species_backbone")
+    .orderBy(
+      sql<number>`case ${sql.ref("catalog_alias_projections.status")}
+        when 'accepted' then 0
+        when 'review_needed' then 1
+        when 'generated' then 2
+        when 'rejected' then 3
+        else 4
+      end`,
+      "asc",
+    )
+    .orderBy("catalog_alias_projections.locale", "asc")
+    .orderBy("catalog_alias_projections.display_name", "asc");
+}
+
 class RollbackReadbackProof extends Error {
   constructor(readonly proof: SpeciesBackboneGardenReadbackProof) {
-    super("Rollback OVE-58 species backbone readback proof");
+    super("Rollback OVE-59 alias promotion readback proof");
   }
 }
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
+}
+
+function emptyAliasStatusCounts(): Record<
+  SpeciesBackboneAliasCandidate["status"],
+  number
+> {
+  return {
+    accepted: 0,
+    review_needed: 0,
+    rejected: 0,
+    generated: 0,
+    user_provisional: 0,
+  };
+}
+
+function resolveAliasSourceRecordId(
+  alias: SpeciesBackboneAliasCandidate,
+  sourceRecordIdsByKey: ReadonlyMap<string, string>,
+) {
+  if (alias.sourceMethod !== "source_backed") return null;
+
+  if (!alias.sourceRecordKey) {
+    throw new Error(
+      `Source-backed alias ${alias.displayName} has no source record key.`,
+    );
+  }
+
+  const sourceRecordId = sourceRecordIdsByKey.get(alias.sourceRecordKey);
+  if (!sourceRecordId) {
+    throw new Error(
+      `Source-backed alias ${alias.displayName} references missing source record ${alias.sourceRecordKey}.`,
+    );
+  }
+
+  return sourceRecordId;
+}
+
+function buildAliasKey(locale: string, normalizedName: string) {
+  return `${locale}:${normalizedName}`;
 }

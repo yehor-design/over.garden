@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, JsonValue } from "@/db/schema";
@@ -34,7 +34,18 @@ export interface CatalogSourceProvenanceCurationRow {
 export interface CatalogSourceProjectedAlias {
   displayName: string;
   locale: string;
-  isPrimary: boolean;
+  script: string;
+  aliasKind: string;
+  status: string;
+  sourceSlug: string;
+  sourceMethod: string;
+  sourceRecordKey: string | null;
+  confidence: number;
+  license: string;
+  attributionRequired: boolean;
+  projectedToTypeahead: boolean;
+  isPrimary: boolean | null;
+  projectionNotes: string | null;
 }
 
 export async function listCatalogSourceProvenanceForCuration(
@@ -125,16 +136,41 @@ export function buildCatalogSourceProjectedAliasesForCurationQuery(
   catalogItemIds: string[],
 ) {
   return executor
-    .selectFrom("catalog_item_names")
+    .selectFrom("catalog_alias_projections")
+    .leftJoin(
+      "catalog_item_names",
+      "catalog_item_names.id",
+      "catalog_alias_projections.catalog_item_name_id",
+    )
     .select([
-      "catalog_item_names.catalog_item_id as catalogItemId",
-      "catalog_item_names.display_name as displayName",
-      "catalog_item_names.locale as locale",
+      "catalog_alias_projections.catalog_item_id as catalogItemId",
+      "catalog_alias_projections.display_name as displayName",
+      "catalog_alias_projections.locale as locale",
+      "catalog_alias_projections.script as script",
+      "catalog_alias_projections.alias_kind as aliasKind",
+      "catalog_alias_projections.status as status",
+      "catalog_alias_projections.source_slug as sourceSlug",
+      "catalog_alias_projections.source_method as sourceMethod",
+      "catalog_alias_projections.source_record_key as sourceRecordKey",
+      "catalog_alias_projections.confidence as confidence",
+      "catalog_alias_projections.license as license",
+      "catalog_alias_projections.attribution_required as attributionRequired",
       "catalog_item_names.is_primary as isPrimary",
+      "catalog_alias_projections.projection_notes as projectionNotes",
     ])
-    .where("catalog_item_names.catalog_item_id", "in", catalogItemIds)
-    .orderBy("catalog_item_names.is_primary", "desc")
-    .orderBy("catalog_item_names.display_name", "asc");
+    .where("catalog_alias_projections.catalog_item_id", "in", catalogItemIds)
+    .orderBy(
+      sql<number>`case ${sql.ref("catalog_alias_projections.status")}
+        when 'accepted' then 0
+        when 'review_needed' then 1
+        when 'generated' then 2
+        when 'rejected' then 3
+        else 4
+      end`,
+      "asc",
+    )
+    .orderBy("catalog_alias_projections.locale", "asc")
+    .orderBy("catalog_alias_projections.display_name", "asc");
 }
 
 function normalizeSourceProvenanceLimit(limit: number) {
@@ -163,7 +199,18 @@ async function readProjectedAliasesByCatalogItemId(
     aliases.push({
       displayName: row.displayName,
       locale: row.locale,
-      isPrimary: Boolean(row.isPrimary),
+      script: row.script,
+      aliasKind: row.aliasKind,
+      status: row.status,
+      sourceSlug: row.sourceSlug,
+      sourceMethod: row.sourceMethod,
+      sourceRecordKey: row.sourceRecordKey,
+      confidence: Number(row.confidence),
+      license: row.license,
+      attributionRequired: Boolean(row.attributionRequired),
+      projectedToTypeahead: row.isPrimary !== null,
+      isPrimary: row.isPrimary === null ? null : Boolean(row.isPrimary),
+      projectionNotes: row.projectionNotes,
     });
     aliasesByCatalogItemId.set(row.catalogItemId, aliases);
   }

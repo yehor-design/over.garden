@@ -1,9 +1,9 @@
 # Species Backbone Policy
 
-Status: OVE-58 bounded seed policy
+Status: OVE-59 bounded seed and alias-promotion policy
 Scope: CoL/WFO/GBIF/EPPO/Wikidata species seed consumed by `pnpm catalog:sources:import-species-backbone`
 
-OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. It is not a full taxonomy import.
+OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. OVE-59 adds explicit vernacular alias promotion states for that same path. This is not a full taxonomy import.
 
 ## Source Precedence
 
@@ -24,13 +24,22 @@ The product catalog projection may include:
 - Source-backed synonym aliases, currently `Lycopersicon esculentum`.
 - Small, gardener-facing vernacular aliases with permissive license/provenance, currently `Tomato`, `помідор`, `томати`, and `домат`.
 
+Projected aliases must also have an alias record with explicit language/locale, script, source slug, source method, source record key when source-backed, confidence, license, attribution flag, and one of these statuses:
+
+- `accepted`: allowed into `catalog_item_names`, typeahead, and Meilisearch's public catalog document shape.
+- `review_needed`: visible to the operator for review only; not projected to typeahead.
+- `rejected`: retained as provenance for why it was not promoted; not projected to typeahead.
+- `generated`: machine/generated variant candidate; never masquerades as source-backed and is not projected to typeahead unless a later curator action promotes it.
+- `user_provisional`: reserved for user-added local names; the existing provisional confirm/merge flow remains separate from imported alias promotion.
+
 The product catalog projection must not include:
 
 - Raw source payload blobs.
 - Source-only fields.
 - GBIF occurrence records or coordinates.
 - EPPO distribution/native-range text.
-- Wikidata aliases that have not been reviewed for local gardener language fit.
+- Wikidata aliases that have not been reviewed for local gardener language fit, including `garden tomato` while it is `review_needed` and `love apple` while it is `rejected`.
+- Generated aliases such as `помидор` unless a later explicit curation step promotes them.
 - Conditional or internal-validation-only sources such as PESI, EOL, or iNaturalist.
 
 ## Conflict Handling
@@ -42,3 +51,5 @@ If a source link disappears or a source license changes, new imports must stop b
 ## Runtime Boundary
 
 User typeahead, save, and readback paths do not call live external APIs. They read only OverGarden catalog tables and the derived Meilisearch typeahead index. Source refresh/import work is offline/operator-run and must keep raw fields quarantined in `catalog_source_records`.
+
+Typeahead is fed by `catalog_item_names`; alias review metadata is stored separately in `catalog_alias_projections`. A non-accepted alias can support operator review without becoming a public/product lookup term because it has no `catalog_item_name_id` link. Meilisearch catalog hits must also reject alias curation metadata (`aliasStatus`, source method, confidence, license, attribution, projection notes) if those fields appear accidentally.
