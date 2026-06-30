@@ -10,7 +10,7 @@ This policy does not delete every Docker reference immediately. It classifies th
 
 | Surface | Apple Container target | Docker retained | Reason Docker may remain | Owner |
 | --- | --- | --- | --- | --- |
-| Supported local Mac development | Yes | Fallback only | OVE-72 provides the Apple Container service trio start/status/down path. Docker Desktop should not be required for normal local infra work on supported Macs; OVE-73 still needs to prove the fresh-checkout web bootstrap against that path. | OVE-72, OVE-73, OVE-77 |
+| Supported local Mac development | Yes | Fallback only | OVE-72 provides the Apple Container service trio start/status/down path. OVE-73 proves the fresh-checkout web bootstrap and test path against those services with Docker Desktop stopped, so Docker Desktop is not required for normal local infra work on supported Macs. | OVE-72, OVE-73, OVE-77 |
 | Unsupported developer machines | No | Yes | Apple Container is macOS/Apple Silicon scoped. Docker remains the practical fallback for unsupported hosts or older macOS versions. | OVE-77 |
 | Local Postgres | Yes | Fallback only | `infra/container-up` starts Postgres on `127.0.0.1:5432` with a named Apple Container volume. Docker Compose remains for unsupported hosts or verified feature gaps. | OVE-72 |
 | Local Meilisearch | Yes | Fallback only | `infra/container-up` starts Meilisearch on `127.0.0.1:7700` with a named Apple Container volume and `infra/container-status` checks `/health`. | OVE-72 |
@@ -38,7 +38,7 @@ Use these labels when touching docs or Linear issues that still mention Docker:
 ## Agent Rules
 
 1. For local runtime work, start with Apple Container on supported Macs.
-2. Docker Desktop must not be listed as a default local prerequisite once OVE-72 and OVE-73 prove the replacement path.
+2. Docker Desktop must not be listed as a default local prerequisite for supported Mac local development now that OVE-72 and OVE-73 prove the replacement path.
 3. If Docker remains in a new or edited instruction, state one of: unsupported host, CI runner, production Linux process management, temporary fallback issue, or specific missing Apple Container feature.
 4. Keep Docker Compose for current production worker/search docs until OVE-76 explicitly proves the production boundary and records why it stays or what replaces it.
 5. Keep Docker in GitHub Actions only where OVE-75 confirms the Apple Container boundary for Ubuntu CI.
@@ -46,7 +46,7 @@ Use these labels when touching docs or Linear issues that still mention Docker:
 
 ## Current Migration Boundary
 
-OVE-71 changed doctrine and documentation only. OVE-72 adds the supported-Mac Apple Container path for the local Postgres, Meilisearch, and MinIO service trio. It still does not prove the fresh-checkout web bootstrap, matching image builds, GitHub Actions, or the production worker droplet without Docker.
+OVE-71 changed doctrine and documentation only. OVE-72 adds the supported-Mac Apple Container path for the local Postgres, Meilisearch, and MinIO service trio. OVE-73 proves the fresh-checkout web bootstrap and test path against those Apple Container services with Docker Desktop stopped. The migration still does not prove matching image builds, GitHub Actions, or the production worker droplet without Docker.
 
 The correct end state is not "delete every Docker file." The correct end state is:
 

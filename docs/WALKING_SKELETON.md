@@ -1,13 +1,13 @@
 # Walking Skeleton
 
-Status: implemented and locally verified on 2026-06-26. CI now repeats the fresh-checkout bootstrap contract by starting Postgres plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`.
+Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. CI now repeats the fresh-checkout bootstrap contract by starting Postgres plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`.
 
 This is not product UI. It is the first end-to-end proof that the selected stack works together before agents start building product slices.
 
 ## What It Proves
 
 1. **Stack baseline is committed separately.** `86d902b8 Realign stack to Kysely / Better Auth & R2` is the stack realignment baseline.
-2. **Local infra works.** The original walking-skeleton proof used Docker Compose to start Postgres, Meilisearch, and MinIO. Current runtime policy is Apple Container-first for supported local Macs: `infra/container-up` starts the same service trio on the same local ports, with Docker Compose retained as fallback for unsupported hosts or verified feature gaps. `pnpm local:bootstrap` applies app SQL, creates Better Auth tables through Better Auth's migration helper, creates R2/MinIO buckets, and applies local public-read policy to the derivative bucket.
+2. **Local infra works.** The original walking-skeleton proof used Docker Compose to start Postgres, Meilisearch, and MinIO. Current runtime policy is Apple Container-first for supported local Macs: `infra/container-up` starts the same service trio on the same local ports, with Docker Compose retained as fallback for unsupported hosts or verified feature gaps. OVE-73 proves the normal web bootstrap and test path does not require Docker Desktop on a supported Mac. `pnpm local:bootstrap` applies app SQL, creates Better Auth tables through Better Auth's migration helper, creates R2/MinIO buckets, and applies local public-read policy to the derivative bucket.
 3. **Better Auth round-trip works.** `/api/auth/sign-up/email` creates a user and returns `overgarden.session_token`.
 4. **Vertical journal slice works.** `/skeleton` and `/api/skeleton/journal` go through auth -> scoped repository -> Kysely -> Postgres -> queue -> SSR readback.
 5. **Media quarantine pipeline works.** `/api/media/uploads` creates a presigned quarantine upload URL; `/api/media/process` reads the quarantine object, re-encodes a metadata-stripped WebP derivative with `sharp`, writes it to the public bucket, deletes the original, and marks the row processed.
@@ -16,22 +16,23 @@ This is not product UI. It is the first end-to-end proof that the selected stack
 
 ## Commands
 
-These commands use the current Apple Container-first local runtime. Docker Compose remains documented in `infra/README.md` only as fallback.
+These commands use the current Apple Container-first local runtime and were fresh-checkout verified by OVE-73. Docker Compose remains documented in `infra/README.md` only as fallback.
 
 ```bash
 infra/container-up
 infra/container-status
 
 cd apps/web
-cp .env.example .env.local
 pnpm install
+cp .env.example .env.local
+pnpm mainline:closeout:check
 pnpm local:bootstrap
 pnpm db:types
 pnpm db:types:check
 pnpm lint
 pnpm typecheck
 pnpm test
-pnpm build
+BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 pnpm dev
 ```
 
