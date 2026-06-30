@@ -20,6 +20,7 @@
     "catalog:sources:import-breed-seed": "tsx scripts/import-breed-seed.ts",
     "catalog:sources:import-bg-official-variety": "tsx scripts/import-bg-official-variety.ts",
     "catalog:sources:import-genebank-long-tail": "tsx scripts/import-genebank-long-tail.ts",
+    "catalog:sources:seed-rollout-proof": "tsx scripts/seed-catalog-rollout-proof.ts",
     "catalog:sources:refresh-sample": "tsx scripts/refresh-catalog-source-sample.ts",
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "smoke:garden-catalog-ux": "tsx scripts/smoke-garden-catalog-ux.ts",
