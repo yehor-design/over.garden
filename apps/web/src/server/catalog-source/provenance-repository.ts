@@ -7,10 +7,11 @@ import type { Database, JsonValue } from "@/db/schema";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 
 const MAX_SOURCE_PROVENANCE_ROWS = 25;
+const SOURCE_PROVENANCE_HISTORY_MULTIPLIER = 4;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-export interface CatalogSourceProvenanceCurationRow {
+export interface CatalogSourceProvenanceHistoryRow {
   catalogItemId: string;
   catalogCanonicalName: string;
   catalogPublicSlug: string | null;
@@ -31,6 +32,11 @@ export interface CatalogSourceProvenanceCurationRow {
   fetchedAt: Date | string;
   verifiedAt: Date | string;
   projectionStatus: string;
+}
+
+export interface CatalogSourceProvenanceCurationRow
+  extends CatalogSourceProvenanceHistoryRow {
+  auditLinkCount: number;
   projectedAliases: CatalogSourceProjectedAlias[];
 }
 
@@ -55,16 +61,21 @@ export async function listCatalogSourceProvenanceForCuration(
   limit = MAX_SOURCE_PROVENANCE_ROWS,
   executor: QueryExecutor = db,
 ): Promise<CatalogSourceProvenanceCurationRow[]> {
+  const normalizedLimit = normalizeSourceProvenanceLimit(limit);
   const rows = await buildCatalogSourceProvenanceForCurationQuery(
     executor,
-    limit,
+    normalizedLimit * SOURCE_PROVENANCE_HISTORY_MULTIPLIER,
   ).execute();
+  const currentRows = toCurrentCatalogSourceProvenanceRows(rows).slice(
+    0,
+    normalizedLimit,
+  );
   const aliasesByCatalogItemId = await readProjectedAliasesByCatalogItemId(
     executor,
-    rows.map((row) => row.catalogItemId),
+    currentRows.map((row) => row.catalogItemId),
   );
 
-  return rows.map((row) => ({
+  return currentRows.map((row) => ({
     catalogItemId: row.catalogItemId,
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
@@ -85,6 +96,7 @@ export async function listCatalogSourceProvenanceForCuration(
     fetchedAt: row.fetchedAt,
     verifiedAt: row.verifiedAt,
     projectionStatus: row.projectionStatus,
+    auditLinkCount: row.auditLinkCount,
     projectedAliases: aliasesByCatalogItemId.get(row.catalogItemId) ?? [],
   }));
 }
@@ -136,8 +148,41 @@ export function buildCatalogSourceProvenanceForCurationQuery(
     .where("catalog_items.created_by_user_id", "is", null)
     .where("catalog_source_links.projection_kind", "=", "canonical_item")
     .orderBy("catalog_source_snapshots.verified_at", "desc")
+    .orderBy("catalog_source_snapshots.fetched_at", "desc")
+    .orderBy("catalog_source_snapshots.source_version", "desc")
+    .orderBy("catalog_source_snapshots.parser_version", "desc")
     .orderBy("catalog_items.canonical_name", "asc")
-    .limit(normalizeSourceProvenanceLimit(limit));
+    .limit(normalizeSourceProvenanceHistoryLimit(limit));
+}
+
+export function toCurrentCatalogSourceProvenanceRows(
+  rows: CatalogSourceProvenanceHistoryRow[],
+): Array<CatalogSourceProvenanceHistoryRow & { auditLinkCount: number }> {
+  const currentRows = new Map<
+    string,
+    CatalogSourceProvenanceHistoryRow & { auditLinkCount: number }
+  >();
+
+  for (const row of rows) {
+    const key = catalogSourceProvenanceCurrentKey(row);
+    const current = currentRows.get(key);
+
+    if (!current) {
+      currentRows.set(key, { ...row, auditLinkCount: 1 });
+      continue;
+    }
+
+    current.auditLinkCount += 1;
+
+    if (isNewerCatalogSourceProvenanceRow(row, current)) {
+      currentRows.set(key, {
+        ...row,
+        auditLinkCount: current.auditLinkCount,
+      });
+    }
+  }
+
+  return [...currentRows.values()].sort(compareCatalogSourceProvenanceRows);
 }
 
 export function buildCatalogSourceProjectedAliasesForCurationQuery(
@@ -185,6 +230,61 @@ export function buildCatalogSourceProjectedAliasesForCurationQuery(
 function normalizeSourceProvenanceLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_SOURCE_PROVENANCE_ROWS;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_SOURCE_PROVENANCE_ROWS);
+}
+
+function normalizeSourceProvenanceHistoryLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_SOURCE_PROVENANCE_ROWS;
+  return Math.min(
+    Math.max(Math.trunc(limit), 1),
+    MAX_SOURCE_PROVENANCE_ROWS * SOURCE_PROVENANCE_HISTORY_MULTIPLIER,
+  );
+}
+
+function catalogSourceProvenanceCurrentKey(
+  row: CatalogSourceProvenanceHistoryRow,
+) {
+  return [
+    row.catalogSource,
+    row.catalogKind,
+    normalizeCatalogSourceProvenanceText(row.catalogCanonicalName),
+    row.sourceSlug,
+    row.sourceRecordKey,
+  ].join(":");
+}
+
+function compareCatalogSourceProvenanceRows(
+  left: CatalogSourceProvenanceHistoryRow,
+  right: CatalogSourceProvenanceHistoryRow,
+) {
+  return (
+    compareDateDesc(left.verifiedAt, right.verifiedAt) ||
+    compareDateDesc(left.fetchedAt, right.fetchedAt) ||
+    right.sourceVersion.localeCompare(left.sourceVersion) ||
+    right.parserVersion.localeCompare(left.parserVersion) ||
+    left.catalogCanonicalName.localeCompare(right.catalogCanonicalName) ||
+    left.sourceRecordKey.localeCompare(right.sourceRecordKey)
+  );
+}
+
+function isNewerCatalogSourceProvenanceRow(
+  candidate: CatalogSourceProvenanceHistoryRow,
+  current: CatalogSourceProvenanceHistoryRow,
+) {
+  return compareCatalogSourceProvenanceRows(candidate, current) < 0;
+}
+
+function compareDateDesc(left: Date | string, right: Date | string) {
+  return dateMillis(right) - dateMillis(left);
+}
+
+function dateMillis(value: Date | string) {
+  const date = new Date(value);
+  const time = date.getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function normalizeCatalogSourceProvenanceText(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 async function readProjectedAliasesByCatalogItemId(

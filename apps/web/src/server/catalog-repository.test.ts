@@ -142,6 +142,71 @@ describe("catalog repository query contracts", () => {
     ]);
   });
 
+  it("dedupes source-backed Meili hits that represent the same catalog concept", async () => {
+    const client = {
+      index() {
+        return {
+          async search() {
+            return {
+              hits: [
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000056002",
+                  displayName: "Bergeron 1",
+                  canonicalName: "Bergeron 1",
+                  catalogKind: "plant_variety",
+                  locale: "uk",
+                  status: "seeded",
+                  source: "ua_state_register",
+                },
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000064002",
+                  displayName: "Bergeron 1",
+                  canonicalName: "Bergeron 1",
+                  catalogKind: "plant_variety",
+                  locale: "uk",
+                  status: "seeded",
+                  source: "ua_state_register",
+                },
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000064013",
+                  displayName: "Refresh New 64",
+                  canonicalName: "Refresh New 64",
+                  catalogKind: "plant_variety",
+                  locale: "uk",
+                  status: "seeded",
+                  source: "ua_state_register",
+                },
+              ],
+            };
+          },
+        };
+      },
+    };
+
+    await expect(
+      searchCatalogSuggestionsWithMeili("bergeron", 8, client),
+    ).resolves.toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000056002",
+        displayName: "Bergeron 1",
+        canonicalName: "Bergeron 1",
+        catalogKind: "plant_variety",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_state_register",
+      },
+      {
+        id: "00000000-0000-4000-8000-000000064013",
+        displayName: "Refresh New 64",
+        canonicalName: "Refresh New 64",
+        catalogKind: "plant_variety",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_state_register",
+      },
+    ]);
+  });
+
   it("validates selected catalog IDs against selectable statuses", () => {
     const compiled = buildFindSelectableCatalogItemQuery(
       testDb,

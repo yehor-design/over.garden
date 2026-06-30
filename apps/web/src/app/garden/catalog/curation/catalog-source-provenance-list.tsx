@@ -78,6 +78,9 @@ function CatalogSourceProvenanceCard({
               Row: {row.sourceRecordKey}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Audit links: {row.auditLinkCount}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Verified: {formatDate(row.verifiedAt)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">

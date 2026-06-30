@@ -30,6 +30,7 @@ describe("CatalogSourceProvenanceList", () => {
             fetchedAt: "2026-06-29T00:00:00.000Z",
             verifiedAt: "2026-06-29T00:00:00.000Z",
             projectionStatus: "projected",
+            auditLinkCount: 2,
             projectedAliases: [
               {
                 displayName: "Ботсадівський",
@@ -72,6 +73,7 @@ describe("CatalogSourceProvenanceList", () => {
 
     expect(html).toContain("Ботсадівський");
     expect(html).toContain("RegisterVarietis:83070006");
+    expect(html).toContain("Audit links: 2");
     expect(html).toContain("2025-07-15");
     expect(html).toContain("https://data.gov.ua/example.csv");
     expect(html).toContain("Creative Commons Attribution 4.0 International");

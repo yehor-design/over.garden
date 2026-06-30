@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CATALOG_TYPEAHEAD_INDEX,
+  catalogTypeaheadSuggestionDedupeKey,
   catalogTypeaheadHitToSuggestion,
   dedupeCatalogTypeaheadSuggestions,
   toCatalogTypeaheadDocument,
@@ -443,6 +444,65 @@ describe("catalog typeahead search documents", () => {
         status: "seeded",
         source: "internal_seed",
       },
+    ]);
+  });
+
+  it("dedupes source-backed duplicate proof fixtures by canonical concept", () => {
+    expect(
+      dedupeCatalogTypeaheadSuggestions([
+        {
+          id: "00000000-0000-4000-8000-000000056002",
+          displayName: "Bergeron 1",
+          canonicalName: "Bergeron 1",
+          catalogKind: "plant_variety",
+          locale: "uk",
+          status: "seeded",
+          source: "ua_state_register",
+        },
+        {
+          id: "00000000-0000-4000-8000-000000064002",
+          displayName: "Bergeron 1",
+          canonicalName: "Bergeron 1",
+          catalogKind: "plant_variety",
+          locale: "uk",
+          status: "seeded",
+          source: "ua_state_register",
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000056002",
+        displayName: "Bergeron 1",
+        canonicalName: "Bergeron 1",
+        catalogKind: "plant_variety",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_state_register",
+      },
+    ]);
+  });
+
+  it("does not collapse non-source-backed rows just because names match", () => {
+    const left = {
+      id: "00000000-0000-4000-8000-000000000701",
+      displayName: "Red Cherry",
+      canonicalName: "Red Cherry",
+      catalogKind: "plant_variety" as const,
+      locale: "en",
+      status: "seeded" as const,
+      source: "internal_seed",
+    };
+    const right = {
+      ...left,
+      id: "00000000-0000-4000-8000-000000000702",
+    };
+
+    expect(catalogTypeaheadSuggestionDedupeKey(left)).toBe(
+      "catalog-item:00000000-0000-4000-8000-000000000701",
+    );
+    expect(dedupeCatalogTypeaheadSuggestions([left, right])).toEqual([
+      left,
+      right,
     ]);
   });
 });

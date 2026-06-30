@@ -22,6 +22,7 @@ import {
 const MAX_CATALOG_QUERY_LENGTH = 120;
 const MAX_CATALOG_PUBLIC_SLUG_LENGTH = 96;
 const MAX_CATALOG_SUGGESTIONS = 8;
+const MAX_CATALOG_TYPEAHEAD_ROWS = MAX_CATALOG_SUGGESTIONS * 3;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 const DEFAULT_USER_ADDED_LOCALE = "und";
 const CATALOG_CURATION_QUEUE = "catalog_curation";
@@ -107,18 +108,15 @@ export async function searchCatalogSuggestions(
   const normalizedQuery = normalizeCatalogQuery(query);
   if (normalizedQuery.length < MIN_CATALOG_QUERY_LENGTH) return [];
 
+  const normalizedLimit = normalizeCatalogLimit(limit);
   const rows = await buildCatalogTypeaheadQuery(
     executor,
     normalizedQuery,
-    limit,
+    normalizedLimit * 3,
   ).execute();
 
-  const suggestions = new Map<string, CatalogSuggestion>();
-
-  for (const row of rows) {
-    if (suggestions.has(row.id)) continue;
-
-    suggestions.set(row.id, {
+  return dedupeCatalogTypeaheadSuggestions(
+    rows.map((row) => ({
       id: row.id,
       displayName: row.displayName,
       canonicalName: row.canonicalName,
@@ -126,10 +124,8 @@ export async function searchCatalogSuggestions(
       locale: row.locale,
       status: row.status as SelectableCatalogStatus,
       source: row.source,
-    });
-  }
-
-  return [...suggestions.values()];
+    })),
+  ).slice(0, normalizedLimit);
 }
 
 export async function buildCatalogTypeaheadDocuments(
@@ -266,8 +262,9 @@ export function buildCatalogTypeaheadQuery(
       sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
     )
     .orderBy("catalog_item_names.is_primary", "desc")
+    .orderBy("catalog_items.updated_at", "desc")
     .orderBy("catalog_item_names.display_name", "asc")
-    .limit(normalizeCatalogLimit(limit));
+    .limit(normalizeCatalogTypeaheadRowLimit(limit));
 }
 
 export function buildCatalogTypeaheadReindexRowsQuery(executor: QueryExecutor) {
@@ -502,6 +499,14 @@ export function normalizeCatalogPublicSlug(value: string | null | undefined) {
 function normalizeCatalogLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_CATALOG_SUGGESTIONS;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_CATALOG_SUGGESTIONS);
+}
+
+function normalizeCatalogTypeaheadRowLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_CATALOG_SUGGESTIONS;
+  return Math.min(
+    Math.max(Math.trunc(limit), 1),
+    MAX_CATALOG_TYPEAHEAD_ROWS,
+  );
 }
 
 function catalogCurationIdempotencyKey(

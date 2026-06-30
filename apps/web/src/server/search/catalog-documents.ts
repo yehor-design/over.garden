@@ -186,6 +186,14 @@ export interface CatalogTypeaheadSuggestion {
   catalogKind: CatalogTypeaheadCatalogKind;
 }
 
+const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCES = new Set([
+  "ua_state_register",
+  "species_backbone",
+  "ua_official_bee_breed",
+  "eu_common_catalogue_bg",
+  "grin_genebank_candidate",
+]);
+
 export function toCatalogTypeaheadDocument(
   row: CatalogTypeaheadRow,
 ): CatalogTypeaheadDocument | null {
@@ -262,11 +270,33 @@ export function dedupeCatalogTypeaheadSuggestions(
   const deduped = new Map<string, CatalogTypeaheadSuggestion>();
 
   for (const suggestion of suggestions) {
-    if (deduped.has(suggestion.id)) continue;
-    deduped.set(suggestion.id, suggestion);
+    const key = catalogTypeaheadSuggestionDedupeKey(suggestion);
+    if (deduped.has(key)) continue;
+    deduped.set(key, suggestion);
   }
 
   return [...deduped.values()];
+}
+
+export function catalogTypeaheadSuggestionDedupeKey(
+  suggestion: CatalogTypeaheadSuggestion,
+) {
+  if (SOURCE_BACKED_CONCEPT_DEDUPE_SOURCES.has(suggestion.source)) {
+    const normalizedCanonicalName = normalizeTypeaheadText(
+      suggestion.canonicalName,
+    );
+
+    if (normalizedCanonicalName) {
+      return [
+        "source-backed-concept",
+        suggestion.source,
+        suggestion.catalogKind,
+        normalizedCanonicalName,
+      ].join(":");
+    }
+  }
+
+  return `catalog-item:${suggestion.id}`;
 }
 
 function catalogTypeaheadDocumentId(
