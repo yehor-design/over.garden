@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Database, ExternalLink } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { catalogKindLabel } from "@/lib/garden/pilot-ux-copy";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import type { CatalogSourceProvenanceCurationRow } from "@/server/catalog-source/provenance-repository";
 
@@ -58,6 +59,9 @@ function CatalogSourceProvenanceCard({
             </h3>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-md border border-border px-2 py-1">
+              {catalogKindLabel(row.catalogKind)}
+            </span>
             <span className="rounded-md border border-border px-2 py-1">
               {row.catalogStatus}
             </span>

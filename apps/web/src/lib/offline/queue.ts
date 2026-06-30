@@ -2,7 +2,7 @@
 
 import Dexie, { type Table } from "dexie";
 
-import type { EntrySyncStatus } from "@/db/schema";
+import type { EntrySyncStatus, PlantObjectKind } from "@/db/schema";
 import type {
   ActivationSource,
   JournalEntryTarget,
@@ -30,11 +30,11 @@ interface OfflineJournalEntryPayloadBase {
   processedMediaAssetId?: string | null;
 }
 
-export interface OfflineFirstPlantEntryPayload
-  extends OfflineJournalEntryPayloadBase {
+export interface OfflineFirstPlantEntryPayload extends OfflineJournalEntryPayloadBase {
   target?: "first_plant_entry";
   spaceName: string;
   plantName: string;
+  objectKind?: PlantObjectKind | null;
   catalogItemId?: string | null;
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
@@ -43,8 +43,7 @@ export interface OfflineFirstPlantEntryPayload
   activationSource?: ActivationSource | null;
 }
 
-export interface OfflinePlantObjectEntryPayload
-  extends OfflineJournalEntryPayloadBase {
+export interface OfflinePlantObjectEntryPayload extends OfflineJournalEntryPayloadBase {
   target: "plant_object_entry";
   plantObjectId: string;
 }

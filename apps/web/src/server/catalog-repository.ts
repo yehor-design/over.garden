@@ -3,7 +3,12 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { CatalogItemStatus, Database, JsonValue } from "@/db/schema";
+import type {
+  CatalogItemStatus,
+  CatalogKind,
+  Database,
+  JsonValue,
+} from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
 import { meiliSearchClient } from "@/server/search/client";
 import {
@@ -42,6 +47,7 @@ export interface CatalogSuggestion {
   id: string;
   displayName: string;
   canonicalName: string;
+  catalogKind: CatalogKind;
   locale: string;
   status: SelectableCatalogStatus;
   source: string;
@@ -51,6 +57,7 @@ export interface SelectableCatalogItem {
   id: string;
   canonicalName: string;
   publicSlug: string | null;
+  catalogKind: CatalogKind;
   locale: string;
   status: SelectableCatalogStatus;
   source: string;
@@ -115,6 +122,7 @@ export async function searchCatalogSuggestions(
       id: row.id,
       displayName: row.displayName,
       canonicalName: row.canonicalName,
+      catalogKind: row.catalogKind as CatalogKind,
       locale: row.locale,
       status: row.status as SelectableCatalogStatus,
       source: row.source,
@@ -152,6 +160,7 @@ export async function findSelectableCatalogItem(
     id: row.id,
     canonicalName: row.canonicalName,
     publicSlug: row.publicSlug,
+    catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
     source: row.source,
@@ -176,6 +185,7 @@ export async function findSelectableCatalogItemByPublicSlug(
     id: row.id,
     canonicalName: row.canonicalName,
     publicSlug: row.publicSlug,
+    catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
     source: row.source,
@@ -244,6 +254,7 @@ export function buildCatalogTypeaheadQuery(
     .select([
       "catalog_items.id as id",
       "catalog_items.canonical_name as canonicalName",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.locale as locale",
       "catalog_items.status as status",
       "catalog_items.source as source",
@@ -271,6 +282,7 @@ export function buildCatalogTypeaheadReindexRowsQuery(executor: QueryExecutor) {
       "catalog_items.id as id",
       "catalog_items.canonical_name as canonicalName",
       "catalog_items.normalized_name as normalizedName",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.status as status",
       "catalog_items.source as source",
       "catalog_items.created_by_user_id as createdByUserId",
@@ -297,6 +309,7 @@ export function buildFindSelectableCatalogItemQuery(
       "id",
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
+      "catalog_kind as catalogKind",
       "locale",
       "status",
       "source",
@@ -316,6 +329,7 @@ export function buildFindSelectableCatalogItemByPublicSlugQuery(
       "id",
       "canonical_name as canonicalName",
       "public_slug as publicSlug",
+      "catalog_kind as catalogKind",
       "locale",
       "status",
       "source",
@@ -341,6 +355,7 @@ export function buildUpsertUserAddedCatalogItemQuery(
     .values({
       canonical_name: input.displayName,
       normalized_name: input.normalizedName,
+      catalog_kind: "plant_variety",
       status: "provisional",
       source: "user_added",
       source_id: null,

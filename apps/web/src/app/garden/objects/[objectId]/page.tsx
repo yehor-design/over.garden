@@ -3,14 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
-import type {
-  EntryScope,
-  LocationVisibility,
-  VarietyState,
-} from "@/db/schema";
+import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
   entryPrivacyLabel,
   entryScopeLabel,
+  plantObjectKindLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
@@ -19,7 +16,10 @@ import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
-import { getPlantObjectPage, type PlantObjectPage } from "@/server/journal-repository";
+import {
+  getPlantObjectPage,
+  type PlantObjectPage,
+} from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
@@ -60,7 +60,7 @@ export default async function PlantObjectReadbackPage({
             Garden journal
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Plant object
+            Living object
           </h1>
         </header>
         <GardenAuthPanel />
@@ -73,7 +73,9 @@ export default async function PlantObjectReadbackPage({
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   await recordOwnRecordRevisited(scope, page);
-  const showProgressMoment = isObjectProgressMomentEligible(page.entries.length);
+  const showProgressMoment = isObjectProgressMomentEligible(
+    page.entries.length,
+  );
   if (showProgressMoment) {
     await recordProgressMomentShown(scope, page);
   }
@@ -114,6 +116,9 @@ export default async function PlantObjectReadbackPage({
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
               {locationLabel}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              {plantObjectKindLabel(page.plantObject.object_kind)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               Variety: {page.plantObject.variety_text ?? "Unknown"}

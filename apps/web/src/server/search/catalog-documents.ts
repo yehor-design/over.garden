@@ -41,6 +41,22 @@ const FORBIDDEN_TYPEAHEAD_HIT_KEYS = [
   "eppo_code",
   "wikidataId",
   "wikidata_id",
+  "vboId",
+  "vbo_id",
+  "dadIsRef",
+  "dad_is_ref",
+  "efabisRef",
+  "efabis_ref",
+  "officialBeeRef",
+  "official_bee_ref",
+  "manualSeedProvenance",
+  "manual_seed_provenance",
+  "internalValidation",
+  "internal_validation",
+  "latinNameDispute",
+  "latin_name_dispute",
+  "restrictedBreedFields",
+  "restricted_breed_fields",
   "sourceOnlyFields",
   "source_only_fields",
   "rawPayload",
@@ -85,11 +101,13 @@ const FORBIDDEN_TYPEAHEAD_HIT_KEYS = [
 
 export type CatalogTypeaheadStatus =
   (typeof SELECTABLE_CATALOG_STATUSES)[number];
+export type CatalogTypeaheadCatalogKind = "plant_variety" | "species" | "breed";
 
 export interface CatalogTypeaheadRow {
   id: string;
   canonicalName: string;
   normalizedName: string | null;
+  catalogKind: string;
   status: string;
   source: string;
   createdByUserId: string | null;
@@ -106,6 +124,7 @@ export interface CatalogTypeaheadDocument {
   displayName: string;
   canonicalName: string;
   normalizedName: string;
+  catalogKind: CatalogTypeaheadCatalogKind;
   locale: string;
   itemLocale: string;
   status: CatalogTypeaheadStatus;
@@ -122,12 +141,14 @@ export interface CatalogTypeaheadSuggestion {
   locale: string;
   status: CatalogTypeaheadStatus;
   source: string;
+  catalogKind: CatalogTypeaheadCatalogKind;
 }
 
 export function toCatalogTypeaheadDocument(
   row: CatalogTypeaheadRow,
 ): CatalogTypeaheadDocument | null {
   if (!isCatalogTypeaheadStatus(row.status)) return null;
+  if (!isCatalogTypeaheadCatalogKind(row.catalogKind)) return null;
   if (row.createdByUserId !== null) return null;
 
   const normalizedName = normalizeTypeaheadText(
@@ -143,6 +164,7 @@ export function toCatalogTypeaheadDocument(
     displayName: row.displayName,
     canonicalName: row.canonicalName,
     normalizedName,
+    catalogKind: row.catalogKind,
     locale: row.aliasLocale,
     itemLocale: row.itemLocale,
     status: row.status,
@@ -165,6 +187,7 @@ export function catalogTypeaheadHitToSuggestion(
   const locale = stringValue(hit.locale);
   const status = stringValue(hit.status);
   const source = stringValue(hit.source);
+  const catalogKind = stringValue(hit.catalogKind);
 
   if (
     !catalogItemId ||
@@ -173,7 +196,9 @@ export function catalogTypeaheadHitToSuggestion(
     !locale ||
     !status ||
     !isCatalogTypeaheadStatus(status) ||
-    !source
+    !source ||
+    !catalogKind ||
+    !isCatalogTypeaheadCatalogKind(catalogKind)
   ) {
     return null;
   }
@@ -185,6 +210,7 @@ export function catalogTypeaheadHitToSuggestion(
     locale,
     status,
     source,
+    catalogKind,
   };
 }
 
@@ -219,6 +245,12 @@ function isCatalogTypeaheadStatus(
   value: string,
 ): value is CatalogTypeaheadStatus {
   return SELECTABLE_CATALOG_STATUSES.includes(value as CatalogTypeaheadStatus);
+}
+
+function isCatalogTypeaheadCatalogKind(
+  value: string,
+): value is CatalogTypeaheadCatalogKind {
+  return value === "plant_variety" || value === "species" || value === "breed";
 }
 
 function hasForbiddenTypeaheadKeys(hit: Record<string, unknown>) {

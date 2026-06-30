@@ -105,11 +105,11 @@ export function varietyStateLabel(value: string | null | undefined) {
     case "selected":
       return "Matched to catalog";
     case "user_added":
-      return "Saved with your variety name";
+      return "Saved with your catalog name";
     case "free_text":
       return "Saved without catalog match";
     case "unknown":
-      return "No variety match yet";
+      return "No catalog match yet";
     default:
       return "Catalog match not set";
   }
@@ -126,8 +126,30 @@ export function catalogSuggestionStatusLabel(status: string) {
   }
 }
 
+export function catalogKindLabel(value: string | null | undefined) {
+  switch (value) {
+    case "breed":
+      return "Breed";
+    case "species":
+      return "Species";
+    default:
+      return "Variety";
+  }
+}
+
+export function plantObjectKindLabel(value: string | null | undefined) {
+  switch (value) {
+    case "bee_colony":
+      return "Bee colony";
+    case "animal":
+      return "Animal";
+    default:
+      return "Plant";
+  }
+}
+
 export function entryScopeLabel(value: string) {
-  return value === "space" ? "Space note" : "Plant note";
+  return value === "space" ? "Space note" : "Object note";
 }
 
 export function entryPrivacyLabel({

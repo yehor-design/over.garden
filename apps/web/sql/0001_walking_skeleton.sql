@@ -47,6 +47,7 @@ create index if not exists spaces_owner_coarse_region_idx
 create table if not exists catalog_items (
   id uuid primary key default gen_random_uuid(),
   canonical_name text not null check (char_length(canonical_name) between 1 and 120),
+  catalog_kind text not null default 'plant_variety' check (catalog_kind in ('plant_variety', 'species', 'breed')),
   normalized_name text check (normalized_name is null or char_length(normalized_name) between 1 and 120),
   public_slug text check (public_slug is null or public_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   status text not null default 'seeded' check (status in ('seeded', 'confirmed', 'provisional', 'merged', 'rejected')),
@@ -62,6 +63,7 @@ create table if not exists catalog_items (
 );
 
 alter table catalog_items
+  add column if not exists catalog_kind text default 'plant_variety',
   add column if not exists normalized_name text,
   add column if not exists public_slug text,
   add column if not exists created_by_user_id uuid,
@@ -73,8 +75,32 @@ update catalog_items
 set normalized_name = lower(canonical_name)
 where normalized_name is null;
 
+update catalog_items
+set catalog_kind = 'plant_variety'
+where catalog_kind is null;
+
+update catalog_items
+set catalog_kind = 'species'
+where source = 'species_backbone'
+  and catalog_kind <> 'species';
+
+alter table catalog_items
+  alter column catalog_kind set default 'plant_variety',
+  alter column catalog_kind set not null;
+
 do $$
 begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_items_catalog_kind_check'
+      and conrelid = 'catalog_items'::regclass
+  ) then
+    alter table catalog_items
+      add constraint catalog_items_catalog_kind_check
+      check (catalog_kind in ('plant_variety', 'species', 'breed'));
+  end if;
+
   if not exists (
     select 1
     from pg_constraint
@@ -89,6 +115,9 @@ end $$;
 
 create index if not exists catalog_items_status_created_idx
   on catalog_items (status, created_at desc);
+
+create index if not exists catalog_items_kind_status_idx
+  on catalog_items (catalog_kind, status, created_at desc);
 
 create unique index if not exists catalog_items_public_slug_uidx
   on catalog_items (public_slug)
@@ -535,6 +564,7 @@ create table if not exists plant_objects (
   owner_user_id uuid not null,
   space_id uuid not null references spaces(id) on delete cascade,
   display_name text not null check (char_length(display_name) between 1 and 120),
+  object_kind text not null default 'plant' check (object_kind in ('plant', 'bee_colony', 'animal')),
   catalog_item_id uuid references catalog_items(id) on delete set null,
   variety_text text check (variety_text is null or char_length(variety_text) between 1 and 120),
   variety_state text not null default 'unknown' check (variety_state in ('selected', 'unknown', 'user_added', 'free_text')),
@@ -545,11 +575,31 @@ create table if not exists plant_objects (
 );
 
 alter table plant_objects
+  add column if not exists object_kind text default 'plant',
   add column if not exists catalog_item_id uuid,
   add column if not exists coarse_region_code text;
 
+update plant_objects
+set object_kind = 'plant'
+where object_kind is null;
+
+alter table plant_objects
+  alter column object_kind set default 'plant',
+  alter column object_kind set not null;
+
 do $$
 begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_object_kind_check'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_object_kind_check
+      check (object_kind in ('plant', 'bee_colony', 'animal'));
+  end if;
+
   if exists (
     select 1
     from pg_constraint

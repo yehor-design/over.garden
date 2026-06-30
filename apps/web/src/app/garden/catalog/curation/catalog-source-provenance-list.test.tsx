@@ -12,6 +12,7 @@ describe("CatalogSourceProvenanceList", () => {
             catalogItemId: "00000000-0000-4000-8000-000000057003",
             catalogCanonicalName: "Ботсадівський",
             catalogPublicSlug: "botsadivskyi-ua-register-83070006",
+            catalogKind: "plant_variety",
             catalogStatus: "seeded",
             catalogSource: "ua_state_register",
             sourceSlug: "ua-state-register",

@@ -4,8 +4,9 @@ import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import type { VarietyState } from "@/db/schema";
+import type { CatalogKind, VarietyState } from "@/db/schema";
 import {
+  catalogKindLabel,
   catalogSuggestionStatusLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
@@ -23,6 +24,7 @@ interface CatalogSuggestion {
   id: string;
   displayName: string;
   canonicalName: string;
+  catalogKind: CatalogKind;
   locale: string;
   status: string;
   source: string;
@@ -111,10 +113,10 @@ export function CatalogResolveControl({
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">
-          Match this plant to the catalog
+          Match this object to the catalog
         </h2>
         <p className="text-sm text-muted-foreground">
-          Current: {currentVarietyText ?? "No variety name yet"} ·{" "}
+          Current: {currentVarietyText ?? "No catalog name yet"} ·{" "}
           {varietyStateLabel(currentVarietyState)}
         </p>
       </div>
@@ -151,7 +153,8 @@ export function CatalogResolveControl({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selected ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Matched in catalog: {selected.displayName}
+              Matched in catalog: {selected.displayName} ·{" "}
+              {catalogKindLabel(selected.catalogKind)}
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
@@ -182,7 +185,9 @@ export function CatalogResolveControl({
                       {suggestion.displayName}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {suggestion.canonicalName} · {suggestion.locale}
+                      {suggestion.canonicalName} ·{" "}
+                      {catalogKindLabel(suggestion.catalogKind)} ·{" "}
+                      {suggestion.locale}
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
@@ -222,6 +227,7 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
       typeof candidate.id !== "string" ||
       typeof candidate.displayName !== "string" ||
       typeof candidate.canonicalName !== "string" ||
+      !isSelectableCatalogKind(candidate.catalogKind) ||
       typeof candidate.locale !== "string" ||
       typeof candidate.status !== "string" ||
       typeof candidate.source !== "string"
@@ -234,10 +240,15 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         id: candidate.id,
         displayName: candidate.displayName,
         canonicalName: candidate.canonicalName,
+        catalogKind: candidate.catalogKind,
         locale: candidate.locale,
         status: candidate.status,
         source: candidate.source,
       },
     ];
   });
+}
+
+function isSelectableCatalogKind(value: unknown): value is CatalogKind {
+  return value === "plant_variety" || value === "species" || value === "breed";
 }

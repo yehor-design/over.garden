@@ -15,6 +15,7 @@ function catalogRow(
     id: "00000000-0000-4000-8000-000000000101",
     canonicalName: "Помідор чері",
     normalizedName: "помідор чері",
+    catalogKind: "plant_variety",
     status: "seeded",
     source: "internal_seed",
     createdByUserId: null,
@@ -41,6 +42,7 @@ describe("catalog typeahead search documents", () => {
       displayName: "Томат чері",
       canonicalName: "Помідор чері",
       normalizedName: "томат чері",
+      catalogKind: "plant_variety",
       locale: "uk",
       itemLocale: "uk",
       status: "seeded",
@@ -66,6 +68,7 @@ describe("catalog typeahead search documents", () => {
         canonicalName: "Solanum lycopersicum L.",
         normalizedName: "solanum lycopersicum l.",
         source: "species_backbone",
+        catalogKind: "species",
         itemLocale: "la",
         displayName: "помідор",
         aliasNormalizedName: "помідор",
@@ -80,6 +83,7 @@ describe("catalog typeahead search documents", () => {
       displayName: "помідор",
       canonicalName: "Solanum lycopersicum L.",
       normalizedName: "помідор",
+      catalogKind: "species",
       locale: "uk",
       itemLocale: "la",
       status: "seeded",
@@ -104,6 +108,41 @@ describe("catalog typeahead search documents", () => {
     expect(document).not.toHaveProperty("sourceCredits");
     expect(document).not.toHaveProperty("sourceRecordKey");
     expect(document).not.toHaveProperty("coordinates");
+    expect(document).not.toHaveProperty("rawPayload");
+  });
+
+  it("indexes breed aliases as breed documents without validation-only source IDs", () => {
+    const document = toCatalogTypeaheadDocument(
+      catalogRow({
+        id: "00000000-0000-4000-8000-000000000601",
+        canonicalName: "Карпатська бджола",
+        normalizedName: "карпатська бджола",
+        catalogKind: "breed",
+        source: "ua_official_bee_breed",
+        itemLocale: "uk",
+        displayName: "Карпатська",
+        aliasNormalizedName: "карпатська",
+        aliasLocale: "uk",
+        isPrimary: false,
+      }),
+    );
+
+    expect(document).toMatchObject({
+      catalogItemId: "00000000-0000-4000-8000-000000000601",
+      displayName: "Карпатська",
+      canonicalName: "Карпатська бджола",
+      catalogKind: "breed",
+      locale: "uk",
+      itemLocale: "uk",
+      status: "seeded",
+      source: "ua_official_bee_breed",
+      kind: "catalog_item",
+    });
+    expect(document).not.toHaveProperty("vboId");
+    expect(document).not.toHaveProperty("dadIsRef");
+    expect(document).not.toHaveProperty("efabisRef");
+    expect(document).not.toHaveProperty("officialBeeRef");
+    expect(document).not.toHaveProperty("sourceOnlyFields");
     expect(document).not.toHaveProperty("rawPayload");
   });
 
@@ -136,6 +175,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000101",
         displayName: "Помідор чері",
         canonicalName: "Помідор чері",
+        catalogKind: "plant_variety",
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
@@ -144,6 +184,7 @@ describe("catalog typeahead search documents", () => {
       id: "00000000-0000-4000-8000-000000000101",
       displayName: "Помідор чері",
       canonicalName: "Помідор чері",
+      catalogKind: "plant_variety",
       locale: "uk",
       status: "seeded",
       source: "internal_seed",
@@ -156,6 +197,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000201",
         displayName: "Бабусин перець",
         canonicalName: "Бабусин перець",
+        catalogKind: "plant_variety",
         locale: "und",
         status: "provisional",
         source: "user_added",
@@ -173,6 +215,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000101",
         displayName: "Bergeron 1",
         canonicalName: "Bergeron 1",
+        catalogKind: "plant_variety",
         locale: "uk",
         status: "seeded",
         source: "ua_state_register",
@@ -188,6 +231,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000301",
         displayName: "помідор",
         canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species",
         locale: "uk",
         status: "seeded",
         source: "species_backbone",
@@ -201,6 +245,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000301",
         displayName: "Tomato",
         canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species",
         locale: "en",
         status: "seeded",
         source: "species_backbone",
@@ -215,6 +260,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000301",
         displayName: "помідор",
         canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species",
         locale: "uk",
         status: "seeded",
         source: "species_backbone",
@@ -231,6 +277,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000301",
         displayName: "garden tomato",
         canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species",
         locale: "en",
         status: "seeded",
         source: "species_backbone",
@@ -246,6 +293,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000301",
         displayName: "Solanum lycopersicum L.",
         canonicalName: "Solanum lycopersicum L.",
+        catalogKind: "species",
         locale: "la",
         status: "seeded",
         source: "species_backbone",
@@ -262,6 +310,7 @@ describe("catalog typeahead search documents", () => {
         catalogItemId: "00000000-0000-4000-8000-000000000057",
         displayName: "Ботсадівський",
         canonicalName: "Ботсадівський",
+        catalogKind: "plant_variety",
         locale: "uk",
         status: "seeded",
         source: "ua_state_register",
@@ -275,6 +324,33 @@ describe("catalog typeahead search documents", () => {
     ).toBeNull();
   });
 
+  it("rejects breed hits that carry VBO, DAD-IS, EFABIS, or manual source-only fields", () => {
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000601",
+        displayName: "Карпатська",
+        canonicalName: "Карпатська бджола",
+        catalogKind: "breed",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_official_bee_breed",
+        dadIsRef: "DAD-IS:internal-only",
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000000601",
+        displayName: "Карпатська бджола",
+        canonicalName: "Карпатська бджола",
+        catalogKind: "breed",
+        locale: "uk",
+        status: "seeded",
+        source: "ua_official_bee_breed",
+        internalValidation: { dadIsEfabis: true },
+      }),
+    ).toBeNull();
+  });
+
   it("dedupes aliases by catalog item ID to keep the picker stable", () => {
     expect(
       dedupeCatalogTypeaheadSuggestions([
@@ -282,6 +358,7 @@ describe("catalog typeahead search documents", () => {
           id: "00000000-0000-4000-8000-000000000101",
           displayName: "Помідор чері",
           canonicalName: "Помідор чері",
+          catalogKind: "plant_variety",
           locale: "uk",
           status: "seeded",
           source: "internal_seed",
@@ -290,6 +367,7 @@ describe("catalog typeahead search documents", () => {
           id: "00000000-0000-4000-8000-000000000101",
           displayName: "Томат чері",
           canonicalName: "Помідор чері",
+          catalogKind: "plant_variety",
           locale: "uk",
           status: "seeded",
           source: "internal_seed",
@@ -300,6 +378,7 @@ describe("catalog typeahead search documents", () => {
         id: "00000000-0000-4000-8000-000000000101",
         displayName: "Помідор чері",
         canonicalName: "Помідор чері",
+        catalogKind: "plant_variety",
         locale: "uk",
         status: "seeded",
         source: "internal_seed",

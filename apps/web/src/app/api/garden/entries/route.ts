@@ -13,6 +13,7 @@ import type {
   EntryScope,
   EntrySyncStatus,
   LocationVisibility,
+  PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
 import {
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
         : await createFirstPlantEntry(scope, {
             spaceName: body.spaceName ?? "",
             plantName: body.plantName ?? "",
+            objectKind: body.objectKind ?? "",
             catalogItemId: body.catalogItemId ?? "",
             userAddedCatalogName: body.userAddedCatalogName ?? "",
             varietyText: body.varietyText ?? "",
@@ -117,6 +119,7 @@ export async function POST(request: Request) {
       plantObject: {
         id: result.plantObject.id,
         displayName: result.plantObject.display_name,
+        objectKind: result.plantObject.object_kind as PlantObjectKind,
         catalogItemId: result.plantObject.catalog_item_id,
         varietyText: result.plantObject.variety_text,
         varietyState: result.plantObject.variety_state,
@@ -187,6 +190,7 @@ async function recordFirstPlantEntryEvents(
       .location_visibility as LocationVisibility,
     sync_status: syncStatus,
     variety_state: result.plantObject.variety_state as VarietyState,
+    object_kind: result.plantObject.object_kind,
     ...activationProperties,
   };
   const eventTarget = {
@@ -209,6 +213,7 @@ async function recordFirstPlantEntryEvents(
       location_visibility_level: result.plantObject
         .location_visibility as LocationVisibility,
       variety_state: result.plantObject.variety_state as VarietyState,
+      object_kind: result.plantObject.object_kind,
     },
     spaceId: result.space.id,
     plantObjectId: result.plantObject.id,

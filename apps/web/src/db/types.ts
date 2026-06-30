@@ -33,6 +33,8 @@ export type EntryScope = "object";
 export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
 export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
+export type CatalogKind = "plant_variety" | "species" | "breed";
+export type PlantObjectKind = "plant" | "bee_colony" | "animal";
 export type CatalogItemStatus =
   | "seeded"
   | "confirmed"

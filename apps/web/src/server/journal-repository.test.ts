@@ -247,6 +247,7 @@ describe("journal repository query contracts", () => {
       {
         plantObjectId: "00000000-0000-0000-0000-000000000003",
         catalogItemId: "00000000-0000-4000-8000-000000000101",
+        objectKind: "plant",
         varietyText: "Помідор чері",
         now,
       },
@@ -254,16 +255,18 @@ describe("journal repository query contracts", () => {
 
     expect(compiled.sql).toContain('update "plant_objects"');
     expect(compiled.sql).toContain('"catalog_item_id" = $1');
-    expect(compiled.sql).toContain('"variety_text" = $2');
-    expect(compiled.sql).toContain('"variety_state" = $3');
-    expect(compiled.sql).toContain('"updated_at" = $4');
-    expect(compiled.sql).toContain('"id" = $5');
-    expect(compiled.sql).toContain('"owner_user_id" = $6');
-    expect(compiled.sql).toContain('"variety_state" in ($7, $8)');
+    expect(compiled.sql).toContain('"object_kind" = $2');
+    expect(compiled.sql).toContain('"variety_text" = $3');
+    expect(compiled.sql).toContain('"variety_state" = $4');
+    expect(compiled.sql).toContain('"updated_at" = $5');
+    expect(compiled.sql).toContain('"id" = $6');
+    expect(compiled.sql).toContain('"owner_user_id" = $7');
+    expect(compiled.sql).toContain('"variety_state" in ($8, $9)');
     expect(compiled.sql).toContain("returning *");
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.parameters).toEqual([
       "00000000-0000-4000-8000-000000000101",
+      "plant",
       "Помідор чері",
       "selected",
       now,

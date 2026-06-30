@@ -22,11 +22,13 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import type { PlantObjectKind } from "@/db/schema";
 import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
 import {
+  catalogKindLabel,
   catalogSuggestionStatusLabel,
   journalSaveErrorMessage,
   journalSaveStateLabel,
@@ -36,6 +38,7 @@ import {
   offlineSaveStatusLabel,
   offlineSaveStatusSentence,
   photoHelpText,
+  plantObjectKindLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 import {
@@ -80,6 +83,7 @@ export function FirstEntryComposer({
   const [draft, setDraft] = useState({
     spaceName: "",
     plantName: "",
+    objectKind: "plant" as PlantObjectKind,
     title: "",
     body: "",
     entryDate: today,
@@ -212,7 +216,9 @@ export function FirstEntryComposer({
       payload = await buildPayload();
     } catch {
       setSubmitState("failed");
-      setMessage("We couldn't read that photo on this device. Choose it again.");
+      setMessage(
+        "We couldn't read that photo on this device. Choose it again.",
+      );
       return;
     }
 
@@ -278,6 +284,7 @@ export function FirstEntryComposer({
     return {
       target: "first_plant_entry",
       ...draft,
+      objectKind: draft.objectKind,
       catalogItemId: selectedCatalogItem?.id ?? null,
       userAddedCatalogName:
         !selectedCatalogItem && userAddedCatalogName
@@ -327,6 +334,10 @@ export function FirstEntryComposer({
     setSelectedCatalogItem(suggestion);
     setUserAddedCatalogName(null);
     setCatalogQuery(suggestion.displayName);
+    setDraft((current) => ({
+      ...current,
+      objectKind: suggestion.catalogKind === "breed" ? "bee_colony" : "plant",
+    }));
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
   }
@@ -398,7 +409,7 @@ export function FirstEntryComposer({
         </label>
 
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Plant
+          Living object
           <input
             name="plantName"
             required
@@ -406,7 +417,7 @@ export function FirstEntryComposer({
             value={draft.plantName}
             onChange={(event) => updateDraft("plantName", event.target.value)}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="Cherry tomato"
+            placeholder="Cherry tomato or Carpathian colony"
           />
         </label>
       </div>
@@ -477,15 +488,17 @@ export function FirstEntryComposer({
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selectedCatalogItem ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Matched in catalog: {selectedCatalogItem.displayName}
+              Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
+              {catalogKindLabel(selectedCatalogItem.catalogKind)} ·{" "}
+              {plantObjectKindLabel(draft.objectKind)}
             </span>
           ) : userAddedCatalogName ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Saved with your variety name: {userAddedCatalogName}
+              Saved with your catalog name: {userAddedCatalogName}
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              No variety match yet
+              No catalog match yet
             </span>
           )}
           <button
@@ -528,7 +541,9 @@ export function FirstEntryComposer({
                       {suggestion.displayName}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {suggestion.canonicalName} · {suggestion.locale}
+                      {suggestion.canonicalName} ·{" "}
+                      {catalogKindLabel(suggestion.catalogKind)} ·{" "}
+                      {suggestion.locale}
                     </span>
                   </span>
                   <span className="shrink-0 text-xs text-muted-foreground">
@@ -751,6 +766,7 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
       typeof candidate.id !== "string" ||
       typeof candidate.displayName !== "string" ||
       typeof candidate.canonicalName !== "string" ||
+      !isSelectableCatalogKind(candidate.catalogKind) ||
       typeof candidate.locale !== "string" ||
       !isSelectableCatalogStatus(candidate.status) ||
       typeof candidate.source !== "string"
@@ -763,12 +779,19 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         id: candidate.id,
         displayName: candidate.displayName,
         canonicalName: candidate.canonicalName,
+        catalogKind: candidate.catalogKind,
         locale: candidate.locale,
         status: candidate.status,
         source: candidate.source,
       },
     ];
   });
+}
+
+function isSelectableCatalogKind(
+  value: unknown,
+): value is CatalogSuggestion["catalogKind"] {
+  return value === "plant_variety" || value === "species" || value === "breed";
 }
 
 function isSelectableCatalogStatus(

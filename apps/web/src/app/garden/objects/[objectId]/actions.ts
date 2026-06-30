@@ -157,6 +157,7 @@ async function recordPlantObjectJournalEntryEvents(
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
     location_visibility_level: result.plantObject
       .location_visibility as LocationVisibility,
+    object_kind: result.plantObject.object_kind,
     sync_status: "online" as const,
     variety_state: result.plantObject.variety_state as VarietyState,
   };

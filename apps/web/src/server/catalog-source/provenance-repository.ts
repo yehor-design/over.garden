@@ -14,6 +14,7 @@ export interface CatalogSourceProvenanceCurationRow {
   catalogItemId: string;
   catalogCanonicalName: string;
   catalogPublicSlug: string | null;
+  catalogKind: string;
   catalogStatus: string;
   catalogSource: string;
   sourceSlug: string;
@@ -67,6 +68,7 @@ export async function listCatalogSourceProvenanceForCuration(
     catalogItemId: row.catalogItemId,
     catalogCanonicalName: row.catalogCanonicalName,
     catalogPublicSlug: row.catalogPublicSlug,
+    catalogKind: row.catalogKind,
     catalogStatus: row.catalogStatus,
     catalogSource: row.catalogSource,
     sourceSlug: row.sourceSlug,
@@ -112,6 +114,7 @@ export function buildCatalogSourceProvenanceForCurationQuery(
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.status as catalogStatus",
       "catalog_items.source as catalogSource",
       "catalog_source_links.source_slug as sourceSlug",

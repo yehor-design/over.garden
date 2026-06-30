@@ -37,6 +37,7 @@ describe("offline journal entry sync", () => {
     );
 
     expect(body.clientMutationId).toBe("queue-entry-id");
+    expect(body.objectKind).toBe("plant");
     expect(body.catalogItemId).toBe("00000000-0000-4000-8000-000000000101");
     expect(body.mediaAssetId).toBe("media-1");
     expect(body.syncStatus).toBe("online");
@@ -75,6 +76,7 @@ describe("offline journal entry sync", () => {
     expect(body.syncStatus).toBe("offline_synced");
     expect(body.spaceName).toBeUndefined();
     expect(body.plantName).toBeUndefined();
+    expect(body.objectKind).toBeUndefined();
     expect(body.catalogItemId).toBeUndefined();
     expect(JSON.stringify(body)).not.toContain("latitude");
     expect(JSON.stringify(body)).not.toContain("longitude");
@@ -145,6 +147,7 @@ describe("offline journal entry sync", () => {
           plantObject: {
             id: "object-1",
             displayName: "Cherry tomato",
+            objectKind: "plant",
             catalogItemId: "00000000-0000-4000-8000-000000000101",
             varietyText: "Помідор чері",
             varietyState: "selected",
@@ -193,6 +196,7 @@ describe("offline journal entry sync", () => {
           plantObject: {
             id: "object-1",
             displayName: "Cherry tomato",
+            objectKind: "plant",
             catalogItemId: "00000000-0000-4000-8000-000000000101",
             varietyText: "Помідор чері",
             varietyState: "selected",
@@ -318,6 +322,7 @@ describe("offline journal entry sync", () => {
             plantObject: {
               id: "object-1",
               displayName: "Cherry tomato",
+              objectKind: "plant",
               catalogItemId: "00000000-0000-4000-8000-000000000101",
               varietyText: "Помідор чері",
               varietyState: "selected",

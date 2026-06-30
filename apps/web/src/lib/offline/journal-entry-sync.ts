@@ -129,6 +129,7 @@ export function buildJournalEntryRequestBodyForSync(
     target: "first_plant_entry",
     spaceName: payload.spaceName,
     plantName: payload.plantName,
+    objectKind: payload.objectKind ?? "plant",
     catalogItemId: payload.catalogItemId ?? null,
     userAddedCatalogName: payload.userAddedCatalogName ?? null,
     varietyText: payload.varietyText ?? "",

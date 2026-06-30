@@ -10,6 +10,7 @@ import type {
   JournalEntry,
   LocationVisibility,
   PlantObject,
+  PlantObjectKind,
   Space,
   VarietyState,
 } from "@/db/schema";
@@ -40,6 +41,7 @@ type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
 export interface CreateFirstPlantEntryInput {
   spaceName: string;
   plantName: string;
+  objectKind?: string | null;
   catalogItemId?: string | null;
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
@@ -115,6 +117,7 @@ export interface PlantObjectLocationUpdateResult {
 export interface PlantObjectSummary {
   id: string;
   displayName: string;
+  objectKind: PlantObjectKind;
   spaceDisplayName: string;
   catalogItemId: string | null;
   varietyText: string | null;
@@ -127,16 +130,16 @@ export interface PlantObjectPage {
     Space,
     "id" | "display_name" | "location_visibility" | "coarse_region_code"
   >;
-  plantObject: Pick<
-    PlantObject,
-    | "id"
-    | "display_name"
-    | "catalog_item_id"
-    | "variety_text"
-    | "variety_state"
-    | "location_visibility"
-    | "coarse_region_code"
-  >;
+  plantObject: {
+    id: PlantObject["id"];
+    display_name: PlantObject["display_name"];
+    object_kind: PlantObjectKind;
+    catalog_item_id: PlantObject["catalog_item_id"];
+    variety_text: PlantObject["variety_text"];
+    variety_state: PlantObject["variety_state"];
+    location_visibility: PlantObject["location_visibility"];
+    coarse_region_code: PlantObject["coarse_region_code"];
+  };
   entries: JournalEntryReadback[];
 }
 
@@ -167,6 +170,7 @@ export interface PublicJournalEntryPage {
   };
   plantObject: {
     displayName: string;
+    objectKind: PlantObjectKind;
     catalogCanonicalName: string | null;
     catalogPublicSlug: string | null;
     varietyText: string | null;
@@ -279,6 +283,10 @@ export async function createFirstPlantEntry(
         owner_user_id: scope.userId,
         space_id: space.id,
         display_name: normalized.plantName,
+        object_kind: resolvePlantObjectKind(
+          normalized.objectKind,
+          selectedCatalogItem?.catalogKind,
+        ),
         catalog_item_id:
           selectedCatalogItem?.id ?? userAddedCatalogItem?.id ?? null,
         variety_text:
@@ -326,6 +334,7 @@ export async function createFirstPlantEntry(
         plantObject: {
           id: plantObject.id,
           display_name: plantObject.display_name,
+          object_kind: plantObject.object_kind as PlantObjectKind,
           catalog_item_id: plantObject.catalog_item_id,
           variety_text: plantObject.variety_text,
           variety_state: plantObject.variety_state,
@@ -390,6 +399,7 @@ export async function listMyPlantObjects(
     .select([
       "plant_objects.id as id",
       "plant_objects.display_name as displayName",
+      "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
@@ -404,6 +414,7 @@ export async function listMyPlantObjects(
 
   return rows.map((row) => ({
     ...row,
+    objectKind: row.objectKind as PlantObjectKind,
     varietyState: row.varietyState as VarietyState,
   }));
 }
@@ -445,6 +456,7 @@ export async function getPlantObjectPage(
     plantObject: {
       id: objectRow.objectId,
       display_name: objectRow.objectDisplayName,
+      object_kind: objectRow.objectKind as PlantObjectKind,
       catalog_item_id: objectRow.catalogItemId,
       variety_text: objectRow.varietyText,
       variety_state: objectRow.varietyState,
@@ -541,6 +553,7 @@ export async function createPlantObjectJournalEntry(
         plantObject: {
           id: target.objectId,
           display_name: target.objectDisplayName,
+          object_kind: target.objectKind as PlantObjectKind,
           catalog_item_id: target.catalogItemId,
           variety_text: target.varietyText,
           variety_state: target.varietyState,
@@ -589,6 +602,7 @@ export async function createPlantObjectJournalEntry(
       plantObject: {
         id: target.objectId,
         display_name: target.objectDisplayName,
+        object_kind: target.objectKind as PlantObjectKind,
         catalog_item_id: target.catalogItemId,
         variety_text: target.varietyText,
         variety_state: target.varietyState,
@@ -636,6 +650,10 @@ export async function resolvePlantObjectCatalog(
     const resolved = await buildResolvePlantObjectCatalogQuery(trx, scope, {
       plantObjectId: target.objectId,
       catalogItemId: selectedCatalogItem.id,
+      objectKind: resolvePlantObjectKind(
+        target.objectKind,
+        selectedCatalogItem.catalogKind,
+      ),
       varietyText: selectedCatalogItem.canonicalName,
       now: new Date(),
     }).executeTakeFirstOrThrow();
@@ -661,6 +679,7 @@ export async function resolvePlantObjectCatalog(
       plantObject: {
         id: resolved.id,
         display_name: resolved.display_name,
+        object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
         variety_text: resolved.variety_text,
         variety_state: resolved.variety_state,
@@ -866,6 +885,7 @@ export async function getPublicJournalEntryLookup(
       },
       plantObject: {
         displayName: row.objectDisplayName,
+        objectKind: row.objectKind as PlantObjectKind,
         catalogCanonicalName: row.catalogCanonicalName,
         catalogPublicSlug: row.catalogPublicSlug,
         varietyText: row.varietyText,
@@ -1051,6 +1071,7 @@ export function buildResolvePlantObjectCatalogQuery(
   input: {
     plantObjectId: string;
     catalogItemId: string;
+    objectKind: PlantObjectKind;
     varietyText: string;
     now: Date;
   },
@@ -1059,6 +1080,7 @@ export function buildResolvePlantObjectCatalogQuery(
     .updateTable("plant_objects")
     .set({
       catalog_item_id: input.catalogItemId,
+      object_kind: input.objectKind,
       variety_text: input.varietyText,
       variety_state: "selected",
       updated_at: input.now,
@@ -1118,6 +1140,7 @@ export function buildPlantObjectPageObjectQuery(
     .select([
       "plant_objects.id as objectId",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
@@ -1177,6 +1200,7 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
@@ -1313,6 +1337,7 @@ function normalizeCreateFirstPlantEntryInput(
       "Plant name",
       MAX_NAME_LENGTH,
     ),
+    objectKind: normalizePlantObjectKind(input.objectKind),
     catalogItemId,
     userAddedCatalogName,
     varietyText: null,
@@ -1354,7 +1379,11 @@ function normalizeCreatePlantObjectJournalEntryInput(
       "Client mutation id",
       200,
     ),
-    mediaAssetId: normalizeOptionalText(input.mediaAssetId, "Media asset id", 200),
+    mediaAssetId: normalizeOptionalText(
+      input.mediaAssetId,
+      "Media asset id",
+      200,
+    ),
   };
 }
 
@@ -1401,6 +1430,32 @@ function normalizeLocationVisibility(
   if (!normalized) return DEFAULT_LOCATION_VISIBILITY;
   if (normalized === "region" || normalized === "hidden") return normalized;
   throw new Error("Location visibility must be region or hidden.");
+}
+
+function normalizePlantObjectKind(
+  value: string | null | undefined,
+): PlantObjectKind {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) return "plant";
+  if (
+    normalized === "plant" ||
+    normalized === "bee_colony" ||
+    normalized === "animal"
+  ) {
+    return normalized;
+  }
+  throw new Error("Object kind must be plant, bee colony, or animal.");
+}
+
+function resolvePlantObjectKind(
+  requestedObjectKind: PlantObjectKind | string,
+  catalogKind: string | null | undefined,
+): PlantObjectKind {
+  if (catalogKind === "breed") {
+    return requestedObjectKind === "animal" ? "animal" : "bee_colony";
+  }
+
+  return normalizePlantObjectKind(requestedObjectKind);
 }
 
 function normalizeResolvePlantObjectCatalogInput(

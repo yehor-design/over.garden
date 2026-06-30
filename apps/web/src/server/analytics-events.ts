@@ -20,6 +20,7 @@ import type {
   EntrySyncStatus,
   JsonValue,
   LocationVisibility,
+  PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
@@ -33,6 +34,7 @@ export interface AnalyticsEventProperties {
   has_photo?: boolean;
   is_backdated?: boolean;
   location_visibility_level?: LocationVisibility;
+  object_kind?: PlantObjectKind;
   pulse_outcome?: FollowUpValuePulseOutcome;
   source_surface_kind?: ActivationSurfaceKind;
   sync_status?: EntrySyncStatus;
@@ -76,6 +78,7 @@ const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "has_photo",
   "is_backdated",
   "location_visibility_level",
+  "object_kind",
   "source_surface_kind",
   "sync_status",
   "variety_state",
@@ -359,7 +362,11 @@ function normalizeAnalyticsEventPropertyValue(
       if (value === "submitted" || value === "skipped") return value;
       break;
     case "usefulness":
-      if (value === "useful" || value === "not_sure" || value === "not_useful") {
+      if (
+        value === "useful" ||
+        value === "not_sure" ||
+        value === "not_useful"
+      ) {
         return value;
       }
       break;

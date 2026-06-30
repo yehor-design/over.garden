@@ -89,6 +89,7 @@ export interface CatalogItemNames {
 
 export interface CatalogItems {
   canonical_name: string;
+  catalog_kind: Generated<string>;
   created_at: Generated<Timestamp>;
   created_by_user_id: string | null;
   id: Generated<string>;
@@ -281,6 +282,7 @@ export interface PlantObjects {
   display_name: string;
   id: Generated<string>;
   location_visibility: Generated<string>;
+  object_kind: Generated<string>;
   owner_user_id: string;
   space_id: string;
   updated_at: Generated<Timestamp>;

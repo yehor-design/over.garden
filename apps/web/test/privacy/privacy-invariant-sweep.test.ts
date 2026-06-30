@@ -155,6 +155,7 @@ describe("OVE-40 privacy invariant sweep — catalog typeahead", () => {
       catalogItemId: JOURNEY.catalogItemId,
       displayName: "Помідор чері",
       canonicalName: "Помідор чері",
+      catalogKind: "plant_variety",
       locale: "uk",
       status: "seeded",
       source: "internal_seed",
@@ -318,11 +319,10 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
   });
 
   it("erasure dry-run counts journal rows without selecting private content", () => {
-    const { sql } = buildCountJournalEntriesQuery(
-      testDb,
-      POISON.ownerUserId,
-      { visibility: "private", lifecycleState: "active" },
-    ).compile();
+    const { sql } = buildCountJournalEntriesQuery(testDb, POISON.ownerUserId, {
+      visibility: "private",
+      lifecycleState: "active",
+    }).compile();
 
     expect(sql).toContain('"journal_entries"');
     expect(sql).toContain('"owner_user_id" = $1');

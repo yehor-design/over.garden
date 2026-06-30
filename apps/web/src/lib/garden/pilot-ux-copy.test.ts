@@ -77,8 +77,8 @@ describe("pilot UX copy", () => {
     ].join(" ");
 
     expect(copy).toContain("Matched to catalog");
-    expect(copy).toContain("Saved with your variety name");
-    expect(copy).toContain("No variety match yet");
+    expect(copy).toContain("Saved with your catalog name");
+    expect(copy).toContain("No catalog match yet");
     expect(copy).not.toMatch(/\b(selected|user_added|unknown|lifecycle)\b/i);
   });
 });

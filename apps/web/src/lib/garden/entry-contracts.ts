@@ -1,4 +1,5 @@
 import type { EntrySyncStatus } from "@/db/schema";
+import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 
 export type ActivationSource =
   | "homepage"
@@ -16,6 +17,7 @@ export interface FirstEntryCatalogSelection {
   id: string;
   displayName: string;
   canonicalName: string;
+  catalogKind: CatalogKind;
   locale: string;
   status: "seeded" | "confirmed";
   source: string;
@@ -26,6 +28,7 @@ export interface FirstPlantEntryRequest {
   plantObjectId?: string | null;
   spaceName?: string;
   plantName?: string;
+  objectKind?: PlantObjectKind | null;
   catalogItemId?: string | null;
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
@@ -50,6 +53,7 @@ export interface FirstPlantEntryResponse {
   plantObject: {
     id: string;
     displayName: string;
+    objectKind: PlantObjectKind;
     catalogItemId: string | null;
     varietyText: string | null;
     varietyState: string;
