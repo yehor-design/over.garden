@@ -26,6 +26,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 - Prefer Apple Container for local containerized development on supported Apple Silicon/macOS 26 machines.
 - Use Docker only as a fallback when Apple Container is unavailable or does not provide a required feature, such as GitHub Actions Ubuntu service containers, Linux production droplet process management, mature Compose restart policies, or another explicitly verified gap.
 - Do not assume Docker Desktop is required for local OverGarden work after the Apple Container migration is proven. Local Postgres, Meilisearch, and MinIO start through `infra/container-up`; matching-image smoke should move to Apple Container-first scripts.
+- GitHub Actions Ubuntu CI may keep Docker service containers as the OVE-75 platform-bound exception; never treat that as a local Docker Desktop prerequisite.
 - When Docker remains in CI, production, or fallback docs, state why Apple Container does not fit that specific surface.
 
 ## Hard Rules

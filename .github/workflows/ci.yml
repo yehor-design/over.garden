@@ -17,6 +17,11 @@ jobs:
   web:
     name: Web app
     runs-on: ubuntu-latest
+    # ci-required: GitHub-hosted Ubuntu uses Actions service containers and
+    # Docker for ad hoc services. This is a platform-bound exception, not a
+    # local Docker Desktop prerequisite. Do not move CI to Apple Container
+    # unless runner support, cost/availability, and proof commands are
+    # recorded in docs/CONTAINER_RUNTIME_POLICY.md.
     services:
       postgres:
         image: postgres:16-alpine
@@ -78,8 +83,10 @@ jobs:
 
       - name: Start MinIO
         run: |
-          # GitHub Actions runs this job on Ubuntu, where Apple Container is not
-          # the service-container runtime. See docs/CONTAINER_RUNTIME_POLICY.md.
+          # ci-required: GitHub Actions runs this job on Ubuntu, where Apple
+          # Container is not the service-container runtime. This does not make
+          # Docker Desktop a supported-Mac local prerequisite.
+          # See docs/CONTAINER_RUNTIME_POLICY.md.
           docker run --detach --rm \
             --name overgarden-ci-minio \
             -p 9000:9000 \

@@ -31,7 +31,7 @@ User-facing issues must also run the Product Thinking Gate in `docs/product-rese
 
 ## Getting Started
 
-Apple Container is the primary local runtime on supported Apple Silicon/macOS 26 machines. OVE-73 re-proved the fresh-checkout web bootstrap against Apple Container services with Docker Desktop stopped; Docker Compose remains available only as a documented fallback. See `docs/CONTAINER_RUNTIME_POLICY.md` and `infra/README.md`.
+Apple Container is the primary local runtime on supported Apple Silicon/macOS 26 machines. OVE-73 re-proved the fresh-checkout web bootstrap against Apple Container services with Docker Desktop stopped; Docker Compose remains available only as a documented fallback. GitHub Actions still uses Docker for hosted Ubuntu service containers as a CI platform exception, not as a local prerequisite. See `docs/CONTAINER_RUNTIME_POLICY.md` and `infra/README.md`.
 
 ```bash
 infra/container-up

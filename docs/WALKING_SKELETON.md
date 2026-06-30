@@ -1,6 +1,6 @@
 # Walking Skeleton
 
-Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. CI now repeats the fresh-checkout bootstrap contract by starting Postgres plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`.
+Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. CI repeats the fresh-checkout bootstrap contract by starting Postgres plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`. OVE-75 documents that CI keeps Docker only because GitHub-hosted Ubuntu does not run Apple Container service containers; that CI exception does not restore Docker Desktop as a local requirement.
 
 This is not product UI. It is the first end-to-end proof that the selected stack works together before agents start building product slices.
 
