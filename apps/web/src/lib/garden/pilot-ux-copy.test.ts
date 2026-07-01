@@ -76,10 +76,12 @@ describe("pilot UX copy", () => {
       varietyStateLabel("unknown"),
       catalogKindLabel("plant_variety"),
       catalogKindLabel("species"),
-      catalogKindLabel("breed"),
+      catalogKindLabel("breed", "bee_colony"),
+      catalogKindLabel("breed", "animal"),
       catalogIdentityLabel("plant_variety"),
       catalogIdentityLabel("species"),
-      catalogIdentityLabel("breed"),
+      catalogIdentityLabel("breed", "bee_colony"),
+      catalogIdentityLabel("breed", "animal"),
       catalogSuggestionStatusLabel("seeded"),
       publicCatalogStatusLabel("seeded"),
       publicCatalogStatusLabel("confirmed"),
@@ -94,9 +96,12 @@ describe("pilot UX copy", () => {
     expect(copy).toContain("Plant variety");
     expect(copy).toContain("Plant species");
     expect(copy).toContain("Bee breed");
+    expect(copy).toContain("Animal breed");
     expect(catalogIdentityLabel("plant_variety")).toBe("Plant variety");
     expect(catalogIdentityLabel("species")).toBe("Plant species");
-    expect(catalogIdentityLabel("breed")).toBe("Bee breed");
+    expect(catalogIdentityLabel("breed", "bee_colony")).toBe("Bee breed");
+    expect(catalogIdentityLabel("breed", "animal")).toBe("Animal breed");
+    expect(catalogIdentityLabel("breed")).toBe("Breed");
     expect(publicCatalogStatusLabel("seeded")).toBe("Pilot catalog");
     expect(publicCatalogStatusLabel("confirmed")).toBe("Curated catalog");
     expect(copy).not.toMatch(

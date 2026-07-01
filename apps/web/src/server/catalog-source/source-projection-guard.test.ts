@@ -25,6 +25,12 @@ const beeManualSeedGate = {
   scope: "manual_seed",
 } as const;
 
+const beeExpandedManualSeedGate = {
+  issueKey: "OVE-86",
+  gateId: "ove-86-ua-official-bee-breed-expanded-manual-seed",
+  scope: "manual_seed",
+} as const;
+
 describe("catalog source product projection guard", () => {
   it("allows OVE-55 approved sources to project catalog items and typeahead aliases", () => {
     expect(
@@ -195,6 +201,59 @@ describe("catalog source product projection guard", () => {
         explicitGate: beeManualSeedGate,
       }),
     ).toThrow(CatalogSourceProjectionBlockedError);
+  });
+
+  it("allows the OVE-86 named bee expansion without opening unreviewed manual breed rows", () => {
+    const allowed = assertCatalogSourceProductProjectionAllowed({
+      sourceSlug: "ua-official-bee-breeds",
+      sourceVersion: "law-1492-iii-manual-seed-2026-06-30",
+      sourceRecordKey: "ua-law-1492-iii:bee-breed:ukrainian-steppe",
+      productSurface: "catalog_item_names",
+      productSource: "ua_official_bee_breed",
+      productSourceId: "ua-official-bee-breeds:ukrainian-steppe",
+      explicitGate: beeExpandedManualSeedGate,
+    });
+
+    expect(allowed.verdict).toBe("SOURCE-SPECIFIC-GATE");
+    expect(allowed.gateIssueKey).toBe("OVE-86");
+
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "ua-official-bee-breeds",
+        sourceVersion: "law-1492-iii-manual-seed-2026-06-30",
+        sourceRecordKey: "ua-law-1492-iii:bee-breed:unreviewed",
+        productSurface: "catalog_items",
+        productSource: "ua_official_bee_breed",
+        productSourceId: "ua-official-bee-breeds:unreviewed",
+        explicitGate: beeExpandedManualSeedGate,
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
+  });
+
+  it("allows VBO breed backbone projection only through its approved manifest verdict", () => {
+    const allowed = assertCatalogSourceProductProjectionAllowed({
+      sourceSlug: "vertebrate-breed-ontology",
+      sourceVersion: "vbo-2026-04-15-ove-86-curated-subset",
+      sourceRecordKey: "VBO:0017006",
+      productSurface: "catalog_items",
+      productSource: "vertebrate_breed_ontology",
+      productSourceId: "VBO:0017006",
+    });
+
+    expect(allowed.allowed).toBe(true);
+    expect(allowed.verdict).toBe("USE");
+
+    const dadIsDecision = checkCatalogSourceProductProjection({
+      sourceSlug: "dad-is-efabis",
+      sourceVersion: "DAD-IS/EFABIS data page",
+      sourceRecordKey: "DAD-IS:breed:blocked",
+      productSurface: "catalog_item_names",
+      productSource: "dad_is_efabis",
+      productSourceId: "DAD-IS:breed:blocked",
+    });
+
+    expect(dadIsDecision.allowed).toBe(false);
+    expect(dadIsDecision.message).toContain("INTERNAL-VALIDATION-ONLY");
   });
 
   it("blocks internal-only and rejected source slugs before product-visible tables", () => {

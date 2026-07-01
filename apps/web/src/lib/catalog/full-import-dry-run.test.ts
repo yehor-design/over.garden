@@ -90,8 +90,8 @@ describe("OVE-80 catalog full-import dry-run", () => {
       "genebank-long-tail",
     ]);
     expect(report.totals.targets).toBe(6);
-    expect(report.totals.productConceptsWouldProject).toBe(15185);
-    expect(report.totals.rawRowsWouldCapture).toBe(15203);
+    expect(report.totals.productConceptsWouldProject).toBe(15189);
+    expect(report.totals.rawRowsWouldCapture).toBe(15207);
     expect(report.totals.blockedRows).toBeGreaterThan(0);
     expect(
       report.targets.every(
@@ -617,6 +617,48 @@ describe("OVE-80 catalog full-import dry-run", () => {
         rawRowsWouldCapture: 20,
         productConceptsWouldProject: 4,
       }),
+    });
+  });
+
+  it("reports the OVE-86 approved breed expansion with VBO readiness and blocked aliases", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["breed-seed"],
+      }),
+      generatedAt: "2026-07-02T00:00:00.000Z",
+    });
+
+    expect(report.targets[0]).toMatchObject({
+      key: "breed-seed",
+      packageScript: "catalog:sources:import-breed-seed",
+      sourceSet: "OVE-86 approved bee and VBO breed expansion",
+      importerIssue: "OVE-86",
+      downstreamIssue: "OVE-86",
+      projectionScope: "full_import_wave",
+      sources: ["ua-official-bee-breeds", "vertebrate-breed-ontology"],
+      readinessVerdicts: [
+        expect.objectContaining({
+          slug: "vertebrate-breed-ontology",
+          productProjectionAllowed: true,
+          productProjectionMode: "breed_backbone_limited",
+        }),
+      ],
+      counts: {
+        sourceRowsWouldRead: 5,
+        rawRowsWouldCapture: 5,
+        productConceptsWouldProject: 5,
+        aliasesWouldProject: 13,
+        reviewNeededRows: 8,
+        rejectedRows: 0,
+        blockedRows: 8,
+        attributionRequiredSources: 2,
+      },
+      projectionGuard: {
+        status: "passed",
+        checkedProjectionRequests: 10,
+      },
     });
   });
 

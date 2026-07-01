@@ -77,6 +77,7 @@ export type CatalogAliasSourceMethod =
   | "source_backed"
   | "generated"
   | "manual_seed"
+  | "ontology_seed"
   | "user_provisional"
   | "curator";
 

@@ -231,6 +231,7 @@ describe("UA official bee breed seed import", () => {
       "confirmed",
       "breed",
       "ua_official_bee_breed",
+      "vertebrate_breed_ontology",
       "%карпатська%",
       8,
     ]);
@@ -254,7 +255,9 @@ describe("UA official bee breed seed import", () => {
       catalogItemId,
       "breed",
       "ua_official_bee_breed",
+      "vertebrate_breed_ontology",
       "ua-official-bee-breeds",
+      "vertebrate-breed-ontology",
       "canonical_item",
       1,
     ]);

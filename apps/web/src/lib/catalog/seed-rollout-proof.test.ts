@@ -161,6 +161,63 @@ describe("catalog seed rollout proof", () => {
     expect(JSON.stringify(summary)).not.toContain("sourceRecord");
   });
 
+  it("builds redacted seed summaries from multi-concept breed importer output", () => {
+    const summary = buildSafeSeedCommandSummary(
+      CATALOG_SEED_ROLLOUT_COMMANDS[2],
+      {
+        imported: {
+          conceptsImported: 5,
+          aliasesProjected: 13,
+          reindexQueued: true,
+          concepts: [
+            {
+              catalogItemId: "00000000-0000-4000-8000-000000060003",
+              canonicalName: "Карпатська бджола",
+              catalogKind: "breed",
+              publicSlug: "karpatska-bdzhola-ua-official-breed",
+              aliasesProjected: 3,
+              sourceRecordId: "must-not-survive",
+            },
+            {
+              catalogItemId: "00000000-0000-4000-8000-000000060013",
+              canonicalName: "Ukrainian Grey (Cattle)",
+              catalogKind: "breed",
+              publicSlug: "ukrainian-grey-cattle-vbo-breed",
+              aliasesProjected: 2,
+              sourceRecordId: "must-not-survive",
+            },
+          ],
+        },
+        idempotencyProof: {
+          stableConceptCount: 5,
+          stableCatalogIdentities: true,
+        },
+        carpathianProvenanceProof: {
+          sourceName: "Official Ukrainian bee breed legal text",
+        },
+        vboProvenanceProof: {
+          sourceName: "Vertebrate Breed Ontology",
+        },
+        leakCheck: "passed",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      key: "breed-seed",
+      expectedCanonicalName: "Карпатська бджола",
+      catalogItemId: "00000000-0000-4000-8000-000000060003",
+      canonicalName: "Карпатська бджола",
+      catalogKind: "breed",
+      source: "ua_official_bee_breed",
+      aliasesProjected: 13,
+      reindexQueued: true,
+      stableProductIdentityOnRerun: true,
+      sourceProofRecorded: true,
+      leakCheck: "passed",
+    });
+    expect(JSON.stringify(summary)).not.toContain("sourceRecord");
+  });
+
   it("fails closed when importer output omits or misreports catalog kind", () => {
     expect(() =>
       buildSafeSeedCommandSummary(CATALOG_SEED_ROLLOUT_COMMANDS[1], {

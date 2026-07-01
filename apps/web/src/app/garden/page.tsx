@@ -120,9 +120,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                           <span className="text-xs text-muted-foreground">
                             {plantObjectKindLabel(object.objectKind)} ·{" "}
                             {object.varietyText
-                              ? `${catalogIdentityLabel(object.catalogKind)}: ${
-                                  object.varietyText
-                                }`
+                              ? `${catalogIdentityLabel(
+                                  object.catalogKind,
+                                  object.objectKind,
+                                )}: ${object.varietyText}`
                               : "Unknown catalog match"}{" "}
                             · {varietyStateLabel(object.varietyState)}
                           </span>

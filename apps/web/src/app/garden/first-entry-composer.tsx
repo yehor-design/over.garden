@@ -27,6 +27,7 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
+import { defaultObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
 import {
   catalogKindLabel,
   catalogSuggestionStatusLabel,
@@ -337,7 +338,10 @@ export function FirstEntryComposer({
     setCatalogQuery(suggestion.displayName);
     setDraft((current) => ({
       ...current,
-      objectKind: suggestion.catalogKind === "breed" ? "bee_colony" : "plant",
+      objectKind: defaultObjectKindForCatalogSelection(
+        suggestion.catalogKind,
+        suggestion.source,
+      ),
     }));
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
@@ -493,8 +497,11 @@ export function FirstEntryComposer({
           {selectedCatalogItem ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">
               Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
-              {catalogKindLabel(selectedCatalogItem.catalogKind)} ·{" "}
-              {plantObjectKindLabel(draft.objectKind)}
+              {catalogKindLabel(
+                selectedCatalogItem.catalogKind,
+                draft.objectKind,
+              )}{" "}
+              · {plantObjectKindLabel(draft.objectKind)}
             </span>
           ) : userAddedCatalogName ? (
             <span className="rounded-md border border-border px-2 py-1 text-foreground">

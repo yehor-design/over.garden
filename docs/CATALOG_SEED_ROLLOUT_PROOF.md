@@ -29,7 +29,7 @@ The rollout command seeds the product-availability proof set:
 
 - OVE-81 UA State Register official variety wave: 15,177 official variety concepts from the approved file, including the existing `Ботсадівський` proof row and representative `Kaiser`, `7 ФОР 7`, and `ЕС ЯСМІНІС КЛП` smoke cases
 - OVE-58/82/83 species backbone: tomato, cucumber, sunflower, and basil species with reviewed Ukrainian, Bulgarian, English, and scientific/synonym aliases such as `помідор`, `помідори`, `домат`, `домати`, `огірок звичайний`, `common sunflower`, `сонях`, `sweet basil`, `базилік духмяний`, and `обикновен босилек`
-- OVE-60 official bee breed seed: `Карпатська бджола`
+- OVE-60/86 approved breed seed: official Ukrainian bee breeds including `Карпатська бджола`, plus the VBO animal-breed subset including `Ukrainian Grey (Cattle)`
 - OVE-61 BG official variety proof subset: `Садово 1`
 - OVE-62 GRIN/NPGS promoted long-tail candidate: `Red Cherry tomato`
 
@@ -54,7 +54,7 @@ The historical OVE-78 final redacted evidence recorded these product-visible row
 | OVE-61 BG official variety proof subset       | `Садово 1`                | `plant_variety` | `3b59681d-228a-40e5-b59c-302e952923b7` | `sadovo-1-bg-official-variety`              |
 | OVE-62 GRIN/NPGS promoted long-tail candidate | `Red Cherry tomato`       | `plant_variety` | `63e9e0e7-126e-421f-825f-3e9c208bc614` | `red-cherry-tomato-grin-genebank-candidate` |
 
-The historical OVE-78 real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions. OVE-81 expands the current smoke to include additional UA State Register cases beyond the proof row, and OVE-83 expands it with reviewed species aliases plus blocked-alias absence checks. Production proof must be rerun before those expanded cases are claimed on `https://over.garden`.
+The historical OVE-78 real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions. OVE-81 expands the current smoke to include additional UA State Register cases beyond the proof row, OVE-83 expands it with reviewed species aliases plus blocked-alias absence checks, and OVE-86 expands it with `Ukrainian Grey (Cattle)` as an `animal` breed readback. Production proof must be rerun before those expanded cases are claimed on `https://over.garden`.
 
 Production setup note: before the successful OVE-78 proof, production schema bootstrap was rerun non-destructively because the source-catalog tables required by the rollout command were missing from the live database. No schema drop, bulk delete, restore-over-production, or source/user data export was performed. The OVE-78 code also hardened the species and UA register importers so production reruns write the expected `catalog_kind` explicitly instead of relying on database defaults.
 

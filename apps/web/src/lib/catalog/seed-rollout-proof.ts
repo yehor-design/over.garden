@@ -91,7 +91,7 @@ export const CATALOG_SEED_ROLLOUT_COMMANDS: readonly SeedCommandDefinition[] = [
   {
     key: "breed-seed",
     packageScript: "catalog:sources:import-breed-seed",
-    sourceSet: "OVE-60 official bee breed seed",
+    sourceSet: "OVE-60/86 approved bee and VBO breed seed",
     expectedCanonicalName: "Карпатська бджола",
     expectedCatalogKind: "breed",
     expectedSource: "ua_official_bee_breed",
@@ -126,6 +126,7 @@ export const CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES = [
   "common sunflower",
   "sweet basil",
   "Карпатська",
+  "Ukrainian Grey",
   "Садово 1",
   "Red Cherry",
 ] as const;
@@ -308,6 +309,7 @@ export function buildSafeSeedCommandSummary(
     stringValue(idempotency?.promotedAgainCatalogItemId);
   const stableIdentityReported =
     booleanValue(idempotency?.stableCatalogItems) ??
+    booleanValue(idempotency?.stableCatalogIdentities) ??
     booleanValue(idempotency?.stableProductIdentityOnRerun);
   const canonicalName =
     stringValue(identity?.canonicalName) ?? command.expectedCanonicalName;
@@ -346,7 +348,9 @@ export function buildSafeSeedCommandSummary(
     canonicalName,
     catalogKind: catalogKind as SafeSeedCommandSummary["catalogKind"],
     source: command.expectedSource,
-    aliasesProjected: numberValue(identity?.aliasesProjected),
+    aliasesProjected:
+      numberValue(imported?.aliasesProjected) ??
+      numberValue(identity?.aliasesProjected),
     reindexQueued:
       booleanValue(identity?.reindexQueued) ??
       booleanValue(imported?.reindexQueued),
@@ -356,7 +360,7 @@ export function buildSafeSeedCommandSummary(
         ? catalogItemId === rerunCatalogItemId
         : stableIdentityReported),
     ),
-    sourceProofRecorded: hasValue(root.provenanceProof),
+    sourceProofRecorded: hasSourceProofRecorded(root),
     leakCheck: "passed",
   };
 }
@@ -488,4 +492,12 @@ function booleanValue(value: unknown) {
 function hasValue(value: unknown) {
   if (Array.isArray(value)) return value.length > 0;
   return typeof value === "object" && value !== null;
+}
+
+function hasSourceProofRecorded(root: Record<string, unknown>) {
+  if (hasValue(root.provenanceProof)) return true;
+
+  return Object.entries(root).some(
+    ([key, value]) => key.endsWith("ProvenanceProof") && hasValue(value),
+  );
 }

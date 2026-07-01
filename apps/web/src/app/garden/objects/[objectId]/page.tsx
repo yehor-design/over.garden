@@ -129,9 +129,10 @@ export default async function PlantObjectReadbackPage({
               {plantObjectKindLabel(page.plantObject.object_kind)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {`${catalogIdentityLabel(page.plantObject.catalog_kind)}: ${
-                page.plantObject.variety_text ?? "Unknown"
-              }`}
+              {`${catalogIdentityLabel(
+                page.plantObject.catalog_kind,
+                page.plantObject.object_kind,
+              )}: ${page.plantObject.variety_text ?? "Unknown"}`}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {varietyStateLabel(page.plantObject.variety_state)}

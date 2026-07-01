@@ -135,6 +135,23 @@ const SOURCE_SPECIFIC_PRODUCT_GATES: Record<
       nextAction:
         "Keep VBO, DAD-IS, EFABIS, and any unreviewed breed mappings internal-only until their own source-specific gate is cleared.",
     },
+    {
+      issueKey: "OVE-86",
+      gateId: "ove-86-ua-official-bee-breed-expanded-manual-seed",
+      scope: "manual_seed",
+      sourceVersions: ["law-1492-iii-manual-seed-2026-06-30"],
+      sourceRecordKeys: [
+        "ua-law-1492-iii:bee-breed:ukrainian-steppe",
+        "ua-law-1492-iii:bee-breed:polissian",
+      ],
+      productSources: ["ua_official_bee_breed"],
+      productSourceIds: [
+        "ua-official-bee-breeds:ukrainian-steppe",
+        "ua-official-bee-breeds:polissian",
+      ],
+      nextAction:
+        "Keep DAD-IS/EFABIS and any unreviewed bee Latin mappings internal-only until their own source-specific gate is cleared.",
+    },
   ],
 };
 

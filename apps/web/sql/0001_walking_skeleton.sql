@@ -377,7 +377,7 @@ create table if not exists catalog_alias_projections (
   alias_kind text not null check (alias_kind in ('accepted_scientific_name', 'synonym', 'vernacular_alias', 'generated_variant', 'user_provisional')),
   status text not null check (status in ('accepted', 'review_needed', 'rejected', 'generated', 'user_provisional')),
   source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
-  source_method text not null check (source_method in ('source_backed', 'generated', 'manual_seed', 'user_provisional', 'curator')),
+  source_method text not null check (source_method in ('source_backed', 'generated', 'manual_seed', 'ontology_seed', 'user_provisional', 'curator')),
   source_record_id uuid references catalog_source_records(id) on delete set null,
   source_record_key text check (source_record_key is null or char_length(source_record_key) between 1 and 200),
   confidence numeric(5,4) not null check (confidence >= 0 and confidence <= 1),
@@ -387,6 +387,23 @@ create table if not exists catalog_alias_projections (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_alias_projections_source_method_check'
+      and conrelid = 'catalog_alias_projections'::regclass
+  ) then
+    alter table catalog_alias_projections
+      drop constraint catalog_alias_projections_source_method_check;
+  end if;
+
+  alter table catalog_alias_projections
+    add constraint catalog_alias_projections_source_method_check
+    check (source_method in ('source_backed', 'generated', 'manual_seed', 'ontology_seed', 'user_provisional', 'curator'));
+end $$;
 
 create unique index if not exists catalog_alias_projections_item_alias_source_uidx
   on catalog_alias_projections (

@@ -145,10 +145,13 @@ export function locationVisibilityHelpText(value: string | null | undefined) {
   return "Public pages never show a location while this stays hidden.";
 }
 
-export function catalogKindLabel(value: string | null | undefined) {
+export function catalogKindLabel(
+  value: string | null | undefined,
+  objectKind?: string | null,
+) {
   switch (value) {
     case "breed":
-      return "Bee breed";
+      return breedKindLabel(objectKind);
     case "species":
       return "Plant species";
     case "plant_variety":
@@ -158,10 +161,13 @@ export function catalogKindLabel(value: string | null | undefined) {
   }
 }
 
-export function catalogIdentityLabel(value: string | null | undefined) {
+export function catalogIdentityLabel(
+  value: string | null | undefined,
+  objectKind?: string | null,
+) {
   switch (value) {
     case "breed":
-      return "Bee breed";
+      return breedKindLabel(objectKind);
     case "species":
       return "Plant species";
     case "plant_variety":
@@ -180,6 +186,12 @@ export function plantObjectKindLabel(value: string | null | undefined) {
     default:
       return "Plant";
   }
+}
+
+function breedKindLabel(objectKind?: string | null) {
+  if (objectKind === "bee_colony") return "Bee breed";
+  if (objectKind === "animal") return "Animal breed";
+  return "Breed";
 }
 
 export function entryScopeLabel(value: string) {

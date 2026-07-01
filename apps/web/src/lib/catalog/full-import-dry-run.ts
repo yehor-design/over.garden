@@ -18,6 +18,7 @@ import {
 } from "@/lib/catalog/species-backbone-seed";
 import {
   BREED_SEED_PARSER_VERSION,
+  breedSeedConcepts,
   breedSeedDefinition,
 } from "@/lib/catalog/breed-seed";
 import {
@@ -590,6 +591,16 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
       speciesAliasExpansionReadinessSourceSlugs.includes(record.source.slug),
   );
   const breedDefinition = breedSeedDefinition();
+  const breedConcepts = breedSeedConcepts(breedDefinition);
+  const breedAliasCandidates = breedConcepts.flatMap(
+    (concept) => concept.aliasCandidates,
+  );
+  const breedSourceSlugs = dedupeStrings(
+    breedConcepts.map((concept) => concept.source.slug),
+  );
+  const breedReadinessSourceSlugs = breedSourceSlugs.filter(
+    (sourceSlug) => sourceSlug === "vertebrate-breed-ontology",
+  );
   const bgDefinition = bgOfficialVarietyDefinition();
   const genebankDefinition = genebankLongTailDefinition();
 
@@ -774,58 +785,68 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     {
       key: "breed-seed",
       packageScript: "catalog:sources:import-breed-seed",
-      sourceSet: "OVE-60 official bee breed seed",
-      importerIssue: "OVE-60",
+      sourceSet: "OVE-86 approved bee and VBO breed expansion",
+      importerIssue: "OVE-86",
       downstreamIssue: "OVE-86",
-      projectionScope: "bounded_existing_proof",
-      sourceSlugs: [breedDefinition.source.slug],
-      readinessSourceSlugs: [],
+      projectionScope: "full_import_wave",
+      sourceSlugs: breedSourceSlugs,
+      readinessSourceSlugs: breedReadinessSourceSlugs,
       rowCounts: {
-        sourceRowsWouldRead: 1,
-        rawRowsWouldCapture: 1,
-        productConceptsWouldProject: 1,
-        aliasesWouldProject: breedDefinition.projection.aliases.length,
-        reviewNeededRows: breedDefinition.aliasCandidates.filter(
+        sourceRowsWouldRead: breedConcepts.length,
+        rawRowsWouldCapture: breedConcepts.length,
+        productConceptsWouldProject: breedConcepts.length,
+        aliasesWouldProject: breedAliasCandidates.filter(
+          (alias) => alias.status === "accepted",
+        ).length,
+        reviewNeededRows: breedAliasCandidates.filter(
           (alias) => alias.status === "review_needed",
         ).length,
-        rejectedRows: 0,
-        blockedRows: breedDefinition.aliasCandidates.filter(
+        rejectedRows: breedAliasCandidates.filter(
+          (alias) => alias.status === "rejected",
+        ).length,
+        blockedRows: breedAliasCandidates.filter(
           (alias) => alias.status !== "accepted",
         ).length,
-        attributionRequiredSources: breedDefinition.source.attributionRequired
-          ? 1
-          : 0,
+        attributionRequiredSources: breedSourceSlugs.length,
       },
       parserVersions: [BREED_SEED_PARSER_VERSION],
       projectionRequests: [
+        ...breedConcepts.flatMap((concept) =>
+          (["catalog_items", "catalog_item_names"] as const).map(
+            (productSurface) => ({
+              sourceSlug: concept.source.slug,
+              sourceVersion: concept.source.version,
+              sourceRecordKey: concept.record.id,
+              productSurface,
+              productSource: concept.projection.source,
+              productSourceId: concept.projection.sourceId,
+              explicitGate:
+                concept.source.slug === "ua-official-bee-breeds"
+                  ? {
+                      issueKey:
+                        concept.record.id ===
+                        "ua-law-1492-iii:bee-breed:carpathian"
+                          ? "OVE-60"
+                          : "OVE-86",
+                      gateId:
+                        concept.record.id ===
+                        "ua-law-1492-iii:bee-breed:carpathian"
+                          ? "ove-60-ua-official-bee-breed-manual-seed"
+                          : "ove-86-ua-official-bee-breed-expanded-manual-seed",
+                      scope: "manual_seed" as const,
+                    }
+                  : undefined,
+            }),
+          ),
+        ),
+      ],
+      duplicateSignals: [
         {
-          sourceSlug: breedDefinition.source.slug,
-          sourceVersion: breedDefinition.source.version,
-          sourceRecordKey: breedDefinition.record.id,
-          productSurface: "catalog_items",
-          productSource: breedDefinition.projection.source,
-          productSourceId: breedDefinition.projection.sourceId,
-          explicitGate: {
-            issueKey: "OVE-60",
-            gateId: "ove-60-ua-official-bee-breed-manual-seed",
-            scope: "manual_seed",
-          },
-        },
-        {
-          sourceSlug: breedDefinition.source.slug,
-          sourceVersion: breedDefinition.source.version,
-          sourceRecordKey: breedDefinition.record.id,
-          productSurface: "catalog_item_names",
-          productSource: breedDefinition.projection.source,
-          productSourceId: breedDefinition.projection.sourceId,
-          explicitGate: {
-            issueKey: "OVE-60",
-            gateId: "ove-60-ua-official-bee-breed-manual-seed",
-            scope: "manual_seed",
-          },
+          signal: "approved-breed-kind-mapping",
+          conceptRole:
+            "bee manual seed and VBO animal breed labels share catalogKind=breed with different object-kind outcomes",
         },
       ],
-      duplicateSignals: [],
     },
     {
       key: "bg-official-variety",
@@ -915,8 +936,7 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
           sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
           productSurface: "catalog_items",
           productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
-          productSourceId:
-            "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+          productSourceId: "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
         },
         {
           sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
@@ -925,8 +945,7 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
           sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
           productSurface: "catalog_item_names",
           productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
-          productSourceId:
-            "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+          productSourceId: "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
         },
       ],
       duplicateSignals: [

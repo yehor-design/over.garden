@@ -11,6 +11,7 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
+import { defaultObjectKindForCatalogSelection } from "../src/lib/garden/catalog-object-kind";
 import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
@@ -73,8 +74,12 @@ interface SmokeCase {
   query: string;
   expectedCanonicalName: string;
   expectedCatalogKind: CatalogKind;
-  expectedObjectKind: "plant" | "bee_colony";
-  expectedIdentityLabel: "Plant variety" | "Plant species" | "Bee breed";
+  expectedObjectKind: "plant" | "bee_colony" | "animal";
+  expectedIdentityLabel:
+    | "Plant variety"
+    | "Plant species"
+    | "Bee breed"
+    | "Animal breed";
   plantName: string;
 }
 
@@ -231,6 +236,14 @@ const SMOKE_CASES: SmokeCase[] = [
     plantName: "OVE-67 Carpathian colony",
   },
   {
+    query: "Ukrainian Grey",
+    expectedCanonicalName: "Ukrainian Grey (Cattle)",
+    expectedCatalogKind: "breed",
+    expectedObjectKind: "animal",
+    expectedIdentityLabel: "Animal breed",
+    plantName: "OVE-86 Ukrainian Grey cattle",
+  },
+  {
     query: "Садово 1",
     expectedCanonicalName: "Садово 1",
     expectedCatalogKind: "plant_variety",
@@ -280,6 +293,12 @@ const BLOCKED_ALIAS_SMOKE_CASES: BlockedAliasSmokeCase[] = [
   {
     query: "holy basil",
     forbiddenDisplayName: "holy basil",
+  },
+  {
+    query: "Українська сіра",
+    forbiddenDisplayName: "Українська сіра",
+    forbiddenCanonicalName: "Ukrainian Grey (Cattle)",
+    forbiddenCatalogKind: "breed",
   },
 ];
 
@@ -368,7 +387,10 @@ async function main() {
           target: "first_plant_entry",
           spaceName: "OVE-67 catalog UX smoke",
           plantName: smokeCase.plantName,
-          objectKind: selected.catalogKind === "breed" ? "bee_colony" : "plant",
+          objectKind: defaultObjectKindForCatalogSelection(
+            selected.catalogKind,
+            selected.source,
+          ),
           catalogItemId: selected.id,
           userAddedCatalogName: null,
           varietyText: selected.displayName,

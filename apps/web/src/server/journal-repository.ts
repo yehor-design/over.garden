@@ -17,6 +17,10 @@ import type {
 } from "@/db/schema";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  normalizePlantObjectKind,
+  resolveObjectKindForCatalogSelection,
+} from "@/lib/garden/catalog-object-kind";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   SELECTABLE_CATALOG_STATUSES,
@@ -296,6 +300,7 @@ export async function createFirstPlantEntry(
         object_kind: resolvePlantObjectKind(
           normalized.objectKind,
           selectedCatalogItem?.catalogKind,
+          selectedCatalogItem?.source,
         ),
         catalog_item_id:
           selectedCatalogItem?.id ?? userAddedCatalogItem?.id ?? null,
@@ -704,6 +709,7 @@ export async function resolvePlantObjectCatalog(
       objectKind: resolvePlantObjectKind(
         target.objectKind,
         selectedCatalogItem.catalogKind,
+        selectedCatalogItem.source,
       ),
       varietyText: selectedCatalogItem.canonicalName,
       now: new Date(),
@@ -1521,30 +1527,16 @@ function normalizeLocationVisibility(
   throw new Error("Location visibility must be region or hidden.");
 }
 
-function normalizePlantObjectKind(
-  value: string | null | undefined,
-): PlantObjectKind {
-  const normalized = value?.trim() ?? "";
-  if (!normalized) return "plant";
-  if (
-    normalized === "plant" ||
-    normalized === "bee_colony" ||
-    normalized === "animal"
-  ) {
-    return normalized;
-  }
-  throw new Error("Object kind must be plant, bee colony, or animal.");
-}
-
 function resolvePlantObjectKind(
   requestedObjectKind: PlantObjectKind | string,
   catalogKind: string | null | undefined,
+  source: string | null | undefined,
 ): PlantObjectKind {
-  if (catalogKind === "breed") {
-    return requestedObjectKind === "animal" ? "animal" : "bee_colony";
-  }
-
-  return normalizePlantObjectKind(requestedObjectKind);
+  return resolveObjectKindForCatalogSelection(
+    requestedObjectKind,
+    catalogKind,
+    source,
+  );
 }
 
 function normalizeResolvePlantObjectCatalogInput(

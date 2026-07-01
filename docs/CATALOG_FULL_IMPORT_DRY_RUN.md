@@ -103,6 +103,15 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 
 The `vernacular-alias-expansion` target reports reviewed local-name expansion over the existing species-backbone source set. It does not claim new raw taxonomy rows or new species concepts. It reports 31 alias candidates, 21 product-visible vernacular aliases, 2 review-needed aliases, 4 rejected aliases, 10 blocked aliases, and the OVE-89 duplicate/collision review dependency. Only accepted aliases can be linked to `catalog_item_names`; review-needed, rejected, generated, and curator-only rows stay in `catalog_alias_projections`.
 
+For OVE-86, use the breed target:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local --target breed-seed
+```
+
+The `breed-seed` target now reports the approved breed expansion, not the older one-row OVE-60 proof. It includes three manual official Ukrainian bee breed concepts plus the VBO-supported animal-breed subset for `Ukrainian Grey (Cattle)` and `Bulgarian Rhodope (Cattle)`. It reports 5 source rows, 5 product-visible breed concepts, 13 accepted aliases, 8 review-needed aliases, 8 blocked alias rows, VBO readiness evidence, and the OVE-89 duplicate/kind-mapping review dependency. DAD-IS/EFABIS remains internal-validation-only; no DAD-IS/EFABIS row is product-projected by this target.
+
 For OVE-84, the current `bg-official-variety` target remains a bounded OVE-61 proof target only. `fullImportReadiness.bgOfficialVarietyBulkGate` reports `fullRawImportAllowed = false` and `productProjectionAllowed = false` for IASAS and EU Plant Variety Portal-only BG rows. OVE-100 adds the separate `eu-oj-eur-lex-common-catalogue` legal-source path; OVE-103 is the importer path that must prove stable EUR-Lex/data.europa.eu ELI source URLs, parser counts/checksums, attribution, legal-value caveat mapping, and rejected/review-needed source-only handling. The existing bounded target can still prove `Садово 1` and the blocked low-confidence row, but it is not full BG import evidence.
 
 For OVE-85, use the BG-specific successor target:
