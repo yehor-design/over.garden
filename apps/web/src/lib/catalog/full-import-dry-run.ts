@@ -54,6 +54,7 @@ const MANIFEST_URL = new URL(
 
 const EU_OJ_COMMON_CATALOGUE_TARGET =
   "eu-official-journal-common-catalogue" as const;
+const BG_OFFICIAL_VARIETIES_TARGET = "bg-official-varieties" as const;
 const EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG =
   "eu-oj-eur-lex-common-catalogue" as const;
 const EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION =
@@ -75,6 +76,7 @@ export const CATALOG_FULL_IMPORT_DRY_RUN_TARGETS = [
   "vernacular-alias-expansion",
   "breed-seed",
   "bg-official-variety",
+  BG_OFFICIAL_VARIETIES_TARGET,
   "genebank-long-tail",
   EU_OJ_COMMON_CATALOGUE_TARGET,
 ] as const;
@@ -499,6 +501,7 @@ export function buildCatalogFullImportDryRunReport(input: {
         "OVE-81",
         "OVE-82",
         "OVE-83",
+        "OVE-85",
         "OVE-103",
         "OVE-86",
         "OVE-88",
@@ -524,7 +527,9 @@ export async function buildCatalogFullImportDryRunReportWithLiveInventory(input:
   const report = buildCatalogFullImportDryRunReport(input);
   if (
     !report.targets.some(
-      (target) => target.key === EU_OJ_COMMON_CATALOGUE_TARGET,
+      (target) =>
+        target.key === EU_OJ_COMMON_CATALOGUE_TARGET ||
+        target.key === BG_OFFICIAL_VARIETIES_TARGET,
     )
   ) {
     return report;
@@ -534,9 +539,11 @@ export async function buildCatalogFullImportDryRunReportWithLiveInventory(input:
     input.fetchImpl ?? fetch,
   );
   const targets = report.targets.map((target) =>
-    target.key === EU_OJ_COMMON_CATALOGUE_TARGET
-      ? applyEuOfficialJournalParserQaToTarget(target, sourceInventory)
-      : target,
+    target.key === BG_OFFICIAL_VARIETIES_TARGET
+      ? applyBgOfficialVarietiesParserQaToTarget(target, sourceInventory)
+      : target.key === EU_OJ_COMMON_CATALOGUE_TARGET
+        ? applyEuOfficialJournalParserQaToTarget(target, sourceInventory)
+        : target,
   );
   const updatedReport = {
     ...report,
@@ -877,6 +884,60 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
       duplicateSignals: [],
     },
     {
+      key: BG_OFFICIAL_VARIETIES_TARGET,
+      packageScript: "catalog:sources:import-eu-oj-common-catalogue",
+      sourceSet:
+        "OVE-85 BG official varieties via EUR-Lex Official Journal rows",
+      importerIssue: "OVE-85",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
+      sourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
+      readinessSourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
+      rowCounts: {
+        sourceRowsWouldRead: 0,
+        rawRowsWouldCapture: 0,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: 0,
+        reviewNeededRows: 0,
+        rejectedRows: 0,
+        blockedRows: 0,
+        attributionRequiredSources: 1,
+      },
+      parserVersions: [
+        EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION,
+        EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
+      ],
+      projectionRequests: [
+        {
+          sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
+          sourceVersion: "C/2026/830:vegetable_supplement_h:2026-02-12",
+          sourceRecordKey: "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+          sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+          productSurface: "catalog_items",
+          productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+          productSourceId:
+            "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+        },
+        {
+          sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
+          sourceVersion: "C/2026/830:vegetable_supplement_h:2026-02-12",
+          sourceRecordKey: "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+          sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+          productSurface: "catalog_item_names",
+          productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+          productSourceId:
+            "EUR-Lex:ELI:C/2026/830:row:bg-dry-run-policy-check",
+        },
+      ],
+      duplicateSignals: [
+        {
+          signal: "eu-oj-bg-official-variety-denominations",
+          conceptRole:
+            "Official Journal Bulgaria-notified variety denominations for OVE-89 entity-resolution review",
+        },
+      ],
+    },
+    {
       key: "genebank-long-tail",
       packageScript: "catalog:sources:import-genebank-long-tail",
       sourceSet: "OVE-62 GRIN/NPGS promoted long-tail candidate",
@@ -1060,6 +1121,40 @@ function applyEuOfficialJournalParserQaToTarget(
       reviewNeededRows: totals.reviewNeededRows,
       rejectedRows: totals.rejectedRows,
       blockedRows: totals.reviewNeededRows + totals.rejectedRows,
+      attributionRequiredSources: 1,
+    },
+    parserVersions: dedupeStrings([
+      ...target.parserVersions,
+      sourceInventory.parserQa.parserVersion,
+    ]),
+    sourceInventory,
+  };
+}
+
+function applyBgOfficialVarietiesParserQaToTarget(
+  target: CatalogFullImportDryRunTargetReport,
+  sourceInventory: CatalogFullImportDryRunSourceInventory,
+): CatalogFullImportDryRunTargetReport {
+  const bgCounts = sourceInventory.parserQa?.byCountry.find(
+    (row) => row.countryCode === "BG",
+  );
+  if (!sourceInventory.parserQa || !bgCounts) {
+    return {
+      ...target,
+      sourceInventory,
+    };
+  }
+
+  return {
+    ...target,
+    counts: {
+      sourceRowsWouldRead: bgCounts.rows,
+      rawRowsWouldCapture: bgCounts.rows,
+      productConceptsWouldProject: bgCounts.acceptedRows,
+      aliasesWouldProject: bgCounts.acceptedRows,
+      reviewNeededRows: bgCounts.reviewNeededRows,
+      rejectedRows: bgCounts.rejectedRows,
+      blockedRows: bgCounts.reviewNeededRows + bgCounts.rejectedRows,
       attributionRequiredSources: 1,
     },
     parserVersions: dedupeStrings([

@@ -52,6 +52,7 @@ Allowed targets:
 - `vernacular-alias-expansion`
 - `breed-seed`
 - `bg-official-variety`
+- `bg-official-varieties`
 - `genebank-long-tail`
 - `eu-official-journal-common-catalogue`
 
@@ -103,6 +104,26 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 The `vernacular-alias-expansion` target reports reviewed local-name expansion over the existing species-backbone source set. It does not claim new raw taxonomy rows or new species concepts. It reports 31 alias candidates, 21 product-visible vernacular aliases, 2 review-needed aliases, 4 rejected aliases, 10 blocked aliases, and the OVE-89 duplicate/collision review dependency. Only accepted aliases can be linked to `catalog_item_names`; review-needed, rejected, generated, and curator-only rows stay in `catalog_alias_projections`.
 
 For OVE-84, the current `bg-official-variety` target remains a bounded OVE-61 proof target only. `fullImportReadiness.bgOfficialVarietyBulkGate` reports `fullRawImportAllowed = false` and `productProjectionAllowed = false` for IASAS and EU Plant Variety Portal-only BG rows. OVE-100 adds the separate `eu-oj-eur-lex-common-catalogue` legal-source path; OVE-103 is the importer path that must prove stable EUR-Lex/data.europa.eu ELI source URLs, parser counts/checksums, attribution, legal-value caveat mapping, and rejected/review-needed source-only handling. The existing bounded target can still prove `Садово 1` and the blocked low-confidence row, but it is not full BG import evidence.
+
+For OVE-85, use the BG-specific successor target:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local --target bg-official-varieties
+```
+
+This target still consumes only the approved `eu-oj-eur-lex-common-catalogue` source path. It filters the OVE-102 parser QA country summary to Bulgaria (`countryCode = BG`) and reports BG source rows, accepted product projections, review-needed rows, rejected rows, blocked rows, attribution, and the OVE-89 duplicate-risk dependency. It does not upgrade IASAS PDF rows or EU Plant Variety Portal-only rows.
+
+The matching import and app smoke are:
+
+```bash
+cd apps/web
+pnpm catalog:sources:import-bg-official-variety
+pnpm catalog:sources:import-eu-oj-common-catalogue
+pnpm smoke:garden-bg-official-varieties
+```
+
+The first command keeps the OVE-61 `Садово 1` bounded proof stable. The second command imports the approved Official Journal / EUR-Lex Common Catalogue rows. The smoke verifies a Bulgaria-relevant OJ-backed variety beyond `Садово 1`, legacy `Садово 1` stability, product dedupe in `/garden` typeahead, source attribution/caveat readback, and absence of review-needed/rejected OJ rows plus IASAS-only rows from product selection.
 
 For OVE-101/OVE-102/OVE-103, use `eu-official-journal-common-catalogue`. It discovers the latest agricultural Supplement A and vegetable Supplement H links from the official DG SANTE Common Catalogue page, then fetches the corresponding EUR-Lex/OJ source pages, EUR-Lex XML notices, Publications Office Formex ZIPs, and fallback CELEX RDF metadata. The output includes source family, supplement type, publication date, EUR-Lex URL, OJ/ELI/CELEX identifiers when available, language, artifact format, checksum for fetched artifacts, fetch/parse status, OVE-102 parser QA counts, and OVE-103 product projection counts. Accepted rows count toward `productConceptsWouldProject` and `aliasesWouldProject`; review-needed and rejected rows count toward blocked rows and must remain source-only.
 

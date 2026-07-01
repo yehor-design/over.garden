@@ -393,6 +393,105 @@ describe("OVE-80 catalog full-import dry-run", () => {
     );
   });
 
+  it("builds the OVE-85 BG official-varieties target from EUR-Lex/OJ parser QA", async () => {
+    const dgSanteUrl =
+      "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
+    const hUrl = "https://eur-lex.europa.eu/eli/C/2026/830/oj";
+    const hFormexZipUrl =
+      "http://publications.europa.eu/resource/oj/C_202600830.ENG.fmx4.OJABA_C_202600830_ENG.fmx4.zip";
+    const hFormexXml = `
+      <GENERAL>
+        <TITLE><TI><NP><NO.P>1</NO.P><TXT><HT TYPE="ITALIC">Allium cepa</HT> L. - Onion</TXT></NP></TI></TITLE>
+        <TBL NO.SEQ="0001" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Cincinnati</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Cincinnati</CELL><CELL COL="2">BG 3 b</CELL><CELL COL="3">(add.)</CELL></ROW>
+          <ROW><CELL COL="1">Header Inferred BG</CELL><CELL COL="2">BG 4 b</CELL><CELL COL="3"><IE/></CELL></ROW>
+          <ROW><CELL COL="1"><IE/></CELL><CELL COL="2">BG 7 b</CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+      </GENERAL>
+    `;
+    const report = await buildCatalogFullImportDryRunReportWithLiveInventory({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["bg-official-varieties"],
+      }),
+      generatedAt: "2026-07-01T20:00:00.000Z",
+      fetchImpl: fakeFetch({
+        [dgSanteUrl]: {
+          contentType: "text/html; charset=UTF-8",
+          body: `<a href="${hUrl}">Supplement H 2026/1</a>`,
+        },
+        [hUrl]: {
+          contentType: "text/html; charset=UTF-8",
+          body: `
+            <meta about="http://data.europa.eu/eli/C/2026/830/oj/eng" property="eli:title" content="Common catalogue of varieties of vegetable species Supplement H 2026/1" lang="en"/>
+            <a href="https://eur-lex.europa.eu/eli/C/2026/830/oj/eng/pdf">PDF</a>
+            <a href="http://data.europa.eu/eli/C/2026/830/oj">ELI</a>
+            <p>CELEX:C/2026/00830</p>
+            <p>OJ C, C/2026/830, 12.2.2026</p>
+            <a href="download-notice.html?legalContentId=cellar:ee6e6ad2-07b3-11f1-825d-01aa75ed71a1">Download notice</a>
+          `,
+        },
+        "https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:C/2026/00830":
+          {
+            contentType: "text/xml; charset=UTF-8",
+            body: `<?xml version="1.0" encoding="UTF-8"?><NOTICE><WORK><IDENTIFIER>C/2026/00830</IDENTIFIER></WORK><MANIFESTATION><URI>${hFormexZipUrl}</URI></MANIFESTATION></NOTICE>`,
+          },
+        [hFormexZipUrl]: {
+          contentType: "application/zip",
+          body: buildStoredZip({
+            "C_202600830EN.000301.fmx.xml": hFormexXml,
+          }),
+        },
+      }),
+    });
+
+    expect(report.downstreamUsage.requiredBeforeIssues).toContain("OVE-85");
+    expect(report.targets).toHaveLength(1);
+    expect(report.targets[0]).toMatchObject({
+      key: "bg-official-varieties",
+      packageScript: "catalog:sources:import-eu-oj-common-catalogue",
+      sourceSet:
+        "OVE-85 BG official varieties via EUR-Lex Official Journal rows",
+      importerIssue: "OVE-85",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
+      sources: ["eu-oj-eur-lex-common-catalogue"],
+      counts: {
+        sourceRowsWouldRead: 3,
+        rawRowsWouldCapture: 3,
+        productConceptsWouldProject: 1,
+        aliasesWouldProject: 1,
+        reviewNeededRows: 1,
+        rejectedRows: 1,
+        blockedRows: 2,
+        attributionRequiredSources: 1,
+      },
+      projectionGuard: {
+        status: "passed",
+        checkedProjectionRequests: 2,
+      },
+    });
+    expect(report.targets[0].sourceInventory?.parserQa?.byCountry).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          countryCode: "BG",
+          rows: 3,
+          acceptedRows: 1,
+          reviewNeededRows: 1,
+          rejectedRows: 1,
+        }),
+      ]),
+    );
+    expect(report.duplicateRisk.clusters).toEqual([
+      expect.objectContaining({
+        signal: "eu-oj-bg-official-variety-denominations",
+        requiredGate: "OVE-89",
+      }),
+    ]);
+  });
+
   it("reports unavailable EUR-Lex XML artifacts as review-needed", async () => {
     const dgSanteUrl =
       "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
