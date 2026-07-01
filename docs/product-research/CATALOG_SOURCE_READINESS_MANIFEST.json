@@ -20,7 +20,8 @@
       "eppo-codes",
       "wikidata",
       "grin-global",
-      "vertebrate-breed-ontology"
+      "vertebrate-breed-ontology",
+      "eu-oj-eur-lex-common-catalogue"
     ],
     "conditionalOrBlockedSources": [
       "iasas-bg-official-variety-list",
@@ -61,6 +62,7 @@
         "vertebrate-breed-ontology",
         "iasas-bg-official-variety-list",
         "eu-common-catalogue",
+        "eu-oj-eur-lex-common-catalogue",
         "eol-vernaculars",
         "inaturalist"
       ],
@@ -72,7 +74,8 @@
         "eppo-codes",
         "wikidata",
         "grin-global",
-        "vertebrate-breed-ontology"
+        "vertebrate-breed-ontology",
+        "eu-oj-eur-lex-common-catalogue"
       ],
       "operator_review_required": [
         "wikidata",
@@ -107,10 +110,7 @@
       "verificationDate": "2026-07-01",
       "verifiedBy": "pnpm --filter web catalog:sources:verify plus live IASAS PDF and EU Plant Variety Portal legal-page checks",
       "decision": "blocked",
-      "sourceSlugs": [
-        "iasas-bg-official-variety-list",
-        "eu-common-catalogue"
-      ],
+      "sourceSlugs": ["iasas-bg-official-variety-list", "eu-common-catalogue"],
       "fullRawImportAllowed": false,
       "productProjectionAllowed": false,
       "boundedProofProjectionAllowed": true,
@@ -490,6 +490,43 @@
           "OVE-85 dedupe/readback proof"
         ],
         "nextIssueDependency": "OVE-84, OVE-85"
+      },
+      {
+        "slug": "eu-oj-eur-lex-common-catalogue",
+        "sourceVersionOrExport": "Official Journal Common Catalogue supplements published on EUR-Lex with stable ELI links, starting from DG SANTE latest update links such as C/2026/830 and C/2026/829.",
+        "exportPathOrAccessMethod": "DG SANTE catalogue page -> latest EUR-Lex Official Journal supplement ELI page -> per-row parser output with the ELI/OJ source URL preserved.",
+        "license": "EUR-Lex legal documents may be reused for commercial and non-commercial purposes unless a specific Official Journal document states additional conditions; source acknowledgement is required.",
+        "attributionRequired": true,
+        "volumeEstimate": "EU Common Catalogue OJ supplement rows; OVE-85 must scope to Bulgarian rows and record source OJ/ELI links per projected row.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "bulk_official_varieties",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "full OJ row text before field mapping",
+          "maintainer/address text unless separately approved",
+          "parser diagnostics",
+          "non-BG country rows outside the scoped import",
+          "EU Plant Variety Portal rows not backed by an OJ/EUR-Lex source URL",
+          "IASAS PDF rows"
+        ],
+        "productProjectionFields": [
+          "official variety denomination",
+          "crop/species heading from the OJ supplement",
+          "catalogue action/status",
+          "member-state code when present in the OJ row",
+          "OJ/ELI source URL",
+          "source attribution",
+          "legal-value caveat"
+        ],
+        "unblockingEvidence": [
+          "OVE-100 live EUR-Lex legal notice and reuse checks",
+          "OVE-100 DG SANTE page check showing catalogue updates are published in the Official Journal",
+          "OVE-100 EU Plant Variety Portal legal-caveat check",
+          "OVE-85 parser proof with row counts, accepted/review/reject counts, checksums, and per-row stable EUR-Lex or data.europa.eu ELI links"
+        ],
+        "nextIssueDependency": "OVE-85"
       },
       {
         "slug": "pesi-euro-med",
@@ -1140,6 +1177,128 @@
             "Official Journal"
           ],
           "notes": "Legal-value caveat proof for OVE-84; not product projection permission."
+        }
+      ]
+    },
+    {
+      "slug": "eu-oj-eur-lex-common-catalogue",
+      "name": "EU Official Journal / EUR-Lex Common Catalogue",
+      "category": "official_varieties",
+      "verdict": "USE",
+      "deferred": false,
+      "currentAccessPath": "DG SANTE catalogue page links to Official Journal Common Catalogue supplements on EUR-Lex; product projection must use those OJ/EUR-Lex artifacts, not IASAS PDFs or information-only portal rows.",
+      "endpointUrls": [
+        "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+        "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en",
+        "https://ec.europa.eu/food/plant-variety-portal/cat_legal.xhtml",
+        "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+        "https://eur-lex.europa.eu/eli/C/2026/829/oj"
+      ],
+      "license": "EUR-Lex legal documents may be reused for commercial and non-commercial purposes unless the specific Official Journal document states additional conditions",
+      "commercialUseBasis": "EUR-Lex legal notice records reuse permission for legal documents and DG SANTE publishes Common Catalogue updates through Official Journal/EUR-Lex links. Each product row must preserve a stable EUR-Lex or data.europa.eu ELI source URL and source-specific attribution.",
+      "attributionRequired": true,
+      "attributionText": "European Union, Official Journal of the European Union / EUR-Lex, Common Catalogue of varieties of agricultural plant and vegetable species. Reused under the EUR-Lex legal-document reuse policy; verify document-specific conditions.",
+      "legalValueCaveat": "The EU Plant Variety Portal is information-only and has no legal value; the legally binding source for Common Catalogue varieties is the Official Journal of the European Union.",
+      "parserPrerequisites": [
+        "Use only EUR-Lex Official Journal ELI pages or data.europa.eu ELI links selected from the DG SANTE catalogue update list.",
+        "Persist sourceUrl, sourceVersion, sourceRecordKey, productSource, productSourceId, attributionText, and legalValueCaveat for every projected row.",
+        "Reject or quarantine rows whose source URL is IASAS, the EU Plant Variety Portal, CPVO, UPOV, or any non-EUR-Lex/non-ELI path.",
+        "Before OVE-85 projection, record row count, checksum/source version, accepted/review/reject counts, parser version, and representative BG readback proof."
+      ],
+      "productProjectionPolicy": {
+        "requiredProvenanceFields": [
+          "sourceVersion",
+          "sourceRecordKey",
+          "sourceUrl",
+          "productSource",
+          "productSourceId"
+        ],
+        "requiredSourceUrlPrefixes": [
+          "https://eur-lex.europa.eu/eli/",
+          "https://data.europa.eu/eli/",
+          "http://data.europa.eu/eli/"
+        ],
+        "requiredProductSources": ["eu_oj_eur_lex_common_catalogue"],
+        "requiredSourceRecordKeyPrefixes": [
+          "EUR-Lex:ELI:",
+          "data.europa.eu:ELI:"
+        ],
+        "exactBlockerLanguage": "Only legal-source Official Journal / EUR-Lex Common Catalogue rows with stable EUR-Lex or data.europa.eu ELI links may project. IASAS PDFs, EU Plant Variety Portal-only rows, CPVO/UPOV rows, and missing-provenance rows remain source-only."
+      },
+      "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
+      "allowedSensitiveFields": "Official OJ Common Catalogue fields needed for variety identity, action/status, OJ/ELI source link, attribution, and legal-value caveat. No coordinates, user data, media, analytics, or raw request metadata.",
+      "coordinateTreatment": "no_product_location_use",
+      "sourceVersionOrDate": "DG SANTE latest Common Catalogue updates, EUR-Lex legal notice, and EUR-Lex C/2026/830 OJ supplement verified 2026-07-01",
+      "verificationDate": "2026-07-01",
+      "sampleProof": "DG SANTE catalogue page states that Common Catalogue updates are published in the Official Journal and links to EUR-Lex Supplement H 2026/1 and Supplement A 2026/1. EUR-Lex legal notice records OJ authenticity and legal-document reuse. EU Plant Variety Portal legal page confirms the portal is information-only/no legal value.",
+      "knownBlockers": [
+        "IASAS PDFs and EU Plant Variety Portal-only rows are not approved product-projection sources under this entry.",
+        "Rows without a stable EUR-Lex or data.europa.eu ELI source URL must stay raw/source-only.",
+        "OVE-85 must still prove parser counts, checksums, accepted/review/reject states, attribution, legal-value caveat mapping, and BG readback before importing beyond the existing OVE-61 proof row."
+      ],
+      "nextAllowedIssue": "OVE-85 may import BG/EU official varieties only from Official Journal / EUR-Lex rows that satisfy productProjectionPolicy; IASAS and portal-only rows remain blocked",
+      "liveChecks": [
+        {
+          "id": "eur-lex-legal-notice-authenticity",
+          "method": "GET",
+          "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "Official Journal of the European Union",
+            "deemed authentic",
+            "Council Regulation (EU) No. 216/2013"
+          ],
+          "notes": "Authenticity proof for using OJ/EUR-Lex, not the information-only EU portal, as the product source."
+        },
+        {
+          "id": "eur-lex-legal-documents-reuse",
+          "method": "GET",
+          "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "commercial or non-commercial purposes",
+            "EUR-Lex <strong>metadata</strong> is dedicated to the public domain",
+            "Creative Commons CC0"
+          ],
+          "notes": "Reuse proof; importer must still check document-specific conditions."
+        },
+        {
+          "id": "dg-sante-common-catalogue-oj-updates",
+          "method": "GET",
+          "url": "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "common catalogues",
+            "The updates are published in the Official Journal",
+            "Supplement H 2026/1",
+            "Supplement A 2026/1"
+          ],
+          "notes": "DG SANTE proof that Common Catalogue updates are available through OJ/EUR-Lex links."
+        },
+        {
+          "id": "eu-plant-variety-portal-legal-caveat-for-oj-path",
+          "method": "GET",
+          "url": "https://ec.europa.eu/food/plant-variety-portal/cat_legal.xhtml",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "information purposes only",
+            "no legal value",
+            "Official Journal of the European Union"
+          ],
+          "notes": "Confirms portal-only rows remain blocked unless backed by the legally binding OJ source."
+        },
+        {
+          "id": "eur-lex-common-catalogue-oj-sample",
+          "method": "GET",
+          "url": "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "Common catalogue of varieties of vegetable species",
+            "OJ C, C/2026/830",
+            "PDF - authentic OJ",
+            "ELI:"
+          ],
+          "notes": "Stable OJ/ELI source sample for future OVE-85 parser proof."
         }
       ]
     },

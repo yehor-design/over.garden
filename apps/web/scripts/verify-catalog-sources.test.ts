@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { readManifest, validateManifest, type Manifest } from "./verify-catalog-sources";
+import {
+  readManifest,
+  validateManifest,
+  type Manifest,
+} from "./verify-catalog-sources";
 
 function cloneManifest(): Manifest {
   return structuredClone(readManifest());
@@ -23,6 +27,7 @@ describe("catalog source readiness manifest", () => {
         "ua-state-register",
         "catalogue-of-life-checklistbank",
         "iasas-bg-official-variety-list",
+        "eu-oj-eur-lex-common-catalogue",
         "eol-vernaculars",
       ]),
     );
@@ -38,6 +43,7 @@ describe("catalog source readiness manifest", () => {
         "wikidata",
         "grin-global",
         "vertebrate-breed-ontology",
+        "eu-oj-eur-lex-common-catalogue",
       ]),
     );
   });
@@ -68,6 +74,58 @@ describe("catalog source readiness manifest", () => {
       productProjectionAllowed: false,
       productProjectionMode: "blocked_until_export_reuse_gate",
     });
+    expect(verdictBySlug.get("eu-oj-eur-lex-common-catalogue")).toMatchObject({
+      rawQuarantineAllowed: true,
+      productProjectionAllowed: true,
+      productProjectionMode: "bulk_official_varieties",
+      nextIssueDependency: "OVE-85",
+    });
+  });
+
+  it("records the OVE-100 EUR-Lex legal-source projection policy", () => {
+    const manifest = cloneManifest();
+    const source = manifest.sources.find(
+      (item) => item.slug === "eu-oj-eur-lex-common-catalogue",
+    );
+    const legacyPortal = manifest.sources.find(
+      (item) => item.slug === "eu-common-catalogue",
+    );
+    const iasas = manifest.sources.find(
+      (item) => item.slug === "iasas-bg-official-variety-list",
+    );
+
+    expect(source).toMatchObject({
+      verdict: "USE",
+      allowedUsage: ["raw_snapshot", "canonical_product_projection"],
+      attributionRequired: true,
+      legalValueCaveat: expect.stringContaining("no legal value"),
+      productProjectionPolicy: {
+        requiredSourceUrlPrefixes: [
+          "https://eur-lex.europa.eu/eli/",
+          "https://data.europa.eu/eli/",
+          "http://data.europa.eu/eli/",
+        ],
+        requiredProductSources: ["eu_oj_eur_lex_common_catalogue"],
+        exactBlockerLanguage: expect.stringContaining("IASAS PDFs"),
+      },
+    });
+    expect(source?.parserPrerequisites).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("sourceUrl"),
+        expect.stringContaining("Reject or quarantine"),
+      ]),
+    );
+    expect(source?.liveChecks.map((check) => check.id)).toEqual(
+      expect.arrayContaining([
+        "eur-lex-legal-notice-authenticity",
+        "eur-lex-legal-documents-reuse",
+        "dg-sante-common-catalogue-oj-updates",
+        "eu-plant-variety-portal-legal-caveat-for-oj-path",
+        "eur-lex-common-catalogue-oj-sample",
+      ]),
+    );
+    expect(legacyPortal?.allowedUsage).toEqual(["raw_snapshot"]);
+    expect(iasas?.allowedUsage).toEqual(["raw_snapshot"]);
   });
 
   it("records the OVE-84 BG official variety bulk gate as blocked with exact evidence needs", () => {

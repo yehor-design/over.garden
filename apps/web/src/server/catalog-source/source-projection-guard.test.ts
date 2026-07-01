@@ -75,6 +75,59 @@ describe("catalog source product projection guard", () => {
     expect(allowed.gateIssueKey).toBe("OVE-61");
   });
 
+  it("allows OVE-100 Official Journal / EUR-Lex rows only with stable legal-source provenance", () => {
+    const allowed = assertCatalogSourceProductProjectionAllowed({
+      sourceSlug: "eu-oj-eur-lex-common-catalogue",
+      sourceVersion: "oj-c-2026-830",
+      sourceRecordKey: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+      sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+      productSurface: "catalog_items",
+      productSource: "eu_oj_eur_lex_common_catalogue",
+      productSourceId: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+    });
+
+    expect(allowed.allowed).toBe(true);
+    expect(allowed.verdict).toBe("USE");
+
+    const missingProvenance = checkCatalogSourceProductProjection({
+      sourceSlug: "eu-oj-eur-lex-common-catalogue",
+      productSurface: "catalog_items",
+    });
+
+    expect(missingProvenance.allowed).toBe(false);
+    if (missingProvenance.allowed) {
+      throw new Error("Missing provenance should be blocked.");
+    }
+    expect(missingProvenance.nextAction).toContain(
+      "Only legal-source Official Journal / EUR-Lex",
+    );
+    expect(missingProvenance.nextAction).toContain("sourceVersion");
+
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "eu-oj-eur-lex-common-catalogue",
+        sourceVersion: "iasas-osl-2026",
+        sourceRecordKey: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+        sourceUrl: "https://iasas.government.bg/att/OSL%201%20-%202026%208.pdf",
+        productSurface: "catalog_item_names",
+        productSource: "eu_oj_eur_lex_common_catalogue",
+        productSourceId: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
+
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "eu-oj-eur-lex-common-catalogue",
+        sourceVersion: "eu-plant-variety-portal",
+        sourceRecordKey: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+        sourceUrl: "https://ec.europa.eu/food/plant-variety-portal/",
+        productSurface: "catalog_item_names",
+        productSource: "eu_oj_eur_lex_common_catalogue",
+        productSourceId: "EUR-Lex:ELI:C/2026/830:BG:NEBRASKA",
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
+  });
+
   it("does not turn the OVE-61 bounded proof into bulk EU/Common Catalogue approval", () => {
     expect(() =>
       assertCatalogSourceProductProjectionAllowed({

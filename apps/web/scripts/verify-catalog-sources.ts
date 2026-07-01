@@ -59,6 +59,10 @@ type SourceReadiness = {
   license: string;
   commercialUseBasis: string;
   attributionRequired: boolean;
+  attributionText?: string;
+  legalValueCaveat?: string;
+  parserPrerequisites?: string[];
+  productProjectionPolicy?: ProductProjectionPolicy;
   allowedUsage: AllowedUsage[];
   allowedSensitiveFields: string;
   coordinateTreatment: string;
@@ -68,6 +72,14 @@ type SourceReadiness = {
   knownBlockers: string[];
   nextAllowedIssue: string;
   liveChecks: LiveCheck[];
+};
+
+type ProductProjectionPolicy = {
+  requiredProvenanceFields: string[];
+  requiredSourceUrlPrefixes: string[];
+  requiredProductSources: string[];
+  requiredSourceRecordKeyPrefixes: string[];
+  exactBlockerLanguage: string;
 };
 
 type FullImportSourceVerdict = {
@@ -164,6 +176,7 @@ const REQUIRED_SLUGS = new Set([
   "vertebrate-breed-ontology",
   "iasas-bg-official-variety-list",
   "eu-common-catalogue",
+  "eu-oj-eur-lex-common-catalogue",
   "pesi-euro-med",
   "eol-vernaculars",
   "inaturalist",
@@ -276,7 +289,10 @@ function assertUsageArray(
   }
 }
 
-function assertBoolean(value: unknown, field: string): asserts value is boolean {
+function assertBoolean(
+  value: unknown,
+  field: string,
+): asserts value is boolean {
   if (typeof value !== "boolean") {
     fail(`Missing boolean: ${field}`);
   }
@@ -381,9 +397,14 @@ export function validateManifest(manifest: Manifest): void {
       `${source.slug}.sourceVersionOrDate`,
     );
     assertString(source.verificationDate, `${source.slug}.verificationDate`);
-    if (source.verificationDate !== manifest.verificationDate) {
+    if (
+      ![
+        manifest.verificationDate,
+        manifest.fullImportReadiness.verificationDate,
+      ].includes(source.verificationDate)
+    ) {
       fail(
-        `${source.slug}.verificationDate must match manifest verificationDate`,
+        `${source.slug}.verificationDate must match manifest or full-import verification date`,
       );
     }
     assertString(source.sampleProof, `${source.slug}.sampleProof`);
@@ -427,6 +448,7 @@ export function validateManifest(manifest: Manifest): void {
         `${source.slug} coordinate treatment must not approve product location use`,
       );
     }
+    validateProductProjectionPolicy(source);
   }
 
   for (const slug of REQUIRED_SLUGS) {
@@ -448,13 +470,55 @@ export function validateManifest(manifest: Manifest): void {
   validateFullImportReadiness(manifest);
 }
 
+function validateProductProjectionPolicy(source: SourceReadiness): void {
+  const policy = source.productProjectionPolicy;
+  if (!policy) return;
+
+  assertStringArray(
+    policy.requiredProvenanceFields,
+    `${source.slug}.productProjectionPolicy.requiredProvenanceFields`,
+  );
+  assertStringArray(
+    policy.requiredSourceUrlPrefixes,
+    `${source.slug}.productProjectionPolicy.requiredSourceUrlPrefixes`,
+  );
+  assertStringArray(
+    policy.requiredProductSources,
+    `${source.slug}.productProjectionPolicy.requiredProductSources`,
+  );
+  assertStringArray(
+    policy.requiredSourceRecordKeyPrefixes,
+    `${source.slug}.productProjectionPolicy.requiredSourceRecordKeyPrefixes`,
+  );
+  assertString(
+    policy.exactBlockerLanguage,
+    `${source.slug}.productProjectionPolicy.exactBlockerLanguage`,
+  );
+  if (!source.allowedUsage.includes("canonical_product_projection")) {
+    fail(
+      `${source.slug} has a productProjectionPolicy but cannot project canonically`,
+    );
+  }
+  if (source.attributionRequired) {
+    assertString(source.attributionText, `${source.slug}.attributionText`);
+  }
+  assertString(source.legalValueCaveat, `${source.slug}.legalValueCaveat`);
+  assertStringArray(
+    source.parserPrerequisites,
+    `${source.slug}.parserPrerequisites`,
+  );
+}
+
 function validateFullImportReadiness(manifest: Manifest): void {
   const readiness = manifest.fullImportReadiness;
   if (!readiness || readiness.issue !== "OVE-79") {
     fail("fullImportReadiness.issue must be OVE-79");
   }
   assertString(readiness.title, "fullImportReadiness.title");
-  assertString(readiness.verificationDate, "fullImportReadiness.verificationDate");
+  assertString(
+    readiness.verificationDate,
+    "fullImportReadiness.verificationDate",
+  );
   assertString(readiness.verifiedBy, "fullImportReadiness.verifiedBy");
   assertString(
     readiness.operatorDecision,
@@ -593,7 +657,9 @@ function validateFullImportReadiness(manifest: Manifest): void {
       !verdict.productProjectionAllowed &&
       verdict.productProjectionFields.length > 0
     ) {
-      fail(`${verdict.slug} blocks product projection but lists product fields`);
+      fail(
+        `${verdict.slug} blocks product projection but lists product fields`,
+      );
     }
     if (
       source.verdict === "REJECT" &&
@@ -672,7 +738,10 @@ function validateBgOfficialVarietyBulkGate(
     gate.exportPathOrAccessMethod,
     "bgOfficialVarietyBulkGate.exportPathOrAccessMethod",
   );
-  assertString(gate.legalReuseBasis, "bgOfficialVarietyBulkGate.legalReuseBasis");
+  assertString(
+    gate.legalReuseBasis,
+    "bgOfficialVarietyBulkGate.legalReuseBasis",
+  );
   assertBoolean(
     gate.attributionRequired,
     "bgOfficialVarietyBulkGate.attributionRequired",
@@ -732,7 +801,12 @@ function validateBgOfficialVarietyBulkGate(
     parserPolicy.requiredReviewStates,
     "bgOfficialVarietyBulkGate.parserPolicy.requiredReviewStates",
   );
-  for (const state of ["accepted", "review_needed", "rejected", "quarantined"]) {
+  for (const state of [
+    "accepted",
+    "review_needed",
+    "rejected",
+    "quarantined",
+  ]) {
     if (!parserPolicy.requiredReviewStates.includes(state)) {
       fail(`bgOfficialVarietyBulkGate parser policy must include ${state}`);
     }

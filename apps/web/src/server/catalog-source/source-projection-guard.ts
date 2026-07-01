@@ -30,11 +30,20 @@ export interface CatalogSourceReadiness {
   name?: string;
   verdict: CatalogSourceReadinessVerdict;
   allowedUsage: string[];
+  productProjectionPolicy?: CatalogSourceProductProjectionPolicy;
   conditions?: string[];
   blockers?: string[];
   knownBlockers?: string[];
   nextAction?: string;
   nextAllowedIssue?: string;
+}
+
+export interface CatalogSourceProductProjectionPolicy {
+  requiredProvenanceFields?: string[];
+  requiredSourceUrlPrefixes?: string[];
+  requiredProductSources?: string[];
+  requiredSourceRecordKeyPrefixes?: string[];
+  exactBlockerLanguage?: string;
 }
 
 export interface CatalogSourceReadinessManifest {
@@ -51,6 +60,7 @@ export interface CatalogSourceProductProjectionRequest {
   sourceSlug: string;
   sourceVersion?: string;
   sourceRecordKey?: string;
+  sourceUrl?: string;
   productSurface: CatalogSourceProductSurface;
   productSource?: string;
   productSourceId?: string;
@@ -161,6 +171,19 @@ export function checkCatalogSourceProductProjection(
     source?.verdict === "USE" &&
     source.allowedUsage.includes(CANONICAL_PRODUCT_USAGE)
   ) {
+    const policyDecision = checkManifestProjectionPolicy(source, request);
+    if (!policyDecision.allowed) {
+      return {
+        allowed: false,
+        sourceSlug: request.sourceSlug,
+        productSurface: request.productSurface,
+        verdict: source.verdict,
+        allowedUsage: source.allowedUsage,
+        nextAction: policyDecision.nextAction,
+        message: `${request.sourceSlug} cannot project to ${request.productSurface}: ${policyDecision.nextAction}`,
+      };
+    }
+
     return {
       allowed: true,
       sourceSlug: request.sourceSlug,
@@ -287,6 +310,100 @@ function matchesOptionalAllowlist(
 ) {
   if (!allowlist) return true;
   return value !== undefined && allowlist.includes(value);
+}
+
+function matchesAnyPrefix(
+  value: string | undefined,
+  prefixes: readonly string[] | undefined,
+) {
+  if (!prefixes) return true;
+  return (
+    value !== undefined && prefixes.some((prefix) => value.startsWith(prefix))
+  );
+}
+
+function checkManifestProjectionPolicy(
+  source: CatalogSourceReadiness,
+  request: CatalogSourceProductProjectionRequest,
+): { allowed: true } | { allowed: false; nextAction: string } {
+  const policy = source.productProjectionPolicy;
+  if (!policy) {
+    return { allowed: true };
+  }
+
+  const blocker =
+    policy.exactBlockerLanguage ??
+    "Projection requires the manifest-defined source provenance policy.";
+  const missing = (policy.requiredProvenanceFields ?? []).filter(
+    (field) => !projectionRequestFieldValue(request, field),
+  );
+  if (missing.length > 0) {
+    return {
+      allowed: false,
+      nextAction: `${blocker} Missing required provenance fields: ${missing.join(
+        ", ",
+      )}.`,
+    };
+  }
+
+  if (!matchesAnyPrefix(request.sourceUrl, policy.requiredSourceUrlPrefixes)) {
+    return {
+      allowed: false,
+      nextAction: `${blocker} sourceUrl must start with one of: ${(
+        policy.requiredSourceUrlPrefixes ?? []
+      ).join(", ")}.`,
+    };
+  }
+
+  if (
+    !matchesOptionalAllowlist(
+      request.productSource,
+      policy.requiredProductSources,
+    )
+  ) {
+    return {
+      allowed: false,
+      nextAction: `${blocker} productSource must be one of: ${(
+        policy.requiredProductSources ?? []
+      ).join(", ")}.`,
+    };
+  }
+
+  if (
+    !matchesAnyPrefix(
+      request.sourceRecordKey,
+      policy.requiredSourceRecordKeyPrefixes,
+    )
+  ) {
+    return {
+      allowed: false,
+      nextAction: `${blocker} sourceRecordKey must start with one of: ${(
+        policy.requiredSourceRecordKeyPrefixes ?? []
+      ).join(", ")}.`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+function projectionRequestFieldValue(
+  request: CatalogSourceProductProjectionRequest,
+  field: string,
+) {
+  switch (field) {
+    case "sourceVersion":
+      return request.sourceVersion;
+    case "sourceRecordKey":
+      return request.sourceRecordKey;
+    case "sourceUrl":
+      return request.sourceUrl;
+    case "productSource":
+      return request.productSource;
+    case "productSourceId":
+      return request.productSourceId;
+    default:
+      return undefined;
+  }
 }
 
 function nextActionForBlockedSource(

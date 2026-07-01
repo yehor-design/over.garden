@@ -1,7 +1,7 @@
 # Catalog Source Readiness Gate
 
-Status: OVE-55 live gate plus OVE-79 full-import readiness gate
-Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01
+Status: OVE-55 live gate plus OVE-79 full-import readiness gate plus OVE-100 EU OJ/EUR-Lex source-path approval
+Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01; OVE-100 EUR-Lex path check on 2026-07-01
 Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
 Full-import dry-run: `cd apps/web && pnpm catalog:sources:dry-run -- --environment local --confirm-environment local`
@@ -22,11 +22,12 @@ Approved first ingestion sources:
 - `wikidata` - USE. Supplemental aliases/entity IDs under CC0. Use as corroborating source, not sole canonical truth.
 - `grin-global` - USE. Supplemental taxonomy/economic-plant backbone. Use official export/dump paths later; do not scrape interactive pages.
 - `vertebrate-breed-ontology` - USE. Vertebrate breed backbone only. It is English-only and does not cover bees.
+- `eu-oj-eur-lex-common-catalogue` - USE. Official Journal / EUR-Lex Common Catalogue source path. Product projection is allowed only for rows with stable EUR-Lex or `data.europa.eu` ELI links, recorded attribution, legal-value caveat, parser proof, and source provenance.
 
 Conditional or blocked:
 
 - `iasas-bg-official-variety-list` - USE-WITH-CONDITIONS. Reachable official BG list, but PDF/HTML-only and commercial reuse basis must be captured before canonical projection.
-- `eu-common-catalogue` - USE-WITH-CONDITIONS. Portal reachable, but exact reuse/export/legal-value basis must be captured before product projection.
+- `eu-common-catalogue` - USE-WITH-CONDITIONS. The EU Plant Variety Portal path is reachable but remains information-only/no-legal-value for product projection unless backed row-by-row by the `eu-oj-eur-lex-common-catalogue` source path.
 - `pesi-euro-med` - INTERNAL-VALIDATION-ONLY. Technically reachable, but commercial reuse license is not captured.
 - `eol-vernaculars` - USE-WITH-CONDITIONS. Zenodo metadata is reachable, but license is not specified at dump level; needs license-filter pipeline.
 - `inaturalist` - USE-WITH-CONDITIONS. Taxa API reachable; do not ingest observations, users, photos, or coordinates.
@@ -39,8 +40,8 @@ Conditional or blocked:
 
 The machine-readable `fullImportReadiness` section is the current import-wave contract for OVE-80 through OVE-90:
 
-- `raw_quarantine_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, `vertebrate-breed-ontology`, `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
-- `product_projection_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, and `vertebrate-breed-ontology`.
+- `raw_quarantine_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, `vertebrate-breed-ontology`, `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eu-oj-eur-lex-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
+- `product_projection_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, `vertebrate-breed-ontology`, and `eu-oj-eur-lex-common-catalogue`.
 - `operator_review_required`: `wikidata`, `grin-global`, `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
 - `legal_blocked`: `iasas-bg-official-variety-list`, `eu-common-catalogue`, `pesi-euro-med`, `eol-vernaculars`, `inaturalist`, `dad-is-efabis`, `eurisco`, `genesys-pgr`, and `vendor-marketplace-paths`.
 - `parser_blocked`: `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
@@ -52,7 +53,7 @@ Import order:
 2. OVE-81 may expand the UA State Register only after full-file checksum, row count, UTF-16LE parser proof, and dry-run leak proof.
 3. OVE-82 may expand the species backbone only after CoL/WFO/GBIF/EPPO release/export checks, source attribution, coordinate exclusion, and OVE-89 entity-resolution QA.
 4. OVE-83 may expand product aliases only through approved Wikidata/EPPO-backed species records with machine-checked language, claim, license, and ambiguity filters. EOL/iNaturalist vernacular data remains out of product projection until a later gate explicitly clears its parser/license boundary.
-5. OVE-84 must close the BG/EU legal, export, parser, attribution, and legal-value caveat blockers before OVE-85 imports Bulgarian official varieties beyond the proof row.
+5. OVE-100 closes the legal-source path decision for EU OJ/EUR-Lex. OVE-85 may import Bulgarian official varieties beyond the proof row only from rows satisfying the `eu-oj-eur-lex-common-catalogue` policy; IASAS and EU Plant Variety Portal-only rows remain blocked until a later gate clears them.
 6. OVE-86 may expand breed concepts only for source/object-kind mappings cleared by the manifest; DAD-IS/EFABIS remains internal validation only until legal clearance.
 7. OVE-87 must clear genebank/PGR legal and source-use blockers before OVE-88 performs raw import and curator-only projection.
 8. OVE-89 must review duplicate clusters, canonical conflicts, ambiguous aliases, and cross-source identity risk before OVE-90 production proof claims full catalog availability.
@@ -68,21 +69,35 @@ Concrete blocker evidence required before promotion:
 
 ## OVE-84 BG Official Variety Bulk Gate
 
-Verdict: blocked for full BG raw import and blocked for product projection. The bounded OVE-61 proof row remains allowed, but it is not bulk clearance.
+Verdict: blocked for IASAS and EU Plant Variety Portal-only full BG raw import and blocked for product projection. The bounded OVE-61 proof row remains allowed, but it is not bulk clearance. OVE-100 supersedes only one part of the earlier blocker: the approved product source path is now Official Journal / EUR-Lex, not IASAS PDFs or portal-only rows.
 
 Live OVE-84 checks on 2026-07-01 confirmed that the IASAS OSL 1 - 2026 8 PDF is reachable as a PDF (`Last-Modified: 2026-06-26`, `Content-Length: 4,716,785`) and that the EU Plant Variety Portal plus legal page are reachable. The EU legal page states that the portal is for information purposes only, has no legal value, and that the legally binding Common Catalogue source is the Official Journal of the European Union.
 
-This blocks the bulk path for five concrete reasons:
+This blocks the IASAS/portal-only bulk path for five concrete reasons:
 
-- no approved structured IASAS/EU export, API, or Official Journal bulk source path is cleared for all Bulgarian rows;
+- no approved structured IASAS export/API path is cleared for all Bulgarian rows, and EU portal-only rows have no legal value;
 - IASAS commercial reuse basis is not explicit enough for automatic OverGarden product projection;
 - EU Plant Variety Portal legal-value caveat is not mapped into a safe product projection policy;
 - full-volume IASAS PDF parser QA is not proven with row count, checksum, accepted/review/reject counts, and threshold evidence;
 - attribution and legal-value caveat handling are not mapped row-by-row.
 
-Machine-checkable result lives in `fullImportReadiness.bgOfficialVarietyBulkGate` in the manifest: `fullRawImportAllowed = false`, `productProjectionAllowed = false`, `boundedProofProjectionAllowed = true`, accepted parser confidence would need `>= 0.98`, rows below that require review, rows below `0.90` are rejected, and all fields beyond the OVE-61 projection remain source-only.
+Machine-checkable result lives in `fullImportReadiness.bgOfficialVarietyBulkGate` in the manifest: `fullRawImportAllowed = false`, `productProjectionAllowed = false`, `boundedProofProjectionAllowed = true`, accepted parser confidence would need `>= 0.98`, rows below that require review, rows below `0.90` are rejected, and all IASAS/portal-only fields beyond the OVE-61 projection remain source-only.
 
-Evidence that would change the decision: stable official export/API or Official Journal bulk source path for the BG subset, legal reuse basis for commercial product projection, parser QA report with counts/checksums/thresholds, row-level attribution and caveat mapping, and an OVE-85 importer proof that rejected/review-needed rows stay source-only.
+Evidence that would change the IASAS/portal-only decision: stable official IASAS export/API with explicit reuse basis, parser QA report with counts/checksums/thresholds, row-level attribution and caveat mapping, and an OVE-85 or later importer proof that rejected/review-needed rows stay source-only.
+
+## OVE-100 EU OJ / EUR-Lex Common Catalogue Gate
+
+Verdict: approved source path for BG/EU official-variety projection, with strict provenance. The approved source slug is `eu-oj-eur-lex-common-catalogue`; the legacy `eu-common-catalogue` portal slug and `iasas-bg-official-variety-list` remain raw/source-only.
+
+The machine-readable entry requires:
+
+- `sourceUrl` starting with `https://eur-lex.europa.eu/eli/`, `https://data.europa.eu/eli/`, or `http://data.europa.eu/eli/`;
+- `sourceVersion`, `sourceRecordKey`, `productSource`, and `productSourceId` on every projected row;
+- `productSource = eu_oj_eur_lex_common_catalogue`;
+- source record keys starting with `EUR-Lex:ELI:` or `data.europa.eu:ELI:`;
+- attribution text and the legal-value caveat stating that the EU Plant Variety Portal has no legal value and the legally binding Common Catalogue source is the Official Journal.
+
+Exact blocker language: only legal-source Official Journal / EUR-Lex Common Catalogue rows with stable EUR-Lex or `data.europa.eu` ELI links may project. IASAS PDFs, EU Plant Variety Portal-only rows, CPVO/UPOV rows, and missing-provenance rows remain source-only.
 
 ## OVE-80 Full-Import Dry-Run Harness
 
@@ -117,9 +132,10 @@ External occurrence or distribution coordinates are not OverGarden user/product 
 
 - Live checks passed for UA State Register landing and byte-range CSV sample, CoL release metadata and nameusage sample, WFO Zenodo release, GBIF dataset metadata and species match, EPPO data services/licence/taxon pages, Wikidata EntityData, GRIN taxonomy page, VBO OLS metadata, IASAS official list page, EU Plant Variety Portal, PESI portal, EOL Zenodo vernacular metadata, iNaturalist taxa API, DAD-IS data page, EURISCO terms/full-dump pages, and Genesys terms.
 - OVE-84 BG checks additionally verify the IASAS 2026 OSL PDF byte range and EU Plant Variety Portal legal-value caveat page; both are reachability/legal-caveat proof, not bulk import clearance.
+- OVE-100 checks verify EUR-Lex legal notice authenticity and reuse language, DG SANTE Common Catalogue update links, the EU Plant Variety Portal legal-value caveat, and an EUR-Lex OJ sample page for Supplement H 2026/1.
 - Vendor/marketplace paths are intentionally manual-gated: no approved endpoint exists, so no scrape/API probe was run.
-- OVE-55 result counts: 17 sources; USE=8; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
-- OVE-79 import-wave counts: raw=12; product=8; review=6; legal=9; parser=4; rejected=1.
+- OVE-55/OVE-100 result counts: 18 sources; USE=9; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
+- OVE-79 import-wave counts: raw=13; product=9; review=6; legal=9; parser=4; rejected=1.
 
 ## Downstream Gates
 
@@ -133,7 +149,7 @@ External occurrence or distribution coordinates are not OverGarden user/product 
 - OVE-65 hardens the post-seed read model before additional source expansion. Product typeahead must dedupe source-backed rows by canonical concept so repeated proof fixtures and parser/snapshot versions produce one selectable suggestion per real catalog concept. Operator provenance should show the latest/current safe proof per concept record with an audit-link count, while retaining full source snapshots, records, links, and refresh rows internally.
 - OVE-66 adds the first internal source-candidate review lane to `/garden/catalog/curation`. Operators can inspect grouped source candidates from safe `allowed_projection` metadata, see source/legal/status context and a safe projection preview, promote the approved GRIN/NPGS proof candidate through a server action, or hold/reject quarantined review rows. The read model and UI do not select or render raw payloads, source-only fields, external coordinates, journal text, media internals, owner data, analytics, or precise location; product typeahead changes only after explicit promotion and reindex enqueue.
 - OVE-67 proves the real `/garden` catalog UX against the imported seed set. After OVE-81, OVE-82, and OVE-83, the smoke covers representative UA official varieties beyond the original proof row plus accepted species aliases across Ukrainian, Bulgarian, English, and scientific/synonym lookup names; it also checks blocked alias inputs such as `garden tomato`, `love apple`, `помидор`, `gherkin`, `pickle`, and `holy basil`. The smoke verifies one deduped selectable suggestion per intended catalog concept, saves each accepted suggestion through the canonical first-entry path, and checks authenticated readback for kind-correct labels (`Plant variety`, `Plant species`, `Bee breed`), expected object kind including `bee_colony`, selected catalog identity, hidden location, and no source-only/operator metadata in proof output. The typeahead route falls back to canonical Postgres search when the derived Meilisearch index is stale or empty.
-- OVE-68 adds the source-expansion product-projection guard. Any importer that writes source-backed `catalog_items` or product-visible `catalog_item_names` must pass the OVE-55 manifest check first: the source must be `USE` and include `canonical_product_projection`, unless a named source-specific gate allows one bounded source/version/record path. The OVE-60 official bee manual seed and OVE-61 BG reviewed subset are explicit bounded exceptions, not bulk approvals. `eu-common-catalogue`, IASAS/BG rows outside the OVE-61 accepted proof row, DAD-IS/EFABIS, EURISCO, Genesys, vendor/marketplace paths, unknown sources, and manifest entries missing `canonical_product_projection` stay raw/internal/quarantined until a fresh gate clears that exact use.
+- OVE-68 adds the source-expansion product-projection guard. Any importer that writes source-backed `catalog_items` or product-visible `catalog_item_names` must pass the manifest check first: the source must be `USE` and include `canonical_product_projection`, unless a named source-specific gate allows one bounded source/version/record path. The OVE-60 official bee manual seed and OVE-61 BG reviewed subset are explicit bounded exceptions, not bulk approvals. OVE-100 adds a manifest policy for `eu-oj-eur-lex-common-catalogue`: it may project only with stable EUR-Lex/data.europa.eu ELI source URLs and required provenance. `eu-common-catalogue`, IASAS/BG rows outside the OVE-61 accepted proof row, DAD-IS/EFABIS, EURISCO, Genesys, vendor/marketplace paths, unknown sources, and manifest entries missing `canonical_product_projection` stay raw/internal/quarantined until a fresh gate clears that exact use.
 - OVE-69 adds the repeatable environment seed rollout proof. Operators must explicitly name and confirm `local`, `staging`, `preview`, or `production`; non-local runs require an extra mutation flag. The command seeds only the approved product proof set, captures verbose importer output privately, emits a redacted evidence contract, and runs the real `/garden` smoke against the selected app URL. The checked-in state does not claim staging or production rows exist until a run against that environment is recorded.
 - OVE-70 isolates proof-harness semantics for source-import reruns. The GRIN/NPGS proof now labels clean-state absence as `cleanStateProof.status = passed` only when the promotable candidate is still quarantined and absent from product typeahead; reruns with an existing projection report `cleanStateProof.status = skipped_existing_projection` plus `rerunExistingProjection` instead of reusing a misleading `typeaheadBeforePromotion` field. Operators can add `--require-clean-state` to fail loudly when a clean-state precondition is required.
 - OVE-60 consumes the safe manual official UA bee breed path first: `pnpm catalog:sources:import-breed-seed` imports `Карпатська бджола` as `catalogKind = breed`, proves typeahead/readback/provenance, keeps VBO as a future vertebrate-only backbone, and keeps DAD-IS/EFABIS validation notes source-only/internal-only.
