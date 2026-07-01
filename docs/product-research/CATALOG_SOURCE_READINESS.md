@@ -4,6 +4,7 @@ Status: OVE-55 live gate plus OVE-79 full-import readiness gate
 Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01
 Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
+Full-import dry-run: `cd apps/web && pnpm catalog:sources:dry-run -- --environment local --confirm-environment local`
 
 This gate decides which catalog sources later ingestion slices may consume. It is not a bulk import and it does not approve live product dependencies on external APIs.
 
@@ -64,6 +65,28 @@ Concrete blocker evidence required before promotion:
 - DAD-IS/EFABIS needs legal confirmation and official export/API terms before any product ingestion.
 - EURISCO and Genesys need legal review or written permission because accession/redistribution terms currently block product projection.
 - Vendor/marketplace paths need written permission, partner feed, official API contract, and explicit maintainer approval; scraping remains rejected.
+
+## OVE-80 Full-Import Dry-Run Harness
+
+`docs/CATALOG_FULL_IMPORT_DRY_RUN.md` defines the OVE-80 operator preflight. The current command is:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local
+```
+
+For staging, preview, or production preflight, add `--preflight-only`; the command never accepts a mutation flag and does not connect to the database. The report uses schema `ove80.catalogFullImportDryRun.v1`, references the OVE-79 readiness gate, and emits one normalized redacted target row for the existing proof importers:
+
+- `catalog-source-sample`
+- `ua-register-variety`
+- `species-backbone`
+- `breed-seed`
+- `bg-official-variety`
+- `genebank-long-tail`
+
+The report includes source row counts, raw/quarantine capture counts, product projection counts, review-needed counts, rejected/blocked counts, attribution-required counts, OVE-79 source verdicts, projection-guard status, duplicate-risk clusters, and a fail-closed leak check. UA State Register reports the verified full-file count as raw/quarantine volume while keeping the current product projection count separate, so OVE-81 cannot confuse the one-row proof with the full import shape.
+
+Later full-import issues must attach this report or a target-specific successor report before mutating source-family imports or projecting new product-visible concepts. `leakCheck = "passed"` is required before the output can be pasted into Linear.
 
 ## Privacy Boundary
 
