@@ -49,6 +49,7 @@ DNS and edge invariants:
 
 - Cloudflare is authoritative DNS for `over.garden`.
 - Cloudflare may proxy DNS records, but must not cache app HTML. Vercel owns app HTML/ISR behavior.
+- App-layer cache guardrail (OVE-91): matched Next app routes set `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` in `apps/web/src/proxy.ts`. This is defense-in-depth for app HTML/RSC/API responses; it does not change R2 media or static asset caching.
 - Do not manually CNAME media traffic to the `r2.dev` public development URL. R2 custom domains must be attached through the R2 bucket custom-domain flow.
 - OVE-51 canonical app DNS:
   - `over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`

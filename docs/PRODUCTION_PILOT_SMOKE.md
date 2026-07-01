@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation
-Last updated: 2026-06-29
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail
+Last updated: 2026-07-01
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -78,9 +78,35 @@ Final canonical browser-smoke result on 2026-06-29:
 Canonical smoke bar:
 
 - `https://over.garden/`, `/health`, and `/privacy` return OverGarden responses without Vercel SSO.
+- Matched app routes send `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate`. This applies to app HTML/RSC/API responses during the closed pilot; static assets, the service worker, manifest, and R2 media derivatives stay outside this guardrail.
 - A pilot user signs in or signs up on `https://over.garden`, creates a first entry, attaches one photo, reads back only a `media.over.garden` derivative, adds a same-object follow-up, publishes, opens the SSR `/journal/[slug]`, opens `/variety/[slug]`, saves through the public-variety activation CTA, and archives to a `410 Gone` tombstone.
 - Public journal and variety HTML stay `noindex, nofollow`, location-safe, and free of quarantine/original keys. The public derivative host class may be recorded as `media.over.garden`; derivative keys, signed URLs, raw journal text, EXIF, precise location, cookies, invite links, and emails must not be recorded.
 - Worker/search proof from OVE-36/OVE-39 remains valid unless worker, search, job payload, or worker env changes. A fresh live worker/search round-trip is required after such changes.
+
+## OVE-91 HTML Cache Guardrail
+
+Goal: pilot evidence should never be polluted by stale or cross-user HTML from an intermediary cache. During the closed pilot, public SSR routes are intentionally treated as no-store too, even when they are crawler-visible, because H1/H4/H6 learning is more important than caching public shells before real UGC depth exists.
+
+Current code contract:
+
+- `apps/web/src/proxy.ts` sets `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` for matched app routes.
+- The matcher covers homepage, invite/join, privacy, health, journal, variety, authenticated garden/operator routes, and app API routes.
+- The matcher excludes `/_next/static`, `/_next/image`, `favicon.ico`, image files, `sw.js`, and `manifest.webmanifest`. R2 public derivative caching is unchanged and remains governed by the media bucket contract.
+- Cloudflare DNS remains DNS-only for the app domain as of the OVE-51 provider state. If Cloudflare proxying is enabled later, any app HTML `cf-cache-status: HIT` still blocks pilot traffic.
+
+Representative header smoke:
+
+```bash
+curl -I "$SMOKE_BASE_URL/"
+curl -I "$SMOKE_BASE_URL/garden"
+curl -I "$SMOKE_BASE_URL/join"
+curl -I "$SMOKE_BASE_URL/privacy"
+curl -I "$SMOKE_BASE_URL/health"
+curl -I "$SMOKE_BASE_URL/journal/<safe-smoke-slug>"
+curl -I "$SMOKE_BASE_URL/variety/<safe-smoke-slug>"
+```
+
+Expected: each app-route response includes the no-store cache policy above. If the domain is routed through Cloudflare, the same response must not include `cf-cache-status: HIT`.
 
 ## OVE-38 iOS Safari Offline Entry + Photo Field Proof
 
@@ -436,12 +462,14 @@ Header probes:
 ```bash
 curl -I "$SMOKE_BASE_URL/health"
 curl -I "$SMOKE_BASE_URL/"
+curl -I "$SMOKE_BASE_URL/join"
 curl -I "$SMOKE_BASE_URL/privacy"
 ```
 
 Public visitor/crawler prerequisite:
 
 - These routes must return OverGarden HTML or route-appropriate redirects, not Vercel SSO.
+- Matched app routes must send `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` during the closed pilot.
 - Public HTML must not have Cloudflare `cf-cache-status: HIT`.
 - Public marketing/legal/supporting routes should remain `noindex` unless explicitly promoted.
 
