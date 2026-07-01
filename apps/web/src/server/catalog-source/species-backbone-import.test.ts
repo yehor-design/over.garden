@@ -16,6 +16,7 @@ import type { Database } from "@/db/schema";
 import {
   SPECIES_BACKBONE_SOURCE_IDS,
   speciesBackboneAllowedProjection,
+  speciesBackboneConcepts,
   speciesBackbonePayloadChecksum,
   speciesBackboneSeedDefinition,
   speciesBackboneSnapshotChecksum,
@@ -156,6 +157,54 @@ describe("species backbone seed import", () => {
     expect(projection.conflictBehavior).toContain("Conflicting accepted names");
   });
 
+  it("defines the OVE-82 planned species wave beyond the original tomato proof", () => {
+    const concepts = speciesBackboneConcepts(definition);
+    const canonicalNames = concepts.map(
+      (concept) => concept.projection.canonicalName,
+    );
+    const allSourceRecords = concepts.flatMap(
+      (concept) => concept.sourceRecords,
+    );
+    const blockedAliases = concepts.flatMap((concept) =>
+      concept.aliasCandidates.filter((alias) => alias.status !== "accepted"),
+    );
+
+    expect(concepts).toHaveLength(4);
+    expect(allSourceRecords).toHaveLength(20);
+    expect(canonicalNames).toEqual([
+      "Solanum lycopersicum L.",
+      "Cucumis sativus L.",
+      "Helianthus annuus L.",
+      "Ocimum basilicum L.",
+    ]);
+    expect(
+      concepts.flatMap((concept) =>
+        concept.projection.aliases.map((alias) => alias.displayName),
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "огірок",
+        "краставица",
+        "Sunflower",
+        "слънчоглед",
+        "Basil",
+        "базилік",
+        "босилек",
+      ]),
+    );
+    expect(blockedAliases.map((alias) => alias.displayName)).toEqual(
+      expect.arrayContaining([
+        "gherkin",
+        "common sunflower",
+        "sweet basil",
+        "holy basil",
+      ]),
+    );
+    expect(blockedAliases.every((alias) => alias.status !== "accepted")).toBe(
+      true,
+    );
+  });
+
   it("upserts each source snapshot by source version and snapshot checksum", () => {
     const col = sourceRecord("catalogue-of-life-checklistbank");
     const snapshotSha256 = speciesBackboneSnapshotChecksum(col);
@@ -203,6 +252,30 @@ describe("species backbone seed import", () => {
     expect(JSON.stringify(compiled.parameters)).toContain(
       "Solanum lycopersicum L.",
     );
+  });
+
+  it("stores the matching allowed projection for each non-primary species source record", () => {
+    const cucumber = speciesBackboneConcepts(definition).find(
+      (concept) => concept.key === "cucumis-sativus",
+    );
+    if (!cucumber) throw new Error("Missing cucumber species fixture");
+    const gbif = cucumber.sourceRecords.find(
+      (row) => row.source.slug === "gbif-backbone",
+    );
+    if (!gbif) throw new Error("Missing cucumber GBIF fixture");
+
+    const compiled = buildUpsertSpeciesBackboneRecordQuery(testDb, gbif, {
+      sourceSnapshotId,
+      rawPayloadSha256: speciesBackbonePayloadChecksum(gbif),
+      projection: cucumber.projection,
+    }).compile();
+    const serializedParameters = JSON.stringify(compiled.parameters);
+
+    expect(serializedParameters).toContain("Cucumis sativus L.");
+    expect(serializedParameters).toContain("2874569");
+    expect(serializedParameters).toContain("decimalLatitude");
+    expect(serializedParameters).not.toContain("Solanum lycopersicum L.");
+    expect(serializedParameters).not.toContain("2930137");
   });
 
   it("projects the accepted scientific name, source-backed synonym, and safe aliases", () => {

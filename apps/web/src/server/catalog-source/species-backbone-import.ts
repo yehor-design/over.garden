@@ -6,12 +6,14 @@ import {
   speciesBackboneAllowedProjection,
   speciesBackboneAllowedProjectionJson,
   speciesBackboneAllowedUsage,
+  speciesBackboneConcepts,
   speciesBackbonePayloadChecksum,
   speciesBackboneRawPayload,
   speciesBackboneSeedDefinition,
   speciesBackboneSnapshotChecksum,
   speciesBackboneSourceOnlyFields,
   type SpeciesBackboneAliasCandidate,
+  type SpeciesBackboneConceptDefinition,
   type SpeciesBackboneImportDefinition,
   type SpeciesBackboneProjection,
   type SpeciesBackboneSourceRecordDefinition,
@@ -33,7 +35,8 @@ const SPECIES_BACKBONE_APPROVED_SOURCE_SLUGS = [
   "wikidata",
 ] as const;
 
-export interface SpeciesBackboneImportSummary {
+export interface SpeciesBackboneConceptImportSummary {
+  key: string;
   sourceSnapshotIds: Record<string, string>;
   sourceRecordIds: Record<string, string>;
   catalogItemId: string;
@@ -51,6 +54,13 @@ export interface SpeciesBackboneImportSummary {
   aliasesRecorded: number;
   aliasStatusCounts: Record<SpeciesBackboneAliasCandidate["status"], number>;
   reindexQueued: boolean;
+}
+
+export interface SpeciesBackboneImportSummary
+  extends SpeciesBackboneConceptImportSummary {
+  concepts: SpeciesBackboneConceptImportSummary[];
+  importedConcepts: number;
+  sourceRowsImported: number;
 }
 
 export interface SpeciesBackboneTypeaheadProof {
@@ -118,132 +128,163 @@ export async function importSpeciesBackboneSeed(
   definition = speciesBackboneSeedDefinition(),
 ): Promise<SpeciesBackboneImportSummary> {
   return executor.transaction().execute(async (trx) => {
-    const projection = speciesBackboneAllowedProjection(definition);
-    const sourceSnapshotIds: Record<string, string> = {};
-    const sourceRecordIds: Record<string, string> = {};
-    const sourceRecordIdsByKey = new Map<string, string>();
-    const rawPayloadSha256BySource: Record<string, string> = {};
-    const snapshotSha256BySource: Record<string, string> = {};
-    const linkedSourceRecords: Array<{
-      sourceRecord: SpeciesBackboneSourceRecordDefinition;
-      sourceRecordId: string;
-    }> = [];
-
-    for (const sourceRecord of definition.sourceRecords) {
-      const rawPayloadSha256 = speciesBackbonePayloadChecksum(sourceRecord);
-      const snapshotSha256 = speciesBackboneSnapshotChecksum(sourceRecord);
-
-      const snapshot = await buildUpsertSpeciesBackboneSnapshotQuery(
-        trx,
-        sourceRecord,
-        {
-          payloadSha256: snapshotSha256,
-        },
-      ).executeTakeFirstOrThrow();
-
-      const record = await buildUpsertSpeciesBackboneRecordQuery(
-        trx,
-        sourceRecord,
-        {
-          sourceSnapshotId: snapshot.id,
-          rawPayloadSha256,
-          definition,
-        },
-      ).executeTakeFirstOrThrow();
-
-      sourceSnapshotIds[sourceRecord.source.slug] = snapshot.id;
-      sourceRecordIds[sourceRecord.source.slug] = record.id;
-      sourceRecordIdsByKey.set(sourceRecord.record.id, record.id);
-      rawPayloadSha256BySource[sourceRecord.source.slug] = rawPayloadSha256;
-      snapshotSha256BySource[sourceRecord.source.slug] = snapshotSha256;
-      linkedSourceRecords.push({
-        sourceRecord,
-        sourceRecordId: record.id,
-      });
-    }
-
-    const catalogItem = await buildUpsertSpeciesBackboneCatalogItemQuery(
-      trx,
-      projection,
-    ).executeTakeFirstOrThrow();
-
-    const catalogItemNameIdsByAliasKey = new Map<string, string>();
-    for (const alias of projection.aliases) {
-      const catalogItemName = await buildUpsertSpeciesBackboneCatalogNameQuery(
-        trx,
-        {
-          catalogItemId: catalogItem.id,
-          ...alias,
-        },
-      ).executeTakeFirstOrThrow();
-
-      catalogItemNameIdsByAliasKey.set(
-        buildAliasKey(alias.locale, alias.normalizedName),
-        catalogItemName.id,
-      );
-    }
-
-    const aliasStatusCounts = emptyAliasStatusCounts();
-    for (const alias of definition.aliasCandidates) {
-      const sourceRecordId = resolveAliasSourceRecordId(
-        alias,
-        sourceRecordIdsByKey,
-      );
-      const catalogItemNameId =
-        alias.status === "accepted"
-          ? catalogItemNameIdsByAliasKey.get(
-              buildAliasKey(alias.locale, alias.normalizedName),
-            )
-          : null;
-
-      if (alias.status === "accepted" && !catalogItemNameId) {
-        throw new Error(
-          `Accepted alias ${alias.locale}:${alias.normalizedName} is missing from catalog_item_names.`,
-        );
-      }
-
-      await buildUpsertSpeciesBackboneAliasProjectionQuery(trx, {
-        catalogItemId: catalogItem.id,
-        catalogItemNameId: catalogItemNameId ?? null,
-        sourceRecordId,
-        alias,
-      }).execute();
-      aliasStatusCounts[alias.status] += 1;
-    }
-
-    for (const linked of linkedSourceRecords) {
-      await buildInsertSpeciesBackboneSourceLinkQuery(trx, {
-        catalogItemId: catalogItem.id,
-        sourceRecordId: linked.sourceRecordId,
-        sourceRecord: linked.sourceRecord,
-      }).execute();
+    const conceptSummaries = [];
+    for (const concept of speciesBackboneConcepts(definition)) {
+      conceptSummaries.push(await importSpeciesBackboneConcept(trx, concept));
     }
 
     const reindexJob =
       await buildEnqueueSpeciesBackboneTypeaheadReindexJobQuery(
         trx,
       ).executeTakeFirstOrThrow();
+    const reindexQueued = reindexJob.id.length > 0;
+    const concepts = conceptSummaries.map((summary) => ({
+      ...summary,
+      reindexQueued,
+    }));
+    const primaryConcept = concepts[0];
+    if (!primaryConcept) {
+      throw new Error("Species backbone import definition has no concepts.");
+    }
 
     return {
-      sourceSnapshotIds,
-      sourceRecordIds,
-      catalogItemId: catalogItem.id,
-      catalogKind: projection.catalogKind,
-      sourceSlugs: definition.sourceRecords.map((row) => row.source.slug),
-      sourceRecordKeys: definition.sourceRecords.map((row) => row.record.id),
-      rawPayloadSha256BySource,
-      snapshotSha256BySource,
-      parserVersion: SPECIES_BACKBONE_PARSER_VERSION,
-      canonicalName: catalogItem.canonicalName,
-      acceptedScientificName: projection.acceptedScientificName,
-      publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
-      sourceIds: projection.sourceIds,
-      aliasesProjected: projection.aliases.length,
-      aliasesRecorded: definition.aliasCandidates.length,
-      aliasStatusCounts,
-      reindexQueued: reindexJob.id.length > 0,
+      ...primaryConcept,
+      concepts,
+      importedConcepts: concepts.length,
+      sourceRowsImported: concepts.reduce(
+        (total, concept) => total + concept.sourceRecordKeys.length,
+        0,
+      ),
+      reindexQueued,
     };
   });
+}
+
+async function importSpeciesBackboneConcept(
+  trx: Transaction<Database>,
+  concept: SpeciesBackboneConceptDefinition,
+): Promise<SpeciesBackboneConceptImportSummary> {
+  const projection = speciesBackboneAllowedProjection(concept);
+  const sourceSnapshotIds: Record<string, string> = {};
+  const sourceRecordIds: Record<string, string> = {};
+  const sourceRecordIdsByKey = new Map<string, string>();
+  const rawPayloadSha256BySource: Record<string, string> = {};
+  const snapshotSha256BySource: Record<string, string> = {};
+  const linkedSourceRecords: Array<{
+    sourceRecord: SpeciesBackboneSourceRecordDefinition;
+    sourceRecordId: string;
+  }> = [];
+
+  for (const sourceRecord of concept.sourceRecords) {
+    const rawPayloadSha256 = speciesBackbonePayloadChecksum(sourceRecord);
+    const snapshotSha256 = speciesBackboneSnapshotChecksum(sourceRecord);
+
+    const snapshot = await buildUpsertSpeciesBackboneSnapshotQuery(
+      trx,
+      sourceRecord,
+      {
+        payloadSha256: snapshotSha256,
+      },
+    ).executeTakeFirstOrThrow();
+
+    const record = await buildUpsertSpeciesBackboneRecordQuery(
+      trx,
+      sourceRecord,
+      {
+        sourceSnapshotId: snapshot.id,
+        rawPayloadSha256,
+        projection,
+      },
+    ).executeTakeFirstOrThrow();
+
+    sourceSnapshotIds[sourceRecord.source.slug] = snapshot.id;
+    sourceRecordIds[sourceRecord.source.slug] = record.id;
+    sourceRecordIdsByKey.set(sourceRecord.record.id, record.id);
+    rawPayloadSha256BySource[sourceRecord.source.slug] = rawPayloadSha256;
+    snapshotSha256BySource[sourceRecord.source.slug] = snapshotSha256;
+    linkedSourceRecords.push({
+      sourceRecord,
+      sourceRecordId: record.id,
+    });
+  }
+
+  const catalogItem = await buildUpsertSpeciesBackboneCatalogItemQuery(
+    trx,
+    projection,
+  ).executeTakeFirstOrThrow();
+
+  const catalogItemNameIdsByAliasKey = new Map<string, string>();
+  for (const alias of projection.aliases) {
+    const catalogItemName = await buildUpsertSpeciesBackboneCatalogNameQuery(
+      trx,
+      {
+        catalogItemId: catalogItem.id,
+        ...alias,
+      },
+    ).executeTakeFirstOrThrow();
+
+    catalogItemNameIdsByAliasKey.set(
+      buildAliasKey(alias.locale, alias.normalizedName),
+      catalogItemName.id,
+    );
+  }
+
+  const aliasStatusCounts = emptyAliasStatusCounts();
+  for (const alias of concept.aliasCandidates) {
+    const sourceRecordId = resolveAliasSourceRecordId(
+      alias,
+      sourceRecordIdsByKey,
+    );
+    const catalogItemNameId =
+      alias.status === "accepted"
+        ? catalogItemNameIdsByAliasKey.get(
+            buildAliasKey(alias.locale, alias.normalizedName),
+          )
+        : null;
+
+    if (alias.status === "accepted" && !catalogItemNameId) {
+      throw new Error(
+        `Accepted alias ${alias.locale}:${alias.normalizedName} is missing from catalog_item_names.`,
+      );
+    }
+
+    await buildUpsertSpeciesBackboneAliasProjectionQuery(trx, {
+      catalogItemId: catalogItem.id,
+      catalogItemNameId: catalogItemNameId ?? null,
+      sourceRecordId,
+      alias,
+    }).execute();
+    aliasStatusCounts[alias.status] += 1;
+  }
+
+  for (const linked of linkedSourceRecords) {
+    await buildInsertSpeciesBackboneSourceLinkQuery(trx, {
+      catalogItemId: catalogItem.id,
+      sourceRecordId: linked.sourceRecordId,
+      sourceRecord: linked.sourceRecord,
+    }).execute();
+  }
+
+  return {
+    key: concept.key,
+    sourceSnapshotIds,
+    sourceRecordIds,
+    catalogItemId: catalogItem.id,
+    catalogKind: projection.catalogKind,
+    sourceSlugs: concept.sourceRecords.map((row) => row.source.slug),
+    sourceRecordKeys: concept.sourceRecords.map((row) => row.record.id),
+    rawPayloadSha256BySource,
+    snapshotSha256BySource,
+    parserVersion: SPECIES_BACKBONE_PARSER_VERSION,
+    canonicalName: catalogItem.canonicalName,
+    acceptedScientificName: projection.acceptedScientificName,
+    publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
+    sourceIds: projection.sourceIds,
+    aliasesProjected: projection.aliases.length,
+    aliasesRecorded: concept.aliasCandidates.length,
+    aliasStatusCounts,
+    reindexQueued: false,
+  };
 }
 
 export async function readSpeciesBackboneTypeaheadProof(
@@ -331,15 +372,15 @@ export async function readSpeciesBackboneAliasCurationProof(
 export async function proveSpeciesBackboneGardenReadback(
   executor: Kysely<Database>,
   catalogItemId: string,
+  projection = speciesBackboneAllowedProjection(),
 ): Promise<SpeciesBackboneGardenReadbackProof> {
   try {
     await executor.transaction().execute(async (trx) => {
-      const projection = speciesBackboneAllowedProjection();
       const space = await trx
         .insertInto("spaces")
         .values({
           owner_user_id: PROOF_OWNER_USER_ID,
-          display_name: "OVE-59 alias promotion proof",
+          display_name: "OVE-82 species backbone proof",
           location_visibility: "hidden",
           coarse_region_code: null,
         })
@@ -351,7 +392,7 @@ export async function proveSpeciesBackboneGardenReadback(
         .values({
           owner_user_id: PROOF_OWNER_USER_ID,
           space_id: space.id,
-          display_name: "Proof tomato",
+          display_name: `Proof ${projection.acceptedScientificName}`,
           catalog_item_id: catalogItemId,
           variety_text: projection.canonicalName,
           variety_state: "selected",
@@ -367,8 +408,8 @@ export async function proveSpeciesBackboneGardenReadback(
           owner_user_id: PROOF_OWNER_USER_ID,
           space_id: space.id,
           plant_object_id: plantObject.id,
-          title: "OVE-59 alias promotion proof",
-          body: "Local alias selection reads back the canonical species identity without raw source fields.",
+          title: "OVE-82 species backbone proof",
+          body: "Species selection reads back the canonical catalog identity without raw source fields.",
           entry_scope: "object",
           entry_date: "2026-06-30",
           visibility: "private",
@@ -468,10 +509,15 @@ export function buildUpsertSpeciesBackboneRecordQuery(
     sourceSnapshotId: string;
     rawPayloadSha256: string;
     definition?: SpeciesBackboneImportDefinition;
+    projection?: SpeciesBackboneProjection;
   },
 ) {
   const now = new Date();
-  const definition = input.definition ?? speciesBackboneSeedDefinition();
+  const projection =
+    input.projection ??
+    speciesBackboneAllowedProjection(
+      input.definition ?? speciesBackboneSeedDefinition(),
+    );
 
   return executor
     .insertInto("catalog_source_records")
@@ -484,7 +530,7 @@ export function buildUpsertSpeciesBackboneRecordQuery(
         speciesBackboneSourceOnlyFields(sourceRecord),
       ),
       allowed_projection: jsonbParam(
-        speciesBackboneAllowedProjectionJson(definition),
+        speciesBackboneAllowedProjectionJson(projection),
       ),
       projection_status: "projected",
     })
@@ -496,7 +542,7 @@ export function buildUpsertSpeciesBackboneRecordQuery(
           speciesBackboneSourceOnlyFields(sourceRecord),
         ),
         allowed_projection: jsonbParam(
-          speciesBackboneAllowedProjectionJson(definition),
+          speciesBackboneAllowedProjectionJson(projection),
         ),
         projection_status: "projected",
         updated_at: now,

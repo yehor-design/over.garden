@@ -40,8 +40,8 @@ describe("OVE-80 catalog full-import dry-run", () => {
       "genebank-long-tail",
     ]);
     expect(report.totals.targets).toBe(6);
-    expect(report.totals.productConceptsWouldProject).toBe(6);
-    expect(report.totals.rawRowsWouldCapture).toBe(15188);
+    expect(report.totals.productConceptsWouldProject).toBe(9);
+    expect(report.totals.rawRowsWouldCapture).toBe(15203);
     expect(report.totals.blockedRows).toBeGreaterThan(0);
     expect(
       report.targets.every(
@@ -136,6 +136,35 @@ describe("OVE-80 catalog full-import dry-run", () => {
         }),
       ]),
     );
+  });
+
+  it("reports the OVE-82 planned species backbone as a multi-concept target", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["species-backbone"],
+      }),
+      generatedAt: "2026-07-01T13:00:00.000Z",
+    });
+
+    expect(report.targets[0]).toMatchObject({
+      key: "species-backbone",
+      downstreamIssue: "OVE-82",
+      projectionScope: "full_import_wave",
+      sources: [
+        "catalogue-of-life-checklistbank",
+        "world-flora-online",
+        "gbif-backbone",
+        "eppo-codes",
+        "wikidata",
+      ],
+      counts: expect.objectContaining({
+        sourceRowsWouldRead: 20,
+        rawRowsWouldCapture: 20,
+        productConceptsWouldProject: 4,
+      }),
+    });
   });
 
   it("enforces OVE-79 source verdicts before full projection", () => {

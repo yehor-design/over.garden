@@ -13,6 +13,7 @@ import {
 } from "@/lib/catalog/ua-state-register-variety";
 import {
   SPECIES_BACKBONE_PARSER_VERSION,
+  speciesBackboneConcepts,
   speciesBackboneSeedDefinition,
 } from "@/lib/catalog/species-backbone-seed";
 import {
@@ -376,7 +377,16 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
   const sampleProjection = catalogSourceSampleAllowedProjection();
   const uaProjection = uaStateRegisterAllowedProjection();
   const speciesDefinition = speciesBackboneSeedDefinition();
-  const speciesProjection = speciesDefinition.projection;
+  const speciesConcepts = speciesBackboneConcepts(speciesDefinition);
+  const speciesSourceRecords = speciesConcepts.flatMap(
+    (concept) => concept.sourceRecords,
+  );
+  const speciesAliasCandidates = speciesConcepts.flatMap(
+    (concept) => concept.aliasCandidates,
+  );
+  const speciesSourceSlugs = dedupeStrings(
+    speciesSourceRecords.map((record) => record.source.slug),
+  );
   const breedDefinition = breedSeedDefinition();
   const bgDefinition = bgOfficialVarietyDefinition();
   const genebankDefinition = genebankLongTailDefinition();
@@ -465,45 +475,44 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     {
       key: "species-backbone",
       packageScript: "catalog:sources:import-species-backbone",
-      sourceSet: "OVE-58 species backbone",
-      importerIssue: "OVE-58",
+      sourceSet: "OVE-82 planned species backbone wave",
+      importerIssue: "OVE-82",
       downstreamIssue: "OVE-82",
       projectionScope: "full_import_wave",
-      sourceSlugs: speciesDefinition.sourceRecords.map(
-        (record) => record.source.slug,
-      ),
-      readinessSourceSlugs: speciesDefinition.sourceRecords.map(
-        (record) => record.source.slug,
-      ),
+      sourceSlugs: speciesSourceSlugs,
+      readinessSourceSlugs: speciesSourceSlugs,
       rowCounts: {
-        sourceRowsWouldRead: speciesDefinition.sourceRecords.length,
-        rawRowsWouldCapture: speciesDefinition.sourceRecords.length,
-        productConceptsWouldProject: 1,
-        aliasesWouldProject: speciesProjection.aliases.length,
-        reviewNeededRows: speciesDefinition.aliasCandidates.filter(
+        sourceRowsWouldRead: speciesSourceRecords.length,
+        rawRowsWouldCapture: speciesSourceRecords.length,
+        productConceptsWouldProject: speciesConcepts.length,
+        aliasesWouldProject: speciesConcepts.reduce(
+          (total, concept) => total + concept.projection.aliases.length,
+          0,
+        ),
+        reviewNeededRows: speciesAliasCandidates.filter(
           (alias) => alias.status === "review_needed",
         ).length,
-        rejectedRows: speciesDefinition.aliasCandidates.filter(
+        rejectedRows: speciesAliasCandidates.filter(
           (alias) => alias.status === "rejected",
         ).length,
-        blockedRows: speciesDefinition.aliasCandidates.filter(
+        blockedRows: speciesAliasCandidates.filter(
           (alias) =>
             alias.status === "review_needed" ||
             alias.status === "rejected" ||
             alias.status === "generated",
         ).length,
-        attributionRequiredSources: speciesDefinition.sourceRecords.filter(
+        attributionRequiredSources: speciesSourceRecords.filter(
           (record) => record.source.attributionRequired,
         ).length,
       },
       parserVersions: [SPECIES_BACKBONE_PARSER_VERSION],
-      projectionRequests: speciesDefinition.sourceRecords.flatMap((record) => [
+      projectionRequests: speciesSourceSlugs.flatMap((sourceSlug) => [
         {
-          sourceSlug: record.source.slug,
+          sourceSlug,
           productSurface: "catalog_items" as const,
         },
         {
-          sourceSlug: record.source.slug,
+          sourceSlug,
           productSurface: "catalog_item_names" as const,
         },
       ]),
@@ -903,4 +912,8 @@ function dedupeTargets(
   targets: CatalogFullImportDryRunTarget[],
 ): CatalogFullImportDryRunTarget[] {
   return [...new Set(targets)];
+}
+
+function dedupeStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }

@@ -68,11 +68,24 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain(
       'lower("catalog_item_names"."display_name") like $3',
     );
+    expect(compiled.sql).toContain(
+      'when "catalog_item_names"."normalized_name" = $4 then 0',
+    );
+    expect(compiled.sql).toContain(
+      'when "catalog_item_names"."normalized_name" like $5 then 1',
+    );
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.sql).not.toContain("catalog_source_records");
     expect(compiled.sql).not.toContain("raw_payload");
-    expect(compiled.parameters).toEqual(["seeded", "confirmed", "%чері%", 5]);
+    expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
+      "%чері%",
+      "чері",
+      "чері%",
+      5,
+    ]);
   });
 
   it("queries the dedicated Meili index and filters unsafe hits", async () => {

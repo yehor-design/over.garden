@@ -10,13 +10,19 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
-import { speciesBackboneSeedDefinition } from "../src/lib/catalog/species-backbone-seed";
+import {
+  speciesBackboneConcepts,
+  speciesBackboneSeedDefinition,
+  type SpeciesBackboneAliasCandidate,
+  type SpeciesBackboneConceptDefinition,
+} from "../src/lib/catalog/species-backbone-seed";
 import {
   importSpeciesBackboneSeed,
   proveSpeciesBackboneGardenReadback,
   readSpeciesBackboneAliasCurationProof,
   readSpeciesBackboneSourceProvenanceProof,
   readSpeciesBackboneTypeaheadProof,
+  type SpeciesBackboneConceptImportSummary,
 } from "../src/server/catalog-source/species-backbone-import";
 
 const REQUIRED_SOURCE_SLUGS = [
@@ -34,6 +40,12 @@ const FORBIDDEN_OUTPUT_MARKERS = [
   '"rawPayload":',
   '"allowedProjection":',
   '"allowed_projection":',
+  "sourceRecordId",
+  "source_record_id",
+  "sourceRecordKey",
+  "source_record_key",
+  "rawPayloadSha256",
+  "sourceFileSha256",
   "decimalLatitude",
   "decimalLongitude",
   "poisonCoordinateSentinel",
@@ -62,128 +74,150 @@ const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 
 async function main() {
   const definition = speciesBackboneSeedDefinition();
+  const concepts = speciesBackboneConcepts(definition);
   const imported = await importSpeciesBackboneSeed(db, definition);
   const rerun = await importSpeciesBackboneSeed(db, definition);
 
-  const scientificTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    imported.acceptedScientificName,
-  );
-  const englishAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    "Tomato",
-  );
-  const ukrainianAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    "помідор",
-  );
-  const synonymTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    "Lycopersicon esculentum",
-  );
-  const reviewNeededAliasTypeaheadProof =
-    await readSpeciesBackboneTypeaheadProof(db, "garden tomato");
-  const rejectedAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    "love apple",
-  );
-  const generatedAliasTypeaheadProof = await readSpeciesBackboneTypeaheadProof(
-    db,
-    "помидор",
-  );
-  const provenanceProof = await readSpeciesBackboneSourceProvenanceProof(
-    db,
-    imported.catalogItemId,
-  );
-  const aliasCurationProof = await readSpeciesBackboneAliasCurationProof(
-    db,
-    imported.catalogItemId,
-  );
-  const gardenReadbackProof = await proveSpeciesBackboneGardenReadback(
-    db,
-    imported.catalogItemId,
-  );
-
-  if (rerun.catalogItemId !== imported.catalogItemId) {
-    throw new Error("Re-run import created a different catalog item.");
+  if (imported.importedConcepts !== concepts.length) {
+    throw new Error(
+      `Species import projected ${imported.importedConcepts} concepts; expected ${concepts.length}.`,
+    );
+  }
+  if (rerun.importedConcepts !== imported.importedConcepts) {
+    throw new Error("Re-run import changed the imported concept count.");
   }
 
-  for (const slug of REQUIRED_SOURCE_SLUGS) {
-    if (rerun.sourceRecordIds[slug] !== imported.sourceRecordIds[slug]) {
-      throw new Error(`Re-run import created a different ${slug} source row.`);
+  const importedByKey = indexSummaries(imported.concepts);
+  const rerunByKey = indexSummaries(rerun.concepts);
+  const typeaheadProof = [];
+  const blockedAliasProof = [];
+  const provenanceProof = [];
+  const aliasCurationProof = [];
+  const gardenReadbackProof = [];
+
+  for (const concept of concepts) {
+    const summary = requiredSummary(importedByKey, concept.key);
+    const rerunSummary = requiredSummary(rerunByKey, concept.key);
+
+    if (rerunSummary.catalogItemId !== summary.catalogItemId) {
+      throw new Error(`${concept.key} re-run created a different catalog item.`);
     }
-    if (!provenanceProof.some((row) => row.sourceSlug === slug)) {
-      throw new Error(`Missing provenance row for ${slug}.`);
-    }
-  }
-  assertRequiredAttributionProof(provenanceProof);
 
-  if (
-    !scientificTypeaheadProof.some(
-      (row) => row.catalogItemId === imported.catalogItemId,
-    )
-  ) {
-    throw new Error("Imported species is missing by accepted scientific name.");
+    for (const slug of REQUIRED_SOURCE_SLUGS) {
+      if (rerunSummary.sourceRecordIds[slug] !== summary.sourceRecordIds[slug]) {
+        throw new Error(
+          `${concept.key} re-run created a different ${slug} source row.`,
+        );
+      }
+    }
+
+    for (const query of representativeProjectedQueries(concept)) {
+      const rows = await readSpeciesBackboneTypeaheadProof(db, query);
+      const matchingRows = rows.filter(
+        (row) => row.catalogItemId === summary.catalogItemId,
+      );
+      if (matchingRows.length === 0) {
+        throw new Error(
+          `${concept.key} is missing from typeahead for query "${query}".`,
+        );
+      }
+      typeaheadProof.push({
+        conceptKey: concept.key,
+        query,
+        matchedDisplays: matchingRows.map((row) => row.displayName),
+        canonicalName: summary.canonicalName,
+        catalogKind: summary.catalogKind,
+      });
+    }
+
+    for (const alias of concept.aliasCandidates.filter(
+      (candidate) => candidate.status !== "accepted",
+    )) {
+      const rows = await readSpeciesBackboneTypeaheadProof(
+        db,
+        alias.displayName,
+      );
+      assertNoCatalogItemMatch(
+        rows,
+        summary.catalogItemId,
+        `${concept.key} ${alias.status} alias reached typeahead: ${alias.displayName}`,
+      );
+      blockedAliasProof.push({
+        conceptKey: concept.key,
+        displayName: alias.displayName,
+        status: alias.status,
+        projectedToTypeahead: false,
+      });
+    }
+
+    const sourceRows = await readSpeciesBackboneSourceProvenanceProof(
+      db,
+      summary.catalogItemId,
+    );
+    assertRequiredSourceCoverage(concept.key, sourceRows);
+    assertRequiredAttributionProof(sourceRows);
+    provenanceProof.push({
+      conceptKey: concept.key,
+      sourceSlugs: sourceRows.map((row) => row.sourceSlug).sort(),
+      attributionRequiredSources: sourceRows.filter(
+        (row) => row.attributionRequired,
+      ).length,
+      attributionCreditsPresent: true,
+    });
+
+    const aliasRows = await readSpeciesBackboneAliasCurationProof(
+      db,
+      summary.catalogItemId,
+    );
+    assertAliasCurationProof(aliasRows, summary.catalogItemId);
+    aliasCurationProof.push({
+      conceptKey: concept.key,
+      statusCounts: countAliasStatuses(aliasRows),
+      acceptedProjectedToTypeahead: aliasRows
+        .filter((row) => row.status === "accepted")
+        .every((row) => row.projectedToTypeahead),
+      blockedAliasesHeldForReview: aliasRows
+        .filter((row) => row.status !== "accepted")
+        .every((row) => !row.projectedToTypeahead),
+    });
+
+    const gardenReadback = await proveSpeciesBackboneGardenReadback(
+      db,
+      summary.catalogItemId,
+      concept.projection,
+    );
+    if (gardenReadback.catalogItemId !== summary.catalogItemId) {
+      throw new Error(
+        `${concept.key} garden readback did not preserve catalog identity.`,
+      );
+    }
+    if (gardenReadback.catalogSource !== "species_backbone") {
+      throw new Error(
+        `${concept.key} garden readback did not preserve species source.`,
+      );
+    }
+    gardenReadbackProof.push({
+      conceptKey: concept.key,
+      canonicalName: gardenReadback.catalogCanonicalName,
+      varietyState: gardenReadback.varietyState,
+      catalogSource: gardenReadback.catalogSource,
+    });
   }
-  if (
-    !englishAliasTypeaheadProof.some(
-      (row) => row.catalogItemId === imported.catalogItemId,
-    )
-  ) {
-    throw new Error("Imported species is missing by English common name.");
-  }
-  if (
-    !ukrainianAliasTypeaheadProof.some(
-      (row) => row.catalogItemId === imported.catalogItemId,
-    )
-  ) {
-    throw new Error("Imported species is missing by Ukrainian common name.");
-  }
-  if (
-    !synonymTypeaheadProof.some(
-      (row) => row.catalogItemId === imported.catalogItemId,
-    )
-  ) {
-    throw new Error("Imported species is missing by source-backed synonym.");
-  }
-  assertNoCatalogItemMatch(
-    reviewNeededAliasTypeaheadProof,
-    imported.catalogItemId,
-    "review-needed alias reached typeahead",
-  );
-  assertNoCatalogItemMatch(
-    rejectedAliasTypeaheadProof,
-    imported.catalogItemId,
-    "rejected alias reached typeahead",
-  );
-  assertNoCatalogItemMatch(
-    generatedAliasTypeaheadProof,
-    imported.catalogItemId,
-    "generated alias reached typeahead",
-  );
-  if (gardenReadbackProof.catalogItemId !== imported.catalogItemId) {
-    throw new Error("Garden readback proof did not preserve catalog identity.");
-  }
-  if (gardenReadbackProof.catalogSource !== "species_backbone") {
-    throw new Error("Garden readback proof did not preserve species source.");
-  }
-  assertAliasCurationProof(aliasCurationProof, imported.catalogItemId);
 
   const output = {
-    imported,
+    imported: {
+      importedConcepts: imported.importedConcepts,
+      sourceRowsImported: imported.sourceRowsImported,
+      concepts: imported.concepts.map(redactConceptSummary),
+      reindexQueued: imported.reindexQueued,
+    },
     idempotencyProof: {
-      rerunCatalogItemId: rerun.catalogItemId,
-      rerunSourceRecordIds: rerun.sourceRecordIds,
+      rerunImportedConcepts: rerun.importedConcepts,
+      stableCatalogItems: true,
+      stableSourceRows: true,
     },
-    scientificTypeaheadProof,
-    englishAliasTypeaheadProof,
-    ukrainianAliasTypeaheadProof,
-    synonymTypeaheadProof,
-    blockedAliasTypeaheadProof: {
-      reviewNeededAliasTypeaheadProof,
-      rejectedAliasTypeaheadProof,
-      generatedAliasTypeaheadProof,
-    },
+    typeaheadProof,
+    blockedAliasProof,
     provenanceProof,
     aliasCurationProof,
     gardenReadbackProof,
@@ -192,6 +226,43 @@ async function main() {
   assertNoForbiddenOutput(output);
 
   console.log(JSON.stringify(output, null, 2));
+}
+
+function representativeProjectedQueries(
+  concept: SpeciesBackboneConceptDefinition,
+) {
+  const queries = concept.projection.aliases.map((alias) => alias.displayName);
+  return [...new Set(queries)];
+}
+
+function redactConceptSummary(summary: SpeciesBackboneConceptImportSummary) {
+  return {
+    key: summary.key,
+    catalogItemId: summary.catalogItemId,
+    catalogKind: summary.catalogKind,
+    canonicalName: summary.canonicalName,
+    acceptedScientificName: summary.acceptedScientificName,
+    publicSlug: summary.publicSlug,
+    sourceSlugs: [...new Set(summary.sourceSlugs)].sort(),
+    aliasesProjected: summary.aliasesProjected,
+    aliasesRecorded: summary.aliasesRecorded,
+    aliasStatusCounts: summary.aliasStatusCounts,
+  };
+}
+
+function indexSummaries(summaries: SpeciesBackboneConceptImportSummary[]) {
+  return new Map(summaries.map((summary) => [summary.key, summary]));
+}
+
+function requiredSummary(
+  summaries: ReadonlyMap<string, SpeciesBackboneConceptImportSummary>,
+  key: string,
+) {
+  const summary = summaries.get(key);
+  if (!summary) {
+    throw new Error(`Missing import summary for species concept ${key}.`);
+  }
+  return summary;
 }
 
 function assertNoForbiddenOutput(output: unknown) {
@@ -224,45 +295,44 @@ function assertAliasCurationProof(
   }>,
   catalogItemId: string,
 ) {
-  const byName = new Map(rows.map((row) => [row.displayName, row]));
-  const acceptedUkrainianAlias = byName.get("помідор");
-  const reviewNeededAlias = byName.get("garden tomato");
-  const rejectedAlias = byName.get("love apple");
-  const generatedAlias = byName.get("помидор");
+  const acceptedRows = rows.filter((row) => row.status === "accepted");
+  const blockedRows = rows.filter((row) => row.status !== "accepted");
+  if (acceptedRows.length === 0) {
+    throw new Error("Missing accepted alias curation proof.");
+  }
+  if (blockedRows.length === 0) {
+    throw new Error("Missing blocked alias curation proof.");
+  }
 
-  if (!acceptedUkrainianAlias) {
-    throw new Error("Missing accepted Ukrainian alias curation proof.");
+  for (const row of acceptedRows) {
+    if (
+      row.catalogItemId !== catalogItemId ||
+      row.sourceMethod !== "source_backed" ||
+      !row.projectedToTypeahead
+    ) {
+      throw new Error(
+        `Accepted alias curation proof is invalid for ${row.displayName}.`,
+      );
+    }
   }
-  if (
-    acceptedUkrainianAlias.catalogItemId !== catalogItemId ||
-    acceptedUkrainianAlias.status !== "accepted" ||
-    acceptedUkrainianAlias.sourceSlug !== "wikidata" ||
-    acceptedUkrainianAlias.sourceMethod !== "source_backed" ||
-    !acceptedUkrainianAlias.projectedToTypeahead
-  ) {
-    throw new Error("Accepted Ukrainian alias curation proof is invalid.");
+
+  for (const row of blockedRows) {
+    if (row.projectedToTypeahead) {
+      throw new Error(
+        `Blocked alias curation proof is invalid for ${row.displayName}.`,
+      );
+    }
   }
-  if (
-    !reviewNeededAlias ||
-    reviewNeededAlias.status !== "review_needed" ||
-    reviewNeededAlias.projectedToTypeahead
-  ) {
-    throw new Error("Review-needed alias curation proof is invalid.");
-  }
-  if (
-    !rejectedAlias ||
-    rejectedAlias.status !== "rejected" ||
-    rejectedAlias.projectedToTypeahead
-  ) {
-    throw new Error("Rejected alias curation proof is invalid.");
-  }
-  if (
-    !generatedAlias ||
-    generatedAlias.status !== "generated" ||
-    generatedAlias.sourceMethod !== "generated" ||
-    generatedAlias.projectedToTypeahead
-  ) {
-    throw new Error("Generated alias curation proof is invalid.");
+}
+
+function assertRequiredSourceCoverage(
+  conceptKey: string,
+  rows: Array<{ sourceSlug: string }>,
+) {
+  for (const slug of REQUIRED_SOURCE_SLUGS) {
+    if (!rows.some((row) => row.sourceSlug === slug)) {
+      throw new Error(`Missing ${conceptKey} provenance row for ${slug}.`);
+    }
   }
 }
 
@@ -286,6 +356,15 @@ function assertRequiredAttributionProof(
         .join(", ")}.`,
     );
   }
+}
+
+function countAliasStatuses(
+  rows: Array<{ status: SpeciesBackboneAliasCandidate["status"] | string }>,
+) {
+  return rows.reduce<Record<string, number>>((counts, row) => {
+    counts[row.status] = (counts[row.status] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 main()

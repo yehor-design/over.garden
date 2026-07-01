@@ -264,7 +264,9 @@ export function buildCatalogTypeaheadQuery(
   normalizedQuery: string,
   limit = MAX_CATALOG_SUGGESTIONS,
 ) {
-  const pattern = `%${normalizeCatalogQuery(normalizedQuery)}%`;
+  const normalizedSearch = normalizeCatalogQuery(normalizedQuery);
+  const pattern = `%${normalizedSearch}%`;
+  const prefixPattern = `${normalizedSearch}%`;
 
   return executor
     .selectFrom("catalog_item_names")
@@ -287,7 +289,15 @@ export function buildCatalogTypeaheadQuery(
     .where(
       sql<boolean>`lower(${sql.ref("catalog_item_names.display_name")}) like ${pattern}`,
     )
-    .orderBy("catalog_item_names.is_primary", "desc")
+    .orderBy(
+      sql<number>`case
+        when ${sql.ref("catalog_item_names.normalized_name")} = ${normalizedSearch} then 0
+        when ${sql.ref("catalog_item_names.normalized_name")} like ${prefixPattern} then 1
+        when ${sql.ref("catalog_item_names.is_primary")} then 2
+        else 3
+      end`,
+      "asc",
+    )
     .orderBy("catalog_items.updated_at", "desc")
     .orderBy("catalog_item_names.display_name", "asc")
     .limit(normalizeCatalogTypeaheadRowLimit(limit));
