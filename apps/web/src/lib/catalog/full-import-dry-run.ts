@@ -32,6 +32,16 @@ import {
   checkCatalogSourceProductProjection,
   type CatalogSourceSpecificProjectionGate,
 } from "@/server/catalog-source/source-projection-guard";
+import {
+  EU_COMMON_CATALOGUE_CONFIDENCE_THRESHOLDS,
+  EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
+  extractFormexXmlFilesFromZip,
+  parseEuCommonCatalogueFormex,
+  type EuCommonCatalogueConfidenceBucket,
+  type EuCommonCatalogueParsedRow,
+  type EuCommonCatalogueParserResult,
+  type EuCommonCatalogueSupplementType,
+} from "./eu-common-catalogue-parser";
 
 const MANIFEST_URL = new URL(
   "../../../../../docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json",
@@ -255,7 +265,7 @@ export interface CatalogFullImportDryRunReport {
 }
 
 export interface CatalogFullImportDryRunSourceInventory {
-  issue: "OVE-101";
+  issue: "OVE-102";
   status: "passed" | "review_needed";
   discoverySource: {
     url: string;
@@ -271,12 +281,13 @@ export interface CatalogFullImportDryRunSourceInventory {
     notes: string[];
   };
   candidates: CatalogFullImportDryRunSourceInventoryCandidate[];
+  parserQa?: CatalogFullImportDryRunSourceParserQa;
   reviewNeeded: string[];
 }
 
 export interface CatalogFullImportDryRunSourceInventoryCandidate {
   sourceFamily: "eu-official-journal-common-catalogue";
-  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+  supplementType: EuCommonCatalogueSupplementType;
   label: string;
   title: string | null;
   publicationDate: string | null;
@@ -290,12 +301,13 @@ export interface CatalogFullImportDryRunSourceInventoryCandidate {
   cellarId: string | null;
   artifacts: CatalogFullImportDryRunSourceInventoryArtifact[];
   fetchStatus: "fetched" | "review_needed";
-  parseStatus: "metadata_only_not_parsed";
-  reviewStatus: "ready_for_parser_plan" | "review_needed";
+  parseStatus: "formex_parser_qa_reported" | "parser_qa_review_needed";
+  reviewStatus: "parser_qa_reported" | "review_needed";
+  parserQa?: CatalogFullImportDryRunCandidateParserQa;
 }
 
 export interface CatalogFullImportDryRunSourceInventoryArtifact {
-  format: "xml_notice" | "celex_rdf" | "html" | "pdf";
+  format: "xml_notice" | "formex_zip" | "celex_rdf" | "html" | "pdf";
   role:
     | "preferred_machine_readable"
     | "metadata_fallback"
@@ -305,12 +317,61 @@ export interface CatalogFullImportDryRunSourceInventoryArtifact {
   fetchStatus: "fetched" | "available_not_fetched" | "review_needed";
   parseStatus:
     | "metadata_parsed"
+    | "parser_qa_parsed"
     | "not_parsed_dry_run_only"
-    | "not_machine_preferred";
+    | "not_machine_preferred"
+    | "fallback_review_needed";
   httpStatus: number | null;
   contentType: string | null;
   byteLength: number | null;
   checksumSha256: string | null;
+}
+
+export interface CatalogFullImportDryRunSourceParserQa {
+  issue: "OVE-102";
+  status: "passed" | "review_needed";
+  parserVersion: string;
+  thresholds: typeof EU_COMMON_CATALOGUE_CONFIDENCE_THRESHOLDS;
+  totals: EuCommonCatalogueParserResult["totals"];
+  bySupplement: EuCommonCatalogueParserResult["bySupplement"];
+  bySpeciesOrCrop: EuCommonCatalogueParserResult["bySpeciesOrCrop"];
+  byCountry: EuCommonCatalogueParserResult["byCountry"];
+  byNotifier: EuCommonCatalogueParserResult["byNotifier"];
+  byConfidenceBucket: EuCommonCatalogueParserResult["byConfidenceBucket"];
+  sampleRows: CatalogFullImportDryRunParserQaSampleRow[];
+  reviewNeeded: string[];
+  rejected: string[];
+}
+
+export interface CatalogFullImportDryRunCandidateParserQa {
+  parserVersion: string;
+  thresholds: typeof EU_COMMON_CATALOGUE_CONFIDENCE_THRESHOLDS;
+  totals: EuCommonCatalogueParserResult["totals"];
+  bySpeciesOrCrop: EuCommonCatalogueParserResult["bySpeciesOrCrop"];
+  byCountry: EuCommonCatalogueParserResult["byCountry"];
+  byNotifier: EuCommonCatalogueParserResult["byNotifier"];
+  byConfidenceBucket: EuCommonCatalogueParserResult["byConfidenceBucket"];
+  sampleRows: CatalogFullImportDryRunParserQaSampleRow[];
+}
+
+export interface CatalogFullImportDryRunParserQaSampleRow {
+  supplementType: EuCommonCatalogueSupplementType;
+  supplementLabel: string;
+  varietyDenomination: string | null;
+  speciesOrCrop: string | null;
+  countryCode: string | null;
+  notifierCode: string | null;
+  admissionAction: "add" | "delete" | "modify" | null;
+  marketExtensionDate: string | null;
+  registerType: "agricultural_common_catalogue" | "vegetable_common_catalogue";
+  ojCitation: string | null;
+  sourceUrl: string;
+  publicationDate: string | null;
+  artifactChecksumSha256: string;
+  parserVersion: string;
+  extractionConfidence: number;
+  confidenceBucket: EuCommonCatalogueConfidenceBucket;
+  statusReasons: string[];
 }
 
 export type CatalogFullImportDryRunFetch = (
@@ -470,12 +531,13 @@ export async function buildCatalogFullImportDryRunReportWithLiveInventory(input:
   );
   const targets = report.targets.map((target) =>
     target.key === EU_OJ_COMMON_CATALOGUE_TARGET
-      ? { ...target, sourceInventory }
+      ? applyEuOfficialJournalParserQaToTarget(target, sourceInventory)
       : target,
   );
   const updatedReport = {
     ...report,
     targets,
+    totals: buildTotals(targets),
   };
 
   assertNoForbiddenCatalogFullImportDryRunEvidence(updatedReport);
@@ -857,15 +919,16 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     {
       key: EU_OJ_COMMON_CATALOGUE_TARGET,
       packageScript: "catalog:sources:dry-run",
-      sourceSet: "OVE-101 EUR-Lex Official Journal Common Catalogue inventory",
-      importerIssue: "OVE-101",
+      sourceSet:
+        "OVE-102 EUR-Lex Official Journal Common Catalogue Formex parser QA",
+      importerIssue: "OVE-102",
       downstreamIssue: "OVE-85",
       projectionScope: "raw_quarantine_only",
       sourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
       readinessSourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
       rowCounts: {
-        sourceRowsWouldRead: 2,
-        rawRowsWouldCapture: 2,
+        sourceRowsWouldRead: 0,
+        rawRowsWouldCapture: 0,
         productConceptsWouldProject: 0,
         aliasesWouldProject: 0,
         reviewNeededRows: 0,
@@ -873,7 +936,10 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
         blockedRows: 0,
         attributionRequiredSources: 1,
       },
-      parserVersions: [EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION],
+      parserVersions: [
+        EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION,
+        EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
+      ],
       projectionRequests: [],
       duplicateSignals: [],
     },
@@ -940,6 +1006,39 @@ function buildTargetReport(
 
   assertNoForbiddenCatalogFullImportDryRunEvidence(report);
   return report;
+}
+
+function applyEuOfficialJournalParserQaToTarget(
+  target: CatalogFullImportDryRunTargetReport,
+  sourceInventory: CatalogFullImportDryRunSourceInventory,
+): CatalogFullImportDryRunTargetReport {
+  if (!sourceInventory.parserQa) {
+    return {
+      ...target,
+      sourceInventory,
+    };
+  }
+
+  const totals = sourceInventory.parserQa.totals;
+
+  return {
+    ...target,
+    counts: {
+      sourceRowsWouldRead: totals.parsedRows,
+      rawRowsWouldCapture: totals.parsedRows,
+      productConceptsWouldProject: 0,
+      aliasesWouldProject: 0,
+      reviewNeededRows: totals.reviewNeededRows,
+      rejectedRows: totals.rejectedRows,
+      blockedRows: totals.reviewNeededRows + totals.rejectedRows,
+      attributionRequiredSources: 1,
+    },
+    parserVersions: dedupeStrings([
+      ...target.parserVersions,
+      sourceInventory.parserQa.parserVersion,
+    ]),
+    sourceInventory,
+  };
 }
 
 function assertReadinessVerdictsAllowTarget(
@@ -1155,15 +1254,26 @@ async function buildEuOfficialJournalCommonCatalogueInventory(
     ),
   );
   for (const candidate of enrichedCandidates) {
-    if (candidate.reviewStatus === "review_needed") {
+    if (!candidate.parserQa) {
       reviewNeeded.push(
-        `${candidate.label} needs review because one or more preferred machine-readable artifacts were unavailable or ambiguous.`,
+        `${candidate.label} needs review because the preferred Formex ZIP parser path was unavailable or ambiguous.`,
+      );
+      continue;
+    }
+
+    if (
+      candidate.parserQa.totals.reviewNeededRows > 0 ||
+      candidate.parserQa.totals.rejectedRows > 0
+    ) {
+      reviewNeeded.push(
+        `${candidate.label} parser QA reported ${candidate.parserQa.totals.reviewNeededRows} review-needed rows and ${candidate.parserQa.totals.rejectedRows} rejected rows before product projection.`,
       );
     }
   }
+  const parserQa = buildEuOfficialJournalSourceParserQa(enrichedCandidates);
 
   return {
-    issue: "OVE-101",
+    issue: "OVE-102",
     status: reviewNeeded.length > 0 ? "review_needed" : "passed",
     discoverySource: {
       url: DG_SANTE_COMMON_CATALOGUE_URL,
@@ -1176,17 +1286,19 @@ async function buildEuOfficialJournalCommonCatalogueInventory(
     },
     fetchStrategy: {
       preferredArtifactOrder: [
-        "EUR-Lex XML notice from legal-content/.../TXT/XML",
+        "Publications Office Formex XML ZIP discovered from the EUR-Lex XML notice",
+        "EUR-Lex XML notice from legal-content/.../TXT/XML for manifestation discovery",
         "Cellar REST/SPARQL or data.europa.eu ELI link for work/expression metadata",
         "EUR-Lex HTML source page for OJ citation and fallback metadata",
-        "Authentic OJ PDF only as a human/legal fallback, not the first parser input",
+        "Authentic OJ PDF only as a human/legal fallback when Formex/XML is unavailable",
       ],
       notes: [
-        "This target is an inventory dry-run only: it fetches public source pages and XML notices, computes checksums, and performs no parser projection.",
-        "Unavailable or ambiguous XML/Formex paths are reported as review-needed before OVE-85 parser work.",
+        "This target fetches public official EUR-Lex/OJ artifacts, parses Formex XML rows for operator QA, and still performs no product projection.",
+        "Unavailable or ambiguous Formex paths, HTML-only evidence, and PDF-only evidence are reported as review-needed before OVE-85 import work.",
       ],
     },
     candidates: enrichedCandidates,
+    ...(parserQa ? { parserQa } : {}),
     reviewNeeded,
   };
 }
@@ -1195,7 +1307,7 @@ async function buildEuOfficialJournalCandidate(
   fetchImpl: CatalogFullImportDryRunFetch,
   candidate: {
     label: string;
-    supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+    supplementType: EuCommonCatalogueSupplementType;
     eurLexUrl: string;
   },
 ): Promise<CatalogFullImportDryRunSourceInventoryCandidate> {
@@ -1251,6 +1363,24 @@ async function buildEuOfficialJournalCandidate(
   const celexRdf = celexRdfUrl
     ? await fetchTextArtifact(fetchImpl, celexRdfUrl)
     : null;
+  const formexZipUrl = xml?.ok ? readFormexZipUrl(xml.text) : null;
+  const formexZip = formexZipUrl
+    ? await fetchTextArtifact(fetchImpl, formexZipUrl)
+    : null;
+  const parserResult =
+    formexZip?.ok && formexZip.checksumSha256
+      ? parseCandidateFormexZip({
+          candidate,
+          formexZipBuffer: formexZip.buffer,
+          sourceUrl: candidate.eurLexUrl,
+          ojCitation,
+          publicationDate,
+          artifactChecksumSha256: formexZip.checksumSha256,
+        })
+      : null;
+  const parserQa = parserResult?.ok
+    ? buildCandidateParserQa(parserResult.result)
+    : null;
   const rdfPublicationDate = celexRdf?.ok
     ? readFirstMatch(
         celexRdf.text,
@@ -1299,14 +1429,48 @@ async function buildEuOfficialJournalCandidate(
         byteLength: null,
         checksumSha256: null,
       };
+  const formexArtifact: CatalogFullImportDryRunSourceInventoryArtifact =
+    formexZipUrl
+      ? {
+          format: "formex_zip",
+          role: "preferred_machine_readable",
+          url: formexZipUrl,
+          fetchStatus: formexZip?.ok && parserQa ? "fetched" : "review_needed",
+          parseStatus:
+            formexZip?.ok && parserQa
+              ? "parser_qa_parsed"
+              : "fallback_review_needed",
+          httpStatus: formexZip?.httpStatus ?? null,
+          contentType: formexZip?.contentType ?? null,
+          byteLength: formexZip?.byteLength ?? null,
+          checksumSha256: formexZip?.ok ? formexZip.checksumSha256 : null,
+        }
+      : {
+          format: "formex_zip",
+          role: "preferred_machine_readable",
+          url: null,
+          fetchStatus: "review_needed",
+          parseStatus: "fallback_review_needed",
+          httpStatus: null,
+          contentType: null,
+          byteLength: null,
+          checksumSha256: null,
+        };
   const reviewStatus =
     page.ok &&
     normalizedCelexId &&
     eliUrl &&
     (publicationDate ?? rdfPublicationDate) &&
-    xmlArtifact.fetchStatus === "fetched"
-      ? "ready_for_parser_plan"
+    xmlArtifact.fetchStatus === "fetched" &&
+    formexArtifact.fetchStatus === "fetched" &&
+    parserQa &&
+    parserQa.totals.parsedRows > 0
+      ? "parser_qa_reported"
       : "review_needed";
+  const parseStatus =
+    reviewStatus === "parser_qa_reported"
+      ? "formex_parser_qa_reported"
+      : "parser_qa_review_needed";
 
   return {
     sourceFamily: "eu-official-journal-common-catalogue",
@@ -1336,6 +1500,7 @@ async function buildEuOfficialJournalCandidate(
         checksumSha256: page.ok ? page.checksumSha256 : null,
       },
       xmlArtifact,
+      formexArtifact,
       {
         format: "celex_rdf",
         role: "metadata_fallback",
@@ -1361,15 +1526,305 @@ async function buildEuOfficialJournalCandidate(
         checksumSha256: null,
       },
     ],
-    fetchStatus: page.ok ? "fetched" : "review_needed",
-    parseStatus: "metadata_only_not_parsed",
+    fetchStatus:
+      reviewStatus === "parser_qa_reported" ? "fetched" : "review_needed",
+    parseStatus,
     reviewStatus,
+    ...(parserQa ? { parserQa } : {}),
   };
+}
+
+function parseCandidateFormexZip(input: {
+  candidate: {
+    label: string;
+    supplementType: EuCommonCatalogueSupplementType;
+  };
+  formexZipBuffer: Buffer;
+  sourceUrl: string;
+  ojCitation: string | null;
+  publicationDate: string | null;
+  artifactChecksumSha256: string;
+}):
+  | {
+      ok: true;
+      result: EuCommonCatalogueParserResult;
+    }
+  | {
+      ok: false;
+    } {
+  try {
+    const formexXmlFiles = extractFormexXmlFilesFromZip(input.formexZipBuffer);
+    if (formexXmlFiles.length === 0) {
+      return { ok: false };
+    }
+
+    const result = parseEuCommonCatalogueFormex({
+      supplementType: input.candidate.supplementType,
+      supplementLabel: input.candidate.label,
+      formexXmlFiles,
+      sourceUrl: input.sourceUrl,
+      ojCitation: input.ojCitation,
+      publicationDate: input.publicationDate,
+      artifactChecksumSha256: input.artifactChecksumSha256,
+    });
+
+    return result.totals.parsedRows > 0 ? { ok: true, result } : { ok: false };
+  } catch {
+    return { ok: false };
+  }
+}
+
+function buildCandidateParserQa(
+  result: EuCommonCatalogueParserResult,
+): CatalogFullImportDryRunCandidateParserQa {
+  return {
+    parserVersion: result.parserVersion,
+    thresholds: result.thresholds,
+    totals: result.totals,
+    bySpeciesOrCrop: result.bySpeciesOrCrop,
+    byCountry: result.byCountry,
+    byNotifier: result.byNotifier,
+    byConfidenceBucket: result.byConfidenceBucket,
+    sampleRows: selectParserQaSampleRows(result.rows),
+  };
+}
+
+function buildEuOfficialJournalSourceParserQa(
+  candidates: CatalogFullImportDryRunSourceInventoryCandidate[],
+): CatalogFullImportDryRunSourceParserQa | null {
+  const sampleRows = candidates.flatMap(
+    (candidate) => candidate.parserQa?.sampleRows ?? [],
+  );
+  const parserCandidates = candidates.filter((candidate) => candidate.parserQa);
+
+  if (parserCandidates.length === 0) return null;
+
+  const allTotals = parserCandidates.reduce(
+    (totals, candidate) => {
+      const candidateTotals = candidate.parserQa?.totals;
+      if (!candidateTotals) return totals;
+      totals.parsedRows += candidateTotals.parsedRows;
+      totals.acceptedRows += candidateTotals.acceptedRows;
+      totals.reviewNeededRows += candidateTotals.reviewNeededRows;
+      totals.rejectedRows += candidateTotals.rejectedRows;
+      return totals;
+    },
+    {
+      parsedRows: 0,
+      acceptedRows: 0,
+      reviewNeededRows: 0,
+      rejectedRows: 0,
+    },
+  );
+
+  return {
+    issue: "OVE-102",
+    status:
+      allTotals.reviewNeededRows > 0 || allTotals.rejectedRows > 0
+        ? "review_needed"
+        : "passed",
+    parserVersion: EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
+    thresholds: EU_COMMON_CATALOGUE_CONFIDENCE_THRESHOLDS,
+    totals: allTotals,
+    bySupplement: parserCandidates.map((candidate) => ({
+      supplementLabel: candidate.label,
+      rows: candidate.parserQa?.totals.parsedRows ?? 0,
+      acceptedRows: candidate.parserQa?.totals.acceptedRows ?? 0,
+      reviewNeededRows: candidate.parserQa?.totals.reviewNeededRows ?? 0,
+      rejectedRows: candidate.parserQa?.totals.rejectedRows ?? 0,
+    })),
+    bySpeciesOrCrop: aggregateSpeciesSummaries(
+      parserCandidates.flatMap(
+        (candidate) => candidate.parserQa?.bySpeciesOrCrop ?? [],
+      ),
+    ),
+    byCountry: aggregateCountrySummaries(
+      parserCandidates.flatMap(
+        (candidate) => candidate.parserQa?.byCountry ?? [],
+      ),
+    ),
+    byNotifier: aggregateNotifierSummaries(
+      parserCandidates.flatMap(
+        (candidate) => candidate.parserQa?.byNotifier ?? [],
+      ),
+    ),
+    byConfidenceBucket: aggregateConfidenceBucketSummaries(
+      parserCandidates.flatMap(
+        (candidate) => candidate.parserQa?.byConfidenceBucket ?? [],
+      ),
+    ),
+    sampleRows: selectSourceParserQaSampleRows(sampleRows),
+    reviewNeeded: candidates.flatMap((candidate) => {
+      const count = candidate.parserQa?.totals.reviewNeededRows ?? 0;
+      return count > 0
+        ? [`${candidate.label}: ${count} parser rows need operator review.`]
+        : [];
+    }),
+    rejected: candidates.flatMap((candidate) => {
+      const count = candidate.parserQa?.totals.rejectedRows ?? 0;
+      return count > 0
+        ? [`${candidate.label}: ${count} parser rows were rejected.`]
+        : [];
+    }),
+  };
+}
+
+function selectParserQaSampleRows(
+  rows: readonly EuCommonCatalogueParsedRow[],
+): CatalogFullImportDryRunParserQaSampleRow[] {
+  const selectedRows = [
+    ...rows.filter((row) => row.confidenceBucket === "accepted").slice(0, 6),
+    ...rows
+      .filter((row) => row.confidenceBucket === "review_needed")
+      .slice(0, 6),
+    ...rows.filter((row) => row.confidenceBucket === "rejected").slice(0, 6),
+  ];
+
+  return selectedRows.map((row) => ({
+    supplementType: row.supplementType,
+    supplementLabel: row.supplementLabel,
+    varietyDenomination: row.varietyDenomination,
+    speciesOrCrop: row.speciesOrCrop,
+    countryCode: row.countryCode,
+    notifierCode: row.notifierCode,
+    admissionAction: row.admissionAction,
+    marketExtensionDate: row.marketExtensionDate,
+    registerType: row.registerType,
+    ojCitation: row.ojCitation,
+    sourceUrl: row.sourceUrl,
+    publicationDate: row.publicationDate,
+    artifactChecksumSha256: row.artifactChecksumSha256,
+    parserVersion: row.parserVersion,
+    extractionConfidence: row.extractionConfidence,
+    confidenceBucket: row.confidenceBucket,
+    statusReasons: row.statusReasons,
+  }));
+}
+
+function selectSourceParserQaSampleRows(
+  rows: readonly CatalogFullImportDryRunParserQaSampleRow[],
+): CatalogFullImportDryRunParserQaSampleRow[] {
+  return [
+    ...rows.filter((row) => row.confidenceBucket === "accepted").slice(0, 8),
+    ...rows
+      .filter((row) => row.confidenceBucket === "review_needed")
+      .slice(0, 8),
+    ...rows.filter((row) => row.confidenceBucket === "rejected").slice(0, 8),
+  ];
+}
+
+function aggregateSpeciesSummaries(
+  summaries: EuCommonCatalogueParserResult["bySpeciesOrCrop"],
+): EuCommonCatalogueParserResult["bySpeciesOrCrop"] {
+  const bySpecies = new Map<
+    string,
+    EuCommonCatalogueParserResult["bySpeciesOrCrop"][number]
+  >();
+
+  for (const summary of summaries) {
+    const existing = bySpecies.get(summary.speciesOrCrop);
+    bySpecies.set(
+      summary.speciesOrCrop,
+      existing
+        ? addSummaryCounts(existing, summary)
+        : {
+            ...summary,
+          },
+    );
+  }
+
+  return [...bySpecies.values()].sort(sortParserQaSummaryRows);
+}
+
+function aggregateCountrySummaries(
+  summaries: EuCommonCatalogueParserResult["byCountry"],
+): EuCommonCatalogueParserResult["byCountry"] {
+  const byCountry = new Map<
+    string,
+    EuCommonCatalogueParserResult["byCountry"][number]
+  >();
+
+  for (const summary of summaries) {
+    const existing = byCountry.get(summary.countryCode);
+    byCountry.set(
+      summary.countryCode,
+      existing
+        ? addSummaryCounts(existing, summary)
+        : {
+            ...summary,
+          },
+    );
+  }
+
+  return [...byCountry.values()].sort(sortParserQaSummaryRows);
+}
+
+function aggregateNotifierSummaries(
+  summaries: EuCommonCatalogueParserResult["byNotifier"],
+): EuCommonCatalogueParserResult["byNotifier"] {
+  const byNotifier = new Map<
+    string,
+    EuCommonCatalogueParserResult["byNotifier"][number]
+  >();
+
+  for (const summary of summaries) {
+    const existing = byNotifier.get(summary.notifierCode);
+    byNotifier.set(
+      summary.notifierCode,
+      existing
+        ? {
+            ...addSummaryCounts(existing, summary),
+            countryCode: existing.countryCode ?? summary.countryCode,
+          }
+        : {
+            ...summary,
+          },
+    );
+  }
+
+  return [...byNotifier.values()].sort(sortParserQaSummaryRows);
+}
+
+function aggregateConfidenceBucketSummaries(
+  summaries: EuCommonCatalogueParserResult["byConfidenceBucket"],
+): EuCommonCatalogueParserResult["byConfidenceBucket"] {
+  return (["accepted", "review_needed", "rejected"] as const).map((bucket) => ({
+    bucket,
+    rows: summaries
+      .filter((summary) => summary.bucket === bucket)
+      .reduce((total, summary) => total + summary.rows, 0),
+  }));
+}
+
+function addSummaryCounts<
+  TSummary extends {
+    rows: number;
+    acceptedRows: number;
+    reviewNeededRows: number;
+    rejectedRows: number;
+  },
+>(left: TSummary, right: TSummary): TSummary {
+  return {
+    ...left,
+    rows: left.rows + right.rows,
+    acceptedRows: left.acceptedRows + right.acceptedRows,
+    reviewNeededRows: left.reviewNeededRows + right.reviewNeededRows,
+    rejectedRows: left.rejectedRows + right.rejectedRows,
+  } as TSummary;
+}
+
+function sortParserQaSummaryRows<
+  TRow extends {
+    rows: number;
+  },
+>(left: TRow, right: TRow) {
+  if (left.rows !== right.rows) return right.rows - left.rows;
+  return JSON.stringify(left).localeCompare(JSON.stringify(right));
 }
 
 function selectLatestSupplementCandidates(html: string): Array<{
   label: string;
-  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+  supplementType: EuCommonCatalogueSupplementType;
   eurLexUrl: string;
 }> {
   type SupplementAnchor = {
@@ -1409,7 +1864,7 @@ function selectLatestSupplementCandidates(html: string): Array<{
     });
   const selected: Array<{
     label: string;
-    supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+    supplementType: EuCommonCatalogueSupplementType;
     eurLexUrl: string;
   }> = [];
 
@@ -1443,7 +1898,7 @@ async function fetchTextArtifact(
       headers: {
         accept: "text/html,application/xml,text/xml,*/*",
         "user-agent":
-          "OverGarden OVE-101 EUR-Lex OJ inventory dry-run (contact via over.garden)",
+          "OverGarden OVE-102 EUR-Lex OJ parser QA dry-run (contact via over.garden)",
       },
     });
     const buffer = Buffer.from(await response.arrayBuffer());
@@ -1453,6 +1908,7 @@ async function fetchTextArtifact(
       contentType: response.headers.get("content-type"),
       byteLength: buffer.length,
       checksumSha256: createHash("sha256").update(buffer).digest("hex"),
+      buffer,
       text: buffer.toString("utf8"),
     };
   } catch {
@@ -1462,6 +1918,7 @@ async function fetchTextArtifact(
       contentType: null,
       byteLength: 0,
       checksumSha256: null,
+      buffer: Buffer.alloc(0),
       text: "",
     };
   }
@@ -1485,6 +1942,15 @@ function readEurLexEnglishTitle(html: string): string | null {
   );
 }
 
+function readFormexZipUrl(xmlNotice: string): string | null {
+  return normalizeRdfText(
+    readFirstMatch(
+      xmlNotice,
+      /(https?:\/\/publications\.europa\.eu\/resource\/oj\/[^"<\s]+?\.fmx4\.zip)/,
+    ),
+  );
+}
+
 function deriveEurLexIdentifiers(eurLexUrl: string): {
   celexId: string | null;
   eliUrl: string | null;
@@ -1503,7 +1969,7 @@ function deriveEurLexIdentifiers(eurLexUrl: string): {
 
 function fallbackSupplementTitle(candidate: {
   label: string;
-  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+  supplementType: EuCommonCatalogueSupplementType;
 }) {
   const family =
     candidate.supplementType === "agricultural_supplement_a"

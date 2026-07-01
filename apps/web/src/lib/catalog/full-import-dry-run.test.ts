@@ -20,7 +20,7 @@ const LOCAL_OPTIONS = validateCatalogFullImportDryRunOptions({
 function fakeFetch(
   fixtures: Record<
     string,
-    { body: string; contentType: string; status?: number }
+    { body: string | Buffer; contentType: string; status?: number }
   >,
 ): CatalogFullImportDryRunFetch {
   return async (url) => {
@@ -29,13 +29,40 @@ function fakeFetch(
       return new Response("missing fixture", { status: 404 });
     }
 
-    return new Response(fixture.body, {
+    const body =
+      typeof fixture.body === "string"
+        ? fixture.body
+        : new Uint8Array(fixture.body);
+
+    return new Response(body, {
       status: fixture.status ?? 200,
       headers: {
         "content-type": fixture.contentType,
       },
     });
   };
+}
+
+function buildStoredZip(files: Record<string, string>) {
+  const buffers = Object.entries(files).map(([fileName, text]) => {
+    const fileNameBuffer = Buffer.from(fileName);
+    const dataBuffer = Buffer.from(text);
+    const header = Buffer.alloc(30);
+
+    header.writeUInt32LE(0x04034b50, 0);
+    header.writeUInt16LE(20, 4);
+    header.writeUInt16LE(0, 6);
+    header.writeUInt16LE(0, 8);
+    header.writeUInt32LE(0, 14);
+    header.writeUInt32LE(dataBuffer.length, 18);
+    header.writeUInt32LE(dataBuffer.length, 22);
+    header.writeUInt16LE(fileNameBuffer.length, 26);
+    header.writeUInt16LE(0, 28);
+
+    return Buffer.concat([header, fileNameBuffer, dataBuffer]);
+  });
+
+  return Buffer.concat(buffers);
 }
 
 describe("OVE-80 catalog full-import dry-run", () => {
@@ -132,11 +159,41 @@ describe("OVE-80 catalog full-import dry-run", () => {
     });
   });
 
-  it("builds the OVE-101 EUR-Lex/OJ inventory target without product projection", async () => {
+  it("builds the OVE-102 EUR-Lex/OJ parser QA target without product projection", async () => {
     const dgSanteUrl =
       "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
     const hUrl = "https://eur-lex.europa.eu/eli/C/2026/830/oj";
     const aUrl = "https://eur-lex.europa.eu/eli/C/2026/829/oj";
+    const hFormexZipUrl =
+      "http://publications.europa.eu/resource/oj/C_202600830.ENG.fmx4.OJABA_C_202600830_ENG.fmx4.zip";
+    const aFormexZipUrl =
+      "http://publications.europa.eu/resource/oj/C_202600829.ENG.fmx4.OJABA_C_202600829_ENG.fmx4.zip";
+    const aFormexXml = `
+      <GENERAL>
+        <TITLE><TI><NP><NO.P>1</NO.P><TXT><HT TYPE="ITALIC">Beta vulgaris</HT> L. - Sugar beet</TXT></NP></TI></TITLE>
+        <TBL NO.SEQ="0001" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Asase Smart</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Asase Smart</CELL><CELL COL="2">HU 101361</CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+        <TBL NO.SEQ="0002" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Balear</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">mod.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Balear</CELL><CELL COL="2">LT 119</CELL><CELL COL="3"><IE/></CELL></ROW>
+        </CORPUS></TBL>
+        <TBL NO.SEQ="0003" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Broken</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Broken</CELL><CELL COL="2"><IE/></CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+      </GENERAL>
+    `;
+    const hFormexXml = `
+      <GENERAL>
+        <TITLE><TI><NP><NO.P>1</NO.P><TXT><HT TYPE="ITALIC">Allium cepa</HT> L. &gt;&gt; Cepa Group - Onion, Echalion</TXT></NP></TI></TITLE>
+        <TBL NO.SEQ="0001" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Cincinnati</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Cincinnati</CELL><CELL COL="2">BG 3 b</CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+      </GENERAL>
+    `;
     const report = await buildCatalogFullImportDryRunReportWithLiveInventory({
       options: validateCatalogFullImportDryRunOptions({
         environment: "local",
@@ -179,31 +236,43 @@ describe("OVE-80 catalog full-import dry-run", () => {
         "https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:C/2026/00830":
           {
             contentType: "text/xml; charset=UTF-8",
-            body: `<?xml version="1.0" encoding="UTF-8"?><NOTICE><WORK><IDENTIFIER>C/2026/00830</IDENTIFIER></WORK></NOTICE>`,
+            body: `<?xml version="1.0" encoding="UTF-8"?><NOTICE><WORK><IDENTIFIER>C/2026/00830</IDENTIFIER></WORK><MANIFESTATION><URI>${hFormexZipUrl}</URI></MANIFESTATION></NOTICE>`,
           },
         "https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:C/2026/00829":
           {
             contentType: "text/xml; charset=UTF-8",
-            body: `<?xml version="1.0" encoding="UTF-8"?><NOTICE><WORK><IDENTIFIER>C/2026/00829</IDENTIFIER></WORK></NOTICE>`,
+            body: `<?xml version="1.0" encoding="UTF-8"?><NOTICE><WORK><IDENTIFIER>C/2026/00829</IDENTIFIER></WORK><MANIFESTATION><URI>${aFormexZipUrl}</URI></MANIFESTATION></NOTICE>`,
           },
+        [aFormexZipUrl]: {
+          contentType: "application/zip",
+          body: buildStoredZip({
+            "C_202600829EN.000401.fmx.xml": aFormexXml,
+          }),
+        },
+        [hFormexZipUrl]: {
+          contentType: "application/zip",
+          body: buildStoredZip({
+            "C_202600830EN.000301.fmx.xml": hFormexXml,
+          }),
+        },
       }),
     });
 
     expect(report.targets).toHaveLength(1);
     expect(report.targets[0]).toMatchObject({
       key: "eu-official-journal-common-catalogue",
-      importerIssue: "OVE-101",
+      importerIssue: "OVE-102",
       downstreamIssue: "OVE-85",
       projectionScope: "raw_quarantine_only",
       sources: ["eu-oj-eur-lex-common-catalogue"],
       counts: {
-        sourceRowsWouldRead: 2,
-        rawRowsWouldCapture: 2,
+        sourceRowsWouldRead: 4,
+        rawRowsWouldCapture: 4,
         productConceptsWouldProject: 0,
         aliasesWouldProject: 0,
-        reviewNeededRows: 0,
-        rejectedRows: 0,
-        blockedRows: 0,
+        reviewNeededRows: 1,
+        rejectedRows: 1,
+        blockedRows: 2,
         attributionRequiredSources: 1,
       },
       projectionGuard: {
@@ -212,12 +281,45 @@ describe("OVE-80 catalog full-import dry-run", () => {
       },
     });
     expect(report.targets[0].sourceInventory).toMatchObject({
-      issue: "OVE-101",
-      status: "passed",
+      issue: "OVE-102",
+      status: "review_needed",
       discoverySource: {
         fetched: true,
         httpStatus: 200,
         candidateLinksFound: 2,
+      },
+      parserQa: {
+        parserVersion: "ove102-eu-oj-formex-parser-v1",
+        totals: {
+          parsedRows: 4,
+          acceptedRows: 2,
+          reviewNeededRows: 1,
+          rejectedRows: 1,
+        },
+        byConfidenceBucket: [
+          { bucket: "accepted", rows: 2 },
+          { bucket: "review_needed", rows: 1 },
+          { bucket: "rejected", rows: 1 },
+        ],
+        sampleRows: expect.arrayContaining([
+          expect.objectContaining({
+            varietyDenomination: "Asase Smart",
+            speciesOrCrop: "Beta vulgaris L. - Sugar beet",
+            countryCode: "HU",
+            confidenceBucket: "accepted",
+          }),
+          expect.objectContaining({
+            varietyDenomination: "Cincinnati",
+            speciesOrCrop: "Allium cepa L. >> Cepa Group - Onion, Echalion",
+            countryCode: "BG",
+            confidenceBucket: "accepted",
+          }),
+          expect.objectContaining({
+            varietyDenomination: "Broken",
+            confidenceBucket: "rejected",
+            statusReasons: ["missing notifier or admission field"],
+          }),
+        ]),
       },
     });
     expect(report.targets[0].sourceInventory?.candidates).toEqual([
@@ -231,7 +333,15 @@ describe("OVE-80 catalog full-import dry-run", () => {
         celexUrl:
           "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:C/2026/00829",
         celexId: "C/2026/00829",
-        reviewStatus: "ready_for_parser_plan",
+        reviewStatus: "parser_qa_reported",
+        parserQa: expect.objectContaining({
+          totals: {
+            parsedRows: 3,
+            acceptedRows: 1,
+            reviewNeededRows: 1,
+            rejectedRows: 1,
+          },
+        }),
       }),
       expect.objectContaining({
         supplementType: "vegetable_supplement_h",
@@ -243,7 +353,15 @@ describe("OVE-80 catalog full-import dry-run", () => {
         celexUrl:
           "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:C/2026/00830",
         celexId: "C/2026/00830",
-        reviewStatus: "ready_for_parser_plan",
+        reviewStatus: "parser_qa_reported",
+        parserQa: expect.objectContaining({
+          totals: {
+            parsedRows: 1,
+            acceptedRows: 1,
+            reviewNeededRows: 0,
+            rejectedRows: 0,
+          },
+        }),
       }),
     ]);
     expect(
@@ -256,6 +374,13 @@ describe("OVE-80 catalog full-import dry-run", () => {
           format: "xml_notice",
           role: "preferred_machine_readable",
           fetchStatus: "fetched",
+          checksumSha256: expect.any(String),
+        }),
+        expect.objectContaining({
+          format: "formex_zip",
+          role: "preferred_machine_readable",
+          fetchStatus: "fetched",
+          parseStatus: "parser_qa_parsed",
           checksumSha256: expect.any(String),
         }),
         expect.objectContaining({

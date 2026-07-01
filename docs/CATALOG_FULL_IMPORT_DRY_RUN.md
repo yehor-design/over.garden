@@ -10,6 +10,8 @@ The default report is a preflight contract, not an importer. It does not connect
 
 OVE-101 adds one explicit live inventory target: `eu-official-journal-common-catalogue`. That target fetches only public official EUR-Lex / Official Journal discovery artifacts, computes checksums, and reports fetch/parse readiness. It still performs no product projection and writes no catalog rows.
 
+OVE-102 extends the same target with Formex parser QA. It discovers the Publications Office Formex XML ZIP from the EUR-Lex XML notice, parses the OJ-derived variety rows, reports accepted/review-needed/rejected confidence buckets, and keeps product projection at zero until a later OVE-85 import path proves row-level attribution and caveat mapping.
+
 ## Commands
 
 Local preflight:
@@ -64,7 +66,7 @@ The JSON report uses `schemaVersion = "ove80.catalogFullImportDryRun.v1"` and in
 - OVE-79 source verdicts for every readiness-governed source;
 - projection-guard status using the existing source projection guard;
 - duplicate-risk clusters that must be reviewed by OVE-89;
-- optional OVE-101 source inventory for explicit EUR-Lex/OJ inventory runs;
+- optional OVE-102 source inventory and parser QA for explicit EUR-Lex/OJ runs;
 - a fail-closed leak check.
 
 For UA State Register, the dry-run now reports the OVE-81 full approved wave: 15,177 source rows read, 15,177 raw/source records captured, 15,177 product concepts projected, 61,105 safe aliases projected, zero review-needed rows, zero parser rejects, and 759 repeated official denomination clusters assigned to OVE-89 entity-resolution review.
@@ -100,17 +102,20 @@ The `vernacular-alias-expansion` target reports reviewed local-name expansion ov
 
 For OVE-84/OVE-85, the current `bg-official-variety` target remains a bounded OVE-61 proof target only. `fullImportReadiness.bgOfficialVarietyBulkGate` reports `fullRawImportAllowed = false` and `productProjectionAllowed = false` for IASAS and EU Plant Variety Portal-only BG rows. OVE-100 adds the separate `eu-oj-eur-lex-common-catalogue` legal-source path; an OVE-85 full BG import must use a target-specific successor report that proves stable EUR-Lex/data.europa.eu ELI source URLs, parser counts/checksums, attribution, legal-value caveat mapping, and rejected/review-needed source-only handling. The existing bounded target can still prove `Садово 1` and the blocked low-confidence row, but it is not full BG import evidence.
 
-For OVE-101, use `eu-official-journal-common-catalogue`. It discovers the latest agricultural Supplement A and vegetable Supplement H links from the official DG SANTE Common Catalogue page, then fetches the corresponding EUR-Lex/OJ source pages and EUR-Lex XML notices. The output includes source family, supplement type, publication date, EUR-Lex URL, OJ/ELI/CELEX identifiers when available, language, artifact format, checksum for fetched artifacts, and fetch/parse status. The target reports `productConceptsWouldProject = 0`, `aliasesWouldProject = 0`, and `checkedProjectionRequests = 0`; it is inventory only.
+For OVE-101/OVE-102, use `eu-official-journal-common-catalogue`. It discovers the latest agricultural Supplement A and vegetable Supplement H links from the official DG SANTE Common Catalogue page, then fetches the corresponding EUR-Lex/OJ source pages, EUR-Lex XML notices, Publications Office Formex ZIPs, and fallback CELEX RDF metadata. The output includes source family, supplement type, publication date, EUR-Lex URL, OJ/ELI/CELEX identifiers when available, language, artifact format, checksum for fetched artifacts, fetch/parse status, and OVE-102 parser QA counts. The target reports `productConceptsWouldProject = 0`, `aliasesWouldProject = 0`, and `checkedProjectionRequests = 0`; it is still pre-import QA only.
 
-The OVE-101 fetch strategy is:
+The OVE-102 fetch strategy is:
 
 - DG SANTE Common Catalogue page: scoped official seed list for the latest Supplement A/H candidates.
 - EUR-Lex ELI/OJ pages: canonical source pages for OJ citation, publication date, CELEX, ELI, Cellar id, language, HTML fallback, and authentic PDF link.
-- EUR-Lex XML notice endpoint (`legal-content/EN/TXT/XML/?uri=CELEX:...`): preferred machine-readable inventory artifact before any parser work; checksum and byte length are preserved.
+- EUR-Lex XML notice endpoint (`legal-content/EN/TXT/XML/?uri=CELEX:...`): manifestation discovery artifact; checksum and byte length are preserved.
+- Publications Office Formex XML ZIP: primary machine-readable parser artifact for Common Catalogue table rows.
 - Publications Office CELEX RDF plus Cellar REST/SPARQL: metadata fallback when EUR-Lex HTML/XML is temporarily unavailable or when OVE-85 needs work/expression/manifest metadata beyond the XML notice. Use it to resolve publication date, title, Cellar ids, and available representations, not to bypass the ELI/OJ source boundary.
 - `data.europa.eu` yearly OJ CSV lists: broad official discovery aid for yearly OJ inventory reconciliation. Use them to cross-check that DG SANTE-linked CELEX/ELI candidates are not missing, then resolve back to EUR-Lex/Cellar artifacts before parsing.
 - EUR-Lex webservice: metadata search and CELEX discovery support. It can help find candidate legal resources, but file downloads still resolve through EUR-Lex/Cellar/ELI artifacts before checksums are trusted.
 
-Unavailable XML/Formex, missing CELEX/ELI, or ambiguous artifact format is reported as `review_needed`. Do not silently skip a supplement family.
+The OVE-102 parser preserves variety denomination, species/crop, notifier/admission field, country code when present, admission action, market extension date when present, register/supplement type, OJ citation, EUR-Lex source URL, publication date, Formex artifact checksum, parser version, extraction confidence, and status reasons. Confidence thresholds are explicit: `accepted >= 0.98`, `review_needed >= 0.90 and < 0.98`, and `rejected < 0.90` or missing required core fields. Rows whose action is inferred only from a Formex table header are review-needed, not accepted.
+
+The dry-run reports row counts by supplement, species/crop, country, notifier, and confidence bucket. IASAS-only, EU Plant Variety Portal-only, CPVO/UPOV, or missing-provenance rows cannot be upgraded through this parser path; the parser accepts only official EUR-Lex or `data.europa.eu` ELI source URLs. Unavailable XML/Formex, missing CELEX/ELI, HTML-only evidence, PDF-only evidence, or ambiguous artifact format is reported as `review_needed`. Do not silently skip a supplement family.
 
 OVE-90 must not claim full catalog availability until the relevant dry-run reports, source-family imports, OVE-89 entity-resolution QA, and production seed proof all agree.
