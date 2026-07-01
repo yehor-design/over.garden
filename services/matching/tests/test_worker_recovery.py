@@ -21,7 +21,9 @@ Meilisearch double, so the public-safe contract under test is the production one
 
 from __future__ import annotations
 
+import json
 from datetime import date, datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -31,37 +33,16 @@ from app import search, worker
 ENTRY_ID = "00000000-0000-4000-8000-000000000abc"
 OWNER_ID = "00000000-0000-4000-8000-000000000def"
 
-# The public-safe journal document contract proven in OVE-36 (hidden location).
-PUBLIC_SAFE_DOCUMENT_KEYS = {
-    "body",
-    "createdAt",
-    "entryDate",
-    "id",
-    "kind",
-    "locationVisibility",
-    "noindex",
-    "publicPath",
-    "publicSlug",
-    "title",
-}
+CONTRACT_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "contracts/search/public-journal-entry-search-document.json"
+)
+PUBLIC_JOURNAL_CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 
-FORBIDDEN_DOCUMENT_KEYS = {
-    "ownerUserId",
-    "userId",
-    "email",
-    "plantObjectId",
-    "spaceId",
-    "quarantineKey",
-    "originalKey",
-    "signedUrl",
-    "publicGoneAt",
-    "lifecycleState",
-    "latitude",
-    "longitude",
-    "coordinates",
-    "ip",
-    "userAgent",
-}
+# The public-safe journal document contract proven in OVE-36/OVE-39 for hidden
+# location documents. Region documents may additionally include coarseRegionCode.
+PUBLIC_SAFE_DOCUMENT_KEYS = set(PUBLIC_JOURNAL_CONTRACT["requiredFields"])
+FORBIDDEN_DOCUMENT_KEYS = set(PUBLIC_JOURNAL_CONTRACT["forbiddenFields"])
 
 
 def journal_row(**overrides: Any) -> dict[str, Any]:

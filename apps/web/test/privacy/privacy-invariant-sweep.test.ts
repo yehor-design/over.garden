@@ -33,7 +33,7 @@ import {
   catalogTypeaheadHitToSuggestion,
   toCatalogTypeaheadDocument,
 } from "@/server/search/catalog-documents";
-import { toJournalEntrySearchDocument } from "@/server/search/documents";
+import { buildJournalEntrySearchDocumentContractFixture } from "@/server/search/documents";
 
 import {
   ALLOWED_CATALOG_DOCUMENT_KEYS,
@@ -78,7 +78,7 @@ const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 describe("OVE-40 privacy invariant sweep — search index", () => {
   it("does not index the journey entry while it is still private", () => {
     expect(
-      toJournalEntrySearchDocument(
+      buildJournalEntrySearchDocumentContractFixture(
         publicJournalSearchRow({ visibility: "private", public_slug: null }),
       ),
     ).toBeNull();
@@ -86,12 +86,12 @@ describe("OVE-40 privacy invariant sweep — search index", () => {
 
   it("does not index archived or tombstoned public entries", () => {
     expect(
-      toJournalEntrySearchDocument(
+      buildJournalEntrySearchDocumentContractFixture(
         publicJournalSearchRow({ lifecycle_state: "archived" }),
       ),
     ).toBeNull();
     expect(
-      toJournalEntrySearchDocument(
+      buildJournalEntrySearchDocumentContractFixture(
         publicJournalSearchRow({
           public_gone_at: new Date("2026-06-27T00:00:00.000Z"),
         }),
@@ -101,14 +101,16 @@ describe("OVE-40 privacy invariant sweep — search index", () => {
 
   it("drops region entries whose coarse code is really a precise string", () => {
     expect(
-      toJournalEntrySearchDocument(
+      buildJournalEntrySearchDocumentContractFixture(
         publicJournalSearchRow({ coarse_region_code: POISON.streetAddress }),
       ),
     ).toBeNull();
   });
 
   it("emits only a bounded public-safe document once published", () => {
-    const doc = toJournalEntrySearchDocument(publicJournalSearchRow());
+    const doc = buildJournalEntrySearchDocumentContractFixture(
+      publicJournalSearchRow(),
+    );
     expect(doc).not.toBeNull();
     if (!doc) return;
 

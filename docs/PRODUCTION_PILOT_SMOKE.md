@@ -220,7 +220,7 @@ Do not remove or rewrite these production Docker Compose instructions for Apple 
 
 - a `processing` row is reclaimed only after the visibility timeout (and a freshly locked row is not), so a restarted worker recovers in-flight jobs;
 - after a simulated restart/crash, `journal_entry_index` and `journal_entry_unindex` still reach `done`;
-- the indexed document keeps exactly the public-safe OVE-36 contract (`body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, `title`) with no owner/user IDs, media keys, precise location, IPs, or user agents;
+- the indexed document keeps the public-safe contract enforced by `contracts/search/public-journal-entry-search-document.json` and written by `services/matching/app/search.py`: required keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, `title`, with optional `coarseRegionCode` only for region-visible entries, and no owner/user IDs, media keys, precise location, raw coarse-location columns, request metadata, IPs, user agents, referrers, invite data, or private journal state;
 - at-least-once re-delivery is idempotent (no duplicate document, identical safe shape);
 - a transient Meilisearch outage marks the job `failed` with a future retry and a later run recovers it to `done`.
 
@@ -522,7 +522,7 @@ Public journal search:
 - On 2026-06-28, the OVE-36 redacted canary smoke proved:
   - public canary URL returned `200` before archive,
   - `journal_entry_index` reached `done` in one attempt,
-  - Meilisearch document existed with keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`,
+  - Meilisearch document existed with the public-safe keys from `contracts/search/public-journal-entry-search-document.json`: `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`,
   - document `locationVisibility` was `hidden`, `noindex` was `true`, and forbidden field scan passed,
   - `journal_entry_unindex` reached `done` in one attempt,
   - the Meilisearch document returned `404` after archive,

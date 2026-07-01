@@ -4,7 +4,16 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 
-export interface JournalEntrySearchRow {
+/*
+ * TS-side privacy contract fixture only.
+ *
+ * Runtime writes to the public journal Meilisearch index happen in
+ * services/matching/app/search.py:journal_entry_search_document_from_row.
+ * This fixture mirrors that shape so TypeScript privacy tests can compare it
+ * against contracts/search/public-journal-entry-search-document.json without
+ * making this file look like the runtime writer.
+ */
+export interface JournalEntrySearchContractRow {
   id: string;
   title: string;
   body: string;
@@ -19,7 +28,7 @@ export interface JournalEntrySearchRow {
   coarse_region_code?: string | null;
 }
 
-export interface JournalEntrySearchDocument {
+export interface JournalEntrySearchContractDocument {
   id: string;
   title: string;
   body: string;
@@ -33,9 +42,9 @@ export interface JournalEntrySearchDocument {
   kind: "journal_entry";
 }
 
-export function toJournalEntrySearchDocument(
-  entry: JournalEntrySearchRow,
-): JournalEntrySearchDocument | null {
+export function buildJournalEntrySearchDocumentContractFixture(
+  entry: JournalEntrySearchContractRow,
+): JournalEntrySearchContractDocument | null {
   if (entry.visibility !== "public") return null;
   if (entry.lifecycle_state !== "active") return null;
   if (entry.public_gone_at !== null) return null;

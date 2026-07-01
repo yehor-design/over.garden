@@ -1,8 +1,11 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
 import type { PublicVarietyPage } from "@/server/public-variety-repository";
 import { evaluatePublicVarietyIndexState } from "@/server/public-variety-indexing";
 import type { CatalogTypeaheadRow } from "@/server/search/catalog-documents";
-import type { JournalEntrySearchRow } from "@/server/search/documents";
+import type { JournalEntrySearchContractRow } from "@/server/search/documents";
 
 import { POISON } from "./poison";
 
@@ -49,8 +52,8 @@ function seedPrivateColumns<T>(row: T): T {
 }
 
 export function publicJournalSearchRow(
-  overrides: Partial<JournalEntrySearchRow> = {},
-): JournalEntrySearchRow {
+  overrides: Partial<JournalEntrySearchContractRow> = {},
+): JournalEntrySearchContractRow {
   return seedPrivateColumns({
     id: JOURNEY.entryId,
     title: JOURNEY.safeTitle,
@@ -68,19 +71,15 @@ export function publicJournalSearchRow(
   });
 }
 
-export const ALLOWED_SEARCH_DOCUMENT_KEYS: readonly string[] = [
-  "id",
-  "title",
-  "body",
-  "publicSlug",
-  "publicPath",
-  "locationVisibility",
-  "coarseRegionCode",
-  "noindex",
-  "entryDate",
-  "createdAt",
-  "kind",
-];
+export const ALLOWED_SEARCH_DOCUMENT_KEYS: readonly string[] = JSON.parse(
+  readFileSync(
+    path.resolve(
+      process.cwd(),
+      "../../contracts/search/public-journal-entry-search-document.json",
+    ),
+    "utf8",
+  ),
+).allowedFields;
 
 export function catalogTypeaheadRow(
   overrides: Partial<CatalogTypeaheadRow> = {},

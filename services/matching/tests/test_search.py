@@ -1,10 +1,18 @@
+import json
 import re
 from datetime import date, datetime, timezone
+from pathlib import Path
 
-from app.search import (
-    catalog_typeahead_document_from_row,
-    journal_entry_search_document_from_row,
+from app import search
+
+CONTRACT_PATH = (
+    Path(__file__).resolve().parents[3]
+    / "contracts/search/public-journal-entry-search-document.json"
 )
+PUBLIC_JOURNAL_CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+PUBLIC_JOURNAL_REQUIRED_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["requiredFields"])
+PUBLIC_JOURNAL_ALLOWED_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["allowedFields"])
+PUBLIC_JOURNAL_FORBIDDEN_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["forbiddenFields"])
 
 
 def journal_row(**overrides):
@@ -27,7 +35,7 @@ def journal_row(**overrides):
 
 
 def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
-    document = journal_entry_search_document_from_row(journal_row())
+    document = search.journal_entry_search_document_from_row(journal_row())
 
     assert document == {
         "id": "00000000-0000-4000-8000-000000000001",
@@ -42,49 +50,63 @@ def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
         "kind": "journal_entry",
     }
 
-    forbidden_fields = {
-        "ownerUserId",
-        "userId",
-        "email",
-        "plantObjectId",
-        "spaceId",
-        "quarantineKey",
-        "originalKey",
-        "signedUrl",
-        "publicGoneAt",
-        "lifecycleState",
-        "latitude",
-        "longitude",
-        "coordinates",
-        "ip",
-        "userAgent",
-    }
-    assert forbidden_fields.isdisjoint(document.keys())
+    assert set(document.keys()) == PUBLIC_JOURNAL_REQUIRED_FIELDS
+    assert PUBLIC_JOURNAL_FORBIDDEN_FIELDS.isdisjoint(document.keys())
+
+
+def test_public_journal_entry_document_contract_matches_runtime_settings():
+    assert PUBLIC_JOURNAL_CONTRACT["runtimeWriter"] == (
+        "services/matching/app/search.py:journal_entry_search_document_from_row"
+    )
+    assert PUBLIC_JOURNAL_CONTRACT["typescriptContractFixture"] == (
+        "apps/web/src/server/search/documents.ts:"
+        "buildJournalEntrySearchDocumentContractFixture"
+    )
+    assert PUBLIC_JOURNAL_ALLOWED_FIELDS == (
+        PUBLIC_JOURNAL_REQUIRED_FIELDS | set(PUBLIC_JOURNAL_CONTRACT["optionalFields"])
+    )
+    assert search.JOURNAL_SEARCHABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
+        "searchableAttributes"
+    ]
+    assert search.JOURNAL_FILTERABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
+        "filterableAttributes"
+    ]
+    assert search.JOURNAL_SORTABLE_ATTRIBUTES == PUBLIC_JOURNAL_CONTRACT[
+        "sortableAttributes"
+    ]
+    assert "coarseRegionCode" in PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert "coarse_region_code" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
+    assert "ownerUserId" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
+    assert "quarantineKey" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
+    assert "userAgent" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
+    assert "inviteToken" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
 
 
 def test_journal_entry_document_indexes_supported_region_only_when_visible():
-    document = journal_entry_search_document_from_row(
+    document = search.journal_entry_search_document_from_row(
         journal_row(location_visibility="region", coarse_region_code="UA-30")
     )
 
     assert document is not None
     assert document["locationVisibility"] == "region"
     assert document["coarseRegionCode"] == "UA-30"
+    assert set(document.keys()) == PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert PUBLIC_JOURNAL_FORBIDDEN_FIELDS.isdisjoint(document.keys())
 
 
 def test_journal_entry_document_refuses_private_archived_or_gone_entries():
     assert (
-        journal_entry_search_document_from_row(journal_row(visibility="private"))
+        search.journal_entry_search_document_from_row(journal_row(visibility="private"))
         is None
     )
     assert (
-        journal_entry_search_document_from_row(
+        search.journal_entry_search_document_from_row(
             journal_row(lifecycle_state="archived")
         )
         is None
     )
     assert (
-        journal_entry_search_document_from_row(
+        search.journal_entry_search_document_from_row(
             journal_row(public_gone_at=datetime(2026, 6, 27, tzinfo=timezone.utc))
         )
         is None
@@ -92,21 +114,21 @@ def test_journal_entry_document_refuses_private_archived_or_gone_entries():
 
 
 def test_journal_entry_document_refuses_unsafe_public_shape():
-    assert journal_entry_search_document_from_row(journal_row(public_slug=None)) is None
+    assert search.journal_entry_search_document_from_row(journal_row(public_slug=None)) is None
     assert (
-        journal_entry_search_document_from_row(
+        search.journal_entry_search_document_from_row(
             journal_row(location_visibility="exact", coarse_region_code="UA-30")
         )
         is None
     )
     assert (
-        journal_entry_search_document_from_row(
+        search.journal_entry_search_document_from_row(
             journal_row(location_visibility="region", coarse_region_code="UA-99")
         )
         is None
     )
     assert (
-        journal_entry_search_document_from_row(
+        search.journal_entry_search_document_from_row(
             journal_row(location_visibility="region", coarse_region_code=None)
         )
         is None
@@ -114,7 +136,7 @@ def test_journal_entry_document_refuses_unsafe_public_shape():
 
 
 def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
-    document = catalog_typeahead_document_from_row(
+    document = search.catalog_typeahead_document_from_row(
         {
             "catalog_item_id": "00000000-0000-4000-8000-000000000101",
             "canonical_name": "Помідор чері",

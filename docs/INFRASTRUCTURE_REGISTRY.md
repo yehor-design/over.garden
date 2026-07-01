@@ -241,8 +241,10 @@ Worker and search invariants:
 - `MEILI_MASTER_KEY`, `MEILISEARCH_API_KEY`, and `MATCHING_SERVICE_TOKEN` must stay only in platform/env secret stores.
 - Do not expose Meilisearch keys, worker env files, database URLs, canary row identifiers, or indexed journal text in docs, Linear, or chat.
 - `matching-worker` must process `journal_entry_index` and `journal_entry_unindex` idempotently and reclaim stale `processing` rows after the visibility timeout.
-- `journal_entries` index documents may contain only the public-safe field contract proven in OVE-36: `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`.
-- No owner/user IDs, space IDs, plant object IDs, precise location, media keys, quarantine/original keys, signed URLs, IPs, or user agents may enter Meilisearch documents.
+- Runtime writer: `services/matching/app/search.py:journal_entry_search_document_from_row`.
+- Machine-readable contract: `contracts/search/public-journal-entry-search-document.json`.
+- `journal_entries` index documents may contain only the public-safe field contract proven in OVE-36/OVE-39: required keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`, plus optional `coarseRegionCode` only when `locationVisibility = region`.
+- No owner/user IDs, space IDs, plant object IDs, precise location, raw coarse-location columns, media keys, quarantine/original keys, signed URLs, request metadata, IPs, user agents, referrers, invite data, or private journal state may enter Meilisearch documents.
 
 Process management and recovery (OVE-39):
 
