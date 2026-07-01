@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
 import {
@@ -37,6 +38,15 @@ const MANIFEST_URL = new URL(
   import.meta.url,
 );
 
+const EU_OJ_COMMON_CATALOGUE_TARGET =
+  "eu-official-journal-common-catalogue" as const;
+const EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG =
+  "eu-oj-eur-lex-common-catalogue" as const;
+const EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION =
+  "ove101-eur-lex-oj-inventory-dry-run-v1";
+const DG_SANTE_COMMON_CATALOGUE_URL =
+  "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
+
 export const CATALOG_FULL_IMPORT_DRY_RUN_ENVIRONMENTS = [
   "local",
   "staging",
@@ -52,6 +62,7 @@ export const CATALOG_FULL_IMPORT_DRY_RUN_TARGETS = [
   "breed-seed",
   "bg-official-variety",
   "genebank-long-tail",
+  EU_OJ_COMMON_CATALOGUE_TARGET,
 ] as const;
 
 const CATALOG_FULL_IMPORT_DRY_RUN_DEFAULT_TARGETS = [
@@ -140,6 +151,7 @@ export interface CatalogFullImportDryRunProjectionRequest {
   productSurface: "catalog_items" | "catalog_item_names";
   sourceVersion?: string;
   sourceRecordKey?: string;
+  sourceUrl?: string;
   productSource?: string;
   productSourceId?: string;
   explicitGate?: CatalogSourceSpecificProjectionGate;
@@ -200,6 +212,7 @@ export interface CatalogFullImportDryRunTargetReport {
     status: "passed";
     forbiddenMarkerCount: number;
   };
+  sourceInventory?: CatalogFullImportDryRunSourceInventory;
 }
 
 export interface CatalogFullImportDryRunReport {
@@ -240,6 +253,70 @@ export interface CatalogFullImportDryRunReport {
   };
   leakCheck: "passed";
 }
+
+export interface CatalogFullImportDryRunSourceInventory {
+  issue: "OVE-101";
+  status: "passed" | "review_needed";
+  discoverySource: {
+    url: string;
+    fetched: boolean;
+    httpStatus: number | null;
+    contentType: string | null;
+    byteLength: number;
+    checksumSha256: string | null;
+    candidateLinksFound: number;
+  };
+  fetchStrategy: {
+    preferredArtifactOrder: string[];
+    notes: string[];
+  };
+  candidates: CatalogFullImportDryRunSourceInventoryCandidate[];
+  reviewNeeded: string[];
+}
+
+export interface CatalogFullImportDryRunSourceInventoryCandidate {
+  sourceFamily: "eu-official-journal-common-catalogue";
+  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+  label: string;
+  title: string | null;
+  publicationDate: string | null;
+  language: "EN";
+  eurLexUrl: string;
+  ojUrl: string;
+  ojCitation: string | null;
+  eliUrl: string | null;
+  celexId: string | null;
+  celexUrl: string | null;
+  cellarId: string | null;
+  artifacts: CatalogFullImportDryRunSourceInventoryArtifact[];
+  fetchStatus: "fetched" | "review_needed";
+  parseStatus: "metadata_only_not_parsed";
+  reviewStatus: "ready_for_parser_plan" | "review_needed";
+}
+
+export interface CatalogFullImportDryRunSourceInventoryArtifact {
+  format: "xml_notice" | "celex_rdf" | "html" | "pdf";
+  role:
+    | "preferred_machine_readable"
+    | "metadata_fallback"
+    | "source_page"
+    | "authentic_oj_fallback";
+  url: string | null;
+  fetchStatus: "fetched" | "available_not_fetched" | "review_needed";
+  parseStatus:
+    | "metadata_parsed"
+    | "not_parsed_dry_run_only"
+    | "not_machine_preferred";
+  httpStatus: number | null;
+  contentType: string | null;
+  byteLength: number | null;
+  checksumSha256: string | null;
+}
+
+export type CatalogFullImportDryRunFetch = (
+  url: string,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export function parseCatalogFullImportDryRunArgs(
   argv: string[],
@@ -370,6 +447,39 @@ export function buildCatalogFullImportDryRunReport(input: {
 
   assertNoForbiddenCatalogFullImportDryRunEvidence(report);
   return report;
+}
+
+export async function buildCatalogFullImportDryRunReportWithLiveInventory(input: {
+  options: CatalogFullImportDryRunOptions;
+  generatedAt: string;
+  manifest?: CatalogFullImportDryRunManifest;
+  targetDefinitions?: readonly CatalogFullImportDryRunTargetDefinition[];
+  fetchImpl?: CatalogFullImportDryRunFetch;
+}): Promise<CatalogFullImportDryRunReport> {
+  const report = buildCatalogFullImportDryRunReport(input);
+  if (
+    !report.targets.some(
+      (target) => target.key === EU_OJ_COMMON_CATALOGUE_TARGET,
+    )
+  ) {
+    return report;
+  }
+
+  const sourceInventory = await buildEuOfficialJournalCommonCatalogueInventory(
+    input.fetchImpl ?? fetch,
+  );
+  const targets = report.targets.map((target) =>
+    target.key === EU_OJ_COMMON_CATALOGUE_TARGET
+      ? { ...target, sourceInventory }
+      : target,
+  );
+  const updatedReport = {
+    ...report,
+    targets,
+  };
+
+  assertNoForbiddenCatalogFullImportDryRunEvidence(updatedReport);
+  return updatedReport;
 }
 
 export function readCatalogFullImportDryRunManifest(): CatalogFullImportDryRunManifest {
@@ -744,6 +854,29 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
         },
       ],
     },
+    {
+      key: EU_OJ_COMMON_CATALOGUE_TARGET,
+      packageScript: "catalog:sources:dry-run",
+      sourceSet: "OVE-101 EUR-Lex Official Journal Common Catalogue inventory",
+      importerIssue: "OVE-101",
+      downstreamIssue: "OVE-85",
+      projectionScope: "raw_quarantine_only",
+      sourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
+      readinessSourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
+      rowCounts: {
+        sourceRowsWouldRead: 2,
+        rawRowsWouldCapture: 2,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: 0,
+        reviewNeededRows: 0,
+        rejectedRows: 0,
+        blockedRows: 0,
+        attributionRequiredSources: 1,
+      },
+      parserVersions: [EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION],
+      projectionRequests: [],
+      duplicateSignals: [],
+    },
   ];
 }
 
@@ -981,4 +1114,422 @@ function dedupeTargets(
 
 function dedupeStrings(values: readonly string[]): string[] {
   return [...new Set(values)];
+}
+
+async function buildEuOfficialJournalCommonCatalogueInventory(
+  fetchImpl: CatalogFullImportDryRunFetch,
+): Promise<CatalogFullImportDryRunSourceInventory> {
+  const discovery = await fetchTextArtifact(
+    fetchImpl,
+    DG_SANTE_COMMON_CATALOGUE_URL,
+  );
+  const candidates = discovery.ok
+    ? selectLatestSupplementCandidates(discovery.text)
+    : [];
+  const reviewNeeded: string[] = [];
+
+  if (!discovery.ok) {
+    reviewNeeded.push(
+      `DG SANTE Common Catalogue page returned ${discovery.httpStatus ?? "network error"}; operator must re-run before parser work.`,
+    );
+  }
+
+  for (const supplementType of [
+    "agricultural_supplement_a",
+    "vegetable_supplement_h",
+  ] as const) {
+    if (
+      !candidates.some(
+        (candidate) => candidate.supplementType === supplementType,
+      )
+    ) {
+      reviewNeeded.push(
+        `No latest ${supplementType} EUR-Lex link was discovered from DG SANTE; do not silently skip this supplement family.`,
+      );
+    }
+  }
+
+  const enrichedCandidates = await Promise.all(
+    candidates.map((candidate) =>
+      buildEuOfficialJournalCandidate(fetchImpl, candidate),
+    ),
+  );
+  for (const candidate of enrichedCandidates) {
+    if (candidate.reviewStatus === "review_needed") {
+      reviewNeeded.push(
+        `${candidate.label} needs review because one or more preferred machine-readable artifacts were unavailable or ambiguous.`,
+      );
+    }
+  }
+
+  return {
+    issue: "OVE-101",
+    status: reviewNeeded.length > 0 ? "review_needed" : "passed",
+    discoverySource: {
+      url: DG_SANTE_COMMON_CATALOGUE_URL,
+      fetched: discovery.ok,
+      httpStatus: discovery.httpStatus,
+      contentType: discovery.contentType,
+      byteLength: discovery.byteLength,
+      checksumSha256: discovery.checksumSha256,
+      candidateLinksFound: candidates.length,
+    },
+    fetchStrategy: {
+      preferredArtifactOrder: [
+        "EUR-Lex XML notice from legal-content/.../TXT/XML",
+        "Cellar REST/SPARQL or data.europa.eu ELI link for work/expression metadata",
+        "EUR-Lex HTML source page for OJ citation and fallback metadata",
+        "Authentic OJ PDF only as a human/legal fallback, not the first parser input",
+      ],
+      notes: [
+        "This target is an inventory dry-run only: it fetches public source pages and XML notices, computes checksums, and performs no parser projection.",
+        "Unavailable or ambiguous XML/Formex paths are reported as review-needed before OVE-85 parser work.",
+      ],
+    },
+    candidates: enrichedCandidates,
+    reviewNeeded,
+  };
+}
+
+async function buildEuOfficialJournalCandidate(
+  fetchImpl: CatalogFullImportDryRunFetch,
+  candidate: {
+    label: string;
+    supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+    eurLexUrl: string;
+  },
+): Promise<CatalogFullImportDryRunSourceInventoryCandidate> {
+  const page = await fetchTextArtifact(fetchImpl, candidate.eurLexUrl);
+  const derived = deriveEurLexIdentifiers(candidate.eurLexUrl);
+  const title = page.ok ? readEurLexEnglishTitle(page.text) : null;
+  const celexId = page.ok
+    ? (readFirstMatch(page.text, /CELEX:([^"&<\s]+)/) ??
+      readFirstMatch(page.text, /resource\/celex\/([^"<\s]+)/))
+    : null;
+  const normalizedCelexId = celexId
+    ? decodeURIComponent(celexId)
+    : derived.celexId;
+  const eliUrl = page.ok
+    ? (readFirstMatch(
+        page.text,
+        /href="(http:\/\/data\.europa\.eu\/eli\/C\/\d+\/\d+\/oj)"/,
+      ) ??
+      readFirstMatch(
+        page.text,
+        /about="(http:\/\/data\.europa\.eu\/eli\/C\/\d+\/\d+\/oj)"/,
+      ))
+    : derived.eliUrl;
+  const ojCitation = page.ok
+    ? normalizeRdfText(
+        readFirstMatch(
+          page.text,
+          /(OJ C,\s*C\/\d+\/\d+,\s*\d{1,2}\.\d{1,2}\.\d{4})/,
+        ),
+      )
+    : null;
+  const publicationDate = ojCitation
+    ? parseEuropeanDate(readFirstMatch(ojCitation, /(\d{1,2}\.\d{1,2}\.\d{4})/))
+    : null;
+  const pdfUrl = page.ok
+    ? (readFirstMatch(
+        page.text,
+        /href="(https:\/\/eur-lex\.europa\.eu\/eli\/C\/\d+\/\d+\/oj\/eng\/pdf)"/,
+      ) ?? `${candidate.eurLexUrl.replace(/\/$/, "")}/eng/pdf`)
+    : `${candidate.eurLexUrl.replace(/\/$/, "")}/eng/pdf`;
+  const xmlUrl = normalizedCelexId
+    ? `https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:${normalizedCelexId}`
+    : null;
+  const celexUrl = normalizedCelexId
+    ? `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:${normalizedCelexId}`
+    : null;
+  const celexRdfUrl = normalizedCelexId
+    ? `http://publications.europa.eu/resource/celex/${encodeURIComponent(
+        normalizedCelexId,
+      )}`
+    : null;
+  const xml = xmlUrl ? await fetchTextArtifact(fetchImpl, xmlUrl) : null;
+  const celexRdf = celexRdfUrl
+    ? await fetchTextArtifact(fetchImpl, celexRdfUrl)
+    : null;
+  const rdfPublicationDate = celexRdf?.ok
+    ? readFirstMatch(
+        celexRdf.text,
+        /<[^>]*date_document[^>]*>(\d{4}-\d{2}-\d{2})<\/[^>]+>/,
+      )
+    : null;
+  const rdfTitle = celexRdf?.ok
+    ? readFirstMatch(
+        celexRdf.text,
+        /<[^>]*title xml:lang="en">([^<]+)<\/[^>]+>/,
+      )
+    : null;
+  const cellarId =
+    (page.ok
+      ? (readFirstMatch(page.text, /legalContentId=cellar:([a-f0-9-]+)/) ??
+        readFirstMatch(page.text, /resource\/cellar\/([a-f0-9-]+)/))
+      : null) ??
+    (xml?.ok
+      ? (readFirstMatch(xml.text, /resource\/cellar\/([a-f0-9-]+)/) ??
+        readFirstMatch(xml.text, /<IDENTIFIER>([a-f0-9-]{36})<\/IDENTIFIER>/))
+      : null) ??
+    (celexRdf?.ok
+      ? readFirstMatch(celexRdf.text, /resource\/cellar\/([a-f0-9-]+)/)
+      : null);
+
+  const xmlArtifact: CatalogFullImportDryRunSourceInventoryArtifact = xmlUrl
+    ? {
+        format: "xml_notice",
+        role: "preferred_machine_readable",
+        url: xmlUrl,
+        fetchStatus: xml?.ok ? "fetched" : "review_needed",
+        parseStatus: "not_parsed_dry_run_only",
+        httpStatus: xml?.httpStatus ?? null,
+        contentType: xml?.contentType ?? null,
+        byteLength: xml?.byteLength ?? null,
+        checksumSha256: xml?.ok ? xml.checksumSha256 : null,
+      }
+    : {
+        format: "xml_notice",
+        role: "preferred_machine_readable",
+        url: null,
+        fetchStatus: "review_needed",
+        parseStatus: "not_parsed_dry_run_only",
+        httpStatus: null,
+        contentType: null,
+        byteLength: null,
+        checksumSha256: null,
+      };
+  const reviewStatus =
+    page.ok &&
+    normalizedCelexId &&
+    eliUrl &&
+    (publicationDate ?? rdfPublicationDate) &&
+    xmlArtifact.fetchStatus === "fetched"
+      ? "ready_for_parser_plan"
+      : "review_needed";
+
+  return {
+    sourceFamily: "eu-official-journal-common-catalogue",
+    supplementType: candidate.supplementType,
+    label: candidate.label,
+    title:
+      title ?? normalizeRdfText(rdfTitle) ?? fallbackSupplementTitle(candidate),
+    publicationDate: publicationDate ?? rdfPublicationDate,
+    language: "EN",
+    eurLexUrl: candidate.eurLexUrl,
+    ojUrl: candidate.eurLexUrl,
+    ojCitation,
+    eliUrl,
+    celexId: normalizedCelexId,
+    celexUrl,
+    cellarId,
+    artifacts: [
+      {
+        format: "html",
+        role: "source_page",
+        url: candidate.eurLexUrl,
+        fetchStatus: page.ok ? "fetched" : "review_needed",
+        parseStatus: "metadata_parsed",
+        httpStatus: page.httpStatus,
+        contentType: page.contentType,
+        byteLength: page.byteLength,
+        checksumSha256: page.ok ? page.checksumSha256 : null,
+      },
+      xmlArtifact,
+      {
+        format: "celex_rdf",
+        role: "metadata_fallback",
+        url: celexRdfUrl,
+        fetchStatus: celexRdf?.ok ? "fetched" : "review_needed",
+        parseStatus: celexRdf?.ok
+          ? "metadata_parsed"
+          : "not_parsed_dry_run_only",
+        httpStatus: celexRdf?.httpStatus ?? null,
+        contentType: celexRdf?.contentType ?? null,
+        byteLength: celexRdf?.byteLength ?? null,
+        checksumSha256: celexRdf?.ok ? celexRdf.checksumSha256 : null,
+      },
+      {
+        format: "pdf",
+        role: "authentic_oj_fallback",
+        url: pdfUrl,
+        fetchStatus: pdfUrl ? "available_not_fetched" : "review_needed",
+        parseStatus: "not_machine_preferred",
+        httpStatus: null,
+        contentType: null,
+        byteLength: null,
+        checksumSha256: null,
+      },
+    ],
+    fetchStatus: page.ok ? "fetched" : "review_needed",
+    parseStatus: "metadata_only_not_parsed",
+    reviewStatus,
+  };
+}
+
+function selectLatestSupplementCandidates(html: string): Array<{
+  label: string;
+  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+  eurLexUrl: string;
+}> {
+  type SupplementAnchor = {
+    href: string;
+    text: string;
+    supplementLetter: string;
+    year: number;
+    number: number;
+  };
+
+  const anchors = [
+    ...html.matchAll(/<a[^>]+href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g),
+  ]
+    .map((match) => {
+      const text = decodeHtml(match[2].replace(/<[^>]+>/g, " "))
+        .replace(/\s+/g, " ")
+        .trim();
+      const supplementMatch = /^Supplement ([AH]) (\d{4})\/(\d+)$/.exec(text);
+      return {
+        href: decodeHtml(match[1]),
+        text,
+        supplementLetter: supplementMatch?.[1] ?? null,
+        year: supplementMatch ? Number(supplementMatch[2]) : null,
+        number: supplementMatch ? Number(supplementMatch[3]) : null,
+      };
+    })
+    .filter((anchor): anchor is SupplementAnchor => {
+      return (
+        anchor.supplementLetter !== null &&
+        anchor.year !== null &&
+        anchor.number !== null
+      );
+    })
+    .sort((left, right) => {
+      if (left.year !== right.year) return right.year - left.year;
+      return right.number - left.number;
+    });
+  const selected: Array<{
+    label: string;
+    supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+    eurLexUrl: string;
+  }> = [];
+
+  for (const supplementType of [
+    "agricultural_supplement_a",
+    "vegetable_supplement_h",
+  ] as const) {
+    const supplementLetter =
+      supplementType === "agricultural_supplement_a" ? "A" : "H";
+    const anchor = anchors.find(
+      (item) => item.supplementLetter === supplementLetter,
+    );
+    if (!anchor) continue;
+
+    selected.push({
+      label: anchor.text,
+      supplementType,
+      eurLexUrl: new URL(anchor.href, DG_SANTE_COMMON_CATALOGUE_URL).href,
+    });
+  }
+
+  return selected;
+}
+
+async function fetchTextArtifact(
+  fetchImpl: CatalogFullImportDryRunFetch,
+  url: string,
+) {
+  try {
+    const response = await fetchImpl(url, {
+      headers: {
+        accept: "text/html,application/xml,text/xml,*/*",
+        "user-agent":
+          "OverGarden OVE-101 EUR-Lex OJ inventory dry-run (contact via over.garden)",
+      },
+    });
+    const buffer = Buffer.from(await response.arrayBuffer());
+    return {
+      ok: response.status === 200 && buffer.length > 0,
+      httpStatus: response.status,
+      contentType: response.headers.get("content-type"),
+      byteLength: buffer.length,
+      checksumSha256: createHash("sha256").update(buffer).digest("hex"),
+      text: buffer.toString("utf8"),
+    };
+  } catch {
+    return {
+      ok: false,
+      httpStatus: null,
+      contentType: null,
+      byteLength: 0,
+      checksumSha256: null,
+      text: "",
+    };
+  }
+}
+
+function readFirstMatch(text: string, pattern: RegExp): string | null {
+  return pattern.exec(text)?.[1] ?? null;
+}
+
+function readEurLexEnglishTitle(html: string): string | null {
+  return normalizeRdfText(
+    readFirstMatch(
+      html,
+      /property="eli:title"\s+content="([^"]+)"\s+lang="en"/,
+    ) ??
+      readFirstMatch(
+        html,
+        /lang="en"\s+property="eli:title"\s+content="([^"]+)"/,
+      ) ??
+      readFirstMatch(html, /property="eli:title"\s+content="([^"]+)"/),
+  );
+}
+
+function deriveEurLexIdentifiers(eurLexUrl: string): {
+  celexId: string | null;
+  eliUrl: string | null;
+} {
+  const match = /\/eli\/C\/(\d{4})\/(\d+)\/oj\/?$/.exec(eurLexUrl);
+  if (!match) {
+    return { celexId: null, eliUrl: null };
+  }
+
+  const [, year, naturalNumber] = match;
+  return {
+    celexId: `C/${year}/${naturalNumber.padStart(5, "0")}`,
+    eliUrl: `http://data.europa.eu/eli/C/${year}/${Number(naturalNumber)}/oj`,
+  };
+}
+
+function fallbackSupplementTitle(candidate: {
+  label: string;
+  supplementType: "agricultural_supplement_a" | "vegetable_supplement_h";
+}) {
+  const family =
+    candidate.supplementType === "agricultural_supplement_a"
+      ? "agricultural plant species"
+      : "vegetable species";
+  return `Common catalogue of varieties of ${family} ${candidate.label}`;
+}
+
+function normalizeRdfText(value: string | null): string | null {
+  if (!value) return null;
+  return decodeHtml(value).replace(/\s+/g, " ").trim();
+}
+
+function parseEuropeanDate(value: string | null): string | null {
+  if (!value) return null;
+  const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(value);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function decodeHtml(value: string): string {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
 }

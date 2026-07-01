@@ -1,7 +1,7 @@
 import process from "node:process";
 
 import {
-  buildCatalogFullImportDryRunReport,
+  buildCatalogFullImportDryRunReportWithLiveInventory,
   parseCatalogFullImportDryRunArgs,
   validateCatalogFullImportDryRunOptions,
 } from "../src/lib/catalog/full-import-dry-run";
@@ -10,7 +10,7 @@ async function main() {
   const options = validateCatalogFullImportDryRunOptions(
     parseCatalogFullImportDryRunArgs(process.argv.slice(2)),
   );
-  const report = buildCatalogFullImportDryRunReport({
+  const report = await buildCatalogFullImportDryRunReportWithLiveInventory({
     options,
     generatedAt: new Date().toISOString(),
   });
