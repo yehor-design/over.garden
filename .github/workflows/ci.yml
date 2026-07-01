@@ -155,3 +155,6 @@ jobs:
 
       - name: Compile Python modules
         run: uv run python -m py_compile app/__init__.py app/main.py app/search.py app/worker.py
+
+      - name: Test Python worker
+        run: uv run --frozen pytest -q
