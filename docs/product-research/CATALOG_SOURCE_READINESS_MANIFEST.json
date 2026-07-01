@@ -35,6 +35,591 @@
     ],
     "nextSliceGate": "OVE-56 may create raw/source snapshot quarantine only from USE sources. OVE-57, OVE-58, and OVE-60 may consume the explicitly named USE sources below. OVE-59, OVE-61, OVE-62, and marketplace/vendor paths must not promote conditional or internal-validation-only data until their blockers are closed."
   },
+  "fullImportReadiness": {
+    "issue": "OVE-79",
+    "title": "Full catalog import readiness gate",
+    "verificationDate": "2026-07-01",
+    "verifiedBy": "pnpm --filter web catalog:sources:verify",
+    "operatorDecision": "Full catalog import is allowed only as controlled waves: raw/source quarantine first, then dry-run counts and leak checks, then source-family projection slices, then entity-resolution QA, then production proof. This gate does not approve an unsafe all-at-once product projection.",
+    "waveLegend": {
+      "raw_quarantine_allowed": "Source rows may be captured into source snapshot/quarantine tables with provenance, checksums, license, and source-only field flags.",
+      "product_projection_allowed": "Some fields from this source may reach product-facing catalog/typeahead after the named importer, dry-run, attribution, dedupe, and privacy checks pass.",
+      "operator_review_required": "Rows or aliases need operator/curator review before becoming product-visible, even if raw capture is allowed.",
+      "legal_blocked": "Legal, reuse, license, database-right, or terms evidence is insufficient for product projection.",
+      "parser_blocked": "The exact export/parser/row-filter path is not yet strong enough for full-volume automated import.",
+      "rejected": "No ingestion path is allowed without a new partner/legal basis."
+    },
+    "importWaves": {
+      "raw_quarantine_allowed": [
+        "ua-state-register",
+        "catalogue-of-life-checklistbank",
+        "world-flora-online",
+        "gbif-backbone",
+        "eppo-codes",
+        "wikidata",
+        "grin-global",
+        "vertebrate-breed-ontology",
+        "iasas-bg-official-variety-list",
+        "eu-common-catalogue",
+        "eol-vernaculars",
+        "inaturalist"
+      ],
+      "product_projection_allowed": [
+        "ua-state-register",
+        "catalogue-of-life-checklistbank",
+        "world-flora-online",
+        "gbif-backbone",
+        "eppo-codes",
+        "wikidata",
+        "grin-global",
+        "vertebrate-breed-ontology"
+      ],
+      "operator_review_required": [
+        "wikidata",
+        "grin-global",
+        "iasas-bg-official-variety-list",
+        "eu-common-catalogue",
+        "eol-vernaculars",
+        "inaturalist"
+      ],
+      "legal_blocked": [
+        "iasas-bg-official-variety-list",
+        "eu-common-catalogue",
+        "pesi-euro-med",
+        "eol-vernaculars",
+        "inaturalist",
+        "dad-is-efabis",
+        "eurisco",
+        "genesys-pgr",
+        "vendor-marketplace-paths"
+      ],
+      "parser_blocked": [
+        "iasas-bg-official-variety-list",
+        "eu-common-catalogue",
+        "eol-vernaculars",
+        "inaturalist"
+      ],
+      "rejected": ["vendor-marketplace-paths"]
+    },
+    "sourceVerdicts": [
+      {
+        "slug": "ua-state-register",
+        "sourceVersionOrExport": "2025-07-15 RegisterVarietis CSV resource",
+        "exportPathOrAccessMethod": "Exact data.gov.ua CSV resource URL; no portal crawling.",
+        "license": "Creative Commons Attribution 4.0 International",
+        "attributionRequired": true,
+        "volumeEstimate": "Full official register CSV; OVE-81 must record row count and checksum before projection.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "bulk_official_varieties",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "proposed zone",
+          "direction/use notes",
+          "creation method",
+          "owner/maintainer rows until separately approved"
+        ],
+        "productProjectionFields": [
+          "official variety name",
+          "official transliteration",
+          "taxon name",
+          "register identifier",
+          "source attribution"
+        ],
+        "unblockingEvidence": [
+          "OVE-81 full-file checksum",
+          "OVE-81 row count",
+          "UTF-16LE parser proof",
+          "dry-run leak report from OVE-80"
+        ],
+        "nextIssueDependency": "OVE-81"
+      },
+      {
+        "slug": "catalogue-of-life-checklistbank",
+        "sourceVersionOrExport": "COL26.6 release alias 3LR, DOI 10.48580/dgy4k",
+        "exportPathOrAccessMethod": "ChecklistBank/Catalogue of Life API or release export with release DOI preserved.",
+        "license": "CC BY",
+        "attributionRequired": true,
+        "volumeEstimate": "Full species backbone release; millions of name usages, importer must scope to plant catalog needs first.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "species_backbone",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "full raw classification payload",
+          "verbatim source keys not needed in product UI",
+          "non-selected synonyms until curation"
+        ],
+        "productProjectionFields": [
+          "accepted scientific name",
+          "rank",
+          "canonical source identifier",
+          "safe synonyms",
+          "source attribution"
+        ],
+        "unblockingEvidence": [
+          "OVE-82 dry-run row/projection counts",
+          "CoL release DOI in provenance",
+          "entity-resolution QA in OVE-89"
+        ],
+        "nextIssueDependency": "OVE-82"
+      },
+      {
+        "slug": "world-flora-online",
+        "sourceVersionOrExport": "World Flora Online Plant List June 2026, DOI 10.5281/zenodo.20782718",
+        "exportPathOrAccessMethod": "Zenodo WFO release files; prefer dump metadata over unstable app hostnames.",
+        "license": "CC0",
+        "attributionRequired": false,
+        "volumeEstimate": "Full WFO plant list release dump.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "species_backbone_corroboration",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "raw dump rows",
+          "non-selected synonym candidates",
+          "parser diagnostics"
+        ],
+        "productProjectionFields": [
+          "plant scientific names",
+          "WFO identifiers",
+          "safe synonym corroboration"
+        ],
+        "unblockingEvidence": [
+          "OVE-82 dump checksum and file selection",
+          "WFO-to-CoL/GBIF reconciliation report",
+          "entity-resolution QA in OVE-89"
+        ],
+        "nextIssueDependency": "OVE-82"
+      },
+      {
+        "slug": "gbif-backbone",
+        "sourceVersionOrExport": "GBIF Backbone Taxonomy DOI 10.15468/39omei",
+        "exportPathOrAccessMethod": "GBIF species API or backbone dataset export; occurrence datasets are separate and not product-approved here.",
+        "license": "CC BY 4.0 for the backbone dataset; occurrence datasets have independent licenses.",
+        "attributionRequired": true,
+        "volumeEstimate": "Full backbone taxonomy surface; occurrence volume is out of scope for this product projection gate.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "species_backbone_corroboration",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "occurrence coordinates",
+          "dataset-specific occurrence licenses",
+          "verbatim occurrence metadata",
+          "distribution fields"
+        ],
+        "productProjectionFields": [
+          "taxon key",
+          "accepted scientific name",
+          "rank",
+          "taxonomy corroboration",
+          "source attribution"
+        ],
+        "unblockingEvidence": [
+          "OVE-82 backbone-only import plan",
+          "explicit occurrence-data exclusion",
+          "coordinate leak checks",
+          "entity-resolution QA in OVE-89"
+        ],
+        "nextIssueDependency": "OVE-82"
+      },
+      {
+        "slug": "eppo-codes",
+        "sourceVersionOrExport": "EPPO Open Data Licence and Global Database taxon pages verified live",
+        "exportPathOrAccessMethod": "EPPO Data Services / Global Database taxon pages; preserve Open Data Licence attribution.",
+        "license": "EPPO Codes Open Data Licence",
+        "attributionRequired": true,
+        "volumeEstimate": "EPPO code/name backbone subset relevant to garden plants and pests.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "codes_and_safe_aliases",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "distribution metadata",
+          "regulated-organism notes unless explicitly modeled",
+          "non-reviewed common-name candidates"
+        ],
+        "productProjectionFields": [
+          "EPPO code",
+          "scientific name",
+          "source-backed synonyms",
+          "safe common names",
+          "mandatory attribution"
+        ],
+        "unblockingEvidence": [
+          "OVE-82/OVE-83 parser coverage report",
+          "attribution rendering proof",
+          "distribution-field exclusion test"
+        ],
+        "nextIssueDependency": "OVE-82, OVE-83"
+      },
+      {
+        "slug": "wikidata",
+        "sourceVersionOrExport": "Live EntityData access for QID-backed aliases",
+        "exportPathOrAccessMethod": "EntityData JSON for selected QIDs; do not use as sole canonical source.",
+        "license": "CC0",
+        "attributionRequired": false,
+        "volumeEstimate": "Supplemental entity/alias records only for concepts already corroborated by stronger sources.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "supplemental_aliases_only",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "product_projection_allowed",
+          "operator_review_required"
+        ],
+        "sourceOnlyFields": [
+          "unsourced claims",
+          "non-language aliases",
+          "external identifiers not needed in product UI",
+          "ambiguous aliases"
+        ],
+        "productProjectionFields": [
+          "QID",
+          "source-backed local aliases",
+          "safe language labels",
+          "corroborating identifiers"
+        ],
+        "unblockingEvidence": [
+          "OVE-83 language/claim allowlist",
+          "alias ambiguity review",
+          "non-canonical-source guard"
+        ],
+        "nextIssueDependency": "OVE-83"
+      },
+      {
+        "slug": "grin-global",
+        "sourceVersionOrExport": "GRIN/NPGS official taxonomy/search/export path verified live",
+        "exportPathOrAccessMethod": "Official GRIN export/dump path only; do not scrape interactive pages.",
+        "license": "US public-domain compatible federal data, with source-specific confirmation required for non-US contributed records.",
+        "attributionRequired": false,
+        "volumeEstimate": "Long-tail taxonomy and germplasm candidate records; projection count must be curator-bounded.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "curator_promotion_only",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "product_projection_allowed",
+          "operator_review_required"
+        ],
+        "sourceOnlyFields": [
+          "accession identifiers",
+          "germplasm distribution policy",
+          "source row references",
+          "donor/geographic metadata",
+          "review-only candidate notes"
+        ],
+        "productProjectionFields": [
+          "curator-approved candidate name",
+          "safe species alias",
+          "source attribution/provenance",
+          "review status"
+        ],
+        "unblockingEvidence": [
+          "OVE-87 bulk genebank legal/source gate",
+          "OVE-88 curator queue proof",
+          "dry-run held-vs-promoted counts",
+          "accession-field leak check"
+        ],
+        "nextIssueDependency": "OVE-87, OVE-88"
+      },
+      {
+        "slug": "vertebrate-breed-ontology",
+        "sourceVersionOrExport": "OLS reports VBO loaded 2026-04-15",
+        "exportPathOrAccessMethod": "OLS metadata plus official OBO release file.",
+        "license": "CC BY 4.0",
+        "attributionRequired": true,
+        "volumeEstimate": "Vertebrate breed ontology; English labels only and no bee coverage.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": true,
+        "productProjectionMode": "breed_backbone_limited",
+        "importWaves": ["raw_quarantine_allowed", "product_projection_allowed"],
+        "sourceOnlyFields": [
+          "ontology axioms not rendered in product UI",
+          "non-localized labels",
+          "unsupported species branches"
+        ],
+        "productProjectionFields": [
+          "breed label",
+          "ontology identifier",
+          "source attribution",
+          "supported object-kind mapping"
+        ],
+        "unblockingEvidence": [
+          "OVE-86 supported-species mapping",
+          "kind-correct readback proof",
+          "VBO attribution proof"
+        ],
+        "nextIssueDependency": "OVE-86"
+      },
+      {
+        "slug": "iasas-bg-official-variety-list",
+        "sourceVersionOrExport": "IASAS official Bulgarian variety list page/PDF/HTML",
+        "exportPathOrAccessMethod": "Official IASAS list page; no approved structured bulk export yet.",
+        "license": "Reuse basis not explicit enough for automatic commercial projection.",
+        "attributionRequired": true,
+        "volumeEstimate": "Bulgarian official variety list volume unknown until parser/export proof.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "blocked_until_legal_and_parser_gate",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "operator_review_required",
+          "legal_blocked",
+          "parser_blocked"
+        ],
+        "sourceOnlyFields": [
+          "PDF/OCR confidence",
+          "source page references",
+          "legal caveats",
+          "low-confidence parsed rows"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-84 exact reuse/legal basis",
+          "OVE-84 export or parser proof",
+          "OVE-84 attribution text",
+          "operator-approved row confidence threshold"
+        ],
+        "nextIssueDependency": "OVE-84, OVE-85"
+      },
+      {
+        "slug": "eu-common-catalogue",
+        "sourceVersionOrExport": "EU Plant Variety Portal / Common Catalogue surfaces",
+        "exportPathOrAccessMethod": "EU portal or official export path after API/export stability is proven.",
+        "license": "EU reuse likely available under Commission reuse rules, but dataset-specific basis and legal-value caveats must be captured before projection.",
+        "attributionRequired": true,
+        "volumeEstimate": "EU/Common Catalogue varieties; BG subset needs exact source/version split.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "blocked_until_export_reuse_gate",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "operator_review_required",
+          "legal_blocked",
+          "parser_blocked"
+        ],
+        "sourceOnlyFields": [
+          "legal-value caveats",
+          "portal/source row references",
+          "low-confidence country filters",
+          "parser diagnostics"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-84 stable export/API path",
+          "OVE-84 reuse basis",
+          "OVE-84 legal-value caveat handling",
+          "OVE-85 dedupe/readback proof"
+        ],
+        "nextIssueDependency": "OVE-84, OVE-85"
+      },
+      {
+        "slug": "pesi-euro-med",
+        "sourceVersionOrExport": "PESI / Euro+Med portal",
+        "exportPathOrAccessMethod": "No approved full-import export for OverGarden commercial product use.",
+        "license": "Unknown for OverGarden commercial product use.",
+        "attributionRequired": true,
+        "volumeEstimate": "Unknown until legal/export basis is resolved.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": false,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "internal_validation_only",
+        "importWaves": ["legal_blocked"],
+        "sourceOnlyFields": [
+          "all portal payloads until legal basis is resolved",
+          "coverage probes"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "commercial reuse license",
+          "official export/API terms",
+          "UA/BG vernacular coverage measurement"
+        ],
+        "nextIssueDependency": "OVE-83 after legal gate"
+      },
+      {
+        "slug": "eol-vernaculars",
+        "sourceVersionOrExport": "EOL vernacular Zenodo record 13223288",
+        "exportPathOrAccessMethod": "Zenodo dump only after row-level license filter is implemented.",
+        "license": "Mixed or not specified at dump metadata level; row-level licensing must be resolved before product use.",
+        "attributionRequired": true,
+        "volumeEstimate": "Large vernacular dump; product projection count depends on license/language filters.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "blocked_until_license_filter",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "operator_review_required",
+          "legal_blocked",
+          "parser_blocked"
+        ],
+        "sourceOnlyFields": [
+          "unlicensed rows",
+          "non-commercial/share-alike rows",
+          "ambiguous vernaculars",
+          "source page references"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-83 row-level license filter",
+          "language coverage report",
+          "alias ambiguity review",
+          "attribution rendering proof"
+        ],
+        "nextIssueDependency": "OVE-83"
+      },
+      {
+        "slug": "inaturalist",
+        "sourceVersionOrExport": "iNaturalist taxa API only",
+        "exportPathOrAccessMethod": "Taxa API for taxonomy/vernacular probes; no observations, users, photos, or coordinates.",
+        "license": "API/content terms and per-field/per-media licenses require filtering.",
+        "attributionRequired": true,
+        "volumeEstimate": "Taxa/alias candidate volume only; observations are out of scope.",
+        "parserRisk": "high",
+        "rawQuarantineAllowed": true,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "blocked_until_terms_and_field_filter",
+        "importWaves": [
+          "raw_quarantine_allowed",
+          "operator_review_required",
+          "legal_blocked",
+          "parser_blocked"
+        ],
+        "sourceOnlyFields": [
+          "observations",
+          "users",
+          "photos",
+          "coordinates",
+          "license-restricted media/content",
+          "ambiguous common names"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-83 terms and field filter",
+          "explicit observation/photo/user exclusion",
+          "row-level license proof",
+          "BG/UA coverage measurement"
+        ],
+        "nextIssueDependency": "OVE-83"
+      },
+      {
+        "slug": "dad-is-efabis",
+        "sourceVersionOrExport": "DAD-IS/EFABIS data page",
+        "exportPathOrAccessMethod": "Internal validation only; no full import path approved.",
+        "license": "FAO/DAD-IS terms require legal confirmation before product ingestion or commercial promotion.",
+        "attributionRequired": true,
+        "volumeEstimate": "Breed validation surface only until legal basis changes.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": false,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "internal_validation_only",
+        "importWaves": ["legal_blocked"],
+        "sourceOnlyFields": [
+          "all DAD-IS/EFABIS rows",
+          "country/breed validation notes"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "legal confirmation for commercial product ingestion",
+          "official export/API contract",
+          "breed object-kind mapping proof"
+        ],
+        "nextIssueDependency": "OVE-86 after legal gate"
+      },
+      {
+        "slug": "eurisco",
+        "sourceVersionOrExport": "EURISCO terms and full-dump page",
+        "exportPathOrAccessMethod": "No product import path until anti-compete/flow-down terms are legally cleared.",
+        "license": "Custom EURISCO Terms of Use, not treated as CC-BY.",
+        "attributionRequired": true,
+        "volumeEstimate": "Large accession dataset; product projection blocked.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": false,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "internal_validation_only",
+        "importWaves": ["legal_blocked"],
+        "sourceOnlyFields": [
+          "all accession rows",
+          "geospatial metadata",
+          "donor metadata",
+          "anti-compete restricted data"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-87 legal review",
+          "allowed-use memo for raw quarantine",
+          "explicit aggregate/projection policy"
+        ],
+        "nextIssueDependency": "OVE-87"
+      },
+      {
+        "slug": "genesys-pgr",
+        "sourceVersionOrExport": "Genesys Terms and Conditions of Use",
+        "exportPathOrAccessMethod": "No product import path until redistribution restriction is cleared.",
+        "license": "Genesys Terms and Conditions of Use.",
+        "attributionRequired": true,
+        "volumeEstimate": "Large accession dataset; product projection blocked.",
+        "parserRisk": "medium",
+        "rawQuarantineAllowed": false,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "internal_validation_only",
+        "importWaves": ["legal_blocked"],
+        "sourceOnlyFields": [
+          "all accession rows",
+          "redistribution-restricted metadata",
+          "geospatial/donor metadata"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "OVE-87 legal review or written permission",
+          "redistribution-safe subset definition",
+          "source-only field policy"
+        ],
+        "nextIssueDependency": "OVE-87"
+      },
+      {
+        "slug": "vendor-marketplace-paths",
+        "sourceVersionOrExport": "No approved source version or endpoint",
+        "exportPathOrAccessMethod": "None; partner feed, official API contract, or written permission required.",
+        "license": "No general reuse license.",
+        "attributionRequired": true,
+        "volumeEstimate": "Not estimated because ingestion is rejected.",
+        "parserRisk": "not_applicable",
+        "rawQuarantineAllowed": false,
+        "productProjectionAllowed": false,
+        "productProjectionMode": "rejected",
+        "importWaves": ["legal_blocked", "rejected"],
+        "sourceOnlyFields": [
+          "all vendor catalogue rows",
+          "product pages",
+          "prices",
+          "photos",
+          "marketplace metadata"
+        ],
+        "productProjectionFields": [],
+        "unblockingEvidence": [
+          "written permission",
+          "partner feed",
+          "official API contract",
+          "explicit maintainer approval"
+        ],
+        "nextIssueDependency": "None until partner/legal basis"
+      }
+    ]
+  },
   "requiredCoverage": [
     "UA State Register",
     "CoL/ChecklistBank",

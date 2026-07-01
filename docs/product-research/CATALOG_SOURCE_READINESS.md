@@ -1,11 +1,13 @@
 # Catalog Source Readiness Gate
 
-Status: OVE-55 live gate
-Verification date: 2026-06-29
+Status: OVE-55 live gate plus OVE-79 full-import readiness gate
+Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01
 Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
 
 This gate decides which catalog sources later ingestion slices may consume. It is not a bulk import and it does not approve live product dependencies on external APIs.
+
+OVE-79 extends the original OVE-55 source gate for the founder's full-import goal. The full-import decision is still controlled: raw/source quarantine comes first, then dry-run counts/leak checks, then source-family projection slices, then entity-resolution QA, then production rollout proof.
 
 ## Operator Decision
 
@@ -32,17 +34,49 @@ Conditional or blocked:
 - `genesys-pgr` - INTERNAL-VALIDATION-ONLY. Terms page reachable and includes redistribution restriction; legal basis required before OVE-62.
 - `vendor-marketplace-paths` - REJECT. No scraping or bulk vendor ingestion without partner feed, official API contract, or written permission.
 
+## OVE-79 Full-Import Waves
+
+The machine-readable `fullImportReadiness` section is the current import-wave contract for OVE-80 through OVE-90:
+
+- `raw_quarantine_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, `vertebrate-breed-ontology`, `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
+- `product_projection_allowed`: `ua-state-register`, `catalogue-of-life-checklistbank`, `world-flora-online`, `gbif-backbone`, `eppo-codes`, `wikidata`, `grin-global`, and `vertebrate-breed-ontology`.
+- `operator_review_required`: `wikidata`, `grin-global`, `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
+- `legal_blocked`: `iasas-bg-official-variety-list`, `eu-common-catalogue`, `pesi-euro-med`, `eol-vernaculars`, `inaturalist`, `dad-is-efabis`, `eurisco`, `genesys-pgr`, and `vendor-marketplace-paths`.
+- `parser_blocked`: `iasas-bg-official-variety-list`, `eu-common-catalogue`, `eol-vernaculars`, and `inaturalist`.
+- `rejected`: `vendor-marketplace-paths`.
+
+Import order:
+
+1. OVE-80 must run dry-run row counts, projection counts, duplicate-risk checks, and forbidden-field leak checks before any full-volume mutation.
+2. OVE-81 may expand the UA State Register only after full-file checksum, row count, UTF-16LE parser proof, and dry-run leak proof.
+3. OVE-82 may expand the species backbone only after CoL/WFO/GBIF/EPPO release/export checks, source attribution, coordinate exclusion, and OVE-89 entity-resolution QA.
+4. OVE-83 may expand aliases only after Wikidata/EOL/iNaturalist language, claim, license, and ambiguity filters are machine-checked.
+5. OVE-84 must close the BG/EU legal, export, parser, attribution, and legal-value caveat blockers before OVE-85 imports Bulgarian official varieties beyond the proof row.
+6. OVE-86 may expand breed concepts only for source/object-kind mappings cleared by the manifest; DAD-IS/EFABIS remains internal validation only until legal clearance.
+7. OVE-87 must clear genebank/PGR legal and source-use blockers before OVE-88 performs raw import and curator-only projection.
+8. OVE-89 must review duplicate clusters, canonical conflicts, ambiguous aliases, and cross-source identity risk before OVE-90 production proof claims full catalog availability.
+
+Concrete blocker evidence required before promotion:
+
+- Conditional BG/EU sources need exact reuse basis, export/API path, parser confidence, attribution text, and legal-value caveat handling.
+- EOL and iNaturalist need row-level license/terms filtering, explicit observation/photo/user/coordinate exclusion, and alias ambiguity review.
+- PESI/Euro+Med needs commercial reuse license and coverage proof.
+- DAD-IS/EFABIS needs legal confirmation and official export/API terms before any product ingestion.
+- EURISCO and Genesys need legal review or written permission because accession/redistribution terms currently block product projection.
+- Vendor/marketplace paths need written permission, partner feed, official API contract, and explicit maintainer approval; scraping remains rejected.
+
 ## Privacy Boundary
 
 External occurrence or distribution coordinates are not OverGarden user/product location data. When a source license later allows capture, coordinates may exist only in isolated raw/source snapshots with provenance, license, checksum, and usage flags. They must not enter canonical product projections, public pages, Meilisearch, analytics, logs, or UI without a later explicit ADR and SDD slice.
 
 ## Live Verification Summary
 
-`pnpm catalog:sources:verify` passed on 2026-06-29:
+`pnpm catalog:sources:verify` passed on 2026-07-01:
 
 - Live checks passed for UA State Register landing and byte-range CSV sample, CoL release metadata and nameusage sample, WFO Zenodo release, GBIF dataset metadata and species match, EPPO data services/licence/taxon pages, Wikidata EntityData, GRIN taxonomy page, VBO OLS metadata, IASAS official list page, EU Plant Variety Portal, PESI portal, EOL Zenodo vernacular metadata, iNaturalist taxa API, DAD-IS data page, EURISCO terms/full-dump pages, and Genesys terms.
 - Vendor/marketplace paths are intentionally manual-gated: no approved endpoint exists, so no scrape/API probe was run.
-- Result counts: 17 sources; USE=8; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
+- OVE-55 result counts: 17 sources; USE=8; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
+- OVE-79 import-wave counts: raw=12; product=8; review=6; legal=9; parser=4; rejected=1.
 
 ## Downstream Gates
 
