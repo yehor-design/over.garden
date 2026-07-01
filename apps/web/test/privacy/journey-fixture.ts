@@ -152,7 +152,6 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
     },
     plantObject: {
       displayName: JOURNEY.plantDisplayName,
-      objectKind: "plant",
       catalogCanonicalName: JOURNEY.catalogCanonicalName,
       catalogPublicSlug: JOURNEY.catalogPublicSlug,
       varietyText: "Помідор чері",

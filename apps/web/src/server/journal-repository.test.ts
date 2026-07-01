@@ -358,6 +358,7 @@ describe("journal repository query contracts", () => {
       '"catalog_items"."created_by_user_id" is null',
     );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
+    expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
@@ -396,6 +397,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" as "publicGoneAt"',
     );
+    expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
     expect(compiled.sql).not.toContain("owner_user_id");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");

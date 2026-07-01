@@ -173,7 +173,6 @@ export interface PublicJournalEntryPage {
   };
   plantObject: {
     displayName: string;
-    objectKind: PlantObjectKind;
     catalogCanonicalName: string | null;
     catalogPublicSlug: string | null;
     varietyText: string | null;
@@ -901,7 +900,6 @@ export async function getPublicJournalEntryLookup(
       },
       plantObject: {
         displayName: row.objectDisplayName,
-        objectKind: row.objectKind as PlantObjectKind,
         catalogCanonicalName: row.catalogCanonicalName,
         catalogPublicSlug: row.catalogPublicSlug,
         varietyText: row.varietyText,
@@ -1223,7 +1221,6 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
       "plant_objects.display_name as objectDisplayName",
-      "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
