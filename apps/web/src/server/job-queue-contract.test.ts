@@ -112,6 +112,11 @@ describe("job queue producer/consumer contract", () => {
         queueName: "matching",
         kind: "catalog_typeahead_reindex",
       },
+      {
+        source: "server/erasure-execution.ts",
+        queueName: "matching",
+        kind: "journal_entry_unindex",
+      },
     ]);
   });
 

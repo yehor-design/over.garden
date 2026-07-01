@@ -24,6 +24,7 @@
     "catalog:sources:refresh-sample": "tsx scripts/refresh-catalog-source-sample.ts",
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "smoke:garden-catalog-ux": "tsx scripts/smoke-garden-catalog-ux.ts",
+    "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",
     "test:watch": "vitest",

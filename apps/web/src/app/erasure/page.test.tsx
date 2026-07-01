@@ -46,10 +46,12 @@ describe("/erasure", () => {
       "Closed-pilot OverGarden account erasure",
     );
     expect(html).toContain("Needs identity verification");
+    expect(html).toContain(ERASURE_REQUEST_INTAKE_VERSION);
     expect(html).toContain(
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     );
     expect(html).toContain("does not automatically delete");
+    expect(html).toContain("removal best-effort only");
     expect(html).not.toContain("00000000-0000-4000-8000-000000000001");
     expect(html).not.toMatch(/placeholder|media keys|ip address/i);
   });

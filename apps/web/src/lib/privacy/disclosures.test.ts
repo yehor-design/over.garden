@@ -42,12 +42,18 @@ describe("pilot privacy disclosure constants", () => {
   });
 
   it("keeps erasure intake version explicit and non-destructive", () => {
-    expect(ERASURE_REQUEST_INTAKE_VERSION).toBe("erasure-request-pilot-v2");
+    expect(ERASURE_REQUEST_INTAKE_VERSION).toBe("erasure-request-pilot-v3");
     expect(ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.join(" ")).toContain(
       "operator-reviewed",
     );
     expect(ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.join(" ")).toContain(
       "deleted automatically",
+    );
+    expect(ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.join(" ")).toContain(
+      "request-specific approval",
+    );
+    expect(ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.join(" ")).toContain(
+      "removal best-effort only",
     );
     expect(ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.join(" ")).not.toContain(
       "automatically delete or anonymize",
@@ -59,7 +65,7 @@ describe("pilot privacy disclosure constants", () => {
       "Final reviewed legal policy text.",
     );
     expect(PILOT_PUBLIC_RELEASE_BLOCKERS.join(" ")).toContain(
-      "Maintainer-approved irreversible erasure/anonymization procedure.",
+      "Production proof of the maintainer-approved erasure workflow",
     );
   });
 

@@ -1,5 +1,5 @@
 export const FIRST_PUBLICATION_DISCLOSURE_VERSION = "first-publication-v3";
-export const ERASURE_REQUEST_INTAKE_VERSION = "erasure-request-pilot-v2";
+export const ERASURE_REQUEST_INTAKE_VERSION = "erasure-request-pilot-v3";
 
 export const PILOT_LEGAL_COPY_STATUS =
   "closed_pilot_reviewed_public_release_blocked" as const;
@@ -20,14 +20,15 @@ export const ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES = [
   "No account, journal entry, media object, search document, or analytics row is deleted automatically by this form.",
   "A closed-pilot operator can review a non-destructive dry-run preview of affected data classes before any maintainer-approved destructive workflow.",
   "A closed-pilot operator can move the request through submitted, reviewing, and handled statuses without reading private journal text.",
-  "Irreversible erasure or anonymization still requires maintainer approval and a manual operator workflow.",
+  "A maintainer-approved operator can execute irreversible erasure or anonymization only after dry-run review and request-specific approval.",
+  "Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.",
 ] as const;
 
 export const PILOT_PUBLIC_RELEASE_BLOCKERS = [
   "Final reviewed legal policy text.",
   "Verified operator contact and response process.",
   "Processor, retention, and legal-basis wording.",
-  "Maintainer-approved irreversible erasure/anonymization procedure.",
+  "Production proof of the maintainer-approved erasure workflow before public self-serve traffic.",
 ] as const;
 
 export type ErasureRequestStatusCopyKey =

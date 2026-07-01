@@ -9,6 +9,7 @@ import {
 } from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getErasureDryRunPreviewForRequest } from "@/server/erasure-dry-run-repository";
+import { expectedErasureMaintainerApprovalText } from "@/server/erasure-execution";
 import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
 import {
   listOperatorErasureRequests,
@@ -17,6 +18,7 @@ import {
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
+  executeApprovedErasureRequestAction,
   markErasureRequestDryRunReviewedAction,
   markErasureRequestHandledAction,
   markErasureRequestReviewingAction,
@@ -188,34 +190,111 @@ function ErasureRequestCard({
         </form>
       ) : null}
       {request.status === "submitted" || request.status === "reviewing" ? (
-        <form
-          action={markErasureRequestHandledAction}
-          className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
-        >
-          <input type="hidden" name="requestId" value={request.id} />
-          <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
-            Operator outcome
-            <select
-              name="handledStatus"
-              required
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            >
-              {ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            type="submit"
-            className={buttonVariants({ className: "self-start" })}
-          >
-            Mark handled
-          </button>
-        </form>
+        <>
+          <ApprovedErasureExecutionPanel request={request} />
+          <NonDestructiveOutcomeForm request={request} />
+        </>
       ) : null}
     </li>
+  );
+}
+
+function ApprovedErasureExecutionPanel({
+  request,
+}: {
+  request: ErasureRequestReadModel;
+}) {
+  const approvalText = expectedErasureMaintainerApprovalText(request.id);
+  const dryRunReviewed = Boolean(request.dryRunReviewedAt);
+
+  return (
+    <section className="grid gap-3 border-t border-border pt-3">
+      <div className="grid gap-1">
+        <h3 className="text-base font-semibold text-foreground">
+          Maintainer-approved irreversible erasure
+        </h3>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          Execution deletes or anonymizes current-schema account, journal,
+          media, analytics, catalog-provisional, search-job, and pilot operator
+          references for this requester. It removes OverGarden-controlled R2
+          media objects when their keys are still known, but crawler, search
+          engine, or AI copies outside OverGarden are best-effort only.
+        </p>
+      </div>
+      <form
+        action={executeApprovedErasureRequestAction}
+        className="grid gap-2 sm:max-w-xl"
+      >
+        <input type="hidden" name="requestId" value={request.id} />
+        <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+          Maintainer approval phrase
+          <input
+            name="maintainerApprovalText"
+            required
+            disabled={!dryRunReviewed}
+            placeholder={approvalText}
+            className="h-10 rounded-md border border-input bg-background px-3 font-mono text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-60"
+          />
+        </label>
+        <p className="font-mono text-xs text-muted-foreground">
+          {approvalText}
+        </p>
+        <button
+          type="submit"
+          disabled={!dryRunReviewed}
+          className={buttonVariants({
+            variant: "destructive",
+            className: "self-start disabled:pointer-events-none disabled:opacity-60",
+          })}
+        >
+          Execute approved erasure
+        </button>
+        {!dryRunReviewed ? (
+          <p className="text-xs text-muted-foreground">
+            Record the dry-run review before irreversible execution.
+          </p>
+        ) : null}
+      </form>
+    </section>
+  );
+}
+
+function NonDestructiveOutcomeForm({
+  request,
+}: {
+  request: ErasureRequestReadModel;
+}) {
+  const nonDestructiveOutcomes = ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.filter(
+    (option) => option.value !== "completed",
+  );
+
+  return (
+    <form
+      action={markErasureRequestHandledAction}
+      className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
+    >
+      <input type="hidden" name="requestId" value={request.id} />
+      <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+        Operator outcome
+        <select
+          name="handledStatus"
+          required
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+        >
+          {nonDestructiveOutcomes.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="submit"
+        className={buttonVariants({ className: "self-start" })}
+      >
+        Mark handled
+      </button>
+    </form>
   );
 }
 

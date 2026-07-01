@@ -1,6 +1,11 @@
 import "server-only";
 
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import {
@@ -97,6 +102,17 @@ export async function deleteQuarantineObject(objectKey: string): Promise<void> {
   await r2Client().send(
     new DeleteObjectCommand({
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
+      Key: objectKey,
+    }),
+  );
+}
+
+export async function deletePublicDerivativeObject(
+  objectKey: string,
+): Promise<void> {
+  await r2Client().send(
+    new DeleteObjectCommand({
+      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
       Key: objectKey,
     }),
   );

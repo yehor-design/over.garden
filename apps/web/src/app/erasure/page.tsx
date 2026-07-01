@@ -60,7 +60,9 @@ export default async function ErasureRequestPage() {
         <p>
           Status: <strong>{PILOT_LEGAL_COPY_STATUS_LABEL}</strong>. Final
           public-release legal wording, contact instructions, response
-          timelines, and erasure scope still require approval.
+          timelines, production proof, and erasure scope still require
+          approval. Search-engine, crawler, or AI copies outside OverGarden are
+          removal best-effort only.
         </p>
         <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
           {ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.map((line) => (

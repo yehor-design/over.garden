@@ -59,8 +59,9 @@ export default function PrivacyNoticePage() {
               previous public URL and leave public discovery surfaces.
             </li>
             <li>
-              Erasure requests use non-destructive intake version{" "}
-              {ERASURE_REQUEST_INTAKE_VERSION}.
+              Erasure requests use operator-reviewed intake version{" "}
+              {ERASURE_REQUEST_INTAKE_VERSION}; submitting the form never
+              deletes data automatically.
             </li>
           </ul>
         </section>

@@ -35,7 +35,13 @@ vi.mock("@/server/erasure-dry-run-repository", () => ({
   getErasureDryRunPreviewForRequest: mocks.getErasureDryRunPreviewForRequest,
 }));
 
+vi.mock("@/server/erasure-execution", () => ({
+  expectedErasureMaintainerApprovalText: () =>
+    "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
+}));
+
 vi.mock("./actions", () => ({
+  executeApprovedErasureRequestAction: vi.fn(),
   markErasureRequestHandledAction: vi.fn(),
   markErasureRequestReviewingAction: vi.fn(),
   markErasureRequestDryRunReviewedAction: vi.fn(),
@@ -58,8 +64,8 @@ describe("/garden/privacy/erasure-requests", () => {
         handledAt: null,
         handledStatus: null,
         intakeDisclosureVersion: ERASURE_REQUEST_INTAKE_VERSION,
-        dryRunReviewedAt: null,
-        dryRunReviewedByUserId: null,
+        dryRunReviewedAt: new Date("2026-06-29T09:00:00.000Z"),
+        dryRunReviewedByUserId: "00000000-0000-4000-8000-000000000999",
       },
     ]);
     mocks.getErasureDryRunPreviewForRequest.mockResolvedValue({
@@ -105,10 +111,14 @@ describe("/garden/privacy/erasure-requests", () => {
     expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
     expect(html).toContain("Non-destructive dry-run preview");
     expect(html).toContain("Journal entries");
-    expect(html).toContain("Mark dry-run reviewed");
+    expect(html).toContain("Record dry-run review again");
+    expect(html).toContain("Maintainer-approved irreversible erasure");
+    expect(html).toContain("Execute approved erasure");
+    expect(html).toContain("APPROVE request-0000abcd IRREVERSIBLE ERASURE");
     expect(html).toContain("request-0000abcd");
     expect(html).toContain("Mark handled");
     expect(html).toContain("Needs identity verification");
+    expect(html).not.toContain('<option value="completed">');
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
   });
 });

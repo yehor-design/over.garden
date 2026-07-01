@@ -130,7 +130,7 @@ export async function markErasureRequestHandled(
   },
 ): Promise<ErasureRequestReadModel> {
   const requestId = normalizeErasureRequestId(input.requestId);
-  const handledStatus = parseHandledStatus(input.handledStatus);
+  const handledStatus = parseNonDestructiveHandledStatus(input.handledStatus);
   const now = new Date();
   const request = await buildMarkErasureRequestHandledQuery(db, scope, {
     requestId,
@@ -312,6 +312,20 @@ function parseHandledStatus(value: string): ErasureRequestHandledStatus {
 
   if (!status) {
     throw new Error("Invalid erasure handled status.");
+  }
+
+  return status;
+}
+
+function parseNonDestructiveHandledStatus(
+  value: string,
+): ErasureRequestHandledStatus {
+  const status = parseHandledStatus(value);
+
+  if (status === "completed") {
+    throw new Error(
+      "Completed erasure requests must use the maintainer-approved execution workflow.",
+    );
   }
 
   return status;
