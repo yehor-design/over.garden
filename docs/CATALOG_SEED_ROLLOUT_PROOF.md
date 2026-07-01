@@ -58,6 +58,26 @@ The historical OVE-78 real app smoke selected and read back `Ботсадівс�
 
 Production setup note: before the successful OVE-78 proof, production schema bootstrap was rerun non-destructively because the source-catalog tables required by the rollout command were missing from the live database. No schema drop, bulk delete, restore-over-production, or source/user data export was performed. The OVE-78 code also hardened the species and UA register importers so production reruns write the expected `catalog_kind` explicitly instead of relying on database defaults.
 
+## OVE-104 EU OJ Local Smoke Gate
+
+OVE-104 adds a local/main smoke gate for the OVE-103 Official Journal / EUR-Lex Common Catalogue projection before OVE-85-90 resume. This is not a staging or production rollout claim; OVE-90 remains the production proof issue for the full catalog rollout.
+
+Local proof sequence:
+
+```bash
+cd apps/web
+pnpm catalog:sources:import-eu-oj-common-catalogue
+BETTER_AUTH_SECRET=local_ove104_build_secret_32_chars_minimum pnpm build
+BETTER_AUTH_SECRET=local_ove104_build_secret_32_chars_minimum pnpm start --hostname localhost --port 3000
+pnpm smoke:garden-eu-oj-common-catalogue -- --base-url http://localhost:3000
+```
+
+The smoke signs in through the real app, opens `/garden`, searches the authenticated typeahead for an EU OJ-backed variety, saves it through `/api/garden/entries`, reads back `/garden/objects/[objectId]`, and verifies the approved text: `Source: Official Journal of the European Union / EUR-Lex. Normalized by OverGarden.` It also verifies the legal-value caveat is visible and that IASAS-only blocked rows do not reach product typeahead through the legacy `eu_common_catalogue_bg` source.
+
+If the current approved OJ artifacts contain a Bulgaria-relevant accepted row, the smoke uses that row. If not, the smoke reports the absence explicitly and uses another accepted EU OJ row without claiming BG coverage.
+
+OVE-85-90 may resume only after this OVE-104 gate is committed, pushed, and verified on `main`.
+
 ## Local Proof Command
 
 Start from a clean current checkout, then run the local bootstrap and production server in one terminal:

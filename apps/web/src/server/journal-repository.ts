@@ -142,8 +142,16 @@ export interface PlantObjectPage {
     variety_state: PlantObject["variety_state"];
     location_visibility: PlantObject["location_visibility"];
     coarse_region_code: PlantObject["coarse_region_code"];
+    source_credit: PlantObjectCatalogSourceCredit | null;
   };
   entries: JournalEntryReadback[];
+}
+
+export interface PlantObjectCatalogSourceCredit {
+  sourceSlug: string;
+  sourceName: string;
+  sourceUrl: string;
+  attributionText: string | null;
 }
 
 export interface EntryMediaReadback {
@@ -343,6 +351,7 @@ export async function createFirstPlantEntry(
           variety_state: plantObject.variety_state,
           location_visibility: plantObject.location_visibility,
           coarse_region_code: plantObject.coarse_region_code,
+          source_credit: null,
         },
         entry,
         isNewEntry: true,
@@ -456,6 +465,12 @@ export async function getPlantObjectPage(
     scope,
     entryRows.map((entry) => entry.id),
   );
+  const sourceCredit = objectRow.catalogItemId
+    ? await readPlantObjectCatalogSourceCredit(
+        executor,
+        objectRow.catalogItemId,
+      )
+    : null;
 
   return {
     space: {
@@ -474,11 +489,31 @@ export async function getPlantObjectPage(
       variety_state: objectRow.varietyState,
       location_visibility: objectRow.objectLocationVisibility,
       coarse_region_code: objectRow.objectCoarseRegionCode,
+      source_credit: sourceCredit,
     },
     entries: entryRows.map((entry) => ({
       ...entry,
       media: mediaByEntryId.get(entry.id) ?? null,
     })),
+  };
+}
+
+async function readPlantObjectCatalogSourceCredit(
+  executor: QueryExecutor,
+  catalogItemId: string,
+): Promise<PlantObjectCatalogSourceCredit | null> {
+  const row = await buildPlantObjectCatalogSourceCreditQuery(
+    executor,
+    catalogItemId,
+  ).executeTakeFirst();
+
+  if (!row) return null;
+
+  return {
+    sourceSlug: row.sourceSlug,
+    sourceName: row.sourceName,
+    sourceUrl: row.sourceUrl,
+    attributionText: row.attributionText,
   };
 }
 
@@ -572,6 +607,7 @@ export async function createPlantObjectJournalEntry(
           variety_state: target.varietyState,
           location_visibility: target.objectLocationVisibility,
           coarse_region_code: target.objectCoarseRegionCode,
+          source_credit: null,
         },
         entry,
         isNewEntry: true,
@@ -622,6 +658,7 @@ export async function createPlantObjectJournalEntry(
         variety_state: target.varietyState,
         location_visibility: target.objectLocationVisibility,
         coarse_region_code: target.objectCoarseRegionCode,
+        source_credit: null,
       },
       entry: existingAfterConflict,
       isNewEntry: false,
@@ -700,6 +737,7 @@ export async function resolvePlantObjectCatalog(
         variety_state: resolved.variety_state,
         location_visibility: resolved.location_visibility,
         coarse_region_code: resolved.coarse_region_code,
+        source_credit: null,
       },
       entryCount,
       publicEntryPaths: publicSlugs.flatMap((row) =>
@@ -1175,6 +1213,37 @@ export function buildPlantObjectPageObjectQuery(
     .where("plant_objects.id", "=", objectId)
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("spaces.owner_user_id", "=", scope.userId);
+}
+
+export function buildPlantObjectCatalogSourceCreditQuery(
+  executor: QueryExecutor,
+  catalogItemId: string,
+) {
+  return executor
+    .selectFrom("catalog_source_links")
+    .innerJoin(
+      "catalog_source_records",
+      "catalog_source_records.id",
+      "catalog_source_links.source_record_id",
+    )
+    .innerJoin(
+      "catalog_source_snapshots",
+      "catalog_source_snapshots.id",
+      "catalog_source_records.source_snapshot_id",
+    )
+    .select([
+      "catalog_source_links.source_slug as sourceSlug",
+      "catalog_source_snapshots.source_name as sourceName",
+      "catalog_source_snapshots.source_url as sourceUrl",
+      "catalog_source_snapshots.attribution_text as attributionText",
+    ])
+    .where("catalog_source_links.catalog_item_id", "=", catalogItemId)
+    .where("catalog_source_links.projection_kind", "=", "canonical_item")
+    .where("catalog_source_records.projection_status", "=", "projected")
+    .where("catalog_source_snapshots.attribution_required", "=", true)
+    .orderBy("catalog_source_snapshots.verified_at", "desc")
+    .orderBy("catalog_source_snapshots.source_name", "asc")
+    .limit(1);
 }
 
 export function buildPublicJournalEntryPageQuery(

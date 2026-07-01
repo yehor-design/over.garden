@@ -26,6 +26,7 @@
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "catalog:sources:dry-run": "tsx scripts/dry-run-catalog-full-import.ts",
     "smoke:garden-catalog-ux": "tsx scripts/smoke-garden-catalog-ux.ts",
+    "smoke:garden-eu-oj-common-catalogue": "tsx scripts/smoke-garden-eu-oj-common-catalogue.ts",
     "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",

@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
+  catalogSourceAttributionCaveat,
+  catalogSourceAttributionSummary,
+} from "@/lib/catalog/catalog-source-attribution";
+import {
   catalogIdentityLabel,
   entryPrivacyLabel,
   entryScopeLabel,
@@ -83,6 +87,9 @@ export default async function PlantObjectReadbackPage({
 
   const today = new Date().toISOString().slice(0, 10);
   const locationLabel = getObjectLocationLabel(page);
+  const sourceAttributionCaveat = page.plantObject.source_credit
+    ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
+    : null;
   const valuePulseJournalEntryId =
     query.valuePulse === "1" && typeof query.entryId === "string"
       ? query.entryId.trim()
@@ -130,6 +137,24 @@ export default async function PlantObjectReadbackPage({
               {varietyStateLabel(page.plantObject.variety_state)}
             </span>
           </div>
+          {page.plantObject.source_credit ? (
+            <div className="mt-2 flex flex-col gap-1 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
+              <p>
+                {catalogSourceAttributionSummary(
+                  page.plantObject.source_credit,
+                )}
+              </p>
+              {sourceAttributionCaveat ? (
+                <p>{sourceAttributionCaveat}</p>
+              ) : null}
+              <Link
+                href={page.plantObject.source_credit.sourceUrl}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Open source
+              </Link>
+            </div>
+          ) : null}
         </div>
       </header>
 
