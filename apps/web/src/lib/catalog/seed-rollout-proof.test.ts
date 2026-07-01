@@ -5,6 +5,7 @@ import {
   buildCatalogSeedRolloutEvidence,
   buildSafeSeedCommandSummary,
   CATALOG_SEED_ROLLOUT_COMMANDS,
+  CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES,
   extractJsonObjectFromCommandOutput,
   parseCatalogSeedRolloutArgs,
   validateCatalogSeedRolloutOptions,
@@ -93,7 +94,7 @@ describe("catalog seed rollout proof", () => {
     expect(summary).toEqual({
       key: "ua-register-variety",
       packageScript: "catalog:sources:import-ua-register-variety",
-      sourceSet: "OVE-57 UA State Register official variety",
+      sourceSet: "OVE-81 UA State Register official variety wave",
       expectedCanonicalName: "Ботсадівський",
       catalogItemId: "00000000-0000-4000-8000-000000057001",
       publicSlug: "botsadivskyi-ua-register-83070006",
@@ -174,7 +175,7 @@ describe("catalog seed rollout proof", () => {
         {
           key: "ua-register-variety",
           packageScript: "catalog:sources:import-ua-register-variety",
-          sourceSet: "OVE-57 UA State Register official variety",
+          sourceSet: "OVE-81 UA State Register official variety wave",
           expectedCanonicalName: "Ботсадівський",
           catalogItemId: "00000000-0000-4000-8000-000000057001",
           publicSlug: "botsadivskyi-ua-register-83070006",
@@ -218,6 +219,9 @@ describe("catalog seed rollout proof", () => {
       baseUrl: "http://localhost:3000",
       databaseWriteScope: "explicit_local_environment",
     });
+    expect(CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES).toEqual(
+      expect.arrayContaining(["Kaiser", "7 ФОР 7", "ЕС ЯСМІНІС КЛП"]),
+    );
     expect(JSON.stringify(evidence)).not.toMatch(/rawPayload|sourceRecord/);
   });
 });

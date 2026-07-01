@@ -55,7 +55,7 @@ The JSON report uses `schemaVersion = "ove80.catalogFullImportDryRun.v1"` and in
 - duplicate-risk clusters that must be reviewed by OVE-89;
 - a fail-closed leak check.
 
-For UA State Register, the dry-run reports the full verified source-file count as raw/quarantine volume and the current proof projection count separately. This prevents OVE-81 from treating the old one-row proof as the full raw import shape.
+For UA State Register, the dry-run now reports the OVE-81 full approved wave: 15,177 source rows read, 15,177 raw/source records captured, 15,177 product concepts projected, 61,105 safe aliases projected, zero review-needed rows, zero parser rejects, and 759 repeated official denomination clusters assigned to OVE-89 entity-resolution review.
 
 ## Redaction Rules
 

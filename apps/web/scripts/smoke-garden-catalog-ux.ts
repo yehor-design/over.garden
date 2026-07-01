@@ -88,6 +88,30 @@ const SMOKE_CASES: SmokeCase[] = [
     plantName: "OVE-67 Botsadivskyi apricot",
   },
   {
+    query: "Kaiser",
+    expectedCanonicalName: "Кайзер",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-81 Kaiser tomato-rootstock variety",
+  },
+  {
+    query: "7 ФОР 7",
+    expectedCanonicalName: "7 ФОР 7",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-81 potato variety",
+  },
+  {
+    query: "ЕС ЯСМІНІС КЛП",
+    expectedCanonicalName: "ЕС ЯСМІНІС КЛП",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-81 sunflower variety",
+  },
+  {
     query: "помідор",
     expectedCanonicalName: "Solanum lycopersicum L.",
     expectedCatalogKind: "species",
@@ -350,7 +374,9 @@ async function grantSmokeWriteAccess(email: string) {
   const connectionString = resolvePgConnectionString(process.env, resolution);
 
   if (!connectionString) {
-    throw new Error("Missing supported database connection env for smoke write access.");
+    throw new Error(
+      "Missing supported database connection env for smoke write access.",
+    );
   }
 
   const pool = new Pool({
@@ -370,7 +396,9 @@ async function grantSmokeWriteAccess(email: string) {
       .executeTakeFirst();
 
     if (!user) {
-      throw new Error("Smoke auth user was not persisted before write access setup.");
+      throw new Error(
+        "Smoke auth user was not persisted before write access setup.",
+      );
     }
 
     await db

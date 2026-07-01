@@ -68,7 +68,7 @@ export const CATALOG_SEED_ROLLOUT_COMMANDS: readonly SeedCommandDefinition[] = [
   {
     key: "ua-register-variety",
     packageScript: "catalog:sources:import-ua-register-variety",
-    sourceSet: "OVE-57 UA State Register official variety",
+    sourceSet: "OVE-81 UA State Register official variety wave",
     expectedCanonicalName: "Ботсадівський",
     expectedCatalogKind: "plant_variety",
     expectedSource: "ua_state_register",
@@ -109,6 +109,9 @@ export const CATALOG_SEED_ROLLOUT_COMMANDS: readonly SeedCommandDefinition[] = [
 
 export const CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES = [
   "Ботсадівський",
+  "Kaiser",
+  "7 ФОР 7",
+  "ЕС ЯСМІНІС КЛП",
   "помідор",
   "Карпатська",
   "Садово 1",
@@ -227,9 +230,7 @@ export function validateCatalogSeedRolloutOptions(
     throw new Error("Missing --confirm-environment.");
   }
   if (options.environment !== options.confirmEnvironment) {
-    throw new Error(
-      "--confirm-environment must exactly match --environment.",
-    );
+    throw new Error("--confirm-environment must exactly match --environment.");
   }
   if (!options.baseUrl) {
     throw new Error("Missing --base-url for the real app smoke.");
@@ -309,8 +310,14 @@ export function buildSafeSeedCommandSummary(
       `${command.key} catalog kind mismatch: expected ${command.expectedCatalogKind}, received ${catalogKind ?? "missing"}.`,
     );
   }
-  if (catalogItemId && rerunCatalogItemId && catalogItemId !== rerunCatalogItemId) {
-    throw new Error(`${command.key} did not preserve catalog item id on rerun.`);
+  if (
+    catalogItemId &&
+    rerunCatalogItemId &&
+    catalogItemId !== rerunCatalogItemId
+  ) {
+    throw new Error(
+      `${command.key} did not preserve catalog item id on rerun.`,
+    );
   }
 
   return {

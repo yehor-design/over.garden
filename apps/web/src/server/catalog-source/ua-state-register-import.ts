@@ -12,7 +12,9 @@ import {
   uaStateRegisterRawPayload,
   uaStateRegisterSnapshotChecksum,
   uaStateRegisterSourceOnlyFields,
+  type UaStateRegisterFullImportBuildResult,
   type UaStateRegisterVarietyImportDefinition,
+  type UaStateRegisterVarietyProjection,
 } from "@/lib/catalog/ua-state-register-variety";
 import { assertCatalogSourceProductProjectionAllowed } from "./source-projection-guard";
 
@@ -41,6 +43,13 @@ export interface UaStateRegisterImportSummary {
   publicSlug: string;
   aliasesProjected: number;
   reindexQueued: boolean;
+}
+
+export interface UaStateRegisterFullImportSummary extends UaStateRegisterImportSummary {
+  varieties: UaStateRegisterImportSummary[];
+  importedVarieties: number;
+  sourceRowsImported: number;
+  audit: UaStateRegisterFullImportBuildResult["audit"];
 }
 
 export interface UaStateRegisterTypeaheadProof {
@@ -88,69 +97,121 @@ export async function importUaStateRegisterVariety(
   executor: Kysely<Database>,
   definition = uaStateRegisterFixtureDefinition(),
 ): Promise<UaStateRegisterImportSummary> {
+  const imported = await importUaStateRegisterVarieties(executor, {
+    definitions: [definition],
+    audit: {
+      sourceRowsRead: 1,
+      rawRowsCaptured: 1,
+      productConceptsProjected: 1,
+      aliasesProjected: definition.projection.aliases.length,
+      reviewNeededRows: 0,
+      rejectedRows: 0,
+      duplicateCanonicalNameClusters: 0,
+    },
+  });
+
+  const first = imported.varieties[0];
+  if (!first) {
+    throw new Error("UA State Register import returned no variety summary.");
+  }
+
+  return first;
+}
+
+export async function importUaStateRegisterVarieties(
+  executor: Kysely<Database>,
+  input: UaStateRegisterFullImportBuildResult,
+): Promise<UaStateRegisterFullImportSummary> {
+  if (input.definitions.length === 0) {
+    throw new Error("UA State Register full import has no accepted rows.");
+  }
+
   return executor.transaction().execute(async (trx) => {
-    const projection = uaStateRegisterAllowedProjection(definition);
-    const rawPayloadSha256 = uaStateRegisterPayloadChecksum(definition);
-    const sourceFileSha256 = uaStateRegisterSnapshotChecksum(definition);
+    const firstDefinition = input.definitions[0];
+    const sourceFileSha256 = uaStateRegisterSnapshotChecksum(firstDefinition);
 
     const snapshot = await buildUpsertUaStateRegisterSnapshotQuery(trx, {
-      definition,
+      definition: firstDefinition,
       payloadSha256: sourceFileSha256,
     }).executeTakeFirstOrThrow();
 
-    const record = await buildUpsertUaStateRegisterRecordQuery(trx, {
-      definition,
-      sourceSnapshotId: snapshot.id,
-      rawPayloadSha256,
-    }).executeTakeFirstOrThrow();
+    const varieties: UaStateRegisterImportSummary[] = [];
+    for (const definition of input.definitions) {
+      const projection = uaStateRegisterAllowedProjection(definition);
+      const rawPayloadSha256 = uaStateRegisterPayloadChecksum(definition);
 
-    const catalogItem = await buildUpsertUaStateRegisterCatalogItemQuery(
-      trx,
-      projection,
-    ).executeTakeFirstOrThrow();
+      const record = await buildUpsertUaStateRegisterRecordQuery(trx, {
+        definition,
+        sourceSnapshotId: snapshot.id,
+        rawPayloadSha256,
+      }).executeTakeFirstOrThrow();
 
-    for (const alias of projection.aliases) {
-      await buildUpsertUaStateRegisterCatalogNameQuery(trx, {
+      const catalogItem = await buildUpsertUaStateRegisterCatalogItemQuery(
+        trx,
+        projection,
+      ).executeTakeFirstOrThrow();
+
+      for (const alias of projection.aliases) {
+        await buildUpsertUaStateRegisterCatalogNameQuery(trx, {
+          catalogItemId: catalogItem.id,
+          ...alias,
+        }).execute();
+      }
+
+      await buildInsertUaStateRegisterSourceLinkQuery(trx, {
+        definition,
         catalogItemId: catalogItem.id,
-        ...alias,
+        sourceRecordId: record.id,
       }).execute();
-    }
 
-    await buildInsertUaStateRegisterSourceLinkQuery(trx, {
-      definition,
-      catalogItemId: catalogItem.id,
-      sourceRecordId: record.id,
-    }).execute();
+      const transliteration =
+        projection.aliases.find(
+          (alias) =>
+            alias.displayName !== projection.canonicalName &&
+            /^[A-Za-z0-9`' -]+$/.test(alias.displayName),
+        )?.displayName ?? null;
+
+      varieties.push({
+        sourceSnapshotId: snapshot.id,
+        sourceRecordId: record.id,
+        catalogItemId: catalogItem.id,
+        catalogKind: projection.catalogKind,
+        sourceSlug: definition.source.slug,
+        sourceVersion: definition.source.version,
+        sourceRecordKey: definition.record.id,
+        sourceFileSha256,
+        sourceFileRowCount: definition.fileProof.rowCount,
+        rawPayloadSha256,
+        parserVersion: UA_STATE_REGISTER_VARIETY_PARSER_VERSION,
+        canonicalName: catalogItem.canonicalName,
+        transliterationName: transliteration,
+        publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
+        aliasesProjected: projection.aliases.length,
+        reindexQueued: false,
+      });
+    }
 
     const reindexJob =
       await buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(
         trx,
       ).executeTakeFirstOrThrow();
-
-    const transliteration =
-      projection.aliases.find(
-        (alias) =>
-          alias.displayName !== projection.canonicalName &&
-          /^[A-Za-z0-9`' -]+$/.test(alias.displayName),
-      )?.displayName ?? null;
+    const reindexQueued = reindexJob.id.length > 0;
+    const importedVarieties = varieties.map((summary) => ({
+      ...summary,
+      reindexQueued,
+    }));
+    const primary = importedVarieties[0];
+    if (!primary) {
+      throw new Error("UA State Register full import produced no summaries.");
+    }
 
     return {
-      sourceSnapshotId: snapshot.id,
-      sourceRecordId: record.id,
-      catalogItemId: catalogItem.id,
-      catalogKind: projection.catalogKind,
-      sourceSlug: definition.source.slug,
-      sourceVersion: definition.source.version,
-      sourceRecordKey: definition.record.id,
-      sourceFileSha256,
-      sourceFileRowCount: definition.fileProof.rowCount,
-      rawPayloadSha256,
-      parserVersion: UA_STATE_REGISTER_VARIETY_PARSER_VERSION,
-      canonicalName: catalogItem.canonicalName,
-      transliterationName: transliteration,
-      publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
-      aliasesProjected: projection.aliases.length,
-      reindexQueued: reindexJob.id.length > 0,
+      ...primary,
+      varieties: importedVarieties,
+      importedVarieties: importedVarieties.length,
+      sourceRowsImported: importedVarieties.length,
+      audit: input.audit,
+      reindexQueued,
     };
   });
 }
@@ -213,10 +274,10 @@ export async function readUaStateRegisterSourceProvenanceProof(
 export async function proveUaStateRegisterGardenReadback(
   executor: Kysely<Database>,
   catalogItemId: string,
+  projection: UaStateRegisterVarietyProjection = uaStateRegisterAllowedProjection(),
 ): Promise<UaStateRegisterGardenReadbackProof> {
   try {
     await executor.transaction().execute(async (trx) => {
-      const projection = uaStateRegisterAllowedProjection();
       const space = await trx
         .insertInto("spaces")
         .values({

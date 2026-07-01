@@ -15,7 +15,9 @@ import { describe, expect, it } from "vitest";
 import type { Database } from "@/db/schema";
 import {
   UA_STATE_REGISTER_FILE_PROOF,
+  UA_STATE_REGISTER_FULL_IMPORT_PROOF,
   UA_STATE_REGISTER_VARIETY_SOURCE_ROW,
+  buildUaStateRegisterFullImportDefinitions,
   decodeUaStateRegisterCsv,
   parseUaStateRegisterCsv,
   uaStateRegisterAllowedProjection,
@@ -108,6 +110,15 @@ describe("UA State Register official variety import", () => {
 
   it("records the full register file proof separately from the row payload checksum", () => {
     expect(UA_STATE_REGISTER_FILE_PROOF.rowCount).toBe(15177);
+    expect(UA_STATE_REGISTER_FULL_IMPORT_PROOF).toMatchObject({
+      sourceRowsRead: 15177,
+      rawRowsCaptured: 15177,
+      productConceptsProjected: 15177,
+      aliasesProjected: 61105,
+      reviewNeededRows: 0,
+      rejectedRows: 0,
+      duplicateCanonicalNameClusters: 759,
+    });
     expect(UA_STATE_REGISTER_FILE_PROOF.payloadSha256).toMatch(
       /^[a-f0-9]{64}$/,
     );
@@ -117,6 +128,86 @@ describe("UA State Register official variety import", () => {
     expect(uaStateRegisterPayloadChecksum()).toMatch(/^[a-f0-9]{64}$/);
     expect(uaStateRegisterPayloadChecksum()).not.toBe(
       uaStateRegisterSnapshotChecksum(),
+    );
+  });
+
+  it("builds full-import definitions with per-row source identity and audit counts", () => {
+    const kaiserRow = {
+      ...UA_STATE_REGISTER_VARIETY_SOURCE_ROW,
+      taxonName: "Підщепи помідора",
+      taxonNameLat:
+        "Solanum lycopersicum L. x Solanum habrochaites S.Knapp & D.M.Spooner; Solanum lycopersicum L.xSolanum peruvianum(L.) Mill.;Solanum lycopersicum L.xSolanum cheesmaniae (L.Ridley) Fosberg;Solanum pimpinellifolium L.xSolanum habrochaites S.Knapp & D.M.Spooner;Solanum habrochaites S.Knapp & D.M.Spooner",
+      applicationNumber: "15989001",
+      varietyName: "Кайзер",
+      varietyNameLan: "Кайзер",
+      varietyNameTRL: "Kaiser",
+    };
+    const built = buildUaStateRegisterFullImportDefinitions(
+      [UA_STATE_REGISTER_VARIETY_SOURCE_ROW, kaiserRow],
+      UA_STATE_REGISTER_FILE_PROOF,
+    );
+
+    expect(built.audit).toMatchObject({
+      sourceRowsRead: 2,
+      rawRowsCaptured: 2,
+      productConceptsProjected: 2,
+      reviewNeededRows: 0,
+      rejectedRows: 0,
+      duplicateCanonicalNameClusters: 0,
+    });
+    expect(built.definitions.map((row) => row.projection.publicSlug)).toEqual([
+      "botsadivskyi-ua-register-83070006",
+      "kaiser-ua-register-15989001",
+    ]);
+    expect(built.definitions.map((row) => row.projection.sourceId)).toEqual([
+      "ua-state-register:2025-07-15:RegisterVarietis:83070006",
+      "ua-state-register:2025-07-15:RegisterVarietis:15989001",
+    ]);
+    expect(
+      built.definitions[1].projection.aliases.every(
+        (alias) =>
+          alias.displayName.length <= 120 && alias.normalizedName.length <= 120,
+      ),
+    ).toBe(true);
+    expect(
+      built.definitions[1].projection.aliases.map((row) => row.displayName),
+    ).not.toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Solanum lycopersicum L. x Solanum"),
+      ]),
+    );
+  });
+
+  it("counts repeated official denominations as duplicate clusters for OVE-89", () => {
+    const first = {
+      ...UA_STATE_REGISTER_VARIETY_SOURCE_ROW,
+      applicationNumber: "15005001",
+      taxonName: "Гірчиця сарептська (озима)",
+      taxonNameLat: "Brassica juncea (L.) Czern.",
+      varietyName: "Серпанок",
+      varietyNameLan: "Серпанок",
+      varietyNameTRL: "Serpanok",
+    };
+    const second = {
+      ...UA_STATE_REGISTER_VARIETY_SOURCE_ROW,
+      applicationNumber: "18015001",
+      taxonName: "Жито посівне (озиме)",
+      taxonNameLat: "Secale cereale L.",
+      varietyName: "Серпанок",
+      varietyNameLan: "Серпанок",
+      varietyNameTRL: "Serpanok",
+    };
+    const built = buildUaStateRegisterFullImportDefinitions(
+      [UA_STATE_REGISTER_VARIETY_SOURCE_ROW, first, second],
+      UA_STATE_REGISTER_FILE_PROOF,
+    );
+
+    expect(built.audit.duplicateCanonicalNameClusters).toBe(1);
+    expect(built.definitions.map((row) => row.projection.sourceId)).toEqual(
+      expect.arrayContaining([
+        "ua-state-register:2025-07-15:RegisterVarietis:15005001",
+        "ua-state-register:2025-07-15:RegisterVarietis:18015001",
+      ]),
     );
   });
 

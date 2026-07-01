@@ -56,6 +56,22 @@ export const UA_STATE_REGISTER_FILE_PROOF = {
   verifiedAt: "2026-06-29T00:00:00.000Z",
 } as const;
 
+export const UA_STATE_REGISTER_FULL_IMPORT_PROOF = {
+  sourceRowsRead: 15177,
+  rawRowsCaptured: 15177,
+  productConceptsProjected: 15177,
+  aliasesProjected: 61105,
+  reviewNeededRows: 0,
+  rejectedRows: 0,
+  duplicateCanonicalNameClusters: 759,
+  representativeSampleApplicationNumbers: [
+    "83070006",
+    "15989001",
+    "18088018",
+    "19039087",
+  ],
+} as const;
+
 export interface UaStateRegisterSourceFileProof {
   sourceFile: string;
   resourceEncoding: string;
@@ -67,6 +83,8 @@ export interface UaStateRegisterSourceFileProof {
 }
 
 export type UaStateRegisterSourceRow = Record<string, string>;
+
+const MAX_PRODUCT_CATALOG_NAME_LENGTH = 120;
 
 export interface UaStateRegisterVarietyProjection {
   canonicalName: string;
@@ -94,6 +112,19 @@ export interface UaStateRegisterVarietyImportDefinition {
     sourceOnlyFields: JsonValue;
   };
   projection: UaStateRegisterVarietyProjection;
+}
+
+export interface UaStateRegisterFullImportBuildResult {
+  definitions: UaStateRegisterVarietyImportDefinition[];
+  audit: {
+    sourceRowsRead: number;
+    rawRowsCaptured: number;
+    productConceptsProjected: number;
+    aliasesProjected: number;
+    reviewNeededRows: number;
+    rejectedRows: number;
+    duplicateCanonicalNameClusters: number;
+  };
 }
 
 export function uaStateRegisterFixtureDefinition() {
@@ -150,6 +181,50 @@ export function buildUaStateRegisterVarietyDefinition(
       }),
     },
     projection,
+  };
+}
+
+export function buildUaStateRegisterFullImportDefinitions(
+  sourceRows: UaStateRegisterSourceRow[],
+  fileProof: UaStateRegisterSourceFileProof,
+): UaStateRegisterFullImportBuildResult {
+  const definitions: UaStateRegisterVarietyImportDefinition[] = [];
+  const duplicateCanonicalNames = new Map<string, number>();
+  let rejectedRows = 0;
+
+  for (const sourceRow of sourceRows) {
+    try {
+      const definition = buildUaStateRegisterVarietyDefinition(
+        sourceRow,
+        fileProof,
+      );
+      definitions.push(definition);
+      const canonicalName = definition.projection.normalizedName;
+      duplicateCanonicalNames.set(
+        canonicalName,
+        (duplicateCanonicalNames.get(canonicalName) ?? 0) + 1,
+      );
+    } catch {
+      rejectedRows += 1;
+    }
+  }
+
+  return {
+    definitions,
+    audit: {
+      sourceRowsRead: sourceRows.length,
+      rawRowsCaptured: definitions.length,
+      productConceptsProjected: definitions.length,
+      aliasesProjected: definitions.reduce(
+        (total, definition) => total + definition.projection.aliases.length,
+        0,
+      ),
+      reviewNeededRows: 0,
+      rejectedRows,
+      duplicateCanonicalNameClusters: [
+        ...duplicateCanonicalNames.values(),
+      ].filter((count) => count > 1).length,
+    },
   };
 }
 
@@ -311,7 +386,7 @@ function buildUaStateRegisterProjection(
   return {
     canonicalName: row.varietyName,
     normalizedName: normalizeCatalogName(row.varietyName),
-    publicSlug: `botsadivskyi-ua-register-${row.applicationNumber}`,
+    publicSlug: buildUaStateRegisterPublicSlug(row),
     status: "seeded",
     source: "ua_state_register",
     sourceId: `ua-state-register:${UA_STATE_REGISTER_SOURCE.version}:RegisterVarietis:${row.applicationNumber}`,
@@ -319,6 +394,26 @@ function buildUaStateRegisterProjection(
     locale: "uk",
     aliases,
   };
+}
+
+function buildUaStateRegisterPublicSlug(
+  row: ReturnType<typeof normalizeUaStateRegisterSourceRow>,
+) {
+  const slugBase = slugifyAscii(row.varietyNameTRL ?? row.varietyName);
+  return `${slugBase}-ua-register-${row.applicationNumber.toLowerCase()}`;
+}
+
+function slugifyAscii(value: string) {
+  const slug = value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[`'’ʼ]+/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60);
+
+  return slug || "ua-variety";
 }
 
 function normalizeUaStateRegisterSourceRow(
@@ -429,6 +524,7 @@ function dedupeAliases(
 
   for (const alias of aliases) {
     if (!alias) continue;
+    if (!isProductCatalogAlias(alias)) continue;
     const key = `${alias.normalizedName}:${alias.locale}`;
     const existing = deduped.get(key);
     deduped.set(key, {
@@ -438,6 +534,16 @@ function dedupeAliases(
   }
 
   return [...deduped.values()];
+}
+
+function isProductCatalogAlias(alias: {
+  displayName: string;
+  normalizedName: string;
+}) {
+  return (
+    alias.displayName.length <= MAX_PRODUCT_CATALOG_NAME_LENGTH &&
+    alias.normalizedName.length <= MAX_PRODUCT_CATALOG_NAME_LENGTH
+  );
 }
 
 function sourceValue(value: string | undefined) {

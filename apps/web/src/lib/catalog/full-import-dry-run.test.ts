@@ -40,7 +40,7 @@ describe("OVE-80 catalog full-import dry-run", () => {
       "genebank-long-tail",
     ]);
     expect(report.totals.targets).toBe(6);
-    expect(report.totals.productConceptsWouldProject).toBe(9);
+    expect(report.totals.productConceptsWouldProject).toBe(15185);
     expect(report.totals.rawRowsWouldCapture).toBe(15203);
     expect(report.totals.blockedRows).toBeGreaterThan(0);
     expect(
@@ -165,6 +165,43 @@ describe("OVE-80 catalog full-import dry-run", () => {
         productConceptsWouldProject: 4,
       }),
     });
+  });
+
+  it("reports the OVE-81 UA register target as a full approved import wave", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["ua-register-variety"],
+      }),
+      generatedAt: "2026-07-01T13:00:00.000Z",
+    });
+
+    expect(report.targets[0]).toMatchObject({
+      key: "ua-register-variety",
+      sourceSet: "OVE-81 UA State Register official variety wave",
+      importerIssue: "OVE-81",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
+      sources: ["ua-state-register"],
+      counts: expect.objectContaining({
+        sourceRowsWouldRead: 15177,
+        rawRowsWouldCapture: 15177,
+        productConceptsWouldProject: 15177,
+        aliasesWouldProject: 61105,
+        reviewNeededRows: 0,
+        rejectedRows: 0,
+      }),
+    });
+    expect(report.duplicateRisk.clusters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signal: "ua-register-duplicate-denominations",
+          riskLevel: "review_needed",
+          requiredGate: "OVE-89",
+        }),
+      ]),
+    );
   });
 
   it("enforces OVE-79 source verdicts before full projection", () => {

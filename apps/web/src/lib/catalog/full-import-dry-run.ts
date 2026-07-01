@@ -8,8 +8,7 @@ import {
 import {
   UA_STATE_REGISTER_SOURCE,
   UA_STATE_REGISTER_VARIETY_PARSER_VERSION,
-  UA_STATE_REGISTER_FILE_PROOF,
-  uaStateRegisterAllowedProjection,
+  UA_STATE_REGISTER_FULL_IMPORT_PROOF,
 } from "@/lib/catalog/ua-state-register-variety";
 import {
   SPECIES_BACKBONE_PARSER_VERSION,
@@ -102,30 +101,29 @@ export type CatalogFullImportDryRunProjectionScope =
   | "bounded_existing_proof"
   | "raw_quarantine_only";
 
-export type CatalogFullImportDryRunTargetDefinition =
-  Readonly<{
-    key: string;
-    packageScript: string;
-    sourceSet: string;
-    importerIssue: string;
-    downstreamIssue: string;
-    projectionScope: CatalogFullImportDryRunProjectionScope;
-    sourceSlugs: readonly string[];
-    readinessSourceSlugs: readonly string[];
-    rowCounts: {
-      sourceRowsWouldRead: number;
-      rawRowsWouldCapture: number;
-      productConceptsWouldProject: number;
-      aliasesWouldProject: number;
-      reviewNeededRows: number;
-      rejectedRows: number;
-      blockedRows: number;
-      attributionRequiredSources: number;
-    };
-    parserVersions: readonly string[];
-    projectionRequests: readonly CatalogFullImportDryRunProjectionRequest[];
-    duplicateSignals: readonly CatalogFullImportDryRunDuplicateSignal[];
-  }>;
+export type CatalogFullImportDryRunTargetDefinition = Readonly<{
+  key: string;
+  packageScript: string;
+  sourceSet: string;
+  importerIssue: string;
+  downstreamIssue: string;
+  projectionScope: CatalogFullImportDryRunProjectionScope;
+  sourceSlugs: readonly string[];
+  readinessSourceSlugs: readonly string[];
+  rowCounts: {
+    sourceRowsWouldRead: number;
+    rawRowsWouldCapture: number;
+    productConceptsWouldProject: number;
+    aliasesWouldProject: number;
+    reviewNeededRows: number;
+    rejectedRows: number;
+    blockedRows: number;
+    attributionRequiredSources: number;
+  };
+  parserVersions: readonly string[];
+  projectionRequests: readonly CatalogFullImportDryRunProjectionRequest[];
+  duplicateSignals: readonly CatalogFullImportDryRunDuplicateSignal[];
+}>;
 
 export interface CatalogFullImportDryRunProjectionRequest {
   sourceSlug: string;
@@ -282,9 +280,7 @@ export function validateCatalogFullImportDryRunOptions(
     throw new Error("Missing --confirm-environment.");
   }
   if (options.environment !== options.confirmEnvironment) {
-    throw new Error(
-      "--confirm-environment must exactly match --environment.",
-    );
+    throw new Error("--confirm-environment must exactly match --environment.");
   }
   if (options.environment !== "local" && !options.preflightOnly) {
     throw new Error(
@@ -357,8 +353,7 @@ export function buildCatalogFullImportDryRunReport(input: {
         "OVE-89",
         "OVE-90",
       ],
-      rule:
-        "Later bulk import issues must attach this redacted report or a target-specific successor report before any source-family mutation or product projection.",
+      rule: "Later bulk import issues must attach this redacted report or a target-specific successor report before any source-family mutation or product projection.",
     },
     leakCheck: "passed",
   };
@@ -375,7 +370,6 @@ export function readCatalogFullImportDryRunManifest(): CatalogFullImportDryRunMa
 
 export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDefinition[] {
   const sampleProjection = catalogSourceSampleAllowedProjection();
-  const uaProjection = uaStateRegisterAllowedProjection();
   const speciesDefinition = speciesBackboneSeedDefinition();
   const speciesConcepts = speciesBackboneConcepts(speciesDefinition);
   const speciesSourceRecords = speciesConcepts.flatMap(
@@ -435,22 +429,24 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     {
       key: "ua-register-variety",
       packageScript: "catalog:sources:import-ua-register-variety",
-      sourceSet: "OVE-57 UA State Register official variety",
-      importerIssue: "OVE-57",
-      downstreamIssue: "OVE-81",
+      sourceSet: "OVE-81 UA State Register official variety wave",
+      importerIssue: "OVE-81",
+      downstreamIssue: "OVE-89",
       projectionScope: "full_import_wave",
       sourceSlugs: [UA_STATE_REGISTER_SOURCE.slug],
       readinessSourceSlugs: [UA_STATE_REGISTER_SOURCE.slug],
       rowCounts: {
-        sourceRowsWouldRead: UA_STATE_REGISTER_FILE_PROOF.rowCount,
-        rawRowsWouldCapture: UA_STATE_REGISTER_FILE_PROOF.rowCount,
-        productConceptsWouldProject: 1,
-        aliasesWouldProject: uaProjection.aliases.length,
-        reviewNeededRows: 0,
-        rejectedRows: 0,
+        sourceRowsWouldRead: UA_STATE_REGISTER_FULL_IMPORT_PROOF.sourceRowsRead,
+        rawRowsWouldCapture:
+          UA_STATE_REGISTER_FULL_IMPORT_PROOF.rawRowsCaptured,
+        productConceptsWouldProject:
+          UA_STATE_REGISTER_FULL_IMPORT_PROOF.productConceptsProjected,
+        aliasesWouldProject:
+          UA_STATE_REGISTER_FULL_IMPORT_PROOF.aliasesProjected,
+        reviewNeededRows: UA_STATE_REGISTER_FULL_IMPORT_PROOF.reviewNeededRows,
+        rejectedRows: UA_STATE_REGISTER_FULL_IMPORT_PROOF.rejectedRows,
         blockedRows: 0,
-        attributionRequiredSources: UA_STATE_REGISTER_SOURCE
-          .attributionRequired
+        attributionRequiredSources: UA_STATE_REGISTER_SOURCE.attributionRequired
           ? 1
           : 0,
       },
@@ -467,8 +463,8 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
       ],
       duplicateSignals: [
         {
-          signal: "prunus-armeniaca-variety-boundary",
-          conceptRole: "official apricot variety",
+          signal: "ua-register-duplicate-denominations",
+          conceptRole: `${UA_STATE_REGISTER_FULL_IMPORT_PROOF.duplicateCanonicalNameClusters} repeated official variety denomination clusters for OVE-89 review`,
         },
       ],
     },
@@ -837,14 +833,14 @@ function buildDuplicateRiskClusters(
   }
 
   return [...bySignal.entries()].flatMap(([signal, members]) => {
-    if (members.length < 2) return [];
-
     return [
       {
         signal,
         riskLevel: "review_needed" as const,
         reason:
-          "Multiple import targets share an identity signal; OVE-89 must review whether this is a safe species/variety boundary or a duplicate concept before production proof.",
+          members.length > 1
+            ? "Multiple import targets share an identity signal; OVE-89 must review whether this is a safe species/variety boundary or a duplicate concept before production proof."
+            : "One import target reports an internal duplicate or boundary signal; OVE-89 must review it before production proof trusts the broader projection.",
         members,
         requiredGate: "OVE-89" as const,
       },

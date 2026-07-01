@@ -18,6 +18,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
   branch `main`, environment `production`, generated timestamp `2026-07-01T12:16:18.722Z`,
   idempotent product identity for every seed command, duplicate same-concept suggestions absent,
   real `/garden` readback status `200` for every smoke case, and leak check `passed`.
+  This is historical proof for the OVE-78 seed set; after OVE-81, a fresh production rollout proof is required before claiming production has the full UA State Register wave.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -26,7 +27,7 @@ Exact next operational action for staging or production: point the shell at that
 
 The rollout command seeds the product-availability proof set:
 
-- OVE-57 UA State Register official variety: `Ботсадівський`
+- OVE-81 UA State Register official variety wave: 15,177 official variety concepts from the approved file, including the existing `Ботсадівський` proof row and representative `Kaiser`, `7 ФОР 7`, and `ЕС ЯСМІНІС КЛП` smoke cases
 - OVE-58 species backbone: `Solanum lycopersicum L.` with `помідор` and `домат` aliases
 - OVE-60 official bee breed seed: `Карпатська бджола`
 - OVE-61 BG official variety proof subset: `Садово 1`
@@ -43,17 +44,17 @@ cd apps/web
 pnpm catalog:sources:seed-rollout-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden
 ```
 
-The final redacted evidence recorded these product-visible rows:
+The historical OVE-78 final redacted evidence recorded these product-visible rows:
 
-| Source set | Canonical name | Catalog kind | Product catalog item ID | Public slug |
-| --- | --- | --- | --- | --- |
-| OVE-57 UA State Register official variety | `Ботсадівський` | `plant_variety` | `b56745df-a726-4425-b2d1-7209e4bd6c76` | `botsadivskyi-ua-register-83070006` |
-| OVE-58 species backbone | `Solanum lycopersicum L.` | `species` | `0a512046-b52d-46d8-9f67-e785895b1806` | `solanum-lycopersicum-species-backbone` |
-| OVE-60 official bee breed seed | `Карпатська бджола` | `breed` | `ec7bee1c-078c-4851-aff4-e43188abcc31` | `karpatska-bdzhola-ua-official-breed` |
-| OVE-61 BG official variety proof subset | `Садово 1` | `plant_variety` | `3b59681d-228a-40e5-b59c-302e952923b7` | `sadovo-1-bg-official-variety` |
-| OVE-62 GRIN/NPGS promoted long-tail candidate | `Red Cherry tomato` | `plant_variety` | `63e9e0e7-126e-421f-825f-3e9c208bc614` | `red-cherry-tomato-grin-genebank-candidate` |
+| Source set                                    | Canonical name            | Catalog kind    | Product catalog item ID                | Public slug                                 |
+| --------------------------------------------- | ------------------------- | --------------- | -------------------------------------- | ------------------------------------------- |
+| OVE-57 UA State Register official variety     | `Ботсадівський`           | `plant_variety` | `b56745df-a726-4425-b2d1-7209e4bd6c76` | `botsadivskyi-ua-register-83070006`         |
+| OVE-58 species backbone                       | `Solanum lycopersicum L.` | `species`       | `0a512046-b52d-46d8-9f67-e785895b1806` | `solanum-lycopersicum-species-backbone`     |
+| OVE-60 official bee breed seed                | `Карпатська бджола`       | `breed`         | `ec7bee1c-078c-4851-aff4-e43188abcc31` | `karpatska-bdzhola-ua-official-breed`       |
+| OVE-61 BG official variety proof subset       | `Садово 1`                | `plant_variety` | `3b59681d-228a-40e5-b59c-302e952923b7` | `sadovo-1-bg-official-variety`              |
+| OVE-62 GRIN/NPGS promoted long-tail candidate | `Red Cherry tomato`       | `plant_variety` | `63e9e0e7-126e-421f-825f-3e9c208bc614` | `red-cherry-tomato-grin-genebank-candidate` |
 
-The real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions.
+The real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions. OVE-81 expands the current smoke to include additional UA State Register cases beyond the proof row; production proof must be rerun before those expanded cases are claimed on `https://over.garden`.
 
 Production setup note: before the successful OVE-78 proof, production schema bootstrap was rerun non-destructively because the source-catalog tables required by the rollout command were missing from the live database. No schema drop, bulk delete, restore-over-production, or source/user data export was performed. The OVE-78 code also hardened the species and UA register importers so production reruns write the expected `catalog_kind` explicitly instead of relying on database defaults.
 
@@ -80,7 +81,7 @@ The command:
 - runs the approved seed/import scripts with captured output;
 - emits only a redacted rollout summary;
 - runs the real `/garden` catalog UX smoke against the provided base URL;
-- verifies `Ботсадівський`, `помідор`, `Карпатська`, `Садово 1`, and `Red Cherry`;
+- verifies `Ботсадівський`, `Kaiser`, `7 ФОР 7`, `ЕС ЯСМІНІС КЛП`, `помідор`, `Карпатська`, `Садово 1`, and `Red Cherry`;
 - reports idempotent product identity and absence of duplicate same-concept suggestions;
 - fails if final evidence contains source-record IDs, raw payload fields, exact location markers, emails, tokens, user-agent/referrer fields, media keys, or other forbidden proof markers.
 
