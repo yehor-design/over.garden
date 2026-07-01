@@ -37,6 +37,7 @@ export interface SpeciesBackboneImportSummary {
   sourceSnapshotIds: Record<string, string>;
   sourceRecordIds: Record<string, string>;
   catalogItemId: string;
+  catalogKind: SpeciesBackboneProjection["catalogKind"];
   sourceSlugs: string[];
   sourceRecordKeys: string[];
   rawPayloadSha256BySource: Record<string, string>;
@@ -227,6 +228,7 @@ export async function importSpeciesBackboneSeed(
       sourceSnapshotIds,
       sourceRecordIds,
       catalogItemId: catalogItem.id,
+      catalogKind: projection.catalogKind,
       sourceSlugs: definition.sourceRecords.map((row) => row.source.slug),
       sourceRecordKeys: definition.sourceRecords.map((row) => row.record.id),
       rawPayloadSha256BySource,
@@ -525,6 +527,7 @@ export function buildUpsertSpeciesBackboneCatalogItemQuery(
       status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
+      catalog_kind: projection.catalogKind,
       created_by_user_id: null,
       locale: projection.locale,
     })
@@ -534,6 +537,7 @@ export function buildUpsertSpeciesBackboneCatalogItemQuery(
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
         status: projection.status,
+        catalog_kind: projection.catalogKind,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,

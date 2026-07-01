@@ -110,6 +110,39 @@ describe("catalog seed rollout proof", () => {
     expect(JSON.stringify(summary)).not.toContain("rawPayload");
   });
 
+  it("fails closed when importer output omits or misreports catalog kind", () => {
+    expect(() =>
+      buildSafeSeedCommandSummary(CATALOG_SEED_ROLLOUT_COMMANDS[1], {
+        imported: {
+          catalogItemId: "00000000-0000-4000-8000-000000058003",
+          canonicalName: "Solanum lycopersicum L.",
+          catalogKind: "plant_variety",
+          publicSlug: "solanum-lycopersicum-species-backbone",
+        },
+        idempotencyProof: {
+          rerunCatalogItemId: "00000000-0000-4000-8000-000000058003",
+        },
+        provenanceProof: {},
+        leakCheck: "passed",
+      }),
+    ).toThrow("catalog kind mismatch");
+
+    expect(() =>
+      buildSafeSeedCommandSummary(CATALOG_SEED_ROLLOUT_COMMANDS[1], {
+        imported: {
+          catalogItemId: "00000000-0000-4000-8000-000000058003",
+          canonicalName: "Solanum lycopersicum L.",
+          publicSlug: "solanum-lycopersicum-species-backbone",
+        },
+        idempotencyProof: {
+          rerunCatalogItemId: "00000000-0000-4000-8000-000000058003",
+        },
+        provenanceProof: {},
+        leakCheck: "passed",
+      }),
+    ).toThrow("catalog kind mismatch");
+  });
+
   it("fails closed when final evidence contains forbidden internal markers", () => {
     expect(() =>
       assertNoForbiddenCatalogSeedRolloutEvidence({

@@ -184,8 +184,10 @@ describe("UA State Register official variety import", () => {
       "Prunus armeniaca L. Botsadivs`kyi",
     ]);
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
+    expect(item.sql).toContain('"catalog_kind"');
     expect(item.parameters).toContain("Ботсадівський");
     expect(item.parameters).toContain("ua_state_register");
+    expect(item.parameters).toContain("plant_variety");
     expect(JSON.stringify(item.parameters)).not.toContain("varietyDescription");
     expect(alias.parameters).toEqual([
       catalogItemId,

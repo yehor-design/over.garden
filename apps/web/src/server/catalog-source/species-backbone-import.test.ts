@@ -220,8 +220,10 @@ describe("species backbone seed import", () => {
     }).compile();
 
     expect(item.sql).toContain('on conflict ("source", "source_id") do update');
+    expect(item.sql).toContain('"catalog_kind"');
     expect(item.parameters).toContain("Solanum lycopersicum L.");
     expect(item.parameters).toContain("species_backbone");
+    expect(item.parameters).toContain("species");
     expect(item.parameters).toContain("species-backbone:col-3LR:4Y369");
     expect(JSON.stringify(item.parameters)).not.toContain("decimalLatitude");
     expect(alias.parameters).toEqual([

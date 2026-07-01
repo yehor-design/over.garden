@@ -75,6 +75,7 @@ export interface UaStateRegisterVarietyProjection {
   status: "seeded";
   source: "ua_state_register";
   sourceId: string;
+  catalogKind: "plant_variety";
   locale: "uk";
   aliases: Array<{
     displayName: string;
@@ -314,6 +315,7 @@ function buildUaStateRegisterProjection(
     status: "seeded",
     source: "ua_state_register",
     sourceId: `ua-state-register:${UA_STATE_REGISTER_SOURCE.version}:RegisterVarietis:${row.applicationNumber}`,
+    catalogKind: "plant_variety",
     locale: "uk",
     aliases,
   };

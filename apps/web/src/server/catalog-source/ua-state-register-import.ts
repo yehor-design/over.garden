@@ -28,6 +28,7 @@ export interface UaStateRegisterImportSummary {
   sourceSnapshotId: string;
   sourceRecordId: string;
   catalogItemId: string;
+  catalogKind: "plant_variety";
   sourceSlug: string;
   sourceVersion: string;
   sourceRecordKey: string;
@@ -137,6 +138,7 @@ export async function importUaStateRegisterVariety(
       sourceSnapshotId: snapshot.id,
       sourceRecordId: record.id,
       catalogItemId: catalogItem.id,
+      catalogKind: projection.catalogKind,
       sourceSlug: definition.source.slug,
       sourceVersion: definition.source.version,
       sourceRecordKey: definition.record.id,
@@ -410,6 +412,7 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
       status: projection.status,
       source: projection.source,
       source_id: projection.sourceId,
+      catalog_kind: projection.catalogKind,
       created_by_user_id: null,
       locale: projection.locale,
     })
@@ -419,6 +422,7 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
         normalized_name: projection.normalizedName,
         public_slug: projection.publicSlug,
         status: projection.status,
+        catalog_kind: projection.catalogKind,
         created_by_user_id: null,
         locale: projection.locale,
         updated_at: now,

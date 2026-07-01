@@ -294,6 +294,7 @@ export function buildSafeSeedCommandSummary(
     stringValue(idempotency?.promotedAgainCatalogItemId);
   const canonicalName =
     stringValue(identity?.canonicalName) ?? command.expectedCanonicalName;
+  const catalogKind = stringValue(identity?.catalogKind);
 
   if (root.leakCheck !== "passed") {
     throw new Error(`${command.key} did not report a passed leak check.`);
@@ -301,6 +302,11 @@ export function buildSafeSeedCommandSummary(
   if (canonicalName !== command.expectedCanonicalName) {
     throw new Error(
       `${command.key} canonical name mismatch: expected ${command.expectedCanonicalName}, received ${canonicalName}.`,
+    );
+  }
+  if (catalogKind !== command.expectedCatalogKind) {
+    throw new Error(
+      `${command.key} catalog kind mismatch: expected ${command.expectedCatalogKind}, received ${catalogKind ?? "missing"}.`,
     );
   }
   if (catalogItemId && rerunCatalogItemId && catalogItemId !== rerunCatalogItemId) {
@@ -315,9 +321,7 @@ export function buildSafeSeedCommandSummary(
     catalogItemId,
     publicSlug: stringValue(identity?.publicSlug),
     canonicalName,
-    catalogKind:
-      (stringValue(identity?.catalogKind) as SafeSeedCommandSummary["catalogKind"]) ??
-      command.expectedCatalogKind,
+    catalogKind: catalogKind as SafeSeedCommandSummary["catalogKind"],
     source: command.expectedSource,
     aliasesProjected: numberValue(identity?.aliasesProjected),
     reindexQueued: booleanValue(identity?.reindexQueued),

@@ -52,6 +52,7 @@ export interface SpeciesBackboneProjection {
   status: "seeded";
   source: "species_backbone";
   sourceId: string;
+  catalogKind: "species";
   locale: "la";
   acceptedScientificName: string;
   sourceIds: {
@@ -192,6 +193,7 @@ export function buildSpeciesBackboneProjection(): SpeciesBackboneProjection {
     status: "seeded",
     source: "species_backbone",
     sourceId: `species-backbone:col-${SPECIES_BACKBONE_SOURCE_IDS.colDatasetAlias}:${SPECIES_BACKBONE_SOURCE_IDS.colId}`,
+    catalogKind: "species",
     locale: "la",
     acceptedScientificName: "Solanum lycopersicum L.",
     sourceIds: { ...SPECIES_BACKBONE_SOURCE_IDS },
