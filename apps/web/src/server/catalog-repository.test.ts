@@ -259,7 +259,7 @@ describe("catalog repository query contracts", () => {
     ).resolves.toEqual(fallback);
   });
 
-  it("keeps non-empty derived Meili suggestions as the first choice", async () => {
+  it("keeps non-empty derived Meili suggestions first while adding canonical Postgres rows", async () => {
     const meiliSuggestion = {
       id: "00000000-0000-4000-8000-000000000621",
       displayName: "Red Cherry",
@@ -269,18 +269,51 @@ describe("catalog repository query contracts", () => {
       status: "seeded" as const,
       source: "grin_genebank_candidate",
     };
-    let postgresCalled = false;
+    const postgresSuggestion = {
+      id: "00000000-0000-4000-8000-000000000301",
+      displayName: "помідор",
+      canonicalName: "Solanum lycopersicum L.",
+      catalogKind: "species" as const,
+      locale: "uk",
+      status: "seeded" as const,
+      source: "species_backbone",
+    };
 
     await expect(
       searchCatalogSuggestionsForTypeahead("Red Cherry", 8, {
         searchWithMeili: async () => [meiliSuggestion],
-        searchWithPostgres: async () => {
-          postgresCalled = true;
-          return [];
-        },
+        searchWithPostgres: async () => [postgresSuggestion],
       }),
-    ).resolves.toEqual([meiliSuggestion]);
-    expect(postgresCalled).toBe(false);
+    ).resolves.toEqual([meiliSuggestion, postgresSuggestion]);
+  });
+
+  it("dedupes stale Meili hits when canonical Postgres rows are merged", async () => {
+    const canonicalSuggestion = {
+      id: "00000000-0000-4000-8000-000000000301",
+      displayName: "помідор",
+      canonicalName: "Solanum lycopersicum L.",
+      catalogKind: "species" as const,
+      locale: "uk",
+      status: "seeded" as const,
+      source: "species_backbone",
+    };
+
+    await expect(
+      searchCatalogSuggestionsForTypeahead("помідор", 8, {
+        searchWithMeili: async () => [
+          {
+            ...canonicalSuggestion,
+            displayName: "Tomato",
+          },
+        ],
+        searchWithPostgres: async () => [canonicalSuggestion],
+      }),
+    ).resolves.toEqual([
+      {
+        ...canonicalSuggestion,
+        displayName: "Tomato",
+      },
+    ]);
   });
 
   it("validates selected catalog IDs against selectable statuses", () => {

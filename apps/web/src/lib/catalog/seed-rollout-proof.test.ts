@@ -176,6 +176,10 @@ describe("catalog seed rollout proof", () => {
       generatedAt: "2026-06-30T00:00:00.000Z",
     });
 
+    expect(evidence).toMatchObject({
+      schemaVersion: "ove78.catalogSeedRolloutProof.v1",
+      issue: "OVE-78",
+    });
     expect(evidence.environment).toMatchObject({
       name: "local",
       baseUrl: "http://localhost:3000",

@@ -335,8 +335,8 @@ export function buildCatalogSeedRolloutEvidence(input: {
   generatedAt: string;
 }) {
   const evidence = {
-    schemaVersion: "ove69.catalogSeedRolloutProof.v1",
-    issue: "OVE-69",
+    schemaVersion: "ove78.catalogSeedRolloutProof.v1",
+    issue: "OVE-78",
     generatedAt: input.generatedAt,
     environment: {
       name: input.options.environment,

@@ -97,14 +97,20 @@ export async function searchCatalogSuggestionsForTypeahead(
   const searchWithPostgres =
     deps.searchWithPostgres ?? searchCatalogSuggestions;
 
+  const normalizedLimit = normalizeCatalogLimit(limit);
+  let meiliSuggestions: CatalogSuggestion[] = [];
   try {
-    const suggestions = await searchWithMeili(query, limit);
-    if (suggestions.length > 0) return suggestions;
+    meiliSuggestions = await searchWithMeili(query, normalizedLimit);
   } catch {
     // Meilisearch is derived state; Postgres remains the canonical fallback.
   }
 
-  return searchWithPostgres(query, limit);
+  const postgresSuggestions = await searchWithPostgres(query, normalizedLimit);
+
+  return dedupeCatalogTypeaheadSuggestions([
+    ...meiliSuggestions,
+    ...postgresSuggestions,
+  ]).slice(0, normalizedLimit);
 }
 
 export async function searchCatalogSuggestionsWithMeili(
