@@ -16,7 +16,6 @@ import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
-  buildEnqueueCatalogCurationJobQuery,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildCatalogTypeaheadQuery,
   buildFindSelectableCatalogItemByPublicSlugQuery,
@@ -391,37 +390,6 @@ describe("catalog repository query contracts", () => {
       "бабусин перець",
       "und",
       true,
-    ]);
-  });
-
-  it("enqueues a privacy-bounded curation job with a stable idempotency key", () => {
-    const compiled = buildEnqueueCatalogCurationJobQuery(testDb, {
-      catalogItemId: "00000000-0000-4000-8000-000000000201",
-      displayName: "Бабусин перець",
-      normalizedName: "бабусин перець",
-      locale: "und",
-      idempotencyKey:
-        "catalog-curation:00000000-0000-0000-0000-000000000001:und:бабусин перець",
-    }).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
-    );
-    expect(compiled.sql).not.toContain("journal_entries");
-    expect(JSON.stringify(compiled.parameters)).not.toContain("title");
-    expect(JSON.stringify(compiled.parameters)).not.toContain("body");
-    expect(compiled.parameters).toEqual([
-      "catalog_curation",
-      {
-        kind: "provisional_catalog_item",
-        catalogItemId: "00000000-0000-4000-8000-000000000201",
-        displayName: "Бабусин перець",
-        normalizedName: "бабусин перець",
-        locale: "und",
-      },
-      "catalog-curation:00000000-0000-0000-0000-000000000001:und:бабусин перець",
-      expect.any(Date),
     ]);
   });
 

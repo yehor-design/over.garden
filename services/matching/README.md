@@ -74,6 +74,24 @@ The catalog typeahead rebuild job uses payload `{ "kind":
 `created_by_user_id`, so provisional user-added names stay out of global search
 until a later curation slice promotes them.
 
+Provisional user-added catalog names are not worker jobs. The internal curation
+surface reads `catalog_items` rows where `status = provisional`, `source =
+user_added`, and `created_by_user_id is not null` directly. If non-local
+environments contain historical `catalog_curation` rows, inspect them
+non-destructively first:
+
+```sql
+select queue_name, status, count(*)
+from job_queue
+group by 1, 2
+order by 1, 2;
+```
+
+Do not bulk-delete orphan queue rows without maintainer approval. The safe
+cleanup plan is: record counts by status, confirm no worker claims
+`catalog_curation`, confirm provisional rows are visible through
+`/garden/catalog/curation`, then run an approved one-off maintenance cleanup.
+
 Public journal publishing uses `{ "kind": "journal_entry_index",
 "journalEntryId": "...", "userId": "..." }` and archiving uses `{ "kind":
 "journal_entry_unindex", "journalEntryId": "...", "userId": "..." }`. The

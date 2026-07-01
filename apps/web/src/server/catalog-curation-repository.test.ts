@@ -66,6 +66,7 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is not null',
     );
+    expect(compiled.sql).not.toContain("job_queue");
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("title");
     expect(compiled.sql).not.toContain("body");

@@ -25,7 +25,6 @@ const MAX_CATALOG_SUGGESTIONS = 8;
 const MAX_CATALOG_TYPEAHEAD_ROWS = MAX_CATALOG_SUGGESTIONS * 3;
 const MIN_CATALOG_QUERY_LENGTH = 2;
 const DEFAULT_USER_ADDED_LOCALE = "und";
-const CATALOG_CURATION_QUEUE = "catalog_curation";
 const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
@@ -227,11 +226,6 @@ export async function createUserAddedCatalogCandidate(
   const displayName = normalizeUserAddedCatalogName(input.displayName);
   const normalizedName = normalizeCatalogQuery(displayName);
   const locale = DEFAULT_USER_ADDED_LOCALE;
-  const idempotencyKey = catalogCurationIdempotencyKey(
-    scope.userId,
-    normalizedName,
-    locale,
-  );
 
   const item = await buildUpsertUserAddedCatalogItemQuery(executor, scope, {
     displayName,
@@ -246,13 +240,8 @@ export async function createUserAddedCatalogCandidate(
     locale,
   }).execute();
 
-  await buildEnqueueCatalogCurationJobQuery(executor, {
-    catalogItemId: item.id,
-    displayName,
-    normalizedName,
-    locale,
-    idempotencyKey,
-  }).executeTakeFirstOrThrow();
+  // Curation reads provisional `catalog_items` directly; no worker consumes a
+  // provisional catalog job, so this path must not enqueue background work.
 
   return {
     id: item.id,
@@ -430,42 +419,6 @@ export function buildInsertCatalogItemNameQuery(
     );
 }
 
-export function buildEnqueueCatalogCurationJobQuery(
-  executor: QueryExecutor,
-  input: {
-    catalogItemId: string;
-    displayName: string;
-    normalizedName: string;
-    locale: string;
-    idempotencyKey: string;
-  },
-) {
-  const payload = {
-    kind: "provisional_catalog_item",
-    catalogItemId: input.catalogItemId,
-    displayName: input.displayName,
-    normalizedName: input.normalizedName,
-    locale: input.locale,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: CATALOG_CURATION_QUEUE,
-      payload,
-      idempotency_key: input.idempotencyKey,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returningAll();
-}
-
 export function buildEnqueueCatalogTypeaheadReindexJobQuery(
   executor: QueryExecutor,
 ) {
@@ -535,14 +488,6 @@ function normalizeCatalogLimit(limit: number) {
 function normalizeCatalogTypeaheadRowLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_CATALOG_SUGGESTIONS;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_CATALOG_TYPEAHEAD_ROWS);
-}
-
-function catalogCurationIdempotencyKey(
-  userId: string,
-  normalizedName: string,
-  locale: string,
-) {
-  return `catalog-curation:${userId}:${locale}:${normalizedName}`;
 }
 
 export function isSelectableCatalogStatus(
