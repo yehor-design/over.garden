@@ -23,6 +23,8 @@ pnpm mainline:closeout:check
 
 Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 remains the real-user segmented field-run gate and must not be closed from internal smoke users. When external invites are unavailable, OVE-54 provides a founder-only pilot rehearsal path that proves operator readiness without contaminating OVE-53 decision evidence.
 
+OVE-96 records the current lineage/social graph scope decision in `docs/LINEAGE_SCOPE_DECISION.md`: lineage, provenance edges, handles, follows, claim inbox, invitations, ask-the-lineage flows, and graph UI are post-MVP for current execution. Do not implement them from the historical S14-S20 research specs or historical Slice 6 text until the decision file's closed-pilot H1/H4 gates are met or a newer dated founder/operator decision supersedes it.
+
 Next queued Linear project after the pilot-decision handoff is `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64). It starts with OVE-55 live source verification, then proceeds through source snapshot quarantine, UA official varieties, species backbone, alias promotion, breed proof, BG official variety proof, genebank long-tail candidates, attribution, and refresh/diff slices.
 
 OVE-55 is the binding source-readiness gate for that project: later ingestion issues must link back to `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` and may only consume sources according to the manifest verdicts.
@@ -197,6 +199,8 @@ Includes:
 
 ### Slice 6: Lineage And Social Graph MVP
 
+Current status: historical only. OVE-96 supersedes this as an implementation instruction; read `docs/LINEAGE_SCOPE_DECISION.md` before touching lineage or social graph work.
+
 Goal: add cross-user defensibility only after the capture loop is working.
 
 Primary user behavior: user can attribute provenance, confirm/decline a claim, and see lineage without exposing another user's identity/location beyond their own settings.
@@ -208,6 +212,8 @@ Includes:
 - Sort-mediated public artifacts only.
 - Block/report/limits.
 - Noindex full lineage graph.
+
+Current non-goals until the OVE-96 decision gates are met: no lineage tables, handles, follows, claim inbox, non-user invitations, ask-the-lineage flows, graph UI, cross-user typeahead, or social graph jobs.
 
 ## Execution Batch 1
 
