@@ -81,14 +81,14 @@ describe("OVE-80 catalog full-import dry-run", () => {
           "production",
           "--preflight-only",
           "--target",
-          "ua-register-variety",
+          "vernacular-alias-expansion",
         ]),
       ),
     ).toMatchObject({
       environment: "production",
       confirmEnvironment: "production",
       preflightOnly: true,
-      targets: ["ua-register-variety"],
+      targets: ["vernacular-alias-expansion"],
     });
   });
 
@@ -165,6 +165,59 @@ describe("OVE-80 catalog full-import dry-run", () => {
         productConceptsWouldProject: 4,
       }),
     });
+  });
+
+  it("reports the OVE-83 vernacular alias expansion as an explicit dry-run target", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["vernacular-alias-expansion"],
+      }),
+      generatedAt: "2026-07-01T13:00:00.000Z",
+    });
+
+    expect(report.targets[0]).toMatchObject({
+      key: "vernacular-alias-expansion",
+      packageScript: "catalog:sources:import-species-backbone",
+      sourceSet: "OVE-83 reviewed vernacular alias expansion",
+      importerIssue: "OVE-83",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
+      counts: {
+        sourceRowsWouldRead: 31,
+        rawRowsWouldCapture: 0,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: 21,
+        reviewNeededRows: 2,
+        rejectedRows: 4,
+        blockedRows: 10,
+        attributionRequiredSources: 4,
+      },
+    });
+    expect(report.targets[0].sources).toEqual(
+      expect.arrayContaining([
+        "wikidata",
+        "eppo-codes",
+        "overgarden-curation",
+        "overgarden-generated",
+      ]),
+    );
+    expect(report.targets[0].sources).toHaveLength(4);
+    expect(report.targets[0].readinessVerdicts.map((row) => row.slug)).toEqual([
+      "eppo-codes",
+      "wikidata",
+    ]);
+    expect(report.targets[0].projectionGuard).toEqual({
+      status: "passed",
+      checkedProjectionRequests: 2,
+    });
+    expect(report.duplicateRisk.clusters).toEqual([
+      expect.objectContaining({
+        signal: "reviewed-vernacular-alias-collisions",
+        requiredGate: "OVE-89",
+      }),
+    ]);
   });
 
   it("reports the OVE-81 UA register target as a full approved import wave", () => {

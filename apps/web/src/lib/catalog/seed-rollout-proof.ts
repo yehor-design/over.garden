@@ -35,6 +35,13 @@ export interface CatalogSeedRolloutAppSmoke {
     readbackIdentityPreserved: boolean;
     readbackPageStatus: number;
   }>;
+  blockedAliasCases?: Array<{
+    query: string;
+    suggestionCount: number;
+    forbiddenDisplayNameAbsent: boolean;
+    canonicalTargetAbsent: boolean | null;
+    duplicateSameConceptSuggestionsAbsent: boolean;
+  }>;
   leakCheck: "passed";
 }
 
@@ -76,7 +83,7 @@ export const CATALOG_SEED_ROLLOUT_COMMANDS: readonly SeedCommandDefinition[] = [
   {
     key: "species-backbone",
     packageScript: "catalog:sources:import-species-backbone",
-    sourceSet: "OVE-58 species backbone",
+    sourceSet: "OVE-58/82/83 species backbone and alias expansion",
     expectedCanonicalName: "Solanum lycopersicum L.",
     expectedCatalogKind: "species",
     expectedSource: "species_backbone",
@@ -113,6 +120,11 @@ export const CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES = [
   "7 ФОР 7",
   "ЕС ЯСМІНІС КЛП",
   "помідор",
+  "помідори",
+  "домати",
+  "огірок звичайний",
+  "common sunflower",
+  "sweet basil",
   "Карпатська",
   "Садово 1",
   "Red Cherry",
@@ -287,12 +299,16 @@ export function buildSafeSeedCommandSummary(
 
   const imported = asRecord(root.imported);
   const promoted = asRecord(root.promoted);
-  const identity = promoted ?? imported;
+  const importedConcept = findImportedConcept(imported, command);
+  const identity = promoted ?? importedConcept ?? imported;
   const idempotency = asRecord(root.idempotencyProof);
   const catalogItemId = stringValue(identity?.catalogItemId);
   const rerunCatalogItemId =
     stringValue(idempotency?.rerunCatalogItemId) ??
     stringValue(idempotency?.promotedAgainCatalogItemId);
+  const stableIdentityReported =
+    booleanValue(idempotency?.stableCatalogItems) ??
+    booleanValue(idempotency?.stableProductIdentityOnRerun);
   const canonicalName =
     stringValue(identity?.canonicalName) ?? command.expectedCanonicalName;
   const catalogKind = stringValue(identity?.catalogKind);
@@ -331,8 +347,15 @@ export function buildSafeSeedCommandSummary(
     catalogKind: catalogKind as SafeSeedCommandSummary["catalogKind"],
     source: command.expectedSource,
     aliasesProjected: numberValue(identity?.aliasesProjected),
-    reindexQueued: booleanValue(identity?.reindexQueued),
-    stableProductIdentityOnRerun: Boolean(catalogItemId && rerunCatalogItemId),
+    reindexQueued:
+      booleanValue(identity?.reindexQueued) ??
+      booleanValue(imported?.reindexQueued),
+    stableProductIdentityOnRerun: Boolean(
+      catalogItemId &&
+      (rerunCatalogItemId
+        ? catalogItemId === rerunCatalogItemId
+        : stableIdentityReported),
+    ),
     sourceProofRecorded: hasValue(root.provenanceProof),
     leakCheck: "passed",
   };
@@ -377,6 +400,7 @@ export function buildCatalogSeedRolloutEvidence(input: {
       realAppSmoke: {
         baseUrl: input.appSmoke.baseUrl,
         cases: input.appSmoke.cases,
+        blockedAliasCases: input.appSmoke.blockedAliasCases ?? [],
         leakCheck: input.appSmoke.leakCheck,
       },
     },
@@ -430,6 +454,23 @@ function asRecord(value: unknown) {
     return null;
   }
   return value as Record<string, unknown>;
+}
+
+function findImportedConcept(
+  imported: Record<string, unknown> | null,
+  command: SeedCommandDefinition,
+) {
+  const concepts = imported?.concepts;
+  if (!Array.isArray(concepts)) return null;
+
+  return (
+    concepts
+      .map((concept) => asRecord(concept))
+      .find(
+        (concept) =>
+          stringValue(concept?.canonicalName) === command.expectedCanonicalName,
+      ) ?? null
+  );
 }
 
 function stringValue(value: unknown) {

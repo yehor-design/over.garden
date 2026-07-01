@@ -18,7 +18,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
   branch `main`, environment `production`, generated timestamp `2026-07-01T12:16:18.722Z`,
   idempotent product identity for every seed command, duplicate same-concept suggestions absent,
   real `/garden` readback status `200` for every smoke case, and leak check `passed`.
-  This is historical proof for the OVE-78 seed set; after OVE-81, a fresh production rollout proof is required before claiming production has the full UA State Register wave.
+  This is historical proof for the OVE-78 seed set; after OVE-81 and OVE-83, a fresh production rollout proof is required before claiming production has the full UA State Register wave or the reviewed species alias expansion.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -28,7 +28,7 @@ Exact next operational action for staging or production: point the shell at that
 The rollout command seeds the product-availability proof set:
 
 - OVE-81 UA State Register official variety wave: 15,177 official variety concepts from the approved file, including the existing `Ботсадівський` proof row and representative `Kaiser`, `7 ФОР 7`, and `ЕС ЯСМІНІС КЛП` smoke cases
-- OVE-58 species backbone: `Solanum lycopersicum L.` with `помідор` and `домат` aliases
+- OVE-58/82/83 species backbone: tomato, cucumber, sunflower, and basil species with reviewed Ukrainian, Bulgarian, English, and scientific/synonym aliases such as `помідор`, `помідори`, `домат`, `домати`, `огірок звичайний`, `common sunflower`, `сонях`, `sweet basil`, `базилік духмяний`, and `обикновен босилек`
 - OVE-60 official bee breed seed: `Карпатська бджола`
 - OVE-61 BG official variety proof subset: `Садово 1`
 - OVE-62 GRIN/NPGS promoted long-tail candidate: `Red Cherry tomato`
@@ -54,7 +54,7 @@ The historical OVE-78 final redacted evidence recorded these product-visible row
 | OVE-61 BG official variety proof subset       | `Садово 1`                | `plant_variety` | `3b59681d-228a-40e5-b59c-302e952923b7` | `sadovo-1-bg-official-variety`              |
 | OVE-62 GRIN/NPGS promoted long-tail candidate | `Red Cherry tomato`       | `plant_variety` | `63e9e0e7-126e-421f-825f-3e9c208bc614` | `red-cherry-tomato-grin-genebank-candidate` |
 
-The real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions. OVE-81 expands the current smoke to include additional UA State Register cases beyond the proof row; production proof must be rerun before those expanded cases are claimed on `https://over.garden`.
+The historical OVE-78 real app smoke selected and read back `Ботсадівський`, `помідор`, `домат`, `Карпатська бджола`, `Садово 1`, and `Red Cherry tomato` from `https://over.garden/garden`. `помідор` and `домат` both resolved to the same `species` catalog identity for `Solanum lycopersicum L.` without duplicate same-concept suggestions. OVE-81 expands the current smoke to include additional UA State Register cases beyond the proof row, and OVE-83 expands it with reviewed species aliases plus blocked-alias absence checks. Production proof must be rerun before those expanded cases are claimed on `https://over.garden`.
 
 Production setup note: before the successful OVE-78 proof, production schema bootstrap was rerun non-destructively because the source-catalog tables required by the rollout command were missing from the live database. No schema drop, bulk delete, restore-over-production, or source/user data export was performed. The OVE-78 code also hardened the species and UA register importers so production reruns write the expected `catalog_kind` explicitly instead of relying on database defaults.
 
@@ -81,7 +81,8 @@ The command:
 - runs the approved seed/import scripts with captured output;
 - emits only a redacted rollout summary;
 - runs the real `/garden` catalog UX smoke against the provided base URL;
-- verifies `Ботсадівський`, `Kaiser`, `7 ФОР 7`, `ЕС ЯСМІНІС КЛП`, `помідор`, `Карпатська`, `Садово 1`, and `Red Cherry`;
+- verifies `Ботсадівський`, `Kaiser`, `7 ФОР 7`, `ЕС ЯСМІНІС КЛП`, `помідор`, `помідори`, `домати`, `огірок звичайний`, `common sunflower`, `sweet basil`, `Карпатська`, `Садово 1`, and `Red Cherry`;
+- verifies blocked/review-only species aliases such as `garden tomato`, `love apple`, `помидор`, `gherkin`, `pickle`, and `holy basil` do not appear as product alias suggestions;
 - reports idempotent product identity and absence of duplicate same-concept suggestions;
 - fails if final evidence contains source-record IDs, raw payload fields, exact location markers, emails, tokens, user-agent/referrer fields, media keys, or other forbidden proof markers.
 
@@ -105,6 +106,6 @@ The final JSON output is the only command output intended for Linear or docs. It
 - commit SHA, branch, and working-tree state;
 - product-visible catalog item IDs, public slugs, canonical names, catalog kind, source family, alias counts, reindex intent, and idempotency booleans;
 - sources intentionally not seeded by the rollout command;
-- real app smoke results with query, selected text, canonical name, catalog kind, object kind, readback status, duplicate absence, and leak check.
+- real app smoke results with query, selected text, canonical name, catalog kind, object kind, readback status, duplicate absence, blocked-alias absence, and leak check.
 
 It must not record secrets, connection strings, raw importer stdout, source-record identifiers, raw payload hashes, source-only metadata, exact location data, emails, cookies, invite URLs, user identifiers, media keys, IP addresses, user agents, or referrers.

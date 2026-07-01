@@ -1,11 +1,11 @@
 # Species Backbone Policy
 
-Status: OVE-82 planned species import policy, extending the OVE-58/59/63 seed, alias-promotion, and attribution path
+Status: OVE-83 planned species import and reviewed vernacular alias policy, extending the OVE-58/59/63 seed, alias-promotion, and attribution path
 Scope: CoL/WFO/GBIF/EPPO/Wikidata species seed consumed by `pnpm catalog:sources:import-species-backbone`
 
 OVE-58 proves one canonical species path through the real gardener flow: typeahead -> selected catalog item -> journal save -> readback. OVE-59 adds explicit vernacular alias promotion states for that same path. OVE-63 adds required source credits for attribution-required imported facts.
 
-OVE-82 expands that proof into the full planned species wave for the current catalog rollout: `Solanum lycopersicum L.`, `Cucumis sativus L.`, `Helianthus annuus L.`, and `Ocimum basilicum L.`. This is a full planned import for the approved MVP species backbone wave, not a blind full global taxonomy dump. CoL/WFO/GBIF/EPPO/Wikidata remain approved source families, but each product-visible concept must pass the deterministic projection, alias review, attribution, and leak-check rules below.
+OVE-82 expands that proof into the full planned species wave for the current catalog rollout: `Solanum lycopersicum L.`, `Cucumis sativus L.`, `Helianthus annuus L.`, and `Ocimum basilicum L.`. OVE-83 expands reviewed vernacular aliases on top of the same source-backed wave so local Ukrainian, Bulgarian, English, and scientific/synonym lookup names resolve to the same canonical concepts without promoting ambiguous, rejected, or generated aliases. This is a full planned import for the approved MVP species backbone wave, not a blind full global taxonomy dump. CoL/WFO/GBIF/EPPO/Wikidata remain approved source families, but each product-visible concept must pass the deterministic projection, alias review, attribution, and leak-check rules below.
 
 ## Source Precedence
 
@@ -24,7 +24,7 @@ The product catalog projection may include:
 - Accepted scientific names for the planned species wave: `Solanum lycopersicum L.`, `Cucumis sativus L.`, `Helianthus annuus L.`, and `Ocimum basilicum L.`
 - Source IDs: `col_id`, `wfo_id`, `gbif_taxon_key`, `eppo_code`, and `wikidata_id` inside internal allowed projection/provenance only.
 - Source-backed synonym aliases, currently `Lycopersicon esculentum`.
-- Small, gardener-facing vernacular aliases with permissive license/provenance, currently tomato/cucumber/sunflower/basil aliases in English, Ukrainian, and Bulgarian.
+- Small, gardener-facing vernacular aliases with permissive license/provenance, currently tomato/cucumber/sunflower/basil aliases in English, Ukrainian, and Bulgarian. OVE-83 accepted the reviewed expansion set: `помідори`, `домати`, `огірок звичайний`, `common sunflower`, `сонях`, `sweet basil`, `базилік духмяний`, and `обикновен босилек`.
 
 Projected aliases must also have an alias record with explicit language/locale, script, source slug, source method, source record key when source-backed, confidence, license, attribution flag, and one of these statuses:
 
@@ -40,7 +40,7 @@ The product catalog projection must not include:
 - Source-only fields.
 - GBIF occurrence records or coordinates.
 - EPPO distribution/native-range text.
-- Wikidata/EPPO aliases that have not been reviewed for local gardener language fit, including `garden tomato`, `gherkin`, `common sunflower`, `сонях`, `sweet basil`, and `базилік духмяний` while they are `review_needed`.
+- Wikidata/EPPO aliases that have not been reviewed for local gardener language fit, including `garden tomato` and `gherkin` while they are `review_needed`.
 - Rejected aliases such as `love apple`, `pickle`, `обикновен слънчоглед`, and `holy basil`.
 - Generated aliases such as `помидор`, `огурец`, `соняхи`, or `базилик` unless a later explicit curation step promotes them.
 - Conditional or internal-validation-only sources such as PESI, EOL, or iNaturalist.

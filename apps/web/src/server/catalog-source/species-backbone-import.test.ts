@@ -124,9 +124,13 @@ describe("species backbone seed import", () => {
       "Tomato",
       "помідор",
       "томати",
+      "помідори",
       "домат",
+      "домати",
     ]);
     expect(definition.aliasCandidates.map((row) => row.status)).toEqual([
+      "accepted",
+      "accepted",
       "accepted",
       "accepted",
       "accepted",
@@ -184,25 +188,85 @@ describe("species backbone seed import", () => {
     ).toEqual(
       expect.arrayContaining([
         "огірок",
+        "огірок звичайний",
         "краставица",
         "Sunflower",
+        "common sunflower",
+        "сонях",
         "слънчоглед",
         "Basil",
+        "sweet basil",
         "базилік",
+        "базилік духмяний",
         "босилек",
+        "обикновен босилек",
       ]),
     );
     expect(blockedAliases.map((alias) => alias.displayName)).toEqual(
       expect.arrayContaining([
         "gherkin",
-        "common sunflower",
-        "sweet basil",
+        "pickle",
+        "обикновен слънчоглед",
         "holy basil",
+        "помидор",
       ]),
     );
     expect(blockedAliases.every((alias) => alias.status !== "accepted")).toBe(
       true,
     );
+  });
+
+  it("promotes only reviewed OVE-83 vernacular aliases while keeping blocked aliases out of projection", () => {
+    const concepts = speciesBackboneConcepts(definition);
+    const projectedAliasNames = concepts.flatMap((concept) =>
+      concept.projection.aliases.map((alias) => alias.displayName),
+    );
+    const aliasCandidates = concepts.flatMap(
+      (concept) => concept.aliasCandidates,
+    );
+    const statusCounts = aliasCandidates.reduce<Record<string, number>>(
+      (counts, alias) => {
+        counts[alias.status] = (counts[alias.status] ?? 0) + 1;
+        return counts;
+      },
+      {},
+    );
+
+    expect(projectedAliasNames).toEqual(
+      expect.arrayContaining([
+        "помідори",
+        "домати",
+        "огірок звичайний",
+        "common sunflower",
+        "сонях",
+        "sweet basil",
+        "базилік духмяний",
+        "обикновен босилек",
+      ]),
+    );
+    expect(projectedAliasNames).toEqual(
+      expect.not.arrayContaining([
+        "garden tomato",
+        "love apple",
+        "помидор",
+        "gherkin",
+        "holy basil",
+      ]),
+    );
+    expect(statusCounts).toMatchObject({
+      accepted: 30,
+      review_needed: 2,
+      rejected: 4,
+      generated: 4,
+    });
+    expect(
+      aliasCandidates.find((alias) => alias.displayName === "sweet basil"),
+    ).toMatchObject({
+      status: "accepted",
+      sourceSlug: "eppo-codes",
+      sourceRecordKey: "EPPO:OCIBA",
+      attributionRequired: true,
+    });
   });
 
   it("upserts each source snapshot by source version and snapshot checksum", () => {

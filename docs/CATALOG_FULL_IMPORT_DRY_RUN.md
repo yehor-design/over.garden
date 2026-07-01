@@ -36,6 +36,7 @@ Allowed targets:
 - `catalog-source-sample`
 - `ua-register-variety`
 - `species-backbone`
+- `vernacular-alias-expansion`
 - `breed-seed`
 - `bg-official-variety`
 - `genebank-long-tail`
@@ -76,5 +77,14 @@ Before OVE-81, OVE-82, OVE-83, OVE-85, OVE-86, or OVE-88 expands a source family
 - `leakCheck = "passed"`.
 
 For OVE-82, the `species-backbone` target is the current planned species wave, not the older one-species OVE-58 proof. Its dry-run counts must include all planned CoL/WFO/GBIF/EPPO/Wikidata source rows, all projected species concepts, accepted aliases, and review-only/rejected/generated aliases.
+
+For OVE-83, use the explicit alias target:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local --target vernacular-alias-expansion
+```
+
+The `vernacular-alias-expansion` target reports reviewed local-name expansion over the existing species-backbone source set. It does not claim new raw taxonomy rows or new species concepts. It reports 31 alias candidates, 21 product-visible vernacular aliases, 2 review-needed aliases, 4 rejected aliases, 10 blocked aliases, and the OVE-89 duplicate/collision review dependency. Only accepted aliases can be linked to `catalog_item_names`; review-needed, rejected, generated, and curator-only rows stay in `catalog_alias_projections`.
 
 OVE-90 must not claim full catalog availability until the relevant dry-run reports, source-family imports, OVE-89 entity-resolution QA, and production seed proof all agree.

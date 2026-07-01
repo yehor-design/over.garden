@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type { JsonValue } from "@/db/schema";
 
 export const SPECIES_BACKBONE_PARSER_VERSION =
-  "ove-82.species-backbone.planned-import.v1";
+  "ove-83.species-backbone.alias-expansion.v1";
 
 export interface SpeciesBackboneSourceIds {
   colId: string;
@@ -181,6 +181,13 @@ export function buildSpeciesBackboneConcepts(): SpeciesBackboneConceptDefinition
       acceptedVernacularAliases: [
         { displayName: "Cucumber", locale: "en", script: "Latin" },
         { displayName: "огірок", locale: "uk", script: "Cyrillic" },
+        {
+          displayName: "огірок звичайний",
+          locale: "uk",
+          script: "Cyrillic",
+          projectionNotes:
+            "OVE-83 reviewed local Ukrainian label accepted for exact species search.",
+        },
         { displayName: "краставица", locale: "bg", script: "Cyrillic" },
       ],
       reviewAliases: [
@@ -238,38 +245,31 @@ export function buildSpeciesBackboneConcepts(): SpeciesBackboneConceptDefinition
       },
       acceptedVernacularAliases: [
         { displayName: "Sunflower", locale: "en", script: "Latin" },
-        { displayName: "соняшник", locale: "uk", script: "Cyrillic" },
-        { displayName: "слънчоглед", locale: "bg", script: "Cyrillic" },
-      ],
-      reviewAliases: [
         {
           displayName: "common sunflower",
           locale: "en",
           script: "Latin",
-          sourceSlug: "wikidata",
-          sourceRecordKey: "Wikidata:Q171497",
-          confidence: 0.72,
           projectionNotes:
-            "Source-backed label held for review because product search should first prefer the simpler gardener-facing alias.",
+            "OVE-83 reviewed English source-backed label accepted because it resolves unambiguously to the species concept.",
         },
+        { displayName: "соняшник", locale: "uk", script: "Cyrillic" },
         {
           displayName: "сонях",
           locale: "uk",
           script: "Cyrillic",
-          sourceSlug: "wikidata",
-          sourceRecordKey: "Wikidata:Q171497",
-          confidence: 0.58,
           projectionNotes:
-            "Source-backed local variant held until Ukrainian alias coverage is reviewed.",
+            "OVE-83 reviewed Ukrainian local variant accepted for gardener-facing search.",
         },
+        { displayName: "слънчоглед", locale: "bg", script: "Cyrillic" },
       ],
+      reviewAliases: [],
       rejectedAliases: [
         {
           displayName: "обикновен слънчоглед",
           locale: "bg",
           script: "Cyrillic",
           projectionNotes:
-            "Rejected from the first projection as a verbose duplicate that can crowd Bulgarian typeahead before OVE-83 alias QA.",
+            "Rejected after OVE-83 alias QA because the phrase is a verbose duplicate that can crowd Bulgarian typeahead.",
         },
       ],
       generatedAliases: [
@@ -306,31 +306,32 @@ export function buildSpeciesBackboneConcepts(): SpeciesBackboneConceptDefinition
       },
       acceptedVernacularAliases: [
         { displayName: "Basil", locale: "en", script: "Latin" },
-        { displayName: "базилік", locale: "uk", script: "Cyrillic" },
-        { displayName: "босилек", locale: "bg", script: "Cyrillic" },
-      ],
-      reviewAliases: [
         {
           displayName: "sweet basil",
           locale: "en",
           script: "Latin",
           sourceSlug: "eppo-codes",
-          sourceRecordKey: "EPPO:OCIBA",
-          confidence: 0.67,
           projectionNotes:
-            "Source-backed common-name candidate held because it can compete with cultivar/common herb naming in the first projection.",
+            "OVE-83 reviewed EPPO common-name candidate accepted for species search; canonical display remains scientific.",
         },
+        { displayName: "базилік", locale: "uk", script: "Cyrillic" },
         {
           displayName: "базилік духмяний",
           locale: "uk",
           script: "Cyrillic",
-          sourceSlug: "wikidata",
-          sourceRecordKey: "Wikidata:Q38859",
-          confidence: 0.68,
           projectionNotes:
-            "Source-backed Ukrainian label held until local-language alias review confirms it should be searchable.",
+            "OVE-83 reviewed Ukrainian local label accepted for exact species search.",
+        },
+        { displayName: "босилек", locale: "bg", script: "Cyrillic" },
+        {
+          displayName: "обикновен босилек",
+          locale: "bg",
+          script: "Cyrillic",
+          projectionNotes:
+            "OVE-83 reviewed Bulgarian local label accepted for exact species search.",
         },
       ],
+      reviewAliases: [],
       rejectedAliases: [
         {
           displayName: "holy basil",
@@ -371,6 +372,10 @@ interface PlannedSpeciesBackboneConceptInput {
     displayName: string;
     locale: "en" | "uk" | "bg";
     script: "Latin" | "Cyrillic";
+    sourceSlug?: "wikidata" | "eppo-codes";
+    sourceRecordKey?: string | null;
+    confidence?: number;
+    projectionNotes?: string;
   }>;
   reviewAliases: Array<{
     displayName: string;
@@ -445,7 +450,7 @@ function buildPlannedSpeciesBackboneProjection(
       locale: alias.locale,
       isPrimary: false,
       kind: "vernacular_alias" as const,
-      sourceSlugs: ["wikidata"],
+      sourceSlugs: [acceptedAliasSourceSlug(alias)],
     })),
   ]);
 
@@ -629,6 +634,9 @@ function buildPlannedSpeciesBackboneSourceRecords(
           nonProjectedCommonNames: input.reviewAliases
             .filter((alias) => alias.sourceSlug === "eppo-codes")
             .map((alias) => alias.displayName),
+          projectedCommonNames: input.acceptedVernacularAliases
+            .filter((alias) => acceptedAliasSourceSlug(alias) === "eppo-codes")
+            .map((alias) => alias.displayName),
         }),
       },
     },
@@ -657,7 +665,11 @@ function buildPlannedSpeciesBackboneSourceRecords(
             en: [
               input.scientificName,
               ...input.acceptedVernacularAliases
-                .filter((alias) => alias.locale === "en")
+                .filter(
+                  (alias) =>
+                    alias.locale === "en" &&
+                    acceptedAliasSourceSlug(alias) === "wikidata",
+                )
                 .map((alias) => alias.displayName),
               ...input.reviewAliases
                 .filter((alias) => alias.locale === "en")
@@ -666,7 +678,11 @@ function buildPlannedSpeciesBackboneSourceRecords(
             uk: [
               input.scientificName,
               ...input.acceptedVernacularAliases
-                .filter((alias) => alias.locale === "uk")
+                .filter(
+                  (alias) =>
+                    alias.locale === "uk" &&
+                    acceptedAliasSourceSlug(alias) === "wikidata",
+                )
                 .map((alias) => alias.displayName),
               ...input.reviewAliases
                 .filter((alias) => alias.locale === "uk")
@@ -675,7 +691,11 @@ function buildPlannedSpeciesBackboneSourceRecords(
             bg: [
               input.scientificName,
               ...input.acceptedVernacularAliases
-                .filter((alias) => alias.locale === "bg")
+                .filter(
+                  (alias) =>
+                    alias.locale === "bg" &&
+                    acceptedAliasSourceSlug(alias) === "wikidata",
+                )
                 .map((alias) => alias.displayName),
               ...input.reviewAliases
                 .filter((alias) => alias.locale === "bg")
@@ -694,7 +714,7 @@ function buildPlannedSpeciesBackboneSourceRecords(
               locale: alias.locale,
             })),
             reason:
-              "OVE-82 projects only reviewed gardener-facing aliases; ambiguous and unsupported mappings stay in curation.",
+              "OVE-83 projects only reviewed gardener-facing aliases; ambiguous and unsupported mappings stay in curation.",
           },
         }),
       },
@@ -749,13 +769,16 @@ function buildPlannedSpeciesBackboneAliasCandidates(
       isPrimary: false,
       aliasKind: "vernacular_alias" as const,
       status: "accepted" as const,
-      sourceSlug: "wikidata",
-      sourceRecordKey: `Wikidata:${input.sourceIds.wikidataId}`,
+      sourceSlug: acceptedAliasSourceSlug(alias),
+      sourceRecordKey: acceptedAliasSourceRecordKey(alias, input),
       sourceMethod: "source_backed" as const,
-      confidence: 0.96,
-      license: "CC0 1.0 Universal",
-      attributionRequired: false,
+      confidence: alias.confidence ?? 0.96,
+      license: sourceLicense(acceptedAliasSourceSlug(alias)),
+      attributionRequired: sourceAttributionRequired(
+        acceptedAliasSourceSlug(alias),
+      ),
       projectionNotes:
+        alias.projectionNotes ??
         "Reviewed gardener-facing local alias from Wikidata EntityData.",
     })),
   ];
@@ -872,7 +895,21 @@ export function buildSpeciesBackboneProjection(): SpeciesBackboneProjection {
       sourceSlugs: ["wikidata"],
     },
     {
+      displayName: "помідори",
+      locale: "uk",
+      isPrimary: false,
+      kind: "vernacular_alias",
+      sourceSlugs: ["wikidata"],
+    },
+    {
       displayName: "домат",
+      locale: "bg",
+      isPrimary: false,
+      kind: "vernacular_alias",
+      sourceSlugs: ["wikidata"],
+    },
+    {
+      displayName: "домати",
       locale: "bg",
       isPrimary: false,
       kind: "vernacular_alias",
@@ -1112,16 +1149,16 @@ export function buildSpeciesBackboneSourceRecords(): SpeciesBackboneSourceRecord
               "помідори",
               "томати",
             ],
-            bg: ["Домати", "Solanum lycopersicum"],
+            bg: ["домати", "Solanum lycopersicum"],
           },
         }),
         sourceOnlyFields: jsonValue({
           nonProjectedAliases: {
             en: ["garden tomato", "love apple", "tomato plant"],
-            uk: ["томат (рослина)", "помідори"],
-            bg: ["Домати"],
+            uk: ["томат (рослина)"],
+            bg: [],
             reason:
-              "OVE-58 keeps the first gardener-facing alias set deliberately small until local-language coverage is reviewed.",
+              "OVE-83 projects only reviewed gardener-facing aliases; ambiguous or redundant source labels remain out of product search.",
           },
         }),
       },
@@ -1236,6 +1273,23 @@ export function buildSpeciesBackboneAliasCandidates(
         "Ukrainian plural alias accepted because it is source-backed and common in gardener search.",
     },
     {
+      displayName: "помідори",
+      normalizedName: normalizeCatalogName("помідори"),
+      locale: "uk",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.91,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "OVE-83 reviewed Ukrainian plural alias accepted for gardener-facing exact search.",
+    },
+    {
       displayName: "домат",
       normalizedName: normalizeCatalogName("домат"),
       locale: "bg",
@@ -1251,6 +1305,23 @@ export function buildSpeciesBackboneAliasCandidates(
       attributionRequired: false,
       projectionNotes:
         "Bulgarian local gardener-facing alias from Wikidata EntityData.",
+    },
+    {
+      displayName: "домати",
+      normalizedName: normalizeCatalogName("домати"),
+      locale: "bg",
+      script: "Cyrillic",
+      isPrimary: false,
+      aliasKind: "vernacular_alias",
+      status: "accepted",
+      sourceSlug: "wikidata",
+      sourceRecordKey: "Wikidata:Q23501",
+      sourceMethod: "source_backed",
+      confidence: 0.91,
+      license: "CC0 1.0 Universal",
+      attributionRequired: false,
+      projectionNotes:
+        "OVE-83 reviewed Bulgarian plural alias accepted for gardener-facing exact search.",
     },
   ];
 
@@ -1402,6 +1473,39 @@ function dedupeAliases(
 
 function normalizeCatalogName(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function acceptedAliasSourceSlug(alias: {
+  sourceSlug?: "wikidata" | "eppo-codes";
+}) {
+  return alias.sourceSlug ?? "wikidata";
+}
+
+function acceptedAliasSourceRecordKey(
+  alias: {
+    sourceSlug?: "wikidata" | "eppo-codes";
+    sourceRecordKey?: string | null;
+  },
+  input: PlannedSpeciesBackboneConceptInput,
+) {
+  if (alias.sourceRecordKey !== undefined) return alias.sourceRecordKey;
+
+  switch (acceptedAliasSourceSlug(alias)) {
+    case "eppo-codes":
+      return `EPPO:${input.sourceIds.eppoCode}`;
+    case "wikidata":
+      return `Wikidata:${input.sourceIds.wikidataId}`;
+  }
+}
+
+function sourceLicense(sourceSlug: "wikidata" | "eppo-codes") {
+  return sourceSlug === "eppo-codes"
+    ? "EPPO Codes Open Data Licence"
+    : "CC0 1.0 Universal";
+}
+
+function sourceAttributionRequired(sourceSlug: "wikidata" | "eppo-codes") {
+  return sourceSlug === "eppo-codes";
 }
 
 function assertAcceptedAliasesMatchProjection(

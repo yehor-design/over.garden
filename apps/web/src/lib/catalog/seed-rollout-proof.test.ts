@@ -111,6 +111,56 @@ describe("catalog seed rollout proof", () => {
     expect(JSON.stringify(summary)).not.toContain("rawPayload");
   });
 
+  it("builds redacted seed summaries from multi-concept species importer output", () => {
+    const summary = buildSafeSeedCommandSummary(
+      CATALOG_SEED_ROLLOUT_COMMANDS[1],
+      {
+        imported: {
+          importedConcepts: 4,
+          reindexQueued: true,
+          concepts: [
+            {
+              key: "solanum-lycopersicum",
+              catalogItemId: "00000000-0000-4000-8000-000000058003",
+              canonicalName: "Solanum lycopersicum L.",
+              catalogKind: "species",
+              publicSlug: "solanum-lycopersicum-species-backbone",
+              aliasesProjected: 9,
+              sourceRecordIds: {
+                wikidata: "must-not-survive",
+              },
+            },
+          ],
+        },
+        idempotencyProof: {
+          stableCatalogItems: true,
+          stableSourceRows: true,
+        },
+        provenanceProof: [
+          {
+            sourceRecordKey: "must-not-survive",
+          },
+        ],
+        leakCheck: "passed",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      key: "species-backbone",
+      expectedCanonicalName: "Solanum lycopersicum L.",
+      catalogItemId: "00000000-0000-4000-8000-000000058003",
+      canonicalName: "Solanum lycopersicum L.",
+      catalogKind: "species",
+      source: "species_backbone",
+      aliasesProjected: 9,
+      reindexQueued: true,
+      stableProductIdentityOnRerun: true,
+      sourceProofRecorded: true,
+      leakCheck: "passed",
+    });
+    expect(JSON.stringify(summary)).not.toContain("sourceRecord");
+  });
+
   it("fails closed when importer output omits or misreports catalog kind", () => {
     expect(() =>
       buildSafeSeedCommandSummary(CATALOG_SEED_ROLLOUT_COMMANDS[1], {
@@ -220,7 +270,16 @@ describe("catalog seed rollout proof", () => {
       databaseWriteScope: "explicit_local_environment",
     });
     expect(CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES).toEqual(
-      expect.arrayContaining(["Kaiser", "7 ФОР 7", "ЕС ЯСМІНІС КЛП"]),
+      expect.arrayContaining([
+        "Kaiser",
+        "7 ФОР 7",
+        "ЕС ЯСМІНІС КЛП",
+        "помідори",
+        "домати",
+        "огірок звичайний",
+        "common sunflower",
+        "sweet basil",
+      ]),
     );
     expect(JSON.stringify(evidence)).not.toMatch(/rawPayload|sourceRecord/);
   });

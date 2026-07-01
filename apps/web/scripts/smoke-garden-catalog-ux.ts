@@ -78,6 +78,13 @@ interface SmokeCase {
   plantName: string;
 }
 
+interface BlockedAliasSmokeCase {
+  query: string;
+  forbiddenDisplayName: string;
+  forbiddenCanonicalName?: string;
+  forbiddenCatalogKind?: CatalogKind;
+}
+
 const SMOKE_CASES: SmokeCase[] = [
   {
     query: "Ботсадівський",
@@ -120,6 +127,14 @@ const SMOKE_CASES: SmokeCase[] = [
     plantName: "OVE-67 tomato species",
   },
   {
+    query: "помідори",
+    expectedCanonicalName: "Solanum lycopersicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 tomato Ukrainian plural species",
+  },
+  {
     query: "домат",
     expectedCanonicalName: "Solanum lycopersicum L.",
     expectedCatalogKind: "species",
@@ -128,12 +143,44 @@ const SMOKE_CASES: SmokeCase[] = [
     plantName: "OVE-67 domat species",
   },
   {
+    query: "домати",
+    expectedCanonicalName: "Solanum lycopersicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 tomato Bulgarian plural species",
+  },
+  {
     query: "огірок",
     expectedCanonicalName: "Cucumis sativus L.",
     expectedCatalogKind: "species",
     expectedObjectKind: "plant",
     expectedIdentityLabel: "Plant species",
     plantName: "OVE-82 cucumber species",
+  },
+  {
+    query: "огірок звичайний",
+    expectedCanonicalName: "Cucumis sativus L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 cucumber Ukrainian formal species",
+  },
+  {
+    query: "common sunflower",
+    expectedCanonicalName: "Helianthus annuus L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 common sunflower species",
+  },
+  {
+    query: "сонях",
+    expectedCanonicalName: "Helianthus annuus L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 Ukrainian sunflower species",
   },
   {
     query: "слънчоглед",
@@ -150,6 +197,30 @@ const SMOKE_CASES: SmokeCase[] = [
     expectedObjectKind: "plant",
     expectedIdentityLabel: "Plant species",
     plantName: "OVE-82 basil species",
+  },
+  {
+    query: "sweet basil",
+    expectedCanonicalName: "Ocimum basilicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 sweet basil species",
+  },
+  {
+    query: "базилік духмяний",
+    expectedCanonicalName: "Ocimum basilicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 Ukrainian basil species",
+  },
+  {
+    query: "обикновен босилек",
+    expectedCanonicalName: "Ocimum basilicum L.",
+    expectedCatalogKind: "species",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant species",
+    plantName: "OVE-83 Bulgarian basil species",
   },
   {
     query: "Карпатська",
@@ -174,6 +245,41 @@ const SMOKE_CASES: SmokeCase[] = [
     expectedObjectKind: "plant",
     expectedIdentityLabel: "Plant variety",
     plantName: "OVE-67 Red Cherry tomato",
+  },
+];
+
+const BLOCKED_ALIAS_SMOKE_CASES: BlockedAliasSmokeCase[] = [
+  {
+    query: "garden tomato",
+    forbiddenDisplayName: "garden tomato",
+  },
+  {
+    query: "love apple",
+    forbiddenDisplayName: "love apple",
+    forbiddenCanonicalName: "Solanum lycopersicum L.",
+    forbiddenCatalogKind: "species",
+  },
+  {
+    query: "помидор",
+    forbiddenDisplayName: "помидор",
+    forbiddenCanonicalName: "Solanum lycopersicum L.",
+    forbiddenCatalogKind: "species",
+  },
+  {
+    query: "gherkin",
+    forbiddenDisplayName: "gherkin",
+    forbiddenCanonicalName: "Cucumis sativus L.",
+    forbiddenCatalogKind: "species",
+  },
+  {
+    query: "pickle",
+    forbiddenDisplayName: "pickle",
+    forbiddenCanonicalName: "Cucumis sativus L.",
+    forbiddenCatalogKind: "species",
+  },
+  {
+    query: "holy basil",
+    forbiddenDisplayName: "holy basil",
   },
 ];
 
@@ -334,9 +440,36 @@ async function main() {
     });
   }
 
+  const blockedAliasEvidence = [];
+  for (const smokeCase of BLOCKED_ALIAS_SMOKE_CASES) {
+    const typeahead = await jsonRequest<TypeaheadResponse>(
+      baseUrl,
+      jar,
+      `/api/garden/catalog/typeahead?q=${encodeURIComponent(smokeCase.query)}`,
+    );
+    const suggestions = Array.isArray(typeahead.suggestions)
+      ? typeahead.suggestions
+      : [];
+    assertNoDuplicateConcepts(smokeCase.query, suggestions);
+    assertNoForbiddenDisplayName(smokeCase, suggestions);
+    const canonicalTargetAbsent = assertForbiddenCanonicalAbsentIfNeeded(
+      smokeCase,
+      suggestions,
+    );
+
+    blockedAliasEvidence.push({
+      query: smokeCase.query,
+      suggestionCount: suggestions.length,
+      forbiddenDisplayNameAbsent: true,
+      canonicalTargetAbsent,
+      duplicateSameConceptSuggestionsAbsent: true,
+    });
+  }
+
   const output = {
     baseUrl,
     cases: evidence,
+    blockedAliasCases: blockedAliasEvidence,
     leakCheck: "passed",
   };
   assertNoForbiddenEvidence(output);
@@ -506,6 +639,49 @@ function assertNoDuplicateConcepts(
     }
     seen.add(key);
   }
+}
+
+function assertNoForbiddenDisplayName(
+  smokeCase: BlockedAliasSmokeCase,
+  suggestions: CatalogSuggestion[],
+) {
+  const forbidden = normalizeSmokeName(smokeCase.forbiddenDisplayName);
+  const match = suggestions.find(
+    (suggestion) => normalizeSmokeName(suggestion.displayName) === forbidden,
+  );
+
+  if (match) {
+    throw new Error(
+      `${smokeCase.query} returned blocked alias display name ${match.displayName}.`,
+    );
+  }
+}
+
+function assertForbiddenCanonicalAbsentIfNeeded(
+  smokeCase: BlockedAliasSmokeCase,
+  suggestions: CatalogSuggestion[],
+) {
+  if (!smokeCase.forbiddenCanonicalName || !smokeCase.forbiddenCatalogKind) {
+    return null;
+  }
+
+  const match = suggestions.find(
+    (suggestion) =>
+      suggestion.canonicalName === smokeCase.forbiddenCanonicalName &&
+      suggestion.catalogKind === smokeCase.forbiddenCatalogKind,
+  );
+
+  if (match) {
+    throw new Error(
+      `${smokeCase.query} resolved blocked alias to ${match.canonicalName} (${match.catalogKind}).`,
+    );
+  }
+
+  return true;
+}
+
+function normalizeSmokeName(value: string) {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
 }
 
 function assertNoForbiddenEvidence(output: unknown) {

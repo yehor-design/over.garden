@@ -48,10 +48,20 @@ export const CATALOG_FULL_IMPORT_DRY_RUN_TARGETS = [
   "catalog-source-sample",
   "ua-register-variety",
   "species-backbone",
+  "vernacular-alias-expansion",
   "breed-seed",
   "bg-official-variety",
   "genebank-long-tail",
 ] as const;
+
+const CATALOG_FULL_IMPORT_DRY_RUN_DEFAULT_TARGETS = [
+  "catalog-source-sample",
+  "ua-register-variety",
+  "species-backbone",
+  "breed-seed",
+  "bg-official-variety",
+  "genebank-long-tail",
+] as const satisfies readonly CatalogFullImportDryRunTarget[];
 
 const FORBIDDEN_DRY_RUN_EVIDENCE_MARKERS = [
   "rawPayload",
@@ -295,7 +305,7 @@ export function validateCatalogFullImportDryRunOptions(
     targets:
       options.targets && options.targets.length > 0
         ? dedupeTargets(options.targets)
-        : [...CATALOG_FULL_IMPORT_DRY_RUN_TARGETS],
+        : [...CATALOG_FULL_IMPORT_DRY_RUN_DEFAULT_TARGETS],
   };
 }
 
@@ -380,6 +390,21 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
   );
   const speciesSourceSlugs = dedupeStrings(
     speciesSourceRecords.map((record) => record.source.slug),
+  );
+  const speciesAliasExpansionCandidates = speciesAliasCandidates.filter(
+    (alias) =>
+      alias.aliasKind === "vernacular_alias" ||
+      alias.aliasKind === "generated_variant",
+  );
+  const speciesAliasExpansionSourceSlugs = dedupeStrings(
+    speciesAliasExpansionCandidates.map((alias) => alias.sourceSlug),
+  );
+  const speciesAliasExpansionReadinessSourceSlugs = speciesSourceSlugs.filter(
+    (sourceSlug) => speciesAliasExpansionSourceSlugs.includes(sourceSlug),
+  );
+  const speciesAliasExpansionSourceRecords = speciesSourceRecords.filter(
+    (record) =>
+      speciesAliasExpansionReadinessSourceSlugs.includes(record.source.slug),
   );
   const breedDefinition = breedSeedDefinition();
   const bgDefinition = bgOfficialVarietyDefinition();
@@ -516,6 +541,50 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
         {
           signal: "solanum-lycopersicum-boundary",
           conceptRole: "species backbone",
+        },
+      ],
+    },
+    {
+      key: "vernacular-alias-expansion",
+      packageScript: "catalog:sources:import-species-backbone",
+      sourceSet: "OVE-83 reviewed vernacular alias expansion",
+      importerIssue: "OVE-83",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
+      sourceSlugs: speciesAliasExpansionSourceSlugs,
+      readinessSourceSlugs: speciesAliasExpansionReadinessSourceSlugs,
+      rowCounts: {
+        sourceRowsWouldRead: speciesAliasExpansionCandidates.length,
+        rawRowsWouldCapture: 0,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: speciesAliasExpansionCandidates.filter(
+          (alias) => alias.status === "accepted",
+        ).length,
+        reviewNeededRows: speciesAliasExpansionCandidates.filter(
+          (alias) => alias.status === "review_needed",
+        ).length,
+        rejectedRows: speciesAliasExpansionCandidates.filter(
+          (alias) => alias.status === "rejected",
+        ).length,
+        blockedRows: speciesAliasExpansionCandidates.filter(
+          (alias) => alias.status !== "accepted",
+        ).length,
+        attributionRequiredSources: speciesAliasExpansionSourceRecords.filter(
+          (record) => record.source.attributionRequired,
+        ).length,
+      },
+      parserVersions: [SPECIES_BACKBONE_PARSER_VERSION],
+      projectionRequests: speciesAliasExpansionReadinessSourceSlugs.map(
+        (sourceSlug) => ({
+          sourceSlug,
+          productSurface: "catalog_item_names" as const,
+        }),
+      ),
+      duplicateSignals: [
+        {
+          signal: "reviewed-vernacular-alias-collisions",
+          conceptRole:
+            "local Ukrainian, Bulgarian, English, and scientific-name lookup aliases",
         },
       ],
     },
