@@ -38,6 +38,30 @@ for volume in "$POSTGRES_VOLUME" "$MEILI_VOLUME" "$MINIO_VOLUME"; do
   ensure_volume "$volume"
 done
 
+ensure_postgres_contract() {
+  if ! container_exists "$POSTGRES_CONTAINER"; then
+    return 0
+  fi
+
+  local actual_image
+  actual_image="$(container_image_reference "$POSTGRES_CONTAINER")"
+
+  if container_image_matches "$POSTGRES_CONTAINER" "$POSTGRES_IMAGE" &&
+    container_has_volume "$POSTGRES_CONTAINER" "$POSTGRES_VOLUME"; then
+    return 0
+  fi
+
+  if (( RECREATE == 1 )); then
+    info "Postgres container contract changed; recreating container while preserving existing named volumes."
+    info "Expected image: $POSTGRES_IMAGE"
+    info "Actual image: ${actual_image:-unknown}"
+    info "Expected volume: $POSTGRES_VOLUME"
+    return 0
+  fi
+
+  fail "Existing $POSTGRES_CONTAINER does not match the requested Postgres runtime. Expected image $POSTGRES_IMAGE with volume $POSTGRES_VOLUME, found image ${actual_image:-unknown}. Run infra/container-up --recreate to replace the container without deleting existing named volumes."
+}
+
 recreate_if_requested() {
   local name="$1"
 
@@ -63,6 +87,8 @@ start_or_create() {
     "$@"
   fi
 }
+
+ensure_postgres_contract
 
 start_or_create "$POSTGRES_CONTAINER" \
   container run --detach \

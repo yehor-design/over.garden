@@ -8,24 +8,24 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Current stack
 
-| Layer | Decision |
-| --- | --- |
-| Web/app runtime | Next.js App Router + TypeScript on Vercel |
-| UI | shadcn/ui only |
-| Auth | Better Auth |
-| Database | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback |
-| Type-safe data access | Kysely typed SQL builder; SQL migrations are schema source of truth |
-| Data-access safety | Scoped repository functions + invariant tests; no browser-direct broad DB access |
-| Object storage | Cloudflare R2 with private quarantine bucket and public derivative bucket/CDN |
-| Media processing | Worker-side sharp re-encode/resize/metadata strip; originals deleted after processing |
-| Search/typeahead | Meilisearch as a derived public index |
-| Matching/dedup | Python worker using RapidFuzz, Splink, PyICU, CyrTranslit; off request path |
-| Queue | Plain Postgres `job_queue` table, consumed with `FOR UPDATE SKIP LOCKED` |
-| Offline capture | PWA + Dexie/IndexedDB local queue + idempotency keys + visible sync state |
-| Realtime | Deferred; canonical server fetch path first |
-| Edge/DNS | Cloudflare in front of Vercel; do not cache HTML at Cloudflare |
-| Analytics | PostHog / first-party analytics later, after privacy event review |
-| Build method | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches |
+| Layer                   | Decision                                                                                                                                                                                                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web/app runtime         | Next.js App Router + TypeScript on Vercel                                                                                                                                                                                                                                                             |
+| UI                      | shadcn/ui only                                                                                                                                                                                                                                                                                        |
+| Auth                    | Better Auth                                                                                                                                                                                                                                                                                           |
+| Database                | DigitalOcean Managed Postgres in production; Apple Container-first local Postgres on supported Macs, with Docker only as fallback; local/CI default to the production major version, currently Postgres 18                                                                                            |
+| Type-safe data access   | Kysely typed SQL builder; SQL migrations are schema source of truth                                                                                                                                                                                                                                   |
+| Data-access safety      | Scoped repository functions + invariant tests; no browser-direct broad DB access                                                                                                                                                                                                                      |
+| Object storage          | Cloudflare R2 with private quarantine bucket and public derivative bucket/CDN                                                                                                                                                                                                                         |
+| Media processing        | Worker-side sharp re-encode/resize/metadata strip; originals deleted after processing                                                                                                                                                                                                                 |
+| Search/typeahead        | Meilisearch as a derived public index                                                                                                                                                                                                                                                                 |
+| Matching/dedup          | Python worker using RapidFuzz, Splink, PyICU, CyrTranslit; off request path                                                                                                                                                                                                                           |
+| Queue                   | Plain Postgres `job_queue` table, consumed with `FOR UPDATE SKIP LOCKED`                                                                                                                                                                                                                              |
+| Offline capture         | PWA + Dexie/IndexedDB local queue + idempotency keys + visible sync state                                                                                                                                                                                                                             |
+| Realtime                | Deferred; canonical server fetch path first                                                                                                                                                                                                                                                           |
+| Edge/DNS                | Cloudflare in front of Vercel; do not cache HTML at Cloudflare                                                                                                                                                                                                                                        |
+| Analytics               | PostHog / first-party analytics later, after privacy event review                                                                                                                                                                                                                                     |
+| Build method            | Walking skeleton first, then vertical SDD slices from `docs/SDD_VERTICAL_SLICE_ROADMAP.md`; no layer-ticket batches                                                                                                                                                                                   |
 | Local container runtime | Apple Container-first for local Postgres, Meilisearch, MinIO, and matching-image smoke on supported Apple Silicon/macOS 26; Docker Desktop is not required after OVE-77, except as a fallback for unsupported hosts or verified Apple Container feature gaps. See `docs/CONTAINER_RUNTIME_POLICY.md`. |
 
 ## Binding invariants
@@ -57,7 +57,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## Local topology
 
-- Apple Container-first local Postgres for database development on supported Macs, started by `infra/container-up`.
+- Apple Container-first local Postgres 18 for database development on supported Macs, started by `infra/container-up`.
 - Apple Container-first Meilisearch for search proof and index integration on supported Macs, started by `infra/container-up`.
 - Apple Container-first MinIO as local S3/R2 emulator on supported Macs, started by `infra/container-up`.
 - Docker remains an allowed fallback only when Apple Container cannot run or does not support the required local behavior. Fallback docs must name the gap instead of treating Docker Desktop as the default. Supported Apple Silicon/macOS 26 machines do not need Docker Desktop for the OVE-77-proven local path.
@@ -66,7 +66,7 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 ## CI runtime boundary
 
-GitHub Actions currently runs on `ubuntu-latest`. Its Postgres service container and MinIO `docker run` path are a `ci-required` Docker exception because Apple Container is not an Ubuntu service-container runtime. This keeps bootstrap, generated-type drift, lint, typecheck, test, and build coverage intact without reintroducing Docker Desktop as a supported-Mac local prerequisite.
+GitHub Actions currently runs on `ubuntu-latest`. Its Postgres 18 service container and MinIO `docker run` path are a `ci-required` Docker exception because Apple Container is not an Ubuntu service-container runtime. This keeps bootstrap, generated-type drift, lint, typecheck, test, and build coverage aligned with the production Postgres major version without reintroducing Docker Desktop as a supported-Mac local prerequisite.
 
 Do not migrate CI to Apple Container unless the replacement change documents runner support, runner cost/availability/concurrency, complete service-contract proof commands, and fallback behavior in `docs/CONTAINER_RUNTIME_POLICY.md`.
 

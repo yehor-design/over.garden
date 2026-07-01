@@ -32,15 +32,17 @@ infra/container-down --volumes
 
 `container-up` starts:
 
-| Service | Image | Host endpoint | Volume |
-| --- | --- | --- | --- |
-| Postgres | `docker.io/library/postgres:16-alpine` | `127.0.0.1:5432` | `overgarden-postgres-data` |
-| Meilisearch | `docker.io/getmeili/meilisearch:v1.48.1` | `http://127.0.0.1:7700` | `overgarden-meili-data` |
-| MinIO | `docker.io/minio/minio:latest` | `http://127.0.0.1:9000`, console `http://127.0.0.1:9001` | `overgarden-minio-data` |
+| Service     | Image                                    | Host endpoint                                            | Volume                        |
+| ----------- | ---------------------------------------- | -------------------------------------------------------- | ----------------------------- |
+| Postgres    | `docker.io/library/postgres:18-alpine`   | `127.0.0.1:5432`                                         | `overgarden-postgres-18-data` |
+| Meilisearch | `docker.io/getmeili/meilisearch:v1.48.1` | `http://127.0.0.1:7700`                                  | `overgarden-meili-data`       |
+| MinIO       | `docker.io/minio/minio:latest`           | `http://127.0.0.1:9000`, console `http://127.0.0.1:9001` | `overgarden-minio-data`       |
 
 Environment values are loaded from `infra/.env` when it exists. If it is missing, `infra/.env.example` provides local defaults. Keep `apps/web/.env.local` aligned with the same Postgres, Meilisearch, and MinIO values.
 
 Postgres uses `PGDATA=/var/lib/postgresql/data/pgdata` inside the mounted volume. Apple Container named volumes are ext4 filesystems and may contain `lost+found` at the mount root, so the database cluster must live in a subdirectory.
+
+Postgres local and CI defaults intentionally track the production major version: DigitalOcean Managed PostgreSQL is recorded as pg 18 in `docs/INFRASTRUCTURE_REGISTRY.md`, so local Apple Container, Docker fallback, and GitHub Actions use `postgres:18-alpine`. The local volume is version-specific to avoid starting Postgres 18 on an old Postgres 16 data directory. If an older `overgarden-postgres` container exists, run `infra/container-up --recreate`; this replaces the container while preserving existing named volumes such as `overgarden-postgres-data`.
 
 ## Docker Fallback
 
@@ -57,5 +59,7 @@ cd infra
 cp .env.example .env
 docker compose up -d
 ```
+
+The Docker fallback also uses `postgres:18-alpine` with the `overgarden-postgres-18-data` named volume so fallback hosts exercise the same Postgres major-version contract as production and CI.
 
 When adding new runtime instructions, cite `docs/CONTAINER_RUNTIME_POLICY.md` and name the fallback reason.

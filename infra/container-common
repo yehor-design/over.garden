@@ -10,11 +10,12 @@ POSTGRES_CONTAINER="overgarden-postgres"
 MEILI_CONTAINER="overgarden-meilisearch"
 MINIO_CONTAINER="overgarden-minio"
 
-POSTGRES_VOLUME="overgarden-postgres-data"
+POSTGRES_MAJOR="${OVERGARDEN_POSTGRES_MAJOR:-18}"
+POSTGRES_VOLUME="${OVERGARDEN_POSTGRES_VOLUME:-overgarden-postgres-${POSTGRES_MAJOR}-data}"
 MEILI_VOLUME="overgarden-meili-data"
 MINIO_VOLUME="overgarden-minio-data"
 
-POSTGRES_IMAGE="${OVERGARDEN_POSTGRES_IMAGE:-docker.io/library/postgres:16-alpine}"
+POSTGRES_IMAGE="${OVERGARDEN_POSTGRES_IMAGE:-docker.io/library/postgres:${POSTGRES_MAJOR}-alpine}"
 MEILI_IMAGE="${OVERGARDEN_MEILI_IMAGE:-docker.io/getmeili/meilisearch:v1.48.1}"
 MINIO_IMAGE="${OVERGARDEN_MINIO_IMAGE:-docker.io/minio/minio:latest}"
 
@@ -77,6 +78,28 @@ container_exists() {
 
 container_running() {
   container inspect "$1" 2>/dev/null | grep -Eq '"state"[[:space:]]*:[[:space:]]*"running"|"status"[[:space:]]*:[[:space:]]*"running"'
+}
+
+container_inspect_normalized() {
+  container inspect "$1" 2>/dev/null | sed 's#\\/#/#g'
+}
+
+container_image_reference() {
+  container_inspect_normalized "$1" | awk -F'"' '/"reference"[[:space:]]*:/ { print $4; exit }'
+}
+
+container_image_matches() {
+  local name="$1"
+  local image="$2"
+
+  container_inspect_normalized "$name" | grep -F "\"reference\" : \"$image\"" >/dev/null
+}
+
+container_has_volume() {
+  local name="$1"
+  local volume="$2"
+
+  container_inspect_normalized "$name" | grep -F "\"name\" : \"$volume\"" >/dev/null
 }
 
 volume_exists() {
