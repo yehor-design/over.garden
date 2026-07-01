@@ -14,7 +14,8 @@ describe("/first-publication-disclosure", () => {
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
     expect(html).toContain("not listed for search engines");
     expect(html).toContain("not a secrecy guarantee");
-    expect(html).toContain("410 Gone");
+    expect(html).toContain("stops showing the journal text");
+    expect(html).not.toContain("410 Gone");
     expect(html).not.toMatch(/placeholder/i);
     expect(html).not.toMatch(/\b(noindex|stripped derivatives?)\b/i);
   });

@@ -15,6 +15,8 @@ describe("/privacy pilot notice", () => {
     expect(html).toContain(PILOT_LEGAL_COPY_STATUS);
     expect(html).toContain("Public release blockers");
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
+    expect(html).toContain("stop showing the journal text");
+    expect(html).not.toContain("410 Gone");
     expect(html).not.toMatch(/placeholder/i);
     expect(html).not.toMatch(/\b(noindex|stripped derivatives?)\b/i);
     expect(html).not.toMatch(

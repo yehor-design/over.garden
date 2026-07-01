@@ -1,4 +1,4 @@
-export const FIRST_PUBLICATION_DISCLOSURE_VERSION = "first-publication-v2";
+export const FIRST_PUBLICATION_DISCLOSURE_VERSION = "first-publication-v3";
 export const ERASURE_REQUEST_INTAKE_VERSION = "erasure-request-pilot-v2";
 
 export const PILOT_LEGAL_COPY_STATUS =
@@ -12,7 +12,7 @@ export const FIRST_PUBLICATION_DISCLOSURE_LINES = [
   "Public pages are not listed for search engines during the closed pilot unless explicit promotion rules allow indexing; this is not a secrecy guarantee.",
   "Precise location is not collected or shown in v0; only supported coarse regions can appear when you choose region visibility.",
   "Original photos stay in private processing storage and are deleted after successful processing; public pages can show only server-cleaned copies.",
-  "You can archive a public entry so its old public URL returns 410 Gone and leaves public discovery surfaces.",
+  "You can archive a public entry so its old public page stops showing the journal text and leaves public discovery surfaces.",
 ] as const;
 
 export const ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES = [

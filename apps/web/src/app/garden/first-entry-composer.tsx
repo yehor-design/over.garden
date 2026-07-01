@@ -32,6 +32,7 @@ import {
   catalogSuggestionStatusLabel,
   journalSaveErrorMessage,
   journalSaveStateLabel,
+  locationVisibilityHelpText,
   localDuplicateMessage,
   localSavedMessage,
   offlineSaveActionLabel,
@@ -434,6 +435,9 @@ export function FirstEntryComposer({
             <option value="hidden">Hidden</option>
             <option value="region">Region</option>
           </select>
+          <span className="text-xs leading-5 font-normal text-muted-foreground">
+            {locationVisibilityHelpText(draft.locationVisibility)}
+          </span>
         </label>
 
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">

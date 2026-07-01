@@ -10,6 +10,7 @@ import {
   gardenFirstEntryPreselectionPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
+import { publicCatalogStatusLabel } from "@/lib/garden/pilot-ux-copy";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
 import { PublicVarietySourceCredits } from "./source-credits";
@@ -95,7 +96,7 @@ export default async function PublicVarietyRoute({
               {formatCount(page.photoCount, "photo", "photos")}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {page.catalog.status}
+              {publicCatalogStatusLabel(page.catalog.status)}
             </span>
           </div>
           <Link

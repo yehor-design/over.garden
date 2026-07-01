@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { Button } from "@/components/ui/button";
 import {
   hasUsableBetterAuthSecret,
@@ -6,6 +8,16 @@ import {
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Infrastructure health | OverGarden",
+  description:
+    "Public noindex diagnostic route for OverGarden uptime and manual smoke checks.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 async function getAuthStatus(): Promise<string> {
   if (hasUsableBetterAuthSecret()) {
@@ -26,8 +38,8 @@ async function getDbStatus(): Promise<string> {
       readRecentHealth(3),
     ]);
     return `Kysely read OK — ping=${String(isReachable)} · ${rows.length} health row(s)`;
-  } catch (e) {
-    return `Postgres not wired yet (deferred): ${(e as Error).message}`;
+  } catch {
+    return "Database check unavailable in this environment";
   }
 }
 
@@ -47,7 +59,8 @@ export default async function HealthPage() {
           Infrastructure health
         </h1>
         <p className="text-muted-foreground">
-          Server-rendered tracer for the current stack. This is not product UI.
+          Public noindex diagnostic for uptime and manual smoke checks. This is
+          not product UI.
         </p>
       </header>
 

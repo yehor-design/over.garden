@@ -14,7 +14,7 @@ import {
 
 describe("pilot privacy disclosure constants", () => {
   it("keeps first-publication disclosure version explicit and copy bounded", () => {
-    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v2");
+    expect(FIRST_PUBLICATION_DISCLOSURE_VERSION).toBe("first-publication-v3");
     expect(PILOT_LEGAL_COPY_STATUS).toBe(
       "closed_pilot_reviewed_public_release_blocked",
     );
@@ -26,6 +26,12 @@ describe("pilot privacy disclosure constants", () => {
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
       "server-cleaned copies",
+    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).toContain(
+      "stops showing the journal text",
+    );
+    expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).not.toContain(
+      "410 Gone",
     );
     expect(FIRST_PUBLICATION_DISCLOSURE_LINES.join(" ")).not.toMatch(
       /\b(noindex|stripped derivatives?)\b/i,

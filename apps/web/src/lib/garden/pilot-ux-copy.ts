@@ -115,6 +115,17 @@ export function varietyStateLabel(value: string | null | undefined) {
   }
 }
 
+export function publicCatalogStatusLabel(value: string | null | undefined) {
+  switch (value) {
+    case "confirmed":
+      return "Curated catalog";
+    case "seeded":
+      return "Pilot catalog";
+    default:
+      return "Catalog identity";
+  }
+}
+
 export function catalogSuggestionStatusLabel(status: string) {
   switch (status) {
     case "confirmed":
@@ -124,6 +135,14 @@ export function catalogSuggestionStatusLabel(status: string) {
     default:
       return "Catalog option";
   }
+}
+
+export function locationVisibilityHelpText(value: string | null | undefined) {
+  if (value === "region") {
+    return "If you publish an entry later, this region can appear on the public page. Exact location is never shown.";
+  }
+
+  return "Public pages never show a location while this stays hidden.";
 }
 
 export function catalogKindLabel(value: string | null | undefined) {

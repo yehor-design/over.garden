@@ -55,8 +55,8 @@ export default function PrivacyNoticePage() {
               promotion rules allow indexing.
             </li>
             <li>
-              Archived public entries return 410 Gone at their previous public
-              URL.
+              Archived public entries stop showing the journal text at their
+              previous public URL and leave public discovery surfaces.
             </li>
             <li>
               Erasure requests use non-destructive intake version{" "}

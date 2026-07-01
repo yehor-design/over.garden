@@ -245,8 +245,8 @@ export default async function PlantObjectReadbackPage({
                     </span>
                     {entry.public_gone_at ? (
                       <span className="text-xs text-muted-foreground">
-                        The old public page now shows 410 Gone and is removed
-                        from public discovery surfaces.
+                        The old public page no longer shows the journal text and
+                        is removed from public discovery surfaces.
                       </span>
                     ) : null}
                   </div>
@@ -277,8 +277,8 @@ export default async function PlantObjectReadbackPage({
                         />
                         <span>
                           Archive this entry privately, remove it from public
-                          discovery surfaces, and make its old public page show
-                          410 Gone.
+                          discovery surfaces, and stop its old public page from
+                          showing the journal text.
                         </span>
                       </label>
                       <button
@@ -415,7 +415,7 @@ function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
       isArchived: entry.lifecycle_state === "archived",
     }),
     entry.media ? "Server-cleaned photo copy" : null,
-    entry.public_gone_at ? "Old public page shows 410 Gone" : null,
+    entry.public_gone_at ? "Old public page archived" : null,
   ].filter(Boolean);
 
   return parts.join(" · ");

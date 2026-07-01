@@ -8,12 +8,14 @@ import {
   entryScopeLabel,
   journalSaveErrorMessage,
   journalSaveStateLabel,
+  locationVisibilityHelpText,
   localDuplicateMessage,
   localSavedMessage,
   offlineSaveActionLabel,
   offlineSaveStatusLabel,
   offlineSaveStatusSentence,
   photoHelpText,
+  publicCatalogStatusLabel,
   varietyStateLabel,
 } from "./pilot-ux-copy";
 
@@ -79,6 +81,8 @@ describe("pilot UX copy", () => {
       catalogIdentityLabel("species"),
       catalogIdentityLabel("breed"),
       catalogSuggestionStatusLabel("seeded"),
+      publicCatalogStatusLabel("seeded"),
+      publicCatalogStatusLabel("confirmed"),
       entryScopeLabel("object"),
       entryPrivacyLabel({ visibility: "public", isArchived: false }),
       entryPrivacyLabel({ visibility: "private", isArchived: true }),
@@ -93,6 +97,23 @@ describe("pilot UX copy", () => {
     expect(catalogIdentityLabel("plant_variety")).toBe("Plant variety");
     expect(catalogIdentityLabel("species")).toBe("Plant species");
     expect(catalogIdentityLabel("breed")).toBe("Bee breed");
-    expect(copy).not.toMatch(/\b(selected|user_added|unknown|lifecycle)\b/i);
+    expect(publicCatalogStatusLabel("seeded")).toBe("Pilot catalog");
+    expect(publicCatalogStatusLabel("confirmed")).toBe("Curated catalog");
+    expect(copy).not.toMatch(
+      /\b(selected|user_added|unknown|lifecycle|seeded|confirmed)\b/i,
+    );
+  });
+
+  it("explains location visibility consequences at selection time", () => {
+    const hidden = locationVisibilityHelpText("hidden");
+    const region = locationVisibilityHelpText("region");
+    const copy = `${hidden} ${region}`;
+
+    expect(hidden).toContain("never show a location");
+    expect(region).toContain("region can appear");
+    expect(region).toContain("Exact location is never shown");
+    expect(copy).not.toMatch(
+      /\b(address|coordinates?|latitude|longitude|ip_address|user[_ -]?agent)\b/i,
+    );
   });
 });

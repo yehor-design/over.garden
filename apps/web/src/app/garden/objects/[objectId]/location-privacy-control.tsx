@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility } from "@/db/schema";
+import { locationVisibilityHelpText } from "@/lib/garden/pilot-ux-copy";
 import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
 
 interface LocationPrivacyControlProps {
@@ -50,6 +51,9 @@ export function LocationPrivacyControl({
             <option value="hidden">Hidden</option>
             <option value="region">Region</option>
           </select>
+          <span className="text-xs leading-5 font-normal text-muted-foreground">
+            {locationVisibilityHelpText(locationVisibility)}
+          </span>
         </label>
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
           Coarse region
@@ -59,7 +63,7 @@ export function LocationPrivacyControl({
             disabled={locationVisibility === "hidden"}
             value={coarseRegionCode}
             onChange={(event) => setCoarseRegionCode(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none disabled:opacity-60 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             <option value="">Choose region</option>
             {COARSE_REGION_OPTIONS.map((region) => (
