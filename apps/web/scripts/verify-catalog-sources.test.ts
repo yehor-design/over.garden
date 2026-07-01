@@ -70,6 +70,48 @@ describe("catalog source readiness manifest", () => {
     });
   });
 
+  it("records the OVE-84 BG official variety bulk gate as blocked with exact evidence needs", () => {
+    const manifest = cloneManifest();
+    const gate = manifest.fullImportReadiness.bgOfficialVarietyBulkGate;
+
+    expect(gate).toMatchObject({
+      issue: "OVE-84",
+      decision: "blocked",
+      fullRawImportAllowed: false,
+      productProjectionAllowed: false,
+      boundedProofProjectionAllowed: true,
+      attributionRequired: true,
+    });
+    expect(gate.sourceSlugs).toEqual([
+      "iasas-bg-official-variety-list",
+      "eu-common-catalogue",
+    ]);
+    expect(gate.allowedProductProjectionFields).toEqual([]);
+    expect(gate.blockers).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("No approved structured"),
+        expect.stringContaining("information purposes only"),
+      ]),
+    );
+    expect(gate.nextEvidenceNeeded).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("stable official export/API"),
+        expect.stringContaining("legal reuse basis"),
+      ]),
+    );
+    expect(gate.parserPolicy).toMatchObject({
+      bulkParserApproved: false,
+      acceptedRowMinimumConfidence: 0.98,
+      reviewRequiredBelowConfidence: 0.98,
+      rejectBelowConfidence: 0.9,
+    });
+    expect(gate.guardContract).toMatchObject({
+      boundedGateIssue: "OVE-61",
+      blockedBulkGateIssue: "OVE-84",
+      requiredBeforeIssue: "OVE-85",
+    });
+  });
+
   it("fails closed when a source is missing its full-import verdict", () => {
     const manifest = cloneManifest();
     manifest.fullImportReadiness.sourceVerdicts =
@@ -95,6 +137,20 @@ describe("catalog source readiness manifest", () => {
     manifest.fullImportReadiness.importWaves.product_projection_allowed.push(
       "genesys-pgr",
     );
+
+    expect(() => validateManifest(manifest)).toThrow(
+      "canonical_product_projection",
+    );
+  });
+
+  it("fails closed when the OVE-84 BG bulk gate claims projection before sources are cleared", () => {
+    const manifest = cloneManifest();
+    const gate = manifest.fullImportReadiness.bgOfficialVarietyBulkGate;
+    gate.decision = "allowed";
+    gate.fullRawImportAllowed = true;
+    gate.productProjectionAllowed = true;
+    gate.parserPolicy.bulkParserApproved = true;
+    gate.allowedProductProjectionFields = ["official variety denomination"];
 
     expect(() => validateManifest(manifest)).toThrow(
       "canonical_product_projection",

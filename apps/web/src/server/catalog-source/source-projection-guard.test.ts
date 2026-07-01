@@ -13,6 +13,12 @@ const bgReviewedSubsetGate = {
   scope: "reviewed_subset",
 } as const;
 
+const bgBlockedBulkGate = {
+  issueKey: "OVE-84",
+  gateId: "ove-84-bg-official-variety-bulk-blocked-2026-07-01",
+  scope: "bulk_official_variety_import",
+} as const;
+
 const beeManualSeedGate = {
   issueKey: "OVE-60",
   gateId: "ove-60-ua-official-bee-breed-manual-seed",
@@ -81,6 +87,34 @@ describe("catalog source product projection guard", () => {
         explicitGate: bgReviewedSubsetGate,
       }),
     ).toThrow(CatalogSourceProjectionBlockedError);
+  });
+
+  it("does not treat the blocked OVE-84 BG bulk gate as product projection clearance", () => {
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "eu-common-catalogue",
+        sourceVersion: "2026-07-01-bg-bulk-blocked",
+        sourceRecordKey: "EU-PVP:BG:BULK",
+        productSurface: "catalog_items",
+        productSource: "eu_common_catalogue_bg",
+        productSourceId: "EU-PVP:BG:BULK",
+        explicitGate: bgBlockedBulkGate,
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
+
+    const iasasDecision = checkCatalogSourceProductProjection({
+      sourceSlug: "iasas-bg-official-variety-list",
+      sourceVersion: "2026-07-01-iasas-osl-pdf",
+      sourceRecordKey: "IASAS-OSL-2026:BULK",
+      productSurface: "catalog_item_names",
+      productSource: "iasas_bg_official_variety",
+      productSourceId: "IASAS-OSL-2026:BULK",
+      explicitGate: bgBlockedBulkGate,
+    });
+
+    expect(iasasDecision.allowed).toBe(false);
+    expect(iasasDecision.message).toContain("No approved structured");
+    expect(iasasDecision.message).toContain("OVE-84");
   });
 
   it("allows only the named OVE-60 official bee manual seed path", () => {

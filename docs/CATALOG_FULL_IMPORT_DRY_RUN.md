@@ -87,4 +87,6 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 
 The `vernacular-alias-expansion` target reports reviewed local-name expansion over the existing species-backbone source set. It does not claim new raw taxonomy rows or new species concepts. It reports 31 alias candidates, 21 product-visible vernacular aliases, 2 review-needed aliases, 4 rejected aliases, 10 blocked aliases, and the OVE-89 duplicate/collision review dependency. Only accepted aliases can be linked to `catalog_item_names`; review-needed, rejected, generated, and curator-only rows stay in `catalog_alias_projections`.
 
+For OVE-84/OVE-85, the `bg-official-variety` target remains a bounded OVE-61 proof target only. `fullImportReadiness.bgOfficialVarietyBulkGate` currently reports `fullRawImportAllowed = false` and `productProjectionAllowed = false` for the broader BG official variety path. A BG dry-run can therefore prove the existing `Садово 1` projection and the blocked low-confidence row, but it cannot be attached as evidence for a full BG import until the OVE-84 gate is changed by a fresh source/export/legal/parser proof.
+
 OVE-90 must not claim full catalog availability until the relevant dry-run reports, source-family imports, OVE-89 entity-resolution QA, and production seed proof all agree.

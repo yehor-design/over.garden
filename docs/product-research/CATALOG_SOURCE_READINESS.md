@@ -66,6 +66,24 @@ Concrete blocker evidence required before promotion:
 - EURISCO and Genesys need legal review or written permission because accession/redistribution terms currently block product projection.
 - Vendor/marketplace paths need written permission, partner feed, official API contract, and explicit maintainer approval; scraping remains rejected.
 
+## OVE-84 BG Official Variety Bulk Gate
+
+Verdict: blocked for full BG raw import and blocked for product projection. The bounded OVE-61 proof row remains allowed, but it is not bulk clearance.
+
+Live OVE-84 checks on 2026-07-01 confirmed that the IASAS OSL 1 - 2026 8 PDF is reachable as a PDF (`Last-Modified: 2026-06-26`, `Content-Length: 4,716,785`) and that the EU Plant Variety Portal plus legal page are reachable. The EU legal page states that the portal is for information purposes only, has no legal value, and that the legally binding Common Catalogue source is the Official Journal of the European Union.
+
+This blocks the bulk path for five concrete reasons:
+
+- no approved structured IASAS/EU export, API, or Official Journal bulk source path is cleared for all Bulgarian rows;
+- IASAS commercial reuse basis is not explicit enough for automatic OverGarden product projection;
+- EU Plant Variety Portal legal-value caveat is not mapped into a safe product projection policy;
+- full-volume IASAS PDF parser QA is not proven with row count, checksum, accepted/review/reject counts, and threshold evidence;
+- attribution and legal-value caveat handling are not mapped row-by-row.
+
+Machine-checkable result lives in `fullImportReadiness.bgOfficialVarietyBulkGate` in the manifest: `fullRawImportAllowed = false`, `productProjectionAllowed = false`, `boundedProofProjectionAllowed = true`, accepted parser confidence would need `>= 0.98`, rows below that require review, rows below `0.90` are rejected, and all fields beyond the OVE-61 projection remain source-only.
+
+Evidence that would change the decision: stable official export/API or Official Journal bulk source path for the BG subset, legal reuse basis for commercial product projection, parser QA report with counts/checksums/thresholds, row-level attribution and caveat mapping, and an OVE-85 importer proof that rejected/review-needed rows stay source-only.
+
 ## OVE-80 Full-Import Dry-Run Harness
 
 `docs/CATALOG_FULL_IMPORT_DRY_RUN.md` defines the OVE-80 operator preflight. The current command is:
@@ -98,6 +116,7 @@ External occurrence or distribution coordinates are not OverGarden user/product 
 `pnpm catalog:sources:verify` passed on 2026-07-01:
 
 - Live checks passed for UA State Register landing and byte-range CSV sample, CoL release metadata and nameusage sample, WFO Zenodo release, GBIF dataset metadata and species match, EPPO data services/licence/taxon pages, Wikidata EntityData, GRIN taxonomy page, VBO OLS metadata, IASAS official list page, EU Plant Variety Portal, PESI portal, EOL Zenodo vernacular metadata, iNaturalist taxa API, DAD-IS data page, EURISCO terms/full-dump pages, and Genesys terms.
+- OVE-84 BG checks additionally verify the IASAS 2026 OSL PDF byte range and EU Plant Variety Portal legal-value caveat page; both are reachability/legal-caveat proof, not bulk import clearance.
 - Vendor/marketplace paths are intentionally manual-gated: no approved endpoint exists, so no scrape/API probe was run.
 - OVE-55 result counts: 17 sources; USE=8; USE-WITH-CONDITIONS=4; INTERNAL-VALIDATION-ONLY=4; REJECT=1.
 - OVE-79 import-wave counts: raw=12; product=8; review=6; legal=9; parser=4; rejected=1.

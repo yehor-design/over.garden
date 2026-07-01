@@ -101,6 +101,72 @@
       ],
       "rejected": ["vendor-marketplace-paths"]
     },
+    "bgOfficialVarietyBulkGate": {
+      "issue": "OVE-84",
+      "title": "BG official variety bulk gate",
+      "verificationDate": "2026-07-01",
+      "verifiedBy": "pnpm --filter web catalog:sources:verify plus live IASAS PDF and EU Plant Variety Portal legal-page checks",
+      "decision": "blocked",
+      "sourceSlugs": [
+        "iasas-bg-official-variety-list",
+        "eu-common-catalogue"
+      ],
+      "fullRawImportAllowed": false,
+      "productProjectionAllowed": false,
+      "boundedProofProjectionAllowed": true,
+      "sourceVersionOrExport": "IASAS OSL 1 - 2026 8 PDF last-modified 2026-06-26 plus EU Plant Variety Portal 2.0 pages last updated 2026-06-05",
+      "exportPathOrAccessMethod": "IASAS PDF and EU Plant Variety Portal interactive JSF/HTML surfaces are reachable; no approved structured CSV/API/export or Official Journal bulk source path is cleared for all BG rows.",
+      "legalReuseBasis": "Not cleared for full-volume commercial product projection. EU portal reuse/attribution can support the bounded OVE-61 proof, but the portal itself says it is information-only and the legally binding source is the Official Journal; IASAS reuse basis is still not explicit enough for product projection.",
+      "attributionRequired": true,
+      "attributionText": "European Commission, EU Plant Variety Portal; Bulgarian Executive Agency for Variety Testing, Field Inspection and Seed Control (IASAS), official variety list. Portal information is for information purposes only and has no legal value.",
+      "legalValueCaveat": "EU Plant Variety Portal information has no legal value; the legally binding Common Catalogue source is the Official Journal of the European Union. Product projection must preserve this caveat or use a legally binding source path.",
+      "parserPolicy": {
+        "bulkParserApproved": false,
+        "acceptedRowMinimumConfidence": 0.98,
+        "reviewRequiredBelowConfidence": 0.98,
+        "rejectBelowConfidence": 0.9,
+        "requiredReviewStates": [
+          "accepted",
+          "review_needed",
+          "rejected",
+          "quarantined"
+        ]
+      },
+      "allowedProductProjectionFields": [],
+      "sourceOnlyFields": [
+        "all IASAS PDF rows beyond OVE-61 proof",
+        "all EU portal rows beyond OVE-61 proof",
+        "national IDs",
+        "maintainer/national authority columns",
+        "source page and row references",
+        "parser confidence and parser diagnostics",
+        "legal-value caveats",
+        "PDF checksums and byte lengths"
+      ],
+      "blockers": [
+        "No approved structured IASAS or EU export/API/OJ bulk source path for all Bulgarian official variety rows.",
+        "EU Plant Variety Portal legal page says the portal is made available for information purposes only and has no legal value.",
+        "IASAS commercial reuse basis is not explicit enough for automatic OverGarden product projection.",
+        "Current IASAS source is PDF/HTML-first; full-volume parser QA, row counts, and confidence thresholds are not proven.",
+        "Attribution and legal-value caveat handling are not mapped to product projection fields for every row."
+      ],
+      "nextEvidenceNeeded": [
+        "stable official export/API or Official Journal bulk source path for the Bulgarian variety subset",
+        "legal reuse basis for commercial product projection from IASAS and/or EU source terms",
+        "full parser QA report with row count, checksum, accepted/review/reject counts, and threshold evidence",
+        "row-level attribution and legal-value caveat mapping",
+        "OVE-85 importer proof that rejected/review-needed rows stay source-only"
+      ],
+      "guardContract": {
+        "boundedGateIssue": "OVE-61",
+        "blockedBulkGateIssue": "OVE-84",
+        "requiredBeforeIssue": "OVE-85",
+        "blockedProductSourceSlugs": [
+          "iasas-bg-official-variety-list",
+          "eu-common-catalogue"
+        ]
+      }
+    },
     "sourceVerdicts": [
       {
         "slug": "ua-state-register",
@@ -989,7 +1055,8 @@
       "deferred": true,
       "currentAccessPath": "IASAS public official-variety-list HTML/PDF channel.",
       "endpointUrls": [
-        "https://iasas.government.bg/cms/%D0%BE%D1%84%D0%B8%D1%86%D0%B8%D0%B0%D0%BB%D0%BD%D0%B0-%D1%81%D0%BE%D1%80%D1%82%D0%BE%D0%B2%D0%B0-%D0%BB%D0%B8%D1%81%D1%82%D0%B0"
+        "https://iasas.government.bg/cms/%D0%BE%D1%84%D0%B8%D1%86%D0%B8%D0%B0%D0%BB%D0%BD%D0%B0-%D1%81%D0%BE%D1%80%D1%82%D0%BE%D0%B2%D0%B0-%D0%BB%D0%B8%D1%81%D1%82%D0%B0",
+        "https://iasas.government.bg/att/OSL%201%20-%202026%208.pdf"
       ],
       "license": "Reuse basis not explicit enough for automatic commercial projection",
       "commercialUseBasis": "Technically reachable official list, but OVE-55 does not find a clean machine-readable export or explicit commercial reuse grant.",
@@ -999,13 +1066,13 @@
       "coordinateTreatment": "no_product_location_use",
       "sourceVersionOrDate": "Live IASAS page verified 2026-06-29",
       "verificationDate": "2026-06-29",
-      "sampleProof": "IASAS official-variety-list page returned HTTP 200 and contains OSL references.",
+      "sampleProof": "IASAS official-variety-list page returned HTTP 200 and contains OSL references. The OSL 1 - 2026 8 PDF returned PDF bytes and HTTP metadata last-modified 2026-06-26 / content-length 4,716,785 during OVE-84 verification.",
       "knownBlockers": [
-        "PDF/HTML only; no approved API/CSV.",
+        "No approved structured IASAS export/API/CSV for full Bulgarian official-variety rows.",
         "Commercial reuse basis must be captured from IASAS or legal review before canonical product projection.",
-        "Parser/OCR proof belongs in OVE-61."
+        "OVE-84 blocks full raw import and product projection until stable export/parser/legal evidence exists."
       ],
-      "nextAllowedIssue": "OVE-61 after legal/parser condition",
+      "nextAllowedIssue": "OVE-84 blocked; OVE-85 must not import beyond the bounded OVE-61 proof until these blockers are cleared",
       "liveChecks": [
         {
           "id": "iasas-official-list-page",
@@ -1014,6 +1081,15 @@
           "expectStatus": 200,
           "expectBodyIncludes": ["Официална сортова листа", "OSL"],
           "notes": "Reachability proof only; not permission proof."
+        },
+        {
+          "id": "iasas-2026-osl-pdf-range",
+          "method": "GET",
+          "url": "https://iasas.government.bg/att/OSL%201%20-%202026%208.pdf",
+          "range": "bytes=0-256",
+          "expectStatus": [200, 206],
+          "expectBodyIncludes": ["%PDF"],
+          "notes": "PDF byte proof only; this is not a structured export or reuse permission proof."
         }
       ]
     },
@@ -1026,6 +1102,7 @@
       "currentAccessPath": "EU Plant Variety Portal and official catalogue/publication surfaces.",
       "endpointUrls": [
         "https://ec.europa.eu/food/plant-variety-portal/",
+        "https://ec.europa.eu/food/plant-variety-portal/cat_legal.xhtml",
         "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en"
       ],
       "license": "EU reuse likely available under Commission reuse rules, but dataset-specific basis and legal-value caveats must be captured before projection",
@@ -1036,13 +1113,13 @@
       "coordinateTreatment": "no_product_location_use",
       "sourceVersionOrDate": "Live portal verified 2026-06-29",
       "verificationDate": "2026-06-29",
-      "sampleProof": "EU Plant Variety Portal returned live application HTML containing Plant Variety Portal references.",
+      "sampleProof": "EU Plant Variety Portal returned live application HTML containing Plant Variety Portal references. The legal page returned the information-only/no-legal-value caveat and identifies the Official Journal as the legally binding source.",
       "knownBlockers": [
-        "API/export stability remains unresolved.",
-        "Capture exact reuse basis and legal-value caveat before canonical projection.",
+        "No approved stable public bulk export/API or Official Journal import path for the BG subset.",
+        "EU Plant Variety Portal is information-only and has no legal value; product projection needs caveat handling or a legally binding source path.",
         "Do not treat CPVO/UPOV data as approved through this entry."
       ],
-      "nextAllowedIssue": "OVE-61 after reuse/export condition",
+      "nextAllowedIssue": "OVE-84 blocked; OVE-85 must not import beyond the bounded OVE-61 proof until these blockers are cleared",
       "liveChecks": [
         {
           "id": "eu-plant-variety-portal",
@@ -1051,6 +1128,18 @@
           "expectStatus": 200,
           "expectBodyIncludes": ["Plant Variety Portal", "variety"],
           "notes": "Portal reachability proof only."
+        },
+        {
+          "id": "eu-plant-variety-legal-caveat",
+          "method": "GET",
+          "url": "https://ec.europa.eu/food/plant-variety-portal/cat_legal.xhtml",
+          "expectStatus": 200,
+          "expectBodyIncludes": [
+            "information purposes only",
+            "no legal value",
+            "Official Journal"
+          ],
+          "notes": "Legal-value caveat proof for OVE-84; not product projection permission."
         }
       ]
     },

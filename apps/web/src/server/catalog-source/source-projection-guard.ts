@@ -22,7 +22,8 @@ export type CatalogSourceProductSurface =
 export type CatalogSourceProjectionGateScope =
   | "curator_promotion"
   | "manual_seed"
-  | "reviewed_subset";
+  | "reviewed_subset"
+  | "bulk_official_variety_import";
 
 export interface CatalogSourceReadiness {
   slug: string;
@@ -31,7 +32,9 @@ export interface CatalogSourceReadiness {
   allowedUsage: string[];
   conditions?: string[];
   blockers?: string[];
+  knownBlockers?: string[];
   nextAction?: string;
+  nextAllowedIssue?: string;
 }
 
 export interface CatalogSourceReadinessManifest {
@@ -107,7 +110,7 @@ const SOURCE_SPECIFIC_PRODUCT_GATES: Record<
       productSources: ["eu_common_catalogue_bg"],
       productSourceIds: ["EU-PVP:BG:SADOVO-1"],
       nextAction:
-        "Keep broader EU/Common Catalogue and IASAS rows raw/quarantined until a fresh source-specific gate closes the export, parser, and reuse blockers.",
+        "OVE-84 blocks broader EU/Common Catalogue and IASAS BG rows: keep them out of product projection until stable export/API or legally binding source/version, reuse basis, parser thresholds, attribution, and legal-value caveat handling are cleared.",
     },
   ],
   "ua-official-bee-breeds": [
@@ -298,9 +301,18 @@ function nextActionForBlockedSource(
     return source.nextAction;
   }
 
-  const blockers = [...(source.conditions ?? []), ...(source.blockers ?? [])];
+  const blockers = [
+    ...(source.conditions ?? []),
+    ...(source.blockers ?? []),
+    ...(source.knownBlockers ?? []),
+  ];
   if (blockers.length > 0) {
-    return `Resolve source blockers before product projection: ${blockers.join("; ")}`;
+    const issueSuffix =
+      typeof source.nextAllowedIssue === "string" &&
+      source.nextAllowedIssue.length > 0
+        ? ` Next allowed issue: ${source.nextAllowedIssue}.`
+        : "";
+    return `Resolve source blockers before product projection: ${blockers.join("; ")}.${issueSuffix}`;
   }
 
   if (

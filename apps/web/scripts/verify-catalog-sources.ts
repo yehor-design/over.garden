@@ -96,7 +96,43 @@ type FullImportReadiness = {
   operatorDecision: string;
   waveLegend: Record<ImportWave, string>;
   importWaves: Record<ImportWave, string[]>;
+  bgOfficialVarietyBulkGate: BgOfficialVarietyBulkGate;
   sourceVerdicts: FullImportSourceVerdict[];
+};
+
+type BgOfficialVarietyBulkGate = {
+  issue: "OVE-84";
+  title: string;
+  verificationDate: string;
+  verifiedBy: string;
+  decision: "blocked" | "allowed";
+  sourceSlugs: string[];
+  fullRawImportAllowed: boolean;
+  productProjectionAllowed: boolean;
+  boundedProofProjectionAllowed: boolean;
+  sourceVersionOrExport: string;
+  exportPathOrAccessMethod: string;
+  legalReuseBasis: string;
+  attributionRequired: boolean;
+  attributionText: string;
+  legalValueCaveat: string;
+  parserPolicy: {
+    bulkParserApproved: boolean;
+    acceptedRowMinimumConfidence: number;
+    reviewRequiredBelowConfidence: number;
+    rejectBelowConfidence: number;
+    requiredReviewStates: string[];
+  };
+  allowedProductProjectionFields: string[];
+  sourceOnlyFields: string[];
+  blockers: string[];
+  nextEvidenceNeeded: string[];
+  guardContract: {
+    boundedGateIssue: string;
+    blockedBulkGateIssue: string;
+    requiredBeforeIssue: string;
+    blockedProductSourceSlugs: string[];
+  };
 };
 
 export type Manifest = {
@@ -243,6 +279,17 @@ function assertUsageArray(
 function assertBoolean(value: unknown, field: string): asserts value is boolean {
   if (typeof value !== "boolean") {
     fail(`Missing boolean: ${field}`);
+  }
+}
+
+function assertNumberInRange(
+  value: unknown,
+  field: string,
+  min: number,
+  max: number,
+): asserts value is number {
+  if (typeof value !== "number" || value < min || value > max) {
+    fail(`Expected ${field} to be a number from ${min} to ${max}`);
   }
 }
 
@@ -419,6 +466,8 @@ function validateFullImportReadiness(manifest: Manifest): void {
   );
   const verdictBySlug = new Map<string, FullImportSourceVerdict>();
 
+  validateBgOfficialVarietyBulkGate(readiness, sourceBySlug);
+
   for (const wave of REQUIRED_IMPORT_WAVES) {
     assertString(
       readiness.waveLegend?.[wave],
@@ -566,6 +615,202 @@ function validateFullImportReadiness(manifest: Manifest): void {
       if (!verdict?.importWaves.includes(wave)) {
         fail(`Wave ${wave} lists ${slug}, but source verdict does not`);
       }
+    }
+  }
+}
+
+function validateBgOfficialVarietyBulkGate(
+  readiness: FullImportReadiness,
+  sourceBySlug: Map<string, SourceReadiness>,
+): void {
+  const gate = readiness.bgOfficialVarietyBulkGate;
+  if (!gate || gate.issue !== "OVE-84") {
+    fail("fullImportReadiness.bgOfficialVarietyBulkGate.issue must be OVE-84");
+  }
+
+  assertString(gate.title, "bgOfficialVarietyBulkGate.title");
+  assertString(
+    gate.verificationDate,
+    "bgOfficialVarietyBulkGate.verificationDate",
+  );
+  assertString(gate.verifiedBy, "bgOfficialVarietyBulkGate.verifiedBy");
+  if (!["blocked", "allowed"].includes(gate.decision)) {
+    fail(`Invalid bgOfficialVarietyBulkGate decision: ${gate.decision}`);
+  }
+  assertStringArray(gate.sourceSlugs, "bgOfficialVarietyBulkGate.sourceSlugs");
+  for (const requiredSlug of [
+    "iasas-bg-official-variety-list",
+    "eu-common-catalogue",
+  ]) {
+    if (!gate.sourceSlugs.includes(requiredSlug)) {
+      fail(`bgOfficialVarietyBulkGate must cover ${requiredSlug}`);
+    }
+  }
+  for (const slug of gate.sourceSlugs) {
+    if (!sourceBySlug.has(slug)) {
+      fail(`bgOfficialVarietyBulkGate references missing source ${slug}`);
+    }
+  }
+
+  assertBoolean(
+    gate.fullRawImportAllowed,
+    "bgOfficialVarietyBulkGate.fullRawImportAllowed",
+  );
+  assertBoolean(
+    gate.productProjectionAllowed,
+    "bgOfficialVarietyBulkGate.productProjectionAllowed",
+  );
+  assertBoolean(
+    gate.boundedProofProjectionAllowed,
+    "bgOfficialVarietyBulkGate.boundedProofProjectionAllowed",
+  );
+  assertString(
+    gate.sourceVersionOrExport,
+    "bgOfficialVarietyBulkGate.sourceVersionOrExport",
+  );
+  assertString(
+    gate.exportPathOrAccessMethod,
+    "bgOfficialVarietyBulkGate.exportPathOrAccessMethod",
+  );
+  assertString(gate.legalReuseBasis, "bgOfficialVarietyBulkGate.legalReuseBasis");
+  assertBoolean(
+    gate.attributionRequired,
+    "bgOfficialVarietyBulkGate.attributionRequired",
+  );
+  assertString(
+    gate.attributionText,
+    "bgOfficialVarietyBulkGate.attributionText",
+  );
+  assertString(
+    gate.legalValueCaveat,
+    "bgOfficialVarietyBulkGate.legalValueCaveat",
+  );
+
+  const parserPolicy = gate.parserPolicy;
+  if (!parserPolicy || typeof parserPolicy !== "object") {
+    fail("bgOfficialVarietyBulkGate.parserPolicy must be an object");
+  }
+  assertBoolean(
+    parserPolicy.bulkParserApproved,
+    "bgOfficialVarietyBulkGate.parserPolicy.bulkParserApproved",
+  );
+  assertNumberInRange(
+    parserPolicy.acceptedRowMinimumConfidence,
+    "bgOfficialVarietyBulkGate.parserPolicy.acceptedRowMinimumConfidence",
+    0,
+    1,
+  );
+  assertNumberInRange(
+    parserPolicy.reviewRequiredBelowConfidence,
+    "bgOfficialVarietyBulkGate.parserPolicy.reviewRequiredBelowConfidence",
+    0,
+    1,
+  );
+  assertNumberInRange(
+    parserPolicy.rejectBelowConfidence,
+    "bgOfficialVarietyBulkGate.parserPolicy.rejectBelowConfidence",
+    0,
+    1,
+  );
+  if (
+    parserPolicy.rejectBelowConfidence >
+    parserPolicy.reviewRequiredBelowConfidence
+  ) {
+    fail(
+      "bgOfficialVarietyBulkGate parser reject threshold exceeds review threshold",
+    );
+  }
+  if (
+    parserPolicy.reviewRequiredBelowConfidence >
+    parserPolicy.acceptedRowMinimumConfidence
+  ) {
+    fail(
+      "bgOfficialVarietyBulkGate parser review threshold exceeds accept threshold",
+    );
+  }
+  assertStringArray(
+    parserPolicy.requiredReviewStates,
+    "bgOfficialVarietyBulkGate.parserPolicy.requiredReviewStates",
+  );
+  for (const state of ["accepted", "review_needed", "rejected", "quarantined"]) {
+    if (!parserPolicy.requiredReviewStates.includes(state)) {
+      fail(`bgOfficialVarietyBulkGate parser policy must include ${state}`);
+    }
+  }
+
+  assertMaybeEmptyStringArray(
+    gate.allowedProductProjectionFields,
+    "bgOfficialVarietyBulkGate.allowedProductProjectionFields",
+  );
+  assertStringArray(
+    gate.sourceOnlyFields,
+    "bgOfficialVarietyBulkGate.sourceOnlyFields",
+  );
+  assertStringArray(gate.blockers, "bgOfficialVarietyBulkGate.blockers");
+  assertStringArray(
+    gate.nextEvidenceNeeded,
+    "bgOfficialVarietyBulkGate.nextEvidenceNeeded",
+  );
+
+  const guard = gate.guardContract;
+  if (!guard || typeof guard !== "object") {
+    fail("bgOfficialVarietyBulkGate.guardContract must be an object");
+  }
+  assertString(
+    guard.boundedGateIssue,
+    "bgOfficialVarietyBulkGate.guardContract.boundedGateIssue",
+  );
+  assertString(
+    guard.blockedBulkGateIssue,
+    "bgOfficialVarietyBulkGate.guardContract.blockedBulkGateIssue",
+  );
+  assertString(
+    guard.requiredBeforeIssue,
+    "bgOfficialVarietyBulkGate.guardContract.requiredBeforeIssue",
+  );
+  assertStringArray(
+    guard.blockedProductSourceSlugs,
+    "bgOfficialVarietyBulkGate.guardContract.blockedProductSourceSlugs",
+  );
+  if (guard.boundedGateIssue !== "OVE-61") {
+    fail("bgOfficialVarietyBulkGate bounded proof must remain OVE-61");
+  }
+  if (guard.blockedBulkGateIssue !== "OVE-84") {
+    fail("bgOfficialVarietyBulkGate bulk blocker must be OVE-84");
+  }
+  if (guard.requiredBeforeIssue !== "OVE-85") {
+    fail("bgOfficialVarietyBulkGate must guard OVE-85");
+  }
+
+  if (gate.decision === "blocked") {
+    if (gate.fullRawImportAllowed || gate.productProjectionAllowed) {
+      fail(
+        "blocked bgOfficialVarietyBulkGate cannot allow raw import or product projection",
+      );
+    }
+    if (gate.allowedProductProjectionFields.length > 0) {
+      fail(
+        "blocked bgOfficialVarietyBulkGate cannot list product projection fields",
+      );
+    }
+    if (parserPolicy.bulkParserApproved) {
+      fail("blocked bgOfficialVarietyBulkGate cannot approve a bulk parser");
+    }
+  }
+
+  if (gate.productProjectionAllowed) {
+    for (const slug of gate.sourceSlugs) {
+      const source = sourceBySlug.get(slug);
+      if (!source?.allowedUsage.includes("canonical_product_projection")) {
+        fail(
+          `bgOfficialVarietyBulkGate allows product projection but ${slug} lacks canonical_product_projection`,
+        );
+      }
+    }
+    if (gate.allowedProductProjectionFields.length === 0) {
+      fail(
+        "allowed bgOfficialVarietyBulkGate must list product projection fields",
+      );
     }
   }
 }
