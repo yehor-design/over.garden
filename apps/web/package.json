@@ -19,6 +19,7 @@
     "catalog:sources:import-species-backbone": "tsx scripts/import-species-backbone-seed.ts",
     "catalog:sources:import-breed-seed": "tsx scripts/import-breed-seed.ts",
     "catalog:sources:import-bg-official-variety": "tsx scripts/import-bg-official-variety.ts",
+    "catalog:sources:import-eu-oj-common-catalogue": "tsx scripts/import-eu-oj-common-catalogue.ts",
     "catalog:sources:import-genebank-long-tail": "tsx scripts/import-genebank-long-tail.ts",
     "catalog:sources:seed-rollout-proof": "tsx scripts/seed-catalog-rollout-proof.ts",
     "catalog:sources:refresh-sample": "tsx scripts/refresh-catalog-source-sample.ts",

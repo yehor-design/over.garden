@@ -78,7 +78,7 @@ describe("catalog source readiness manifest", () => {
       rawQuarantineAllowed: true,
       productProjectionAllowed: true,
       productProjectionMode: "bulk_official_varieties",
-      nextIssueDependency: "OVE-85",
+      nextIssueDependency: "OVE-103",
     });
   });
 

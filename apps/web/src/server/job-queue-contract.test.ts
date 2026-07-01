@@ -88,6 +88,12 @@ describe("job queue producer/consumer contract", () => {
         kind: "catalog_typeahead_reindex",
       },
       {
+        source:
+          "server/catalog-source/eu-official-journal-common-catalogue-import.ts",
+        queueName: "matching",
+        kind: "catalog_typeahead_reindex",
+      },
+      {
         source: "server/catalog-source/genebank-long-tail-import.ts",
         queueName: "matching",
         kind: "catalog_typeahead_reindex",

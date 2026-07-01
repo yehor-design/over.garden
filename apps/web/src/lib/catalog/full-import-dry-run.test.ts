@@ -159,7 +159,7 @@ describe("OVE-80 catalog full-import dry-run", () => {
     });
   });
 
-  it("builds the OVE-102 EUR-Lex/OJ parser QA target without product projection", async () => {
+  it("builds the OVE-103 EUR-Lex/OJ parser QA target with accepted-row projection counts", async () => {
     const dgSanteUrl =
       "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
     const hUrl = "https://eur-lex.europa.eu/eli/C/2026/830/oj";
@@ -261,15 +261,15 @@ describe("OVE-80 catalog full-import dry-run", () => {
     expect(report.targets).toHaveLength(1);
     expect(report.targets[0]).toMatchObject({
       key: "eu-official-journal-common-catalogue",
-      importerIssue: "OVE-102",
-      downstreamIssue: "OVE-85",
-      projectionScope: "raw_quarantine_only",
+      importerIssue: "OVE-103",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
       sources: ["eu-oj-eur-lex-common-catalogue"],
       counts: {
         sourceRowsWouldRead: 4,
         rawRowsWouldCapture: 4,
-        productConceptsWouldProject: 0,
-        aliasesWouldProject: 0,
+        productConceptsWouldProject: 2,
+        aliasesWouldProject: 2,
         reviewNeededRows: 1,
         rejectedRows: 1,
         blockedRows: 2,
@@ -277,7 +277,7 @@ describe("OVE-80 catalog full-import dry-run", () => {
       },
       projectionGuard: {
         status: "passed",
-        checkedProjectionRequests: 0,
+        checkedProjectionRequests: 2,
       },
     });
     expect(report.targets[0].sourceInventory).toMatchObject({

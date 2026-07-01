@@ -29,6 +29,10 @@ import {
   genebankLongTailDefinition,
 } from "@/lib/catalog/genebank-long-tail";
 import {
+  EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+  EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE,
+} from "@/lib/catalog/eu-official-journal-common-catalogue";
+import {
   checkCatalogSourceProductProjection,
   type CatalogSourceSpecificProjectionGate,
 } from "@/server/catalog-source/source-projection-guard";
@@ -495,7 +499,7 @@ export function buildCatalogFullImportDryRunReport(input: {
         "OVE-81",
         "OVE-82",
         "OVE-83",
-        "OVE-85",
+        "OVE-103",
         "OVE-86",
         "OVE-88",
         "OVE-89",
@@ -918,12 +922,12 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     },
     {
       key: EU_OJ_COMMON_CATALOGUE_TARGET,
-      packageScript: "catalog:sources:dry-run",
+      packageScript: "catalog:sources:import-eu-oj-common-catalogue",
       sourceSet:
-        "OVE-102 EUR-Lex Official Journal Common Catalogue Formex parser QA",
-      importerIssue: "OVE-102",
-      downstreamIssue: "OVE-85",
-      projectionScope: "raw_quarantine_only",
+        "OVE-103 EUR-Lex Official Journal Common Catalogue product projection",
+      importerIssue: "OVE-103",
+      downstreamIssue: "OVE-89",
+      projectionScope: "full_import_wave",
       sourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
       readinessSourceSlugs: [EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG],
       rowCounts: {
@@ -940,8 +944,33 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
         EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION,
         EU_COMMON_CATALOGUE_FORMEX_PARSER_VERSION,
       ],
-      projectionRequests: [],
-      duplicateSignals: [],
+      projectionRequests: [
+        {
+          sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
+          sourceVersion: "C/2026/830:vegetable_supplement_h:2026-02-12",
+          sourceRecordKey: "EUR-Lex:ELI:C/2026/830:row:dry-run-policy-check",
+          sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+          productSurface: "catalog_items",
+          productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+          productSourceId: "EUR-Lex:ELI:C/2026/830:row:dry-run-policy-check",
+        },
+        {
+          sourceSlug: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE.slug,
+          sourceVersion: "C/2026/830:vegetable_supplement_h:2026-02-12",
+          sourceRecordKey: "EUR-Lex:ELI:C/2026/830:row:dry-run-policy-check",
+          sourceUrl: "https://eur-lex.europa.eu/eli/C/2026/830/oj",
+          productSurface: "catalog_item_names",
+          productSource: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+          productSourceId: "EUR-Lex:ELI:C/2026/830:row:dry-run-policy-check",
+        },
+      ],
+      duplicateSignals: [
+        {
+          signal: "eu-oj-common-catalogue-variety-denominations",
+          conceptRole:
+            "Official Journal accepted variety denominations for OVE-89 entity-resolution review",
+        },
+      ],
     },
   ];
 }
@@ -1026,8 +1055,8 @@ function applyEuOfficialJournalParserQaToTarget(
     counts: {
       sourceRowsWouldRead: totals.parsedRows,
       rawRowsWouldCapture: totals.parsedRows,
-      productConceptsWouldProject: 0,
-      aliasesWouldProject: 0,
+      productConceptsWouldProject: totals.acceptedRows,
+      aliasesWouldProject: totals.acceptedRows,
       reviewNeededRows: totals.reviewNeededRows,
       rejectedRows: totals.rejectedRows,
       blockedRows: totals.reviewNeededRows + totals.rejectedRows,
@@ -1293,8 +1322,8 @@ async function buildEuOfficialJournalCommonCatalogueInventory(
         "Authentic OJ PDF only as a human/legal fallback when Formex/XML is unavailable",
       ],
       notes: [
-        "This target fetches public official EUR-Lex/OJ artifacts, parses Formex XML rows for operator QA, and still performs no product projection.",
-        "Unavailable or ambiguous Formex paths, HTML-only evidence, and PDF-only evidence are reported as review-needed before OVE-85 import work.",
+        "This target fetches public official EUR-Lex/OJ artifacts, parses Formex XML rows for operator QA, and reports OVE-103 accepted-row projection counts without mutating data.",
+        "Unavailable or ambiguous Formex paths, HTML-only evidence, and PDF-only evidence are reported as review-needed before OVE-103 import work.",
       ],
     },
     candidates: enrichedCandidates,

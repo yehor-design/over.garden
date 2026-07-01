@@ -497,7 +497,7 @@
         "exportPathOrAccessMethod": "DG SANTE catalogue page -> latest EUR-Lex Official Journal supplement ELI page -> per-row parser output with the ELI/OJ source URL preserved.",
         "license": "EUR-Lex legal documents may be reused for commercial and non-commercial purposes unless a specific Official Journal document states additional conditions; source acknowledgement is required.",
         "attributionRequired": true,
-        "volumeEstimate": "EU Common Catalogue OJ supplement rows; OVE-85 must scope to Bulgarian rows and record source OJ/ELI links per projected row.",
+        "volumeEstimate": "EU Common Catalogue OJ supplement rows; OVE-103 must record source OJ/ELI links per projected row.",
         "parserRisk": "medium",
         "rawQuarantineAllowed": true,
         "productProjectionAllowed": true,
@@ -524,9 +524,9 @@
           "OVE-100 live EUR-Lex legal notice and reuse checks",
           "OVE-100 DG SANTE page check showing catalogue updates are published in the Official Journal",
           "OVE-100 EU Plant Variety Portal legal-caveat check",
-          "OVE-85 parser proof with row counts, accepted/review/reject counts, checksums, and per-row stable EUR-Lex or data.europa.eu ELI links"
+          "OVE-103 parser/importer proof with row counts, accepted/review/reject counts, checksums, and per-row stable EUR-Lex or data.europa.eu ELI links"
         ],
-        "nextIssueDependency": "OVE-85"
+        "nextIssueDependency": "OVE-103"
       },
       {
         "slug": "pesi-euro-med",
@@ -1203,7 +1203,7 @@
         "Use only EUR-Lex Official Journal ELI pages or data.europa.eu ELI links selected from the DG SANTE catalogue update list.",
         "Persist sourceUrl, sourceVersion, sourceRecordKey, productSource, productSourceId, attributionText, and legalValueCaveat for every projected row.",
         "Reject or quarantine rows whose source URL is IASAS, the EU Plant Variety Portal, CPVO, UPOV, or any non-EUR-Lex/non-ELI path.",
-        "Before OVE-85 projection, record row count, checksum/source version, accepted/review/reject counts, parser version, and representative BG readback proof."
+        "Before OVE-103 projection, record row count, checksum/source version, accepted/review/reject counts, parser version, and representative typeahead/provenance proof."
       ],
       "productProjectionPolicy": {
         "requiredProvenanceFields": [
@@ -1234,9 +1234,9 @@
       "knownBlockers": [
         "IASAS PDFs and EU Plant Variety Portal-only rows are not approved product-projection sources under this entry.",
         "Rows without a stable EUR-Lex or data.europa.eu ELI source URL must stay raw/source-only.",
-        "OVE-85 must still prove parser counts, checksums, accepted/review/reject states, attribution, legal-value caveat mapping, and BG readback before importing beyond the existing OVE-61 proof row."
+        "OVE-103 must prove parser counts, checksums, accepted/review/reject states, attribution, legal-value caveat mapping, typeahead/provenance proof, and rejected/review-needed source-only handling before importing beyond the existing OVE-61 proof row."
       ],
-      "nextAllowedIssue": "OVE-85 may import BG/EU official varieties only from Official Journal / EUR-Lex rows that satisfy productProjectionPolicy; IASAS and portal-only rows remain blocked",
+      "nextAllowedIssue": "OVE-103 may import BG/EU official varieties only from Official Journal / EUR-Lex rows that satisfy productProjectionPolicy; IASAS and portal-only rows remain blocked",
       "liveChecks": [
         {
           "id": "eur-lex-legal-notice-authenticity",
@@ -1298,7 +1298,7 @@
             "PDF - authentic OJ",
             "ELI:"
           ],
-          "notes": "Stable OJ/ELI source sample for future OVE-85 parser proof."
+          "notes": "Stable OJ/ELI source sample for OVE-103 parser/importer proof."
         }
       ]
     },

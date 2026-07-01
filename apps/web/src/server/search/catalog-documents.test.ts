@@ -382,6 +382,81 @@ describe("catalog typeahead search documents", () => {
     ).toBeNull();
   });
 
+  it("rejects EU OJ Common Catalogue hits that carry source or parser metadata", () => {
+    const safeDocument = toCatalogTypeaheadDocument(
+      catalogRow({
+        id: "00000000-0000-4000-8000-000000001103",
+        canonicalName: "Cincinnati",
+        normalizedName: "cincinnati",
+        source: "eu_oj_eur_lex_common_catalogue",
+        catalogKind: "plant_variety",
+        itemLocale: "en",
+        displayName: "Cincinnati",
+        aliasNormalizedName: "cincinnati",
+        aliasLocale: "en",
+        isPrimary: true,
+      }),
+    );
+
+    expect(safeDocument).toMatchObject({
+      catalogItemId: "00000000-0000-4000-8000-000000001103",
+      displayName: "Cincinnati",
+      canonicalName: "Cincinnati",
+      catalogKind: "plant_variety",
+      status: "seeded",
+      source: "eu_oj_eur_lex_common_catalogue",
+      kind: "catalog_item",
+    });
+    expect(safeDocument).not.toHaveProperty("sourceRecordKey");
+    expect(safeDocument).not.toHaveProperty("ojCitation");
+    expect(safeDocument).not.toHaveProperty("publicationDate");
+    expect(safeDocument).not.toHaveProperty("extractionVersion");
+    expect(safeDocument).not.toHaveProperty("legalValueCaveat");
+
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000001103",
+        displayName: "Cincinnati",
+        canonicalName: "Cincinnati",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "eu_oj_eur_lex_common_catalogue",
+        ojCitation: "OJ C, C/2026/830, 12.2.2026",
+        publicationDate: "2026-02-12",
+        extractionVersion: "ove103-eu-oj-product-projection-v1",
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000001103",
+        displayName: "Cincinnati",
+        canonicalName: "Cincinnati",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "eu_oj_eur_lex_common_catalogue",
+        legalValueCaveat:
+          "The EU Plant Variety Portal is information-only and has no legal value.",
+        artifactChecksumSha256: "b".repeat(64),
+      }),
+    ).toBeNull();
+    expect(
+      catalogTypeaheadHitToSuggestion({
+        catalogItemId: "00000000-0000-4000-8000-000000001103",
+        displayName: "Cincinnati",
+        canonicalName: "Cincinnati",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "eu_oj_eur_lex_common_catalogue",
+        notifierCode: "BG 3 b",
+        admissionAction: "add",
+        statusReasons: [],
+      }),
+    ).toBeNull();
+  });
+
   it("rejects genebank candidate hits that carry accession or review metadata", () => {
     expect(
       catalogTypeaheadHitToSuggestion({
