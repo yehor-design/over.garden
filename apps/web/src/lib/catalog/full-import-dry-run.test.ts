@@ -662,6 +662,69 @@ describe("OVE-80 catalog full-import dry-run", () => {
     });
   });
 
+  it("reports the OVE-87 PGR/genebank bulk gate without mutating source rows", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["pgr-genebank-bulk-gate"],
+      }),
+      generatedAt: "2026-07-02T00:00:00.000Z",
+    });
+
+    expect(report.downstreamUsage.requiredBeforeIssues).toContain("OVE-87");
+    expect(report.targets[0]).toMatchObject({
+      key: "pgr-genebank-bulk-gate",
+      packageScript: "catalog:sources:verify",
+      sourceSet: "OVE-87 PGR source-use gate",
+      importerIssue: "OVE-87",
+      downstreamIssue: "OVE-88",
+      projectionScope: "raw_quarantine_only",
+      sources: ["grin-global", "genesys-pgr", "eurisco"],
+      readinessVerdicts: [
+        expect.objectContaining({
+          slug: "grin-global",
+          rawQuarantineAllowed: true,
+          productProjectionAllowed: true,
+          productProjectionMode: "curator_promotion_only",
+        }),
+        expect.objectContaining({
+          slug: "genesys-pgr",
+          rawQuarantineAllowed: false,
+          productProjectionAllowed: false,
+          productProjectionMode: "internal_validation_only",
+        }),
+        expect.objectContaining({
+          slug: "eurisco",
+          rawQuarantineAllowed: false,
+          productProjectionAllowed: false,
+          productProjectionMode: "internal_validation_only",
+        }),
+      ],
+      counts: {
+        sourceRowsWouldRead: 3,
+        rawRowsWouldCapture: 0,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: 0,
+        reviewNeededRows: 1,
+        rejectedRows: 0,
+        blockedRows: 2,
+        attributionRequiredSources: 2,
+      },
+      projectionGuard: {
+        status: "passed",
+        checkedProjectionRequests: 0,
+      },
+    });
+    expect(report.totals).toMatchObject({
+      targets: 1,
+      readinessSources: 3,
+      rawRowsWouldCapture: 0,
+      productConceptsWouldProject: 0,
+    });
+    expect(report.leakCheck).toBe("passed");
+  });
+
   it("reports the OVE-83 vernacular alias expansion as an explicit dry-run target", () => {
     const report = buildCatalogFullImportDryRunReport({
       options: validateCatalogFullImportDryRunOptions({

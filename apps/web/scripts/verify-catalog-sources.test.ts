@@ -170,6 +170,74 @@ describe("catalog source readiness manifest", () => {
     });
   });
 
+  it("records the OVE-87 PGR/genebank gate without opening broad genebank projection", () => {
+    const manifest = cloneManifest();
+    const gate = manifest.fullImportReadiness.pgrGenebankBulkGate;
+    const grin = manifest.sources.find(
+      (source) => source.slug === "grin-global",
+    );
+    const verdictBySlug = new Map(
+      manifest.fullImportReadiness.sourceVerdicts.map((source) => [
+        source.slug,
+        source,
+      ]),
+    );
+
+    expect(gate).toMatchObject({
+      issue: "OVE-87",
+      decision: "partially_allowed",
+      rawQuarantineAllowedSourceSlugs: ["grin-global"],
+      productCandidateAllowedSourceSlugs: ["grin-global"],
+      internalValidationOnlySourceSlugs: ["genesys-pgr", "eurisco"],
+      legalBlockedSourceSlugs: ["genesys-pgr", "eurisco"],
+      guardContract: {
+        requiredBeforeIssue: "OVE-88",
+        allowedProductSource: "grin_genebank_candidate",
+      },
+    });
+    expect(gate.guardContract.requiredSourceRecordKeyPrefixes).toEqual([
+      "GRIN:NPGS:OVE62:",
+      "GRIN:NPGS:OVE88:",
+    ]);
+    expect(grin?.productProjectionPolicy).toMatchObject({
+      requiredProvenanceFields: [
+        "sourceVersion",
+        "sourceRecordKey",
+        "sourceUrl",
+        "productSource",
+        "productSourceId",
+      ],
+      requiredSourceUrlPrefixes: ["https://npgsweb.ars-grin.gov/gringlobal/"],
+      requiredProductSources: ["grin_genebank_candidate"],
+      exactBlockerLanguage: expect.stringContaining("OVE-87-cleared"),
+    });
+    expect(grin?.liveChecks.map((check) => check.id)).toEqual(
+      expect.arrayContaining([
+        "grin-accession-search",
+        "grin-accession-detail-probe",
+        "grin-taxonomy-search",
+      ]),
+    );
+    expect(verdictBySlug.get("grin-global")).toMatchObject({
+      rawQuarantineAllowed: true,
+      productProjectionAllowed: true,
+      productProjectionMode: "curator_promotion_only",
+      nextIssueDependency: "OVE-88",
+    });
+    expect(verdictBySlug.get("genesys-pgr")).toMatchObject({
+      rawQuarantineAllowed: false,
+      productProjectionAllowed: false,
+      productProjectionMode: "internal_validation_only",
+      nextIssueDependency: "Later PGR legal-permission gate",
+    });
+    expect(verdictBySlug.get("eurisco")).toMatchObject({
+      rawQuarantineAllowed: false,
+      productProjectionAllowed: false,
+      productProjectionMode: "internal_validation_only",
+      nextIssueDependency: "Later PGR legal-permission gate",
+    });
+  });
+
   it("fails closed when a source is missing its full-import verdict", () => {
     const manifest = cloneManifest();
     manifest.fullImportReadiness.sourceVerdicts =
@@ -212,6 +280,28 @@ describe("catalog source readiness manifest", () => {
 
     expect(() => validateManifest(manifest)).toThrow(
       "canonical_product_projection",
+    );
+  });
+
+  it("fails closed when the OVE-87 PGR gate opens Genesys or EURISCO", () => {
+    const manifest = cloneManifest();
+    const gate = manifest.fullImportReadiness.pgrGenebankBulkGate;
+    const genesysGate = gate.gateVerdicts.find(
+      (source) => source.slug === "genesys-pgr",
+    );
+    if (!genesysGate) throw new Error("Missing genesys-pgr gate verdict");
+
+    genesysGate.fullRawImportAllowed = true;
+    genesysGate.productProjectionAllowed = true;
+    genesysGate.productProjectionMode = "curator_promotion_only";
+    genesysGate.allowedCandidateProjectionFields = [
+      "restricted candidate name",
+    ];
+    gate.rawQuarantineAllowedSourceSlugs.push("genesys-pgr");
+    gate.productCandidateAllowedSourceSlugs.push("genesys-pgr");
+
+    expect(() => validateManifest(manifest)).toThrow(
+      "cannot raw-import blocked genesys-pgr",
     );
   });
 });

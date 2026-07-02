@@ -109,6 +109,7 @@ type FullImportReadiness = {
   waveLegend: Record<ImportWave, string>;
   importWaves: Record<ImportWave, string[]>;
   bgOfficialVarietyBulkGate: BgOfficialVarietyBulkGate;
+  pgrGenebankBulkGate: PgrGenebankBulkGate;
   sourceVerdicts: FullImportSourceVerdict[];
 };
 
@@ -144,6 +145,55 @@ type BgOfficialVarietyBulkGate = {
     blockedBulkGateIssue: string;
     requiredBeforeIssue: string;
     blockedProductSourceSlugs: string[];
+  };
+};
+
+type PgrSourceGateVerdict = {
+  slug: string;
+  rawQuarantineVerdict:
+    | "raw_quarantine_allowed"
+    | "internal_validation_only"
+    | "legal_blocked"
+    | "rejected";
+  productCandidateVerdict:
+    | "product_candidate_allowed"
+    | "internal_validation_only"
+    | "legal_blocked"
+    | "rejected";
+  legalVerdict:
+    | "allowed_with_source_only_caveats"
+    | "terms_blocked"
+    | "rejected";
+  fullRawImportAllowed: boolean;
+  productProjectionAllowed: boolean;
+  productProjectionMode: ProductProjectionMode;
+  allowedCandidateProjectionFields: string[];
+  sourceOnlyFields: string[];
+  operatorReviewMetadata: string[];
+  blockers: string[];
+  requiredBeforeBulkMutation: string[];
+};
+
+type PgrGenebankBulkGate = {
+  issue: "OVE-87";
+  title: string;
+  verificationDate: string;
+  verifiedBy: string;
+  decision: "partially_allowed" | "blocked" | "allowed";
+  sourceSlugs: string[];
+  gateVerdicts: PgrSourceGateVerdict[];
+  rawQuarantineAllowedSourceSlugs: string[];
+  productCandidateAllowedSourceSlugs: string[];
+  internalValidationOnlySourceSlugs: string[];
+  legalBlockedSourceSlugs: string[];
+  rejectedSourceSlugs: string[];
+  guardContract: {
+    requiredBeforeIssue: string;
+    allowedProductSourceSlugs: string[];
+    blockedProductSourceSlugs: string[];
+    allowedProductSource: string;
+    requiredSourceRecordKeyPrefixes: string[];
+    forbiddenProductFields: string[];
   };
 };
 
@@ -330,6 +380,15 @@ function assertLiveCheck(check: LiveCheck, source: SourceReadiness): void {
   assertString(check.notes, `${source.slug}.${check.id}.notes`);
 }
 
+function allowedManifestVerificationDates(manifest: Manifest): string[] {
+  return [
+    manifest.verificationDate,
+    manifest.fullImportReadiness?.verificationDate,
+    manifest.fullImportReadiness?.bgOfficialVarietyBulkGate?.verificationDate,
+    manifest.fullImportReadiness?.pgrGenebankBulkGate?.verificationDate,
+  ].filter((date): date is string => typeof date === "string");
+}
+
 export function validateManifest(manifest: Manifest): void {
   if (manifest.manifestVersion !== 1) {
     fail("manifestVersion must be 1");
@@ -398,13 +457,12 @@ export function validateManifest(manifest: Manifest): void {
     );
     assertString(source.verificationDate, `${source.slug}.verificationDate`);
     if (
-      ![
-        manifest.verificationDate,
-        manifest.fullImportReadiness.verificationDate,
-      ].includes(source.verificationDate)
+      !allowedManifestVerificationDates(manifest).includes(
+        source.verificationDate,
+      )
     ) {
       fail(
-        `${source.slug}.verificationDate must match manifest or full-import verification date`,
+        `${source.slug}.verificationDate must match a manifest gate verification date`,
       );
     }
     assertString(source.sampleProof, `${source.slug}.sampleProof`);
@@ -675,6 +733,8 @@ function validateFullImportReadiness(manifest: Manifest): void {
     }
   }
 
+  validatePgrGenebankBulkGate(readiness, sourceBySlug, verdictBySlug);
+
   for (const wave of REQUIRED_IMPORT_WAVES) {
     for (const slug of readiness.importWaves[wave]) {
       const verdict = verdictBySlug.get(slug);
@@ -889,6 +949,277 @@ function validateBgOfficialVarietyBulkGate(
   }
 }
 
+function validatePgrGenebankBulkGate(
+  readiness: FullImportReadiness,
+  sourceBySlug: Map<string, SourceReadiness>,
+  verdictBySlug: Map<string, FullImportSourceVerdict>,
+): void {
+  const gate = readiness.pgrGenebankBulkGate;
+  if (!gate || gate.issue !== "OVE-87") {
+    fail("fullImportReadiness.pgrGenebankBulkGate.issue must be OVE-87");
+  }
+
+  assertString(gate.title, "pgrGenebankBulkGate.title");
+  assertString(gate.verificationDate, "pgrGenebankBulkGate.verificationDate");
+  assertString(gate.verifiedBy, "pgrGenebankBulkGate.verifiedBy");
+  if (!["partially_allowed", "blocked", "allowed"].includes(gate.decision)) {
+    fail(`Invalid pgrGenebankBulkGate decision: ${gate.decision}`);
+  }
+  assertStringArray(gate.sourceSlugs, "pgrGenebankBulkGate.sourceSlugs");
+  for (const requiredSlug of ["grin-global", "genesys-pgr", "eurisco"]) {
+    if (!gate.sourceSlugs.includes(requiredSlug)) {
+      fail(`pgrGenebankBulkGate must cover ${requiredSlug}`);
+    }
+  }
+  for (const slug of gate.sourceSlugs) {
+    if (!sourceBySlug.has(slug)) {
+      fail(`pgrGenebankBulkGate references missing source ${slug}`);
+    }
+  }
+
+  assertStringArray(
+    gate.rawQuarantineAllowedSourceSlugs,
+    "pgrGenebankBulkGate.rawQuarantineAllowedSourceSlugs",
+  );
+  assertStringArray(
+    gate.productCandidateAllowedSourceSlugs,
+    "pgrGenebankBulkGate.productCandidateAllowedSourceSlugs",
+  );
+  assertStringArray(
+    gate.internalValidationOnlySourceSlugs,
+    "pgrGenebankBulkGate.internalValidationOnlySourceSlugs",
+  );
+  assertStringArray(
+    gate.legalBlockedSourceSlugs,
+    "pgrGenebankBulkGate.legalBlockedSourceSlugs",
+  );
+  assertMaybeEmptyStringArray(
+    gate.rejectedSourceSlugs,
+    "pgrGenebankBulkGate.rejectedSourceSlugs",
+  );
+
+  if (!gate.rawQuarantineAllowedSourceSlugs.includes("grin-global")) {
+    fail("pgrGenebankBulkGate must allow GRIN raw quarantine");
+  }
+  if (!gate.productCandidateAllowedSourceSlugs.includes("grin-global")) {
+    fail("pgrGenebankBulkGate must allow GRIN curator-only candidates");
+  }
+  for (const blockedSlug of ["genesys-pgr", "eurisco"]) {
+    if (!gate.internalValidationOnlySourceSlugs.includes(blockedSlug)) {
+      fail(`pgrGenebankBulkGate must keep ${blockedSlug} internal-only`);
+    }
+    if (!gate.legalBlockedSourceSlugs.includes(blockedSlug)) {
+      fail(`pgrGenebankBulkGate must keep ${blockedSlug} legally blocked`);
+    }
+    if (gate.rawQuarantineAllowedSourceSlugs.includes(blockedSlug)) {
+      fail(`pgrGenebankBulkGate cannot raw-import blocked ${blockedSlug}`);
+    }
+    if (gate.productCandidateAllowedSourceSlugs.includes(blockedSlug)) {
+      fail(`pgrGenebankBulkGate cannot product-project blocked ${blockedSlug}`);
+    }
+  }
+
+  if (!Array.isArray(gate.gateVerdicts) || gate.gateVerdicts.length === 0) {
+    fail("pgrGenebankBulkGate.gateVerdicts must be non-empty");
+  }
+
+  const gateVerdictBySlug = new Map<string, PgrSourceGateVerdict>();
+  for (const sourceGate of gate.gateVerdicts) {
+    assertString(sourceGate.slug, "pgrGenebankBulkGate.gateVerdicts.slug");
+    if (!gate.sourceSlugs.includes(sourceGate.slug)) {
+      fail(`pgrGenebankBulkGate gate verdict references ${sourceGate.slug}`);
+    }
+    if (gateVerdictBySlug.has(sourceGate.slug)) {
+      fail(`Duplicate pgrGenebankBulkGate verdict: ${sourceGate.slug}`);
+    }
+    gateVerdictBySlug.set(sourceGate.slug, sourceGate);
+
+    if (
+      ![
+        "raw_quarantine_allowed",
+        "internal_validation_only",
+        "legal_blocked",
+        "rejected",
+      ].includes(sourceGate.rawQuarantineVerdict)
+    ) {
+      fail(
+        `Invalid PGR rawQuarantineVerdict for ${sourceGate.slug}: ${sourceGate.rawQuarantineVerdict}`,
+      );
+    }
+    if (
+      ![
+        "product_candidate_allowed",
+        "internal_validation_only",
+        "legal_blocked",
+        "rejected",
+      ].includes(sourceGate.productCandidateVerdict)
+    ) {
+      fail(
+        `Invalid PGR productCandidateVerdict for ${sourceGate.slug}: ${sourceGate.productCandidateVerdict}`,
+      );
+    }
+    if (
+      ![
+        "allowed_with_source_only_caveats",
+        "terms_blocked",
+        "rejected",
+      ].includes(sourceGate.legalVerdict)
+    ) {
+      fail(
+        `Invalid PGR legalVerdict for ${sourceGate.slug}: ${sourceGate.legalVerdict}`,
+      );
+    }
+
+    assertBoolean(
+      sourceGate.fullRawImportAllowed,
+      `${sourceGate.slug}.pgr.fullRawImportAllowed`,
+    );
+    assertBoolean(
+      sourceGate.productProjectionAllowed,
+      `${sourceGate.slug}.pgr.productProjectionAllowed`,
+    );
+    if (
+      !ALLOWED_PRODUCT_PROJECTION_MODES.has(sourceGate.productProjectionMode)
+    ) {
+      fail(
+        `Invalid PGR productProjectionMode for ${sourceGate.slug}: ${sourceGate.productProjectionMode}`,
+      );
+    }
+    assertMaybeEmptyStringArray(
+      sourceGate.allowedCandidateProjectionFields,
+      `${sourceGate.slug}.pgr.allowedCandidateProjectionFields`,
+    );
+    assertStringArray(
+      sourceGate.sourceOnlyFields,
+      `${sourceGate.slug}.pgr.sourceOnlyFields`,
+    );
+    assertStringArray(
+      sourceGate.operatorReviewMetadata,
+      `${sourceGate.slug}.pgr.operatorReviewMetadata`,
+    );
+    assertStringArray(sourceGate.blockers, `${sourceGate.slug}.pgr.blockers`);
+    assertStringArray(
+      sourceGate.requiredBeforeBulkMutation,
+      `${sourceGate.slug}.pgr.requiredBeforeBulkMutation`,
+    );
+
+    const source = sourceBySlug.get(sourceGate.slug);
+    const fullImportVerdict = verdictBySlug.get(sourceGate.slug);
+    if (!source || !fullImportVerdict) {
+      fail(`pgrGenebankBulkGate missing source verdict for ${sourceGate.slug}`);
+    }
+
+    if (
+      sourceGate.fullRawImportAllowed &&
+      !fullImportVerdict.rawQuarantineAllowed
+    ) {
+      fail(`${sourceGate.slug} PGR gate allows raw import but OVE-79 does not`);
+    }
+    if (
+      sourceGate.productProjectionAllowed &&
+      !fullImportVerdict.productProjectionAllowed
+    ) {
+      fail(
+        `${sourceGate.slug} PGR gate allows product projection but OVE-79 does not`,
+      );
+    }
+    if (
+      sourceGate.productProjectionAllowed &&
+      sourceGate.allowedCandidateProjectionFields.length === 0
+    ) {
+      fail(`${sourceGate.slug} PGR gate allows projection with no safe fields`);
+    }
+    if (
+      !sourceGate.productProjectionAllowed &&
+      sourceGate.allowedCandidateProjectionFields.length > 0
+    ) {
+      fail(`${sourceGate.slug} PGR gate blocks projection but lists fields`);
+    }
+
+    if (sourceGate.slug === "grin-global") {
+      if (!source.productProjectionPolicy) {
+        fail("grin-global must define productProjectionPolicy after OVE-87");
+      }
+      if (!sourceGate.fullRawImportAllowed) {
+        fail("grin-global must allow raw quarantine after OVE-87");
+      }
+      if (
+        !sourceGate.productProjectionAllowed ||
+        sourceGate.productProjectionMode !== "curator_promotion_only"
+      ) {
+        fail("grin-global must allow only curator_promotion_only projection");
+      }
+    }
+
+    if (["genesys-pgr", "eurisco"].includes(sourceGate.slug)) {
+      if (
+        sourceGate.fullRawImportAllowed ||
+        sourceGate.productProjectionAllowed
+      ) {
+        fail(`${sourceGate.slug} must remain blocked by the OVE-87 PGR gate`);
+      }
+      if (sourceGate.productProjectionMode !== "internal_validation_only") {
+        fail(`${sourceGate.slug} PGR projection mode must be internal-only`);
+      }
+    }
+  }
+
+  for (const slug of gate.sourceSlugs) {
+    if (!gateVerdictBySlug.has(slug)) {
+      fail(`pgrGenebankBulkGate is missing a gate verdict for ${slug}`);
+    }
+  }
+
+  const guard = gate.guardContract;
+  if (!guard || typeof guard !== "object") {
+    fail("pgrGenebankBulkGate.guardContract must be an object");
+  }
+  assertString(
+    guard.requiredBeforeIssue,
+    "pgrGenebankBulkGate.guardContract.requiredBeforeIssue",
+  );
+  assertStringArray(
+    guard.allowedProductSourceSlugs,
+    "pgrGenebankBulkGate.guardContract.allowedProductSourceSlugs",
+  );
+  assertStringArray(
+    guard.blockedProductSourceSlugs,
+    "pgrGenebankBulkGate.guardContract.blockedProductSourceSlugs",
+  );
+  assertString(
+    guard.allowedProductSource,
+    "pgrGenebankBulkGate.guardContract.allowedProductSource",
+  );
+  assertStringArray(
+    guard.requiredSourceRecordKeyPrefixes,
+    "pgrGenebankBulkGate.guardContract.requiredSourceRecordKeyPrefixes",
+  );
+  assertStringArray(
+    guard.forbiddenProductFields,
+    "pgrGenebankBulkGate.guardContract.forbiddenProductFields",
+  );
+
+  if (guard.requiredBeforeIssue !== "OVE-88") {
+    fail("pgrGenebankBulkGate must guard OVE-88");
+  }
+  if (!guard.allowedProductSourceSlugs.includes("grin-global")) {
+    fail("pgrGenebankBulkGate guard must allow only GRIN product source slug");
+  }
+  for (const blockedSlug of ["genesys-pgr", "eurisco"]) {
+    if (!guard.blockedProductSourceSlugs.includes(blockedSlug)) {
+      fail(`pgrGenebankBulkGate guard must block ${blockedSlug}`);
+    }
+  }
+  if (guard.allowedProductSource !== "grin_genebank_candidate") {
+    fail("pgrGenebankBulkGate guard must require grin_genebank_candidate");
+  }
+  for (const prefix of ["GRIN:NPGS:OVE62:", "GRIN:NPGS:OVE88:"]) {
+    if (!guard.requiredSourceRecordKeyPrefixes.includes(prefix)) {
+      fail(`pgrGenebankBulkGate guard must require ${prefix}`);
+    }
+  }
+}
+
 function expectedStatuses(check: LiveCheck): number[] {
   return Array.isArray(check.expectStatus)
     ? check.expectStatus
@@ -1020,6 +1351,14 @@ function printSummary(manifest: Manifest): void {
   );
   console.log(
     `Import waves: raw=${fullImport.importWaves.raw_quarantine_allowed.length}; product=${fullImport.importWaves.product_projection_allowed.length}; review=${fullImport.importWaves.operator_review_required.length}; legal=${fullImport.importWaves.legal_blocked.length}; parser=${fullImport.importWaves.parser_blocked.length}; rejected=${fullImport.importWaves.rejected.length}.`,
+  );
+  const pgrGate = fullImport.pgrGenebankBulkGate;
+  console.log(
+    `OVE-87 PGR/genebank gate OK (${pgrGate.verificationDate}): raw=${pgrGate.rawQuarantineAllowedSourceSlugs.join(
+      ", ",
+    )}; product=${pgrGate.productCandidateAllowedSourceSlugs.join(
+      ", ",
+    )}; legal-blocked=${pgrGate.legalBlockedSourceSlugs.join(", ")}.`,
   );
 }
 

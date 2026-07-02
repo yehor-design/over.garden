@@ -46,11 +46,64 @@ describe("catalog source product projection guard", () => {
     expect(
       assertCatalogSourceProductProjectionAllowed({
         sourceSlug: "grin-global",
+        sourceVersion: "2026-06-30-ove62-proof-subset",
+        sourceRecordKey: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+        sourceUrl: "https://npgsweb.ars-grin.gov/gringlobal/search",
         productSurface: "catalog_item_names",
         productSource: "grin_genebank_candidate",
         productSourceId: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
       }).allowed,
     ).toBe(true);
+  });
+
+  it("allows only OVE-87-cleared GRIN/NPGS curator candidate projection", () => {
+    const allowed = assertCatalogSourceProductProjectionAllowed({
+      sourceSlug: "grin-global",
+      sourceVersion: "2026-06-30-ove62-proof-subset",
+      sourceRecordKey: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+      sourceUrl: "https://npgsweb.ars-grin.gov/gringlobal/search",
+      productSurface: "catalog_items",
+      productSource: "grin_genebank_candidate",
+      productSourceId: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+    });
+
+    expect(allowed.allowed).toBe(true);
+
+    const missingProvenance = checkCatalogSourceProductProjection({
+      sourceSlug: "grin-global",
+      productSurface: "catalog_items",
+    });
+
+    expect(missingProvenance.allowed).toBe(false);
+    if (missingProvenance.allowed) {
+      throw new Error("Missing GRIN provenance should be blocked.");
+    }
+    expect(missingProvenance.nextAction).toContain("OVE-87-cleared");
+    expect(missingProvenance.nextAction).toContain("sourceVersion");
+
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "grin-global",
+        sourceVersion: "bulk-accession-dump",
+        sourceRecordKey: "GRIN:NPGS:BULK:UNREVIEWED",
+        sourceUrl: "https://npgsweb.ars-grin.gov/gringlobal/search",
+        productSurface: "catalog_item_names",
+        productSource: "grin_genebank_candidate",
+        productSourceId: "GRIN:NPGS:BULK:UNREVIEWED",
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
+
+    expect(() =>
+      assertCatalogSourceProductProjectionAllowed({
+        sourceSlug: "grin-global",
+        sourceVersion: "2026-06-30-ove62-proof-subset",
+        sourceRecordKey: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+        sourceUrl: "https://npgsweb.ars-grin.gov/gringlobal/search",
+        productSurface: "catalog_item_names",
+        productSource: "genesys_pgr_accession",
+        productSourceId: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
+      }),
+    ).toThrow(CatalogSourceProjectionBlockedError);
   });
 
   it("blocks conditional EU/Common Catalogue projection unless the bounded OVE-61 gate matches", () => {

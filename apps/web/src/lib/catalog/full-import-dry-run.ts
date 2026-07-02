@@ -56,10 +56,12 @@ const MANIFEST_URL = new URL(
 const EU_OJ_COMMON_CATALOGUE_TARGET =
   "eu-official-journal-common-catalogue" as const;
 const BG_OFFICIAL_VARIETIES_TARGET = "bg-official-varieties" as const;
+const PGR_GENEBANK_BULK_GATE_TARGET = "pgr-genebank-bulk-gate" as const;
 const EU_OJ_COMMON_CATALOGUE_SOURCE_SLUG =
   "eu-oj-eur-lex-common-catalogue" as const;
 const EU_OJ_COMMON_CATALOGUE_INVENTORY_PARSER_VERSION =
   "ove101-eur-lex-oj-inventory-dry-run-v1";
+const PGR_GENEBANK_BULK_GATE_VERSION = "ove87-pgr-genebank-bulk-gate.v1";
 const DG_SANTE_COMMON_CATALOGUE_URL =
   "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
 
@@ -79,6 +81,7 @@ export const CATALOG_FULL_IMPORT_DRY_RUN_TARGETS = [
   "bg-official-variety",
   BG_OFFICIAL_VARIETIES_TARGET,
   "genebank-long-tail",
+  PGR_GENEBANK_BULK_GATE_TARGET,
   EU_OJ_COMMON_CATALOGUE_TARGET,
 ] as const;
 
@@ -505,6 +508,7 @@ export function buildCatalogFullImportDryRunReport(input: {
         "OVE-85",
         "OVE-103",
         "OVE-86",
+        "OVE-87",
         "OVE-88",
         "OVE-89",
         "OVE-90",
@@ -986,17 +990,56 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
       projectionRequests: [
         {
           sourceSlug: genebankDefinition.source.slug,
+          sourceVersion: genebankDefinition.source.version,
+          sourceRecordKey: genebankDefinition.promotion.sourceId,
+          sourceUrl: genebankDefinition.source.url,
           productSurface: "catalog_items",
+          productSource: genebankDefinition.promotion.source,
+          productSourceId: genebankDefinition.promotion.sourceId,
         },
         {
           sourceSlug: genebankDefinition.source.slug,
+          sourceVersion: genebankDefinition.source.version,
+          sourceRecordKey: genebankDefinition.promotion.sourceId,
+          sourceUrl: genebankDefinition.source.url,
           productSurface: "catalog_item_names",
+          productSource: genebankDefinition.promotion.source,
+          productSourceId: genebankDefinition.promotion.sourceId,
         },
       ],
       duplicateSignals: [
         {
           signal: "solanum-lycopersicum-boundary",
           conceptRole: "variety candidate under tomato species",
+        },
+      ],
+    },
+    {
+      key: PGR_GENEBANK_BULK_GATE_TARGET,
+      packageScript: "catalog:sources:verify",
+      sourceSet: "OVE-87 PGR source-use gate",
+      importerIssue: "OVE-87",
+      downstreamIssue: "OVE-88",
+      projectionScope: "raw_quarantine_only",
+      sourceSlugs: ["grin-global", "genesys-pgr", "eurisco"],
+      readinessSourceSlugs: ["grin-global", "genesys-pgr", "eurisco"],
+      rowCounts: {
+        sourceRowsWouldRead: 3,
+        rawRowsWouldCapture: 0,
+        productConceptsWouldProject: 0,
+        aliasesWouldProject: 0,
+        reviewNeededRows: 1,
+        rejectedRows: 0,
+        blockedRows: 2,
+        attributionRequiredSources: 2,
+      },
+      parserVersions: [PGR_GENEBANK_BULK_GATE_VERSION],
+      projectionRequests: [],
+      duplicateSignals: [
+        {
+          signal: "pgr-source-use-boundary",
+          conceptRole:
+            "PGR legal/source gate before GRIN-only OVE-88 candidate import",
         },
       ],
     },

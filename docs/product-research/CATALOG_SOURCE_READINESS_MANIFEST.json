@@ -167,6 +167,141 @@
         ]
       }
     },
+    "pgrGenebankBulkGate": {
+      "issue": "OVE-87",
+      "title": "PGR/genebank bulk legal and source-use gate",
+      "verificationDate": "2026-07-02",
+      "verifiedBy": "pnpm --filter web catalog:sources:verify plus live GRIN accession, EURISCO terms/full-dump, and Genesys terms checks",
+      "decision": "partially_allowed",
+      "sourceSlugs": ["grin-global", "genesys-pgr", "eurisco"],
+      "gateVerdicts": [
+        {
+          "slug": "grin-global",
+          "rawQuarantineVerdict": "raw_quarantine_allowed",
+          "productCandidateVerdict": "product_candidate_allowed",
+          "legalVerdict": "allowed_with_source_only_caveats",
+          "fullRawImportAllowed": true,
+          "productProjectionAllowed": true,
+          "productProjectionMode": "curator_promotion_only",
+          "allowedCandidateProjectionFields": [
+            "curator-approved candidate display name",
+            "safe species or crop alias",
+            "source provenance",
+            "review status"
+          ],
+          "sourceOnlyFields": [
+            "accession identifiers",
+            "germplasm distribution policy",
+            "donor or geographic metadata",
+            "source row references",
+            "review-only candidate notes"
+          ],
+          "operatorReviewMetadata": [
+            "source version",
+            "source URL",
+            "candidate review state",
+            "curator decision",
+            "legal caveat"
+          ],
+          "blockers": [
+            "Bulk mutation still needs an official GRIN export/dump or bounded curated proof file; interactive GRIN pages are reachability proof only.",
+            "NPGS germplasm distribution policy is not a product availability claim.",
+            "Any non-US contributed subset needs row-level legal/source confirmation before product projection."
+          ],
+          "requiredBeforeBulkMutation": [
+            "OVE-88 raw import dry-run counts",
+            "official export/dump checksum or curated proof source file",
+            "source-only field leak check",
+            "curator review queue proof"
+          ]
+        },
+        {
+          "slug": "genesys-pgr",
+          "rawQuarantineVerdict": "legal_blocked",
+          "productCandidateVerdict": "internal_validation_only",
+          "legalVerdict": "terms_blocked",
+          "fullRawImportAllowed": false,
+          "productProjectionAllowed": false,
+          "productProjectionMode": "internal_validation_only",
+          "allowedCandidateProjectionFields": [],
+          "sourceOnlyFields": [
+            "accession identifiers",
+            "donor or geographic metadata",
+            "source row references",
+            "terms evidence"
+          ],
+          "operatorReviewMetadata": [
+            "terms URL",
+            "terms blocker summary",
+            "legal review status"
+          ],
+          "blockers": [
+            "Live terms include a redistribution restriction.",
+            "No written permission or legal memo currently permits OverGarden raw bulk capture, redistribution, or product projection.",
+            "Terms evidence may be used for internal validation only."
+          ],
+          "requiredBeforeBulkMutation": [
+            "written permission or legal memo covering OverGarden raw storage and product projection",
+            "field-level reuse matrix",
+            "source-only leak test"
+          ]
+        },
+        {
+          "slug": "eurisco",
+          "rawQuarantineVerdict": "legal_blocked",
+          "productCandidateVerdict": "internal_validation_only",
+          "legalVerdict": "terms_blocked",
+          "fullRawImportAllowed": false,
+          "productProjectionAllowed": false,
+          "productProjectionMode": "internal_validation_only",
+          "allowedCandidateProjectionFields": [],
+          "sourceOnlyFields": [
+            "accession identifiers",
+            "donor or geographic metadata",
+            "source row references",
+            "terms evidence"
+          ],
+          "operatorReviewMetadata": [
+            "terms URL",
+            "full-dump page URL",
+            "terms blocker summary",
+            "legal review status"
+          ],
+          "blockers": [
+            "Live terms/full-dump path is reachable, but anti-compete and flow-down constraints remain unresolved.",
+            "No written permission or legal memo currently permits OverGarden raw bulk capture, redistribution, or product projection.",
+            "Terms and dump-page evidence may be used for internal validation only."
+          ],
+          "requiredBeforeBulkMutation": [
+            "written permission or legal memo covering OverGarden raw storage and product projection",
+            "field-level reuse matrix",
+            "source-only leak test"
+          ]
+        }
+      ],
+      "rawQuarantineAllowedSourceSlugs": ["grin-global"],
+      "productCandidateAllowedSourceSlugs": ["grin-global"],
+      "internalValidationOnlySourceSlugs": ["genesys-pgr", "eurisco"],
+      "legalBlockedSourceSlugs": ["genesys-pgr", "eurisco"],
+      "rejectedSourceSlugs": [],
+      "guardContract": {
+        "requiredBeforeIssue": "OVE-88",
+        "allowedProductSourceSlugs": ["grin-global"],
+        "blockedProductSourceSlugs": ["genesys-pgr", "eurisco"],
+        "allowedProductSource": "grin_genebank_candidate",
+        "requiredSourceRecordKeyPrefixes": [
+          "GRIN:NPGS:OVE62:",
+          "GRIN:NPGS:OVE88:"
+        ],
+        "forbiddenProductFields": [
+          "accession identifiers",
+          "germplasm distribution policy",
+          "donor or geographic metadata",
+          "raw source rows",
+          "terms-only validation evidence"
+        ]
+      }
+    },
     "sourceVerdicts": [
       {
         "slug": "ua-state-register",
@@ -390,12 +525,12 @@
           "review status"
         ],
         "unblockingEvidence": [
-          "OVE-87 bulk genebank legal/source gate",
+          "OVE-87 PGR gate allows GRIN raw quarantine and curator-only product candidates",
           "OVE-88 curator queue proof",
           "dry-run held-vs-promoted counts",
           "accession-field leak check"
         ],
-        "nextIssueDependency": "OVE-87, OVE-88"
+        "nextIssueDependency": "OVE-88"
       },
       {
         "slug": "vertebrate-breed-ontology",
@@ -662,11 +797,11 @@
         ],
         "productProjectionFields": [],
         "unblockingEvidence": [
-          "OVE-87 legal review",
-          "allowed-use memo for raw quarantine",
-          "explicit aggregate/projection policy"
+          "written permission or legal memo covering raw storage and product projection",
+          "field-level reuse matrix",
+          "explicit source-only leak policy"
         ],
-        "nextIssueDependency": "OVE-87"
+        "nextIssueDependency": "Later PGR legal-permission gate"
       },
       {
         "slug": "genesys-pgr",
@@ -687,11 +822,11 @@
         ],
         "productProjectionFields": [],
         "unblockingEvidence": [
-          "OVE-87 legal review or written permission",
+          "written permission or legal memo covering raw storage and product projection",
           "redistribution-safe subset definition",
-          "source-only field policy"
+          "explicit source-only leak policy"
         ],
-        "nextIssueDependency": "OVE-87"
+        "nextIssueDependency": "Later PGR legal-permission gate"
       },
       {
         "slug": "vendor-marketplace-paths",
@@ -1015,25 +1150,68 @@
       "category": "species_backbone_and_matching_support",
       "verdict": "USE",
       "deferred": false,
-      "currentAccessPath": "GRIN-Global public taxonomy web surface; later implementation should use official dumps or documented export path, not scrape interactive pages.",
+      "currentAccessPath": "GRIN-Global taxonomy, accession search, and accession detail public web surfaces are reachable; later bulk implementation must use official dumps, documented export path, or a bounded curated proof file, not scrape interactive pages.",
       "endpointUrls": [
+        "https://npgsweb.ars-grin.gov/gringlobal/search",
+        "https://npgsweb.ars-grin.gov/gringlobal/accessiondetail?id=1",
         "https://npgsweb.ars-grin.gov/gringlobal/taxon/taxonomysearch"
       ],
       "license": "US public-domain compatible federal data, with source-specific confirmation required for any non-US contributed records.",
-      "commercialUseBasis": "Research corpus classifies USDA GRIN as public domain; OVE-55 verifies the current official taxonomy search surface is reachable.",
+      "commercialUseBasis": "Research corpus classifies USDA GRIN as public domain; OVE-87 re-verifies GRIN taxonomy/accession reachability and allows only raw quarantine plus curator-approved candidate projection with source-only caveats.",
       "attributionRequired": false,
+      "legalValueCaveat": "NPGS germplasm distribution policy is not a product availability claim; accession, donor, geographic, and distribution fields remain source-only unless a later ADR and SDD slice explicitly clears an aggregate projection.",
+      "parserPrerequisites": [
+        "Use an official GRIN export/dump path or a bounded curated proof file; do not scrape interactive GRIN pages.",
+        "Only curator-promoted candidates with sourceRecordKey prefix GRIN:NPGS:OVE62: or GRIN:NPGS:OVE88: may project.",
+        "Reject or quarantine accession identifiers, donor/geographic metadata, germplasm policy text, and review-only notes from product typeahead/search/UI."
+      ],
+      "productProjectionPolicy": {
+        "requiredProvenanceFields": [
+          "sourceVersion",
+          "sourceRecordKey",
+          "sourceUrl",
+          "productSource",
+          "productSourceId"
+        ],
+        "requiredSourceUrlPrefixes": [
+          "https://npgsweb.ars-grin.gov/gringlobal/"
+        ],
+        "requiredProductSources": ["grin_genebank_candidate"],
+        "requiredSourceRecordKeyPrefixes": [
+          "GRIN:NPGS:OVE62:",
+          "GRIN:NPGS:OVE88:"
+        ],
+        "exactBlockerLanguage": "Only OVE-87-cleared GRIN/NPGS curator-promoted candidate rows may project. Accession identifiers, germplasm distribution policy, donor/geographic metadata, Genesys/EURISCO rows, and missing-provenance rows remain source-only."
+      },
       "allowedUsage": ["raw_snapshot", "canonical_product_projection"],
       "allowedSensitiveFields": "Taxonomy, economic-plant common names, synonyms, source IDs, and provenance. No product location.",
       "coordinateTreatment": "no_product_location_use",
-      "sourceVersionOrDate": "Live taxonomy search surface verified 2026-06-29",
-      "verificationDate": "2026-06-29",
-      "sampleProof": "GRIN-Global taxonomy search page returned live HTML containing Search Taxonomy Data in GRIN-Global.",
+      "sourceVersionOrDate": "Live taxonomy, accession search, and accession detail surfaces verified 2026-07-02",
+      "verificationDate": "2026-07-02",
+      "sampleProof": "GRIN-Global accession search, accession detail, and taxonomy pages returned live HTML containing their expected GRIN-Global titles.",
       "knownBlockers": [
-        "No modern public REST endpoint was approved by this gate; use official dump/export path in raw quarantine.",
-        "Confirm licensing on any non-US contributed subset before canonical projection."
+        "No modern public REST endpoint was approved by this gate; use official dump/export path or bounded curated proof file in raw quarantine.",
+        "Confirm licensing on any non-US contributed subset before canonical projection.",
+        "Accession identifiers, donor/geographic metadata, and germplasm distribution policy stay source-only."
       ],
-      "nextAllowedIssue": "OVE-58",
+      "nextAllowedIssue": "OVE-58 taxonomy support and OVE-88 GRIN-only genebank candidate import",
       "liveChecks": [
+        {
+          "id": "grin-accession-search",
+          "method": "GET",
+          "url": "https://npgsweb.ars-grin.gov/gringlobal/search",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Search Accessions GRIN-Global"],
+          "notes": "Reachability proof only; no page scraping approved."
+        },
+        {
+          "id": "grin-accession-detail-probe",
+          "method": "GET",
+          "url": "https://npgsweb.ars-grin.gov/gringlobal/accessiondetail?id=1",
+          "expectStatus": 200,
+          "expectBodyIncludes": ["Accession Detail GRIN-Global"],
+          "notes": "Small accession detail reachability proof only; no accession row projection approved."
+        },
         {
           "id": "grin-taxonomy-search",
           "method": "GET",
@@ -1240,7 +1418,7 @@
       "liveChecks": [
         {
           "id": "eur-lex-legal-notice-authenticity",
-          "method": "GET",
+          "method": "MANUAL",
           "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
           "expectStatus": 200,
           "expectBodyIncludes": [
@@ -1248,11 +1426,11 @@
             "deemed authentic",
             "Council Regulation (EU) No. 216/2013"
           ],
-          "notes": "Authenticity proof for using OJ/EUR-Lex, not the information-only EU portal, as the product source."
+          "notes": "Manual browser proof currently required: CLI fetches receive CloudFront WAF HTTP 202 challenge with no legal-notice body."
         },
         {
           "id": "eur-lex-legal-documents-reuse",
-          "method": "GET",
+          "method": "MANUAL",
           "url": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
           "expectStatus": 200,
           "expectBodyIncludes": [
@@ -1260,7 +1438,7 @@
             "EUR-Lex <strong>metadata</strong> is dedicated to the public domain",
             "Creative Commons CC0"
           ],
-          "notes": "Reuse proof; importer must still check document-specific conditions."
+          "notes": "Manual browser proof currently required: CLI fetches receive CloudFront WAF HTTP 202 challenge with no reuse body."
         },
         {
           "id": "dg-sante-common-catalogue-oj-updates",
@@ -1289,7 +1467,7 @@
         },
         {
           "id": "eur-lex-common-catalogue-oj-sample",
-          "method": "GET",
+          "method": "MANUAL",
           "url": "https://eur-lex.europa.eu/eli/C/2026/830/oj",
           "expectStatus": 200,
           "expectBodyIncludes": [
@@ -1298,7 +1476,7 @@
             "PDF - authentic OJ",
             "ELI:"
           ],
-          "notes": "Stable OJ/ELI source sample for OVE-103 parser/importer proof."
+          "notes": "Manual browser proof currently required: CLI fetches receive CloudFront WAF HTTP 202 challenge with no OJ body."
         }
       ]
     },
@@ -1448,25 +1626,26 @@
       "category": "genebank",
       "verdict": "INTERNAL-VALIDATION-ONLY",
       "deferred": true,
-      "currentAccessPath": "EURISCO terms and full-dump page are reachable, but terms include competition/flow-down constraints.",
+      "currentAccessPath": "EURISCO terms and full-dump page are reachable, but terms include competition/flow-down constraints; OVE-87 keeps EURISCO out of raw bulk import and product projection.",
       "endpointUrls": [
         "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/terms-of-use",
         "https://eurisco.ipk-gatersleben.de/apex/eurisco/r/eurisco/eurisco-full-dump"
       ],
       "license": "Custom EURISCO Terms of Use, not treated as CC-BY",
-      "commercialUseBasis": "Not approved for OverGarden product ingestion because anti-compete/flow-down terms require legal review.",
+      "commercialUseBasis": "Not approved for OverGarden raw bulk capture or product ingestion because anti-compete/flow-down terms require legal review or written permission.",
       "attributionRequired": true,
       "allowedUsage": ["internal_validation_only"],
-      "allowedSensitiveFields": "Internal validation only until legal review. Do not persist accession, donor, or location data into product snapshots.",
+      "allowedSensitiveFields": "Internal validation only until legal review. Do not persist accession, donor, or location data into raw/product snapshots.",
       "coordinateTreatment": "raw_source_only_if_later_licensed; no_product_projection",
-      "sourceVersionOrDate": "Live terms and full-dump page verified 2026-06-29",
-      "verificationDate": "2026-06-29",
-      "sampleProof": "EURISCO terms page returned Terms of Use text including compete-related language.",
+      "sourceVersionOrDate": "Live terms and full-dump page verified 2026-07-02",
+      "verificationDate": "2026-07-02",
+      "sampleProof": "EURISCO terms page returned Terms of Use text including compete-related language; full-dump page returned EURISCO full dump page text.",
       "knownBlockers": [
-        "Anti-compete/flow-down terms need legal review.",
-        "Accession and geospatial/donor metadata must not be projected into product surfaces without explicit approval."
+        "Anti-compete/flow-down terms need legal review or written permission.",
+        "No OVE-87 raw-quarantine clearance exists for EURISCO.",
+        "Accession and geospatial/donor metadata must not be captured for product snapshots or projected into product surfaces without explicit approval."
       ],
-      "nextAllowedIssue": "OVE-62 only after legal basis",
+      "nextAllowedIssue": "Later PGR issue only after legal basis or written permission",
       "liveChecks": [
         {
           "id": "eurisco-terms",
@@ -1492,22 +1671,23 @@
       "category": "genebank",
       "verdict": "INTERNAL-VALIDATION-ONLY",
       "deferred": true,
-      "currentAccessPath": "Genesys public terms page and API ecosystem; terms restrict redistribution.",
+      "currentAccessPath": "Genesys public terms page and API ecosystem; terms restrict redistribution, so OVE-87 keeps Genesys out of raw bulk import and product projection.",
       "endpointUrls": ["https://www.genesys-pgr.org/content/legal/terms"],
       "license": "Genesys Terms and Conditions of Use",
-      "commercialUseBasis": "Not approved for product ingestion because live terms include a redistribution restriction.",
+      "commercialUseBasis": "Not approved for OverGarden raw bulk capture or product ingestion because live terms include a redistribution restriction.",
       "attributionRequired": true,
       "allowedUsage": ["internal_validation_only"],
-      "allowedSensitiveFields": "Internal validation only until legal basis. Do not persist accession, donor, or location data into product snapshots.",
+      "allowedSensitiveFields": "Internal validation only until legal basis. Do not persist accession, donor, or location data into raw/product snapshots.",
       "coordinateTreatment": "raw_source_only_if_later_licensed; no_product_projection",
-      "sourceVersionOrDate": "Live terms verified 2026-06-29",
-      "verificationDate": "2026-06-29",
+      "sourceVersionOrDate": "Live terms verified 2026-07-02",
+      "verificationDate": "2026-07-02",
       "sampleProof": "Genesys terms page returned Terms and Conditions and text stating data cannot be redistributed to other users.",
       "knownBlockers": [
-        "Redistribution restriction blocks OverGarden canonical/public projection.",
-        "Legal review or explicit permission required before OVE-62 can consume it."
+        "Redistribution restriction blocks OverGarden raw bulk capture and canonical/public projection.",
+        "Legal review or explicit permission required before any importer can consume it.",
+        "Accession, donor, and location metadata must remain out of product snapshots and product surfaces."
       ],
-      "nextAllowedIssue": "OVE-62 only after legal basis",
+      "nextAllowedIssue": "Later PGR issue only after legal basis or written permission",
       "liveChecks": [
         {
           "id": "genesys-terms",

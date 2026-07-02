@@ -14,6 +14,8 @@ OVE-102 extends the same target with Formex parser QA. It discovers the Publicat
 
 OVE-103 turns that target into the source-backed EU OJ product projection preflight. Accepted rows are counted as product concepts and aliases that the importer may project through `eu_oj_eur_lex_common_catalogue`; review-needed and rejected rows remain blocked/source-only. The dry-run still does not mutate data.
 
+OVE-87 adds one explicit gate target: `pgr-genebank-bulk-gate`. It reports the GRIN/Genesys/EURISCO source-use boundary before OVE-88. It performs no source-row capture and no product projection.
+
 ## Commands
 
 Local preflight:
@@ -54,6 +56,7 @@ Allowed targets:
 - `bg-official-variety`
 - `bg-official-varieties`
 - `genebank-long-tail`
+- `pgr-genebank-bulk-gate`
 - `eu-official-journal-common-catalogue`
 
 ## Report Contract
@@ -84,7 +87,7 @@ If any forbidden evidence marker appears, the command fails closed instead of pr
 
 ## Downstream Usage
 
-Before OVE-81, OVE-82, OVE-83, OVE-86, OVE-88, OVE-103, or a later source-family expansion mutates data, the operator must run this dry-run or a target-specific successor report and confirm:
+Before OVE-81, OVE-82, OVE-83, OVE-86, OVE-87, OVE-88, OVE-103, or a later source-family expansion mutates data, the operator must run this dry-run or a target-specific successor report and confirm:
 
 - OVE-79 still allows raw quarantine for the source family;
 - OVE-79 allows product projection, or the issue is explicitly bounded by an existing source-specific gate;
@@ -113,6 +116,15 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 The `breed-seed` target now reports the approved breed expansion, not the older one-row OVE-60 proof. It includes three manual official Ukrainian bee breed concepts plus the VBO-supported animal-breed subset for `Ukrainian Grey (Cattle)` and `Bulgarian Rhodope (Cattle)`. It reports 5 source rows, 5 product-visible breed concepts, 13 accepted aliases, 8 review-needed aliases, 8 blocked alias rows, VBO readiness evidence, and the OVE-89 duplicate/kind-mapping review dependency. DAD-IS/EFABIS remains internal-validation-only; no DAD-IS/EFABIS row is product-projected by this target.
 
 For OVE-84, the current `bg-official-variety` target remains a bounded OVE-61 proof target only. `fullImportReadiness.bgOfficialVarietyBulkGate` reports `fullRawImportAllowed = false` and `productProjectionAllowed = false` for IASAS and EU Plant Variety Portal-only BG rows. OVE-100 adds the separate `eu-oj-eur-lex-common-catalogue` legal-source path; OVE-103 is the importer path that must prove stable EUR-Lex/data.europa.eu ELI source URLs, parser counts/checksums, attribution, legal-value caveat mapping, and rejected/review-needed source-only handling. The existing bounded target can still prove `Садово 1` and the blocked low-confidence row, but it is not full BG import evidence.
+
+For OVE-87, use the PGR/genebank gate target:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local --target pgr-genebank-bulk-gate
+```
+
+The `pgr-genebank-bulk-gate` target reports GRIN as the only raw/quarantine and curator-candidate-approved PGR source for OVE-88. Genesys and EURISCO remain internal-validation-only/legal-blocked. The target reads no external data, captures no raw rows, projects no product concepts, and exists to prove that broad genebank/PGR availability has not become broad typeahead availability.
 
 For OVE-85, use the BG-specific successor target:
 
