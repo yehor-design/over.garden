@@ -20,7 +20,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
   idempotent product identity for every seed command, duplicate same-concept suggestions absent,
   real `/garden` readback status `200` for every smoke case, and leak check `passed`.
   This is historical proof for the OVE-78 seed set; after OVE-81 and OVE-83, a fresh production rollout proof is required before claiming production has the full UA State Register wave or the reviewed species alias expansion.
-- Full production rollout proof: OVE-90 uses `pnpm catalog:sources:production-rollout-proof` as the final gate. It reruns the guarded seed proof, imports the approved EU OJ/Common Catalogue rows, runs the BG official-varieties `/garden` smoke, reads the OVE-89 entity-resolution QA report, and verifies the `catalog_typeahead` result through both Postgres fallback and Meilisearch. A passing seed proof alone is not enough to close OVE-90.
+- Full production rollout proof: OVE-90 uses `pnpm catalog:sources:production-rollout-proof` as the final gate. It reads the already-landed production source-family rows without running source ingestion, runs the full `/garden` catalog UX smoke plus the BG official-varieties `/garden` smoke, reads the OVE-89 entity-resolution QA report, and verifies the `catalog_typeahead` result through both Postgres fallback and Meilisearch. A passing seed proof alone is not enough to close OVE-90.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -95,9 +95,9 @@ The command is intentionally stricter than `catalog:sources:seed-rollout-proof`:
 
 - it requires the same explicit non-local mutation confirmation and HTTPS base URL;
 - it refuses a production/staging/preview proof if the selected database connection is local;
-- it reruns the approved OVE-78/81/82/83/86/88 seed/import proof set;
-- it imports the approved Official Journal / EUR-Lex Common Catalogue projection used by OVE-85;
-- it runs the real BG official-varieties `/garden` smoke and proves a Bulgaria-relevant OJ-backed variety beyond `Садово 1`;
+- it reads the existing product-visible production rows for the approved OVE-81/82/83/86/88 source families without running source ingestion;
+- it proves the approved Official Journal / EUR-Lex Common Catalogue production rows used by OVE-85 are already product-visible;
+- it runs the full real `/garden` catalog UX smoke plus the BG official-varieties `/garden` smoke and proves a Bulgaria-relevant OJ-backed variety beyond `Садово 1`;
 - it reads the OVE-89 entity-resolution QA report and fails on unresolved likely-duplicate or source-disagreement clusters;
 - it rebuilds the derived Meilisearch `catalog_typeahead` index from safe catalog rows and waits for the indexing task;
 - it verifies representative UA variety, species, breed, GRIN/NPGS, and EU OJ/BG rows through both direct Postgres typeahead fallback and Meilisearch `catalog_typeahead`;

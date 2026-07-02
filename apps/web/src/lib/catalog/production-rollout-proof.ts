@@ -7,10 +7,56 @@ import type {
 } from "./seed-rollout-proof";
 import { assertNoForbiddenCatalogSeedRolloutEvidence } from "./seed-rollout-proof";
 
+export const CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS = [
+  {
+    key: "ua-state-register",
+    sourceSet: "OVE-81 UA State Register official variety wave",
+    expectedCanonicalName: "Ботсадівський",
+    expectedCatalogKind: "plant_variety",
+    expectedSource: "ua_state_register",
+  },
+  {
+    key: "species-backbone",
+    sourceSet: "OVE-58/82/83 species backbone and alias expansion",
+    expectedCanonicalName: "Solanum lycopersicum L.",
+    expectedCatalogKind: "species",
+    expectedSource: "species_backbone",
+  },
+  {
+    key: "breed-seed",
+    sourceSet: "OVE-60/86 approved bee and VBO breed seed",
+    expectedCanonicalName: "Карпатська бджола",
+    expectedCatalogKind: "breed",
+    expectedSource: "ua_official_bee_breed",
+  },
+  {
+    key: "bg-official-variety-proof-subset",
+    sourceSet: "OVE-61 BG official variety proof subset",
+    expectedCanonicalName: "Садово 1",
+    expectedCatalogKind: "plant_variety",
+    expectedSource: "eu_common_catalogue_bg",
+  },
+  {
+    key: "eu-oj-bg-official-varieties",
+    sourceSet: "OVE-85 EU OJ Bulgaria official varieties",
+    expectedCanonicalName: null,
+    expectedCatalogKind: "plant_variety",
+    expectedSource: "eu_oj_eur_lex_common_catalogue",
+  },
+  {
+    key: "genebank-long-tail",
+    sourceSet: "OVE-88 GRIN/NPGS promoted long-tail candidates",
+    expectedCanonicalName: "Red Cherry tomato",
+    expectedCatalogKind: "plant_variety",
+    expectedSource: "grin_genebank_candidate",
+  },
+] as const;
+
 export const CATALOG_PRODUCTION_ROLLOUT_REQUIRED_FAMILIES = [
   "OVE-81 UA State Register official variety wave",
   "OVE-58/82/83 species backbone and alias expansion",
   "OVE-60/86 approved bee and VBO breed seed",
+  "OVE-61 BG official variety proof subset",
   "OVE-85 EU OJ Bulgaria official varieties",
   "OVE-88 GRIN/NPGS promoted long-tail candidates",
   "OVE-89 entity-resolution QA",
@@ -41,18 +87,45 @@ export interface CatalogProductionRolloutSearchProof {
   leakCheck: "passed";
 }
 
+export interface CatalogProductionRolloutSourceFamilyProof {
+  key: string;
+  sourceSet: string;
+  expectedCanonicalName: string | null;
+  expectedCatalogKind: "plant_variety" | "species" | "breed";
+  expectedSource: string;
+  canonicalName: string;
+  catalogKind: "plant_variety" | "species" | "breed";
+  source: string;
+  catalogItemId: string;
+  publicSlug: string | null;
+  aliasesProjected: number;
+  productVisibleRowsForSource: number;
+  sourceProofRecorded: boolean;
+  duplicateProductIdentitiesAbsent: boolean;
+  productVisible: boolean;
+}
+
+export interface CatalogProductionRolloutSourceAvailabilityProof {
+  schemaVersion: "ove90.productionSourceAvailability.v1";
+  completedFamilies: CatalogProductionRolloutSourceFamilyProof[];
+  blockedProjectionLinkLeaks: number;
+  leakCheck: "passed";
+}
+
 export function buildCatalogProductionRolloutEvidence(input: {
   options: CatalogSeedRolloutOptions;
   codeState: CatalogSeedRolloutCodeState;
-  seedRolloutEvidence: unknown;
-  euOjImportOutput: unknown;
+  sourceAvailability: CatalogProductionRolloutSourceAvailabilityProof;
+  realAppSmoke: CatalogSeedRolloutAppSmoke;
   bgOfficialVarietiesSmoke: unknown;
   entityResolutionQa: CatalogEntityResolutionQaReport;
   searchProof: CatalogProductionRolloutSearchProof;
   generatedAt: string;
 }) {
-  const seedRollout = buildSafeSeedRolloutSummary(input.seedRolloutEvidence);
-  const euOjImport = buildSafeEuOjImportSummary(input.euOjImportOutput);
+  const sourceAvailability = buildSafeSourceAvailabilitySummary(
+    input.sourceAvailability,
+  );
+  const realAppSmoke = summarizeSeedAppSmoke(input.realAppSmoke);
   const bgSmoke = buildSafeBgOfficialVarietiesSummary(
     input.bgOfficialVarietiesSmoke,
   );
@@ -86,20 +159,21 @@ export function buildCatalogProductionRolloutEvidence(input: {
     prerequisites: {
       completedFamilies: CATALOG_PRODUCTION_ROLLOUT_REQUIRED_FAMILIES,
       previousProofSchemas: [
-        seedRollout.schemaVersion,
+        input.sourceAvailability.schemaVersion,
         input.entityResolutionQa.schemaVersion,
       ],
     },
     proof: {
-      seedRollout,
-      euOjImport,
+      sourceAvailability,
+      realAppSmoke,
       bgOfficialVarietiesSmoke: bgSmoke,
       entityResolutionQa,
       searchAndIndex: input.searchProof,
       availability: {
         sampleCoversEveryCompletedImportFamily:
-          seedRollout.seededFamilyCount >= 5 &&
-          euOjImport.projectedConcepts > 0 &&
+          sourceAvailability.completedFamilyCount >=
+            CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS.length &&
+          realAppSmoke.caseCount >= 20 &&
           bgSmoke.beyondSadovoProof &&
           entityResolutionQa.blockingClusterCount === 0 &&
           input.searchProof.cases.length >= 5 &&
@@ -110,13 +184,15 @@ export function buildCatalogProductionRolloutEvidence(input: {
               result.duplicateSameConceptSuggestionsAbsent,
           ),
         duplicateSameConceptSuggestionsAbsent:
-          seedRollout.duplicateSameConceptSuggestionsAbsent &&
+          sourceAvailability.duplicateProductIdentitiesAbsent &&
+          realAppSmoke.duplicateSameConceptSuggestionsAbsent &&
           bgSmoke.duplicateSameConceptSuggestionsAbsent &&
           input.searchProof.cases.every(
             (result) => result.duplicateSameConceptSuggestionsAbsent,
           ),
         heldRejectedOrBlockedCandidatesAbsent:
-          seedRollout.blockedAliasCasesAbsent &&
+          sourceAvailability.blockedProjectionLinkLeaks === 0 &&
+          realAppSmoke.blockedAliasCasesAbsent &&
           bgSmoke.blockedRowsAbsent &&
           entityResolutionQa.blockedProjectionRowsKeptOutOfProductProof,
       },
@@ -137,6 +213,81 @@ export function buildCatalogProductionRolloutEvidence(input: {
 
   assertNoForbiddenCatalogProductionRolloutEvidence(evidence);
   return evidence;
+}
+
+export function buildSafeSourceAvailabilitySummary(
+  proof: CatalogProductionRolloutSourceAvailabilityProof,
+) {
+  if (proof.schemaVersion !== "ove90.productionSourceAvailability.v1") {
+    throw new Error("Production source availability proof schema mismatch.");
+  }
+  if (proof.leakCheck !== "passed") {
+    throw new Error("Production source availability proof leak check failed.");
+  }
+  if (proof.blockedProjectionLinkLeaks !== 0) {
+    throw new Error("Blocked source projections have product links.");
+  }
+
+  const familyByKey = new Map(
+    proof.completedFamilies.map((family) => [family.key, family]),
+  );
+  for (const definition of CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS) {
+    const family = familyByKey.get(definition.key);
+    if (!family) {
+      throw new Error(
+        `Production source availability is missing ${definition.key}.`,
+      );
+    }
+    if (family.sourceSet !== definition.sourceSet) {
+      throw new Error(`${definition.key} source set mismatch.`);
+    }
+    if (
+      definition.expectedCanonicalName &&
+      family.canonicalName !== definition.expectedCanonicalName
+    ) {
+      throw new Error(`${definition.key} canonical name mismatch.`);
+    }
+    if (family.catalogKind !== definition.expectedCatalogKind) {
+      throw new Error(`${definition.key} catalog kind mismatch.`);
+    }
+    if (family.source !== definition.expectedSource) {
+      throw new Error(`${definition.key} source mismatch.`);
+    }
+    if (!family.productVisible) {
+      throw new Error(`${definition.key} is not product-visible.`);
+    }
+    if (!family.sourceProofRecorded) {
+      throw new Error(`${definition.key} is missing source proof.`);
+    }
+    if (!family.duplicateProductIdentitiesAbsent) {
+      throw new Error(`${definition.key} has duplicate product identities.`);
+    }
+  }
+
+  return {
+    schemaVersion: proof.schemaVersion,
+    completedFamilyCount: proof.completedFamilies.length,
+    completedFamilies: proof.completedFamilies.map((family) => ({
+      key: family.key,
+      sourceSet: family.sourceSet,
+      expectedCanonicalName: family.expectedCanonicalName,
+      expectedCatalogKind: family.expectedCatalogKind,
+      expectedSource: family.expectedSource,
+      canonicalName: family.canonicalName,
+      catalogKind: family.catalogKind,
+      source: family.source,
+      catalogItemId: family.catalogItemId,
+      publicSlug: family.publicSlug,
+      aliasesProjected: family.aliasesProjected,
+      productVisibleRowsForSource: family.productVisibleRowsForSource,
+      sourceProofRecorded: true,
+      duplicateProductIdentitiesAbsent: true,
+      productVisible: true,
+    })),
+    blockedProjectionLinkLeaks: proof.blockedProjectionLinkLeaks,
+    duplicateProductIdentitiesAbsent: true,
+    leakCheck: "passed" as const,
+  };
 }
 
 export function buildSafeSeedRolloutSummary(seedRolloutEvidence: unknown) {
@@ -381,6 +532,8 @@ export function assertNoForbiddenCatalogProductionRolloutEvidence(
 }
 
 function summarizeSeedAppSmoke(smoke: CatalogSeedRolloutAppSmoke) {
+  const blockedAliasCases = smoke.blockedAliasCases ?? [];
+
   return {
     baseUrl: smoke.baseUrl,
     caseCount: smoke.cases.length,
@@ -396,7 +549,15 @@ function summarizeSeedAppSmoke(smoke: CatalogSeedRolloutAppSmoke) {
       readbackIdentityPreserved: caseOutput.readbackIdentityPreserved,
       readbackPageStatus: caseOutput.readbackPageStatus,
     })),
-    blockedAliasCaseCount: smoke.blockedAliasCases?.length ?? 0,
+    duplicateSameConceptSuggestionsAbsent: smoke.cases.every(
+      (caseOutput) => caseOutput.duplicateSameConceptSuggestionsAbsent,
+    ),
+    blockedAliasCaseCount: blockedAliasCases.length,
+    blockedAliasCasesAbsent: blockedAliasCases.every(
+      (caseOutput) =>
+        caseOutput.forbiddenDisplayNameAbsent === true &&
+        caseOutput.duplicateSameConceptSuggestionsAbsent === true,
+    ),
     leakCheck: smoke.leakCheck,
   };
 }

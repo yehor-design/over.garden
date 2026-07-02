@@ -7,7 +7,7 @@ import {
   buildCatalogProductionRolloutEvidence,
   buildSafeBgOfficialVarietiesSummary,
   buildSafeEntityResolutionQaSummary,
-  buildSafeEuOjImportSummary,
+  buildSafeSourceAvailabilitySummary,
 } from "./production-rollout-proof";
 import {
   parseCatalogSeedRolloutArgs,
@@ -15,7 +15,7 @@ import {
 } from "./seed-rollout-proof";
 
 describe("catalog production rollout proof", () => {
-  it("builds the OVE-90 gate from seed, EU OJ, BG smoke, QA, and search proof", () => {
+  it("builds the OVE-90 gate from production source availability, app smoke, QA, and search proof", () => {
     const evidence = buildCatalogProductionRolloutEvidence({
       options: validateCatalogSeedRolloutOptions(
         parseCatalogSeedRolloutArgs([
@@ -33,8 +33,8 @@ describe("catalog production rollout proof", () => {
         branch: "main",
         workingTree: "clean",
       },
-      seedRolloutEvidence: seedRolloutEvidence(),
-      euOjImportOutput: euOjImportOutput(),
+      sourceAvailability: sourceAvailabilityProof(),
+      realAppSmoke: realAppSmokeOutput(),
       bgOfficialVarietiesSmoke: bgSmokeOutput(),
       entityResolutionQa: entityResolutionQaReport(),
       searchProof: searchProof(),
@@ -59,7 +59,8 @@ describe("catalog production rollout proof", () => {
       },
       leakCheck: "passed",
     });
-    expect(evidence.proof.seedRollout.seededFamilyCount).toBe(5);
+    expect(evidence.proof.sourceAvailability.completedFamilyCount).toBe(6);
+    expect(evidence.proof.realAppSmoke.caseCount).toBe(23);
     expect(evidence.proof.searchAndIndex.cases).toHaveLength(5);
     expect(JSON.stringify(evidence)).not.toMatch(
       /rawPayload|sourceRecord|sourceUrl|licenseUrl|database_url/i,
@@ -85,8 +86,8 @@ describe("catalog production rollout proof", () => {
           branch: "main",
           workingTree: "clean",
         },
-        seedRolloutEvidence: seedRolloutEvidence(),
-        euOjImportOutput: euOjImportOutput(),
+        sourceAvailability: sourceAvailabilityProof(),
+        realAppSmoke: realAppSmokeOutput(),
         bgOfficialVarietiesSmoke: bgSmokeOutput(),
         entityResolutionQa: entityResolutionQaReport(),
         searchProof: {
@@ -103,15 +104,13 @@ describe("catalog production rollout proof", () => {
     ).toThrow("Search proof failed");
   });
 
-  it("rejects EU OJ imports that let blocked parser rows reach product projection", () => {
+  it("rejects source availability proofs that link blocked source rows", () => {
     expect(() =>
-      buildSafeEuOjImportSummary({
-        ...euOjImportOutput(),
-        blockedRecordProof: {
-          projectionStatus: "projected",
-        },
+      buildSafeSourceAvailabilitySummary({
+        ...sourceAvailabilityProof(),
+        blockedProjectionLinkLeaks: 1,
       }),
-    ).toThrow("blocked parser row reached product projection");
+    ).toThrow("Blocked source projections have product links");
   });
 
   it("rejects BG proof when it only covers the legacy Sadovo row", () => {
@@ -155,108 +154,114 @@ describe("catalog production rollout proof", () => {
   });
 });
 
-function seedRolloutEvidence() {
+function sourceAvailabilityProof() {
   return {
-    schemaVersion: "ove78.catalogSeedRolloutProof.v1",
-    issue: "OVE-78",
-    seedSet: {
-      seeded: [
-        seedFamily("ua-register-variety", "Ботсадівський", "plant_variety"),
-        seedFamily("species-backbone", "Solanum lycopersicum L.", "species"),
-        seedFamily("breed-seed", "Карпатська бджола", "breed"),
-        seedFamily("bg-official-variety", "Садово 1", "plant_variety"),
-        seedFamily("genebank-long-tail", "Red Cherry tomato", "plant_variety"),
-      ],
-    },
-    proof: {
-      idempotency: {
-        stableProductIdentityForSeedCommands: true,
-        duplicateSameConceptSuggestionsAbsent: true,
-      },
-      realAppSmoke: {
-        baseUrl: "https://over.garden",
-        leakCheck: "passed",
-        cases: [
-          {
-            query: "Ботсадівський",
-            suggestionCount: 1,
-            selectedResultText: "Ботсадівський",
-            canonicalName: "Ботсадівський",
-            catalogKind: "plant_variety",
-            objectKind: "plant",
-            varietyState: "selected",
-            duplicateSameConceptSuggestionsAbsent: true,
-            readbackIdentityPreserved: true,
-            readbackPageStatus: 200,
-          },
-        ],
-        blockedAliasCases: [
-          {
-            query: "garden tomato",
-            suggestionCount: 0,
-            forbiddenDisplayNameAbsent: true,
-            canonicalTargetAbsent: true,
-            duplicateSameConceptSuggestionsAbsent: true,
-          },
-        ],
-      },
-    },
-    leakCheck: "passed",
+    schemaVersion: "ove90.productionSourceAvailability.v1" as const,
+    completedFamilies: [
+      sourceFamily(
+        "ua-state-register",
+        "OVE-81 UA State Register official variety wave",
+        "Ботсадівський",
+        "plant_variety",
+        "ua_state_register",
+      ),
+      sourceFamily(
+        "species-backbone",
+        "OVE-58/82/83 species backbone and alias expansion",
+        "Solanum lycopersicum L.",
+        "species",
+        "species_backbone",
+      ),
+      sourceFamily(
+        "breed-seed",
+        "OVE-60/86 approved bee and VBO breed seed",
+        "Карпатська бджола",
+        "breed",
+        "ua_official_bee_breed",
+      ),
+      sourceFamily(
+        "bg-official-variety-proof-subset",
+        "OVE-61 BG official variety proof subset",
+        "Садово 1",
+        "plant_variety",
+        "eu_common_catalogue_bg",
+      ),
+      sourceFamily(
+        "eu-oj-bg-official-varieties",
+        "OVE-85 EU OJ Bulgaria official varieties",
+        null,
+        "plant_variety",
+        "eu_oj_eur_lex_common_catalogue",
+        "A sample BG OJ variety",
+        10,
+      ),
+      sourceFamily(
+        "genebank-long-tail",
+        "OVE-88 GRIN/NPGS promoted long-tail candidates",
+        "Red Cherry tomato",
+        "plant_variety",
+        "grin_genebank_candidate",
+      ),
+    ],
+    blockedProjectionLinkLeaks: 0,
+    leakCheck: "passed" as const,
   };
 }
 
-function seedFamily(
+function sourceFamily(
   key: string,
-  expectedCanonicalName: string,
-  catalogKind: string,
+  sourceSet: string,
+  expectedCanonicalName: string | null,
+  catalogKind: "plant_variety" | "species" | "breed",
+  source: string,
+  canonicalName = expectedCanonicalName ?? "A sample source-backed item",
+  productVisibleRowsForSource = 1,
 ) {
   return {
     key,
-    packageScript: "catalog:sources:import",
-    sourceSet: `${key} source set`,
+    sourceSet,
     expectedCanonicalName,
+    expectedCatalogKind: catalogKind,
+    expectedSource: source,
     catalogItemId: "00000000-0000-4000-8000-000000090000",
     publicSlug: `${key}-slug`,
-    canonicalName: expectedCanonicalName,
+    canonicalName,
     catalogKind,
-    source: `${key}_source`,
+    source,
     aliasesProjected: 2,
-    reindexQueued: true,
-    stableProductIdentityOnRerun: true,
+    productVisibleRowsForSource,
     sourceProofRecorded: true,
-    leakCheck: "passed",
+    duplicateProductIdentitiesAbsent: true,
+    productVisible: true,
+    leakCheck: "passed" as const,
   };
 }
 
-function euOjImportOutput() {
+function realAppSmokeOutput() {
   return {
-    imported: {
-      projectedConcepts: 10,
-      sourceRecordsImported: 12,
-      aliasesProjected: 20,
-      sampleProjectedCanonicalName: "A sample BG OJ variety",
-    },
-    idempotencyProof: {
-      rerunProjectedConcepts: 10,
-      rerunSourceRecordsImported: 12,
-      rerunSampleProjectedCatalogItemId: "00000000-0000-4000-8000-000000085000",
-    },
-    typeaheadProof: {
-      projectedAcceptedRowReachable: true,
-    },
-    provenanceProof: {
-      catalogItemId: "00000000-0000-4000-8000-000000085000",
-      canonicalName: "A sample BG OJ variety",
-      sourceName: "EU OJ Common Catalogue",
-      sourceVersion: "2026-07-02",
-      attributionRequired: true,
-      projectionStatus: "projected",
-      hasRequiredCaveats: true,
-    },
-    blockedRecordProof: {
-      projectionStatus: "blocked",
-    },
-    leakCheck: "passed",
+    baseUrl: "https://over.garden",
+    cases: Array.from({ length: 23 }, (_, index) => ({
+      query: `query-${index}`,
+      suggestionCount: 1,
+      selectedResultText: `Display ${index}`,
+      canonicalName: `Canonical ${index}`,
+      catalogKind: "plant_variety" as const,
+      objectKind: "plant" as const,
+      varietyState: "selected",
+      duplicateSameConceptSuggestionsAbsent: true,
+      readbackIdentityPreserved: true,
+      readbackPageStatus: 200,
+    })),
+    blockedAliasCases: [
+      {
+        query: "garden tomato",
+        suggestionCount: 0,
+        forbiddenDisplayNameAbsent: true,
+        canonicalTargetAbsent: true,
+        duplicateSameConceptSuggestionsAbsent: true,
+      },
+    ],
+    leakCheck: "passed" as const,
   };
 }
 

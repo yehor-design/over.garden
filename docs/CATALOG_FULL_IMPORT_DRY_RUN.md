@@ -191,4 +191,4 @@ cd apps/web
 pnpm catalog:sources:production-rollout-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden
 ```
 
-It emits schema `ove90.fullCatalogProductionRolloutProof.v1`. A passing OVE-78 seed proof alone is not enough for OVE-90 because the final gate must also cover the OVE-85 EU OJ/BG official-varieties path, OVE-89 entity-resolution QA, deterministic Meilisearch `catalog_typeahead` rebuild, and both Postgres fallback plus Meilisearch freshness.
+It emits schema `ove90.fullCatalogProductionRolloutProof.v1`. A passing OVE-78 seed proof alone is not enough for OVE-90 because the final gate must also cover production source-family availability without new source ingestion, the OVE-85 EU OJ/BG official-varieties path, OVE-89 entity-resolution QA, deterministic Meilisearch `catalog_typeahead` rebuild, and both Postgres fallback plus Meilisearch freshness.

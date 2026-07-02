@@ -14,6 +14,9 @@ import {
 import type { Database } from "../src/db/types";
 import {
   buildCatalogProductionRolloutEvidence,
+  CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS,
+  type CatalogProductionRolloutSourceAvailabilityProof,
+  type CatalogProductionRolloutSourceFamilyProof,
   type CatalogProductionRolloutSearchCaseProof,
   type CatalogProductionRolloutSearchProof,
 } from "../src/lib/catalog/production-rollout-proof";
@@ -21,6 +24,7 @@ import { EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE } from "../src/lib/
 import {
   extractJsonObjectFromCommandOutput,
   parseCatalogSeedRolloutArgs,
+  type CatalogSeedRolloutAppSmoke,
   validateCatalogSeedRolloutOptions,
 } from "../src/lib/catalog/seed-rollout-proof";
 import { readCatalogEntityResolutionQaReport } from "../src/server/catalog-source/entity-resolution-qa-repository";
@@ -83,7 +87,7 @@ const CATALOG_FILTERABLE_ATTRIBUTES = [
 const CATALOG_SORTABLE_ATTRIBUTES = ["rank"] as const;
 const MEILI_WAIT_OPTIONS = { timeout: 120_000, interval: 250 } as const;
 const DEFAULT_CHILD_SCRIPT_TIMEOUT_MS = 300_000;
-const SEED_ROLLOUT_TIMEOUT_MS = 1_200_000;
+const GARDEN_SMOKE_TIMEOUT_MS = 600_000;
 
 async function main() {
   const options = validateCatalogSeedRolloutOptions(
@@ -94,37 +98,23 @@ async function main() {
   validateDatabaseTarget(options.environment, connectionKind);
 
   try {
-    logProofStep("running guarded seed rollout proof");
-    const seedRolloutEvidence = extractJsonObjectFromCommandOutput(
+    logProofStep("reading production source availability without ingestion");
+    const sourceAvailability = await readProductionSourceAvailability(db);
+    logProofStep("running full /garden catalog UX smoke");
+    const realAppSmoke = extractJsonObjectFromCommandOutput(
       runPackageScript(
-        "catalog:sources:seed-rollout-proof",
-        [
-          "--",
-          "--environment",
-          options.environment,
-          "--confirm-environment",
-          options.confirmEnvironment,
-          "--base-url",
-          options.baseUrl,
-          ...(options.allowNonLocalMutation
-            ? ["--allow-non-local-mutation"]
-            : []),
-        ],
-        SEED_ROLLOUT_TIMEOUT_MS,
+        "smoke:garden-catalog-ux",
+        ["--", "--base-url", options.baseUrl],
+        GARDEN_SMOKE_TIMEOUT_MS,
       ),
-    );
-
-    logProofStep("importing approved EU OJ Common Catalogue rows");
-    const euOjImportOutput = extractJsonObjectFromCommandOutput(
-      runPackageScript("catalog:sources:import-eu-oj-common-catalogue"),
-    );
+    ) as CatalogSeedRolloutAppSmoke;
     logProofStep("running BG official-varieties real app smoke");
     const bgOfficialVarietiesSmoke = extractJsonObjectFromCommandOutput(
-      runPackageScript("smoke:garden-bg-official-varieties", [
-        "--",
-        "--base-url",
-        options.baseUrl,
-      ]),
+      runPackageScript(
+        "smoke:garden-bg-official-varieties",
+        ["--", "--base-url", options.baseUrl],
+        GARDEN_SMOKE_TIMEOUT_MS,
+      ),
     );
     logProofStep("reading entity-resolution QA report");
     const entityResolutionQa = await readCatalogEntityResolutionQaReport(db);
@@ -134,8 +124,8 @@ async function main() {
     const evidence = buildCatalogProductionRolloutEvidence({
       options,
       codeState,
-      seedRolloutEvidence,
-      euOjImportOutput,
+      sourceAvailability,
+      realAppSmoke,
       bgOfficialVarietiesSmoke,
       entityResolutionQa,
       searchProof,
@@ -146,6 +136,178 @@ async function main() {
   } finally {
     await db.destroy();
   }
+}
+
+async function readProductionSourceAvailability(
+  db: Kysely<Database>,
+): Promise<CatalogProductionRolloutSourceAvailabilityProof> {
+  const completedFamilies: CatalogProductionRolloutSourceFamilyProof[] = [];
+
+  for (const definition of CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS) {
+    completedFamilies.push(
+      await readProductionSourceFamilyProof(db, definition),
+    );
+  }
+
+  return {
+    schemaVersion: "ove90.productionSourceAvailability.v1",
+    completedFamilies,
+    blockedProjectionLinkLeaks: await countBlockedProjectionLinkLeaks(db),
+    leakCheck: "passed",
+  };
+}
+
+async function readProductionSourceFamilyProof(
+  db: Kysely<Database>,
+  definition: (typeof CATALOG_PRODUCTION_ROLLOUT_SOURCE_FAMILY_DEFINITIONS)[number],
+): Promise<CatalogProductionRolloutSourceFamilyProof> {
+  const baseItemQuery = db
+    .selectFrom("catalog_items")
+    .where("catalog_items.status", "in", ["seeded", "confirmed"])
+    .where("catalog_items.created_by_user_id", "is", null)
+    .where("catalog_items.catalog_kind", "=", definition.expectedCatalogKind)
+    .where("catalog_items.source", "=", definition.expectedSource);
+  const itemQuery = definition.expectedCanonicalName
+    ? baseItemQuery.where(
+        "catalog_items.canonical_name",
+        "=",
+        definition.expectedCanonicalName,
+      )
+    : baseItemQuery;
+  const item = await itemQuery
+    .leftJoin(
+      "catalog_item_names",
+      "catalog_item_names.catalog_item_id",
+      "catalog_items.id",
+    )
+    .leftJoin(
+      "catalog_source_links",
+      "catalog_source_links.catalog_item_id",
+      "catalog_items.id",
+    )
+    .select([
+      "catalog_items.id as catalogItemId",
+      "catalog_items.public_slug as publicSlug",
+      "catalog_items.canonical_name as canonicalName",
+      "catalog_items.catalog_kind as catalogKind",
+      "catalog_items.source as source",
+      sql<number>`count(distinct ${sql.ref("catalog_item_names.id")})`.as(
+        "aliasesProjected",
+      ),
+      sql<number>`count(distinct ${sql.ref("catalog_source_links.id")})`.as(
+        "sourceLinkCount",
+      ),
+    ])
+    .groupBy([
+      "catalog_items.id",
+      "catalog_items.public_slug",
+      "catalog_items.canonical_name",
+      "catalog_items.catalog_kind",
+      "catalog_items.source",
+    ])
+    .orderBy("catalog_items.canonical_name", "asc")
+    .limit(1)
+    .$castTo<{
+      catalogItemId: string;
+      publicSlug: string | null;
+      canonicalName: string;
+      catalogKind: "plant_variety" | "species" | "breed";
+      source: string;
+      aliasesProjected: number | string | null;
+      sourceLinkCount: number | string | null;
+    }>()
+    .executeTakeFirst();
+
+  if (!item) {
+    throw new Error(
+      `Production source availability is missing ${definition.key}.`,
+    );
+  }
+
+  const productVisibleRowsForSource = await countProductVisibleRowsForSource(
+    db,
+    definition.expectedSource,
+    definition.expectedCatalogKind,
+  );
+  const duplicateIdentityCount = await countDuplicateProductIdentityRows(
+    db,
+    {
+      canonicalName: item.canonicalName,
+      catalogKind: item.catalogKind,
+      source: item.source,
+    },
+  );
+
+  return {
+    key: definition.key,
+    sourceSet: definition.sourceSet,
+    expectedCanonicalName: definition.expectedCanonicalName,
+    expectedCatalogKind: definition.expectedCatalogKind,
+    expectedSource: definition.expectedSource,
+    canonicalName: item.canonicalName,
+    catalogKind: item.catalogKind,
+    source: item.source,
+    catalogItemId: item.catalogItemId,
+    publicSlug: item.publicSlug,
+    aliasesProjected: toNumber(item.aliasesProjected),
+    productVisibleRowsForSource,
+    sourceProofRecorded: toNumber(item.sourceLinkCount) > 0,
+    duplicateProductIdentitiesAbsent: duplicateIdentityCount === 1,
+    productVisible: true,
+  };
+}
+
+async function countProductVisibleRowsForSource(
+  db: Kysely<Database>,
+  source: string,
+  catalogKind: "plant_variety" | "species" | "breed",
+) {
+  const row = await db
+    .selectFrom("catalog_items")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("status", "in", ["seeded", "confirmed"])
+    .where("created_by_user_id", "is", null)
+    .where("source", "=", source)
+    .where("catalog_kind", "=", catalogKind)
+    .executeTakeFirst();
+
+  return toNumber(row?.count);
+}
+
+async function countDuplicateProductIdentityRows(
+  db: Kysely<Database>,
+  identity: {
+    canonicalName: string;
+    catalogKind: "plant_variety" | "species" | "breed";
+    source: string;
+  },
+) {
+  const row = await db
+    .selectFrom("catalog_items")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("status", "in", ["seeded", "confirmed"])
+    .where("created_by_user_id", "is", null)
+    .where("canonical_name", "=", identity.canonicalName)
+    .where("catalog_kind", "=", identity.catalogKind)
+    .where("source", "=", identity.source)
+    .executeTakeFirst();
+
+  return toNumber(row?.count);
+}
+
+async function countBlockedProjectionLinkLeaks(db: Kysely<Database>) {
+  const row = await db
+    .selectFrom("catalog_source_links")
+    .innerJoin(
+      "catalog_source_records",
+      "catalog_source_records.id",
+      "catalog_source_links.source_record_id",
+    )
+    .select(sql<number>`count(*)`.as("leaks"))
+    .where("catalog_source_records.projection_status", "!=", "projected")
+    .executeTakeFirst();
+
+  return toNumber(row?.leaks);
 }
 
 function createDb() {
@@ -523,6 +685,10 @@ function requireRecord(value: unknown, label: string) {
 
 function stringValue(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function toNumber(value: unknown) {
+  return typeof value === "number" ? value : Number(value ?? 0);
 }
 
 main().catch((error) => {
