@@ -306,14 +306,16 @@ export function buildSafeSeedCommandSummary(
   }
 
   const imported = asRecord(root.imported);
-  const promoted = asRecord(root.promoted);
+  const promoted =
+    asRecord(root.promoted) ?? findPromotedRecord(root.promoted, command);
   const importedConcept = findImportedConcept(imported, command);
   const identity = promoted ?? importedConcept ?? imported;
   const idempotency = asRecord(root.idempotencyProof);
   const catalogItemId = stringValue(identity?.catalogItemId);
   const rerunCatalogItemId =
     stringValue(idempotency?.rerunCatalogItemId) ??
-    stringValue(idempotency?.promotedAgainCatalogItemId);
+    stringValue(idempotency?.promotedAgainCatalogItemId) ??
+    findRerunPromotedCatalogItemId(idempotency, identity);
   const stableIdentityReported =
     booleanValue(idempotency?.stableCatalogItems) ??
     booleanValue(idempotency?.stableCatalogIdentities) ??
@@ -482,6 +484,38 @@ function findImportedConcept(
           stringValue(concept?.canonicalName) === command.expectedCanonicalName,
       ) ?? null
   );
+}
+
+function findPromotedRecord(
+  promoted: unknown,
+  command: SeedCommandDefinition,
+) {
+  if (!Array.isArray(promoted)) return null;
+
+  return (
+    promoted
+      .map((candidate) => asRecord(candidate))
+      .find(
+        (candidate) =>
+          stringValue(candidate?.canonicalName) ===
+          command.expectedCanonicalName,
+      ) ?? null
+  );
+}
+
+function findRerunPromotedCatalogItemId(
+  idempotency: Record<string, unknown> | null,
+  identity: Record<string, unknown> | null,
+) {
+  const rerunItems = idempotency?.promotedAgainCatalogItemIds;
+  const sourceRecordKey = stringValue(identity?.sourceRecordKey);
+  if (!Array.isArray(rerunItems) || !sourceRecordKey) return null;
+
+  const rerun = rerunItems
+    .map((item) => asRecord(item))
+    .find((item) => stringValue(item?.sourceRecordKey) === sourceRecordKey);
+
+  return stringValue(rerun?.catalogItemId);
 }
 
 function stringValue(value: unknown) {

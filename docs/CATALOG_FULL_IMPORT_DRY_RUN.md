@@ -184,6 +184,8 @@ The dry-run reports row counts by supplement, species/crop, country, notifier, a
 
 OVE-106 is the narrow EU OJ/BG production UX/search gate after OVE-105. It must pass `pnpm catalog:sources:eu-oj-production-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden` before OVE-90 is rerun for final full-catalog closeout. The proof directly rebuilds the derived `catalog_typeahead` index from product-visible Postgres catalog rows, then verifies the landed EU OJ/BG row through both Postgres fallback and Meilisearch.
 
+OVE-107 is the remaining non-EU production landing gate after OVE-106. It uses `pnpm catalog:sources:seed-rollout-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden` to land the approved OVE-81 UA State Register wave, OVE-86 VBO animal-breed subset, and OVE-88 promoted GRIN/NPGS rows into production with redacted evidence. This removes the production-data blocker found by OVE-90 on 2026-07-02, where `Kaiser`, `Ukrainian Grey (Cattle)`, `Bulgarian Carrot pepper`, and `Odessa Market tomato` were absent from production. OVE-107 still does not close OVE-90.
+
 OVE-90 must not claim full catalog availability until the relevant dry-run reports, source-family imports, OVE-89 entity-resolution QA, production `/garden` smoke, and production search/index proof all agree.
 
 The OVE-90 gate command is:

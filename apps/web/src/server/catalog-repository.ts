@@ -131,8 +131,20 @@ export async function searchCatalogSuggestionsWithMeili(
   const hits = Array.isArray(result.hits) ? result.hits : [];
   return dedupeCatalogTypeaheadSuggestions(
     hits
-      .map(catalogTypeaheadHitToSuggestion)
-      .filter((suggestion) => suggestion !== null),
+      .map((hit) => ({
+        hit,
+        suggestion: catalogTypeaheadHitToSuggestion(hit),
+      }))
+      .filter(
+        (result): result is { hit: unknown; suggestion: CatalogSuggestion } =>
+          result.suggestion !== null &&
+          meiliHitMatchesCatalogQuery(
+            result.hit,
+            result.suggestion,
+            normalizedQuery,
+          ),
+      )
+      .map((result) => result.suggestion)
   ).slice(0, normalizedLimit);
 }
 
@@ -466,6 +478,37 @@ export function normalizeCatalogQuery(query: string) {
     .replace(/\s+/g, " ")
     .slice(0, MAX_CATALOG_QUERY_LENGTH)
     .toLowerCase();
+}
+
+function meiliHitMatchesCatalogQuery(
+  hit: unknown,
+  suggestion: CatalogSuggestion,
+  normalizedQuery: string,
+) {
+  if (!isCatalogSearchHitRecord(hit)) {
+    return textMatchesCatalogQuery(
+      suggestion.displayName,
+      normalizedQuery,
+    ) || textMatchesCatalogQuery(suggestion.canonicalName, normalizedQuery);
+  }
+
+  return [
+    hit.normalizedName,
+    hit.displayName,
+    hit.canonicalName,
+  ].some((value) => textMatchesCatalogQuery(value, normalizedQuery));
+}
+
+function textMatchesCatalogQuery(value: unknown, normalizedQuery: string) {
+  if (typeof value !== "string") return false;
+  const normalizedValue = normalizeCatalogQuery(value);
+  return normalizedValue.includes(normalizedQuery);
+}
+
+function isCatalogSearchHitRecord(
+  value: unknown,
+): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function normalizeUserAddedCatalogName(value: string) {

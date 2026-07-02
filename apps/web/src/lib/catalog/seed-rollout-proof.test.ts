@@ -218,6 +218,63 @@ describe("catalog seed rollout proof", () => {
     expect(JSON.stringify(summary)).not.toContain("sourceRecord");
   });
 
+  it("builds redacted seed summaries from promoted genebank candidate arrays", () => {
+    const summary = buildSafeSeedCommandSummary(
+      CATALOG_SEED_ROLLOUT_COMMANDS[4],
+      {
+        imported: {
+          sourceRowsImported: 12,
+          rawRowsCaptured: 12,
+          sourceRecordKey: "must-not-survive",
+        },
+        promoted: [
+          {
+            sourceRecordKey: "grin:other",
+            catalogItemId: "00000000-0000-4000-8000-000000062999",
+            canonicalName: "Other promoted candidate",
+            catalogKind: "plant_variety",
+            publicSlug: "other-promoted-candidate",
+            aliasesProjected: 3,
+          },
+          {
+            sourceRecordKey: "grin:red-cherry",
+            catalogItemId: "00000000-0000-4000-8000-000000062001",
+            canonicalName: "Red Cherry tomato",
+            catalogKind: "plant_variety",
+            publicSlug: "red-cherry-tomato-grin-genebank-candidate",
+            aliasesProjected: 3,
+          },
+        ],
+        idempotencyProof: {
+          promotedAgainCatalogItemIds: [
+            {
+              sourceRecordKey: "grin:red-cherry",
+              catalogItemId: "00000000-0000-4000-8000-000000062001",
+            },
+          ],
+        },
+        provenanceProof: {
+          sourceRecordKey: "must-not-survive",
+        },
+        leakCheck: "passed",
+      },
+    );
+
+    expect(summary).toMatchObject({
+      key: "genebank-long-tail",
+      expectedCanonicalName: "Red Cherry tomato",
+      catalogItemId: "00000000-0000-4000-8000-000000062001",
+      canonicalName: "Red Cherry tomato",
+      catalogKind: "plant_variety",
+      source: "grin_genebank_candidate",
+      aliasesProjected: 3,
+      stableProductIdentityOnRerun: true,
+      sourceProofRecorded: true,
+      leakCheck: "passed",
+    });
+    expect(JSON.stringify(summary)).not.toContain("sourceRecord");
+  });
+
   it("fails closed when importer output omits or misreports catalog kind", () => {
     expect(() =>
       buildSafeSeedCommandSummary(CATALOG_SEED_ROLLOUT_COMMANDS[1], {

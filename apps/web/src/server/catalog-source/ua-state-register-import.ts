@@ -25,6 +25,7 @@ const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
 const PROOF_OWNER_USER_ID = "00000000-0000-4000-8000-000000057000";
+const UA_STATE_REGISTER_BATCH_SIZE = 500;
 
 export interface UaStateRegisterImportSummary {
   sourceSnapshotId: string;
@@ -135,34 +136,50 @@ export async function importUaStateRegisterVarieties(
       payloadSha256: sourceFileSha256,
     }).executeTakeFirstOrThrow();
 
-    const varieties: UaStateRegisterImportSummary[] = [];
-    for (const definition of input.definitions) {
+    const records = await upsertUaStateRegisterRecordsInChunks(
+      trx,
+      input.definitions,
+      snapshot.id,
+    );
+    const catalogItems = await upsertUaStateRegisterCatalogItemsInChunks(
+      trx,
+      input.definitions,
+    );
+    const recordBySourceRecordId = new Map(
+      records.map((record) => [record.sourceRecordId, record]),
+    );
+    const catalogItemBySourceId = new Map(
+      catalogItems.map((item) => [item.sourceId, item]),
+    );
+
+    await upsertUaStateRegisterCatalogNamesInChunks(
+      trx,
+      input.definitions,
+      catalogItemBySourceId,
+    );
+    await insertUaStateRegisterSourceLinksInChunks(
+      trx,
+      input.definitions,
+      recordBySourceRecordId,
+      catalogItemBySourceId,
+    );
+
+    const varieties = input.definitions.map((definition) => {
       const projection = uaStateRegisterAllowedProjection(definition);
       const rawPayloadSha256 = uaStateRegisterPayloadChecksum(definition);
+      const record = recordBySourceRecordId.get(definition.record.id);
+      const catalogItem = catalogItemBySourceId.get(projection.sourceId);
 
-      const record = await buildUpsertUaStateRegisterRecordQuery(trx, {
-        definition,
-        sourceSnapshotId: snapshot.id,
-        rawPayloadSha256,
-      }).executeTakeFirstOrThrow();
-
-      const catalogItem = await buildUpsertUaStateRegisterCatalogItemQuery(
-        trx,
-        projection,
-      ).executeTakeFirstOrThrow();
-
-      for (const alias of projection.aliases) {
-        await buildUpsertUaStateRegisterCatalogNameQuery(trx, {
-          catalogItemId: catalogItem.id,
-          ...alias,
-        }).execute();
+      if (!record) {
+        throw new Error(
+          `UA State Register record ${definition.record.id} was not returned by batch upsert.`,
+        );
       }
-
-      await buildInsertUaStateRegisterSourceLinkQuery(trx, {
-        definition,
-        catalogItemId: catalogItem.id,
-        sourceRecordId: record.id,
-      }).execute();
+      if (!catalogItem) {
+        throw new Error(
+          `UA State Register catalog item ${projection.sourceId} was not returned by batch upsert.`,
+        );
+      }
 
       const transliteration =
         projection.aliases.find(
@@ -171,7 +188,7 @@ export async function importUaStateRegisterVarieties(
             /^[A-Za-z0-9`' -]+$/.test(alias.displayName),
         )?.displayName ?? null;
 
-      varieties.push({
+      return {
         sourceSnapshotId: snapshot.id,
         sourceRecordId: record.id,
         catalogItemId: catalogItem.id,
@@ -188,8 +205,8 @@ export async function importUaStateRegisterVarieties(
         publicSlug: catalogItem.publicSlug ?? projection.publicSlug,
         aliasesProjected: projection.aliases.length,
         reindexQueued: false,
-      });
-    }
+      };
+    });
 
     const reindexJob =
       await buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(
@@ -450,6 +467,51 @@ export function buildUpsertUaStateRegisterRecordQuery(
     .returning("id");
 }
 
+async function upsertUaStateRegisterRecordsInChunks(
+  executor: QueryExecutor,
+  definitions: UaStateRegisterVarietyImportDefinition[],
+  sourceSnapshotId: string,
+) {
+  const rows: Array<{ id: string; sourceRecordId: string }> = [];
+  const now = new Date();
+
+  for (const chunk of chunkArray(definitions, UA_STATE_REGISTER_BATCH_SIZE)) {
+    const result = await executor
+      .insertInto("catalog_source_records")
+      .values(
+        chunk.map((definition) => ({
+          source_snapshot_id: sourceSnapshotId,
+          source_record_id: definition.record.id,
+          raw_payload: jsonbParam(uaStateRegisterRawPayload(definition)),
+          raw_payload_sha256: uaStateRegisterPayloadChecksum(definition),
+          source_only_fields: jsonbParam(
+            uaStateRegisterSourceOnlyFields(definition),
+          ),
+          allowed_projection: jsonbParam(
+            uaStateRegisterAllowedProjectionJson(definition),
+          ),
+          projection_status: "projected" as const,
+        })),
+      )
+      .onConflict((oc) =>
+        oc.columns(["source_snapshot_id", "source_record_id"]).doUpdateSet({
+          raw_payload: sql`excluded.raw_payload`,
+          raw_payload_sha256: sql`excluded.raw_payload_sha256`,
+          source_only_fields: sql`excluded.source_only_fields`,
+          allowed_projection: sql`excluded.allowed_projection`,
+          projection_status: sql`excluded.projection_status`,
+          updated_at: now,
+        }),
+      )
+      .returning(["id", "source_record_id as sourceRecordId"])
+      .execute();
+
+    rows.push(...result);
+  }
+
+  return rows;
+}
+
 export function buildUpsertUaStateRegisterCatalogItemQuery(
   executor: QueryExecutor,
   projection = uaStateRegisterAllowedProjection(),
@@ -496,6 +558,71 @@ export function buildUpsertUaStateRegisterCatalogItemQuery(
     ]);
 }
 
+async function upsertUaStateRegisterCatalogItemsInChunks(
+  executor: QueryExecutor,
+  definitions: UaStateRegisterVarietyImportDefinition[],
+) {
+  const rows: Array<{
+    id: string;
+    sourceId: string;
+    canonicalName: string;
+    publicSlug: string | null;
+  }> = [];
+  const now = new Date();
+
+  for (const chunk of chunkArray(definitions, UA_STATE_REGISTER_BATCH_SIZE)) {
+    const result = await executor
+      .insertInto("catalog_items")
+      .values(
+        chunk.map((definition) => {
+          const projection = uaStateRegisterAllowedProjection(definition);
+          assertUaStateRegisterCatalogItemProjectionAllowed(projection);
+
+          return {
+            canonical_name: projection.canonicalName,
+            normalized_name: projection.normalizedName,
+            public_slug: projection.publicSlug,
+            status: projection.status,
+            source: projection.source,
+            source_id: projection.sourceId,
+            catalog_kind: projection.catalogKind,
+            created_by_user_id: null,
+            locale: projection.locale,
+          };
+        }),
+      )
+      .onConflict((oc) =>
+        oc.columns(["source", "source_id"]).doUpdateSet({
+          canonical_name: sql`excluded.canonical_name`,
+          normalized_name: sql`excluded.normalized_name`,
+          public_slug: sql`excluded.public_slug`,
+          status: sql`excluded.status`,
+          catalog_kind: sql`excluded.catalog_kind`,
+          created_by_user_id: null,
+          locale: sql`excluded.locale`,
+          updated_at: now,
+        }),
+      )
+      .returning([
+        "id",
+        "source_id as sourceId",
+        "canonical_name as canonicalName",
+        "public_slug as publicSlug",
+      ])
+      .$castTo<{
+        id: string;
+        sourceId: string;
+        canonicalName: string;
+        publicSlug: string | null;
+      }>()
+      .execute();
+
+    rows.push(...result);
+  }
+
+  return rows;
+}
+
 export function buildUpsertUaStateRegisterCatalogNameQuery(
   executor: QueryExecutor,
   input: {
@@ -530,6 +657,50 @@ export function buildUpsertUaStateRegisterCatalogNameQuery(
     );
 }
 
+async function upsertUaStateRegisterCatalogNamesInChunks(
+  executor: QueryExecutor,
+  definitions: UaStateRegisterVarietyImportDefinition[],
+  catalogItemBySourceId: Map<
+    string,
+    { id: string; canonicalName: string; publicSlug: string | null }
+  >,
+) {
+  assertUaStateRegisterCatalogNameProjectionAllowed();
+
+  const values = definitions.flatMap((definition) => {
+    const projection = uaStateRegisterAllowedProjection(definition);
+    const catalogItem = catalogItemBySourceId.get(projection.sourceId);
+    if (!catalogItem) {
+      throw new Error(
+        `UA State Register catalog item ${projection.sourceId} is missing before alias upsert.`,
+      );
+    }
+
+    return projection.aliases.map((alias) => ({
+      catalog_item_id: catalogItem.id,
+      display_name: alias.displayName,
+      normalized_name: alias.normalizedName,
+      locale: alias.locale,
+      is_primary: alias.isPrimary,
+    }));
+  });
+
+  for (const chunk of chunkArray(values, UA_STATE_REGISTER_BATCH_SIZE)) {
+    await executor
+      .insertInto("catalog_item_names")
+      .values(chunk)
+      .onConflict((oc) =>
+        oc
+          .columns(["catalog_item_id", "normalized_name", "locale"])
+          .doUpdateSet({
+            display_name: sql`excluded.display_name`,
+            is_primary: sql`excluded.is_primary`,
+          }),
+      )
+      .execute();
+  }
+}
+
 export function buildInsertUaStateRegisterSourceLinkQuery(
   executor: QueryExecutor,
   input: {
@@ -552,6 +723,51 @@ export function buildInsertUaStateRegisterSourceLinkQuery(
     .onConflict((oc) =>
       oc.columns(["catalog_item_id", "source_record_id"]).doNothing(),
     );
+}
+
+async function insertUaStateRegisterSourceLinksInChunks(
+  executor: QueryExecutor,
+  definitions: UaStateRegisterVarietyImportDefinition[],
+  recordBySourceRecordId: Map<string, { id: string; sourceRecordId: string }>,
+  catalogItemBySourceId: Map<
+    string,
+    { id: string; canonicalName: string; publicSlug: string | null }
+  >,
+) {
+  const values = definitions.map((definition) => {
+    const projection = uaStateRegisterAllowedProjection(definition);
+    const record = recordBySourceRecordId.get(definition.record.id);
+    const catalogItem = catalogItemBySourceId.get(projection.sourceId);
+
+    if (!record) {
+      throw new Error(
+        `UA State Register record ${definition.record.id} is missing before source-link insert.`,
+      );
+    }
+    if (!catalogItem) {
+      throw new Error(
+        `UA State Register catalog item ${projection.sourceId} is missing before source-link insert.`,
+      );
+    }
+
+    return {
+      catalog_item_id: catalogItem.id,
+      source_record_id: record.id,
+      source_slug: definition.source.slug,
+      source_record_key: definition.record.id,
+      projection_kind: "canonical_item" as const,
+    };
+  });
+
+  for (const chunk of chunkArray(values, UA_STATE_REGISTER_BATCH_SIZE)) {
+    await executor
+      .insertInto("catalog_source_links")
+      .values(chunk)
+      .onConflict((oc) =>
+        oc.columns(["catalog_item_id", "source_record_id"]).doNothing(),
+      )
+      .execute();
+  }
 }
 
 export function buildEnqueueUaStateRegisterTypeaheadReindexJobQuery(
@@ -675,4 +891,33 @@ class RollbackReadbackProof extends Error {
 
 function jsonbParam(value: JsonValue) {
   return sql<JsonValue>`${JSON.stringify(value)}::jsonb`;
+}
+
+function assertUaStateRegisterCatalogItemProjectionAllowed(
+  projection: UaStateRegisterVarietyProjection,
+) {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_STATE_REGISTER_SOURCE.slug,
+    sourceVersion: UA_STATE_REGISTER_SOURCE.version,
+    productSurface: "catalog_items",
+    productSource: projection.source,
+    productSourceId: projection.sourceId,
+  });
+}
+
+function assertUaStateRegisterCatalogNameProjectionAllowed() {
+  assertCatalogSourceProductProjectionAllowed({
+    sourceSlug: UA_STATE_REGISTER_SOURCE.slug,
+    sourceVersion: UA_STATE_REGISTER_SOURCE.version,
+    productSurface: "catalog_item_names",
+    productSource: UA_STATE_REGISTER_SOURCE.slug.replaceAll("-", "_"),
+  });
+}
+
+function chunkArray<T>(values: T[], size: number) {
+  const chunks: T[][] = [];
+  for (let index = 0; index < values.length; index += size) {
+    chunks.push(values.slice(index, index + size));
+  }
+  return chunks;
 }

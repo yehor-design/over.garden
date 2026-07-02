@@ -77,7 +77,10 @@ function readCodeState() {
     readNonEmptyEnvValue(process.env.VERCEL_GIT_COMMIT_REF) ??
     readGitValue(["rev-parse", "--abbrev-ref", "HEAD"], "unknown") ??
     "unknown";
-  const status = readGitValue(["status", "--porcelain"], null);
+  const status = readGitValue(
+    ["status", "--porcelain", "--untracked-files=no"],
+    null,
+  );
 
   return {
     commitSha,

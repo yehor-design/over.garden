@@ -88,7 +88,7 @@ describe("catalog repository query contracts", () => {
     ]);
   });
 
-  it("queries the dedicated Meili index and filters unsafe hits", async () => {
+  it("queries the dedicated Meili index and filters unsafe or fuzzy-only hits", async () => {
     const calls: Array<{ indexName: string; query: string; limit: number }> =
       [];
     const client = {
@@ -135,6 +135,17 @@ describe("catalog repository query contracts", () => {
 
     await expect(
       searchCatalogSuggestionsWithMeili("  ПОМДОР  ", 5, client),
+    ).resolves.toEqual([]);
+    expect(calls).toEqual([
+      {
+        indexName: "catalog_typeahead",
+        query: "помдор",
+        limit: 15,
+      },
+    ]);
+
+    await expect(
+      searchCatalogSuggestionsWithMeili("  чері  ", 5, client),
     ).resolves.toEqual([
       {
         id: "00000000-0000-4000-8000-000000000101",
@@ -144,13 +155,6 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
-      },
-    ]);
-    expect(calls).toEqual([
-      {
-        indexName: "catalog_typeahead",
-        query: "помдор",
-        limit: 15,
       },
     ]);
   });
@@ -203,15 +207,6 @@ describe("catalog repository query contracts", () => {
         id: "00000000-0000-4000-8000-000000056002",
         displayName: "Bergeron 1",
         canonicalName: "Bergeron 1",
-        catalogKind: "plant_variety",
-        locale: "uk",
-        status: "seeded",
-        source: "ua_state_register",
-      },
-      {
-        id: "00000000-0000-4000-8000-000000064013",
-        displayName: "Refresh New 64",
-        canonicalName: "Refresh New 64",
         catalogKind: "plant_variety",
         locale: "uk",
         status: "seeded",

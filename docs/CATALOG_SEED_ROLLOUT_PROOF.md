@@ -25,6 +25,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
 - Full production rollout proof: OVE-90 uses `pnpm catalog:sources:production-rollout-proof` as the final gate. It reads the already-landed production source-family rows without running source ingestion, runs the full `/garden` catalog UX smoke plus the BG official-varieties `/garden` smoke, reads the OVE-89 entity-resolution QA report, and verifies the `catalog_typeahead` result through both Postgres fallback and Meilisearch. A passing seed proof alone is not enough to close OVE-90.
 - EU OJ production landing proof: OVE-105 owns the explicit non-local import of the approved Official Journal / EUR-Lex Common Catalogue rows into production. It must pass and record redacted evidence before OVE-106 and OVE-90 claim production availability for the EU OJ/BG source family.
 - EU OJ production UX/search proof: OVE-106 uses `pnpm catalog:sources:eu-oj-production-proof` after OVE-105. It does not import source rows and does not close OVE-90. It proves the real production `/garden` BG official-varieties smoke, the Postgres fallback typeahead, a direct safe rebuild of the derived Meilisearch `catalog_typeahead` index from product-visible Postgres catalog rows, duplicate absence, public-safe Meili hit shape, and blocked/review-needed row absence for the EU OJ/BG source family. OVE-106 also fixes the EU OJ importer reindex enqueue so future idempotent importer reruns return the job to `pending`, and aligns the Python worker catalog document shape with the TypeScript `catalogKind` contract.
+- Remaining source-family production landing proof: OVE-107 owns the guarded production landing for the approved non-EU source families that OVE-90 samples after OVE-106: the OVE-81 UA State Register wave, the OVE-86 VBO animal-breed subset, and the OVE-88 promoted GRIN/NPGS rows. It uses the existing `catalog:sources:seed-rollout-proof` non-local command as the production landing gate, then leaves OVE-90 as a separate final proof rerun. The UA State Register importer uses chunked upserts so the approved full wave can land in production without row-by-row transaction stalls.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -136,6 +137,25 @@ The command emits `ove106.euOjProductionUxSearchProof.v1` redacted evidence and 
 - Postgres fallback and Meilisearch `catalog_typeahead` both find the selected landed EU OJ/BG row after the direct safe derived-index refresh;
 - duplicate same-concept suggestions are absent;
 - review-needed/rejected OJ rows have no product links, IASAS-only blocked rows are absent from search, and Meilisearch hits can be converted through the public-safe typeahead contract;
+- evidence excludes raw payloads, source-row keys, source-only fields, env values, secrets, cookies, emails, user private data, precise coordinates, IP addresses, user agents, referrers, database URLs, and Meilisearch credentials.
+
+## OVE-107 Remaining Source-Family Production Landing Gate
+
+OVE-107 is the guarded production landing step for approved source-family rows that were implemented before OVE-90 but were still missing from production after OVE-106. It does not close OVE-90. It lands the approved non-EU seed-rollout families and proves representative production `/garden` behavior so OVE-90 can be rerun as a pure final proof.
+
+Production command:
+
+```bash
+vercel env run -e production -- pnpm --dir apps/web catalog:sources:seed-rollout-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden
+```
+
+The command must emit `ove78.catalogSeedRolloutProof.v1` redacted evidence and fail closed unless:
+
+- the approved UA State Register wave is product-visible, including `Kaiser`, `7 ФОР 7`, and `ЕС ЯСМІНІС КЛП`;
+- the approved OVE-86 breed seed is product-visible, including `Ukrainian Grey (Cattle)` as an animal breed;
+- the approved OVE-88 promoted GRIN/NPGS rows are product-visible, including `Bulgarian Carrot pepper` and `Odessa Market tomato`;
+- the real production `/garden` catalog UX smoke can search, select, save, and read back every representative row with hidden location visibility;
+- blocked/review-needed/source-only aliases and non-promoted candidates remain absent from product typeahead;
 - evidence excludes raw payloads, source-row keys, source-only fields, env values, secrets, cookies, emails, user private data, precise coordinates, IP addresses, user agents, referrers, database URLs, and Meilisearch credentials.
 
 ## OVE-90 Full Production Rollout Proof
