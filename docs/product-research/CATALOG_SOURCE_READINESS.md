@@ -6,6 +6,7 @@ Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIF
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
 Full-import dry-run: `cd apps/web && pnpm catalog:sources:dry-run -- --environment local --confirm-environment local`
 Entity-resolution QA: `cd apps/web && pnpm catalog:sources:entity-resolution-qa`
+Production rollout proof: `cd apps/web && pnpm catalog:sources:production-rollout-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden`
 
 This gate decides which catalog sources later ingestion slices may consume. It is not a bulk import and it does not approve live product dependencies on external APIs.
 
@@ -58,6 +59,7 @@ Import order:
 6. OVE-86 may expand breed concepts only for source/object-kind mappings cleared by the manifest; DAD-IS/EFABIS remains internal validation only until legal clearance.
 7. OVE-87 clears only the GRIN/NPGS boundary for OVE-88: GRIN raw quarantine and curator-only candidate projection are allowed with provenance and source-only caveats; Genesys and EURISCO remain legally blocked/internal-validation-only.
 8. OVE-89 must review duplicate clusters, canonical conflicts, ambiguous aliases, and cross-source identity risk before OVE-90 production proof claims full catalog availability.
+9. OVE-90 must run the explicit production rollout proof command. That command must rerun the approved seed/import path, consume the OVE-85 EU OJ/BG proof, read the OVE-89 QA report, rebuild the derived Meilisearch typeahead index from safe catalog rows, and prove representative catalog rows through both Postgres fallback and Meilisearch before the source-readiness gate can be considered product-visible in production.
 
 Concrete blocker evidence required before promotion:
 
