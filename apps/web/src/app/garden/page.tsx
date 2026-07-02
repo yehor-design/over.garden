@@ -4,6 +4,8 @@ import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
+import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
@@ -18,7 +20,7 @@ import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { FirstEntryComposer } from "./first-entry-composer";
-import { GardenAuthPanel } from "./garden-auth-panel";
+import { GardenAuthPanel, GoogleAccountLinkPanel } from "./garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
+  const googleSignInEnabled = isGoogleSignInEnabled();
+  const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
@@ -84,6 +88,15 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         <GardenAuthPanel
           activationSource={activationSource}
           catalogName={initialCatalogItem?.displayName}
+          googleSignInEnabled={googleSignInEnabled}
+          initialMessage={oauthMessage}
+        />
+      ) : null}
+
+      {userId ? (
+        <GoogleAccountLinkPanel
+          googleSignInEnabled={googleSignInEnabled}
+          initialMessage={oauthMessage}
         />
       ) : null}
 

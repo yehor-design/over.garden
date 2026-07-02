@@ -256,6 +256,8 @@ export function poisonOperatorEnv(): Record<string, string> {
     PUBLIC_SITE_URL: "https://over.garden",
     BETTER_AUTH_URL: "https://over.garden",
     BETTER_AUTH_SECRET: POISON.betterAuthSecret,
+    GOOGLE_CLIENT_ID: POISON.googleClientId,
+    GOOGLE_CLIENT_SECRET: POISON.googleClientSecret,
     DATABASE_URL: POISON.databaseUrl,
     DIRECT_URL: POISON.databaseUrl,
     CATALOG_CURATOR_USER_IDS: POISON.curatorUserId,

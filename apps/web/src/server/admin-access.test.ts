@@ -27,6 +27,21 @@ describe("admin access gate", () => {
     expect(access).toEqual({ status: "denied" });
   });
 
+  it("reads admin authorization from durable user ids, not OAuth provider claims", async () => {
+    const userId = "00000000-0000-4000-8000-000000000001";
+    const executeTakeFirst = vi.fn(async () => ({ role: "owner" }));
+    const where = vi.fn(() => ({ executeTakeFirst }));
+    const select = vi.fn(() => ({ where }));
+    const selectFrom = vi.fn(() => ({ select }));
+    const database = { selectFrom } as unknown as Kysely<Database>;
+
+    await expect(readAdminRoleForUser(database, userId)).resolves.toBe("owner");
+
+    expect(selectFrom).toHaveBeenCalledWith("admin_user_roles");
+    expect(select).toHaveBeenCalledWith("role");
+    expect(where).toHaveBeenCalledWith("user_id", "=", userId);
+  });
+
   it("allows owners with role-management capability", async () => {
     const access = await assertAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000001"),

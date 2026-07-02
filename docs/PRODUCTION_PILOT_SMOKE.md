@@ -20,7 +20,7 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - Canonical app domains `over.garden` and `www.over.garden` are attached to the Vercel project and point to Vercel through DNS-only Cloudflare A records.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces use durable `admin_user_roles` capabilities and owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. OVE-111 adds Google OAuth env names `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; their values are never recorded. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, when Google OAuth env is missing for production Google sign-in smoke, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces use durable `admin_user_roles` capabilities and owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables. OVE-51 reran the non-destructive app bootstrap and confirmed the closed-pilot `pilot_invite_grants` table exists before the canonical invited-gardener smoke.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
@@ -445,6 +445,7 @@ Forbidden evidence:
 - Quarantine keys, signed upload URLs, original object keys, EXIF data, precise location, IP address, user agent, referrer, or raw query string.
 - Full private URLs from authenticated pages.
 - Auth secret values. Evidence may only say present, missing, placeholder-like, or local-fallback.
+- Google client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may name only env presence and exact authorized redirect URI presence.
 
 ## Preflight
 
@@ -456,11 +457,15 @@ Forbidden evidence:
 4. Treat any `fail` check as a blocker for live pilot.
 5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
 6. Confirm Cloudflare is not caching app HTML if the app domain is routed through Cloudflare.
-7. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
-8. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
-9. Open `/admin` as the owner and confirm it renders `Role: Owner`, admin links, role-required hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
-10. Open `/admin/users` as the owner and confirm role assignments plus recent audit rows render with bounded role/action/reason labels only.
-11. Open `/admin/users` as a normal signed-in user and as a non-owner admin role; both must show `Access denied.` before assignments or audit rows.
+7. Confirm Google OAuth provider setup for the selected environment:
+   - Google Cloud OAuth client type is Web application.
+   - Authorized redirect URIs include `http://localhost:3000/api/auth/callback/google` for local testing and `https://over.garden/api/auth/callback/google` for production.
+   - Vercel production has `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` present; do not record either value.
+8. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
+9. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
+10. Open `/admin` as the owner and confirm it renders `Role: Owner`, admin links, role-required hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
+11. Open `/admin/users` as the owner and confirm role assignments plus recent audit rows render with bounded role/action/reason labels only.
+12. Open `/admin/users` as a normal signed-in user and as a non-owner admin role; both must show `Access denied.` before assignments or audit rows.
 
 Header probes:
 
@@ -482,34 +487,38 @@ Public visitor/crawler prerequisite:
 
 1. Open `/` and follow the primary CTA into `/garden?source=homepage`.
 2. Sign up or sign in as the pilot smoke user.
-3. Create one first plant entry with:
+3. For Google OAuth:
+   - Start "Continue with Google" from `/garden` and confirm Google accepts the callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`.
+   - For an existing email/password account, sign in once, use "Link Google sign-in" from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
+   - Open `/admin` as a normal Google-created user and confirm `Access denied.`; open `/admin` as a linked owner/admin user and confirm durable `admin_user_roles` access is preserved.
+4. Create one first plant entry with:
    - one space,
    - one plant object,
    - title/body entered by the operator but not copied into evidence,
    - `hidden` or safe region-level location only,
    - catalog selected, user-added, or Unknown.
-4. Attach one photo:
+5. Attach one photo:
    - create the presigned quarantine upload through the app,
    - upload the image,
    - process it server-side,
    - confirm authenticated readback displays only the public derivative.
-5. Open the object page and add a follow-up entry to the same object.
-6. Publish the first entry after accepting first-publication disclosure.
-7. Open the public `/journal/[slug]` URL:
+6. Open the object page and add a follow-up entry to the same object.
+7. Publish the first entry after accepting first-publication disclosure.
+8. Open the public `/journal/[slug]` URL:
    - status `200`,
    - SSR HTML visible without client JS dependency,
    - robots `noindex, nofollow`,
    - no precise location,
    - no quarantine/original media key,
    - derivative-only media if a photo was attached.
-8. From the public entry, open `/variety/[slug]` when linked:
+9. From the public entry, open `/variety/[slug]` when linked:
    - page renders only if there is safe public entry depth for that catalog item,
    - thin pages stay noindex,
    - CTA carries only a public catalog slug into `/garden`.
-9. Use the public variety CTA, sign in if needed, and save another first-entry path with public-variety activation attribution.
-10. Archive the published entry from the authenticated object page.
-11. Reopen the old public journal URL and confirm status `410`, robots `noindex, nofollow`, and no private content in the tombstone.
-12. Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 metrics update without raw journal text, email, precise location, media keys, referrers, IPs, or user agents.
+10. Use the public variety CTA, sign in if needed, and save another first-entry path with public-variety activation attribution.
+11. Archive the published entry from the authenticated object page.
+12. Reopen the old public journal URL and confirm status `410`, robots `noindex, nofollow`, and no private content in the tombstone.
+13. Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 metrics update without raw journal text, email, precise location, media keys, referrers, IPs, or user agents.
 
 ## Worker And Search Health
 

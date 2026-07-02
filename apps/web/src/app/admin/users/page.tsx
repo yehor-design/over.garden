@@ -8,6 +8,8 @@ import {
   type AdminRole,
   type AdminRoleChangeReason,
 } from "@/lib/admin/roles";
+import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { resolveAdminCapabilityAccess } from "@/server/admin-access";
 import {
   readAdminRoleManagementView,
@@ -29,7 +31,20 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function AdminUsersPage() {
+type AdminUsersSearchParams = Record<string, string | string[] | undefined>;
+
+interface AdminUsersPageProps {
+  searchParams?: Promise<AdminUsersSearchParams>;
+}
+
+export default async function AdminUsersPage({
+  searchParams,
+}: AdminUsersPageProps = {}) {
+  const params: AdminUsersSearchParams = await (
+    searchParams ?? Promise.resolve({})
+  );
+  const googleSignInEnabled = isGoogleSignInEnabled();
+  const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const session = await getCurrentSession();
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
@@ -39,7 +54,10 @@ export default async function AdminUsersPage() {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
-        <GardenAuthPanel />
+        <GardenAuthPanel
+          googleSignInEnabled={googleSignInEnabled}
+          initialMessage={oauthMessage}
+        />
       </main>
     );
   }
@@ -53,7 +71,10 @@ export default async function AdminUsersPage() {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
-        <GardenAuthPanel />
+        <GardenAuthPanel
+          googleSignInEnabled={googleSignInEnabled}
+          initialMessage={oauthMessage}
+        />
       </main>
     );
   }

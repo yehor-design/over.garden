@@ -12,6 +12,8 @@ import {
 
 import { buttonVariants } from "@/components/ui/button";
 import type { AdminCapability, AdminRole } from "@/lib/admin/roles";
+import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolveAdminAccess } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
@@ -79,7 +81,16 @@ const ADMIN_LINKS = [
   },
 ] as const;
 
-export default async function AdminPage() {
+type AdminSearchParams = Record<string, string | string[] | undefined>;
+
+interface AdminPageProps {
+  searchParams?: Promise<AdminSearchParams>;
+}
+
+export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
+  const params: AdminSearchParams = await (searchParams ?? Promise.resolve({}));
+  const googleSignInEnabled = isGoogleSignInEnabled();
+  const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const session = await getCurrentSession();
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
@@ -90,7 +101,10 @@ export default async function AdminPage() {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminHeader />
-        <GardenAuthPanel />
+        <GardenAuthPanel
+          googleSignInEnabled={googleSignInEnabled}
+          initialMessage={oauthMessage}
+        />
       </main>
     );
   }

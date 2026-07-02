@@ -5,8 +5,14 @@ import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
 import { resolveBetterAuthSecret } from "@/lib/auth-secret";
+import {
+  googleAccountPolicy,
+  resolveGoogleSocialProviderConfig,
+} from "@/lib/auth/google-oauth";
 import { capturePilotPasswordResetLink } from "@/lib/auth/pilot-password-reset-delivery";
 import { getAuthBaseUrl } from "@/lib/runtime-url";
+
+const googleProvider = resolveGoogleSocialProviderConfig();
 
 export const auth = betterAuth({
   appName: "OverGarden",
@@ -26,6 +32,8 @@ export const auth = betterAuth({
       void capturePilotPasswordResetLink({ email: user.email, url });
     },
   },
+  socialProviders: googleProvider ? { google: googleProvider } : undefined,
+  account: googleAccountPolicy(),
   plugins: [nextCookies()],
   advanced: {
     cookiePrefix: "overgarden",

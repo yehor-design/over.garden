@@ -15,16 +15,21 @@ import {
   shouldUseLocalDevAuthDefaults,
   signInRecoveryHint,
 } from "@/lib/auth/pilot-auth-recovery";
+import { GOOGLE_PROVIDER_ID, oauthCallbackPath } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
 
 interface GardenAuthPanelProps {
   activationSource?: ActivationSource;
   catalogName?: string | null;
+  googleSignInEnabled?: boolean;
+  initialMessage?: string | null;
 }
 
 export function GardenAuthPanel({
   activationSource = "direct_garden",
   catalogName,
+  googleSignInEnabled = false,
+  initialMessage = null,
 }: GardenAuthPanelProps) {
   const router = useRouter();
   const useDevDefaults = shouldUseLocalDevAuthDefaults();
@@ -37,7 +42,7 @@ export function GardenAuthPanel({
   const [name, setName] = useState(
     useDevDefaults ? LOCAL_DEV_DEFAULT_NAME : "",
   );
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState<string>(initialMessage ?? "");
   const [isPending, setIsPending] = useState(false);
 
   async function signUp() {
@@ -83,6 +88,28 @@ export function GardenAuthPanel({
     }
 
     router.refresh();
+  }
+
+  async function signInWithGoogle() {
+    setIsPending(true);
+    setMessage("");
+
+    const callbackURL = currentOAuthCallbackPath();
+    const { error } = await authClient.signIn.social({
+      provider: GOOGLE_PROVIDER_ID,
+      callbackURL,
+      newUserCallbackURL: callbackURL,
+      errorCallbackURL: callbackURL,
+    });
+
+    setIsPending(false);
+
+    if (error) {
+      setMessage(
+        interpretAuthClientErrorMessage(error) ??
+          "Could not start Google sign-in. Use email and password for now.",
+      );
+    }
   }
 
   return (
@@ -153,6 +180,20 @@ export function GardenAuthPanel({
         </Button>
       </div>
 
+      {googleSignInEnabled ? (
+        <div className="grid gap-2 border-t border-border pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={signInWithGoogle}
+            disabled={isPending}
+            data-testid="google-sign-in-button"
+          >
+            Continue with Google
+          </Button>
+        </div>
+      ) : null}
+
       <p className="text-xs leading-5 text-muted-foreground">
         {signInRecoveryHint()}{" "}
         <Link
@@ -165,6 +206,73 @@ export function GardenAuthPanel({
 
       {message ? (
         <p className="text-sm text-destructive" data-testid="garden-auth-message">
+          {message}
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+interface GoogleAccountLinkPanelProps {
+  googleSignInEnabled?: boolean;
+  initialMessage?: string | null;
+}
+
+export function GoogleAccountLinkPanel({
+  googleSignInEnabled = false,
+  initialMessage = null,
+}: GoogleAccountLinkPanelProps) {
+  const [message, setMessage] = useState<string>(initialMessage ?? "");
+  const [isPending, setIsPending] = useState(false);
+
+  if (!googleSignInEnabled) return null;
+
+  async function linkGoogle() {
+    setIsPending(true);
+    setMessage("");
+
+    const callbackURL = currentOAuthCallbackPath();
+    const { error } = await authClient.linkSocial({
+      provider: GOOGLE_PROVIDER_ID,
+      callbackURL,
+      errorCallbackURL: callbackURL,
+    });
+
+    setIsPending(false);
+
+    if (error) {
+      setMessage(
+        interpretAuthClientErrorMessage(error) ??
+          "Could not link Google sign-in. Keep using email and password for now.",
+      );
+    }
+  }
+
+  return (
+    <section
+      className="flex max-w-xl flex-col gap-3 rounded-lg border border-border p-4"
+      data-testid="google-account-link-panel"
+    >
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold text-foreground">
+          Sign-in methods
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Link Google to this account before using Google as the shortcut back
+          to the same garden.
+        </p>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={linkGoogle}
+        disabled={isPending}
+        data-testid="google-link-button"
+      >
+        Link Google sign-in
+      </Button>
+      {message ? (
+        <p className="text-sm text-destructive" data-testid="google-link-message">
           {message}
         </p>
       ) : null}
@@ -192,4 +300,9 @@ function authPrompt({
   }
 
   return "Sign in or create an account to start or continue your garden journal. Use the same email each time so your plant records stay together.";
+}
+
+function currentOAuthCallbackPath() {
+  if (typeof window === "undefined") return "/garden";
+  return oauthCallbackPath(window.location);
 }

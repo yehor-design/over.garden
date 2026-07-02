@@ -23,6 +23,8 @@ export const POISON = {
   ipAddress: "203.0.113.77",
   userAgent: "Mozilla/5.0 (POISON-SecretDevice)",
   betterAuthSecret: "better-auth-secret-POISON-deadbeef",
+  googleClientId: "google-client-id-POISON.apps.googleusercontent.com",
+  googleClientSecret: "google-client-secret-POISON-deadbeef",
   r2AccessKeyId: "r2-access-key-POISON-deadbeef",
   r2SecretAccessKey: "r2-secret-access-POISON-deadbeef",
   databaseUrl: "postgresql://dbuser:POISONpass@db.example.internal:5432/over",

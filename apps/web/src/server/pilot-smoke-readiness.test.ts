@@ -10,6 +10,8 @@ const productionLikeEnv = {
   PUBLIC_SITE_URL: "https://over.garden",
   BETTER_AUTH_SECRET: "auth-secret-that-must-not-leak",
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
+  GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
+  GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
   DATABASE_URL:
     "postgresql://overgarden:database-secret@db.example.com:5432/overgarden",
   DIRECT_URL:
@@ -44,6 +46,8 @@ describe("pilot smoke readiness", () => {
 
     expect(serialized).not.toContain("auth-secret-that-must-not-leak");
     expect(serialized).not.toContain("operator-user-id-that-must-not-leak");
+    expect(serialized).not.toContain("google-client-id");
+    expect(serialized).not.toContain("google-secret-that-must-not-leak");
     expect(serialized).not.toContain("database-secret");
     expect(serialized).not.toContain("direct-database-secret");
     expect(serialized).not.toContain("r2-access-key-that-must-not-leak");
@@ -307,6 +311,49 @@ describe("pilot smoke readiness", () => {
       severity: "manual",
       summary: expect.stringContaining("admin_user_roles"),
     });
+  });
+
+  it("requires Google OAuth env in production and keeps provider proof manual", () => {
+    const readyReadout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+    const readyChecks = readyReadout.sections.flatMap(
+      (section) => section.checks,
+    );
+
+    expect(findCheck(readyChecks, "google-oauth-provider")).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("redirect mismatch"),
+      evidence: expect.stringContaining(
+        "https://over.garden/api/auth/callback/google",
+      ),
+    });
+    expect(JSON.stringify(readyReadout)).not.toContain(
+      "google-secret-that-must-not-leak",
+    );
+    expect(
+      readyReadout.smokeSteps.some((step) => step.includes("Google OAuth")),
+    ).toBe(true);
+
+    const blockedReadout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        GOOGLE_CLIENT_ID: undefined,
+        GOOGLE_CLIENT_SECRET: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+
+    expect(
+      findCheck(
+        blockedReadout.sections.flatMap((section) => section.checks),
+        "google-oauth-provider",
+      ),
+    ).toMatchObject({ severity: "fail" });
+    expect(blockedReadout.overall).toBe("blocked");
   });
 
   it("accepts Vercel deployment URL as the effective public/auth URL outside production", () => {
