@@ -119,6 +119,7 @@ async function main() {
       moderatorEmail,
       "OVE-110 Moderator Smoke",
     );
+    await waitForAuthRateLimitWindow();
     await signUpAndSignIn(
       baseUrl,
       socialLinkedAdminJar,
@@ -423,6 +424,10 @@ async function signUpAndSignIn(
     email,
     password: TEST_PASSWORD,
   });
+}
+
+async function waitForAuthRateLimitWindow() {
+  await new Promise((resolve) => setTimeout(resolve, 11_000));
 }
 
 async function readUserIdByEmail(db: Kysely<Database>, email: string) {
