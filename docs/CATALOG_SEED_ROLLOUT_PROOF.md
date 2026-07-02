@@ -103,6 +103,19 @@ The command:
 
 OVE-105 evidence must include the final commit SHA on `main`, CI proof for that commit, the production URL/environment, import count summary, idempotency summary, source provenance/caveat summary, blocked-row absence summary, and leak check. Do not paste raw importer internals, database URLs, env values, source-row keys, raw payload identifiers, checksums, cookies, tokens, emails, precise coordinates, user private data, IP addresses, user-agent/referrer fields, or Meilisearch credentials.
 
+Production landing evidence on 2026-07-02:
+
+- Command: `vercel env run -e production -- pnpm --dir apps/web catalog:sources:import-eu-oj-common-catalogue -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden`.
+- Evidence schema: `ove105.euOjProductionLanding.v1`; generated at `2026-07-02T10:38:45.462Z`.
+- Code: commit `a74cc976a286863fe9f0a5b3d221ee972a5c1608`, branch `main`, tracked working tree `clean`; CI run `https://github.com/yehor-design/over.garden/actions/runs/28583649110` passed.
+- Environment: `production`, base URL `https://over.garden`, non-local mutation gate explicitly confirmed.
+- Import summary: 2 source snapshots, 1,075 source records, 721 product-visible accepted `plant_variety` concepts, 721 aliases, 353 quarantined rows, 1 rejected row, reindex queued.
+- Idempotency summary: rerun projected 721 concepts and 1,075 source records again with the same sample product identity.
+- Product proof: sample accepted row `Artic` from source version `C/2026/829:agricultural_supplement_a:2026-02-12` matched typeahead as `eu_oj_eur_lex_common_catalogue`.
+- Provenance proof: Official Journal link, license, reuse terms link, required attribution text, parser version, and legal/normalization caveats were recorded; sample projection status was `projected`.
+- Blocked-row proof: representative non-accepted parser row remained `quarantined`; review-needed/rejected rows did not receive product links.
+- Evidence safety: `linear_safe_redacted`; leak check `passed`.
+
 ## OVE-90 Full Production Rollout Proof
 
 OVE-90 is the final full-catalog production availability gate. It must be run from a clean current `main` checkout after the prerequisite source-family issues are done and after CI has passed for the code being used for proof.

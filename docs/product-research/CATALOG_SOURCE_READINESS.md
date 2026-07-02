@@ -1,7 +1,7 @@
 # Catalog Source Readiness Gate
 
 Status: OVE-55 live gate plus OVE-79 full-import readiness gate plus OVE-100 EU OJ/EUR-Lex source-path approval plus OVE-87 PGR/genebank source-use gate plus OVE-89 entity-resolution QA gate plus OVE-105 EU OJ production landing gate
-Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01; OVE-100 EUR-Lex path check on 2026-07-01; OVE-87 PGR/genebank check on 2026-07-02
+Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01; OVE-100 EUR-Lex path check on 2026-07-01; OVE-87 PGR/genebank check on 2026-07-02; OVE-105 production landing on 2026-07-02
 Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
 Full-import dry-run: `cd apps/web && pnpm catalog:sources:dry-run -- --environment local --confirm-environment local`
