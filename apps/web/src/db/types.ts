@@ -2,6 +2,7 @@ import type { Insertable, Selectable } from "kysely";
 
 import type {
   DB,
+  AdminUserRoles as AdminUserRolesTable,
   AnalyticsEvents as AnalyticsEventsTable,
   CatalogAliasProjections as CatalogAliasProjectionsTable,
   CatalogItemNames as CatalogItemNamesTable,
@@ -81,6 +82,8 @@ export type CatalogAliasSourceMethod =
   | "user_provisional"
   | "curator";
 
+export type AdminUserRole = Selectable<AdminUserRolesTable>;
+export type NewAdminUserRole = Insertable<AdminUserRolesTable>;
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
 export type CatalogAliasProjection = Selectable<CatalogAliasProjectionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;

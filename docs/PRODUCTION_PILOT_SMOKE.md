@@ -456,6 +456,10 @@ Forbidden evidence:
 4. Treat any `fail` check as a blocker for live pilot.
 5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
 6. Confirm Cloudflare is not caching app HTML if the app domain is routed through Cloudflare.
+7. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
+8. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
+9. Bootstrap the owner role only through `pnpm admin:bootstrap-owner`; do not copy the user id into evidence.
+10. Open `/admin` as the owner and confirm it renders `Role: Owner`, admin links, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
 
 Header probes:
 

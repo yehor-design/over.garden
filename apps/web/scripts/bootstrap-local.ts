@@ -53,6 +53,10 @@ async function main() {
   const migrations = await getMigrations(authOptions);
   await migrations.runMigrations();
 
+  // Re-run idempotent app SQL so app-owned tables can attach optional FKs to
+  // Better Auth tables on a fresh database after Better Auth creates them.
+  await pool.query(appSql);
+
   await ensureBucket(requiredEnv("R2_QUARANTINE_BUCKET"));
   await ensureBucket(requiredEnv("R2_PUBLIC_BUCKET"));
   await allowPublicReads(requiredEnv("R2_PUBLIC_BUCKET"));

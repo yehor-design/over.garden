@@ -10,6 +10,82 @@ create table if not exists health (
   created_at timestamptz not null default now()
 );
 
+-- Admin control plane roles (OVE-108). This app-owned table stores durable
+-- role grants for Better Auth users. It intentionally stores only user IDs,
+-- role enums, and bounded grant metadata: never emails, cookies, tokens,
+-- request metadata, IP/user-agent, journal text, media keys, env values, or
+-- fine-grained place data.
+create table if not exists admin_user_roles (
+  user_id uuid primary key,
+  role text not null check (role in ('owner', 'admin', 'moderator', 'viewer')),
+  granted_by_user_id uuid,
+  grant_reason text not null default 'manual_bootstrap',
+  granted_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table admin_user_roles
+  add column if not exists role text not null default 'viewer',
+  add column if not exists granted_by_user_id uuid,
+  add column if not exists grant_reason text not null default 'manual_bootstrap',
+  add column if not exists granted_at timestamptz not null default now(),
+  add column if not exists updated_at timestamptz not null default now();
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_user_roles_role_check'
+      and conrelid = 'admin_user_roles'::regclass
+  ) then
+    alter table admin_user_roles
+      drop constraint admin_user_roles_role_check;
+  end if;
+
+  alter table admin_user_roles
+    add constraint admin_user_roles_role_check
+    check (role in ('owner', 'admin', 'moderator', 'viewer'));
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_user_roles_grant_reason_check'
+      and conrelid = 'admin_user_roles'::regclass
+  ) then
+    alter table admin_user_roles
+      add constraint admin_user_roles_grant_reason_check
+      check (char_length(grant_reason) between 1 and 120);
+  end if;
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'admin_user_roles_user_id_fkey'
+        and conrelid = 'admin_user_roles'::regclass
+    ) then
+      alter table admin_user_roles
+        add constraint admin_user_roles_user_id_fkey
+        foreign key (user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'admin_user_roles_granted_by_user_id_fkey'
+        and conrelid = 'admin_user_roles'::regclass
+    ) then
+      alter table admin_user_roles
+        add constraint admin_user_roles_granted_by_user_id_fkey
+        foreign key (granted_by_user_id) references "user"(id) on delete set null;
+    end if;
+  end if;
+end $$;
+
+create index if not exists admin_user_roles_role_granted_idx
+  on admin_user_roles (role, granted_at desc);
+
 create table if not exists spaces (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

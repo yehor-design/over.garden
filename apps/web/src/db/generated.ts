@@ -41,6 +41,15 @@ export interface Account {
   userId: string;
 }
 
+export interface AdminUserRoles {
+  grant_reason: Generated<string>;
+  granted_at: Generated<Timestamp>;
+  granted_by_user_id: string | null;
+  role: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface AnalyticsEvents {
   created_at: Generated<Timestamp>;
   event_name: string;
@@ -346,6 +355,7 @@ export interface Verification {
 
 export interface DB {
   account: Account;
+  admin_user_roles: AdminUserRoles;
   analytics_events: AnalyticsEvents;
   catalog_alias_projections: CatalogAliasProjections;
   catalog_item_names: CatalogItemNames;

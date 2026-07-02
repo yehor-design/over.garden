@@ -32,10 +32,12 @@
     "smoke:garden-eu-oj-common-catalogue": "tsx scripts/smoke-garden-eu-oj-common-catalogue.ts",
     "smoke:garden-bg-official-varieties": "tsx scripts/smoke-garden-bg-official-varieties.ts",
     "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
+    "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",
+    "admin:bootstrap-owner": "tsx scripts/bootstrap-admin-owner.ts",
     "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
     "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"
   },
