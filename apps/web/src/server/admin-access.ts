@@ -78,3 +78,39 @@ export function assertAdminCapability(
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 }
+
+export function hasAdminCapability(
+  access: AdminAccess,
+  capability: AdminCapability,
+) {
+  return access.capabilities.includes(capability);
+}
+
+export async function assertAdminCapabilityForScope(
+  scope: RequestScope,
+  capability: AdminCapability,
+  database: Kysely<Database> = defaultDb,
+): Promise<AdminAccess> {
+  const access = await assertAdminAccess(scope, database);
+  assertAdminCapability(access, capability);
+  return access;
+}
+
+export async function resolveAdminCapabilityAccess(
+  scope: RequestScope | null,
+  capability: AdminCapability,
+  database: Kysely<Database> = defaultDb,
+): Promise<AdminEntryAccess> {
+  if (!scope) return { status: "sign_in_required" };
+
+  try {
+    const access = await assertAdminCapabilityForScope(
+      scope,
+      capability,
+      database,
+    );
+    return { status: "allowed", ...access };
+  } catch {
+    return { status: "denied" };
+  }
+}

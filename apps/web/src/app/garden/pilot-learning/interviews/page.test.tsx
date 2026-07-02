@@ -20,6 +20,13 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/admin-access", () => ({
+  hasAdminCapability: vi.fn(
+    (access: { capabilities: string[] }, capability: string) =>
+      access.capabilities.includes(capability),
+  ),
+}));
+
 vi.mock("@/server/founder-interview-access", () => ({
   resolveFounderInterviewOperatorAccess:
     mocks.resolveFounderInterviewOperatorAccess,
@@ -50,7 +57,9 @@ describe("/garden/pilot-learning/interviews", () => {
     vi.clearAllMocks();
     mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "allowlist",
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });
     mocks.listFounderInterviewLearnings.mockResolvedValue([
       {
@@ -94,10 +103,31 @@ describe("/garden/pilot-learning/interviews", () => {
       }),
     );
 
-    expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: moderator");
     expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
     expect(html).toContain("Activated — first entry plus follow-up");
     expect(html).toContain("Follow-up felt natural.");
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
+  });
+
+  it("keeps read-only viewer roles from seeing the capture form", async () => {
+    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
+      status: "allowed",
+      mode: "database_role",
+      role: "viewer",
+      capabilities: ["admin:read", "operator:read"],
+    });
+
+    const { default: FounderInterviewCapturePage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await FounderInterviewCapturePage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Interview capture requires owner");
+    expect(html).not.toContain("Save interview record");
+    expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
   });
 });

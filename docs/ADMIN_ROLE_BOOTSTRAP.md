@@ -15,8 +15,25 @@ The initial role enum is:
 - `viewer`
 
 `owner` can manage future role grants. `viewer` can read the admin entry and
-operator links, but cannot mutate operator state. Server code must check
-capabilities before any future admin mutation.
+viewer-safe operator readouts, but cannot mutate operator state. Server code
+must check capabilities before any admin or operator mutation.
+
+## Operator Surfaces
+
+OVE-109 moves the existing internal operator surfaces behind this shared role
+model:
+
+- `/garden/pilot-smoke`, `/garden/pilot-health`, and
+  `/garden/pilot-learning/decision` require `operator:read`.
+- `/garden/pilot-learning/interviews` allows `operator:read` for readback and
+  requires `operator:mutate` for new interview capture.
+- `/garden/catalog/curation` requires `operator:mutate`.
+- `/garden/privacy/erasure-requests` allows `operator:read` for minimized
+  readback, requires `operator:mutate` for review/status actions, and requires
+  `erasure:execute` for maintainer-approved irreversible erasure.
+
+`CATALOG_CURATOR_USER_IDS` is not the long-term admin authorization model. Do
+not add new operator surfaces to that env allowlist pattern.
 
 ## Owner Bootstrap
 
@@ -53,5 +70,4 @@ request metadata.
 - precise coordinates
 - env values or connection strings
 
-Existing operator surfaces keep their own legacy gates until a later SDD slice
-explicitly migrates them to this role/capability model.
+Existing operator surfaces must keep using the shared role/capability model.

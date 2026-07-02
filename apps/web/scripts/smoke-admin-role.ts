@@ -14,8 +14,40 @@ import type { Database } from "../src/db/types";
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove108-smoke-password";
-const FORBIDDEN_OWNER_MARKERS = [
+const TEST_PASSWORD = "overgarden-ove109-smoke-password";
+const ADMIN_SURFACE_EXPECTATIONS = [
+  {
+    path: "/garden/pilot-smoke",
+    ownerMarker: "Production pilot smoke",
+    normalForbiddenMarker: "Readiness status",
+  },
+  {
+    path: "/garden/pilot-health",
+    ownerMarker: "Pilot health",
+    normalForbiddenMarker: "provisional pilot signals",
+  },
+  {
+    path: "/garden/pilot-learning/decision",
+    ownerMarker: "Pilot cohort decision",
+    normalForbiddenMarker: "provisional decision support",
+  },
+  {
+    path: "/garden/pilot-learning/interviews",
+    ownerMarker: "Founder interview capture",
+    normalForbiddenMarker: "Capture structured learning",
+  },
+  {
+    path: "/garden/catalog/curation",
+    ownerMarker: "Catalog curation",
+    normalForbiddenMarker: "Source candidates",
+  },
+  {
+    path: "/garden/privacy/erasure-requests",
+    ownerMarker: "Erasure requests",
+    normalForbiddenMarker: "Requests:",
+  },
+] as const;
+const FORBIDDEN_ADMIN_MARKERS = [
   "ownerUserId",
   "owner_user_id",
   "journalBody",
@@ -30,6 +62,13 @@ const FORBIDDEN_OWNER_MARKERS = [
   "POSTGRES",
   "R2_SECRET",
   "BETTER_AUTH_SECRET",
+];
+const FORBIDDEN_SURFACE_SECRET_MARKERS = [
+  "auth-secret-that-must-not-leak",
+  "database-secret",
+  "r2-secret",
+  "meili-secret",
+  "matching-token",
 ];
 
 class CookieJar {
@@ -56,19 +95,19 @@ async function main() {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
   const db = createDatabase();
 
-  const ownerEmail = `ove108-owner-${Date.now()}-${randomUUID()}@example.test`;
-  const normalEmail = `ove108-normal-${Date.now()}-${randomUUID()}@example.test`;
+  const ownerEmail = `ove109-owner-${Date.now()}-${randomUUID()}@example.test`;
+  const normalEmail = `ove109-normal-${Date.now()}-${randomUUID()}@example.test`;
 
   try {
     const ownerJar = new CookieJar();
     const normalJar = new CookieJar();
 
-    await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-108 Owner Smoke");
+    await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-109 Owner Smoke");
     await signUpAndSignIn(
       baseUrl,
       normalJar,
       normalEmail,
-      "OVE-108 User Smoke",
+      "OVE-109 User Smoke",
     );
 
     const ownerUserId = await readUserIdByEmail(db, ownerEmail);
@@ -77,12 +116,12 @@ async function main() {
       .values({
         user_id: ownerUserId,
         role: "owner",
-        grant_reason: "ove108_smoke",
+        grant_reason: "ove109_smoke",
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           role: "owner",
-          grant_reason: "ove108_smoke",
+          grant_reason: "ove109_smoke",
         }),
       )
       .execute();
@@ -120,16 +159,61 @@ async function main() {
       "Catalog curation",
       "Owner dashboard missing catalog curation link.",
     );
-    assertNoForbiddenOwnerEvidence(ownerText);
+    assertIncludes(
+      ownerText,
+      "Review: owner/admin/moderator",
+      "Owner dashboard missing role-required curation hint.",
+    );
+    assertIncludes(
+      ownerText,
+      "execute: owner/admin",
+      "Owner dashboard missing erasure execution role hint.",
+    );
+    assertNoForbiddenAdminEvidence(ownerText);
+
+    for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
+      const normalSurfaceHtml = await textRequest(
+        baseUrl,
+        normalJar,
+        surface.path,
+      );
+      const ownerSurfaceHtml = await textRequest(
+        baseUrl,
+        ownerJar,
+        surface.path,
+      );
+      const normalSurfaceText = visiblePageText(normalSurfaceHtml);
+      const ownerSurfaceText = visiblePageText(ownerSurfaceHtml);
+
+      assertIncludes(
+        normalSurfaceText,
+        "Access denied.",
+        `Normal signed-in user was not denied from ${surface.path}.`,
+      );
+      assertNotIncludes(
+        normalSurfaceText,
+        surface.normalForbiddenMarker,
+        `Normal signed-in user saw operator data marker on ${surface.path}.`,
+      );
+      assertIncludes(
+        ownerSurfaceText,
+        surface.ownerMarker,
+        `Owner could not open ${surface.path}.`,
+      );
+      assertNoForbiddenSurfaceSecrets(ownerSurfaceText, surface.path);
+    }
 
     console.log(
       JSON.stringify(
         {
           ok: true,
-          issue: "OVE-108",
+          issue: "OVE-109",
           signedOutDeniedToDashboard: true,
           normalUserDenied: true,
           ownerDashboardRendered: true,
+          linkedOperatorSurfacesChecked: ADMIN_SURFACE_EXPECTATIONS.map(
+            (surface) => surface.path,
+          ),
           evidenceSafety: "redacted_no_user_ids_emails_cookies_tokens_or_env",
         },
         null,
@@ -288,10 +372,18 @@ function assertNotIncludes(value: string, expected: string, message: string) {
   }
 }
 
-function assertNoForbiddenOwnerEvidence(value: string) {
-  for (const marker of FORBIDDEN_OWNER_MARKERS) {
+function assertNoForbiddenAdminEvidence(value: string) {
+  for (const marker of FORBIDDEN_ADMIN_MARKERS) {
     if (value.toLowerCase().includes(marker.toLowerCase())) {
       throw new Error(`Owner dashboard leaked forbidden marker: ${marker}.`);
+    }
+  }
+}
+
+function assertNoForbiddenSurfaceSecrets(value: string, path: string) {
+  for (const marker of FORBIDDEN_SURFACE_SECRET_MARKERS) {
+    if (value.toLowerCase().includes(marker.toLowerCase())) {
+      throw new Error(`${path} leaked forbidden marker: ${marker}.`);
     }
   }
 }

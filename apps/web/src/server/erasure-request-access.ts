@@ -1,28 +1,35 @@
 import "server-only";
 
+import type { Kysely } from "kysely";
+
+import type { Database } from "@/db/schema";
 import {
-  assertCatalogCuratorAccess,
-  type CatalogCuratorAccessMode,
-} from "@/server/catalog-curator-auth";
+  assertAdminCapabilityForScope,
+  resolveAdminCapabilityAccess,
+  type AdminAccess,
+  type AdminEntryAccess,
+} from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
-export type ErasureRequestOperatorAccess =
-  | { status: "sign_in_required" }
-  | { status: "denied" }
-  | { status: "allowed"; mode: CatalogCuratorAccessMode };
+export type ErasureRequestOperatorAccess = AdminEntryAccess;
 
-export function resolveErasureRequestOperatorAccess(
+export async function resolveErasureRequestOperatorAccess(
   scope: RequestScope | null,
-  rawAllowedUserIds?: string,
-): ErasureRequestOperatorAccess {
-  if (!scope) return { status: "sign_in_required" };
+  database?: Kysely<Database>,
+): Promise<ErasureRequestOperatorAccess> {
+  return resolveAdminCapabilityAccess(scope, "operator:read", database);
+}
 
-  try {
-    return {
-      status: "allowed",
-      mode: assertCatalogCuratorAccess(scope, rawAllowedUserIds).mode,
-    };
-  } catch {
-    return { status: "denied" };
-  }
+export async function assertErasureRequestMutationAccess(
+  scope: RequestScope,
+  database?: Kysely<Database>,
+): Promise<AdminAccess> {
+  return assertAdminCapabilityForScope(scope, "operator:mutate", database);
+}
+
+export async function assertErasureExecutionAccess(
+  scope: RequestScope,
+  database?: Kysely<Database>,
+): Promise<AdminAccess> {
+  return assertAdminCapabilityForScope(scope, "erasure:execute", database);
 }

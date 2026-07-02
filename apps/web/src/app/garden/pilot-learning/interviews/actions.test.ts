@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
-  resolveFounderInterviewOperatorAccess: vi.fn(),
+  assertFounderInterviewMutationAccess: vi.fn(),
   createFounderInterviewLearning: vi.fn(),
   revalidatePath: vi.fn(),
 }));
@@ -16,8 +16,8 @@ vi.mock("@/server/auth-session", () => ({
 }));
 
 vi.mock("@/server/founder-interview-access", () => ({
-  resolveFounderInterviewOperatorAccess:
-    mocks.resolveFounderInterviewOperatorAccess,
+  assertFounderInterviewMutationAccess:
+    mocks.assertFounderInterviewMutationAccess,
 }));
 
 vi.mock("@/server/founder-interview-repository", () => ({
@@ -31,16 +31,17 @@ describe("founder interview operator actions", () => {
       userId: "00000000-0000-4000-8000-000000000999",
       sessionId: "non-operator-session",
     });
-    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
-      status: "allowed",
-      mode: "allowlist",
+    mocks.assertFounderInterviewMutationAccess.mockResolvedValue({
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });
   });
 
   it("rejects capture before repository writes for a non-operator", async () => {
-    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
-      status: "denied",
-    });
+    mocks.assertFounderInterviewMutationAccess.mockRejectedValue(
+      new Error("Admin access denied."),
+    );
 
     const { createFounderInterviewLearningAction } = await import("./actions");
     const formData = new FormData();
@@ -51,14 +52,14 @@ describe("founder interview operator actions", () => {
     formData.set("observedValue", "no_clear_value_yet");
     formData.set("nextAction", "schedule_follow_up");
 
-    await expect(createFounderInterviewLearningAction(formData)).rejects.toThrow(
-      "Founder interview operator access denied.",
-    );
+    await expect(
+      createFounderInterviewLearningAction(formData),
+    ).rejects.toThrow("Admin access denied.");
     expect(mocks.createFounderInterviewLearning).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows capture for an allowlisted operator", async () => {
+  it("allows capture for an operator mutation role", async () => {
     const { createFounderInterviewLearningAction } = await import("./actions");
     const formData = new FormData();
     formData.set("segment", "casual_practical_beginner");

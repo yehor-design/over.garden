@@ -9,7 +9,8 @@ Quantitative first-save and follow-up metrics are not enough during closed pilot
 ## Access
 
 - Route: `/garden/pilot-learning/interviews`
-- Gate: same operator allowlist as catalog curation (`CATALOG_CURATOR_USER_IDS`)
+- Gate: shared admin role model. Readback requires `operator:read`; capturing
+  a new structured learning row requires `operator:mutate`.
 - Fail-closed: unauthenticated users see sign-in; authenticated non-operators see access denied
 
 ## What may be copied from interviews

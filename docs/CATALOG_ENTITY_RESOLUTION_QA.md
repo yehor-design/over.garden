@@ -31,7 +31,7 @@ The report groups clusters as `canonical_concept`, `likely_duplicate`, `alias_co
 
 The QA read model may expose only catalog identity, public slug, source family, aggregate counts, projection/review status, and safe review labels. It must not expose raw source payloads, source-only fields, source record keys, checksums, journal text, owner data, media internals, precise location, or legal/source-only caveat bodies.
 
-`/garden/catalog/curation` renders the same report for allowlisted operators beside the source-candidate review lane. The UI is a review surface, not an automatic merge tool: OVE-89 proves where human review is needed and that risky rows remain held or blocked.
+`/garden/catalog/curation` renders the same report for admin roles with `operator:mutate` beside the source-candidate review lane. The UI is a review surface, not an automatic merge tool: OVE-89 proves where human review is needed and that risky rows remain held or blocked.
 
 ## Downstream Rule
 

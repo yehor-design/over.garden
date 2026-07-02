@@ -41,6 +41,7 @@ describe("/admin", () => {
         "admin:manage_roles",
         "operator:read",
         "operator:mutate",
+        "erasure:execute",
       ],
     });
   });
@@ -77,6 +78,9 @@ describe("/admin", () => {
     expect(html).toContain("Pilot smoke");
     expect(html).toContain("Catalog curation");
     expect(html).toContain("Erasure requests");
+    expect(html).toContain("Read: owner/admin/moderator/viewer");
+    expect(html).toContain("Review: owner/admin/moderator");
+    expect(html).toContain("execute: owner/admin");
     expect(html).not.toContain("00000000-0000-4000-8000-000000000999");
     expect(html).not.toMatch(/email|cookie|token|ip address|user agent/i);
   });

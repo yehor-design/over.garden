@@ -34,7 +34,9 @@ describe("/garden/pilot-learning/decision", () => {
     vi.clearAllMocks();
     mocks.resolvePilotHealthOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "allowlist",
+      mode: "database_role",
+      role: "viewer",
+      capabilities: ["admin:read", "operator:read"],
     });
     mocks.getPilotCohortDecisionReadoutSafely.mockResolvedValue(null);
   });
@@ -51,11 +53,12 @@ describe("/garden/pilot-learning/decision", () => {
     expect(mocks.getPilotCohortDecisionReadoutSafely).not.toHaveBeenCalled();
   });
 
-  it("renders the operator decision boundary for an allowlisted operator", async () => {
+  it("renders the operator decision boundary for a read-only admin role", async () => {
     const { default: PilotCohortDecisionPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotCohortDecisionPage());
 
-    expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: viewer");
     expect(html).toContain("Pilot cohort decision");
     expect(mocks.getPilotCohortDecisionReadoutSafely).toHaveBeenCalledOnce();
   });

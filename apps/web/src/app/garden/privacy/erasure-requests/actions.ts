@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { executeApprovedErasureRequest } from "@/server/erasure-execution";
-import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
+import {
+  assertErasureExecutionAccess,
+  assertErasureRequestMutationAccess,
+} from "@/server/erasure-request-access";
 import {
   markErasureRequestDryRunReviewed,
   markErasureRequestHandled,
@@ -15,7 +18,7 @@ const ERASURE_REQUESTS_PATH = "/garden/privacy/erasure-requests";
 
 export async function markErasureRequestReviewingAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertOperator(scope);
+  await assertErasureRequestMutationAccess(scope);
 
   await markErasureRequestReviewing({
     requestId: String(formData.get("requestId") ?? ""),
@@ -27,7 +30,7 @@ export async function markErasureRequestReviewingAction(formData: FormData) {
 
 export async function markErasureRequestHandledAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertOperator(scope);
+  await assertErasureRequestMutationAccess(scope);
   const handledStatus = String(formData.get("handledStatus") ?? "");
 
   if (handledStatus === "completed") {
@@ -47,7 +50,7 @@ export async function markErasureRequestHandledAction(formData: FormData) {
 
 export async function executeApprovedErasureRequestAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertOperator(scope);
+  await assertErasureExecutionAccess(scope);
 
   await executeApprovedErasureRequest(scope, {
     requestId: String(formData.get("requestId") ?? ""),
@@ -59,9 +62,11 @@ export async function executeApprovedErasureRequestAction(formData: FormData) {
   revalidatePath("/garden");
 }
 
-export async function markErasureRequestDryRunReviewedAction(formData: FormData) {
+export async function markErasureRequestDryRunReviewedAction(
+  formData: FormData,
+) {
   const scope = await requireCurrentRequestScope();
-  assertOperator(scope);
+  await assertErasureRequestMutationAccess(scope);
 
   await markErasureRequestDryRunReviewed(scope, {
     requestId: String(formData.get("requestId") ?? ""),
@@ -69,11 +74,4 @@ export async function markErasureRequestDryRunReviewedAction(formData: FormData)
 
   revalidatePath(ERASURE_REQUESTS_PATH);
   revalidatePath("/erasure");
-}
-
-function assertOperator(scope: Awaited<ReturnType<typeof requireCurrentRequestScope>>) {
-  const access = resolveErasureRequestOperatorAccess(scope);
-  if (access.status !== "allowed") {
-    throw new Error("Erasure request operator access denied.");
-  }
 }

@@ -23,8 +23,16 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/admin-access", () => ({
+  hasAdminCapability: vi.fn(
+    (access: { capabilities: string[] }, capability: string) =>
+      access.capabilities.includes(capability),
+  ),
+}));
+
 vi.mock("@/server/erasure-request-access", () => ({
-  resolveErasureRequestOperatorAccess: mocks.resolveErasureRequestOperatorAccess,
+  resolveErasureRequestOperatorAccess:
+    mocks.resolveErasureRequestOperatorAccess,
 }));
 
 vi.mock("@/server/erasure-request-repository", () => ({
@@ -52,7 +60,14 @@ describe("/garden/privacy/erasure-requests", () => {
     vi.clearAllMocks();
     mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "allowlist",
+      mode: "database_role",
+      role: "admin",
+      capabilities: [
+        "admin:read",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
     mocks.listOperatorErasureRequests.mockResolvedValue([
       {
@@ -106,7 +121,8 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
-    expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: admin");
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();
     expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
     expect(html).toContain("Non-destructive dry-run preview");
@@ -120,5 +136,42 @@ describe("/garden/privacy/erasure-requests", () => {
     expect(html).toContain("Needs identity verification");
     expect(html).not.toContain('<option value="completed">');
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
+  });
+
+  it("keeps read-only viewer roles from seeing review or execution actions", async () => {
+    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
+      status: "allowed",
+      mode: "database_role",
+      role: "viewer",
+      capabilities: ["admin:read", "operator:read"],
+    });
+
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: viewer");
+    expect(html).toContain("Non-destructive dry-run preview");
+    expect(html).not.toContain("Record dry-run review again");
+    expect(html).not.toContain("Maintainer-approved irreversible erasure");
+    expect(html).not.toContain("Execute approved erasure");
+    expect(html).not.toContain("Mark handled");
+  });
+
+  it("keeps moderator roles from seeing irreversible execution", async () => {
+    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
+      status: "allowed",
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+    });
+
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain("Record dry-run review again");
+    expect(html).toContain("Mark handled");
+    expect(html).toContain("Irreversible erasure execution requires owner");
+    expect(html).not.toContain("Execute approved erasure");
   });
 });

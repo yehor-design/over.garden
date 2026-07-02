@@ -33,7 +33,9 @@ describe("/garden/pilot-health", () => {
     vi.clearAllMocks();
     mocks.resolvePilotHealthOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "allowlist",
+      mode: "database_role",
+      role: "viewer",
+      capabilities: ["admin:read", "operator:read"],
     });
     mocks.getPilotHealthReadoutSafely.mockResolvedValue(null);
   });
@@ -50,11 +52,12 @@ describe("/garden/pilot-health", () => {
     expect(mocks.getPilotHealthReadoutSafely).not.toHaveBeenCalled();
   });
 
-  it("renders the operator readout boundary for an allowlisted operator", async () => {
+  it("renders the operator readout boundary for a read-only admin role", async () => {
     const { default: PilotHealthPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotHealthPage());
 
-    expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: viewer");
     expect(mocks.getPilotHealthReadoutSafely).toHaveBeenCalledOnce();
   });
 

@@ -336,7 +336,7 @@ Vercel invariants:
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Do not document or paste auth secret values. Evidence may say `BETTER_AUTH_SECRET` is present, missing, placeholder-like, or local-fallback only.
 - Public H6 smoke must use an unauthenticated public URL that returns OverGarden SSR HTML, not Vercel SSO.
-- Internal operator surfaces require explicit `CATALOG_CURATOR_USER_IDS` in the selected environment. Missing or empty values fail closed for catalog curation, pilot health, pilot smoke, and erasure request operator readback/actions; do not record the actual user IDs in docs, Linear, logs, or chat.
+- Internal operator surfaces use durable `admin_user_roles` capabilities. Bootstrap owner access only through `pnpm admin:bootstrap-owner`, and do not record user IDs, emails, cookies, tokens, connection strings, IP/user-agent fields, or env values in docs, Linear, logs, or chat. `CATALOG_CURATOR_USER_IDS` is a deprecated legacy allowlist pattern, not the primary long-term admin model.
 - Keep Cloudflare from caching app HTML if the app domain is later proxied through Cloudflare. Vercel should own app HTML/ISR behavior.
 
 ## Local Development

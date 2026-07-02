@@ -33,7 +33,9 @@ describe("/garden/pilot-smoke", () => {
     vi.clearAllMocks();
     mocks.resolvePilotHealthOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "allowlist",
+      mode: "database_role",
+      role: "viewer",
+      capabilities: ["admin:read", "operator:read"],
     });
     mocks.getPilotSmokeReadinessSafely.mockResolvedValue({
       generatedAt: new Date("2026-06-28T00:00:00.000Z"),
@@ -57,11 +59,13 @@ describe("/garden/pilot-smoke", () => {
     expect(mocks.getPilotSmokeReadinessSafely).not.toHaveBeenCalled();
   });
 
-  it("renders the smoke readout for an allowlisted operator", async () => {
+  it("renders the smoke readout for a read-only admin role", async () => {
     const { default: PilotSmokePage } = await import("./page");
     const html = renderToStaticMarkup(await PilotSmokePage());
 
     expect(html).toContain("Readiness status: ready");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: viewer");
     expect(mocks.getPilotSmokeReadinessSafely).toHaveBeenCalledOnce();
   });
 });

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
-  resolveErasureRequestOperatorAccess: vi.fn(),
+  assertErasureExecutionAccess: vi.fn(),
+  assertErasureRequestMutationAccess: vi.fn(),
   executeApprovedErasureRequest: vi.fn(),
   markErasureRequestDryRunReviewed: vi.fn(),
   markErasureRequestHandled: vi.fn(),
@@ -19,8 +20,8 @@ vi.mock("@/server/auth-session", () => ({
 }));
 
 vi.mock("@/server/erasure-request-access", () => ({
-  resolveErasureRequestOperatorAccess:
-    mocks.resolveErasureRequestOperatorAccess,
+  assertErasureExecutionAccess: mocks.assertErasureExecutionAccess,
+  assertErasureRequestMutationAccess: mocks.assertErasureRequestMutationAccess,
 }));
 
 vi.mock("@/server/erasure-execution", () => ({
@@ -40,29 +41,40 @@ describe("erasure request operator actions", () => {
       userId: "00000000-0000-4000-8000-000000000999",
       sessionId: "non-operator-session",
     });
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "allowed",
-      mode: "allowlist",
+    mocks.assertErasureRequestMutationAccess.mockResolvedValue({
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+    });
+    mocks.assertErasureExecutionAccess.mockResolvedValue({
+      mode: "database_role",
+      role: "admin",
+      capabilities: [
+        "admin:read",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
   });
 
   it("rejects review mutation before repository writes for a non-operator", async () => {
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "denied",
-    });
+    mocks.assertErasureRequestMutationAccess.mockRejectedValue(
+      new Error("Admin access denied."),
+    );
 
     const { markErasureRequestReviewingAction } = await import("./actions");
     const formData = new FormData();
     formData.set("requestId", "request-1");
 
     await expect(markErasureRequestReviewingAction(formData)).rejects.toThrow(
-      "Erasure request operator access denied.",
+      "Admin access denied.",
     );
     expect(mocks.markErasureRequestReviewing).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows review mutation for an allowlisted operator", async () => {
+  it("allows review mutation for an operator mutation role", async () => {
     const { markErasureRequestReviewingAction } = await import("./actions");
     const formData = new FormData();
     formData.set("requestId", "request-1");
@@ -89,9 +101,9 @@ describe("erasure request operator actions", () => {
   });
 
   it("rejects irreversible execution before repository writes for a non-operator", async () => {
-    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
-      status: "denied",
-    });
+    mocks.assertErasureExecutionAccess.mockRejectedValue(
+      new Error("Admin access denied."),
+    );
 
     const { executeApprovedErasureRequestAction } = await import("./actions");
     const formData = new FormData();
@@ -102,13 +114,13 @@ describe("erasure request operator actions", () => {
     );
 
     await expect(executeApprovedErasureRequestAction(formData)).rejects.toThrow(
-      "Erasure request operator access denied.",
+      "Admin access denied.",
     );
     expect(mocks.executeApprovedErasureRequest).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("executes maintainer-approved erasure for an allowlisted operator", async () => {
+  it("executes maintainer-approved erasure for owner/admin execution access", async () => {
     const { executeApprovedErasureRequestAction } = await import("./actions");
     const formData = new FormData();
     formData.set("requestId", "00000000-0000-4000-8000-00000000abcd");

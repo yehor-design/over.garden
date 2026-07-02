@@ -1,28 +1,28 @@
 import "server-only";
 
+import type { Kysely } from "kysely";
+
+import type { Database } from "@/db/schema";
 import {
-  assertCatalogCuratorAccess,
-  type CatalogCuratorAccessMode,
-} from "@/server/catalog-curator-auth";
+  assertAdminCapabilityForScope,
+  resolveAdminCapabilityAccess,
+  type AdminAccess,
+  type AdminEntryAccess,
+} from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
-export type FounderInterviewOperatorAccess =
-  | { status: "sign_in_required" }
-  | { status: "denied" }
-  | { status: "allowed"; mode: CatalogCuratorAccessMode };
+export type FounderInterviewOperatorAccess = AdminEntryAccess;
 
-export function resolveFounderInterviewOperatorAccess(
+export async function resolveFounderInterviewOperatorAccess(
   scope: RequestScope | null,
-  rawAllowedUserIds?: string,
-): FounderInterviewOperatorAccess {
-  if (!scope) return { status: "sign_in_required" };
+  database?: Kysely<Database>,
+): Promise<FounderInterviewOperatorAccess> {
+  return resolveAdminCapabilityAccess(scope, "operator:read", database);
+}
 
-  try {
-    return {
-      status: "allowed",
-      mode: assertCatalogCuratorAccess(scope, rawAllowedUserIds).mode,
-    };
-  } catch {
-    return { status: "denied" };
-  }
+export async function assertFounderInterviewMutationAccess(
+  scope: RequestScope,
+  database?: Kysely<Database>,
+): Promise<AdminAccess> {
+  return assertAdminCapabilityForScope(scope, "operator:mutate", database);
 }

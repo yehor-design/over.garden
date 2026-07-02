@@ -10,6 +10,7 @@ import {
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getErasureDryRunPreviewForRequest } from "@/server/erasure-dry-run-repository";
 import { expectedErasureMaintainerApprovalText } from "@/server/erasure-execution";
+import { hasAdminCapability } from "@/server/admin-access";
 import { resolveErasureRequestOperatorAccess } from "@/server/erasure-request-access";
 import {
   listOperatorErasureRequests,
@@ -38,7 +39,7 @@ export default async function ErasureRequestsOperatorPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const access = resolveErasureRequestOperatorAccess(scope);
+  const access = await resolveErasureRequestOperatorAccess(scope);
 
   if (access.status === "sign_in_required") {
     return (
@@ -73,6 +74,8 @@ export default async function ErasureRequestsOperatorPage() {
   const dryRunByRequestId = new Map(
     dryRunPreviews.map((entry) => [entry.requestId, entry.preview]),
   );
+  const canMutate = hasAdminCapability(access, "operator:mutate");
+  const canExecuteErasure = hasAdminCapability(access, "erasure:execute");
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -85,6 +88,9 @@ export default async function ErasureRequestsOperatorPage() {
           </span>
           <span className="rounded-md border border-border px-2 py-1">
             Gate: {access.mode}
+          </span>
+          <span className="rounded-md border border-border px-2 py-1">
+            Role: {access.role}
           </span>
         </div>
 
@@ -99,6 +105,8 @@ export default async function ErasureRequestsOperatorPage() {
                 key={request.id}
                 request={request}
                 dryRunPreview={dryRunByRequestId.get(request.id) ?? null}
+                canMutate={canMutate}
+                canExecuteErasure={canExecuteErasure}
               />
             ))}
           </ol>
@@ -111,11 +119,15 @@ export default async function ErasureRequestsOperatorPage() {
 function ErasureRequestCard({
   request,
   dryRunPreview,
+  canMutate,
+  canExecuteErasure,
 }: {
   request: ErasureRequestReadModel;
   dryRunPreview: Awaited<
     ReturnType<typeof getErasureDryRunPreviewForRequest>
   > | null;
+  canMutate: boolean;
+  canExecuteErasure: boolean;
 }) {
   return (
     <li className="grid gap-4 rounded-lg border border-border p-4 text-sm">
@@ -127,10 +139,8 @@ function ErasureRequestCard({
       </div>
       <p className="text-sm text-muted-foreground">
         {
-          getErasureRequestStatusCopy(
-            request.status,
-            request.handledStatus,
-          ).description
+          getErasureRequestStatusCopy(request.status, request.handledStatus)
+            .description
         }
       </p>
       <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
@@ -172,10 +182,11 @@ function ErasureRequestCard({
         <DryRunPreviewPanel
           preview={dryRunPreview}
           request={request}
+          canMutate={canMutate}
         />
       ) : null}
 
-      {request.status === "submitted" ? (
+      {canMutate && request.status === "submitted" ? (
         <form action={markErasureRequestReviewingAction}>
           <input type="hidden" name="requestId" value={request.id} />
           <button
@@ -189,9 +200,16 @@ function ErasureRequestCard({
           </button>
         </form>
       ) : null}
-      {request.status === "submitted" || request.status === "reviewing" ? (
+      {canMutate &&
+      (request.status === "submitted" || request.status === "reviewing") ? (
         <>
-          <ApprovedErasureExecutionPanel request={request} />
+          {canExecuteErasure ? (
+            <ApprovedErasureExecutionPanel request={request} />
+          ) : (
+            <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
+              Irreversible erasure execution requires owner or admin access.
+            </p>
+          )}
           <NonDestructiveOutcomeForm request={request} />
         </>
       ) : null}
@@ -226,7 +244,7 @@ function ApprovedErasureExecutionPanel({
         className="grid gap-2 sm:max-w-xl"
       >
         <input type="hidden" name="requestId" value={request.id} />
-        <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+        <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
           Maintainer approval phrase
           <input
             name="maintainerApprovalText"
@@ -244,7 +262,8 @@ function ApprovedErasureExecutionPanel({
           disabled={!dryRunReviewed}
           className={buttonVariants({
             variant: "destructive",
-            className: "self-start disabled:pointer-events-none disabled:opacity-60",
+            className:
+              "self-start disabled:pointer-events-none disabled:opacity-60",
           })}
         >
           Execute approved erasure
@@ -274,7 +293,7 @@ function NonDestructiveOutcomeForm({
       className="grid gap-2 border-t border-border pt-3 sm:max-w-md"
     >
       <input type="hidden" name="requestId" value={request.id} />
-      <label className="grid gap-1 text-xs font-medium uppercase text-muted-foreground">
+      <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
         Operator outcome
         <select
           name="handledStatus"
@@ -301,9 +320,11 @@ function NonDestructiveOutcomeForm({
 function DryRunPreviewPanel({
   preview,
   request,
+  canMutate,
 }: {
   preview: Awaited<ReturnType<typeof getErasureDryRunPreviewForRequest>>;
   request: ErasureRequestReadModel;
+  canMutate: boolean;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
@@ -344,7 +365,7 @@ function DryRunPreviewPanel({
                   <dt className="text-xs text-muted-foreground uppercase">
                     {key.replaceAll("_", " ")}
                   </dt>
-                  <dd className="font-semibold tabular-nums text-foreground">
+                  <dd className="font-semibold text-foreground tabular-nums">
                     {count}
                   </dd>
                 </div>
@@ -360,7 +381,8 @@ function DryRunPreviewPanel({
         ))}
       </ul>
 
-      {request.status === "submitted" || request.status === "reviewing" ? (
+      {canMutate &&
+      (request.status === "submitted" || request.status === "reviewing") ? (
         <form action={markErasureRequestDryRunReviewedAction}>
           <input type="hidden" name="requestId" value={request.id} />
           <button
@@ -398,8 +420,8 @@ function OperatorHeader() {
         </h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
           Operator readback for non-destructive pilot erasure intake. Each
-          request includes a repeatable dry-run preview of affected data
-          classes before any maintainer-approved destructive workflow. This list
+          request includes a repeatable dry-run preview of affected data classes
+          before any maintainer-approved destructive workflow. This list
           intentionally excludes journal text, media keys, precise location,
           request headers, referrers, IP addresses, and user agents.
         </p>

@@ -25,7 +25,7 @@ export default async function PilotHealthPage() {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const access = resolvePilotHealthOperatorAccess(scope);
+  const access = await resolvePilotHealthOperatorAccess(scope);
 
   if (access.status === "sign_in_required") {
     return (
@@ -56,6 +56,9 @@ export default async function PilotHealthPage() {
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="rounded-md border border-border px-2 py-1">
           Gate: {access.mode}
+        </span>
+        <span className="rounded-md border border-border px-2 py-1">
+          Role: {access.role}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
           Status: provisional pilot signals

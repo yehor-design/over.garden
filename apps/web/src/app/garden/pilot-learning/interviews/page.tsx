@@ -20,6 +20,7 @@ import type {
   PilotInterviewSegment,
 } from "@/db/schema";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { hasAdminCapability } from "@/server/admin-access";
 import { resolveFounderInterviewOperatorAccess } from "@/server/founder-interview-access";
 import {
   groupFounderInterviewLearningsBySegment,
@@ -50,7 +51,7 @@ export default async function FounderInterviewCapturePage({
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
-  const access = resolveFounderInterviewOperatorAccess(scope);
+  const access = await resolveFounderInterviewOperatorAccess(scope);
   const filters = await searchParams;
 
   if (access.status === "sign_in_required") {
@@ -78,6 +79,7 @@ export default async function FounderInterviewCapturePage({
     activationResult: filters.activationResult ?? null,
   });
   const groupedRecords = groupFounderInterviewLearningsBySegment(records);
+  const canCaptureLearning = hasAdminCapability(access, "operator:mutate");
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -88,100 +90,110 @@ export default async function FounderInterviewCapturePage({
           Gate: {access.mode}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
+          Role: {access.role}
+        </span>
+        <span className="rounded-md border border-border px-2 py-1">
           Records: {records.length}
         </span>
       </div>
 
-      <section className="grid gap-4 rounded-lg border border-border p-4">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Capture structured learning
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Record bounded pilot interview signals only. Do not paste journal
-            text, media keys, contact details, signed URLs, or raw transcripts.
-          </p>
-        </div>
-
-        <form
-          action={createFounderInterviewLearningAction}
-          className="grid gap-4 border-t border-border pt-4"
-        >
-          <div className="grid gap-3 sm:grid-cols-2">
-            <SelectField
-              label="Segment"
-              name="segment"
-              required
-              options={PILOT_INTERVIEW_SEGMENT_OPTIONS}
-            />
-            <SelectField
-              label="Activation result"
-              name="activationResult"
-              required
-              options={PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS}
-            />
-            <SelectField
-              label="Return reason"
-              name="returnReason"
-              required
-              options={PILOT_INTERVIEW_RETURN_REASON_OPTIONS}
-            />
-            <SelectField
-              label="Main objection"
-              name="mainObjection"
-              required
-              options={PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS}
-            />
-            <SelectField
-              label="Observed value"
-              name="observedValue"
-              required
-              options={PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS}
-            />
-            <SelectField
-              label="Next action"
-              name="nextAction"
-              required
-              options={PILOT_INTERVIEW_NEXT_ACTION_OPTIONS}
-            />
+      {canCaptureLearning ? (
+        <section className="grid gap-4 rounded-lg border border-border p-4">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold text-foreground">
+              Capture structured learning
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Record bounded pilot interview signals only. Do not paste journal
+              text, media keys, contact details, signed URLs, or raw
+              transcripts.
+            </p>
           </div>
 
-          <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-            Optional subject user id (operator only)
-            <input
-              name="subjectUserId"
-              type="text"
-              placeholder="00000000-0000-4000-8000-000000000001"
-              className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          </label>
-
-          <SelectField
-            label="Pilot cohort"
-            name="pilotCohort"
-            value={DEFAULT_PILOT_INTERVIEW_COHORT}
-            options={PILOT_INTERVIEW_COHORT_OPTIONS}
-          />
-
-          <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-            Optional redacted note ({MAX_REDACTED_NOTE_LENGTH} chars max)
-            <textarea
-              name="redactedNote"
-              rows={3}
-              maxLength={MAX_REDACTED_NOTE_LENGTH}
-              placeholder="Short operator note without names, addresses, or quoted journal text."
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          </label>
-
-          <button
-            type="submit"
-            className={buttonVariants({ className: "self-start" })}
+          <form
+            action={createFounderInterviewLearningAction}
+            className="grid gap-4 border-t border-border pt-4"
           >
-            Save interview record
-          </button>
-        </form>
-      </section>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <SelectField
+                label="Segment"
+                name="segment"
+                required
+                options={PILOT_INTERVIEW_SEGMENT_OPTIONS}
+              />
+              <SelectField
+                label="Activation result"
+                name="activationResult"
+                required
+                options={PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS}
+              />
+              <SelectField
+                label="Return reason"
+                name="returnReason"
+                required
+                options={PILOT_INTERVIEW_RETURN_REASON_OPTIONS}
+              />
+              <SelectField
+                label="Main objection"
+                name="mainObjection"
+                required
+                options={PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS}
+              />
+              <SelectField
+                label="Observed value"
+                name="observedValue"
+                required
+                options={PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS}
+              />
+              <SelectField
+                label="Next action"
+                name="nextAction"
+                required
+                options={PILOT_INTERVIEW_NEXT_ACTION_OPTIONS}
+              />
+            </div>
+
+            <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
+              Optional subject user id (operator only)
+              <input
+                name="subjectUserId"
+                type="text"
+                placeholder="00000000-0000-4000-8000-000000000001"
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </label>
+
+            <SelectField
+              label="Pilot cohort"
+              name="pilotCohort"
+              value={DEFAULT_PILOT_INTERVIEW_COHORT}
+              options={PILOT_INTERVIEW_COHORT_OPTIONS}
+            />
+
+            <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
+              Optional redacted note ({MAX_REDACTED_NOTE_LENGTH} chars max)
+              <textarea
+                name="redactedNote"
+                rows={3}
+                maxLength={MAX_REDACTED_NOTE_LENGTH}
+                placeholder="Short operator note without names, addresses, or quoted journal text."
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              />
+            </label>
+
+            <button
+              type="submit"
+              className={buttonVariants({ className: "self-start" })}
+            >
+              Save interview record
+            </button>
+          </form>
+        </section>
+      ) : (
+        <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+          Interview capture requires owner, admin, or moderator access.
+        </p>
+      )}
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="grid gap-1">

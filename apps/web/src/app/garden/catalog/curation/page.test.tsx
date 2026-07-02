@@ -42,7 +42,8 @@ vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
 }));
 
 vi.mock("@/server/catalog-source/entity-resolution-qa-repository", () => ({
-  readCatalogEntityResolutionQaReport: mocks.readCatalogEntityResolutionQaReport,
+  readCatalogEntityResolutionQaReport:
+    mocks.readCatalogEntityResolutionQaReport,
 }));
 
 vi.mock("@/server/catalog-source/provenance-repository", () => ({
@@ -87,7 +88,11 @@ vi.mock("./variety-seed-proof-editor", () => ({
 describe("/garden/catalog/curation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
+    mocks.assertCatalogCuratorAccess.mockResolvedValue({
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+    });
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
     mocks.listCatalogSourceCandidatesForReview.mockResolvedValue([]);
     mocks.readCatalogSourceCandidateReviewSummary.mockResolvedValue({
@@ -132,16 +137,19 @@ describe("/garden/catalog/curation", () => {
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
 
-  it("renders curation data for an allowlisted operator", async () => {
+  it("renders curation data for an operator mutation role", async () => {
     const { default: CatalogCurationPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
-    expect(html).toContain("Gate: allowlist");
+    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Role: moderator");
     expect(html).toContain("source-candidate-review");
     expect(html).toContain("entity-resolution-report");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceCandidatesForReview).toHaveBeenCalledOnce();
-    expect(mocks.readCatalogSourceCandidateReviewSummary).toHaveBeenCalledOnce();
+    expect(
+      mocks.readCatalogSourceCandidateReviewSummary,
+    ).toHaveBeenCalledOnce();
     expect(mocks.readCatalogEntityResolutionQaReport).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();

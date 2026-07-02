@@ -31,36 +31,42 @@ const ADMIN_LINKS = [
     href: "/garden/pilot-smoke",
     label: "Pilot smoke",
     detail: "Production readiness contract",
+    required: "Read: owner/admin/moderator/viewer",
     icon: Activity,
   },
   {
     href: "/garden/pilot-health",
     label: "Pilot health",
     detail: "Aggregate activation signals",
+    required: "Read: owner/admin/moderator/viewer",
     icon: ClipboardCheck,
   },
   {
     href: "/garden/pilot-learning/decision",
     label: "Cohort decision",
     detail: "Segment-level decision guard",
+    required: "Read: owner/admin/moderator/viewer",
     icon: FileSearch,
   },
   {
     href: "/garden/pilot-learning/interviews",
     label: "Founder interviews",
     detail: "Bounded pilot learning rows",
+    required: "Read: all roles; capture: owner/admin/moderator",
     icon: ShieldCheck,
   },
   {
     href: "/garden/catalog/curation",
     label: "Catalog curation",
     detail: "Source and identity review",
+    required: "Review: owner/admin/moderator",
     icon: DatabaseZap,
   },
   {
     href: "/garden/privacy/erasure-requests",
     label: "Erasure requests",
     detail: "Privacy request review",
+    required: "Read: all roles; execute: owner/admin",
     icon: Sprout,
   },
 ] as const;
@@ -133,6 +139,9 @@ export default async function AdminPage() {
               <span className="text-sm leading-6 text-muted-foreground">
                 {item.detail}
               </span>
+              <span className="text-xs leading-5 text-muted-foreground">
+                {item.required}
+              </span>
             </span>
           </Link>
         ))}
@@ -202,6 +211,7 @@ function capabilityLabel(capabilities: AdminCapability[]) {
     "admin:manage_roles": "role management",
     "operator:read": "operator read",
     "operator:mutate": "operator mutation",
+    "erasure:execute": "approved erasure execution",
   };
 
   return capabilities.map((capability) => labels[capability]).join(", ");

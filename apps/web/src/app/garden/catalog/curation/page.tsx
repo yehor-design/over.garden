@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/db";
+import type { AdminAccess } from "@/server/admin-access";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
@@ -65,10 +66,10 @@ export default async function CatalogCurationPage({
   }
 
   const scope = scopedToUser(userId, getSessionId(session));
-  let accessMode: ReturnType<typeof assertCatalogCuratorAccess>["mode"];
+  let access: AdminAccess;
 
   try {
-    accessMode = assertCatalogCuratorAccess(scope).mode;
+    access = await assertCatalogCuratorAccess(scope);
   } catch {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -100,15 +101,14 @@ export default async function CatalogCurationPage({
     sourceCandidateSummary,
     entityResolutionReport,
     provenanceRows,
-  ] =
-    await Promise.all([
-      listPendingCatalogCurationCandidates(),
-      listVarietySeedProofsForCuration(),
-      listCatalogSourceCandidatesForReview({ status: sourceStatus }),
-      readCatalogSourceCandidateReviewSummary(),
-      readCatalogEntityResolutionQaReport(db),
-      listCatalogSourceProvenanceForCuration(),
-    ]);
+  ] = await Promise.all([
+    listPendingCatalogCurationCandidates(),
+    listVarietySeedProofsForCuration(),
+    listCatalogSourceCandidatesForReview({ status: sourceStatus }),
+    readCatalogSourceCandidateReviewSummary(),
+    readCatalogEntityResolutionQaReport(db),
+    listCatalogSourceProvenanceForCuration(),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -144,7 +144,10 @@ export default async function CatalogCurationPage({
               Source rows: {provenanceRows.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: {accessMode}
+              Gate: {access.mode}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              Role: {access.role}
             </span>
           </div>
         </div>

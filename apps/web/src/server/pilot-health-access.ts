@@ -1,28 +1,17 @@
 import "server-only";
 
-import {
-  assertCatalogCuratorAccess,
-  type CatalogCuratorAccessMode,
-} from "@/server/catalog-curator-auth";
+import type { Kysely } from "kysely";
+
+import type { Database } from "@/db/schema";
+import { resolveAdminCapabilityAccess } from "@/server/admin-access";
+import type { AdminEntryAccess } from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
-export type PilotHealthOperatorAccess =
-  | { status: "sign_in_required" }
-  | { status: "denied" }
-  | { status: "allowed"; mode: CatalogCuratorAccessMode };
+export type PilotHealthOperatorAccess = AdminEntryAccess;
 
-export function resolvePilotHealthOperatorAccess(
+export async function resolvePilotHealthOperatorAccess(
   scope: RequestScope | null,
-  rawAllowedUserIds?: string,
-): PilotHealthOperatorAccess {
-  if (!scope) return { status: "sign_in_required" };
-
-  try {
-    return {
-      status: "allowed",
-      mode: assertCatalogCuratorAccess(scope, rawAllowedUserIds).mode,
-    };
-  } catch {
-    return { status: "denied" };
-  }
+  database?: Kysely<Database>,
+): Promise<PilotHealthOperatorAccess> {
+  return resolveAdminCapabilityAccess(scope, "operator:read", database);
 }

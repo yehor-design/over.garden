@@ -3,7 +3,6 @@ import "server-only";
 import { resolveDatabaseConnection } from "@/db/connection";
 import { isBlockedBetterAuthSecret } from "@/lib/auth-secret";
 import { vercelUrl } from "@/lib/runtime-url";
-import { parseCatalogCuratorUserIds } from "@/server/catalog-curator-auth";
 import { pingDatabase } from "@/server/health-repository";
 
 const PILOT_INVITE_SIGNING_SECRET_ENV = "PILOT_INVITE_SIGNING_SECRET";
@@ -109,7 +108,7 @@ export function buildPilotSmokeReadiness({
         checkDatabase(env, databaseProbe),
         checkBetterAuthSecret(env),
         checkPilotInviteSigningSecret(env),
-        checkOperatorAllowlist(env),
+        checkAdminRoleAccessModel(),
         checkR2Configuration(env),
         checkRequiredSecretPresence(
           env,
@@ -457,27 +456,15 @@ function checkR2Configuration(env: EnvLike): PilotSmokeCheck {
   };
 }
 
-function checkOperatorAllowlist(env: EnvLike): PilotSmokeCheck {
-  if (parseCatalogCuratorUserIds(env.CATALOG_CURATOR_USER_IDS).length === 0) {
-    return {
-      id: "catalog-curator-user-ids",
-      label: "Operator allowlist",
-      severity: "fail",
-      summary:
-        "CATALOG_CURATOR_USER_IDS is empty, so internal operator surfaces fail closed.",
-      evidence:
-        "Evidence may say missing/present only. Do not copy user IDs into docs, Linear, logs, or chat.",
-    };
-  }
-
+function checkAdminRoleAccessModel(): PilotSmokeCheck {
   return {
-    id: "catalog-curator-user-ids",
-    label: "Operator allowlist",
-    severity: "pass",
+    id: "admin-role-access-model",
+    label: "Admin role access model",
+    severity: "manual",
     summary:
-      "CATALOG_CURATOR_USER_IDS is configured for explicit operator access.",
+      "Internal operator surfaces use durable admin_user_roles capabilities; bootstrap owner access through the documented role script before smoke.",
     evidence:
-      "Evidence may say present only. Do not copy user IDs into docs, Linear, logs, or chat.",
+      "Evidence may say owner/admin role present only. Do not copy user IDs, emails, cookies, tokens, connection strings, or env values.",
   };
 }
 

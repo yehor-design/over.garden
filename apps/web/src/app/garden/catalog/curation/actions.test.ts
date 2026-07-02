@@ -52,7 +52,11 @@ describe("catalog curation actions", () => {
       userId: "00000000-0000-4000-8000-000000000999",
       sessionId: "non-operator-session",
     });
-    mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
+    mocks.assertCatalogCuratorAccess.mockResolvedValue({
+      mode: "database_role",
+      role: "moderator",
+      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+    });
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
       publicEntryPaths: [],
     });
@@ -95,7 +99,7 @@ describe("catalog curation actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows candidate confirmation for an allowlisted operator", async () => {
+  it("allows candidate confirmation for an operator mutation role", async () => {
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
       candidate: {
         public_slug: "babusyn-perets-0000000201",
@@ -160,7 +164,7 @@ describe("catalog curation actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows source candidate promotion for an allowlisted operator", async () => {
+  it("allows source candidate promotion for an operator mutation role", async () => {
     const { promoteCatalogSourceCandidateAction } = await import("./actions");
     const formData = new FormData();
     formData.set("sourceRecordId", "00000000-0000-4000-8000-000000066001");

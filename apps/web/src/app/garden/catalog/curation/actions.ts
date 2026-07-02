@@ -23,7 +23,7 @@ const CURATION_PATH = "/garden/catalog/curation";
 
 export async function confirmCatalogCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await confirmCatalogCurationCandidate(scope, {
     candidateId: String(formData.get("candidateId") ?? ""),
@@ -34,7 +34,7 @@ export async function confirmCatalogCandidateAction(formData: FormData) {
 
 export async function mergeCatalogCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await mergeCatalogCurationCandidate(scope, {
     candidateId: String(formData.get("candidateId") ?? ""),
@@ -46,7 +46,7 @@ export async function mergeCatalogCandidateAction(formData: FormData) {
 
 export async function rejectCatalogCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogCurationCandidate(scope, {
     candidateId: String(formData.get("candidateId") ?? ""),
@@ -57,7 +57,7 @@ export async function rejectCatalogCandidateAction(formData: FormData) {
 
 export async function upsertVarietySeedProofAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await upsertVarietySeedProof(scope, {
     catalogItemId: String(formData.get("catalogItemId") ?? ""),
@@ -74,7 +74,7 @@ export async function upsertVarietySeedProofAction(formData: FormData) {
 
 export async function promoteCatalogSourceCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await promoteCatalogSourceCandidate(scope, {
     sourceRecordId: String(formData.get("sourceRecordId") ?? ""),
@@ -85,7 +85,7 @@ export async function promoteCatalogSourceCandidateAction(formData: FormData) {
 
 export async function holdCatalogSourceCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await holdCatalogSourceCandidate(scope, {
     sourceRecordId: String(formData.get("sourceRecordId") ?? ""),
@@ -96,7 +96,7 @@ export async function holdCatalogSourceCandidateAction(formData: FormData) {
 
 export async function rejectCatalogSourceCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
-  assertCatalogCuratorAccess(scope);
+  await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogSourceCandidate(scope, {
     sourceRecordId: String(formData.get("sourceRecordId") ?? ""),

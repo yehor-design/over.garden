@@ -287,7 +287,7 @@ describe("pilot smoke readiness", () => {
     expect(readout.overall).toBe("blocked");
   });
 
-  it("blocks deployed smoke when the explicit operator allowlist is missing", () => {
+  it("requires manual admin role bootstrap proof without treating the legacy allowlist as primary auth", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
@@ -297,15 +297,15 @@ describe("pilot smoke readiness", () => {
       generatedAt: new Date("2026-06-27T00:00:00.000Z"),
     });
 
-    expect(readout.overall).toBe("blocked");
+    expect(readout.overall).toBe("ready");
     expect(
       findCheck(
         readout.sections.flatMap((section) => section.checks),
-        "catalog-curator-user-ids",
+        "admin-role-access-model",
       ),
     ).toMatchObject({
-      severity: "fail",
-      summary: expect.stringContaining("fail closed"),
+      severity: "manual",
+      summary: expect.stringContaining("admin_user_roles"),
     });
   });
 

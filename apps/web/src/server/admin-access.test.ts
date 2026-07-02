@@ -41,6 +41,7 @@ describe("admin access gate", () => {
         "admin:manage_roles",
         "operator:read",
         "operator:mutate",
+        "erasure:execute",
       ],
     });
     expect(() =>
@@ -58,6 +59,27 @@ describe("admin access gate", () => {
     expect(() => assertAdminCapability(access, "operator:mutate")).toThrow(
       ADMIN_ACCESS_DENIED_MESSAGE,
     );
+    expect(() => assertAdminCapability(access, "erasure:execute")).toThrow(
+      ADMIN_ACCESS_DENIED_MESSAGE,
+    );
+  });
+
+  it("limits irreversible erasure execution to owner and admin roles", async () => {
+    const adminAccess = await assertAdminAccess(
+      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      fakeAdminDb("admin"),
+    );
+    const moderatorAccess = await assertAdminAccess(
+      scopedToUser("00000000-0000-4000-8000-000000000002"),
+      fakeAdminDb("moderator"),
+    );
+
+    expect(() =>
+      assertAdminCapability(adminAccess, "erasure:execute"),
+    ).not.toThrow();
+    expect(() =>
+      assertAdminCapability(moderatorAccess, "erasure:execute"),
+    ).toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
   });
 
   it("fails closed if the stored role is outside the enum", async () => {

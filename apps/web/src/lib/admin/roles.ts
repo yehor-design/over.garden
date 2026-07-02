@@ -6,7 +6,8 @@ export type AdminCapability =
   | "admin:read"
   | "admin:manage_roles"
   | "operator:read"
-  | "operator:mutate";
+  | "operator:mutate"
+  | "erasure:execute";
 
 export function isAdminRole(value: unknown): value is AdminRole {
   return typeof value === "string" && ADMIN_ROLES.includes(value as AdminRole);
@@ -20,9 +21,15 @@ export function capabilitiesForAdminRole(role: AdminRole): AdminCapability[] {
         "admin:manage_roles",
         "operator:read",
         "operator:mutate",
+        "erasure:execute",
       ];
     case "admin":
-      return ["admin:read", "operator:read", "operator:mutate"];
+      return [
+        "admin:read",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ];
     case "moderator":
       return ["admin:read", "operator:read", "operator:mutate"];
     case "viewer":
