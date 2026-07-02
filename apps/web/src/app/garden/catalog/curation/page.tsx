@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { db } from "@/db";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
@@ -9,6 +10,7 @@ import {
   readCatalogSourceCandidateReviewSummary,
   type CatalogSourceCandidateReviewStatus,
 } from "@/server/catalog-source/candidate-review-repository";
+import { readCatalogEntityResolutionQaReport } from "@/server/catalog-source/entity-resolution-qa-repository";
 import { listCatalogSourceProvenanceForCuration } from "@/server/catalog-source/provenance-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
@@ -23,6 +25,7 @@ import {
   upsertVarietySeedProofAction,
 } from "./actions";
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
+import { CatalogEntityResolutionReport } from "./catalog-entity-resolution-report";
 import { CatalogSourceCandidateReviewList } from "./catalog-source-candidate-review-list";
 import { CatalogSourceProvenanceList } from "./catalog-source-provenance-list";
 import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
@@ -95,6 +98,7 @@ export default async function CatalogCurationPage({
     seedProofs,
     sourceCandidates,
     sourceCandidateSummary,
+    entityResolutionReport,
     provenanceRows,
   ] =
     await Promise.all([
@@ -102,6 +106,7 @@ export default async function CatalogCurationPage({
       listVarietySeedProofsForCuration(),
       listCatalogSourceCandidatesForReview({ status: sourceStatus }),
       readCatalogSourceCandidateReviewSummary(),
+      readCatalogEntityResolutionQaReport(db),
       listCatalogSourceProvenanceForCuration(),
     ]);
 
@@ -158,6 +163,8 @@ export default async function CatalogCurationPage({
         holdAction={holdCatalogSourceCandidateAction}
         rejectAction={rejectCatalogSourceCandidateAction}
       />
+
+      <CatalogEntityResolutionReport report={entityResolutionReport} />
 
       <CatalogSourceProvenanceList provenanceRows={provenanceRows} />
 

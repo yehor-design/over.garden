@@ -557,6 +557,64 @@ describe("catalog typeahead search documents", () => {
     ]);
   });
 
+  it("dedupes EU OJ duplicate rows by canonical concept before OVE-90 proof", () => {
+    expect(
+      dedupeCatalogTypeaheadSuggestions([
+        {
+          id: "00000000-0000-4000-8000-000000103001",
+          displayName: "Albion",
+          canonicalName: "Albion",
+          catalogKind: "plant_variety",
+          locale: "en",
+          status: "seeded",
+          source: "eu_oj_eur_lex_common_catalogue",
+        },
+        {
+          id: "00000000-0000-4000-8000-000000103002",
+          displayName: "Albion",
+          canonicalName: "Albion",
+          catalogKind: "plant_variety",
+          locale: "en",
+          status: "seeded",
+          source: "eu_oj_eur_lex_common_catalogue",
+        },
+      ]),
+    ).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000103001",
+        displayName: "Albion",
+        canonicalName: "Albion",
+        catalogKind: "plant_variety",
+        locale: "en",
+        status: "seeded",
+        source: "eu_oj_eur_lex_common_catalogue",
+      },
+    ]);
+  });
+
+  it("does not collapse source-backed rows when the catalog kind differs", () => {
+    const variety = {
+      id: "00000000-0000-4000-8000-000000089001",
+      displayName: "Bergeron 1",
+      canonicalName: "Bergeron 1",
+      catalogKind: "plant_variety" as const,
+      locale: "en",
+      status: "seeded" as const,
+      source: "eu_oj_eur_lex_common_catalogue",
+    };
+    const species = {
+      ...variety,
+      id: "00000000-0000-4000-8000-000000089002",
+      catalogKind: "species" as const,
+      source: "species_backbone",
+    };
+
+    expect(dedupeCatalogTypeaheadSuggestions([variety, species])).toEqual([
+      variety,
+      species,
+    ]);
+  });
+
   it("does not collapse non-source-backed rows just because names match", () => {
     const left = {
       id: "00000000-0000-4000-8000-000000000701",

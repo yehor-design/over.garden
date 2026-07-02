@@ -210,13 +210,19 @@ export interface CatalogTypeaheadSuggestion {
   catalogKind: CatalogTypeaheadCatalogKind;
 }
 
-const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCES = new Set([
+export const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES = [
   "ua_state_register",
   "species_backbone",
   "ua_official_bee_breed",
+  "vertebrate_breed_ontology",
   "eu_common_catalogue_bg",
+  "eu_oj_eur_lex_common_catalogue",
   "grin_genebank_candidate",
-]);
+] as const;
+
+const SOURCE_BACKED_CONCEPT_DEDUPE_SOURCES = new Set<string>(
+  SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES,
+);
 
 export function toCatalogTypeaheadDocument(
   row: CatalogTypeaheadRow,

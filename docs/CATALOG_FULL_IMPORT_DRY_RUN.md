@@ -16,6 +16,8 @@ OVE-103 turns that target into the source-backed EU OJ product projection prefli
 
 OVE-87 adds one explicit gate target: `pgr-genebank-bulk-gate`. It reports the GRIN/Genesys/EURISCO source-use boundary before OVE-88. It performs no source-row capture and no product projection.
 
+OVE-89 adds the database-backed entity-resolution QA successor report. It reviews the already imported source-backed catalog state for likely duplicates, alias collisions, source disagreements, blocked projection rows, and manual-review groups before OVE-90 may claim full catalog availability.
+
 ## Commands
 
 Local preflight:
@@ -134,6 +136,15 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 ```
 
 The `genebank-long-tail` target reports 12 curated GRIN/NPGS proof rows, 12 raw/quarantine captures, three approved plant-variety projections, nine safe aliases, and held/review-needed/rejected/blocked rows that must stay out of product typeahead unless a later explicit curator/legal gate promotes them.
+
+For OVE-89, run the entity-resolution QA report after the relevant source-family imports:
+
+```bash
+cd apps/web
+pnpm catalog:sources:entity-resolution-qa
+```
+
+The report uses schema `ove89.catalogEntityResolutionQa.v1` and must show `leakCheck = "passed"` before its output is attached to Linear. It reads only safe catalog/source-review fields, not raw payloads or source-only metadata. Any duplicate, alias-collision, source-disagreement, blocked, or manual-review cluster is evidence for operator review before OVE-90 production proof.
 
 For OVE-85, use the BG-specific successor target:
 

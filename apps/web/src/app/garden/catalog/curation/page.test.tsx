@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   listPendingCatalogCurationCandidates: vi.fn(),
   listCatalogSourceCandidatesForReview: vi.fn(),
   readCatalogSourceCandidateReviewSummary: vi.fn(),
+  readCatalogEntityResolutionQaReport: vi.fn(),
   listCatalogSourceProvenanceForCuration: vi.fn(),
   listVarietySeedProofsForCuration: vi.fn(),
 }));
@@ -40,6 +41,10 @@ vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
     mocks.readCatalogSourceCandidateReviewSummary,
 }));
 
+vi.mock("@/server/catalog-source/entity-resolution-qa-repository", () => ({
+  readCatalogEntityResolutionQaReport: mocks.readCatalogEntityResolutionQaReport,
+}));
+
 vi.mock("@/server/catalog-source/provenance-repository", () => ({
   listCatalogSourceProvenanceForCuration:
     mocks.listCatalogSourceProvenanceForCuration,
@@ -67,6 +72,10 @@ vi.mock("./catalog-source-candidate-review-list", () => ({
   CatalogSourceCandidateReviewList: () => "source-candidate-review",
 }));
 
+vi.mock("./catalog-entity-resolution-report", () => ({
+  CatalogEntityResolutionReport: () => "entity-resolution-report",
+}));
+
 vi.mock("./catalog-source-provenance-list", () => ({
   CatalogSourceProvenanceList: () => "source-provenance-list",
 }));
@@ -84,6 +93,21 @@ describe("/garden/catalog/curation", () => {
     mocks.readCatalogSourceCandidateReviewSummary.mockResolvedValue({
       total: 0,
       statuses: [],
+    });
+    mocks.readCatalogEntityResolutionQaReport.mockResolvedValue({
+      schemaVersion: "ove89.catalogEntityResolutionQa.v1",
+      issue: "OVE-89",
+      generatedAt: "2026-07-02T00:00:00.000Z",
+      evidenceSafety: "linear_safe_redacted",
+      summary: {
+        clusterCount: 0,
+        sourceBackedCatalogRowsReviewed: 0,
+        aliasCollisionRowsReviewed: 0,
+        sourceCandidateGroupsReviewed: 0,
+        groups: [],
+      },
+      clusters: [],
+      leakCheck: "passed",
     });
     mocks.listCatalogSourceProvenanceForCuration.mockResolvedValue([]);
     mocks.listVarietySeedProofsForCuration.mockResolvedValue([]);
@@ -103,6 +127,7 @@ describe("/garden/catalog/curation", () => {
     expect(
       mocks.readCatalogSourceCandidateReviewSummary,
     ).not.toHaveBeenCalled();
+    expect(mocks.readCatalogEntityResolutionQaReport).not.toHaveBeenCalled();
     expect(mocks.listCatalogSourceProvenanceForCuration).not.toHaveBeenCalled();
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
@@ -113,9 +138,11 @@ describe("/garden/catalog/curation", () => {
 
     expect(html).toContain("Gate: allowlist");
     expect(html).toContain("source-candidate-review");
+    expect(html).toContain("entity-resolution-report");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceCandidatesForReview).toHaveBeenCalledOnce();
     expect(mocks.readCatalogSourceCandidateReviewSummary).toHaveBeenCalledOnce();
+    expect(mocks.readCatalogEntityResolutionQaReport).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();
   });
