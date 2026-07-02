@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export const CATALOG_TYPEAHEAD_INDEX = "catalog_typeahead";
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
@@ -334,9 +336,11 @@ function catalogTypeaheadDocumentId(
   locale: string,
   normalizedName: string,
 ) {
-  return `${catalogItemId}:${encodeURIComponent(locale)}:${encodeURIComponent(
-    normalizedName,
-  )}`;
+  const aliasDigest = createHash("sha256")
+    .update(`${locale}\0${normalizedName}`)
+    .digest("hex")
+    .slice(0, 24);
+  return `${catalogItemId}-${aliasDigest}`;
 }
 
 function normalizeTypeaheadText(value: string) {

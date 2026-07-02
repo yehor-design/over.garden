@@ -5,6 +5,7 @@ Started by: OVE-69
 Primary seed command: `cd apps/web && pnpm catalog:sources:seed-rollout-proof`
 Full production proof command: `cd apps/web && pnpm catalog:sources:production-rollout-proof`
 EU OJ production landing command: `cd apps/web && pnpm catalog:sources:import-eu-oj-common-catalogue`
+EU OJ production UX/search proof command: `cd apps/web && pnpm catalog:sources:eu-oj-production-proof`
 
 ## Purpose
 
@@ -23,6 +24,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
   This is historical proof for the OVE-78 seed set; after OVE-81 and OVE-83, a fresh production rollout proof is required before claiming production has the full UA State Register wave or the reviewed species alias expansion.
 - Full production rollout proof: OVE-90 uses `pnpm catalog:sources:production-rollout-proof` as the final gate. It reads the already-landed production source-family rows without running source ingestion, runs the full `/garden` catalog UX smoke plus the BG official-varieties `/garden` smoke, reads the OVE-89 entity-resolution QA report, and verifies the `catalog_typeahead` result through both Postgres fallback and Meilisearch. A passing seed proof alone is not enough to close OVE-90.
 - EU OJ production landing proof: OVE-105 owns the explicit non-local import of the approved Official Journal / EUR-Lex Common Catalogue rows into production. It must pass and record redacted evidence before OVE-106 and OVE-90 claim production availability for the EU OJ/BG source family.
+- EU OJ production UX/search proof: OVE-106 uses `pnpm catalog:sources:eu-oj-production-proof` after OVE-105. It does not import source rows and does not close OVE-90. It proves the real production `/garden` BG official-varieties smoke, the Postgres fallback typeahead, a direct safe rebuild of the derived Meilisearch `catalog_typeahead` index from product-visible Postgres catalog rows, duplicate absence, public-safe Meili hit shape, and blocked/review-needed row absence for the EU OJ/BG source family. OVE-106 also fixes the EU OJ importer reindex enqueue so future idempotent importer reruns return the job to `pending`, and aligns the Python worker catalog document shape with the TypeScript `catalogKind` contract.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -115,6 +117,26 @@ Production landing evidence on 2026-07-02:
 - Provenance proof: Official Journal link, license, reuse terms link, required attribution text, parser version, and legal/normalization caveats were recorded; sample projection status was `projected`.
 - Blocked-row proof: representative non-accepted parser row remained `quarantined`; review-needed/rejected rows did not receive product links.
 - Evidence safety: `linear_safe_redacted`; leak check `passed`.
+
+## OVE-106 EU OJ Production UX/Search Proof
+
+OVE-106 is the missing production UX/search proof between the OVE-105 landing import and the final OVE-90 full-catalog production proof. It runs only against rows already landed by OVE-105. It creates only synthetic smoke user/entry data through the real app path with hidden location visibility, directly rebuilds the derived `catalog_typeahead` index from product-visible Postgres catalog rows using the TypeScript safe document contract, and verifies search/index state after that derived-index refresh without running a new source import.
+
+Production command:
+
+```bash
+vercel env run -e production -- pnpm --dir apps/web catalog:sources:eu-oj-production-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden
+```
+
+The command emits `ove106.euOjProductionUxSearchProof.v1` redacted evidence and fails closed unless:
+
+- the production BG/EU OJ `/garden` smoke can search, select, save, and read back a `eu_oj_eur_lex_common_catalogue` `plant_variety` beyond `Садово 1`;
+- readback shows the approved Official Journal / EUR-Lex attribution and legal-value caveat;
+- legacy `Садово 1` remains selectable;
+- Postgres fallback and Meilisearch `catalog_typeahead` both find the selected landed EU OJ/BG row after the direct safe derived-index refresh;
+- duplicate same-concept suggestions are absent;
+- review-needed/rejected OJ rows have no product links, IASAS-only blocked rows are absent from search, and Meilisearch hits can be converted through the public-safe typeahead contract;
+- evidence excludes raw payloads, source-row keys, source-only fields, env values, secrets, cookies, emails, user private data, precise coordinates, IP addresses, user agents, referrers, database URLs, and Meilisearch credentials.
 
 ## OVE-90 Full Production Rollout Proof
 

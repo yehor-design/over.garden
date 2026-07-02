@@ -23,6 +23,7 @@
     "catalog:sources:import-genebank-long-tail": "tsx scripts/import-genebank-long-tail.ts",
     "catalog:sources:seed-rollout-proof": "tsx scripts/seed-catalog-rollout-proof.ts",
     "catalog:sources:production-rollout-proof": "tsx scripts/prove-catalog-production-rollout.ts",
+    "catalog:sources:eu-oj-production-proof": "tsx scripts/prove-eu-oj-production-ux-search.ts",
     "catalog:sources:refresh-sample": "tsx scripts/refresh-catalog-source-sample.ts",
     "catalog:sources:verify": "tsx scripts/verify-catalog-sources.ts",
     "catalog:sources:dry-run": "tsx scripts/dry-run-catalog-full-import.ts",

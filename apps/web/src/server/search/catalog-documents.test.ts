@@ -38,7 +38,7 @@ describe("catalog typeahead search documents", () => {
     const document = toCatalogTypeaheadDocument(catalogRow());
 
     expect(document).toEqual({
-      id: "00000000-0000-4000-8000-000000000101:uk:%D1%82%D0%BE%D0%BC%D0%B0%D1%82%20%D1%87%D0%B5%D1%80%D1%96",
+      id: "00000000-0000-4000-8000-000000000101-158355993c15b26d5715715b",
       catalogItemId: "00000000-0000-4000-8000-000000000101",
       displayName: "Томат чері",
       canonicalName: "Помідор чері",
@@ -79,7 +79,7 @@ describe("catalog typeahead search documents", () => {
     );
 
     expect(document).toEqual({
-      id: "00000000-0000-4000-8000-000000000301:uk:%D0%BF%D0%BE%D0%BC%D1%96%D0%B4%D0%BE%D1%80",
+      id: "00000000-0000-4000-8000-000000000301-a3966f5cde1445beb1fd2999",
       catalogItemId: "00000000-0000-4000-8000-000000000301",
       displayName: "помідор",
       canonicalName: "Solanum lycopersicum L.",

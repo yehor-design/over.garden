@@ -229,14 +229,11 @@ async function readProductionSourceFamilyProof(
     definition.expectedSource,
     definition.expectedCatalogKind,
   );
-  const duplicateIdentityCount = await countDuplicateProductIdentityRows(
-    db,
-    {
-      canonicalName: item.canonicalName,
-      catalogKind: item.catalogKind,
-      source: item.source,
-    },
-  );
+  const duplicateIdentityCount = await countDuplicateProductIdentityRows(db, {
+    canonicalName: item.canonicalName,
+    catalogKind: item.catalogKind,
+    source: item.source,
+  });
 
   return {
     key: definition.key,
@@ -416,21 +413,39 @@ async function refreshCatalogTypeaheadIndex(
     index.updateFilterableAttributes([...CATALOG_FILTERABLE_ATTRIBUTES]),
     index.updateSortableAttributes([...CATALOG_SORTABLE_ATTRIBUTES]),
   ]) {
-    await task.waitTask(MEILI_WAIT_OPTIONS);
+    assertMeiliTaskSucceeded(
+      await task.waitTask(MEILI_WAIT_OPTIONS),
+      "catalog_typeahead settings update",
+    );
   }
 
-  await index.deleteAllDocuments().waitTask(MEILI_WAIT_OPTIONS);
+  assertMeiliTaskSucceeded(
+    await index.deleteAllDocuments().waitTask(MEILI_WAIT_OPTIONS),
+    "catalog_typeahead delete",
+  );
 
   if (documents.length > 0) {
-    await index
-      .addDocuments(documents, { primaryKey: "id" })
-      .waitTask(MEILI_WAIT_OPTIONS);
+    assertMeiliTaskSucceeded(
+      await index
+        .addDocuments(documents, { primaryKey: "id" })
+        .waitTask(MEILI_WAIT_OPTIONS),
+      "catalog_typeahead add documents",
+    );
   }
 
   return {
     documentsIndexed: documents.length,
     taskWaited: true as const,
   };
+}
+
+function assertMeiliTaskSucceeded(
+  task: { status?: string; error?: unknown },
+  label: string,
+) {
+  if (task.status !== "succeeded") {
+    throw new Error(`${label} failed in Meilisearch.`);
+  }
 }
 
 async function readCatalogTypeaheadDocuments(

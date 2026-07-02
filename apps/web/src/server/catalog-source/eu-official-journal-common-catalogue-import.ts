@@ -471,6 +471,7 @@ export function buildInsertEuOfficialJournalCommonCatalogueSourceLinkQuery(
 export function buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQuery(
   executor: QueryExecutor,
 ) {
+  const now = new Date();
   const payload = {
     kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
   } satisfies JsonValue;
@@ -480,6 +481,11 @@ export function buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQ
     .values({
       queue_name: MATCHING_QUEUE,
       payload,
+      status: "pending",
+      available_at: now,
+      locked_at: null,
+      locked_by: null,
+      last_error: null,
       idempotency_key: CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY,
     })
     .onConflict((oc) =>
@@ -487,7 +493,13 @@ export function buildEnqueueEuOfficialJournalCommonCatalogueTypeaheadReindexJobQ
         .column("idempotency_key")
         .where("idempotency_key", "is not", null)
         .doUpdateSet({
-          updated_at: new Date(),
+          payload,
+          status: "pending",
+          available_at: now,
+          locked_at: null,
+          locked_by: null,
+          last_error: null,
+          updated_at: now,
         }),
     )
     .returning("id");

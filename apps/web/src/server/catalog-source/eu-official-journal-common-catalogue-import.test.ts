@@ -319,10 +319,27 @@ describe("EU Official Journal Common Catalogue import", () => {
       ).compile();
 
     expect(compiled.sql).toContain('insert into "job_queue"');
+    expect(compiled.sql).toContain('"payload" = $9');
+    expect(compiled.sql).toContain('"status" = $10');
+    expect(compiled.sql).toContain('"available_at" = $11');
+    expect(compiled.sql).toContain('"locked_at" = $12');
+    expect(compiled.sql).toContain('"locked_by" = $13');
+    expect(compiled.sql).toContain('"last_error" = $14');
     expect(compiled.parameters).toEqual([
       "matching",
       { kind: "catalog_typeahead_reindex" },
+      "pending",
+      expect.any(Date),
+      null,
+      null,
+      null,
       "catalog-typeahead-reindex",
+      { kind: "catalog_typeahead_reindex" },
+      "pending",
+      expect.any(Date),
+      null,
+      null,
+      null,
       expect.any(Date),
     ]);
   });

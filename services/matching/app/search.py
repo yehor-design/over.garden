@@ -103,6 +103,7 @@ select
   catalog_items.id::text as catalog_item_id,
   catalog_items.canonical_name,
   catalog_items.normalized_name as item_normalized_name,
+  catalog_items.catalog_kind,
   catalog_items.status,
   catalog_items.source,
   catalog_items.created_by_user_id::text as created_by_user_id,
@@ -189,6 +190,7 @@ def catalog_typeahead_document_from_row(
     catalog_item_id = _text(row, "catalog_item_id", "id")
     display_name = _text(row, "display_name")
     canonical_name = _text(row, "canonical_name")
+    catalog_kind = _text(row, "catalog_kind", "catalogKind")
     alias_locale = _text(row, "alias_locale", fallback="und")
     item_locale = _text(row, "item_locale", fallback=alias_locale)
     normalized_name = _normalized_name(row)
@@ -198,6 +200,7 @@ def catalog_typeahead_document_from_row(
         not catalog_item_id
         or not display_name
         or not canonical_name
+        or catalog_kind not in {"plant_variety", "species", "breed"}
         or not normalized_name
     ):
         return None
@@ -213,6 +216,7 @@ def catalog_typeahead_document_from_row(
         "catalogItemId": catalog_item_id,
         "displayName": display_name,
         "canonicalName": canonical_name,
+        "catalogKind": catalog_kind,
         "normalizedName": normalized_name,
         "locale": alias_locale,
         "itemLocale": item_locale,
@@ -419,6 +423,7 @@ def prove_catalog_cyrillic_typeahead() -> dict[str, object]:
             {
                 "catalog_item_id": "00000000-0000-4000-8000-000000000101",
                 "canonical_name": "Помідор чері",
+                "catalog_kind": "plant_variety",
                 "status": "seeded",
                 "source": "internal_seed",
                 "created_by_user_id": None,
@@ -431,6 +436,7 @@ def prove_catalog_cyrillic_typeahead() -> dict[str, object]:
             {
                 "catalog_item_id": "00000000-0000-4000-8000-000000000102",
                 "canonical_name": "Огірок Ніжинський",
+                "catalog_kind": "plant_variety",
                 "status": "seeded",
                 "source": "internal_seed",
                 "created_by_user_id": None,

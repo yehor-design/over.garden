@@ -182,6 +182,8 @@ The OVE-102 parser preserves variety denomination, species/crop, notifier/admiss
 
 The dry-run reports row counts by supplement, species/crop, country, notifier, and confidence bucket. IASAS-only, EU Plant Variety Portal-only, CPVO/UPOV, or missing-provenance rows cannot be upgraded through this parser path; the parser accepts only official EUR-Lex or `data.europa.eu` ELI source URLs. Missing CELEX/ELI, unavailable Formex ZIP, HTML-only evidence, PDF-only evidence, or ambiguous artifact format is reported as `review_needed`; EUR-Lex XML WAF `202` remains a recorded XML artifact caveat, but does not block parsing when the CELEX-derived Publications Office ZIP is fetched and checksummed. Do not silently skip a supplement family.
 
+OVE-106 is the narrow EU OJ/BG production UX/search gate after OVE-105. It must pass `pnpm catalog:sources:eu-oj-production-proof -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden` before OVE-90 is rerun for final full-catalog closeout. The proof directly rebuilds the derived `catalog_typeahead` index from product-visible Postgres catalog rows, then verifies the landed EU OJ/BG row through both Postgres fallback and Meilisearch.
+
 OVE-90 must not claim full catalog availability until the relevant dry-run reports, source-family imports, OVE-89 entity-resolution QA, production `/garden` smoke, and production search/index proof all agree.
 
 The OVE-90 gate command is:

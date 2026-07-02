@@ -140,6 +140,7 @@ def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
         {
             "catalog_item_id": "00000000-0000-4000-8000-000000000101",
             "canonical_name": "Помідор чері",
+            "catalog_kind": "plant_variety",
             "status": "seeded",
             "source": "internal_seed",
             "created_by_user_id": None,
@@ -154,5 +155,6 @@ def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():
     assert document is not None
     assert document["catalogItemId"] == "00000000-0000-4000-8000-000000000101"
     assert document["displayName"] == "Помідор чері"
+    assert document["catalogKind"] == "plant_variety"
     assert document["normalizedName"] == "помідор чері"
     assert re.fullmatch(r"[A-Za-z0-9_-]+", str(document["id"]))
