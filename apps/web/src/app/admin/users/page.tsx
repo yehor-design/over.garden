@@ -8,9 +8,6 @@ import {
   type AdminRole,
   type AdminRoleChangeReason,
 } from "@/lib/admin/roles";
-import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
-import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { resolveAdminCapabilityAccess } from "@/server/admin-access";
 import {
   readAdminRoleManagementView,
@@ -41,11 +38,7 @@ interface AdminUsersPageProps {
 export default async function AdminUsersPage({
   searchParams,
 }: AdminUsersPageProps = {}) {
-  const params: AdminUsersSearchParams = await (searchParams ??
-    Promise.resolve({}));
-  const facebookSignInEnabled = isFacebookSignInEnabled();
-  const googleSignInEnabled = isGoogleSignInEnabled();
-  const oauthMessage = oauthErrorRecoveryMessage(params.error);
+  await (searchParams ?? Promise.resolve({}));
   const session = await getCurrentSession();
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
@@ -55,11 +48,7 @@ export default async function AdminUsersPage({
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
-        <GardenAuthPanel
-          facebookSignInEnabled={facebookSignInEnabled}
-          googleSignInEnabled={googleSignInEnabled}
-          initialMessage={oauthMessage}
-        />
+        <GardenAuthPanel />
       </main>
     );
   }
@@ -73,11 +62,7 @@ export default async function AdminUsersPage({
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
-        <GardenAuthPanel
-          facebookSignInEnabled={facebookSignInEnabled}
-          googleSignInEnabled={googleSignInEnabled}
-          initialMessage={oauthMessage}
-        />
+        <GardenAuthPanel />
       </main>
     );
   }
@@ -107,8 +92,9 @@ export default async function AdminUsersPage({
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
               Owner-only grants for internal roles. Use exact Better Auth user
-              ids from a secure operator channel; emails and provider claims are
-              intentionally not used for authorization.
+              ids from a secure operator channel. Target accounts must use email
+              and password only; Google or Facebook linked accounts are
+              intentionally not eligible for admin capabilities.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -129,7 +115,7 @@ export default async function AdminUsersPage({
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
             Grant only `admin`, `moderator`, or `viewer`. Owner access remains a
-            bootstrap-controlled role.
+            bootstrap-controlled email/password-only role.
           </p>
         </div>
 

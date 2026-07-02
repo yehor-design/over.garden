@@ -9,7 +9,7 @@ import {
 } from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
-export type CatalogCuratorAccessMode = "database_role";
+export type CatalogCuratorAccessMode = "database_role_credential_only";
 
 export type CatalogCuratorAccess = AdminAccess & {
   mode: CatalogCuratorAccessMode;

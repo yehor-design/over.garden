@@ -5,6 +5,7 @@ import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
   ADMIN_LAST_OWNER_PROTECTION_MESSAGE,
+  ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE,
   grantAdminRole,
   hashAdminActorSessionId,
   readAdminRoleManagementView,
@@ -116,6 +117,31 @@ describe("admin role management repository", () => {
     expect(state.audit).toEqual([]);
   });
 
+  it("rejects role grants to social-linked users before mutating role rows", async () => {
+    const state = createState({
+      users: [OWNER_ID, MODERATOR_ID],
+      roles: [{ userId: OWNER_ID, role: "owner" }],
+      accounts: {
+        [MODERATOR_ID]: ["credential", "google"],
+      },
+    });
+
+    await expect(
+      grantAdminRole(
+        scopedToUser(OWNER_ID, "owner-session"),
+        {
+          targetUserId: MODERATOR_ID,
+          role: "moderator",
+          reason: "pilot_operator_delegation",
+        },
+        fakeAdminRoleDb(state),
+      ),
+    ).rejects.toThrow(ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE);
+
+    expect(state.roles.has(MODERATOR_ID)).toBe(false);
+    expect(state.audit).toEqual([]);
+  });
+
   it("prevents downgrading or revoking the last owner", async () => {
     const grantState = createState({
       users: [OWNER_ID],
@@ -196,6 +222,7 @@ type RoleRow = {
 
 type FakeState = {
   users: Set<string>;
+  accounts: Map<string, string[]>;
   roles: Map<
     string,
     {
@@ -210,10 +237,20 @@ type FakeState = {
   audit: Array<Record<string, unknown>>;
 };
 
-function createState(input: { users: string[]; roles: RoleRow[] }): FakeState {
+function createState(input: {
+  users: string[];
+  roles: RoleRow[];
+  accounts?: Record<string, string[]>;
+}): FakeState {
   const now = new Date("2026-07-02T00:00:00.000Z");
   return {
     users: new Set(input.users),
+    accounts: new Map(
+      input.users.map((userId) => [
+        userId,
+        input.accounts?.[userId] ?? ["credential"],
+      ]),
+    ),
     roles: new Map(
       input.roles.map((row) => [
         row.userId,
@@ -273,6 +310,14 @@ function createSelectBuilder(state: FakeState, table: string) {
             matches(filters, "user_id", row.user_id) &&
             matches(filters, "role", row.role),
         );
+      }
+
+      if (table === "account") {
+        return [...state.accounts.entries()]
+          .filter(([userId]) => matches(filters, "userId", userId))
+          .flatMap(([, providers]) =>
+            providers.map((providerId) => ({ providerId })),
+          );
       }
 
       if (table === "admin_role_audit_log") {

@@ -44,7 +44,7 @@ describe("/admin/users", () => {
     });
     mocks.resolveAdminCapabilityAccess.mockResolvedValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "owner",
       capabilities: [
         "admin:read",
@@ -96,6 +96,8 @@ describe("/admin/users", () => {
 
     expect(html).toContain("Admin users");
     expect(html).toContain("admin-users-auth-panel");
+    expect(html).not.toContain("Continue with Google");
+    expect(html).not.toContain("Continue with Facebook");
     expect(mocks.resolveAdminCapabilityAccess).not.toHaveBeenCalled();
     expect(mocks.readAdminRoleManagementView).not.toHaveBeenCalled();
   });
@@ -117,7 +119,8 @@ describe("/admin/users", () => {
 
     expect(metadata.title).toBe("Admin users | OverGarden");
     expect(html).toContain("Role management");
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
+    expect(html).toContain("email and password only");
     expect(html).toContain("Grant a role");
     expect(html).toContain("Moderator");
     expect(html).toContain("Recent role audit");

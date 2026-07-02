@@ -53,7 +53,7 @@ describe("catalog curation actions", () => {
       sessionId: "non-operator-session",
     });
     mocks.assertCatalogCuratorAccess.mockResolvedValue({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });

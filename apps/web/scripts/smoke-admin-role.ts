@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { config as loadEnv } from "dotenv";
-import { Kysely, PostgresDialect } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 
 import {
@@ -98,11 +98,13 @@ async function main() {
   const ownerEmail = `ove110-owner-${Date.now()}-${randomUUID()}@example.test`;
   const normalEmail = `ove110-normal-${Date.now()}-${randomUUID()}@example.test`;
   const moderatorEmail = `ove110-moderator-${Date.now()}-${randomUUID()}@example.test`;
+  const socialLinkedAdminEmail = `ove113-social-admin-${Date.now()}-${randomUUID()}@example.test`;
 
   try {
     const ownerJar = new CookieJar();
     const normalJar = new CookieJar();
     const moderatorJar = new CookieJar();
+    const socialLinkedAdminJar = new CookieJar();
 
     await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-110 Owner Smoke");
     await signUpAndSignIn(
@@ -117,9 +119,19 @@ async function main() {
       moderatorEmail,
       "OVE-110 Moderator Smoke",
     );
+    await signUpAndSignIn(
+      baseUrl,
+      socialLinkedAdminJar,
+      socialLinkedAdminEmail,
+      "OVE-113 Social Linked Admin Smoke",
+    );
 
     const ownerUserId = await readUserIdByEmail(db, ownerEmail);
     const moderatorUserId = await readUserIdByEmail(db, moderatorEmail);
+    const socialLinkedAdminUserId = await readUserIdByEmail(
+      db,
+      socialLinkedAdminEmail,
+    );
     await db
       .insertInto("admin_user_roles")
       .values({
@@ -163,13 +175,37 @@ async function main() {
         reason: "pilot_operator_delegation",
       })
       .execute();
+    await db
+      .insertInto("admin_user_roles")
+      .values({
+        user_id: socialLinkedAdminUserId,
+        role: "admin",
+        granted_by_user_id: ownerUserId,
+        grant_reason: "manual_owner_grant",
+      })
+      .execute();
+    await db
+      .insertInto("account")
+      .values({
+        userId: socialLinkedAdminUserId,
+        providerId: "google",
+        accountId: `ove113-${randomUUID()}`,
+        updatedAt: sql`now()`,
+      })
+      .execute();
 
     const signedOutHtml = await textRequest(baseUrl, new CookieJar(), "/admin");
     const normalHtml = await textRequest(baseUrl, normalJar, "/admin");
     const ownerHtml = await textRequest(baseUrl, ownerJar, "/admin");
+    const socialLinkedAdminHtml = await textRequest(
+      baseUrl,
+      socialLinkedAdminJar,
+      "/admin",
+    );
     const signedOutText = visiblePageText(signedOutHtml);
     const normalText = visiblePageText(normalHtml);
     const ownerText = visiblePageText(ownerHtml);
+    const socialLinkedAdminText = visiblePageText(socialLinkedAdminHtml);
 
     assertIncludes(
       signedOutText,
@@ -186,7 +222,22 @@ async function main() {
       "Pilot smoke",
       "Normal signed-in user saw admin dashboard links.",
     );
+    assertIncludes(
+      socialLinkedAdminText,
+      "Access denied.",
+      "Social-linked admin-role user was not denied from /admin.",
+    );
+    assertNotIncludes(
+      socialLinkedAdminText,
+      "Pilot smoke",
+      "Social-linked admin-role user saw admin dashboard links.",
+    );
     assertIncludes(ownerText, "Role: Owner", "Owner did not see owner role.");
+    assertIncludes(
+      ownerText,
+      "Gate: database_role_credential_only",
+      "Owner dashboard did not show the credential-only admin gate.",
+    );
     assertIncludes(
       ownerText,
       "Admin users",
@@ -310,10 +361,11 @@ async function main() {
       JSON.stringify(
         {
           ok: true,
-          issue: "OVE-110",
+          issue: "OVE-113",
           signedOutDeniedToDashboard: true,
           normalUserDenied: true,
           ownerDashboardRendered: true,
+          socialLinkedAdminDenied: true,
           ownerRoleManagementRendered: true,
           normalRoleManagementDenied: true,
           moderatorRoleManagementDenied: true,
@@ -331,6 +383,7 @@ async function main() {
     await cleanupSmokeUser(db, ownerEmail);
     await cleanupSmokeUser(db, normalEmail);
     await cleanupSmokeUser(db, moderatorEmail);
+    await cleanupSmokeUser(db, socialLinkedAdminEmail);
     await db.destroy();
   }
 }

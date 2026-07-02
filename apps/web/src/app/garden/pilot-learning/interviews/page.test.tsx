@@ -57,7 +57,7 @@ describe("/garden/pilot-learning/interviews", () => {
     vi.clearAllMocks();
     mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });
@@ -103,7 +103,7 @@ describe("/garden/pilot-learning/interviews", () => {
       }),
     );
 
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Role: moderator");
     expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
     expect(html).toContain("Activated — first entry plus follow-up");
@@ -114,7 +114,7 @@ describe("/garden/pilot-learning/interviews", () => {
   it("keeps read-only viewer roles from seeing the capture form", async () => {
     mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "viewer",
       capabilities: ["admin:read", "operator:read"],
     });

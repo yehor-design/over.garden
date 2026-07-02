@@ -89,7 +89,7 @@ describe("/garden/catalog/curation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.assertCatalogCuratorAccess.mockResolvedValue({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });
@@ -141,7 +141,7 @@ describe("/garden/catalog/curation", () => {
     const { default: CatalogCurationPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Role: moderator");
     expect(html).toContain("source-candidate-review");
     expect(html).toContain("entity-resolution-report");

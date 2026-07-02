@@ -5,6 +5,13 @@ plane. Admin access is tied to a Better Auth user through
 `admin_user_roles.user_id`; it is never inferred from email domain, display
 name, provider, cookies, or client state.
 
+OVE-113 tightens the admin sign-in boundary: admin-capable accounts must be
+email/password (`credential`) accounts only. Google and Facebook remain
+gardener sign-in options, but a user with any linked social provider account is
+denied by `/admin` even if an internal role row exists. This is intentional for
+the MVP: admin power lives in a dedicated credential-only account, not in a
+consumer social login.
+
 ## Roles
 
 The initial role enum is:
@@ -41,6 +48,8 @@ OVE-110 adds `/admin/users` as the owner-only role-management surface. It lets
 an owner grant or revoke `admin`, `moderator`, and `viewer` roles by exact
 Better Auth user id. It is not a broad user search or CRM surface, and it must
 not infer roles from email, provider claim, URL parameter, or client state.
+Targets must have a credential account and no linked Google/Facebook account;
+role grants fail closed for social-created or social-linked users.
 
 Every role change writes `admin_role_audit_log` with actor user id, target user
 id, bounded action/reason/role enums, timestamp, and a one-way hash of the
@@ -54,6 +63,8 @@ bootstrap-controlled operation.
 ## Owner Bootstrap
 
 1. Sign in once through the normal Better Auth flow so the owner user exists.
+   Use the dedicated email/password admin account. Do not bootstrap a Google or
+   Facebook-created user.
 2. Obtain the user id from a secure operator-only channel. Do not paste it into
    docs, Linear, screenshots, logs, commits, or chat.
 3. Run:

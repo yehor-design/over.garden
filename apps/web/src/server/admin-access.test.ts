@@ -14,14 +14,14 @@ import {
 describe("admin access gate", () => {
   it("requires authentication before reading admin roles", async () => {
     await expect(
-      resolveAdminAccess(null, fakeAdminDb("owner")),
+      resolveAdminAccess(null, fakeAdminDb({ role: "owner" })),
     ).resolves.toEqual({ status: "sign_in_required" });
   });
 
   it("denies signed-in users without a durable admin role", async () => {
     const access = await resolveAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb(null),
+      fakeAdminDb({ role: null }),
     );
 
     expect(access).toEqual({ status: "denied" });
@@ -45,11 +45,11 @@ describe("admin access gate", () => {
   it("allows owners with role-management capability", async () => {
     const access = await assertAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb("owner"),
+      fakeAdminDb({ role: "owner" }),
     );
 
     expect(access).toEqual({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "owner",
       capabilities: [
         "admin:read",
@@ -64,10 +64,27 @@ describe("admin access gate", () => {
     ).not.toThrow();
   });
 
+  it("denies stored admin roles when the account is not credential-only", async () => {
+    const socialLinkedAccess = await resolveAdminAccess(
+      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      fakeAdminDb({
+        role: "owner",
+        accountProviders: ["credential", "google"],
+      }),
+    );
+    const socialOnlyAccess = await resolveAdminAccess(
+      scopedToUser("00000000-0000-4000-8000-000000000002"),
+      fakeAdminDb({ role: "admin", accountProviders: ["facebook"] }),
+    );
+
+    expect(socialLinkedAccess).toEqual({ status: "denied" });
+    expect(socialOnlyAccess).toEqual({ status: "denied" });
+  });
+
   it("keeps viewer roles read-only", async () => {
     const access = await assertAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb("viewer"),
+      fakeAdminDb({ role: "viewer" }),
     );
 
     expect(access.capabilities).toEqual(["admin:read", "operator:read"]);
@@ -82,11 +99,11 @@ describe("admin access gate", () => {
   it("limits irreversible erasure execution to owner and admin roles", async () => {
     const adminAccess = await assertAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb("admin"),
+      fakeAdminDb({ role: "admin" }),
     );
     const moderatorAccess = await assertAdminAccess(
       scopedToUser("00000000-0000-4000-8000-000000000002"),
-      fakeAdminDb("moderator"),
+      fakeAdminDb({ role: "moderator" }),
     );
 
     expect(() =>
@@ -100,18 +117,36 @@ describe("admin access gate", () => {
   it("fails closed if the stored role is outside the enum", async () => {
     await expect(
       readAdminRoleForUser(
-        fakeAdminDb("founder") as Kysely<Database>,
+        fakeAdminDb({ role: "founder" }) as Kysely<Database>,
         "00000000-0000-4000-8000-000000000001",
       ),
     ).resolves.toBeNull();
   });
 });
 
-function fakeAdminDb(role: string | null): Kysely<Database> {
-  const executeTakeFirst = vi.fn(async () => (role ? { role } : undefined));
-  const where = vi.fn(() => ({ executeTakeFirst }));
-  const select = vi.fn(() => ({ where }));
-  const selectFrom = vi.fn(() => ({ select }));
+function fakeAdminDb(input: {
+  role: string | null;
+  accountProviders?: string[];
+}): Kysely<Database> {
+  const selectFrom = vi.fn((table: string) => {
+    const builder = {
+      select: vi.fn(() => builder),
+      where: vi.fn(() => builder),
+      executeTakeFirst: vi.fn(async () =>
+        table === "admin_user_roles" && input.role
+          ? { role: input.role }
+          : undefined,
+      ),
+      execute: vi.fn(async () =>
+        table === "account"
+          ? (input.accountProviders ?? ["credential"]).map((providerId) => ({
+              providerId,
+            }))
+          : [],
+      ),
+    };
+    return builder;
+  });
 
   return { selectFrom } as unknown as Kysely<Database>;
 }

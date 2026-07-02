@@ -32,7 +32,7 @@ describe("founder interview operator actions", () => {
       sessionId: "non-operator-session",
     });
     mocks.assertFounderInterviewMutationAccess.mockResolvedValue({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });

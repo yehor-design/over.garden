@@ -60,7 +60,7 @@ describe("/garden/privacy/erasure-requests", () => {
     vi.clearAllMocks();
     mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "admin",
       capabilities: [
         "admin:read",
@@ -121,7 +121,7 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Role: admin");
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();
     expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
@@ -141,7 +141,7 @@ describe("/garden/privacy/erasure-requests", () => {
   it("keeps read-only viewer roles from seeing review or execution actions", async () => {
     mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "viewer",
       capabilities: ["admin:read", "operator:read"],
     });
@@ -149,7 +149,7 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Role: viewer");
     expect(html).toContain("Non-destructive dry-run preview");
     expect(html).not.toContain("Record dry-run review again");
@@ -161,7 +161,7 @@ describe("/garden/privacy/erasure-requests", () => {
   it("keeps moderator roles from seeing irreversible execution", async () => {
     mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });

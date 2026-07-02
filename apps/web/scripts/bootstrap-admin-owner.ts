@@ -6,8 +6,9 @@
  *   pnpm admin:bootstrap-owner -- --env-file .env.production.local --user-id "$OVERGARDEN_OWNER_USER_ID"
  *
  * The script validates that the Better Auth user already exists and writes only
- * a durable owner role row. Output is intentionally redacted: no user IDs,
- * emails, tokens, cookies, connection strings, or env values are printed.
+ * a durable owner role row for a credential-only account. Output is
+ * intentionally redacted: no user IDs, emails, tokens, cookies, connection
+ * strings, or env values are printed.
  */
 
 import { readFileSync } from "node:fs";
@@ -31,6 +32,7 @@ interface CliOptions {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const CREDENTIAL_PROVIDER_ID = "credential";
 
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
@@ -67,6 +69,8 @@ async function main() {
       throw new Error("Admin bootstrap user was not found.");
     }
 
+    await assertCredentialOnlyAccount(db, userId);
+
     await db
       .insertInto("admin_user_roles")
       .values({
@@ -90,6 +94,7 @@ async function main() {
           issue: "OVE-108",
           role: "owner",
           userVerified: true,
+          credentialOnlyVerified: true,
           roleUpserted: true,
           evidenceSafety: "redacted_no_user_ids_emails_tokens_or_env",
         },
@@ -99,6 +104,28 @@ async function main() {
     );
   } finally {
     await db.destroy();
+  }
+}
+
+async function assertCredentialOnlyAccount(
+  db: Kysely<Database>,
+  userId: string,
+) {
+  const accounts = await db
+    .selectFrom("account")
+    .select("providerId")
+    .where("userId", "=", userId)
+    .execute();
+
+  const hasCredentialAccount = accounts.some(
+    (account) => account.providerId === CREDENTIAL_PROVIDER_ID,
+  );
+  const hasLinkedSocialAccount = accounts.some(
+    (account) => account.providerId !== CREDENTIAL_PROVIDER_ID,
+  );
+
+  if (!hasCredentialAccount || hasLinkedSocialAccount) {
+    throw new Error("Admin bootstrap user must use email and password only.");
   }
 }
 

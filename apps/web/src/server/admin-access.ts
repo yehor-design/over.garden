@@ -13,9 +13,10 @@ import {
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
+export const ADMIN_CREDENTIAL_PROVIDER_ID = "credential";
 
 export interface AdminAccess {
-  mode: "database_role";
+  mode: "database_role_credential_only";
   role: AdminRole;
   capabilities: AdminCapability[];
 }
@@ -49,8 +50,10 @@ export async function assertAdminAccess(
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 
+  await assertCredentialOnlyAdminAccount(database, scope.userId);
+
   return {
-    mode: "database_role",
+    mode: "database_role_credential_only",
     role,
     capabilities: capabilitiesForAdminRole(role),
   };
@@ -112,5 +115,27 @@ export async function resolveAdminCapabilityAccess(
     return { status: "allowed", ...access };
   } catch {
     return { status: "denied" };
+  }
+}
+
+export async function assertCredentialOnlyAdminAccount(
+  database: Kysely<Database>,
+  userId: string,
+) {
+  const rows = await database
+    .selectFrom("account")
+    .select("providerId")
+    .where("userId", "=", userId)
+    .execute();
+
+  const hasCredentialAccount = rows.some(
+    (row) => row.providerId === ADMIN_CREDENTIAL_PROVIDER_ID,
+  );
+  const hasLinkedSocialAccount = rows.some(
+    (row) => row.providerId !== ADMIN_CREDENTIAL_PROVIDER_ID,
+  );
+
+  if (!hasCredentialAccount || hasLinkedSocialAccount) {
+    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 }

@@ -15,7 +15,10 @@ import {
   type AdminRoleChangeReason,
   type ManageableAdminRole,
 } from "@/lib/admin/roles";
-import { assertAdminCapabilityForScope } from "@/server/admin-access";
+import {
+  assertAdminCapabilityForScope,
+  assertCredentialOnlyAdminAccount,
+} from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ROLE_MANAGEMENT_DENIED_MESSAGE =
@@ -26,6 +29,8 @@ export const ADMIN_ROLE_ASSIGNMENT_NOT_FOUND_MESSAGE =
   "Admin role assignment was not found.";
 export const ADMIN_LAST_OWNER_PROTECTION_MESSAGE =
   "At least one owner role must remain.";
+export const ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE =
+  "Admin role target must use email and password only.";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -154,6 +159,7 @@ export async function grantAdminRole(
     );
 
     await assertTargetUserExists(trx, targetUserId);
+    await assertAdminRoleTargetUsesCredentialOnlyAuth(trx, targetUserId);
     const previousRole = await readCurrentAdminRole(trx, targetUserId);
 
     if (previousRole === "owner") {
@@ -275,6 +281,17 @@ async function assertTargetUserExists(
 
   if (!user) {
     throw new Error(ADMIN_ROLE_TARGET_NOT_FOUND_MESSAGE);
+  }
+}
+
+async function assertAdminRoleTargetUsesCredentialOnlyAuth(
+  database: Kysely<Database>,
+  targetUserId: string,
+) {
+  try {
+    await assertCredentialOnlyAdminAccount(database, targetUserId);
+  } catch {
+    throw new Error(ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE);
   }
 }
 

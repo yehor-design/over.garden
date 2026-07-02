@@ -34,7 +34,7 @@ describe("/garden/pilot-learning/decision", () => {
     vi.clearAllMocks();
     mocks.resolvePilotHealthOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "viewer",
       capabilities: ["admin:read", "operator:read"],
     });
@@ -57,7 +57,7 @@ describe("/garden/pilot-learning/decision", () => {
     const { default: PilotCohortDecisionPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotCohortDecisionPage());
 
-    expect(html).toContain("Gate: database_role");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Role: viewer");
     expect(html).toContain("Pilot cohort decision");
     expect(mocks.getPilotCohortDecisionReadoutSafely).toHaveBeenCalledOnce();

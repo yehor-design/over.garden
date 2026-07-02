@@ -34,7 +34,7 @@ describe("/admin", () => {
     });
     mocks.resolveAdminAccess.mockResolvedValue({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "owner",
       capabilities: [
         "admin:read",
@@ -55,6 +55,8 @@ describe("/admin", () => {
 
     expect(html).toContain("Admin");
     expect(html).toContain("admin-auth-panel");
+    expect(html).not.toContain("Continue with Google");
+    expect(html).not.toContain("Continue with Facebook");
     expect(html).not.toContain("Pilot smoke");
   });
 
@@ -75,6 +77,7 @@ describe("/admin", () => {
 
     expect(metadata.title).toBe("Admin | OverGarden");
     expect(html).toContain("Role: Owner");
+    expect(html).toContain("Gate: database_role_credential_only");
     expect(html).toContain("Admin users");
     expect(html).toContain("Manage roles: owner only");
     expect(html).toContain("Pilot smoke");

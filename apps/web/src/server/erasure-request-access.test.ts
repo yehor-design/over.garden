@@ -33,7 +33,7 @@ describe("erasure request operator access", () => {
       ),
     ).resolves.toMatchObject({
       status: "allowed",
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "viewer",
     });
   });
@@ -62,10 +62,19 @@ describe("erasure request operator access", () => {
 });
 
 function fakeAdminDb(role: string | null): Kysely<Database> {
-  const executeTakeFirst = vi.fn(async () => (role ? { role } : undefined));
-  const where = vi.fn(() => ({ executeTakeFirst }));
-  const select = vi.fn(() => ({ where }));
-  const selectFrom = vi.fn(() => ({ select }));
+  const selectFrom = vi.fn((table: string) => {
+    const builder = {
+      select: vi.fn(() => builder),
+      where: vi.fn(() => builder),
+      executeTakeFirst: vi.fn(async () =>
+        table === "admin_user_roles" && role ? { role } : undefined,
+      ),
+      execute: vi.fn(async () =>
+        table === "account" ? [{ providerId: "credential" }] : [],
+      ),
+    };
+    return builder;
+  });
 
   return { selectFrom } as unknown as Kysely<Database>;
 }

@@ -286,8 +286,8 @@ export function buildPilotSmokeReadiness({
       "Start Google OAuth from `/garden`, confirm the provider accepts the exact callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`, and confirm the callback lands back on `/garden` without recording auth params.",
       "Start Facebook Login from `/garden`, confirm Meta accepts the exact callback without redirect/origin errors, and confirm the callback lands back on `/garden` without recording auth params.",
       "Sign up or sign in as the pilot smoke user and create one first plant entry through `/garden`.",
-      "For an existing email/password account, sign in once, link Google from `/garden`, sign out, return with Google, and confirm the same garden data, invite grant, and any durable admin role stay attached to the same OverGarden user id.",
-      "For an existing email/password account, sign in once, link Facebook from `/garden`, sign out, return with Facebook, and confirm the same garden data, invite grant, and any durable admin role stay attached to the same OverGarden user id.",
+      "For an existing gardener email/password account, sign in once, link Google from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
+      "For an existing gardener email/password account, sign in once, link Facebook from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
       "Attach one photo, process it, and confirm authenticated readback shows only a public derivative URL.",
       "Add a follow-up entry to the same object and confirm it does not create a duplicate object.",
       "Publish the first entry after accepting the disclosure and confirm `/journal/[slug]` is SSR, noindex, location-safe, and derivative-only.",
@@ -295,7 +295,7 @@ export function buildPilotSmokeReadiness({
       "Open the noindex `/join` invite, confirm it is absent from the sitemap, follow it into `/garden?source=invited-cohort`, save a first entry plus a same-object follow-up, and confirm `/garden/pilot-health` shows the invited-cohort loop as aggregate counts.",
       "Archive the published entry and confirm the old public URL returns 410 Gone.",
       "Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 counts update without raw private data.",
-      "Open `/admin` as a normal Google- or Facebook-created user and confirm access denied; then open it as a linked owner/admin user and confirm durable admin_user_roles access is preserved.",
+      "Open `/admin` as a normal Google- or Facebook-created or linked user and confirm access denied; then open it as the dedicated email/password owner account and confirm durable admin_user_roles access is available.",
       "Verify catalog typeahead or matching service health, then prove journal_entry_index and journal_entry_unindex job processing with redacted job_queue and Meilisearch evidence.",
       "Confirm durability before inviting users: managed Postgres backup/PITR status and a worker restart/recovery smoke that keeps the public-safe search contract. Record both with redacted evidence.",
     ],
@@ -483,7 +483,7 @@ function checkAdminRoleAccessModel(): PilotSmokeCheck {
     label: "Admin role access model",
     severity: "manual",
     summary:
-      "Internal operator surfaces use durable admin_user_roles capabilities; bootstrap owner access through the documented role script before smoke.",
+      "Internal operator surfaces use durable admin_user_roles capabilities; bootstrap owner access through the documented role script for a credential-only email/password account before smoke.",
     evidence:
       "Evidence may say owner/admin role present only. Do not copy user IDs, emails, cookies, tokens, connection strings, or env values.",
   };

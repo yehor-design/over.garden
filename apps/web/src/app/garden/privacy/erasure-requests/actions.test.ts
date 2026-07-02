@@ -42,12 +42,12 @@ describe("erasure request operator actions", () => {
       sessionId: "non-operator-session",
     });
     mocks.assertErasureRequestMutationAccess.mockResolvedValue({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "moderator",
       capabilities: ["admin:read", "operator:read", "operator:mutate"],
     });
     mocks.assertErasureExecutionAccess.mockResolvedValue({
-      mode: "database_role",
+      mode: "database_role_credential_only",
       role: "admin",
       capabilities: [
         "admin:read",
