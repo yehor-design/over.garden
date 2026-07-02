@@ -258,6 +258,8 @@ export function poisonOperatorEnv(): Record<string, string> {
     BETTER_AUTH_SECRET: POISON.betterAuthSecret,
     GOOGLE_CLIENT_ID: POISON.googleClientId,
     GOOGLE_CLIENT_SECRET: POISON.googleClientSecret,
+    FACEBOOK_CLIENT_ID: POISON.facebookClientId,
+    FACEBOOK_CLIENT_SECRET: POISON.facebookClientSecret,
     DATABASE_URL: POISON.databaseUrl,
     DIRECT_URL: POISON.databaseUrl,
     CATALOG_CURATOR_USER_IDS: POISON.curatorUserId,

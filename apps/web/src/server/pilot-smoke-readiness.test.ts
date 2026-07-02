@@ -12,6 +12,8 @@ const productionLikeEnv = {
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
+  FACEBOOK_CLIENT_ID: "facebook-app-id-that-must-not-leak",
+  FACEBOOK_CLIENT_SECRET: "facebook-secret-that-must-not-leak",
   DATABASE_URL:
     "postgresql://overgarden:database-secret@db.example.com:5432/overgarden",
   DIRECT_URL:
@@ -48,6 +50,8 @@ describe("pilot smoke readiness", () => {
     expect(serialized).not.toContain("operator-user-id-that-must-not-leak");
     expect(serialized).not.toContain("google-client-id");
     expect(serialized).not.toContain("google-secret-that-must-not-leak");
+    expect(serialized).not.toContain("facebook-app-id-that-must-not-leak");
+    expect(serialized).not.toContain("facebook-secret-that-must-not-leak");
     expect(serialized).not.toContain("database-secret");
     expect(serialized).not.toContain("direct-database-secret");
     expect(serialized).not.toContain("r2-access-key-that-must-not-leak");
@@ -351,6 +355,49 @@ describe("pilot smoke readiness", () => {
       findCheck(
         blockedReadout.sections.flatMap((section) => section.checks),
         "google-oauth-provider",
+      ),
+    ).toMatchObject({ severity: "fail" });
+    expect(blockedReadout.overall).toBe("blocked");
+  });
+
+  it("requires Facebook Login env in production and keeps provider proof manual", () => {
+    const readyReadout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+    const readyChecks = readyReadout.sections.flatMap(
+      (section) => section.checks,
+    );
+
+    expect(findCheck(readyChecks, "facebook-oauth-provider")).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("redirect mismatch"),
+      evidence: expect.stringContaining(
+        "https://over.garden/api/auth/callback/facebook",
+      ),
+    });
+    expect(JSON.stringify(readyReadout)).not.toContain(
+      "facebook-secret-that-must-not-leak",
+    );
+    expect(
+      readyReadout.smokeSteps.some((step) => step.includes("Facebook Login")),
+    ).toBe(true);
+
+    const blockedReadout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        FACEBOOK_CLIENT_ID: undefined,
+        FACEBOOK_CLIENT_SECRET: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+
+    expect(
+      findCheck(
+        blockedReadout.sections.flatMap((section) => section.checks),
+        "facebook-oauth-provider",
       ),
     ).toMatchObject({ severity: "fail" });
     expect(blockedReadout.overall).toBe("blocked");

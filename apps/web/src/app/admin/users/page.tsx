@@ -8,6 +8,7 @@ import {
   type AdminRole,
   type AdminRoleChangeReason,
 } from "@/lib/admin/roles";
+import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { resolveAdminCapabilityAccess } from "@/server/admin-access";
@@ -40,9 +41,9 @@ interface AdminUsersPageProps {
 export default async function AdminUsersPage({
   searchParams,
 }: AdminUsersPageProps = {}) {
-  const params: AdminUsersSearchParams = await (
-    searchParams ?? Promise.resolve({})
-  );
+  const params: AdminUsersSearchParams = await (searchParams ??
+    Promise.resolve({}));
+  const facebookSignInEnabled = isFacebookSignInEnabled();
   const googleSignInEnabled = isGoogleSignInEnabled();
   const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const session = await getCurrentSession();
@@ -55,6 +56,7 @@ export default async function AdminUsersPage({
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
         <GardenAuthPanel
+          facebookSignInEnabled={facebookSignInEnabled}
           googleSignInEnabled={googleSignInEnabled}
           initialMessage={oauthMessage}
         />
@@ -72,6 +74,7 @@ export default async function AdminUsersPage({
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminUsersHeader />
         <GardenAuthPanel
+          facebookSignInEnabled={facebookSignInEnabled}
           googleSignInEnabled={googleSignInEnabled}
           initialMessage={oauthMessage}
         />

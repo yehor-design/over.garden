@@ -24,10 +24,13 @@ describe("social OAuth client helpers", () => {
       "existing OverGarden account",
     );
     expect(oauthErrorRecoveryMessage("account_not_linked")).toContain(
-      "Link Google sign-in",
+      "link the sign-in method",
     );
     expect(oauthErrorRecoveryMessage(["email_doesn't_match"])).toContain(
       "different email",
+    );
+    expect(oauthErrorRecoveryMessage("oauth_provider_not_found")).toContain(
+      "not configured",
     );
   });
 });

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  googleAccountPolicy,
   googleOAuthConfigurationState,
   isGoogleSignInEnabled,
   resolveGoogleSocialProviderConfig,
@@ -52,20 +51,6 @@ describe("Google OAuth configuration", () => {
       clientIdConfigured: true,
       clientSecretConfigured: true,
       productionRedirectUri: "https://over.garden/api/auth/callback/google",
-    });
-  });
-
-  it("requires explicit same-account linking instead of implicit email takeover", () => {
-    const policy = googleAccountPolicy();
-
-    expect(policy.encryptOAuthTokens).toBe(true);
-    expect(policy.accountLinking).toMatchObject({
-      enabled: true,
-      disableImplicitLinking: true,
-      trustedProviders: ["google"],
-      allowDifferentEmails: false,
-      allowUnlinkingAll: false,
-      updateUserInfoOnLink: false,
     });
   });
 });

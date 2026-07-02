@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   GardenAuthPanel,
-  GoogleAccountLinkPanel,
+  SocialAccountLinkPanel,
 } from "@/app/garden/garden-auth-panel";
 
 import {
@@ -59,27 +59,33 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(message).toContain(signInRecoveryHint());
   });
 
-  it("renders Google sign-in only when server configuration enables it", () => {
+  it("renders social sign-in only when server configuration enables it", () => {
     const disabledHtml = renderToStaticMarkup(<GardenAuthPanel />);
     const enabledHtml = renderToStaticMarkup(
       <GardenAuthPanel
+        facebookSignInEnabled
         googleSignInEnabled
-        initialMessage="Google sign-in did not finish."
+        initialMessage="Social sign-in did not finish."
       />,
     );
 
     expect(disabledHtml).not.toContain("Continue with Google");
+    expect(disabledHtml).not.toContain("Continue with Facebook");
     expect(enabledHtml).toContain("Continue with Google");
-    expect(enabledHtml).toContain("Google sign-in did not finish.");
+    expect(enabledHtml).toContain("Continue with Facebook");
+    expect(enabledHtml).toContain("Social sign-in did not finish.");
     expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
+    expect(enabledHtml).not.toContain("FACEBOOK_CLIENT_SECRET");
   });
 
-  it("offers explicit Google linking for the signed-in garden account", () => {
+  it("offers explicit social linking for the signed-in garden account", () => {
     const html = renderToStaticMarkup(
-      <GoogleAccountLinkPanel googleSignInEnabled />,
+      <SocialAccountLinkPanel facebookSignInEnabled googleSignInEnabled />,
     );
 
     expect(html).toContain("Link Google sign-in");
+    expect(html).toContain("Link Facebook sign-in");
+    expect(html).toContain("uses it only for sign-in");
     expect(html).not.toContain("client_secret");
   });
 });

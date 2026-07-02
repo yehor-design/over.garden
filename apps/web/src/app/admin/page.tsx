@@ -12,6 +12,7 @@ import {
 
 import { buttonVariants } from "@/components/ui/button";
 import type { AdminCapability, AdminRole } from "@/lib/admin/roles";
+import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -89,6 +90,7 @@ interface AdminPageProps {
 
 export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   const params: AdminSearchParams = await (searchParams ?? Promise.resolve({}));
+  const facebookSignInEnabled = isFacebookSignInEnabled();
   const googleSignInEnabled = isGoogleSignInEnabled();
   const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const session = await getCurrentSession();
@@ -102,6 +104,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <AdminHeader />
         <GardenAuthPanel
+          facebookSignInEnabled={facebookSignInEnabled}
           googleSignInEnabled={googleSignInEnabled}
           initialMessage={oauthMessage}
         />

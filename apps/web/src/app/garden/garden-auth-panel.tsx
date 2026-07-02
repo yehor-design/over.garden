@@ -15,12 +15,34 @@ import {
   shouldUseLocalDevAuthDefaults,
   signInRecoveryHint,
 } from "@/lib/auth/pilot-auth-recovery";
-import { GOOGLE_PROVIDER_ID, oauthCallbackPath } from "@/lib/auth/social-oauth";
+import {
+  FACEBOOK_PROVIDER_ID,
+  GOOGLE_PROVIDER_ID,
+  oauthCallbackPath,
+} from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
+
+type SocialProviderId = typeof GOOGLE_PROVIDER_ID | typeof FACEBOOK_PROVIDER_ID;
+
+const SOCIAL_PROVIDER_OPTIONS = [
+  {
+    id: GOOGLE_PROVIDER_ID,
+    label: "Google",
+    signInTestId: "google-sign-in-button",
+    linkTestId: "google-link-button",
+  },
+  {
+    id: FACEBOOK_PROVIDER_ID,
+    label: "Facebook",
+    signInTestId: "facebook-sign-in-button",
+    linkTestId: "facebook-link-button",
+  },
+] as const;
 
 interface GardenAuthPanelProps {
   activationSource?: ActivationSource;
   catalogName?: string | null;
+  facebookSignInEnabled?: boolean;
   googleSignInEnabled?: boolean;
   initialMessage?: string | null;
 }
@@ -28,6 +50,7 @@ interface GardenAuthPanelProps {
 export function GardenAuthPanel({
   activationSource = "direct_garden",
   catalogName,
+  facebookSignInEnabled = false,
   googleSignInEnabled = false,
   initialMessage = null,
 }: GardenAuthPanelProps) {
@@ -44,6 +67,10 @@ export function GardenAuthPanel({
   );
   const [message, setMessage] = useState<string>(initialMessage ?? "");
   const [isPending, setIsPending] = useState(false);
+  const socialSignInOptions = availableSocialProviderOptions({
+    facebookSignInEnabled,
+    googleSignInEnabled,
+  });
 
   async function signUp() {
     setIsPending(true);
@@ -90,13 +117,13 @@ export function GardenAuthPanel({
     router.refresh();
   }
 
-  async function signInWithGoogle() {
+  async function signInWithSocial(provider: SocialProviderId, label: string) {
     setIsPending(true);
     setMessage("");
 
     const callbackURL = currentOAuthCallbackPath();
     const { error } = await authClient.signIn.social({
-      provider: GOOGLE_PROVIDER_ID,
+      provider,
       callbackURL,
       newUserCallbackURL: callbackURL,
       errorCallbackURL: callbackURL,
@@ -107,7 +134,7 @@ export function GardenAuthPanel({
     if (error) {
       setMessage(
         interpretAuthClientErrorMessage(error) ??
-          "Could not start Google sign-in. Use email and password for now.",
+          `Could not start ${label} sign-in. Use email and password for now.`,
       );
     }
   }
@@ -180,17 +207,20 @@ export function GardenAuthPanel({
         </Button>
       </div>
 
-      {googleSignInEnabled ? (
+      {socialSignInOptions.length > 0 ? (
         <div className="grid gap-2 border-t border-border pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={signInWithGoogle}
-            disabled={isPending}
-            data-testid="google-sign-in-button"
-          >
-            Continue with Google
-          </Button>
+          {socialSignInOptions.map((provider) => (
+            <Button
+              key={provider.id}
+              type="button"
+              variant="outline"
+              onClick={() => signInWithSocial(provider.id, provider.label)}
+              disabled={isPending}
+              data-testid={provider.signInTestId}
+            >
+              Continue with {provider.label}
+            </Button>
+          ))}
         </div>
       ) : null}
 
@@ -205,7 +235,10 @@ export function GardenAuthPanel({
       </p>
 
       {message ? (
-        <p className="text-sm text-destructive" data-testid="garden-auth-message">
+        <p
+          className="text-sm text-destructive"
+          data-testid="garden-auth-message"
+        >
           {message}
         </p>
       ) : null}
@@ -213,27 +246,33 @@ export function GardenAuthPanel({
   );
 }
 
-interface GoogleAccountLinkPanelProps {
+interface SocialAccountLinkPanelProps {
+  facebookSignInEnabled?: boolean;
   googleSignInEnabled?: boolean;
   initialMessage?: string | null;
 }
 
-export function GoogleAccountLinkPanel({
+export function SocialAccountLinkPanel({
+  facebookSignInEnabled = false,
   googleSignInEnabled = false,
   initialMessage = null,
-}: GoogleAccountLinkPanelProps) {
+}: SocialAccountLinkPanelProps) {
   const [message, setMessage] = useState<string>(initialMessage ?? "");
   const [isPending, setIsPending] = useState(false);
+  const socialLinkOptions = availableSocialProviderOptions({
+    facebookSignInEnabled,
+    googleSignInEnabled,
+  });
 
-  if (!googleSignInEnabled) return null;
+  if (socialLinkOptions.length === 0) return null;
 
-  async function linkGoogle() {
+  async function linkSocial(provider: SocialProviderId, label: string) {
     setIsPending(true);
     setMessage("");
 
     const callbackURL = currentOAuthCallbackPath();
     const { error } = await authClient.linkSocial({
-      provider: GOOGLE_PROVIDER_ID,
+      provider,
       callbackURL,
       errorCallbackURL: callbackURL,
     });
@@ -243,7 +282,7 @@ export function GoogleAccountLinkPanel({
     if (error) {
       setMessage(
         interpretAuthClientErrorMessage(error) ??
-          "Could not link Google sign-in. Keep using email and password for now.",
+          `Could not link ${label} sign-in. Keep using email and password for now.`,
       );
     }
   }
@@ -251,28 +290,36 @@ export function GoogleAccountLinkPanel({
   return (
     <section
       className="flex max-w-xl flex-col gap-3 rounded-lg border border-border p-4"
-      data-testid="google-account-link-panel"
+      data-testid="social-account-link-panel"
     >
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">
           Sign-in methods
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          Link Google to this account before using Google as the shortcut back
-          to the same garden.
+          Link a provider here before using it as the shortcut back to the same
+          garden. OverGarden uses it only for sign-in.
         </p>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={linkGoogle}
-        disabled={isPending}
-        data-testid="google-link-button"
-      >
-        Link Google sign-in
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        {socialLinkOptions.map((provider) => (
+          <Button
+            key={provider.id}
+            type="button"
+            variant="outline"
+            onClick={() => linkSocial(provider.id, provider.label)}
+            disabled={isPending}
+            data-testid={provider.linkTestId}
+          >
+            Link {provider.label} sign-in
+          </Button>
+        ))}
+      </div>
       {message ? (
-        <p className="text-sm text-destructive" data-testid="google-link-message">
+        <p
+          className="text-sm text-destructive"
+          data-testid="social-link-message"
+        >
           {message}
         </p>
       ) : null}
@@ -305,4 +352,18 @@ function authPrompt({
 function currentOAuthCallbackPath() {
   if (typeof window === "undefined") return "/garden";
   return oauthCallbackPath(window.location);
+}
+
+function availableSocialProviderOptions({
+  facebookSignInEnabled,
+  googleSignInEnabled,
+}: {
+  facebookSignInEnabled: boolean;
+  googleSignInEnabled: boolean;
+}) {
+  return SOCIAL_PROVIDER_OPTIONS.filter((provider) => {
+    if (provider.id === GOOGLE_PROVIDER_ID) return googleSignInEnabled;
+    if (provider.id === FACEBOOK_PROVIDER_ID) return facebookSignInEnabled;
+    return false;
+  });
 }
