@@ -82,6 +82,7 @@ const CATALOG_FILTERABLE_ATTRIBUTES = [
 ] as const;
 const CATALOG_SORTABLE_ATTRIBUTES = ["rank"] as const;
 const MEILI_WAIT_OPTIONS = { timeout: 120_000, interval: 250 } as const;
+const CHILD_SCRIPT_TIMEOUT_MS = 300_000;
 
 async function main() {
   const options = validateCatalogSeedRolloutOptions(
@@ -92,6 +93,7 @@ async function main() {
   validateDatabaseTarget(options.environment, connectionKind);
 
   try {
+    logProofStep("running guarded seed rollout proof");
     const seedRolloutEvidence = extractJsonObjectFromCommandOutput(
       runPackageScript("catalog:sources:seed-rollout-proof", [
         "--",
@@ -107,9 +109,11 @@ async function main() {
       ]),
     );
 
+    logProofStep("importing approved EU OJ Common Catalogue rows");
     const euOjImportOutput = extractJsonObjectFromCommandOutput(
       runPackageScript("catalog:sources:import-eu-oj-common-catalogue"),
     );
+    logProofStep("running BG official-varieties real app smoke");
     const bgOfficialVarietiesSmoke = extractJsonObjectFromCommandOutput(
       runPackageScript("smoke:garden-bg-official-varieties", [
         "--",
@@ -117,7 +121,9 @@ async function main() {
         options.baseUrl,
       ]),
     );
+    logProofStep("reading entity-resolution QA report");
     const entityResolutionQa = await readCatalogEntityResolutionQaReport(db);
+    logProofStep("refreshing and proving catalog typeahead search index");
     const searchProof = await buildSearchProof(db, bgOfficialVarietiesSmoke);
 
     const evidence = buildCatalogProductionRolloutEvidence({
@@ -433,9 +439,20 @@ function runPackageScript(script: string, args: string[] = []) {
     env: process.env,
     encoding: "utf8",
     stdio: "pipe",
+    timeout: CHILD_SCRIPT_TIMEOUT_MS,
     maxBuffer: 24 * 1024 * 1024,
   });
 
+  if (result.error) {
+    throw new Error(
+      `${script} failed before completion: ${result.error.message}. Output is withheld to keep rollout evidence redacted.`,
+    );
+  }
+  if (result.signal) {
+    throw new Error(
+      `${script} stopped with signal ${result.signal}. Output is withheld to keep rollout evidence redacted.`,
+    );
+  }
   if (result.status !== 0) {
     throw new Error(
       `${script} failed with exit ${result.status ?? "unknown"}. Output is withheld to keep rollout evidence redacted; run the package script directly in a private terminal for debugging.`,
@@ -443,6 +460,10 @@ function runPackageScript(script: string, args: string[] = []) {
   }
 
   return result.stdout;
+}
+
+function logProofStep(message: string) {
+  console.error(`[OVE-90 proof] ${message}`);
 }
 
 function readCodeState() {
