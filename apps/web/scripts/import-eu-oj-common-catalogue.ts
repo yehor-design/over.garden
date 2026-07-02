@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import process from "node:process";
 
 import { config as loadEnv } from "dotenv";
@@ -25,6 +26,7 @@ import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_EXTRACTION_VERSION,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_LEGAL_VALUE_CAVEAT,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_NORMALIZATION_CAVEAT,
+  EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
   euOfficialJournalCommonCatalogueDefinitionFromParserResults,
 } from "../src/lib/catalog/eu-official-journal-common-catalogue";
 import {
@@ -33,6 +35,12 @@ import {
   readEuOfficialJournalCommonCatalogueSourceProvenanceProof,
   readEuOfficialJournalCommonCatalogueTypeaheadProof,
 } from "../src/server/catalog-source/eu-official-journal-common-catalogue-import";
+import {
+  classifyCatalogProductionImportConnection,
+  parseCatalogProductionImportArgs,
+  validateCatalogProductionImportDatabaseTarget,
+  validateCatalogProductionImportOptions,
+} from "../src/lib/catalog/production-import-guard";
 
 const EU_OJ_COMMON_CATALOGUE_TARGET =
   "eu-official-journal-common-catalogue" as const;
@@ -46,6 +54,10 @@ const FORBIDDEN_OUTPUT_MARKERS = [
   "source_record_key",
   "sourceRecordId",
   "source_record_id",
+  "sourceUrl",
+  "source_url",
+  "licenseUrl",
+  "license_url",
   "notifierCode",
   "notifier_code",
   "admissionAction",
@@ -65,7 +77,7 @@ const FORBIDDEN_OUTPUT_MARKERS = [
   "secret",
 ] as const;
 
-loadEnv({ path: ".env.local" });
+loadEnv({ path: ".env.local", override: false, quiet: true });
 
 const resolution = resolveDatabaseConnection(process.env);
 const connectionString = resolvePgConnectionString(process.env, resolution);
@@ -74,6 +86,8 @@ if (!connectionString) {
   throw new Error("Missing supported database connection env");
 }
 
+const connectionKind =
+  classifyCatalogProductionImportConnection(connectionString);
 const pool = new Pool({
   connectionString,
   max: 1,
@@ -83,14 +97,22 @@ const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
 
 async function main() {
   const generatedAt = new Date().toISOString();
-  const options = validateCatalogFullImportDryRunOptions({
+  const importOptions = validateCatalogProductionImportOptions(
+    parseCatalogProductionImportArgs(process.argv.slice(2)),
+  );
+  validateCatalogProductionImportDatabaseTarget(
+    importOptions,
+    connectionKind,
+  );
+  const codeState = readCodeState();
+  const dryRunOptions = validateCatalogFullImportDryRunOptions({
     environment: "local",
     confirmEnvironment: "local",
     targets: [EU_OJ_COMMON_CATALOGUE_TARGET],
   });
   const dryRunReport =
     await buildCatalogFullImportDryRunReportWithLiveInventory({
-      options,
+      options: dryRunOptions,
       generatedAt,
     });
   const target = dryRunReport.targets.find(
@@ -170,23 +192,70 @@ async function main() {
   }
 
   const output = {
-    imported,
+    schemaVersion: "ove105.euOjProductionLanding.v1",
+    issue: "OVE-105",
+    generatedAt,
+    environment: {
+      name: importOptions.environment,
+      baseUrl: importOptions.baseUrl,
+      databaseWriteScope:
+        importOptions.environment === "local"
+          ? "explicit_local_environment"
+          : "explicit_non_local_environment",
+      nonLocalMutationGate:
+        importOptions.environment === "local"
+          ? "not_required_for_local"
+          : "explicitly_confirmed",
+      proofBoundary: "guarded_eu_oj_source_import_database_landing",
+    },
+    code: codeState,
+    imported: {
+      sourceSlug: imported.sourceSlug,
+      sourceSnapshotsImported: imported.sourceSnapshotsImported,
+      sourceRecordsImported: imported.sourceRecordsImported,
+      projectedConcepts: imported.projectedConcepts,
+      quarantinedRecords: imported.quarantinedRecords,
+      rejectedRecords: imported.rejectedRecords,
+      aliasesProjected: imported.aliasesProjected,
+      parserVersion: imported.parserVersion,
+      extractionVersion: imported.extractionVersion,
+      reindexQueued: imported.reindexQueued,
+      sampleProjectedCatalogItemId: imported.sampleProjectedCatalogItemId,
+      sampleProjectedCanonicalName: imported.sampleProjectedCanonicalName,
+      sampleProjectedSourceVersion: imported.sampleProjectedSourceVersion,
+      sampleProjectedPublicationDate: imported.sampleProjectedPublicationDate,
+    },
     idempotencyProof: {
       rerunProjectedConcepts: rerun.projectedConcepts,
       rerunSourceRecordsImported: rerun.sourceRecordsImported,
+      rerunSourceSnapshotsImported: rerun.sourceSnapshotsImported,
       rerunSampleProjectedCatalogItemId: rerun.sampleProjectedCatalogItemId,
+      stableProductIdentityOnRerun:
+        rerun.sampleProjectedCatalogItemId ===
+        imported.sampleProjectedCatalogItemId,
     },
     dryRunCounts: target.counts,
-    typeaheadProof,
+    typeaheadProof: {
+      query: imported.sampleProjectedCanonicalName,
+      matchedCatalogItem: true,
+      suggestionCount: typeaheadProof.length,
+      sampleCatalogKind: "plant_variety",
+      source: EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
+    },
     provenanceProof: {
       catalogItemId: provenanceProof.catalogItemId,
       canonicalName: provenanceProof.canonicalName,
+      catalogKind: provenanceProof.catalogKind,
+      status: provenanceProof.status,
+      source: provenanceProof.source,
+      sourceSlug: provenanceProof.sourceSlug,
       sourceName: provenanceProof.sourceName,
       sourceVersion: provenanceProof.sourceVersion,
-      sourceUrl: provenanceProof.sourceUrl,
-      license: provenanceProof.license,
-      licenseUrl: provenanceProof.licenseUrl,
+      officialJournalLinkRecorded: Boolean(provenanceProof.sourceUrl),
+      licenseRecorded: Boolean(provenanceProof.license),
+      reuseTermsLinkRecorded: Boolean(provenanceProof.licenseUrl),
       attributionRequired: provenanceProof.attributionRequired,
+      attributionTextRecorded: Boolean(provenanceProof.attributionText),
       parserVersion: provenanceProof.parserVersion,
       projectionStatus: provenanceProof.projectionStatus,
       hasRequiredCaveats: true,
@@ -196,6 +265,13 @@ async function main() {
           projectionStatus: blockedRecordProof.projectionStatus,
         }
       : null,
+    productionLandingGate: {
+      acceptedRowsProductVisible: imported.projectedConcepts > 0,
+      reviewNeededOrRejectedRowsProductLinksAbsent:
+        blockedRecordProof?.projectionStatus !== "projected",
+      evidenceRedacted: true,
+    },
+    evidenceSafety: "linear_safe_redacted",
     leakCheck: "passed",
   };
   assertNoForbiddenOutput(output);
@@ -296,6 +372,40 @@ function assertNoForbiddenOutput(output: unknown) {
     if (text.includes(marker)) {
       throw new Error(`Unsafe source-only marker reached output: ${marker}`);
     }
+  }
+}
+
+function readCodeState() {
+  const commitSha =
+    process.env.VERCEL_GIT_COMMIT_SHA ??
+    readGitValue(["rev-parse", "HEAD"], "unknown") ??
+    "unknown";
+  const branch =
+    process.env.VERCEL_GIT_COMMIT_REF ??
+    readGitValue(["rev-parse", "--abbrev-ref", "HEAD"], "unknown") ??
+    "unknown";
+  const status = readGitValue(
+    ["status", "--porcelain", "--untracked-files=no"],
+    null,
+  );
+
+  return {
+    commitSha,
+    branch,
+    workingTree:
+      status === null ? "unknown" : status.length === 0 ? "clean" : "dirty",
+  } as const;
+}
+
+function readGitValue(args: string[], fallback: string | null) {
+  try {
+    return execFileSync("git", args, {
+      cwd: process.cwd(),
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return fallback;
   }
 }
 

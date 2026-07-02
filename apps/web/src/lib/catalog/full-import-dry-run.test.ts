@@ -492,6 +492,166 @@ describe("OVE-80 catalog full-import dry-run", () => {
     ]);
   });
 
+  it("derives Publications Office Formex ZIP URLs when EUR-Lex XML is WAF-challenged", async () => {
+    const dgSanteUrl =
+      "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";
+    const hUrl = "https://eur-lex.europa.eu/eli/C/2026/830/oj";
+    const aUrl = "https://eur-lex.europa.eu/eli/C/2026/829/oj";
+    const hFormexZipUrl =
+      "http://publications.europa.eu/resource/oj/C_202600830.ENG.fmx4.OJABA_C_202600830_ENG.fmx4.zip";
+    const aFormexZipUrl =
+      "http://publications.europa.eu/resource/oj/C_202600829.ENG.fmx4.OJABA_C_202600829_ENG.fmx4.zip";
+    const aFormexXml = `
+      <GENERAL>
+        <TITLE><TI><NP><NO.P>1</NO.P><TXT><HT TYPE="ITALIC">Beta vulgaris</HT> L. - Sugar beet</TXT></NP></TI></TITLE>
+        <TBL NO.SEQ="0001" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Asase Smart</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Asase Smart</CELL><CELL COL="2">HU 101361</CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+      </GENERAL>
+    `;
+    const hFormexXml = `
+      <GENERAL>
+        <TITLE><TI><NP><NO.P>1</NO.P><TXT><HT TYPE="ITALIC">Allium cepa</HT> L. - Onion</TXT></NP></TI></TITLE>
+        <TBL NO.SEQ="0001" COLS="3"><CORPUS>
+          <ROW TYPE="HEADER"><CELL COL="1" TYPE="HEADER"><HT TYPE="BOLD">Cincinnati</HT></CELL><CELL COL="2" TYPE="HEADER"><IE/></CELL><CELL COL="3" TYPE="HEADER"><HT TYPE="BOLD">add.</HT></CELL></ROW>
+          <ROW><CELL COL="1">Cincinnati</CELL><CELL COL="2">BG 3 b</CELL><CELL COL="3">(add.)</CELL></ROW>
+        </CORPUS></TBL>
+      </GENERAL>
+    `;
+
+    const report = await buildCatalogFullImportDryRunReportWithLiveInventory({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["eu-official-journal-common-catalogue"],
+      }),
+      generatedAt: "2026-07-02T10:00:00.000Z",
+      fetchImpl: fakeFetch({
+        [dgSanteUrl]: {
+          contentType: "text/html; charset=UTF-8",
+          body: `
+            <a href="${hUrl}">Supplement H 2026/1</a>
+            <a href="${aUrl}">Supplement A 2026/1</a>
+          `,
+        },
+        [hUrl]: {
+          contentType: "text/html; charset=UTF-8",
+          status: 202,
+          body: "CloudFront challenge",
+        },
+        [aUrl]: {
+          contentType: "text/html; charset=UTF-8",
+          status: 202,
+          body: "CloudFront challenge",
+        },
+        "https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:C/2026/00830":
+          {
+            contentType: "text/html; charset=UTF-8",
+            status: 202,
+            body: "CloudFront challenge",
+          },
+        "https://eur-lex.europa.eu/legal-content/EN/TXT/XML/?uri=CELEX:C/2026/00829":
+          {
+            contentType: "text/html; charset=UTF-8",
+            status: 202,
+            body: "CloudFront challenge",
+          },
+        "http://publications.europa.eu/resource/celex/C%2F2026%2F00830": {
+          contentType: "application/rdf+xml;charset=UTF-8",
+          body: `
+            <rdf>
+              <title xml:lang="en">Common catalogue of varieties of vegetable species Supplement H 2026/1</title>
+              <date_document>2026-02-12</date_document>
+            </rdf>
+          `,
+        },
+        "http://publications.europa.eu/resource/celex/C%2F2026%2F00829": {
+          contentType: "application/rdf+xml;charset=UTF-8",
+          body: `
+            <rdf>
+              <title xml:lang="en">Common catalogue of varieties of agricultural plant species Supplement A 2026/1</title>
+              <date_document>2026-02-12</date_document>
+            </rdf>
+          `,
+        },
+        [aFormexZipUrl]: {
+          contentType: "application/zip",
+          body: buildStoredZip({
+            "C_202600829EN.000401.fmx.xml": aFormexXml,
+          }),
+        },
+        [hFormexZipUrl]: {
+          contentType: "application/zip",
+          body: buildStoredZip({
+            "C_202600830EN.000301.fmx.xml": hFormexXml,
+          }),
+        },
+      }),
+    });
+
+    expect(report.targets[0].counts).toMatchObject({
+      sourceRowsWouldRead: 2,
+      productConceptsWouldProject: 2,
+      aliasesWouldProject: 2,
+    });
+    expect(report.targets[0].sourceInventory?.parserQa).toMatchObject({
+      totals: {
+        parsedRows: 2,
+        acceptedRows: 2,
+        reviewNeededRows: 0,
+        rejectedRows: 0,
+      },
+    });
+    expect(report.targets[0].sourceInventory?.candidates).toEqual([
+      expect.objectContaining({
+        label: "Supplement A 2026/1",
+        reviewStatus: "parser_qa_reported",
+        publicationDate: "2026-02-12",
+        artifacts: expect.arrayContaining([
+          expect.objectContaining({
+            format: "xml_notice",
+            fetchStatus: "review_needed",
+            httpStatus: 202,
+          }),
+          expect.objectContaining({
+            format: "formex_zip",
+            url: aFormexZipUrl,
+            fetchStatus: "fetched",
+            parseStatus: "parser_qa_parsed",
+          }),
+        ]),
+      }),
+      expect.objectContaining({
+        label: "Supplement H 2026/1",
+        reviewStatus: "parser_qa_reported",
+        publicationDate: "2026-02-12",
+        parserQa: expect.objectContaining({
+          sampleRows: expect.arrayContaining([
+            expect.objectContaining({
+              varietyDenomination: "Cincinnati",
+              ojCitation: "OJ C, C/2026/830, 12.2.2026",
+              sourceUrl: hUrl,
+            }),
+          ]),
+        }),
+        artifacts: expect.arrayContaining([
+          expect.objectContaining({
+            format: "xml_notice",
+            fetchStatus: "review_needed",
+            httpStatus: 202,
+          }),
+          expect.objectContaining({
+            format: "formex_zip",
+            url: hFormexZipUrl,
+            fetchStatus: "fetched",
+            parseStatus: "parser_qa_parsed",
+          }),
+        ]),
+      }),
+    ]);
+  });
+
   it("reports unavailable EUR-Lex XML artifacts as review-needed", async () => {
     const dgSanteUrl =
       "https://food.ec.europa.eu/plants/plant-reproductive-material/plant-variety-catalogues-databases-information-systems_en";

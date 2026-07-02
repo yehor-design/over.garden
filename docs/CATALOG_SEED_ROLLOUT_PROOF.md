@@ -4,6 +4,7 @@ Status: active runbook
 Started by: OVE-69
 Primary seed command: `cd apps/web && pnpm catalog:sources:seed-rollout-proof`
 Full production proof command: `cd apps/web && pnpm catalog:sources:production-rollout-proof`
+EU OJ production landing command: `cd apps/web && pnpm catalog:sources:import-eu-oj-common-catalogue`
 
 ## Purpose
 
@@ -21,6 +22,7 @@ This runbook is the repeatable proof that an explicitly named environment has re
   real `/garden` readback status `200` for every smoke case, and leak check `passed`.
   This is historical proof for the OVE-78 seed set; after OVE-81 and OVE-83, a fresh production rollout proof is required before claiming production has the full UA State Register wave or the reviewed species alias expansion.
 - Full production rollout proof: OVE-90 uses `pnpm catalog:sources:production-rollout-proof` as the final gate. It reads the already-landed production source-family rows without running source ingestion, runs the full `/garden` catalog UX smoke plus the BG official-varieties `/garden` smoke, reads the OVE-89 entity-resolution QA report, and verifies the `catalog_typeahead` result through both Postgres fallback and Meilisearch. A passing seed proof alone is not enough to close OVE-90.
+- EU OJ production landing proof: OVE-105 owns the explicit non-local import of the approved Official Journal / EUR-Lex Common Catalogue rows into production. It must pass and record redacted evidence before OVE-106 and OVE-90 claim production availability for the EU OJ/BG source family.
 - Deployed code: prove separately through commit SHA, CI, and deployment metadata. Do not infer catalog rows from deployment alone.
 
 Exact next operational action for staging or production: point the shell at that environment's approved database/app env through the secure provider tooling, run the command with the matching environment flags, and paste only the final redacted JSON output plus CI/deployment proof into Linear. Never paste child importer output, database URLs, env values, invite URLs, cookies, emails, source-record rows, raw payload hashes, or user identifiers.
@@ -79,6 +81,27 @@ The smoke signs in through the real app, opens `/garden`, searches the authentic
 If the current approved OJ artifacts contain a Bulgaria-relevant accepted row, the smoke uses that row. If not, the smoke reports the absence explicitly and uses another accepted EU OJ row without claiming BG coverage.
 
 OVE-85-90 may resume only after this OVE-104 gate is committed, pushed, and verified on `main`.
+
+## OVE-105 EU OJ Production Landing Gate
+
+OVE-105 is the missing production landing step between the local/main EU OJ proof and the final OVE-90 production availability proof. It runs the approved Official Journal / EUR-Lex Common Catalogue importer against the explicitly selected environment and emits one redacted evidence object. This is a source import gate only; OVE-106 must still prove the production app/search path, and OVE-90 remains the final full-catalog proof.
+
+Production command:
+
+```bash
+vercel env run -e production -- pnpm --dir apps/web catalog:sources:import-eu-oj-common-catalogue -- --environment production --confirm-environment production --allow-non-local-mutation --base-url https://over.garden
+```
+
+The command:
+
+- refuses non-local mutation unless `--environment`, `--confirm-environment`, `--allow-non-local-mutation`, and an HTTPS `--base-url` are all present;
+- refuses production/staging/preview import when the selected database connection resolves to a local database;
+- imports only accepted Official Journal / EUR-Lex Common Catalogue rows as `eu_oj_eur_lex_common_catalogue` `plant_variety` concepts;
+- keeps review-needed, rejected, IASAS-only, portal-only, and missing-provenance rows source-only;
+- proves idempotent rerun counts, typeahead visibility for the accepted sample row, source provenance, attribution/caveat presence, and blocked-row absence;
+- emits only `ove105.euOjProductionLanding.v1` Linear-safe redacted evidence.
+
+OVE-105 evidence must include the final commit SHA on `main`, CI proof for that commit, the production URL/environment, import count summary, idempotency summary, source provenance/caveat summary, blocked-row absence summary, and leak check. Do not paste raw importer internals, database URLs, env values, source-row keys, raw payload identifiers, checksums, cookies, tokens, emails, precise coordinates, user private data, IP addresses, user-agent/referrer fields, or Meilisearch credentials.
 
 ## OVE-90 Full Production Rollout Proof
 

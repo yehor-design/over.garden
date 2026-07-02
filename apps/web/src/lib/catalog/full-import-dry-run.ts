@@ -1475,7 +1475,7 @@ async function buildEuOfficialJournalCommonCatalogueInventory(
     },
     fetchStrategy: {
       preferredArtifactOrder: [
-        "Publications Office Formex XML ZIP discovered from the EUR-Lex XML notice",
+        "Publications Office Formex XML ZIP discovered from the EUR-Lex XML notice or derived from CELEX when EUR-Lex XML is WAF-challenged",
         "EUR-Lex XML notice from legal-content/.../TXT/XML for manifestation discovery",
         "Cellar REST/SPARQL or data.europa.eu ELI link for work/expression metadata",
         "EUR-Lex HTML source page for OJ citation and fallback metadata",
@@ -1483,7 +1483,7 @@ async function buildEuOfficialJournalCommonCatalogueInventory(
       ],
       notes: [
         "This target fetches public official EUR-Lex/OJ artifacts, parses Formex XML rows for operator QA, and reports OVE-103 accepted-row projection counts without mutating data.",
-        "Unavailable or ambiguous Formex paths, HTML-only evidence, and PDF-only evidence are reported as review-needed before OVE-103 import work.",
+        "Unavailable or ambiguous Formex paths, HTML-only evidence, and PDF-only evidence are reported as review-needed before OVE-103 import work. A CELEX-derived Publications Office Formex URL is allowed only when the EUR-Lex XML notice returns a WAF challenge and the official CELEX/ELI identity is still stable.",
       ],
     },
     candidates: enrichedCandidates,
@@ -1552,24 +1552,6 @@ async function buildEuOfficialJournalCandidate(
   const celexRdf = celexRdfUrl
     ? await fetchTextArtifact(fetchImpl, celexRdfUrl)
     : null;
-  const formexZipUrl = xml?.ok ? readFormexZipUrl(xml.text) : null;
-  const formexZip = formexZipUrl
-    ? await fetchTextArtifact(fetchImpl, formexZipUrl)
-    : null;
-  const parserResult =
-    formexZip?.ok && formexZip.checksumSha256
-      ? parseCandidateFormexZip({
-          candidate,
-          formexZipBuffer: formexZip.buffer,
-          sourceUrl: candidate.eurLexUrl,
-          ojCitation,
-          publicationDate,
-          artifactChecksumSha256: formexZip.checksumSha256,
-        })
-      : null;
-  const parserQa = parserResult?.ok
-    ? buildCandidateParserQa(parserResult.result)
-    : null;
   const rdfPublicationDate = celexRdf?.ok
     ? readFirstMatch(
         celexRdf.text,
@@ -1581,6 +1563,32 @@ async function buildEuOfficialJournalCandidate(
         celexRdf.text,
         /<[^>]*title xml:lang="en">([^<]+)<\/[^>]+>/,
       )
+    : null;
+  const discoveredFormexZipUrl = xml?.ok ? readFormexZipUrl(xml.text) : null;
+  const derivedFormexZipUrl =
+    !discoveredFormexZipUrl && xml?.httpStatus === 202
+      ? derivePublicationsOfficeFormexZipUrl(normalizedCelexId)
+      : null;
+  const formexZipUrl = discoveredFormexZipUrl ?? derivedFormexZipUrl;
+  const formexZip = formexZipUrl
+    ? await fetchTextArtifact(fetchImpl, formexZipUrl)
+    : null;
+  const effectivePublicationDate = publicationDate ?? rdfPublicationDate;
+  const parserResult =
+    formexZip?.ok && formexZip.checksumSha256
+      ? parseCandidateFormexZip({
+          candidate,
+          formexZipBuffer: formexZip.buffer,
+          sourceUrl: candidate.eurLexUrl,
+          ojCitation:
+            ojCitation ??
+            buildFallbackOjCitation(normalizedCelexId, effectivePublicationDate),
+          publicationDate: effectivePublicationDate,
+          artifactChecksumSha256: formexZip.checksumSha256,
+        })
+      : null;
+  const parserQa = parserResult?.ok
+    ? buildCandidateParserQa(parserResult.result)
     : null;
   const cellarId =
     (page.ok
@@ -1646,11 +1654,9 @@ async function buildEuOfficialJournalCandidate(
           checksumSha256: null,
         };
   const reviewStatus =
-    page.ok &&
     normalizedCelexId &&
     eliUrl &&
-    (publicationDate ?? rdfPublicationDate) &&
-    xmlArtifact.fetchStatus === "fetched" &&
+    effectivePublicationDate &&
     formexArtifact.fetchStatus === "fetched" &&
     parserQa &&
     parserQa.totals.parsedRows > 0
@@ -1667,7 +1673,7 @@ async function buildEuOfficialJournalCandidate(
     label: candidate.label,
     title:
       title ?? normalizeRdfText(rdfTitle) ?? fallbackSupplementTitle(candidate),
-    publicationDate: publicationDate ?? rdfPublicationDate,
+    publicationDate: effectivePublicationDate,
     language: "EN",
     eurLexUrl: candidate.eurLexUrl,
     ojUrl: candidate.eurLexUrl,
@@ -2138,6 +2144,40 @@ function readFormexZipUrl(xmlNotice: string): string | null {
       /(https?:\/\/publications\.europa\.eu\/resource\/oj\/[^"<\s]+?\.fmx4\.zip)/,
     ),
   );
+}
+
+function derivePublicationsOfficeFormexZipUrl(
+  celexId: string | null,
+): string | null {
+  const match = /^C\/(\d{4})\/(\d{5})$/.exec(celexId ?? "");
+  if (!match) return null;
+
+  const [, year, paddedNaturalNumber] = match;
+  const compactId = `${year}${paddedNaturalNumber}`;
+  return `http://publications.europa.eu/resource/oj/C_${compactId}.ENG.fmx4.OJABA_C_${compactId}_ENG.fmx4.zip`;
+}
+
+function buildFallbackOjCitation(
+  celexId: string | null,
+  publicationDate: string | null,
+) {
+  if (!celexId || !publicationDate) return null;
+
+  const match = /^C\/(\d{4})\/0*(\d+)$/.exec(celexId);
+  if (!match) return null;
+
+  const [, , naturalNumber] = match;
+  return `OJ C, C/${publicationDate.slice(0, 4)}/${Number(naturalNumber)}, ${formatEuropeanDate(
+    publicationDate,
+  )}`;
+}
+
+function formatEuropeanDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return value;
+
+  const [, year, month, day] = match;
+  return `${Number(day)}.${Number(month)}.${year}`;
 }
 
 function deriveEurLexIdentifiers(eurLexUrl: string): {
