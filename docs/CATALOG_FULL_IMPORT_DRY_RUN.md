@@ -126,6 +126,15 @@ pnpm catalog:sources:dry-run -- --environment local --confirm-environment local 
 
 The `pgr-genebank-bulk-gate` target reports GRIN as the only raw/quarantine and curator-candidate-approved PGR source for OVE-88. Genesys and EURISCO remain internal-validation-only/legal-blocked. The target reads no external data, captures no raw rows, projects no product concepts, and exists to prove that broad genebank/PGR availability has not become broad typeahead availability.
 
+For OVE-88, use the bounded GRIN/NPGS quarantine successor target:
+
+```bash
+cd apps/web
+pnpm catalog:sources:dry-run -- --environment local --confirm-environment local --target genebank-long-tail
+```
+
+The `genebank-long-tail` target reports 12 curated GRIN/NPGS proof rows, 12 raw/quarantine captures, three approved plant-variety projections, nine safe aliases, and held/review-needed/rejected/blocked rows that must stay out of product typeahead unless a later explicit curator/legal gate promotes them.
+
 For OVE-85, use the BG-specific successor target:
 
 ```bash

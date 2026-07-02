@@ -90,8 +90,8 @@ describe("OVE-80 catalog full-import dry-run", () => {
       "genebank-long-tail",
     ]);
     expect(report.totals.targets).toBe(6);
-    expect(report.totals.productConceptsWouldProject).toBe(15189);
-    expect(report.totals.rawRowsWouldCapture).toBe(15207);
+    expect(report.totals.productConceptsWouldProject).toBe(15191);
+    expect(report.totals.rawRowsWouldCapture).toBe(15217);
     expect(report.totals.blockedRows).toBeGreaterThan(0);
     expect(
       report.targets.every(
@@ -658,6 +658,41 @@ describe("OVE-80 catalog full-import dry-run", () => {
       projectionGuard: {
         status: "passed",
         checkedProjectionRequests: 10,
+      },
+    });
+  });
+
+  it("reports the OVE-88 GRIN genebank bulk quarantine target", () => {
+    const report = buildCatalogFullImportDryRunReport({
+      options: validateCatalogFullImportDryRunOptions({
+        environment: "local",
+        confirmEnvironment: "local",
+        targets: ["genebank-long-tail"],
+      }),
+      generatedAt: "2026-07-02T00:00:00.000Z",
+    });
+
+    expect(report.targets[0]).toMatchObject({
+      key: "genebank-long-tail",
+      packageScript: "catalog:sources:import-genebank-long-tail",
+      sourceSet: "OVE-88 GRIN/NPGS genebank bulk candidate quarantine",
+      importerIssue: "OVE-88",
+      downstreamIssue: "OVE-88",
+      projectionScope: "full_import_wave",
+      sources: ["grin-global"],
+      counts: {
+        sourceRowsWouldRead: 12,
+        rawRowsWouldCapture: 12,
+        productConceptsWouldProject: 3,
+        aliasesWouldProject: 9,
+        reviewNeededRows: 3,
+        rejectedRows: 2,
+        blockedRows: 5,
+        attributionRequiredSources: 0,
+      },
+      projectionGuard: {
+        status: "passed",
+        checkedProjectionRequests: 6,
       },
     });
   });

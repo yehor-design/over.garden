@@ -4,7 +4,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
-import { listCatalogSourceCandidatesForReview } from "@/server/catalog-source/candidate-review-repository";
+import {
+  listCatalogSourceCandidatesForReview,
+  readCatalogSourceCandidateReviewSummary,
+  type CatalogSourceCandidateReviewStatus,
+} from "@/server/catalog-source/candidate-review-repository";
 import { listCatalogSourceProvenanceForCuration } from "@/server/catalog-source/provenance-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
@@ -25,9 +29,21 @@ import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
 
 export const dynamic = "force-dynamic";
 
-export default async function CatalogCurationPage() {
+type CatalogCurationPageProps = {
+  searchParams?:
+    | Promise<Record<string, string | string[] | undefined>>
+    | Record<string, string | string[] | undefined>;
+};
+
+export default async function CatalogCurationPage({
+  searchParams,
+}: CatalogCurationPageProps = {}) {
   const session = await getCurrentSession();
   const userId = session?.user?.id;
+  const resolvedSearchParams = await searchParams;
+  const sourceStatus = normalizeSourceStatusParam(
+    resolvedSearchParams?.sourceStatus,
+  );
 
   if (!userId) {
     return (
@@ -74,11 +90,18 @@ export default async function CatalogCurationPage() {
     );
   }
 
-  const [candidates, seedProofs, sourceCandidates, provenanceRows] =
+  const [
+    candidates,
+    seedProofs,
+    sourceCandidates,
+    sourceCandidateSummary,
+    provenanceRows,
+  ] =
     await Promise.all([
       listPendingCatalogCurationCandidates(),
       listVarietySeedProofsForCuration(),
-      listCatalogSourceCandidatesForReview(),
+      listCatalogSourceCandidatesForReview({ status: sourceStatus }),
+      readCatalogSourceCandidateReviewSummary(),
       listCatalogSourceProvenanceForCuration(),
     ]);
 
@@ -129,6 +152,8 @@ export default async function CatalogCurationPage() {
 
       <CatalogSourceCandidateReviewList
         candidates={sourceCandidates}
+        summary={sourceCandidateSummary}
+        activeStatus={sourceStatus}
         promoteAction={promoteCatalogSourceCandidateAction}
         holdAction={holdCatalogSourceCandidateAction}
         rejectAction={rejectCatalogSourceCandidateAction}
@@ -144,4 +169,21 @@ export default async function CatalogCurationPage() {
       />
     </main>
   );
+}
+
+function normalizeSourceStatusParam(
+  value: string | string[] | undefined,
+): CatalogSourceCandidateReviewStatus | null {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  switch (candidate) {
+    case "quarantined":
+    case "held":
+    case "review_needed":
+    case "blocked":
+    case "rejected":
+    case "promoted":
+      return candidate;
+    default:
+      return null;
+  }
 }

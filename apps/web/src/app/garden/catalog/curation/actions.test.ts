@@ -59,14 +59,14 @@ describe("catalog curation actions", () => {
     mocks.promoteCatalogSourceCandidate.mockResolvedValue({
       sourceRecordId: "00000000-0000-4000-8000-000000066001",
       sourceRecordKey: "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO",
-      status: "projected",
+      status: "promoted",
       catalogItemId: "00000000-0000-4000-8000-000000066002",
       catalogPublicSlug: "red-cherry-tomato-grin-genebank-candidate",
     });
     mocks.holdCatalogSourceCandidate.mockResolvedValue({
       sourceRecordId: "00000000-0000-4000-8000-000000066003",
       sourceRecordKey: "GRIN:NPGS:OVE62:UNREVIEWED-LANDRACE",
-      status: "review_needed",
+      status: "held",
       catalogItemId: null,
       catalogPublicSlug: null,
     });

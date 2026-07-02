@@ -27,7 +27,7 @@ function sourceCandidate(
     projectionStatus: "quarantined",
     sourceSlug: "grin-global",
     sourceName: "USDA GRIN/NPGS long-tail accession proof subset",
-    sourceVersion: "2026-06-30-ove62-proof-subset",
+    sourceVersion: "2026-07-02-ove88-bulk-proof-subset",
     sourceUrl: "https://npgsweb.ars-grin.gov/gringlobal/search",
     license:
       "USDA GRIN/NPGS public-domain source metadata; germplasm distribution policy is not a product availability claim.",
@@ -40,7 +40,7 @@ function sourceCandidate(
       "curator_promotion",
       "canonical_product_projection",
     ],
-    parserVersion: "ove-62.genebank-long-tail.proof.v1",
+    parserVersion: "ove-88.genebank-long-tail.bulk-proof.v1",
     fetchedAt: "2026-06-30T00:00:00.000Z",
     verifiedAt: "2026-06-30T00:00:00.000Z",
     updatedAt: "2026-06-30T00:00:00.000Z",
@@ -88,7 +88,7 @@ describe("CatalogSourceCandidateReviewList", () => {
           sourceCandidate({
             sourceRecordId: "00000000-0000-4000-8000-000000066002",
             sourceRecordKey: "GRIN:NPGS:OVE62:UNREVIEWED-LANDRACE",
-            status: "review_needed",
+            status: "held",
             review: {
               displayName: "Unreviewed NPGS landrace proof row",
               candidateKind: "landrace",
@@ -102,15 +102,14 @@ describe("CatalogSourceCandidateReviewList", () => {
             promotionPreview: null,
             actions: {
               canPromote: false,
-              canHold: true,
+              canHold: false,
               canReject: true,
-              blockedReason:
-                "Curator decision does not approve canonical seed promotion.",
+              blockedReason: "Held for curator review.",
             },
           }),
           sourceCandidate({
             sourceRecordId: "00000000-0000-4000-8000-000000066003",
-            status: "projected",
+            status: "promoted",
             projectedCatalog: {
               catalogItemId: "00000000-0000-4000-8000-000000066004",
               canonicalName: "Red Cherry tomato",
@@ -135,8 +134,8 @@ describe("CatalogSourceCandidateReviewList", () => {
 
     expect(html).toContain("Source candidate review");
     expect(html).toContain("Quarantined: 1");
-    expect(html).toContain("Review needed: 1");
-    expect(html).toContain("Projected: 1");
+    expect(html).toContain("Held: 1");
+    expect(html).toContain("Promoted: 1");
     expect(html).toContain("Red Cherry");
     expect(html).toContain("grin_genebank_candidate");
     expect(html).toContain("Solanum lycopersicum L.");

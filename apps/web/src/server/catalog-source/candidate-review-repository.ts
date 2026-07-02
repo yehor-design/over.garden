@@ -8,7 +8,7 @@ import {
   GENEBANK_LONG_TAIL_PARSER_VERSION,
   GRIN_GENEBANK_SOURCE,
   genebankLongTailDefinition,
-  genebankLongTailPromotionProjection,
+  genebankLongTailProjectionForRecord,
 } from "@/lib/catalog/genebank-long-tail";
 import {
   buildEnqueueGenebankTypeaheadReindexJobQuery,
@@ -20,14 +20,36 @@ import {
 import type { RequestScope } from "@/server/request-scope";
 
 const MAX_SOURCE_CANDIDATES = 40;
+const REVIEW_STATUS_GROUPS: Array<{
+  status: CatalogSourceCandidateReviewStatus;
+  label: string;
+}> = [
+  { status: "quarantined", label: "Quarantined" },
+  { status: "held", label: "Held" },
+  { status: "review_needed", label: "Review needed" },
+  { status: "blocked", label: "Blocked" },
+  { status: "rejected", label: "Rejected" },
+  { status: "promoted", label: "Promoted" },
+];
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export type CatalogSourceCandidateReviewStatus =
   | "quarantined"
   | "review_needed"
-  | "projected"
+  | "promoted"
+  | "held"
+  | "blocked"
   | "rejected";
+
+export interface CatalogSourceCandidateReviewSummary {
+  total: number;
+  statuses: Array<{
+    status: CatalogSourceCandidateReviewStatus;
+    label: string;
+    count: number;
+  }>;
+}
 
 export interface CatalogSourceCandidateReviewRow {
   sourceRecordId: string;
@@ -121,15 +143,45 @@ export interface CatalogSourceCandidateDecisionResult {
   catalogPublicSlug: string | null;
 }
 
+export interface CatalogSourceCandidateReviewListOptions {
+  limit?: number;
+  status?: CatalogSourceCandidateReviewStatus | "all" | null;
+}
+
 export async function listCatalogSourceCandidatesForReview(
-  limit = MAX_SOURCE_CANDIDATES,
+  input: number | CatalogSourceCandidateReviewListOptions = MAX_SOURCE_CANDIDATES,
 ): Promise<CatalogSourceCandidateReviewItem[]> {
+  const options = normalizeSourceCandidateReviewListOptions(input);
   const rows = await buildCatalogSourceCandidatesForReviewQuery(
     db,
-    limit,
+    options.limit,
+    options.status,
   ).execute();
 
   return rows.map(toCatalogSourceCandidateReviewItem);
+}
+
+export async function readCatalogSourceCandidateReviewSummary(): Promise<CatalogSourceCandidateReviewSummary> {
+  const rows = await buildCatalogSourceCandidateReviewSummaryQuery(
+    db,
+  ).execute();
+  const counts = new Map(
+    rows.map((row) => [
+      row.status as CatalogSourceCandidateReviewStatus,
+      Number(row.count),
+    ]),
+  );
+
+  return {
+    total: REVIEW_STATUS_GROUPS.reduce(
+      (sum, group) => sum + (counts.get(group.status) ?? 0),
+      0,
+    ),
+    statuses: REVIEW_STATUS_GROUPS.map((group) => ({
+      ...group,
+      count: counts.get(group.status) ?? 0,
+    })),
+  };
 }
 
 export async function promoteCatalogSourceCandidate(
@@ -160,7 +212,9 @@ export async function promoteCatalogSourceCandidate(
       );
     }
 
-    const projection = genebankLongTailPromotionProjection();
+    const projection = genebankLongTailProjectionForRecord(
+      candidate.sourceRecordKey,
+    );
     const catalogItem = await buildUpsertGenebankCatalogItemQuery(
       trx,
       projection,
@@ -169,6 +223,7 @@ export async function promoteCatalogSourceCandidate(
     for (const alias of projection.aliases) {
       await buildUpsertGenebankCatalogNameQuery(trx, {
         catalogItemId: catalogItem.id,
+        projection,
         ...alias,
       }).execute();
     }
@@ -190,7 +245,7 @@ export async function promoteCatalogSourceCandidate(
     return {
       sourceRecordId: candidate.sourceRecordId,
       sourceRecordKey: candidate.sourceRecordKey,
-      status: "projected",
+      status: "promoted",
       catalogItemId: catalogItem.id,
       catalogPublicSlug: catalogItem.publicSlug,
     };
@@ -231,10 +286,7 @@ export async function holdCatalogSourceCandidate(
     return {
       sourceRecordId,
       sourceRecordKey: held.sourceRecordKey,
-      status:
-        candidate.review.reviewStatus === "review_needed"
-          ? "review_needed"
-          : "quarantined",
+      status: candidate.status,
       catalogItemId: null,
       catalogPublicSlug: null,
     };
@@ -285,8 +337,9 @@ export async function rejectCatalogSourceCandidate(
 export function buildCatalogSourceCandidatesForReviewQuery(
   executor: QueryExecutor,
   limit = MAX_SOURCE_CANDIDATES,
+  status: CatalogSourceCandidateReviewStatus | null = null,
 ) {
-  return executor
+  let query = executor
     .selectFrom("catalog_source_records")
     .innerJoin(
       "catalog_source_snapshots",
@@ -363,7 +416,13 @@ export function buildCatalogSourceCandidatesForReviewQuery(
       "catalog_items.public_slug",
       "catalog_items.status",
       "catalog_items.catalog_kind",
-    ])
+    ]);
+
+  if (status) {
+    query = query.where(catalogSourceCandidateStatusSql(), "=", status);
+  }
+
+  return query
     .orderBy(
       sql<number>`case ${sql.ref("catalog_source_records.projection_status")}
         when 'quarantined' then 0
@@ -377,6 +436,26 @@ export function buildCatalogSourceCandidatesForReviewQuery(
     .orderBy("catalog_source_records.updated_at", "desc")
     .orderBy("catalog_source_records.source_record_id", "asc")
     .limit(normalizeSourceCandidateLimit(limit));
+}
+
+export function buildCatalogSourceCandidateReviewSummaryQuery(
+  executor: QueryExecutor,
+) {
+  const status = catalogSourceCandidateStatusSql();
+
+  return executor
+    .selectFrom("catalog_source_records")
+    .innerJoin(
+      "catalog_source_snapshots",
+      "catalog_source_snapshots.id",
+      "catalog_source_records.source_snapshot_id",
+    )
+    .select([
+      status.as("status"),
+      sql<number>`count(*)::int`.as("count"),
+    ])
+    .groupBy(status)
+    .orderBy(status, "asc");
 }
 
 export function buildCatalogSourceCandidateForDecisionQuery(
@@ -480,7 +559,11 @@ export function toCatalogSourceCandidateReviewItem(
     status,
   );
   const canHold = status === "quarantined" || status === "review_needed";
-  const canReject = status === "quarantined" || status === "review_needed";
+  const canReject =
+    status === "quarantined" ||
+    status === "review_needed" ||
+    status === "held" ||
+    status === "blocked";
 
   return {
     sourceRecordId: row.sourceRecordId,
@@ -527,14 +610,32 @@ export function toCatalogSourceCandidateReviewItem(
   };
 }
 
+function catalogSourceCandidateStatusSql() {
+  return sql<CatalogSourceCandidateReviewStatus>`case
+    when ${sql.ref("catalog_source_records.projection_status")} = 'projected'
+      then 'promoted'
+    when ${sql.ref("catalog_source_records.projection_status")} = 'rejected'
+      then 'rejected'
+    when ${sql.ref("catalog_source_records.allowed_projection")} #>> '{reviewQueue,curatorDecision}' = 'hold_for_review'
+      then 'held'
+    when ${sql.ref("catalog_source_records.allowed_projection")} #>> '{reviewQueue,curatorDecision}' = 'blocked_source_only'
+      then 'blocked'
+    when ${sql.ref("catalog_source_records.allowed_projection")} #>> '{reviewQueue,reviewStatus}' = 'review_needed'
+      then 'review_needed'
+    else 'quarantined'
+  end`;
+}
+
 function sourceCandidateReviewStatus(
   row: CatalogSourceCandidateReviewRow,
   review: CatalogSourceCandidateReviewItem["review"],
 ): CatalogSourceCandidateReviewStatus {
   if (row.projectionStatus === "projected" || row.catalogItemId) {
-    return "projected";
+    return "promoted";
   }
   if (row.projectionStatus === "rejected") return "rejected";
+  if (review.curatorDecision === "hold_for_review") return "held";
+  if (review.curatorDecision === "blocked_source_only") return "blocked";
   if (review.reviewStatus === "review_needed") return "review_needed";
   return "quarantined";
 }
@@ -551,7 +652,7 @@ function canPromoteCatalogSourceCandidate(
     status === "quarantined" &&
     row.sourceSlug === GRIN_GENEBANK_SOURCE.slug &&
     row.sourceVersion === GRIN_GENEBANK_SOURCE.version &&
-    row.sourceRecordKey === definition.promotableRecordKey &&
+    definition.promotableRecordKeys.includes(row.sourceRecordKey) &&
     row.projectionStatus === "quarantined" &&
     row.parserVersion === GENEBANK_LONG_TAIL_PARSER_VERSION &&
     review.curatorDecision === "promote_to_canonical_seed" &&
@@ -565,8 +666,10 @@ function blockedPromotionReason(
   promotionPreview: CatalogSourceCandidateReviewItem["promotionPreview"],
   status: CatalogSourceCandidateReviewStatus,
 ) {
-  if (status === "projected") return "Already projected to catalog.";
+  if (status === "promoted") return "Already projected to catalog.";
   if (status === "rejected") return "Rejected source row.";
+  if (status === "held") return "Held for curator review.";
+  if (status === "blocked") return "Blocked before product projection.";
   if (row.sourceSlug !== GRIN_GENEBANK_SOURCE.slug) {
     return "No UI promotion gate exists for this source yet.";
   }
@@ -668,6 +771,28 @@ function normalizeSourceRecordId(value: string | null | undefined) {
     throw new Error("Source record id is required.");
   }
   return trimmed;
+}
+
+function normalizeSourceCandidateReviewListOptions(
+  input: number | CatalogSourceCandidateReviewListOptions,
+) {
+  if (typeof input === "number") {
+    return { limit: normalizeSourceCandidateLimit(input), status: null };
+  }
+
+  return {
+    limit: normalizeSourceCandidateLimit(input.limit ?? MAX_SOURCE_CANDIDATES),
+    status: normalizeSourceCandidateStatus(input.status),
+  };
+}
+
+function normalizeSourceCandidateStatus(
+  value: CatalogSourceCandidateReviewStatus | "all" | null | undefined,
+) {
+  if (!value || value === "all") return null;
+  return REVIEW_STATUS_GROUPS.some((group) => group.status === value)
+    ? value
+    : null;
 }
 
 function normalizeSourceCandidateLimit(limit: number) {

@@ -259,6 +259,22 @@ const SMOKE_CASES: SmokeCase[] = [
     expectedIdentityLabel: "Plant variety",
     plantName: "OVE-67 Red Cherry tomato",
   },
+  {
+    query: "Bulgarian Carrot",
+    expectedCanonicalName: "Bulgarian Carrot pepper",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-88 Bulgarian Carrot pepper",
+  },
+  {
+    query: "Odessa Market",
+    expectedCanonicalName: "Odessa Market tomato",
+    expectedCatalogKind: "plant_variety",
+    expectedObjectKind: "plant",
+    expectedIdentityLabel: "Plant variety",
+    plantName: "OVE-88 Odessa Market tomato",
+  },
 ];
 
 const BLOCKED_ALIAS_SMOKE_CASES: BlockedAliasSmokeCase[] = [
@@ -299,6 +315,42 @@ const BLOCKED_ALIAS_SMOKE_CASES: BlockedAliasSmokeCase[] = [
     forbiddenDisplayName: "Українська сіра",
     forbiddenCanonicalName: "Ukrainian Grey (Cattle)",
     forbiddenCatalogKind: "breed",
+  },
+  {
+    query: "Unreviewed NPGS landrace proof row",
+    forbiddenDisplayName: "Unreviewed NPGS landrace proof row",
+  },
+  {
+    query: "Balkan dry bean proof row",
+    forbiddenDisplayName: "Balkan dry bean proof row",
+  },
+  {
+    query: "Kyiv Long cucumber proof row",
+    forbiddenDisplayName: "Kyiv Long cucumber proof row",
+  },
+  {
+    query: "Chernozem melon proof row",
+    forbiddenDisplayName: "Chernozem melon proof row",
+  },
+  {
+    query: "Red Cherry duplicate proof row",
+    forbiddenDisplayName: "Red Cherry duplicate proof row",
+  },
+  {
+    query: "Ambiguous Capsicum proof row",
+    forbiddenDisplayName: "Ambiguous Capsicum proof row",
+  },
+  {
+    query: "Restricted-field proof row",
+    forbiddenDisplayName: "Restricted-field proof row",
+  },
+  {
+    query: "Policy-caveat proof row",
+    forbiddenDisplayName: "Policy-caveat proof row",
+  },
+  {
+    query: "External-terms proof row",
+    forbiddenDisplayName: "External-terms proof row",
   },
 ];
 

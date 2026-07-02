@@ -5,17 +5,21 @@ import {
   ExternalLink,
   XCircle,
 } from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { catalogKindLabel } from "@/lib/garden/pilot-ux-copy";
 import type {
   CatalogSourceCandidateReviewItem,
+  CatalogSourceCandidateReviewSummary,
   CatalogSourceCandidateReviewStatus,
 } from "@/server/catalog-source/candidate-review-repository";
 
 interface CatalogSourceCandidateReviewListProps {
   candidates: CatalogSourceCandidateReviewItem[];
+  summary?: CatalogSourceCandidateReviewSummary;
+  activeStatus?: CatalogSourceCandidateReviewStatus | null;
   promoteAction: (formData: FormData) => void | Promise<void>;
   holdAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
@@ -26,17 +30,22 @@ const STATUS_GROUPS: Array<{
   label: string;
 }> = [
   { status: "quarantined", label: "Quarantined" },
+  { status: "held", label: "Held" },
   { status: "review_needed", label: "Review needed" },
-  { status: "projected", label: "Projected" },
+  { status: "blocked", label: "Blocked" },
   { status: "rejected", label: "Rejected" },
+  { status: "promoted", label: "Promoted" },
 ];
 
 export function CatalogSourceCandidateReviewList({
   candidates,
+  summary,
+  activeStatus,
   promoteAction,
   holdAction,
   rejectAction,
 }: CatalogSourceCandidateReviewListProps) {
+  const statusSummary = summary ?? buildLocalSummary(candidates);
   const grouped = STATUS_GROUPS.map((group) => ({
     ...group,
     candidates: candidates.filter(
@@ -52,15 +61,29 @@ export function CatalogSourceCandidateReviewList({
         </h2>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Rows: {candidates.length}
+            Rows: {statusSummary.total}
           </span>
-          {grouped.map((group) => (
+          {statusSummary.statuses.map((group) => (
             <span
               key={group.status}
               className="rounded-md border border-border px-2 py-1"
             >
-              {group.label}: {group.candidates.length}
+              {group.label}: {group.count}
             </span>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs">
+          <FilterLink active={!activeStatus} href="/garden/catalog/curation">
+            All
+          </FilterLink>
+          {STATUS_GROUPS.map((group) => (
+            <FilterLink
+              key={group.status}
+              active={activeStatus === group.status}
+              href={`/garden/catalog/curation?sourceStatus=${group.status}`}
+            >
+              {group.label}
+            </FilterLink>
           ))}
         </div>
       </div>
@@ -95,6 +118,42 @@ export function CatalogSourceCandidateReviewList({
         </p>
       )}
     </section>
+  );
+}
+
+function buildLocalSummary(
+  candidates: CatalogSourceCandidateReviewItem[],
+): CatalogSourceCandidateReviewSummary {
+  return {
+    total: candidates.length,
+    statuses: STATUS_GROUPS.map((group) => ({
+      ...group,
+      count: candidates.filter((candidate) => candidate.status === group.status)
+        .length,
+    })),
+  };
+}
+
+function FilterLink({
+  active,
+  href,
+  children,
+}: {
+  active: boolean;
+  href: string;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className={
+        active
+          ? "rounded-md border border-foreground bg-foreground px-2 py-1 text-background"
+          : "rounded-md border border-border px-2 py-1 text-muted-foreground hover:text-foreground"
+      }
+    >
+      {children}
+    </Link>
   );
 }
 

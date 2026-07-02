@@ -336,6 +336,8 @@ describe("catalog seed rollout proof", () => {
         "огірок звичайний",
         "common sunflower",
         "sweet basil",
+        "Bulgarian Carrot",
+        "Odessa Market",
       ]),
     );
     expect(JSON.stringify(evidence)).not.toMatch(/rawPayload|sourceRecord/);

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   assertCatalogCuratorAccess: vi.fn(),
   listPendingCatalogCurationCandidates: vi.fn(),
   listCatalogSourceCandidatesForReview: vi.fn(),
+  readCatalogSourceCandidateReviewSummary: vi.fn(),
   listCatalogSourceProvenanceForCuration: vi.fn(),
   listVarietySeedProofsForCuration: vi.fn(),
 }));
@@ -35,6 +36,8 @@ vi.mock("@/server/catalog-curation-repository", () => ({
 vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
   listCatalogSourceCandidatesForReview:
     mocks.listCatalogSourceCandidatesForReview,
+  readCatalogSourceCandidateReviewSummary:
+    mocks.readCatalogSourceCandidateReviewSummary,
 }));
 
 vi.mock("@/server/catalog-source/provenance-repository", () => ({
@@ -78,6 +81,10 @@ describe("/garden/catalog/curation", () => {
     mocks.assertCatalogCuratorAccess.mockReturnValue({ mode: "allowlist" });
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
     mocks.listCatalogSourceCandidatesForReview.mockResolvedValue([]);
+    mocks.readCatalogSourceCandidateReviewSummary.mockResolvedValue({
+      total: 0,
+      statuses: [],
+    });
     mocks.listCatalogSourceProvenanceForCuration.mockResolvedValue([]);
     mocks.listVarietySeedProofsForCuration.mockResolvedValue([]);
   });
@@ -93,6 +100,9 @@ describe("/garden/catalog/curation", () => {
     expect(html).toContain("Access denied.");
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
     expect(mocks.listCatalogSourceCandidatesForReview).not.toHaveBeenCalled();
+    expect(
+      mocks.readCatalogSourceCandidateReviewSummary,
+    ).not.toHaveBeenCalled();
     expect(mocks.listCatalogSourceProvenanceForCuration).not.toHaveBeenCalled();
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
@@ -105,6 +115,7 @@ describe("/garden/catalog/curation", () => {
     expect(html).toContain("source-candidate-review");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceCandidatesForReview).toHaveBeenCalledOnce();
+    expect(mocks.readCatalogSourceCandidateReviewSummary).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();
   });

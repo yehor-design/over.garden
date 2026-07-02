@@ -107,7 +107,7 @@ export const CATALOG_SEED_ROLLOUT_COMMANDS: readonly SeedCommandDefinition[] = [
   {
     key: "genebank-long-tail",
     packageScript: "catalog:sources:import-genebank-long-tail",
-    sourceSet: "OVE-62 GRIN/NPGS promoted long-tail candidate",
+    sourceSet: "OVE-62/88 GRIN/NPGS promoted long-tail candidates",
     expectedCanonicalName: "Red Cherry tomato",
     expectedCatalogKind: "plant_variety",
     expectedSource: "grin_genebank_candidate",
@@ -129,6 +129,8 @@ export const CATALOG_SEED_ROLLOUT_REQUIRED_QUERIES = [
   "Ukrainian Grey",
   "Садово 1",
   "Red Cherry",
+  "Bulgarian Carrot",
+  "Odessa Market",
 ] as const;
 
 export const CATALOG_SEED_ROLLOUT_NOT_SEEDED = [
@@ -156,6 +158,11 @@ export const CATALOG_SEED_ROLLOUT_NOT_SEEDED = [
   {
     source: "genesys-pgr",
     reason: "internal validation only",
+  },
+  {
+    source: "non-promoted grin-global source candidates",
+    reason:
+      "held, review-needed, rejected, or blocked GRIN/NPGS rows stay source-only until explicit promotion",
   },
   {
     source: "vendor-marketplace-paths",

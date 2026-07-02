@@ -101,8 +101,8 @@ The command:
 - runs the approved seed/import scripts with captured output;
 - emits only a redacted rollout summary;
 - runs the real `/garden` catalog UX smoke against the provided base URL;
-- verifies `Ботсадівський`, `Kaiser`, `7 ФОР 7`, `ЕС ЯСМІНІС КЛП`, `помідор`, `помідори`, `домати`, `огірок звичайний`, `common sunflower`, `sweet basil`, `Карпатська`, `Садово 1`, and `Red Cherry`;
-- verifies blocked/review-only species aliases such as `garden tomato`, `love apple`, `помидор`, `gherkin`, `pickle`, and `holy basil` do not appear as product alias suggestions;
+- verifies `Ботсадівський`, `Kaiser`, `7 ФОР 7`, `ЕС ЯСМІНІС КЛП`, `помідор`, `помідори`, `домати`, `огірок звичайний`, `common sunflower`, `sweet basil`, `Карпатська`, `Садово 1`, `Red Cherry`, `Bulgarian Carrot`, and `Odessa Market`;
+- verifies blocked/review-only aliases and source candidates such as `garden tomato`, `love apple`, `помидор`, `gherkin`, `pickle`, `holy basil`, `Unreviewed NPGS landrace proof row`, `Balkan dry bean proof row`, `Kyiv Long cucumber proof row`, and rejected/blocked genebank proof names do not appear as product alias suggestions;
 - reports idempotent product identity and absence of duplicate same-concept suggestions;
 - fails if final evidence contains source-record IDs, raw payload fields, exact location markers, emails, tokens, user-agent/referrer fields, media keys, or other forbidden proof markers.
 

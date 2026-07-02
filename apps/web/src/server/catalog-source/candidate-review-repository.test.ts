@@ -13,9 +13,13 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
-import { genebankLongTailDefinition } from "@/lib/catalog/genebank-long-tail";
+import {
+  GENEBANK_LONG_TAIL_PARSER_VERSION,
+  genebankLongTailDefinition,
+} from "@/lib/catalog/genebank-long-tail";
 import {
   buildCatalogSourceCandidateForDecisionQuery,
+  buildCatalogSourceCandidateReviewSummaryQuery,
   buildCatalogSourceCandidatesForReviewQuery,
   buildHoldCatalogSourceCandidateQuery,
   buildRejectCatalogSourceCandidateQuery,
@@ -43,6 +47,9 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const definition = genebankLongTailDefinition();
+const heldRecord = definition.records.find(
+  (record) => record.id === definition.heldRecordKey,
+)!;
 
 const forbiddenReviewMarkers = [
   "rawPayload",
@@ -76,7 +83,7 @@ function candidateRow(
     attributionRequired: definition.source.attributionRequired,
     attributionText: definition.source.attributionText,
     allowedUsage: [...definition.source.allowedUsage],
-    parserVersion: "ove-62.genebank-long-tail.proof.v1",
+    parserVersion: GENEBANK_LONG_TAIL_PARSER_VERSION,
     fetchedAt: "2026-06-30T00:00:00.000Z",
     verifiedAt: "2026-06-30T00:00:00.000Z",
     catalogItemId: null,
@@ -109,6 +116,26 @@ describe("catalog source candidate review repository", () => {
     expect(compiled.sql).not.toContain("owner_user_id");
   });
 
+  it("summarizes and filters source candidates without raw payload fields", () => {
+    const summary = buildCatalogSourceCandidateReviewSummaryQuery(
+      testDb,
+    ).compile();
+    const filtered = buildCatalogSourceCandidatesForReviewQuery(
+      testDb,
+      10,
+      "blocked",
+    ).compile();
+
+    expect(summary.sql).toContain("count(*)::int");
+    expect(summary.sql).toContain("#>> '{reviewQueue,curatorDecision}'");
+    expect(summary.sql).not.toContain("raw_payload");
+    expect(summary.sql).not.toContain("source_only_fields");
+    expect(filtered.sql).toContain("#>> '{reviewQueue,curatorDecision}'");
+    expect(filtered.parameters).toContain("blocked");
+    expect(filtered.sql).not.toContain("raw_payload");
+    expect(filtered.sql).not.toContain("source_only_fields");
+  });
+
   it("reads one source candidate for decisions without raw payload fields", () => {
     const compiled = buildCatalogSourceCandidateForDecisionQuery(
       testDb,
@@ -130,7 +157,7 @@ describe("catalog source candidate review repository", () => {
       candidateRow({
         sourceRecordId: "00000000-0000-4000-8000-000000066002",
         sourceRecordKey: definition.heldRecordKey,
-        allowedProjection: definition.records[1].allowedProjection,
+        allowedProjection: heldRecord.allowedProjection,
       }),
     );
     const projected = toCatalogSourceCandidateReviewItem(
@@ -157,10 +184,10 @@ describe("catalog source candidate review repository", () => {
 
     expect(promotable.status).toBe("quarantined");
     expect(promotable.actions.canPromote).toBe(true);
-    expect(held.status).toBe("review_needed");
+    expect(held.status).toBe("held");
     expect(held.actions.canPromote).toBe(false);
     expect(held.actions.canReject).toBe(true);
-    expect(projected.status).toBe("projected");
+    expect(projected.status).toBe("promoted");
     expect(projected.actions.canReject).toBe(false);
     expect(projected.projectedCatalog?.typeaheadNameCount).toBe(3);
     expect(rejected.status).toBe("rejected");

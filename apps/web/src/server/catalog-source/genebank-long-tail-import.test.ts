@@ -14,6 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  GENEBANK_LONG_TAIL_PARSER_VERSION,
   GENEBANK_LONG_TAIL_SOURCE_PROOF,
   genebankLongTailDefinition,
   genebankLongTailPayloadChecksum,
@@ -33,6 +34,7 @@ import {
   buildUpsertGenebankCatalogNameQuery,
   buildUpsertGenebankRecordQuery,
   buildUpsertGenebankSnapshotQuery,
+  type GenebankLongTailImportSummary,
 } from "./genebank-long-tail-import";
 
 class TestPostgresDialect implements Dialect {
@@ -55,8 +57,12 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const definition = genebankLongTailDefinition();
-const promotableRecord = definition.records[0];
-const heldRecord = definition.records[1];
+const promotableRecord = definition.records.find(
+  (record) => record.id === definition.promotableRecordKey,
+)!;
+const heldRecord = definition.records.find(
+  (record) => record.id === definition.heldRecordKey,
+)!;
 const sourceSnapshotId = "00000000-0000-4000-8000-000000062001";
 const sourceRecordId = "00000000-0000-4000-8000-000000062002";
 const catalogItemId = "00000000-0000-4000-8000-000000062003";
@@ -69,6 +75,7 @@ const forbiddenProjectionMarkers = [
   "accessionIdentifier",
   "accessionRecordUrl",
   "genesysEuriscoBlocker",
+  "germplasmDistributionPolicy",
   "journalBody",
   "ownerUserId",
   "exifGps",
@@ -77,32 +84,79 @@ const forbiddenProjectionMarkers = [
   "occurrenceCoordinates",
 ];
 
+function importSummary(
+  overrides: Partial<GenebankLongTailImportSummary> = {},
+): GenebankLongTailImportSummary {
+  const promotableRecords = definition.promotableRecordKeys.map(
+    (sourceRecordKey) => {
+      const record =
+        definition.records.find((candidate) => candidate.id === sourceRecordKey) ??
+        promotableRecord;
+
+      return {
+        sourceRecordId: promotableSourceRecordId,
+        sourceRecordKey,
+        projectionStatus: "quarantined",
+        rawPayloadSha256: genebankLongTailPayloadChecksum(record),
+      };
+    },
+  );
+
+  const heldRecords = definition.heldRecordKeys.map((sourceRecordKey) => {
+    const record =
+      definition.records.find((candidate) => candidate.id === sourceRecordKey) ??
+      heldRecord;
+
+    return {
+      sourceRecordId: heldSourceRecordId,
+      sourceRecordKey,
+      projectionStatus: "quarantined",
+      rawPayloadSha256: genebankLongTailPayloadChecksum(record),
+    };
+  });
+
+  return {
+    sourceSnapshotId,
+    promotableSourceRecordId,
+    heldSourceRecordId,
+    promotableRecordKey: definition.promotableRecordKey,
+    heldRecordKey: definition.heldRecordKey,
+    promotableRecords,
+    heldRecords,
+    reviewNeededRecordKeys: [...definition.reviewNeededRecordKeys],
+    rejectedRecordKeys: [...definition.rejectedRecordKeys],
+    blockedRecordKeys: [...definition.blockedRecordKeys],
+    sourceRowsImported: definition.records.length,
+    rawRowsCaptured: definition.records.length,
+    promotableProjectionStatus: "quarantined",
+    heldProjectionStatus: "quarantined",
+    sourceSlug: definition.source.slug,
+    sourceVersion: definition.source.version,
+    snapshotSha256: genebankLongTailSnapshotChecksum(),
+    promotableRawPayloadSha256: genebankLongTailPayloadChecksum(promotableRecord),
+    heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
+    parserVersion: GENEBANK_LONG_TAIL_PARSER_VERSION,
+    ...overrides,
+  };
+}
+
 describe("genebank long-tail candidate import", () => {
   it("labels clean-state absence separately from rerun idempotency", () => {
     const proof = buildGenebankProofHarnessIsolation({
-      imported: {
+      imported: importSummary({
         sourceSnapshotId,
         promotableSourceRecordId,
         heldSourceRecordId,
-        promotableRecordKey: definition.promotableRecordKey,
-        heldRecordKey: definition.heldRecordKey,
         promotableProjectionStatus: "quarantined",
         heldProjectionStatus: "quarantined",
-        sourceSlug: definition.source.slug,
-        sourceVersion: definition.source.version,
-        snapshotSha256: genebankLongTailSnapshotChecksum(),
-        promotableRawPayloadSha256:
-          genebankLongTailPayloadChecksum(promotableRecord),
-        heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
-        parserVersion: "ove-62.genebank-long-tail.proof.v1",
-      },
-      candidateQueueBeforePromotion: [
-        {
-          sourceRecordKey: definition.promotableRecordKey,
+      }),
+      candidateQueueBeforePromotion: definition.promotableRecordKeys.map(
+        (sourceRecordKey) => ({
+          sourceRecordKey,
           projectionStatus: "quarantined",
-          allowedProjection: { reviewQueue: { displayName: "Red Cherry" } },
-        },
-      ],
+          allowedProjection: { reviewQueue: { displayName: "Promotable" } },
+        }),
+      ),
       typeaheadBeforePromotion: [],
       requireCleanState: true,
     });
@@ -119,22 +173,21 @@ describe("genebank long-tail candidate import", () => {
 
   it("does not label a rerun's existing projection as pre-promotion clean state", () => {
     const proof = buildGenebankProofHarnessIsolation({
-      imported: {
+      imported: importSummary({
         sourceSnapshotId,
         promotableSourceRecordId,
         heldSourceRecordId,
-        promotableRecordKey: definition.promotableRecordKey,
-        heldRecordKey: definition.heldRecordKey,
         promotableProjectionStatus: "projected",
         heldProjectionStatus: "quarantined",
-        sourceSlug: definition.source.slug,
-        sourceVersion: definition.source.version,
-        snapshotSha256: genebankLongTailSnapshotChecksum(),
-        promotableRawPayloadSha256:
-          genebankLongTailPayloadChecksum(promotableRecord),
-        heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
-        parserVersion: "ove-62.genebank-long-tail.proof.v1",
-      },
+        promotableRecords: definition.promotableRecordKeys.map(
+          (sourceRecordKey) => ({
+            sourceRecordId: promotableSourceRecordId,
+            sourceRecordKey,
+            projectionStatus: "projected",
+            rawPayloadSha256: genebankLongTailPayloadChecksum(promotableRecord),
+          }),
+        ),
+      }),
       candidateQueueBeforePromotion: [
         {
           sourceRecordKey: definition.heldRecordKey,
@@ -171,22 +224,13 @@ describe("genebank long-tail candidate import", () => {
   it("fails loudly when clean-state proof is required but the projection already exists", () => {
     expect(() =>
       buildGenebankProofHarnessIsolation({
-        imported: {
+        imported: importSummary({
           sourceSnapshotId,
           promotableSourceRecordId,
           heldSourceRecordId,
-          promotableRecordKey: definition.promotableRecordKey,
-          heldRecordKey: definition.heldRecordKey,
           promotableProjectionStatus: "projected",
           heldProjectionStatus: "quarantined",
-          sourceSlug: definition.source.slug,
-          sourceVersion: definition.source.version,
-          snapshotSha256: genebankLongTailSnapshotChecksum(),
-          promotableRawPayloadSha256:
-            genebankLongTailPayloadChecksum(promotableRecord),
-          heldRawPayloadSha256: genebankLongTailPayloadChecksum(heldRecord),
-          parserVersion: "ove-62.genebank-long-tail.proof.v1",
-        },
+        }),
         candidateQueueBeforePromotion: [],
         typeaheadBeforePromotion: [
           {
@@ -213,7 +257,6 @@ describe("genebank long-tail candidate import", () => {
     expect(sourceOnlyFields).toContain("germplasmDistributionPolicy");
     expect(projection).toContain("Red Cherry tomato");
     expect(projection).toContain("candidateKind");
-    expect(projection).toContain("germplasmDistributionPolicy");
 
     for (const marker of forbiddenProjectionMarkers) {
       expect(projection).not.toContain(marker);
@@ -294,7 +337,11 @@ describe("genebank long-tail candidate import", () => {
     expect(compiled.sql).toContain("projection_status");
     expect(compiled.sql).not.toContain('"raw_payload"');
     expect(compiled.sql).not.toContain("source_only_fields");
-    expect(compiled.parameters).toEqual(["grin-global", "quarantined"]);
+    expect(compiled.parameters).toEqual([
+      "grin-global",
+      definition.source.version,
+      "quarantined",
+    ]);
   });
 
   it("selects only non-rejected candidates for curator promotion", () => {
@@ -310,6 +357,7 @@ describe("genebank long-tail candidate import", () => {
     expect(compiled.sql).not.toContain("source_only_fields");
     expect(compiled.parameters).toEqual([
       "grin-global",
+      definition.source.version,
       definition.promotableRecordKey,
       "rejected",
       1,

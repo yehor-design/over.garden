@@ -7,6 +7,7 @@ import {
   genebankLongTailAllowedUsage,
   genebankLongTailDefinition,
   genebankLongTailPayloadChecksum,
+  genebankLongTailProjectionForRecord,
   genebankLongTailPromotionProjection,
   genebankLongTailSnapshotChecksum,
   type GenebankLongTailImportDefinition,
@@ -29,6 +30,23 @@ export interface GenebankLongTailImportSummary {
   heldSourceRecordId: string;
   promotableRecordKey: string;
   heldRecordKey: string;
+  promotableRecords: Array<{
+    sourceRecordId: string;
+    sourceRecordKey: string;
+    projectionStatus: string;
+    rawPayloadSha256: string;
+  }>;
+  heldRecords: Array<{
+    sourceRecordId: string;
+    sourceRecordKey: string;
+    projectionStatus: string;
+    rawPayloadSha256: string;
+  }>;
+  reviewNeededRecordKeys: string[];
+  rejectedRecordKeys: string[];
+  blockedRecordKeys: string[];
+  sourceRowsImported: number;
+  rawRowsCaptured: number;
   promotableProjectionStatus: string;
   heldProjectionStatus: string;
   sourceSlug: string;
@@ -170,25 +188,60 @@ export async function importGenebankLongTailCandidates(
         `Missing genebank candidate ${definition.promotableRecordKey}.`,
       );
     }
-    if (!heldRecord) {
+    if (definition.heldRecordKey && !heldRecord) {
       throw new Error(
         `Missing held genebank candidate ${definition.heldRecordKey}.`,
       );
     }
+    const promotableRecords = definition.promotableRecordKeys.map(
+      (sourceRecordKey) => {
+        const record = records.get(sourceRecordKey);
+        if (!record) {
+          throw new Error(`Missing genebank candidate ${sourceRecordKey}.`);
+        }
+
+        return {
+          sourceRecordId: record.id,
+          sourceRecordKey,
+          projectionStatus: record.projectionStatus,
+          rawPayloadSha256: record.rawPayloadSha256,
+        };
+      },
+    );
+    const heldRecords = definition.heldRecordKeys.map((sourceRecordKey) => {
+      const record = records.get(sourceRecordKey);
+      if (!record) {
+        throw new Error(`Missing held genebank candidate ${sourceRecordKey}.`);
+      }
+
+      return {
+        sourceRecordId: record.id,
+        sourceRecordKey,
+        projectionStatus: record.projectionStatus,
+        rawPayloadSha256: record.rawPayloadSha256,
+      };
+    });
 
     return {
       sourceSnapshotId: snapshot.id,
       promotableSourceRecordId: promotableRecord.id,
-      heldSourceRecordId: heldRecord.id,
+      heldSourceRecordId: heldRecord?.id ?? "",
       promotableRecordKey: definition.promotableRecordKey,
       heldRecordKey: definition.heldRecordKey,
+      promotableRecords,
+      heldRecords,
+      reviewNeededRecordKeys: [...definition.reviewNeededRecordKeys],
+      rejectedRecordKeys: [...definition.rejectedRecordKeys],
+      blockedRecordKeys: [...definition.blockedRecordKeys],
+      sourceRowsImported: definition.records.length,
+      rawRowsCaptured: definition.records.length,
       promotableProjectionStatus: promotableRecord.projectionStatus,
-      heldProjectionStatus: heldRecord.projectionStatus,
+      heldProjectionStatus: heldRecord?.projectionStatus ?? "missing",
       sourceSlug: definition.source.slug,
       sourceVersion: definition.source.version,
       snapshotSha256,
       promotableRawPayloadSha256: promotableRecord.rawPayloadSha256,
-      heldRawPayloadSha256: heldRecord.rawPayloadSha256,
+      heldRawPayloadSha256: heldRecord?.rawPayloadSha256 ?? "",
       parserVersion: GENEBANK_LONG_TAIL_PARSER_VERSION,
     };
   });
@@ -198,7 +251,10 @@ export function buildGenebankProofHarnessIsolation(
   input: GenebankProofHarnessIsolationInput,
 ): GenebankProofHarnessIsolation {
   const existingProjectionVisible =
-    input.imported.promotableProjectionStatus === "projected";
+    input.imported.promotableProjectionStatus === "projected" ||
+    input.imported.promotableRecords.some(
+      (record) => record.projectionStatus === "projected",
+    );
   const existingProductTypeahead = input.typeaheadBeforePromotion.filter(
     (row) => row.source === "grin_genebank_candidate",
   );
@@ -225,13 +281,18 @@ export function buildGenebankProofHarnessIsolation(
     };
   }
 
-  if (
-    !input.candidateQueueBeforePromotion.some(
-      (row) => row.sourceRecordKey === input.imported.promotableRecordKey,
-    )
-  ) {
+  const missingPromotableRecords = input.imported.promotableRecords.filter(
+    (record) =>
+      !input.candidateQueueBeforePromotion.some(
+        (row) => row.sourceRecordKey === record.sourceRecordKey,
+      ),
+  );
+
+  if (missingPromotableRecords.length > 0) {
     throw new Error(
-      "Promotable genebank candidate is missing from review queue.",
+      `Promotable genebank candidates are missing from review queue: ${missingPromotableRecords
+        .map((record) => record.sourceRecordKey)
+        .join(", ")}.`,
     );
   }
 
@@ -254,10 +315,14 @@ export async function promoteGenebankLongTailCandidate(
     const candidate = await buildSelectPromotableGenebankCandidateQuery(
       trx,
       sourceRecordKey,
+      definition.source.version,
     ).executeTakeFirstOrThrow();
-    const projection = genebankLongTailPromotionProjection(definition);
+    const projection = genebankLongTailProjectionForRecord(
+      sourceRecordKey,
+      definition,
+    );
 
-    if (sourceRecordKey !== definition.promotableRecordKey) {
+    if (!definition.promotableRecordKeys.includes(sourceRecordKey)) {
       throw new Error(
         `Genebank candidate ${sourceRecordKey} is not approved for promotion.`,
       );
@@ -274,6 +339,7 @@ export async function promoteGenebankLongTailCandidate(
     for (const alias of projection.aliases) {
       await buildUpsertGenebankCatalogNameQuery(trx, {
         catalogItemId: catalogItem.id,
+        projection,
         ...alias,
       }).execute();
     }
@@ -382,10 +448,10 @@ export async function readGenebankSourceProvenanceProof(
 export async function proveGenebankGardenReadback(
   executor: Kysely<Database>,
   catalogItemId: string,
+  projection: GenebankLongTailProjection = genebankLongTailPromotionProjection(),
 ): Promise<GenebankGardenReadbackProof> {
   try {
     await executor.transaction().execute(async (trx) => {
-      const projection = genebankLongTailPromotionProjection();
       const space = await trx
         .insertInto("spaces")
         .values({
@@ -557,6 +623,7 @@ export function buildUpsertGenebankRecordQuery(
 export function buildSelectPromotableGenebankCandidateQuery(
   executor: QueryExecutor,
   sourceRecordKey: string,
+  sourceVersion: string = GRIN_GENEBANK_SOURCE.version,
 ) {
   return executor
     .selectFrom("catalog_source_records")
@@ -577,6 +644,7 @@ export function buildSelectPromotableGenebankCandidateQuery(
       "=",
       GRIN_GENEBANK_SOURCE.slug,
     )
+    .where("catalog_source_snapshots.source_version", "=", sourceVersion)
     .where("catalog_source_records.source_record_id", "=", sourceRecordKey)
     .where("catalog_source_records.projection_status", "!=", "rejected")
     .limit(1);
@@ -634,13 +702,14 @@ export function buildUpsertGenebankCatalogNameQuery(
   executor: QueryExecutor,
   input: {
     catalogItemId: string;
+    projection?: GenebankLongTailProjection;
     displayName: string;
     normalizedName: string;
     locale: string;
     isPrimary: boolean;
   },
 ) {
-  const projection = genebankLongTailPromotionProjection();
+  const projection = input.projection ?? genebankLongTailPromotionProjection();
   assertCatalogSourceProductProjectionAllowed({
     sourceSlug: GRIN_GENEBANK_SOURCE.slug,
     sourceVersion: GRIN_GENEBANK_SOURCE.version,
@@ -746,6 +815,11 @@ export function buildGenebankCandidateQueueQuery(executor: QueryExecutor) {
       "catalog_source_snapshots.source_slug",
       "=",
       GRIN_GENEBANK_SOURCE.slug,
+    )
+    .where(
+      "catalog_source_snapshots.source_version",
+      "=",
+      GRIN_GENEBANK_SOURCE.version,
     )
     .where("catalog_source_records.projection_status", "=", "quarantined")
     .orderBy("catalog_source_records.source_record_id", "asc");

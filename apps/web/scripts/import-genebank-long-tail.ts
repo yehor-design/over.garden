@@ -10,7 +10,10 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
-import { genebankLongTailDefinition } from "../src/lib/catalog/genebank-long-tail";
+import {
+  genebankLongTailDefinition,
+  genebankLongTailProjectionForRecord,
+} from "../src/lib/catalog/genebank-long-tail";
 import {
   buildGenebankProofHarnessIsolation,
   importGenebankLongTailCandidates,
@@ -29,6 +32,8 @@ const FORBIDDEN_OUTPUT_MARKERS = [
   "accessionIdentifier",
   "accessionRecordUrl",
   "genesysEuriscoBlocker",
+  "germplasmDistributionPolicy",
+  "distributionPolicyCaveat",
   "journalBody",
   "ownerUserId",
   "exifGps",
@@ -69,16 +74,22 @@ async function main() {
     requireCleanState,
   });
 
-  const promoted = await promoteGenebankLongTailCandidate(
-    db,
-    imported.promotableRecordKey,
-    definition,
-  );
-  const promotedAgain = await promoteGenebankLongTailCandidate(
-    db,
-    imported.promotableRecordKey,
-    definition,
-  );
+  const promotedCandidates = [];
+  const promotedAgainCandidates = [];
+  for (const sourceRecordKey of definition.promotableRecordKeys) {
+    promotedCandidates.push(
+      await promoteGenebankLongTailCandidate(db, sourceRecordKey, definition),
+    );
+    promotedAgainCandidates.push(
+      await promoteGenebankLongTailCandidate(db, sourceRecordKey, definition),
+    );
+  }
+  const promoted = promotedCandidates[0];
+  const promotedAgain = promotedAgainCandidates[0];
+  if (!promoted || !promotedAgain) {
+    throw new Error("No promoted genebank candidates were produced.");
+  }
+
   const rerunImport = await importGenebankLongTailCandidates(db, definition);
   const typeaheadByCandidateName = await readGenebankTypeaheadProof(
     db,
@@ -92,6 +103,10 @@ async function main() {
     db,
     "Unreviewed NPGS landrace",
   );
+  const promotedTypeaheadProof = await readPromotedTypeaheadProof(
+    promotedCandidates,
+  );
+  const nonPromotedAbsenceProof = await readNonPromotedAbsenceProof();
   const provenanceProof = await readGenebankSourceProvenanceProof(
     db,
     promoted.catalogItemId,
@@ -107,6 +122,17 @@ async function main() {
       "Re-running candidate promotion created a new catalog item.",
     );
   }
+  for (const promotedCandidate of promotedCandidates) {
+    const promotedAgainCandidate = promotedAgainCandidates.find(
+      (candidate) =>
+        candidate.sourceRecordKey === promotedCandidate.sourceRecordKey,
+    );
+    if (promotedAgainCandidate?.catalogItemId !== promotedCandidate.catalogItemId) {
+      throw new Error(
+        `Re-running promotion created a new catalog item for ${promotedCandidate.sourceRecordKey}.`,
+      );
+    }
+  }
   if (
     rerunImport.promotableSourceRecordId !== imported.promotableSourceRecordId
   ) {
@@ -117,8 +143,12 @@ async function main() {
   if (rerunImport.heldSourceRecordId !== imported.heldSourceRecordId) {
     throw new Error("Re-running import created a new held source record.");
   }
-  if (rerunImport.promotableProjectionStatus !== "projected") {
-    throw new Error("Re-running import demoted the promoted source record.");
+  for (const record of rerunImport.promotableRecords) {
+    if (record.projectionStatus !== "projected") {
+      throw new Error(
+        `Re-running import demoted promoted source record ${record.sourceRecordKey}.`,
+      );
+    }
   }
   if (
     !typeaheadByCandidateName.some(
@@ -139,6 +169,13 @@ async function main() {
   if (heldTypeaheadProof.length > 0) {
     throw new Error("Held genebank candidate reached typeahead.");
   }
+  for (const proof of nonPromotedAbsenceProof) {
+    if (proof.suggestionCount > 0) {
+      throw new Error(
+        `Non-promoted genebank candidate ${proof.query} reached typeahead.`,
+      );
+    }
+  }
   if (!provenanceProof) {
     throw new Error(
       "Promoted genebank candidate is missing provenance readback.",
@@ -151,10 +188,10 @@ async function main() {
   assertAllowedProjectionProof(provenanceProof.allowedProjection);
   if (
     candidateQueueAfterPromotion.some(
-      (row) => row.sourceRecordKey === imported.promotableRecordKey,
+      (row) => definition.promotableRecordKeys.includes(row.sourceRecordKey),
     )
   ) {
-    throw new Error("Promoted genebank candidate stayed in review queue.");
+    throw new Error("Promoted genebank candidates stayed in review queue.");
   }
   if (
     !candidateQueueAfterPromotion.some(
@@ -176,29 +213,166 @@ async function main() {
   }
 
   const output = {
-    imported,
-    proofHarnessIsolation,
-    promoted,
+    imported: {
+      sourceSnapshotId: imported.sourceSnapshotId,
+      sourceRowsImported: imported.sourceRowsImported,
+      rawRowsCaptured: imported.rawRowsCaptured,
+      promotableRecordKeys: imported.promotableRecords.map(
+        (record) => record.sourceRecordKey,
+      ),
+      heldRecordKeys: imported.heldRecords.map(
+        (record) => record.sourceRecordKey,
+      ),
+      reviewNeededRecordKeys: imported.reviewNeededRecordKeys,
+      rejectedRecordKeys: imported.rejectedRecordKeys,
+      blockedRecordKeys: imported.blockedRecordKeys,
+      sourceSlug: imported.sourceSlug,
+      sourceVersion: imported.sourceVersion,
+      parserVersion: imported.parserVersion,
+    },
+    proofHarnessIsolation: summarizeProofHarnessIsolation(
+      proofHarnessIsolation,
+    ),
+    promoted: promotedCandidates,
     idempotencyProof: {
       promotedAgainCatalogItemId: promotedAgain.catalogItemId,
+      promotedAgainCatalogItemIds: promotedAgainCandidates.map((candidate) => ({
+        sourceRecordKey: candidate.sourceRecordKey,
+        catalogItemId: candidate.catalogItemId,
+      })),
       rerunSourceSnapshotId: rerunImport.sourceSnapshotId,
       rerunPromotableSourceRecordId: rerunImport.promotableSourceRecordId,
       rerunHeldSourceRecordId: rerunImport.heldSourceRecordId,
       rerunPromotableProjectionStatus: rerunImport.promotableProjectionStatus,
+      rerunPromotableProjectionStatuses: rerunImport.promotableRecords.map(
+        (record) => ({
+          sourceRecordKey: record.sourceRecordKey,
+          projectionStatus: record.projectionStatus,
+        }),
+      ),
     },
     promotionVisibilityProof: {
       typeaheadByCandidateName,
       typeaheadBySpeciesAlias,
       heldTypeaheadProof,
+      promotedTypeaheadProof,
+      nonPromotedAbsenceProof,
     },
-    candidateQueueAfterPromotion,
-    provenanceProof,
+    candidateQueueAfterPromotion: summarizeCandidateQueue(
+      candidateQueueAfterPromotion,
+    ),
+    provenanceProof: {
+      catalogItemId: provenanceProof.catalogItemId,
+      canonicalName: provenanceProof.canonicalName,
+      catalogKind: provenanceProof.catalogKind,
+      status: provenanceProof.status,
+      source: provenanceProof.source,
+      sourceSlug: provenanceProof.sourceSlug,
+      sourceVersion: provenanceProof.sourceVersion,
+      sourceRecordKey: provenanceProof.sourceRecordKey,
+      parserVersion: provenanceProof.parserVersion,
+      projectionStatus: provenanceProof.projectionStatus,
+    },
     gardenReadbackProof,
     leakCheck: "passed",
   };
   assertNoForbiddenOutput(output);
 
   console.log(JSON.stringify(output, null, 2));
+}
+
+async function readPromotedTypeaheadProof(
+  promotedCandidates: Array<{ sourceRecordKey: string; catalogItemId: string }>,
+) {
+  const proof = [];
+  for (const candidate of promotedCandidates) {
+    const projection = genebankLongTailProjectionForRecord(
+      candidate.sourceRecordKey,
+    );
+    const query = projection.aliases[0]?.displayName ?? projection.canonicalName;
+    const typeahead = await readGenebankTypeaheadProof(db, query);
+    const matchingRows = typeahead.filter(
+      (row) => row.catalogItemId === candidate.catalogItemId,
+    );
+    if (matchingRows.length === 0) {
+      throw new Error(
+        `Promoted genebank candidate ${candidate.sourceRecordKey} is missing from typeahead.`,
+      );
+    }
+
+    proof.push({
+      sourceRecordKey: candidate.sourceRecordKey,
+      query,
+      catalogItemId: candidate.catalogItemId,
+      canonicalName: projection.canonicalName,
+      suggestionCount: typeahead.length,
+      matchingDisplayNames: matchingRows.map((row) => row.displayName),
+    });
+  }
+  return proof;
+}
+
+async function readNonPromotedAbsenceProof() {
+  const queries = [
+    { query: "Unreviewed NPGS landrace proof row", reason: "held" },
+    { query: "Balkan dry bean proof row", reason: "held" },
+    { query: "Kyiv Long cucumber proof row", reason: "review_needed" },
+    { query: "Chernozem melon proof row", reason: "review_needed" },
+    { query: "Red Cherry duplicate proof row", reason: "rejected" },
+    { query: "Ambiguous Capsicum proof row", reason: "rejected" },
+    { query: "Restricted-field proof row", reason: "blocked" },
+    { query: "Policy-caveat proof row", reason: "blocked" },
+    { query: "External-terms proof row", reason: "blocked" },
+  ];
+
+  const proof = [];
+  for (const item of queries) {
+    const typeahead = await readGenebankTypeaheadProof(db, item.query);
+    proof.push({
+      ...item,
+      suggestionCount: typeahead.length,
+    });
+  }
+  return proof;
+}
+
+function summarizeCandidateQueue(
+  queue: Awaited<ReturnType<typeof readGenebankCandidateQueue>>,
+) {
+  return {
+    rows: queue.length,
+    sourceRecordKeys: queue.map((row) => row.sourceRecordKey),
+  };
+}
+
+function summarizeProofHarnessIsolation(
+  proof: ReturnType<typeof buildGenebankProofHarnessIsolation>,
+) {
+  if (proof.cleanStateProof.status === "passed") {
+    return {
+      cleanStateProof: {
+        status: "passed",
+        candidateQueueBeforePromotionRows:
+          proof.cleanStateProof.candidateQueueBeforePromotion.length,
+        cleanStateTypeaheadBeforePromotionRows:
+          proof.cleanStateProof.cleanStateTypeaheadBeforePromotion.length,
+      },
+      rerunExistingProjection: null,
+    };
+  }
+
+  return {
+    cleanStateProof: proof.cleanStateProof,
+    rerunExistingProjection: proof.rerunExistingProjection
+      ? {
+          status: proof.rerunExistingProjection.status,
+          promotableProjectionStatus:
+            proof.rerunExistingProjection.promotableProjectionStatus,
+          existingTypeaheadBeforeThisRunRows:
+            proof.rerunExistingProjection.existingTypeaheadBeforeThisRun.length,
+        }
+      : null,
+  };
 }
 
 function assertAllowedUsage(value: unknown) {
@@ -217,7 +391,6 @@ function assertAllowedProjectionProof(value: unknown) {
     "reviewStatus",
     "legalStatus",
     "curatorDecision",
-    "germplasmDistributionPolicy",
     "sourceRowReference",
   ]) {
     if (!text.includes(marker)) {

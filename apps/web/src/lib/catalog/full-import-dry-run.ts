@@ -963,8 +963,8 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
     {
       key: "genebank-long-tail",
       packageScript: "catalog:sources:import-genebank-long-tail",
-      sourceSet: "OVE-62 GRIN/NPGS promoted long-tail candidate",
-      importerIssue: "OVE-62",
+      sourceSet: "OVE-88 GRIN/NPGS genebank bulk candidate quarantine",
+      importerIssue: "OVE-88",
       downstreamIssue: "OVE-88",
       projectionScope: "full_import_wave",
       sourceSlugs: [genebankDefinition.source.slug],
@@ -972,41 +972,44 @@ export function buildDryRunTargetDefinitions(): CatalogFullImportDryRunTargetDef
       rowCounts: {
         sourceRowsWouldRead: genebankDefinition.records.length,
         rawRowsWouldCapture: genebankDefinition.records.length,
-        productConceptsWouldProject: 1,
-        aliasesWouldProject: genebankDefinition.promotion.aliases.length,
-        reviewNeededRows: genebankDefinition.records.filter(
-          (record) => record.id !== genebankDefinition.promotableRecordKey,
-        ).length,
-        rejectedRows: 0,
-        blockedRows: genebankDefinition.records.filter(
-          (record) => record.id !== genebankDefinition.promotableRecordKey,
-        ).length,
+        productConceptsWouldProject: genebankDefinition.promotions.length,
+        aliasesWouldProject: genebankDefinition.promotions.reduce(
+          (sum, projection) => sum + projection.aliases.length,
+          0,
+        ),
+        reviewNeededRows: genebankDefinition.reviewNeededRecordKeys.length,
+        rejectedRows: genebankDefinition.rejectedRecordKeys.length,
+        blockedRows:
+          genebankDefinition.blockedRecordKeys.length +
+          genebankDefinition.heldRecordKeys.length,
         attributionRequiredSources: genebankDefinition.source
           .attributionRequired
           ? 1
           : 0,
       },
       parserVersions: [GENEBANK_LONG_TAIL_PARSER_VERSION],
-      projectionRequests: [
-        {
-          sourceSlug: genebankDefinition.source.slug,
-          sourceVersion: genebankDefinition.source.version,
-          sourceRecordKey: genebankDefinition.promotion.sourceId,
-          sourceUrl: genebankDefinition.source.url,
-          productSurface: "catalog_items",
-          productSource: genebankDefinition.promotion.source,
-          productSourceId: genebankDefinition.promotion.sourceId,
-        },
-        {
-          sourceSlug: genebankDefinition.source.slug,
-          sourceVersion: genebankDefinition.source.version,
-          sourceRecordKey: genebankDefinition.promotion.sourceId,
-          sourceUrl: genebankDefinition.source.url,
-          productSurface: "catalog_item_names",
-          productSource: genebankDefinition.promotion.source,
-          productSourceId: genebankDefinition.promotion.sourceId,
-        },
-      ],
+      projectionRequests: genebankDefinition.promotions.flatMap(
+        (projection) => [
+          {
+            sourceSlug: genebankDefinition.source.slug,
+            sourceVersion: genebankDefinition.source.version,
+            sourceRecordKey: projection.sourceId,
+            sourceUrl: genebankDefinition.source.url,
+            productSurface: "catalog_items",
+            productSource: projection.source,
+            productSourceId: projection.sourceId,
+          },
+          {
+            sourceSlug: genebankDefinition.source.slug,
+            sourceVersion: genebankDefinition.source.version,
+            sourceRecordKey: projection.sourceId,
+            sourceUrl: genebankDefinition.source.url,
+            productSurface: "catalog_item_names",
+            productSource: projection.source,
+            productSourceId: projection.sourceId,
+          },
+        ],
+      ),
       duplicateSignals: [
         {
           signal: "solanum-lycopersicum-boundary",

@@ -3,13 +3,13 @@ import { createHash } from "node:crypto";
 import type { JsonValue } from "@/db/schema";
 
 export const GENEBANK_LONG_TAIL_PARSER_VERSION =
-  "ove-62.genebank-long-tail.proof.v1";
+  "ove-88.genebank-long-tail.bulk-proof.v1";
 
 export const GRIN_GENEBANK_SOURCE = {
   slug: "grin-global",
   name: "USDA GRIN/NPGS long-tail accession proof subset",
   category: "genebank_accessions",
-  version: "2026-06-30-ove62-proof-subset",
+  version: "2026-07-02-ove88-bulk-proof-subset",
   url: "https://npgsweb.ars-grin.gov/gringlobal/search",
   license:
     "USDA GRIN/NPGS public-domain source metadata; germplasm distribution policy is not a product availability claim.",
@@ -82,6 +82,62 @@ export const GENEBANK_LONG_TAIL_SOURCE_ROWS = [
     ],
   },
   {
+    id: "GRIN:NPGS:OVE88:BULGARIAN-CARROT-PEPPER",
+    candidateKind: "accession",
+    displayName: "Bulgarian Carrot",
+    canonicalName: "Bulgarian Carrot pepper",
+    speciesName: "Capsicum annuum L.",
+    cropName: "Pepper",
+    accessionIdentifier: "GRIN curated proof row OVE88-001",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "cultivar_candidate",
+    reviewStatus: "candidate_review",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "promote_to_canonical_seed",
+    sourceRowReference:
+      "Curated OVE-88 GRIN/NPGS proof row: candidate Bulgarian Carrot; species Capsicum annuum L.; crop Pepper.",
+    aliases: [
+      { displayName: "Bulgarian Carrot", locale: "en", isPrimary: true },
+      {
+        displayName: "Bulgarian Carrot pepper",
+        locale: "en",
+        isPrimary: false,
+      },
+      {
+        displayName: "Capsicum annuum Bulgarian Carrot",
+        locale: "la",
+        isPrimary: false,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:ODESSA-MARKET-TOMATO",
+    candidateKind: "accession",
+    displayName: "Odessa Market",
+    canonicalName: "Odessa Market tomato",
+    speciesName: "Solanum lycopersicum L.",
+    cropName: "Tomato",
+    accessionIdentifier: "GRIN curated proof row OVE88-002",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "cultivar_candidate",
+    reviewStatus: "candidate_review",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "promote_to_canonical_seed",
+    sourceRowReference:
+      "Curated OVE-88 GRIN/NPGS proof row: candidate Odessa Market; species Solanum lycopersicum L.; crop Tomato.",
+    aliases: [
+      { displayName: "Odessa Market", locale: "en", isPrimary: true },
+      { displayName: "Odessa Market tomato", locale: "en", isPrimary: false },
+      {
+        displayName: "Solanum lycopersicum Odessa Market",
+        locale: "la",
+        isPrimary: false,
+      },
+    ],
+  },
+  {
     id: "GRIN:NPGS:OVE62:UNREVIEWED-LANDRACE",
     candidateKind: "landrace",
     displayName: "Unreviewed NPGS landrace proof row",
@@ -100,6 +156,198 @@ export const GENEBANK_LONG_TAIL_SOURCE_ROWS = [
     aliases: [
       {
         displayName: "Unreviewed NPGS landrace proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:BALKAN-DRY-BEAN-HOLD",
+    candidateKind: "landrace",
+    displayName: "Balkan dry bean proof row",
+    canonicalName: "Balkan dry bean proof row",
+    speciesName: "Phaseolus vulgaris L.",
+    cropName: "Common bean",
+    accessionIdentifier: "GRIN curated proof row OVE88-HOLD-001",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "landrace",
+    reviewStatus: "candidate_review",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "hold_for_review",
+    sourceRowReference:
+      "Held OVE-88 GRIN/NPGS proof row; candidate identity is not curator-promoted.",
+    aliases: [
+      {
+        displayName: "Balkan dry bean proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:KYIV-LONG-CUCUMBER-REVIEW",
+    candidateKind: "accession",
+    displayName: "Kyiv Long cucumber proof row",
+    canonicalName: "Kyiv Long cucumber proof row",
+    speciesName: "Cucumis sativus L.",
+    cropName: "Cucumber",
+    accessionIdentifier: "GRIN curated proof row OVE88-REVIEW-001",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "cultivar_candidate",
+    reviewStatus: "review_needed",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "needs_taxonomy_review",
+    sourceRowReference:
+      "Review-needed OVE-88 GRIN/NPGS proof row; candidate remains source-only until curator review.",
+    aliases: [
+      {
+        displayName: "Kyiv Long cucumber proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:CHERNOZEM-MELON-REVIEW",
+    candidateKind: "accession",
+    displayName: "Chernozem melon proof row",
+    canonicalName: "Chernozem melon proof row",
+    speciesName: "Cucumis melo L.",
+    cropName: "Melon",
+    accessionIdentifier: "GRIN curated proof row OVE88-REVIEW-002",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "cultivar_candidate",
+    reviewStatus: "review_needed",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "needs_taxonomy_review",
+    sourceRowReference:
+      "Review-needed OVE-88 GRIN/NPGS proof row; candidate remains source-only until curator review.",
+    aliases: [
+      {
+        displayName: "Chernozem melon proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:DUPLICATE-RED-CHERRY",
+    candidateKind: "accession",
+    displayName: "Red Cherry duplicate proof row",
+    canonicalName: "Red Cherry duplicate proof row",
+    speciesName: "Solanum lycopersicum L.",
+    cropName: "Tomato",
+    accessionIdentifier: "GRIN curated proof row OVE88-REJECT-001",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "cultivar_candidate",
+    reviewStatus: "candidate_review",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "rejected",
+    curatorDecision: "reject_duplicate",
+    sourceRowReference:
+      "Rejected OVE-88 GRIN/NPGS proof row; duplicate candidate remains source-only.",
+    aliases: [
+      {
+        displayName: "Red Cherry duplicate proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:AMBIGUOUS-CAPSICUM",
+    candidateKind: "accession",
+    displayName: "Ambiguous Capsicum proof row",
+    canonicalName: "Ambiguous Capsicum proof row",
+    speciesName: "Capsicum sp.",
+    cropName: "Pepper",
+    accessionIdentifier: "GRIN curated proof row OVE88-REJECT-002",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "unknown",
+    reviewStatus: "candidate_review",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "rejected",
+    curatorDecision: "reject_ambiguous_identity",
+    sourceRowReference:
+      "Rejected OVE-88 GRIN/NPGS proof row; ambiguous identity remains source-only.",
+    aliases: [
+      {
+        displayName: "Ambiguous Capsicum proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:RESTRICTED-FIELD-BLOCK",
+    candidateKind: "accession",
+    displayName: "Restricted-field proof row",
+    canonicalName: "Restricted-field proof row",
+    speciesName: "Triticum aestivum L.",
+    cropName: "Wheat",
+    accessionIdentifier: "GRIN curated proof row OVE88-BLOCK-001",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "source_only",
+    reviewStatus: "blocked",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "blocked_source_only",
+    sourceRowReference:
+      "Blocked OVE-88 GRIN/NPGS proof row; not eligible for product projection.",
+    aliases: [
+      {
+        displayName: "Restricted-field proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:DISTRIBUTION-CAVEAT-BLOCK",
+    candidateKind: "accession",
+    displayName: "Policy-caveat proof row",
+    canonicalName: "Policy-caveat proof row",
+    speciesName: "Lactuca sativa L.",
+    cropName: "Lettuce",
+    accessionIdentifier: "GRIN curated proof row OVE88-BLOCK-002",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "source_only",
+    reviewStatus: "blocked",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "blocked_source_only",
+    sourceRowReference:
+      "Blocked OVE-88 GRIN/NPGS proof row; not eligible for product projection.",
+    aliases: [
+      {
+        displayName: "Policy-caveat proof row",
+        locale: "en",
+        isPrimary: true,
+      },
+    ],
+  },
+  {
+    id: "GRIN:NPGS:OVE88:EXTERNAL-TERMS-BLOCK",
+    candidateKind: "accession",
+    displayName: "External-terms proof row",
+    canonicalName: "External-terms proof row",
+    speciesName: "Brassica oleracea L.",
+    cropName: "Cabbage",
+    accessionIdentifier: "GRIN curated proof row OVE88-BLOCK-003",
+    accessionRecordUrl: GRIN_GENEBANK_SOURCE.url,
+    improvementLevel: "source_only",
+    reviewStatus: "blocked",
+    legalStatus: "grin_public_domain_ove87_use",
+    projectionStatus: "quarantined",
+    curatorDecision: "blocked_source_only",
+    sourceRowReference:
+      "Blocked OVE-88 GRIN/NPGS proof row; not eligible for product projection.",
+    aliases: [
+      {
+        displayName: "External-terms proof row",
         locale: "en",
         isPrimary: true,
       },
@@ -131,7 +379,6 @@ export interface GenebankLongTailProjection {
     reviewStatus: string;
     legalStatus: string;
     curatorDecision: string;
-    germplasmDistributionPolicy: string;
   };
 }
 
@@ -143,7 +390,7 @@ export interface GenebankLongTailSourceRecordDefinition {
   rawPayload: JsonValue;
   sourceOnlyFields: JsonValue;
   allowedProjection: JsonValue;
-  projectionStatus: "quarantined";
+  projectionStatus: "quarantined" | "rejected";
 }
 
 export interface GenebankLongTailImportDefinition {
@@ -151,24 +398,54 @@ export interface GenebankLongTailImportDefinition {
   fileProof: typeof GENEBANK_LONG_TAIL_SOURCE_PROOF;
   records: GenebankLongTailSourceRecordDefinition[];
   promotion: GenebankLongTailProjection;
+  promotions: GenebankLongTailProjection[];
   promotableRecordKey: string;
+  promotableRecordKeys: string[];
   heldRecordKey: string;
+  heldRecordKeys: string[];
+  reviewNeededRecordKeys: string[];
+  rejectedRecordKeys: string[];
+  blockedRecordKeys: string[];
 }
 
 export function genebankLongTailDefinition(): GenebankLongTailImportDefinition {
-  const promotableRow = GENEBANK_LONG_TAIL_SOURCE_ROWS[0];
-  const heldRow = GENEBANK_LONG_TAIL_SOURCE_ROWS[1];
-  const promotion = buildGenebankLongTailProjection(promotableRow);
+  const promotableRows = GENEBANK_LONG_TAIL_SOURCE_ROWS.filter(
+    (row) => row.curatorDecision === "promote_to_canonical_seed",
+  );
+  const promotions = promotableRows.map(buildGenebankLongTailProjection);
+  const promotionBySourceId = new Map(
+    promotions.map((projection) => [projection.sourceId, projection]),
+  );
+  const promotion = promotions[0];
+  const heldRows = GENEBANK_LONG_TAIL_SOURCE_ROWS.filter(
+    (row) => row.curatorDecision === "hold_for_review",
+  );
+
+  if (!promotion) {
+    throw new Error("Genebank long-tail definition needs a promotion row.");
+  }
 
   return {
     source: GRIN_GENEBANK_SOURCE,
     fileProof: GENEBANK_LONG_TAIL_SOURCE_PROOF,
     records: GENEBANK_LONG_TAIL_SOURCE_ROWS.map((row) =>
-      buildGenebankLongTailSourceRecord(row, promotion),
+      buildGenebankLongTailSourceRecord(row, promotionBySourceId.get(row.id)),
     ),
     promotion,
-    promotableRecordKey: promotableRow.id,
-    heldRecordKey: heldRow.id,
+    promotions,
+    promotableRecordKey: promotableRows[0]?.id ?? promotion.sourceId,
+    promotableRecordKeys: promotableRows.map((row) => row.id),
+    heldRecordKey: heldRows[0]?.id ?? "",
+    heldRecordKeys: heldRows.map((row) => row.id),
+    reviewNeededRecordKeys: GENEBANK_LONG_TAIL_SOURCE_ROWS.filter(
+      (row) => row.reviewStatus === "review_needed",
+    ).map((row) => row.id),
+    rejectedRecordKeys: GENEBANK_LONG_TAIL_SOURCE_ROWS.filter(
+      (row) => row.projectionStatus === "rejected",
+    ).map((row) => row.id),
+    blockedRecordKeys: GENEBANK_LONG_TAIL_SOURCE_ROWS.filter(
+      (row) => row.curatorDecision === "blocked_source_only",
+    ).map((row) => row.id),
   };
 }
 
@@ -198,6 +475,31 @@ export function genebankLongTailPromotionProjection(
   ) as GenebankLongTailProjection;
 }
 
+export function genebankLongTailPromotedProjections(
+  definition = genebankLongTailDefinition(),
+): GenebankLongTailProjection[] {
+  return JSON.parse(
+    stableJsonStringify(jsonValue(definition.promotions)),
+  ) as GenebankLongTailProjection[];
+}
+
+export function genebankLongTailProjectionForRecord(
+  sourceRecordKey: string,
+  definition = genebankLongTailDefinition(),
+): GenebankLongTailProjection {
+  const projection = definition.promotions.find(
+    (candidate) => candidate.sourceId === sourceRecordKey,
+  );
+  if (!projection) {
+    throw new Error(
+      `Genebank candidate ${sourceRecordKey} is not approved for promotion.`,
+    );
+  }
+  return JSON.parse(
+    stableJsonStringify(jsonValue(projection)),
+  ) as GenebankLongTailProjection;
+}
+
 export function stableJsonStringify(value: JsonValue): string {
   return JSON.stringify(sortJsonValue(value));
 }
@@ -208,7 +510,7 @@ function buildGenebankLongTailProjection(
   return {
     canonicalName: row.canonicalName,
     normalizedName: normalizeName(row.canonicalName),
-    publicSlug: "red-cherry-tomato-grin-genebank-candidate",
+    publicSlug: buildGenebankPublicSlug(row),
     status: "seeded",
     source: "grin_genebank_candidate",
     sourceId: row.id,
@@ -229,17 +531,17 @@ function buildGenebankLongTailProjection(
       reviewStatus: row.reviewStatus,
       legalStatus: row.legalStatus,
       curatorDecision: row.curatorDecision,
-      germplasmDistributionPolicy:
-        GENEBANK_LONG_TAIL_SOURCE_PROOF.liveProof.distributionPolicyCaveat,
     },
   };
 }
 
 function buildGenebankLongTailSourceRecord(
   row: GenebankLongTailSourceRow,
-  promotion: GenebankLongTailProjection,
+  promotion: GenebankLongTailProjection | undefined,
 ): GenebankLongTailSourceRecordDefinition {
-  const isPromotable = row.curatorDecision === "promote_to_canonical_seed";
+  const isPromotable =
+    row.curatorDecision === "promote_to_canonical_seed" &&
+    promotion !== undefined;
 
   return {
     id: row.id,
@@ -271,7 +573,7 @@ function buildGenebankLongTailSourceRecord(
             curatorDecision: row.curatorDecision,
             sourceRowReference: row.sourceRowReference,
           },
-          promotion,
+          promotion: promotion!,
         })
       : jsonValue({
           reviewQueue: {
@@ -286,12 +588,24 @@ function buildGenebankLongTailSourceRecord(
           reason:
             "Candidate remains review-only; legal source is approved but this row is not curator-promoted.",
         }),
-    projectionStatus: "quarantined",
+    projectionStatus: row.projectionStatus,
   };
 }
 
 function normalizeName(value: string) {
   return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function buildGenebankPublicSlug(row: GenebankLongTailSourceRow) {
+  if (row.id === "GRIN:NPGS:OVE62:RED-CHERRY-TOMATO") {
+    return "red-cherry-tomato-grin-genebank-candidate";
+  }
+
+  return `${row.canonicalName
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")}-grin-genebank-candidate`;
 }
 
 function sha256Hex(value: string) {
