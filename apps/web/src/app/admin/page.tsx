@@ -30,51 +30,51 @@ export const metadata: Metadata = {
 const ADMIN_LINKS = [
   {
     href: "/admin/users",
-    label: "Admin users",
-    detail: "Role grants and audit trail",
-    required: "Manage roles: owner only",
+    label: "Sealed owner",
+    detail: "Single-owner status and audit trail",
+    required: "Read-only: configured owner only",
     icon: UsersRound,
   },
   {
     href: "/garden/pilot-smoke",
     label: "Pilot smoke",
     detail: "Production readiness contract",
-    required: "Read: owner/admin/moderator/viewer",
+    required: "Owner only",
     icon: Activity,
   },
   {
     href: "/garden/pilot-health",
     label: "Pilot health",
     detail: "Aggregate activation signals",
-    required: "Read: owner/admin/moderator/viewer",
+    required: "Owner only",
     icon: ClipboardCheck,
   },
   {
     href: "/garden/pilot-learning/decision",
     label: "Cohort decision",
     detail: "Segment-level decision guard",
-    required: "Read: owner/admin/moderator/viewer",
+    required: "Owner only",
     icon: FileSearch,
   },
   {
     href: "/garden/pilot-learning/interviews",
     label: "Founder interviews",
     detail: "Bounded pilot learning rows",
-    required: "Read: all roles; capture: owner/admin/moderator",
+    required: "Owner only",
     icon: ShieldCheck,
   },
   {
     href: "/garden/catalog/curation",
     label: "Catalog curation",
     detail: "Source and identity review",
-    required: "Review: owner/admin/moderator",
+    required: "Owner only",
     icon: DatabaseZap,
   },
   {
     href: "/garden/privacy/erasure-requests",
     label: "Erasure requests",
     detail: "Privacy request review",
-    required: "Read: all roles; execute: owner/admin",
+    required: "Owner only",
     icon: Sprout,
   },
 ] as const;
@@ -124,8 +124,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
               Control plane
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              Role-gated entry for internal operations. This dashboard renders
-              links and status only, without private gardener data.
+              Sealed owner-only entry for internal operations. This dashboard
+              renders links and status only, without private gardener data.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -223,7 +223,7 @@ function roleLabel(role: AdminRole) {
 function capabilityLabel(capabilities: AdminCapability[]) {
   const labels: Record<AdminCapability, string> = {
     "admin:read": "admin read",
-    "admin:manage_roles": "role management",
+    "admin:manage_roles": "sealed owner readback",
     "operator:read": "operator read",
     "operator:mutate": "operator mutation",
     "erasure:execute": "approved erasure execution",

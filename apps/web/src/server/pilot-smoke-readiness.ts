@@ -483,9 +483,9 @@ function checkAdminRoleAccessModel(): PilotSmokeCheck {
     label: "Admin role access model",
     severity: "manual",
     summary:
-      "Internal operator surfaces use durable admin_user_roles capabilities; bootstrap owner access through the documented role script for a credential-only email/password account before smoke.",
+      "Internal operator surfaces are sealed to the configured admin_user_roles owner; bootstrap only the credential-only email/password owner account before smoke.",
     evidence:
-      "Evidence may say owner/admin role present only. Do not copy user IDs, emails, cookies, tokens, connection strings, or env values.",
+      "Evidence may say sealed owner present only. Do not copy user IDs, emails, cookies, tokens, connection strings, or env values.",
   };
 }
 

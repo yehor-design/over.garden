@@ -1,37 +1,41 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { ADMIN_SEALED_OWNER_USER_ID_ENV } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
 import type { Kysely } from "kysely";
 import { assertCatalogCuratorAccess } from "./catalog-curator-auth";
 
-const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
+const OWNER_ID = "00000000-0000-4000-8000-000000000001";
+const OTHER_ID = "00000000-0000-4000-8000-000000000002";
 
 describe("catalog curator auth gate", () => {
+  beforeEach(() => {
+    vi.stubEnv(ADMIN_SEALED_OWNER_USER_ID_ENV, OWNER_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("denies signed-in users without a durable operator mutation role", async () => {
     await expect(
-      assertCatalogCuratorAccess(scope, fakeAdminDb(null)),
+      assertCatalogCuratorAccess(scopedToUser(OTHER_ID), fakeAdminDb(null)),
     ).rejects.toThrow("Catalog curation access denied.");
   });
 
-  it("allows owner, admin, and moderator curator roles", async () => {
+  it("allows only the sealed owner to curate catalog rows", async () => {
     expect(
-      await assertCatalogCuratorAccess(scope, fakeAdminDb("owner")),
-    ).toMatchObject({ mode: "database_role_credential_only", role: "owner" });
-    expect(
-      await assertCatalogCuratorAccess(scope, fakeAdminDb("admin")),
-    ).toMatchObject({ mode: "database_role_credential_only", role: "admin" });
-    expect(
-      await assertCatalogCuratorAccess(scope, fakeAdminDb("moderator")),
-    ).toMatchObject({
-      mode: "database_role_credential_only",
-      role: "moderator",
-    });
+      await assertCatalogCuratorAccess(
+        scopedToUser(OWNER_ID),
+        fakeAdminDb("owner"),
+      ),
+    ).toMatchObject({ mode: "sealed_owner_credential_only", role: "owner" });
   });
 
-  it("rejects viewer roles because catalog curation mutates operator state", async () => {
+  it("rejects owner role rows for non-sealed users", async () => {
     await expect(
-      assertCatalogCuratorAccess(scope, fakeAdminDb("viewer")),
+      assertCatalogCuratorAccess(scopedToUser(OTHER_ID), fakeAdminDb("owner")),
     ).rejects.toThrow("Catalog curation access denied.");
   });
 });

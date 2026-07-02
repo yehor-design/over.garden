@@ -5,30 +5,27 @@ plane. Admin access is tied to a Better Auth user through
 `admin_user_roles.user_id`; it is never inferred from email domain, display
 name, provider, cookies, or client state.
 
-OVE-113 tightens the admin sign-in boundary: admin-capable accounts must be
-email/password (`credential`) accounts only. Google and Facebook remain
-gardener sign-in options, but a user with any linked social provider account is
-denied by `/admin` even if an internal role row exists. This is intentional for
-the MVP: admin power lives in a dedicated credential-only account, not in a
-consumer social login.
+OVE-113 seals the admin boundary to one configured owner account:
+`OVERGARDEN_ADMIN_OWNER_USER_ID` must match the single `admin_user_roles.owner`
+row. The owner account must be email/password (`credential`) only. Google and
+Facebook remain gardener sign-in options, but a user with any linked social
+provider account is denied by `/admin`, and no social-created or social-linked
+user can become an admin-capable account.
 
 ## Roles
 
-The initial role enum is:
+The live role enum is:
 
 - `owner`
-- `admin`
-- `moderator`
-- `viewer`
 
-`owner` can manage future role grants. `viewer` can read the admin entry and
-viewer-safe operator readouts, but cannot mutate operator state. Server code
-must check capabilities before any admin or operator mutation.
+There are no grantable admin roles in the product. Historical audit rows may
+contain older bounded role/reason labels, but the runtime gate accepts only the
+configured credential-only owner.
 
 ## Operator Surfaces
 
-OVE-109 moves the existing internal operator surfaces behind this shared role
-model:
+OVE-109 moves the existing internal operator surfaces behind this sealed owner
+gate:
 
 - `/garden/pilot-smoke`, `/garden/pilot-health`, and
   `/garden/pilot-learning/decision` require `operator:read`.
@@ -39,17 +36,18 @@ model:
   readback, requires `operator:mutate` for review/status actions, and requires
   `erasure:execute` for maintainer-approved irreversible erasure.
 
+Only the configured owner can receive those capabilities.
+
 `CATALOG_CURATOR_USER_IDS` is not the long-term admin authorization model. Do
 not add new operator surfaces to that env allowlist pattern.
 
-## Owner Role Management
+## Sealed Owner Status
 
-OVE-110 adds `/admin/users` as the owner-only role-management surface. It lets
-an owner grant or revoke `admin`, `moderator`, and `viewer` roles by exact
-Better Auth user id. It is not a broad user search or CRM surface, and it must
-not infer roles from email, provider claim, URL parameter, or client state.
-Targets must have a credential account and no linked Google/Facebook account;
-role grants fail closed for social-created or social-linked users.
+OVE-110 originally introduced `/admin/users`; OVE-113 seals it into a read-only
+owner status and audit surface. It cannot grant or revoke roles, it is not a
+broad user search or CRM surface, and it must not infer roles from email,
+provider claim, URL parameter, or client state. Server-side grant/revoke
+requests fail closed even for the owner.
 
 Every role change writes `admin_role_audit_log` with actor user id, target user
 id, bounded action/reason/role enums, timestamp, and a one-way hash of the
@@ -57,8 +55,8 @@ actor session id. The audit table and UI must not store or render emails,
 cookies, raw session ids, provider tokens, IP/user-agent fields, private
 journal/media content, precise coordinates, or env values.
 
-The last owner cannot be removed or downgraded. Owner role creation remains a
-bootstrap-controlled operation.
+Owner creation remains a bootstrap-controlled operation. All non-owner admin
+role rows are treated as drift and are not accepted by the runtime gate.
 
 ## Owner Bootstrap
 
@@ -67,7 +65,9 @@ bootstrap-controlled operation.
    Facebook-created user.
 2. Obtain the user id from a secure operator-only channel. Do not paste it into
    docs, Linear, screenshots, logs, commits, or chat.
-3. Run:
+3. Set `OVERGARDEN_ADMIN_OWNER_USER_ID` in the target environment to that user
+   id. Do not record the value in evidence.
+4. Run:
 
 ```bash
 cd apps/web
@@ -81,10 +81,11 @@ pnpm admin:bootstrap-owner -- --env-file .env.production.local --user-id "$OVERG
 pnpm admin:bootstrap-owner -- --ca-file /secure/path/ca.pem --user-id "$OVERGARDEN_OWNER_USER_ID"
 ```
 
-The script validates that the Better Auth user exists, upserts `role = owner`,
-and prints only redacted JSON evidence. It must not print user IDs, emails,
-cookies, tokens, connection strings, env values, IP addresses, user agents, or
-request metadata.
+The script validates that the Better Auth user exists, validates that the env
+matches the user id, verifies the account is credential-only, removes stale
+non-owner admin rows, upserts `role = owner`, and prints only redacted JSON
+evidence. It must not print user IDs, emails, cookies, tokens, connection
+strings, env values, IP addresses, user agents, or request metadata.
 
 ## Redaction Boundary
 
@@ -97,6 +98,6 @@ request metadata.
 - precise coordinates
 - env values or connection strings
 
-Existing operator surfaces must keep using the shared role/capability model.
+Existing operator surfaces must keep using the sealed owner capability model.
 `/admin/users` may render shortened internal user references for owner
-operation, but evidence and docs must not copy live user ids.
+readback, but evidence and docs must not copy live user ids.

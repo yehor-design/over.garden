@@ -1,17 +1,29 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import type { Kysely } from "kysely";
 import {
   ADMIN_ACCESS_DENIED_MESSAGE,
+  ADMIN_SEALED_OWNER_USER_ID_ENV,
   assertAdminAccess,
   assertAdminCapability,
   readAdminRoleForUser,
   resolveAdminAccess,
 } from "./admin-access";
 
+const OWNER_ID = "00000000-0000-4000-8000-000000000001";
+const OTHER_ID = "00000000-0000-4000-8000-000000000002";
+
 describe("admin access gate", () => {
+  beforeEach(() => {
+    vi.stubEnv(ADMIN_SEALED_OWNER_USER_ID_ENV, OWNER_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("requires authentication before reading admin roles", async () => {
     await expect(
       resolveAdminAccess(null, fakeAdminDb({ role: "owner" })),
@@ -20,7 +32,7 @@ describe("admin access gate", () => {
 
   it("denies signed-in users without a durable admin role", async () => {
     const access = await resolveAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      scopedToUser(OWNER_ID),
       fakeAdminDb({ role: null }),
     );
 
@@ -28,7 +40,7 @@ describe("admin access gate", () => {
   });
 
   it("reads admin authorization from durable user ids, not OAuth provider claims", async () => {
-    const userId = "00000000-0000-4000-8000-000000000001";
+    const userId = OWNER_ID;
     const executeTakeFirst = vi.fn(async () => ({ role: "owner" }));
     const where = vi.fn(() => ({ executeTakeFirst }));
     const select = vi.fn(() => ({ where }));
@@ -44,12 +56,12 @@ describe("admin access gate", () => {
 
   it("allows owners with role-management capability", async () => {
     const access = await assertAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      scopedToUser(OWNER_ID),
       fakeAdminDb({ role: "owner" }),
     );
 
     expect(access).toEqual({
-      mode: "database_role_credential_only",
+      mode: "sealed_owner_credential_only",
       role: "owner",
       capabilities: [
         "admin:read",
@@ -66,14 +78,14 @@ describe("admin access gate", () => {
 
   it("denies stored admin roles when the account is not credential-only", async () => {
     const socialLinkedAccess = await resolveAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000001"),
+      scopedToUser(OWNER_ID),
       fakeAdminDb({
         role: "owner",
         accountProviders: ["credential", "google"],
       }),
     );
     const socialOnlyAccess = await resolveAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000002"),
+      scopedToUser(OWNER_ID),
       fakeAdminDb({ role: "admin", accountProviders: ["facebook"] }),
     );
 
@@ -81,44 +93,35 @@ describe("admin access gate", () => {
     expect(socialOnlyAccess).toEqual({ status: "denied" });
   });
 
-  it("keeps viewer roles read-only", async () => {
-    const access = await assertAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb({ role: "viewer" }),
-    );
+  it("denies any non-owner role even when the user id matches the sealed owner", async () => {
+    await expect(
+      assertAdminAccess(scopedToUser(OWNER_ID), fakeAdminDb({ role: "viewer" })),
+    ).rejects.toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
 
-    expect(access.capabilities).toEqual(["admin:read", "operator:read"]);
-    expect(() => assertAdminCapability(access, "operator:mutate")).toThrow(
-      ADMIN_ACCESS_DENIED_MESSAGE,
-    );
-    expect(() => assertAdminCapability(access, "erasure:execute")).toThrow(
-      ADMIN_ACCESS_DENIED_MESSAGE,
-    );
+    await expect(
+      assertAdminAccess(scopedToUser(OWNER_ID), fakeAdminDb({ role: "admin" })),
+    ).rejects.toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
   });
 
-  it("limits irreversible erasure execution to owner and admin roles", async () => {
-    const adminAccess = await assertAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000001"),
-      fakeAdminDb({ role: "admin" }),
-    );
-    const moderatorAccess = await assertAdminAccess(
-      scopedToUser("00000000-0000-4000-8000-000000000002"),
-      fakeAdminDb({ role: "moderator" }),
-    );
+  it("denies owner role rows for any user other than the sealed owner", async () => {
+    await expect(
+      assertAdminAccess(scopedToUser(OTHER_ID), fakeAdminDb({ role: "owner" })),
+    ).rejects.toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
+  });
 
-    expect(() =>
-      assertAdminCapability(adminAccess, "erasure:execute"),
-    ).not.toThrow();
-    expect(() =>
-      assertAdminCapability(moderatorAccess, "erasure:execute"),
-    ).toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
+  it("fails closed when the sealed owner env is missing", async () => {
+    vi.unstubAllEnvs();
+
+    await expect(
+      assertAdminAccess(scopedToUser(OWNER_ID), fakeAdminDb({ role: "owner" })),
+    ).rejects.toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
   });
 
   it("fails closed if the stored role is outside the enum", async () => {
     await expect(
       readAdminRoleForUser(
         fakeAdminDb({ role: "founder" }) as Kysely<Database>,
-        "00000000-0000-4000-8000-000000000001",
+        OWNER_ID,
       ),
     ).resolves.toBeNull();
   });

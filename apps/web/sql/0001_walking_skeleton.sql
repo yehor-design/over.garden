@@ -10,14 +10,15 @@ create table if not exists health (
   created_at timestamptz not null default now()
 );
 
--- Admin control plane roles (OVE-108). This app-owned table stores durable
--- role grants for Better Auth users. It intentionally stores only user IDs,
--- role enums, and bounded grant metadata: never emails, cookies, tokens,
+-- Admin control plane owner lock (OVE-108/OVE-113 sealed owner hardening).
+-- This app-owned table stores the single durable owner grant for the configured
+-- Better Auth user. It intentionally stores only user IDs, role enums, and
+-- bounded grant metadata: never emails, cookies, tokens,
 -- request metadata, IP/user-agent, journal text, media keys, env values, or
 -- fine-grained place data.
 create table if not exists admin_user_roles (
   user_id uuid primary key,
-  role text not null check (role in ('owner', 'admin', 'moderator', 'viewer')),
+  role text not null check (role = 'owner'),
   granted_by_user_id uuid,
   grant_reason text not null default 'manual_bootstrap',
   granted_at timestamptz not null default now(),
@@ -25,7 +26,7 @@ create table if not exists admin_user_roles (
 );
 
 alter table admin_user_roles
-  add column if not exists role text not null default 'viewer',
+  add column if not exists role text not null default 'owner',
   add column if not exists granted_by_user_id uuid,
   add column if not exists grant_reason text not null default 'manual_bootstrap',
   add column if not exists granted_at timestamptz not null default now(),
@@ -45,7 +46,7 @@ begin
 
   alter table admin_user_roles
     add constraint admin_user_roles_role_check
-    check (role in ('owner', 'admin', 'moderator', 'viewer'));
+    check (role = 'owner');
 
   if not exists (
     select 1
@@ -85,6 +86,9 @@ end $$;
 
 create index if not exists admin_user_roles_role_granted_idx
   on admin_user_roles (role, granted_at desc);
+
+create unique index if not exists admin_user_roles_single_owner_idx
+  on admin_user_roles ((true));
 
 -- Admin role audit trail (OVE-110). Audit rows store only internal user IDs,
 -- a one-way session hash, bounded role/action/reason enums, and timestamps.

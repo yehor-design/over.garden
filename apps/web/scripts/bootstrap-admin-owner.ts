@@ -1,12 +1,14 @@
 /**
- * OVE-108 owner bootstrap.
+ * OVE-113 sealed owner bootstrap.
  *
  * Usage:
  *   pnpm admin:bootstrap-owner -- --user-id "$OVERGARDEN_OWNER_USER_ID"
  *   pnpm admin:bootstrap-owner -- --env-file .env.production.local --user-id "$OVERGARDEN_OWNER_USER_ID"
  *
  * The script validates that the Better Auth user already exists and writes only
- * a durable owner role row for a credential-only account. Output is
+ * a durable owner role row for the configured credential-only account. Any
+ * stale non-owner admin role rows are removed before the owner-only schema
+ * constraint is applied. Output is
  * intentionally redacted: no user IDs, emails, tokens, cookies, connection
  * strings, or env values are printed.
  */
@@ -33,6 +35,7 @@ interface CliOptions {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CREDENTIAL_PROVIDER_ID = "credential";
+const SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
 
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
@@ -42,6 +45,7 @@ async function main() {
     process.env.DATABASE_SSL_CA = readFileSync(options.caFile, "utf8");
   }
   const userId = resolveBootstrapUserId(options.userId);
+  assertMatchesSealedOwnerEnv(userId);
 
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);
@@ -71,31 +75,39 @@ async function main() {
 
     await assertCredentialOnlyAccount(db, userId);
 
-    await db
-      .insertInto("admin_user_roles")
-      .values({
-        user_id: userId,
-        role: "owner",
-        grant_reason: "manual_owner_bootstrap",
-      })
-      .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet({
+    await db.transaction().execute(async (trx) => {
+      await trx
+        .deleteFrom("admin_user_roles")
+        .where("user_id", "!=", userId)
+        .execute();
+
+      await trx
+        .insertInto("admin_user_roles")
+        .values({
+          user_id: userId,
           role: "owner",
           grant_reason: "manual_owner_bootstrap",
-          updated_at: sql`now()`,
-        }),
-      )
-      .execute();
+        })
+        .onConflict((oc) =>
+          oc.column("user_id").doUpdateSet({
+            role: "owner",
+            grant_reason: "manual_owner_bootstrap",
+            updated_at: sql`now()`,
+          }),
+        )
+        .execute();
+    });
 
     console.log(
       JSON.stringify(
         {
           ok: true,
-          issue: "OVE-108",
+          issue: "OVE-113",
           role: "owner",
           userVerified: true,
           credentialOnlyVerified: true,
-          roleUpserted: true,
+          staleAdminRowsRemoved: true,
+          sealedOwnerUpserted: true,
           evidenceSafety: "redacted_no_user_ids_emails_tokens_or_env",
         },
         null,
@@ -169,6 +181,18 @@ function resolveBootstrapUserId(cliUserId: string | undefined) {
   }
 
   return userId;
+}
+
+function assertMatchesSealedOwnerEnv(userId: string) {
+  const configuredOwnerUserId = process.env[SEALED_OWNER_USER_ID_ENV]?.trim();
+
+  if (!configuredOwnerUserId) {
+    throw new Error("Missing sealed owner env for admin bootstrap.");
+  }
+
+  if (configuredOwnerUserId !== userId) {
+    throw new Error("Admin bootstrap user must match the sealed owner env.");
+  }
 }
 
 function requiredArg(argv: string[], index: number, name: string) {

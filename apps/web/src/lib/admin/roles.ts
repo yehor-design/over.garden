@@ -1,5 +1,4 @@
-export const ADMIN_ROLES = ["owner", "admin", "moderator", "viewer"] as const;
-export const MANAGEABLE_ADMIN_ROLES = ["admin", "moderator", "viewer"] as const;
+export const ADMIN_ROLES = ["owner"] as const;
 export const ADMIN_ROLE_CHANGE_REASONS = [
   "manual_owner_grant",
   "pilot_operator_delegation",
@@ -9,7 +8,6 @@ export const ADMIN_ROLE_CHANGE_REASONS = [
 ] as const;
 
 export type AdminRole = (typeof ADMIN_ROLES)[number];
-export type ManageableAdminRole = (typeof MANAGEABLE_ADMIN_ROLES)[number];
 export type AdminRoleChangeReason = (typeof ADMIN_ROLE_CHANGE_REASONS)[number];
 
 export type AdminCapability =
@@ -21,15 +19,6 @@ export type AdminCapability =
 
 export function isAdminRole(value: unknown): value is AdminRole {
   return typeof value === "string" && ADMIN_ROLES.includes(value as AdminRole);
-}
-
-export function isManageableAdminRole(
-  value: unknown,
-): value is ManageableAdminRole {
-  return (
-    typeof value === "string" &&
-    MANAGEABLE_ADMIN_ROLES.includes(value as ManageableAdminRole)
-  );
 }
 
 export function isAdminRoleChangeReason(
@@ -51,16 +40,5 @@ export function capabilitiesForAdminRole(role: AdminRole): AdminCapability[] {
         "operator:mutate",
         "erasure:execute",
       ];
-    case "admin":
-      return [
-        "admin:read",
-        "operator:read",
-        "operator:mutate",
-        "erasure:execute",
-      ];
-    case "moderator":
-      return ["admin:read", "operator:read", "operator:mutate"];
-    case "viewer":
-      return ["admin:read", "operator:read"];
   }
 }

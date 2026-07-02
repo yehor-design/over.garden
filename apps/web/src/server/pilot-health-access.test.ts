@@ -1,11 +1,23 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { ADMIN_SEALED_OWNER_USER_ID_ENV } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
 import type { Kysely } from "kysely";
 import { resolvePilotHealthOperatorAccess } from "./pilot-health-access";
 
+const OWNER_ID = "00000000-0000-4000-8000-000000000001";
+const OTHER_ID = "00000000-0000-4000-8000-000000000002";
+
 describe("pilot health operator access", () => {
+  beforeEach(() => {
+    vi.stubEnv(ADMIN_SEALED_OWNER_USER_ID_ENV, OWNER_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("requires sign-in before the health readout is visible", async () => {
     await expect(resolvePilotHealthOperatorAccess(null)).resolves.toEqual({
       status: "sign_in_required",
@@ -13,7 +25,7 @@ describe("pilot health operator access", () => {
   });
 
   it("denies authenticated users without an admin role", async () => {
-    const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
+    const scope = scopedToUser(OTHER_ID);
 
     await expect(
       resolvePilotHealthOperatorAccess(scope, fakeAdminDb(null)),
@@ -22,15 +34,25 @@ describe("pilot health operator access", () => {
     });
   });
 
-  it("allows viewer roles to read aggregate pilot health", async () => {
-    const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
-
+  it("allows only the sealed owner to read aggregate pilot health", async () => {
     await expect(
-      resolvePilotHealthOperatorAccess(scope, fakeAdminDb("viewer")),
+      resolvePilotHealthOperatorAccess(
+        scopedToUser(OWNER_ID),
+        fakeAdminDb("owner"),
+      ),
     ).resolves.toMatchObject({
       status: "allowed",
-      mode: "database_role_credential_only",
-      role: "viewer",
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+    });
+
+    await expect(
+      resolvePilotHealthOperatorAccess(
+        scopedToUser(OTHER_ID),
+        fakeAdminDb("owner"),
+      ),
+    ).resolves.toEqual({
+      status: "denied",
     });
   });
 });

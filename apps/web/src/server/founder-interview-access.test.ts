@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { ADMIN_SEALED_OWNER_USER_ID_ENV } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
 import type { Kysely } from "kysely";
 import {
@@ -8,7 +9,18 @@ import {
   resolveFounderInterviewOperatorAccess,
 } from "./founder-interview-access";
 
+const OWNER_ID = "00000000-0000-4000-8000-000000000001";
+const OTHER_ID = "00000000-0000-4000-8000-000000000002";
+
 describe("founder interview operator access", () => {
+  beforeEach(() => {
+    vi.stubEnv(ADMIN_SEALED_OWNER_USER_ID_ENV, OWNER_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("requires authentication before interview capture readback", async () => {
     await expect(resolveFounderInterviewOperatorAccess(null)).resolves.toEqual({
       status: "sign_in_required",
@@ -18,39 +30,42 @@ describe("founder interview operator access", () => {
   it("denies authenticated users without an admin role", async () => {
     await expect(
       resolveFounderInterviewOperatorAccess(
-        scopedToUser("00000000-0000-0000-0000-000000000001"),
+        scopedToUser(OTHER_ID),
         fakeAdminDb(null),
       ),
     ).resolves.toEqual({ status: "denied" });
   });
 
-  it("allows viewer roles to read interview learnings", async () => {
+  it("allows the sealed owner to read and capture interview learnings", async () => {
     await expect(
       resolveFounderInterviewOperatorAccess(
-        scopedToUser("00000000-0000-0000-0000-000000000001"),
-        fakeAdminDb("viewer"),
+        scopedToUser(OWNER_ID),
+        fakeAdminDb("owner"),
       ),
     ).resolves.toMatchObject({
       status: "allowed",
-      mode: "database_role_credential_only",
-      role: "viewer",
+      mode: "sealed_owner_credential_only",
+      role: "owner",
     });
-  });
-
-  it("allows moderator roles to capture bounded interview learnings", async () => {
     await expect(
       assertFounderInterviewMutationAccess(
-        scopedToUser("00000000-0000-0000-0000-000000000001"),
-        fakeAdminDb("moderator"),
+        scopedToUser(OWNER_ID),
+        fakeAdminDb("owner"),
       ),
-    ).resolves.toMatchObject({ role: "moderator" });
+    ).resolves.toMatchObject({ role: "owner" });
   });
 
-  it("denies viewer roles from capturing interview learnings", async () => {
+  it("denies non-owner role rows from interview learnings", async () => {
+    await expect(
+      resolveFounderInterviewOperatorAccess(
+        scopedToUser(OTHER_ID),
+        fakeAdminDb("owner"),
+      ),
+    ).resolves.toEqual({ status: "denied" });
     await expect(
       assertFounderInterviewMutationAccess(
-        scopedToUser("00000000-0000-0000-0000-000000000001"),
-        fakeAdminDb("viewer"),
+        scopedToUser(OTHER_ID),
+        fakeAdminDb("owner"),
       ),
     ).rejects.toThrow("Admin access denied.");
   });

@@ -14,36 +14,33 @@ import type { Database } from "../src/db/types";
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove110-smoke-password";
+const TEST_PASSWORD = "overgarden-ove113-smoke-password";
+const SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ADMIN_SURFACE_EXPECTATIONS = [
   {
     path: "/garden/pilot-smoke",
-    ownerMarker: "Production pilot smoke",
     normalForbiddenMarker: "Readiness status",
   },
   {
     path: "/garden/pilot-health",
-    ownerMarker: "Pilot health",
     normalForbiddenMarker: "provisional pilot signals",
   },
   {
     path: "/garden/pilot-learning/decision",
-    ownerMarker: "Pilot cohort decision",
     normalForbiddenMarker: "provisional decision support",
   },
   {
     path: "/garden/pilot-learning/interviews",
-    ownerMarker: "Founder interview capture",
     normalForbiddenMarker: "Capture structured learning",
   },
   {
     path: "/garden/catalog/curation",
-    ownerMarker: "Catalog curation",
     normalForbiddenMarker: "Source candidates",
   },
   {
     path: "/garden/privacy/erasure-requests",
-    ownerMarker: "Erasure requests",
     normalForbiddenMarker: "Requests:",
   },
 ] as const;
@@ -62,13 +59,6 @@ const FORBIDDEN_ADMIN_MARKERS = [
   "POSTGRES",
   "R2_SECRET",
   "BETTER_AUTH_SECRET",
-];
-const FORBIDDEN_SURFACE_SECRET_MARKERS = [
-  "auth-secret-that-must-not-leak",
-  "database-secret",
-  "r2-secret",
-  "meili-secret",
-  "matching-token",
 ];
 
 class CookieJar {
@@ -95,118 +85,42 @@ async function main() {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
   const db = createDatabase();
 
-  const ownerEmail = `ove110-owner-${Date.now()}-${randomUUID()}@example.test`;
-  const normalEmail = `ove110-normal-${Date.now()}-${randomUUID()}@example.test`;
-  const moderatorEmail = `ove110-moderator-${Date.now()}-${randomUUID()}@example.test`;
-  const socialLinkedAdminEmail = `ove113-social-admin-${Date.now()}-${randomUUID()}@example.test`;
+  const normalEmail = `ove113-normal-${Date.now()}-${randomUUID()}@example.test`;
+  const socialLinkedEmail = `ove113-social-${Date.now()}-${randomUUID()}@example.test`;
 
   try {
-    const ownerJar = new CookieJar();
-    const normalJar = new CookieJar();
-    const moderatorJar = new CookieJar();
-    const socialLinkedAdminJar = new CookieJar();
+    await assertSealedOwnerDatabaseState(db);
 
-    await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-110 Owner Smoke");
+    const normalJar = new CookieJar();
+    const socialLinkedJar = new CookieJar();
+
     await signUpAndSignIn(
       baseUrl,
       normalJar,
       normalEmail,
-      "OVE-110 User Smoke",
-    );
-    await signUpAndSignIn(
-      baseUrl,
-      moderatorJar,
-      moderatorEmail,
-      "OVE-110 Moderator Smoke",
+      "OVE-113 Normal Smoke",
     );
     await waitForAuthRateLimitWindow();
     await signUpAndSignIn(
       baseUrl,
-      socialLinkedAdminJar,
-      socialLinkedAdminEmail,
-      "OVE-113 Social Linked Admin Smoke",
+      socialLinkedJar,
+      socialLinkedEmail,
+      "OVE-113 Social Linked Smoke",
     );
 
-    const ownerUserId = await readUserIdByEmail(db, ownerEmail);
-    const moderatorUserId = await readUserIdByEmail(db, moderatorEmail);
-    const socialLinkedAdminUserId = await readUserIdByEmail(
-      db,
-      socialLinkedAdminEmail,
-    );
-    await db
-      .insertInto("admin_user_roles")
-      .values({
-        user_id: ownerUserId,
-        role: "owner",
-        grant_reason: "manual_owner_grant",
-      })
-      .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet({
-          role: "owner",
-          grant_reason: "manual_owner_grant",
-        }),
-      )
-      .execute();
-    await db
-      .insertInto("admin_user_roles")
-      .values({
-        user_id: moderatorUserId,
-        role: "moderator",
-        granted_by_user_id: ownerUserId,
-        grant_reason: "pilot_operator_delegation",
-      })
-      .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet({
-          role: "moderator",
-          granted_by_user_id: ownerUserId,
-          grant_reason: "pilot_operator_delegation",
-        }),
-      )
-      .execute();
-    await db
-      .insertInto("admin_role_audit_log")
-      .values({
-        actor_user_id: ownerUserId,
-        actor_session_id_hash:
-          "0000000000000000000000000000000000000000000000000000000000000000",
-        target_user_id: moderatorUserId,
-        action: "grant",
-        previous_role: null,
-        new_role: "moderator",
-        reason: "pilot_operator_delegation",
-      })
-      .execute();
-    await db
-      .insertInto("admin_user_roles")
-      .values({
-        user_id: socialLinkedAdminUserId,
-        role: "admin",
-        granted_by_user_id: ownerUserId,
-        grant_reason: "manual_owner_grant",
-      })
-      .execute();
-    await db
-      .insertInto("account")
-      .values({
-        userId: socialLinkedAdminUserId,
-        providerId: "google",
-        accountId: `ove113-${randomUUID()}`,
-        updatedAt: sql`now()`,
-      })
-      .execute();
+    const socialLinkedUserId = await readUserIdByEmail(db, socialLinkedEmail);
+    await linkFakeSocialAccount(db, socialLinkedUserId);
+    await assertSecondOwnerInsertRejected(db, socialLinkedUserId);
 
-    const signedOutHtml = await textRequest(baseUrl, new CookieJar(), "/admin");
-    const normalHtml = await textRequest(baseUrl, normalJar, "/admin");
-    const ownerHtml = await textRequest(baseUrl, ownerJar, "/admin");
-    const socialLinkedAdminHtml = await textRequest(
-      baseUrl,
-      socialLinkedAdminJar,
-      "/admin",
+    const signedOutText = visiblePageText(
+      await textRequest(baseUrl, new CookieJar(), "/admin"),
     );
-    const signedOutText = visiblePageText(signedOutHtml);
-    const normalText = visiblePageText(normalHtml);
-    const ownerText = visiblePageText(ownerHtml);
-    const socialLinkedAdminText = visiblePageText(socialLinkedAdminHtml);
+    const normalText = visiblePageText(
+      await textRequest(baseUrl, normalJar, "/admin"),
+    );
+    const socialLinkedText = visiblePageText(
+      await textRequest(baseUrl, socialLinkedJar, "/admin"),
+    );
 
     assertIncludes(
       signedOutText,
@@ -224,64 +138,23 @@ async function main() {
       "Normal signed-in user saw admin dashboard links.",
     );
     assertIncludes(
-      socialLinkedAdminText,
+      socialLinkedText,
       "Access denied.",
-      "Social-linked admin-role user was not denied from /admin.",
+      "Social-linked signed-in user was not denied from /admin.",
     );
     assertNotIncludes(
-      socialLinkedAdminText,
+      socialLinkedText,
       "Pilot smoke",
-      "Social-linked admin-role user saw admin dashboard links.",
+      "Social-linked signed-in user saw admin dashboard links.",
     );
-    assertIncludes(ownerText, "Role: Owner", "Owner did not see owner role.");
-    assertIncludes(
-      ownerText,
-      "Gate: database_role_credential_only",
-      "Owner dashboard did not show the credential-only admin gate.",
-    );
-    assertIncludes(
-      ownerText,
-      "Admin users",
-      "Owner dashboard missing admin users link.",
-    );
-    assertIncludes(
-      ownerText,
-      "Manage roles: owner only",
-      "Owner dashboard missing owner-only role-management hint.",
-    );
-    assertIncludes(
-      ownerText,
-      "Pilot smoke",
-      "Owner did not see admin dashboard links.",
-    );
-    assertIncludes(
-      ownerText,
-      "Catalog curation",
-      "Owner dashboard missing catalog curation link.",
-    );
-    assertIncludes(
-      ownerText,
-      "Review: owner/admin/moderator",
-      "Owner dashboard missing role-required curation hint.",
-    );
-    assertIncludes(
-      ownerText,
-      "execute: owner/admin",
-      "Owner dashboard missing erasure execution role hint.",
-    );
-    assertNoForbiddenAdminEvidence(ownerText);
+    assertNoForbiddenAdminEvidence(normalText);
+    assertNoForbiddenAdminEvidence(socialLinkedText);
 
     const normalUsersText = visiblePageText(
       await textRequest(baseUrl, normalJar, "/admin/users"),
     );
-    const moderatorUsersText = visiblePageText(
-      await textRequest(baseUrl, moderatorJar, "/admin/users"),
-    );
-    const ownerUsersText = visiblePageText(
-      await textRequest(baseUrl, ownerJar, "/admin/users"),
-    );
-    const moderatorCurationText = visiblePageText(
-      await textRequest(baseUrl, moderatorJar, "/garden/catalog/curation"),
+    const socialLinkedUsersText = visiblePageText(
+      await textRequest(baseUrl, socialLinkedJar, "/admin/users"),
     );
 
     assertIncludes(
@@ -290,72 +163,39 @@ async function main() {
       "Normal signed-in user was not denied from /admin/users.",
     );
     assertIncludes(
-      moderatorUsersText,
+      socialLinkedUsersText,
       "Access denied.",
-      "Moderator was not denied from /admin/users.",
-    );
-    assertIncludes(
-      ownerUsersText,
-      "Role management",
-      "Owner did not see role management surface.",
-    );
-    assertIncludes(
-      ownerUsersText,
-      "Recent role audit",
-      "Owner did not see role audit trail.",
-    );
-    assertIncludes(
-      ownerUsersText,
-      "Pilot operator delegation",
-      "Owner did not see bounded role-change reason.",
-    );
-    assertIncludes(
-      ownerUsersText,
-      "Owner role is protected",
-      "Owner page did not render last-owner protection copy.",
-    );
-    assertNoForbiddenSurfaceSecrets(ownerUsersText, "/admin/users");
-    assertIncludes(
-      moderatorCurationText,
-      "Catalog curation",
-      "Moderator role did not take effect on catalog curation.",
-    );
-    assertNotIncludes(
-      moderatorCurationText,
-      "Access denied.",
-      "Moderator was denied from catalog curation after role grant.",
+      "Social-linked signed-in user was not denied from /admin/users.",
     );
 
     for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
-      const normalSurfaceHtml = await textRequest(
-        baseUrl,
-        normalJar,
-        surface.path,
+      const normalSurfaceText = visiblePageText(
+        await textRequest(baseUrl, normalJar, surface.path),
       );
-      const ownerSurfaceHtml = await textRequest(
-        baseUrl,
-        ownerJar,
-        surface.path,
+      const socialLinkedSurfaceText = visiblePageText(
+        await textRequest(baseUrl, socialLinkedJar, surface.path),
       );
-      const normalSurfaceText = visiblePageText(normalSurfaceHtml);
-      const ownerSurfaceText = visiblePageText(ownerSurfaceHtml);
 
       assertIncludes(
         normalSurfaceText,
         "Access denied.",
         `Normal signed-in user was not denied from ${surface.path}.`,
       );
+      assertIncludes(
+        socialLinkedSurfaceText,
+        "Access denied.",
+        `Social-linked signed-in user was not denied from ${surface.path}.`,
+      );
       assertNotIncludes(
         normalSurfaceText,
         surface.normalForbiddenMarker,
         `Normal signed-in user saw operator data marker on ${surface.path}.`,
       );
-      assertIncludes(
-        ownerSurfaceText,
-        surface.ownerMarker,
-        `Owner could not open ${surface.path}.`,
+      assertNotIncludes(
+        socialLinkedSurfaceText,
+        surface.normalForbiddenMarker,
+        `Social-linked signed-in user saw operator data marker on ${surface.path}.`,
       );
-      assertNoForbiddenSurfaceSecrets(ownerSurfaceText, surface.path);
     }
 
     console.log(
@@ -363,14 +203,14 @@ async function main() {
         {
           ok: true,
           issue: "OVE-113",
+          sealedOwnerEnvPresent: true,
+          sealedOwnerRoleOnly: true,
+          sealedOwnerCredentialOnly: true,
+          secondOwnerDatabaseGuardRejected: true,
           signedOutDeniedToDashboard: true,
           normalUserDenied: true,
-          ownerDashboardRendered: true,
-          socialLinkedAdminDenied: true,
-          ownerRoleManagementRendered: true,
-          normalRoleManagementDenied: true,
-          moderatorRoleManagementDenied: true,
-          moderatorCurationAllowed: true,
+          socialLinkedUserDenied: true,
+          ownerSessionUiProof: "manual_password_login_required",
           linkedOperatorSurfacesChecked: ADMIN_SURFACE_EXPECTATIONS.map(
             (surface) => surface.path,
           ),
@@ -381,10 +221,8 @@ async function main() {
       ),
     );
   } finally {
-    await cleanupSmokeUser(db, ownerEmail);
     await cleanupSmokeUser(db, normalEmail);
-    await cleanupSmokeUser(db, moderatorEmail);
-    await cleanupSmokeUser(db, socialLinkedAdminEmail);
+    await cleanupSmokeUser(db, socialLinkedEmail);
     await db.destroy();
   }
 }
@@ -407,6 +245,67 @@ function createDatabase() {
   return new Kysely<Database>({
     dialect: new PostgresDialect({ pool }),
   });
+}
+
+async function assertSealedOwnerDatabaseState(db: Kysely<Database>) {
+  const sealedOwnerUserId = process.env[SEALED_OWNER_USER_ID_ENV]?.trim() ?? "";
+
+  if (!UUID_PATTERN.test(sealedOwnerUserId)) {
+    throw new Error("Missing or invalid sealed owner env for admin smoke.");
+  }
+
+  const roleRows = await db
+    .selectFrom("admin_user_roles")
+    .select(["user_id", "role"])
+    .execute();
+
+  if (
+    roleRows.length !== 1 ||
+    roleRows[0]?.user_id !== sealedOwnerUserId ||
+    roleRows[0]?.role !== "owner"
+  ) {
+    throw new Error("Admin smoke requires exactly one sealed owner role row.");
+  }
+
+  const accountRows = await db
+    .selectFrom("account")
+    .select("providerId")
+    .where("userId", "=", sealedOwnerUserId)
+    .execute();
+  const hasCredentialAccount = accountRows.some(
+    (account) => account.providerId === "credential",
+  );
+  const hasLinkedSocialAccount = accountRows.some(
+    (account) => account.providerId !== "credential",
+  );
+
+  if (!hasCredentialAccount || hasLinkedSocialAccount) {
+    throw new Error("Sealed owner must be credential-only.");
+  }
+}
+
+async function assertSecondOwnerInsertRejected(
+  db: Kysely<Database>,
+  userId: string,
+) {
+  try {
+    await db
+      .insertInto("admin_user_roles")
+      .values({
+        user_id: userId,
+        role: "owner",
+        grant_reason: "role_cleanup",
+      })
+      .execute();
+  } catch {
+    return;
+  }
+
+  await db
+    .deleteFrom("admin_user_roles")
+    .where("user_id", "=", userId)
+    .execute();
+  throw new Error("Admin role table accepted a second owner row.");
 }
 
 async function signUpAndSignIn(
@@ -442,6 +341,18 @@ async function readUserIdByEmail(db: Kysely<Database>, email: string) {
   }
 
   return user.id;
+}
+
+async function linkFakeSocialAccount(db: Kysely<Database>, userId: string) {
+  await db
+    .insertInto("account")
+    .values({
+      userId,
+      providerId: "google",
+      accountId: `ove113-${randomUUID()}`,
+      updatedAt: sql`now()`,
+    })
+    .execute();
 }
 
 async function cleanupSmokeUser(db: Kysely<Database>, email: string) {
@@ -549,15 +460,7 @@ function assertNotIncludes(value: string, expected: string, message: string) {
 function assertNoForbiddenAdminEvidence(value: string) {
   for (const marker of FORBIDDEN_ADMIN_MARKERS) {
     if (value.toLowerCase().includes(marker.toLowerCase())) {
-      throw new Error(`Owner dashboard leaked forbidden marker: ${marker}.`);
-    }
-  }
-}
-
-function assertNoForbiddenSurfaceSecrets(value: string, path: string) {
-  for (const marker of FORBIDDEN_SURFACE_SECRET_MARKERS) {
-    if (value.toLowerCase().includes(marker.toLowerCase())) {
-      throw new Error(`${path} leaked forbidden marker: ${marker}.`);
+      throw new Error(`Admin boundary leaked forbidden marker: ${marker}.`);
     }
   }
 }

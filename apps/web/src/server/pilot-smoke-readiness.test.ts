@@ -295,7 +295,7 @@ describe("pilot smoke readiness", () => {
     expect(readout.overall).toBe("blocked");
   });
 
-  it("requires manual admin role bootstrap proof without treating the legacy allowlist as primary auth", () => {
+  it("requires manual sealed owner bootstrap proof without treating the legacy allowlist as primary auth", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
@@ -313,7 +313,7 @@ describe("pilot smoke readiness", () => {
       ),
     ).toMatchObject({
       severity: "manual",
-      summary: expect.stringContaining("admin_user_roles"),
+      summary: expect.stringContaining("sealed"),
     });
   });
 

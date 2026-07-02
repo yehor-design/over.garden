@@ -89,9 +89,15 @@ describe("/garden/catalog/curation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.assertCatalogCuratorAccess.mockResolvedValue({
-      mode: "database_role_credential_only",
-      role: "moderator",
-      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: [
+        "admin:read",
+        "admin:manage_roles",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
     mocks.listCatalogSourceCandidatesForReview.mockResolvedValue([]);
@@ -137,12 +143,12 @@ describe("/garden/catalog/curation", () => {
     expect(mocks.listVarietySeedProofsForCuration).not.toHaveBeenCalled();
   });
 
-  it("renders curation data for an operator mutation role", async () => {
+  it("renders curation data for the sealed owner", async () => {
     const { default: CatalogCurationPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
-    expect(html).toContain("Gate: database_role_credential_only");
-    expect(html).toContain("Role: moderator");
+    expect(html).toContain("Gate: sealed_owner_credential_only");
+    expect(html).toContain("Role: owner");
     expect(html).toContain("source-candidate-review");
     expect(html).toContain("entity-resolution-report");
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();

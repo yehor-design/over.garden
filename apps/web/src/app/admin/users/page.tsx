@@ -3,8 +3,6 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
-  ADMIN_ROLE_CHANGE_REASONS,
-  MANAGEABLE_ADMIN_ROLES,
   type AdminRole,
   type AdminRoleChangeReason,
 } from "@/lib/admin/roles";
@@ -17,12 +15,11 @@ import {
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../../garden/garden-auth-panel";
-import { grantAdminRoleAction, revokeAdminRoleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Admin users | OverGarden",
+  title: "Sealed owner | OverGarden",
   robots: {
     index: false,
     follow: false,
@@ -88,13 +85,12 @@ export default async function AdminUsersPage({
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-foreground">
-              Role management
+              Sealed owner access
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              Owner-only grants for internal roles. Use exact Better Auth user
-              ids from a secure operator channel. Target accounts must use email
-              and password only; Google or Facebook linked accounts are
-              intentionally not eligible for admin capabilities.
+              Admin access is locked to one configured email/password owner
+              account. This surface is read-only and cannot grant capabilities
+              to any other user.
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -108,61 +104,10 @@ export default async function AdminUsersPage({
         </div>
       </section>
 
-      <section className="grid gap-4 rounded-lg border border-border p-4">
-        <div className="grid gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Grant a role
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Grant only `admin`, `moderator`, or `viewer`. Owner access remains a
-            bootstrap-controlled email/password-only role.
-          </p>
-        </div>
-
-        <form
-          action={grantAdminRoleAction}
-          className="grid gap-3 border-t border-border pt-4 md:grid-cols-2 lg:grid-cols-4"
-        >
-          <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-            Better Auth user id
-            <input
-              name="targetUserId"
-              required
-              placeholder="00000000-0000-4000-8000-000000000001"
-              className="h-10 rounded-md border border-input bg-background px-3 font-mono text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            />
-          </label>
-          <SelectField
-            label="Role"
-            name="role"
-            options={MANAGEABLE_ADMIN_ROLES.map((role) => ({
-              value: role,
-              label: roleLabel(role),
-            }))}
-          />
-          <SelectField
-            label="Reason"
-            name="reason"
-            options={ADMIN_ROLE_CHANGE_REASONS.filter(
-              (reason) => reason !== "access_revoked",
-            ).map((reason) => ({
-              value: reason,
-              label: reasonLabel(reason),
-            }))}
-          />
-          <button
-            type="submit"
-            className={buttonVariants({ className: "self-end" })}
-          >
-            Grant role
-          </button>
-        </form>
-      </section>
-
       <section className="grid gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
           <h2 className="text-lg font-semibold text-foreground">
-            Current role assignments
+            Current sealed assignment
           </h2>
           <span className="text-xs text-muted-foreground">
             {view.assignments.length} assignment
@@ -172,7 +117,7 @@ export default async function AdminUsersPage({
 
         {view.assignments.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No admin roles have been assigned.
+            No sealed owner assignment has been created.
           </p>
         ) : (
           <ol className="grid gap-3">
@@ -249,22 +194,13 @@ function RoleAssignmentCard({
 
       {isOwner ? (
         <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
-          Owner role is protected. Last-owner removal is blocked server-side.
+          Owner role is sealed to the configured email/password account.
         </p>
       ) : (
-        <form action={revokeAdminRoleAction} className="flex flex-wrap gap-2">
-          <input type="hidden" name="targetUserId" value={assignment.userId} />
-          <input type="hidden" name="reason" value="access_revoked" />
-          <button
-            type="submit"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Revoke role
-          </button>
-        </form>
+        <p className="rounded-md border border-destructive/30 p-3 text-xs text-muted-foreground">
+          This assignment is not accepted by the sealed owner gate and should be
+          cleaned up through an operator-only database maintenance path.
+        </p>
       )}
     </li>
   );
@@ -328,41 +264,13 @@ function AdminUsersHeader() {
       </div>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Admin users
+          Sealed owner
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Owner-controlled role grants and audit trail for the internal control
-          plane.
+          Sealed owner status and audit trail for the internal control plane.
         </p>
       </div>
     </header>
-  );
-}
-
-function SelectField({
-  label,
-  name,
-  options,
-}: {
-  label: string;
-  name: string;
-  options: ReadonlyArray<{ value: string; label: string }>;
-}) {
-  return (
-    <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-      {label}
-      <select
-        name={name}
-        required
-        className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 

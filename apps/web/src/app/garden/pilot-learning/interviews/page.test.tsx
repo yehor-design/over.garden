@@ -57,9 +57,15 @@ describe("/garden/pilot-learning/interviews", () => {
     vi.clearAllMocks();
     mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role_credential_only",
-      role: "moderator",
-      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: [
+        "admin:read",
+        "admin:manage_roles",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
     mocks.listFounderInterviewLearnings.mockResolvedValue([
       {
@@ -103,31 +109,12 @@ describe("/garden/pilot-learning/interviews", () => {
       }),
     );
 
-    expect(html).toContain("Gate: database_role_credential_only");
-    expect(html).toContain("Role: moderator");
+    expect(html).toContain("Gate: sealed_owner_credential_only");
+    expect(html).toContain("Role: owner");
     expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
     expect(html).toContain("Activated — first entry plus follow-up");
     expect(html).toContain("Follow-up felt natural.");
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
   });
 
-  it("keeps read-only viewer roles from seeing the capture form", async () => {
-    mocks.resolveFounderInterviewOperatorAccess.mockReturnValue({
-      status: "allowed",
-      mode: "database_role_credential_only",
-      role: "viewer",
-      capabilities: ["admin:read", "operator:read"],
-    });
-
-    const { default: FounderInterviewCapturePage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await FounderInterviewCapturePage({
-        searchParams: Promise.resolve({}),
-      }),
-    );
-
-    expect(html).toContain("Interview capture requires owner");
-    expect(html).not.toContain("Save interview record");
-    expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
-  });
 });

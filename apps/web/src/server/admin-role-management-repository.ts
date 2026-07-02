@@ -3,37 +3,22 @@ import "server-only";
 import { createHash } from "node:crypto";
 
 import type { Kysely } from "kysely";
-import { sql } from "kysely";
 
 import { db as defaultDb } from "@/db";
 import type { Database } from "@/db/schema";
 import {
   isAdminRole,
   isAdminRoleChangeReason,
-  isManageableAdminRole,
   type AdminRole,
   type AdminRoleChangeReason,
-  type ManageableAdminRole,
 } from "@/lib/admin/roles";
-import {
-  assertAdminCapabilityForScope,
-  assertCredentialOnlyAdminAccount,
-} from "@/server/admin-access";
+import { assertAdminCapabilityForScope } from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ROLE_MANAGEMENT_DENIED_MESSAGE =
   "Admin role management denied.";
-export const ADMIN_ROLE_TARGET_NOT_FOUND_MESSAGE =
-  "Admin role target user was not found.";
-export const ADMIN_ROLE_ASSIGNMENT_NOT_FOUND_MESSAGE =
-  "Admin role assignment was not found.";
-export const ADMIN_LAST_OWNER_PROTECTION_MESSAGE =
-  "At least one owner role must remain.";
-export const ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE =
-  "Admin role target must use email and password only.";
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE =
+  "Admin role management is sealed to the configured owner.";
 
 export interface AdminRoleAssignmentReadModel {
   userId: string;
@@ -142,7 +127,7 @@ export async function listAdminRoleAuditEntries(
 
 export async function grantAdminRole(
   scope: RequestScope,
-  input: {
+  _input: {
     targetUserId: string;
     role: string;
     reason?: string | null;
@@ -151,55 +136,13 @@ export async function grantAdminRole(
 ) {
   await database.transaction().execute(async (trx) => {
     await assertAdminCapabilityForScope(scope, "admin:manage_roles", trx);
-    const targetUserId = normalizeUserId(input.targetUserId);
-    const role = normalizeManageableRole(input.role);
-    const reason = normalizeRoleChangeReason(
-      input.reason,
-      "manual_owner_grant",
-    );
-
-    await assertTargetUserExists(trx, targetUserId);
-    await assertAdminRoleTargetUsesCredentialOnlyAuth(trx, targetUserId);
-    const previousRole = await readCurrentAdminRole(trx, targetUserId);
-
-    if (previousRole === "owner") {
-      await assertCanChangeOwnerRole(trx);
-    }
-
-    await trx
-      .insertInto("admin_user_roles")
-      .values({
-        user_id: targetUserId,
-        role,
-        granted_by_user_id: scope.userId,
-        grant_reason: reason,
-        granted_at: sql`now()`,
-        updated_at: sql`now()`,
-      })
-      .onConflict((oc) =>
-        oc.column("user_id").doUpdateSet({
-          role,
-          granted_by_user_id: scope.userId,
-          grant_reason: reason,
-          updated_at: sql`now()`,
-        }),
-      )
-      .execute();
-
-    await writeAdminRoleAuditEntry(trx, {
-      scope,
-      targetUserId,
-      action: "grant",
-      previousRole,
-      newRole: role,
-      reason,
-    });
+    throw new Error(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
   });
 }
 
 export async function revokeAdminRole(
   scope: RequestScope,
-  input: {
+  _input: {
     targetUserId: string;
     reason?: string | null;
   },
@@ -207,53 +150,13 @@ export async function revokeAdminRole(
 ) {
   await database.transaction().execute(async (trx) => {
     await assertAdminCapabilityForScope(scope, "admin:manage_roles", trx);
-    const targetUserId = normalizeUserId(input.targetUserId);
-    const reason = normalizeRoleChangeReason(input.reason, "access_revoked");
-
-    const previousRole = await readCurrentAdminRole(trx, targetUserId);
-
-    if (!previousRole) {
-      throw new Error(ADMIN_ROLE_ASSIGNMENT_NOT_FOUND_MESSAGE);
-    }
-
-    if (previousRole === "owner") {
-      await assertCanChangeOwnerRole(trx);
-    }
-
-    await trx
-      .deleteFrom("admin_user_roles")
-      .where("user_id", "=", targetUserId)
-      .execute();
-
-    await writeAdminRoleAuditEntry(trx, {
-      scope,
-      targetUserId,
-      action: "revoke",
-      previousRole,
-      newRole: null,
-      reason,
-    });
+    throw new Error(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
   });
 }
 
 export function hashAdminActorSessionId(sessionId: string | null | undefined) {
   if (!sessionId) return null;
   return createHash("sha256").update(sessionId).digest("hex");
-}
-
-function normalizeUserId(value: string) {
-  const candidate = value.trim();
-  if (!UUID_PATTERN.test(candidate)) {
-    throw new Error("Admin role target user id is invalid.");
-  }
-  return candidate;
-}
-
-function normalizeManageableRole(value: string): ManageableAdminRole {
-  if (!isManageableAdminRole(value)) {
-    throw new Error("Only admin, moderator, and viewer roles are grantable.");
-  }
-  return value;
 }
 
 function normalizeRoleChangeReason(
@@ -267,81 +170,4 @@ function normalizeRoleChangeReason(
 function normalizeStoredReason(value: string) {
   if (isAdminRoleChangeReason(value)) return value;
   return "manual_bootstrap";
-}
-
-async function assertTargetUserExists(
-  database: Kysely<Database>,
-  targetUserId: string,
-) {
-  const user = await database
-    .selectFrom("user")
-    .select("id")
-    .where("id", "=", targetUserId)
-    .executeTakeFirst();
-
-  if (!user) {
-    throw new Error(ADMIN_ROLE_TARGET_NOT_FOUND_MESSAGE);
-  }
-}
-
-async function assertAdminRoleTargetUsesCredentialOnlyAuth(
-  database: Kysely<Database>,
-  targetUserId: string,
-) {
-  try {
-    await assertCredentialOnlyAdminAccount(database, targetUserId);
-  } catch {
-    throw new Error(ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE);
-  }
-}
-
-async function readCurrentAdminRole(
-  database: Kysely<Database>,
-  userId: string,
-): Promise<AdminRole | null> {
-  const row = await database
-    .selectFrom("admin_user_roles")
-    .select("role")
-    .where("user_id", "=", userId)
-    .executeTakeFirst();
-
-  return isAdminRole(row?.role) ? row.role : null;
-}
-
-async function assertCanChangeOwnerRole(database: Kysely<Database>) {
-  const owners = await database
-    .selectFrom("admin_user_roles")
-    .select("user_id")
-    .where("role", "=", "owner")
-    .forUpdate()
-    .execute();
-
-  if (owners.length <= 1) {
-    throw new Error(ADMIN_LAST_OWNER_PROTECTION_MESSAGE);
-  }
-}
-
-async function writeAdminRoleAuditEntry(
-  database: Kysely<Database>,
-  input: {
-    scope: RequestScope;
-    targetUserId: string;
-    action: "grant" | "revoke";
-    previousRole: AdminRole | null;
-    newRole: AdminRole | null;
-    reason: AdminRoleChangeReason;
-  },
-) {
-  await database
-    .insertInto("admin_role_audit_log")
-    .values({
-      actor_user_id: input.scope.userId,
-      actor_session_id_hash: hashAdminActorSessionId(input.scope.sessionId),
-      target_user_id: input.targetUserId,
-      action: input.action,
-      previous_role: input.previousRole,
-      new_role: input.newRole,
-      reason: input.reason,
-    })
-    .execute();
 }

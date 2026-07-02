@@ -32,9 +32,15 @@ describe("founder interview operator actions", () => {
       sessionId: "non-operator-session",
     });
     mocks.assertFounderInterviewMutationAccess.mockResolvedValue({
-      mode: "database_role_credential_only",
-      role: "moderator",
-      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: [
+        "admin:read",
+        "admin:manage_roles",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
   });
 
@@ -59,7 +65,7 @@ describe("founder interview operator actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows capture for an operator mutation role", async () => {
+  it("allows capture for the sealed owner", async () => {
     const { createFounderInterviewLearningAction } = await import("./actions");
     const formData = new FormData();
     formData.set("segment", "casual_practical_beginner");

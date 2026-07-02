@@ -455,8 +455,8 @@ Forbidden evidence:
 1. Pick one smoke URL:
    - Production public URL once deployment protection is disabled for the pilot audience.
    - Protected preview only when the goal is internal deployment inspection, not public H6 validation.
-2. Bootstrap the owner role only through `pnpm admin:bootstrap-owner` after creating the dedicated email/password admin account; do not copy the user id into evidence. Do not bootstrap a Google/Facebook-created or linked account.
-3. Open `/garden/pilot-smoke` as an owner/admin/moderator/viewer role with `operator:read`.
+2. Set `OVERGARDEN_ADMIN_OWNER_USER_ID` for the target environment, then bootstrap the owner role only through `pnpm admin:bootstrap-owner` after creating the dedicated email/password admin account; do not copy the user id into evidence. Do not bootstrap a Google/Facebook-created or linked account.
+3. Open `/garden/pilot-smoke` as the dedicated owner account. No other role is accepted for operator access.
 4. Treat any `fail` check as a blocker for live pilot.
 5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
 6. Confirm Cloudflare is not caching app HTML if the app domain is routed through Cloudflare.
@@ -472,10 +472,10 @@ Forbidden evidence:
    - Vercel production has `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET` present; do not record either value.
 9. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
 10. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
-11. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: database_role_credential_only`, admin links, role-required hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
-12. Open `/admin/users` as the owner and confirm role assignments plus recent audit rows render with bounded role/action/reason labels only.
-13. Open `/admin/users` as a normal signed-in user and as a non-owner admin role; both must show `Access denied.` before assignments or audit rows.
-14. Open `/admin` as a user with any linked Google/Facebook account, even if a role row exists in test smoke setup; it must show `Access denied.` before admin links.
+11. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
+12. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
+13. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
+14. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
 
 Header probes:
 
@@ -568,8 +568,8 @@ Do not mark OVE-27 Done if any of the following are true:
 
 - The selected live URL only works locally or only behind Vercel SSO when the goal is public pilot validation.
 - Sign-up/sign-in fails on the deployed URL.
-- The selected owner/admin user has not been bootstrapped into `admin_user_roles`, leaving operator surfaces inaccessible by design.
-- `/admin/users` lets a non-owner role grant/revoke admin roles or remove the last owner.
+- The selected owner user has not been configured in `OVERGARDEN_ADMIN_OWNER_USER_ID` and bootstrapped into `admin_user_roles`, leaving operator surfaces inaccessible by design.
+- `/admin/users` lets any request grant/revoke admin roles, or `admin_user_roles` accepts more than one owner row.
 - The first-entry or follow-up flow bypasses canonical server routes/repositories.
 - A public page exposes precise location, raw private journal evidence, email, quarantine/original media keys, or signed upload URLs.
 - A public photo renders from anything other than a stripped derivative.

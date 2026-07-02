@@ -191,7 +191,7 @@ export default async function FounderInterviewCapturePage({
         </section>
       ) : (
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Interview capture requires owner, admin, or moderator access.
+          Interview capture requires sealed owner access.
         </p>
       )}
 

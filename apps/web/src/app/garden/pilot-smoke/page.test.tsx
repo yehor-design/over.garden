@@ -33,9 +33,15 @@ describe("/garden/pilot-smoke", () => {
     vi.clearAllMocks();
     mocks.resolvePilotHealthOperatorAccess.mockReturnValue({
       status: "allowed",
-      mode: "database_role_credential_only",
-      role: "viewer",
-      capabilities: ["admin:read", "operator:read"],
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: [
+        "admin:read",
+        "admin:manage_roles",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
     mocks.getPilotSmokeReadinessSafely.mockResolvedValue({
       generatedAt: new Date("2026-06-28T00:00:00.000Z"),
@@ -59,13 +65,13 @@ describe("/garden/pilot-smoke", () => {
     expect(mocks.getPilotSmokeReadinessSafely).not.toHaveBeenCalled();
   });
 
-  it("renders the smoke readout for a read-only admin role", async () => {
+  it("renders the smoke readout for the sealed owner", async () => {
     const { default: PilotSmokePage } = await import("./page");
     const html = renderToStaticMarkup(await PilotSmokePage());
 
     expect(html).toContain("Readiness status: ready");
-    expect(html).toContain("Gate: database_role_credential_only");
-    expect(html).toContain("Role: viewer");
+    expect(html).toContain("Gate: sealed_owner_credential_only");
+    expect(html).toContain("Role: owner");
     expect(mocks.getPilotSmokeReadinessSafely).toHaveBeenCalledOnce();
   });
 });

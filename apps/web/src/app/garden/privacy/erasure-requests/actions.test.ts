@@ -42,13 +42,19 @@ describe("erasure request operator actions", () => {
       sessionId: "non-operator-session",
     });
     mocks.assertErasureRequestMutationAccess.mockResolvedValue({
-      mode: "database_role_credential_only",
-      role: "moderator",
-      capabilities: ["admin:read", "operator:read", "operator:mutate"],
+      mode: "sealed_owner_credential_only",
+      role: "owner",
+      capabilities: [
+        "admin:read",
+        "admin:manage_roles",
+        "operator:read",
+        "operator:mutate",
+        "erasure:execute",
+      ],
     });
     mocks.assertErasureExecutionAccess.mockResolvedValue({
-      mode: "database_role_credential_only",
-      role: "admin",
+      mode: "sealed_owner_credential_only",
+      role: "owner",
       capabilities: [
         "admin:read",
         "operator:read",
@@ -74,7 +80,7 @@ describe("erasure request operator actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("allows review mutation for an operator mutation role", async () => {
+  it("allows review mutation for the sealed owner", async () => {
     const { markErasureRequestReviewingAction } = await import("./actions");
     const formData = new FormData();
     formData.set("requestId", "request-1");
@@ -120,7 +126,7 @@ describe("erasure request operator actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("executes maintainer-approved erasure for owner/admin execution access", async () => {
+  it("executes maintainer-approved erasure for sealed owner execution access", async () => {
     const { executeApprovedErasureRequestAction } = await import("./actions");
     const formData = new FormData();
     formData.set("requestId", "00000000-0000-4000-8000-00000000abcd");

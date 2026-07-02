@@ -1,11 +1,11 @@
 import type { Kysely } from "kysely";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { ADMIN_SEALED_OWNER_USER_ID_ENV } from "@/server/admin-access";
 import { scopedToUser } from "@/server/request-scope";
 import {
-  ADMIN_LAST_OWNER_PROTECTION_MESSAGE,
-  ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE,
+  ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE,
   grantAdminRole,
   hashAdminActorSessionId,
   readAdminRoleManagementView,
@@ -17,6 +17,14 @@ const ADMIN_ID = "00000000-0000-4000-8000-000000000002";
 const MODERATOR_ID = "00000000-0000-4000-8000-000000000003";
 
 describe("admin role management repository", () => {
+  beforeEach(() => {
+    vi.stubEnv(ADMIN_SEALED_OWNER_USER_ID_ENV, OWNER_ID);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("hashes actor session ids instead of storing raw session ids", () => {
     const hash = hashAdminActorSessionId("session-secret-value");
 
@@ -25,38 +33,26 @@ describe("admin role management repository", () => {
     expect(hashAdminActorSessionId(null)).toBeNull();
   });
 
-  it("lets an owner grant a role and writes a bounded audit row", async () => {
+  it("seals role grants even for the configured owner", async () => {
     const state = createState({
       users: [OWNER_ID, MODERATOR_ID],
       roles: [{ userId: OWNER_ID, role: "owner" }],
     });
 
-    await grantAdminRole(
-      scopedToUser(OWNER_ID, "owner-session"),
-      {
-        targetUserId: MODERATOR_ID,
-        role: "moderator",
-        reason: "pilot_operator_delegation",
-      },
-      fakeAdminRoleDb(state),
-    );
+    await expect(
+      grantAdminRole(
+        scopedToUser(OWNER_ID, "owner-session"),
+        {
+          targetUserId: MODERATOR_ID,
+          role: "moderator",
+          reason: "pilot_operator_delegation",
+        },
+        fakeAdminRoleDb(state),
+      ),
+    ).rejects.toThrow(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
 
-    expect(state.roles.get(MODERATOR_ID)).toMatchObject({
-      role: "moderator",
-      granted_by_user_id: OWNER_ID,
-      grant_reason: "pilot_operator_delegation",
-    });
-    expect(state.audit).toEqual([
-      expect.objectContaining({
-        actor_user_id: OWNER_ID,
-        target_user_id: MODERATOR_ID,
-        action: "grant",
-        previous_role: null,
-        new_role: "moderator",
-        reason: "pilot_operator_delegation",
-      }),
-    ]);
-    expect(state.audit[0]?.actor_session_id_hash).toMatch(/^[a-f0-9]{64}$/);
+    expect(state.roles.has(MODERATOR_ID)).toBe(false);
+    expect(state.audit).toEqual([]);
     expect(JSON.stringify(state.audit)).not.toContain("owner-session");
   });
 
@@ -91,7 +87,7 @@ describe("admin role management repository", () => {
       fakeAdminRoleDb(ownerState),
     );
 
-    expect(view.assignments).toHaveLength(2);
+    expect(view.assignments).toHaveLength(1);
     expect(view.auditEntries).toHaveLength(1);
   });
 
@@ -117,7 +113,7 @@ describe("admin role management repository", () => {
     expect(state.audit).toEqual([]);
   });
 
-  it("rejects role grants to social-linked users before mutating role rows", async () => {
+  it("rejects role grants before target eligibility can create any role row", async () => {
     const state = createState({
       users: [OWNER_ID, MODERATOR_ID],
       roles: [{ userId: OWNER_ID, role: "owner" }],
@@ -136,13 +132,13 @@ describe("admin role management repository", () => {
         },
         fakeAdminRoleDb(state),
       ),
-    ).rejects.toThrow(ADMIN_ROLE_TARGET_REQUIRES_CREDENTIAL_ONLY_MESSAGE);
+    ).rejects.toThrow(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
 
     expect(state.roles.has(MODERATOR_ID)).toBe(false);
     expect(state.audit).toEqual([]);
   });
 
-  it("prevents downgrading or revoking the last owner", async () => {
+  it("seals owner downgrade and revoke mutations", async () => {
     const grantState = createState({
       users: [OWNER_ID],
       roles: [{ userId: OWNER_ID, role: "owner" }],
@@ -158,7 +154,7 @@ describe("admin role management repository", () => {
         },
         fakeAdminRoleDb(grantState),
       ),
-    ).rejects.toThrow(ADMIN_LAST_OWNER_PROTECTION_MESSAGE);
+    ).rejects.toThrow(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
 
     expect(grantState.roles.get(OWNER_ID)?.role).toBe("owner");
     expect(grantState.audit).toEqual([]);
@@ -177,13 +173,13 @@ describe("admin role management repository", () => {
         },
         fakeAdminRoleDb(revokeState),
       ),
-    ).rejects.toThrow(ADMIN_LAST_OWNER_PROTECTION_MESSAGE);
+    ).rejects.toThrow(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
 
     expect(revokeState.roles.get(OWNER_ID)?.role).toBe("owner");
     expect(revokeState.audit).toEqual([]);
   });
 
-  it("revokes delegated roles and writes an audit row", async () => {
+  it("seals delegated role revokes even for the configured owner", async () => {
     const state = createState({
       users: [OWNER_ID, MODERATOR_ID],
       roles: [
@@ -192,26 +188,19 @@ describe("admin role management repository", () => {
       ],
     });
 
-    await revokeAdminRole(
-      scopedToUser(OWNER_ID, "owner-session"),
-      {
-        targetUserId: MODERATOR_ID,
-        reason: "access_revoked",
-      },
-      fakeAdminRoleDb(state),
-    );
+    await expect(
+      revokeAdminRole(
+        scopedToUser(OWNER_ID, "owner-session"),
+        {
+          targetUserId: MODERATOR_ID,
+          reason: "access_revoked",
+        },
+        fakeAdminRoleDb(state),
+      ),
+    ).rejects.toThrow(ADMIN_ROLE_MANAGEMENT_SEALED_MESSAGE);
 
-    expect(state.roles.has(MODERATOR_ID)).toBe(false);
-    expect(state.audit).toEqual([
-      expect.objectContaining({
-        actor_user_id: OWNER_ID,
-        target_user_id: MODERATOR_ID,
-        action: "revoke",
-        previous_role: "moderator",
-        new_role: null,
-        reason: "access_revoked",
-      }),
-    ]);
+    expect(state.roles.get(MODERATOR_ID)?.role).toBe("moderator");
+    expect(state.audit).toEqual([]);
   });
 });
 

@@ -34,7 +34,7 @@ describe("/admin", () => {
     });
     mocks.resolveAdminAccess.mockResolvedValue({
       status: "allowed",
-      mode: "database_role_credential_only",
+      mode: "sealed_owner_credential_only",
       role: "owner",
       capabilities: [
         "admin:read",
@@ -77,15 +77,14 @@ describe("/admin", () => {
 
     expect(metadata.title).toBe("Admin | OverGarden");
     expect(html).toContain("Role: Owner");
-    expect(html).toContain("Gate: database_role_credential_only");
-    expect(html).toContain("Admin users");
-    expect(html).toContain("Manage roles: owner only");
+    expect(html).toContain("Gate: sealed_owner_credential_only");
+    expect(html).toContain("Sealed owner");
+    expect(html).toContain("Read-only: configured owner only");
     expect(html).toContain("Pilot smoke");
     expect(html).toContain("Catalog curation");
     expect(html).toContain("Erasure requests");
-    expect(html).toContain("Read: owner/admin/moderator/viewer");
-    expect(html).toContain("Review: owner/admin/moderator");
-    expect(html).toContain("execute: owner/admin");
+    expect(html).toContain("Owner only");
+    expect(html).toContain("sealed owner readback");
     expect(html).not.toContain("00000000-0000-4000-8000-000000000999");
     expect(html).not.toMatch(/email|cookie|token|ip address|user agent/i);
   });

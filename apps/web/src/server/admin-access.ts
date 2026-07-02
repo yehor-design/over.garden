@@ -14,9 +14,14 @@ import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
 export const ADMIN_CREDENTIAL_PROVIDER_ID = "credential";
+export const ADMIN_SEALED_OWNER_USER_ID_ENV =
+  "OVERGARDEN_ADMIN_OWNER_USER_ID";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface AdminAccess {
-  mode: "database_role_credential_only";
+  mode: "sealed_owner_credential_only";
   role: AdminRole;
   capabilities: AdminCapability[];
 }
@@ -50,10 +55,11 @@ export async function assertAdminAccess(
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 
+  assertSealedOwner(scope.userId, role);
   await assertCredentialOnlyAdminAccount(database, scope.userId);
 
   return {
-    mode: "database_role_credential_only",
+    mode: "sealed_owner_credential_only",
     role,
     capabilities: capabilitiesForAdminRole(role),
   };
@@ -136,6 +142,26 @@ export async function assertCredentialOnlyAdminAccount(
   );
 
   if (!hasCredentialAccount || hasLinkedSocialAccount) {
+    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+  }
+}
+
+export function resolveSealedAdminOwnerUserId(
+  env: Record<string, string | undefined> = process.env,
+) {
+  const configured = env[ADMIN_SEALED_OWNER_USER_ID_ENV]?.trim();
+
+  if (!configured || !UUID_PATTERN.test(configured)) {
+    throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
+  }
+
+  return configured;
+}
+
+function assertSealedOwner(userId: string, role: AdminRole) {
+  const sealedOwnerUserId = resolveSealedAdminOwnerUserId();
+
+  if (role !== "owner" || userId !== sealedOwnerUserId) {
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 }
