@@ -639,11 +639,11 @@ function logProofStep(message: string) {
 
 function readCodeState() {
   const commitSha =
-    process.env.VERCEL_GIT_COMMIT_SHA ??
+    readNonEmptyEnvValue(process.env.VERCEL_GIT_COMMIT_SHA) ??
     readGitValue(["rev-parse", "HEAD"], "unknown") ??
     "unknown";
   const branch =
-    process.env.VERCEL_GIT_COMMIT_REF ??
+    readNonEmptyEnvValue(process.env.VERCEL_GIT_COMMIT_REF) ??
     readGitValue(["rev-parse", "--abbrev-ref", "HEAD"], "unknown") ??
     "unknown";
   const status = readGitValue(
@@ -657,6 +657,10 @@ function readCodeState() {
     workingTree:
       status === null ? "unknown" : status.length === 0 ? "clean" : "dirty",
   } as const;
+}
+
+function readNonEmptyEnvValue(value: string | undefined) {
+  return value && value.trim().length > 0 ? value.trim() : null;
 }
 
 function readGitValue(args: string[], fallback: string | null) {
