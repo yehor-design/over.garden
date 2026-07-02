@@ -7,6 +7,7 @@ import {
   FileSearch,
   ShieldCheck,
   Sprout,
+  UsersRound,
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -27,6 +28,13 @@ export const metadata: Metadata = {
 };
 
 const ADMIN_LINKS = [
+  {
+    href: "/admin/users",
+    label: "Admin users",
+    detail: "Role grants and audit trail",
+    required: "Manage roles: owner only",
+    icon: UsersRound,
+  },
   {
     href: "/garden/pilot-smoke",
     label: "Pilot smoke",

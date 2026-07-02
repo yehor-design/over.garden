@@ -86,6 +86,126 @@ end $$;
 create index if not exists admin_user_roles_role_granted_idx
   on admin_user_roles (role, granted_at desc);
 
+-- Admin role audit trail (OVE-110). Audit rows store only internal user IDs,
+-- a one-way session hash, bounded role/action/reason enums, and timestamps.
+-- Never store emails, cookies, raw session IDs, provider tokens, IP/user-agent,
+-- private journal/media content, fine-grained place data, or env values here.
+create table if not exists admin_role_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_user_id uuid,
+  actor_session_id_hash text,
+  target_user_id uuid,
+  action text not null,
+  previous_role text,
+  new_role text,
+  reason text not null default 'manual_owner_grant',
+  created_at timestamptz not null default now()
+);
+
+alter table admin_role_audit_log
+  add column if not exists actor_user_id uuid,
+  add column if not exists actor_session_id_hash text,
+  add column if not exists target_user_id uuid,
+  add column if not exists action text not null default 'grant',
+  add column if not exists previous_role text,
+  add column if not exists new_role text,
+  add column if not exists reason text not null default 'manual_owner_grant',
+  add column if not exists created_at timestamptz not null default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_role_audit_log_actor_session_hash_check'
+      and conrelid = 'admin_role_audit_log'::regclass
+  ) then
+    alter table admin_role_audit_log
+      add constraint admin_role_audit_log_actor_session_hash_check
+      check (actor_session_id_hash is null or actor_session_id_hash ~ '^[a-f0-9]{64}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_role_audit_log_action_check'
+      and conrelid = 'admin_role_audit_log'::regclass
+  ) then
+    alter table admin_role_audit_log
+      add constraint admin_role_audit_log_action_check
+      check (action in ('grant', 'revoke'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_role_audit_log_previous_role_check'
+      and conrelid = 'admin_role_audit_log'::regclass
+  ) then
+    alter table admin_role_audit_log
+      add constraint admin_role_audit_log_previous_role_check
+      check (previous_role is null or previous_role in ('owner', 'admin', 'moderator', 'viewer'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_role_audit_log_new_role_check'
+      and conrelid = 'admin_role_audit_log'::regclass
+  ) then
+    alter table admin_role_audit_log
+      add constraint admin_role_audit_log_new_role_check
+      check (new_role is null or new_role in ('owner', 'admin', 'moderator', 'viewer'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'admin_role_audit_log_reason_check'
+      and conrelid = 'admin_role_audit_log'::regclass
+  ) then
+    alter table admin_role_audit_log
+      add constraint admin_role_audit_log_reason_check
+      check (reason in (
+        'manual_owner_grant',
+        'pilot_operator_delegation',
+        'temporary_coverage',
+        'role_cleanup',
+        'access_revoked'
+      ));
+  end if;
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'admin_role_audit_log_actor_user_id_fkey'
+        and conrelid = 'admin_role_audit_log'::regclass
+    ) then
+      alter table admin_role_audit_log
+        add constraint admin_role_audit_log_actor_user_id_fkey
+        foreign key (actor_user_id) references "user"(id) on delete set null;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'admin_role_audit_log_target_user_id_fkey'
+        and conrelid = 'admin_role_audit_log'::regclass
+    ) then
+      alter table admin_role_audit_log
+        add constraint admin_role_audit_log_target_user_id_fkey
+        foreign key (target_user_id) references "user"(id) on delete set null;
+    end if;
+  end if;
+end $$;
+
+create index if not exists admin_role_audit_log_created_idx
+  on admin_role_audit_log (created_at desc);
+
+create index if not exists admin_role_audit_log_target_created_idx
+  on admin_role_audit_log (target_user_id, created_at desc);
+
 create table if not exists spaces (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

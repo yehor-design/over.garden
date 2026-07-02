@@ -41,6 +41,18 @@ export interface Account {
   userId: string;
 }
 
+export interface AdminRoleAuditLog {
+  action: string;
+  actor_session_id_hash: string | null;
+  actor_user_id: string | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  new_role: string | null;
+  previous_role: string | null;
+  reason: Generated<string>;
+  target_user_id: string | null;
+}
+
 export interface AdminUserRoles {
   grant_reason: Generated<string>;
   granted_at: Generated<Timestamp>;
@@ -355,6 +367,7 @@ export interface Verification {
 
 export interface DB {
   account: Account;
+  admin_role_audit_log: AdminRoleAuditLog;
   admin_user_roles: AdminUserRoles;
   analytics_events: AnalyticsEvents;
   catalog_alias_projections: CatalogAliasProjections;

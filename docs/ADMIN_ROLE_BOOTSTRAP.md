@@ -35,6 +35,22 @@ model:
 `CATALOG_CURATOR_USER_IDS` is not the long-term admin authorization model. Do
 not add new operator surfaces to that env allowlist pattern.
 
+## Owner Role Management
+
+OVE-110 adds `/admin/users` as the owner-only role-management surface. It lets
+an owner grant or revoke `admin`, `moderator`, and `viewer` roles by exact
+Better Auth user id. It is not a broad user search or CRM surface, and it must
+not infer roles from email, provider claim, URL parameter, or client state.
+
+Every role change writes `admin_role_audit_log` with actor user id, target user
+id, bounded action/reason/role enums, timestamp, and a one-way hash of the
+actor session id. The audit table and UI must not store or render emails,
+cookies, raw session ids, provider tokens, IP/user-agent fields, private
+journal/media content, precise coordinates, or env values.
+
+The last owner cannot be removed or downgraded. Owner role creation remains a
+bootstrap-controlled operation.
+
 ## Owner Bootstrap
 
 1. Sign in once through the normal Better Auth flow so the owner user exists.
@@ -71,3 +87,5 @@ request metadata.
 - env values or connection strings
 
 Existing operator surfaces must keep using the shared role/capability model.
+`/admin/users` may render shortened internal user references for owner
+operation, but evidence and docs must not copy live user ids.

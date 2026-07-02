@@ -14,7 +14,7 @@ import type { Database } from "../src/db/types";
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove109-smoke-password";
+const TEST_PASSWORD = "overgarden-ove110-smoke-password";
 const ADMIN_SURFACE_EXPECTATIONS = [
   {
     path: "/garden/pilot-smoke",
@@ -95,35 +95,73 @@ async function main() {
   const baseUrl = normalizeBaseUrl(options.baseUrl);
   const db = createDatabase();
 
-  const ownerEmail = `ove109-owner-${Date.now()}-${randomUUID()}@example.test`;
-  const normalEmail = `ove109-normal-${Date.now()}-${randomUUID()}@example.test`;
+  const ownerEmail = `ove110-owner-${Date.now()}-${randomUUID()}@example.test`;
+  const normalEmail = `ove110-normal-${Date.now()}-${randomUUID()}@example.test`;
+  const moderatorEmail = `ove110-moderator-${Date.now()}-${randomUUID()}@example.test`;
 
   try {
     const ownerJar = new CookieJar();
     const normalJar = new CookieJar();
+    const moderatorJar = new CookieJar();
 
-    await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-109 Owner Smoke");
+    await signUpAndSignIn(baseUrl, ownerJar, ownerEmail, "OVE-110 Owner Smoke");
     await signUpAndSignIn(
       baseUrl,
       normalJar,
       normalEmail,
-      "OVE-109 User Smoke",
+      "OVE-110 User Smoke",
+    );
+    await signUpAndSignIn(
+      baseUrl,
+      moderatorJar,
+      moderatorEmail,
+      "OVE-110 Moderator Smoke",
     );
 
     const ownerUserId = await readUserIdByEmail(db, ownerEmail);
+    const moderatorUserId = await readUserIdByEmail(db, moderatorEmail);
     await db
       .insertInto("admin_user_roles")
       .values({
         user_id: ownerUserId,
         role: "owner",
-        grant_reason: "ove109_smoke",
+        grant_reason: "manual_owner_grant",
       })
       .onConflict((oc) =>
         oc.column("user_id").doUpdateSet({
           role: "owner",
-          grant_reason: "ove109_smoke",
+          grant_reason: "manual_owner_grant",
         }),
       )
+      .execute();
+    await db
+      .insertInto("admin_user_roles")
+      .values({
+        user_id: moderatorUserId,
+        role: "moderator",
+        granted_by_user_id: ownerUserId,
+        grant_reason: "pilot_operator_delegation",
+      })
+      .onConflict((oc) =>
+        oc.column("user_id").doUpdateSet({
+          role: "moderator",
+          granted_by_user_id: ownerUserId,
+          grant_reason: "pilot_operator_delegation",
+        }),
+      )
+      .execute();
+    await db
+      .insertInto("admin_role_audit_log")
+      .values({
+        actor_user_id: ownerUserId,
+        actor_session_id_hash:
+          "0000000000000000000000000000000000000000000000000000000000000000",
+        target_user_id: moderatorUserId,
+        action: "grant",
+        previous_role: null,
+        new_role: "moderator",
+        reason: "pilot_operator_delegation",
+      })
       .execute();
 
     const signedOutHtml = await textRequest(baseUrl, new CookieJar(), "/admin");
@@ -151,6 +189,16 @@ async function main() {
     assertIncludes(ownerText, "Role: Owner", "Owner did not see owner role.");
     assertIncludes(
       ownerText,
+      "Admin users",
+      "Owner dashboard missing admin users link.",
+    );
+    assertIncludes(
+      ownerText,
+      "Manage roles: owner only",
+      "Owner dashboard missing owner-only role-management hint.",
+    );
+    assertIncludes(
+      ownerText,
       "Pilot smoke",
       "Owner did not see admin dashboard links.",
     );
@@ -170,6 +218,61 @@ async function main() {
       "Owner dashboard missing erasure execution role hint.",
     );
     assertNoForbiddenAdminEvidence(ownerText);
+
+    const normalUsersText = visiblePageText(
+      await textRequest(baseUrl, normalJar, "/admin/users"),
+    );
+    const moderatorUsersText = visiblePageText(
+      await textRequest(baseUrl, moderatorJar, "/admin/users"),
+    );
+    const ownerUsersText = visiblePageText(
+      await textRequest(baseUrl, ownerJar, "/admin/users"),
+    );
+    const moderatorCurationText = visiblePageText(
+      await textRequest(baseUrl, moderatorJar, "/garden/catalog/curation"),
+    );
+
+    assertIncludes(
+      normalUsersText,
+      "Access denied.",
+      "Normal signed-in user was not denied from /admin/users.",
+    );
+    assertIncludes(
+      moderatorUsersText,
+      "Access denied.",
+      "Moderator was not denied from /admin/users.",
+    );
+    assertIncludes(
+      ownerUsersText,
+      "Role management",
+      "Owner did not see role management surface.",
+    );
+    assertIncludes(
+      ownerUsersText,
+      "Recent role audit",
+      "Owner did not see role audit trail.",
+    );
+    assertIncludes(
+      ownerUsersText,
+      "Pilot operator delegation",
+      "Owner did not see bounded role-change reason.",
+    );
+    assertIncludes(
+      ownerUsersText,
+      "Owner role is protected",
+      "Owner page did not render last-owner protection copy.",
+    );
+    assertNoForbiddenSurfaceSecrets(ownerUsersText, "/admin/users");
+    assertIncludes(
+      moderatorCurationText,
+      "Catalog curation",
+      "Moderator role did not take effect on catalog curation.",
+    );
+    assertNotIncludes(
+      moderatorCurationText,
+      "Access denied.",
+      "Moderator was denied from catalog curation after role grant.",
+    );
 
     for (const surface of ADMIN_SURFACE_EXPECTATIONS) {
       const normalSurfaceHtml = await textRequest(
@@ -207,10 +310,14 @@ async function main() {
       JSON.stringify(
         {
           ok: true,
-          issue: "OVE-109",
+          issue: "OVE-110",
           signedOutDeniedToDashboard: true,
           normalUserDenied: true,
           ownerDashboardRendered: true,
+          ownerRoleManagementRendered: true,
+          normalRoleManagementDenied: true,
+          moderatorRoleManagementDenied: true,
+          moderatorCurationAllowed: true,
           linkedOperatorSurfacesChecked: ADMIN_SURFACE_EXPECTATIONS.map(
             (surface) => surface.path,
           ),
@@ -223,6 +330,7 @@ async function main() {
   } finally {
     await cleanupSmokeUser(db, ownerEmail);
     await cleanupSmokeUser(db, normalEmail);
+    await cleanupSmokeUser(db, moderatorEmail);
     await db.destroy();
   }
 }
@@ -286,6 +394,14 @@ async function cleanupSmokeUser(db: Kysely<Database>, email: string) {
     .executeTakeFirst();
 
   if (user) {
+    await db
+      .deleteFrom("admin_role_audit_log")
+      .where("actor_user_id", "=", user.id)
+      .execute();
+    await db
+      .deleteFrom("admin_role_audit_log")
+      .where("target_user_id", "=", user.id)
+      .execute();
     await db
       .deleteFrom("admin_user_roles")
       .where("user_id", "=", user.id)

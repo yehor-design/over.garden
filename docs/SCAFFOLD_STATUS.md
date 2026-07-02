@@ -6,6 +6,8 @@ OVE-27 adds an operator production-smoke surface and live smoke contract: `/gard
 
 OVE-108 adds the admin role foundation for SDD Slice 14. `/admin` is the canonical internal admin entry, gated by durable Better Auth user roles in `admin_user_roles` (`owner`, `admin`, `moderator`, `viewer`) rather than a shared admin account or email/provider inference. Owner bootstrap runs through `pnpm admin:bootstrap-owner` with redacted output only; `/admin` renders links/status without journal text, user emails, cookies, tokens, IP/user-agent data, media keys, precise coordinates, or env values. OVE-109 moves the existing operator surfaces behind the same role/capability model: viewer-safe readouts use `operator:read`, catalog/interview/review mutations use `operator:mutate`, and maintainer-approved irreversible erasure requires `erasure:execute` for owner/admin only.
 
+OVE-110 adds owner-controlled role management at `/admin/users`. Owners can grant or revoke `admin`, `moderator`, and `viewer` roles by exact Better Auth user id, while non-owner admin roles are denied before assignments or audit rows are read. Role changes write durable `admin_role_audit_log` rows with actor/target ids, bounded action/role/reason enums, timestamps, and a one-way session hash only; emails, cookies, raw session ids, provider tokens, IP/user-agent fields, private journal/media content, precise coordinates, and env values stay out of the table and UI. Last-owner removal or downgrade is blocked server-side.
+
 OVE-29 hardens owner-consistent media attachment: quarantine uploads cannot pre-bind an entry id, processed media can attach only when the target entry belongs to the same user, and public journal/variety read models require media owner equality before rendering derivative photos.
 
 OVE-30 hardens production auth startup: Better Auth uses a local fallback only outside production-like runtimes, deployed production/preview fails closed when `BETTER_AUTH_SECRET` is missing or placeholder-like, and pilot-smoke flags local-fallback auth config as a blocker without exposing secret values.
@@ -253,6 +255,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 ## Admin Role-Gated Operator Surfaces
 
 - `/admin` and existing operator surfaces use durable Better Auth user roles in `admin_user_roles`.
+- `/admin/users` is owner-only role management with durable audit rows in `admin_role_audit_log`.
 - `/garden/catalog/curation` requires `operator:mutate`; pilot health/smoke/decision readouts allow `operator:read`; founder interview capture requires `operator:mutate`; erasure execution requires `erasure:execute`.
 - The legacy `CATALOG_CURATOR_USER_IDS` allowlist pattern is deprecated and must not be used for new operator surfaces.
 - The curation surface is intentionally narrow: pending provisional names, aggregate affected-object counts, confirm, merge, source candidate review, and reject. It is not a public moderation product.

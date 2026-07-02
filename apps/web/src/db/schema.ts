@@ -3,6 +3,7 @@
 // database exists). This file preserves a stable import path for app code.
 export type {
   Database,
+  AdminRoleAuditEntry,
   AdminUserRole,
   EntryLifecycleState,
   EntryScope,
@@ -44,6 +45,7 @@ export type {
   PilotInterviewObservedValue,
   PilotInterviewNextAction,
   NewVarietySeedProof,
+  NewAdminRoleAuditEntry,
   NewAdminUserRole,
   NewHealth,
   NewAnalyticsEvent,

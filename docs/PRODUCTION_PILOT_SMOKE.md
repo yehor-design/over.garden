@@ -459,6 +459,8 @@ Forbidden evidence:
 7. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
 8. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
 9. Open `/admin` as the owner and confirm it renders `Role: Owner`, admin links, role-required hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
+10. Open `/admin/users` as the owner and confirm role assignments plus recent audit rows render with bounded role/action/reason labels only.
+11. Open `/admin/users` as a normal signed-in user and as a non-owner admin role; both must show `Access denied.` before assignments or audit rows.
 
 Header probes:
 
@@ -542,6 +544,7 @@ Do not mark OVE-27 Done if any of the following are true:
 - The selected live URL only works locally or only behind Vercel SSO when the goal is public pilot validation.
 - Sign-up/sign-in fails on the deployed URL.
 - The selected owner/admin user has not been bootstrapped into `admin_user_roles`, leaving operator surfaces inaccessible by design.
+- `/admin/users` lets a non-owner role grant/revoke admin roles or remove the last owner.
 - The first-entry or follow-up flow bypasses canonical server routes/repositories.
 - A public page exposes precise location, raw private journal evidence, email, quarantine/original media keys, or signed upload URLs.
 - A public photo renders from anything other than a stripped derivative.

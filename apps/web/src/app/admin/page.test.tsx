@@ -75,6 +75,8 @@ describe("/admin", () => {
 
     expect(metadata.title).toBe("Admin | OverGarden");
     expect(html).toContain("Role: Owner");
+    expect(html).toContain("Admin users");
+    expect(html).toContain("Manage roles: owner only");
     expect(html).toContain("Pilot smoke");
     expect(html).toContain("Catalog curation");
     expect(html).toContain("Erasure requests");
