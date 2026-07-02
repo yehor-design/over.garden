@@ -82,7 +82,8 @@ const CATALOG_FILTERABLE_ATTRIBUTES = [
 ] as const;
 const CATALOG_SORTABLE_ATTRIBUTES = ["rank"] as const;
 const MEILI_WAIT_OPTIONS = { timeout: 120_000, interval: 250 } as const;
-const CHILD_SCRIPT_TIMEOUT_MS = 300_000;
+const DEFAULT_CHILD_SCRIPT_TIMEOUT_MS = 300_000;
+const SEED_ROLLOUT_TIMEOUT_MS = 1_200_000;
 
 async function main() {
   const options = validateCatalogSeedRolloutOptions(
@@ -95,18 +96,22 @@ async function main() {
   try {
     logProofStep("running guarded seed rollout proof");
     const seedRolloutEvidence = extractJsonObjectFromCommandOutput(
-      runPackageScript("catalog:sources:seed-rollout-proof", [
-        "--",
-        "--environment",
-        options.environment,
-        "--confirm-environment",
-        options.confirmEnvironment,
-        "--base-url",
-        options.baseUrl,
-        ...(options.allowNonLocalMutation
-          ? ["--allow-non-local-mutation"]
-          : []),
-      ]),
+      runPackageScript(
+        "catalog:sources:seed-rollout-proof",
+        [
+          "--",
+          "--environment",
+          options.environment,
+          "--confirm-environment",
+          options.confirmEnvironment,
+          "--base-url",
+          options.baseUrl,
+          ...(options.allowNonLocalMutation
+            ? ["--allow-non-local-mutation"]
+            : []),
+        ],
+        SEED_ROLLOUT_TIMEOUT_MS,
+      ),
     );
 
     logProofStep("importing approved EU OJ Common Catalogue rows");
@@ -433,13 +438,17 @@ function hasExpectedSuggestion(
   );
 }
 
-function runPackageScript(script: string, args: string[] = []) {
+function runPackageScript(
+  script: string,
+  args: string[] = [],
+  timeoutMs = DEFAULT_CHILD_SCRIPT_TIMEOUT_MS,
+) {
   const result = spawnSync("pnpm", [script, ...args], {
     cwd: process.cwd(),
     env: process.env,
     encoding: "utf8",
     stdio: "pipe",
-    timeout: CHILD_SCRIPT_TIMEOUT_MS,
+    timeout: timeoutMs,
     maxBuffer: 24 * 1024 * 1024,
   });
 
