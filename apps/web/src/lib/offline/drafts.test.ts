@@ -7,6 +7,7 @@ import {
   offlineDb,
   type OfflineJournalEntryPayload,
 } from "./queue";
+import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
   deleteOfflineDraft,
   FIRST_ENTRY_DRAFT_ID,
@@ -124,6 +125,45 @@ describe("offline journal drafts", () => {
     expect(drafts).toHaveLength(2);
     expect(drafts[0]?.id).toBe(followUpEntryDraftId("object-2"));
     expect(hasPersistableFollowUpDraft(secondPayload, "2026-07-04")).toBe(true);
+  });
+
+  it("persists voice-transcribed text as ordinary draft body text only", async () => {
+    const payload: FirstEntryDraftPayload = {
+      clientMutationId: "voice-draft-entry-id",
+      draft: {
+        spaceName: "Balcony",
+        plantName: "Cherry tomato",
+        objectKind: "plant",
+        title: "Cherry tomato - Jul 3",
+        body: appendVoiceTranscriptToBody(
+          "Started by typing.",
+          "two new flower clusters after rain",
+        ),
+        entryDate: "2026-07-03",
+        locationVisibility: "hidden",
+        coarseRegionCode: "",
+      },
+      catalogQuery: "",
+      selectedCatalogItem: null,
+      userAddedCatalogName: null,
+      activationSource: "direct_garden",
+      photoIntent: null,
+    };
+
+    await upsertOfflineDraft({
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload,
+    });
+
+    const restored =
+      await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+    const serialized = JSON.stringify(restored?.payload);
+
+    expect(restored?.payload.draft.body).toBe(
+      "Started by typing.\ntwo new flower clusters after rain",
+    );
+    expect(serialized).not.toMatch(/audio|recording|speechBlob/i);
   });
 
   it("deletes the draft after local save hands the same intent to the offline queue", async () => {

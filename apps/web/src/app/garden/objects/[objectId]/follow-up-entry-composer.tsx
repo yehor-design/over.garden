@@ -32,6 +32,7 @@ import {
   nextJournalTitleValue,
   suggestJournalEntryTitle,
 } from "@/lib/garden/journal-title-prefill";
+import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
   journalSaveErrorMessage,
   journalSaveStateLabel,
@@ -62,6 +63,7 @@ import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
+import { JournalVoiceInputControl } from "../../journal-voice-input-control";
 
 interface FollowUpEntryComposerProps {
   objectId: string;
@@ -353,6 +355,20 @@ export function FollowUpEntryComposer({
     setDraft((current) => ({ ...current, title: value }));
   }
 
+  function updateBody(value: string) {
+    updateDraft("body", value);
+  }
+
+  function appendVoiceTranscript(transcript: string) {
+    draftPersistencePausedRef.current = false;
+    setDraft((current) =>
+      withSuggestedTitle({
+        ...current,
+        body: appendVoiceTranscriptToBody(current.body, transcript),
+      }),
+    );
+  }
+
   function handlePhotoChange(file: File | undefined) {
     draftPersistencePausedRef.current = false;
     setPhotoError(null);
@@ -510,19 +526,28 @@ export function FollowUpEntryComposer({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Note
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label
+            htmlFor="follow-up-entry-body"
+            className="text-sm font-medium text-foreground"
+          >
+            Note
+          </label>
+          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
+        </div>
         <textarea
+          id="follow-up-entry-body"
           name="body"
           required
           minLength={1}
           maxLength={2000}
           value={draft.body}
-          onChange={(event) => updateDraft("body", event.target.value)}
+          onChange={(event) => updateBody(event.target.value)}
           className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           placeholder="Compared with the previous entry, the new leaves are stronger and the soil stayed moist longer."
         />
-      </label>
+      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>

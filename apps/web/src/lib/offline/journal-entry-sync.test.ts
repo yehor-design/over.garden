@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FirstPlantEntryRequest } from "@/lib/garden/entry-contracts";
+import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
   enqueueOfflineMutation,
   getOfflineMutation,
@@ -52,6 +53,28 @@ describe("offline journal entry sync", () => {
       null,
     );
 
+    expect(body.syncStatus).toBe("offline_synced");
+  });
+
+  it("saves dictated body text as normal body text without audio metadata", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        ...payload,
+        body: appendVoiceTranscriptToBody(
+          "Started by typing.",
+          "two new flower clusters after rain",
+        ),
+        syncStatus: "offline_queued",
+      },
+      "queue-entry-id",
+      null,
+    );
+    const serialized = JSON.stringify(body);
+
+    expect(body.body).toBe(
+      "Started by typing.\ntwo new flower clusters after rain",
+    );
+    expect(serialized).not.toMatch(/audio|recording|speechBlob/i);
     expect(body.syncStatus).toBe("offline_synced");
   });
 
