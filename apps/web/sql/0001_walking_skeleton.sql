@@ -1088,6 +1088,17 @@ begin
       add constraint plant_objects_identity_owner_space_uidx
       unique (id, owner_user_id, space_id);
   end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_identity_owner_uidx'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_identity_owner_uidx
+      unique (id, owner_user_id);
+  end if;
 end $$;
 
 do $$
@@ -1173,6 +1184,129 @@ create index if not exists journal_entry_object_mentions_owner_space_idx
 
 create index if not exists journal_entry_object_mentions_object_idx
   on journal_entry_object_mentions (owner_user_id, plant_object_id, journal_entry_id);
+
+create table if not exists lineage_provenance_edges (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  subject_plant_object_id uuid not null,
+  source_kind text not null check (
+    source_kind in ('own_object', 'source_reference')
+  ),
+  source_plant_object_id uuid,
+  source_owner_user_id uuid,
+  source_reference_kind text check (
+    source_reference_kind is null
+    or source_reference_kind in (
+      'person',
+      'seed_packet',
+      'nursery',
+      'catalog_variety',
+      'other'
+    )
+  ),
+  source_reference_label text check (
+    source_reference_label is null
+    or char_length(source_reference_label) between 1 and 120
+  ),
+  edge_type text not null default 'provenance' check (
+    edge_type in ('provenance')
+  ),
+  consent_state text not null default 'proposed' check (
+    consent_state in ('proposed', 'confirmed', 'declined', 'anonymized')
+  ),
+  visibility_policy text not null default 'owner_only_until_confirmed' check (
+    visibility_policy in ('owner_only_until_confirmed')
+  ),
+  erasure_state text not null default 'active' check (
+    erasure_state in (
+      'active',
+      'source_tombstone',
+      'subject_tombstone',
+      'anonymized'
+    )
+  ),
+  client_mutation_id text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint lineage_provenance_edges_owner_client_mutation_uidx
+    unique (owner_user_id, client_mutation_id),
+  constraint lineage_provenance_edges_subject_fkey
+    foreign key (subject_plant_object_id, owner_user_id)
+    references plant_objects (id, owner_user_id)
+    on update cascade
+    on delete restrict,
+  constraint lineage_provenance_edges_source_object_fkey
+    foreign key (source_plant_object_id, source_owner_user_id)
+    references plant_objects (id, owner_user_id)
+    on update cascade
+    on delete restrict,
+  constraint lineage_provenance_edges_source_shape_check check (
+    (
+      source_kind = 'own_object'
+      and source_plant_object_id is not null
+      and source_owner_user_id is not null
+      and source_reference_kind is null
+      and source_reference_label is null
+      and source_plant_object_id <> subject_plant_object_id
+    )
+    or (
+      source_kind = 'source_reference'
+      and source_plant_object_id is null
+      and source_owner_user_id is null
+      and source_reference_kind is not null
+      and source_reference_label is not null
+    )
+  )
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_owner_client_mutation_uidx'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      add constraint lineage_provenance_edges_owner_client_mutation_uidx
+      unique (owner_user_id, client_mutation_id);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_subject_fkey'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      add constraint lineage_provenance_edges_subject_fkey
+      foreign key (subject_plant_object_id, owner_user_id)
+      references plant_objects (id, owner_user_id)
+      on update cascade
+      on delete restrict;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_source_object_fkey'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      add constraint lineage_provenance_edges_source_object_fkey
+      foreign key (source_plant_object_id, source_owner_user_id)
+      references plant_objects (id, owner_user_id)
+      on update cascade
+      on delete restrict;
+  end if;
+end $$;
+
+create index if not exists lineage_provenance_edges_owner_subject_idx
+  on lineage_provenance_edges (owner_user_id, subject_plant_object_id, created_at desc);
+
+create index if not exists lineage_provenance_edges_owner_source_object_idx
+  on lineage_provenance_edges (owner_user_id, source_plant_object_id, created_at desc)
+  where source_plant_object_id is not null;
 
 create table if not exists erasure_requests (
   id uuid primary key default gen_random_uuid(),

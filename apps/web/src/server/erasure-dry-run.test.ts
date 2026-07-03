@@ -23,6 +23,7 @@ import {
   buildCountAuthUserPresentQuery,
   buildCountCatalogProvisionalItemsQuery,
   buildCountJournalEntriesQuery,
+  buildCountLineageProvenanceEdgesQuery,
   buildCountMediaAssetsQuery,
   buildCountPendingJournalSearchJobsQuery,
   buildCountPilotInterviewRecordsQuery,
@@ -62,6 +63,7 @@ describe("erasure dry-run preview assembly", () => {
         pilotInviteGrantPresent: 1,
         spaces: 1,
         plantObjects: 2,
+        lineageProvenanceEdges: 2,
         journalEntriesTotal: 3,
         journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
@@ -83,7 +85,12 @@ describe("erasure dry-run preview assembly", () => {
       },
     });
 
-    expect(preview.dataClasses).toHaveLength(9);
+    expect(preview.dataClasses).toHaveLength(10);
+    expect(
+      preview.dataClasses.find(
+        (dataClass) => dataClass.key === "lineage_provenance",
+      )?.counts,
+    ).toEqual({ provenance_edges: 2 });
     expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
     expect(
       JSON.stringify(preview.dataClasses.map((dataClass) => dataClass.counts)),
@@ -134,6 +141,22 @@ describe("erasure dry-run repository privacy contracts", () => {
 
     expect(mediaSql).toContain('"media_assets"');
     expect(mediaSql).not.toMatch(/quarantine_key|derivative_key|title|body|email/i);
+  });
+
+  it("counts lineage provenance edges without selecting labels or location-adjacent fields", () => {
+    const compiled = buildCountLineageProvenanceEdgesQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain('"lineage_provenance_edges"');
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"source_owner_user_id" = $2');
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toMatch(
+      /source_reference_label|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
   });
 
   it("counts search jobs by payload kind without returning payload content", () => {

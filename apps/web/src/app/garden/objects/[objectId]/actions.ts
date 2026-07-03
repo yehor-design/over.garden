@@ -22,6 +22,7 @@ import {
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
+import { createProvenanceEdge } from "@/server/lineage-repository";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 import { enqueueJob } from "@/server/queue";
 import { scopedToUser } from "@/server/request-scope";
@@ -70,6 +71,24 @@ export async function updatePlantObjectLocationAction(formData: FormData) {
   revalidatePath(`/garden/objects/${result.plantObject.id}`);
   for (const publicEntryPath of result.publicEntryPaths) {
     revalidatePath(publicEntryPath);
+  }
+}
+
+export async function createProvenanceEdgeAction(formData: FormData) {
+  const scope = await requireWriteEligibleRequestScope();
+  const result = await createProvenanceEdge(scope, {
+    subjectPlantObjectId: String(formData.get("objectId") ?? ""),
+    sourceKind: String(formData.get("sourceKind") ?? ""),
+    sourcePlantObjectId: String(formData.get("sourcePlantObjectId") ?? ""),
+    sourceReferenceKind: String(formData.get("sourceReferenceKind") ?? ""),
+    sourceReferenceLabel: String(formData.get("sourceReferenceLabel") ?? ""),
+    clientMutationId: String(formData.get("clientMutationId") ?? ""),
+  });
+
+  revalidatePath("/garden");
+  revalidatePath(`/garden/objects/${result.subjectObject.id}`);
+  if (result.sourceObject) {
+    revalidatePath(`/garden/objects/${result.sourceObject.id}`);
   }
 }
 

@@ -16,6 +16,7 @@ import type { Database } from "@/db/schema";
 import {
   buildAnonymizeErasureRequestSubjectsQuery,
   buildAnonymizeJournalEntriesForErasureQuery,
+  buildAnonymizeLineageProvenanceEdgesForErasureQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
   buildExecutableErasureRequestQuery,
@@ -108,6 +109,37 @@ describe("approved erasure execution SQL contracts", () => {
       requesterUserId,
       "journal_entry_index",
       "journal_entry_unindex",
+    ]);
+  });
+
+  it("anonymizes lineage provenance edges without deleting structural tombstones", () => {
+    const now = new Date("2026-07-01T08:00:00.000Z");
+    const compiled = buildAnonymizeLineageProvenanceEdgesForErasureQuery(
+      testDb,
+      {
+        requesterUserId,
+        now,
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('update "lineage_provenance_edges"');
+    expect(compiled.sql).toContain('"consent_state" = $1');
+    expect(compiled.sql).toContain('"erasure_state" = $2');
+    expect(compiled.sql).toContain("Erased source");
+    expect(compiled.sql).toContain(
+      "'erased:' || \"lineage_provenance_edges\".\"id\"::text",
+    );
+    expect(compiled.sql).toContain('"owner_user_id" = $4');
+    expect(compiled.sql).toContain('"source_owner_user_id" = $5');
+    expect(compiled.sql).not.toMatch(
+      /journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "anonymized",
+      "anonymized",
+      now,
+      requesterUserId,
+      requesterUserId,
     ]);
   });
 

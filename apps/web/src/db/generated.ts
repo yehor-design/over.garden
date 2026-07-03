@@ -266,6 +266,24 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface LineageProvenanceEdges {
+  client_mutation_id: string;
+  consent_state: Generated<string>;
+  created_at: Generated<Timestamp>;
+  edge_type: Generated<string>;
+  erasure_state: Generated<string>;
+  id: Generated<string>;
+  owner_user_id: string;
+  source_kind: string;
+  source_owner_user_id: string | null;
+  source_plant_object_id: string | null;
+  source_reference_kind: string | null;
+  source_reference_label: string | null;
+  subject_plant_object_id: string;
+  updated_at: Generated<Timestamp>;
+  visibility_policy: Generated<string>;
+}
+
 export interface MediaAssets {
   created_at: Generated<Timestamp>;
   derivative_key: string | null;
@@ -391,6 +409,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  lineage_provenance_edges: LineageProvenanceEdges;
   media_assets: MediaAssets;
   pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;

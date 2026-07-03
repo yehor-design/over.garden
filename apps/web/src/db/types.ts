@@ -19,6 +19,7 @@ import type {
   JournalEntries as JournalEntriesTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JsonValue,
+  LineageProvenanceEdges as LineageProvenanceEdgesTable,
   MediaAssets as MediaAssetsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
   PilotInterviewLearnings as PilotInterviewLearningsTable,
@@ -70,6 +71,24 @@ export type AnalyticsEventName =
   | "own_record_revisited"
   | "follow_up_value_pulse";
 export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
+export type LineageSourceKind = "own_object" | "source_reference";
+export type LineageSourceReferenceKind =
+  | "person"
+  | "seed_packet"
+  | "nursery"
+  | "catalog_variety"
+  | "other";
+export type LineageConsentState =
+  | "proposed"
+  | "confirmed"
+  | "declined"
+  | "anonymized";
+export type LineageVisibilityPolicy = "owner_only_until_confirmed";
+export type LineageErasureState =
+  | "active"
+  | "source_tombstone"
+  | "subject_tombstone"
+  | "anonymized";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -125,6 +144,10 @@ export type JournalEntryObjectMention =
   Selectable<JournalEntryObjectMentionsTable>;
 export type NewJournalEntryObjectMention =
   Insertable<JournalEntryObjectMentionsTable>;
+export type LineageProvenanceEdge =
+  Selectable<LineageProvenanceEdgesTable>;
+export type NewLineageProvenanceEdge =
+  Insertable<LineageProvenanceEdgesTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;

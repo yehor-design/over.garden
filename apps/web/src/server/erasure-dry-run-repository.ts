@@ -43,6 +43,7 @@ export async function collectErasureDryRunCounts(
     pilotInviteGrantPresent,
     spaces,
     plantObjects,
+    lineageProvenanceEdges,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -68,6 +69,7 @@ export async function collectErasureDryRunCounts(
     countPilotInviteGrantPresent(executor, requesterUserId),
     countOwnedRows(executor, "spaces", requesterUserId),
     countOwnedRows(executor, "plant_objects", requesterUserId),
+    countLineageProvenanceEdges(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
       visibility: "private",
@@ -110,6 +112,7 @@ export async function collectErasureDryRunCounts(
     pilotInviteGrantPresent,
     spaces,
     plantObjects,
+    lineageProvenanceEdges,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -180,6 +183,21 @@ export function buildCountOwnedRowsQuery(
     .selectFrom(table)
     .select(sql<number>`count(*)`.as("count"))
     .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildCountLineageProvenanceEdgesQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("lineage_provenance_edges")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("owner_user_id", "=", requesterUserId),
+        eb("source_owner_user_id", "=", requesterUserId),
+      ]),
+    );
 }
 
 export function buildCountJournalEntriesQuery(
@@ -352,6 +370,17 @@ async function countOwnedRows(
   const row = await buildCountOwnedRowsQuery(
     executor,
     table,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countLineageProvenanceEdges(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountLineageProvenanceEdgesQuery(
+    executor,
     requesterUserId,
   ).executeTakeFirst();
   return toCount(row?.count);

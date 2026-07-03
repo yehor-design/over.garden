@@ -25,12 +25,19 @@ import {
   getPlantObjectPage,
   type PlantObjectPage,
 } from "@/server/journal-repository";
+import {
+  getObjectProvenancePanel,
+  type LineageProvenanceEdgeReadback,
+  type LineagePlantObjectOption,
+  type ObjectProvenancePanel,
+} from "@/server/lineage-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
+  createProvenanceEdgeAction,
   publishJournalEntryAction,
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
@@ -77,6 +84,8 @@ export default async function PlantObjectReadbackPage({
   const writeAccess = await resolvePilotWriteAccess(scope);
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
+  const provenancePanel = await getObjectProvenancePanel(scope, objectId);
+  if (!provenancePanel) notFound();
   await recordOwnRecordRevisited(scope, page);
   const showProgressMoment = isObjectProgressMomentEligible(
     page.entries.length,
@@ -219,6 +228,12 @@ export default async function PlantObjectReadbackPage({
           <ClosedPilotWriteCallout context="follow-up" />
         )}
       </section>
+
+      <ProvenanceSection
+        objectId={objectId}
+        provenancePanel={provenancePanel}
+        writeEnabled={writeAccess.invited}
+      />
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -379,6 +394,145 @@ export default async function PlantObjectReadbackPage({
   );
 }
 
+function ProvenanceSection({
+  objectId,
+  provenancePanel,
+  writeEnabled,
+}: {
+  objectId: string;
+  provenancePanel: ObjectProvenancePanel;
+  writeEnabled: boolean;
+}) {
+  return (
+    <section className="grid gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+        <p className="text-sm text-muted-foreground">
+          Record where this object came from without making the source public.
+        </p>
+      </div>
+
+      {writeEnabled ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {provenancePanel.sourceObjectOptions.length > 0 ? (
+            <form
+              action={createProvenanceEdgeAction}
+              className="grid gap-3 rounded-md border border-border p-3"
+            >
+              <input type="hidden" name="objectId" value={objectId} />
+              <input type="hidden" name="sourceKind" value="own_object" />
+              <input
+                type="hidden"
+                name="clientMutationId"
+                value={crypto.randomUUID()}
+              />
+              <label className="grid gap-1 text-sm font-medium text-foreground">
+                Source object
+                <select
+                  name="sourcePlantObjectId"
+                  required
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                >
+                  {provenancePanel.sourceObjectOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {lineageObjectOptionLabel(option)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="submit"
+                className={buttonVariants({ className: "justify-self-start" })}
+              >
+                Record object source
+              </button>
+            </form>
+          ) : (
+            <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+              Add another object before linking this one to your own source
+              object.
+            </p>
+          )}
+
+          <form
+            action={createProvenanceEdgeAction}
+            className="grid gap-3 rounded-md border border-border p-3"
+          >
+            <input type="hidden" name="objectId" value={objectId} />
+            <input type="hidden" name="sourceKind" value="source_reference" />
+            <input
+              type="hidden"
+              name="clientMutationId"
+              value={crypto.randomUUID()}
+            />
+            <label className="grid gap-1 text-sm font-medium text-foreground">
+              Source type
+              <select
+                name="sourceReferenceKind"
+                required
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                defaultValue="person"
+              >
+                <option value="person">Person</option>
+                <option value="seed_packet">Seed packet</option>
+                <option value="nursery">Nursery</option>
+                <option value="catalog_variety">Catalog or variety</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium text-foreground">
+              Private source label
+              <input
+                name="sourceReferenceLabel"
+                required
+                maxLength={120}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                placeholder="Seed packet from spring swap"
+              />
+            </label>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Keep this label contact-free: no email, phone, URL, handle, exact
+              address, or coordinates.
+            </p>
+            <button
+              type="submit"
+              className={buttonVariants({ className: "justify-self-start" })}
+            >
+              Record private source
+            </button>
+          </form>
+        </div>
+      ) : (
+        <ClosedPilotWriteCallout context="follow-up" />
+      )}
+
+      {provenancePanel.edges.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
+          No provenance recorded for this object yet.
+        </p>
+      ) : (
+        <ol className="grid gap-3">
+          {provenancePanel.edges.map((edge) => (
+            <li key={edge.id} className="rounded-md border border-border p-3">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {lineageEdgeTitle(edge)}
+                </h3>
+                <time className="text-xs text-muted-foreground">
+                  {formatDate(edge.createdAt)}
+                </time>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {lineageConsentLabel(edge)} · Owner-only until confirmed
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
 async function recordOwnRecordRevisited(
   scope: Parameters<typeof getPlantObjectPage>[0],
   page: PlantObjectPage,
@@ -461,4 +615,51 @@ function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
   ].filter(Boolean);
 
   return parts.join(" · ");
+}
+
+function lineageObjectOptionLabel(option: LineagePlantObjectOption) {
+  const variety = option.varietyText ?? "Unknown";
+  return `${option.displayName} · ${variety}`;
+}
+
+function lineageEdgeTitle(edge: LineageProvenanceEdgeReadback) {
+  if (edge.sourceObject) {
+    return `Came from ${lineageObjectOptionLabel(edge.sourceObject)}`;
+  }
+
+  return `Came from ${edge.sourceReferenceLabel ?? "private source"} · ${lineageSourceReferenceKindLabel(
+    edge.sourceReferenceKind,
+  )}`;
+}
+
+function lineageSourceReferenceKindLabel(
+  value: LineageProvenanceEdgeReadback["sourceReferenceKind"],
+) {
+  switch (value) {
+    case "person":
+      return "person";
+    case "seed_packet":
+      return "seed packet";
+    case "nursery":
+      return "nursery";
+    case "catalog_variety":
+      return "catalog or variety";
+    case "other":
+    default:
+      return "source";
+  }
+}
+
+function lineageConsentLabel(edge: LineageProvenanceEdgeReadback) {
+  switch (edge.consentState) {
+    case "confirmed":
+      return "Confirmed provenance";
+    case "declined":
+      return "Declined provenance";
+    case "anonymized":
+      return "Anonymized provenance";
+    case "proposed":
+    default:
+      return "Proposed provenance";
+  }
 }

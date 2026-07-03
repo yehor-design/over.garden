@@ -1,6 +1,7 @@
 export type ErasureDryRunDataClassKey =
   | "account_auth"
   | "garden_workspace"
+  | "lineage_provenance"
   | "journal_entries"
   | "media_assets"
   | "public_exposure"
@@ -25,7 +26,7 @@ export interface ErasureDryRunPreview {
 }
 
 export const ERASURE_DRY_RUN_CAVEATS = [
-  "This preview is non-destructive and repeatable. No account, journal, media, search, or analytics row is deleted or anonymized by viewing it.",
+  "This preview is non-destructive and repeatable. No account, garden, lineage, journal, media, search, or analytics row is deleted or anonymized by viewing it.",
   "Counts describe affected data classes only. Raw journal text, media keys, emails, tokens, IP addresses, user agents, referrers, and precise location never appear in this read model.",
   "Final irreversible erasure or anonymization still requires maintainer approval and a separate operator workflow.",
 ] as const;
@@ -52,6 +53,7 @@ export interface ErasureDryRunCounts {
   pilotInviteGrantPresent: number;
   spaces: number;
   plantObjects: number;
+  lineageProvenanceEdges: number;
   journalEntriesTotal: number;
   journalEntriesPrivateActive: number;
   journalEntriesPublicActive: number;
@@ -95,6 +97,15 @@ function buildErasureDryRunDataClasses(
       counts: {
         spaces: counts.spaces,
         plant_objects: counts.plantObjects,
+      },
+    },
+    {
+      key: "lineage_provenance",
+      label: "Lineage provenance",
+      description:
+        "Owner-scoped provenance edges that preserve structure through anonymized tombstones. Source labels and contact-like details never appear in this preview.",
+      counts: {
+        provenance_edges: counts.lineageProvenanceEdges,
       },
     },
     {

@@ -140,6 +140,10 @@ export async function executeApprovedErasureRequest(
       requesterUserId,
       now,
     ).execute();
+    await buildAnonymizeLineageProvenanceEdgesForErasureQuery(trx, {
+      requesterUserId,
+      now,
+    }).execute();
 
     await buildAnonymizeSpacesForErasureQuery(trx, {
       requesterUserId,
@@ -372,6 +376,33 @@ export function buildAnonymizePilotInterviewSubjectsForErasureQuery(
       updated_at: now,
     })
     .where("subject_user_id", "=", requesterUserId);
+}
+
+export function buildAnonymizeLineageProvenanceEdgesForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_provenance_edges")
+    .set({
+      consent_state: "anonymized",
+      erasure_state: "anonymized",
+      source_reference_label: sql<string | null>`case
+        when source_kind = 'source_reference' then 'Erased source'
+        else source_reference_label
+      end`,
+      client_mutation_id: sql<string>`'erased:' || "lineage_provenance_edges"."id"::text`,
+      updated_at: input.now,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("owner_user_id", "=", input.requesterUserId),
+        eb("source_owner_user_id", "=", input.requesterUserId),
+      ]),
+    );
 }
 
 export function buildAnonymizeSpacesForErasureQuery(
