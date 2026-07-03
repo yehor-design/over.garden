@@ -44,6 +44,7 @@ export async function collectErasureDryRunCounts(
     spaces,
     plantObjects,
     lineageProvenanceEdges,
+    lineagePendingSourceIdentities,
     lineageProvenanceAuditEvents,
     journalEntriesTotal,
     journalEntriesPrivateActive,
@@ -71,6 +72,7 @@ export async function collectErasureDryRunCounts(
     countOwnedRows(executor, "spaces", requesterUserId),
     countOwnedRows(executor, "plant_objects", requesterUserId),
     countLineageProvenanceEdges(executor, requesterUserId),
+    countLineagePendingSourceIdentities(executor, requesterUserId),
     countLineageProvenanceAuditEvents(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
@@ -115,6 +117,7 @@ export async function collectErasureDryRunCounts(
     spaces,
     plantObjects,
     lineageProvenanceEdges,
+    lineagePendingSourceIdentities,
     lineageProvenanceAuditEvents,
     journalEntriesTotal,
     journalEntriesPrivateActive,
@@ -214,6 +217,21 @@ export function buildCountLineageProvenanceAuditEventsQuery(
       eb.or([
         eb("actor_user_id", "=", requesterUserId),
         eb("target_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountLineagePendingSourceIdentitiesQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("lineage_pending_source_identities")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("created_by_user_id", "=", requesterUserId),
+        eb("claimed_by_user_id", "=", requesterUserId),
       ]),
     );
 }
@@ -409,6 +427,17 @@ async function countLineageProvenanceAuditEvents(
   requesterUserId: string,
 ) {
   const row = await buildCountLineageProvenanceAuditEventsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countLineagePendingSourceIdentities(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountLineagePendingSourceIdentitiesQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

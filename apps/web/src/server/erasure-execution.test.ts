@@ -17,6 +17,7 @@ import {
   buildAnonymizeErasureRequestSubjectsQuery,
   buildAnonymizeJournalEntriesForErasureQuery,
   buildAnonymizeLineageClaimAuditEventsForErasureQuery,
+  buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery,
   buildAnonymizeLineageProvenanceEdgesForErasureQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
@@ -132,12 +133,49 @@ describe("approved erasure execution SQL contracts", () => {
     );
     expect(compiled.sql).toContain('"owner_user_id" = $4');
     expect(compiled.sql).toContain('"source_owner_user_id" = $5');
+    expect(compiled.sql).toContain('"lineage_pending_source_identities"');
+    expect(compiled.sql).toContain('"created_by_user_id" = $6');
+    expect(compiled.sql).toContain('"claimed_by_user_id" = $7');
     expect(compiled.sql).not.toMatch(
       /journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
     );
     expect(compiled.parameters).toEqual([
       "anonymized",
       "anonymized",
+      now,
+      requesterUserId,
+      requesterUserId,
+      requesterUserId,
+      requesterUserId,
+    ]);
+  });
+
+  it("anonymizes lineage pending source identities without selecting invite tokens", () => {
+    const now = new Date("2026-07-01T08:00:00.000Z");
+    const compiled =
+      buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery(
+        testDb,
+        requesterUserId,
+        now,
+      ).compile();
+
+    expect(compiled.sql).toContain(
+      'update "lineage_pending_source_identities"',
+    );
+    expect(compiled.sql).toContain('"display_label" = $1');
+    expect(compiled.sql).toContain('"invite_state" = $2');
+    expect(compiled.sql).toContain('"created_by_user_id" = case');
+    expect(compiled.sql).toContain('"claimed_by_user_id" = case');
+    expect(compiled.sql).toContain('"created_by_user_id" = $6');
+    expect(compiled.sql).toContain('"claimed_by_user_id" = $7');
+    expect(compiled.sql).not.toMatch(
+      /token|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent|referrer/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "Erased pending source",
+      "anonymized",
+      requesterUserId,
+      requesterUserId,
       now,
       requesterUserId,
       requesterUserId,

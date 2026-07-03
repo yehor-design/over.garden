@@ -23,6 +23,7 @@ import {
   buildCountAuthUserPresentQuery,
   buildCountCatalogProvisionalItemsQuery,
   buildCountJournalEntriesQuery,
+  buildCountLineagePendingSourceIdentitiesQuery,
   buildCountLineageProvenanceAuditEventsQuery,
   buildCountLineageProvenanceEdgesQuery,
   buildCountMediaAssetsQuery,
@@ -65,6 +66,7 @@ describe("erasure dry-run preview assembly", () => {
         spaces: 1,
         plantObjects: 2,
         lineageProvenanceEdges: 2,
+        lineagePendingSourceIdentities: 1,
         lineageProvenanceAuditEvents: 1,
         journalEntriesTotal: 3,
         journalEntriesPrivateActive: 2,
@@ -92,7 +94,11 @@ describe("erasure dry-run preview assembly", () => {
       preview.dataClasses.find(
         (dataClass) => dataClass.key === "lineage_provenance",
       )?.counts,
-    ).toEqual({ provenance_edges: 2, audit_events: 1 });
+    ).toEqual({
+      provenance_edges: 2,
+      pending_identities: 1,
+      audit_events: 1,
+    });
     expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
     expect(
       JSON.stringify(preview.dataClasses.map((dataClass) => dataClass.counts)),
@@ -175,6 +181,22 @@ describe("erasure dry-run repository privacy contracts", () => {
     expect(compiled.sql).toMatch(/count\(\*\)/i);
     expect(compiled.sql).not.toMatch(
       /lineage_provenance_edges|source_reference_label|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
+  });
+
+  it("counts lineage pending source identities without selecting labels or tokens", () => {
+    const compiled = buildCountLineagePendingSourceIdentitiesQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain('"lineage_pending_source_identities"');
+    expect(compiled.sql).toContain('"created_by_user_id" = $1');
+    expect(compiled.sql).toContain('"claimed_by_user_id" = $2');
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toMatch(
+      /display_label|token|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent|referrer/i,
     );
     expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
   });

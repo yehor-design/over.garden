@@ -8,6 +8,8 @@ import type {
   Database,
   LineageConsentState,
   LineageErasureState,
+  LineagePendingSourceIdentity,
+  LineagePendingSourceInviteState,
   LineageProvenanceEdge,
   LineageSourceKind,
   LineageSourceReferenceKind,
@@ -15,9 +17,19 @@ import type {
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
+import { lineageInvitationClaimPath } from "@/lib/garden/public-paths";
+import {
+  signLineageInviteToken,
+  verifyLineageInviteToken,
+  type LineageInviteVerification,
+} from "@/server/lineage-invite-token";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
+type CreateProvenanceSourceKind = Extract<
+  LineageSourceKind,
+  "own_object" | "source_reference"
+>;
 
 export interface CreateProvenanceEdgeInput {
   subjectPlantObjectId: string;
@@ -25,6 +37,12 @@ export interface CreateProvenanceEdgeInput {
   sourcePlantObjectId?: string | null;
   sourceReferenceKind?: string | null;
   sourceReferenceLabel?: string | null;
+  clientMutationId: string;
+}
+
+export interface CreateLineageInvitationInput {
+  subjectPlantObjectId: string;
+  pendingSourceLabel: string;
   clientMutationId: string;
 }
 
@@ -51,6 +69,7 @@ export interface LineageProvenanceEdgeReadback {
   visibilityPolicy: LineageVisibilityPolicy;
   erasureState: LineageErasureState;
   sourceObject: LineagePlantObjectOption | null;
+  pendingIdentity: LineagePendingSourceIdentityReadback | null;
   sourceReferenceKind: LineageSourceReferenceKind | null;
   sourceReferenceLabel: string | null;
   createdAt: Date | string;
@@ -66,6 +85,21 @@ export interface CreateProvenanceEdgeResult {
   subjectObject: LineagePlantObjectOption;
   sourceObject: LineagePlantObjectOption | null;
   isNewEdge: boolean;
+}
+
+export interface CreateLineageInvitationResult {
+  edge: LineageProvenanceEdge;
+  subjectObject: LineagePlantObjectOption;
+  pendingIdentity: LineagePendingSourceIdentityReadback;
+  isNewEdge: boolean;
+}
+
+export interface LineagePendingSourceIdentityReadback {
+  id: string;
+  displayLabel: string;
+  inviteState: LineagePendingSourceInviteState;
+  invitePath: string;
+  createdAt: Date | string;
 }
 
 export interface LineageClaimInboxItem {
@@ -88,12 +122,40 @@ export interface ResolveLineageClaimResult {
   decision: LineageClaimDecision;
 }
 
+export interface LineageInvitationClaimPreview {
+  edgeId: string;
+  consentState: LineageConsentState;
+  pendingIdentity: {
+    id: string;
+    displayLabel: string;
+    inviteState: LineagePendingSourceInviteState;
+  };
+  subjectObject: LineagePlantObjectOption;
+  createdAt: Date | string;
+}
+
+export interface ResolveLineageInvitationClaimInput {
+  token: string;
+  decision: string;
+}
+
+export interface ResolveLineageInvitationClaimResult {
+  edge: LineageProvenanceEdge;
+  decision: LineageClaimDecision;
+}
+
 interface NormalizedCreateProvenanceEdgeInput {
   subjectPlantObjectId: string;
-  sourceKind: LineageSourceKind;
+  sourceKind: CreateProvenanceSourceKind;
   sourcePlantObjectId: string | null;
   sourceReferenceKind: LineageSourceReferenceKind | null;
   sourceReferenceLabel: string | null;
+  clientMutationId: string;
+}
+
+interface NormalizedCreateLineageInvitationInput {
+  subjectPlantObjectId: string;
+  pendingSourceLabel: string;
   clientMutationId: string;
 }
 
@@ -176,6 +238,22 @@ export async function getObjectProvenancePanel(
             catalogKind: edge.sourceCatalogKind as CatalogKind | null,
             varietyText: edge.sourceVarietyText,
             varietyState: edge.sourceVarietyState as VarietyState,
+          }
+        : null,
+      pendingIdentity: edge.pendingIdentityId
+        ? {
+            id: edge.pendingIdentityId,
+            displayLabel: edge.pendingIdentityDisplayLabel ?? "Pending source",
+            inviteState:
+              edge.pendingIdentityInviteState as LineagePendingSourceInviteState,
+            invitePath: lineageInvitationClaimPath(
+              signLineageInviteToken({
+                pendingIdentityId: edge.pendingIdentityId,
+                edgeId: edge.id,
+                createdAt: edge.pendingIdentityCreatedAt ?? edge.created_at,
+              }),
+            ),
+            createdAt: edge.pendingIdentityCreatedAt ?? edge.created_at,
           }
         : null,
       sourceReferenceKind:
@@ -274,6 +352,94 @@ export async function createProvenanceEdge(
   });
 }
 
+export async function createLineageInvitation(
+  scope: RequestScope,
+  input: CreateLineageInvitationInput,
+): Promise<CreateLineageInvitationResult> {
+  const normalized = normalizeCreateLineageInvitationInput(input);
+  const existing = await buildFindProvenanceEdgeByClientMutationQuery(
+    db,
+    scope,
+    normalized.clientMutationId,
+  ).executeTakeFirst();
+
+  if (existing) {
+    assertExistingInvitationEdgeMatchesInput(existing, normalized);
+    return readCreateLineageInvitationResult(db, scope, existing, false);
+  }
+
+  return db.transaction().execute(async (trx) => {
+    const subjectObject = await buildLineagePlantObjectByIdQuery(
+      trx,
+      scope,
+      normalized.subjectPlantObjectId,
+    ).executeTakeFirst();
+
+    if (!subjectObject) {
+      throw new Error("Lineage invitation subject object was not found.");
+    }
+
+    const pendingIdentity =
+      await buildInsertLineagePendingSourceIdentityQuery(trx, {
+        created_by_user_id: scope.userId,
+        display_label: normalized.pendingSourceLabel,
+        invite_state: "pending",
+      }).executeTakeFirstOrThrow();
+
+    const edge = await buildInsertProvenanceEdgeQuery(trx, {
+      owner_user_id: scope.userId,
+      subject_plant_object_id: normalized.subjectPlantObjectId,
+      source_kind: "pending_identity",
+      source_plant_object_id: null,
+      source_owner_user_id: null,
+      source_pending_identity_id: pendingIdentity.id,
+      source_reference_kind: null,
+      source_reference_label: null,
+      edge_type: "provenance",
+      consent_state: "proposed",
+      visibility_policy: "owner_only_until_confirmed",
+      erasure_state: "active",
+      client_mutation_id: normalized.clientMutationId,
+    }).executeTakeFirst();
+
+    if (edge) {
+      return {
+        edge,
+        subjectObject: mapPlantObjectOption(subjectObject),
+        pendingIdentity: mapPendingIdentityReadback(pendingIdentity, edge.id),
+        isNewEdge: true,
+      };
+    }
+
+    const existingAfterConflict =
+      await buildFindProvenanceEdgeByClientMutationQuery(
+        trx,
+        scope,
+        normalized.clientMutationId,
+      ).executeTakeFirst();
+
+    if (!existingAfterConflict) {
+      throw new Error("Lineage invitation idempotency conflict could not be resolved.");
+    }
+
+    await trx
+      .deleteFrom("lineage_pending_source_identities")
+      .where("id", "=", pendingIdentity.id)
+      .execute();
+
+    assertExistingInvitationEdgeMatchesInput(
+      existingAfterConflict,
+      normalized,
+    );
+    return readCreateLineageInvitationResult(
+      trx,
+      scope,
+      existingAfterConflict,
+      false,
+    );
+  });
+}
+
 export async function resolveLineageClaim(
   scope: RequestScope,
   input: ResolveLineageClaimInput,
@@ -305,6 +471,88 @@ export async function resolveLineageClaim(
     return {
       edge,
       decision: normalized.decision,
+    };
+  });
+}
+
+export async function getLineageInvitationClaimPreview(
+  token: string,
+): Promise<LineageInvitationClaimPreview | null> {
+  const verified = verifyLineageInviteToken(token);
+  if (!verified) return null;
+
+  const row = await buildLineageInvitationClaimPreviewQuery(
+    db,
+    verified,
+  ).executeTakeFirst();
+  if (!row) return null;
+
+  return {
+    edgeId: row.id,
+    consentState: row.consent_state as LineageConsentState,
+    pendingIdentity: {
+      id: row.pendingIdentityId,
+      displayLabel: row.pendingIdentityDisplayLabel,
+      inviteState:
+        row.pendingIdentityInviteState as LineagePendingSourceInviteState,
+    },
+    subjectObject: mapPlantObjectOption({
+      id: row.subjectObjectId,
+      displayName: row.subjectObjectDisplayName,
+      objectKind: row.subjectObjectKind,
+      catalogKind: row.subjectCatalogKind,
+      varietyText: row.subjectVarietyText,
+      varietyState: row.subjectVarietyState,
+    }),
+    createdAt: row.created_at,
+  };
+}
+
+export async function resolveLineageInvitationClaim(
+  scope: RequestScope,
+  input: ResolveLineageInvitationClaimInput,
+): Promise<ResolveLineageInvitationClaimResult> {
+  const verified = verifyLineageInviteToken(input.token);
+  if (!verified) {
+    throw new Error("Lineage invitation is invalid or expired.");
+  }
+  const decision = normalizeLineageClaimDecision(input.decision);
+  const inviteState = decision === "confirmed" ? "claimed" : "declined";
+  const now = new Date();
+
+  return db.transaction().execute(async (trx) => {
+    const edge = await buildResolveLineageInvitationClaimEdgeQuery(
+      trx,
+      verified,
+      {
+        decision,
+        now,
+      },
+    ).executeTakeFirst();
+
+    if (!edge) {
+      throw new Error("Lineage invitation is not available.");
+    }
+
+    await buildResolveLineagePendingSourceIdentityClaimQuery(trx, verified, {
+      claimedByUserId: scope.userId,
+      inviteState,
+      now,
+    }).executeTakeFirstOrThrow();
+
+    await buildInsertLineageClaimAuditEventQuery(trx, {
+      edge_id: edge.id,
+      actor_user_id: scope.userId,
+      target_user_id: scope.userId,
+      action: lineageClaimActionForDecision(decision),
+      previous_consent_state: "proposed",
+      new_consent_state: decision,
+      visibility_policy: edge.visibility_policy,
+    }).executeTakeFirstOrThrow();
+
+    return {
+      edge,
+      decision,
     };
   });
 }
@@ -384,6 +632,13 @@ export function buildObjectProvenanceEdgesQuery(
         .onRef("source_catalog_items.id", "=", "source_objects.catalog_item_id")
         .on("source_catalog_items.created_by_user_id", "is", null),
     )
+    .leftJoin("lineage_pending_source_identities as pending_identities", (join) =>
+      join.onRef(
+        "pending_identities.id",
+        "=",
+        "lineage_provenance_edges.source_pending_identity_id",
+      ),
+    )
     .select([
       "lineage_provenance_edges.id",
       "lineage_provenance_edges.source_kind",
@@ -399,6 +654,10 @@ export function buildObjectProvenanceEdgesQuery(
       "source_catalog_items.catalog_kind as sourceCatalogKind",
       "source_objects.variety_text as sourceVarietyText",
       "source_objects.variety_state as sourceVarietyState",
+      "pending_identities.id as pendingIdentityId",
+      "pending_identities.display_label as pendingIdentityDisplayLabel",
+      "pending_identities.invite_state as pendingIdentityInviteState",
+      "pending_identities.created_at as pendingIdentityCreatedAt",
     ])
     .where("lineage_provenance_edges.owner_user_id", "=", scope.userId)
     .where(
@@ -509,6 +768,16 @@ export function buildInsertProvenanceEdgeQuery(
     .returningAll();
 }
 
+export function buildInsertLineagePendingSourceIdentityQuery(
+  executor: QueryExecutor,
+  input: Insertable<Database["lineage_pending_source_identities"]>,
+) {
+  return executor
+    .insertInto("lineage_pending_source_identities")
+    .values(input)
+    .returningAll();
+}
+
 export function buildResolveLineageClaimQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -533,6 +802,115 @@ export function buildResolveLineageClaimQuery(
     .returningAll();
 }
 
+export function buildLineageInvitationClaimPreviewQuery(
+  executor: QueryExecutor,
+  token: LineageInviteVerification,
+) {
+  return executor
+    .selectFrom("lineage_provenance_edges")
+    .innerJoin("lineage_pending_source_identities as pending_identities", (join) =>
+      join.onRef(
+        "pending_identities.id",
+        "=",
+        "lineage_provenance_edges.source_pending_identity_id",
+      ),
+    )
+    .innerJoin("plant_objects as subject_objects", (join) =>
+      join
+        .onRef(
+          "subject_objects.id",
+          "=",
+          "lineage_provenance_edges.subject_plant_object_id",
+        )
+        .onRef(
+          "subject_objects.owner_user_id",
+          "=",
+          "lineage_provenance_edges.owner_user_id",
+        ),
+    )
+    .leftJoin("catalog_items as subject_catalog_items", (join) =>
+      join
+        .onRef(
+          "subject_catalog_items.id",
+          "=",
+          "subject_objects.catalog_item_id",
+        )
+        .on("subject_catalog_items.created_by_user_id", "is", null),
+    )
+    .select([
+      "lineage_provenance_edges.id",
+      "lineage_provenance_edges.consent_state",
+      "lineage_provenance_edges.created_at",
+      "pending_identities.id as pendingIdentityId",
+      "pending_identities.display_label as pendingIdentityDisplayLabel",
+      "pending_identities.invite_state as pendingIdentityInviteState",
+      "subject_objects.id as subjectObjectId",
+      "subject_objects.display_name as subjectObjectDisplayName",
+      "subject_objects.object_kind as subjectObjectKind",
+      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      "subject_objects.variety_text as subjectVarietyText",
+      "subject_objects.variety_state as subjectVarietyState",
+    ])
+    .where("lineage_provenance_edges.id", "=", token.edgeId)
+    .where(
+      "lineage_provenance_edges.source_pending_identity_id",
+      "=",
+      token.pendingIdentityId,
+    )
+    .where("lineage_provenance_edges.source_kind", "=", "pending_identity")
+    .where("lineage_provenance_edges.consent_state", "=", "proposed")
+    .where("lineage_provenance_edges.erasure_state", "=", "active")
+    .where("pending_identities.id", "=", token.pendingIdentityId)
+    .where("pending_identities.invite_state", "=", "pending");
+}
+
+export function buildResolveLineageInvitationClaimEdgeQuery(
+  executor: QueryExecutor,
+  token: LineageInviteVerification,
+  input: {
+    decision: LineageClaimDecision;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_provenance_edges")
+    .set({
+      consent_state: input.decision,
+      updated_at: input.now,
+    })
+    .where("id", "=", token.edgeId)
+    .where("source_pending_identity_id", "=", token.pendingIdentityId)
+    .where("source_kind", "=", "pending_identity")
+    .where("consent_state", "=", "proposed")
+    .where("erasure_state", "=", "active")
+    .returningAll();
+}
+
+export function buildResolveLineagePendingSourceIdentityClaimQuery(
+  executor: QueryExecutor,
+  token: LineageInviteVerification,
+  input: {
+    claimedByUserId: string;
+    inviteState: Extract<
+      LineagePendingSourceInviteState,
+      "claimed" | "declined"
+    >;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_pending_source_identities")
+    .set({
+      invite_state: input.inviteState,
+      claimed_by_user_id: input.claimedByUserId,
+      claimed_at: input.now,
+      updated_at: input.now,
+    })
+    .where("id", "=", token.pendingIdentityId)
+    .where("invite_state", "=", "pending")
+    .returningAll();
+}
+
 export function buildInsertLineageClaimAuditEventQuery(
   executor: QueryExecutor,
   input: Insertable<Database["lineage_provenance_edge_audit_events"]>,
@@ -545,12 +923,22 @@ export function buildInsertLineageClaimAuditEventQuery(
 
 export function normalizeLineageSourceReferenceLabel(value: string) {
   const label = normalizeRequiredText(value, "Source label", 120);
-  const forbiddenPattern =
-    /(@|https?:\/\/|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\+?\d[\d\s().-]{6,}\d|[-+]?\d{1,2}\.\d{3,}\s*,\s*[-+]?\d{1,3}\.\d{3,})/i;
 
-  if (forbiddenPattern.test(label)) {
+  if (looksLikePrivateContactOrPreciseLocation(label)) {
     throw new Error(
       "Source label cannot include contact details, handles, URLs, or precise coordinates.",
+    );
+  }
+
+  return label;
+}
+
+export function normalizeLineagePendingSourceLabel(value: string) {
+  const label = normalizeRequiredText(value, "Invited source label", 120);
+
+  if (looksLikePrivateContactOrPreciseLocation(label)) {
+    throw new Error(
+      "Invited source label cannot include contact details, handles, URLs, or precise coordinates.",
     );
   }
 
@@ -607,6 +995,26 @@ function normalizeCreateProvenanceEdgeInput(
   };
 }
 
+function normalizeCreateLineageInvitationInput(
+  input: CreateLineageInvitationInput,
+): NormalizedCreateLineageInvitationInput {
+  return {
+    subjectPlantObjectId: normalizeRequiredText(
+      input.subjectPlantObjectId,
+      "Subject object",
+      80,
+    ),
+    pendingSourceLabel: normalizeLineagePendingSourceLabel(
+      input.pendingSourceLabel,
+    ),
+    clientMutationId: normalizeRequiredText(
+      input.clientMutationId,
+      "Client mutation id",
+      160,
+    ),
+  };
+}
+
 function normalizeResolveLineageClaimInput(
   input: ResolveLineageClaimInput,
 ): NormalizedResolveLineageClaimInput {
@@ -648,6 +1056,44 @@ async function readCreateProvenanceEdgeResult(
   };
 }
 
+async function readCreateLineageInvitationResult(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  edge: LineageProvenanceEdge,
+  isNewEdge: boolean,
+): Promise<CreateLineageInvitationResult> {
+  const subjectObject = await buildLineagePlantObjectByIdQuery(
+    executor,
+    scope,
+    edge.subject_plant_object_id,
+  ).executeTakeFirst();
+
+  if (!subjectObject) {
+    throw new Error("Lineage invitation subject object was not found.");
+  }
+
+  if (!edge.source_pending_identity_id) {
+    throw new Error("Lineage invitation pending identity was not found.");
+  }
+
+  const pendingIdentity = await executor
+    .selectFrom("lineage_pending_source_identities")
+    .selectAll()
+    .where("id", "=", edge.source_pending_identity_id)
+    .executeTakeFirst();
+
+  if (!pendingIdentity) {
+    throw new Error("Lineage invitation pending identity was not found.");
+  }
+
+  return {
+    edge,
+    subjectObject: mapPlantObjectOption(subjectObject),
+    pendingIdentity: mapPendingIdentityReadback(pendingIdentity, edge.id),
+    isNewEdge,
+  };
+}
+
 function assertExistingEdgeMatchesInput(
   edge: LineageProvenanceEdge,
   input: NormalizedCreateProvenanceEdgeInput,
@@ -661,6 +1107,21 @@ function assertExistingEdgeMatchesInput(
   ) {
     throw new Error(
       "Client mutation id already belongs to another provenance edge.",
+    );
+  }
+}
+
+function assertExistingInvitationEdgeMatchesInput(
+  edge: LineageProvenanceEdge,
+  input: NormalizedCreateLineageInvitationInput,
+) {
+  if (
+    edge.subject_plant_object_id !== input.subjectPlantObjectId ||
+    edge.source_kind !== "pending_identity" ||
+    edge.source_pending_identity_id === null
+  ) {
+    throw new Error(
+      "Client mutation id already belongs to another lineage invitation.",
     );
   }
 }
@@ -683,7 +1144,27 @@ function mapPlantObjectOption(row: {
   };
 }
 
-function normalizeSourceKind(value: string): LineageSourceKind {
+function mapPendingIdentityReadback(
+  pendingIdentity: LineagePendingSourceIdentity,
+  edgeId: string,
+): LineagePendingSourceIdentityReadback {
+  return {
+    id: pendingIdentity.id,
+    displayLabel: pendingIdentity.display_label,
+    inviteState:
+      pendingIdentity.invite_state as LineagePendingSourceInviteState,
+    invitePath: lineageInvitationClaimPath(
+      signLineageInviteToken({
+        pendingIdentityId: pendingIdentity.id,
+        edgeId,
+        createdAt: pendingIdentity.created_at,
+      }),
+    ),
+    createdAt: pendingIdentity.created_at,
+  };
+}
+
+function normalizeSourceKind(value: string): CreateProvenanceSourceKind {
   if (value === "own_object" || value === "source_reference") {
     return value;
   }
@@ -718,6 +1199,12 @@ function lineageClaimActionForDecision(
   decision: LineageClaimDecision,
 ): LineageClaimAuditAction {
   return decision === "confirmed" ? "confirm" : "decline";
+}
+
+function looksLikePrivateContactOrPreciseLocation(value: string) {
+  return /(@|https?:\/\/|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\+?\d[\d\s().-]{6,}\d|[-+]?\d{1,2}\.\d{3,}\s*,\s*[-+]?\d{1,3}\.\d{3,})/i.test(
+    value,
+  );
 }
 
 function normalizeRequiredText(

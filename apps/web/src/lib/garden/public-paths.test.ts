@@ -4,6 +4,7 @@ import {
   gardenFirstEntryHomepagePath,
   gardenFirstEntryInvitePath,
   gardenFirstEntryPreselectionPath,
+  lineageInvitationClaimPath,
   pilotInviteJoinPath,
   pilotInviteJoinUrl,
 } from "./public-paths";
@@ -41,6 +42,19 @@ describe("garden public paths", () => {
     expect(path).toBe(`/join?invite=${encodeURIComponent(token)}`);
     expect(path).not.toContain("email");
     expect(path).not.toContain("referrer");
+  });
+
+  it("builds a lineage invitation claim path with only the scoped token", () => {
+    const token = "v1.payload.signature";
+    const path = lineageInvitationClaimPath(token);
+
+    expect(path).toBe(
+      `/garden/lineage/invitations/claim?token=${encodeURIComponent(token)}`,
+    );
+    expect(path).not.toContain("email");
+    expect(path).not.toContain("phone");
+    expect(path).not.toContain("referrer");
+    expect(path).not.toContain("display");
   });
 
   it("builds a full invite URL from a base origin and token", () => {

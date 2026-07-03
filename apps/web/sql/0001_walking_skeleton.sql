@@ -1185,15 +1185,72 @@ create index if not exists journal_entry_object_mentions_owner_space_idx
 create index if not exists journal_entry_object_mentions_object_idx
   on journal_entry_object_mentions (owner_user_id, plant_object_id, journal_entry_id);
 
+-- Lineage pending source identities (OVE-124). These rows represent a
+-- non-user provenance source before they join and claim/confirm the edge.
+-- Store only internal ids, a bounded contact-free display label, enum state,
+-- and timestamps. Never store invite links, raw tokens, emails, phone numbers,
+-- URLs, referrers, IP/user-agent values, media keys, journal text, or precise
+-- location data here.
+create table if not exists lineage_pending_source_identities (
+  id uuid primary key default gen_random_uuid(),
+  created_by_user_id uuid,
+  display_label text not null check (
+    char_length(display_label) between 1 and 120
+  ),
+  invite_state text not null default 'pending' check (
+    invite_state in ('pending', 'claimed', 'declined', 'anonymized')
+  ),
+  claimed_by_user_id uuid,
+  claimed_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lineage_pending_source_identities_created_by_fkey'
+        and conrelid = 'lineage_pending_source_identities'::regclass
+    ) then
+      alter table lineage_pending_source_identities
+        add constraint lineage_pending_source_identities_created_by_fkey
+        foreign key (created_by_user_id) references "user"(id) on delete set null;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lineage_pending_source_identities_claimed_by_fkey'
+        and conrelid = 'lineage_pending_source_identities'::regclass
+    ) then
+      alter table lineage_pending_source_identities
+        add constraint lineage_pending_source_identities_claimed_by_fkey
+        foreign key (claimed_by_user_id) references "user"(id) on delete set null;
+    end if;
+  end if;
+end $$;
+
+create index if not exists lineage_pending_source_identities_creator_created_idx
+  on lineage_pending_source_identities (created_by_user_id, created_at desc)
+  where created_by_user_id is not null;
+
+create index if not exists lineage_pending_source_identities_claimed_created_idx
+  on lineage_pending_source_identities (claimed_by_user_id, created_at desc)
+  where claimed_by_user_id is not null;
+
 create table if not exists lineage_provenance_edges (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,
   subject_plant_object_id uuid not null,
   source_kind text not null check (
-    source_kind in ('own_object', 'source_reference')
+    source_kind in ('own_object', 'source_reference', 'pending_identity')
   ),
   source_plant_object_id uuid,
   source_owner_user_id uuid,
+  source_pending_identity_id uuid,
   source_reference_kind text check (
     source_reference_kind is null
     or source_reference_kind in (
@@ -1259,8 +1316,64 @@ create table if not exists lineage_provenance_edges (
   )
 );
 
+alter table lineage_provenance_edges
+  add column if not exists source_pending_identity_id uuid;
+
 do $$
 begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_source_kind_check'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      drop constraint lineage_provenance_edges_source_kind_check;
+  end if;
+
+  alter table lineage_provenance_edges
+    add constraint lineage_provenance_edges_source_kind_check
+    check (source_kind in ('own_object', 'source_reference', 'pending_identity'));
+
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_source_shape_check'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      drop constraint lineage_provenance_edges_source_shape_check;
+  end if;
+
+  alter table lineage_provenance_edges
+    add constraint lineage_provenance_edges_source_shape_check check (
+      (
+        source_kind = 'own_object'
+        and source_plant_object_id is not null
+        and source_owner_user_id is not null
+        and source_pending_identity_id is null
+        and source_reference_kind is null
+        and source_reference_label is null
+        and source_plant_object_id <> subject_plant_object_id
+      )
+      or (
+        source_kind = 'source_reference'
+        and source_plant_object_id is null
+        and source_owner_user_id is null
+        and source_pending_identity_id is null
+        and source_reference_kind is not null
+        and source_reference_label is not null
+      )
+      or (
+        source_kind = 'pending_identity'
+        and source_plant_object_id is null
+        and source_owner_user_id is null
+        and source_pending_identity_id is not null
+        and source_reference_kind is null
+        and source_reference_label is null
+      )
+    );
+
   if not exists (
     select 1
     from pg_constraint
@@ -1299,6 +1412,20 @@ begin
       on update cascade
       on delete restrict;
   end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edges_pending_identity_fkey'
+      and conrelid = 'lineage_provenance_edges'::regclass
+  ) then
+    alter table lineage_provenance_edges
+      add constraint lineage_provenance_edges_pending_identity_fkey
+      foreign key (source_pending_identity_id)
+      references lineage_pending_source_identities (id)
+      on update cascade
+      on delete restrict;
+  end if;
 end $$;
 
 create index if not exists lineage_provenance_edges_owner_subject_idx
@@ -1307,6 +1434,10 @@ create index if not exists lineage_provenance_edges_owner_subject_idx
 create index if not exists lineage_provenance_edges_owner_source_object_idx
   on lineage_provenance_edges (owner_user_id, source_plant_object_id, created_at desc)
   where source_plant_object_id is not null;
+
+create index if not exists lineage_provenance_edges_owner_pending_identity_idx
+  on lineage_provenance_edges (owner_user_id, source_pending_identity_id, created_at desc)
+  where source_pending_identity_id is not null;
 
 -- Lineage claim audit trail (OVE-123). Audit rows store only internal ids,
 -- bounded action/state enums, the active visibility policy, and timestamps.

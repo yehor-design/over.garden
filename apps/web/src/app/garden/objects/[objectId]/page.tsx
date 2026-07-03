@@ -37,6 +37,7 @@ import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   archiveJournalEntryAction,
+  createLineageInvitationAction,
   createProvenanceEdgeAction,
   publishJournalEntryAction,
   resolvePlantObjectCatalogAction,
@@ -413,7 +414,7 @@ function ProvenanceSection({
       </div>
 
       {writeEnabled ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-3">
           {provenancePanel.sourceObjectOptions.length > 0 ? (
             <form
               action={createProvenanceEdgeAction}
@@ -501,6 +502,39 @@ function ProvenanceSection({
               Record private source
             </button>
           </form>
+
+          <form
+            action={createLineageInvitationAction}
+            className="grid gap-3 rounded-md border border-border p-3"
+          >
+            <input type="hidden" name="objectId" value={objectId} />
+            <input
+              type="hidden"
+              name="clientMutationId"
+              value={crypto.randomUUID()}
+            />
+            <label className="grid gap-1 text-sm font-medium text-foreground">
+              Invited source label
+              <input
+                name="pendingSourceLabel"
+                required
+                maxLength={120}
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                placeholder="Maria's saved seeds"
+              />
+            </label>
+            <p className="text-xs leading-5 text-muted-foreground">
+              Creates a pending invite source. The link reveals details only
+              after sign-in; keep the label free of contact details, URLs,
+              handles, addresses, or coordinates.
+            </p>
+            <button
+              type="submit"
+              className={buttonVariants({ className: "justify-self-start" })}
+            >
+              Create source invite
+            </button>
+          </form>
         </div>
       ) : (
         <ClosedPilotWriteCallout context="follow-up" />
@@ -525,6 +559,24 @@ function ProvenanceSection({
               <p className="mt-2 text-xs text-muted-foreground">
                 {lineageConsentLabel(edge)} · {lineageVisibilityLabel(edge)}
               </p>
+              {edge.pendingIdentity ? (
+                <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                  <span className="text-xs text-muted-foreground">
+                    Invite state:{" "}
+                    {lineagePendingInviteStateLabel(
+                      edge.pendingIdentity.inviteState,
+                    )}
+                  </span>
+                  {edge.pendingIdentity.inviteState === "pending" ? (
+                    <Link
+                      href={edge.pendingIdentity.invitePath}
+                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                    >
+                      Open private invite
+                    </Link>
+                  ) : null}
+                </div>
+              ) : null}
             </li>
           ))}
         </ol>
@@ -627,6 +679,10 @@ function lineageEdgeTitle(edge: LineageProvenanceEdgeReadback) {
     return `Came from ${lineageObjectOptionLabel(edge.sourceObject)}`;
   }
 
+  if (edge.pendingIdentity) {
+    return `Invite pending for ${edge.pendingIdentity.displayLabel}`;
+  }
+
   return `Came from ${edge.sourceReferenceLabel ?? "private source"} · ${lineageSourceReferenceKindLabel(
     edge.sourceReferenceKind,
   )}`;
@@ -651,6 +707,10 @@ function lineageSourceReferenceKindLabel(
 }
 
 function lineageConsentLabel(edge: LineageProvenanceEdgeReadback) {
+  if (edge.pendingIdentity?.inviteState === "pending") {
+    return "Pending invited source";
+  }
+
   switch (edge.consentState) {
     case "confirmed":
       return "Confirmed provenance";
@@ -665,6 +725,10 @@ function lineageConsentLabel(edge: LineageProvenanceEdgeReadback) {
 }
 
 function lineageVisibilityLabel(edge: LineageProvenanceEdgeReadback) {
+  if (edge.pendingIdentity?.inviteState === "pending") {
+    return "No public contribution before claim";
+  }
+
   switch (edge.consentState) {
     case "confirmed":
       return "Eligible for lineage readback";
@@ -675,5 +739,23 @@ function lineageVisibilityLabel(edge: LineageProvenanceEdgeReadback) {
     case "proposed":
     default:
       return "Owner-only until confirmed";
+  }
+}
+
+function lineagePendingInviteStateLabel(
+  value: NonNullable<
+    LineageProvenanceEdgeReadback["pendingIdentity"]
+  >["inviteState"],
+) {
+  switch (value) {
+    case "claimed":
+      return "claimed";
+    case "declined":
+      return "declined";
+    case "anonymized":
+      return "anonymized";
+    case "pending":
+    default:
+      return "pending";
   }
 }

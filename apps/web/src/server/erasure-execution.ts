@@ -144,6 +144,11 @@ export async function executeApprovedErasureRequest(
       requesterUserId,
       now,
     }).execute();
+    await buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery(
+      trx,
+      requesterUserId,
+      now,
+    ).execute();
     await buildAnonymizeLineageClaimAuditEventsForErasureQuery(
       trx,
       requesterUserId,
@@ -405,6 +410,58 @@ export function buildAnonymizeLineageProvenanceEdgesForErasureQuery(
       eb.or([
         eb("owner_user_id", "=", input.requesterUserId),
         eb("source_owner_user_id", "=", input.requesterUserId),
+        eb.exists(
+          eb
+            .selectFrom("lineage_pending_source_identities")
+            .select(sql`1`.as("one"))
+            .whereRef(
+              "lineage_pending_source_identities.id",
+              "=",
+              "lineage_provenance_edges.source_pending_identity_id",
+            )
+            .where((innerEb) =>
+              innerEb.or([
+                innerEb(
+                  "lineage_pending_source_identities.created_by_user_id",
+                  "=",
+                  input.requesterUserId,
+                ),
+                innerEb(
+                  "lineage_pending_source_identities.claimed_by_user_id",
+                  "=",
+                  input.requesterUserId,
+                ),
+              ]),
+            ),
+        ),
+      ]),
+    );
+}
+
+export function buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("lineage_pending_source_identities")
+    .set({
+      display_label: "Erased pending source",
+      invite_state: "anonymized",
+      created_by_user_id: sql<string | null>`case
+        when created_by_user_id = ${requesterUserId} then null
+        else created_by_user_id
+      end`,
+      claimed_by_user_id: sql<string | null>`case
+        when claimed_by_user_id = ${requesterUserId} then null
+        else claimed_by_user_id
+      end`,
+      updated_at: now,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("created_by_user_id", "=", requesterUserId),
+        eb("claimed_by_user_id", "=", requesterUserId),
       ]),
     );
 }

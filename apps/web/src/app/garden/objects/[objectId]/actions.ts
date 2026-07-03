@@ -22,7 +22,10 @@ import {
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
-import { createProvenanceEdge } from "@/server/lineage-repository";
+import {
+  createLineageInvitation,
+  createProvenanceEdge,
+} from "@/server/lineage-repository";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 import { enqueueJob } from "@/server/queue";
 import { scopedToUser } from "@/server/request-scope";
@@ -90,6 +93,18 @@ export async function createProvenanceEdgeAction(formData: FormData) {
   if (result.sourceObject) {
     revalidatePath(`/garden/objects/${result.sourceObject.id}`);
   }
+}
+
+export async function createLineageInvitationAction(formData: FormData) {
+  const scope = await requireWriteEligibleRequestScope();
+  const result = await createLineageInvitation(scope, {
+    subjectPlantObjectId: String(formData.get("objectId") ?? ""),
+    pendingSourceLabel: String(formData.get("pendingSourceLabel") ?? ""),
+    clientMutationId: String(formData.get("clientMutationId") ?? ""),
+  });
+
+  revalidatePath("/garden");
+  revalidatePath(`/garden/objects/${result.subjectObject.id}`);
 }
 
 export async function publishJournalEntryAction(formData: FormData) {

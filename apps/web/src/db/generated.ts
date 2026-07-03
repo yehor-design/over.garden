@@ -266,6 +266,17 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface LineagePendingSourceIdentities {
+  claimed_at: Timestamp | null;
+  claimed_by_user_id: string | null;
+  created_at: Generated<Timestamp>;
+  created_by_user_id: string | null;
+  display_label: string;
+  id: Generated<string>;
+  invite_state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface LineageProvenanceEdgeAuditEvents {
   action: string;
   actor_user_id: string | null;
@@ -288,6 +299,7 @@ export interface LineageProvenanceEdges {
   owner_user_id: string;
   source_kind: string;
   source_owner_user_id: string | null;
+  source_pending_identity_id: string | null;
   source_plant_object_id: string | null;
   source_reference_kind: string | null;
   source_reference_label: string | null;
@@ -421,6 +433,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;
   lineage_provenance_edges: LineageProvenanceEdges;
   media_assets: MediaAssets;

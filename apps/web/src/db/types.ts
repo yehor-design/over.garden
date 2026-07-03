@@ -19,6 +19,7 @@ import type {
   JournalEntries as JournalEntriesTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JsonValue,
+  LineagePendingSourceIdentities as LineagePendingSourceIdentitiesTable,
   LineageProvenanceEdgeAuditEvents as LineageProvenanceEdgeAuditEventsTable,
   LineageProvenanceEdges as LineageProvenanceEdgesTable,
   MediaAssets as MediaAssetsTable,
@@ -72,7 +73,10 @@ export type AnalyticsEventName =
   | "own_record_revisited"
   | "follow_up_value_pulse";
 export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
-export type LineageSourceKind = "own_object" | "source_reference";
+export type LineageSourceKind =
+  | "own_object"
+  | "source_reference"
+  | "pending_identity";
 export type LineageSourceReferenceKind =
   | "person"
   | "seed_packet"
@@ -91,6 +95,11 @@ export type LineageErasureState =
   | "subject_tombstone"
   | "anonymized";
 export type LineageClaimAuditAction = "confirm" | "decline";
+export type LineagePendingSourceInviteState =
+  | "pending"
+  | "claimed"
+  | "declined"
+  | "anonymized";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -146,6 +155,10 @@ export type JournalEntryObjectMention =
   Selectable<JournalEntryObjectMentionsTable>;
 export type NewJournalEntryObjectMention =
   Insertable<JournalEntryObjectMentionsTable>;
+export type LineagePendingSourceIdentity =
+  Selectable<LineagePendingSourceIdentitiesTable>;
+export type NewLineagePendingSourceIdentity =
+  Insertable<LineagePendingSourceIdentitiesTable>;
 export type LineageProvenanceEdge =
   Selectable<LineageProvenanceEdgesTable>;
 export type NewLineageProvenanceEdge =

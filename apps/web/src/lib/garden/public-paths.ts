@@ -24,6 +24,11 @@ export function pilotInviteJoinUrl(token: string, baseUrl: string): string {
   return `${normalizedBase}${pilotInviteJoinPath(token)}`;
 }
 
+export function lineageInvitationClaimPath(token: string): string {
+  const params = new URLSearchParams({ token });
+  return `/garden/lineage/invitations/claim?${params.toString()}`;
+}
+
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,
