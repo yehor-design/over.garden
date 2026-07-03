@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -35,10 +36,18 @@ import {
   listOfflineMutations,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
+  type OfflinePhotoIntent,
 } from "@/lib/offline/queue";
 import {
-  buildFollowUpValuePulseReadbackUrl,
-} from "@/lib/garden/follow-up-value-pulse";
+  deleteOfflineDraft,
+  followUpEntryDraftId,
+  getOfflineDraft,
+  hasPersistableFollowUpDraft,
+  upsertOfflineDraft,
+  type FollowUpEntryDraftFields,
+  type FollowUpEntryDraftPayload,
+} from "@/lib/offline/drafts";
+import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
@@ -60,13 +69,19 @@ export function FollowUpEntryComposer({
   initialClientMutationId,
 }: FollowUpEntryComposerProps) {
   const router = useRouter();
-  const [clientMutationId] = useState(initialClientMutationId);
-  const [draft, setDraft] = useState({
+  const draftPersistencePausedRef = useRef(false);
+  const draftId = followUpEntryDraftId(objectId);
+  const [clientMutationId, setClientMutationId] = useState(
+    initialClientMutationId,
+  );
+  const [draft, setDraft] = useState<FollowUpEntryDraftFields>({
     title: "",
     body: "",
     entryDate: today,
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [storedPhotoIntent, setStoredPhotoIntent] =
+    useState<OfflinePhotoIntent | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine,
@@ -76,6 +91,7 @@ export function FollowUpEntryComposer({
     "Save a dated follow-up on this existing plant.",
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   const refreshQueue = useCallback(async () => {
     const localMutations = await listOfflineMutations([
@@ -120,13 +136,73 @@ export function FollowUpEntryComposer({
     };
   }, [refreshQueue]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    void getOfflineDraft<FollowUpEntryDraftPayload>(draftId).then(
+      (storedDraft) => {
+        if (cancelled) return;
+
+        if (storedDraft && storedDraft.payload.plantObjectId === objectId) {
+          setClientMutationId(storedDraft.payload.clientMutationId);
+          setDraft(storedDraft.payload.draft);
+          setStoredPhotoIntent(storedDraft.payload.photoIntent);
+          setMessage("Draft restored on this device.");
+        }
+
+        setDraftHydrated(true);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [draftId, objectId]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+
+    const payload: FollowUpEntryDraftPayload = {
+      clientMutationId,
+      plantObjectId: objectId,
+      draft,
+      photoIntent: storedPhotoIntent,
+    };
+
+    const timer = window.setTimeout(() => {
+      if (draftPersistencePausedRef.current) return;
+
+      if (hasPersistableFollowUpDraft(payload, today)) {
+        void upsertOfflineDraft({
+          id: draftId,
+          kind: "follow_up_entry",
+          payload,
+        });
+      } else {
+        void deleteOfflineDraft(draftId);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    clientMutationId,
+    draft,
+    draftHydrated,
+    draftId,
+    objectId,
+    storedPhotoIntent,
+    today,
+  ]);
+
   const photoHelp = useMemo(() => {
     return photoHelpText({
-      fileName: photoFile?.name ?? null,
+      fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
       isOnline,
       photoError,
     });
-  }, [isOnline, photoError, photoFile]);
+  }, [isOnline, photoError, photoFile, storedPhotoIntent]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -142,7 +218,9 @@ export function FollowUpEntryComposer({
       payload = await buildPayload();
     } catch {
       setSubmitState("failed");
-      setMessage("We couldn't read that photo on this device. Choose it again.");
+      setMessage(
+        "We couldn't read that photo on this device. Choose it again.",
+      );
       return;
     }
 
@@ -158,6 +236,8 @@ export function FollowUpEntryComposer({
       const result = await submitJournalEntryPayload(payload, {
         idempotencyKey: clientMutationId,
       });
+      draftPersistencePausedRef.current = true;
+      await deleteOfflineDraft(draftId);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       router.push(
@@ -183,6 +263,8 @@ export function FollowUpEntryComposer({
     });
 
     setSubmitState("queued");
+    draftPersistencePausedRef.current = true;
+    await deleteOfflineDraft(draftId);
     setMessage(
       mutation.status === "queued"
         ? localSavedMessage("follow-up")
@@ -197,6 +279,8 @@ export function FollowUpEntryComposer({
 
     try {
       const result = await syncOfflineJournalEntryMutation(mutation);
+      draftPersistencePausedRef.current = true;
+      await deleteOfflineDraft(draftId);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
@@ -219,7 +303,7 @@ export function FollowUpEntryComposer({
   async function buildPayload(): Promise<OfflineJournalEntryPayload> {
     const photoIntent = photoFile
       ? await createOfflinePhotoIntent(photoFile)
-      : null;
+      : storedPhotoIntent;
 
     return {
       target: "plant_object_entry",
@@ -233,25 +317,41 @@ export function FollowUpEntryComposer({
     };
   }
 
-  function updateDraft(field: keyof typeof draft, value: string) {
+  function updateDraft<K extends keyof FollowUpEntryDraftFields>(
+    field: K,
+    value: FollowUpEntryDraftFields[K],
+  ) {
+    draftPersistencePausedRef.current = false;
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
   function handlePhotoChange(file: File | undefined) {
+    draftPersistencePausedRef.current = false;
     setPhotoError(null);
 
     if (!file) {
       setPhotoFile(null);
+      setStoredPhotoIntent(null);
       return;
     }
 
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       setPhotoFile(null);
+      setStoredPhotoIntent(null);
       setPhotoError("Use a JPEG, PNG, or WebP photo.");
       return;
     }
 
     setPhotoFile(file);
+    void createOfflinePhotoIntent(file)
+      .then((intent) => setStoredPhotoIntent(intent))
+      .catch(() => {
+        setPhotoFile(null);
+        setStoredPhotoIntent(null);
+        setPhotoError(
+          "We couldn't keep that photo on this device. Choose it again.",
+        );
+      });
   }
 
   return (

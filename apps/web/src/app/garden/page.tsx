@@ -20,6 +20,7 @@ import { listMyPlantObjects } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
+import { GardenDraftResumePanel } from "./draft-resume-panel";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel, SocialAccountLinkPanel } from "./garden-auth-panel";
 
@@ -106,117 +107,121 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
       {userId ? (
         writeAccess.invited ? (
-          <div className="grid gap-6 lg:grid-cols-3">
-            {hasObjects ? (
-              <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
+          <>
+            <GardenDraftResumePanel />
+            <div className="grid gap-6 lg:grid-cols-3">
+              {hasObjects ? (
+                <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
+                  <div className="flex flex-col gap-1">
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Continue an object
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Open an existing object to add the next dated entry,
+                      including recovery when the connection is unstable and an
+                      optional photo.
+                    </p>
+                  </div>
+
+                  <ul className="grid gap-3 sm:grid-cols-2">
+                    {objects.map((object) => (
+                      <li key={object.id}>
+                        <Link
+                          href={`/garden/objects/${object.id}`}
+                          className="flex h-full flex-col justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
+                        >
+                          <span className="flex flex-col gap-1">
+                            <span className="text-base font-semibold text-foreground">
+                              {object.displayName}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {object.spaceDisplayName}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {plantObjectKindLabel(object.objectKind)} ·{" "}
+                              {object.varietyText
+                                ? `${catalogIdentityLabel(
+                                    object.catalogKind,
+                                    object.objectKind,
+                                  )}: ${object.varietyText}`
+                                : "Unknown catalog match"}{" "}
+                              · {varietyStateLabel(object.varietyState)}
+                            </span>
+                          </span>
+                          <span className="text-sm font-medium text-primary">
+                            Add follow-up
+                          </span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+
+              <section
+                id="first-entry-composer"
+                className={`flex flex-col gap-4 rounded-lg border border-border p-4 ${
+                  hasObjects ? "" : "lg:col-span-2"
+                }`}
+              >
                 <div className="flex flex-col gap-1">
                   <h2 className="text-lg font-semibold text-foreground">
-                    Continue an object
+                    {hasObjects ? "Start another object" : "First entry"}
                   </h2>
                   <p className="text-sm text-muted-foreground">
-                    Open an existing object to add the next dated entry,
-                    including recovery when the connection is unstable and an
-                    optional photo.
+                    {hasObjects
+                      ? "Create a new object only when you are starting a separate living record."
+                      : "Save the first note with a catalog match, your own catalog name, or no match yet."}
                   </p>
                 </div>
 
-                <ul className="grid gap-3 sm:grid-cols-2">
-                  {objects.map((object) => (
-                    <li key={object.id}>
-                      <Link
-                        href={`/garden/objects/${object.id}`}
-                        className="flex h-full flex-col justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
-                      >
-                        <span className="flex flex-col gap-1">
-                          <span className="text-base font-semibold text-foreground">
+                <FirstEntryComposer
+                  key={initialCatalogItem?.id ?? "first-entry"}
+                  today={today}
+                  initialClientMutationId={crypto.randomUUID()}
+                  initialCatalogItem={initialCatalogItem}
+                  activationSource={activationSource}
+                />
+              </section>
+
+              <aside className="flex flex-col gap-3">
+                <h2 className="text-base font-semibold text-foreground">
+                  Living objects
+                </h2>
+                {!hasObjects ? (
+                  <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
+                    No living objects yet. Save the first entry to create one.
+                  </p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {objects.map((object) => (
+                      <li key={object.id}>
+                        <Link
+                          href={`/garden/objects/${object.id}`}
+                          className="block rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
+                        >
+                          <span className="block text-sm font-medium text-foreground">
                             {object.displayName}
                           </span>
-                          <span className="text-sm text-muted-foreground">
-                            {object.spaceDisplayName}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="mt-1 block text-xs text-muted-foreground">
                             {plantObjectKindLabel(object.objectKind)} ·{" "}
-                            {object.varietyText
-                              ? `${catalogIdentityLabel(
-                                  object.catalogKind,
-                                  object.objectKind,
-                                )}: ${object.varietyText}`
-                              : "Unknown catalog match"}{" "}
-                            · {varietyStateLabel(object.varietyState)}
+                            {object.spaceDisplayName}
+                            {` · ${
+                              object.varietyText
+                                ? `${catalogIdentityLabel(object.catalogKind)}: ${
+                                    object.varietyText
+                                  }`
+                                : "Unknown"
+                            }`}
                           </span>
-                        </span>
-                        <span className="text-sm font-medium text-primary">
-                          Add follow-up
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-
-            <section
-              className={`flex flex-col gap-4 rounded-lg border border-border p-4 ${
-                hasObjects ? "" : "lg:col-span-2"
-              }`}
-            >
-              <div className="flex flex-col gap-1">
-                <h2 className="text-lg font-semibold text-foreground">
-                  {hasObjects ? "Start another object" : "First entry"}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {hasObjects
-                    ? "Create a new object only when you are starting a separate living record."
-                    : "Save the first note with a catalog match, your own catalog name, or no match yet."}
-                </p>
-              </div>
-
-              <FirstEntryComposer
-                key={initialCatalogItem?.id ?? "first-entry"}
-                today={today}
-                initialClientMutationId={crypto.randomUUID()}
-                initialCatalogItem={initialCatalogItem}
-                activationSource={activationSource}
-              />
-            </section>
-
-            <aside className="flex flex-col gap-3">
-              <h2 className="text-base font-semibold text-foreground">
-                Living objects
-              </h2>
-              {!hasObjects ? (
-                <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
-                  No living objects yet. Save the first entry to create one.
-                </p>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {objects.map((object) => (
-                    <li key={object.id}>
-                      <Link
-                        href={`/garden/objects/${object.id}`}
-                        className="block rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
-                      >
-                        <span className="block text-sm font-medium text-foreground">
-                          {object.displayName}
-                        </span>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {plantObjectKindLabel(object.objectKind)} ·{" "}
-                          {object.spaceDisplayName}
-                          {` · ${
-                            object.varietyText
-                              ? `${catalogIdentityLabel(object.catalogKind)}: ${
-                                  object.varietyText
-                                }`
-                              : "Unknown"
-                          }`}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </aside>
-          </div>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </aside>
+            </div>
+          </>
         ) : (
           <ClosedPilotWriteCallout />
         )

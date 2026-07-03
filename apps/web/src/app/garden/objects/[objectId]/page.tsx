@@ -195,7 +195,10 @@ export default async function PlantObjectReadbackPage({
         />
       ) : null}
 
-      <section className="grid gap-4 rounded-lg border border-border p-4">
+      <section
+        id="follow-up-composer"
+        className="grid gap-4 rounded-lg border border-border p-4"
+      >
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-foreground">
             Add dated entry

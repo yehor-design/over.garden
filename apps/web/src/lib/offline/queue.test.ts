@@ -15,6 +15,7 @@ import {
 describe("offline queue", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
+    await offlineDb?.drafts.clear();
   });
 
   it("stores queued mutations with idempotency keys", async () => {

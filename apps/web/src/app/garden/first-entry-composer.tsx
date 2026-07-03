@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type FormEvent,
 } from "react";
@@ -54,7 +55,17 @@ import {
   type OfflineFirstPlantEntryPayload,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
+  type OfflinePhotoIntent,
 } from "@/lib/offline/queue";
+import {
+  deleteOfflineDraft,
+  FIRST_ENTRY_DRAFT_ID,
+  getOfflineDraft,
+  hasPersistableFirstEntryDraft,
+  upsertOfflineDraft,
+  type FirstEntryDraftFields,
+  type FirstEntryDraftPayload,
+} from "@/lib/offline/drafts";
 import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
@@ -81,8 +92,11 @@ export function FirstEntryComposer({
   activationSource = null,
 }: FirstEntryComposerProps) {
   const router = useRouter();
-  const [clientMutationId] = useState(initialClientMutationId);
-  const [draft, setDraft] = useState({
+  const draftPersistencePausedRef = useRef(false);
+  const [clientMutationId, setClientMutationId] = useState(
+    initialClientMutationId,
+  );
+  const [draft, setDraft] = useState<FirstEntryDraftFields>({
     spaceName: "",
     plantName: "",
     objectKind: "plant" as PlantObjectKind,
@@ -105,6 +119,8 @@ export function FirstEntryComposer({
   >(null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [storedPhotoIntent, setStoredPhotoIntent] =
+    useState<OfflinePhotoIntent | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? true : navigator.onLine,
@@ -114,6 +130,7 @@ export function FirstEntryComposer({
     "Private by default. You choose later whether an entry becomes public.",
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
 
   const refreshQueue = useCallback(async () => {
     const localMutations = await listOfflineMutations([
@@ -153,6 +170,78 @@ export function FirstEntryComposer({
       window.removeEventListener("offline", handleOffline);
     };
   }, [refreshQueue]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID).then(
+      (storedDraft) => {
+        if (cancelled) return;
+
+        if (storedDraft) {
+          setClientMutationId(storedDraft.payload.clientMutationId);
+          setDraft(storedDraft.payload.draft);
+          setCatalogQuery(
+            storedDraft.payload.catalogQuery ||
+              storedDraft.payload.selectedCatalogItem?.displayName ||
+              "",
+          );
+          setSelectedCatalogItem(storedDraft.payload.selectedCatalogItem);
+          setUserAddedCatalogName(storedDraft.payload.userAddedCatalogName);
+          setStoredPhotoIntent(storedDraft.payload.photoIntent);
+          setMessage("Draft restored on this device.");
+        }
+
+        setDraftHydrated(true);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+
+    const payload: FirstEntryDraftPayload = {
+      clientMutationId,
+      draft,
+      catalogQuery,
+      selectedCatalogItem,
+      userAddedCatalogName,
+      activationSource,
+      photoIntent: storedPhotoIntent,
+    };
+
+    const timer = window.setTimeout(() => {
+      if (draftPersistencePausedRef.current) return;
+
+      if (hasPersistableFirstEntryDraft(payload, today)) {
+        void upsertOfflineDraft({
+          id: FIRST_ENTRY_DRAFT_ID,
+          kind: "first_entry",
+          payload,
+        });
+      } else {
+        void deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    activationSource,
+    catalogQuery,
+    clientMutationId,
+    draft,
+    draftHydrated,
+    selectedCatalogItem,
+    storedPhotoIntent,
+    today,
+    userAddedCatalogName,
+  ]);
 
   useEffect(() => {
     const query = catalogQuery.trim();
@@ -198,11 +287,11 @@ export function FirstEntryComposer({
 
   const photoHelp = useMemo(() => {
     return photoHelpText({
-      fileName: photoFile?.name ?? null,
+      fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
       isOnline,
       photoError,
     });
-  }, [isOnline, photoError, photoFile]);
+  }, [isOnline, photoError, photoFile, storedPhotoIntent]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -236,6 +325,8 @@ export function FirstEntryComposer({
       const result = await submitJournalEntryPayload(payload, {
         idempotencyKey: clientMutationId,
       });
+      draftPersistencePausedRef.current = true;
+      await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       router.push(result.readbackUrl);
@@ -253,6 +344,8 @@ export function FirstEntryComposer({
     });
 
     setSubmitState("queued");
+    draftPersistencePausedRef.current = true;
+    await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
     setMessage(
       mutation.status === "queued"
         ? localSavedMessage("entry")
@@ -267,6 +360,8 @@ export function FirstEntryComposer({
 
     try {
       const result = await syncOfflineJournalEntryMutation(mutation);
+      draftPersistencePausedRef.current = true;
+      await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
@@ -281,7 +376,7 @@ export function FirstEntryComposer({
   async function buildPayload(): Promise<OfflineJournalEntryPayload> {
     const photoIntent = photoFile
       ? await createOfflinePhotoIntent(photoFile)
-      : null;
+      : storedPhotoIntent;
 
     return {
       target: "first_plant_entry",
@@ -303,11 +398,16 @@ export function FirstEntryComposer({
     };
   }
 
-  function updateDraft(field: keyof typeof draft, value: string) {
+  function updateDraft<K extends keyof FirstEntryDraftFields>(
+    field: K,
+    value: FirstEntryDraftFields[K],
+  ) {
+    draftPersistencePausedRef.current = false;
     setDraft((current) => ({ ...current, [field]: value }));
   }
 
   function updateLocationVisibility(value: string) {
+    draftPersistencePausedRef.current = false;
     setDraft((current) => ({
       ...current,
       locationVisibility: value === "region" ? "region" : "hidden",
@@ -316,6 +416,7 @@ export function FirstEntryComposer({
   }
 
   function updateCatalogQuery(value: string) {
+    draftPersistencePausedRef.current = false;
     setCatalogQuery(value);
 
     if (selectedCatalogItem && value !== selectedCatalogItem.displayName) {
@@ -333,6 +434,7 @@ export function FirstEntryComposer({
   }
 
   function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
+    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(suggestion);
     setUserAddedCatalogName(null);
     setCatalogQuery(suggestion.displayName);
@@ -351,6 +453,7 @@ export function FirstEntryComposer({
     const displayName = catalogQuery.trim().replace(/\s+/g, " ");
     if (displayName.length < 1) return;
 
+    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(displayName);
     setCatalogQuery(displayName);
@@ -359,6 +462,7 @@ export function FirstEntryComposer({
   }
 
   function chooseUnknownCatalog() {
+    draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(null);
     setCatalogQuery("");
@@ -367,20 +471,32 @@ export function FirstEntryComposer({
   }
 
   function handlePhotoChange(file: File | undefined) {
+    draftPersistencePausedRef.current = false;
     setPhotoError(null);
 
     if (!file) {
       setPhotoFile(null);
+      setStoredPhotoIntent(null);
       return;
     }
 
     if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
       setPhotoFile(null);
+      setStoredPhotoIntent(null);
       setPhotoError("Use a JPEG, PNG, or WebP photo.");
       return;
     }
 
     setPhotoFile(file);
+    void createOfflinePhotoIntent(file)
+      .then((intent) => setStoredPhotoIntent(intent))
+      .catch(() => {
+        setPhotoFile(null);
+        setStoredPhotoIntent(null);
+        setPhotoError(
+          "We couldn't keep that photo on this device. Choose it again.",
+        );
+      });
   }
 
   return (

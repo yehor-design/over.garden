@@ -26,6 +26,7 @@ const payload: OfflineJournalEntryPayload = {
 describe("offline journal entry sync", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
+    await offlineDb?.drafts.clear();
     vi.unstubAllGlobals();
   });
 
@@ -277,6 +278,72 @@ describe("offline journal entry sync", () => {
     expect(
       (failed?.payload as OfflineJournalEntryPayload).photoIntent?.fileName,
     ).toBe("tomato.jpg");
+  });
+
+  it("retries a failed mutation with the same canonical idempotency key", async () => {
+    const requests: FirstPlantEntryRequest[] = [];
+    let attempt = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe("/api/garden/entries");
+        requests.push(JSON.parse(String(init?.body)) as FirstPlantEntryRequest);
+        attempt += 1;
+
+        if (attempt === 1) {
+          return Response.json(
+            { error: "Temporary network edge failure." },
+            { status: 503 },
+          );
+        }
+
+        return Response.json({
+          space: {
+            id: "space-1",
+            displayName: "Balcony",
+            locationVisibility: "hidden",
+          },
+          plantObject: {
+            id: "object-1",
+            displayName: "Cherry tomato",
+            objectKind: "plant",
+            catalogItemId: "00000000-0000-4000-8000-000000000101",
+            varietyText: "Помідор чері",
+            varietyState: "selected",
+            locationVisibility: "hidden",
+          },
+          entry: {
+            id: "entry-1",
+            title: "First flowers",
+            body: "Two new flower clusters.",
+            entryDate: "2026-06-26",
+            clientMutationId: "queue-entry-id",
+          },
+          readbackUrl: "/garden/objects/object-1",
+        });
+      }),
+    );
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { ...payload, syncStatus: "offline_queued" },
+      idempotencyKey: "queue-entry-id",
+    });
+
+    await expect(syncOfflineJournalEntryMutation(mutation)).rejects.toThrow(
+      "Temporary network edge failure.",
+    );
+    const failed = await getOfflineMutation(mutation.id);
+    if (!failed) throw new Error("Expected failed mutation to remain stored.");
+
+    const result = await syncOfflineJournalEntryMutation(failed);
+    const synced = await getOfflineMutation(mutation.id);
+
+    expect(requests).toHaveLength(2);
+    expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
+    expect(requests[1]?.clientMutationId).toBe("queue-entry-id");
+    expect(requests[1]?.syncStatus).toBe("offline_synced");
+    expect(result.readbackUrl).toBe("/garden/objects/object-1");
+    expect(synced?.status).toBe("synced");
   });
 
   it("stores processed media before final entry create so retry reuses it", async () => {

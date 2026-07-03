@@ -66,13 +66,28 @@ export interface OfflineMutation {
   syncResult?: unknown;
 }
 
+export type OfflineDraftKind = "first_entry" | "follow_up_entry";
+
+export interface OfflineDraftRecord<TPayload = unknown> {
+  id: string;
+  kind: OfflineDraftKind;
+  payload: TPayload;
+  createdAt: number;
+  updatedAt: number;
+}
+
 class OverGardenOfflineDb extends Dexie {
   mutations!: Table<OfflineMutation, string>;
+  drafts!: Table<OfflineDraftRecord, string>;
 
   constructor() {
     super("overgarden-offline");
     this.version(1).stores({
       mutations: "id, kind, status, idempotencyKey, createdAt, updatedAt",
+    });
+    this.version(2).stores({
+      mutations: "id, kind, status, idempotencyKey, createdAt, updatedAt",
+      drafts: "id, kind, createdAt, updatedAt",
     });
   }
 }
