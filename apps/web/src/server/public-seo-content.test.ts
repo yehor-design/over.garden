@@ -13,44 +13,42 @@ import {
 
 describe("public SEO/AEO content foundation", () => {
   it("exposes authored content surfaces that are eligible for the sitemap", () => {
-    expect(listIndexableAuthoredPublicContentSitemapEntries()).toEqual([
-      {
-        kind: "editorial_blog",
-        path: "/blog",
-        changeFrequency: "weekly",
-        priority: 0.7,
-      },
-      {
-        kind: "editorial_blog",
-        path: "/blog/ai-garden-advice-vs-real-garden-proof",
-        changeFrequency: "monthly",
-        priority: 0.65,
-      },
-      {
-        kind: "guide",
-        path: "/guides/start-a-living-plant-record",
-        changeFrequency: "monthly",
-        priority: 0.65,
-      },
-      {
-        kind: "aeo_answer",
-        path: "/answers/why-are-tomato-leaves-yellow",
-        changeFrequency: "monthly",
-        priority: 0.6,
-      },
-      {
-        kind: "marketing_landing",
-        path: "/markets/ukraine",
-        changeFrequency: "monthly",
-        priority: 0.65,
-      },
-      {
-        kind: "marketing_landing",
-        path: "/markets/bulgaria",
-        changeFrequency: "monthly",
-        priority: 0.65,
-      },
+    const entries = listIndexableAuthoredPublicContentSitemapEntries();
+    const paths = entries.map((entry) => entry.path);
+
+    expect(paths).toEqual([
+      "/uk/blog",
+      "/bg/blog",
+      "/ru/blog",
+      "/uk/blog/ai-garden-advice-vs-real-garden-proof",
+      "/bg/blog/ai-garden-advice-vs-real-garden-proof",
+      "/ru/blog/ai-garden-advice-vs-real-garden-proof",
+      "/uk/guides/start-a-living-plant-record",
+      "/bg/guides/start-a-living-plant-record",
+      "/ru/guides/start-a-living-plant-record",
+      "/uk/answers/why-are-tomato-leaves-yellow",
+      "/bg/answers/why-are-tomato-leaves-yellow",
+      "/ru/answers/why-are-tomato-leaves-yellow",
+      "/uk/markets/ukraine",
+      "/ru/markets/ukraine",
+      "/bg/markets/bulgaria",
+      "/ru/markets/bulgaria",
+      "/uk/markets/bulgaria",
     ]);
+    expect(entries).toContainEqual({
+      kind: "editorial_blog",
+      locale: "uk",
+      path: "/uk/blog",
+      changeFrequency: "weekly",
+      priority: 0.7,
+    });
+    expect(entries).toContainEqual({
+      kind: "marketing_landing",
+      locale: "bg",
+      path: "/bg/markets/bulgaria",
+      changeFrequency: "monthly",
+      priority: 0.65,
+    });
   });
 
   it("keeps the authored public content manifest free of private payload surfaces", () => {
@@ -91,7 +89,7 @@ describe("public SEO/AEO content foundation", () => {
     const answerPage = getAnswerPage("why-are-tomato-leaves-yellow");
     expect(answerPage).not.toBeNull();
 
-    const jsonLd = buildAnswerPageJsonLd(answerPage!);
+    const jsonLd = buildAnswerPageJsonLd(answerPage!, "bg");
 
     expect(jsonLd).toMatchObject({
       "@context": "https://schema.org",
@@ -99,7 +97,8 @@ describe("public SEO/AEO content foundation", () => {
         {
           "@type": "WebPage",
           name: "Why are tomato leaves turning yellow?",
-          inLanguage: "en",
+          inLanguage: "bg",
+          url: "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",
         },
         {
           "@type": "FAQPage",

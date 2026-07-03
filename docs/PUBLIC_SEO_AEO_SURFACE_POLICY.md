@@ -3,7 +3,7 @@
 Status: current implementation policy
 Date: 2026-07-03
 Owner: founder/operator
-Linear: OVE-115, OVE-116
+Linear: OVE-115, OVE-116, OVE-117
 
 ## Purpose
 
@@ -24,9 +24,10 @@ The source of truth is `apps/web/src/server/public-surface-indexing-policy.ts`.
 Current decisions:
 
 - Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
-- The existing homepage `/` is the first authored marketing landing surface and is included in the sitemap.
+- The localized homepages `/uk`, `/bg`, and `/ru` are the first authored marketing landing surfaces included in the sitemap.
 - OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
-- The UA/BG market routes are live in English for the MVP content foundation; locale-specific `/uk/...` and `/bg/...` routes, hreflang, and language switching remain the OVE-117 localization foundation handoff.
+- OVE-117 moves the canonical public content routes into language folders: `/uk`, `/bg`, and `/ru` for home/blog/guide/answer/static surfaces, with market-aware availability for `/uk/markets/ukraine`, `/ru/markets/ukraine`, `/bg/markets/bulgaria`, `/ru/markets/bulgaria`, and `/uk/markets/bulgaria`.
+- Root `/` is an explicit `Accept-Language` redirect with `/uk` fallback; it is not a sitemap URL.
 - Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
 - Current aggregation thresholds are at least 3 safe public entries and at least 600 aggregate body characters.
@@ -36,6 +37,8 @@ Current decisions:
 ## Sitemap Rule
 
 `apps/web/src/app/sitemap.ts` must include only surfaces whose server-side policy returns `sitemapEligible = true`.
+
+Static and authored SEO/AEO sitemap URLs must use canonical localized paths. Non-localized public content URLs are legacy redirects and must not be included.
 
 The sitemap must not include:
 
@@ -61,9 +64,10 @@ Robots and sitemap controls are discovery controls, not privacy controls. The pr
 - public media uses stripped derivatives only;
 - owner ids, emails, invite links, tokens, raw journal internals, quarantine keys, and source-only catalog fields stay out of public surfaces;
 - archived/public-gone entries leave sitemap/indexable metadata and return the appropriate public gone state.
+- user-generated journal bodies stay in the author's language and must not be machine-translated silently for localized route chrome or hreflang clusters.
 
 ## Non-Goals
 
-- This policy and OVE-116 content foundation do not create the full localization system. That belongs to OVE-117.
+- This policy does not localize authenticated product workspace routes; `/garden` remains the gated workspace path until a later slice migrates private/product app routing.
 - This policy does not promote every variety/topic page. OVE-130 and OVE-139 must use the same policy and add stronger evidence gates where needed.
 - This policy does not add monetization.

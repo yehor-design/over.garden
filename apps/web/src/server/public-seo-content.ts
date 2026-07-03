@@ -4,6 +4,12 @@ import type { MetadataRoute } from "next";
 
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import {
+  DEFAULT_PUBLIC_LOCALE,
+  localizedPath,
+  PUBLIC_LOCALES,
+  type PublicLocale,
+} from "@/lib/public-localization";
+import {
   evaluatePublicSurfaceIndexability,
   type PublicSurfaceKind,
 } from "@/server/public-surface-indexing-policy";
@@ -94,12 +100,29 @@ export interface MarketLandingContent {
 
 export interface AuthoredPublicContentSitemapEntry {
   kind: AuthoredPublicContentKind;
+  locale: PublicLocale;
   path: string;
   changeFrequency: SitemapFrequency;
   priority: number;
 }
 
+interface AuthoredPublicContentSitemapTemplate {
+  kind: AuthoredPublicContentKind;
+  path: string;
+  changeFrequency: SitemapFrequency;
+  priority: number;
+  locales: readonly PublicLocale[];
+}
+
 export const BLOG_INDEX_PATH = "/blog";
+
+export const MARKET_LANDING_LOCALES: Record<
+  MarketLandingContent["market"],
+  readonly PublicLocale[]
+> = {
+  ukraine: ["uk", "ru"],
+  bulgaria: ["bg", "ru", "uk"],
+};
 
 const BLOG_POSTS: BlogPostContent[] = [
   {
@@ -359,48 +382,82 @@ export function getMarketLanding(market: string) {
   return MARKET_LANDINGS.find((landing) => landing.market === market) ?? null;
 }
 
+export function listAvailableMarketLandingLocales(
+  market: MarketLandingContent["market"],
+) {
+  return MARKET_LANDING_LOCALES[market];
+}
+
+export function isMarketLandingAvailableInLocale(
+  landing: MarketLandingContent,
+  locale: PublicLocale,
+) {
+  return MARKET_LANDING_LOCALES[landing.market].includes(locale);
+}
+
 export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPublicContentSitemapEntry[] {
-  const entries: AuthoredPublicContentSitemapEntry[] = [
+  const entries: AuthoredPublicContentSitemapTemplate[] = [
     {
       kind: "editorial_blog",
       path: BLOG_INDEX_PATH,
       changeFrequency: "weekly",
       priority: 0.7,
+      locales: PUBLIC_LOCALES,
     },
     ...BLOG_POSTS.map((post) => ({
       kind: post.kind,
       path: post.path,
       changeFrequency: "monthly" as const,
       priority: 0.65,
+      locales: PUBLIC_LOCALES,
     })),
     ...GUIDES.map((guide) => ({
       kind: guide.kind,
       path: guide.path,
       changeFrequency: "monthly" as const,
       priority: 0.65,
+      locales: PUBLIC_LOCALES,
     })),
     ...ANSWER_PAGES.map((page) => ({
       kind: page.kind,
       path: page.path,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+      locales: PUBLIC_LOCALES,
     })),
     ...MARKET_LANDINGS.map((landing) => ({
       kind: landing.kind,
       path: landing.path,
       changeFrequency: "monthly" as const,
       priority: 0.65,
+      locales: MARKET_LANDING_LOCALES[landing.market],
     })),
   ];
 
-  return entries.filter(
-    (entry) =>
-      evaluatePublicSurfaceIndexability({ kind: entry.kind }).sitemapEligible,
-  );
+  return entries.flatMap((entry) => {
+    const isSitemapEligible = evaluatePublicSurfaceIndexability({
+      kind: entry.kind,
+    }).sitemapEligible;
+
+    if (!isSitemapEligible) return [];
+
+    return entry.locales.map(
+      (locale): AuthoredPublicContentSitemapEntry => ({
+        kind: entry.kind,
+        locale,
+        path: localizedPath(locale, entry.path),
+        changeFrequency: entry.changeFrequency,
+        priority: entry.priority,
+      }),
+    );
+  });
 }
 
-export function buildAnswerPageJsonLd(page: AnswerPageContent) {
-  const pageUrl = absolutePublicUrl(page.path);
+export function buildAnswerPageJsonLd(
+  page: AnswerPageContent,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+) {
+  const pageUrl = absolutePublicUrl(localizedPath(locale, page.path));
 
   return {
     "@context": "https://schema.org",
@@ -411,11 +468,11 @@ export function buildAnswerPageJsonLd(page: AnswerPageContent) {
         url: pageUrl,
         name: page.title,
         description: page.description,
-        inLanguage: "en",
+        inLanguage: locale,
         isPartOf: {
           "@type": "WebSite",
           name: "OverGarden",
-          url: absolutePublicUrl("/"),
+          url: absolutePublicUrl(localizedPath(locale, "/")),
         },
       },
       {

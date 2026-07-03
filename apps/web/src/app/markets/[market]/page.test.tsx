@@ -1,20 +1,24 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import MarketLandingPage, { generateMetadata } from "./page";
+import MarketLandingRoute, {
+  generateMetadata,
+} from "../../[locale]/markets/[market]/page";
 
 describe("/markets/[market]", () => {
-  it("renders the Ukraine market landing as an indexable read-only page", async () => {
+  it("renders the Ukraine market landing as a localized indexable read-only page", async () => {
     const html = renderToStaticMarkup(
-      await MarketLandingPage({
-        params: Promise.resolve({ market: "ukraine" }),
+      await MarketLandingRoute({
+        params: Promise.resolve({ locale: "uk", market: "ukraine" }),
       }),
     );
 
-    expect(html).toContain("OverGarden for gardeners in Ukraine");
-    expect(html).toContain("Who this is for");
-    expect(html).toContain("The promise");
-    expect(html).toContain("Start a private record");
+    expect(html).toContain("OverGarden для садівників в Україні");
+    expect(html).toContain("Для кого це");
+    expect(html).toContain("Обіцянка");
+    expect(html).toContain("Почати приватний запис");
+    expect(html).toContain("/ru/markets/ukraine");
+    expect(html).not.toContain("/bg/markets/ukraine");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
     expect(html).not.toContain("<form");
@@ -23,15 +27,17 @@ describe("/markets/[market]", () => {
     expect(html).not.toContain("/journal/");
   });
 
-  it("renders the Bulgaria market landing as an indexable read-only page", async () => {
+  it("renders the Bulgaria market landing as a localized indexable read-only page", async () => {
     const html = renderToStaticMarkup(
-      await MarketLandingPage({
-        params: Promise.resolve({ market: "bulgaria" }),
+      await MarketLandingRoute({
+        params: Promise.resolve({ locale: "bg", market: "bulgaria" }),
       }),
     );
 
-    expect(html).toContain("OverGarden for gardeners in Bulgaria");
-    expect(html).toContain("gardens, yards, greenhouses, terraces");
+    expect(html).toContain("OverGarden за градинари в България");
+    expect(html).toContain("градини, дворове, оранжерии, тераси");
+    expect(html).toContain("/uk/markets/bulgaria");
+    expect(html).toContain("/ru/markets/bulgaria");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
     expect(html).not.toContain("<form");
@@ -43,12 +49,17 @@ describe("/markets/[market]", () => {
   it("uses indexable metadata for known market landings", async () => {
     await expect(
       generateMetadata({
-        params: Promise.resolve({ market: "ukraine" }),
+        params: Promise.resolve({ locale: "uk", market: "ukraine" }),
       }),
     ).resolves.toMatchObject({
-      title: "OverGarden for gardeners in Ukraine | OverGarden",
+      title: "OverGarden для садівників в Україні | OverGarden",
       alternates: {
-        canonical: "/markets/ukraine",
+        canonical: "/uk/markets/ukraine",
+        languages: {
+          uk: "/uk/markets/ukraine",
+          ru: "/ru/markets/ukraine",
+          "x-default": "/uk/markets/ukraine",
+        },
       },
       robots: { index: true, follow: true },
     });

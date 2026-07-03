@@ -1,5 +1,7 @@
 import "server-only";
 
+import { PUBLIC_LOCALES, localizedPath } from "@/lib/public-localization";
+
 export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
   minPublicEntryCount: 3,
   minAggregateBodyLength: 600,
@@ -71,12 +73,14 @@ export interface StaticIndexablePublicSurface {
 }
 
 const STATIC_PUBLIC_SURFACES: StaticIndexablePublicSurface[] = [
-  {
-    kind: "marketing_landing",
-    path: "/",
-    changeFrequency: "weekly",
-    priority: 0.8,
-  },
+  ...PUBLIC_LOCALES.map(
+    (locale): StaticIndexablePublicSurface => ({
+      kind: "marketing_landing",
+      path: localizedPath(locale, "/"),
+      changeFrequency: "weekly",
+      priority: 0.8,
+    }),
+  ),
 ];
 
 export function evaluatePublicSurfaceIndexability(
@@ -112,8 +116,7 @@ export function evaluatePublicSurfaceIndexability(
 export function listStaticIndexablePublicSurfaces() {
   return STATIC_PUBLIC_SURFACES.filter(
     (surface) =>
-      evaluatePublicSurfaceIndexability({ kind: surface.kind })
-        .sitemapEligible,
+      evaluatePublicSurfaceIndexability({ kind: surface.kind }).sitemapEligible,
   );
 }
 

@@ -1,16 +1,29 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import BlogIndexPage, { metadata } from "./page";
+import BlogIndexRoute, { generateMetadata } from "../[locale]/blog/page";
 
 describe("/blog", () => {
-  it("renders indexable authored blog content without private actions", () => {
-    const html = renderToStaticMarkup(<BlogIndexPage />);
+  it("renders localized indexable blog content without private actions", async () => {
+    const html = renderToStaticMarkup(
+      await BlogIndexRoute({ params: Promise.resolve({ locale: "uk" }) }),
+    );
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ locale: "uk" }),
+    });
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
-    expect(metadata.alternates).toMatchObject({ canonical: "/blog" });
-    expect(html).toContain("Useful public pages before thin public pages.");
-    expect(html).toContain("/blog/ai-garden-advice-vs-real-garden-proof");
+    expect(metadata.alternates).toMatchObject({
+      canonical: "/uk/blog",
+      languages: {
+        uk: "/uk/blog",
+        bg: "/bg/blog",
+        ru: "/ru/blog",
+      },
+    });
+    expect(html).toContain("Корисні публічні сторінки");
+    expect(html).toContain("/uk/blog/ai-garden-advice-vs-real-garden-proof");
+    expect(html).toContain("Български");
     expect(html).toContain("/garden");
     expect(html).not.toContain("<form");
     expect(html).not.toContain("/api/");

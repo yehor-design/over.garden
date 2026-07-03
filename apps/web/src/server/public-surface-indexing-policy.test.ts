@@ -19,10 +19,12 @@ describe("public surface indexing policy", () => {
       reasons: ["authored_useful_surface"],
     });
 
-    expect(evaluatePublicSurfaceIndexability({ kind: "guide" }).isIndexable)
-      .toBe(true);
-    expect(evaluatePublicSurfaceIndexability({ kind: "aeo_answer" }).isIndexable)
-      .toBe(true);
+    expect(
+      evaluatePublicSurfaceIndexability({ kind: "guide" }).isIndexable,
+    ).toBe(true);
+    expect(
+      evaluatePublicSurfaceIndexability({ kind: "aeo_answer" }).isIndexable,
+    ).toBe(true);
   });
 
   it("keeps public journal entries noindex until the entry is explicitly promoted", () => {
@@ -96,7 +98,19 @@ describe("public surface indexing policy", () => {
     expect(listStaticIndexablePublicSurfaces()).toEqual([
       {
         kind: "marketing_landing",
-        path: "/",
+        path: "/uk",
+        changeFrequency: "weekly",
+        priority: 0.8,
+      },
+      {
+        kind: "marketing_landing",
+        path: "/bg",
+        changeFrequency: "weekly",
+        priority: 0.8,
+      },
+      {
+        kind: "marketing_landing",
+        path: "/ru",
         changeFrequency: "weekly",
         priority: 0.8,
       },
