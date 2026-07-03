@@ -4,15 +4,17 @@ import { ArrowRight, NotebookPen, ShieldCheck, Sprout } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { gardenFirstEntryHomepagePath } from "@/lib/garden/public-paths";
+import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+
+const homepageIndexState = evaluatePublicSurfaceIndexability({
+  kind: "marketing_landing",
+});
 
 export const metadata: Metadata = {
   title: "OverGarden",
   description:
     "Keep a living, dated record of what happens to each plant you grow.",
-  robots: {
-    index: false,
-    follow: false,
-  },
+  robots: homepageIndexState.robots,
 };
 
 export default function Home() {

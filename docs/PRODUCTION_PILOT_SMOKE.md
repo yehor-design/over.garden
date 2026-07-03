@@ -298,7 +298,7 @@ This slice does not add precise location, raw invite identity, or any per-person
 
 ### What landed
 
-- A `noindex` invite landing page at `/join` with calm, non-technical copy. Its only forward action carries the enum source into `/garden?source=invited-cohort` (`gardenFirstEntryInvitePath`). The page is excluded from `sitemap.ts` (which lists indexable public variety pages only).
+- A `noindex` invite landing page at `/join` with calm, non-technical copy. Its only forward action carries the enum source into `/garden?source=invited-cohort` (`gardenFirstEntryInvitePath`). The page is excluded from `sitemap.ts`, which lists only surfaces approved by `apps/web/src/server/public-surface-indexing-policy.ts`.
 - `invited_cohort` is an allowed `ActivationSource` and `invite` is an allowed `ActivationSurfaceKind`, validated by the same enum-only normalizers and analytics property allowlist used by the other sources. Raw URLs, hyphenated request values, invite tokens, names, and emails are rejected.
 - Intent persists through auth: a signed-out invited gardener keeps `?source=invited-cohort` across sign-up/sign-in (the garden auth panel shows invite-specific copy), so the first saved entry records `entry_logged` with `activation_source = invited_cohort`. That first save is what establishes cohort membership.
 - `/garden/pilot-health` shows an "Invited cohort loop" panel per window: invite starts, first-entry saves, first-save rate, same-object follow-ups, and returning gardeners. Follow-ups and returning gardeners are derived from cohort membership plus a prior same-object entry, never from raw entry text.
@@ -491,7 +491,7 @@ Public visitor/crawler prerequisite:
 - These routes must return OverGarden HTML or route-appropriate redirects, not Vercel SSO.
 - Matched app routes must send `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` during the closed pilot.
 - Public HTML must not have Cloudflare `cf-cache-status: HIT`.
-- Public marketing/legal/supporting routes should remain `noindex` unless explicitly promoted.
+- Public marketing, legal, and supporting routes follow `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`: authored landing/SEO/AEO pages may be indexable when explicitly promoted by the policy, while legal/support/diagnostic surfaces remain `noindex` unless a later slice promotes them deliberately.
 
 ## Smoke Sequence
 

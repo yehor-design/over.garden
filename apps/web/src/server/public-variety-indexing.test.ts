@@ -15,6 +15,8 @@ describe("public variety indexability threshold", () => {
 
     expect(result.value).toBe("noindex");
     expect(result.isIndexable).toBe(false);
+    expect(result.sitemapEligible).toBe(false);
+    expect(result.robots).toEqual({ index: false, follow: false });
     expect(result.reasons).toContain("entry_count_below_threshold");
   });
 
@@ -39,6 +41,8 @@ describe("public variety indexability threshold", () => {
 
     expect(result.value).toBe("indexable");
     expect(result.isIndexable).toBe(true);
+    expect(result.sitemapEligible).toBe(true);
+    expect(result.robots).toEqual({ index: true, follow: true });
     expect(result.reasons).toEqual([]);
   });
 });

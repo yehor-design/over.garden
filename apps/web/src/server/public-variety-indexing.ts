@@ -1,20 +1,23 @@
-export const PUBLIC_VARIETY_INDEXABILITY_THRESHOLD = {
-  minPublicEntryCount: 3,
-  minAggregateBodyLength: 600,
-} as const;
+import {
+  evaluatePublicSurfaceIndexability,
+  PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD,
+  type PublicSurfaceIndexReason,
+  type PublicSurfaceIndexState,
+  type PublicSurfaceIndexValue,
+} from "./public-surface-indexing-policy";
 
-export type PublicVarietyIndexValue = "noindex" | "indexable";
+export const PUBLIC_VARIETY_INDEXABILITY_THRESHOLD =
+  PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD;
 
-export interface PublicVarietyIndexState {
-  value: PublicVarietyIndexValue;
-  isIndexable: boolean;
-  reasons: PublicVarietyIndexReason[];
-  threshold: typeof PUBLIC_VARIETY_INDEXABILITY_THRESHOLD;
-}
+export type PublicVarietyIndexValue = PublicSurfaceIndexValue;
+
+export type PublicVarietyIndexState = PublicSurfaceIndexState;
 
 export type PublicVarietyIndexReason =
-  | "entry_count_below_threshold"
-  | "body_length_below_threshold";
+  | Extract<
+      PublicSurfaceIndexReason,
+      "entry_count_below_threshold" | "body_length_below_threshold"
+    >;
 
 export interface PublicVarietyIndexInput {
   entryCount: number;
@@ -24,26 +27,9 @@ export interface PublicVarietyIndexInput {
 export function evaluatePublicVarietyIndexState(
   input: PublicVarietyIndexInput,
 ): PublicVarietyIndexState {
-  const reasons: PublicVarietyIndexReason[] = [];
-
-  if (
-    input.entryCount <
-    PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount
-  ) {
-    reasons.push("entry_count_below_threshold");
-  }
-
-  if (
-    input.aggregateBodyLength <
-    PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength
-  ) {
-    reasons.push("body_length_below_threshold");
-  }
-
-  return {
-    value: reasons.length === 0 ? "indexable" : "noindex",
-    isIndexable: reasons.length === 0,
-    reasons,
-    threshold: PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
-  };
+  return evaluatePublicSurfaceIndexability({
+    kind: "variety_aggregation",
+    entryCount: input.entryCount,
+    aggregateBodyLength: input.aggregateBodyLength,
+  });
 }

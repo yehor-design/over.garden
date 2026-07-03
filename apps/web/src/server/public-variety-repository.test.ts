@@ -64,6 +64,9 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain('"catalog_items"."id"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).not.toContain("provisional");
+    expect(compiled.sql).not.toContain("rejected");
+    expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -118,6 +121,9 @@ describe("public variety repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).not.toContain("provisional");
+    expect(compiled.sql).not.toContain("rejected");
+    expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
@@ -207,6 +213,9 @@ describe("public variety repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" is not null');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).not.toContain("provisional");
+    expect(compiled.sql).not.toContain("rejected");
+    expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );

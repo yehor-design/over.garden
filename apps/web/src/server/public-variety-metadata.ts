@@ -1,5 +1,6 @@
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
+import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import type { PublicVarietyPage } from "@/server/public-variety-repository";
 
 const MAX_JSON_LD_ENTRIES = 10;
@@ -29,7 +30,13 @@ export interface PublicVarietyCollectionPageJsonLd {
 export function buildPublicVarietyJsonLd(
   page: PublicVarietyPage,
 ): PublicVarietyCollectionPageJsonLd | null {
-  if (!page.indexState.isIndexable) return null;
+  const indexState = evaluatePublicSurfaceIndexability({
+    kind: "variety_aggregation",
+    entryCount: page.entryCount,
+    aggregateBodyLength: page.aggregateBodyLength,
+  });
+
+  if (!indexState.isIndexable) return null;
 
   const siteUrl = absolutePublicUrl("/");
 

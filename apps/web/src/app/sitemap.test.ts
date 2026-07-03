@@ -10,7 +10,7 @@ vi.mock("@/server/public-variety-repository", () => ({
 }));
 
 describe("/sitemap.xml", () => {
-  it("lists indexable public variety pages only and never the health route", async () => {
+  it("lists policy-approved indexable pages only and never noindex/internal routes", async () => {
     mocks.listIndexablePublicVarietySitemapEntries.mockResolvedValue([
       {
         publicSlug: "pomidor-cheri-0000000101",
@@ -25,8 +25,12 @@ describe("/sitemap.xml", () => {
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
+      "https://over.garden/",
       "https://over.garden/variety/pomidor-cheri-0000000101",
     ]);
     expect(urls.join(" ")).not.toContain("/health");
+    expect(urls.join(" ")).not.toContain("/join");
+    expect(urls.join(" ")).not.toContain("/garden");
+    expect(urls.join(" ")).not.toContain("/journal/");
   });
 });

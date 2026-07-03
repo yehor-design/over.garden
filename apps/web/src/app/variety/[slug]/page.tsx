@@ -11,6 +11,7 @@ import {
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import { publicCatalogStatusLabel } from "@/lib/garden/pilot-ux-copy";
+import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
 import { PublicVarietySourceCredits } from "./source-credits";
@@ -32,12 +33,13 @@ export async function generateMetadata({
   const page = await getCachedPublicVarietyPage(slug);
 
   if (!page) {
+    const missingIndexState = evaluatePublicSurfaceIndexability({
+      kind: "missing",
+    });
+
     return {
       title: "Variety | OverGarden",
-      robots: {
-        index: false,
-        follow: false,
-      },
+      robots: missingIndexState.robots,
     };
   }
 
@@ -49,10 +51,7 @@ export async function generateMetadata({
     alternates: {
       canonical: publicVarietyPath(page.catalog.publicSlug),
     },
-    robots: {
-      index: page.indexState.isIndexable,
-      follow: page.indexState.isIndexable,
-    },
+    robots: page.indexState.robots,
   };
 }
 

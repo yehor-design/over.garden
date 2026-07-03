@@ -10,6 +10,8 @@ OverGarden is a gardening journal plus catalog-as-social-graph for Ukraine and B
 
 The current MVP scope reconciliation is `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. It supersedes the 2026-07-01 OVE-96 decision that deferred lineage/social graph. SEO/AEO, localization, full M:N journaling, composer friction work, self-serve auth, and lineage/social graph are MVP scope as vertical SDD slices. Monetization is post-MVP. Apple Sign-In is approved in scope but blocked until Apple Developer account readiness.
 
+Public SEO/AEO indexability policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md` and `apps/web/src/server/public-surface-indexing-policy.ts`. Sitemap entries, route robots metadata, and structured data must use that server policy instead of duplicating thinness or public-surface rules.
+
 ## Current Stack
 
 - Next.js App Router + TypeScript on Vercel.

@@ -4,6 +4,10 @@ import {
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
+import {
+  evaluatePublicSurfaceIndexability,
+  formatRobotsMetaContent,
+} from "@/server/public-surface-indexing-policy";
 
 // Pure HTML renderers for the public journal route. They live in their own
 // module so the public-facing bytes can be unit/privacy tested without the
@@ -12,9 +16,12 @@ import type { PublicJournalEntryPage } from "@/server/journal-repository";
 export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
   const title = `${page.entry.title} | OverGarden`;
   const description = summarize(page.entry.body);
-  const robots = page.entry.publicNoindex
-    ? "noindex, nofollow"
-    : "index, follow";
+  const robots = formatRobotsMetaContent(
+    evaluatePublicSurfaceIndexability({
+      kind: "journal_entry",
+      publicNoindex: page.entry.publicNoindex,
+    }),
+  );
   const locationLabel = getPublicJournalLocationLabel(page);
   const varietyLink = getPublicVarietyLink(page);
 

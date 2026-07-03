@@ -18,6 +18,23 @@ describe("public variety metadata", () => {
     expect(buildPublicVarietyJsonLd(page)).toBeNull();
   });
 
+  it("omits JSON-LD from thin pages even if a caller passes stale index state", () => {
+    const page = buildPage({
+      entryCount: 1,
+      aggregateBodyLength: 200,
+    });
+    page.indexState = {
+      ...page.indexState,
+      value: "indexable",
+      isIndexable: true,
+      sitemapEligible: true,
+      robots: { index: true, follow: true },
+      reasons: [],
+    };
+
+    expect(buildPublicVarietyJsonLd(page)).toBeNull();
+  });
+
   it("emits bounded JSON-LD for indexable pages without private fields", () => {
     vi.stubEnv("PUBLIC_SITE_URL", "https://example.test/base-path");
     const page = buildPage({

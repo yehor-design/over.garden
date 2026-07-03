@@ -20,6 +20,7 @@ vi.mock("./source-credits", () => ({
 
 describe("/variety/[slug]", () => {
   beforeEach(() => {
+    vi.resetModules();
     vi.clearAllMocks();
     mocks.buildPublicVarietyJsonLd.mockReturnValue(null);
     mocks.getPublicVarietyPage.mockResolvedValue({
@@ -33,7 +34,17 @@ describe("/variety/[slug]", () => {
       entryCount: 1,
       photoCount: 0,
       aggregateBodyLength: 200,
-      indexState: { value: "noindex", isIndexable: false },
+      indexState: {
+        value: "noindex",
+        isIndexable: false,
+        sitemapEligible: false,
+        robots: { index: false, follow: false },
+        reasons: ["entry_count_below_threshold"],
+        threshold: {
+          minPublicEntryCount: 3,
+          minAggregateBodyLength: 600,
+        },
+      },
       seedProof: null,
       sourceCredits: [],
       entries: [
@@ -63,5 +74,31 @@ describe("/variety/[slug]", () => {
     expect(html).toContain("Pilot catalog");
     expect(html).not.toContain(">seeded<");
     expect(html).not.toContain(">confirmed<");
+  });
+
+  it("keeps thin public variety metadata noindex", async () => {
+    const { generateMetadata } = await import("./page");
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+      }),
+    ).resolves.toMatchObject({
+      robots: { index: false, follow: false },
+    });
+  });
+
+  it("keeps missing public variety metadata noindex", async () => {
+    mocks.getPublicVarietyPage.mockResolvedValueOnce(null);
+    const { generateMetadata } = await import("./page");
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ slug: "missing-variety" }),
+      }),
+    ).resolves.toMatchObject({
+      title: "Variety | OverGarden",
+      robots: { index: false, follow: false },
+    });
   });
 });
