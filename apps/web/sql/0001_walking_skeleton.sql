@@ -1308,6 +1308,76 @@ create index if not exists lineage_provenance_edges_owner_source_object_idx
   on lineage_provenance_edges (owner_user_id, source_plant_object_id, created_at desc)
   where source_plant_object_id is not null;
 
+-- Lineage claim audit trail (OVE-123). Audit rows store only internal ids,
+-- bounded action/state enums, the active visibility policy, and timestamps.
+-- Never store journal text, source labels, media keys, contacts, IP/user-agent,
+-- invite identity, raw request metadata, or fine-grained place data here.
+create table if not exists lineage_provenance_edge_audit_events (
+  id uuid primary key default gen_random_uuid(),
+  edge_id uuid not null,
+  actor_user_id uuid,
+  target_user_id uuid,
+  action text not null check (action in ('confirm', 'decline')),
+  previous_consent_state text not null check (
+    previous_consent_state in ('proposed', 'confirmed', 'declined', 'anonymized')
+  ),
+  new_consent_state text not null check (
+    new_consent_state in ('confirmed', 'declined')
+  ),
+  visibility_policy text not null check (
+    visibility_policy in ('owner_only_until_confirmed')
+  ),
+  created_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_provenance_edge_audit_events_edge_fkey'
+      and conrelid = 'lineage_provenance_edge_audit_events'::regclass
+  ) then
+    alter table lineage_provenance_edge_audit_events
+      add constraint lineage_provenance_edge_audit_events_edge_fkey
+      foreign key (edge_id)
+      references lineage_provenance_edges (id)
+      on update cascade
+      on delete cascade;
+  end if;
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lineage_provenance_edge_audit_events_actor_fkey'
+        and conrelid = 'lineage_provenance_edge_audit_events'::regclass
+    ) then
+      alter table lineage_provenance_edge_audit_events
+        add constraint lineage_provenance_edge_audit_events_actor_fkey
+        foreign key (actor_user_id) references "user"(id) on delete set null;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'lineage_provenance_edge_audit_events_target_fkey'
+        and conrelid = 'lineage_provenance_edge_audit_events'::regclass
+    ) then
+      alter table lineage_provenance_edge_audit_events
+        add constraint lineage_provenance_edge_audit_events_target_fkey
+        foreign key (target_user_id) references "user"(id) on delete set null;
+    end if;
+  end if;
+end $$;
+
+create index if not exists lineage_provenance_edge_audit_events_edge_created_idx
+  on lineage_provenance_edge_audit_events (edge_id, created_at desc);
+
+create index if not exists lineage_provenance_edge_audit_events_target_created_idx
+  on lineage_provenance_edge_audit_events (target_user_id, created_at desc)
+  where target_user_id is not null;
+
 create table if not exists erasure_requests (
   id uuid primary key default gen_random_uuid(),
   requester_user_id uuid not null,

@@ -19,6 +19,7 @@ import type {
   JournalEntries as JournalEntriesTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JsonValue,
+  LineageProvenanceEdgeAuditEvents as LineageProvenanceEdgeAuditEventsTable,
   LineageProvenanceEdges as LineageProvenanceEdgesTable,
   MediaAssets as MediaAssetsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
@@ -89,6 +90,7 @@ export type LineageErasureState =
   | "source_tombstone"
   | "subject_tombstone"
   | "anonymized";
+export type LineageClaimAuditAction = "confirm" | "decline";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -148,6 +150,10 @@ export type LineageProvenanceEdge =
   Selectable<LineageProvenanceEdgesTable>;
 export type NewLineageProvenanceEdge =
   Insertable<LineageProvenanceEdgesTable>;
+export type LineageProvenanceEdgeAuditEvent =
+  Selectable<LineageProvenanceEdgeAuditEventsTable>;
+export type NewLineageProvenanceEdgeAuditEvent =
+  Insertable<LineageProvenanceEdgeAuditEventsTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;

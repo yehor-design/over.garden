@@ -17,9 +17,13 @@ import { scopedToUser } from "@/server/request-scope";
 import {
   buildFindProvenanceEdgeByClientMutationQuery,
   buildInsertProvenanceEdgeQuery,
+  buildInsertLineageClaimAuditEventQuery,
+  buildLineageClaimInboxQuery,
   buildLineageSourceObjectOptionsQuery,
   buildObjectProvenanceEdgesQuery,
+  buildResolveLineageClaimQuery,
   normalizeLineageSourceReferenceLabel,
+  resolveLineageClaim,
 } from "./lineage-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -44,6 +48,7 @@ const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const scope = scopedToUser("00000000-0000-4000-8000-000000000001");
 const subjectPlantObjectId = "00000000-0000-4000-8000-000000000101";
 const sourcePlantObjectId = "00000000-0000-4000-8000-000000000102";
+const edgeId = "00000000-0000-4000-8000-000000000201";
 
 describe("lineage provenance repository query contracts", () => {
   it("lists source object candidates only inside the current owner scope", () => {
@@ -141,6 +146,99 @@ describe("lineage provenance repository query contracts", () => {
     ]);
   });
 
+  it("lists target claim inbox rows only for proposed cross-user source-owned edges", () => {
+    const compiled = buildLineageClaimInboxQuery(testDb, scope).compile();
+
+    expect(compiled.sql).toContain('from "lineage_provenance_edges"');
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."source_owner_user_id" = $1',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."owner_user_id" != $2',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."source_kind" = $3',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."consent_state" = $4',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."erasure_state" = $5',
+    );
+    expect(compiled.sql).not.toMatch(
+      /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip|user_agent|email|phone|coarse_region|location_visibility|source_reference_label/i,
+    );
+    expect(compiled.parameters).toEqual([
+      scope.userId,
+      scope.userId,
+      "own_object",
+      "proposed",
+      "active",
+    ]);
+  });
+
+  it("confirms or declines only proposed active claims scoped to the target owner", () => {
+    const now = new Date("2026-07-03T18:00:00.000Z");
+    const compiled = buildResolveLineageClaimQuery(testDb, scope, {
+      edgeId,
+      decision: "confirmed",
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "lineage_provenance_edges"');
+    expect(compiled.sql).toContain('"consent_state" = $1');
+    expect(compiled.sql).toContain('"updated_at" = $2');
+    expect(compiled.sql).toContain('"id" = $3');
+    expect(compiled.sql).toContain('"source_owner_user_id" = $4');
+    expect(compiled.sql).toContain('"owner_user_id" != $5');
+    expect(compiled.sql).toContain('"source_kind" = $6');
+    expect(compiled.sql).toContain('"consent_state" = $7');
+    expect(compiled.sql).toContain('"erasure_state" = $8');
+    expect(compiled.sql).toContain("returning *");
+    expect(compiled.sql).not.toMatch(
+      /visibility_policy\s*=|journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip|user_agent|email|phone|coarse_region|location_visibility/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "confirmed",
+      now,
+      edgeId,
+      scope.userId,
+      scope.userId,
+      "own_object",
+      "proposed",
+      "active",
+    ]);
+  });
+
+  it("audits claim decisions with bounded enum metadata only", () => {
+    const compiled = buildInsertLineageClaimAuditEventQuery(testDb, {
+      edge_id: edgeId,
+      actor_user_id: scope.userId,
+      target_user_id: scope.userId,
+      action: "confirm",
+      previous_consent_state: "proposed",
+      new_consent_state: "confirmed",
+      visibility_policy: "owner_only_until_confirmed",
+    }).compile();
+
+    expect(compiled.sql).toContain(
+      'insert into "lineage_provenance_edge_audit_events"',
+    );
+    expect(compiled.sql).toContain("returning *");
+    expect(compiled.sql).not.toMatch(
+      /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip|user_agent|email|phone|coarse_region|location_visibility|source_reference_label|client_mutation_id/i,
+    );
+    expect(compiled.parameters).toEqual([
+      edgeId,
+      scope.userId,
+      scope.userId,
+      "confirm",
+      "proposed",
+      "confirmed",
+      "owner_only_until_confirmed",
+    ]);
+  });
+
   it("rejects source labels that look like private contact details or precise coordinates", () => {
     expect(normalizeLineageSourceReferenceLabel("Spring seed swap")).toBe(
       "Spring seed swap",
@@ -157,5 +255,14 @@ describe("lineage provenance repository query contracts", () => {
         /contact details/i,
       );
     }
+  });
+
+  it("rejects unsupported claim decisions before touching storage", async () => {
+    await expect(
+      resolveLineageClaim(scope, {
+        edgeId,
+        decision: "published",
+      }),
+    ).rejects.toThrow(/unsupported lineage claim decision/i);
   });
 });

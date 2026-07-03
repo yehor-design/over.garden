@@ -23,6 +23,7 @@ import {
   buildCountAuthUserPresentQuery,
   buildCountCatalogProvisionalItemsQuery,
   buildCountJournalEntriesQuery,
+  buildCountLineageProvenanceAuditEventsQuery,
   buildCountLineageProvenanceEdgesQuery,
   buildCountMediaAssetsQuery,
   buildCountPendingJournalSearchJobsQuery,
@@ -64,6 +65,7 @@ describe("erasure dry-run preview assembly", () => {
         spaces: 1,
         plantObjects: 2,
         lineageProvenanceEdges: 2,
+        lineageProvenanceAuditEvents: 1,
         journalEntriesTotal: 3,
         journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
@@ -90,7 +92,7 @@ describe("erasure dry-run preview assembly", () => {
       preview.dataClasses.find(
         (dataClass) => dataClass.key === "lineage_provenance",
       )?.counts,
-    ).toEqual({ provenance_edges: 2 });
+    ).toEqual({ provenance_edges: 2, audit_events: 1 });
     expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
     expect(
       JSON.stringify(preview.dataClasses.map((dataClass) => dataClass.counts)),
@@ -155,6 +157,24 @@ describe("erasure dry-run repository privacy contracts", () => {
     expect(compiled.sql).toMatch(/count\(\*\)/i);
     expect(compiled.sql).not.toMatch(
       /source_reference_label|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
+  });
+
+  it("counts lineage claim audit events without selecting edge payloads", () => {
+    const compiled = buildCountLineageProvenanceAuditEventsQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edge_audit_events"',
+    );
+    expect(compiled.sql).toContain('"actor_user_id" = $1');
+    expect(compiled.sql).toContain('"target_user_id" = $2');
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toMatch(
+      /lineage_provenance_edges|source_reference_label|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
     );
     expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
   });

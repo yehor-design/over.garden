@@ -44,6 +44,7 @@ export async function collectErasureDryRunCounts(
     spaces,
     plantObjects,
     lineageProvenanceEdges,
+    lineageProvenanceAuditEvents,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -70,6 +71,7 @@ export async function collectErasureDryRunCounts(
     countOwnedRows(executor, "spaces", requesterUserId),
     countOwnedRows(executor, "plant_objects", requesterUserId),
     countLineageProvenanceEdges(executor, requesterUserId),
+    countLineageProvenanceAuditEvents(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
       visibility: "private",
@@ -113,6 +115,7 @@ export async function collectErasureDryRunCounts(
     spaces,
     plantObjects,
     lineageProvenanceEdges,
+    lineageProvenanceAuditEvents,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -196,6 +199,21 @@ export function buildCountLineageProvenanceEdgesQuery(
       eb.or([
         eb("owner_user_id", "=", requesterUserId),
         eb("source_owner_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountLineageProvenanceAuditEventsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("lineage_provenance_edge_audit_events")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("actor_user_id", "=", requesterUserId),
+        eb("target_user_id", "=", requesterUserId),
       ]),
     );
 }
@@ -380,6 +398,17 @@ async function countLineageProvenanceEdges(
   requesterUserId: string,
 ) {
   const row = await buildCountLineageProvenanceEdgesQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countLineageProvenanceAuditEvents(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountLineageProvenanceAuditEventsQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

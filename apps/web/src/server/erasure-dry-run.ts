@@ -54,6 +54,7 @@ export interface ErasureDryRunCounts {
   spaces: number;
   plantObjects: number;
   lineageProvenanceEdges: number;
+  lineageProvenanceAuditEvents: number;
   journalEntriesTotal: number;
   journalEntriesPrivateActive: number;
   journalEntriesPublicActive: number;
@@ -106,6 +107,7 @@ function buildErasureDryRunDataClasses(
         "Owner-scoped provenance edges that preserve structure through anonymized tombstones. Source labels and contact-like details never appear in this preview.",
       counts: {
         provenance_edges: counts.lineageProvenanceEdges,
+        audit_events: counts.lineageProvenanceAuditEvents,
       },
     },
     {

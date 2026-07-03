@@ -266,6 +266,18 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface LineageProvenanceEdgeAuditEvents {
+  action: string;
+  actor_user_id: string | null;
+  created_at: Generated<Timestamp>;
+  edge_id: string;
+  id: Generated<string>;
+  new_consent_state: string;
+  previous_consent_state: string;
+  target_user_id: string | null;
+  visibility_policy: string;
+}
+
 export interface LineageProvenanceEdges {
   client_mutation_id: string;
   consent_state: Generated<string>;
@@ -409,6 +421,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;
   lineage_provenance_edges: LineageProvenanceEdges;
   media_assets: MediaAssets;
   pilot_interview_learnings: PilotInterviewLearnings;

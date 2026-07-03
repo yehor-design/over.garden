@@ -523,7 +523,7 @@ function ProvenanceSection({
                 </time>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                {lineageConsentLabel(edge)} · Owner-only until confirmed
+                {lineageConsentLabel(edge)} · {lineageVisibilityLabel(edge)}
               </p>
             </li>
           ))}
@@ -661,5 +661,19 @@ function lineageConsentLabel(edge: LineageProvenanceEdgeReadback) {
     case "proposed":
     default:
       return "Proposed provenance";
+  }
+}
+
+function lineageVisibilityLabel(edge: LineageProvenanceEdgeReadback) {
+  switch (edge.consentState) {
+    case "confirmed":
+      return "Eligible for lineage readback";
+    case "declined":
+      return "Not public and does not contribute";
+    case "anonymized":
+      return "Structural tombstone";
+    case "proposed":
+    default:
+      return "Owner-only until confirmed";
   }
 }

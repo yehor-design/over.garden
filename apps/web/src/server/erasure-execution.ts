@@ -144,6 +144,10 @@ export async function executeApprovedErasureRequest(
       requesterUserId,
       now,
     }).execute();
+    await buildAnonymizeLineageClaimAuditEventsForErasureQuery(
+      trx,
+      requesterUserId,
+    ).execute();
 
     await buildAnonymizeSpacesForErasureQuery(trx, {
       requesterUserId,
@@ -401,6 +405,30 @@ export function buildAnonymizeLineageProvenanceEdgesForErasureQuery(
       eb.or([
         eb("owner_user_id", "=", input.requesterUserId),
         eb("source_owner_user_id", "=", input.requesterUserId),
+      ]),
+    );
+}
+
+export function buildAnonymizeLineageClaimAuditEventsForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .updateTable("lineage_provenance_edge_audit_events")
+    .set({
+      actor_user_id: sql<string | null>`case
+        when actor_user_id = ${requesterUserId} then null
+        else actor_user_id
+      end`,
+      target_user_id: sql<string | null>`case
+        when target_user_id = ${requesterUserId} then null
+        else target_user_id
+      end`,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("actor_user_id", "=", requesterUserId),
+        eb("target_user_id", "=", requesterUserId),
       ]),
     );
 }

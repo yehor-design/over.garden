@@ -16,6 +16,7 @@ import type { Database } from "@/db/schema";
 import {
   buildAnonymizeErasureRequestSubjectsQuery,
   buildAnonymizeJournalEntriesForErasureQuery,
+  buildAnonymizeLineageClaimAuditEventsForErasureQuery,
   buildAnonymizeLineageProvenanceEdgesForErasureQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
@@ -138,6 +139,30 @@ describe("approved erasure execution SQL contracts", () => {
       "anonymized",
       "anonymized",
       now,
+      requesterUserId,
+      requesterUserId,
+    ]);
+  });
+
+  it("anonymizes lineage claim audit actor and target ids without selecting edge payloads", () => {
+    const compiled = buildAnonymizeLineageClaimAuditEventsForErasureQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      'update "lineage_provenance_edge_audit_events"',
+    );
+    expect(compiled.sql).toContain('"actor_user_id" = case');
+    expect(compiled.sql).toContain('"target_user_id" = case');
+    expect(compiled.sql).toContain('"actor_user_id" = $3');
+    expect(compiled.sql).toContain('"target_user_id" = $4');
+    expect(compiled.sql).not.toMatch(
+      /lineage_provenance_edges|source_reference_label|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([
+      requesterUserId,
+      requesterUserId,
       requesterUserId,
       requesterUserId,
     ]);

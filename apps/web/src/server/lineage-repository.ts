@@ -28,6 +28,13 @@ export interface CreateProvenanceEdgeInput {
   clientMutationId: string;
 }
 
+export type LineageClaimDecision = Extract<
+  LineageConsentState,
+  "confirmed" | "declined"
+>;
+
+export type LineageClaimAuditAction = "confirm" | "decline";
+
 export interface LineagePlantObjectOption {
   id: string;
   displayName: string;
@@ -61,6 +68,26 @@ export interface CreateProvenanceEdgeResult {
   isNewEdge: boolean;
 }
 
+export interface LineageClaimInboxItem {
+  id: string;
+  consentState: LineageConsentState;
+  visibilityPolicy: LineageVisibilityPolicy;
+  erasureState: LineageErasureState;
+  subjectObject: LineagePlantObjectOption;
+  sourceObject: LineagePlantObjectOption;
+  createdAt: Date | string;
+}
+
+export interface ResolveLineageClaimInput {
+  edgeId: string;
+  decision: string;
+}
+
+export interface ResolveLineageClaimResult {
+  edge: LineageProvenanceEdge;
+  decision: LineageClaimDecision;
+}
+
 interface NormalizedCreateProvenanceEdgeInput {
   subjectPlantObjectId: string;
   sourceKind: LineageSourceKind;
@@ -70,6 +97,11 @@ interface NormalizedCreateProvenanceEdgeInput {
   clientMutationId: string;
 }
 
+interface NormalizedResolveLineageClaimInput {
+  edgeId: string;
+  decision: LineageClaimDecision;
+}
+
 const LINEAGE_SOURCE_REFERENCE_KINDS = [
   "person",
   "seed_packet",
@@ -77,6 +109,35 @@ const LINEAGE_SOURCE_REFERENCE_KINDS = [
   "catalog_variety",
   "other",
 ] as const satisfies readonly LineageSourceReferenceKind[];
+
+export async function listLineageClaimInbox(
+  scope: RequestScope,
+): Promise<LineageClaimInboxItem[]> {
+  const rows = await buildLineageClaimInboxQuery(db, scope).execute();
+  return rows.map((row) => ({
+    id: row.id,
+    consentState: row.consent_state as LineageConsentState,
+    visibilityPolicy: row.visibility_policy as LineageVisibilityPolicy,
+    erasureState: row.erasure_state as LineageErasureState,
+    subjectObject: mapPlantObjectOption({
+      id: row.subjectObjectId,
+      displayName: row.subjectObjectDisplayName,
+      objectKind: row.subjectObjectKind,
+      catalogKind: row.subjectCatalogKind,
+      varietyText: row.subjectVarietyText,
+      varietyState: row.subjectVarietyState,
+    }),
+    sourceObject: mapPlantObjectOption({
+      id: row.sourceObjectId,
+      displayName: row.sourceObjectDisplayName,
+      objectKind: row.sourceObjectKind,
+      catalogKind: row.sourceCatalogKind,
+      varietyText: row.sourceVarietyText,
+      varietyState: row.sourceVarietyState,
+    }),
+    createdAt: row.created_at,
+  }));
+}
 
 export async function getObjectProvenancePanel(
   scope: RequestScope,
@@ -213,6 +274,41 @@ export async function createProvenanceEdge(
   });
 }
 
+export async function resolveLineageClaim(
+  scope: RequestScope,
+  input: ResolveLineageClaimInput,
+): Promise<ResolveLineageClaimResult> {
+  const normalized = normalizeResolveLineageClaimInput(input);
+  const now = new Date();
+
+  return db.transaction().execute(async (trx) => {
+    const edge = await buildResolveLineageClaimQuery(trx, scope, {
+      edgeId: normalized.edgeId,
+      decision: normalized.decision,
+      now,
+    }).executeTakeFirst();
+
+    if (!edge) {
+      throw new Error("Lineage claim is not available for this gardener.");
+    }
+
+    await buildInsertLineageClaimAuditEventQuery(trx, {
+      edge_id: edge.id,
+      actor_user_id: scope.userId,
+      target_user_id: scope.userId,
+      action: lineageClaimActionForDecision(normalized.decision),
+      previous_consent_state: "proposed",
+      new_consent_state: normalized.decision,
+      visibility_policy: edge.visibility_policy,
+    }).executeTakeFirstOrThrow();
+
+    return {
+      edge,
+      decision: normalized.decision,
+    };
+  });
+}
+
 export function buildLineagePlantObjectByIdQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -314,6 +410,80 @@ export function buildObjectProvenanceEdgesQuery(
     .orderBy("lineage_provenance_edges.id", "asc");
 }
 
+export function buildLineageClaimInboxQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+) {
+  return executor
+    .selectFrom("lineage_provenance_edges")
+    .innerJoin("plant_objects as source_objects", (join) =>
+      join
+        .onRef(
+          "source_objects.id",
+          "=",
+          "lineage_provenance_edges.source_plant_object_id",
+        )
+        .onRef(
+          "source_objects.owner_user_id",
+          "=",
+          "lineage_provenance_edges.source_owner_user_id",
+        ),
+    )
+    .innerJoin("plant_objects as subject_objects", (join) =>
+      join
+        .onRef(
+          "subject_objects.id",
+          "=",
+          "lineage_provenance_edges.subject_plant_object_id",
+        )
+        .onRef(
+          "subject_objects.owner_user_id",
+          "=",
+          "lineage_provenance_edges.owner_user_id",
+        ),
+    )
+    .leftJoin("catalog_items as source_catalog_items", (join) =>
+      join
+        .onRef("source_catalog_items.id", "=", "source_objects.catalog_item_id")
+        .on("source_catalog_items.created_by_user_id", "is", null),
+    )
+    .leftJoin("catalog_items as subject_catalog_items", (join) =>
+      join
+        .onRef(
+          "subject_catalog_items.id",
+          "=",
+          "subject_objects.catalog_item_id",
+        )
+        .on("subject_catalog_items.created_by_user_id", "is", null),
+    )
+    .select([
+      "lineage_provenance_edges.id",
+      "lineage_provenance_edges.consent_state",
+      "lineage_provenance_edges.visibility_policy",
+      "lineage_provenance_edges.erasure_state",
+      "lineage_provenance_edges.created_at",
+      "subject_objects.id as subjectObjectId",
+      "subject_objects.display_name as subjectObjectDisplayName",
+      "subject_objects.object_kind as subjectObjectKind",
+      "subject_catalog_items.catalog_kind as subjectCatalogKind",
+      "subject_objects.variety_text as subjectVarietyText",
+      "subject_objects.variety_state as subjectVarietyState",
+      "source_objects.id as sourceObjectId",
+      "source_objects.display_name as sourceObjectDisplayName",
+      "source_objects.object_kind as sourceObjectKind",
+      "source_catalog_items.catalog_kind as sourceCatalogKind",
+      "source_objects.variety_text as sourceVarietyText",
+      "source_objects.variety_state as sourceVarietyState",
+    ])
+    .where("lineage_provenance_edges.source_owner_user_id", "=", scope.userId)
+    .where("lineage_provenance_edges.owner_user_id", "!=", scope.userId)
+    .where("lineage_provenance_edges.source_kind", "=", "own_object")
+    .where("lineage_provenance_edges.consent_state", "=", "proposed")
+    .where("lineage_provenance_edges.erasure_state", "=", "active")
+    .orderBy("lineage_provenance_edges.created_at", "desc")
+    .orderBy("lineage_provenance_edges.id", "asc");
+}
+
 export function buildFindProvenanceEdgeByClientMutationQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -336,6 +506,40 @@ export function buildInsertProvenanceEdgeQuery(
     .onConflict((oc) =>
       oc.columns(["owner_user_id", "client_mutation_id"]).doNothing(),
     )
+    .returningAll();
+}
+
+export function buildResolveLineageClaimQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    edgeId: string;
+    decision: LineageClaimDecision;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_provenance_edges")
+    .set({
+      consent_state: input.decision,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.edgeId)
+    .where("source_owner_user_id", "=", scope.userId)
+    .where("owner_user_id", "!=", scope.userId)
+    .where("source_kind", "=", "own_object")
+    .where("consent_state", "=", "proposed")
+    .where("erasure_state", "=", "active")
+    .returningAll();
+}
+
+export function buildInsertLineageClaimAuditEventQuery(
+  executor: QueryExecutor,
+  input: Insertable<Database["lineage_provenance_edge_audit_events"]>,
+) {
+  return executor
+    .insertInto("lineage_provenance_edge_audit_events")
+    .values(input)
     .returningAll();
 }
 
@@ -400,6 +604,15 @@ function normalizeCreateProvenanceEdgeInput(
       input.sourceReferenceLabel ?? "",
     ),
     clientMutationId,
+  };
+}
+
+function normalizeResolveLineageClaimInput(
+  input: ResolveLineageClaimInput,
+): NormalizedResolveLineageClaimInput {
+  return {
+    edgeId: normalizeRequiredText(input.edgeId, "Lineage claim", 80),
+    decision: normalizeLineageClaimDecision(input.decision),
   };
 }
 
@@ -491,6 +704,20 @@ function normalizeSourceReferenceKind(
   }
 
   throw new Error("Unsupported provenance source reference type.");
+}
+
+function normalizeLineageClaimDecision(value: string): LineageClaimDecision {
+  if (value === "confirmed" || value === "declined") {
+    return value;
+  }
+
+  throw new Error("Unsupported lineage claim decision.");
+}
+
+function lineageClaimActionForDecision(
+  decision: LineageClaimDecision,
+): LineageClaimAuditAction {
+  return decision === "confirmed" ? "confirm" : "decline";
 }
 
 function normalizeRequiredText(

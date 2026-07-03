@@ -87,10 +87,18 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 : "Capture one real living record with its place, object, and first dated note."}
             </p>
           </div>
-          {session?.user?.email ? (
-            <p className="text-sm text-muted-foreground">
-              {session.user.email}
-            </p>
+          {userId ? (
+            <div className="flex flex-col gap-2 text-sm sm:items-end">
+              <Link
+                href="/garden/lineage/claims"
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Lineage claims
+              </Link>
+              {session?.user?.email ? (
+                <p className="text-muted-foreground">{session.user.email}</p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       </header>
