@@ -132,6 +132,7 @@ export function buildPilotSmokeReadiness({
         checkFacebookOAuthConfiguration(env),
         checkPilotInviteSigningSecret(env),
         checkAdminRoleAccessModel(),
+        checkErasureOperatorBoundary(),
         checkR2Configuration(env),
         checkRequiredSecretPresence(
           env,
@@ -305,6 +306,7 @@ export function buildPilotSmokeReadiness({
       "Archive the published entry and confirm the old public URL returns 410 Gone.",
       "Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 counts update without raw private data.",
       "Open `/admin` as a normal Google- or Facebook-created or linked user and confirm access denied; then open it as the dedicated email/password owner account and confirm durable admin_user_roles access is available.",
+      "Open `/garden/privacy/erasure-requests` as a signed-out visitor, a normal signed-in user, and the dedicated owner. Confirm only the owner can read bounded request state and execute maintainer-approved erasure; record no user ids, emails, journal text, media keys, or request metadata.",
       "Verify catalog typeahead or matching service health, then prove journal_entry_index and journal_entry_unindex job processing with redacted job_queue and Meilisearch evidence.",
       "Confirm durability before inviting users: managed Postgres backup/PITR status and a worker restart/recovery smoke that keeps the public-safe search contract. Record both with redacted evidence.",
     ],
@@ -495,6 +497,18 @@ function checkAdminRoleAccessModel(): PilotSmokeCheck {
       "Internal operator surfaces are sealed to the configured admin_user_roles owner; bootstrap only the credential-only email/password owner account before smoke.",
     evidence:
       "Evidence may say sealed owner present only. Do not copy user IDs, emails, cookies, tokens, connection strings, or env values.",
+  };
+}
+
+function checkErasureOperatorBoundary(): PilotSmokeCheck {
+  return {
+    id: "erasure-operator-boundary",
+    label: "Erasure operator boundary",
+    severity: "manual",
+    summary:
+      "`/garden/privacy/erasure-requests` must stay sealed to the configured owner for bounded readback and maintainer-approved execution.",
+    evidence:
+      "Record only route class, access result, and erasure capability class. Do not copy user ids, emails, journal text, media keys, precise location, request metadata, or approval text values.",
   };
 }
 

@@ -339,6 +339,28 @@ describe("pilot smoke readiness", () => {
     });
   });
 
+  it("keeps erasure readiness as an explicit sealed-owner manual proof", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: productionLikeEnv,
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-04T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    const erasure = findCheck(checks, "erasure-operator-boundary");
+    expect(erasure).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("/garden/privacy/erasure-requests"),
+      evidence: expect.stringContaining("erasure capability class"),
+    });
+    expect(readout.smokeSteps.some((step) => step.includes("erasure"))).toBe(
+      true,
+    );
+    expect(JSON.stringify(readout)).not.toContain(
+      "operator-user-id-that-must-not-leak",
+    );
+  });
+
   it("requires Google OAuth env in production and keeps provider proof manual", () => {
     const readyReadout = buildPilotSmokeReadiness({
       env: productionLikeEnv,

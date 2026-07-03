@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity
-Last updated: 2026-07-02
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof
+Last updated: 2026-07-04
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -29,6 +29,64 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
+
+## OVE-131 Production Owner And Public-Smoke Proof
+
+Goal: record one redacted production-readiness proof that a founder/operator can hand to the next agent without exposing owner identity, user ids, emails, cookies, tokens, invite links, journal text, media keys, IP/user-agent data, precise location, raw provider payloads, or private authenticated URLs.
+
+Selected production environment:
+
+- Public origin: `https://over.garden`
+- App host class: Vercel production behind DNS-only `over.garden` app records
+- Media public host class: `media.over.garden`
+- Worker/search health host classes: `matching.over.garden` and `meili.over.garden`
+- Evidence date: 2026-07-04 Europe/Sofia; public header probes below were observed at 2026-07-03 21:50 UTC.
+
+Founder-confirmed owner/admin smoke, redacted:
+
+- Owner bootstrap: pass. The dedicated email/password owner account was bootstrapped into the durable `admin_user_roles` owner path. The owner user id, email, session id, and env value are not recorded.
+- Signed-out `/admin`: pass. A signed-out request shows the auth boundary, not admin dashboard links.
+- Normal signed-in `/admin`: pass. A non-owner signed-in user is denied before admin links or role rows render.
+- Owner `/admin`: pass. The owner dashboard opens through the sealed owner credential-only gate.
+- Social auth to admin: pass by policy and prior OVE-113 proof. Google/Facebook-linked accounts remain valid gardener accounts but do not satisfy `/admin`.
+
+Live public probes, redacted:
+
+- `/`: HTTP `307` to `/uk`, Vercel response, no Cloudflare cache header, closed-pilot no-store/no-cache header class.
+- `/health`: HTTP `200`, Vercel response, no Cloudflare cache header, closed-pilot no-store/no-cache header class.
+- `/privacy`: HTTP `200`, OverGarden HTML response, no Cloudflare cache header, `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate`.
+- `/support`: HTTP `200`, OverGarden HTML response, no Cloudflare cache header, `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate`.
+- `/admin` signed out: HTTP `200`, robots `noindex, nofollow`, auth panel rendered, no owner dashboard links recorded.
+
+Auth and account continuity evidence:
+
+- Email/password auth, email verification, and password-reset delivery are covered by OVE-127's Resend-backed auth email implementation and must be re-run as redacted live delivery proof before relying on a fresh production cohort. Record only provider class, sender-domain class, canonical-origin class, and account-continuity pass/fail.
+- Google OAuth production continuity is covered by OVE-111 redacted provider smoke on 2026-07-02.
+- Facebook Login production continuity is covered by OVE-112 redacted provider smoke on 2026-07-02.
+- No provider ids, provider secrets, callback query parameters, message ids, reset links, verification links, cookies, or tokens are recorded here.
+
+Current public-product smoke coverage:
+
+- First entry, media derivative, same-object follow-up, publish, public journal SSR, public variety activation, archive-to-410, and pilot-health readback remain covered by the canonical OVE-51 browser smoke and OVE-37 current-main closure unless the deployed app, R2 media path, auth path, public route semantics, worker/search env, or publication/archive code changes.
+- Media proof records only the public derivative host class (`media.over.garden`). Quarantine keys, signed upload URLs, original object keys, EXIF, and derivative object keys remain forbidden evidence.
+- Public journal and variety HTML remain governed by the noindex/no-store policy in this document and `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.md`.
+
+Worker/search and durability evidence:
+
+- Public health probe `https://matching.over.garden/health`: pass (`status=ok`, ICU present).
+- Public health probe `https://meili.over.garden/health`: pass (`status=available`).
+- Journal index/unindex, public-safe Meilisearch document shape, worker restart recovery, and managed Postgres backup/PITR remain covered by OVE-36/OVE-39 redacted evidence unless worker/search/job payload/env or production process management changes.
+- A fresh live worker/search round-trip is deferred for OVE-131 because this issue records the current proof bundle and did not change worker/search runtime behavior. Re-run it before inviting a new cohort if any worker/search surface has changed.
+
+Erasure readiness:
+
+- The operator route `/garden/privacy/erasure-requests` remains in the sealed owner control plane. The checklist now requires signed-out, normal signed-in, and owner checks before production erasure proof is claimed.
+- Live erasure execution is deferred for OVE-131 because irreversible erasure requires a maintainer-approved request and must not be simulated against production data. Acceptable evidence is route/access class plus approved-execution pass/fail only; never record user ids, emails, journal text, media keys, precise location, request metadata, or approval text values.
+
+OVE-131 closeout interpretation:
+
+- Pass for redacted owner/admin proof recording, canonical public access/header probes, public worker/search health probes, and documenting the complete production smoke checklist.
+- Deferred live proof, with reason: new authenticated first-entry/media/publish/archive run, Resend delivery run, live worker index/unindex round-trip, and live erasure execution were not repeated in this issue because they require private owner/test credentials, email inbox/provider evidence, worker data mutation, or maintainer-approved irreversible erasure. Each deferred item has an explicit re-run condition above.
 
 ## OVE-37 Current-Main Public Pilot Closure
 
@@ -534,16 +592,19 @@ Public visitor/crawler prerequisite:
 8. Open the object page and add a follow-up entry to the same object.
 9. Publish the first entry after accepting first-publication disclosure.
 10. Open the public `/journal/[slug]` URL:
-   - status `200`,
-   - SSR HTML visible without client JS dependency,
-   - robots `noindex, nofollow`,
-   - no precise location,
-   - no quarantine/original media key,
-   - derivative-only media if a photo was attached.
+
+- status `200`,
+- SSR HTML visible without client JS dependency,
+- robots `noindex, nofollow`,
+- no precise location,
+- no quarantine/original media key,
+- derivative-only media if a photo was attached.
+
 11. From the public entry, open `/variety/[slug]` when linked:
-   - page renders only if there is safe public entry depth for that catalog item,
-   - thin pages stay noindex,
-   - CTA carries only a public catalog slug into `/garden`.
+
+- page renders only if there is safe public entry depth for that catalog item,
+- thin pages stay noindex,
+- CTA carries only a public catalog slug into `/garden`.
 
 12. Use the public variety CTA, sign in if needed, and save another first-entry path with public-variety activation attribution.
 13. Archive the published entry from the authenticated object page.
