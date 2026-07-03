@@ -9,6 +9,10 @@ import type {
   Database,
   JsonValue,
 } from "@/db/schema";
+import {
+  catalogSuggestionTrustMetadata,
+  type CatalogTrustMetadata,
+} from "@/lib/garden/catalog-trust";
 import type { RequestScope } from "@/server/request-scope";
 import { meiliSearchClient } from "@/server/search/client";
 import {
@@ -17,6 +21,7 @@ import {
   dedupeCatalogTypeaheadSuggestions,
   toCatalogTypeaheadDocument,
   type CatalogTypeaheadRow,
+  type CatalogTypeaheadSuggestion,
 } from "@/server/search/catalog-documents";
 
 const MAX_CATALOG_QUERY_LENGTH = 120;
@@ -43,7 +48,7 @@ interface CatalogSearchClient {
   };
 }
 
-export interface CatalogSuggestion {
+export interface CatalogSuggestion extends CatalogTrustMetadata {
   id: string;
   displayName: string;
   canonicalName: string;
@@ -136,7 +141,9 @@ export async function searchCatalogSuggestionsWithMeili(
         suggestion: catalogTypeaheadHitToSuggestion(hit),
       }))
       .filter(
-        (result): result is { hit: unknown; suggestion: CatalogSuggestion } =>
+        (
+          result,
+        ): result is { hit: unknown; suggestion: CatalogTypeaheadSuggestion } =>
           result.suggestion !== null &&
           meiliHitMatchesCatalogQuery(
             result.hit,
@@ -144,7 +151,7 @@ export async function searchCatalogSuggestionsWithMeili(
             normalizedQuery,
           ),
       )
-      .map((result) => result.suggestion)
+      .map((result) => toCatalogSuggestion(result.suggestion)),
   ).slice(0, normalizedLimit);
 }
 
@@ -164,15 +171,17 @@ export async function searchCatalogSuggestions(
   ).execute();
 
   return dedupeCatalogTypeaheadSuggestions(
-    rows.map((row) => ({
-      id: row.id,
-      displayName: row.displayName,
-      canonicalName: row.canonicalName,
-      catalogKind: row.catalogKind as CatalogKind,
-      locale: row.locale,
-      status: row.status as SelectableCatalogStatus,
-      source: row.source,
-    })),
+    rows.map((row) =>
+      toCatalogSuggestion({
+        id: row.id,
+        displayName: row.displayName,
+        canonicalName: row.canonicalName,
+        catalogKind: row.catalogKind as CatalogKind,
+        locale: row.locale,
+        status: row.status as SelectableCatalogStatus,
+        source: row.source,
+      }),
+    ),
   ).slice(0, normalizedLimit);
 }
 
@@ -482,21 +491,34 @@ export function normalizeCatalogQuery(query: string) {
 
 function meiliHitMatchesCatalogQuery(
   hit: unknown,
-  suggestion: CatalogSuggestion,
+  suggestion: CatalogTypeaheadSuggestion,
   normalizedQuery: string,
 ) {
   if (!isCatalogSearchHitRecord(hit)) {
-    return textMatchesCatalogQuery(
-      suggestion.displayName,
-      normalizedQuery,
-    ) || textMatchesCatalogQuery(suggestion.canonicalName, normalizedQuery);
+    return (
+      textMatchesCatalogQuery(suggestion.displayName, normalizedQuery) ||
+      textMatchesCatalogQuery(suggestion.canonicalName, normalizedQuery)
+    );
   }
 
-  return [
-    hit.normalizedName,
-    hit.displayName,
-    hit.canonicalName,
-  ].some((value) => textMatchesCatalogQuery(value, normalizedQuery));
+  return [hit.normalizedName, hit.displayName, hit.canonicalName].some(
+    (value) => textMatchesCatalogQuery(value, normalizedQuery),
+  );
+}
+
+function toCatalogSuggestion(input: {
+  id: string;
+  displayName: string;
+  canonicalName: string;
+  catalogKind: CatalogKind;
+  locale: string;
+  status: SelectableCatalogStatus;
+  source: string;
+}): CatalogSuggestion {
+  return {
+    ...input,
+    ...catalogSuggestionTrustMetadata(input),
+  };
 }
 
 function textMatchesCatalogQuery(value: unknown, normalizedQuery: string) {

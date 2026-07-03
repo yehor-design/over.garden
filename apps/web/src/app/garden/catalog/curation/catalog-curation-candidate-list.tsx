@@ -4,6 +4,7 @@ import { CheckCircle2, GitMerge, Search, X, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 
 interface CatalogCurationCandidate {
   id: string;
@@ -83,6 +84,12 @@ function CatalogCurationCandidateCard({
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
   const [status, setStatus] = useState<CatalogStatus>("idle");
+  const candidateTrust = catalogSuggestionTrustMetadata({
+    status: candidate.status,
+    source: candidate.source,
+    catalogKind: "plant_variety",
+    locale: candidate.locale,
+  });
 
   useEffect(() => {
     const normalizedQuery = query.trim();
@@ -175,10 +182,10 @@ function CatalogCurationCandidateCard({
               {candidate.locale}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {candidate.status}
+              {candidateTrust.trustLabel}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {candidate.source}
+              {candidateTrust.sourceLabel}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               Objects: {candidate.affectedObjectCount}
@@ -192,6 +199,9 @@ function CatalogCurationCandidateCard({
               Created: {formatDate(candidate.createdAt)}
             </span>
           </div>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+            {candidateTrust.sourceCaveat}
+          </p>
         </div>
 
         <form action={confirmAction}>
@@ -239,8 +249,14 @@ function CatalogCurationCandidateCard({
 
           <div className="flex flex-wrap items-center gap-2 text-xs">
             {selected ? (
-              <span className="rounded-md border border-border px-2 py-1 text-foreground">
-                Target: {selected.displayName}
+              <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                <span>
+                  Target: {selected.displayName} ·{" "}
+                  {catalogSuggestionTrustMetadata(selected).trustLabel}
+                </span>
+                <span className="text-muted-foreground">
+                  {catalogSuggestionTrustMetadata(selected).disambiguationLabel}
+                </span>
               </span>
             ) : (
               <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
@@ -257,27 +273,35 @@ function CatalogCurationCandidateCard({
 
           {suggestions.length > 0 ? (
             <ul className="grid gap-2">
-              {suggestions.map((suggestion) => (
-                <li key={suggestion.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectSuggestion(suggestion)}
-                    className="flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-foreground">
-                        {suggestion.displayName}
+              {suggestions.map((suggestion) => {
+                const trust = catalogSuggestionTrustMetadata(suggestion);
+
+                return (
+                  <li key={suggestion.id}>
+                    <button
+                      type="button"
+                      onClick={() => selectSuggestion(suggestion)}
+                      className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-foreground">
+                          {suggestion.displayName}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {suggestion.canonicalName} ·{" "}
+                          {trust.disambiguationLabel}
+                        </span>
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                          {trust.sourceCaveat}
+                        </span>
                       </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {suggestion.canonicalName} · {suggestion.locale}
+                      <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                        {trust.trustLabel}
                       </span>
-                    </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {suggestion.status}
-                    </span>
-                  </button>
-                </li>
-              ))}
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           ) : null}
 

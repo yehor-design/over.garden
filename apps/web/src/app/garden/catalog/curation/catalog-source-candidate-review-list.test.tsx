@@ -15,6 +15,7 @@ const forbiddenRenderedMarkers = [
   "mediaKey",
   "decimalLatitude",
   "decimalLongitude",
+  "GRIN:NPGS:",
 ];
 
 function sourceCandidate(
@@ -137,7 +138,10 @@ describe("CatalogSourceCandidateReviewList", () => {
     expect(html).toContain("Held: 1");
     expect(html).toContain("Promoted: 1");
     expect(html).toContain("Red Cherry");
-    expect(html).toContain("grin_genebank_candidate");
+    expect(html).toContain("GRIN/NPGS candidate");
+    expect(html).toContain("Hidden from typeahead and public catalog");
+    expect(html).toContain("Not selectable until review confirms");
+    expect(html).toContain("Promoted into the safe catalog projection");
     expect(html).toContain("Solanum lycopersicum L.");
     expect(html).toContain("Promote");
     expect(html).toContain("Hold");

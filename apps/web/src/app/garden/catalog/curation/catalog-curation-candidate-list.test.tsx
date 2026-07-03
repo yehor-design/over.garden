@@ -28,6 +28,8 @@ describe("CatalogCurationCandidateList", () => {
     );
 
     expect(html).toContain("Pilot signal");
+    expect(html).toContain("Your name");
+    expect(html).toContain("Saved only for your garden");
     expect(html).toContain("Invited gardeners: 1");
     expect(html).toContain("Objects: 2");
     expect(html).toContain("Бабусин перець");

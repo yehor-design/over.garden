@@ -189,6 +189,12 @@ describe("catalog typeahead search documents", () => {
       locale: "uk",
       status: "seeded",
       source: "internal_seed",
+      trustState: "candidate",
+      trustLabel: "Candidate",
+      sourceLabel: "OverGarden pilot seed",
+      sourceCaveat:
+        "Pilot seed row. Use your own name or Unknown if this is not exact.",
+      disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
     });
   });
 

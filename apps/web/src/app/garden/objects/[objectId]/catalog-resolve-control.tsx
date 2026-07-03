@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { CatalogKind, VarietyState } from "@/db/schema";
+import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import {
   catalogKindLabel,
-  catalogSuggestionStatusLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 
@@ -40,6 +40,9 @@ export function CatalogResolveControl({
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
   const [status, setStatus] = useState<CatalogStatus>("idle");
+  const selectedTrust = selected
+    ? catalogSuggestionTrustMetadata(selected)
+    : null;
 
   useEffect(() => {
     const normalizedQuery = query.trim();
@@ -152,9 +155,16 @@ export function CatalogResolveControl({
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selected ? (
-            <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Matched in catalog: {selected.displayName} ·{" "}
-              {catalogKindLabel(selected.catalogKind)}
+            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+              <span>
+                Matched in catalog: {selected.displayName} ·{" "}
+                {selectedTrust?.trustLabel} ·{" "}
+                {catalogKindLabel(selected.catalogKind)}
+              </span>
+              <span className="text-muted-foreground">
+                {selectedTrust?.disambiguationLabel} ·{" "}
+                {selectedTrust?.sourceCaveat}
+              </span>
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
@@ -173,29 +183,34 @@ export function CatalogResolveControl({
 
         {suggestions.length > 0 ? (
           <ul className="grid gap-2">
-            {suggestions.map((suggestion) => (
-              <li key={suggestion.id}>
-                <button
-                  type="button"
-                  onClick={() => selectSuggestion(suggestion)}
-                  className="flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">
-                      {suggestion.displayName}
+            {suggestions.map((suggestion) => {
+              const trust = catalogSuggestionTrustMetadata(suggestion);
+
+              return (
+                <li key={suggestion.id}>
+                  <button
+                    type="button"
+                    onClick={() => selectSuggestion(suggestion)}
+                    className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-foreground">
+                        {suggestion.displayName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {suggestion.canonicalName} · {trust.disambiguationLabel}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        {trust.sourceCaveat}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {suggestion.canonicalName} ·{" "}
-                      {catalogKindLabel(suggestion.catalogKind)} ·{" "}
-                      {suggestion.locale}
+                    <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                      {trust.trustLabel}
                     </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {catalogSuggestionStatusLabel(suggestion.status)}
-                  </span>
-                </button>
-              </li>
-            ))}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : null}
 

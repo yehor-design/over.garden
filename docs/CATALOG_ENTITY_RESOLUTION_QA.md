@@ -33,6 +33,8 @@ The QA read model may expose only catalog identity, public slug, source family, 
 
 `/garden/catalog/curation` renders the same report for admin roles with `operator:mutate` beside the source-candidate review lane. The UI is a review surface, not an automatic merge tool: OVE-89 proves where human review is needed and that risky rows remain held or blocked.
 
+OVE-129 extends the review and typeahead surfaces with safe trust-state copy. Selectable typeahead suggestions may show only derived labels such as curated, source-backed, candidate, source family, type, locale, and a plain-language caveat from an allowlist. Quarantined, held/review-needed, blocked, rejected, and promoted source candidates must be described in those safe states; raw source payloads, source-only keys, source record identifiers, legal/source-only caveat bodies, private journal data, media internals, precise location, and owner data remain outside public/catalog evidence.
+
 ## Downstream Rule
 
 OVE-90 must attach the OVE-89 report before claiming production full-catalog availability. Any `likely_duplicate`, `alias_collision`, `source_disagreement`, or `manual_review_required` cluster must either be resolved through a later explicit merge/hold/reject path or called out as an accepted blocker in the OVE-90 evidence.

@@ -1,5 +1,10 @@
 import { createHash } from "node:crypto";
 
+import {
+  catalogSuggestionTrustMetadata,
+  type CatalogTrustMetadata,
+} from "@/lib/garden/catalog-trust";
+
 export const CATALOG_TYPEAHEAD_INDEX = "catalog_typeahead";
 
 const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
@@ -202,7 +207,7 @@ export interface CatalogTypeaheadDocument {
   kind: "catalog_item";
 }
 
-export interface CatalogTypeaheadSuggestion {
+export interface CatalogTypeaheadSuggestion extends Partial<CatalogTrustMetadata> {
   id: string;
   displayName: string;
   canonicalName: string;
@@ -293,13 +298,19 @@ export function catalogTypeaheadHitToSuggestion(
     status,
     source,
     catalogKind,
+    ...catalogSuggestionTrustMetadata({
+      status,
+      source,
+      catalogKind,
+      locale,
+    }),
   };
 }
 
-export function dedupeCatalogTypeaheadSuggestions(
-  suggestions: CatalogTypeaheadSuggestion[],
-): CatalogTypeaheadSuggestion[] {
-  const deduped = new Map<string, CatalogTypeaheadSuggestion>();
+export function dedupeCatalogTypeaheadSuggestions<
+  T extends CatalogTypeaheadSuggestion,
+>(suggestions: T[]): T[] {
+  const deduped = new Map<string, T>();
 
   for (const suggestion of suggestions) {
     const key = catalogTypeaheadSuggestionDedupeKey(suggestion);

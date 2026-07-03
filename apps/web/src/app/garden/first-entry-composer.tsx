@@ -28,6 +28,7 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
+import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import { defaultObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
 import {
   clearComposerPhotoIntent,
@@ -42,7 +43,6 @@ import {
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
   catalogKindLabel,
-  catalogSuggestionStatusLabel,
   journalSaveErrorMessage,
   journalSaveStateLabel,
   locationVisibilityHelpText,
@@ -306,6 +306,19 @@ export function FirstEntryComposer({
       photoError,
     });
   }, [isOnline, photoError, photoFile, storedPhotoIntent]);
+  const catalogAliasCollisionKeys = useMemo(
+    () => catalogSuggestionAliasCollisionKeys(catalogSuggestions),
+    [catalogSuggestions],
+  );
+  const selectedCatalogTrust = selectedCatalogItem
+    ? catalogSuggestionTrustMetadata(selectedCatalogItem)
+    : null;
+  const userAddedCatalogTrust = catalogSuggestionTrustMetadata({
+    status: "provisional",
+    source: "user_added",
+    catalogKind: "plant_variety",
+    locale: "und",
+  });
 
   const hasSelectedPhoto = Boolean(photoFile || storedPhotoIntent);
 
@@ -719,21 +732,34 @@ export function FirstEntryComposer({
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
           {selectedCatalogItem ? (
-            <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
-              {catalogKindLabel(
-                selectedCatalogItem.catalogKind,
-                draft.objectKind,
-              )}{" "}
-              · {plantObjectKindLabel(draft.objectKind)}
+            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+              <span>
+                Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
+                {selectedCatalogTrust?.trustLabel} ·{" "}
+                {catalogKindLabel(
+                  selectedCatalogItem.catalogKind,
+                  draft.objectKind,
+                )}{" "}
+                · {plantObjectKindLabel(draft.objectKind)}
+              </span>
+              <span className="text-muted-foreground">
+                {selectedCatalogTrust?.disambiguationLabel} ·{" "}
+                {selectedCatalogTrust?.sourceCaveat}
+              </span>
             </span>
           ) : userAddedCatalogName ? (
-            <span className="rounded-md border border-border px-2 py-1 text-foreground">
-              Saved with your catalog name: {userAddedCatalogName}
+            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+              <span>
+                Saved with your catalog name: {userAddedCatalogName} ·{" "}
+                {userAddedCatalogTrust.trustLabel}
+              </span>
+              <span className="text-muted-foreground">
+                {userAddedCatalogTrust.sourceCaveat}
+              </span>
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              No catalog match yet
+              No catalog match yet · Safe to save and match later
             </span>
           )}
           <button
@@ -764,29 +790,43 @@ export function FirstEntryComposer({
 
         {catalogSuggestions.length > 0 ? (
           <ul className="grid gap-2">
-            {catalogSuggestions.map((suggestion) => (
-              <li key={suggestion.id}>
-                <button
-                  type="button"
-                  onClick={() => selectCatalogSuggestion(suggestion)}
-                  className="flex w-full items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                >
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">
-                      {suggestion.displayName}
+            {catalogSuggestions.map((suggestion) => {
+              const trust = catalogSuggestionTrustMetadata(suggestion);
+              const hasAliasCollision = catalogAliasCollisionKeys.has(
+                catalogSuggestionAliasCollisionKey(suggestion),
+              );
+
+              return (
+                <li key={suggestion.id}>
+                  <button
+                    type="button"
+                    onClick={() => selectCatalogSuggestion(suggestion)}
+                    className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium text-foreground">
+                        {suggestion.displayName}
+                      </span>
+                      <span className="block truncate text-xs text-muted-foreground">
+                        {suggestion.canonicalName} · {trust.disambiguationLabel}
+                      </span>
+                      {hasAliasCollision ? (
+                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                          Same searched name appears in multiple catalog
+                          choices. Compare type and source before choosing.
+                        </span>
+                      ) : null}
+                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                        {trust.sourceCaveat}
+                      </span>
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {suggestion.canonicalName} ·{" "}
-                      {catalogKindLabel(suggestion.catalogKind)} ·{" "}
-                      {suggestion.locale}
+                    <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                      {trust.trustLabel}
                     </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {catalogSuggestionStatusLabel(suggestion.status)}
-                  </span>
-                </button>
-              </li>
-            ))}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </div>
@@ -1040,6 +1080,7 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         locale: candidate.locale,
         status: candidate.status,
         source: candidate.source,
+        ...catalogSuggestionTrustMetadata(candidate),
       },
     ];
   });
@@ -1055,4 +1096,21 @@ function isSelectableCatalogStatus(
   value: unknown,
 ): value is CatalogSuggestion["status"] {
   return value === "seeded" || value === "confirmed";
+}
+
+function catalogSuggestionAliasCollisionKeys(suggestions: CatalogSuggestion[]) {
+  const counts = new Map<string, number>();
+
+  for (const suggestion of suggestions) {
+    const key = catalogSuggestionAliasCollisionKey(suggestion);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return new Set(
+    [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key),
+  );
+}
+
+function catalogSuggestionAliasCollisionKey(suggestion: CatalogSuggestion) {
+  return suggestion.displayName.trim().replace(/\s+/g, " ").toLowerCase();
 }

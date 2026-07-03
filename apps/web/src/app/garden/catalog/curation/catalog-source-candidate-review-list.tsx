@@ -9,6 +9,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import { catalogKindLabel } from "@/lib/garden/pilot-ux-copy";
 import type {
   CatalogSourceCandidateReviewItem,
@@ -168,6 +169,15 @@ function CatalogSourceCandidateCard({
   holdAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
 }) {
+  const trust = catalogSuggestionTrustMetadata({
+    status: candidate.status,
+    source: candidate.promotionPreview?.source ?? candidate.sourceSlug,
+    catalogKind:
+      candidate.promotionPreview?.catalogKind ??
+      candidate.projectedCatalog?.catalogKind ??
+      null,
+  });
+
   return (
     <article className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -179,10 +189,9 @@ function CatalogSourceCandidateCard({
             </h4>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <Badge>{candidate.status}</Badge>
-            <Badge>{candidate.sourceSlug}</Badge>
+            <Badge>{trust.trustLabel}</Badge>
+            <Badge>{trust.sourceLabel}</Badge>
             <Badge>Version: {candidate.sourceVersion}</Badge>
-            <Badge>Row: {candidate.sourceRecordKey}</Badge>
             {candidate.review.reviewStatus ? (
               <Badge>{candidate.review.reviewStatus}</Badge>
             ) : null}
@@ -193,6 +202,9 @@ function CatalogSourceCandidateCard({
               <Badge>{candidate.review.curatorDecision}</Badge>
             ) : null}
           </div>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+            {trust.sourceCaveat}
+          </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -329,7 +341,15 @@ function CatalogSourceCandidateCard({
             <Badge>
               {catalogKindLabel(candidate.promotionPreview.catalogKind)}
             </Badge>
-            <Badge>{candidate.promotionPreview.source}</Badge>
+            <Badge>
+              {
+                catalogSuggestionTrustMetadata({
+                  status: "seeded",
+                  source: candidate.promotionPreview.source,
+                  catalogKind: candidate.promotionPreview.catalogKind,
+                }).sourceLabel
+              }
+            </Badge>
             <Badge>aliases {candidate.promotionPreview.aliases.length}</Badge>
           </div>
           {candidate.promotionPreview.aliases.length > 0 ? (
@@ -358,7 +378,14 @@ function CatalogSourceCandidateCard({
             <span className="font-medium text-foreground">
               {candidate.projectedCatalog.canonicalName}
             </span>
-            <Badge>{candidate.projectedCatalog.status}</Badge>
+            <Badge>
+              {
+                catalogSuggestionTrustMetadata({
+                  status: candidate.projectedCatalog.status,
+                  catalogKind: candidate.projectedCatalog.catalogKind,
+                }).trustLabel
+              }
+            </Badge>
             <Badge>
               typeahead names {candidate.projectedCatalog.typeaheadNameCount}
             </Badge>

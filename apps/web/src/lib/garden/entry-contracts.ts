@@ -1,5 +1,6 @@
 import type { EntrySyncStatus } from "@/db/schema";
 import type { CatalogKind, PlantObjectKind } from "@/db/schema";
+import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
 
 export type ActivationSource =
   | "homepage"
@@ -21,6 +22,11 @@ export interface FirstEntryCatalogSelection {
   locale: string;
   status: "seeded" | "confirmed";
   source: string;
+  trustState?: CatalogTrustState;
+  trustLabel?: string;
+  sourceLabel?: string;
+  sourceCaveat?: string;
+  disambiguationLabel?: string;
 }
 
 export interface FirstPlantEntryRequest {

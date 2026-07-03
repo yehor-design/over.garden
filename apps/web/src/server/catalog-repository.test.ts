@@ -13,6 +13,7 @@ import {
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
+import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
@@ -48,6 +49,15 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
+
+function catalogSuggestion<
+  T extends Parameters<typeof catalogSuggestionTrustMetadata>[0],
+>(suggestion: T) {
+  return {
+    ...suggestion,
+    ...catalogSuggestionTrustMetadata(suggestion),
+  };
+}
 
 describe("catalog repository query contracts", () => {
   it("normalizes bounded typeahead queries without preserving raw spacing", () => {
@@ -155,6 +165,12 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "internal_seed",
+        trustState: "candidate",
+        trustLabel: "Candidate",
+        sourceLabel: "OverGarden pilot seed",
+        sourceCaveat:
+          "Pilot seed row. Use your own name or Unknown if this is not exact.",
+        disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
       },
     ]);
   });
@@ -211,13 +227,19 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded",
         source: "ua_state_register",
+        trustState: "source_backed",
+        trustLabel: "Source-backed",
+        sourceLabel: "Ukraine variety register",
+        sourceCaveat:
+          "Register-backed variety row. Compare crop and name if aliases collide.",
+        disambiguationLabel: "Plant variety · Ukraine variety register · uk",
       },
     ]);
   });
 
   it("falls back to canonical catalog rows when the derived Meili index is empty", async () => {
     const fallback = [
-      {
+      catalogSuggestion({
         id: "00000000-0000-4000-8000-000000000301",
         displayName: "помідор",
         canonicalName: "Solanum lycopersicum L.",
@@ -225,8 +247,9 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded" as const,
         source: "species_backbone",
-      },
+      }),
     ];
+
     const calls: string[] = [];
 
     await expect(
@@ -246,7 +269,7 @@ describe("catalog repository query contracts", () => {
 
   it("falls back to canonical catalog rows when the derived Meili index is unavailable", async () => {
     const fallback = [
-      {
+      catalogSuggestion({
         id: "00000000-0000-4000-8000-000000000601",
         displayName: "Карпатська",
         canonicalName: "Карпатська бджола",
@@ -254,7 +277,7 @@ describe("catalog repository query contracts", () => {
         locale: "uk",
         status: "seeded" as const,
         source: "ua_official_bee_breed",
-      },
+      }),
     ];
 
     await expect(
@@ -268,7 +291,7 @@ describe("catalog repository query contracts", () => {
   });
 
   it("keeps non-empty derived Meili suggestions first while adding canonical Postgres rows", async () => {
-    const meiliSuggestion = {
+    const meiliSuggestion = catalogSuggestion({
       id: "00000000-0000-4000-8000-000000000621",
       displayName: "Red Cherry",
       canonicalName: "Red Cherry tomato",
@@ -276,8 +299,8 @@ describe("catalog repository query contracts", () => {
       locale: "en",
       status: "seeded" as const,
       source: "grin_genebank_candidate",
-    };
-    const postgresSuggestion = {
+    });
+    const postgresSuggestion = catalogSuggestion({
       id: "00000000-0000-4000-8000-000000000301",
       displayName: "помідор",
       canonicalName: "Solanum lycopersicum L.",
@@ -285,7 +308,7 @@ describe("catalog repository query contracts", () => {
       locale: "uk",
       status: "seeded" as const,
       source: "species_backbone",
-    };
+    });
 
     await expect(
       searchCatalogSuggestionsForTypeahead("Red Cherry", 8, {
@@ -295,8 +318,40 @@ describe("catalog repository query contracts", () => {
     ).resolves.toEqual([meiliSuggestion, postgresSuggestion]);
   });
 
+  it("keeps ambiguous alias choices separate when type or source differs", async () => {
+    const variety = catalogSuggestion({
+      id: "00000000-0000-4000-8000-000000089001",
+      displayName: "Albion",
+      canonicalName: "Albion strawberry",
+      catalogKind: "plant_variety" as const,
+      locale: "en",
+      status: "seeded" as const,
+      source: "eu_oj_eur_lex_common_catalogue",
+    });
+    const species = catalogSuggestion({
+      id: "00000000-0000-4000-8000-000000089002",
+      displayName: "Albion",
+      canonicalName: "Albion sp.",
+      catalogKind: "species" as const,
+      locale: "en",
+      status: "seeded" as const,
+      source: "species_backbone",
+    });
+
+    await expect(
+      searchCatalogSuggestionsForTypeahead("Albion", 8, {
+        searchWithMeili: async () => [variety],
+        searchWithPostgres: async () => [species],
+      }),
+    ).resolves.toEqual([variety, species]);
+    expect(variety.disambiguationLabel).toBe(
+      "Plant variety · EU Official Journal · en",
+    );
+    expect(species.disambiguationLabel).toBe("Species · Species backbone · en");
+  });
+
   it("dedupes stale Meili hits when canonical Postgres rows are merged", async () => {
-    const canonicalSuggestion = {
+    const canonicalSuggestion = catalogSuggestion({
       id: "00000000-0000-4000-8000-000000000301",
       displayName: "помідор",
       canonicalName: "Solanum lycopersicum L.",
@@ -304,7 +359,7 @@ describe("catalog repository query contracts", () => {
       locale: "uk",
       status: "seeded" as const,
       source: "species_backbone",
-    };
+    });
 
     await expect(
       searchCatalogSuggestionsForTypeahead("помідор", 8, {
