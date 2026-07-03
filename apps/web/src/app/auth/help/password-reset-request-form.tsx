@@ -35,7 +35,7 @@ export function PasswordResetRequestForm() {
     if (error) {
       setMessage(
         error.message ??
-          "Could not send a reset link right now. Closed-pilot support can still help.",
+          "Could not send a reset link right now. Support can still help.",
       );
       return;
     }

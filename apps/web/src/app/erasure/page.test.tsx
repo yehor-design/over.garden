@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ERASURE_REQUEST_INTAKE_VERSION,
   formatErasureRequestReference,
+  SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
 
 vi.mock("@/server/auth-session", () => ({
@@ -43,7 +44,7 @@ describe("/erasure", () => {
     const html = renderToStaticMarkup(await ErasureRequestPage());
 
     expect(metadata.description).toContain(
-      "Closed-pilot OverGarden account erasure",
+      "OverGarden MVP account erasure",
     );
     expect(html).toContain("Needs identity verification");
     expect(html).toContain(ERASURE_REQUEST_INTAKE_VERSION);
@@ -51,8 +52,11 @@ describe("/erasure", () => {
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     );
     expect(html).toContain("does not automatically delete");
+    expect(html).toContain("deletes or anonymizes current-schema account");
     expect(html).toContain("removal best-effort only");
+    expect(html).toContain(SUPPORT_EMAIL);
     expect(html).not.toContain("00000000-0000-4000-8000-000000000001");
-    expect(html).not.toMatch(/placeholder|media keys|ip address/i);
+    expect(html).not.toMatch(/placeholder|public release remains blocked/i);
+    expect(html).not.toMatch(/quarantine\/|raw-token|session-token/i);
   });
 });

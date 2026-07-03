@@ -7,7 +7,8 @@ import {
   ERASURE_REQUEST_INTAKE_VERSION,
   formatErasureRequestReference,
   getErasureRequestStatusCopy,
-  PILOT_LEGAL_COPY_STATUS_LABEL,
+  MVP_LEGAL_COPY_STATUS_LABEL,
+  SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getLatestErasureRequestForUser } from "@/server/erasure-request-repository";
@@ -16,9 +17,9 @@ import { GardenAuthPanel } from "../garden/garden-auth-panel";
 import { submitErasureRequestAction } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Pilot erasure request | OverGarden",
+  title: "MVP erasure request | OverGarden",
   description:
-    "Closed-pilot OverGarden account erasure and anonymization request status.",
+    "OverGarden MVP account erasure and anonymization request status.",
   robots: {
     index: false,
     follow: false,
@@ -48,27 +49,38 @@ export default async function ErasureRequestPage() {
       </Link>
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Pilot erasure request
+          MVP erasure request
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Submit or review a closed-pilot operator request for account data
-          erasure or anonymization. This form does not automatically delete
-          anything.
+          Submit or review an operator request for account data erasure or
+          anonymization. This form records the request and status path; it does
+          not automatically delete anything.
         </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
         <p>
-          Status: <strong>{PILOT_LEGAL_COPY_STATUS_LABEL}</strong>. Final
-          public-release legal wording, contact instructions, response
-          timelines, production proof, and erasure scope still require
-          approval. Search-engine, crawler, or AI copies outside OverGarden are
-          removal best-effort only.
+          Status: <strong>{MVP_LEGAL_COPY_STATUS_LABEL}</strong>. OverGarden
+          archives public surfaces first, then a maintainer-approved operator
+          can delete or anonymize current-schema account, garden, journal,
+          media, analytics, catalog-provisional, and search-job references
+          where OverGarden controls them. Search-engine, crawler, or AI copies
+          outside OverGarden are removal best-effort only.
         </p>
         <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
           {ERASURE_REQUEST_ACKNOWLEDGEMENT_LINES.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>
+        <p className="text-muted-foreground">
+          For privacy or support questions, email{" "}
+          <a
+            href={`mailto:${SUPPORT_EMAIL}`}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {SUPPORT_EMAIL}
+          </a>
+          .
+        </p>
       </div>
 
       {userId ? (

@@ -3,24 +3,29 @@ import { describe, expect, it } from "vitest";
 
 import {
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
-  PILOT_LEGAL_COPY_STATUS,
+  MVP_LEGAL_COPY_STATUS,
+  SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
 import PrivacyNoticePage, { metadata } from "./page";
 
-describe("/privacy pilot notice", () => {
-  it("renders closed-pilot reviewed copy and public-release blockers", () => {
+describe("/privacy MVP notice", () => {
+  it("renders founder-approved MVP copy, retention, and support contact", () => {
     const html = renderToStaticMarkup(<PrivacyNoticePage />);
 
-    expect(metadata.description).toContain("Closed-pilot privacy notice");
-    expect(html).toContain(PILOT_LEGAL_COPY_STATUS);
-    expect(html).toContain("Public release blockers");
+    expect(metadata.description).toContain("Founder-approved MVP privacy");
+    expect(html).toContain(MVP_LEGAL_COPY_STATUS);
+    expect(html).toContain("Founder-approved MVP copy");
+    expect(html).toContain("Data retention");
+    expect(html).toContain("7 failed-processing days");
+    expect(html).toContain("13 months");
+    expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
-    expect(html).toContain("stop showing the journal text");
+    expect(html).toContain("queued for public search removal");
     expect(html).not.toContain("410 Gone");
-    expect(html).not.toMatch(/placeholder/i);
+    expect(html).not.toMatch(/placeholder|public release remains blocked/i);
     expect(html).not.toMatch(/\b(noindex|stripped derivatives?)\b/i);
     expect(html).not.toMatch(
-      /\b(address|coordinates?|latitude|longitude|email|ip_address|user[_ -]?agent)\b/i,
+      /00000000-0000-4000-8000|quarantine\/|raw-token|session-token|https?:\/\/[^"]+\/api\//i,
     );
   });
 });

@@ -493,6 +493,7 @@ curl -I "$SMOKE_BASE_URL/health"
 curl -I "$SMOKE_BASE_URL/"
 curl -I "$SMOKE_BASE_URL/join"
 curl -I "$SMOKE_BASE_URL/privacy"
+curl -I "$SMOKE_BASE_URL/support"
 ```
 
 Public visitor/crawler prerequisite:

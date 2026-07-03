@@ -7,6 +7,7 @@ import {
   passwordResetHelpMessage,
   signInRecoveryHint,
 } from "@/lib/auth/pilot-auth-recovery";
+import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import { PasswordResetRequestForm } from "./password-reset-request-form";
 
 export const metadata: Metadata = {
@@ -50,8 +51,15 @@ export default function AuthHelpPage() {
             Creating another account will not move your existing plant records.
           </li>
           <li>
-            If the email reset does not arrive, contact whoever invited you.
-            They can send a private one-time link to set a new password.
+            If the email reset does not arrive, contact{" "}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {SUPPORT_EMAIL}
+            </a>{" "}
+            or whoever invited you. Support can send a private one-time link to
+            set a new password.
           </li>
           <li>
             After you sign in again, open{" "}

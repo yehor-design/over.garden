@@ -4,15 +4,19 @@ import Link from "next/link";
 import {
   ERASURE_REQUEST_INTAKE_VERSION,
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
-  PILOT_LEGAL_COPY_STATUS,
-  PILOT_LEGAL_COPY_STATUS_LABEL,
-  PILOT_PUBLIC_RELEASE_BLOCKERS,
+  MVP_LEGAL_COPY_BOUNDARIES,
+  MVP_LEGAL_COPY_REVIEW_NOTE,
+  MVP_LEGAL_COPY_STATUS,
+  MVP_LEGAL_COPY_STATUS_LABEL,
+  MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS,
+  MVP_RETENTION_RULES,
+  SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
 
 export const metadata: Metadata = {
-  title: "Pilot privacy notice | OverGarden",
+  title: "MVP privacy notice | OverGarden",
   description:
-    "Closed-pilot privacy notice for OverGarden privacy, publication, and erasure controls.",
+    "Founder-approved MVP privacy notice for OverGarden publication, support, erasure, and data retention controls.",
   robots: {
     index: false,
     follow: false,
@@ -27,36 +31,43 @@ export default function PrivacyNoticePage() {
       </Link>
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Pilot privacy notice
+          MVP privacy notice
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          This closed-pilot notice documents the product behavior that is active
-          today. It is reviewed for supervised pilot use, while public release
-          remains blocked on final legal/process review.
+          This notice documents the current OverGarden MVP behavior for public
+          pages, support, erasure, and data retention. {MVP_LEGAL_COPY_REVIEW_NOTE}
         </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
         <p>
-          Status: <strong>{PILOT_LEGAL_COPY_STATUS_LABEL}</strong> (
-          {PILOT_LEGAL_COPY_STATUS}).
+          Status: <strong>{MVP_LEGAL_COPY_STATUS_LABEL}</strong> (
+          {MVP_LEGAL_COPY_STATUS}).
         </p>
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
-            Current pilot controls
+            Current MVP controls
           </h2>
           <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-            <li>Precise location is not collected or rendered in v0.</li>
+            <li>
+              Precise location is not collected or rendered; only supported
+              coarse regions can appear when a gardener chooses region
+              visibility.
+            </li>
             <li>
               Public media uses server-cleaned copies; original uploads are not
               public page assets.
             </li>
             <li>
-              Public pages are not listed for search engines unless explicit
-              promotion rules allow indexing.
+              Useful first-party editorial, guide, answer, and landing pages
+              can be indexed for MVP launch. Thin, unsafe, or user-generated
+              public surfaces stay out of sitemaps unless explicit promotion
+              rules allow indexing.
             </li>
             <li>
               Archived public entries stop showing the journal text at their
-              previous public URL and leave public discovery surfaces.
+              previous public URL, leave public discovery surfaces, and are
+              queued for public search removal. External crawler, search-engine,
+              or AI copies are removal best-effort only.
             </li>
             <li>
               Erasure requests use operator-reviewed intake version{" "}
@@ -67,13 +78,49 @@ export default function PrivacyNoticePage() {
         </section>
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
-            Public release blockers
+            Data retention
           </h2>
           <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-            {PILOT_PUBLIC_RELEASE_BLOCKERS.map((blocker) => (
-              <li key={blocker}>{blocker}</li>
+            {MVP_RETENTION_RULES.map((rule) => (
+              <li key={rule.title}>
+                <strong>{rule.title}:</strong> {rule.summary}
+              </li>
             ))}
           </ul>
+        </section>
+        <section className="grid gap-2">
+          <h2 className="text-base font-semibold text-foreground">
+            Operator evidence limits
+          </h2>
+          <p className="text-muted-foreground">
+            Support, smoke, audit, and erasure evidence must not include{" "}
+            {formatList(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS)}.
+          </p>
+        </section>
+        <section className="grid gap-2">
+          <h2 className="text-base font-semibold text-foreground">
+            Review boundaries
+          </h2>
+          <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
+            {MVP_LEGAL_COPY_BOUNDARIES.map((boundary) => (
+              <li key={boundary}>{boundary}</li>
+            ))}
+          </ul>
+        </section>
+        <section className="grid gap-2">
+          <h2 className="text-base font-semibold text-foreground">
+            Support and privacy contact
+          </h2>
+          <p className="text-muted-foreground">
+            For privacy, erasure, or account support, email{" "}
+            <a
+              href={`mailto:${SUPPORT_EMAIL}`}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {SUPPORT_EMAIL}
+            </a>
+            .
+          </p>
         </section>
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
@@ -87,6 +134,12 @@ export default function PrivacyNoticePage() {
               Request data erasure
             </Link>
             <Link
+              href="/support"
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Support and privacy contact
+            </Link>
+            <Link
               href="/first-publication-disclosure"
               className="text-primary underline-offset-4 hover:underline"
             >
@@ -98,4 +151,11 @@ export default function PrivacyNoticePage() {
       </div>
     </main>
   );
+}
+
+function formatList(items: readonly string[]) {
+  return new Intl.ListFormat("en", {
+    style: "long",
+    type: "conjunction",
+  }).format(items);
 }
