@@ -5,6 +5,14 @@ import { PUBLIC_LOCALES, localizedPath } from "@/lib/public-localization";
 export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
   minPublicEntryCount: 3,
   minAggregateBodyLength: 600,
+  trustedSeededCatalogSources: [
+    "ua_state_register",
+    "species_backbone",
+    "ua_official_bee_breed",
+    "vertebrate_breed_ontology",
+    "eu_common_catalogue_bg",
+    "eu_oj_eur_lex_common_catalogue",
+  ],
 } as const;
 
 export type PublicSurfaceKind =
@@ -26,9 +34,14 @@ export type PublicSurfaceIndexReason =
   | "journal_marked_noindex"
   | "entry_count_below_threshold"
   | "body_length_below_threshold"
+  | "catalog_trust_below_threshold"
+  | "topic_trust_below_threshold"
   | "public_profile_noindex"
   | "lineage_graph_noindex"
   | "missing_public_surface";
+
+export type PublicAggregationCatalogStatus = "seeded" | "confirmed";
+export type PublicTopicTrustState = "curated" | "untrusted";
 
 export interface PublicSurfaceIndexState {
   value: PublicSurfaceIndexValue;
@@ -54,9 +67,17 @@ export type PublicSurfaceIndexInput =
       publicNoindex: boolean;
     }
   | {
-      kind: "variety_aggregation" | "topic_aggregation";
+      kind: "variety_aggregation";
       entryCount: number;
       aggregateBodyLength: number;
+      catalogStatus: PublicAggregationCatalogStatus | string;
+      catalogSource: string;
+    }
+  | {
+      kind: "topic_aggregation";
+      entryCount: number;
+      aggregateBodyLength: number;
+      topicTrust: PublicTopicTrustState;
     }
   | {
       kind: "profile" | "lineage_graph" | "missing";
@@ -99,8 +120,10 @@ export function evaluatePublicSurfaceIndexability(
         : indexable([]);
 
     case "variety_aggregation":
+      return evaluateVarietyAggregationIndexability(input);
+
     case "topic_aggregation":
-      return evaluateAggregationIndexability(input);
+      return evaluateTopicAggregationIndexability(input);
 
     case "profile":
       return noindex(["public_profile_noindex"]);
@@ -124,10 +147,53 @@ export function formatRobotsMetaContent(state: PublicSurfaceIndexState) {
   return state.isIndexable ? "index, follow" : "noindex, nofollow";
 }
 
-function evaluateAggregationIndexability(input: {
+export function isTrustedPublicAggregationCatalogSource(input: {
+  catalogStatus: PublicAggregationCatalogStatus | string;
+  catalogSource: string;
+}) {
+  if (input.catalogStatus === "confirmed") return true;
+
+  return (
+    input.catalogStatus === "seeded" &&
+    (
+      PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.trustedSeededCatalogSources as readonly string[]
+    ).includes(input.catalogSource)
+  );
+}
+
+function evaluateVarietyAggregationIndexability(input: {
   entryCount: number;
   aggregateBodyLength: number;
+  catalogStatus: PublicAggregationCatalogStatus | string;
+  catalogSource: string;
 }): PublicSurfaceIndexState {
+  const reasons = publicAggregationContentReasons(input);
+
+  if (!isTrustedPublicAggregationCatalogSource(input)) {
+    reasons.push("catalog_trust_below_threshold");
+  }
+
+  return reasons.length === 0 ? indexable([]) : noindex(reasons);
+}
+
+function evaluateTopicAggregationIndexability(input: {
+  entryCount: number;
+  aggregateBodyLength: number;
+  topicTrust: PublicTopicTrustState;
+}): PublicSurfaceIndexState {
+  const reasons = publicAggregationContentReasons(input);
+
+  if (input.topicTrust !== "curated") {
+    reasons.push("topic_trust_below_threshold");
+  }
+
+  return reasons.length === 0 ? indexable([]) : noindex(reasons);
+}
+
+function publicAggregationContentReasons(input: {
+  entryCount: number;
+  aggregateBodyLength: number;
+}) {
   const reasons: PublicSurfaceIndexReason[] = [];
 
   if (
@@ -144,7 +210,7 @@ function evaluateAggregationIndexability(input: {
     reasons.push("body_length_below_threshold");
   }
 
-  return reasons.length === 0 ? indexable([]) : noindex(reasons);
+  return reasons;
 }
 
 function indexable(

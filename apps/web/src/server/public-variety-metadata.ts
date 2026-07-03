@@ -34,6 +34,8 @@ export function buildPublicVarietyJsonLd(
     kind: "variety_aggregation",
     entryCount: page.entryCount,
     aggregateBodyLength: page.aggregateBodyLength,
+    catalogStatus: page.catalog.status,
+    catalogSource: page.catalog.source,
   });
 
   if (!indexState.isIndexable) return null;

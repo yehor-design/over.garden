@@ -124,6 +124,8 @@ export async function getPublicVarietyPage(
     indexState: evaluatePublicVarietyIndexState({
       entryCount,
       aggregateBodyLength,
+      catalogStatus: summary.catalogStatus,
+      catalogSource: summary.catalogSource,
     }),
     seedProof: seedProof ?? null,
     sourceCredits: sourceCredits.map((credit) => ({
@@ -204,9 +206,8 @@ export function buildPublicVarietySourceCreditsQuery(
 export async function listIndexablePublicVarietySitemapEntries(
   executor: QueryExecutor = db,
 ): Promise<PublicVarietySitemapEntry[]> {
-  const rows = await buildIndexablePublicVarietySitemapRowsQuery(
-    executor,
-  ).execute();
+  const rows =
+    await buildIndexablePublicVarietySitemapRowsQuery(executor).execute();
 
   return rows.map((row) => ({
     publicSlug: row.publicSlug,
@@ -307,6 +308,17 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     ])
     .where("catalog_items.public_slug", "is not", null)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where(({ eb, or }) =>
+      or([
+        eb("catalog_items.status", "=", "confirmed"),
+        eb.and([
+          eb("catalog_items.status", "=", "seeded"),
+          eb("catalog_items.source", "in", [
+            ...PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.trustedSeededCatalogSources,
+          ]),
+        ]),
+      ]),
+    )
     .where("catalog_items.created_by_user_id", "is", null)
     .where("plant_objects.variety_state", "=", "selected")
     .whereRef(

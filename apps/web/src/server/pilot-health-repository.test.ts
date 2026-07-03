@@ -206,6 +206,10 @@ describe("pilot health privacy-safe aggregate contracts", () => {
     expect(sql).toContain('"journal_entries"."public_gone_at" is null');
     expect(sql).toContain("public_entry_closed_pilot_grant");
     expect(sql).toContain("char_length");
+    expect(sql).toContain('"catalog_items"."status" as "catalogstatus"');
+    expect(sql).toContain('"catalog_items"."source" as "catalogsource"');
+    expect(sql).toContain('"catalog_items"."status"');
+    expect(sql).toContain('"catalog_items"."source"');
     expect(sql).not.toContain('"journal_entries"."title" as');
     expect(sql).not.toContain('"journal_entries"."body" as');
     expect(sql).not.toContain("quarantine_key");
@@ -235,25 +239,36 @@ describe("pilot health privacy-safe aggregate contracts", () => {
         [
           {
             publicSlug: "tomato-a",
+            catalogStatus: "seeded",
+            catalogSource: "ua_state_register",
             entryCount: 3,
             aggregateBodyLength: 650,
           },
           {
             publicSlug: "tomato-b",
+            catalogStatus: "seeded",
+            catalogSource: "internal_seed",
+            entryCount: 3,
+            aggregateBodyLength: 650,
+          },
+          {
+            publicSlug: "tomato-c",
+            catalogStatus: "seeded",
+            catalogSource: "ua_state_register",
             entryCount: 1,
             aggregateBodyLength: 120,
           },
         ],
         [
           { publicSlug: "tomato-b", archivedOrGoneEntryCount: 1 },
-          { publicSlug: "tomato-c", archivedOrGoneEntryCount: 2 },
+          { publicSlug: "tomato-d", archivedOrGoneEntryCount: 2 },
         ],
       ),
     ).toMatchObject({
       promotedIndexableCount: 1,
-      thinNoindexCount: 1,
+      thinNoindexCount: 2,
       demotedByArchiveOrGoneCount: 2,
-      currentPublicVarietyCount: 2,
+      currentPublicVarietyCount: 3,
     });
   });
 

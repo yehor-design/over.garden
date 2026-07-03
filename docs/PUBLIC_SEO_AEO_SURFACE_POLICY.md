@@ -3,7 +3,7 @@
 Status: current implementation policy
 Date: 2026-07-03
 Owner: founder/operator
-Linear: OVE-115, OVE-116, OVE-117
+Linear: OVE-115, OVE-116, OVE-117, OVE-130
 
 ## Purpose
 
@@ -30,7 +30,7 @@ Current decisions:
 - Root `/` is an explicit `Accept-Language` redirect with `/uk` fallback; it is not a sitemap URL.
 - Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
-- Current aggregation thresholds are at least 3 safe public entries and at least 600 aggregate body characters.
+- Current aggregation thresholds are at least 3 safe public entries, at least 600 aggregate body characters, and a trust gate. Variety aggregation must be backed by either a curated `confirmed` catalog item or a seeded item from an approved source-backed family. Topic aggregation must pass a curated-topic trust state before a future topic route can become indexable.
 - Public profiles and full lineage graph pages are shareable but `noindex`.
 - Missing public surfaces are `noindex` and never sitemap-eligible.
 
@@ -45,7 +45,7 @@ The sitemap must not include:
 - authenticated routes such as `/garden`, `/admin`, or operator readouts;
 - invite, auth, reset, health, erasure, or pilot diagnostic routes;
 - public journal entries while `public_noindex = true`;
-- private, archived, public-gone, owner-scoped, provisional, rejected, merged, or thin aggregation rows;
+- private, archived, public-gone, owner-scoped, provisional, rejected, merged, unsafe-source, untrusted-topic, or thin aggregation rows;
 - free tag, profile, or lineage graph URLs while they are policy `noindex`.
 
 ## Metadata And Structured Data Rule
@@ -69,5 +69,5 @@ Robots and sitemap controls are discovery controls, not privacy controls. The pr
 ## Non-Goals
 
 - This policy does not localize authenticated product workspace routes; `/garden` remains the gated workspace path until a later slice migrates private/product app routing.
-- This policy does not promote every variety/topic page. OVE-130 and OVE-139 must use the same policy and add stronger evidence gates where needed.
+- This policy does not promote every variety/topic page. OVE-130 adds the source/catalog trust gate for promotion; OVE-139 must feed topic pages through the same curated-topic gate before any topic URL enters the sitemap.
 - This policy does not add monetization.

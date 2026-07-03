@@ -82,21 +82,42 @@ describe("public variety metadata", () => {
     expect(serialized).not.toContain("data.gov.ua");
     expect(serialized).not.toContain("creativecommons.org");
   });
+
+  it("omits JSON-LD when catalog trust is below the promotion gate", () => {
+    const page = buildPage({
+      entryCount: 3,
+      aggregateBodyLength: 900,
+      catalogSource: "internal_seed",
+    });
+
+    page.indexState = {
+      ...page.indexState,
+      value: "indexable",
+      isIndexable: true,
+      sitemapEligible: true,
+      robots: { index: true, follow: true },
+      reasons: [],
+    };
+
+    expect(buildPublicVarietyJsonLd(page)).toBeNull();
+  });
 });
 
 function buildPage({
   entryCount,
   aggregateBodyLength,
+  catalogSource = "ua_state_register",
 }: {
   entryCount: number;
   aggregateBodyLength: number;
+  catalogSource?: string;
 }): PublicVarietyPage {
   return {
     catalog: {
       canonicalName: "Pomidor Cheri",
       publicSlug: "pomidor-cheri-0000000101",
       status: "seeded",
-      source: "seed",
+      source: catalogSource,
       locale: "uk",
     },
     entryCount,
@@ -105,6 +126,8 @@ function buildPage({
     indexState: evaluatePublicVarietyIndexState({
       entryCount,
       aggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource,
     }),
     seedProof: null,
     sourceCredits: [

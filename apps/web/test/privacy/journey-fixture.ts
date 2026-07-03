@@ -215,7 +215,7 @@ export function publicVarietyPage(
       canonicalName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
       status: "seeded",
-      source: "internal_seed",
+      source: "ua_state_register",
       locale: "uk",
     },
     entryCount,
@@ -224,6 +224,8 @@ export function publicVarietyPage(
     indexState: evaluatePublicVarietyIndexState({
       entryCount,
       aggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     }),
     seedProof: null,
     sourceCredits: [],

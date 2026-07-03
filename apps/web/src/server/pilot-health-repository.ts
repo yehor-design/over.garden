@@ -199,6 +199,8 @@ interface PilotSegmentMetricRow {
 
 interface PilotPublicVarietyRow {
   aggregateBodyLength: number | string | bigint | null;
+  catalogSource: string;
+  catalogStatus: string;
   entryCount: number | string | bigint | null;
   publicSlug: string;
 }
@@ -644,6 +646,8 @@ export function buildPilotPublicVarietyHealthRowsQuery(
     )
     .select(({ fn }) => [
       "catalog_items.public_slug as publicSlug",
+      "catalog_items.status as catalogStatus",
+      "catalog_items.source as catalogSource",
       fn.count<number>("journal_entries.id").as("entryCount"),
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",
@@ -663,7 +667,11 @@ export function buildPilotPublicVarietyHealthRowsQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .groupBy("catalog_items.public_slug")
+    .groupBy([
+      "catalog_items.public_slug",
+      "catalog_items.status",
+      "catalog_items.source",
+    ])
     .orderBy("catalog_items.public_slug", "asc")
     .$narrowType<{ publicSlug: string }>();
 }
@@ -737,7 +745,12 @@ export function summarizePublicVarietyHealthRows(
 
       return [
         row.publicSlug,
-        evaluatePublicVarietyIndexState({ entryCount, aggregateBodyLength }),
+        evaluatePublicVarietyIndexState({
+          entryCount,
+          aggregateBodyLength,
+          catalogStatus: row.catalogStatus,
+          catalogSource: row.catalogSource,
+        }),
       ];
     }),
   );

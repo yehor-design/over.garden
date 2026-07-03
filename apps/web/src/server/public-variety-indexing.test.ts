@@ -11,6 +11,8 @@ describe("public variety indexability threshold", () => {
       entryCount: PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount - 1,
       aggregateBodyLength:
         PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     });
 
     expect(result.value).toBe("noindex");
@@ -25,6 +27,8 @@ describe("public variety indexability threshold", () => {
       entryCount: PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount,
       aggregateBodyLength:
         PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength - 1,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     });
 
     expect(result.value).toBe("noindex");
@@ -32,11 +36,27 @@ describe("public variety indexability threshold", () => {
     expect(result.reasons).toContain("body_length_below_threshold");
   });
 
+  it("keeps pages noindex when catalog/source trust is below the threshold", () => {
+    const result = evaluatePublicVarietyIndexState({
+      entryCount: PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount,
+      aggregateBodyLength:
+        PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "internal_seed",
+    });
+
+    expect(result.value).toBe("noindex");
+    expect(result.isIndexable).toBe(false);
+    expect(result.reasons).toContain("catalog_trust_below_threshold");
+  });
+
   it("promotes pages only when all proof thresholds pass", () => {
     const result = evaluatePublicVarietyIndexState({
       entryCount: PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount,
       aggregateBodyLength:
         PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     });
 
     expect(result.value).toBe("indexable");

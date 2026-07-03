@@ -385,6 +385,8 @@ describe("OVE-40 privacy invariant sweep — operator readbacks", () => {
       [
         {
           publicSlug: `POISON-${JOURNEY.catalogPublicSlug}`,
+          catalogStatus: "seeded",
+          catalogSource: "ua_state_register",
           entryCount: 5,
           aggregateBodyLength: 1200,
         },

@@ -58,18 +58,23 @@ describe("public surface indexing policy", () => {
         PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount - 1,
       aggregateBodyLength:
         PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     });
     const bodyThin = evaluatePublicSurfaceIndexability({
       kind: "topic_aggregation",
       entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
       aggregateBodyLength:
         PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength - 1,
+      topicTrust: "curated",
     });
     const indexable = evaluatePublicSurfaceIndexability({
       kind: "variety_aggregation",
       entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
       aggregateBodyLength:
         PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "ua_state_register",
     });
 
     expect(entryThin.value).toBe("noindex");
@@ -80,6 +85,44 @@ describe("public surface indexing policy", () => {
       value: "indexable",
       sitemapEligible: true,
       reasons: [],
+    });
+  });
+
+  it("requires aggregation source and topic trust before promotion", () => {
+    const unsafeCatalog = evaluatePublicSurfaceIndexability({
+      kind: "variety_aggregation",
+      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
+      aggregateBodyLength:
+        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "seeded",
+      catalogSource: "internal_seed",
+    });
+    const curatedCatalog = evaluatePublicSurfaceIndexability({
+      kind: "variety_aggregation",
+      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
+      aggregateBodyLength:
+        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      catalogStatus: "confirmed",
+      catalogSource: "user_added",
+    });
+    const untrustedTopic = evaluatePublicSurfaceIndexability({
+      kind: "topic_aggregation",
+      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
+      aggregateBodyLength:
+        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      topicTrust: "untrusted",
+    });
+
+    expect(unsafeCatalog).toMatchObject({
+      value: "noindex",
+      sitemapEligible: false,
+      reasons: ["catalog_trust_below_threshold"],
+    });
+    expect(curatedCatalog.value).toBe("indexable");
+    expect(untrustedTopic).toMatchObject({
+      value: "noindex",
+      sitemapEligible: false,
+      reasons: ["topic_trust_below_threshold"],
     });
   });
 

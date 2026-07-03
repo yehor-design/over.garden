@@ -178,7 +178,9 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_source_snapshots"."attribution_required" = $4',
     );
-    expect(compiled.sql).not.toContain('"catalog_source_records"."raw_payload"');
+    expect(compiled.sql).not.toContain(
+      '"catalog_source_records"."raw_payload"',
+    );
     expect(compiled.sql).not.toContain(
       '"catalog_source_records"."source_only_fields"',
     );
@@ -213,21 +215,26 @@ describe("public variety repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"catalog_items"."public_slug" is not null');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($1, $2)');
+    expect(compiled.sql).toContain('"catalog_items"."status" = $3');
+    expect(compiled.sql).toContain('"catalog_items"."status" = $4');
+    expect(compiled.sql).toContain('"catalog_items"."source" in');
+    expect(compiled.sql).not.toContain("internal_seed");
+    expect(compiled.sql).not.toContain("grin_genebank_candidate");
     expect(compiled.sql).not.toContain("provisional");
     expect(compiled.sql).not.toContain("rejected");
     expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $3');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $11');
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $12');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $13');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -236,7 +243,7 @@ describe("public variety repository query contracts", () => {
     );
     expect(compiled.sql).toContain('group by "catalog_items"."public_slug"');
     expect(compiled.sql).toContain(
-      'having count("journal_entries"."id") >= $6 and coalesce(sum(char_length("journal_entries"."body")), 0) >= $7',
+      'having count("journal_entries"."id") >= $14 and coalesce(sum(char_length("journal_entries"."body")), 0) >= $15',
     );
     expect(compiled.sql).not.toContain('join "media_assets"');
     expect(compiled.sql).not.toContain("variety_seed_proofs");
@@ -250,6 +257,14 @@ describe("public variety repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "seeded",
       "confirmed",
+      "confirmed",
+      "seeded",
+      "ua_state_register",
+      "species_backbone",
+      "ua_official_bee_breed",
+      "vertebrate_breed_ontology",
+      "eu_common_catalogue_bg",
+      "eu_oj_eur_lex_common_catalogue",
       "selected",
       "public",
       "active",
