@@ -3,7 +3,7 @@
 Status: current implementation policy
 Date: 2026-07-03
 Owner: founder/operator
-Linear: OVE-115
+Linear: OVE-115, OVE-116
 
 ## Purpose
 
@@ -25,6 +25,8 @@ Current decisions:
 
 - Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
 - The existing homepage `/` is the first authored marketing landing surface and is included in the sitemap.
+- OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
+- The UA/BG market routes are live in English for the MVP content foundation; locale-specific `/uk/...` and `/bg/...` routes, hreflang, and language switching remain the OVE-117 localization foundation handoff.
 - Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
 - Current aggregation thresholds are at least 3 safe public entries and at least 600 aggregate body characters.
@@ -49,6 +51,8 @@ Public route metadata must use the same policy for `robots`.
 
 Structured data must never bypass the policy. For example, variety JSON-LD is emitted only when the server policy marks the variety aggregation indexable. Thin pages must not receive templated JSON-LD because that is both a quality risk and an AEO spam signal.
 
+OVE-116 answer-page JSON-LD is limited to curated authored answer pages. It must include only the page, FAQ questions, and FAQ answers already visible in the HTML; it must not carry private journal text, media internals, raw source payloads, or user identifiers.
+
 ## Privacy Boundary
 
 Robots and sitemap controls are discovery controls, not privacy controls. The privacy boundary remains data-level minimization:
@@ -60,6 +64,6 @@ Robots and sitemap controls are discovery controls, not privacy controls. The pr
 
 ## Non-Goals
 
-- This policy does not create the blog, guide, market landing, or answer-page content system. That belongs to OVE-116.
+- This policy and OVE-116 content foundation do not create the full localization system. That belongs to OVE-117.
 - This policy does not promote every variety/topic page. OVE-130 and OVE-139 must use the same policy and add stronger evidence gates where needed.
 - This policy does not add monetization.

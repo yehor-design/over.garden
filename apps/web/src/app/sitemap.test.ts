@@ -26,6 +26,12 @@ describe("/sitemap.xml", () => {
 
     expect(urls).toEqual([
       "https://over.garden/",
+      "https://over.garden/blog",
+      "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
+      "https://over.garden/guides/start-a-living-plant-record",
+      "https://over.garden/answers/why-are-tomato-leaves-yellow",
+      "https://over.garden/markets/ukraine",
+      "https://over.garden/markets/bulgaria",
       "https://over.garden/variety/pomidor-cheri-0000000101",
     ]);
     expect(urls.join(" ")).not.toContain("/health");
