@@ -24,6 +24,7 @@ def journal_row(**overrides):
         "public_noindex": True,
         "public_gone_at": None,
         "entry_date": date(2026, 6, 25),
+        "entry_scope": "object",
         "created_at": datetime(2026, 6, 26, 12, 30, tzinfo=timezone.utc),
         "visibility": "public",
         "lifecycle_state": "active",
@@ -46,6 +47,7 @@ def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
         "locationVisibility": "hidden",
         "noindex": True,
         "entryDate": "2026-06-25T00:00:00.000Z",
+        "entryScope": "object",
         "createdAt": "2026-06-26T12:30:00.000Z",
         "kind": "journal_entry",
     }
@@ -133,6 +135,23 @@ def test_journal_entry_document_refuses_unsafe_public_shape():
         )
         is None
     )
+    assert (
+        search.journal_entry_search_document_from_row(
+            journal_row(entry_scope="raw-body-tag")
+        )
+        is None
+    )
+
+
+def test_journal_entry_document_indexes_space_entry_with_bounded_scope():
+    document = search.journal_entry_search_document_from_row(
+        journal_row(entry_scope="space")
+    )
+
+    assert document is not None
+    assert document["entryScope"] == "space"
+    assert "plantObjectId" not in document
+    assert "spaceId" not in document
 
 
 def test_catalog_typeahead_document_uses_meili_safe_id_for_cyrillic_alias():

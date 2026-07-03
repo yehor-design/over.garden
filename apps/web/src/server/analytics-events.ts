@@ -319,7 +319,7 @@ function normalizeAnalyticsEventPropertyValue(
       }
       break;
     case "entry_scope":
-      if (value === "object") return value;
+      if (value === "object" || value === "space") return value;
       break;
     case "has_photo":
     case "is_backdated":

@@ -73,6 +73,25 @@ describe("analytics event privacy contracts", () => {
     });
   });
 
+  it("allows space entry scope without raw mentioned object identifiers", () => {
+    expect(
+      normalizeAnalyticsEventProperties({
+        entry_scope: "space",
+        has_photo: false,
+        sync_status: "online",
+      }),
+    ).toEqual({
+      entry_scope: "space",
+      has_photo: false,
+      sync_status: "online",
+    });
+    expect(() =>
+      normalizeAnalyticsEventProperties({
+        mentionedPlantObjectIds: ["00000000-0000-0000-0000-000000000003"],
+      } as never),
+    ).toThrow("Unsupported analytics event property: mentionedPlantObjectIds.");
+  });
+
   it("allows all bounded living object kinds in analytics", () => {
     expect(
       normalizeAnalyticsEventProperties({

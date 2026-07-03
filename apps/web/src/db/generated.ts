@@ -247,7 +247,7 @@ export interface JournalEntries {
   id: Generated<string>;
   lifecycle_state: Generated<string>;
   owner_user_id: string;
-  plant_object_id: string;
+  plant_object_id: string | null;
   public_gone_at: Timestamp | null;
   public_noindex: Generated<boolean>;
   public_slug: string | null;
@@ -256,6 +256,14 @@ export interface JournalEntries {
   title: string;
   updated_at: Generated<Timestamp>;
   visibility: Generated<string>;
+}
+
+export interface JournalEntryObjectMentions {
+  created_at: Generated<Timestamp>;
+  journal_entry_id: string;
+  owner_user_id: string;
+  plant_object_id: string;
+  space_id: string;
 }
 
 export interface MediaAssets {
@@ -382,6 +390,7 @@ export interface DB {
   health: Health;
   job_queue: JobQueue;
   journal_entries: JournalEntries;
+  journal_entry_object_mentions: JournalEntryObjectMentions;
   media_assets: MediaAssets;
   pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;

@@ -19,7 +19,10 @@ import {
   buildArchiveJournalEntryQuery,
   buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
+  buildInsertJournalEntryObjectMentionsQuery,
   buildInsertJournalEntryQuery,
+  buildMentionableObjectsInSpaceQuery,
+  buildObjectTimelineEntriesQuery,
   buildObjectJournalEntryCountQuery,
   buildPlantObjectCatalogSourceCreditQuery,
   buildPlantObjectPageObjectQuery,
@@ -30,6 +33,7 @@ import {
   buildPublicJournalEntryPageQuery,
   buildPublicProcessedMediaForEntryQuery,
   buildPublishJournalEntryQuery,
+  buildSpaceTimelineEntriesQuery,
   buildResolvePlantObjectCatalogQuery,
   buildUpdatePlantObjectLocationQuery,
 } from "./journal-repository";
@@ -73,6 +77,88 @@ describe("journal repository query contracts", () => {
       'on conflict ("owner_user_id", "client_mutation_id") do nothing',
     );
     expect(compiled.sql).toContain("returning *");
+  });
+
+  it("inserts a space-level entry without a direct plant object", () => {
+    const compiled = buildInsertJournalEntryQuery(testDb, {
+      owner_user_id: "00000000-0000-0000-0000-000000000001",
+      space_id: "00000000-0000-0000-0000-000000000002",
+      plant_object_id: null,
+      title: "Balcony watering round",
+      body: "Watered tomatoes and basil together.",
+      entry_scope: "space",
+      entry_date: "2026-07-03",
+      visibility: "private",
+      client_mutation_id: "space-mutation-1",
+    }).compile();
+
+    expect(compiled.sql).toContain(
+      'on conflict ("owner_user_id", "client_mutation_id") do nothing',
+    );
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      null,
+      "Balcony watering round",
+      "Watered tomatoes and basil together.",
+      "space",
+      "2026-07-03",
+      "private",
+      "space-mutation-1",
+    ]);
+  });
+
+  it("inserts entry-object mentions idempotently after same-space validation", () => {
+    const compiled = buildInsertJournalEntryObjectMentionsQuery(testDb, {
+      ownerUserId: "00000000-0000-0000-0000-000000000001",
+      spaceId: "00000000-0000-0000-0000-000000000002",
+      journalEntryId: "00000000-0000-0000-0000-000000000020",
+      plantObjectIds: [
+        "00000000-0000-0000-0000-000000000003",
+        "00000000-0000-0000-0000-000000000004",
+      ],
+    }).compile();
+
+    expect(compiled.sql).toContain(
+      'insert into "journal_entry_object_mentions"',
+    );
+    expect(compiled.sql).toContain(
+      'on conflict ("journal_entry_id", "plant_object_id") do nothing',
+    );
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000004",
+    ]);
+  });
+
+  it("validates mentioned objects inside the same owner and space", () => {
+    const compiled = buildMentionableObjectsInSpaceQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      {
+        spaceId: "00000000-0000-0000-0000-000000000002",
+        plantObjectIds: [
+          "00000000-0000-0000-0000-000000000003",
+          "00000000-0000-0000-0000-000000000004",
+        ],
+      },
+    ).compile();
+
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"space_id" = $2');
+    expect(compiled.sql).toContain('"id" in ($3, $4)');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000004",
+    ]);
   });
 
   it("looks up existing idempotent entries only inside the request scope", () => {
@@ -281,11 +367,67 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain('"owner_user_id" = $1');
-    expect(compiled.sql).toContain('"plant_object_id" = $2');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = $3',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain(
+      '"journal_entry_object_mentions"."plant_object_id" = $7',
+    );
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "object",
+      "00000000-0000-0000-0000-000000000003",
+      "space",
+      "00000000-0000-0000-0000-000000000003",
+    ]);
+  });
+
+  it("reads object timelines from direct entries plus mentioned space entries", () => {
+    const compiled = buildObjectTimelineEntriesQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "00000000-0000-0000-0000-000000000003",
+    ).compile();
+
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain(
+      '"journal_entry_object_mentions"."plant_object_id" = $7',
+    );
+    expect(compiled.sql).toContain("mentioned_space");
+    expect(compiled.sql).toContain("direct_object");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "object",
+      "00000000-0000-0000-0000-000000000003",
+      "space",
+      "00000000-0000-0000-0000-000000000003",
+    ]);
+  });
+
+  it("reads space timelines only from space-level entries", () => {
+    const compiled = buildSpaceTimelineEntriesQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      [
+        "00000000-0000-0000-0000-000000000002",
+        "00000000-0000-0000-0000-000000000022",
+      ],
+    ).compile();
+
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."space_id" in ($3, $4)');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "space",
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000022",
     ]);
   });
 
@@ -368,16 +510,26 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain('"owner_user_id" = $1');
-    expect(compiled.sql).toContain('"plant_object_id" = $2');
-    expect(compiled.sql).toContain('"visibility" = $3');
-    expect(compiled.sql).toContain('"lifecycle_state" = $4');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."owner_user_id" = $3',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
+    expect(compiled.sql).toContain(
+      '"journal_entry_object_mentions"."plant_object_id" = $7',
+    );
+    expect(compiled.sql).toContain('"visibility" = $8');
+    expect(compiled.sql).toContain('"lifecycle_state" = $9');
     expect(compiled.sql).toContain('"public_gone_at" is null');
     expect(compiled.sql).toContain('"public_slug" is not null');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("body");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000001",
+      "object",
+      "00000000-0000-0000-0000-000000000003",
+      "space",
       "00000000-0000-0000-0000-000000000003",
       "public",
       "active",
@@ -390,11 +542,13 @@ describe("journal repository query contracts", () => {
       "first-flowers-abc123",
     ).compile();
 
+    expect(compiled.sql).toContain('left join "plant_objects"');
     expect(compiled.sql).toContain(
-      'inner join "plant_objects" on "plant_objects"."id" = "journal_entries"."plant_object_id"',
+      '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
+    expect(compiled.sql).toContain('inner join "spaces"');
     expect(compiled.sql).toContain(
-      'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
+      '"spaces"."owner_user_id" = "journal_entries"."owner_user_id"',
     );
     expect(compiled.sql).toContain('left join "catalog_items"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug"');
@@ -402,6 +556,7 @@ describe("journal repository query contracts", () => {
       '"catalog_items"."created_by_user_id" is null',
     );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope"');
     expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
@@ -411,7 +566,8 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
-    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain('as "ownerUserId"');
+    expect(compiled.sql).not.toContain('as "owner_user_id"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("coordinates");
@@ -442,7 +598,8 @@ describe("journal repository query contracts", () => {
       '"journal_entries"."public_gone_at" as "publicGoneAt"',
     );
     expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
-    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).not.toContain('as "ownerUserId"');
+    expect(compiled.sql).not.toContain('as "owner_user_id"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.parameters).toEqual([

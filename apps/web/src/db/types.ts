@@ -17,6 +17,7 @@ import type {
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
+  JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JsonValue,
   MediaAssets as MediaAssetsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
@@ -31,7 +32,7 @@ export type { JsonValue };
 
 export type EntryVisibility = "private" | "public";
 export type EntryLifecycleState = "active" | "archived";
-export type EntryScope = "object";
+export type EntryScope = "object" | "space";
 export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
 export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";
@@ -120,6 +121,10 @@ export type PlantObject = Selectable<PlantObjectsTable>;
 export type NewPlantObject = Insertable<PlantObjectsTable>;
 export type JournalEntry = Selectable<JournalEntriesTable>;
 export type NewJournalEntry = Insertable<JournalEntriesTable>;
+export type JournalEntryObjectMention =
+  Selectable<JournalEntryObjectMentionsTable>;
+export type NewJournalEntryObjectMention =
+  Insertable<JournalEntryObjectMentionsTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;

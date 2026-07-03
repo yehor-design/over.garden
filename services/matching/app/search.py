@@ -34,6 +34,7 @@ CATALOG_FILTERABLE_ATTRIBUTES = ["status", "source", "locale", "itemLocale"]
 CATALOG_SORTABLE_ATTRIBUTES = ["rank"]
 JOURNAL_SEARCHABLE_ATTRIBUTES = ["title", "body", "publicSlug"]
 JOURNAL_FILTERABLE_ATTRIBUTES = [
+    "entryScope",
     "kind",
     "locationVisibility",
     "coarseRegionCode",
@@ -129,11 +130,17 @@ select
   journal_entries.public_noindex,
   journal_entries.public_gone_at,
   journal_entries.entry_date,
+  journal_entries.entry_scope,
   journal_entries.created_at,
   journal_entries.visibility,
   journal_entries.lifecycle_state,
-  plant_objects.location_visibility,
   case
+    when journal_entries.entry_scope = 'space' then spaces.location_visibility
+    else plant_objects.location_visibility
+  end as location_visibility,
+  case
+    when journal_entries.entry_scope = 'space'
+     and spaces.location_visibility = 'region' then spaces.coarse_region_code
     when plant_objects.location_visibility = 'region' then
       coalesce(
         plant_objects.coarse_region_code,
@@ -145,7 +152,7 @@ select
     else null
   end as coarse_region_code
 from journal_entries
-inner join plant_objects
+left join plant_objects
   on plant_objects.id = journal_entries.plant_object_id
  and plant_objects.owner_user_id = journal_entries.owner_user_id
 inner join spaces
@@ -159,9 +166,6 @@ limit 1
 JOURNAL_ENTRY_OWNER_SQL = """
 select journal_entries.id::text as id
 from journal_entries
-inner join plant_objects
-  on plant_objects.id = journal_entries.plant_object_id
- and plant_objects.owner_user_id = journal_entries.owner_user_id
 inner join spaces
   on spaces.id = journal_entries.space_id
  and spaces.owner_user_id = journal_entries.owner_user_id
@@ -285,9 +289,12 @@ def journal_entry_search_document_from_row(
     title = _text(row, "title")
     body = _text(row, "body")
     public_slug = _text(row, "public_slug")
+    entry_scope = _text(row, "entry_scope")
     location_visibility = _text(row, "location_visibility")
 
     if not journal_entry_id or not title or not body or not public_slug:
+        return None
+    if entry_scope not in {"object", "space"}:
         return None
     if location_visibility not in {"hidden", "region"}:
         return None
@@ -301,6 +308,7 @@ def journal_entry_search_document_from_row(
         "locationVisibility": location_visibility,
         "noindex": bool(row.get("public_noindex")),
         "entryDate": _iso_datetime(row.get("entry_date")),
+        "entryScope": entry_scope,
         "createdAt": _iso_datetime(row.get("created_at")),
         "kind": "journal_entry",
     }

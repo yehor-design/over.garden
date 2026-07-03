@@ -24,6 +24,10 @@ export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
   );
   const locationLabel = getPublicJournalLocationLabel(page);
   const varietyLink = getPublicVarietyLink(page);
+  const entryContextLabel =
+    page.entry.entryScope === "space"
+      ? `Space entry · ${page.space.displayName}`
+      : page.plantObject.displayName;
 
   return renderShell({
     title,
@@ -35,8 +39,8 @@ export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
         <header class="header">
           <a class="button" href="/">OverGarden</a>
           <p class="eyebrow">
-            ${escapeHtml(page.plantObject.displayName)}
-            ${varietyLink ? ` · ${varietyLink}` : page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}
+            ${escapeHtml(entryContextLabel)}
+            ${page.entry.entryScope === "object" && varietyLink ? ` · ${varietyLink}` : page.entry.entryScope === "object" && page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}
           </p>
           <h1>${escapeHtml(page.entry.title)}</h1>
           <div class="meta">
@@ -58,6 +62,12 @@ export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
 }
 
 export function getPublicJournalLocationLabel(page: PublicJournalEntryPage) {
+  if (page.entry.entryScope === "space") {
+    if (page.space.locationVisibility !== "region") return null;
+    const label = getCoarseRegionLabel(page.space.coarseRegionCode);
+    return label ? `Region: ${label}` : null;
+  }
+
   if (page.plantObject.locationVisibility !== "region") return null;
 
   const code =

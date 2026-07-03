@@ -1,12 +1,13 @@
 import "server-only";
 
-import type { Insertable, Kysely, Transaction } from "kysely";
+import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
   Database,
   CatalogKind,
   EntryLifecycleState,
+  EntryScope,
   EntryVisibility,
   JournalEntry,
   LocationVisibility,
@@ -74,6 +75,15 @@ export interface CreatePlantObjectJournalEntryInput {
   mediaAssetId?: string | null;
 }
 
+export interface CreateSpaceJournalEntryInput {
+  spaceId: string;
+  mentionedPlantObjectIds: string[];
+  title: string;
+  body: string;
+  entryDate?: string | null;
+  clientMutationId: string;
+}
+
 export interface PublishJournalEntryInput {
   entryId: string;
   disclosureAccepted: boolean;
@@ -131,6 +141,24 @@ export interface PlantObjectSummary {
   createdAt: Date;
 }
 
+export interface SpaceTimelineObjectSummary {
+  id: string;
+  displayName: string;
+  objectKind: PlantObjectKind;
+  catalogKind: CatalogKind | null;
+  varietyText: string | null;
+  varietyState: VarietyState;
+}
+
+export interface SpaceJournalTimeline {
+  space: Pick<
+    Space,
+    "id" | "display_name" | "location_visibility" | "coarse_region_code"
+  >;
+  objects: SpaceTimelineObjectSummary[];
+  entries: JournalEntryReadback[];
+}
+
 export interface PlantObjectPage {
   space: Pick<
     Space,
@@ -164,8 +192,20 @@ export interface EntryMediaReadback {
   publicUrl: string;
 }
 
+export interface MentionedPlantObjectReadback {
+  id: string;
+  displayName: string;
+}
+
+export type JournalEntryTimelineRelation =
+  | "direct_object"
+  | "mentioned_space"
+  | "space_timeline";
+
 export type JournalEntryReadback = JournalEntry & {
   media: EntryMediaReadback | null;
+  mentionedObjects: MentionedPlantObjectReadback[];
+  timelineRelation: JournalEntryTimelineRelation;
 };
 
 export interface PublicJournalEntryPage {
@@ -174,6 +214,7 @@ export interface PublicJournalEntryPage {
     title: string;
     body: string;
     entryDate: Date | string;
+    entryScope: EntryScope;
     publicSlug: string;
     publicNoindex: boolean;
     publishedAt: Date | string | null;
@@ -232,6 +273,16 @@ export interface PlantObjectJournalEntryResult {
   priorObjectEntryCount: number;
 }
 
+export interface SpaceJournalEntryResult {
+  space: Pick<
+    Space,
+    "id" | "display_name" | "location_visibility" | "coarse_region_code"
+  >;
+  entry: JournalEntry;
+  mentionedObjects: MentionedPlantObjectReadback[];
+  isNewEntry: boolean;
+}
+
 export async function createFirstPlantEntry(
   scope: RequestScope,
   input: CreateFirstPlantEntryInput,
@@ -243,6 +294,12 @@ export async function createFirstPlantEntry(
   );
 
   if (existing) {
+    if (existing.entry_scope !== "object" || !existing.plant_object_id) {
+      throw new Error(
+        "Client mutation id already belongs to another journal entry.",
+      );
+    }
+
     const mediaAttached = await attachMediaAssetToEntryIfPresent(
       db,
       scope,
@@ -377,6 +434,15 @@ export async function createFirstPlantEntry(
       );
     }
 
+    if (
+      existingAfterConflict.entry_scope !== "object" ||
+      !existingAfterConflict.plant_object_id
+    ) {
+      throw new Error(
+        "Client mutation id already belongs to another journal entry.",
+      );
+    }
+
     const mediaAttached = await attachMediaAssetToEntryIfPresent(
       trx,
       scope,
@@ -444,6 +510,78 @@ export async function listMyPlantObjects(
   }));
 }
 
+export async function listMySpaceJournalTimelines(
+  scope: RequestScope,
+): Promise<SpaceJournalTimeline[]> {
+  const spaces = await db
+    .selectFrom("spaces")
+    .select([
+      "id",
+      "display_name",
+      "location_visibility",
+      "coarse_region_code",
+      "created_at",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .orderBy("created_at", "desc")
+    .execute();
+
+  if (spaces.length === 0) return [];
+
+  const spaceIds = spaces.map((space) => space.id);
+  const [objects, entries] = await Promise.all([
+    buildSpaceTimelineObjectsQuery(db, scope, spaceIds).execute(),
+    buildSpaceTimelineEntriesQuery(db, scope, spaceIds).execute(),
+  ]);
+  const mediaByEntryId = await getProcessedMediaByEntryId(
+    db,
+    scope,
+    entries.map((entry) => entry.id),
+  );
+  const mentionsByEntryId = await getMentionedObjectsByEntryId(
+    db,
+    scope,
+    entries.map((entry) => entry.id),
+  );
+  const objectsBySpaceId = new Map<string, SpaceTimelineObjectSummary[]>();
+  const entriesBySpaceId = new Map<string, JournalEntryReadback[]>();
+
+  for (const object of objects) {
+    const list = objectsBySpaceId.get(object.spaceId) ?? [];
+    list.push({
+      id: object.id,
+      displayName: object.displayName,
+      objectKind: object.objectKind as PlantObjectKind,
+      catalogKind: object.catalogKind as CatalogKind | null,
+      varietyText: object.varietyText,
+      varietyState: object.varietyState as VarietyState,
+    });
+    objectsBySpaceId.set(object.spaceId, list);
+  }
+
+  for (const entry of entries) {
+    const list = entriesBySpaceId.get(entry.space_id) ?? [];
+    list.push({
+      ...entry,
+      media: mediaByEntryId.get(entry.id) ?? null,
+      mentionedObjects: mentionsByEntryId.get(entry.id) ?? [],
+      timelineRelation: "space_timeline",
+    });
+    entriesBySpaceId.set(entry.space_id, list);
+  }
+
+  return spaces.map((space) => ({
+    space: {
+      id: space.id,
+      display_name: space.display_name,
+      location_visibility: space.location_visibility,
+      coarse_region_code: space.coarse_region_code,
+    },
+    objects: objectsBySpaceId.get(space.id) ?? [],
+    entries: entriesBySpaceId.get(space.id) ?? [],
+  }));
+}
+
 export async function getPlantObjectPage(
   scope: RequestScope,
   objectId: string,
@@ -457,15 +595,17 @@ export async function getPlantObjectPage(
 
   if (!objectRow) return null;
 
-  const entryRows = await executor
-    .selectFrom("journal_entries")
-    .selectAll("journal_entries")
-    .where("owner_user_id", "=", scope.userId)
-    .where("plant_object_id", "=", objectId)
-    .orderBy("entry_date", "desc")
-    .orderBy("created_at", "desc")
-    .execute();
+  const entryRows = await buildObjectTimelineEntriesQuery(
+    executor,
+    scope,
+    objectId,
+  ).execute();
   const mediaByEntryId = await getProcessedMediaByEntryId(
+    executor,
+    scope,
+    entryRows.map((entry) => entry.id),
+  );
+  const mentionsByEntryId = await getMentionedObjectsByEntryId(
     executor,
     scope,
     entryRows.map((entry) => entry.id),
@@ -496,9 +636,11 @@ export async function getPlantObjectPage(
       coarse_region_code: objectRow.objectCoarseRegionCode,
       source_credit: sourceCredit,
     },
-    entries: entryRows.map((entry) => ({
+    entries: entryRows.map(({ timelineRelation, ...entry }) => ({
       ...entry,
       media: mediaByEntryId.get(entry.id) ?? null,
+      mentionedObjects: mentionsByEntryId.get(entry.id) ?? [],
+      timelineRelation,
     })),
   };
 }
@@ -533,7 +675,10 @@ export async function createPlantObjectJournalEntry(
   );
 
   if (existing) {
-    if (existing.plant_object_id !== normalized.plantObjectId) {
+    if (
+      existing.entry_scope !== "object" ||
+      existing.plant_object_id !== normalized.plantObjectId
+    ) {
       throw new Error(
         "Client mutation id already belongs to another plant object.",
       );
@@ -633,7 +778,10 @@ export async function createPlantObjectJournalEntry(
       );
     }
 
-    if (existingAfterConflict.plant_object_id !== normalized.plantObjectId) {
+    if (
+      existingAfterConflict.entry_scope !== "object" ||
+      existingAfterConflict.plant_object_id !== normalized.plantObjectId
+    ) {
       throw new Error(
         "Client mutation id already belongs to another plant object.",
       );
@@ -669,6 +817,109 @@ export async function createPlantObjectJournalEntry(
       isNewEntry: false,
       mediaAttached,
       priorObjectEntryCount,
+    };
+  });
+}
+
+export async function createSpaceJournalEntry(
+  scope: RequestScope,
+  input: CreateSpaceJournalEntryInput,
+): Promise<SpaceJournalEntryResult> {
+  const normalized = normalizeCreateSpaceJournalEntryInput(input);
+  const existing = await findJournalEntryByClientMutation(
+    scope,
+    normalized.clientMutationId,
+  );
+
+  if (existing) {
+    if (
+      existing.entry_scope !== "space" ||
+      existing.space_id !== normalized.spaceId
+    ) {
+      throw new Error(
+        "Client mutation id already belongs to another journal entry.",
+      );
+    }
+
+    const mentionedObjects = await readMentionedObjectsForEntry(
+      db,
+      scope,
+      existing.id,
+    );
+    return {
+      space: await requireSpaceInScope(db, scope, existing.space_id),
+      entry: existing,
+      mentionedObjects,
+      isNewEntry: false,
+    };
+  }
+
+  return db.transaction().execute(async (trx) => {
+    const space = await requireSpaceInScope(trx, scope, normalized.spaceId);
+    const mentionedObjects = await readMentionableObjectsInSpace(trx, scope, {
+      spaceId: normalized.spaceId,
+      plantObjectIds: normalized.mentionedPlantObjectIds,
+    });
+
+    if (mentionedObjects.length !== normalized.mentionedPlantObjectIds.length) {
+      throw new Error("Mentioned objects must belong to this space.");
+    }
+
+    const entry = await insertJournalEntry(trx, {
+      owner_user_id: scope.userId,
+      space_id: space.id,
+      plant_object_id: null,
+      title: normalized.title,
+      body: normalized.body,
+      entry_scope: "space",
+      entry_date: normalized.entryDate,
+      visibility: DEFAULT_ENTRY_VISIBILITY,
+      client_mutation_id: normalized.clientMutationId,
+    });
+
+    if (entry) {
+      await insertJournalEntryObjectMentions(trx, {
+        ownerUserId: scope.userId,
+        spaceId: space.id,
+        journalEntryId: entry.id,
+        plantObjectIds: normalized.mentionedPlantObjectIds,
+      });
+
+      return {
+        space,
+        entry,
+        mentionedObjects,
+        isNewEntry: true,
+      };
+    }
+
+    const existingAfterConflict = await findJournalEntryByClientMutation(
+      scope,
+      normalized.clientMutationId,
+      trx,
+    );
+
+    if (
+      !existingAfterConflict ||
+      existingAfterConflict.entry_scope !== "space" ||
+      existingAfterConflict.space_id !== normalized.spaceId
+    ) {
+      throw new Error(
+        "Journal entry idempotency conflict could not be resolved.",
+      );
+    }
+
+    const existingMentions = await readMentionedObjectsForEntry(
+      trx,
+      scope,
+      existingAfterConflict.id,
+    );
+
+    return {
+      space,
+      entry: existingAfterConflict,
+      mentionedObjects: existingMentions,
+      isNewEntry: false,
     };
   });
 }
@@ -933,6 +1184,7 @@ export async function getPublicJournalEntryLookup(
         title: row.title,
         body: row.body,
         entryDate: row.entryDate,
+        entryScope: row.entryScope as EntryScope,
         publicSlug: row.publicSlug,
         publicNoindex: row.publicNoindex,
         publishedAt: row.publishedAt,
@@ -943,13 +1195,25 @@ export async function getPublicJournalEntryLookup(
         coarseRegionCode: row.spaceCoarseRegionCode,
       },
       plantObject: {
-        displayName: row.objectDisplayName,
+        displayName:
+          row.entryScope === "space"
+            ? `${row.spaceDisplayName} space entry`
+            : (row.objectDisplayName ?? "Garden entry"),
         catalogCanonicalName: row.catalogCanonicalName,
         catalogPublicSlug: row.catalogPublicSlug,
         varietyText: row.varietyText,
-        varietyState: row.varietyState as VarietyState,
-        locationVisibility: row.objectLocationVisibility as LocationVisibility,
-        coarseRegionCode: row.objectCoarseRegionCode,
+        varietyState:
+          row.entryScope === "space"
+            ? "unknown"
+            : (row.varietyState as VarietyState),
+        locationVisibility:
+          row.entryScope === "space"
+            ? (row.spaceLocationVisibility as LocationVisibility)
+            : (row.objectLocationVisibility as LocationVisibility),
+        coarseRegionCode:
+          row.entryScope === "space"
+            ? row.spaceCoarseRegionCode
+            : row.objectCoarseRegionCode,
       },
       media: media?.derivativeKey
         ? {
@@ -1032,9 +1296,38 @@ export function buildObjectJournalEntryCountQuery(
 ) {
   return executor
     .selectFrom("journal_entries")
+    .leftJoin("journal_entry_object_mentions", (join) =>
+      join
+        .onRef(
+          "journal_entry_object_mentions.journal_entry_id",
+          "=",
+          "journal_entries.id",
+        )
+        .on("journal_entry_object_mentions.owner_user_id", "=", scope.userId)
+        .on(
+          "journal_entry_object_mentions.plant_object_id",
+          "=",
+          plantObjectId,
+        ),
+    )
     .select(({ fn }) => fn.countAll<number>().as("entryCount"))
-    .where("owner_user_id", "=", scope.userId)
-    .where("plant_object_id", "=", plantObjectId);
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "object"),
+          eb("journal_entries.plant_object_id", "=", plantObjectId),
+        ]),
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "space"),
+          eb(
+            "journal_entry_object_mentions.plant_object_id",
+            "=",
+            plantObjectId,
+          ),
+        ]),
+      ]),
+    );
 }
 
 export function buildInsertJournalEntryQuery(
@@ -1178,9 +1471,38 @@ export function buildPublicEntrySlugsForObjectQuery(
 ) {
   return executor
     .selectFrom("journal_entries")
+    .leftJoin("journal_entry_object_mentions", (join) =>
+      join
+        .onRef(
+          "journal_entry_object_mentions.journal_entry_id",
+          "=",
+          "journal_entries.id",
+        )
+        .on("journal_entry_object_mentions.owner_user_id", "=", scope.userId)
+        .on(
+          "journal_entry_object_mentions.plant_object_id",
+          "=",
+          plantObjectId,
+        ),
+    )
     .select("public_slug as publicSlug")
-    .where("owner_user_id", "=", scope.userId)
-    .where("plant_object_id", "=", plantObjectId)
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "object"),
+          eb("journal_entries.plant_object_id", "=", plantObjectId),
+        ]),
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "space"),
+          eb(
+            "journal_entry_object_mentions.plant_object_id",
+            "=",
+            plantObjectId,
+          ),
+        ]),
+      ]),
+    )
     .where("visibility", "=", "public")
     .where("lifecycle_state", "=", "active")
     .where("public_gone_at", "is", null)
@@ -1219,6 +1541,196 @@ export function buildPlantObjectPageObjectQuery(
     .where("plant_objects.id", "=", objectId)
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("spaces.owner_user_id", "=", scope.userId);
+}
+
+export function buildSpaceByIdQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  spaceId: string,
+) {
+  return executor
+    .selectFrom("spaces")
+    .select(["id", "display_name", "location_visibility", "coarse_region_code"])
+    .where("id", "=", spaceId)
+    .where("owner_user_id", "=", scope.userId);
+}
+
+export function buildSpaceTimelineObjectsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  spaceIds: readonly string[],
+) {
+  return executor
+    .selectFrom("plant_objects")
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.created_by_user_id", "is", null),
+    )
+    .select([
+      "plant_objects.id as id",
+      "plant_objects.space_id as spaceId",
+      "plant_objects.display_name as displayName",
+      "plant_objects.object_kind as objectKind",
+      "catalog_items.catalog_kind as catalogKind",
+      "plant_objects.variety_text as varietyText",
+      "plant_objects.variety_state as varietyState",
+    ])
+    .where("plant_objects.owner_user_id", "=", scope.userId)
+    .where("plant_objects.space_id", "in", [...spaceIds])
+    .orderBy("plant_objects.created_at", "desc");
+}
+
+export function buildSpaceTimelineEntriesQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  spaceIds: readonly string[],
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .selectAll("journal_entries")
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("journal_entries.entry_scope", "=", "space")
+    .where("journal_entries.space_id", "in", [...spaceIds])
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.created_at", "desc")
+    .orderBy("journal_entries.id", "asc");
+}
+
+export function buildObjectTimelineEntriesQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .leftJoin("journal_entry_object_mentions", (join) =>
+      join
+        .onRef(
+          "journal_entry_object_mentions.journal_entry_id",
+          "=",
+          "journal_entries.id",
+        )
+        .on("journal_entry_object_mentions.owner_user_id", "=", scope.userId)
+        .on(
+          "journal_entry_object_mentions.plant_object_id",
+          "=",
+          plantObjectId,
+        ),
+    )
+    .selectAll("journal_entries")
+    .select(() =>
+      sql<JournalEntryTimelineRelation>`case
+        when ${sql.ref("journal_entries.entry_scope")} = 'space'
+          then 'mentioned_space'
+        else 'direct_object'
+      end`.as("timelineRelation"),
+    )
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "object"),
+          eb("journal_entries.plant_object_id", "=", plantObjectId),
+        ]),
+        eb.and([
+          eb("journal_entries.entry_scope", "=", "space"),
+          eb(
+            "journal_entry_object_mentions.plant_object_id",
+            "=",
+            plantObjectId,
+          ),
+        ]),
+      ]),
+    )
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.created_at", "desc")
+    .orderBy("journal_entries.id", "asc");
+}
+
+export function buildMentionableObjectsInSpaceQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    spaceId: string;
+    plantObjectIds: readonly string[];
+  },
+) {
+  return executor
+    .selectFrom("plant_objects")
+    .select([
+      "id",
+      "display_name as displayName",
+      "space_id as spaceId",
+      "owner_user_id as ownerUserId",
+    ])
+    .where("owner_user_id", "=", scope.userId)
+    .where("space_id", "=", input.spaceId)
+    .where("id", "in", [...input.plantObjectIds])
+    .orderBy("display_name", "asc");
+}
+
+export function buildMentionedObjectsForEntriesQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: readonly string[],
+) {
+  return executor
+    .selectFrom("journal_entry_object_mentions")
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef(
+          "plant_objects.id",
+          "=",
+          "journal_entry_object_mentions.plant_object_id",
+        )
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entry_object_mentions.owner_user_id",
+        )
+        .onRef(
+          "plant_objects.space_id",
+          "=",
+          "journal_entry_object_mentions.space_id",
+        ),
+    )
+    .select([
+      "journal_entry_object_mentions.journal_entry_id as journalEntryId",
+      "plant_objects.id as plantObjectId",
+      "plant_objects.display_name as displayName",
+    ])
+    .where("journal_entry_object_mentions.owner_user_id", "=", scope.userId)
+    .where("journal_entry_object_mentions.journal_entry_id", "in", [
+      ...entryIds,
+    ])
+    .orderBy("plant_objects.display_name", "asc");
+}
+
+export function buildInsertJournalEntryObjectMentionsQuery(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    spaceId: string;
+    journalEntryId: string;
+    plantObjectIds: readonly string[];
+  },
+) {
+  return executor
+    .insertInto("journal_entry_object_mentions")
+    .values(
+      input.plantObjectIds.map((plantObjectId) => ({
+        owner_user_id: input.ownerUserId,
+        space_id: input.spaceId,
+        journal_entry_id: input.journalEntryId,
+        plant_object_id: plantObjectId,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["journal_entry_id", "plant_object_id"]).doNothing(),
+    )
+    .returningAll();
 }
 
 export function buildPlantObjectCatalogSourceCreditQuery(
@@ -1268,12 +1780,20 @@ export function buildPublicJournalEntryLookupQuery(
 ) {
   return executor
     .selectFrom("journal_entries")
-    .innerJoin(
-      "plant_objects",
-      "plant_objects.id",
-      "journal_entries.plant_object_id",
+    .leftJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
     )
-    .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
+    .innerJoin("spaces", (join) =>
+      join
+        .onRef("spaces.id", "=", "journal_entries.space_id")
+        .onRef("spaces.owner_user_id", "=", "journal_entries.owner_user_id"),
+    )
     .leftJoin("catalog_items", (join) =>
       join
         .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
@@ -1286,6 +1806,7 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.title as title",
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
+      "journal_entries.entry_scope as entryScope",
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
       "journal_entries.public_slug as publicSlug",
@@ -1398,6 +1919,105 @@ async function countJournalEntriesForObject(
   return Number(row?.entryCount ?? 0);
 }
 
+async function requireSpaceInScope(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  spaceId: string,
+) {
+  const space = await buildSpaceByIdQuery(
+    executor,
+    scope,
+    spaceId,
+  ).executeTakeFirst();
+
+  if (!space) {
+    throw new Error("Space was not found in this garden.");
+  }
+
+  return space;
+}
+
+async function readMentionableObjectsInSpace(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    spaceId: string;
+    plantObjectIds: readonly string[];
+  },
+): Promise<MentionedPlantObjectReadback[]> {
+  const rows = await buildMentionableObjectsInSpaceQuery(
+    executor,
+    scope,
+    input,
+  ).execute();
+  const rowById = new Map(
+    rows.map((row) => [
+      row.id,
+      {
+        id: row.id,
+        displayName: row.displayName,
+      },
+    ]),
+  );
+
+  return input.plantObjectIds.flatMap((id) => {
+    const object = rowById.get(id);
+    return object ? [object] : [];
+  });
+}
+
+async function insertJournalEntryObjectMentions(
+  executor: QueryExecutor,
+  input: {
+    ownerUserId: string;
+    spaceId: string;
+    journalEntryId: string;
+    plantObjectIds: readonly string[];
+  },
+) {
+  if (input.plantObjectIds.length === 0) return [];
+  return buildInsertJournalEntryObjectMentionsQuery(executor, input).execute();
+}
+
+async function readMentionedObjectsForEntry(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryId: string,
+): Promise<MentionedPlantObjectReadback[]> {
+  const mentionedByEntryId = await getMentionedObjectsByEntryId(
+    executor,
+    scope,
+    [entryId],
+  );
+  return mentionedByEntryId.get(entryId) ?? [];
+}
+
+async function getMentionedObjectsByEntryId(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: string[],
+) {
+  const mentionedByEntryId = new Map<string, MentionedPlantObjectReadback[]>();
+  if (entryIds.length === 0) return mentionedByEntryId;
+
+  const rows = await buildMentionedObjectsForEntriesQuery(
+    executor,
+    scope,
+    entryIds,
+  ).execute();
+
+  for (const row of rows) {
+    const list = mentionedByEntryId.get(row.journalEntryId) ?? [];
+    list.push({
+      id: row.plantObjectId,
+      displayName: row.displayName,
+    });
+    mentionedByEntryId.set(row.journalEntryId, list);
+  }
+
+  return mentionedByEntryId;
+}
+
 function normalizeCreateFirstPlantEntryInput(
   input: CreateFirstPlantEntryInput,
 ) {
@@ -1477,6 +2097,36 @@ function normalizeCreatePlantObjectJournalEntryInput(
     mediaAssetId: normalizeOptionalText(
       input.mediaAssetId,
       "Media asset id",
+      200,
+    ),
+  };
+}
+
+function normalizeCreateSpaceJournalEntryInput(
+  input: CreateSpaceJournalEntryInput,
+) {
+  const spaceId = normalizeRequiredText(input.spaceId, "Space id", 200);
+  const mentionedPlantObjectIds = Array.from(
+    new Set(
+      input.mentionedPlantObjectIds.map((id) =>
+        normalizeRequiredText(id, "Mentioned object id", 200),
+      ),
+    ),
+  );
+
+  if (mentionedPlantObjectIds.length === 0) {
+    throw new Error("Choose at least one object from this space.");
+  }
+
+  return {
+    spaceId,
+    mentionedPlantObjectIds,
+    title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
+    body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
+    entryDate: normalizeEntryDate(input.entryDate),
+    clientMutationId: normalizeRequiredText(
+      input.clientMutationId,
+      "Client mutation id",
       200,
     ),
   };

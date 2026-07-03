@@ -54,6 +54,7 @@ def journal_row(**overrides: Any) -> dict[str, Any]:
         "public_noindex": True,
         "public_gone_at": None,
         "entry_date": date(2026, 6, 25),
+        "entry_scope": "object",
         "created_at": datetime(2026, 6, 26, 12, 30, tzinfo=timezone.utc),
         "visibility": "public",
         "lifecycle_state": "active",

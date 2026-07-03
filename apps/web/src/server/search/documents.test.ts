@@ -41,6 +41,7 @@ function entry(
     public_noindex: true,
     public_gone_at: null,
     entry_date: new Date("2026-06-25T00:00:00.000Z"),
+    entry_scope: "object",
     visibility,
     lifecycle_state: "active",
     location_visibility: "hidden",
@@ -73,6 +74,7 @@ describe("journal entry search documents", () => {
       "publicSlug",
     ]);
     expect(contract.filterableAttributes).toEqual([
+      "entryScope",
       "kind",
       "locationVisibility",
       "coarseRegionCode",
@@ -121,6 +123,14 @@ describe("journal entry search documents", () => {
     ).toBeNull();
   });
 
+  it("does not index entries with unsafe entry scope", () => {
+    expect(
+      buildJournalEntrySearchDocumentContractFixture(
+        entry("public", { entry_scope: "raw-body-tag" }),
+      ),
+    ).toBeNull();
+  });
+
   it("does not index region-visible entries without a supported coarse region", () => {
     expect(
       buildJournalEntrySearchDocumentContractFixture(
@@ -146,6 +156,7 @@ describe("journal entry search documents", () => {
       locationVisibility: "hidden",
       noindex: true,
       entryDate: "2026-06-25T00:00:00.000Z",
+      entryScope: "object",
       createdAt: "2026-06-26T00:00:00.000Z",
       kind: "journal_entry",
     });
@@ -195,5 +206,21 @@ describe("journal entry search documents", () => {
     expect(Object.keys(document ?? {}).sort()).toEqual(
       expect.arrayContaining(contract.allowedFields),
     );
+  });
+
+  it("indexes space-level entries only with bounded scope metadata", () => {
+    const document = buildJournalEntrySearchDocumentContractFixture(
+      entry("public", {
+        entry_scope: "space",
+        location_visibility: "hidden",
+      }),
+    );
+
+    expect(document).toMatchObject({
+      entryScope: "space",
+      locationVisibility: "hidden",
+    });
+    expect(document).not.toHaveProperty("plantObjectId");
+    expect(document).not.toHaveProperty("spaceId");
   });
 });

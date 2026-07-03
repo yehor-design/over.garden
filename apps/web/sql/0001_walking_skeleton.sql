@@ -879,10 +879,10 @@ create table if not exists journal_entries (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,
   space_id uuid not null references spaces(id) on delete cascade,
-  plant_object_id uuid not null references plant_objects(id) on delete cascade,
+  plant_object_id uuid references plant_objects(id) on delete cascade,
   title text not null check (char_length(title) between 1 and 140),
   body text not null check (char_length(body) between 1 and 2000),
-  entry_scope text not null default 'object' check (entry_scope = 'object'),
+  entry_scope text not null default 'object' check (entry_scope in ('object', 'space')),
   entry_date date not null default current_date,
   visibility text not null default 'private' check (visibility in ('private', 'public')),
   lifecycle_state text not null default 'active' check (lifecycle_state in ('active', 'archived')),
@@ -896,7 +896,11 @@ create table if not exists journal_entries (
   client_mutation_id text not null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint journal_entries_owner_client_mutation_uidx unique (owner_user_id, client_mutation_id)
+  constraint journal_entries_owner_client_mutation_uidx unique (owner_user_id, client_mutation_id),
+  constraint journal_entries_scope_target_check check (
+    (entry_scope = 'object' and plant_object_id is not null)
+    or (entry_scope = 'space' and plant_object_id is null)
+  )
 );
 
 -- Older local walking-skeleton databases had journal_entries.user_id/body only.
@@ -1014,7 +1018,7 @@ where journal_entries.owner_user_id = space_map.owner_user_id
 alter table journal_entries
   alter column owner_user_id set not null,
   alter column space_id set not null,
-  alter column plant_object_id set not null,
+  alter column plant_object_id drop not null,
   alter column title set not null,
   alter column entry_scope set default 'object',
   alter column entry_scope set not null,
@@ -1024,6 +1028,67 @@ alter table journal_entries
   alter column lifecycle_state set not null,
   alter column public_noindex set default true,
   alter column public_noindex set not null;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_entry_scope_check'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      drop constraint journal_entries_entry_scope_check;
+  end if;
+
+  alter table journal_entries
+    add constraint journal_entries_entry_scope_check
+    check (entry_scope in ('object', 'space'));
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_scope_target_check'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      add constraint journal_entries_scope_target_check
+      check (
+        (entry_scope = 'object' and plant_object_id is not null)
+        or (entry_scope = 'space' and plant_object_id is null)
+      );
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_identity_owner_space_uidx'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      add constraint journal_entries_identity_owner_space_uidx
+      unique (id, owner_user_id, space_id);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'plant_objects_identity_owner_space_uidx'
+      and conrelid = 'plant_objects'::regclass
+  ) then
+    alter table plant_objects
+      add constraint plant_objects_identity_owner_space_uidx
+      unique (id, owner_user_id, space_id);
+  end if;
+end $$;
 
 do $$
 begin
@@ -1070,6 +1135,10 @@ end $$;
 create index if not exists journal_entries_owner_object_date_idx
   on journal_entries (owner_user_id, plant_object_id, entry_date desc, created_at desc);
 
+create index if not exists journal_entries_owner_space_date_idx
+  on journal_entries (owner_user_id, space_id, entry_date desc, created_at desc)
+  where entry_scope = 'space';
+
 create index if not exists journal_entries_public_created_idx
   on journal_entries (created_at desc)
   where visibility = 'public' and lifecycle_state = 'active';
@@ -1081,6 +1150,29 @@ create unique index if not exists journal_entries_public_slug_uidx
 create index if not exists journal_entries_public_gone_idx
   on journal_entries (public_slug, public_gone_at)
   where public_slug is not null and public_gone_at is not null;
+
+create table if not exists journal_entry_object_mentions (
+  journal_entry_id uuid not null,
+  owner_user_id uuid not null,
+  space_id uuid not null,
+  plant_object_id uuid not null,
+  created_at timestamptz not null default now(),
+  primary key (journal_entry_id, plant_object_id),
+  constraint journal_entry_object_mentions_entry_fkey
+    foreign key (journal_entry_id, owner_user_id, space_id)
+    references journal_entries (id, owner_user_id, space_id)
+    on delete cascade,
+  constraint journal_entry_object_mentions_object_fkey
+    foreign key (plant_object_id, owner_user_id, space_id)
+    references plant_objects (id, owner_user_id, space_id)
+    on delete cascade
+);
+
+create index if not exists journal_entry_object_mentions_owner_space_idx
+  on journal_entry_object_mentions (owner_user_id, space_id, journal_entry_id);
+
+create index if not exists journal_entry_object_mentions_object_idx
+  on journal_entry_object_mentions (owner_user_id, plant_object_id, journal_entry_id);
 
 create table if not exists erasure_requests (
   id uuid primary key default gen_random_uuid(),

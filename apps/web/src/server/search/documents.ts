@@ -21,6 +21,7 @@ export interface JournalEntrySearchContractRow {
   public_noindex: boolean;
   public_gone_at: Date | string | null;
   entry_date: Date | string;
+  entry_scope: "object" | "space" | string;
   created_at: Date | string;
   visibility: "private" | "public" | string;
   lifecycle_state: "active" | "archived" | string;
@@ -38,6 +39,7 @@ export interface JournalEntrySearchContractDocument {
   coarseRegionCode?: CoarseRegionCode;
   noindex: boolean;
   entryDate: string;
+  entryScope: "object" | "space";
   createdAt: string;
   kind: "journal_entry";
 }
@@ -49,6 +51,7 @@ export function buildJournalEntrySearchDocumentContractFixture(
   if (entry.lifecycle_state !== "active") return null;
   if (entry.public_gone_at !== null) return null;
   if (!entry.public_slug) return null;
+  if (!isPublicEntryScope(entry.entry_scope)) return null;
   if (!isPublicLocationVisibility(entry.location_visibility)) return null;
   const coarseRegionCode =
     entry.location_visibility === "region"
@@ -68,9 +71,14 @@ export function buildJournalEntrySearchDocumentContractFixture(
     ...(coarseRegionCode ? { coarseRegionCode } : {}),
     noindex: entry.public_noindex,
     entryDate: normalizeDate(entry.entry_date),
+    entryScope: entry.entry_scope,
     createdAt: normalizeDate(entry.created_at),
     kind: "journal_entry",
   };
+}
+
+function isPublicEntryScope(value: string): value is "object" | "space" {
+  return value === "object" || value === "space";
 }
 
 function isPublicLocationVisibility(

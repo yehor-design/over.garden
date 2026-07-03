@@ -268,6 +268,15 @@ export default async function PlantObjectReadbackPage({
                 <p className="mt-3 text-xs text-muted-foreground">
                   {entryTimelineSummary(entry)}
                 </p>
+                {entry.timelineRelation === "mentioned_space" ? (
+                  <p className="mt-2 text-xs font-medium text-muted-foreground">
+                    Space entry mentioning{" "}
+                    {entry.mentionedObjects
+                      .map((object) => object.displayName)
+                      .join(", ")}
+                    .
+                  </p>
+                ) : null}
                 {entry.lifecycle_state === "archived" ? (
                   <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
                     <span className="text-sm font-medium text-muted-foreground">
@@ -439,6 +448,9 @@ function getObjectLocationLabel(page: PlantObjectPage) {
 
 function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
   const parts = [
+    entry.timelineRelation === "mentioned_space"
+      ? "Space-level mention"
+      : "Direct object entry",
     entryScopeLabel(entry.entry_scope),
     entryPrivacyLabel({
       visibility: entry.visibility,

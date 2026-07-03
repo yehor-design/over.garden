@@ -10,16 +10,23 @@ import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
+  entryPrivacyLabel,
+  entryScopeLabel,
   plantObjectKindLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
-import { listMyPlantObjects } from "@/server/journal-repository";
+import {
+  listMyPlantObjects,
+  listMySpaceJournalTimelines,
+  type SpaceJournalTimeline,
+} from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
+import { createSpaceJournalEntryAction } from "./actions";
 import { GardenDraftResumePanel } from "./draft-resume-panel";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel, SocialAccountLinkPanel } from "./garden-auth-panel";
@@ -51,6 +58,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
   const objects = scope ? await listMyPlantObjects(scope, 12) : [];
+  const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
   const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -221,12 +229,192 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 )}
               </aside>
             </div>
+
+            {hasObjects ? (
+              <section className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Space journals
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Write one dated story for a whole space and mention the
+                    objects it covers.
+                  </p>
+                </div>
+
+                <div className="grid gap-4">
+                  {spaceTimelines.map((timeline) => (
+                    <SpaceTimelinePanel
+                      key={timeline.space.id}
+                      timeline={timeline}
+                      today={today}
+                    />
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </>
         ) : (
           <ClosedPilotWriteCallout />
         )
       ) : null}
     </main>
+  );
+}
+
+function SpaceTimelinePanel({
+  timeline,
+  today,
+}: {
+  timeline: SpaceJournalTimeline;
+  today: string;
+}) {
+  const clientMutationId = crypto.randomUUID();
+
+  return (
+    <section
+      id={`space-${timeline.space.id}`}
+      className="grid gap-4 rounded-lg border border-border p-4"
+    >
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base font-semibold text-foreground">
+          {timeline.space.display_name}
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {timeline.objects.length === 1
+            ? "1 object in this space."
+            : `${timeline.objects.length} objects in this space.`}
+        </p>
+      </div>
+
+      {timeline.objects.length > 0 ? (
+        <form action={createSpaceJournalEntryAction} className="grid gap-3">
+          <input type="hidden" name="spaceId" value={timeline.space.id} />
+          <input
+            type="hidden"
+            name="clientMutationId"
+            value={clientMutationId}
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium text-foreground">Title</span>
+              <input
+                name="title"
+                required
+                maxLength={140}
+                placeholder="What changed across this space?"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium text-foreground">Date</span>
+              <input
+                type="date"
+                name="entryDate"
+                defaultValue={today}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium text-foreground">Note</span>
+            <textarea
+              name="body"
+              required
+              maxLength={2000}
+              rows={4}
+              placeholder="Write the story once, then attach the objects it mentions."
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+            />
+          </label>
+          <fieldset className="grid gap-2">
+            <legend className="text-sm font-medium text-foreground">
+              Mentioned objects
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {timeline.objects.map((object) => (
+                <label
+                  key={object.id}
+                  className="flex items-start gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    name="mentionedPlantObjectIds"
+                    value={object.id}
+                    className="mt-1 size-4 rounded border-border"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="font-medium text-foreground">
+                      {object.displayName}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {plantObjectKindLabel(object.objectKind)} ·{" "}
+                      {object.varietyText
+                        ? `${catalogIdentityLabel(
+                            object.catalogKind,
+                            object.objectKind,
+                          )}: ${object.varietyText}`
+                        : "Unknown"}{" "}
+                      · {varietyStateLabel(object.varietyState)}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <button
+            type="submit"
+            className="inline-flex w-fit items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Save space entry
+          </button>
+        </form>
+      ) : null}
+
+      <div className="grid gap-3">
+        <h4 className="text-sm font-semibold text-foreground">
+          Space timeline
+        </h4>
+        {timeline.entries.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+            No space-level entries yet.
+          </p>
+        ) : (
+          <ol className="grid gap-3">
+            {timeline.entries.map((entry) => (
+              <li
+                key={entry.id}
+                className="rounded-lg border border-border p-4"
+              >
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                  <h5 className="text-base font-semibold text-foreground">
+                    {entry.title}
+                  </h5>
+                  <time className="text-xs text-muted-foreground">
+                    {formatDate(entry.entry_date)}
+                  </time>
+                </div>
+                <p className="mt-3 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                  {entry.body}
+                </p>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {entryScopeLabel(entry.entry_scope)} ·{" "}
+                  {entryPrivacyLabel({
+                    visibility: entry.visibility,
+                    isArchived: entry.lifecycle_state === "archived",
+                  })}
+                  {entry.mentionedObjects.length > 0
+                    ? ` · Mentions ${entry.mentionedObjects
+                        .map((object) => object.displayName)
+                        .join(", ")}`
+                    : ""}
+                </p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -253,4 +441,13 @@ async function resolveInitialCatalogSelection(
 function normalizeFirstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return typeof value === "string" ? value.trim() : "";
+}
+
+function formatDate(value: Date | string) {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toLocaleDateString("en", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
