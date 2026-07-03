@@ -17,8 +17,10 @@ import {
   buildAnonymizeErasureRequestSubjectsQuery,
   buildAnonymizeJournalEntriesForErasureQuery,
   buildAnonymizeLineageClaimAuditEventsForErasureQuery,
+  buildAnonymizeLineageNodeFollowsForErasureQuery,
   buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery,
   buildAnonymizeLineageProvenanceEdgesForErasureQuery,
+  buildAnonymizeLineageQuestionsForErasureQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
   buildExecutableErasureRequestQuery,
@@ -204,6 +206,56 @@ describe("approved erasure execution SQL contracts", () => {
       requesterUserId,
       requesterUserId,
     ]);
+  });
+
+  it("anonymizes lineage follows without selecting object labels", () => {
+    const now = new Date("2026-07-01T08:00:00.000Z");
+    const compiled = buildAnonymizeLineageNodeFollowsForErasureQuery(testDb, {
+      requesterUserId,
+      erasedSubjectUserId,
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "lineage_node_follows"');
+    expect(compiled.sql).toContain('"follower_user_id" = case');
+    expect(compiled.sql).toContain('"target_owner_user_id" = case');
+    expect(compiled.sql).toContain('"follow_state" =');
+    expect(compiled.sql).toContain('"updated_at" =');
+    expect(compiled.sql).not.toMatch(
+      /plant_objects|journal_entries|display_name|question_text|source_reference_label|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip_address|user_agent/i,
+    );
+    expect(compiled.parameters).toContain(requesterUserId);
+    expect(compiled.parameters).toContain(erasedSubjectUserId);
+    expect(compiled.parameters).toContain("anonymized");
+    expect(compiled.parameters).toContain(now);
+  });
+
+  it("anonymizes lineage questions including question text and client mutation ids", () => {
+    const now = new Date("2026-07-01T08:00:00.000Z");
+    const compiled = buildAnonymizeLineageQuestionsForErasureQuery(testDb, {
+      requesterUserId,
+      erasedSubjectUserId,
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "lineage_questions"');
+    expect(compiled.sql).toContain('"asker_user_id" = case');
+    expect(compiled.sql).toContain('"recipient_user_id" = case');
+    expect(compiled.sql).toContain('"question_text" =');
+    expect(compiled.sql).toContain('"question_state" =');
+    expect(compiled.sql).toContain(
+      "'erased:' || \"lineage_questions\".\"id\"::text",
+    );
+    expect(compiled.sql).not.toMatch(
+      /plant_objects|journal_entries|display_name|source_reference_label|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip_address|user_agent/i,
+    );
+    expect(compiled.parameters).toContain(requesterUserId);
+    expect(compiled.parameters).toContain(erasedSubjectUserId);
+    expect(compiled.parameters).toContain(
+      "This lineage question was erased by request.",
+    );
+    expect(compiled.parameters).toContain("anonymized");
+    expect(compiled.parameters).toContain(now);
   });
 
   it("enqueues erasure unindex jobs against the synthetic erased owner id", () => {

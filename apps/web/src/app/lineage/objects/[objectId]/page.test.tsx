@@ -2,7 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  getCurrentSession: vi.fn(),
+  getSessionId: vi.fn(),
   getPublicLineageGraphPage: vi.fn(),
+}));
+
+vi.mock("@/server/auth-session", () => ({
+  getCurrentSession: mocks.getCurrentSession,
+  getSessionId: mocks.getSessionId,
 }));
 
 vi.mock("@/server/public-lineage-repository", () => ({
@@ -15,6 +22,8 @@ const sourceObjectId = "00000000-0000-4000-8000-000000000102";
 describe("/lineage/objects/[objectId]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getCurrentSession.mockResolvedValue(null);
+    mocks.getSessionId.mockReturnValue(null);
     mocks.getPublicLineageGraphPage.mockResolvedValue({
       root: {
         plantObjectId: objectId,

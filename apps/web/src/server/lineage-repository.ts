@@ -1201,13 +1201,13 @@ function lineageClaimActionForDecision(
   return decision === "confirmed" ? "confirm" : "decline";
 }
 
-function looksLikePrivateContactOrPreciseLocation(value: string) {
+export function looksLikePrivateContactOrPreciseLocation(value: string) {
   return /(@|https?:\/\/|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\+?\d[\d\s().-]{6,}\d|[-+]?\d{1,2}\.\d{3,}\s*,\s*[-+]?\d{1,3}\.\d{3,})/i.test(
     value,
   );
 }
 
-function normalizeRequiredText(
+export function normalizeRequiredText(
   value: string | null | undefined,
   label: string,
   maxLength: number,

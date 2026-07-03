@@ -1509,6 +1509,179 @@ create index if not exists lineage_provenance_edge_audit_events_target_created_i
   on lineage_provenance_edge_audit_events (target_user_id, created_at desc)
   where target_user_id is not null;
 
+-- Lineage follows and questions (OVE-126). These rows are private interaction
+-- state over already-confirmed public-safe lineage edges. They intentionally do
+-- not store emails, contact handles, fine-grained place data, media keys, IPs,
+-- user-agents, raw request metadata, journal text, or source labels.
+create table if not exists lineage_node_follows (
+  id uuid primary key default gen_random_uuid(),
+  follower_user_id uuid not null,
+  target_owner_user_id uuid not null,
+  target_plant_object_id uuid not null,
+  lineage_edge_id uuid not null,
+  follow_state text not null default 'active' check (
+    follow_state in ('active', 'anonymized')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint lineage_node_follows_cross_user_check
+    check (follower_user_id <> target_owner_user_id),
+  constraint lineage_node_follows_follower_target_uidx
+    unique (follower_user_id, target_plant_object_id)
+);
+
+create table if not exists lineage_questions (
+  id uuid primary key default gen_random_uuid(),
+  asker_user_id uuid not null,
+  recipient_user_id uuid not null,
+  lineage_edge_id uuid not null,
+  subject_plant_object_id uuid not null,
+  target_plant_object_id uuid not null,
+  question_text text not null check (char_length(question_text) between 1 and 360),
+  question_state text not null default 'delivered' check (
+    question_state in ('delivered', 'anonymized')
+  ),
+  client_mutation_id text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint lineage_questions_cross_user_check
+    check (asker_user_id <> recipient_user_id),
+  constraint lineage_questions_asker_client_mutation_uidx
+    unique (asker_user_id, client_mutation_id)
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_node_follows_cross_user_check'
+      and conrelid = 'lineage_node_follows'::regclass
+  ) then
+    alter table lineage_node_follows
+      add constraint lineage_node_follows_cross_user_check
+      check (follower_user_id <> target_owner_user_id);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_questions_cross_user_check'
+      and conrelid = 'lineage_questions'::regclass
+  ) then
+    alter table lineage_questions
+      add constraint lineage_questions_cross_user_check
+      check (asker_user_id <> recipient_user_id);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_node_follows_edge_fkey'
+      and conrelid = 'lineage_node_follows'::regclass
+  ) then
+    alter table lineage_node_follows
+      add constraint lineage_node_follows_edge_fkey
+      foreign key (lineage_edge_id)
+      references lineage_provenance_edges (id)
+      on update cascade
+      on delete cascade;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_node_follows_target_object_fkey'
+      and conrelid = 'lineage_node_follows'::regclass
+  ) then
+    alter table lineage_node_follows
+      add constraint lineage_node_follows_target_object_fkey
+      foreign key (target_plant_object_id, target_owner_user_id)
+      references plant_objects (id, owner_user_id)
+      on update cascade
+      on delete restrict;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_questions_edge_fkey'
+      and conrelid = 'lineage_questions'::regclass
+  ) then
+    alter table lineage_questions
+      add constraint lineage_questions_edge_fkey
+      foreign key (lineage_edge_id)
+      references lineage_provenance_edges (id)
+      on update cascade
+      on delete cascade;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_questions_subject_object_fkey'
+      and conrelid = 'lineage_questions'::regclass
+  ) then
+    alter table lineage_questions
+      add constraint lineage_questions_subject_object_fkey
+      foreign key (subject_plant_object_id)
+      references plant_objects (id)
+      on update cascade
+      on delete restrict;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_questions_target_object_fkey'
+      and conrelid = 'lineage_questions'::regclass
+  ) then
+    alter table lineage_questions
+      add constraint lineage_questions_target_object_fkey
+      foreign key (target_plant_object_id)
+      references plant_objects (id)
+      on update cascade
+      on delete restrict;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'lineage_questions_target_recipient_fkey'
+      and conrelid = 'lineage_questions'::regclass
+  ) then
+    alter table lineage_questions
+      add constraint lineage_questions_target_recipient_fkey
+      foreign key (target_plant_object_id, recipient_user_id)
+      references plant_objects (id, owner_user_id)
+      on update cascade
+      on delete restrict;
+  end if;
+end $$;
+
+create index if not exists lineage_node_follows_follower_created_idx
+  on lineage_node_follows (follower_user_id, created_at desc)
+  where follow_state = 'active';
+
+create index if not exists lineage_node_follows_target_owner_created_idx
+  on lineage_node_follows (target_owner_user_id, created_at desc)
+  where follow_state = 'active';
+
+create index if not exists lineage_node_follows_edge_idx
+  on lineage_node_follows (lineage_edge_id);
+
+create index if not exists lineage_questions_recipient_created_idx
+  on lineage_questions (recipient_user_id, created_at desc)
+  where question_state = 'delivered';
+
+create index if not exists lineage_questions_asker_created_idx
+  on lineage_questions (asker_user_id, created_at desc)
+  where question_state = 'delivered';
+
+create index if not exists lineage_questions_edge_created_idx
+  on lineage_questions (lineage_edge_id, created_at desc)
+  where question_state = 'delivered';
+
 create table if not exists erasure_requests (
   id uuid primary key default gen_random_uuid(),
   requester_user_id uuid not null,

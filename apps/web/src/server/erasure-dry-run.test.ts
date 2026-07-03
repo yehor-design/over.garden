@@ -24,6 +24,8 @@ import {
   buildCountCatalogProvisionalItemsQuery,
   buildCountJournalEntriesQuery,
   buildCountLineagePendingSourceIdentitiesQuery,
+  buildCountLineageNodeFollowsQuery,
+  buildCountLineageQuestionsQuery,
   buildCountLineageProvenanceAuditEventsQuery,
   buildCountLineageProvenanceEdgesQuery,
   buildCountMediaAssetsQuery,
@@ -68,6 +70,8 @@ describe("erasure dry-run preview assembly", () => {
         lineageProvenanceEdges: 2,
         lineagePendingSourceIdentities: 1,
         lineageProvenanceAuditEvents: 1,
+        lineageNodeFollows: 3,
+        lineageQuestions: 2,
         journalEntriesTotal: 3,
         journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
@@ -98,6 +102,8 @@ describe("erasure dry-run preview assembly", () => {
       provenance_edges: 2,
       pending_identities: 1,
       audit_events: 1,
+      follows: 3,
+      questions: 2,
     });
     expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
     expect(
@@ -197,6 +203,38 @@ describe("erasure dry-run repository privacy contracts", () => {
     expect(compiled.sql).toMatch(/count\(\*\)/i);
     expect(compiled.sql).not.toMatch(
       /display_label|token|journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent|referrer/i,
+    );
+    expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
+  });
+
+  it("counts lineage follows without selecting target labels or public payloads", () => {
+    const compiled = buildCountLineageNodeFollowsQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain('"lineage_node_follows"');
+    expect(compiled.sql).toContain('"follower_user_id" = $1');
+    expect(compiled.sql).toContain('"target_owner_user_id" = $2');
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toMatch(
+      /plant_objects|journal_entries|display_name|question_text|email|phone|coarse_region|location_visibility|ip_address|user_agent/i,
+    );
+    expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
+  });
+
+  it("counts lineage questions without selecting question text", () => {
+    const compiled = buildCountLineageQuestionsQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain('"lineage_questions"');
+    expect(compiled.sql).toContain('"asker_user_id" = $1');
+    expect(compiled.sql).toContain('"recipient_user_id" = $2');
+    expect(compiled.sql).toMatch(/count\(\*\)/i);
+    expect(compiled.sql).not.toMatch(
+      /question_text|client_mutation_id|plant_objects|journal_entries|display_name|email|phone|coarse_region|location_visibility|ip_address|user_agent/i,
     );
     expect(compiled.parameters).toEqual([requesterUserId, requesterUserId]);
   });

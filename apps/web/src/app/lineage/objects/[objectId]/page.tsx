@@ -14,6 +14,14 @@ import {
   type PublicLineageNode,
 } from "@/server/public-lineage-repository";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { listLineageInteractionTargets } from "@/server/lineage-interactions-repository";
+import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
+import { scopedToUser } from "@/server/request-scope";
+import {
+  askLineageQuestionAction,
+  followLineageNodeAction,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +70,22 @@ export default async function PublicLineageObjectRoute({
   const nodesById = new Map(
     page.nodes.map((node) => [node.plantObjectId, node]),
   );
+  const session = await getCurrentSession();
+  const userId = session?.user?.id;
+  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  const writeAccess = scope
+    ? await resolvePilotWriteAccess(scope)
+    : { invited: false };
+  const interactionTargets =
+    scope && writeAccess.invited
+      ? await listLineageInteractionTargets(
+          scope,
+          page.edges.map((edge) => edge.id),
+        )
+      : [];
+  const interactionTargetsByEdgeId = new Map(
+    interactionTargets.map((target) => [target.edgeId, target]),
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -107,6 +131,11 @@ export default async function PublicLineageObjectRoute({
               const subject = nodesById.get(edge.subjectPlantObjectId);
               const source = nodesById.get(edge.sourcePlantObjectId);
               if (!subject || !source) return null;
+              const interactionTargetId =
+                interactionTargetsByEdgeId.get(edge.id)?.targetPlantObjectId;
+              const interactionTarget = interactionTargetId
+                ? nodesById.get(interactionTargetId)
+                : null;
 
               return (
                 <PublicLineageEdgeCard
@@ -114,6 +143,8 @@ export default async function PublicLineageObjectRoute({
                   edge={edge}
                   subject={subject}
                   source={source}
+                  rootPlantObjectId={page.root.plantObjectId}
+                  interactionTarget={interactionTarget ?? null}
                 />
               );
             })}
@@ -128,10 +159,14 @@ function PublicLineageEdgeCard({
   edge,
   subject,
   source,
+  rootPlantObjectId,
+  interactionTarget,
 }: {
   edge: PublicLineageEdge;
   subject: PublicLineageNode;
   source: PublicLineageNode;
+  rootPlantObjectId: string;
+  interactionTarget: PublicLineageNode | null;
 }) {
   return (
     <li className="grid gap-4 rounded-lg border border-border p-4">
@@ -153,7 +188,101 @@ function PublicLineageEdgeCard({
         <PublicLineageNodeDescription label="Source" node={source} />
         <PublicLineageNodeDescription label="Grown object" node={subject} />
       </dl>
+
+      {interactionTarget ? (
+        <LineageInteractionPanel
+          edge={edge}
+          rootPlantObjectId={rootPlantObjectId}
+          target={interactionTarget}
+        />
+      ) : null}
     </li>
+  );
+}
+
+function LineageInteractionPanel({
+  edge,
+  rootPlantObjectId,
+  target,
+}: {
+  edge: PublicLineageEdge;
+  rootPlantObjectId: string;
+  target: PublicLineageNode;
+}) {
+  return (
+    <div className="grid gap-3 border-t border-border pt-3">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium text-foreground">
+          Lineage updates from {target.displayName}
+        </p>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Questions stay inside this confirmed chain and must be contact-free.
+        </p>
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <form action={followLineageNodeAction}>
+          <input type="hidden" name="edgeId" value={edge.id} />
+          <input
+            type="hidden"
+            name="targetPlantObjectId"
+            value={target.plantObjectId}
+          />
+          <input
+            type="hidden"
+            name="rootPlantObjectId"
+            value={rootPlantObjectId}
+          />
+          <button
+            type="submit"
+            className={buttonVariants({
+              variant: "outline",
+              className: "w-full md:w-auto",
+            })}
+          >
+            Follow updates
+          </button>
+        </form>
+
+        <form action={askLineageQuestionAction} className="grid gap-2">
+          <input type="hidden" name="edgeId" value={edge.id} />
+          <input
+            type="hidden"
+            name="targetPlantObjectId"
+            value={target.plantObjectId}
+          />
+          <input
+            type="hidden"
+            name="rootPlantObjectId"
+            value={rootPlantObjectId}
+          />
+          <input
+            type="hidden"
+            name="clientMutationId"
+            value={crypto.randomUUID()}
+          />
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium text-foreground">
+              Ask within lineage
+            </span>
+            <textarea
+              name="questionText"
+              required
+              maxLength={360}
+              rows={3}
+              placeholder="What should I know about this line?"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+            />
+          </label>
+          <button
+            type="submit"
+            className={buttonVariants({ className: "justify-self-start" })}
+          >
+            Send question
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
 

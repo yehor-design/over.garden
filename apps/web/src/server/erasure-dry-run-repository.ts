@@ -46,6 +46,8 @@ export async function collectErasureDryRunCounts(
     lineageProvenanceEdges,
     lineagePendingSourceIdentities,
     lineageProvenanceAuditEvents,
+    lineageNodeFollows,
+    lineageQuestions,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -74,6 +76,8 @@ export async function collectErasureDryRunCounts(
     countLineageProvenanceEdges(executor, requesterUserId),
     countLineagePendingSourceIdentities(executor, requesterUserId),
     countLineageProvenanceAuditEvents(executor, requesterUserId),
+    countLineageNodeFollows(executor, requesterUserId),
+    countLineageQuestions(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
       visibility: "private",
@@ -119,6 +123,8 @@ export async function collectErasureDryRunCounts(
     lineageProvenanceEdges,
     lineagePendingSourceIdentities,
     lineageProvenanceAuditEvents,
+    lineageNodeFollows,
+    lineageQuestions,
     journalEntriesTotal,
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
@@ -232,6 +238,36 @@ export function buildCountLineagePendingSourceIdentitiesQuery(
       eb.or([
         eb("created_by_user_id", "=", requesterUserId),
         eb("claimed_by_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountLineageNodeFollowsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("lineage_node_follows")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("follower_user_id", "=", requesterUserId),
+        eb("target_owner_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountLineageQuestionsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("lineage_questions")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("asker_user_id", "=", requesterUserId),
+        eb("recipient_user_id", "=", requesterUserId),
       ]),
     );
 }
@@ -438,6 +474,28 @@ async function countLineagePendingSourceIdentities(
   requesterUserId: string,
 ) {
   const row = await buildCountLineagePendingSourceIdentitiesQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countLineageNodeFollows(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountLineageNodeFollowsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countLineageQuestions(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountLineageQuestionsQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

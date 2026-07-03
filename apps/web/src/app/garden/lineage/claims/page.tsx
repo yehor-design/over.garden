@@ -75,15 +75,26 @@ function LineageClaimInboxHeader({
 }) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
-      <Link
-        href="/garden"
-        className={buttonVariants({
-          variant: "outline",
-          className: "self-start",
-        })}
-      >
-        Back to journal
-      </Link>
+      <div className="flex flex-wrap gap-3">
+        <Link
+          href="/garden"
+          className={buttonVariants({
+            variant: "outline",
+            className: "self-start",
+          })}
+        >
+          Back to journal
+        </Link>
+        <Link
+          href="/garden/lineage/questions"
+          className={buttonVariants({
+            variant: "outline",
+            className: "self-start",
+          })}
+        >
+          Lineage updates
+        </Link>
+      </div>
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Lineage claims

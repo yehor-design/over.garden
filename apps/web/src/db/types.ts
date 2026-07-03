@@ -19,9 +19,11 @@ import type {
   JournalEntries as JournalEntriesTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JsonValue,
+  LineageNodeFollows as LineageNodeFollowsTable,
   LineagePendingSourceIdentities as LineagePendingSourceIdentitiesTable,
   LineageProvenanceEdgeAuditEvents as LineageProvenanceEdgeAuditEventsTable,
   LineageProvenanceEdges as LineageProvenanceEdgesTable,
+  LineageQuestions as LineageQuestionsTable,
   MediaAssets as MediaAssetsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
   PilotInterviewLearnings as PilotInterviewLearningsTable,
@@ -100,6 +102,8 @@ export type LineagePendingSourceInviteState =
   | "claimed"
   | "declined"
   | "anonymized";
+export type LineageFollowState = "active" | "anonymized";
+export type LineageQuestionState = "delivered" | "anonymized";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -155,6 +159,8 @@ export type JournalEntryObjectMention =
   Selectable<JournalEntryObjectMentionsTable>;
 export type NewJournalEntryObjectMention =
   Insertable<JournalEntryObjectMentionsTable>;
+export type LineageNodeFollow = Selectable<LineageNodeFollowsTable>;
+export type NewLineageNodeFollow = Insertable<LineageNodeFollowsTable>;
 export type LineagePendingSourceIdentity =
   Selectable<LineagePendingSourceIdentitiesTable>;
 export type NewLineagePendingSourceIdentity =
@@ -167,6 +173,8 @@ export type LineageProvenanceEdgeAuditEvent =
   Selectable<LineageProvenanceEdgeAuditEventsTable>;
 export type NewLineageProvenanceEdgeAuditEvent =
   Insertable<LineageProvenanceEdgeAuditEventsTable>;
+export type LineageQuestion = Selectable<LineageQuestionsTable>;
+export type NewLineageQuestion = Insertable<LineageQuestionsTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;

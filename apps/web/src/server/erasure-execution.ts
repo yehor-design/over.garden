@@ -20,6 +20,8 @@ const ERASED_ENTRY_TITLE = "Erased journal entry";
 const ERASED_ENTRY_BODY = "This entry was erased by request.";
 const ERASED_SPACE_NAME = "Erased garden";
 const ERASED_OBJECT_NAME = "Erased object";
+const ERASED_LINEAGE_QUESTION_TEXT =
+  "This lineage question was erased by request.";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -160,6 +162,16 @@ export async function executeApprovedErasureRequest(
       now,
     }).execute();
     await buildAnonymizePlantObjectsForErasureQuery(trx, {
+      requesterUserId,
+      erasedSubjectUserId,
+      now,
+    }).execute();
+    await buildAnonymizeLineageNodeFollowsForErasureQuery(trx, {
+      requesterUserId,
+      erasedSubjectUserId,
+      now,
+    }).execute();
+    await buildAnonymizeLineageQuestionsForErasureQuery(trx, {
       requesterUserId,
       erasedSubjectUserId,
       now,
@@ -486,6 +498,70 @@ export function buildAnonymizeLineageClaimAuditEventsForErasureQuery(
       eb.or([
         eb("actor_user_id", "=", requesterUserId),
         eb("target_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildAnonymizeLineageNodeFollowsForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_node_follows")
+    .set({
+      follower_user_id: sql<string>`case
+        when follower_user_id = ${input.requesterUserId} then ${input.erasedSubjectUserId}
+        else follower_user_id
+      end`,
+      target_owner_user_id: sql<string>`case
+        when target_owner_user_id in (${input.requesterUserId}, ${input.erasedSubjectUserId})
+          then ${input.erasedSubjectUserId}
+        else target_owner_user_id
+      end`,
+      follow_state: "anonymized",
+      updated_at: input.now,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("follower_user_id", "=", input.requesterUserId),
+        eb("target_owner_user_id", "=", input.requesterUserId),
+        eb("target_owner_user_id", "=", input.erasedSubjectUserId),
+      ]),
+    );
+}
+
+export function buildAnonymizeLineageQuestionsForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("lineage_questions")
+    .set({
+      asker_user_id: sql<string>`case
+        when asker_user_id = ${input.requesterUserId} then ${input.erasedSubjectUserId}
+        else asker_user_id
+      end`,
+      recipient_user_id: sql<string>`case
+        when recipient_user_id = ${input.requesterUserId} then ${input.erasedSubjectUserId}
+        else recipient_user_id
+      end`,
+      question_text: ERASED_LINEAGE_QUESTION_TEXT,
+      question_state: "anonymized",
+      client_mutation_id: sql<string>`'erased:' || "lineage_questions"."id"::text`,
+      updated_at: input.now,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("asker_user_id", "=", input.requesterUserId),
+        eb("recipient_user_id", "=", input.requesterUserId),
       ]),
     );
 }

@@ -266,6 +266,17 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface LineageNodeFollows {
+  created_at: Generated<Timestamp>;
+  follow_state: Generated<string>;
+  follower_user_id: string;
+  id: Generated<string>;
+  lineage_edge_id: string;
+  target_owner_user_id: string;
+  target_plant_object_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface LineagePendingSourceIdentities {
   claimed_at: Timestamp | null;
   claimed_by_user_id: string | null;
@@ -306,6 +317,20 @@ export interface LineageProvenanceEdges {
   subject_plant_object_id: string;
   updated_at: Generated<Timestamp>;
   visibility_policy: Generated<string>;
+}
+
+export interface LineageQuestions {
+  asker_user_id: string;
+  client_mutation_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  lineage_edge_id: string;
+  question_state: Generated<string>;
+  question_text: string;
+  recipient_user_id: string;
+  subject_plant_object_id: string;
+  target_plant_object_id: string;
+  updated_at: Generated<Timestamp>;
 }
 
 export interface MediaAssets {
@@ -433,9 +458,11 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;
   lineage_provenance_edges: LineageProvenanceEdges;
+  lineage_questions: LineageQuestions;
   media_assets: MediaAssets;
   pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;
