@@ -30,7 +30,7 @@ User job and trust concern: gardeners need a durable, low-friction growing memor
 - The segment set remains: micro/one-pot growers, Gen Z and young beginners, burned-out IT/knowledge workers/digital exiles, practical beginners with land/new dacha owners, urban balcony/patio/small-space gardeners, plant collectors and rare plant people, food self-reliance beginners, homestead/smallholding aspirants, and experienced gardeners/farmers/animal keepers/DIY practitioners.
 - Lineage/social graph is MVP now, not post-MVP. The scope includes provenance edges, chains, claim inbox, invitations, public-safe handles/profiles, cross-user mention/typeahead, lineage readback, follow, ask-the-lineage, followed feed, and bounded notifications.
 - Localization is MVP: `/uk`, `/bg`, and `/ru` routes, language switching, hreflang, and safe root routing.
-- Self-serve auth is MVP. Email auth uses Resend. Google and Facebook auth are already part of the active auth surface. Apple Sign-In remains approved in scope but blocked until the Apple Developer account is ready.
+- Self-serve auth is MVP. Email auth uses Resend. Google and Facebook auth are already part of the active auth surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 - Full M:N journaling is MVP: a space-level entry can mention multiple objects and appear in the relevant timelines without duplicated entries.
 - Composer friction work is MVP now: draft persistence, draft-through-auth, photo-start, title prefill, and voice-to-text.
 - MVP legal/privacy copy is founder-approved for MVP, written/generated internally, with lawyer review deferred until after MVP. Public support contact is `support.overgarden@gmail.com`.
@@ -56,7 +56,7 @@ Already documented before this recheck:
 - `OVE-129`: catalog trust UX
 - `OVE-130`: promoted variety and topic pages
 - `OVE-131`: production owner and public-smoke proof
-- `OVE-132`: Apple Sign-In, blocked until Apple Developer account readiness
+- `OVE-132`: canceled; Apple Sign-In removed from MVP after founder opted out of AppleID login for launch
 
 Added during the recheck because they were approved by product docs/chat but not explicit enough in Linear:
 
