@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   invalidPasswordResetTokenMessage,
+  passwordResetSuccessPath,
   PILOT_AUTH_HELP_PATH,
 } from "@/lib/auth/pilot-auth-recovery";
 import { authClient } from "@/lib/auth-client";
@@ -64,7 +65,7 @@ export function ResetPasswordForm() {
       return;
     }
 
-    router.push("/garden");
+    router.push(passwordResetSuccessPath());
     router.refresh();
   }
 

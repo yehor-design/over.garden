@@ -2,6 +2,7 @@
 
 export const PILOT_AUTH_HELP_PATH = "/auth/help";
 export const PILOT_AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
+export const PASSWORD_RESET_SUCCESS_PATH = "/garden";
 
 export const LOCAL_DEV_DEFAULT_EMAIL = "gardener@over.garden";
 export const LOCAL_DEV_DEFAULT_PASSWORD = "overgarden-local-gardener";
@@ -17,15 +18,19 @@ export function existingAccountRecoveryMessage(): string {
 }
 
 export function signInRecoveryHint(): string {
-  return "Forgot your password? Ask whoever invited you to OverGarden for a fresh sign-in link. During the closed pilot we do not send password reset emails automatically.";
+  return "Forgot your password? Use sign-in help for a one-time reset link. Closed-pilot operators can still hand off a private link when email delivery is unavailable.";
 }
 
 export function passwordResetHelpMessage(): string {
-  return "During the closed pilot, password help is operator-assisted. Contact whoever invited you; they can send a private one-time link that returns you to the same garden.";
+  return "Password recovery uses one-time links that return you to the same OverGarden account and garden. During closed-pilot support, an operator can still generate a private one-time link if email delivery is unavailable.";
 }
 
 export function passwordResetSuccessMessage(): string {
   return "Your password is updated. Sign in to return to your garden.";
+}
+
+export function passwordResetSuccessPath(): string {
+  return PASSWORD_RESET_SUCCESS_PATH;
 }
 
 export function invalidPasswordResetTokenMessage(): string {

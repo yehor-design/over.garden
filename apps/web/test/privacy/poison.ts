@@ -27,6 +27,7 @@ export const POISON = {
   googleClientSecret: "google-client-secret-POISON-deadbeef",
   facebookClientId: "facebook-client-id-POISON",
   facebookClientSecret: "facebook-client-secret-POISON-deadbeef",
+  resendApiKey: "resend-api-key-POISON-deadbeef",
   r2AccessKeyId: "r2-access-key-POISON-deadbeef",
   r2SecretAccessKey: "r2-secret-access-POISON-deadbeef",
   databaseUrl: "postgresql://dbuser:POISONpass@db.example.internal:5432/over",

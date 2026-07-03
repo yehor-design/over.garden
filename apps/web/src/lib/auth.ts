@@ -11,6 +11,11 @@ import {
 } from "@/lib/auth/google-oauth";
 import { socialAccountPolicy } from "@/lib/auth/social-account-policy";
 import { capturePilotPasswordResetLink } from "@/lib/auth/pilot-password-reset-delivery";
+import {
+  sendAuthPasswordResetEmail,
+  sendAuthVerificationEmail,
+  shouldRequireAuthEmailVerification,
+} from "@/lib/auth/resend-auth-email-delivery";
 import { getAuthBaseUrl } from "@/lib/runtime-url";
 
 const googleProvider = resolveGoogleSocialProviderConfig();
@@ -32,11 +37,33 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: false,
+    requireEmailVerification: shouldRequireAuthEmailVerification(),
     revokeSessionsOnPasswordReset: true,
-    sendResetPassword: async ({ user, url }) => {
-      void capturePilotPasswordResetLink({ email: user.email, url });
+    sendResetPassword: ({ user, url }) => {
+      const delivery = capturePilotPasswordResetLink({
+        email: user.email,
+        url,
+      });
+
+      if (delivery === "operator_cli") return Promise.resolve();
+
+      return sendAuthPasswordResetEmail({
+        email: user.email,
+        url,
+        userId: user.id,
+      });
     },
+  },
+  emailVerification: {
+    autoSignInAfterVerification: true,
+    sendOnSignIn: true,
+    sendOnSignUp: shouldRequireAuthEmailVerification(),
+    sendVerificationEmail: ({ user, url }) =>
+      sendAuthVerificationEmail({
+        email: user.email,
+        url,
+        userId: user.id,
+      }),
   },
   socialProviders:
     Object.keys(socialProviders).length > 0 ? socialProviders : undefined,

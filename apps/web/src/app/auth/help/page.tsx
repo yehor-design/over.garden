@@ -7,11 +7,12 @@ import {
   passwordResetHelpMessage,
   signInRecoveryHint,
 } from "@/lib/auth/pilot-auth-recovery";
+import { PasswordResetRequestForm } from "./password-reset-request-form";
 
 export const metadata: Metadata = {
   title: "Sign-in help",
   description:
-    "Closed-pilot sign-in help for invited OverGarden gardeners who need to return to an existing garden.",
+    "Sign-in help for OverGarden gardeners who need to return to an existing garden.",
   robots: {
     index: false,
     follow: false,
@@ -27,7 +28,7 @@ export default function AuthHelpPage() {
 
       <header className="flex flex-col gap-3 border-b border-border pb-6">
         <p className="text-sm font-medium text-muted-foreground">
-          Closed pilot
+          Account recovery
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           Need help signing in?
@@ -36,6 +37,8 @@ export default function AuthHelpPage() {
           {passwordResetHelpMessage()}
         </p>
       </header>
+
+      <PasswordResetRequestForm />
 
       <section className="grid gap-4 rounded-lg border border-border p-5">
         <h2 className="text-base font-semibold text-foreground">
@@ -47,8 +50,8 @@ export default function AuthHelpPage() {
             Creating another account will not move your existing plant records.
           </li>
           <li>
-            If you forgot your password, contact whoever invited you. They can
-            send a private one-time link to set a new password.
+            If the email reset does not arrive, contact whoever invited you.
+            They can send a private one-time link to set a new password.
           </li>
           <li>
             After you sign in again, open{" "}
@@ -63,7 +66,7 @@ export default function AuthHelpPage() {
       <section className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
         <p className="flex items-center gap-2 text-sm font-medium text-foreground">
           <MailWarning className="size-4" />
-          Closed-pilot limitation
+          Closed-pilot fallback
         </p>
         <p className="text-sm leading-6 text-muted-foreground">
           {signInRecoveryHint()} This keeps support small and safe while the

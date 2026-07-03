@@ -14,6 +14,8 @@ const productionLikeEnv = {
   GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
   FACEBOOK_CLIENT_ID: "facebook-app-id-that-must-not-leak",
   FACEBOOK_CLIENT_SECRET: "facebook-secret-that-must-not-leak",
+  RESEND_API_KEY: "resend-secret-that-must-not-leak",
+  RESEND_AUTH_FROM: "OverGarden <auth@over.garden>",
   DATABASE_URL:
     "postgresql://overgarden:database-secret@db.example.com:5432/overgarden",
   DIRECT_URL:
@@ -52,6 +54,7 @@ describe("pilot smoke readiness", () => {
     expect(serialized).not.toContain("google-secret-that-must-not-leak");
     expect(serialized).not.toContain("facebook-app-id-that-must-not-leak");
     expect(serialized).not.toContain("facebook-secret-that-must-not-leak");
+    expect(serialized).not.toContain("resend-secret-that-must-not-leak");
     expect(serialized).not.toContain("database-secret");
     expect(serialized).not.toContain("direct-database-secret");
     expect(serialized).not.toContain("r2-access-key-that-must-not-leak");
@@ -121,6 +124,25 @@ describe("pilot smoke readiness", () => {
     ).toMatchObject({
       severity: "manual",
       summary: expect.stringContaining("journal_entry_index"),
+    });
+  });
+
+  it("blocks Vercel production smoke when Resend auth email env is missing", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        RESEND_API_KEY: undefined,
+        RESEND_AUTH_FROM: undefined,
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-03T00:00:00.000Z"),
+    });
+    const checks = readout.sections.flatMap((section) => section.checks);
+
+    expect(readout.overall).toBe("blocked");
+    expect(findCheck(checks, "resend-auth-email-provider")).toMatchObject({
+      severity: "fail",
+      summary: expect.stringContaining("self-serve password reset"),
     });
   });
 

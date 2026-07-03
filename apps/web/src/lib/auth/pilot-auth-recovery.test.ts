@@ -4,6 +4,7 @@ import {
   existingAccountRecoveryMessage,
   interpretAuthClientErrorMessage,
   passwordResetHelpMessage,
+  passwordResetSuccessPath,
   pilotPasswordResetRedirectUrl,
   signInRecoveryHint,
 } from "./pilot-auth-recovery";
@@ -22,10 +23,10 @@ describe("pilot auth recovery copy", () => {
     expect(existingAccountRecoveryMessage()).not.toMatch(/create/i);
   });
 
-  it("explains operator-assisted password help without promising email delivery", () => {
-    expect(signInRecoveryHint()).toMatch(/invited you/i);
-    expect(signInRecoveryHint()).toMatch(/do not send password reset emails/i);
-    expect(passwordResetHelpMessage()).toMatch(/operator-assisted/i);
+  it("explains email recovery while keeping the closed-pilot operator fallback", () => {
+    expect(signInRecoveryHint()).toMatch(/one-time reset link/i);
+    expect(signInRecoveryHint()).toMatch(/operators/i);
+    expect(passwordResetHelpMessage()).toMatch(/email delivery is unavailable/i);
   });
 
   it("maps Better Auth duplicate-account errors to recovery guidance", () => {
@@ -51,6 +52,10 @@ describe("pilot auth recovery copy", () => {
     expect(pilotPasswordResetRedirectUrl("https://over-garden.vercel.app")).toBe(
       "https://over-garden.vercel.app/auth/reset-password",
     );
+  });
+
+  it("returns recovered gardeners to the existing garden workspace", () => {
+    expect(passwordResetSuccessPath()).toBe("/garden");
   });
 });
 

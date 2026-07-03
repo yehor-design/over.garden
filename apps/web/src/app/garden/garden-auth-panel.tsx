@@ -80,6 +80,7 @@ export function GardenAuthPanel({
       email: email.trim(),
       password,
       name: name.trim() || email.trim().split("@")[0] || "Gardener",
+      callbackURL: "/garden",
     });
 
     setIsPending(false);
@@ -92,6 +93,7 @@ export function GardenAuthPanel({
       return;
     }
 
+    setMessage("Check your email to verify the account, then open your garden.");
     router.refresh();
   }
 

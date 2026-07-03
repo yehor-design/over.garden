@@ -1,5 +1,7 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { PasswordResetRequestForm } from "@/app/auth/help/password-reset-request-form";
 import {
   existingAccountRecoveryMessage,
   passwordResetHelpMessage,
@@ -14,9 +16,18 @@ describe("/auth/help closed-pilot recovery page copy", () => {
     expect(PILOT_AUTH_RESET_PASSWORD_PATH).toBe("/auth/reset-password");
   });
 
-  it("explains operator-assisted recovery without promising automated email delivery", () => {
-    expect(passwordResetHelpMessage()).toMatch(/operator-assisted/i);
-    expect(signInRecoveryHint()).toMatch(/do not send password reset emails/i);
+  it("explains email recovery with the operator fallback", () => {
+    expect(passwordResetHelpMessage()).toMatch(/email delivery is unavailable/i);
+    expect(signInRecoveryHint()).toMatch(/one-time reset link/i);
     expect(existingAccountRecoveryMessage()).toMatch(/already exists/i);
+  });
+
+  it("renders a self-serve password reset request without provider secrets", () => {
+    const html = renderToStaticMarkup(<PasswordResetRequestForm />);
+
+    expect(html).toContain("Email a reset link");
+    expect(html).toContain("Send reset link");
+    expect(html).not.toContain("RESEND_API_KEY");
+    expect(html).not.toContain("re_");
   });
 });

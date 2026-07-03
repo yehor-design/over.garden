@@ -29,6 +29,26 @@ describe("runtime URL resolution", () => {
     ).toBe("https://auth.example.test/");
   });
 
+  it("does not infer a Vercel deployment URL as the production auth base", () => {
+    expect(
+      getAuthBaseUrl({
+        VERCEL: "1",
+        VERCEL_ENV: "production",
+        VERCEL_URL: "over-garden-production.vercel.app",
+      }),
+    ).toBe("https://over.garden/");
+  });
+
+  it("keeps Vercel deployment URL inference available outside production", () => {
+    expect(
+      getAuthBaseUrl({
+        VERCEL: "1",
+        VERCEL_ENV: "preview",
+        VERCEL_URL: "over-garden-preview.vercel.app",
+      }),
+    ).toBe("https://over-garden-preview.vercel.app/");
+  });
+
   it("normalizes Vercel URL values with or without scheme", () => {
     expect(vercelUrl({ VERCEL_URL: "preview.example.test" })).toBe(
       "https://preview.example.test",

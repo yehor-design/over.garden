@@ -16,6 +16,11 @@ import {
   GOOGLE_OAUTH_PRODUCTION_REDIRECT_URI,
   googleOAuthConfigurationState,
 } from "@/lib/auth/google-oauth";
+import {
+  authEmailVerificationPolicy,
+  RESEND_API_KEY_ENV,
+  RESEND_AUTH_FROM_ENV,
+} from "@/lib/auth/resend-auth-email-delivery";
 import { vercelUrl } from "@/lib/runtime-url";
 import { pingDatabase } from "@/server/health-repository";
 
@@ -121,6 +126,8 @@ export function buildPilotSmokeReadiness({
       checks: [
         checkDatabase(env, databaseProbe),
         checkBetterAuthSecret(env),
+        checkResendAuthEmailConfiguration(env),
+        checkAuthEmailVerificationPolicy(env),
         checkGoogleOAuthConfiguration(env),
         checkFacebookOAuthConfiguration(env),
         checkPilotInviteSigningSecret(env),
@@ -285,6 +292,8 @@ export function buildPilotSmokeReadiness({
       "Open the deployed public URL and confirm `/`, `/health`, `/garden`, and `/privacy` return OverGarden HTML rather than deployment-provider auth.",
       "Start Google OAuth from `/garden`, confirm the provider accepts the exact callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`, and confirm the callback lands back on `/garden` without recording auth params.",
       "Start Facebook Login from `/garden`, confirm Meta accepts the exact callback without redirect/origin errors, and confirm the callback lands back on `/garden` without recording auth params.",
+      "Create a new email/password account, confirm the verification email arrives from the approved OverGarden sender, open the verification link, and confirm it returns to `/garden` without recording tokenized URLs.",
+      "Request a password reset from `/auth/help`, confirm the reset email arrives from the approved OverGarden sender, set a new password, and confirm the same garden data remains attached after returning to `/garden`.",
       "Sign up or sign in as the pilot smoke user and create one first plant entry through `/garden`.",
       "For an existing gardener email/password account, sign in once, link Google from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
       "For an existing gardener email/password account, sign in once, link Facebook from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
@@ -666,6 +675,48 @@ function checkBetterAuthSecret(env: EnvLike): PilotSmokeCheck {
     "BETTER_AUTH_SECRET",
     "Better Auth secret",
   );
+}
+
+function checkResendAuthEmailConfiguration(env: EnvLike): PilotSmokeCheck {
+  const apiKey = env[RESEND_API_KEY_ENV];
+  const from = env[RESEND_AUTH_FROM_ENV];
+
+  if (!isConfigured(apiKey) || !isConfigured(from)) {
+    return {
+      id: "resend-auth-email-provider",
+      label: "Resend auth email provider",
+      severity: isProductionVercel(env) ? "fail" : "warn",
+      summary: `${RESEND_API_KEY_ENV} and ${RESEND_AUTH_FROM_ENV} must be present before self-serve password reset and email verification can close smoke.`,
+      evidence:
+        "Evidence may say present or missing only. Never copy API keys, email links, verification tokens, reset tokens, provider message ids, or recipient addresses.",
+    };
+  }
+
+  return {
+    id: "resend-auth-email-provider",
+    label: "Resend auth email provider",
+    severity: "manual",
+    summary:
+      "Resend auth email env is present; the sender domain/from address and real verification/reset delivery must be proven with redacted smoke evidence.",
+    evidence:
+      "Record only provider class, sender domain class, delivery success/failure class, and canonical origin class. Never copy API keys, recipient addresses, tokenized URLs, message ids, or provider payloads.",
+  };
+}
+
+function checkAuthEmailVerificationPolicy(env: EnvLike): PilotSmokeCheck {
+  const policy = authEmailVerificationPolicy(env);
+
+  return {
+    id: "auth-email-verification-policy",
+    label: "Email verification policy",
+    severity: "pass",
+    summary:
+      policy === "required"
+        ? "Email/password sign-up requires email verification in this runtime."
+        : "Email verification is optional in this local/test runtime; deployed runtimes require it.",
+    evidence:
+      "Policy evidence is runtime class only. Do not record verification tokens or recipient addresses.",
+  };
 }
 
 function checkGoogleOAuthConfiguration(env: EnvLike): PilotSmokeCheck {

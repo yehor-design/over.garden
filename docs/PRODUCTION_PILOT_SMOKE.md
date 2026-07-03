@@ -389,19 +389,28 @@ Do not treat the founder-only rehearsal slice as complete if any of the followin
 - Evidence contains invite URLs, raw tokens, cookies, journal text, media keys, contact details, precise location, IP addresses, user agents, referrers, or raw query strings.
 - OVE-53 is closed or described as satisfied from founder/internal rehearsal data.
 
-## OVE-48 Closed-Pilot Auth Recovery
+## OVE-48 / OVE-127 Auth Recovery
 
-Goal: an invited pilot gardener who loses access or forgets how to sign in can recover through a documented operator-assisted path and return to the same `/garden` workspace with prior plant objects and entries intact. This is retention/support for a tiny closed pilot, not a full auth product expansion.
+Goal: a gardener who loses access or forgets how to sign in can recover through a one-time Better Auth reset link and return to the same `/garden` workspace with prior plant objects and entries intact. The OVE-48 operator-assisted path remains available for closed-pilot support; OVE-127 adds Resend-backed self-serve transactional email for verification and password recovery.
 
 ### What landed
 
 - `/garden` auth panel accepts real email/password sign-in and sign-up instead of a hardcoded local-only account. Duplicate sign-up attempts map to calm recovery copy that steers the gardener back to sign-in on the existing account rather than creating a second garden.
-- Better Auth password reset is wired with `sendResetPassword`, but the closed pilot does not send email automatically. Operator CLI mode captures the one-time reset URL for private handoff.
-- `/auth/help` (`noindex`) explains the closed-pilot sign-in support flow and remaining limitations.
-- `/auth/reset-password` (`noindex`) lets a gardener set a new password from the operator-provided one-time link and return to `/garden`.
+- Better Auth password reset is wired with `sendResetPassword`. Normal app traffic sends password reset email through Resend when `RESEND_API_KEY` and `RESEND_AUTH_FROM` are configured; operator CLI mode still captures the one-time reset URL for private handoff when `PILOT_OPERATOR_PASSWORD_RESET=1`.
+- Production-like email/password sign-up requires email verification and sends verification email through the same Resend transactional path. Local/test runtimes keep verification optional.
+- `/auth/help` (`noindex`) offers a self-serve reset request form plus the closed-pilot operator fallback.
+- `/auth/reset-password` (`noindex`) lets a gardener set a new password from the emailed or operator-provided one-time link and return to `/garden`.
 - Founders generate reset URLs from `apps/web` with `pnpm pilot:reset-password -- --email <address>` after confirming the gardener already registered that email.
 
-### Founder recovery workflow (no secrets in git or Linear)
+### Self-serve recovery workflow (redacted evidence only)
+
+1. Confirm production/preview readiness reports `RESEND_API_KEY` and `RESEND_AUTH_FROM` as configured without exposing values.
+2. From `/auth/help`, request a reset link for an existing gardener account.
+3. Confirm a Resend transactional email is delivered from the approved OverGarden sender and that the visible link origin is `https://over.garden` in production.
+4. Set a new password through `/auth/reset-password`, then confirm `/garden` shows the same owner-scoped plant objects and entries.
+5. Evidence may record provider class, sender domain class, canonical origin class, delivery success/failure class, and account-continuity pass/fail only. Do not record recipient email addresses, provider message IDs, reset/verification tokens, tokenized URLs, cookies, or provider payloads.
+
+### Founder fallback workflow (no secrets in git or Linear)
 
 1. Confirm the gardener already created an account with the email they want to recover. Do not create a second account for them.
 2. From `apps/web`, run `pnpm pilot:reset-password -- --email gardener@example.com` (optional: `--base-url https://over.garden`).
@@ -416,7 +425,7 @@ Do not treat auth recovery as complete if any of the following are true:
 - Recovery depends on manual database mutation rather than the operator reset path.
 - Reset links, tokens, or passwords appear in docs, Linear, logs, analytics, or UI evidence.
 - A recovered gardener lands in a duplicate account/garden instead of the original owner-scoped data.
-- Self-serve password reset promises automated email delivery during the closed pilot.
+- Production self-serve reset or email verification claims are made without Resend env readiness and redacted live delivery proof.
 
 ## Product Assumption
 
@@ -497,44 +506,48 @@ Public visitor/crawler prerequisite:
 
 1. Open `/` and follow the primary CTA into `/garden?source=homepage`.
 2. Sign up or sign in as the pilot smoke user.
-3. For Google OAuth:
+3. For email/password auth email:
+   - Create a new email/password account and confirm the verification email arrives from the approved OverGarden sender.
+   - Open the verification link, confirm the visible production origin is `https://over.garden`, and confirm the flow returns to `/garden` without recording the tokenized URL.
+   - From `/auth/help`, request a password reset for an existing gardener account, confirm the reset email arrives from the approved OverGarden sender, set a new password, and confirm the same garden data remains attached after returning to `/garden`.
+4. For Google OAuth:
    - Start "Continue with Google" from `/garden` and confirm Google accepts the callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`.
    - For an existing gardener email/password account, sign in once, use "Link Google sign-in" from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
    - Open `/admin` as a normal Google-created or Google-linked user and confirm `Access denied.`; Google must not be a path to admin capability.
-4. For Facebook Login:
+5. For Facebook Login:
    - Start "Continue with Facebook" from `/garden` and confirm Meta accepts the callback without redirect/origin errors.
    - For an existing gardener email/password account, sign in once, use "Link Facebook sign-in" from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
    - Open `/admin` as a normal Facebook-created or Facebook-linked user and confirm `Access denied.`; Facebook must not be a path to admin capability.
    - If the Meta app is still in Development mode, record the smoke as app-role/test-user only and do not treat it as production gardener proof.
-5. Create one first plant entry with:
+6. Create one first plant entry with:
    - one space,
    - one plant object,
    - title/body entered by the operator but not copied into evidence,
    - `hidden` or safe region-level location only,
    - catalog selected, user-added, or Unknown.
-6. Attach one photo:
+7. Attach one photo:
    - create the presigned quarantine upload through the app,
    - upload the image,
    - process it server-side,
    - confirm authenticated readback displays only the public derivative.
-7. Open the object page and add a follow-up entry to the same object.
-8. Publish the first entry after accepting first-publication disclosure.
-9. Open the public `/journal/[slug]` URL:
+8. Open the object page and add a follow-up entry to the same object.
+9. Publish the first entry after accepting first-publication disclosure.
+10. Open the public `/journal/[slug]` URL:
    - status `200`,
    - SSR HTML visible without client JS dependency,
    - robots `noindex, nofollow`,
    - no precise location,
    - no quarantine/original media key,
    - derivative-only media if a photo was attached.
-10. From the public entry, open `/variety/[slug]` when linked:
+11. From the public entry, open `/variety/[slug]` when linked:
    - page renders only if there is safe public entry depth for that catalog item,
    - thin pages stay noindex,
    - CTA carries only a public catalog slug into `/garden`.
 
-11. Use the public variety CTA, sign in if needed, and save another first-entry path with public-variety activation attribution.
-12. Archive the published entry from the authenticated object page.
-13. Reopen the old public journal URL and confirm status `410`, robots `noindex, nofollow`, and no private content in the tombstone.
-14. Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 metrics update without raw journal text, email, precise location, media keys, referrers, IPs, or user agents.
+12. Use the public variety CTA, sign in if needed, and save another first-entry path with public-variety activation attribution.
+13. Archive the published entry from the authenticated object page.
+14. Reopen the old public journal URL and confirm status `410`, robots `noindex, nofollow`, and no private content in the tombstone.
+15. Open `/garden/pilot-health` and confirm aggregate H1/H4/H6 metrics update without raw journal text, email, precise location, media keys, referrers, IPs, or user agents.
 
 ## Worker And Search Health
 
