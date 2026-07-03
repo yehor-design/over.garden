@@ -30,6 +30,16 @@ import type {
 } from "@/lib/garden/entry-contracts";
 import { defaultObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
 import {
+  clearComposerPhotoIntent,
+  COMPOSER_PHOTO_ACCEPT,
+  createComposerPhotoIntent,
+  isSupportedComposerPhoto,
+} from "@/lib/garden/composer-photo-selection";
+import {
+  nextJournalTitleValue,
+  suggestJournalEntryTitle,
+} from "@/lib/garden/journal-title-prefill";
+import {
   catalogKindLabel,
   catalogSuggestionStatusLabel,
   journalSaveErrorMessage,
@@ -49,7 +59,6 @@ import {
   getCoarseRegionLabel,
 } from "@/lib/garden/regions";
 import {
-  createOfflinePhotoIntent,
   enqueueOfflineMutation,
   listOfflineMutations,
   type OfflineFirstPlantEntryPayload,
@@ -83,8 +92,6 @@ type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
 export function FirstEntryComposer({
   today,
   initialClientMutationId,
@@ -93,6 +100,9 @@ export function FirstEntryComposer({
 }: FirstEntryComposerProps) {
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
+  const titleEditedByUserRef = useRef(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoIntentRequestRef = useRef(0);
   const [clientMutationId, setClientMutationId] = useState(
     initialClientMutationId,
   );
@@ -181,6 +191,8 @@ export function FirstEntryComposer({
         if (storedDraft) {
           setClientMutationId(storedDraft.payload.clientMutationId);
           setDraft(storedDraft.payload.draft);
+          titleEditedByUserRef.current =
+            storedDraft.payload.draft.title.trim().length > 0;
           setCatalogQuery(
             storedDraft.payload.catalogQuery ||
               storedDraft.payload.selectedCatalogItem?.displayName ||
@@ -293,6 +305,8 @@ export function FirstEntryComposer({
     });
   }, [isOnline, photoError, photoFile, storedPhotoIntent]);
 
+  const hasSelectedPhoto = Boolean(photoFile || storedPhotoIntent);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -375,7 +389,7 @@ export function FirstEntryComposer({
 
   async function buildPayload(): Promise<OfflineJournalEntryPayload> {
     const photoIntent = photoFile
-      ? await createOfflinePhotoIntent(photoFile)
+      ? await createComposerPhotoIntent(photoFile)
       : storedPhotoIntent;
 
     return {
@@ -403,7 +417,18 @@ export function FirstEntryComposer({
     value: FirstEntryDraftFields[K],
   ) {
     draftPersistencePausedRef.current = false;
-    setDraft((current) => ({ ...current, [field]: value }));
+    setDraft((current) => {
+      const next = { ...current, [field]: value };
+      return field === "plantName" || field === "body" || field === "entryDate"
+        ? withSuggestedTitle(next)
+        : next;
+    });
+  }
+
+  function updateTitle(value: string) {
+    draftPersistencePausedRef.current = false;
+    titleEditedByUserRef.current = true;
+    setDraft((current) => ({ ...current, title: value }));
   }
 
   function updateLocationVisibility(value: string) {
@@ -438,13 +463,18 @@ export function FirstEntryComposer({
     setSelectedCatalogItem(suggestion);
     setUserAddedCatalogName(null);
     setCatalogQuery(suggestion.displayName);
-    setDraft((current) => ({
-      ...current,
-      objectKind: defaultObjectKindForCatalogSelection(
-        suggestion.catalogKind,
-        suggestion.source,
+    setDraft((current) =>
+      withSuggestedTitle(
+        {
+          ...current,
+          objectKind: defaultObjectKindForCatalogSelection(
+            suggestion.catalogKind,
+            suggestion.source,
+          ),
+        },
+        { catalogLabel: suggestion.displayName },
       ),
-    }));
+    );
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
   }
@@ -457,6 +487,9 @@ export function FirstEntryComposer({
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(displayName);
     setCatalogQuery(displayName);
+    setDraft((current) =>
+      withSuggestedTitle(current, { catalogLabel: displayName }),
+    );
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
   }
@@ -466,6 +499,7 @@ export function FirstEntryComposer({
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(null);
     setCatalogQuery("");
+    setDraft((current) => withSuggestedTitle(current, { catalogLabel: null }));
     setCatalogSuggestions([]);
     setCatalogStatus("idle");
   }
@@ -473,30 +507,88 @@ export function FirstEntryComposer({
   function handlePhotoChange(file: File | undefined) {
     draftPersistencePausedRef.current = false;
     setPhotoError(null);
+    const requestId = photoIntentRequestRef.current + 1;
+    photoIntentRequestRef.current = requestId;
 
     if (!file) {
-      setPhotoFile(null);
-      setStoredPhotoIntent(null);
+      clearPhotoSelection(false);
       return;
     }
 
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    if (!isSupportedComposerPhoto(file)) {
       setPhotoFile(null);
-      setStoredPhotoIntent(null);
+      setStoredPhotoIntent(clearComposerPhotoIntent());
       setPhotoError("Use a JPEG, PNG, or WebP photo.");
+      resetPhotoInput();
+      setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       return;
     }
 
     setPhotoFile(file);
-    void createOfflinePhotoIntent(file)
-      .then((intent) => setStoredPhotoIntent(intent))
+    setStoredPhotoIntent(clearComposerPhotoIntent());
+    setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
+    void createComposerPhotoIntent(file)
+      .then((intent) => {
+        if (photoIntentRequestRef.current === requestId) {
+          setStoredPhotoIntent(intent);
+        }
+      })
       .catch(() => {
+        if (photoIntentRequestRef.current !== requestId) return;
+
         setPhotoFile(null);
-        setStoredPhotoIntent(null);
+        setStoredPhotoIntent(clearComposerPhotoIntent());
         setPhotoError(
           "We couldn't keep that photo on this device. Choose it again.",
         );
+        resetPhotoInput();
+        setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       });
+  }
+
+  function clearPhotoSelection(resetInput = true) {
+    draftPersistencePausedRef.current = false;
+    photoIntentRequestRef.current += 1;
+    setPhotoFile(null);
+    setStoredPhotoIntent(clearComposerPhotoIntent());
+    setPhotoError(null);
+    if (resetInput) resetPhotoInput();
+    setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
+  }
+
+  function resetPhotoInput() {
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  }
+
+  function withSuggestedTitle(
+    nextDraft: FirstEntryDraftFields,
+    options: {
+      catalogLabel?: string | null;
+      hasPhoto?: boolean;
+    } = {},
+  ): FirstEntryDraftFields {
+    const catalogLabel =
+      options.catalogLabel !== undefined
+        ? options.catalogLabel
+        : (selectedCatalogItem?.displayName ?? userAddedCatalogName);
+    const suggestion = suggestJournalEntryTitle({
+      entryDate: nextDraft.entryDate,
+      objectLabel: nextDraft.plantName,
+      catalogLabel,
+      body: nextDraft.body,
+      hasPhoto: options.hasPhoto ?? Boolean(photoFile || storedPhotoIntent),
+    });
+
+    return {
+      ...nextDraft,
+      title: nextJournalTitleValue({
+        currentTitle: nextDraft.title,
+        suggestion,
+        titleEditedByUser: titleEditedByUserRef.current,
+      }),
+    };
   }
 
   return (
@@ -683,6 +775,42 @@ export function FirstEntryComposer({
         ) : null}
       </div>
 
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Start with photo
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept={COMPOSER_PHOTO_ACCEPT}
+            capture="environment"
+            onChange={(event) =>
+              handlePhotoChange(event.currentTarget.files?.[0])
+            }
+            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
+          />
+        </label>
+        {hasSelectedPhoto ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="self-start"
+            onClick={() => clearPhotoSelection()}
+          >
+            <X className="size-4" />
+            Remove photo
+          </Button>
+        ) : null}
+        <p
+          className={
+            photoError
+              ? "text-xs leading-5 text-destructive"
+              : "text-xs leading-5 text-muted-foreground"
+          }
+        >
+          {photoHelp}
+        </p>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
           Entry title
@@ -691,7 +819,7 @@ export function FirstEntryComposer({
             required
             maxLength={140}
             value={draft.title}
-            onChange={(event) => updateDraft("title", event.target.value)}
+            onChange={(event) => updateTitle(event.target.value)}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             placeholder="First flowers"
           />
@@ -722,29 +850,6 @@ export function FirstEntryComposer({
           placeholder="The plant recovered after repotting and has two new flower clusters."
         />
       </label>
-
-      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Photo
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(event) =>
-              handlePhotoChange(event.currentTarget.files?.[0])
-            }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
-          />
-        </label>
-        <p
-          className={
-            photoError
-              ? "text-xs leading-5 text-destructive"
-              : "text-xs leading-5 text-muted-foreground"
-          }
-        >
-          {photoHelp}
-        </p>
-      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>

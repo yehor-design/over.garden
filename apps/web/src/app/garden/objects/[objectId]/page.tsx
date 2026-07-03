@@ -211,6 +211,7 @@ export default async function PlantObjectReadbackPage({
         {writeAccess.invited ? (
           <FollowUpEntryComposer
             objectId={objectId}
+            objectDisplayName={page.plantObject.display_name}
             today={today}
             initialClientMutationId={crypto.randomUUID()}
           />

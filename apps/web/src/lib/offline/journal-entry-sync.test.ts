@@ -433,6 +433,11 @@ describe("offline journal entry sync", () => {
       "00000000-0000-4000-8000-000000000101",
     );
     expect(requests[0]?.mediaAssetId).toBe("media-1");
+    expect(JSON.stringify(requests[0])).not.toContain("quarantine");
+    expect(JSON.stringify(requests[0])).not.toContain("upload.example");
+    expect(JSON.stringify(requests[0])).not.toContain("derivatives/photo");
+    expect(JSON.stringify(requests[0])).not.toContain("tomato.jpg");
+    expect(JSON.stringify(requests[0])).not.toContain("photoIntent");
     expect(
       (synced?.payload as OfflineJournalEntryPayload).processedMediaAssetId,
     ).toBe("media-1");

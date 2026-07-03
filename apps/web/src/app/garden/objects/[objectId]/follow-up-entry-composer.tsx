@@ -17,10 +17,21 @@ import {
   UploadCloud,
   Wifi,
   WifiOff,
+  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  clearComposerPhotoIntent,
+  COMPOSER_PHOTO_ACCEPT,
+  createComposerPhotoIntent,
+  isSupportedComposerPhoto,
+} from "@/lib/garden/composer-photo-selection";
+import {
+  nextJournalTitleValue,
+  suggestJournalEntryTitle,
+} from "@/lib/garden/journal-title-prefill";
 import {
   journalSaveErrorMessage,
   journalSaveStateLabel,
@@ -31,7 +42,6 @@ import {
   photoHelpText,
 } from "@/lib/garden/pilot-ux-copy";
 import {
-  createOfflinePhotoIntent,
   enqueueOfflineMutation,
   listOfflineMutations,
   type OfflineJournalEntryPayload,
@@ -55,21 +65,24 @@ import {
 
 interface FollowUpEntryComposerProps {
   objectId: string;
+  objectDisplayName: string;
   today: string;
   initialClientMutationId: string;
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
 
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
-
 export function FollowUpEntryComposer({
   objectId,
+  objectDisplayName,
   today,
   initialClientMutationId,
 }: FollowUpEntryComposerProps) {
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
+  const titleEditedByUserRef = useRef(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const photoIntentRequestRef = useRef(0);
   const draftId = followUpEntryDraftId(objectId);
   const [clientMutationId, setClientMutationId] = useState(
     initialClientMutationId,
@@ -146,6 +159,8 @@ export function FollowUpEntryComposer({
         if (storedDraft && storedDraft.payload.plantObjectId === objectId) {
           setClientMutationId(storedDraft.payload.clientMutationId);
           setDraft(storedDraft.payload.draft);
+          titleEditedByUserRef.current =
+            storedDraft.payload.draft.title.trim().length > 0;
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
           setMessage("Draft restored on this device.");
         }
@@ -203,6 +218,8 @@ export function FollowUpEntryComposer({
       photoError,
     });
   }, [isOnline, photoError, photoFile, storedPhotoIntent]);
+
+  const hasSelectedPhoto = Boolean(photoFile || storedPhotoIntent);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -302,7 +319,7 @@ export function FollowUpEntryComposer({
 
   async function buildPayload(): Promise<OfflineJournalEntryPayload> {
     const photoIntent = photoFile
-      ? await createOfflinePhotoIntent(photoFile)
+      ? await createComposerPhotoIntent(photoFile)
       : storedPhotoIntent;
 
     return {
@@ -322,36 +339,97 @@ export function FollowUpEntryComposer({
     value: FollowUpEntryDraftFields[K],
   ) {
     draftPersistencePausedRef.current = false;
-    setDraft((current) => ({ ...current, [field]: value }));
+    setDraft((current) => {
+      const next = { ...current, [field]: value };
+      return field === "body" || field === "entryDate"
+        ? withSuggestedTitle(next)
+        : next;
+    });
+  }
+
+  function updateTitle(value: string) {
+    draftPersistencePausedRef.current = false;
+    titleEditedByUserRef.current = true;
+    setDraft((current) => ({ ...current, title: value }));
   }
 
   function handlePhotoChange(file: File | undefined) {
     draftPersistencePausedRef.current = false;
     setPhotoError(null);
+    const requestId = photoIntentRequestRef.current + 1;
+    photoIntentRequestRef.current = requestId;
 
     if (!file) {
-      setPhotoFile(null);
-      setStoredPhotoIntent(null);
+      clearPhotoSelection(false);
       return;
     }
 
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    if (!isSupportedComposerPhoto(file)) {
       setPhotoFile(null);
-      setStoredPhotoIntent(null);
+      setStoredPhotoIntent(clearComposerPhotoIntent());
       setPhotoError("Use a JPEG, PNG, or WebP photo.");
+      resetPhotoInput();
+      setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       return;
     }
 
     setPhotoFile(file);
-    void createOfflinePhotoIntent(file)
-      .then((intent) => setStoredPhotoIntent(intent))
+    setStoredPhotoIntent(clearComposerPhotoIntent());
+    setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
+    void createComposerPhotoIntent(file)
+      .then((intent) => {
+        if (photoIntentRequestRef.current === requestId) {
+          setStoredPhotoIntent(intent);
+        }
+      })
       .catch(() => {
+        if (photoIntentRequestRef.current !== requestId) return;
+
         setPhotoFile(null);
-        setStoredPhotoIntent(null);
+        setStoredPhotoIntent(clearComposerPhotoIntent());
         setPhotoError(
           "We couldn't keep that photo on this device. Choose it again.",
         );
+        resetPhotoInput();
+        setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       });
+  }
+
+  function clearPhotoSelection(resetInput = true) {
+    draftPersistencePausedRef.current = false;
+    photoIntentRequestRef.current += 1;
+    setPhotoFile(null);
+    setStoredPhotoIntent(clearComposerPhotoIntent());
+    setPhotoError(null);
+    if (resetInput) resetPhotoInput();
+    setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
+  }
+
+  function resetPhotoInput() {
+    if (photoInputRef.current) {
+      photoInputRef.current.value = "";
+    }
+  }
+
+  function withSuggestedTitle(
+    nextDraft: FollowUpEntryDraftFields,
+    options: { hasPhoto?: boolean } = {},
+  ): FollowUpEntryDraftFields {
+    const suggestion = suggestJournalEntryTitle({
+      entryDate: nextDraft.entryDate,
+      objectLabel: objectDisplayName,
+      body: nextDraft.body,
+      hasPhoto: options.hasPhoto ?? Boolean(photoFile || storedPhotoIntent),
+    });
+
+    return {
+      ...nextDraft,
+      title: nextJournalTitleValue({
+        currentTitle: nextDraft.title,
+        suggestion,
+        titleEditedByUser: titleEditedByUserRef.current,
+      }),
+    };
   }
 
   return (
@@ -370,6 +448,42 @@ export function FollowUpEntryComposer({
         </span>
       </div>
 
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Start with photo
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept={COMPOSER_PHOTO_ACCEPT}
+            capture="environment"
+            onChange={(event) =>
+              handlePhotoChange(event.currentTarget.files?.[0])
+            }
+            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
+          />
+        </label>
+        {hasSelectedPhoto ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="self-start"
+            onClick={() => clearPhotoSelection()}
+          >
+            <X className="size-4" />
+            Remove photo
+          </Button>
+        ) : null}
+        <p
+          className={
+            photoError
+              ? "text-xs leading-5 text-destructive"
+              : "text-xs leading-5 text-muted-foreground"
+          }
+        >
+          {photoHelp}
+        </p>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
           Entry title
@@ -378,7 +492,7 @@ export function FollowUpEntryComposer({
             required
             maxLength={140}
             value={draft.title}
-            onChange={(event) => updateDraft("title", event.target.value)}
+            onChange={(event) => updateTitle(event.target.value)}
             className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             placeholder="Second flowering wave"
           />
@@ -409,29 +523,6 @@ export function FollowUpEntryComposer({
           placeholder="Compared with the previous entry, the new leaves are stronger and the soil stayed moist longer."
         />
       </label>
-
-      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Photo
-          <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(event) =>
-              handlePhotoChange(event.currentTarget.files?.[0])
-            }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
-          />
-        </label>
-        <p
-          className={
-            photoError
-              ? "text-xs leading-5 text-destructive"
-              : "text-xs leading-5 text-muted-foreground"
-          }
-        >
-          {photoHelp}
-        </p>
-      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>
