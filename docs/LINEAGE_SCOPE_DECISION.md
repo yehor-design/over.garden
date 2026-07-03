@@ -1,11 +1,24 @@
 # Lineage Scope Decision
 
-Status: current execution decision
+Status: superseded execution decision
 Date: 2026-07-01
 Owner: founder/operator
 Scope: lineage, provenance edges, claims, handles, invites, follow, and social graph implementation
 
-## Decision
+## Superseded By 2026-07-03 Founder Decision
+
+This 2026-07-01 decision is no longer the current MVP scope.
+
+On 2026-07-03, the founder/operator explicitly superseded the post-MVP gate and approved lineage/social graph for MVP execution now. The current scope includes provenance edges, chains, claim inbox, invitations, public-safe `@handle` identity/profile, cross-user mention/typeahead, lineage graph readback, follow, ask-the-lineage, followed feed, and bounded notifications, while preserving all privacy and consent invariants below.
+
+Current execution documentation:
+
+- `docs/MVP_SCOPE_RECHECK_2026-07-03.md`
+- Linear `OVE-114` through `OVE-139`, especially `OVE-122` through `OVE-126` and `OVE-133` through `OVE-135`
+
+The historical caution in this file remains useful context, but it is not an instruction to block MVP lineage work anymore.
+
+## Historical Decision (Superseded)
 
 Lineage and social graph are post-MVP for current execution. They must not be started during founder rehearsal, the first friendly closed pilot, or the post-audit hardening batch.
 
@@ -21,7 +34,7 @@ The current MVP execution remains focused on:
 
 This decision supersedes the operational reading of `docs/product-research/LINEAGE_SOCIAL_GRAPH_SPEC_v0.md` and `docs/product-research/OverGarden_MVP_PRD_v0.md` where those files describe S14-S20 as full v0 scope. Those research files remain useful historical/product context, and their AC-INV1-5 privacy constraints remain binding for any future lineage work, but they are not authorization to implement social graph surfaces in the current MVP execution queue.
 
-## Why
+## Historical Why
 
 `LINEAGE_SOCIAL_GRAPH_SPEC_v0.md` records a 2026-06-21 operator decision to build the full lineage layer in v0. Later repo execution did not implement that layer: `docs/SCAFFOLD_STATUS.md` records journal, publication, catalog, pilot, runtime, and post-audit hardening work, but no lineage tables, handles, follows, claim inbox, invitations, graph UI, or social graph job path.
 
@@ -35,7 +48,7 @@ The current active product learning gates remain:
 
 Lineage is a moat candidate after those gates, not a substitute for them.
 
-## Reconsideration Gates
+## Historical Reconsideration Gates
 
 Do not open implementation work for lineage/social graph until all gates below are true or a later dated founder/operator decision explicitly replaces this file.
 
@@ -45,7 +58,7 @@ Do not open implementation work for lineage/social graph until all gates below a
 4. Public/legal/privacy readiness is not blocking the new surface: erasure/anonymization, public copy, and search/noindex rules are ready for a cross-user feature that can preserve structural edges after account erasure.
 5. A fresh SDD slice exists and passes the roadmap SDD Slice Test. It must own the full user behavior end to end and must name the exact subset being built.
 
-## Current Non-Goals
+## Historical Non-Goals
 
 Do not add any of the following in current MVP execution:
 
@@ -62,9 +75,9 @@ Do not add any of the following in current MVP execution:
 
 Do not add a narrow precursor unless a later Linear issue explicitly names it and repeats the gates above. A schema-only precursor is not allowed.
 
-## Future Slice Rules
+## Current Lineage MVP Slice Rules
 
-Any future lineage slice must keep AC-INV1-5 from `OverGarden_MVP_PRD_v0.md` and `CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md` as hard acceptance criteria:
+Any lineage MVP slice must keep AC-INV1-5 from `OverGarden_MVP_PRD_v0.md` and `CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md` as hard acceptance criteria:
 
 - public/indexed cross-user artifacts are variety-mediated, not person-location mediated;
 - tags/follows/mentions never raise target visibility;
@@ -72,9 +85,18 @@ Any future lineage slice must keep AC-INV1-5 from `OverGarden_MVP_PRD_v0.md` and
 - cross-links are earned and abuse-resistant;
 - erasure uses irreversible anonymization and removes region from rare tombstones when needed to avoid re-identification.
 
-The first future slice should be the smallest behavior that tests provenance value without building the whole social network. It must be written as a new vertical SDD issue after the gates above, not revived from the historical Slice 6 text.
+The current slice sequence must test provenance value in small vertical behaviors without building the whole social network at once. Use the fresh Linear issues named in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`, not the historical Slice 6 text.
 
-## Next-Agent Instruction
+## Current Next-Agent Instruction
+
+The correct current action is:
+
+1. Treat lineage/social graph as approved MVP scope under `docs/MVP_SCOPE_RECHECK_2026-07-03.md`.
+2. Use the fresh vertical SDD issues in Linear, especially OVE-122 through OVE-126 and OVE-133 through OVE-135.
+3. Preserve every privacy, consent, no-visibility-escalation, erasure, and public-safe projection invariant in this file and in `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`.
+4. Do not implement lineage as a schema-only, backend-only, or social-network-generic task.
+
+## Historical Next-Agent Instruction (Superseded)
 
 If a future agent sees S14-S20, lineage, follows, handles, claims, invitations, provenance edges, or social graph in product-research files, it must read this file first.
 

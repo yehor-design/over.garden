@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-06-29 (OVE-55-64)
+Last operational update: 2026-07-03 (MVP scope recheck OVE-114-139)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -12,7 +12,7 @@ From this point forward, work must be shipped as narrow vertical SDD slices that
 
 ## Current Execution State
 
-Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active pilot-decision queue now lives in Linear project `SDD Slice 8 - Mainline Recovery And Pilot Decision Quality`.
+Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active MVP scope reconciliation and follow-up queue is Linear `OVE-114` through `OVE-139`. `OVE-114` is the docs reconciliation anchor; `OVE-115` through `OVE-139` are the vertical follow-up slices that convert the 2026-07-03 founder/operator MVP decision into product behavior.
 
 Before selecting or starting any next Linear issue, run:
 
@@ -21,11 +21,11 @@ cd apps/web
 pnpm mainline:closeout:check
 ```
 
-Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 remains the real-user segmented field-run gate and must not be closed from internal smoke users. When external invites are unavailable, OVE-54 provides a founder-only pilot rehearsal path that proves operator readiness without contaminating OVE-53 decision evidence.
+Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 has founder-provided redacted field-run evidence recorded in Linear and is closed: 8 invited, 8 started, 8 first entries, and 6 same-object follow-ups. Do not add raw participant identities, invite URLs, journal text, media keys, private screenshots, IP/user-agent, or precise location to repo docs.
 
-OVE-96 records the current lineage/social graph scope decision in `docs/LINEAGE_SCOPE_DECISION.md`: lineage, provenance edges, handles, follows, claim inbox, invitations, ask-the-lineage flows, and graph UI are post-MVP for current execution. Do not implement them from the historical S14-S20 research specs or historical Slice 6 text until the decision file's closed-pilot H1/H4 gates are met or a newer dated founder/operator decision supersedes it.
+The 2026-07-01 OVE-96 lineage/social graph post-MVP decision is superseded by the 2026-07-03 founder/operator decision recorded in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. Lineage/social graph is now MVP scope and must be planned as vertical SDD slices with the privacy/consent invariants from `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`. Current Linear coverage is OVE-122 through OVE-126 plus OVE-133 through OVE-135.
 
-Next queued Linear project after the pilot-decision handoff is `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64). It starts with OVE-55 live source verification, then proceeds through source snapshot quarantine, UA official varieties, species backbone, alias promotion, breed proof, BG official variety proof, genebank long-tail candidates, attribution, and refresh/diff slices.
+The previously queued Linear project `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64) remains valid catalog work, but it is no longer the automatic next queue while MVP-critical OVE-114 through OVE-139 are active. When Linear returns to Slice 9, start with OVE-55 live source verification, then proceed through source snapshot quarantine, UA official varieties, species backbone, alias promotion, breed proof, BG official variety proof, genebank long-tail candidates, attribution, and refresh/diff slices.
 
 OVE-55 is the binding source-readiness gate for that project: later ingestion issues must link back to `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` and may only consume sources according to the manifest verdicts.
 
@@ -54,7 +54,7 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 4. Kysely is the app data layer. SQL migrations are schema source of truth. Do not introduce Prisma, Drizzle, TypeORM, or a new ORM.
 5. Scoped repositories are mandatory for user data. Kysely types do not protect against missing `user_id`, publication, or location predicates.
 6. Search indexes public-safe documents only. Treat indexing as a privacy boundary.
-7. Public SEO pages stay `noindex` until there is enough real UGC depth and explicit index-promotion logic.
+7. Public editorial, landing, guide, and answer SEO/AEO pages may be SSR and indexable at MVP launch when they contain useful first-party content. Thin, unsafe, or UGC-derived surfaces, including UGC, variety, topic, lineage, and profile pages, stay `noindex` and out of sitemaps until explicit quality gates promote them.
 8. Offline capture is honest: queue locally, show queued/syncing/failed/synced states, allow retry, and do not promise iOS background sync reliability.
 9. Each Linear task must carry context files, invariants, data contract, target files, non-goals, acceptance criteria, and verification commands.
 10. Linear tasks that touch media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` and update it if provider values change.
@@ -98,7 +98,7 @@ Valid SDD slice shapes:
 
 ## Vertical Slice Strategy
 
-The first real product bet is H1: will users sustain a useful narrative growing journal habit? The first slices must therefore validate safe capture and readback before catalog breadth, SEO breadth, social graph, or monetization.
+The first real product bet was H1: will users sustain a useful narrative growing journal habit? The first slices therefore validated safe capture and readback before catalog breadth, SEO breadth, social graph, or monetization. After the 2026-07-03 MVP scope recheck, expansion into SEO/AEO, localization, full M:N journaling, composer friction, self-serve auth, and lineage/social graph is allowed only through the fresh vertical Linear slices in OVE-115 through OVE-139. Monetization remains post-MVP.
 
 The fastest useful path is:
 
@@ -199,9 +199,9 @@ Includes:
 
 ### Slice 6: Lineage And Social Graph MVP
 
-Current status: historical only. OVE-96 supersedes this as an implementation instruction; read `docs/LINEAGE_SCOPE_DECISION.md` before touching lineage or social graph work.
+Current status: historical shape only. The 2026-07-01 OVE-96 post-MVP deferral is superseded by `docs/MVP_SCOPE_RECHECK_2026-07-03.md`; lineage/social graph is now MVP scope, but only through the fresh vertical Linear slices OVE-122 through OVE-126 and OVE-133 through OVE-135. Read `docs/LINEAGE_SCOPE_DECISION.md` for privacy and consent invariants before touching lineage or social graph work.
 
-Goal: add cross-user defensibility only after the capture loop is working.
+Goal: add cross-user defensibility without exposing another user's identity, location, or visibility beyond consented/public-safe settings.
 
 Primary user behavior: user can attribute provenance, confirm/decline a claim, and see lineage without exposing another user's identity/location beyond their own settings.
 
@@ -213,7 +213,7 @@ Includes:
 - Block/report/limits.
 - Noindex full lineage graph.
 
-Current non-goals until the OVE-96 decision gates are met: no lineage tables, handles, follows, claim inbox, non-user invitations, ask-the-lineage flows, graph UI, cross-user typeahead, or social graph jobs.
+Current non-goals for this historical roadmap text: do not revive Slice 6 wholesale or implement a schema-only/social-network-generic layer. Use the fresh Linear issues instead: provenance edge (OVE-122), claim inbox (OVE-123), invitations (OVE-124), graph readback/follow/ask-the-lineage (OVE-125/OVE-126), public-safe handles (OVE-133), cross-user mention/typeahead (OVE-134), and followed feed/notifications (OVE-135).
 
 ## Execution Batch 1
 
@@ -719,4 +719,4 @@ The batch is not done if the flow only works through `/skeleton`, if public imag
 
 ## Post-Batch Decision
 
-After Batch 1, review real implementation friction before opening Batch 2. The most likely next batch is catalog/typeahead + unknown fallback. Do not start lineage, public aggregation breadth, or SEO scale before the journal capture loop is real and safe.
+After Batch 1, review real implementation friction before opening Batch 2. This was the correct historical sequencing guard. It is now superseded by the 2026-07-03 MVP scope recheck for current execution: do not use this paragraph to block OVE-115 through OVE-139, but keep its principle that every expansion must be a vertical SDD slice with executable privacy and quality gates.
