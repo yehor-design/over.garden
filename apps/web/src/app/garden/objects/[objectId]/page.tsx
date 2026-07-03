@@ -16,7 +16,10 @@ import {
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  publicJournalEntryPath,
+  publicLineageObjectPath,
+} from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
@@ -100,6 +103,11 @@ export default async function PlantObjectReadbackPage({
   const sourceAttributionCaveat = page.plantObject.source_credit
     ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
     : null;
+  const lineageReadbackPath = getLineageReadbackPath(
+    page,
+    provenancePanel,
+    objectId,
+  );
   const valuePulseJournalEntryId =
     query.valuePulse === "1" && typeof query.entryId === "string"
       ? query.entryId.trim()
@@ -234,6 +242,7 @@ export default async function PlantObjectReadbackPage({
         objectId={objectId}
         provenancePanel={provenancePanel}
         writeEnabled={writeAccess.invited}
+        lineageReadbackPath={lineageReadbackPath}
       />
 
       <section className="flex flex-col gap-4">
@@ -399,10 +408,12 @@ function ProvenanceSection({
   objectId,
   provenancePanel,
   writeEnabled,
+  lineageReadbackPath,
 }: {
   objectId: string;
   provenancePanel: ObjectProvenancePanel;
   writeEnabled: boolean;
+  lineageReadbackPath: string | null;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
@@ -581,6 +592,20 @@ function ProvenanceSection({
           ))}
         </ol>
       )}
+
+      {lineageReadbackPath ? (
+        <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
+          <span className="text-xs text-muted-foreground">
+            Confirmed lineage readback is available for public-safe links.
+          </span>
+          <Link
+            href={lineageReadbackPath}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open lineage readback
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -667,6 +692,30 @@ function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
   ].filter(Boolean);
 
   return parts.join(" · ");
+}
+
+function getLineageReadbackPath(
+  page: PlantObjectPage,
+  provenancePanel: ObjectProvenancePanel,
+  objectId: string,
+) {
+  const hasPublicActiveEntry = page.entries.some(
+    (entry) =>
+      entry.visibility === "public" &&
+      entry.lifecycle_state === "active" &&
+      entry.public_slug &&
+      !entry.public_gone_at,
+  );
+  if (!hasPublicActiveEntry) return null;
+
+  const hasConfirmedOwnObjectSource = provenancePanel.edges.some(
+    (edge) =>
+      edge.sourceKind === "own_object" &&
+      edge.consentState === "confirmed" &&
+      edge.erasureState === "active",
+  );
+
+  return hasConfirmedOwnObjectSource ? publicLineageObjectPath(objectId) : null;
 }
 
 function lineageObjectOptionLabel(option: LineagePlantObjectOption) {

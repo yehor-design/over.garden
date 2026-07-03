@@ -29,6 +29,10 @@ export function lineageInvitationClaimPath(token: string): string {
   return `/garden/lineage/invitations/claim?${params.toString()}`;
 }
 
+export function publicLineageObjectPath(plantObjectId: string): string {
+  return `/lineage/objects/${encodeURIComponent(plantObjectId)}`;
+}
+
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,

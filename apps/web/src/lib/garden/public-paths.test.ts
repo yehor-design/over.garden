@@ -7,6 +7,7 @@ import {
   lineageInvitationClaimPath,
   pilotInviteJoinPath,
   pilotInviteJoinUrl,
+  publicLineageObjectPath,
 } from "./public-paths";
 
 describe("garden public paths", () => {
@@ -57,8 +58,22 @@ describe("garden public paths", () => {
     expect(path).not.toContain("display");
   });
 
+  it("builds a noindex public lineage object path without contact or token params", () => {
+    const objectId = "00000000-0000-4000-8000-000000000101";
+    const path = publicLineageObjectPath(objectId);
+
+    expect(path).toBe(`/lineage/objects/${objectId}`);
+    expect(path).not.toContain("token");
+    expect(path).not.toContain("email");
+    expect(path).not.toContain("phone");
+    expect(path).not.toContain("referrer");
+  });
+
   it("builds a full invite URL from a base origin and token", () => {
-    const url = pilotInviteJoinUrl("v1.payload.signature", "https://over.garden");
+    const url = pilotInviteJoinUrl(
+      "v1.payload.signature",
+      "https://over.garden",
+    );
 
     expect(url).toBe("https://over.garden/join?invite=v1.payload.signature");
   });
