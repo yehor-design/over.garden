@@ -37,6 +37,7 @@ export interface FirstEntryDraftPayload {
   userAddedCatalogName: string | null;
   activationSource: ActivationSource | null;
   mentionSelections?: JournalMentionSelection[];
+  topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
 }
 
@@ -51,6 +52,7 @@ export interface FollowUpEntryDraftPayload {
   plantObjectId: string;
   draft: FollowUpEntryDraftFields;
   mentionSelections?: JournalMentionSelection[];
+  topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
 }
 
@@ -129,6 +131,7 @@ export function hasPersistableFirstEntryDraft(
     ) ||
     payload.selectedCatalogItem !== null ||
     (payload.mentionSelections?.length ?? 0) > 0 ||
+    hasText(payload.topicTagInput) ||
     payload.photoIntent !== null ||
     payload.draft.entryDate !== defaultEntryDate ||
     payload.draft.locationVisibility === "region" ||
@@ -143,6 +146,7 @@ export function hasPersistableFollowUpDraft(
   return (
     hasText(payload.draft.title, payload.draft.body) ||
     (payload.mentionSelections?.length ?? 0) > 0 ||
+    hasText(payload.topicTagInput) ||
     payload.photoIntent !== null ||
     payload.draft.entryDate !== defaultEntryDate
   );

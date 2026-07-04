@@ -56,6 +56,23 @@ describe("offline journal entry sync", () => {
     expect(body.syncStatus).toBe("offline_synced");
   });
 
+  it("keeps bounded topic tags in retry requests", () => {
+    const body = buildJournalEntryRequestBodyForSync(
+      {
+        ...payload,
+        topicTags: ["watering", "seedlings"],
+        syncStatus: "offline_queued",
+      },
+      "queue-entry-id",
+      null,
+    );
+
+    expect(body.topicTags).toEqual(["watering", "seedlings"]);
+    expect(JSON.stringify(body.topicTags)).not.toMatch(
+      /email|phone|coordinate|latitude|longitude|media_key|token/i,
+    );
+  });
+
   it("saves dictated body text as normal body text without audio metadata", () => {
     const body = buildJournalEntryRequestBodyForSync(
       {

@@ -21,6 +21,8 @@ import type {
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
+  JournalEntryTopicSignals as JournalEntryTopicSignalsTable,
+  JournalTopics as JournalTopicsTable,
   JsonValue,
   LineageNodeFollows as LineageNodeFollowsTable,
   LineagePendingSourceIdentities as LineagePendingSourceIdentitiesTable,
@@ -118,6 +120,18 @@ export type EngagementTargetKind =
 export type EngagementCommentState = "active" | "deleted" | "reported";
 export type EngagementBookmarkState = "active" | "removed";
 export type EngagementLikeState = "active" | "removed";
+export type JournalTopicTrustState = "curated" | "provisional" | "rejected";
+export type JournalEntryTopicSignalSource =
+  | "explicit_tag"
+  | "object_kind"
+  | "catalog_kind"
+  | "catalog_mention"
+  | "operator_curated";
+export type JournalEntryTopicReviewState =
+  | "accepted"
+  | "review_needed"
+  | "rejected";
+export type JournalEntryTopicPublicMembershipState = "eligible" | "hidden";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -173,6 +187,12 @@ export type JournalEntryObjectMention =
   Selectable<JournalEntryObjectMentionsTable>;
 export type NewJournalEntryObjectMention =
   Insertable<JournalEntryObjectMentionsTable>;
+export type JournalTopic = Selectable<JournalTopicsTable>;
+export type NewJournalTopic = Insertable<JournalTopicsTable>;
+export type JournalEntryTopicSignal =
+  Selectable<JournalEntryTopicSignalsTable>;
+export type NewJournalEntryTopicSignal =
+  Insertable<JournalEntryTopicSignalsTable>;
 export type LineageNodeFollow = Selectable<LineageNodeFollowsTable>;
 export type NewLineageNodeFollow = Insertable<LineageNodeFollowsTable>;
 export type LineagePendingSourceIdentity =

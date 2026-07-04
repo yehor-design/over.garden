@@ -31,6 +31,7 @@ Current decisions:
 - Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
 - Current aggregation thresholds are at least 3 safe public entries, at least 600 aggregate body characters, and a trust gate. Variety aggregation must be backed by either a curated `confirmed` catalog item or a seeded item from an approved source-backed family. Topic aggregation must pass a curated-topic trust state before a future topic route can become indexable.
+- Topic/tag capture is only a signal layer. `journal_entry_topic_signals` may connect entries to explicit safe tags, object context, catalog context, catalog mentions, or operator-curated topics, but public topic membership must use only `accepted` + `eligible` signals for `curated` topics and must still pass the aggregation thresholds above.
 - Public profiles and full lineage graph pages are shareable but `noindex`.
 - Missing public surfaces are `noindex` and never sitemap-eligible.
 
@@ -69,5 +70,5 @@ Robots and sitemap controls are discovery controls, not privacy controls. The pr
 ## Non-Goals
 
 - This policy does not localize authenticated product workspace routes; `/garden` remains the gated workspace path until a later slice migrates private/product app routing.
-- This policy does not promote every variety/topic page. OVE-130 adds the source/catalog trust gate for promotion; OVE-139 must feed topic pages through the same curated-topic gate before any topic URL enters the sitemap.
+- This policy does not promote every variety/topic page. OVE-130 adds the source/catalog trust gate for promotion; OVE-139 feeds topic pages through the same curated-topic gate before any topic URL enters the sitemap. Provisional explicit tags, low-confidence assignments, archived entries, private entries, and public-gone entries are not public topic membership.
 - This policy does not add monetization.

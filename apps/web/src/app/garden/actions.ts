@@ -31,6 +31,7 @@ export async function createSpaceJournalEntryAction(formData: FormData) {
     body: String(formData.get("body") ?? ""),
     entryDate: String(formData.get("entryDate") ?? ""),
     clientMutationId: String(formData.get("clientMutationId") ?? ""),
+    topicTags: String(formData.get("topicTags") ?? ""),
   });
 
   await recordSpaceJournalEntryEvents(scope, result);

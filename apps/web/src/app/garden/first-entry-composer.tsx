@@ -59,6 +59,7 @@ import {
   plantObjectKindLabel,
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
+import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import {
   COARSE_REGION_OPTIONS,
   getCoarseRegionLabel,
@@ -150,6 +151,7 @@ export function FirstEntryComposer({
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
+  const [topicTagInput, setTopicTagInput] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -228,6 +230,7 @@ export function FirstEntryComposer({
           setSelectedCatalogItem(storedDraft.payload.selectedCatalogItem);
           setUserAddedCatalogName(storedDraft.payload.userAddedCatalogName);
           setMentionSelections(storedDraft.payload.mentionSelections ?? []);
+          setTopicTagInput(storedDraft.payload.topicTagInput ?? "");
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
           setMessage("Draft restored on this device.");
         }
@@ -252,6 +255,7 @@ export function FirstEntryComposer({
       userAddedCatalogName,
       activationSource,
       mentionSelections,
+      topicTagInput,
       photoIntent: storedPhotoIntent,
     };
 
@@ -282,6 +286,7 @@ export function FirstEntryComposer({
     mentionSelections,
     storedPhotoIntent,
     today,
+    topicTagInput,
     userAddedCatalogName,
   ]);
 
@@ -490,6 +495,7 @@ export function FirstEntryComposer({
       activationSource,
       syncStatus: isOnline ? "online" : "offline_queued",
       mentionSelections,
+      topicTags: normalizeJournalTopicTagLabels(topicTagInput),
       photoIntent,
     };
   }
@@ -590,6 +596,11 @@ export function FirstEntryComposer({
         (item) => mentionSelectionKey(item) !== mentionSelectionKey(selection),
       ),
     );
+  }
+
+  function updateTopicTagInput(value: string) {
+    draftPersistencePausedRef.current = false;
+    setTopicTagInput(value);
   }
 
   function updateLocationVisibility(value: string) {
@@ -1062,6 +1073,18 @@ export function FirstEntryComposer({
           onRemove={removeMentionSelection}
         />
       </div>
+
+      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        Tags / topics
+        <input
+          name="topicTags"
+          maxLength={160}
+          value={topicTagInput}
+          onChange={(event) => updateTopicTagInput(event.target.value)}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="watering, pests, seedlings"
+        />
+      </label>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>

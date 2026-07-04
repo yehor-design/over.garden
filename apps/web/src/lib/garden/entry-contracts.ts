@@ -49,6 +49,7 @@ export interface FirstPlantEntryRequest {
   syncStatus?: EntrySyncStatus;
   activationSource?: ActivationSource | null;
   mentionSelections?: JournalMentionSelection[];
+  topicTags?: string[];
 }
 
 export interface FirstPlantEntryResponse {

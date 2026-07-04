@@ -62,6 +62,7 @@ describe("POST /api/garden/entries save progress readback", () => {
         body: "Two new flower clusters.",
         entryDate: "2026-07-04",
         clientMutationId: "entry-1",
+        topicTags: ["watering", "seedlings"],
       }),
     );
     const body = await response.json();
@@ -71,6 +72,10 @@ describe("POST /api/garden/entries save progress readback", () => {
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/objects/object-1",
+    );
+    expect(mocks.createFirstPlantEntry).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ topicTags: ["watering", "seedlings"] }),
     );
     expect(mocks.recordAnalyticsEventSafely).toHaveBeenCalledWith(
       expect.anything(),
@@ -103,6 +108,7 @@ describe("POST /api/garden/entries save progress readback", () => {
         body: "The same plant has stronger new leaves.",
         entryDate: "2026-07-05",
         clientMutationId: "entry-2",
+        topicTags: ["flowering"],
       }),
     );
     const body = await response.json();
@@ -111,6 +117,10 @@ describe("POST /api/garden/entries save progress readback", () => {
       "/garden/objects/object-1?saveProgress=follow-up",
     );
     expect(body.followUpValuePulse).toEqual({ journalEntryId: "entry-2" });
+    expect(mocks.createPlantObjectJournalEntry).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ topicTags: ["flowering"] }),
+    );
     expect(
       JSON.stringify(mocks.recordAnalyticsEventSafely.mock.calls),
     ).not.toMatch(

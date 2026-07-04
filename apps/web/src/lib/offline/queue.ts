@@ -28,6 +28,7 @@ interface OfflineJournalEntryPayloadBase {
   clientMutationId: string;
   syncStatus?: EntrySyncStatus;
   mentionSelections?: JournalMentionSelection[];
+  topicTags?: string[];
   photoIntent?: OfflinePhotoIntent | null;
   processedMediaAssetId?: string | null;
 }

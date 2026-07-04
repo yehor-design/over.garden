@@ -46,6 +46,7 @@ import {
   offlineSaveStatusSentence,
   photoHelpText,
 } from "@/lib/garden/pilot-ux-copy";
+import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
@@ -114,6 +115,7 @@ export function FollowUpEntryComposer({
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
+  const [topicTagInput, setTopicTagInput] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -189,6 +191,7 @@ export function FollowUpEntryComposer({
           titleEditedByUserRef.current =
             storedDraft.payload.draft.title.trim().length > 0;
           setMentionSelections(storedDraft.payload.mentionSelections ?? []);
+          setTopicTagInput(storedDraft.payload.topicTagInput ?? "");
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
           setMessage("Draft restored on this device.");
         }
@@ -210,6 +213,7 @@ export function FollowUpEntryComposer({
       plantObjectId: objectId,
       draft,
       mentionSelections,
+      topicTagInput,
       photoIntent: storedPhotoIntent,
     };
 
@@ -239,6 +243,7 @@ export function FollowUpEntryComposer({
     objectId,
     storedPhotoIntent,
     today,
+    topicTagInput,
   ]);
 
   const photoHelp = useMemo(() => {
@@ -399,6 +404,7 @@ export function FollowUpEntryComposer({
       clientMutationId,
       syncStatus: isOnline ? "online" : "offline_queued",
       mentionSelections,
+      topicTags: normalizeJournalTopicTagLabels(topicTagInput),
       photoIntent,
     };
   }
@@ -499,6 +505,11 @@ export function FollowUpEntryComposer({
         (item) => mentionSelectionKey(item) !== mentionSelectionKey(selection),
       ),
     );
+  }
+
+  function updateTopicTagInput(value: string) {
+    draftPersistencePausedRef.current = false;
+    setTopicTagInput(value);
   }
 
   function handlePhotoChange(file: File | undefined) {
@@ -695,6 +706,18 @@ export function FollowUpEntryComposer({
           onRemove={removeMentionSelection}
         />
       </div>
+
+      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        Tags / topics
+        <input
+          name="topicTags"
+          maxLength={160}
+          value={topicTagInput}
+          onChange={(event) => updateTopicTagInput(event.target.value)}
+          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="watering, pests, seedlings"
+        />
+      </label>
 
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={submitState === "syncing"}>

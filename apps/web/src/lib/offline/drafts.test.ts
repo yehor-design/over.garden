@@ -58,6 +58,7 @@ describe("offline journal drafts", () => {
       },
       userAddedCatalogName: null,
       activationSource: "public_variety",
+      topicTagInput: "watering, seedlings",
       photoIntent: await createOfflinePhotoIntent(file),
     };
 
@@ -79,6 +80,7 @@ describe("offline journal drafts", () => {
     );
     expect(restored?.payload.draft.coarseRegionCode).toBe("UA-30");
     expect(restored?.payload.activationSource).toBe("public_variety");
+    expect(restored?.payload.topicTagInput).toBe("watering, seedlings");
     expect(new Uint8Array(await restoredPhoto.arrayBuffer())).toEqual(bytes);
     expect(hasPersistableFirstEntryDraft(restored.payload, "2026-07-03")).toBe(
       true,
@@ -280,6 +282,9 @@ function firstEntryPayloadFromDraft(
     clientMutationId: payload.clientMutationId,
     activationSource: payload.activationSource,
     syncStatus: "offline_queued",
+    topicTags: payload.topicTagInput
+      ? payload.topicTagInput.split(",").map((tag) => tag.trim())
+      : [],
     photoIntent: payload.photoIntent,
   };
 }

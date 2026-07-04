@@ -308,6 +308,25 @@ export interface JournalEntryObjectMentions {
   space_id: string;
 }
 
+export interface JournalEntryTopicSignals {
+  created_at: Generated<Timestamp>;
+  journal_entry_id: string;
+  public_membership_state: Generated<string>;
+  review_state: Generated<string>;
+  signal_source: string;
+  topic_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface JournalTopics {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  label: string;
+  slug: string;
+  trust_state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface LineageNodeFollows {
   created_at: Generated<Timestamp>;
   follow_state: Generated<string>;
@@ -523,6 +542,8 @@ export interface DB {
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
   journal_entry_object_mentions: JournalEntryObjectMentions;
+  journal_entry_topic_signals: JournalEntryTopicSignals;
+  journal_topics: JournalTopics;
   lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;

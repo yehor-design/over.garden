@@ -427,6 +427,17 @@ function SpaceTimelinePanel({
               className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
             />
           </label>
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium text-foreground">
+              Tags / topics
+            </span>
+            <input
+              name="topicTags"
+              maxLength={160}
+              placeholder="watering, pests, seedlings"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+            />
+          </label>
           <fieldset className="grid gap-2">
             <legend className="text-sm font-medium text-foreground">
               Mentioned objects

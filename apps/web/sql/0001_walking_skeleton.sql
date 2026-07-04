@@ -1545,6 +1545,181 @@ create index if not exists journal_entry_catalog_mentions_owner_entry_idx
 create index if not exists journal_entry_catalog_mentions_catalog_idx
   on journal_entry_catalog_mentions (catalog_item_id, journal_entry_id);
 
+-- Journal topic capture (OVE-139). Topic rows and entry signals are a bounded
+-- public-aggregation read model: they intentionally store only topic labels,
+-- entry ids, source/review enums, and timestamps. They must never store owner
+-- ids, private journal text, fine-grained place data, contact details, media keys,
+-- auth/session values, request metadata, or unconfirmed lineage edges.
+create table if not exists journal_topics (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  label text not null,
+  trust_state text not null default 'provisional',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint journal_topics_slug_check
+    check (slug ~ '^[a-z0-9][a-z0-9-]{1,63}$'),
+  constraint journal_topics_label_check
+    check (char_length(label) between 2 and 80),
+  constraint journal_topics_trust_state_check
+    check (trust_state in ('curated', 'provisional', 'rejected'))
+);
+
+alter table journal_topics
+  add column if not exists slug text,
+  add column if not exists label text,
+  add column if not exists trust_state text default 'provisional',
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
+alter table journal_topics
+  alter column slug set not null,
+  alter column label set not null,
+  alter column trust_state set default 'provisional',
+  alter column trust_state set not null,
+  alter column created_at set default now(),
+  alter column created_at set not null,
+  alter column updated_at set default now(),
+  alter column updated_at set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_topics_slug_check'
+      and conrelid = 'journal_topics'::regclass
+  ) then
+    alter table journal_topics
+      add constraint journal_topics_slug_check
+      check (slug ~ '^[a-z0-9][a-z0-9-]{1,63}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_topics_label_check'
+      and conrelid = 'journal_topics'::regclass
+  ) then
+    alter table journal_topics
+      add constraint journal_topics_label_check
+      check (char_length(label) between 2 and 80);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_topics_trust_state_check'
+      and conrelid = 'journal_topics'::regclass
+  ) then
+    alter table journal_topics
+      add constraint journal_topics_trust_state_check
+      check (trust_state in ('curated', 'provisional', 'rejected'));
+  end if;
+end $$;
+
+create unique index if not exists journal_topics_slug_uidx
+  on journal_topics (slug);
+
+create index if not exists journal_topics_trust_updated_idx
+  on journal_topics (trust_state, updated_at desc);
+
+create table if not exists journal_entry_topic_signals (
+  journal_entry_id uuid not null references journal_entries(id) on delete cascade,
+  topic_id uuid not null references journal_topics(id) on delete cascade,
+  signal_source text not null,
+  review_state text not null default 'review_needed',
+  public_membership_state text not null default 'hidden',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key (journal_entry_id, topic_id, signal_source),
+  constraint journal_entry_topic_signals_source_check
+    check (signal_source in (
+      'explicit_tag',
+      'object_kind',
+      'catalog_kind',
+      'catalog_mention',
+      'operator_curated'
+    )),
+  constraint journal_entry_topic_signals_review_check
+    check (review_state in ('accepted', 'review_needed', 'rejected')),
+  constraint journal_entry_topic_signals_public_state_check
+    check (public_membership_state in ('eligible', 'hidden'))
+);
+
+alter table journal_entry_topic_signals
+  add column if not exists signal_source text,
+  add column if not exists review_state text default 'review_needed',
+  add column if not exists public_membership_state text default 'hidden',
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
+update journal_entry_topic_signals
+set
+  review_state = coalesce(review_state, 'review_needed'),
+  public_membership_state = coalesce(public_membership_state, 'hidden')
+where review_state is null
+   or public_membership_state is null;
+
+alter table journal_entry_topic_signals
+  alter column signal_source set not null,
+  alter column review_state set default 'review_needed',
+  alter column review_state set not null,
+  alter column public_membership_state set default 'hidden',
+  alter column public_membership_state set not null,
+  alter column created_at set default now(),
+  alter column created_at set not null,
+  alter column updated_at set default now(),
+  alter column updated_at set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entry_topic_signals_source_check'
+      and conrelid = 'journal_entry_topic_signals'::regclass
+  ) then
+    alter table journal_entry_topic_signals
+      add constraint journal_entry_topic_signals_source_check
+      check (signal_source in (
+        'explicit_tag',
+        'object_kind',
+        'catalog_kind',
+        'catalog_mention',
+        'operator_curated'
+      ));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entry_topic_signals_review_check'
+      and conrelid = 'journal_entry_topic_signals'::regclass
+  ) then
+    alter table journal_entry_topic_signals
+      add constraint journal_entry_topic_signals_review_check
+      check (review_state in ('accepted', 'review_needed', 'rejected'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entry_topic_signals_public_state_check'
+      and conrelid = 'journal_entry_topic_signals'::regclass
+  ) then
+    alter table journal_entry_topic_signals
+      add constraint journal_entry_topic_signals_public_state_check
+      check (public_membership_state in ('eligible', 'hidden'));
+  end if;
+end $$;
+
+create index if not exists journal_entry_topic_signals_topic_public_idx
+  on journal_entry_topic_signals (topic_id, public_membership_state, review_state);
+
+create index if not exists journal_entry_topic_signals_entry_idx
+  on journal_entry_topic_signals (journal_entry_id);
+
 -- Lineage pending source identities (OVE-124). These rows represent a
 -- non-user provenance source before they join and claim/confirm the edge.
 -- Store only internal ids, a bounded contact-free display label, enum state,

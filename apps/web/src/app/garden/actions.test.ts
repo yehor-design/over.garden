@@ -69,9 +69,14 @@ describe("garden entry actions", () => {
     formData.set("body", "Watered the selected plants.");
     formData.set("entryDate", "2026-07-04");
     formData.set("clientMutationId", "entry-1");
+    formData.set("topicTags", "watering, balcony");
 
     await createSpaceJournalEntryAction(formData);
 
+    expect(mocks.createSpaceJournalEntry).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ topicTags: "watering, balcony" }),
+    );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/objects/object-1",

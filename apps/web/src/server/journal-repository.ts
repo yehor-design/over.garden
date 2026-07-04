@@ -31,6 +31,10 @@ import {
 } from "@/server/catalog-repository";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
+import {
+  persistJournalEntryTopicSignals,
+  refreshJournalEntryTopicSignalsForPlantObject,
+} from "@/server/journal-topic-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 
@@ -61,6 +65,7 @@ export interface CreateFirstPlantEntryInput {
   clientMutationId: string;
   mediaAssetId?: string | null;
   mentionSelections?: JournalMentionSelection[];
+  topicTags?: unknown;
 }
 
 export interface CreateJournalEntryInput {
@@ -77,6 +82,7 @@ export interface CreatePlantObjectJournalEntryInput {
   clientMutationId: string;
   mediaAssetId?: string | null;
   mentionSelections?: JournalMentionSelection[];
+  topicTags?: unknown;
 }
 
 export interface CreateSpaceJournalEntryInput {
@@ -86,6 +92,7 @@ export interface CreateSpaceJournalEntryInput {
   body: string;
   entryDate?: string | null;
   clientMutationId: string;
+  topicTags?: unknown;
 }
 
 export interface PublishJournalEntryInput {
@@ -406,6 +413,10 @@ export async function createFirstPlantEntry(
         subjectPlantObjectId: plantObject.id,
         clientMutationId: normalized.clientMutationId,
         mentionSelections: normalized.mentionSelections,
+      });
+      await persistJournalEntryTopicSignals(trx, scope, {
+        journalEntryId: entry.id,
+        explicitTagLabels: normalized.topicTags,
       });
 
       return {
@@ -759,6 +770,10 @@ export async function createPlantObjectJournalEntry(
         clientMutationId: normalized.clientMutationId,
         mentionSelections: normalized.mentionSelections,
       });
+      await persistJournalEntryTopicSignals(trx, scope, {
+        journalEntryId: entry.id,
+        explicitTagLabels: normalized.topicTags,
+      });
 
       return {
         space: {
@@ -904,6 +919,10 @@ export async function createSpaceJournalEntry(
         journalEntryId: entry.id,
         plantObjectIds: normalized.mentionedPlantObjectIds,
       });
+      await persistJournalEntryTopicSignals(trx, scope, {
+        journalEntryId: entry.id,
+        explicitTagLabels: normalized.topicTags,
+      });
 
       return {
         space,
@@ -985,6 +1004,9 @@ export async function resolvePlantObjectCatalog(
       varietyText: selectedCatalogItem.canonicalName,
       now: new Date(),
     }).executeTakeFirstOrThrow();
+    await refreshJournalEntryTopicSignalsForPlantObject(trx, scope, {
+      plantObjectId: resolved.id,
+    });
 
     const entryCount = await countJournalEntriesForObject(
       trx,
@@ -2095,6 +2117,7 @@ function normalizeCreateFirstPlantEntryInput(
     ),
     mediaAssetId,
     mentionSelections: input.mentionSelections ?? [],
+    topicTags: input.topicTags ?? [],
   };
 }
 
@@ -2121,6 +2144,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
       200,
     ),
     mentionSelections: input.mentionSelections ?? [],
+    topicTags: input.topicTags ?? [],
   };
 }
 
@@ -2151,6 +2175,7 @@ function normalizeCreateSpaceJournalEntryInput(
       "Client mutation id",
       200,
     ),
+    topicTags: input.topicTags ?? [],
   };
 }
 

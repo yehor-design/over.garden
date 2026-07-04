@@ -73,6 +73,7 @@ export async function POST(request: Request) {
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
             mentionSelections: body.mentionSelections ?? [],
+            topicTags: body.topicTags ?? [],
           })
         : await createFirstPlantEntry(scope, {
             spaceName: body.spaceName ?? "",
@@ -89,6 +90,7 @@ export async function POST(request: Request) {
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
             mentionSelections: body.mentionSelections ?? [],
+            topicTags: body.topicTags ?? [],
           });
     const objectReadbackPath = `/garden/objects/${result.plantObject.id}`;
     const readbackUrl = buildSaveProgressReadbackUrl(
