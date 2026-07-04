@@ -16,6 +16,7 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
 } from "@/lib/public-localization";
+import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
@@ -41,6 +42,7 @@ import { createSpaceJournalEntryAction } from "./actions";
 import { GardenDraftResumePanel } from "./draft-resume-panel";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel, SocialAccountLinkPanel } from "./garden-auth-panel";
+import { SaveProgressMoment } from "./save-progress-moment";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const userId = session?.user?.id;
   const initialCatalogItem = await resolveInitialCatalogSelection(params);
   const pendingWishlistItem = await resolvePendingWishlistSelection(params);
+  const saveProgressKind = normalizeSaveProgressMomentKind(params.saveProgress);
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
@@ -72,6 +75,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const publicProfile = scope ? await ensureUserPublicProfile(scope) : null;
   const objects = scope ? await listMyPlantObjects(scope, 12) : [];
   const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
+  const spaceJournalEntryCount = spaceTimelines.reduce(
+    (count, timeline) => count + timeline.entries.length,
+    0,
+  );
   const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -176,6 +183,17 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             <GardenDraftResumePanel />
             {pendingWishlistItem ? (
               <PendingWishlistIntentPanel item={pendingWishlistItem} />
+            ) : null}
+            {saveProgressKind === "space-entry" ? (
+              <SaveProgressMoment
+                kind={saveProgressKind}
+                entryCount={spaceJournalEntryCount}
+                spaceName="your garden"
+                primaryHref="#space-journals"
+                primaryLabel="Return to space timelines"
+                secondaryHref="#first-entry-composer"
+                secondaryLabel="Add another entry"
+              />
             ) : null}
             <div className="grid gap-6 lg:grid-cols-3">
               {hasObjects ? (
@@ -291,7 +309,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             </div>
 
             {hasObjects ? (
-              <section className="flex flex-col gap-4">
+              <section id="space-journals" className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1">
                   <h2 className="text-lg font-semibold text-foreground">
                     Space journals

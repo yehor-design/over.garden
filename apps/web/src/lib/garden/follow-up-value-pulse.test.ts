@@ -19,6 +19,17 @@ describe("follow-up value pulse helpers", () => {
     );
   });
 
+  it("preserves save-progress readback state when adding pulse params", () => {
+    expect(
+      buildFollowUpValuePulseReadbackUrl(
+        "/garden/objects/object-1?saveProgress=follow-up",
+        "00000000-0000-0000-0000-000000000011",
+      ),
+    ).toBe(
+      "/garden/objects/object-1?saveProgress=follow-up&valuePulse=1&entryId=00000000-0000-0000-0000-000000000011",
+    );
+  });
+
   it("accepts only bounded enum values", () => {
     expect(normalizeFollowUpValuePulseOutcome("skipped")).toBe("skipped");
     expect(normalizeFollowUpValuePulseOutcome("later")).toBeNull();

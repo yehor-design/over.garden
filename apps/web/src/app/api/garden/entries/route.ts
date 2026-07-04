@@ -9,6 +9,7 @@ import type {
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
+import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import type {
   EntryScope,
   EntrySyncStatus,
@@ -89,7 +90,11 @@ export async function POST(request: Request) {
             mediaAssetId: body.mediaAssetId ?? "",
             mentionSelections: body.mentionSelections ?? [],
           });
-    const readbackUrl = `/garden/objects/${result.plantObject.id}`;
+    const objectReadbackPath = `/garden/objects/${result.plantObject.id}`;
+    const readbackUrl = buildSaveProgressReadbackUrl(
+      objectReadbackPath,
+      target === "plant_object_entry" ? "follow-up" : "first-entry",
+    );
     const followUpValuePulse =
       target === "plant_object_entry" &&
       result.isNewEntry &&
@@ -109,7 +114,7 @@ export async function POST(request: Request) {
     }
 
     revalidatePath("/garden");
-    revalidatePath(readbackUrl);
+    revalidatePath(objectReadbackPath);
 
     const response: FirstPlantEntryResponse = {
       space: {

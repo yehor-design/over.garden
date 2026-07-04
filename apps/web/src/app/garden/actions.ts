@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import type {
   EntryScope,
   EntrySyncStatus,
   LocationVisibility,
 } from "@/db/schema";
+import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import {
   isBackdatedEntryDate,
   recordAnalyticsEventSafely,
@@ -36,6 +38,10 @@ export async function createSpaceJournalEntryAction(formData: FormData) {
   revalidatePath("/garden");
   for (const object of result.mentionedObjects) {
     revalidatePath(`/garden/objects/${object.id}`);
+  }
+
+  if (result.isNewEntry) {
+    redirect(buildSaveProgressReadbackUrl("/garden", "space-entry"));
   }
 }
 

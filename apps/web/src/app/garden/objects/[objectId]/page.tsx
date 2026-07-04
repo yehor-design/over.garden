@@ -16,6 +16,7 @@ import {
   varietyStateLabel,
 } from "@/lib/garden/pilot-ux-copy";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
+import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
   publicJournalEntryPath,
   publicLineageObjectPath,
@@ -51,12 +52,17 @@ import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 import { ObjectProgressMoment } from "./object-progress-moment";
+import { SaveProgressMoment } from "../../save-progress-moment";
 
 export const dynamic = "force-dynamic";
 
 interface PlantObjectPageProps {
   params: Promise<{ objectId: string }>;
-  searchParams: Promise<{ valuePulse?: string; entryId?: string }>;
+  searchParams: Promise<{
+    valuePulse?: string;
+    entryId?: string;
+    saveProgress?: string | string[];
+  }>;
 }
 
 export default async function PlantObjectReadbackPage({
@@ -100,6 +106,7 @@ export default async function PlantObjectReadbackPage({
 
   const today = new Date().toISOString().slice(0, 10);
   const locationLabel = getObjectLocationLabel(page);
+  const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
   const sourceAttributionCaveat = page.plantObject.source_credit
     ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
     : null;
@@ -176,6 +183,19 @@ export default async function PlantObjectReadbackPage({
           ) : null}
         </div>
       </header>
+
+      {saveProgressKind === "first-entry" ||
+      saveProgressKind === "follow-up" ? (
+        <SaveProgressMoment
+          kind={saveProgressKind}
+          entryCount={page.entries.length}
+          objectName={page.plantObject.display_name}
+          primaryHref="#follow-up-composer"
+          primaryLabel="Add another entry"
+          secondaryHref="/garden"
+          secondaryLabel="Back to journal"
+        />
+      ) : null}
 
       <LocationPrivacyControl
         objectId={objectId}
