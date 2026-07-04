@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
+const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
 const GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY = "overgarden:analytics-consent";
 const GOOGLE_ANALYTICS_CONSENT_EVENT = "overgarden:analytics-consent-change";
 const PUBLIC_LOCALE_PREFIX_PATTERN = /^\/(?:uk|bg|ru)(?=\/|$)/;
@@ -45,7 +46,7 @@ export function GoogleAnalytics() {
 
   if (!isAllowedRoute) return null;
 
-  if (consent === "accepted") return <GoogleAnalyticsScripts />;
+  if (consent === "accepted") return <GoogleTagManagerScripts />;
   if (consent === "declined") return null;
 
   return (
@@ -56,23 +57,33 @@ export function GoogleAnalytics() {
   );
 }
 
-export function GoogleAnalyticsScripts() {
+export function GoogleTagManagerScripts() {
   return (
-    <>
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GOOGLE_ANALYTICS_MEASUREMENT_ID}`}
-        strategy="afterInteractive"
-      />
-      <Script id="google-analytics-gtag" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('consent', 'default', { analytics_storage: 'granted' });
-          gtag('js', new Date());
-          gtag('config', '${GOOGLE_ANALYTICS_MEASUREMENT_ID}');
-        `}
-      </Script>
-    </>
+    <Script id="google-tag-manager" strategy="afterInteractive">
+      {`
+        (function(w,d,s,l,i){
+          w[l]=w[l]||[];
+          function gtag(){w[l].push(arguments);}
+          gtag('consent', 'default', {
+            ad_storage: 'denied',
+            ad_user_data: 'denied',
+            ad_personalization: 'denied',
+            analytics_storage: 'granted'
+          });
+          w[l].push({
+            'gtm.start': new Date().getTime(),
+            event: 'gtm.js',
+            overgardenAnalyticsMeasurementId: '${GOOGLE_ANALYTICS_MEASUREMENT_ID}'
+          });
+          var f=d.getElementsByTagName(s)[0],
+            j=d.createElement(s),
+            dl=l!='dataLayer'?'&l='+l:'';
+          j.async=true;
+          j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+          f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','${GOOGLE_TAG_MANAGER_ID}');
+      `}
+    </Script>
   );
 }
 
@@ -106,9 +117,9 @@ function AnalyticsConsentBanner({
       role="dialog"
     >
       <p className="text-sm leading-6 text-muted-foreground">
-        We use Google Analytics only on public, legal, and support pages to
-        understand what helps gardeners reach OverGarden. It does not run on
-        private garden, auth, admin, or journal pages.
+        We use Google Tag Manager for analytics only on public, legal, and
+        support pages to understand what helps gardeners reach OverGarden. It
+        does not run on private garden, auth, admin, or journal pages.
       </p>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <Button onClick={onAccept} size="sm" type="button">

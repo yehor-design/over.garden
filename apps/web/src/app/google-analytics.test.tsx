@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   GoogleAnalytics,
-  GoogleAnalyticsScripts,
+  GoogleTagManagerScripts,
   isGoogleAnalyticsRoute,
 } from "./google-analytics";
 
@@ -62,23 +62,27 @@ describe("GoogleAnalytics", () => {
     expect(html).toContain("Accept analytics");
     expect(html).toContain("Decline");
     expect(html).toContain("private garden, auth, admin, or journal pages");
-    expect(html).not.toContain("https://www.googletagmanager.com/gtag/js");
+    expect(html).not.toContain("https://www.googletagmanager.com/gtm.js");
+    expect(html).not.toContain("GTM-W979KSX3");
     expect(html).not.toContain("G-71LP7XZ5NE");
   });
 
-  it("renders the provided GA4 Google tag after analytics consent", () => {
-    const html = renderToStaticMarkup(<GoogleAnalyticsScripts />);
+  it("renders the provided Google Tag Manager container after analytics consent", () => {
+    const html = renderToStaticMarkup(<GoogleTagManagerScripts />);
 
-    expect(html).toContain("https://www.googletagmanager.com/gtag/js");
+    expect(html).toContain("https://www.googletagmanager.com/gtm.js");
+    expect(html).toContain("GTM-W979KSX3");
     expect(html).toContain("G-71LP7XZ5NE");
-    expect(html).toContain("window.dataLayer");
+    expect(html).toContain("dataLayer");
     expect(html).toContain("gtag");
     expect(html).toContain("consent");
+    expect(html).toContain("analytics_storage");
     expect(html).toContain("granted");
-    expect(html).toContain("config");
+    expect(html).toContain("ad_storage");
+    expect(html).toContain("denied");
   });
 
-  it("does not render the Google tag on private garden or admin routes", () => {
+  it("does not render Google tags on private garden or admin routes", () => {
     mockedPathname = "/garden";
     expect(renderToStaticMarkup(<GoogleAnalytics />)).toBe("");
 
