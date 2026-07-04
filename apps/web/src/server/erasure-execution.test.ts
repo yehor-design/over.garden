@@ -22,6 +22,8 @@ import {
   buildAnonymizeLineageProvenanceEdgesForErasureQuery,
   buildAnonymizeLineageQuestionsForErasureQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
+  buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery,
+  buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
   buildExecutableErasureRequestQuery,
   expectedErasureMaintainerApprovalText,
@@ -90,7 +92,9 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"lifecycle_state" = $6');
     expect(compiled.sql).toContain('"public_noindex" = $7');
     expect(compiled.sql).toContain("coalesce(public_gone_at");
-    expect(compiled.sql).toContain("'erased:' || \"journal_entries\".\"id\"::text");
+    expect(compiled.sql).toContain(
+      '\'erased:\' || "journal_entries"."id"::text',
+    );
     expect(compiled.parameters).toContain(erasedSubjectUserId);
     expect(compiled.parameters).toContain("Erased journal entry");
     expect(compiled.parameters).toContain("This entry was erased by request.");
@@ -116,6 +120,34 @@ describe("approved erasure execution SQL contracts", () => {
     ]);
   });
 
+  it("deletes owner-scoped journal mention join rows before owner anonymization", () => {
+    const objectMentions =
+      buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
+        testDb,
+        requesterUserId,
+      ).compile();
+    const catalogMentions =
+      buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
+        testDb,
+        requesterUserId,
+      ).compile();
+
+    expect(objectMentions.sql).toContain(
+      'delete from "journal_entry_object_mentions"',
+    );
+    expect(catalogMentions.sql).toContain(
+      'delete from "journal_entry_catalog_mentions"',
+    );
+
+    for (const compiled of [objectMentions, catalogMentions]) {
+      expect(compiled.sql).toContain('"owner_user_id" = $1');
+      expect(compiled.sql).not.toMatch(
+        /journal_entries|plant_objects|catalog_items|title|body|display_name|canonical_name|media_assets|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+      );
+      expect(compiled.parameters).toEqual([requesterUserId]);
+    }
+  });
+
   it("anonymizes lineage provenance edges without deleting structural tombstones", () => {
     const now = new Date("2026-07-01T08:00:00.000Z");
     const compiled = buildAnonymizeLineageProvenanceEdgesForErasureQuery(
@@ -131,7 +163,7 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"erasure_state" = $2');
     expect(compiled.sql).toContain("Erased source");
     expect(compiled.sql).toContain(
-      "'erased:' || \"lineage_provenance_edges\".\"id\"::text",
+      '\'erased:\' || "lineage_provenance_edges"."id"::text',
     );
     expect(compiled.sql).toContain('"owner_user_id" = $4');
     expect(compiled.sql).toContain('"source_owner_user_id" = $5');
@@ -244,7 +276,7 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"question_text" =');
     expect(compiled.sql).toContain('"question_state" =');
     expect(compiled.sql).toContain(
-      "'erased:' || \"lineage_questions\".\"id\"::text",
+      '\'erased:\' || "lineage_questions"."id"::text',
     );
     expect(compiled.sql).not.toMatch(
       /plant_objects|journal_entries|display_name|source_reference_label|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip_address|user_agent/i,

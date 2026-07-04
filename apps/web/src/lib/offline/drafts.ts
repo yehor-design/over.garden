@@ -5,6 +5,7 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
+import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   offlineDb,
   type OfflineDraftKind,
@@ -35,6 +36,7 @@ export interface FirstEntryDraftPayload {
   selectedCatalogItem: FirstEntryCatalogSelection | null;
   userAddedCatalogName: string | null;
   activationSource: ActivationSource | null;
+  mentionSelections?: JournalMentionSelection[];
   photoIntent: OfflinePhotoIntent | null;
 }
 
@@ -48,6 +50,7 @@ export interface FollowUpEntryDraftPayload {
   clientMutationId: string;
   plantObjectId: string;
   draft: FollowUpEntryDraftFields;
+  mentionSelections?: JournalMentionSelection[];
   photoIntent: OfflinePhotoIntent | null;
 }
 
@@ -125,6 +128,7 @@ export function hasPersistableFirstEntryDraft(
       payload.userAddedCatalogName,
     ) ||
     payload.selectedCatalogItem !== null ||
+    (payload.mentionSelections?.length ?? 0) > 0 ||
     payload.photoIntent !== null ||
     payload.draft.entryDate !== defaultEntryDate ||
     payload.draft.locationVisibility === "region" ||
@@ -138,6 +142,7 @@ export function hasPersistableFollowUpDraft(
 ) {
   return (
     hasText(payload.draft.title, payload.draft.body) ||
+    (payload.mentionSelections?.length ?? 0) > 0 ||
     payload.photoIntent !== null ||
     payload.draft.entryDate !== defaultEntryDate
   );

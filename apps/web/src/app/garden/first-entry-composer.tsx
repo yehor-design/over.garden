@@ -28,6 +28,10 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
+import type {
+  JournalMentionSelection,
+  JournalMentionSuggestion,
+} from "@/lib/garden/journal-mentions";
 import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import { defaultObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
 import {
@@ -80,6 +84,16 @@ import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
+import {
+  JournalMentionTypeaheadPanel,
+  applyMentionSuggestion,
+  mentionSelectionKey,
+  parseJournalMentionSuggestions,
+  resolveActiveMentionToken,
+  toMentionSelection,
+  type ActiveMentionToken,
+  type MentionTypeaheadStatus,
+} from "./journal-mention-typeahead";
 import { JournalVoiceInputControl } from "./journal-voice-input-control";
 
 interface FirstEntryComposerProps {
@@ -103,6 +117,7 @@ export function FirstEntryComposer({
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
   const titleEditedByUserRef = useRef(false);
+  const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
   const [clientMutationId, setClientMutationId] = useState(
@@ -130,6 +145,16 @@ export function FirstEntryComposer({
     string | null
   >(null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
+  const [activeMentionToken, setActiveMentionToken] =
+    useState<ActiveMentionToken | null>(null);
+  const [mentionSelections, setMentionSelections] = useState<
+    JournalMentionSelection[]
+  >([]);
+  const [mentionSuggestions, setMentionSuggestions] = useState<
+    JournalMentionSuggestion[]
+  >([]);
+  const [mentionStatus, setMentionStatus] =
+    useState<MentionTypeaheadStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [storedPhotoIntent, setStoredPhotoIntent] =
     useState<OfflinePhotoIntent | null>(null);
@@ -202,6 +227,7 @@ export function FirstEntryComposer({
           );
           setSelectedCatalogItem(storedDraft.payload.selectedCatalogItem);
           setUserAddedCatalogName(storedDraft.payload.userAddedCatalogName);
+          setMentionSelections(storedDraft.payload.mentionSelections ?? []);
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
           setMessage("Draft restored on this device.");
         }
@@ -225,6 +251,7 @@ export function FirstEntryComposer({
       selectedCatalogItem,
       userAddedCatalogName,
       activationSource,
+      mentionSelections,
       photoIntent: storedPhotoIntent,
     };
 
@@ -252,6 +279,7 @@ export function FirstEntryComposer({
     draft,
     draftHydrated,
     selectedCatalogItem,
+    mentionSelections,
     storedPhotoIntent,
     today,
     userAddedCatalogName,
@@ -298,6 +326,44 @@ export function FirstEntryComposer({
       controller.abort();
     };
   }, [catalogQuery, selectedCatalogItem, userAddedCatalogName]);
+
+  useEffect(() => {
+    if (!activeMentionToken) {
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setMentionStatus("loading");
+
+      try {
+        const response = await fetch(
+          `/api/garden/mentions/typeahead?q=${encodeURIComponent(
+            activeMentionToken.query,
+          )}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) throw new Error("Mention suggestions unavailable.");
+
+        const body = (await response.json()) as unknown;
+        setMentionSuggestions(parseJournalMentionSuggestions(body));
+        setMentionStatus("ready");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+
+        setMentionSuggestions([]);
+        setMentionStatus("failed");
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeMentionToken]);
 
   const photoHelp = useMemo(() => {
     return photoHelpText({
@@ -423,6 +489,7 @@ export function FirstEntryComposer({
       clientMutationId,
       activationSource,
       syncStatus: isOnline ? "online" : "offline_queued",
+      mentionSelections,
       photoIntent,
     };
   }
@@ -446,8 +513,9 @@ export function FirstEntryComposer({
     setDraft((current) => ({ ...current, title: value }));
   }
 
-  function updateBody(value: string) {
+  function updateBody(value: string, cursorPosition = value.length) {
     updateDraft("body", value);
+    updateActiveMentionToken(resolveActiveMentionToken(value, cursorPosition));
   }
 
   function appendVoiceTranscript(transcript: string) {
@@ -457,6 +525,70 @@ export function FirstEntryComposer({
         ...current,
         body: appendVoiceTranscriptToBody(current.body, transcript),
       }),
+    );
+    updateActiveMentionToken(null);
+  }
+
+  function refreshActiveMentionToken() {
+    const textarea = bodyTextareaRef.current;
+    if (!textarea) return;
+
+    updateActiveMentionToken(
+      resolveActiveMentionToken(textarea.value, textarea.selectionStart),
+    );
+  }
+
+  function updateActiveMentionToken(token: ActiveMentionToken | null) {
+    setActiveMentionToken(token);
+    if (token) return;
+
+    setMentionSuggestions([]);
+    setMentionStatus("idle");
+  }
+
+  function selectMentionSuggestion(suggestion: JournalMentionSuggestion) {
+    if (!activeMentionToken) return;
+
+    draftPersistencePausedRef.current = false;
+    const applied = applyMentionSuggestion(
+      draft.body,
+      activeMentionToken,
+      suggestion,
+    );
+
+    setDraft((current) =>
+      withSuggestedTitle({
+        ...current,
+        body: applied.body,
+      }),
+    );
+    setMentionSelections((current) => {
+      const selection = toMentionSelection(suggestion);
+      return current.some(
+        (item) => mentionSelectionKey(item) === mentionSelectionKey(selection),
+      )
+        ? current
+        : [...current, selection];
+    });
+    setActiveMentionToken(null);
+    setMentionSuggestions([]);
+    setMentionStatus("idle");
+
+    window.requestAnimationFrame(() => {
+      bodyTextareaRef.current?.focus();
+      bodyTextareaRef.current?.setSelectionRange(
+        applied.cursorPosition,
+        applied.cursorPosition,
+      );
+    });
+  }
+
+  function removeMentionSelection(selection: JournalMentionSelection) {
+    draftPersistencePausedRef.current = false;
+    setMentionSelections((current) =>
+      current.filter(
+        (item) => mentionSelectionKey(item) !== mentionSelectionKey(selection),
+      ),
     );
   }
 
@@ -904,15 +1036,30 @@ export function FirstEntryComposer({
           <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
         </div>
         <textarea
+          ref={bodyTextareaRef}
           id="first-entry-body"
           name="body"
           required
           minLength={1}
           maxLength={2000}
           value={draft.body}
-          onChange={(event) => updateBody(event.target.value)}
+          onChange={(event) =>
+            updateBody(
+              event.currentTarget.value,
+              event.currentTarget.selectionStart,
+            )
+          }
+          onClick={refreshActiveMentionToken}
+          onKeyUp={refreshActiveMentionToken}
           className="min-h-36 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           placeholder="The plant recovered after repotting and has two new flower clusters."
+        />
+        <JournalMentionTypeaheadPanel
+          status={mentionStatus}
+          suggestions={mentionSuggestions}
+          selections={mentionSelections}
+          onSelect={selectMentionSuggestion}
+          onRemove={removeMentionSelection}
         />
       </div>
 

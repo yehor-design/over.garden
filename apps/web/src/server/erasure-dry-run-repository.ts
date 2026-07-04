@@ -52,6 +52,8 @@ export async function collectErasureDryRunCounts(
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
     journalEntriesArchived,
+    journalEntryObjectMentions,
+    journalEntryCatalogMentions,
     mediaAssetsTotal,
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
@@ -90,6 +92,8 @@ export async function collectErasureDryRunCounts(
     countJournalEntries(executor, requesterUserId, {
       lifecycleState: "archived",
     }),
+    countOwnedRows(executor, "journal_entry_object_mentions", requesterUserId),
+    countOwnedRows(executor, "journal_entry_catalog_mentions", requesterUserId),
     countMediaAssets(executor, requesterUserId),
     countMediaAssets(executor, requesterUserId, "quarantined"),
     countMediaAssets(executor, requesterUserId, "processed"),
@@ -103,7 +107,11 @@ export async function collectErasureDryRunCounts(
       visibility: "public",
       lifecycleState: "active",
     }),
-    countPendingJournalSearchJobs(executor, requesterUserId, "journal_entry_index"),
+    countPendingJournalSearchJobs(
+      executor,
+      requesterUserId,
+      "journal_entry_index",
+    ),
     countPendingJournalSearchJobs(
       executor,
       requesterUserId,
@@ -129,6 +137,8 @@ export async function collectErasureDryRunCounts(
     journalEntriesPrivateActive,
     journalEntriesPublicActive,
     journalEntriesArchived,
+    journalEntryObjectMentions,
+    journalEntryCatalogMentions,
     mediaAssetsTotal,
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
@@ -188,7 +198,12 @@ export function buildCountPilotInviteGrantPresentQuery(
 
 export function buildCountOwnedRowsQuery(
   executor: QueryExecutor,
-  table: "spaces" | "plant_objects" | "analytics_events",
+  table:
+    | "spaces"
+    | "plant_objects"
+    | "journal_entry_object_mentions"
+    | "journal_entry_catalog_mentions"
+    | "analytics_events",
   requesterUserId: string,
 ) {
   return executor
@@ -436,7 +451,12 @@ async function countPilotInviteGrantPresent(
 
 async function countOwnedRows(
   executor: QueryExecutor,
-  table: "spaces" | "plant_objects" | "analytics_events",
+  table:
+    | "spaces"
+    | "plant_objects"
+    | "journal_entry_object_mentions"
+    | "journal_entry_catalog_mentions"
+    | "analytics_events",
   requesterUserId: string,
 ) {
   const row = await buildCountOwnedRowsQuery(

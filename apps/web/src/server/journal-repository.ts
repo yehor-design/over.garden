@@ -17,6 +17,7 @@ import type {
   VarietyState,
 } from "@/db/schema";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
+import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import {
   normalizePlantObjectKind,
@@ -29,6 +30,7 @@ import {
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
+import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 
@@ -58,6 +60,7 @@ export interface CreateFirstPlantEntryInput {
   coarseRegionCode?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  mentionSelections?: JournalMentionSelection[];
 }
 
 export interface CreateJournalEntryInput {
@@ -73,6 +76,7 @@ export interface CreatePlantObjectJournalEntryInput {
   entryDate?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  mentionSelections?: JournalMentionSelection[];
 }
 
 export interface CreateSpaceJournalEntryInput {
@@ -395,6 +399,14 @@ export async function createFirstPlantEntry(
         normalized.mediaAssetId,
         entry.id,
       );
+      await persistJournalEntryMentions(trx, scope, {
+        journalEntryId: entry.id,
+        ownerUserId: scope.userId,
+        spaceId: space.id,
+        subjectPlantObjectId: plantObject.id,
+        clientMutationId: normalized.clientMutationId,
+        mentionSelections: normalized.mentionSelections,
+      });
 
       return {
         space: {
@@ -739,6 +751,14 @@ export async function createPlantObjectJournalEntry(
         normalized.mediaAssetId,
         entry.id,
       );
+      await persistJournalEntryMentions(trx, scope, {
+        journalEntryId: entry.id,
+        ownerUserId: scope.userId,
+        spaceId: target.spaceId,
+        subjectPlantObjectId: target.objectId,
+        clientMutationId: normalized.clientMutationId,
+        mentionSelections: normalized.mentionSelections,
+      });
 
       return {
         space: {
@@ -2074,6 +2094,7 @@ function normalizeCreateFirstPlantEntryInput(
       200,
     ),
     mediaAssetId,
+    mentionSelections: input.mentionSelections ?? [],
   };
 }
 
@@ -2099,6 +2120,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
       "Media asset id",
       200,
     ),
+    mentionSelections: input.mentionSelections ?? [],
   };
 }
 

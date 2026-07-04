@@ -7,6 +7,7 @@ import type {
   ActivationSource,
   JournalEntryTarget,
 } from "@/lib/garden/entry-contracts";
+import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
@@ -26,6 +27,7 @@ interface OfflineJournalEntryPayloadBase {
   entryDate: string;
   clientMutationId: string;
   syncStatus?: EntrySyncStatus;
+  mentionSelections?: JournalMentionSelection[];
   photoIntent?: OfflinePhotoIntent | null;
   processedMediaAssetId?: string | null;
 }

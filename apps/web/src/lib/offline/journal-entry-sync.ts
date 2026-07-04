@@ -120,6 +120,7 @@ export function buildJournalEntryRequestBodyForSync(
       entryDate: payload.entryDate,
       clientMutationId: idempotencyKey,
       mediaAssetId: mediaAssetId ?? "",
+      mentionSelections: payload.mentionSelections ?? [],
       syncStatus:
         payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
     };
@@ -140,6 +141,7 @@ export function buildJournalEntryRequestBodyForSync(
     coarseRegionCode: payload.coarseRegionCode ?? null,
     clientMutationId: idempotencyKey,
     mediaAssetId: mediaAssetId ?? "",
+    mentionSelections: payload.mentionSelections ?? [],
     syncStatus:
       payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
     activationSource: payload.activationSource ?? null,

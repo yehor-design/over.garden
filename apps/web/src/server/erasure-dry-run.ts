@@ -62,6 +62,8 @@ export interface ErasureDryRunCounts {
   journalEntriesPrivateActive: number;
   journalEntriesPublicActive: number;
   journalEntriesArchived: number;
+  journalEntryObjectMentions: number;
+  journalEntryCatalogMentions: number;
   mediaAssetsTotal: number;
   mediaAssetsQuarantined: number;
   mediaAssetsProcessed: number;
@@ -97,7 +99,8 @@ function buildErasureDryRunDataClasses(
     {
       key: "garden_workspace",
       label: "Garden workspace",
-      description: "Owned spaces and plant objects that anchor journal history.",
+      description:
+        "Owned spaces and plant objects that anchor journal history.",
       counts: {
         spaces: counts.spaces,
         plant_objects: counts.plantObjects,
@@ -126,6 +129,8 @@ function buildErasureDryRunDataClasses(
         private_active: counts.journalEntriesPrivateActive,
         public_active: counts.journalEntriesPublicActive,
         archived: counts.journalEntriesArchived,
+        object_mentions: counts.journalEntryObjectMentions,
+        catalog_mentions: counts.journalEntryCatalogMentions,
       },
     },
     {

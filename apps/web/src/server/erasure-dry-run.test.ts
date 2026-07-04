@@ -29,6 +29,7 @@ import {
   buildCountLineageProvenanceAuditEventsQuery,
   buildCountLineageProvenanceEdgesQuery,
   buildCountMediaAssetsQuery,
+  buildCountOwnedRowsQuery,
   buildCountPendingJournalSearchJobsQuery,
   buildCountPilotInterviewRecordsQuery,
 } from "./erasure-dry-run-repository";
@@ -76,6 +77,8 @@ describe("erasure dry-run preview assembly", () => {
         journalEntriesPrivateActive: 2,
         journalEntriesPublicActive: 1,
         journalEntriesArchived: 0,
+        journalEntryObjectMentions: 2,
+        journalEntryCatalogMentions: 1,
         mediaAssetsTotal: 1,
         mediaAssetsQuarantined: 0,
         mediaAssetsProcessed: 1,
@@ -106,6 +109,14 @@ describe("erasure dry-run preview assembly", () => {
       questions: 2,
     });
     expect(preview.caveats).toEqual([...ERASURE_DRY_RUN_CAVEATS]);
+    expect(
+      preview.dataClasses.find(
+        (dataClass) => dataClass.key === "journal_entries",
+      )?.counts,
+    ).toMatchObject({
+      object_mentions: 2,
+      catalog_mentions: 1,
+    });
     expect(
       JSON.stringify(preview.dataClasses.map((dataClass) => dataClass.counts)),
     ).not.toMatch(
@@ -138,11 +149,10 @@ describe("erasure dry-run repository privacy contracts", () => {
   });
 
   it("counts journal and media rows without selecting private content or keys", () => {
-    const journalSql = buildCountJournalEntriesQuery(
-      testDb,
-      requesterUserId,
-      { visibility: "private", lifecycleState: "active" },
-    ).compile().sql;
+    const journalSql = buildCountJournalEntriesQuery(testDb, requesterUserId, {
+      visibility: "private",
+      lifecycleState: "active",
+    }).compile().sql;
     const mediaSql = buildCountMediaAssetsQuery(
       testDb,
       requesterUserId,
@@ -151,10 +161,35 @@ describe("erasure dry-run repository privacy contracts", () => {
 
     expect(journalSql).toContain('"journal_entries"');
     expect(journalSql).toContain('"owner_user_id" = $1');
-    expect(journalSql).not.toMatch(/title|body|public_slug|email|quarantine|derivative/i);
+    expect(journalSql).not.toMatch(
+      /title|body|public_slug|email|quarantine|derivative/i,
+    );
 
     expect(mediaSql).toContain('"media_assets"');
-    expect(mediaSql).not.toMatch(/quarantine_key|derivative_key|title|body|email/i);
+    expect(mediaSql).not.toMatch(
+      /quarantine_key|derivative_key|title|body|email/i,
+    );
+  });
+
+  it("counts journal mention rows by owner without selecting linked content", () => {
+    const objectMentionSql = buildCountOwnedRowsQuery(
+      testDb,
+      "journal_entry_object_mentions",
+      requesterUserId,
+    ).compile().sql;
+    const catalogMentionSql = buildCountOwnedRowsQuery(
+      testDb,
+      "journal_entry_catalog_mentions",
+      requesterUserId,
+    ).compile().sql;
+
+    for (const sql of [objectMentionSql, catalogMentionSql]) {
+      expect(sql).toMatch(/count\(\*\)/i);
+      expect(sql).toContain('"owner_user_id" = $1');
+      expect(sql).not.toMatch(
+        /journal_entries|plant_objects|catalog_items|title|body|display_name|canonical_name|media_assets|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
+      );
+    }
   });
 
   it("counts lineage provenance edges without selecting labels or location-adjacent fields", () => {
@@ -179,9 +214,7 @@ describe("erasure dry-run repository privacy contracts", () => {
       requesterUserId,
     ).compile();
 
-    expect(compiled.sql).toContain(
-      '"lineage_provenance_edge_audit_events"',
-    );
+    expect(compiled.sql).toContain('"lineage_provenance_edge_audit_events"');
     expect(compiled.sql).toContain('"actor_user_id" = $1');
     expect(compiled.sql).toContain('"target_user_id" = $2');
     expect(compiled.sql).toMatch(/count\(\*\)/i);
@@ -265,7 +298,9 @@ describe("erasure dry-run repository privacy contracts", () => {
     ).compile().sql;
 
     expect(catalogSql).toContain('"catalog_items"');
-    expect(catalogSql).not.toMatch(/canonical_name|normalized_name|title|body/i);
+    expect(catalogSql).not.toMatch(
+      /canonical_name|normalized_name|title|body/i,
+    );
 
     expect(interviewSql).toContain('"pilot_interview_learnings"');
     expect(interviewSql).not.toMatch(/redacted_note|title|body|email/i);

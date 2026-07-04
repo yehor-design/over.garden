@@ -71,6 +71,7 @@ export async function POST(request: Request) {
             entryDate: body.entryDate ?? "",
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
+            mentionSelections: body.mentionSelections ?? [],
           })
         : await createFirstPlantEntry(scope, {
             spaceName: body.spaceName ?? "",
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
             coarseRegionCode: body.coarseRegionCode ?? "",
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
+            mentionSelections: body.mentionSelections ?? [],
           });
     const readbackUrl = `/garden/objects/${result.plantObject.id}`;
     const followUpValuePulse =

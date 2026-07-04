@@ -1,6 +1,7 @@
 import type { EntrySyncStatus } from "@/db/schema";
 import type { CatalogKind, PlantObjectKind } from "@/db/schema";
 import type { CatalogTrustState } from "@/lib/garden/catalog-trust";
+import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 
 export type ActivationSource =
   | "homepage"
@@ -47,6 +48,7 @@ export interface FirstPlantEntryRequest {
   mediaAssetId?: string | null;
   syncStatus?: EntrySyncStatus;
   activationSource?: ActivationSource | null;
+  mentionSelections?: JournalMentionSelection[];
 }
 
 export interface FirstPlantEntryResponse {

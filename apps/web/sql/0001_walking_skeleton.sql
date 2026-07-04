@@ -1297,6 +1297,53 @@ create index if not exists journal_entry_object_mentions_owner_space_idx
 create index if not exists journal_entry_object_mentions_object_idx
   on journal_entry_object_mentions (owner_user_id, plant_object_id, journal_entry_id);
 
+create table if not exists journal_entry_catalog_mentions (
+  journal_entry_id uuid not null references journal_entries(id) on delete cascade,
+  owner_user_id uuid not null,
+  space_id uuid not null,
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (journal_entry_id, catalog_item_id),
+  constraint journal_entry_catalog_mentions_entry_fkey
+    foreign key (journal_entry_id, owner_user_id, space_id)
+    references journal_entries (id, owner_user_id, space_id)
+    on delete cascade
+);
+
+alter table journal_entry_catalog_mentions
+  add column if not exists space_id uuid;
+
+update journal_entry_catalog_mentions
+set space_id = journal_entries.space_id
+from journal_entries
+where journal_entry_catalog_mentions.journal_entry_id = journal_entries.id
+  and journal_entry_catalog_mentions.space_id is null;
+
+alter table journal_entry_catalog_mentions
+  alter column space_id set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entry_catalog_mentions_entry_fkey'
+      and conrelid = 'journal_entry_catalog_mentions'::regclass
+  ) then
+    alter table journal_entry_catalog_mentions
+      add constraint journal_entry_catalog_mentions_entry_fkey
+      foreign key (journal_entry_id, owner_user_id, space_id)
+      references journal_entries (id, owner_user_id, space_id)
+      on delete cascade;
+  end if;
+end $$;
+
+create index if not exists journal_entry_catalog_mentions_owner_entry_idx
+  on journal_entry_catalog_mentions (owner_user_id, space_id, journal_entry_id);
+
+create index if not exists journal_entry_catalog_mentions_catalog_idx
+  on journal_entry_catalog_mentions (catalog_item_id, journal_entry_id);
+
 -- Lineage pending source identities (OVE-124). These rows represent a
 -- non-user provenance source before they join and claim/confirm the edge.
 -- Store only internal ids, a bounded contact-free display label, enum state,

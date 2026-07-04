@@ -258,6 +258,14 @@ export interface JournalEntries {
   visibility: Generated<string>;
 }
 
+export interface JournalEntryCatalogMentions {
+  catalog_item_id: string;
+  created_at: Generated<Timestamp>;
+  journal_entry_id: string;
+  owner_user_id: string;
+  space_id: string;
+}
+
 export interface JournalEntryObjectMentions {
   created_at: Generated<Timestamp>;
   journal_entry_id: string;
@@ -467,6 +475,7 @@ export interface DB {
   health: Health;
   job_queue: JobQueue;
   journal_entries: JournalEntries;
+  journal_entry_catalog_mentions: JournalEntryCatalogMentions;
   journal_entry_object_mentions: JournalEntryObjectMentions;
   lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;

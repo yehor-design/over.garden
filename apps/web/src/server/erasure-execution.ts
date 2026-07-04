@@ -104,8 +104,14 @@ export async function executeApprovedErasureRequest(
       trx,
       requesterUserId,
     ).execute();
-    await buildDeleteAuthSessionsForErasureQuery(trx, requesterUserId).execute();
-    await buildDeleteAuthAccountsForErasureQuery(trx, requesterUserId).execute();
+    await buildDeleteAuthSessionsForErasureQuery(
+      trx,
+      requesterUserId,
+    ).execute();
+    await buildDeleteAuthAccountsForErasureQuery(
+      trx,
+      requesterUserId,
+    ).execute();
     await buildDeletePilotInviteGrantForErasureQuery(
       trx,
       requesterUserId,
@@ -119,6 +125,14 @@ export async function executeApprovedErasureRequest(
       requesterUserId,
     ).execute();
     await buildDeletePendingJournalSearchJobsForErasureQuery(
+      trx,
+      requesterUserId,
+    ).execute();
+    await buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
+      trx,
+      requesterUserId,
+    ).execute();
+    await buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
       trx,
       requesterUserId,
     ).execute();
@@ -266,14 +280,16 @@ export function buildDeleteVerificationRowsForErasureQuery(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
-  return executor.deleteFrom("verification").where(
-    "identifier",
-    "in",
-    executor
-      .selectFrom("user")
-      .select("email")
-      .where("id", "=", requesterUserId),
-  );
+  return executor
+    .deleteFrom("verification")
+    .where(
+      "identifier",
+      "in",
+      executor
+        .selectFrom("user")
+        .select("email")
+        .where("id", "=", requesterUserId),
+    );
 }
 
 export function buildDeleteAuthSessionsForErasureQuery(
@@ -336,6 +352,24 @@ export function buildDeletePendingJournalSearchJobsForErasureQuery(
       "journal_entry_index",
       JOURNAL_ENTRY_UNINDEX_KIND,
     ]);
+}
+
+export function buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("journal_entry_object_mentions")
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("journal_entry_catalog_mentions")
+    .where("owner_user_id", "=", requesterUserId);
 }
 
 export function buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
