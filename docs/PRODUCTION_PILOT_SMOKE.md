@@ -60,7 +60,7 @@ Live public probes, redacted:
 
 Auth and account continuity evidence:
 
-- Email/password auth, email verification, and password-reset delivery are covered by OVE-127's Resend-backed auth email implementation and must be re-run as redacted live delivery proof before relying on a fresh production cohort. Record only provider class, sender-domain class, canonical-origin class, and account-continuity pass/fail.
+- Email/password auth, email verification, and password-reset delivery are covered by OVE-127's Resend-backed auth email implementation and OVE-141's 2026-07-04 redacted production delivery proof. Provider class: Resend transactional email. Sender-domain class: `over.garden`. Visible verification/reset link origin class: `https://over.garden`. Account-continuity class: pass.
 - Google OAuth production continuity is covered by OVE-111 redacted provider smoke on 2026-07-02.
 - Facebook Login production continuity is covered by OVE-112 redacted provider smoke on 2026-07-02.
 - No provider ids, provider secrets, callback query parameters, message ids, reset links, verification links, cookies, or tokens are recorded here.
@@ -467,6 +467,16 @@ Goal: a gardener who loses access or forgets how to sign in can recover through 
 3. Confirm a Resend transactional email is delivered from the approved OverGarden sender and that the visible link origin is `https://over.garden` in production.
 4. Set a new password through `/auth/reset-password`, then confirm `/garden` shows the same owner-scoped plant objects and entries.
 5. Evidence may record provider class, sender domain class, canonical origin class, delivery success/failure class, and account-continuity pass/fail only. Do not record recipient email addresses, provider message IDs, reset/verification tokens, tokenized URLs, cookies, or provider payloads.
+
+### OVE-141 production delivery proof (2026-07-04)
+
+- Production deployment class: Vercel production behind `https://over.garden`; latest deployment status was `READY` before the smoke.
+- Resend readiness: pass by live delivery. `RESEND_API_KEY` was inferred present from successful provider delivery, `RESEND_AUTH_FROM` was inferred present from the approved `over.garden` sender-domain class, and `RESEND_AUTH_REPLY_TO` was not configured or not required for this flow.
+- Sign-up verification: pass. A new email/password sign-up sent a Resend transactional verification email from the `over.garden` sender-domain class; the visible verification link origin class was `https://over.garden`; no Vercel alias was observed; verification returned to `/garden`.
+- Password reset: pass. `/auth/help` sent a Resend transactional password-reset email for the same existing account from the `over.garden` sender-domain class; the visible reset link origin class was `https://over.garden`; no Vercel alias was observed; `/auth/reset-password` accepted a new password and `/garden` remained reachable after recovery.
+- Account continuity: pass. Signing in with the reset password resolved to the same Better Auth user as the verified sign-up account, and a duplicate sign-up attempt did not issue a session token or create a second active garden path.
+- Production runtime check: pass. Vercel production runtime logs and runtime error clusters for the post-smoke window showed no error/fatal Resend auth-email logs and no `/api/auth` runtime errors.
+- Evidence redaction: pass. The smoke did not record a recipient email address, provider message id, tokenized verification/reset URL, reset token, verification token, cookie, provider payload, IP address, user agent, or secret.
 
 ### Founder fallback workflow (no secrets in git or Linear)
 
