@@ -525,6 +525,7 @@ Forbidden evidence:
 - Full private URLs from authenticated pages.
 - Auth secret values. Evidence may only say present, missing, placeholder-like, or local-fallback.
 - Google client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may name only env presence and exact authorized redirect URI presence.
+- Google Analytics cookies, client IDs, session IDs, IP/user-agent values, referrers, private route paths, auth callback params, or Google Analytics report rows containing user-level data. Evidence may name only the public measurement id, consent-banner presence, public-route script presence/absence after consent, route class, and HTTP status class.
 - Facebook App Secret values, OAuth tokens, callback query parameters, provider token responses, app access tokens, user access tokens, signed cookies, Meta user ids, or personal emails. Evidence may name only env presence, `FACEBOOK_LOGIN_PUBLIC_READY` false/true by class, exact Valid OAuth Redirect URI presence, and Meta app mode class.
 
 ## Preflight
@@ -548,12 +549,18 @@ Forbidden evidence:
    - Development mode smoke is valid only for app role/test users. Real production gardener login requires the Meta app mode/configuration to allow non-role users.
    - Vercel production has `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET` present if Facebook is being tested; do not record either value.
    - `FACEBOOK_LOGIN_PUBLIC_READY` must stay absent/false unless a real non-role production smoke passed. When absent/false, production must hide Facebook Login and keep email/Google available.
-9. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
-10. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
-11. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
-12. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
-13. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
-14. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
+9. Confirm Google Analytics consent-first tag scope:
+   - authored public, legal, and support pages render the analytics consent banner;
+   - after analytics acceptance, those pages can render the Google tag with measurement id `G-71LP7XZ5NE`;
+   - before analytics acceptance, the external Google tag must not load;
+   - private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the consent banner or Google tag;
+   - do not record Google cookies, client ids, session ids, referrers, IP/user-agent values, private URLs, auth params, or user-level Analytics report rows.
+10. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
+11. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
+12. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
+13. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
+14. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
+15. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
 
 Header probes:
 

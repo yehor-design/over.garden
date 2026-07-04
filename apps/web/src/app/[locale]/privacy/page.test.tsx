@@ -31,6 +31,7 @@ describe("/{locale}/privacy", () => {
     expect(html).toContain("Founder-approved MVP copy");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain("7 failed-processing days");
+    expect(html).toContain("Google Analytics page measurement");
     expect(html).toContain("/uk/privacy");
     expect(html).toContain("/ru/privacy");
     expect(html).not.toContain("/api/");

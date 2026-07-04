@@ -44,9 +44,9 @@ export const MVP_RETENTION_RULES = [
   {
     title: "Analytics events",
     summary:
-      "First-party analytics events are retained for up to 13 months and are limited to privacy-safe product-learning properties.",
+      "First-party product analytics events are retained for up to 13 months, and consented Google Analytics page measurement can run on authored public, legal, and support pages through the Google tag.",
     developerBoundary:
-      "Analytics payloads must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, or contact data.",
+      "Analytics payloads must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, contact data, private garden paths, admin paths, media keys, or auth callback data.",
   },
 ] as const;
 

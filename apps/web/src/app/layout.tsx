@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { GoogleAnalytics } from "./google-analytics";
 import { ServiceWorkerRegister } from "./sw-register";
 
 const geistSans = Geist({
@@ -32,6 +33,7 @@ export default function RootLayout({
       <body className="flex min-h-full flex-col">
         {children}
         <ServiceWorkerRegister />
+        <GoogleAnalytics />
       </body>
     </html>
   );
