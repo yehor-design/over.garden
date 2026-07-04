@@ -8,7 +8,10 @@ import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
-import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  localizedPath,
+} from "@/lib/public-localization";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
@@ -93,6 +96,18 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           </div>
           {userId ? (
             <div className="flex flex-col gap-2 text-sm sm:items-end">
+              <Link
+                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/feed")}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Followed feed
+              </Link>
+              <Link
+                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/notifications")}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Notifications
+              </Link>
               <Link
                 href="/garden/lineage/claims"
                 className="font-medium text-primary underline-offset-4 hover:underline"
