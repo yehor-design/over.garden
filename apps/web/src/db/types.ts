@@ -29,6 +29,7 @@ import type {
   PilotInterviewLearnings as PilotInterviewLearningsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
+  UserPublicProfiles as UserPublicProfilesTable,
   VarietySeedProofs as VarietySeedProofsTable,
 } from "./generated";
 
@@ -165,10 +166,8 @@ export type LineagePendingSourceIdentity =
   Selectable<LineagePendingSourceIdentitiesTable>;
 export type NewLineagePendingSourceIdentity =
   Insertable<LineagePendingSourceIdentitiesTable>;
-export type LineageProvenanceEdge =
-  Selectable<LineageProvenanceEdgesTable>;
-export type NewLineageProvenanceEdge =
-  Insertable<LineageProvenanceEdgesTable>;
+export type LineageProvenanceEdge = Selectable<LineageProvenanceEdgesTable>;
+export type NewLineageProvenanceEdge = Insertable<LineageProvenanceEdgesTable>;
 export type LineageProvenanceEdgeAuditEvent =
   Selectable<LineageProvenanceEdgeAuditEventsTable>;
 export type NewLineageProvenanceEdgeAuditEvent =
@@ -179,6 +178,8 @@ export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
 export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
+export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
+export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
 export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
 export type NewPilotInterviewLearning =
   Insertable<PilotInterviewLearningsTable>;

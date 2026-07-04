@@ -59,6 +59,8 @@ export type {
   PilotInterviewObservedValue,
   PilotInterviewNextAction,
   NewVarietySeedProof,
+  UserPublicProfile,
+  NewUserPublicProfile,
   NewAdminRoleAuditEntry,
   NewAdminUserRole,
   NewHealth,

@@ -210,6 +210,118 @@ create index if not exists admin_role_audit_log_created_idx
 create index if not exists admin_role_audit_log_target_created_idx
   on admin_role_audit_log (target_user_id, created_at desc);
 
+-- Public pseudonymous identity for lineage and cross-user mentions (OVE-133).
+-- These rows intentionally store only a stable handle plus optional
+-- user-controlled public presentation fields. Never store emails, auth
+-- provider details, contact channels, raw session data, request metadata,
+-- private journal text, media keys, invite links, or fine-grained place data.
+create table if not exists user_public_profiles (
+  user_id uuid primary key,
+  handle text not null,
+  normalized_handle text not null,
+  display_name text,
+  avatar_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint user_public_profiles_handle_check
+    check (handle ~ '^[a-z0-9][a-z0-9_]{2,29}$'),
+  constraint user_public_profiles_normalized_handle_check
+    check (
+      normalized_handle = lower(handle)
+      and normalized_handle ~ '^[a-z0-9][a-z0-9_]{2,29}$'
+    ),
+  constraint user_public_profiles_display_name_check
+    check (display_name is null or char_length(display_name) between 1 and 80),
+  constraint user_public_profiles_avatar_url_check
+    check (
+      avatar_url is null
+      or (char_length(avatar_url) between 8 and 500 and avatar_url ~ '^https://')
+    )
+);
+
+alter table user_public_profiles
+  add column if not exists handle text,
+  add column if not exists normalized_handle text,
+  add column if not exists display_name text,
+  add column if not exists avatar_url text,
+  add column if not exists created_at timestamptz default now(),
+  add column if not exists updated_at timestamptz default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_handle_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_handle_check
+      check (handle ~ '^[a-z0-9][a-z0-9_]{2,29}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_normalized_handle_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_normalized_handle_check
+      check (
+        normalized_handle = lower(handle)
+        and normalized_handle ~ '^[a-z0-9][a-z0-9_]{2,29}$'
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_display_name_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_display_name_check
+      check (display_name is null or char_length(display_name) between 1 and 80);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_avatar_url_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_avatar_url_check
+      check (
+        avatar_url is null
+        or (char_length(avatar_url) between 8 and 500 and avatar_url ~ '^https://')
+      );
+  end if;
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'user_public_profiles_user_id_fkey'
+        and conrelid = 'user_public_profiles'::regclass
+    ) then
+      alter table user_public_profiles
+        add constraint user_public_profiles_user_id_fkey
+        foreign key (user_id) references "user"(id) on delete cascade;
+    end if;
+  end if;
+end $$;
+
+create unique index if not exists user_public_profiles_handle_uidx
+  on user_public_profiles (handle);
+
+create unique index if not exists user_public_profiles_normalized_handle_uidx
+  on user_public_profiles (normalized_handle);
+
+create index if not exists user_public_profiles_updated_idx
+  on user_public_profiles (updated_at desc);
+
 create table if not exists spaces (
   id uuid primary key default gen_random_uuid(),
   owner_user_id uuid not null,

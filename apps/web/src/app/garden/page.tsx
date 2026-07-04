@@ -7,6 +7,8 @@ import {
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
+import { publicProfilePath } from "@/lib/garden/public-paths";
+import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
@@ -24,6 +26,7 @@ import {
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
+import { ensureUserPublicProfile } from "@/server/public-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { createSpaceJournalEntryAction } from "./actions";
@@ -57,6 +60,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
+  const publicProfile = scope ? await ensureUserPublicProfile(scope) : null;
   const objects = scope ? await listMyPlantObjects(scope, 12) : [];
   const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
   const hasObjects = objects.length > 0;
@@ -95,6 +99,25 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               >
                 Lineage claims
               </Link>
+              {publicProfile ? (
+                <Link
+                  href="/garden/profile"
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  @{publicProfile.handle}
+                </Link>
+              ) : null}
+              {publicProfile ? (
+                <Link
+                  href={publicProfilePath(
+                    DEFAULT_PUBLIC_LOCALE,
+                    publicProfile.handle,
+                  )}
+                  className="font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Public profile
+                </Link>
+              ) : null}
               {session?.user?.email ? (
                 <p className="text-muted-foreground">{session.user.email}</p>
               ) : null}

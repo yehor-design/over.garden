@@ -417,6 +417,16 @@ export interface User {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface UserPublicProfiles {
+  avatar_url: string | null;
+  created_at: Generated<Timestamp>;
+  display_name: string | null;
+  handle: string;
+  normalized_handle: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface VarietySeedProofs {
   author_user_id: string;
   body: string;
@@ -470,6 +480,7 @@ export interface DB {
   session: Session;
   spaces: Spaces;
   user: User;
+  user_public_profiles: UserPublicProfiles;
   variety_seed_proofs: VarietySeedProofs;
   verification: Verification;
 }

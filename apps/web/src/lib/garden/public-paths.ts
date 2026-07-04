@@ -1,3 +1,5 @@
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+
 export function publicJournalEntryPath(publicSlug: string): string {
   return `/journal/${encodeURIComponent(publicSlug)}`;
 }
@@ -31,6 +33,18 @@ export function lineageInvitationClaimPath(token: string): string {
 
 export function publicLineageObjectPath(plantObjectId: string): string {
   return `/lineage/objects/${encodeURIComponent(plantObjectId)}`;
+}
+
+export function publicProfilePath(
+  locale: PublicLocale,
+  handle: string,
+): string {
+  return localizedPath(locale, publicProfileBasePath(handle));
+}
+
+export function publicProfileBasePath(handle: string): string {
+  const normalizedHandle = handle.replace(/^@/, "");
+  return `/@${encodeURIComponent(normalizedHandle)}`;
 }
 
 export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
