@@ -404,7 +404,7 @@ describe("pilot smoke readiness", () => {
     expect(blockedReadout.overall).toBe("blocked");
   });
 
-  it("requires Facebook Login env in production and keeps provider proof manual", () => {
+  it("keeps Facebook Login hidden in production until public non-role readiness is approved", () => {
     const readyReadout = buildPilotSmokeReadiness({
       env: productionLikeEnv,
       databaseProbe: { reachable: true },
@@ -416,21 +416,45 @@ describe("pilot smoke readiness", () => {
 
     expect(findCheck(readyChecks, "facebook-oauth-provider")).toMatchObject({
       severity: "manual",
-      summary: expect.stringContaining("redirect mismatch"),
-      evidence: expect.stringContaining(
-        "https://over.garden/api/auth/callback/facebook",
-      ),
+      summary: expect.stringContaining("fallback is active"),
+      evidence: expect.stringContaining("FACEBOOK_LOGIN_PUBLIC_READY"),
     });
     expect(JSON.stringify(readyReadout)).not.toContain(
       "facebook-secret-that-must-not-leak",
     );
     expect(
-      readyReadout.smokeSteps.some((step) => step.includes("Facebook Login")),
+      readyReadout.smokeSteps.some(
+        (step) =>
+          step.includes("Facebook Login") && step.includes("hides Facebook"),
+      ),
     ).toBe(true);
+
+    const publicReadyReadout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        FACEBOOK_LOGIN_PUBLIC_READY: "true",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
+    });
+
+    expect(
+      findCheck(
+        publicReadyReadout.sections.flatMap((section) => section.checks),
+        "facebook-oauth-provider",
+      ),
+    ).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("public-ready flag and env are present"),
+      evidence: expect.stringContaining(
+        "https://over.garden/api/auth/callback/facebook",
+      ),
+    });
 
     const blockedReadout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
+        FACEBOOK_LOGIN_PUBLIC_READY: "true",
         FACEBOOK_CLIENT_ID: undefined,
         FACEBOOK_CLIENT_SECRET: undefined,
       },

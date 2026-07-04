@@ -20,7 +20,7 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - Canonical app domains `over.garden` and `www.over.garden` are attached to the Vercel project and point to Vercel through DNS-only Cloudflare A records.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. OVE-111 adds Google OAuth env names `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; OVE-112 adds Facebook Login env names `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`; values are never recorded. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, when Google or Facebook OAuth env is missing for production social sign-in smoke, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces use durable `admin_user_roles` capabilities and credential-only owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
+- Deployment env now has `BETTER_AUTH_SECRET`, R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. OVE-111 adds Google OAuth env names `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; OVE-112 adds Facebook Login env names `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`; values are never recorded. OVE-142 gates production Facebook exposure behind the non-secret `FACEBOOK_LOGIN_PUBLIC_READY` class, so credentials alone no longer render or register Facebook in production. Runtime auth fails closed in production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, equal to the local development fallback, when Google OAuth env is missing for production social sign-in smoke, when Facebook is explicitly marked public-ready but its credentials are missing, or when Vercel production points auth/public origin at the legacy `.vercel.app` alias. Internal operator surfaces use durable `admin_user_roles` capabilities and credential-only owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables. OVE-51 reran the non-destructive app bootstrap and confirmed the closed-pilot `pilot_invite_grants` table exists before the canonical invited-gardener smoke.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
@@ -62,7 +62,7 @@ Auth and account continuity evidence:
 
 - Email/password auth, email verification, and password-reset delivery are covered by OVE-127's Resend-backed auth email implementation and OVE-141's 2026-07-04 redacted production delivery proof. Provider class: Resend transactional email. Sender-domain class: `over.garden`. Visible verification/reset link origin class: `https://over.garden`. Account-continuity class: pass.
 - Google OAuth production continuity is covered by OVE-111 redacted provider smoke on 2026-07-02.
-- Facebook Login production continuity is covered by OVE-112 redacted provider smoke on 2026-07-02.
+- Facebook Login provider-start continuity is covered by OVE-112 redacted provider smoke on 2026-07-02. OVE-142 adds the public launch gate: until `FACEBOOK_LOGIN_PUBLIC_READY` is explicitly true after real non-role Meta proof, production intentionally hides/disables Facebook Login and keeps email/Google as the usable fallback.
 - No provider ids, provider secrets, callback query parameters, message ids, reset links, verification links, cookies, or tokens are recorded here.
 
 Current public-product smoke coverage:
@@ -525,7 +525,7 @@ Forbidden evidence:
 - Full private URLs from authenticated pages.
 - Auth secret values. Evidence may only say present, missing, placeholder-like, or local-fallback.
 - Google client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may name only env presence and exact authorized redirect URI presence.
-- Facebook App Secret values, OAuth tokens, callback query parameters, provider token responses, app access tokens, user access tokens, or signed cookies. Evidence may name only env presence, exact Valid OAuth Redirect URI presence, and Meta app mode class.
+- Facebook App Secret values, OAuth tokens, callback query parameters, provider token responses, app access tokens, user access tokens, signed cookies, Meta user ids, or personal emails. Evidence may name only env presence, `FACEBOOK_LOGIN_PUBLIC_READY` false/true by class, exact Valid OAuth Redirect URI presence, and Meta app mode class.
 
 ## Preflight
 
@@ -546,7 +546,8 @@ Forbidden evidence:
    - Facebook Login Valid OAuth Redirect URIs include `http://localhost:3000/api/auth/callback/facebook` for local testing and `https://over.garden/api/auth/callback/facebook` for production.
    - Requested permissions remain basic sign-in only: `email` and `public_profile`; no posting, groups, friends, ads, or social-graph permissions.
    - Development mode smoke is valid only for app role/test users. Real production gardener login requires the Meta app mode/configuration to allow non-role users.
-   - Vercel production has `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET` present; do not record either value.
+   - Vercel production has `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET` present if Facebook is being tested; do not record either value.
+   - `FACEBOOK_LOGIN_PUBLIC_READY` must stay absent/false unless a real non-role production smoke passed. When absent/false, production must hide Facebook Login and keep email/Google available.
 9. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
 10. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
 11. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
@@ -584,10 +585,11 @@ Public visitor/crawler prerequisite:
    - For an existing gardener email/password account, sign in once, use "Link Google sign-in" from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
    - Open `/admin` as a normal Google-created or Google-linked user and confirm `Access denied.`; Google must not be a path to admin capability.
 5. For Facebook Login:
-   - Start "Continue with Facebook" from `/garden` and confirm Meta accepts the callback without redirect/origin errors.
-   - For an existing gardener email/password account, sign in once, use "Link Facebook sign-in" from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
-   - Open `/admin` as a normal Facebook-created or Facebook-linked user and confirm `Access denied.`; Facebook must not be a path to admin capability.
-   - If the Meta app is still in Development mode, record the smoke as app-role/test-user only and do not treat it as production gardener proof.
+   - If `FACEBOOK_LOGIN_PUBLIC_READY` is absent/false, confirm `/garden` does not render "Continue with Facebook" or "Link Facebook sign-in"; email/Google must remain available and OAuth provider errors must point back to a usable fallback path.
+   - If `FACEBOOK_LOGIN_PUBLIC_READY=true`, start "Continue with Facebook" from `/garden` as a real non-role user and confirm Meta accepts the callback without redirect/origin errors.
+   - When enabled, for an existing gardener email/password account, sign in once, use "Link Facebook sign-in" from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
+   - When enabled, open `/admin` as a normal Facebook-created or Facebook-linked user and confirm `Access denied.`; Facebook must not be a path to admin capability.
+   - If the Meta app is still in Development mode, keep `FACEBOOK_LOGIN_PUBLIC_READY` false and record the result as intentional production fallback, not production gardener proof.
 6. Create one first plant entry with:
    - one space,
    - one plant object,

@@ -5,6 +5,7 @@ import { isBlockedBetterAuthSecret } from "@/lib/auth-secret";
 import {
   FACEBOOK_CLIENT_ID_ENV,
   FACEBOOK_CLIENT_SECRET_ENV,
+  FACEBOOK_LOGIN_PUBLIC_READY_ENV,
   FACEBOOK_OAUTH_LOCAL_REDIRECT_URI,
   FACEBOOK_OAUTH_PRODUCTION_REDIRECT_URI,
   facebookOAuthConfigurationState,
@@ -292,12 +293,12 @@ export function buildPilotSmokeReadiness({
     smokeSteps: [
       "Open the deployed public URL and confirm `/`, `/health`, `/garden`, and `/privacy` return OverGarden HTML rather than deployment-provider auth.",
       "Start Google OAuth from `/garden`, confirm the provider accepts the exact callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`, and confirm the callback lands back on `/garden` without recording auth params.",
-      "Start Facebook Login from `/garden`, confirm Meta accepts the exact callback without redirect/origin errors, and confirm the callback lands back on `/garden` without recording auth params.",
+      "For Facebook Login, first check the production launch gate. If the Meta app is not proven public-ready for non-role users, confirm `/garden` hides Facebook and keeps email/Google available. If `FACEBOOK_LOGIN_PUBLIC_READY=true`, start Facebook Login from `/garden`, confirm a real non-role user can complete auth on the exact callback, and confirm the callback lands back on `/garden` without recording auth params.",
       "Create a new email/password account, confirm the verification email arrives from the approved OverGarden sender, open the verification link, and confirm it returns to `/garden` without recording tokenized URLs.",
       "Request a password reset from `/auth/help`, confirm the reset email arrives from the approved OverGarden sender, set a new password, and confirm the same garden data remains attached after returning to `/garden`.",
       "Sign up or sign in as the pilot smoke user and create one first plant entry through `/garden`.",
       "For an existing gardener email/password account, sign in once, link Google from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
-      "For an existing gardener email/password account, sign in once, link Facebook from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
+      "For an existing gardener email/password account, link Facebook from `/garden` only when `FACEBOOK_LOGIN_PUBLIC_READY=true`; otherwise confirm the link action is hidden and the gardener keeps email/Google fallback. When enabled, sign out, return with Facebook, and confirm the same garden data and invite grant stay attached to the same OverGarden user id.",
       "Attach one photo, process it, and confirm authenticated readback shows only a public derivative URL.",
       "Add a follow-up entry to the same object and confirm it does not create a duplicate object.",
       "Publish the first entry after accepting the disclosure and confirm `/journal/[slug]` is SSR, noindex, location-safe, and derivative-only.",
@@ -759,12 +760,24 @@ function checkGoogleOAuthConfiguration(env: EnvLike): PilotSmokeCheck {
 
 function checkFacebookOAuthConfiguration(env: EnvLike): PilotSmokeCheck {
   const state = facebookOAuthConfigurationState(env);
+  const isProduction = isProductionVercel(env);
+
+  if (isProduction && !state.publicLaunchReady) {
+    return {
+      id: "facebook-oauth-provider",
+      label: "Facebook Login provider",
+      severity: "manual",
+      summary:
+        "Facebook Login production fallback is active: non-role Meta readiness has not been explicitly approved, so production must hide Facebook and keep email/Google available.",
+      evidence: `${FACEBOOK_LOGIN_PUBLIC_READY_ENV} is absent/false by class. If enabling it later, first verify Meta app domain/origin/redirect URI, app mode class, and a real non-role login without recording app secrets, OAuth tokens, callback params, cookies, state, Meta user ids, or emails.`,
+    };
+  }
 
   if (!state.configured) {
     return {
       id: "facebook-oauth-provider",
       label: "Facebook Login provider",
-      severity: isProductionVercel(env) ? "fail" : "warn",
+      severity: isProduction ? "fail" : "warn",
       summary: `${FACEBOOK_CLIENT_ID_ENV} and ${FACEBOOK_CLIENT_SECRET_ENV} must both be present before Facebook sign-in can close smoke.`,
       evidence:
         "Evidence may say present or missing only. Never copy app secrets, OAuth tokens, callback params, cookies, or provider token responses.",
@@ -776,8 +789,8 @@ function checkFacebookOAuthConfiguration(env: EnvLike): PilotSmokeCheck {
     label: "Facebook Login provider",
     severity: "manual",
     summary:
-      "Facebook Login env is present; the Meta app must authorize the exact local and production callback URIs, use only basic login permissions, and a real browser smoke must prove no redirect mismatch.",
-    evidence: `Valid OAuth Redirect URIs must include ${FACEBOOK_OAUTH_LOCAL_REDIRECT_URI} and ${FACEBOOK_OAUTH_PRODUCTION_REDIRECT_URI}. Record only URI presence, app mode class, origin class, and success/failure class.`,
+      "Facebook Login public-ready flag and env are present; a real non-role production browser smoke must prove the Meta app accepts the exact callback and returns to the same garden.",
+    evidence: `Valid OAuth Redirect URIs must include ${FACEBOOK_OAUTH_LOCAL_REDIRECT_URI} and ${FACEBOOK_OAUTH_PRODUCTION_REDIRECT_URI}; requested permissions remain basic sign-in only (email, public_profile). Record only URI presence, app mode class, origin class, and success/failure class.`,
   };
 }
 

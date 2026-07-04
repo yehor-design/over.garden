@@ -7,7 +7,7 @@ import {
 } from "./facebook-oauth";
 
 describe("Facebook OAuth configuration", () => {
-  it("enables Facebook only when both non-placeholder credentials are present", () => {
+  it("enables Facebook outside production only when both non-placeholder credentials are present", () => {
     expect(isFacebookSignInEnabled({})).toBe(false);
     expect(
       isFacebookSignInEnabled({
@@ -26,6 +26,40 @@ describe("Facebook OAuth configuration", () => {
         FACEBOOK_CLIENT_SECRET: "secret",
       }),
     ).toBe(true);
+  });
+
+  it("hides Facebook Login in Vercel production until real non-role readiness is explicitly approved", () => {
+    const productionEnv = {
+      FACEBOOK_CLIENT_ID: "facebook-app-id",
+      FACEBOOK_CLIENT_SECRET: "secret",
+      VERCEL: "1",
+      VERCEL_ENV: "production",
+    };
+
+    expect(isFacebookSignInEnabled(productionEnv)).toBe(false);
+    expect(resolveFacebookSocialProviderConfig(productionEnv)).toBeNull();
+    expect(facebookOAuthConfigurationState(productionEnv)).toMatchObject({
+      configured: true,
+      publicLaunchReady: false,
+      providerEnabled: false,
+    });
+
+    expect(
+      isFacebookSignInEnabled({
+        ...productionEnv,
+        FACEBOOK_LOGIN_PUBLIC_READY: "true",
+      }),
+    ).toBe(true);
+    expect(
+      facebookOAuthConfigurationState({
+        ...productionEnv,
+        FACEBOOK_LOGIN_PUBLIC_READY: "1",
+      }),
+    ).toMatchObject({
+      configured: true,
+      publicLaunchReady: true,
+      providerEnabled: true,
+    });
   });
 
   it("keeps OAuth credentials out of safe configuration state", () => {
@@ -49,6 +83,8 @@ describe("Facebook OAuth configuration", () => {
       configured: true,
       clientIdConfigured: true,
       clientSecretConfigured: true,
+      publicLaunchReady: false,
+      providerEnabled: true,
       productionRedirectUri: "https://over.garden/api/auth/callback/facebook",
     });
   });
