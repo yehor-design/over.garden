@@ -461,6 +461,68 @@ create unique index if not exists catalog_item_names_item_normalized_locale_uidx
 create index if not exists catalog_item_names_normalized_idx
   on catalog_item_names (normalized_name);
 
+-- Personal planning shelf (OVE-136). Wishlist rows intentionally store only a
+-- signed-in owner, a reusable catalog item, bounded source-surface metadata,
+-- and timestamps. They are not journal entries and never store garden object
+-- IDs, journal text, media keys, contact data, position data, invite links,
+-- IP/user-agent, or raw request metadata.
+create table if not exists wishlist_items (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  source_surface text not null default 'catalog_item' check (
+    source_surface in ('catalog_item', 'public_variety')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint wishlist_items_owner_catalog_uidx unique (owner_user_id, catalog_item_id)
+);
+
+alter table wishlist_items
+  add column if not exists source_surface text not null default 'catalog_item',
+  add column if not exists updated_at timestamptz not null default now();
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'wishlist_items_source_surface_check'
+      and conrelid = 'wishlist_items'::regclass
+  ) then
+    alter table wishlist_items
+      add constraint wishlist_items_source_surface_check
+      check (source_surface in ('catalog_item', 'public_variety'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'wishlist_items_owner_catalog_uidx'
+      and conrelid = 'wishlist_items'::regclass
+  ) then
+    alter table wishlist_items
+      add constraint wishlist_items_owner_catalog_uidx
+      unique (owner_user_id, catalog_item_id);
+  end if;
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'wishlist_items_owner_user_id_fkey'
+        and conrelid = 'wishlist_items'::regclass
+    ) then
+      alter table wishlist_items
+        add constraint wishlist_items_owner_user_id_fkey
+        foreign key (owner_user_id) references "user"(id) on delete cascade;
+    end if;
+  end if;
+end $$;
+
+create index if not exists wishlist_items_owner_created_idx
+  on wishlist_items (owner_user_id, created_at desc);
+
 create table if not exists catalog_source_snapshots (
   id uuid primary key default gen_random_uuid(),
   source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),

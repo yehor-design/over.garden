@@ -4,10 +4,14 @@ import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
+import { buttonVariants } from "@/components/ui/button";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
-import { publicProfilePath } from "@/lib/garden/public-paths";
+import {
+  gardenFirstEntryPreselectionPath,
+  publicProfilePath,
+} from "@/lib/garden/public-paths";
 import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
@@ -32,6 +36,7 @@ import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { ensureUserPublicProfile } from "@/server/public-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
+import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
 import { createSpaceJournalEntryAction } from "./actions";
 import { GardenDraftResumePanel } from "./draft-resume-panel";
 import { FirstEntryComposer } from "./first-entry-composer";
@@ -53,6 +58,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   ]);
   const userId = session?.user?.id;
   const initialCatalogItem = await resolveInitialCatalogSelection(params);
+  const pendingWishlistItem = await resolvePendingWishlistSelection(params);
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
@@ -147,7 +153,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           catalogName={initialCatalogItem?.displayName}
           facebookSignInEnabled={facebookSignInEnabled}
           googleSignInEnabled={googleSignInEnabled}
-          initialMessage={oauthMessage}
+          initialMessage={
+            oauthMessage ??
+            (pendingWishlistItem
+              ? `Sign in to save ${pendingWishlistItem.canonicalName} to your wishlist.`
+              : null)
+          }
         />
       ) : null}
 
@@ -163,6 +174,9 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         writeAccess.invited ? (
           <>
             <GardenDraftResumePanel />
+            {pendingWishlistItem ? (
+              <PendingWishlistIntentPanel item={pendingWishlistItem} />
+            ) : null}
             <div className="grid gap-6 lg:grid-cols-3">
               {hasObjects ? (
                 <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
@@ -482,6 +496,70 @@ async function resolveInitialCatalogSelection(
     status: item.status,
     source: item.source,
   };
+}
+
+async function resolvePendingWishlistSelection(
+  searchParams: GardenSearchParams,
+) {
+  const publicSlug = normalizeFirstParam(searchParams.wishlist);
+  if (!publicSlug) return null;
+
+  const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
+  if (!item?.publicSlug) return null;
+
+  return item;
+}
+
+function PendingWishlistIntentPanel({
+  item,
+}: {
+  item: Awaited<ReturnType<typeof resolvePendingWishlistSelection>>;
+}) {
+  if (!item?.publicSlug) return null;
+
+  return (
+    <section className="grid gap-3 rounded-lg border border-border p-4">
+      <div className="grid gap-1">
+        <h2 className="text-lg font-semibold text-foreground">
+          Save for later
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Add {item.canonicalName} to your wishlist without creating a garden
+          object yet.
+        </p>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <form action={addCatalogPublicSlugToWishlistAction}>
+          <input
+            type="hidden"
+            name="catalogPublicSlug"
+            value={item.publicSlug}
+          />
+          <input type="hidden" name="locale" value={DEFAULT_PUBLIC_LOCALE} />
+          <input
+            type="hidden"
+            name="returnTo"
+            value={localizedPath(DEFAULT_PUBLIC_LOCALE, "/wishlist")}
+          />
+          <button
+            type="submit"
+            className={buttonVariants({ className: "w-fit" })}
+          >
+            Save to wishlist
+          </button>
+        </form>
+        <Link
+          href={gardenFirstEntryPreselectionPath(item.publicSlug)}
+          className={buttonVariants({
+            variant: "outline",
+            className: "w-fit",
+          })}
+        >
+          Start first entry
+        </Link>
+      </div>
+    </section>
+  );
 }
 
 function normalizeFirstParam(value: string | string[] | undefined) {

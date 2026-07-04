@@ -31,6 +31,7 @@ import type {
   Spaces as SpacesTable,
   UserPublicProfiles as UserPublicProfilesTable,
   VarietySeedProofs as VarietySeedProofsTable,
+  WishlistItems as WishlistItemsTable,
 } from "./generated";
 
 export type Database = DB;
@@ -105,6 +106,7 @@ export type LineagePendingSourceInviteState =
   | "anonymized";
 export type LineageFollowState = "active" | "anonymized";
 export type LineageQuestionState = "delivered" | "anonymized";
+export type WishlistSourceSurface = "catalog_item" | "public_variety";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -180,6 +182,8 @@ export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
 export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
+export type WishlistItem = Selectable<WishlistItemsTable>;
+export type NewWishlistItem = Insertable<WishlistItemsTable>;
 export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
 export type NewPilotInterviewLearning =
   Insertable<PilotInterviewLearningsTable>;

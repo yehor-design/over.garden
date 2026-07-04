@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getPublicVarietyPage: vi.fn(),
   buildPublicVarietyJsonLd: vi.fn(),
+  addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 
 vi.mock("@/server/public-variety-repository", () => ({
@@ -12,6 +13,11 @@ vi.mock("@/server/public-variety-repository", () => ({
 
 vi.mock("@/server/public-variety-metadata", () => ({
   buildPublicVarietyJsonLd: mocks.buildPublicVarietyJsonLd,
+}));
+
+vi.mock("@/app/wishlist/actions", () => ({
+  addCatalogPublicSlugToWishlistAction:
+    mocks.addCatalogPublicSlugToWishlistAction,
 }));
 
 vi.mock("./source-credits", () => ({
@@ -74,6 +80,33 @@ describe("/variety/[slug]", () => {
     expect(html).toContain("Pilot catalog");
     expect(html).not.toContain(">seeded<");
     expect(html).not.toContain(">confirmed<");
+  });
+
+  it("renders a wishlist action without gating public variety reading", async () => {
+    const { default: PublicVarietyRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicVarietyRoute({
+        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+      }),
+    );
+
+    expect(html).toContain("Save to wishlist");
+    expect(html).toContain('name="catalogPublicSlug"');
+    expect(html).toContain('value="pomidor-cheri-0000000101"');
+    expect(html).toContain("/garden?catalog=pomidor-cheri-0000000101");
+    expect(html).toContain("First ripe cluster");
+  });
+
+  it("renders the saved wishlist status after a successful action redirect", async () => {
+    const { default: PublicVarietyRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicVarietyRoute({
+        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+        searchParams: Promise.resolve({ wishlist: "saved" }),
+      }),
+    );
+
+    expect(html).toContain("Saved to your wishlist.");
   });
 
   it("keeps thin public variety metadata noindex", async () => {

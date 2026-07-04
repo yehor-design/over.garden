@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
-import { Sprout } from "lucide-react";
+import { Bookmark, Sprout } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -11,16 +11,24 @@ import {
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import { publicCatalogStatusLabel } from "@/lib/garden/pilot-ux-copy";
+import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
+import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
 import { PublicVarietySourceCredits } from "./source-credits";
 
 export const dynamic = "force-dynamic";
 
 interface PublicVarietyRouteProps {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const EMPTY_PUBLIC_VARIETY_SEARCH_PARAMS: Record<
+  string,
+  string | string[] | undefined
+> = {};
 
 const getCachedPublicVarietyPage = cache((slug: string) =>
   getPublicVarietyPage(slug),
@@ -57,13 +65,17 @@ export async function generateMetadata({
 
 export default async function PublicVarietyRoute({
   params,
+  searchParams,
 }: PublicVarietyRouteProps) {
   const { slug } = await params;
+  const query = await (searchParams ??
+    Promise.resolve(EMPTY_PUBLIC_VARIETY_SEARCH_PARAMS));
   const page = await getCachedPublicVarietyPage(slug);
 
   if (!page) notFound();
 
   const jsonLd = buildPublicVarietyJsonLd(page);
+  const wishlistStatus = firstParam(query.wishlist);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -108,6 +120,34 @@ export default async function PublicVarietyRoute({
             <Sprout className="size-4" />
             Log this variety
           </Link>
+          <form action={addCatalogPublicSlugToWishlistAction}>
+            <input
+              type="hidden"
+              name="catalogPublicSlug"
+              value={page.catalog.publicSlug}
+            />
+            <input type="hidden" name="locale" value={DEFAULT_PUBLIC_LOCALE} />
+            <input
+              type="hidden"
+              name="returnTo"
+              value={publicVarietyPath(page.catalog.publicSlug)}
+            />
+            <button
+              type="submit"
+              className={buttonVariants({
+                variant: "outline",
+                className: "self-start",
+              })}
+            >
+              <Bookmark className="size-4" />
+              Save to wishlist
+            </button>
+          </form>
+          {wishlistStatus === "saved" ? (
+            <p className="text-sm text-muted-foreground">
+              Saved to your wishlist.
+            </p>
+          ) : null}
         </div>
       </header>
 
@@ -202,4 +242,9 @@ function formatDate(value: Date | string) {
 
 function formatCount(count: number, singular: string, plural: string) {
   return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function firstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0];
+  return value;
 }
