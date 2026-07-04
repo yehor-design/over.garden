@@ -39,6 +39,7 @@ describe("public SEO/AEO content foundation", () => {
       kind: "editorial_blog",
       locale: "uk",
       path: "/uk/blog",
+      lastModified: "2026-07-03T00:00:00.000Z",
       changeFrequency: "weekly",
       priority: 0.7,
     });
@@ -46,6 +47,15 @@ describe("public SEO/AEO content foundation", () => {
       kind: "marketing_landing",
       locale: "bg",
       path: "/bg/markets/bulgaria",
+      lastModified: "2026-07-03T00:00:00.000Z",
+      changeFrequency: "monthly",
+      priority: 0.65,
+    });
+    expect(entries).toContainEqual({
+      kind: "editorial_blog",
+      locale: "uk",
+      path: "/uk/blog/ai-garden-advice-vs-real-garden-proof",
+      lastModified: "2026-07-03T00:00:00.000Z",
       changeFrequency: "monthly",
       priority: 0.65,
     });

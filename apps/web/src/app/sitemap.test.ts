@@ -52,5 +52,16 @@ describe("/sitemap.xml", () => {
     expect(urls.join(" ")).not.toContain("/join");
     expect(urls.join(" ")).not.toContain("/garden");
     expect(urls.join(" ")).not.toContain("/journal/");
+    expect(
+      entries.every((entry) => entry.lastModified instanceof Date),
+    ).toBe(true);
+    expect(entries[0]).toMatchObject({
+      url: "https://over.garden/uk",
+      lastModified: new Date("2026-07-03T00:00:00.000Z"),
+    });
+    expect(entries.at(-1)).toMatchObject({
+      url: "https://over.garden/variety/pomidor-cheri-0000000101",
+      lastModified: new Date("2026-06-20T12:00:00.000Z"),
+    });
   });
 });

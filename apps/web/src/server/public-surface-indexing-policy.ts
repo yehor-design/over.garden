@@ -27,10 +27,15 @@ export type PublicSurfaceKind =
   | "lineage_graph"
   | "missing";
 
+export type NonDiscoveryRouteKind = "workspace" | "auth" | "operator";
+
 export type PublicSurfaceIndexValue = "noindex" | "indexable";
 
 export type PublicSurfaceIndexReason =
   | "authored_useful_surface"
+  | "workspace_route_noindex"
+  | "auth_route_noindex"
+  | "operator_route_noindex"
   | "journal_marked_noindex"
   | "entry_count_below_threshold"
   | "body_length_below_threshold"
@@ -89,15 +94,19 @@ export interface StaticIndexablePublicSurface {
     "marketing_landing" | "editorial_blog" | "guide" | "aeo_answer"
   >;
   path: string;
+  lastModified: string;
   changeFrequency: "weekly" | "monthly";
   priority: number;
 }
+
+export const AUTHORED_PUBLIC_SURFACE_LASTMOD = "2026-07-03T00:00:00.000Z";
 
 const STATIC_PUBLIC_SURFACES: StaticIndexablePublicSurface[] = [
   ...PUBLIC_LOCALES.map(
     (locale): StaticIndexablePublicSurface => ({
       kind: "marketing_landing",
       path: localizedPath(locale, "/"),
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
       changeFrequency: "weekly",
       priority: 0.8,
     }),
@@ -133,6 +142,19 @@ export function evaluatePublicSurfaceIndexability(
 
     case "missing":
       return noindex(["missing_public_surface"]);
+  }
+}
+
+export function evaluateNonDiscoveryRouteIndexability(
+  kind: NonDiscoveryRouteKind,
+): PublicSurfaceIndexState {
+  switch (kind) {
+    case "workspace":
+      return noindex(["workspace_route_noindex"]);
+    case "auth":
+      return noindex(["auth_route_noindex"]);
+    case "operator":
+      return noindex(["operator_route_noindex"]);
   }
 }
 

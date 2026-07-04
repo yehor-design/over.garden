@@ -17,11 +17,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     ...staticEntries.map((entry) => ({
       url: absolutePublicUrl(entry.path),
+      lastModified: new Date(entry.lastModified),
       changeFrequency: entry.changeFrequency,
       priority: entry.priority,
     })),
     ...authoredContentEntries.map((entry) => ({
       url: absolutePublicUrl(entry.path),
+      lastModified: new Date(entry.lastModified),
       changeFrequency: entry.changeFrequency,
       priority: entry.priority,
     })),

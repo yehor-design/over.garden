@@ -10,6 +10,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
+  AUTHORED_PUBLIC_SURFACE_LASTMOD,
   evaluatePublicSurfaceIndexability,
   type PublicSurfaceKind,
 } from "@/server/public-surface-indexing-policy";
@@ -102,6 +103,7 @@ export interface AuthoredPublicContentSitemapEntry {
   kind: AuthoredPublicContentKind;
   locale: PublicLocale;
   path: string;
+  lastModified: string;
   changeFrequency: SitemapFrequency;
   priority: number;
 }
@@ -109,6 +111,7 @@ export interface AuthoredPublicContentSitemapEntry {
 interface AuthoredPublicContentSitemapTemplate {
   kind: AuthoredPublicContentKind;
   path: string;
+  lastModified: string;
   changeFrequency: SitemapFrequency;
   priority: number;
   locales: readonly PublicLocale[];
@@ -400,6 +403,7 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
     {
       kind: "editorial_blog",
       path: BLOG_INDEX_PATH,
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
       changeFrequency: "weekly",
       priority: 0.7,
       locales: PUBLIC_LOCALES,
@@ -407,6 +411,7 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
     ...BLOG_POSTS.map((post) => ({
       kind: post.kind,
       path: post.path,
+      lastModified: dateOnlyToUtcLastModified(post.publishedDate),
       changeFrequency: "monthly" as const,
       priority: 0.65,
       locales: PUBLIC_LOCALES,
@@ -414,6 +419,7 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
     ...GUIDES.map((guide) => ({
       kind: guide.kind,
       path: guide.path,
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
       changeFrequency: "monthly" as const,
       priority: 0.65,
       locales: PUBLIC_LOCALES,
@@ -421,6 +427,7 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
     ...ANSWER_PAGES.map((page) => ({
       kind: page.kind,
       path: page.path,
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
       changeFrequency: "monthly" as const,
       priority: 0.6,
       locales: PUBLIC_LOCALES,
@@ -428,6 +435,7 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
     ...MARKET_LANDINGS.map((landing) => ({
       kind: landing.kind,
       path: landing.path,
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
       changeFrequency: "monthly" as const,
       priority: 0.65,
       locales: MARKET_LANDING_LOCALES[landing.market],
@@ -446,11 +454,16 @@ export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPubl
         kind: entry.kind,
         locale,
         path: localizedPath(locale, entry.path),
+        lastModified: entry.lastModified,
         changeFrequency: entry.changeFrequency,
         priority: entry.priority,
       }),
     );
   });
+}
+
+function dateOnlyToUtcLastModified(date: string) {
+  return `${date}T00:00:00.000Z`;
 }
 
 export function buildAnswerPageJsonLd(

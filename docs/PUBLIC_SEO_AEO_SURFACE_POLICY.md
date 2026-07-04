@@ -25,6 +25,7 @@ Current decisions:
 
 - Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
 - The localized homepages `/uk`, `/bg`, and `/ru` are the first authored marketing landing surfaces included in the sitemap.
+- Private workspace, auth, and operator route groups such as `/garden`, `/auth/*`, and `/admin/*` must emit `noindex, nofollow` route metadata. This metadata is a crawl-quality control, not a privacy boundary.
 - OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
 - OVE-117 moves the canonical public content routes into language folders: `/uk`, `/bg`, and `/ru` for home/blog/guide/answer/static surfaces, with market-aware availability for `/uk/markets/ukraine`, `/ru/markets/ukraine`, `/bg/markets/bulgaria`, `/ru/markets/bulgaria`, and `/uk/markets/bulgaria`.
 - Root `/` is an explicit `Accept-Language` redirect with `/uk` fallback; it is not a sitemap URL.
@@ -41,6 +42,8 @@ Current decisions:
 
 Static and authored SEO/AEO sitemap URLs must use canonical localized paths. Non-localized public content URLs are legacy redirects and must not be included.
 
+Every sitemap row must include a stable `lastmod`/`lastModified` value. Authored static/content surfaces use their explicit content-foundation date, while promoted aggregation rows must provide the latest safe public source-content timestamp through the same sitemap-entry path. Do not use build time or request time as a fake freshness signal.
+
 The sitemap must not include:
 
 - authenticated routes such as `/garden`, `/admin`, or operator readouts;
@@ -56,6 +59,10 @@ Public route metadata must use the same policy for `robots`.
 Structured data must never bypass the policy. For example, variety JSON-LD is emitted only when the server policy marks the variety aggregation indexable. Thin pages must not receive templated JSON-LD because that is both a quality risk and an AEO spam signal.
 
 OVE-116 answer-page JSON-LD is limited to curated authored answer pages. It must include only the page, FAQ questions, and FAQ answers already visible in the HTML; it must not carry private journal text, media internals, raw source payloads, or user identifiers.
+
+## Robots.txt Rule
+
+`apps/web/src/app/robots.ts` must point to the canonical `https://over.garden/sitemap.xml` and allow normal crawl/retrieval discovery for public authored/indexable pages. It must not block workspace/auth/operator paths as a substitute for route-level `noindex`, because crawlers need to see page metadata and `robots.txt` is not a privacy control.
 
 ## Privacy Boundary
 

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  AUTHORED_PUBLIC_SURFACE_LASTMOD,
+  evaluateNonDiscoveryRouteIndexability,
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
   listStaticIndexablePublicSurfaces,
@@ -137,23 +139,46 @@ describe("public surface indexing policy", () => {
     }
   });
 
+  it("keeps private workspace, auth, and operator routes out of organic discovery", () => {
+    expect(evaluateNonDiscoveryRouteIndexability("workspace")).toMatchObject({
+      value: "noindex",
+      isIndexable: false,
+      sitemapEligible: false,
+      robots: { index: false, follow: false },
+      reasons: ["workspace_route_noindex"],
+    });
+    expect(evaluateNonDiscoveryRouteIndexability("auth")).toMatchObject({
+      value: "noindex",
+      robots: { index: false, follow: false },
+      reasons: ["auth_route_noindex"],
+    });
+    expect(evaluateNonDiscoveryRouteIndexability("operator")).toMatchObject({
+      value: "noindex",
+      robots: { index: false, follow: false },
+      reasons: ["operator_route_noindex"],
+    });
+  });
+
   it("lists only static authored surfaces that the same policy marks sitemap-eligible", () => {
     expect(listStaticIndexablePublicSurfaces()).toEqual([
       {
         kind: "marketing_landing",
         path: "/uk",
+        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
         changeFrequency: "weekly",
         priority: 0.8,
       },
       {
         kind: "marketing_landing",
         path: "/bg",
+        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
         changeFrequency: "weekly",
         priority: 0.8,
       },
       {
         kind: "marketing_landing",
         path: "/ru",
+        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
         changeFrequency: "weekly",
         priority: 0.8,
       },
