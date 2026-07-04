@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   getPublicLineageGraphPage: vi.fn(),
+  getEngagementSummary: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/server/public-lineage-repository", () => ({
   getPublicLineageGraphPage: mocks.getPublicLineageGraphPage,
 }));
 
+vi.mock("@/server/engagement-repository", () => ({
+  getEngagementSummary: mocks.getEngagementSummary,
+}));
+
 const objectId = "00000000-0000-4000-8000-000000000101";
 const sourceObjectId = "00000000-0000-4000-8000-000000000102";
 
@@ -24,6 +29,14 @@ describe("/lineage/objects/[objectId]", () => {
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.getSessionId.mockReturnValue(null);
+    mocks.getEngagementSummary.mockResolvedValue({
+      target: {
+        kind: "lineage_object",
+        ref: objectId,
+      },
+      activeLikeCount: 0,
+      comments: [],
+    });
     mocks.getPublicLineageGraphPage.mockResolvedValue({
       root: {
         plantObjectId: objectId,
@@ -98,13 +111,16 @@ describe("/lineage/objects/[objectId]", () => {
     expect(mocks.getPublicLineageGraphPage).toHaveBeenCalledWith(objectId);
     expect(html).toContain("Lineage graph");
     expect(html).toContain("Confirmed provenance");
+    expect(html).toContain("/api/engagement/likes");
+    expect(html).toContain("/api/engagement/bookmarks");
+    expect(html).toContain("/api/engagement/comments");
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("Seed mother");
     expect(html).toContain("Red Cherry");
     expect(html).toContain("Region: Ukraine - Kyiv City");
     expect(html).toContain("/variety/red-cherry-tomato-0000000101");
     expect(html).not.toMatch(
-      /journal body|quarantine|derivative|media key|ip_address|ipaddress|user_agent|useragent|user-agent|email|phone|coarse_region|location_visibility|coordinates|@private|https?:\/\//i,
+      /journal body|quarantine|derivative|media key|ip_address|ipaddress|user_agent|useragent|user-agent|email|phone|coarse_region|location_visibility|coordinates|@private|(?:href|src)="https?:\/\//i,
     );
   });
 

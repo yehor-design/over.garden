@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import {
   activationSurfaceKindForSource,
@@ -61,6 +62,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const userId = session?.user?.id;
   const initialCatalogItem = await resolveInitialCatalogSelection(params);
   const pendingWishlistItem = await resolvePendingWishlistSelection(params);
+  const engagementAuthMessage = engagementAuthPrompt(params.engagement);
+  const engagementPostAuthPath = engagementAuthMessage
+    ? normalizeGardenReturnToParam(params.returnTo)
+    : null;
   const saveProgressKind = normalizeSaveProgressMomentKind(params.saveProgress);
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
@@ -69,6 +74,15 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const googleSignInEnabled = isGoogleSignInEnabled();
   const oauthMessage = oauthErrorRecoveryMessage(params.error);
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+
+  if (
+    userId &&
+    engagementPostAuthPath &&
+    engagementPostAuthPath !== "/garden"
+  ) {
+    redirect(engagementPostAuthPath);
+  }
+
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
@@ -122,6 +136,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 Notifications
               </Link>
               <Link
+                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/bookmarks")}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Bookmarks
+              </Link>
+              <Link
                 href="/garden/lineage/claims"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
@@ -162,10 +182,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           googleSignInEnabled={googleSignInEnabled}
           initialMessage={
             oauthMessage ??
+            engagementAuthMessage ??
             (pendingWishlistItem
               ? `Sign in to save ${pendingWishlistItem.canonicalName} to your wishlist.`
               : null)
           }
+          postAuthPath={engagementPostAuthPath}
         />
       ) : null}
 
@@ -578,6 +600,30 @@ function PendingWishlistIntentPanel({
       </div>
     </section>
   );
+}
+
+function engagementAuthPrompt(value: string | string[] | undefined) {
+  const intent = normalizeFirstParam(value);
+  if (intent === "comment-auth") {
+    return "Sign in to comment on that public page.";
+  }
+  if (intent === "bookmark-auth") {
+    return "Sign in to bookmark that public page.";
+  }
+  return null;
+}
+
+function normalizeGardenReturnToParam(value: string | string[] | undefined) {
+  const raw = normalizeFirstParam(value);
+  if (
+    raw.startsWith("/") &&
+    !raw.startsWith("//") &&
+    !raw.includes("\n") &&
+    !raw.includes("\r")
+  ) {
+    return raw;
+  }
+  return "/garden";
 }
 
 function normalizeFirstParam(value: string | string[] | undefined) {

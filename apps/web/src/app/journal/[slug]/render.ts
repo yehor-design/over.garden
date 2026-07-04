@@ -4,6 +4,10 @@ import {
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
+import type {
+  EngagementTarget,
+  PublicEngagementSummary,
+} from "@/server/engagement-repository";
 import {
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
@@ -13,7 +17,11 @@ import {
 // module so the public-facing bytes can be unit/privacy tested without the
 // Next.js route runtime. The route handler only adds the HTTP response shell.
 
-export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
+export function renderPublicJournalEntryHtml(
+  page: PublicJournalEntryPage,
+  engagement?: PublicEngagementSummary,
+  engagementStatus?: string | null,
+) {
   const title = `${page.entry.title} | OverGarden`;
   const description = summarize(page.entry.body);
   const robots = formatRobotsMetaContent(
@@ -56,6 +64,16 @@ export function renderPublicJournalEntryHtml(page: PublicJournalEntryPage) {
           }
           <p>${escapeHtml(page.entry.body).replaceAll("\n", "<br />")}</p>
         </article>
+        ${
+          engagement
+            ? renderEngagementHtml({
+                target: engagement.target,
+                summary: engagement,
+                returnTo: publicJournalEntryPath(page.entry.publicSlug),
+                status: engagementStatus,
+              })
+            : ""
+        }
       </main>
     `,
   });
@@ -124,6 +142,122 @@ function getPublicVarietyLink(page: PublicJournalEntryPage) {
     "Variety";
 
   return `<a class="inline-link" href="${escapeAttribute(publicVarietyPath(page.plantObject.catalogPublicSlug))}">${escapeHtml(label)}</a>`;
+}
+
+function renderEngagementHtml({
+  target,
+  summary,
+  returnTo,
+  status,
+}: {
+  target: EngagementTarget;
+  summary: PublicEngagementSummary;
+  returnTo: string;
+  status?: string | null;
+}) {
+  return `
+    <section class="engagement">
+      <div class="engagement-actions">
+        <div class="action-row">
+          ${renderActionForm({
+            action: "/api/engagement/likes",
+            target,
+            returnTo,
+            label: "Like",
+          })}
+          ${renderActionForm({
+            action: "/api/engagement/bookmarks",
+            target,
+            returnTo,
+            label: "Bookmark",
+          })}
+        </div>
+        <p class="muted">${summary.activeLikeCount} like${summary.activeLikeCount === 1 ? "" : "s"}</p>
+      </div>
+      ${status ? `<p class="muted">${escapeHtml(engagementStatusMessage(status))}</p>` : ""}
+      <form method="post" action="/api/engagement/comments" class="comment-form">
+        ${renderTargetFields(target, returnTo)}
+        <label>
+          <span>Comment</span>
+          <textarea name="body" maxlength="600" rows="3"></textarea>
+        </label>
+        <button class="button" type="submit">Comment</button>
+      </form>
+      ${
+        summary.comments.length === 0
+          ? `<p class="muted">No comments yet.</p>`
+          : `<ol class="comments">${summary.comments
+              .map(
+                (comment) => `
+                  <li class="comment">
+                    <div class="comment-meta">
+                      <strong>${escapeHtml(comment.authorLabel)}</strong>
+                      <time>${escapeHtml(formatDate(comment.createdAt))}</time>
+                    </div>
+                    ${comment.parentReplyToken ? `<p class="muted">Reply</p>` : ""}
+                    <p>${escapeHtml(comment.body).replaceAll("\n", "<br />")}</p>
+                    <form method="post" action="/api/engagement/comments" class="reply-form">
+                      ${renderTargetFields(target, returnTo)}
+                      <input type="hidden" name="parentCommentId" value="${escapeAttribute(comment.replyToken)}" />
+                      <label>
+                        <span>Reply</span>
+                        <textarea name="body" maxlength="600" rows="2"></textarea>
+                      </label>
+                      <button class="button secondary" type="submit">Reply</button>
+                    </form>
+                  </li>
+                `,
+              )
+              .join("")}</ol>`
+      }
+    </section>
+  `;
+}
+
+function renderActionForm({
+  action,
+  target,
+  returnTo,
+  label,
+}: {
+  action: string;
+  target: EngagementTarget;
+  returnTo: string;
+  label: string;
+}) {
+  return `
+    <form method="post" action="${escapeAttribute(action)}">
+      ${renderTargetFields(target, returnTo)}
+      <button class="button" type="submit">${escapeHtml(label)}</button>
+    </form>
+  `;
+}
+
+function renderTargetFields(target: EngagementTarget, returnTo: string) {
+  return `
+    <input type="hidden" name="targetKind" value="${escapeAttribute(target.kind)}" />
+    <input type="hidden" name="targetRef" value="${escapeAttribute(target.ref)}" />
+    <input type="hidden" name="returnTo" value="${escapeAttribute(returnTo)}" />
+  `;
+}
+
+function engagementStatusMessage(status: string) {
+  switch (status) {
+    case "liked":
+      return "Liked.";
+    case "unliked":
+      return "Like removed.";
+    case "like-rate-limited":
+      return "Too many like toggles. Try again later.";
+    case "bookmarked":
+      return "Saved to bookmarks.";
+    case "bookmark-removed":
+      return "Removed from bookmarks.";
+    case "commented":
+      return "Comment posted.";
+    default:
+      return "";
+  }
 }
 
 function renderShell({
@@ -242,6 +376,72 @@ function renderShell({
         border: 1px solid var(--border);
         border-radius: 0.5rem;
         background: var(--panel);
+      }
+      .engagement {
+        display: grid;
+        gap: 1rem;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        margin-top: 1.5rem;
+        padding: 1.25rem 0;
+      }
+      .engagement-actions,
+      .action-row,
+      .comment-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .action-row {
+        justify-content: flex-start;
+      }
+      .comment-form,
+      .reply-form,
+      .comments,
+      .comment {
+        display: grid;
+        gap: 0.75rem;
+      }
+      label {
+        display: grid;
+        gap: 0.4rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      textarea {
+        width: 100%;
+        min-height: 5rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+        line-height: 1.6;
+        padding: 0.65rem 0.75rem;
+      }
+      ol.comments {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .comment {
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        padding: 0.85rem;
+        background: var(--panel);
+      }
+      .comment p,
+      .muted {
+        margin: 0;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+      .secondary {
+        background: transparent;
       }
       @media (min-width: 640px) {
         h1 {

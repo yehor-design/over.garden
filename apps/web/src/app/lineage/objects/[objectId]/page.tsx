@@ -15,19 +15,24 @@ import {
 } from "@/server/public-lineage-repository";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getEngagementSummary } from "@/server/engagement-repository";
 import { listLineageInteractionTargets } from "@/server/lineage-interactions-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
-import {
-  askLineageQuestionAction,
-  followLineageNodeAction,
-} from "./actions";
+import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
 interface PublicLineageObjectRouteProps {
   params: Promise<{ objectId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
+
+const EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS: Record<
+  string,
+  string | string[] | undefined
+> = {};
 
 const getCachedPublicLineageGraphPage = cache((objectId: string) =>
   getPublicLineageGraphPage(objectId),
@@ -61,8 +66,11 @@ export async function generateMetadata({
 
 export default async function PublicLineageObjectRoute({
   params,
+  searchParams,
 }: PublicLineageObjectRouteProps) {
   const { objectId } = await params;
+  const query = await (searchParams ??
+    Promise.resolve(EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS));
   const page = await getCachedPublicLineageGraphPage(objectId);
 
   if (!page) notFound();
@@ -86,6 +94,11 @@ export default async function PublicLineageObjectRoute({
   const interactionTargetsByEdgeId = new Map(
     interactionTargets.map((target) => [target.edgeId, target]),
   );
+  const engagementTarget = {
+    kind: "lineage_object" as const,
+    ref: page.root.plantObjectId,
+  };
+  const engagement = await getEngagementSummary(engagementTarget);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -110,6 +123,13 @@ export default async function PublicLineageObjectRoute({
         </div>
       </header>
 
+      <PublicEngagementPanel
+        target={engagementTarget}
+        summary={engagement}
+        returnTo={publicLineageObjectPath(page.root.plantObjectId)}
+        status={firstParam(query.engagement)}
+      />
+
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">
@@ -131,8 +151,9 @@ export default async function PublicLineageObjectRoute({
               const subject = nodesById.get(edge.subjectPlantObjectId);
               const source = nodesById.get(edge.sourcePlantObjectId);
               if (!subject || !source) return null;
-              const interactionTargetId =
-                interactionTargetsByEdgeId.get(edge.id)?.targetPlantObjectId;
+              const interactionTargetId = interactionTargetsByEdgeId.get(
+                edge.id,
+              )?.targetPlantObjectId;
               const interactionTarget = interactionTargetId
                 ? nodesById.get(interactionTargetId)
                 : null;
@@ -346,4 +367,9 @@ function formatDate(value: Date | string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function firstParam(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0];
+  return value;
 }

@@ -13,6 +13,9 @@ import type {
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
+  EngagementBookmarks as EngagementBookmarksTable,
+  EngagementComments as EngagementCommentsTable,
+  EngagementLikes as EngagementLikesTable,
   ErasureRequests as ErasureRequestsTable,
   Health as HealthTable,
   JobQueue as JobQueueTable,
@@ -107,6 +110,14 @@ export type LineagePendingSourceInviteState =
 export type LineageFollowState = "active" | "anonymized";
 export type LineageQuestionState = "delivered" | "anonymized";
 export type WishlistSourceSurface = "catalog_item" | "public_variety";
+export type EngagementTargetKind =
+  | "journal_entry"
+  | "lineage_object"
+  | "variety"
+  | "topic";
+export type EngagementCommentState = "active" | "deleted" | "reported";
+export type EngagementBookmarkState = "active" | "removed";
+export type EngagementLikeState = "active" | "removed";
 export type CatalogAliasStatus =
   | "accepted"
   | "review_needed"
@@ -184,6 +195,12 @@ export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
 export type WishlistItem = Selectable<WishlistItemsTable>;
 export type NewWishlistItem = Insertable<WishlistItemsTable>;
+export type EngagementBookmark = Selectable<EngagementBookmarksTable>;
+export type NewEngagementBookmark = Insertable<EngagementBookmarksTable>;
+export type EngagementComment = Selectable<EngagementCommentsTable>;
+export type NewEngagementComment = Insertable<EngagementCommentsTable>;
+export type EngagementLike = Selectable<EngagementLikesTable>;
+export type NewEngagementLike = Insertable<EngagementLikesTable>;
 export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
 export type NewPilotInterviewLearning =
   Insertable<PilotInterviewLearningsTable>;

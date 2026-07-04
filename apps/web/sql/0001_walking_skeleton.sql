@@ -523,6 +523,145 @@ end $$;
 create index if not exists wishlist_items_owner_created_idx
   on wishlist_items (owner_user_id, created_at desc);
 
+-- Bounded public engagement (OVE-138). Engagement stores only public-safe
+-- target handles, signed-in owner/comment authors, hashed anonymous like
+-- device tokens, bounded comment text, and timestamps. It is intentionally
+-- separate from public-surface promotion, search, sitemap, notification
+-- priority, and journal/object privacy state.
+create table if not exists engagement_comments (
+  id uuid primary key default gen_random_uuid(),
+  target_kind text not null check (
+    target_kind in ('journal_entry', 'lineage_object', 'variety', 'topic')
+  ),
+  target_ref text not null constraint engagement_comments_target_ref_check check (
+    char_length(target_ref) between 1 and 160
+    and target_ref !~ '[[:cntrl:][:space:]?#]'
+  ),
+  author_user_id uuid not null,
+  parent_comment_id uuid references engagement_comments(id) on delete set null,
+  body text not null check (
+    length(btrim(body)) between 1 and 600
+  ),
+  comment_state text not null default 'active' check (
+    comment_state in ('active', 'deleted', 'reported')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists engagement_bookmarks (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  target_kind text not null check (
+    target_kind in ('journal_entry', 'lineage_object', 'variety', 'topic')
+  ),
+  target_ref text not null constraint engagement_bookmarks_target_ref_check check (
+    char_length(target_ref) between 1 and 160
+    and target_ref !~ '[[:cntrl:][:space:]?#]'
+  ),
+  bookmark_state text not null default 'active' check (
+    bookmark_state in ('active', 'removed')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint engagement_bookmarks_owner_target_uidx
+    unique (owner_user_id, target_kind, target_ref)
+);
+
+create table if not exists engagement_likes (
+  id uuid primary key default gen_random_uuid(),
+  target_kind text not null check (
+    target_kind in ('journal_entry', 'lineage_object', 'variety', 'topic')
+  ),
+  target_ref text not null constraint engagement_likes_target_ref_check check (
+    char_length(target_ref) between 1 and 160
+    and target_ref !~ '[[:cntrl:][:space:]?#]'
+  ),
+  anonymous_device_hash text not null check (
+    anonymous_device_hash ~ '^[a-f0-9]{64}$'
+  ),
+  like_state text not null default 'active' check (
+    like_state in ('active', 'removed')
+  ),
+  toggle_window_started_at timestamptz not null default now(),
+  toggle_count integer not null default 1 check (
+    toggle_count between 1 and 50
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint engagement_likes_device_target_uidx
+    unique (target_kind, target_ref, anonymous_device_hash)
+);
+
+do $$
+begin
+  alter table engagement_comments
+    drop constraint if exists engagement_comments_target_ref_check;
+  alter table engagement_comments
+    add constraint engagement_comments_target_ref_check
+    check (
+      char_length(target_ref) between 1 and 160
+      and target_ref !~ '[[:cntrl:][:space:]?#]'
+    );
+
+  alter table engagement_bookmarks
+    drop constraint if exists engagement_bookmarks_target_ref_check;
+  alter table engagement_bookmarks
+    add constraint engagement_bookmarks_target_ref_check
+    check (
+      char_length(target_ref) between 1 and 160
+      and target_ref !~ '[[:cntrl:][:space:]?#]'
+    );
+
+  alter table engagement_likes
+    drop constraint if exists engagement_likes_target_ref_check;
+  alter table engagement_likes
+    add constraint engagement_likes_target_ref_check
+    check (
+      char_length(target_ref) between 1 and 160
+      and target_ref !~ '[[:cntrl:][:space:]?#]'
+    );
+
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'engagement_comments_author_user_id_fkey'
+        and conrelid = 'engagement_comments'::regclass
+    ) then
+      alter table engagement_comments
+        add constraint engagement_comments_author_user_id_fkey
+        foreign key (author_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'engagement_bookmarks_owner_user_id_fkey'
+        and conrelid = 'engagement_bookmarks'::regclass
+    ) then
+      alter table engagement_bookmarks
+        add constraint engagement_bookmarks_owner_user_id_fkey
+        foreign key (owner_user_id) references "user"(id) on delete cascade;
+    end if;
+  end if;
+end $$;
+
+create index if not exists engagement_comments_target_created_idx
+  on engagement_comments (target_kind, target_ref, created_at asc)
+  where comment_state = 'active';
+
+create index if not exists engagement_comments_author_created_idx
+  on engagement_comments (author_user_id, created_at desc);
+
+create index if not exists engagement_bookmarks_owner_created_idx
+  on engagement_bookmarks (owner_user_id, created_at desc)
+  where bookmark_state = 'active';
+
+create index if not exists engagement_likes_target_active_idx
+  on engagement_likes (target_kind, target_ref, updated_at desc)
+  where like_state = 'active';
+
 create table if not exists catalog_source_snapshots (
   id uuid primary key default gen_random_uuid(),
   source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),

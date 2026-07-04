@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getPublicVarietyPage: vi.fn(),
   buildPublicVarietyJsonLd: vi.fn(),
+  getEngagementSummary: vi.fn(),
   addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
 
@@ -13,6 +14,10 @@ vi.mock("@/server/public-variety-repository", () => ({
 
 vi.mock("@/server/public-variety-metadata", () => ({
   buildPublicVarietyJsonLd: mocks.buildPublicVarietyJsonLd,
+}));
+
+vi.mock("@/server/engagement-repository", () => ({
+  getEngagementSummary: mocks.getEngagementSummary,
 }));
 
 vi.mock("@/app/wishlist/actions", () => ({
@@ -29,6 +34,14 @@ describe("/variety/[slug]", () => {
     vi.resetModules();
     vi.clearAllMocks();
     mocks.buildPublicVarietyJsonLd.mockReturnValue(null);
+    mocks.getEngagementSummary.mockResolvedValue({
+      target: {
+        kind: "variety",
+        ref: "pomidor-cheri-0000000101",
+      },
+      activeLikeCount: 0,
+      comments: [],
+    });
     mocks.getPublicVarietyPage.mockResolvedValue({
       catalog: {
         canonicalName: "Pomidor Cheri",
@@ -91,6 +104,9 @@ describe("/variety/[slug]", () => {
     );
 
     expect(html).toContain("Save to wishlist");
+    expect(html).toContain("/api/engagement/likes");
+    expect(html).toContain("/api/engagement/bookmarks");
+    expect(html).toContain("/api/engagement/comments");
     expect(html).toContain('name="catalogPublicSlug"');
     expect(html).toContain('value="pomidor-cheri-0000000101"');
     expect(html).toContain("/garden?catalog=pomidor-cheri-0000000101");

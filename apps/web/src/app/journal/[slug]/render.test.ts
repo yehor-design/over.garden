@@ -30,6 +30,40 @@ describe("public journal HTML renderer", () => {
     expect(html).toContain("Balcony");
     expect(html).not.toContain("/variety/");
   });
+
+  it("renders engagement forms and comment readback without private identifiers", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      {
+        target: {
+          kind: "journal_entry",
+          ref: "first-ripe-cluster",
+        },
+        activeLikeCount: 1,
+        comments: [
+          {
+            key: "comment:public",
+            replyToken: "00000000-0000-4000-8000-000000000201",
+            body: "Looks sturdy after rain.",
+            authorLabel: "@green_thumb",
+            authorHandle: "green_thumb",
+            parentReplyToken: null,
+            createdAt: "2026-07-04T08:00:00.000Z",
+          },
+        ],
+      },
+      "commented",
+    );
+
+    expect(html).toContain("/api/engagement/likes");
+    expect(html).toContain("/api/engagement/bookmarks");
+    expect(html).toContain("/api/engagement/comments");
+    expect(html).toContain("Looks sturdy after rain.");
+    expect(html).toContain("Comment posted.");
+    expect(html).not.toMatch(
+      /author_user_id|owner_user_id|quarantine|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
+    );
+  });
 });
 
 function buildPage({

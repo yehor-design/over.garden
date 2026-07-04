@@ -15,7 +15,9 @@ import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
+import { getEngagementSummary } from "@/server/engagement-repository";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
+import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { PublicVarietySourceCredits } from "./source-credits";
 
 export const dynamic = "force-dynamic";
@@ -76,6 +78,12 @@ export default async function PublicVarietyRoute({
 
   const jsonLd = buildPublicVarietyJsonLd(page);
   const wishlistStatus = firstParam(query.wishlist);
+  const engagementStatus = firstParam(query.engagement);
+  const engagementTarget = {
+    kind: "variety" as const,
+    ref: page.catalog.publicSlug,
+  };
+  const engagement = await getEngagementSummary(engagementTarget);
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
@@ -176,6 +184,13 @@ export default async function PublicVarietyRoute({
       ) : null}
 
       <PublicVarietySourceCredits credits={page.sourceCredits} />
+
+      <PublicEngagementPanel
+        target={engagementTarget}
+        summary={engagement}
+        returnTo={publicVarietyPath(page.catalog.publicSlug)}
+        status={engagementStatus}
+      />
 
       <ol className="grid gap-4">
         {page.entries.map((entry) => (

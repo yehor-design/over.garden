@@ -45,6 +45,7 @@ interface GardenAuthPanelProps {
   facebookSignInEnabled?: boolean;
   googleSignInEnabled?: boolean;
   initialMessage?: string | null;
+  postAuthPath?: string | null;
 }
 
 export function GardenAuthPanel({
@@ -53,6 +54,7 @@ export function GardenAuthPanel({
   facebookSignInEnabled = false,
   googleSignInEnabled = false,
   initialMessage = null,
+  postAuthPath = null,
 }: GardenAuthPanelProps) {
   const router = useRouter();
   const useDevDefaults = shouldUseLocalDevAuthDefaults();
@@ -80,7 +82,7 @@ export function GardenAuthPanel({
       email: email.trim(),
       password,
       name: name.trim() || email.trim().split("@")[0] || "Gardener",
-      callbackURL: "/garden",
+      callbackURL: postAuthPath ?? "/garden",
     });
 
     setIsPending(false);
@@ -93,7 +95,9 @@ export function GardenAuthPanel({
       return;
     }
 
-    setMessage("Check your email to verify the account, then open your garden.");
+    setMessage(
+      "Check your email to verify the account, then open your garden.",
+    );
     router.refresh();
   }
 
@@ -113,6 +117,11 @@ export function GardenAuthPanel({
         interpretAuthClientErrorMessage(error) ??
           "Could not sign in. Check your email and password.",
       );
+      return;
+    }
+
+    if (postAuthPath) {
+      router.push(postAuthPath);
       return;
     }
 

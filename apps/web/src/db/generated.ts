@@ -198,6 +198,40 @@ export interface CatalogSourceSnapshots {
   verified_at: Timestamp;
 }
 
+export interface EngagementBookmarks {
+  bookmark_state: Generated<string>;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  owner_user_id: string;
+  target_kind: string;
+  target_ref: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface EngagementComments {
+  author_user_id: string;
+  body: string;
+  comment_state: Generated<string>;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  parent_comment_id: string | null;
+  target_kind: string;
+  target_ref: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface EngagementLikes {
+  anonymous_device_hash: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  like_state: Generated<string>;
+  target_kind: string;
+  target_ref: string;
+  toggle_count: Generated<number>;
+  toggle_window_started_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface ErasureRequests {
   created_at: Generated<Timestamp>;
   dry_run_reviewed_at: Timestamp | null;
@@ -480,6 +514,9 @@ export interface DB {
   catalog_source_refresh_events: CatalogSourceRefreshEvents;
   catalog_source_refresh_records: CatalogSourceRefreshRecords;
   catalog_source_snapshots: CatalogSourceSnapshots;
+  engagement_bookmarks: EngagementBookmarks;
+  engagement_comments: EngagementComments;
+  engagement_likes: EngagementLikes;
   erasure_requests: ErasureRequests;
   health: Health;
   job_queue: JobQueue;
