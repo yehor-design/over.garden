@@ -222,53 +222,60 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       ) : null}
 
       {userId ? (
-        writeAccess.invited ? (
-          <>
-            <GardenDraftResumePanel />
-            {pendingWishlistItem ? (
-              <PendingWishlistIntentPanel item={pendingWishlistItem} />
-            ) : null}
-            {saveProgressKind === "space-entry" ? (
-              <SaveProgressMoment
-                kind={saveProgressKind}
-                entryCount={spaceJournalEntryCount}
-                spaceName="your garden"
-                primaryHref="#space-journals"
-                primaryLabel="Return to space timelines"
-                secondaryHref="#first-entry-composer"
-                secondaryLabel="Add another entry"
-              />
-            ) : null}
-            <WorkspaceOverview
-              hasObjects={hasObjects}
-              stats={workspaceStats}
-              nextAction={nextAction}
+        <>
+          {writeAccess.invited ? <GardenDraftResumePanel /> : null}
+          {writeAccess.invited && pendingWishlistItem ? (
+            <PendingWishlistIntentPanel item={pendingWishlistItem} />
+          ) : null}
+          {writeAccess.invited && saveProgressKind === "space-entry" ? (
+            <SaveProgressMoment
+              kind={saveProgressKind}
+              entryCount={spaceJournalEntryCount}
+              spaceName="your garden"
+              primaryHref="#space-journals"
+              primaryLabel="Return to space timelines"
+              secondaryHref="#first-entry-composer"
+              secondaryLabel="Add another entry"
             />
+          ) : null}
+          <WorkspaceOverview
+            canWrite={writeAccess.invited}
+            hasObjects={hasObjects}
+            stats={workspaceStats}
+            nextAction={nextAction}
+          />
 
-            <div className="grid gap-6 xl:grid-cols-3">
-              <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
-                <ObjectInventory objects={objects} today={today} />
+          <div className="grid gap-6 xl:grid-cols-3">
+            <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
+              <ObjectInventory
+                canWrite={writeAccess.invited}
+                objects={objects}
+                today={today}
+              />
 
-                <section
-                  id="first-entry-composer"
-                  className="flex flex-col gap-4 rounded-lg border border-border p-4"
-                >
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                      {hasObjects ? "Add object" : "Start workspace"}
-                    </p>
-                    <h2 className="text-lg font-semibold text-foreground">
-                      {hasObjects
-                        ? "Start another living object"
-                        : "First living object"}
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {hasObjects
+              <section
+                id="first-entry-composer"
+                className="flex flex-col gap-4 rounded-lg border border-border p-4"
+              >
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    {hasObjects ? "Add object" : "Start workspace"}
+                  </p>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    {hasObjects
+                      ? "Start another living object"
+                      : "First living object"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {!writeAccess.invited
+                      ? "Your workspace structure is visible now; writing unlocks after a valid pilot invitation."
+                      : hasObjects
                         ? "Create a separate record when the next plant, colony, or animal needs its own history."
                         : "Save the first note with a catalog match, your own catalog name, or no match yet."}
-                    </p>
-                  </div>
+                  </p>
+                </div>
 
+                {writeAccess.invited ? (
                   <FirstEntryComposer
                     key={initialCatalogItem?.id ?? "first-entry"}
                     today={today}
@@ -276,48 +283,51 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                     initialCatalogItem={initialCatalogItem}
                     activationSource={activationSource}
                   />
+                ) : (
+                  <ClosedPilotWriteCallout />
+                )}
+              </section>
+
+              {hasObjects ? (
+                <section id="space-journals" className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      Space timeline
+                    </p>
+                    <h2 className="text-lg font-semibold text-foreground">
+                      Space journals
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {writeAccess.invited
+                        ? "Write one dated story for a whole space and mention the objects it covers."
+                        : "Read the dated history for this space. New space notes unlock after write access is available."}
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4">
+                    {spaceTimelines.map((timeline) => (
+                      <SpaceTimelinePanel
+                        key={timeline.space.id}
+                        canWrite={writeAccess.invited}
+                        timeline={timeline}
+                        today={today}
+                      />
+                    ))}
+                  </div>
                 </section>
-
-                {hasObjects ? (
-                  <section id="space-journals" className="flex flex-col gap-4">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase">
-                        Space timeline
-                      </p>
-                      <h2 className="text-lg font-semibold text-foreground">
-                        Space journals
-                      </h2>
-                      <p className="text-sm text-muted-foreground">
-                        Write one dated story for a whole space and mention the
-                        objects it covers.
-                      </p>
-                    </div>
-
-                    <div className="grid gap-4">
-                      {spaceTimelines.map((timeline) => (
-                        <SpaceTimelinePanel
-                          key={timeline.space.id}
-                          timeline={timeline}
-                          today={today}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : null}
-              </div>
-
-              <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
-                <WorkspaceQuickActions
-                  hasObjects={hasObjects}
-                  nextAction={nextAction}
-                />
-                <RecentActivityPanel items={recentActivity} />
-              </aside>
+              ) : null}
             </div>
-          </>
-        ) : (
-          <ClosedPilotWriteCallout />
-        )
+
+            <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
+              <WorkspaceQuickActions
+                canWrite={writeAccess.invited}
+                hasObjects={hasObjects}
+                nextAction={nextAction}
+              />
+              <RecentActivityPanel items={recentActivity} />
+            </aside>
+          </div>
+        </>
       ) : null}
     </main>
   );
@@ -351,14 +361,19 @@ interface RecentActivityItem {
 }
 
 function WorkspaceOverview({
+  canWrite,
   hasObjects,
   stats,
   nextAction,
 }: {
+  canWrite: boolean;
   hasObjects: boolean;
   stats: WorkspaceStats;
   nextAction: WorkspaceNextAction;
 }) {
+  const primaryHref = canWrite ? nextAction.href : "#first-entry-composer";
+  const primaryLabel = canWrite ? nextAction.label : "Check write access";
+
   return (
     <section className="grid gap-5 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-4 lg:col-span-1">
@@ -374,11 +389,11 @@ function WorkspaceOverview({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={nextAction.href} className={buttonVariants()}>
+          <Link href={primaryHref} className={buttonVariants()}>
             <Plus className="size-4" aria-hidden="true" />
-            {nextAction.label}
+            {primaryLabel}
           </Link>
-          {hasObjects ? (
+          {hasObjects && canWrite ? (
             <Link
               href="#space-journals"
               className={buttonVariants({ variant: "outline" })}
@@ -452,9 +467,11 @@ function WorkspaceMetric({
 }
 
 function ObjectInventory({
+  canWrite,
   objects,
   today,
 }: {
+  canWrite: boolean;
   objects: PlantObjectSummary[];
   today: string;
 }) {
@@ -469,8 +486,9 @@ function ObjectInventory({
             No living objects yet
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Save the first entry to create the default space, first living
-            object, and first dated record in one path.
+            {canWrite
+              ? "Save the first entry to create the default space, first living object, and first dated record in one path."
+              : "Your private garden workspace is ready. Writing is still invite-only, so the first object starts after write access is unlocked."}
           </p>
         </div>
         <Link
@@ -478,7 +496,7 @@ function ObjectInventory({
           className={buttonVariants({ className: "w-fit" })}
         >
           <Leaf className="size-4" aria-hidden="true" />
-          Start first object
+          {canWrite ? "Start first object" : "Check write access"}
         </Link>
       </section>
     );
@@ -503,7 +521,7 @@ function ObjectInventory({
           className={buttonVariants({ variant: "outline", className: "w-fit" })}
         >
           <Plus className="size-4" aria-hidden="true" />
-          Add object
+          {canWrite ? "Add object" : "Check write access"}
         </Link>
       </div>
 
@@ -552,10 +570,14 @@ function ObjectInventory({
                 </span>
               </p>
               <Link
-                href={`/garden/objects/${object.id}#follow-up-composer`}
+                href={
+                  canWrite
+                    ? `/garden/objects/${object.id}#follow-up-composer`
+                    : `/garden/objects/${object.id}`
+                }
                 className="text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
-                Add update/photo
+                {canWrite ? "Add update/photo" : "View object"}
               </Link>
             </li>
           );
@@ -566,12 +588,17 @@ function ObjectInventory({
 }
 
 function WorkspaceQuickActions({
+  canWrite,
   hasObjects,
   nextAction,
 }: {
+  canWrite: boolean;
   hasObjects: boolean;
   nextAction: WorkspaceNextAction;
 }) {
+  const primaryHref = canWrite ? nextAction.href : "#first-entry-composer";
+  const primaryLabel = canWrite ? nextAction.label : "Check write access";
+
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
@@ -584,11 +611,11 @@ function WorkspaceQuickActions({
       </div>
       <div className="flex flex-col gap-2">
         <Link
-          href={nextAction.href}
+          href={primaryHref}
           className={buttonVariants({ className: "justify-start" })}
         >
           <Plus className="size-4" aria-hidden="true" />
-          {nextAction.label}
+          {primaryLabel}
         </Link>
         <Link
           href="#first-entry-composer"
@@ -598,7 +625,7 @@ function WorkspaceQuickActions({
           })}
         >
           <Sprout className="size-4" aria-hidden="true" />
-          Add object
+          {canWrite ? "Add object" : "Invite details"}
         </Link>
         {hasObjects ? (
           <Link
@@ -609,10 +636,10 @@ function WorkspaceQuickActions({
             })}
           >
             <BookOpen className="size-4" aria-hidden="true" />
-            Space journal
+            {canWrite ? "Space journal" : "Read space timeline"}
           </Link>
         ) : null}
-        {hasObjects ? (
+        {hasObjects && canWrite ? (
           <Link
             href={nextAction.href}
             className={buttonVariants({
@@ -672,9 +699,11 @@ function RecentActivityPanel({ items }: { items: RecentActivityItem[] }) {
 }
 
 function SpaceTimelinePanel({
+  canWrite,
   timeline,
   today,
 }: {
+  canWrite: boolean;
   timeline: SpaceJournalTimeline;
   today: string;
 }) {
@@ -696,7 +725,7 @@ function SpaceTimelinePanel({
         </p>
       </div>
 
-      {timeline.objects.length > 0 ? (
+      {canWrite && timeline.objects.length > 0 ? (
         <form action={createSpaceJournalEntryAction} className="grid gap-3">
           <input type="hidden" name="spaceId" value={timeline.space.id} />
           <input

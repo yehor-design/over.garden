@@ -166,6 +166,32 @@ describe("/garden workspace", () => {
     expect(html).not.toContain("Space journals");
   });
 
+  it("keeps the signed-in workspace visible when writing is invite-only", async () => {
+    mocks.resolvePilotWriteAccess.mockResolvedValueOnce({ invited: false });
+    mocks.listMyPlantObjects.mockResolvedValueOnce([]);
+    mocks.listMySpaceJournalTimelines.mockResolvedValueOnce([]);
+    mocks.listMyRecentJournalEntries.mockResolvedValueOnce([]);
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Garden workspace");
+    expect(html).toContain("Next action");
+    expect(html).toContain("Start with one living object");
+    expect(html).toContain("Living objects");
+    expect(html).toContain("No living objects yet");
+    expect(html).toContain("Check write access");
+    expect(html).toContain("Writing is invite-only right now");
+    expect(html).toContain("Social account link panel");
+    expect(html).not.toContain("First entry composer");
+    expect(html).not.toContain("Draft resume panel");
+    expect(mocks.listMyPlantObjects).toHaveBeenCalled();
+    expect(mocks.listMyRecentJournalEntries).toHaveBeenCalled();
+  });
+
   it("keeps signed-out visitors behind the garden auth panel", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
     const { default: GardenPage } = await import("./page");
