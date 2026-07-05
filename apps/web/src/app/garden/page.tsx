@@ -1,11 +1,23 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ReactNode } from "react";
+import {
+  BookOpen,
+  Camera,
+  ClipboardList,
+  Clock3,
+  Leaf,
+  Plus,
+  ShieldCheck,
+  Sprout,
+} from "lucide-react";
 
 import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
 import { buttonVariants } from "@/components/ui/button";
+import type { JournalEntry } from "@/db/schema";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
@@ -31,7 +43,9 @@ import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
 import {
   listMyPlantObjects,
+  listMyRecentJournalEntries,
   listMySpaceJournalTimelines,
+  type PlantObjectSummary,
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
@@ -87,14 +101,22 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
   const publicProfile = scope ? await ensureUserPublicProfile(scope) : null;
-  const objects = scope ? await listMyPlantObjects(scope, 12) : [];
+  const objects = scope ? await listMyPlantObjects(scope, 20) : [];
   const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
+  const recentEntries = scope ? await listMyRecentJournalEntries(scope, 8) : [];
   const spaceJournalEntryCount = spaceTimelines.reduce(
     (count, timeline) => count + timeline.entries.length,
     0,
   );
   const hasObjects = objects.length > 0;
   const today = new Date().toISOString().slice(0, 10);
+  const workspaceStats = summarizeWorkspace(objects, spaceTimelines, today);
+  const nextAction = chooseWorkspaceNextAction(objects, today);
+  const recentActivity = buildRecentActivityItems(
+    recentEntries,
+    objects,
+    spaceTimelines,
+  );
 
   if (scope) {
     await recordAnalyticsEventSafely(scope, {
@@ -113,12 +135,12 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              Garden journal
+              Garden workspace
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               {hasObjects
-                ? "Continue the living record for objects you already started."
-                : "Capture one real living record with its place, object, and first dated note."}
+                ? "Your owned living objects, recent changes, and next journal action in one private place."
+                : "Start with one private living object, then return here whenever its story changes."}
             </p>
           </div>
           {userId ? (
@@ -217,148 +239,435 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                 secondaryLabel="Add another entry"
               />
             ) : null}
-            <div className="grid gap-6 lg:grid-cols-3">
-              {hasObjects ? (
-                <section className="flex flex-col gap-4 rounded-lg border border-border p-4 lg:col-span-2">
+            <WorkspaceOverview
+              hasObjects={hasObjects}
+              stats={workspaceStats}
+              nextAction={nextAction}
+            />
+
+            <div className="grid gap-6 xl:grid-cols-3">
+              <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
+                <ObjectInventory objects={objects} today={today} />
+
+                <section
+                  id="first-entry-composer"
+                  className="flex flex-col gap-4 rounded-lg border border-border p-4"
+                >
                   <div className="flex flex-col gap-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
+                      {hasObjects ? "Add object" : "Start workspace"}
+                    </p>
                     <h2 className="text-lg font-semibold text-foreground">
-                      Continue an object
+                      {hasObjects
+                        ? "Start another living object"
+                        : "First living object"}
                     </h2>
                     <p className="text-sm text-muted-foreground">
-                      Open an existing object to add the next dated entry,
-                      including recovery when the connection is unstable and an
-                      optional photo.
+                      {hasObjects
+                        ? "Create a separate record when the next plant, colony, or animal needs its own history."
+                        : "Save the first note with a catalog match, your own catalog name, or no match yet."}
                     </p>
                   </div>
 
-                  <ul className="grid gap-3 sm:grid-cols-2">
-                    {objects.map((object) => (
-                      <li key={object.id}>
-                        <Link
-                          href={`/garden/objects/${object.id}`}
-                          className="flex h-full flex-col justify-between gap-4 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
-                        >
-                          <span className="flex flex-col gap-1">
-                            <span className="text-base font-semibold text-foreground">
-                              {object.displayName}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {object.spaceDisplayName}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {plantObjectKindLabel(object.objectKind)} ·{" "}
-                              {object.varietyText
-                                ? `${catalogIdentityLabel(
-                                    object.catalogKind,
-                                    object.objectKind,
-                                  )}: ${object.varietyText}`
-                                : "Unknown catalog match"}{" "}
-                              · {varietyStateLabel(object.varietyState)}
-                            </span>
-                          </span>
-                          <span className="text-sm font-medium text-primary">
-                            Add follow-up
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+                  <FirstEntryComposer
+                    key={initialCatalogItem?.id ?? "first-entry"}
+                    today={today}
+                    initialClientMutationId={crypto.randomUUID()}
+                    initialCatalogItem={initialCatalogItem}
+                    activationSource={activationSource}
+                  />
                 </section>
-              ) : null}
 
-              <section
-                id="first-entry-composer"
-                className={`flex flex-col gap-4 rounded-lg border border-border p-4 ${
-                  hasObjects ? "" : "lg:col-span-2"
-                }`}
-              >
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    {hasObjects ? "Start another object" : "First entry"}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {hasObjects
-                      ? "Create a new object only when you are starting a separate living record."
-                      : "Save the first note with a catalog match, your own catalog name, or no match yet."}
-                  </p>
-                </div>
+                {hasObjects ? (
+                  <section id="space-journals" className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Space timeline
+                      </p>
+                      <h2 className="text-lg font-semibold text-foreground">
+                        Space journals
+                      </h2>
+                      <p className="text-sm text-muted-foreground">
+                        Write one dated story for a whole space and mention the
+                        objects it covers.
+                      </p>
+                    </div>
 
-                <FirstEntryComposer
-                  key={initialCatalogItem?.id ?? "first-entry"}
-                  today={today}
-                  initialClientMutationId={crypto.randomUUID()}
-                  initialCatalogItem={initialCatalogItem}
-                  activationSource={activationSource}
+                    <div className="grid gap-4">
+                      {spaceTimelines.map((timeline) => (
+                        <SpaceTimelinePanel
+                          key={timeline.space.id}
+                          timeline={timeline}
+                          today={today}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+              </div>
+
+              <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
+                <WorkspaceQuickActions
+                  hasObjects={hasObjects}
+                  nextAction={nextAction}
                 />
-              </section>
-
-              <aside className="flex flex-col gap-3">
-                <h2 className="text-base font-semibold text-foreground">
-                  Living objects
-                </h2>
-                {!hasObjects ? (
-                  <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
-                    No living objects yet. Save the first entry to create one.
-                  </p>
-                ) : (
-                  <ul className="flex flex-col gap-2">
-                    {objects.map((object) => (
-                      <li key={object.id}>
-                        <Link
-                          href={`/garden/objects/${object.id}`}
-                          className="block rounded-lg border border-border p-3 transition-colors hover:bg-muted/60"
-                        >
-                          <span className="block text-sm font-medium text-foreground">
-                            {object.displayName}
-                          </span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {plantObjectKindLabel(object.objectKind)} ·{" "}
-                            {object.spaceDisplayName}
-                            {` · ${
-                              object.varietyText
-                                ? `${catalogIdentityLabel(object.catalogKind)}: ${
-                                    object.varietyText
-                                  }`
-                                : "Unknown"
-                            }`}
-                          </span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <RecentActivityPanel items={recentActivity} />
               </aside>
             </div>
-
-            {hasObjects ? (
-              <section id="space-journals" className="flex flex-col gap-4">
-                <div className="flex flex-col gap-1">
-                  <h2 className="text-lg font-semibold text-foreground">
-                    Space journals
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Write one dated story for a whole space and mention the
-                    objects it covers.
-                  </p>
-                </div>
-
-                <div className="grid gap-4">
-                  {spaceTimelines.map((timeline) => (
-                    <SpaceTimelinePanel
-                      key={timeline.space.id}
-                      timeline={timeline}
-                      today={today}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : null}
           </>
         ) : (
           <ClosedPilotWriteCallout />
         )
       ) : null}
     </main>
+  );
+}
+
+interface WorkspaceStats {
+  objectCount: number;
+  objectEntryCount: number;
+  publicEntryCount: number;
+  needsUpdateCount: number;
+  spaceCount: number;
+  spaceEntryCount: number;
+}
+
+interface WorkspaceNextAction {
+  title: string;
+  description: string;
+  href: string;
+  label: string;
+  object?: PlantObjectSummary;
+}
+
+interface RecentActivityItem {
+  id: string;
+  title: string;
+  href: string;
+  context: string;
+  date: Date | string;
+  scopeLabel: string;
+  privacyLabel: string;
+}
+
+function WorkspaceOverview({
+  hasObjects,
+  stats,
+  nextAction,
+}: {
+  hasObjects: boolean;
+  stats: WorkspaceStats;
+  nextAction: WorkspaceNextAction;
+}) {
+  return (
+    <section className="grid gap-5 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-4 lg:col-span-1">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-medium text-muted-foreground uppercase">
+            Next action
+          </p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            {nextAction.title}
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {nextAction.description}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link href={nextAction.href} className={buttonVariants()}>
+            <Plus className="size-4" aria-hidden="true" />
+            {nextAction.label}
+          </Link>
+          {hasObjects ? (
+            <Link
+              href="#space-journals"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <BookOpen className="size-4" aria-hidden="true" />
+              Space note
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      <dl className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
+        <WorkspaceMetric
+          icon={<Sprout className="size-4" aria-hidden="true" />}
+          label="Living objects"
+          value={stats.objectCount}
+          detail={
+            stats.spaceCount === 1
+              ? "1 workspace space"
+              : `${stats.spaceCount} workspace spaces`
+          }
+        />
+        <WorkspaceMetric
+          icon={<ClipboardList className="size-4" aria-hidden="true" />}
+          label="Journal entries"
+          value={stats.objectEntryCount + stats.spaceEntryCount}
+          detail={`${stats.objectEntryCount} object · ${stats.spaceEntryCount} space`}
+        />
+        <WorkspaceMetric
+          icon={<Clock3 className="size-4" aria-hidden="true" />}
+          label="Need update"
+          value={stats.needsUpdateCount}
+          detail="No note yet or stale direct update"
+        />
+        <WorkspaceMetric
+          icon={<ShieldCheck className="size-4" aria-hidden="true" />}
+          label="Public-safe"
+          value={stats.publicEntryCount}
+          detail="Everything else stays private"
+        />
+      </dl>
+    </section>
+  );
+}
+
+function WorkspaceMetric({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  detail: string;
+}) {
+  return (
+    <div className="flex min-w-0 gap-3 rounded-md border border-border bg-background/80 p-3">
+      <span className="mt-0.5 text-muted-foreground">{icon}</span>
+      <span className="min-w-0">
+        <dt className="text-xs font-medium text-muted-foreground uppercase">
+          {label}
+        </dt>
+        <dd className="mt-1 text-2xl font-semibold text-foreground">{value}</dd>
+        <dd className="mt-1 truncate text-xs text-muted-foreground">
+          {detail}
+        </dd>
+      </span>
+    </div>
+  );
+}
+
+function ObjectInventory({
+  objects,
+  today,
+}: {
+  objects: PlantObjectSummary[];
+  today: string;
+}) {
+  if (objects.length === 0) {
+    return (
+      <section className="flex flex-col gap-4 rounded-lg border border-dashed border-border p-4">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-medium text-muted-foreground uppercase">
+            Inventory
+          </p>
+          <h2 className="text-lg font-semibold text-foreground">
+            No living objects yet
+          </h2>
+          <p className="text-sm leading-6 text-muted-foreground">
+            Save the first entry to create the default space, first living
+            object, and first dated record in one path.
+          </p>
+        </div>
+        <Link
+          href="#first-entry-composer"
+          className={buttonVariants({ className: "w-fit" })}
+        >
+          <Leaf className="size-4" aria-hidden="true" />
+          Start first object
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className="flex min-w-0 flex-col gap-4 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-1">
+          <p className="text-xs font-medium text-muted-foreground uppercase">
+            Inventory
+          </p>
+          <h2 className="text-lg font-semibold text-foreground">
+            Living objects
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            A dense workspace view for the things you own or care for.
+          </p>
+        </div>
+        <Link
+          href="#first-entry-composer"
+          className={buttonVariants({ variant: "outline", className: "w-fit" })}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          Add object
+        </Link>
+      </div>
+
+      <ol className="divide-y divide-border overflow-hidden rounded-md border border-border">
+        <li className="hidden grid-cols-5 gap-3 bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground uppercase md:grid">
+          <span>Object</span>
+          <span>Context</span>
+          <span>Entries</span>
+          <span>Status</span>
+          <span>Action</span>
+        </li>
+        {objects.map((object) => {
+          const updateState = objectUpdateState(object, today);
+          return (
+            <li
+              key={object.id}
+              className="grid gap-3 px-3 py-3 md:grid-cols-5 md:items-center"
+            >
+              <div className="min-w-0">
+                <Link
+                  href={`/garden/objects/${object.id}`}
+                  className="block truncate text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+                >
+                  {object.displayName}
+                </Link>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {plantObjectKindLabel(object.objectKind)} ·{" "}
+                  {object.spaceDisplayName}
+                </p>
+              </div>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {objectCatalogSummary(object)}
+              </p>
+              <p className="text-sm text-foreground">
+                {object.entryCount === 1
+                  ? "1 entry"
+                  : `${object.entryCount} entries`}
+                <span className="block text-xs text-muted-foreground">
+                  {objectPrivacySummary(object)}
+                </span>
+              </p>
+              <p className="text-sm text-foreground">
+                {updateState.label}
+                <span className="block text-xs text-muted-foreground">
+                  {updateState.detail}
+                </span>
+              </p>
+              <Link
+                href={`/garden/objects/${object.id}#follow-up-composer`}
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Add update/photo
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function WorkspaceQuickActions({
+  hasObjects,
+  nextAction,
+}: {
+  hasObjects: boolean;
+  nextAction: WorkspaceNextAction;
+}) {
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase">
+          Fast actions
+        </p>
+        <h2 className="text-base font-semibold text-foreground">
+          Keep the record moving
+        </h2>
+      </div>
+      <div className="flex flex-col gap-2">
+        <Link
+          href={nextAction.href}
+          className={buttonVariants({ className: "justify-start" })}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          {nextAction.label}
+        </Link>
+        <Link
+          href="#first-entry-composer"
+          className={buttonVariants({
+            variant: "outline",
+            className: "justify-start",
+          })}
+        >
+          <Sprout className="size-4" aria-hidden="true" />
+          Add object
+        </Link>
+        {hasObjects ? (
+          <Link
+            href="#space-journals"
+            className={buttonVariants({
+              variant: "outline",
+              className: "justify-start",
+            })}
+          >
+            <BookOpen className="size-4" aria-hidden="true" />
+            Space journal
+          </Link>
+        ) : null}
+        {hasObjects ? (
+          <Link
+            href={nextAction.href}
+            className={buttonVariants({
+              variant: "outline",
+              className: "justify-start",
+            })}
+          >
+            <Camera className="size-4" aria-hidden="true" />
+            Attach update photo
+          </Link>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function RecentActivityPanel({ items }: { items: RecentActivityItem[] }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+      <div className="flex flex-col gap-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase">
+          Recent activity
+        </p>
+        <h2 className="text-base font-semibold text-foreground">
+          Journal timeline
+        </h2>
+      </div>
+      {items.length === 0 ? (
+        <p className="rounded-md border border-dashed border-border p-3 text-sm leading-6 text-muted-foreground">
+          No dated activity yet. The first saved entry will appear here.
+        </p>
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {items.map((item) => (
+            <li
+              key={item.id}
+              className="flex flex-col gap-1 border-b border-border pb-3 last:border-b-0 last:pb-0"
+            >
+              <Link
+                href={item.href}
+                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+              >
+                {item.title}
+              </Link>
+              <p className="text-xs leading-5 text-muted-foreground">
+                {item.context} · {formatDate(item.date)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {item.scopeLabel} · {item.privacyLabel}
+              </p>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
@@ -428,9 +737,7 @@ function SpaceTimelinePanel({
             />
           </label>
           <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              Tags / topics
-            </span>
+            <span className="font-medium text-foreground">Tags / topics</span>
             <input
               name="topicTags"
               maxLength={160}
@@ -640,6 +947,203 @@ function normalizeGardenReturnToParam(value: string | string[] | undefined) {
 function normalizeFirstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return typeof value === "string" ? value.trim() : "";
+}
+
+function summarizeWorkspace(
+  objects: PlantObjectSummary[],
+  spaceTimelines: SpaceJournalTimeline[],
+  today: string,
+): WorkspaceStats {
+  return {
+    objectCount: objects.length,
+    objectEntryCount: objects.reduce(
+      (count, object) => count + object.entryCount,
+      0,
+    ),
+    publicEntryCount:
+      objects.reduce((count, object) => count + object.publicEntryCount, 0) +
+      spaceTimelines.reduce(
+        (count, timeline) =>
+          count +
+          timeline.entries.filter(
+            (entry) =>
+              entry.visibility === "public" &&
+              entry.lifecycle_state === "active",
+          ).length,
+        0,
+      ),
+    needsUpdateCount: objects.filter((object) =>
+      isObjectUpdateDue(object, today),
+    ).length,
+    spaceCount: spaceTimelines.length,
+    spaceEntryCount: spaceTimelines.reduce(
+      (count, timeline) => count + timeline.entries.length,
+      0,
+    ),
+  };
+}
+
+function chooseWorkspaceNextAction(
+  objects: PlantObjectSummary[],
+  today: string,
+): WorkspaceNextAction {
+  if (objects.length === 0) {
+    return {
+      title: "Start with one living object",
+      description:
+        "Create the first private record before the workspace asks for anything else.",
+      href: "#first-entry-composer",
+      label: "Start first object",
+    };
+  }
+
+  const objectNeedingUpdate =
+    objects
+      .filter((object) => isObjectUpdateDue(object, today))
+      .sort(compareObjectsByOldestUpdate)[0] ?? null;
+  const object = objectNeedingUpdate ?? objects[0];
+
+  if (object.entryCount === 0) {
+    return {
+      title: `Finish first note for ${object.displayName}`,
+      description:
+        "This object exists, but it still needs a dated observation to become useful later.",
+      href: `/garden/objects/${object.id}#follow-up-composer`,
+      label: "Add first note",
+      object,
+    };
+  }
+
+  return {
+    title: objectNeedingUpdate
+      ? `Update ${object.displayName}`
+      : `Continue ${object.displayName}`,
+    description: objectNeedingUpdate
+      ? "The last direct object update is old enough that a fresh note would make this record more useful."
+      : "The workspace is current; add the next change when something observable happens.",
+    href: `/garden/objects/${object.id}#follow-up-composer`,
+    label: "Add update",
+    object,
+  };
+}
+
+function buildRecentActivityItems(
+  entries: JournalEntry[],
+  objects: PlantObjectSummary[],
+  spaceTimelines: SpaceJournalTimeline[],
+): RecentActivityItem[] {
+  const objectsById = new Map(objects.map((object) => [object.id, object]));
+  const spacesById = new Map(
+    spaceTimelines.map((timeline) => [
+      timeline.space.id,
+      timeline.space.display_name,
+    ]),
+  );
+
+  return entries.map((entry) => {
+    const object = entry.plant_object_id
+      ? objectsById.get(entry.plant_object_id)
+      : null;
+    const spaceName = spacesById.get(entry.space_id) ?? "Garden space";
+
+    return {
+      id: entry.id,
+      title: entry.title,
+      href: object
+        ? `/garden/objects/${object.id}`
+        : `/garden#space-${entry.space_id}`,
+      context: object ? object.displayName : spaceName,
+      date: entry.entry_date,
+      scopeLabel: entryScopeLabel(entry.entry_scope),
+      privacyLabel: entryPrivacyLabel({
+        visibility: entry.visibility,
+        isArchived: entry.lifecycle_state === "archived",
+      }),
+    };
+  });
+}
+
+function objectCatalogSummary(object: PlantObjectSummary) {
+  const identity = object.varietyText
+    ? `${catalogIdentityLabel(object.catalogKind, object.objectKind)}: ${
+        object.varietyText
+      }`
+    : "Unknown catalog match";
+
+  return `${identity} · ${varietyStateLabel(object.varietyState)}`;
+}
+
+function objectPrivacySummary(object: PlantObjectSummary) {
+  if (object.publicEntryCount > 0) {
+    return `${object.publicEntryCount} public · ${object.privateEntryCount} private`;
+  }
+
+  return "Private record";
+}
+
+function objectUpdateState(object: PlantObjectSummary, today: string) {
+  if (object.entryCount === 0 || !object.latestEntryDate) {
+    return {
+      label: "Needs first note",
+      detail: "No direct entries yet",
+    };
+  }
+
+  const daysSinceUpdate = daysBetween(object.latestEntryDate, today);
+  if (daysSinceUpdate > 14) {
+    return {
+      label: "Needs current note",
+      detail: `Last update ${formatRelativeDays(daysSinceUpdate)}`,
+    };
+  }
+
+  return {
+    label: "Current",
+    detail: `Last update ${formatRelativeDays(daysSinceUpdate)}`,
+  };
+}
+
+function isObjectUpdateDue(object: PlantObjectSummary, today: string) {
+  if (object.entryCount === 0 || !object.latestEntryDate) return true;
+  return daysBetween(object.latestEntryDate, today) > 14;
+}
+
+function compareObjectsByOldestUpdate(
+  left: PlantObjectSummary,
+  right: PlantObjectSummary,
+) {
+  return (
+    entryTimestamp(left.latestEntryDate) - entryTimestamp(right.latestEntryDate)
+  );
+}
+
+function daysBetween(left: Date | string, right: Date | string) {
+  const leftDate = parseDateOnly(left);
+  const rightDate = parseDateOnly(right);
+  const diffMs = rightDate.getTime() - leftDate.getTime();
+  return Math.max(0, Math.floor(diffMs / 86_400_000));
+}
+
+function parseDateOnly(value: Date | string) {
+  if (value instanceof Date) {
+    return new Date(
+      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
+    );
+  }
+
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  return new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
+}
+
+function entryTimestamp(value: Date | string | null) {
+  if (!value) return 0;
+  return parseDateOnly(value).getTime();
+}
+
+function formatRelativeDays(days: number) {
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
 }
 
 function formatDate(value: Date | string) {

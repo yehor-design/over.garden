@@ -22,6 +22,8 @@ import {
   buildInsertJournalEntryObjectMentionsQuery,
   buildInsertJournalEntryQuery,
   buildMentionableObjectsInSpaceQuery,
+  buildMyPlantObjectEntrySummariesQuery,
+  buildMyPlantObjectsQuery,
   buildObjectTimelineEntriesQuery,
   buildObjectJournalEntryCountQuery,
   buildPlantObjectCatalogSourceCreditQuery,
@@ -318,6 +320,67 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
+  it("reads the garden workspace inventory only inside owner scope", () => {
+    const compiled = buildMyPlantObjectsQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      20,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "plant_objects"');
+    expect(compiled.sql).toContain(
+      'inner join "spaces" on "spaces"."id" = "plant_objects"."space_id"',
+    );
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $3');
+    expect(compiled.sql).toContain('"spaces"."owner_user_id" = $4');
+    expect(compiled.sql).toContain("limit $5");
+    expect(compiled.sql).not.toContain("journal_entries");
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("coordinates");
+    expect(compiled.parameters).toEqual([
+      "seeded",
+      "confirmed",
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000001",
+      20,
+    ]);
+  });
+
+  it("summarizes object workspace entries through owner-bound objects", () => {
+    const compiled = buildMyPlantObjectEntrySummariesQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      [
+        "00000000-0000-0000-0000-000000000003",
+        "00000000-0000-0000-0000-000000000004",
+      ],
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain(
+      '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" = $3');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."plant_object_id" in ($4, $5)',
+    );
+    expect(compiled.sql).toContain(
+      'group by "journal_entries"."plant_object_id"',
+    );
+    expect(compiled.sql).not.toContain("client_mutation_id");
+    expect(compiled.sql).not.toContain("body");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000001",
+      "object",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000004",
+    ]);
+  });
+
   it("reads authenticated object source credit without raw source payloads", () => {
     const catalogItemId = "00000000-0000-4000-8000-000000104001";
     const compiled = buildPlantObjectCatalogSourceCreditQuery(
@@ -368,9 +431,7 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000003",
     ).compile();
 
-    expect(compiled.sql).toContain(
-      '"journal_entries"."owner_user_id" = $3',
-    );
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $3');
     expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
     expect(compiled.sql).toContain(
       '"journal_entry_object_mentions"."plant_object_id" = $7',
@@ -511,9 +572,7 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain(
-      '"journal_entries"."owner_user_id" = $3',
-    );
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $3');
     expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $5');
     expect(compiled.sql).toContain(
       '"journal_entry_object_mentions"."plant_object_id" = $7',
@@ -628,9 +687,7 @@ describe("journal repository query contracts", () => {
     ).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain(
-      '"journal_entries"."plant_object_id" = $1',
-    );
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" = $1');
     expect(compiled.sql).toContain('"journal_entries"."id" != $2');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');

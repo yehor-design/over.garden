@@ -159,6 +159,10 @@ export interface PlantObjectSummary {
   varietyText: string | null;
   varietyState: VarietyState;
   createdAt: Date;
+  entryCount: number;
+  publicEntryCount: number;
+  privateEntryCount: number;
+  latestEntryDate: Date | string | null;
 }
 
 export interface SpaceTimelineObjectSummary {
@@ -528,7 +532,47 @@ export async function listMyPlantObjects(
   limit = 10,
 ): Promise<PlantObjectSummary[]> {
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_ITEMS);
-  const rows = await db
+
+  const rows = await buildMyPlantObjectsQuery(
+    db,
+    scope,
+    boundedLimit,
+  ).execute();
+  if (rows.length === 0) return [];
+
+  const entrySummaries = await buildMyPlantObjectEntrySummariesQuery(
+    db,
+    scope,
+    rows.map((row) => row.id),
+  ).execute();
+  const entrySummaryByObjectId = new Map(
+    entrySummaries.map((summary) => [summary.plantObjectId, summary]),
+  );
+
+  return rows.map((row) => {
+    const entrySummary = entrySummaryByObjectId.get(row.id);
+
+    return {
+      ...row,
+      objectKind: row.objectKind as PlantObjectKind,
+      catalogKind: row.catalogKind as CatalogKind | null,
+      varietyState: row.varietyState as VarietyState,
+      entryCount: normalizeCount(entrySummary?.entryCount),
+      publicEntryCount: normalizeCount(entrySummary?.publicEntryCount),
+      privateEntryCount: normalizeCount(entrySummary?.privateEntryCount),
+      latestEntryDate: entrySummary?.latestEntryDate ?? null,
+    };
+  });
+}
+
+export function buildMyPlantObjectsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  limit: number,
+) {
+  const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_ITEMS);
+
+  return executor
     .selectFrom("plant_objects")
     .innerJoin("spaces", "spaces.id", "plant_objects.space_id")
     .leftJoin("catalog_items", (join) =>
@@ -551,15 +595,44 @@ export async function listMyPlantObjects(
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("spaces.owner_user_id", "=", scope.userId)
     .orderBy("plant_objects.created_at", "desc")
-    .limit(boundedLimit)
-    .execute();
+    .limit(boundedLimit);
+}
 
-  return rows.map((row) => ({
-    ...row,
-    objectKind: row.objectKind as PlantObjectKind,
-    catalogKind: row.catalogKind as CatalogKind | null,
-    varietyState: row.varietyState as VarietyState,
-  }));
+export function buildMyPlantObjectEntrySummariesQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectIds: readonly string[],
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .select(({ fn }) => [
+      "journal_entries.plant_object_id as plantObjectId",
+      fn.count<number>("journal_entries.id").as("entryCount"),
+      sql<number>`count(*) filter (
+        where ${sql.ref("journal_entries.visibility")} = 'public'
+          and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
+      )::int`.as("publicEntryCount"),
+      sql<number>`count(*) filter (
+        where ${sql.ref("journal_entries.visibility")} = 'private'
+          and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
+      )::int`.as("privateEntryCount"),
+      fn.max<Date | string>("journal_entries.entry_date").as("latestEntryDate"),
+    ])
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("plant_objects.owner_user_id", "=", scope.userId)
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.plant_object_id", "in", [...plantObjectIds])
+    .groupBy("journal_entries.plant_object_id")
+    .$narrowType<{ plantObjectId: string }>();
 }
 
 export async function listMySpaceJournalTimelines(
@@ -2430,6 +2503,13 @@ function normalizeEntryDate(value: string | null | undefined) {
     throw new Error("Entry date must use YYYY-MM-DD format.");
   }
   return normalized;
+}
+
+function normalizeCount(value: number | string | bigint | null | undefined) {
+  if (typeof value === "number") return value;
+  if (typeof value === "bigint") return Number(value);
+  if (typeof value === "string") return Number.parseInt(value, 10) || 0;
+  return 0;
 }
 
 function normalizePublicSlug(value: string) {
