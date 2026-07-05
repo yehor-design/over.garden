@@ -44,9 +44,9 @@ export const MVP_RETENTION_RULES = [
   {
     title: "Analytics events",
     summary:
-      "First-party product analytics events are retained for up to 13 months. Consented Google Tag Manager / Google Analytics page measurement can run on authored public, legal, and support pages; consented Meta Ads measurement can run only through its separate marketing opt-in and allowlisted event classes.",
+      "First-party product analytics events are retained for up to 13 months. Consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run on authored public, legal, and support pages; consented Meta Ads measurement can run only through its separate marketing opt-in and allowlisted event classes.",
     developerBoundary:
-      "Analytics and marketing payloads must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, contact data, private garden paths, admin paths, media keys, auth callback data, account identifiers, IP address, user-agent values, or provider cookies.",
+      "Analytics and marketing payloads must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, contact data, private garden paths, admin paths, media keys, auth callback data, account identifiers, IP address, user-agent values, provider cookies, Clarity recordings, or Clarity session identifiers.",
   },
 ] as const;
 

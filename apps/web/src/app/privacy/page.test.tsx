@@ -20,6 +20,8 @@ describe("/privacy MVP notice", () => {
     expect(html).toContain("7 failed-processing days");
     expect(html).toContain("13 months");
     expect(html).toContain("Google Analytics page measurement");
+    expect(html).toContain("Microsoft Clarity session insights");
+    expect(html).toContain("Public analytics");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain(FIRST_PUBLICATION_DISCLOSURE_VERSION);
     expect(html).toContain("queued for public search removal");

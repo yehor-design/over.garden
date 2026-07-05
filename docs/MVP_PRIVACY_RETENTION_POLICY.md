@@ -29,7 +29,7 @@ A gardener is more likely to publish and keep journaling when OverGarden explain
 | Public photo derivatives | Stay while the related public entry is active; remove from public surfaces after archive or erasure. | Public pages may render derivative URLs only. Erasure removes OverGarden-controlled objects when their keys are still known. |
 | Operator audit logs | Keep for 1 year. | Evidence may include bounded ids, roles, actions, reasons, and timestamps only. |
 | Erasure handling evidence | Keep for 1 year. | Evidence may include status, request reference, data-class counts, dry-run review, approval checkpoint, and handled outcome only. |
-| Analytics events | Keep for up to 13 months. | Payloads must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, or contact data. |
+| Analytics events | Keep first-party product analytics events for up to 13 months. Consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run only on authored public, legal, and support pages; consented Meta Ads measurement uses a separate marketing opt-in. | Payloads and evidence must remain enum/bounded and must not include journal text, exact location, raw URLs, referrers, contact data, private route paths, media keys, account identifiers, IP/user-agent values, provider cookies, Clarity recordings, or Clarity session identifiers. |
 
 ## Erasure Semantics
 

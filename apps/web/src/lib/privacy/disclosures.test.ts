@@ -89,6 +89,9 @@ describe("MVP privacy disclosure constants", () => {
       "13 months",
     );
     expect(MVP_RETENTION_RULES.map((rule) => rule.summary).join(" ")).toContain(
+      "Microsoft Clarity session insights",
+    );
+    expect(MVP_RETENTION_RULES.map((rule) => rule.summary).join(" ")).toContain(
       "1 year",
     );
     expect(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS).toContain(

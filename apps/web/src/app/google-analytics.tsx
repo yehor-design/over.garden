@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,16 @@ const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
 const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
 const GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY = "overgarden:analytics-consent";
 const GOOGLE_ANALYTICS_CONSENT_EVENT = "overgarden:analytics-consent-change";
+export const MICROSOFT_CLARITY_ENABLED_ENV =
+  "NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED";
+export const MICROSOFT_CLARITY_PROJECT_ID_ENV =
+  "NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID";
+const MICROSOFT_CLARITY_PUBLIC_ENV = {
+  [MICROSOFT_CLARITY_ENABLED_ENV]:
+    process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED,
+  [MICROSOFT_CLARITY_PROJECT_ID_ENV]:
+    process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID,
+} satisfies Record<string, string | undefined>;
 const PUBLIC_LOCALE_PREFIX_PATTERN = /^\/(?:uk|bg|ru)(?=\/|$)/;
 const GOOGLE_ANALYTICS_ALLOWED_EXACT_PATHS = new Set([
   "/",
@@ -23,7 +33,32 @@ const GOOGLE_ANALYTICS_ALLOWED_PREFIXES = [
   "/guides/",
   "/markets/",
 ] as const;
-type GoogleAnalyticsConsent = "accepted" | "declined" | "undecided";
+const MICROSOFT_CLARITY_GRANTED_CONSENT = {
+  ad_Storage: "denied",
+  analytics_Storage: "granted",
+} as const;
+const MICROSOFT_CLARITY_DENIED_CONSENT = {
+  ad_Storage: "denied",
+  analytics_Storage: "denied",
+} as const;
+
+type WindowClarityFn = (action: string, payload?: unknown) => void;
+
+declare global {
+  interface Window {
+    clarity?: WindowClarityFn;
+  }
+}
+
+export type GoogleAnalyticsConsent = "accepted" | "declined" | "undecided";
+
+export interface MicrosoftClarityPublicConfig {
+  enabled: boolean;
+  projectId: string | null;
+}
+
+let initializedMicrosoftClarityProjectId: string | null = null;
+let initializingMicrosoftClarityProjectId: string | null = null;
 
 export function GoogleAnalytics() {
   const pathname = usePathname();
@@ -37,6 +72,12 @@ export function GoogleAnalytics() {
   const consent = sessionConsent ?? storedConsent;
   const isAllowedRoute = isGoogleAnalyticsRoute(pathname);
 
+  useEffect(() => {
+    if (!isAllowedRoute || consent !== "accepted") {
+      revokeMicrosoftClarityAnalyticsConsent();
+    }
+  }, [isAllowedRoute, consent]);
+
   const setStoredConsent = (nextConsent: GoogleAnalyticsConsent) => {
     if (nextConsent !== "undecided") {
       writeStoredGoogleAnalyticsConsent(nextConsent);
@@ -46,7 +87,14 @@ export function GoogleAnalytics() {
 
   if (!isAllowedRoute) return null;
 
-  if (consent === "accepted") return <GoogleTagManagerScripts />;
+  if (consent === "accepted") {
+    return (
+      <>
+        <GoogleTagManagerScripts />
+        <MicrosoftClarityAnalytics />
+      </>
+    );
+  }
   if (consent === "declined") return null;
 
   return (
@@ -55,6 +103,51 @@ export function GoogleAnalytics() {
       onDecline={() => setStoredConsent("declined")}
     />
   );
+}
+
+export function MicrosoftClarityAnalytics() {
+  const config = resolveMicrosoftClarityPublicConfig();
+
+  useEffect(() => {
+    if (!config.enabled || !config.projectId) return;
+    void initializeMicrosoftClarity(config.projectId);
+  }, [config.enabled, config.projectId]);
+
+  return null;
+}
+
+export async function initializeMicrosoftClarity(projectId: string) {
+  if (typeof window === "undefined") return;
+
+  if (initializedMicrosoftClarityProjectId === projectId) {
+    grantMicrosoftClarityAnalyticsConsent();
+    return;
+  }
+
+  if (initializingMicrosoftClarityProjectId === projectId) return;
+  initializingMicrosoftClarityProjectId = projectId;
+
+  try {
+    const { default: Clarity } = await import("@microsoft/clarity");
+
+    if (initializedMicrosoftClarityProjectId === projectId) {
+      grantMicrosoftClarityAnalyticsConsent();
+      return;
+    }
+
+    Clarity.init(projectId);
+    Clarity.consentV2(MICROSOFT_CLARITY_GRANTED_CONSENT);
+    initializedMicrosoftClarityProjectId = projectId;
+  } finally {
+    if (initializingMicrosoftClarityProjectId === projectId) {
+      initializingMicrosoftClarityProjectId = null;
+    }
+  }
+}
+
+export function resetMicrosoftClarityForTests() {
+  initializedMicrosoftClarityProjectId = null;
+  initializingMicrosoftClarityProjectId = null;
 }
 
 export function GoogleTagManagerScripts() {
@@ -84,6 +177,71 @@ export function GoogleTagManagerScripts() {
         })(window,document,'script','dataLayer','${GOOGLE_TAG_MANAGER_ID}');
       `}
     </Script>
+  );
+}
+
+export function AnalyticsPrivacyControls() {
+  const config = resolveMicrosoftClarityPublicConfig();
+  const storedConsent = useSyncExternalStore(
+    subscribeToGoogleAnalyticsConsent,
+    readStoredGoogleAnalyticsConsent,
+    getServerGoogleAnalyticsConsent,
+  );
+  const [sessionConsent, setSessionConsent] =
+    useState<GoogleAnalyticsConsent | null>(null);
+  const consent = sessionConsent ?? storedConsent;
+  const statusLabel =
+    consent === "accepted"
+      ? "Allowed"
+      : consent === "declined"
+        ? "Off"
+        : "Not chosen";
+  const clarityStatus = config.enabled
+    ? "Microsoft Clarity is enabled for this deployment after consent."
+    : "Microsoft Clarity is off for this deployment.";
+
+  const setConsent = (
+    nextConsent: Exclude<GoogleAnalyticsConsent, "undecided">,
+  ) => {
+    writeStoredGoogleAnalyticsConsent(nextConsent);
+    setSessionConsent(nextConsent);
+  };
+
+  return (
+    <section className="grid gap-2 rounded-lg border border-border p-4">
+      <h2 className="text-base font-semibold text-foreground">
+        Public analytics
+      </h2>
+      <p className="text-muted-foreground">
+        Status: <strong>{statusLabel}</strong>. When allowed, OverGarden may
+        use Google Tag Manager / Google Analytics and Microsoft Clarity only on
+        authored public, legal, and support pages. These tools do not run on
+        private garden, auth, admin, invite, erasure, journal, lineage, API, or
+        callback routes.
+      </p>
+      <p className="text-xs leading-5 text-muted-foreground">
+        {clarityStatus}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" size="sm" onClick={() => setConsent("accepted")}>
+          Allow analytics
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setConsent("declined")}
+        >
+          Turn off
+        </Button>
+      </div>
+      <p className="text-xs leading-5 text-muted-foreground">
+        Preference key: {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}. Turning this off
+        stops future Google Tag Manager / Google Analytics loading and revokes
+        Microsoft Clarity analytics storage for the current page when Clarity is
+        already initialized.
+      </p>
+    </section>
   );
 }
 
@@ -118,8 +276,10 @@ function AnalyticsConsentBanner({
     >
       <p className="text-sm leading-6 text-muted-foreground">
         We use Google Tag Manager for analytics only on public, legal, and
-        support pages to understand what helps gardeners reach OverGarden. It
-        does not run on private garden, auth, admin, or journal pages.
+        support pages to understand what helps gardeners reach OverGarden. When
+        enabled, Microsoft Clarity can also provide consented session insights
+        on those same pages. These tools do not run on private garden, auth,
+        admin, invite, erasure, journal, lineage, API, or callback routes.
       </p>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <Button onClick={onAccept} size="sm" type="button">
@@ -148,7 +308,7 @@ export function readStoredGoogleAnalyticsConsent(): GoogleAnalyticsConsent {
   }
 }
 
-function writeStoredGoogleAnalyticsConsent(
+export function writeStoredGoogleAnalyticsConsent(
   consent: Exclude<GoogleAnalyticsConsent, "undecided">,
 ) {
   if (typeof window === "undefined") return;
@@ -161,10 +321,15 @@ function writeStoredGoogleAnalyticsConsent(
   } catch {
     // Private browsing or storage-denied contexts must not block the UI choice.
   }
+  if (consent === "accepted") {
+    grantMicrosoftClarityAnalyticsConsent();
+  } else {
+    revokeMicrosoftClarityAnalyticsConsent();
+  }
   window.dispatchEvent(new Event(GOOGLE_ANALYTICS_CONSENT_EVENT));
 }
 
-function subscribeToGoogleAnalyticsConsent(onStoreChange: () => void) {
+export function subscribeToGoogleAnalyticsConsent(onStoreChange: () => void) {
   if (typeof window === "undefined") return () => undefined;
 
   const handleChange = () => onStoreChange();
@@ -179,4 +344,51 @@ function subscribeToGoogleAnalyticsConsent(onStoreChange: () => void) {
 
 function getServerGoogleAnalyticsConsent(): GoogleAnalyticsConsent {
   return "undecided";
+}
+
+export function resolveMicrosoftClarityPublicConfig(
+  env: Record<string, string | undefined> = MICROSOFT_CLARITY_PUBLIC_ENV,
+): MicrosoftClarityPublicConfig {
+  const enabled = isAffirmativeAnalyticsFlag(env[MICROSOFT_CLARITY_ENABLED_ENV]);
+  const projectId = configuredPublicEnvValue(
+    env[MICROSOFT_CLARITY_PROJECT_ID_ENV],
+  );
+
+  return {
+    enabled: enabled && Boolean(projectId),
+    projectId,
+  };
+}
+
+function isAffirmativeAnalyticsFlag(value: string | undefined) {
+  const normalized = value?.trim().toLowerCase();
+  return normalized === "true" || normalized === "1" || normalized === "yes";
+}
+
+function configuredPublicEnvValue(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === '""' || trimmed === "''") return null;
+
+  const normalized = trimmed.toLowerCase();
+  if (
+    normalized.includes("change_me") ||
+    normalized.includes("placeholder") ||
+    normalized.includes("replace_me") ||
+    normalized.includes("todo") ||
+    normalized.includes("...")
+  ) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+function grantMicrosoftClarityAnalyticsConsent() {
+  if (typeof window === "undefined") return;
+  window.clarity?.("consentv2", MICROSOFT_CLARITY_GRANTED_CONSENT);
+}
+
+function revokeMicrosoftClarityAnalyticsConsent() {
+  if (typeof window === "undefined") return;
+  window.clarity?.("consentv2", MICROSOFT_CLARITY_DENIED_CONSENT);
 }

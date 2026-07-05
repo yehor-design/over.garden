@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
+import { AnalyticsPrivacyControls } from "@/app/google-analytics";
 import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
 import {
   buildLanguageAlternates,
@@ -68,7 +69,7 @@ const PRIVACY_COPY: Record<
       "Private quarantine originals delete after successful processing or after 7 failed-processing days.",
       "Public derivatives stay while active and are removed from public surfaces after archive or erasure.",
       "Operator audit logs and erasure handling evidence are retained for 1 year.",
-      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement can run on authored public, legal, and support pages.",
+      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run on authored public, legal, and support pages only.",
       "Operator evidence must not include private journal text, precise location, private emails, IP/user-agent, media keys, or raw tokens.",
     ],
     boundariesTitle: "Review boundaries",
@@ -106,7 +107,7 @@ const PRIVACY_COPY: Record<
       "Private quarantine originals delete after successful processing or after 7 failed-processing days.",
       "Public derivatives stay while active and are removed from public surfaces after archive or erasure.",
       "Operator audit logs and erasure handling evidence are retained for 1 year.",
-      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement can run on authored public, legal, and support pages.",
+      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run on authored public, legal, and support pages only.",
       "Operator evidence must not include private journal text, precise location, private emails, IP/user-agent, media keys, or raw tokens.",
     ],
     boundariesTitle: "Review boundaries",
@@ -144,7 +145,7 @@ const PRIVACY_COPY: Record<
       "Private quarantine originals delete after successful processing or after 7 failed-processing days.",
       "Public derivatives stay while active and are removed from public surfaces after archive or erasure.",
       "Operator audit logs and erasure handling evidence are retained for 1 year.",
-      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement can run on authored public, legal, and support pages.",
+      "First-party product analytics events are retained for up to 13 months; consented Google Tag Manager / Google Analytics page measurement and Microsoft Clarity session insights can run on authored public, legal, and support pages only.",
       "Operator evidence must not include private journal text, precise location, private emails, IP/user-agent, media keys, or raw tokens.",
     ],
     boundariesTitle: "Review boundaries",
@@ -251,6 +252,7 @@ export default async function LocalizedPrivacyNoticePage({
             ))}
           </ul>
         </section>
+        <AnalyticsPrivacyControls />
         <MetaMarketingPrivacyControls />
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
