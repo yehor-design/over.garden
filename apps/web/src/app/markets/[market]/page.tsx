@@ -1,23 +1,29 @@
-import { permanentRedirect } from "next/navigation";
+import MarketLandingRoute, {
+  generateMetadata as generateLocalizedMarketMetadata,
+} from "../../[locale]/markets/[market]/page";
 
 import {
   DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
 } from "@/lib/public-localization";
 
 interface LegacyMarketRedirectProps {
   params: Promise<{ market: string }>;
 }
 
-export default async function LegacyMarketRedirect({
+export function generateMetadata({ params }: LegacyMarketRedirectProps) {
+  return params.then(({ market }) =>
+    generateLocalizedMarketMetadata({
+      params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, market }),
+    }),
+  );
+}
+
+export default async function MarketPage({
   params,
 }: LegacyMarketRedirectProps) {
   const { market } = await params;
 
-  permanentRedirect(
-    localizedPath(
-      DEFAULT_PUBLIC_LOCALE,
-      `/markets/${encodeURIComponent(market)}`,
-    ),
-  );
+  return MarketLandingRoute({
+    params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, market }),
+  });
 }

@@ -25,7 +25,8 @@ describe("/answers/[slug]", () => {
     expect(html).toContain('"@type":"FAQPage"');
     expect(html).toContain('"@type":"WebPage"');
     expect(html).toContain('"inLanguage":"ru"');
-    expect(html).toContain("/uk/answers/why-are-tomato-leaves-yellow");
+    expect(html).toContain("/bg/answers/why-are-tomato-leaves-yellow");
+    expect(html).not.toContain("/uk/answers/why-are-tomato-leaves-yellow");
     expect(html).toContain("/garden");
     expect(html).not.toContain("<form");
     expect(html).not.toContain("/api/");
@@ -47,7 +48,7 @@ describe("/answers/[slug]", () => {
       alternates: {
         canonical: "/ru/answers/why-are-tomato-leaves-yellow",
         languages: {
-          uk: "/uk/answers/why-are-tomato-leaves-yellow",
+          uk: "/answers/why-are-tomato-leaves-yellow",
           bg: "/bg/answers/why-are-tomato-leaves-yellow",
           ru: "/ru/answers/why-are-tomato-leaves-yellow",
         },

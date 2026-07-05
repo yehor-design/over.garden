@@ -46,7 +46,7 @@ describe("/{locale}/@:handle public profile route", () => {
     expect(metadata).toMatchObject({
       title: "@green_thumb | OverGarden",
       alternates: {
-        canonical: "/uk/@green_thumb",
+        canonical: "/@green_thumb",
       },
       robots: {
         index: false,
@@ -54,7 +54,7 @@ describe("/{locale}/@:handle public profile route", () => {
       },
     });
     expect(metadata.alternates?.languages).toMatchObject({
-      uk: "/uk/@green_thumb",
+      uk: "/@green_thumb",
       bg: "/bg/@green_thumb",
       ru: "/ru/@green_thumb",
     });

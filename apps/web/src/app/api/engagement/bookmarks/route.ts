@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const result = await toggleEngagementBookmark(scope, { target });
 
   revalidatePath(new URL(returnTo, request.url).pathname);
-  revalidatePath("/uk/bookmarks");
+  revalidatePath("/bookmarks");
   revalidatePath("/bg/bookmarks");
   revalidatePath("/ru/bookmarks");
 

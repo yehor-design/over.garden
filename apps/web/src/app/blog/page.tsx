@@ -1,10 +1,19 @@
-import { permanentRedirect } from "next/navigation";
+import BlogIndexRoute, {
+  generateMetadata as generateLocalizedBlogIndexMetadata,
+} from "../[locale]/blog/page";
 
 import {
   DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
 } from "@/lib/public-localization";
 
-export default function LegacyBlogIndexRedirect() {
-  permanentRedirect(localizedPath(DEFAULT_PUBLIC_LOCALE, "/blog"));
+export function generateMetadata() {
+  return generateLocalizedBlogIndexMetadata({
+    params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE }),
+  });
+}
+
+export default function BlogIndexPage() {
+  return BlogIndexRoute({
+    params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE }),
+  });
 }

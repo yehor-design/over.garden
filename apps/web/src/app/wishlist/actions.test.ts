@@ -74,7 +74,7 @@ describe("wishlist actions", () => {
         sourceSurface: "public_variety",
       },
     );
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/uk/wishlist");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/wishlist");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/variety/pomidor-cheri-0000000101",
@@ -115,8 +115,6 @@ describe("wishlist actions", () => {
       },
       "pomidor-cheri-0000000101",
     );
-    expect(mocks.redirect).toHaveBeenCalledWith(
-      "/uk/wishlist?wishlist=removed",
-    );
+    expect(mocks.redirect).toHaveBeenCalledWith("/wishlist?wishlist=removed");
   });
 });

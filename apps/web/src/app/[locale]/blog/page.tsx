@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { LocalizedBlogIndexPage } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   BLOG_INDEX_PATH,
@@ -20,7 +21,7 @@ interface LocalizedBlogIndexRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({
@@ -70,7 +71,7 @@ export default async function BlogIndexRoute({
       locale={localeParam}
       content={getLocalizedBlogIndexContent(localeParam)}
       posts={listLocalizedBlogPosts(localeParam)}
-      availableLocales={PUBLIC_LOCALES}
+      availableLocales={getLanguageSwitcherLocales(localeParam)}
     />
   );
 }

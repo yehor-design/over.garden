@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   getRootLocaleRedirectPath,
   selectPublicLocaleFromAcceptLanguage,
+  selectPublicLocaleFromRequestContext,
 } from "@/lib/public-localization";
 import HomeRoute, { generateMetadata } from "./[locale]/page";
 
@@ -17,6 +18,14 @@ describe("/", () => {
     );
     expect(selectPublicLocaleFromAcceptLanguage("en-US,en;q=0.9")).toBe("uk");
     expect(getRootLocaleRedirectPath("bg-BG,bg;q=0.9")).toBe("/bg");
+    expect(getRootLocaleRedirectPath("ru;q=0.9,uk;q=0.8", "UA")).toBe("/");
+    expect(getRootLocaleRedirectPath("ru;q=0.9,uk;q=0.8", "BG")).toBe("/bg");
+    expect(
+      selectPublicLocaleFromRequestContext({
+        acceptLanguage: "ru;q=0.9",
+        countryCode: "UA",
+      }),
+    ).toBe("uk");
   });
 
   it("renders localized homepages with language switcher and no private route leaks", async () => {
@@ -29,19 +38,19 @@ describe("/", () => {
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.alternates).toMatchObject({
-      canonical: "/uk",
+      canonical: "/",
       languages: {
-        uk: "/uk",
+        uk: "/",
         bg: "/bg",
         ru: "/ru",
-        "x-default": "/uk",
+        "x-default": "/",
       },
     });
     expect(html).toContain('lang="uk"');
     expect(html).toContain("Ведіть живу історію");
     expect(html).toContain("Українська");
-    expect(html).toContain("Български");
-    expect(html).toContain("Русский");
+    expect(html).not.toContain("Български");
+    expect(html).not.toContain("Русский");
     expect(html).not.toContain("/join?");
     expect(html).not.toContain("/admin");
     expect(html).not.toContain("/garden/pilot");

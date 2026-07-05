@@ -5,11 +5,12 @@ import {
   FIRST_PUBLICATION_DISCLOSURE_VERSION,
   SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
-import FirstPublicationDisclosurePage, { metadata } from "./page";
+import FirstPublicationDisclosurePage, { generateMetadata } from "./page";
 
 describe("/first-publication-disclosure", () => {
-  it("renders the current logged disclosure without placeholder wording", () => {
-    const html = renderToStaticMarkup(<FirstPublicationDisclosurePage />);
+  it("renders the current logged disclosure without placeholder wording", async () => {
+    const html = renderToStaticMarkup(await FirstPublicationDisclosurePage());
+    const metadata = await generateMetadata();
 
     expect(metadata.description).toContain(
       "Founder-approved OverGarden MVP disclosure",

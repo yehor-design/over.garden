@@ -25,29 +25,28 @@ describe("/sitemap.xml", () => {
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
-      "https://over.garden/uk",
+      "https://over.garden/",
       "https://over.garden/bg",
       "https://over.garden/ru",
-      "https://over.garden/uk/blog",
+      "https://over.garden/blog",
       "https://over.garden/bg/blog",
       "https://over.garden/ru/blog",
-      "https://over.garden/uk/blog/ai-garden-advice-vs-real-garden-proof",
+      "https://over.garden/blog/ai-garden-advice-vs-real-garden-proof",
       "https://over.garden/bg/blog/ai-garden-advice-vs-real-garden-proof",
       "https://over.garden/ru/blog/ai-garden-advice-vs-real-garden-proof",
-      "https://over.garden/uk/guides/start-a-living-plant-record",
+      "https://over.garden/guides/start-a-living-plant-record",
       "https://over.garden/bg/guides/start-a-living-plant-record",
       "https://over.garden/ru/guides/start-a-living-plant-record",
-      "https://over.garden/uk/answers/why-are-tomato-leaves-yellow",
+      "https://over.garden/answers/why-are-tomato-leaves-yellow",
       "https://over.garden/bg/answers/why-are-tomato-leaves-yellow",
       "https://over.garden/ru/answers/why-are-tomato-leaves-yellow",
-      "https://over.garden/uk/markets/ukraine",
-      "https://over.garden/ru/markets/ukraine",
+      "https://over.garden/markets/ukraine",
       "https://over.garden/bg/markets/bulgaria",
       "https://over.garden/ru/markets/bulgaria",
-      "https://over.garden/uk/markets/bulgaria",
       "https://over.garden/variety/pomidor-cheri-0000000101",
     ]);
-    expect(urls).not.toContain("https://over.garden/");
+    expect(urls).not.toContain("https://over.garden/uk");
+    expect(urls).not.toContain("https://over.garden/ru/markets/ukraine");
     expect(urls.join(" ")).not.toContain("/health");
     expect(urls.join(" ")).not.toContain("/join");
     expect(urls.join(" ")).not.toContain("/garden");
@@ -56,7 +55,7 @@ describe("/sitemap.xml", () => {
       entries.every((entry) => entry.lastModified instanceof Date),
     ).toBe(true);
     expect(entries[0]).toMatchObject({
-      url: "https://over.garden/uk",
+      url: "https://over.garden/",
       lastModified: new Date("2026-07-03T00:00:00.000Z"),
     });
     expect(entries.at(-1)).toMatchObject({

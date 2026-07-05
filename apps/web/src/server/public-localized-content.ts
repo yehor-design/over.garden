@@ -655,9 +655,9 @@ const ANSWER_TRANSLATIONS: Record<
         },
         {
           label: "Балконные овощи",
-          href: "/markets/ukraine",
+          href: "/markets/bulgaria",
           description:
-            "Посмотрите, как OverGarden описывает первые записи для садоводов в Украине.",
+            "Посмотрите, как OverGarden описывает первые записи для садоводов в Болгарии.",
         },
       ],
       relatedTopics: [

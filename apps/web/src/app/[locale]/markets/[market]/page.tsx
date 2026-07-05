@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { LocalizedMarketLandingPage } from "@/components/public/localized-public-pages";
 import {
+  DEFAULT_PUBLIC_LOCALE,
   buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
@@ -21,10 +22,12 @@ interface LocalizedMarketRouteProps {
 
 export function generateStaticParams() {
   return listMarketLandings().flatMap((landing) =>
-    getMarketLandingLocales(landing.market).map((locale) => ({
-      locale,
-      market: landing.market,
-    })),
+    getMarketLandingLocales(landing.market)
+      .filter((locale) => locale !== DEFAULT_PUBLIC_LOCALE)
+      .map((locale) => ({
+        locale,
+        market: landing.market,
+      })),
   );
 }
 

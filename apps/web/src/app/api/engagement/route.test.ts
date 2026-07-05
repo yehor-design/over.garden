@@ -171,7 +171,7 @@ describe("engagement routes", () => {
         },
       },
     );
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/uk/bookmarks");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/bookmarks");
     expect(response.headers.get("location")).toBe(
       "https://over.garden/variety/pomidor-cheri-0000000101?engagement=bookmarked",
     );

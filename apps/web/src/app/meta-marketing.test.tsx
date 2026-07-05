@@ -39,7 +39,7 @@ describe("MetaMarketingAttribution", () => {
 
   it("allows marketing measurement only on authored public/legal/support routes", () => {
     expect(isMetaMarketingRoute("/")).toBe(true);
-    expect(isMetaMarketingRoute("/uk")).toBe(true);
+    expect(isMetaMarketingRoute("/blog")).toBe(true);
     expect(isMetaMarketingRoute("/bg/blog")).toBe(true);
     expect(isMetaMarketingRoute("/guides/start-a-living-plant-record")).toBe(
       true,

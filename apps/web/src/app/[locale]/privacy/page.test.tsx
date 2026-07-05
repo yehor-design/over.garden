@@ -19,7 +19,7 @@ describe("/{locale}/privacy", () => {
       alternates: {
         canonical: "/bg/privacy",
         languages: {
-          uk: "/uk/privacy",
+          uk: "/privacy",
           bg: "/bg/privacy",
           ru: "/ru/privacy",
         },
@@ -32,7 +32,8 @@ describe("/{locale}/privacy", () => {
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).toContain("7 failed-processing days");
     expect(html).toContain("Google Analytics page measurement");
-    expect(html).toContain("/uk/privacy");
+    expect(html).not.toContain("/uk/privacy");
+    expect(html).not.toContain("Українська");
     expect(html).toContain("/ru/privacy");
     expect(html).not.toContain("/api/");
     expect(html).not.toContain("/admin");

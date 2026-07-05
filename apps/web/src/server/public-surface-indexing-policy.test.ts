@@ -163,7 +163,7 @@ describe("public surface indexing policy", () => {
     expect(listStaticIndexablePublicSurfaces()).toEqual([
       {
         kind: "marketing_landing",
-        path: "/uk",
+        path: "/",
         lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
         changeFrequency: "weekly",
         priority: 0.8,

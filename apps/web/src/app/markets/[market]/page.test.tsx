@@ -17,7 +17,7 @@ describe("/markets/[market]", () => {
     expect(html).toContain("Для кого це");
     expect(html).toContain("Обіцянка");
     expect(html).toContain("Почати приватний запис");
-    expect(html).toContain("/ru/markets/ukraine");
+    expect(html).not.toContain("/ru/markets/ukraine");
     expect(html).not.toContain("/bg/markets/ukraine");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
@@ -36,7 +36,7 @@ describe("/markets/[market]", () => {
 
     expect(html).toContain("OverGarden за градинари в България");
     expect(html).toContain("градини, дворове, оранжерии, тераси");
-    expect(html).toContain("/uk/markets/bulgaria");
+    expect(html).not.toContain("/uk/markets/bulgaria");
     expect(html).toContain("/ru/markets/bulgaria");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
@@ -54,11 +54,27 @@ describe("/markets/[market]", () => {
     ).resolves.toMatchObject({
       title: "OverGarden для садівників в Україні | OverGarden",
       alternates: {
-        canonical: "/uk/markets/ukraine",
+        canonical: "/markets/ukraine",
         languages: {
-          uk: "/uk/markets/ukraine",
-          ru: "/ru/markets/ukraine",
-          "x-default": "/uk/markets/ukraine",
+          uk: "/markets/ukraine",
+          "x-default": "/markets/ukraine",
+        },
+      },
+      robots: { index: true, follow: true },
+    });
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ locale: "bg", market: "bulgaria" }),
+      }),
+    ).resolves.toMatchObject({
+      title: "OverGarden за градинари в България | OverGarden",
+      alternates: {
+        canonical: "/bg/markets/bulgaria",
+        languages: {
+          bg: "/bg/markets/bulgaria",
+          ru: "/ru/markets/bulgaria",
+          "x-default": "/bg/markets/bulgaria",
         },
       },
       robots: { index: true, follow: true },

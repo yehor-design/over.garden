@@ -92,7 +92,7 @@ describe("/{locale}/notifications", () => {
     ).resolves.toMatchObject({
       title: "Notifications | OverGarden",
       alternates: {
-        canonical: "/uk/notifications",
+        canonical: "/notifications",
       },
       robots: {
         index: false,
@@ -134,7 +134,7 @@ describe("/{locale}/notifications", () => {
     );
     expect(html).toContain("@green_thumb followed Seed mother");
     expect(html).toContain("/garden/lineage/claims");
-    expect(html).toContain("/uk/feed");
+    expect(html).toContain("/feed");
     expect(html).not.toMatch(
       /00000000-0000|session-1|journal body|private journal|quarantine|derivative|media key|ip_address|user_agent|email|phone|coordinates|invite|token|source_reference_label|client_mutation/i,
     );

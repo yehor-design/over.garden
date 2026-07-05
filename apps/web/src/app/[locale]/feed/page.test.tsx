@@ -66,7 +66,7 @@ describe("/{locale}/feed", () => {
     ).resolves.toMatchObject({
       title: "Followed feed | OverGarden",
       alternates: {
-        canonical: "/uk/feed",
+        canonical: "/feed",
       },
       robots: {
         index: false,

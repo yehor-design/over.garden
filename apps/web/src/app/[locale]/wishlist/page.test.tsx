@@ -75,7 +75,7 @@ describe("/{locale}/wishlist", () => {
     ).resolves.toMatchObject({
       title: "Wishlist | OverGarden",
       alternates: {
-        canonical: "/uk/wishlist",
+        canonical: "/wishlist",
       },
       robots: {
         index: false,

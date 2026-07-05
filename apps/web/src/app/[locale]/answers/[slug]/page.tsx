@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { LocalizedAnswerPage } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   getLocalizedAnswerPage,
@@ -20,7 +21,7 @@ interface LocalizedAnswerRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.flatMap((locale) =>
+  return PREFIXED_PUBLIC_LOCALES.flatMap((locale) =>
     listAnswerPages().map((page) => ({
       locale,
       slug: page.slug,
@@ -89,7 +90,7 @@ export default async function AnswerRoute({
       locale={localeParam}
       page={page}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={PUBLIC_LOCALES}
+      availableLocales={getLanguageSwitcherLocales(localeParam)}
     />
   );
 }

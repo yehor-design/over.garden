@@ -57,7 +57,7 @@ describe("/garden/profile", () => {
       sessionId: "session-1",
     });
     expect(html).toContain("@green_thumb");
-    expect(html).toContain("/uk/@green_thumb");
+    expect(html).toContain("/@green_thumb");
     expect(html).toContain("Save handle");
     expect(html).not.toMatch(
       /email|provider|session-1|quarantine|invite|token|00000000-0000/i,

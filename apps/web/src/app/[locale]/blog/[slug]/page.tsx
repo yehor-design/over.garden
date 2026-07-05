@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { LocalizedBlogPostPage } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   getLocalizedBlogPost,
@@ -20,7 +21,7 @@ interface LocalizedBlogPostRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.flatMap((locale) =>
+  return PREFIXED_PUBLIC_LOCALES.flatMap((locale) =>
     listBlogPosts().map((post) => ({
       locale,
       slug: post.slug,
@@ -89,7 +90,7 @@ export default async function BlogPostRoute({
       locale={localeParam}
       post={post}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={PUBLIC_LOCALES}
+      availableLocales={getLanguageSwitcherLocales(localeParam)}
     />
   );
 }

@@ -3,11 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
+import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
@@ -161,7 +163,7 @@ const PRIVACY_COPY: Record<
 };
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({
@@ -204,7 +206,7 @@ export default async function LocalizedPrivacyNoticePage({
       <PublicLocalizedHeader
         locale={localeParam}
         basePath="/privacy"
-        availableLocales={PUBLIC_LOCALES}
+        availableLocales={getLanguageSwitcherLocales(localeParam)}
       />
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -249,6 +251,7 @@ export default async function LocalizedPrivacyNoticePage({
             ))}
           </ul>
         </section>
+        <MetaMarketingPrivacyControls />
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
             {copy.contactTitle}

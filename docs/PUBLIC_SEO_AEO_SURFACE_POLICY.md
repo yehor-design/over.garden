@@ -24,11 +24,11 @@ The source of truth is `apps/web/src/server/public-surface-indexing-policy.ts`.
 Current decisions:
 
 - Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
-- The localized homepages `/uk`, `/bg`, and `/ru` are the first authored marketing landing surfaces included in the sitemap.
+- The localized homepages `/`, `/bg`, and `/ru` are the first authored marketing landing surfaces included in the sitemap. Ukrainian is the unprefixed canonical default for the primary domain.
 - Private workspace, auth, and operator route groups such as `/garden`, `/auth/*`, and `/admin/*` must emit `noindex, nofollow` route metadata. This metadata is a crawl-quality control, not a privacy boundary.
 - OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
-- OVE-117 moves the canonical public content routes into language folders: `/uk`, `/bg`, and `/ru` for home/blog/guide/answer/static surfaces, with market-aware availability for `/uk/markets/ukraine`, `/ru/markets/ukraine`, `/bg/markets/bulgaria`, `/ru/markets/bulgaria`, and `/uk/markets/bulgaria`.
-- Root `/` is an explicit `Accept-Language` redirect with `/uk` fallback; it is not a sitemap URL.
+- OVE-117 moves the canonical public content routes into language-aware surfaces, superseded by the 2026-07-05 domain-default locale decision: Ukrainian uses unprefixed routes such as `/`, `/blog`, and `/markets/ukraine`; Bulgarian uses `/bg`; Russian remains available as `/ru` for the Bulgarian market.
+- Root `/` renders Ukrainian by default. Requests with a Bulgaria country signal redirect to `/bg`; legacy `/uk` URLs permanently redirect to their unprefixed equivalents.
 - Public journal entries require explicit publication and remain `noindex` while `public_noindex = true`.
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
 - Current aggregation thresholds are at least 3 safe public entries, at least 600 aggregate body characters, and a trust gate. Variety aggregation must be backed by either a curated `confirmed` catalog item or a seeded item from an approved source-backed family. Topic aggregation must pass a curated-topic trust state before a future topic route can become indexable.

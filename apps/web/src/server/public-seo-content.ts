@@ -123,8 +123,8 @@ export const MARKET_LANDING_LOCALES: Record<
   MarketLandingContent["market"],
   readonly PublicLocale[]
 > = {
-  ukraine: ["uk", "ru"],
-  bulgaria: ["bg", "ru", "uk"],
+  ukraine: ["uk"],
+  bulgaria: ["bg", "ru"],
 };
 
 const BLOG_POSTS: BlogPostContent[] = [
@@ -297,7 +297,7 @@ const MARKET_LANDINGS: MarketLandingContent[] = [
     ],
     localizationHandoff: {
       locale: "uk",
-      plannedPath: "/uk/markets/ukraine",
+      plannedPath: "/markets/ukraine",
       owningIssue: "OVE-117",
     },
     relatedLinks: [

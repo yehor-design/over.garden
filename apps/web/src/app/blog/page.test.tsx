@@ -14,16 +14,17 @@ describe("/blog", () => {
 
     expect(metadata.robots).toMatchObject({ index: true, follow: true });
     expect(metadata.alternates).toMatchObject({
-      canonical: "/uk/blog",
+      canonical: "/blog",
       languages: {
-        uk: "/uk/blog",
+        uk: "/blog",
         bg: "/bg/blog",
         ru: "/ru/blog",
       },
     });
     expect(html).toContain("Корисні публічні сторінки");
-    expect(html).toContain("/uk/blog/ai-garden-advice-vs-real-garden-proof");
-    expect(html).toContain("Български");
+    expect(html).toContain("/blog/ai-garden-advice-vs-real-garden-proof");
+    expect(html).not.toContain("Български");
+    expect(html).not.toContain("Русский");
     expect(html).toContain("/garden");
     expect(html).not.toContain("<form");
     expect(html).not.toContain("/api/");

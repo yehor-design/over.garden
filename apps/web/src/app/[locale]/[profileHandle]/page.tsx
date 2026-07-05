@@ -7,9 +7,9 @@ import { cache } from "react";
 import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import {
@@ -87,7 +87,7 @@ export default async function LocalizedPublicProfileRoute({
       <PublicLocalizedHeader
         locale={localeParam}
         basePath={basePath}
-        availableLocales={PUBLIC_LOCALES}
+        availableLocales={getLanguageSwitcherLocales(localeParam)}
       />
 
       <header className="flex flex-col gap-5 border-b border-border pb-6">

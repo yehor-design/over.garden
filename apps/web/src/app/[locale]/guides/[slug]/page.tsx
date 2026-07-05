@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { LocalizedGuidePage } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   getLocalizedGuide,
@@ -20,7 +21,7 @@ interface LocalizedGuideRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.flatMap((locale) =>
+  return PREFIXED_PUBLIC_LOCALES.flatMap((locale) =>
     listGuides().map((guide) => ({
       locale,
       slug: guide.slug,
@@ -87,7 +88,7 @@ export default async function GuideRoute({ params }: LocalizedGuideRouteProps) {
       locale={localeParam}
       guide={guide}
       chrome={getLocalizedRouteChrome(localeParam)}
-      availableLocales={PUBLIC_LOCALES}
+      availableLocales={getLanguageSwitcherLocales(localeParam)}
     />
   );
 }

@@ -1,23 +1,29 @@
-import { permanentRedirect } from "next/navigation";
+import AnswerRoute, {
+  generateMetadata as generateLocalizedAnswerMetadata,
+} from "../../[locale]/answers/[slug]/page";
 
 import {
   DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
 } from "@/lib/public-localization";
 
 interface LegacyAnswerRedirectProps {
   params: Promise<{ slug: string }>;
 }
 
-export default async function LegacyAnswerRedirect({
+export function generateMetadata({ params }: LegacyAnswerRedirectProps) {
+  return params.then(({ slug }) =>
+    generateLocalizedAnswerMetadata({
+      params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
+    }),
+  );
+}
+
+export default async function AnswerPage({
   params,
 }: LegacyAnswerRedirectProps) {
   const { slug } = await params;
 
-  permanentRedirect(
-    localizedPath(
-      DEFAULT_PUBLIC_LOCALE,
-      `/answers/${encodeURIComponent(slug)}`,
-    ),
-  );
+  return AnswerRoute({
+    params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
+  });
 }

@@ -39,7 +39,7 @@ describe("/guides/[slug]", () => {
       alternates: {
         canonical: "/bg/guides/start-a-living-plant-record",
         languages: {
-          uk: "/uk/guides/start-a-living-plant-record",
+          uk: "/guides/start-a-living-plant-record",
           bg: "/bg/guides/start-a-living-plant-record",
           ru: "/ru/guides/start-a-living-plant-record",
         },

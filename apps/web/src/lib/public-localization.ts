@@ -3,6 +3,12 @@ export const PUBLIC_LOCALES = ["uk", "bg", "ru"] as const;
 export type PublicLocale = (typeof PUBLIC_LOCALES)[number];
 
 export const DEFAULT_PUBLIC_LOCALE: PublicLocale = "uk";
+export const UKRAINE_PUBLIC_LOCALES = ["uk"] as const satisfies readonly PublicLocale[];
+export const BULGARIA_PUBLIC_LOCALES = ["bg", "ru"] as const satisfies readonly PublicLocale[];
+export const PREFIXED_PUBLIC_LOCALES = [
+  "bg",
+  "ru",
+] as const satisfies readonly PublicLocale[];
 
 export const PUBLIC_LOCALE_CONFIG: Record<
   PublicLocale,
@@ -36,6 +42,10 @@ export function isPublicLocale(value: string): value is PublicLocale {
 export function localizedPath(locale: PublicLocale, path: string) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
+  if (locale === DEFAULT_PUBLIC_LOCALE) {
+    return normalizedPath;
+  }
+
   return normalizedPath === "/" ? `/${locale}` : `/${locale}${normalizedPath}`;
 }
 
@@ -60,6 +70,9 @@ export function buildLanguageAlternates(
   basePath: string,
   availableLocales: readonly PublicLocale[] = PUBLIC_LOCALES,
 ) {
+  const xDefaultLocale = availableLocales.includes(DEFAULT_PUBLIC_LOCALE)
+    ? DEFAULT_PUBLIC_LOCALE
+    : (availableLocales[0] ?? DEFAULT_PUBLIC_LOCALE);
   const entries = availableLocales.map((locale) => [
     locale,
     localizedPath(locale, basePath),
@@ -67,8 +80,38 @@ export function buildLanguageAlternates(
 
   return Object.fromEntries([
     ...entries,
-    ["x-default", localizedPath(DEFAULT_PUBLIC_LOCALE, basePath)],
+    ["x-default", localizedPath(xDefaultLocale, basePath)],
   ]) as Record<string, string>;
+}
+
+export function getLanguageSwitcherLocales(
+  locale: PublicLocale,
+): readonly PublicLocale[] {
+  return locale === DEFAULT_PUBLIC_LOCALE
+    ? UKRAINE_PUBLIC_LOCALES
+    : BULGARIA_PUBLIC_LOCALES;
+}
+
+export function selectPublicLocaleFromRequestContext(input: {
+  acceptLanguage: string | null;
+  countryCode: string | null;
+}): PublicLocale {
+  const countryCode = input.countryCode?.trim().toUpperCase();
+
+  if (countryCode === "UA") return "uk";
+  if (countryCode === "BG") return "bg";
+
+  return selectPublicLocaleFromAcceptLanguage(input.acceptLanguage);
+}
+
+export function selectPublicLocaleFromRequestHeaders(headers: Headers) {
+  return selectPublicLocaleFromRequestContext({
+    acceptLanguage: headers.get("accept-language"),
+    countryCode:
+      headers.get("x-vercel-ip-country") ??
+      headers.get("cf-ipcountry") ??
+      headers.get("x-country-code"),
+  });
 }
 
 export function selectPublicLocaleFromAcceptLanguage(
@@ -103,9 +146,12 @@ export function selectPublicLocaleFromAcceptLanguage(
   return DEFAULT_PUBLIC_LOCALE;
 }
 
-export function getRootLocaleRedirectPath(acceptLanguage: string | null) {
+export function getRootLocaleRedirectPath(
+  acceptLanguage: string | null,
+  countryCode: string | null = null,
+) {
   return localizedPath(
-    selectPublicLocaleFromAcceptLanguage(acceptLanguage),
+    selectPublicLocaleFromRequestContext({ acceptLanguage, countryCode }),
     "/",
   );
 }

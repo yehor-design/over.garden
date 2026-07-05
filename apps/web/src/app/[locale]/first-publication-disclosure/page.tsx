@@ -4,9 +4,10 @@ import { notFound } from "next/navigation";
 import { PublicLocalizedHeader } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
 import {
   FIRST_PUBLICATION_DISCLOSURE_LINES,
@@ -20,7 +21,7 @@ interface LocalizedFirstPublicationDisclosureRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({
@@ -60,7 +61,7 @@ export default async function LocalizedFirstPublicationDisclosurePage({
       <PublicLocalizedHeader
         locale={localeParam}
         basePath="/first-publication-disclosure"
-        availableLocales={PUBLIC_LOCALES}
+        availableLocales={getLanguageSwitcherLocales(localeParam)}
       />
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">

@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import { LocalizedHomePage } from "@/components/public/localized-public-pages";
 import {
   buildLanguageAlternates,
+  getLanguageSwitcherLocales,
   isPublicLocale,
   localizedPath,
-  PUBLIC_LOCALES,
+  PREFIXED_PUBLIC_LOCALES,
+  type PublicLocale,
 } from "@/lib/public-localization";
 import { getLocalizedHomeContent } from "@/server/public-localized-content";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
@@ -16,7 +18,7 @@ interface LocalizedHomeRouteProps {
 }
 
 export function generateStaticParams() {
-  return PUBLIC_LOCALES.map((locale) => ({ locale }));
+  return PREFIXED_PUBLIC_LOCALES.map((locale) => ({ locale }));
 }
 
 export async function generateMetadata({
@@ -54,16 +56,20 @@ export async function generateMetadata({
   };
 }
 
+export function renderLocalizedHomePage(locale: PublicLocale) {
+  return (
+    <LocalizedHomePage
+      locale={locale}
+      content={getLocalizedHomeContent(locale)}
+      availableLocales={getLanguageSwitcherLocales(locale)}
+    />
+  );
+}
+
 export default async function HomeRoute({ params }: LocalizedHomeRouteProps) {
   const { locale: localeParam } = await params;
 
   if (!isPublicLocale(localeParam)) notFound();
 
-  return (
-    <LocalizedHomePage
-      locale={localeParam}
-      content={getLocalizedHomeContent(localeParam)}
-      availableLocales={PUBLIC_LOCALES}
-    />
-  );
+  return renderLocalizedHomePage(localeParam);
 }

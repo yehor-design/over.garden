@@ -18,7 +18,8 @@ describe("/blog/[slug]", () => {
 
     expect(html).toContain("Порада AI");
     expect(html).toContain("Порада зникає. Записи накопичуються.");
-    expect(html).toContain("/bg/blog/ai-garden-advice-vs-real-garden-proof");
+    expect(html).not.toContain("/ru/blog/ai-garden-advice-vs-real-garden-proof");
+    expect(html).not.toContain("/bg/blog/ai-garden-advice-vs-real-garden-proof");
     expect(html).toContain("/garden");
     expect(html).not.toContain("<form");
     expect(html).not.toContain("/api/");
@@ -38,9 +39,9 @@ describe("/blog/[slug]", () => {
       title:
         "Порада AI - це не те саме, що датований садовий доказ | OverGarden",
       alternates: {
-        canonical: "/uk/blog/ai-garden-advice-vs-real-garden-proof",
+        canonical: "/blog/ai-garden-advice-vs-real-garden-proof",
         languages: {
-          uk: "/uk/blog/ai-garden-advice-vs-real-garden-proof",
+          uk: "/blog/ai-garden-advice-vs-real-garden-proof",
           bg: "/bg/blog/ai-garden-advice-vs-real-garden-proof",
           ru: "/ru/blog/ai-garden-advice-vs-real-garden-proof",
         },

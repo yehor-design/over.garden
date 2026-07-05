@@ -57,7 +57,7 @@ describe("public handle profile actions", () => {
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden/profile");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/uk/@green_thumb");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/@green_thumb");
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/garden/profile?status=updated",
     );

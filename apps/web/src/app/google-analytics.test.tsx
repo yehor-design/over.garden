@@ -33,7 +33,7 @@ vi.mock("next/script", () => ({
 describe("GoogleAnalytics", () => {
   it("allows only authored public pages and legal/support pages", () => {
     expect(isGoogleAnalyticsRoute("/")).toBe(true);
-    expect(isGoogleAnalyticsRoute("/uk")).toBe(true);
+    expect(isGoogleAnalyticsRoute("/blog")).toBe(true);
     expect(isGoogleAnalyticsRoute("/bg/blog")).toBe(true);
     expect(isGoogleAnalyticsRoute("/blog/late-blight-guide")).toBe(true);
     expect(
@@ -55,7 +55,7 @@ describe("GoogleAnalytics", () => {
   });
 
   it("asks for analytics consent before loading the Google tag", () => {
-    mockedPathname = "/uk/blog";
+    mockedPathname = "/blog";
 
     const html = renderToStaticMarkup(<GoogleAnalytics />);
 
