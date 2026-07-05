@@ -28,7 +28,7 @@ describe("/", () => {
     ).toBe("uk");
   });
 
-  it("renders localized homepages with language switcher and no private route leaks", async () => {
+  it("renders the Ukrainian default homepage without a language switcher", async () => {
     const html = renderToStaticMarkup(
       await HomeRoute({ params: Promise.resolve({ locale: "uk" }) }),
     );
@@ -48,11 +48,25 @@ describe("/", () => {
     });
     expect(html).toContain('lang="uk"');
     expect(html).toContain("Ведіть живу історію");
-    expect(html).toContain("Українська");
+    expect(html).not.toContain('aria-label="Language switcher"');
+    expect(html).not.toContain("Українська");
     expect(html).not.toContain("Български");
     expect(html).not.toContain("Русский");
     expect(html).not.toContain("/join?");
     expect(html).not.toContain("/admin");
     expect(html).not.toContain("/garden/pilot");
+  });
+
+  it("renders the Bulgarian homepage with only Bulgarian and Russian choices", async () => {
+    const html = renderToStaticMarkup(
+      await HomeRoute({ params: Promise.resolve({ locale: "bg" }) }),
+    );
+
+    expect(html).toContain('lang="bg"');
+    expect(html).toContain('aria-label="Language switcher"');
+    expect(html).toContain("Български");
+    expect(html).toContain("Русский");
+    expect(html).not.toContain("Українська");
+    expect(html).not.toContain("/uk");
   });
 });

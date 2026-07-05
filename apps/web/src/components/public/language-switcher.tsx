@@ -16,6 +16,10 @@ export function LanguageSwitcher({
   basePath: string;
   availableLocales?: readonly PublicLocale[];
 }) {
+  if (availableLocales.length < 2) {
+    return null;
+  }
+
   return (
     <nav
       aria-label="Language switcher"
