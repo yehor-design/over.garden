@@ -1,25 +1,46 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache } from "react";
+import { cache, type ReactNode } from "react";
+import {
+  ArrowRight,
+  BookOpen,
+  CalendarDays,
+  GitBranch,
+  MapPin,
+  ShieldCheck,
+  Sprout,
+  UserRound,
+} from "lucide-react";
 
+import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { buttonVariants } from "@/components/ui/button";
 import {
   publicLineageObjectPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import {
-  getPublicLineageGraphPage,
-  type PublicLineageEdge,
-  type PublicLineageNode,
-} from "@/server/public-lineage-repository";
-import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+  catalogIdentityLabel,
+  plantObjectKindLabel,
+  varietyStateLabel,
+} from "@/lib/garden/pilot-ux-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { listLineageInteractionTargets } from "@/server/lineage-interactions-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
+import {
+  getPublicLineageGraphPage,
+  type PublicLineageEdge,
+  type PublicLineageGraphPage,
+  type PublicLineageNode,
+} from "@/server/public-lineage-repository";
+import {
+  getPublicObjectPassportPage,
+  type PublicObjectPassportPage,
+} from "@/server/public-object-passport-repository";
+import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { scopedToUser } from "@/server/request-scope";
-import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +55,10 @@ const EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS: Record<
   string | string[] | undefined
 > = {};
 
+const getCachedPublicObjectPassportPage = cache((objectId: string) =>
+  getPublicObjectPassportPage(objectId),
+);
+
 const getCachedPublicLineageGraphPage = cache((objectId: string) =>
   getPublicLineageGraphPage(objectId),
 );
@@ -42,23 +67,23 @@ export async function generateMetadata({
   params,
 }: PublicLineageObjectRouteProps): Promise<Metadata> {
   const { objectId } = await params;
-  const page = await getCachedPublicLineageGraphPage(objectId);
+  const page = await getCachedPublicObjectPassportPage(objectId);
   const indexState = evaluatePublicSurfaceIndexability({
-    kind: page ? "lineage_graph" : "missing",
+    kind: page ? "object_passport" : "missing",
   });
 
   if (!page) {
     return {
-      title: "Lineage | OverGarden",
+      title: "Living object | OverGarden",
       robots: indexState.robots,
     };
   }
 
   return {
-    title: `${page.root.displayName} lineage | OverGarden`,
-    description: `Confirmed public-safe provenance chain for ${page.root.displayName}.`,
+    title: `${page.object.displayName} living object | OverGarden`,
+    description: `Public OverGarden object passport for ${page.object.displayName}.`,
     alternates: {
-      canonical: publicLineageObjectPath(page.root.plantObjectId),
+      canonical: publicLineageObjectPath(page.object.plantObjectId),
     },
     robots: indexState.robots,
   };
@@ -71,24 +96,26 @@ export default async function PublicLineageObjectRoute({
   const { objectId } = await params;
   const query = await (searchParams ??
     Promise.resolve(EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS));
-  const page = await getCachedPublicLineageGraphPage(objectId);
+  const passport = await getCachedPublicObjectPassportPage(objectId);
 
-  if (!page) notFound();
+  if (!passport) notFound();
 
-  const nodesById = new Map(
-    page.nodes.map((node) => [node.plantObjectId, node]),
+  const lineagePage = await getCachedPublicLineageGraphPage(
+    passport.object.plantObjectId,
   );
+  const nodesById = buildPublicLineageNodeMap(passport, lineagePage);
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
+  const edges = lineagePage?.edges ?? [];
   const interactionTargets =
-    scope && writeAccess.invited
+    scope && writeAccess.invited && edges.length > 0
       ? await listLineageInteractionTargets(
           scope,
-          page.edges.map((edge) => edge.id),
+          edges.map((edge) => edge.id),
         )
       : [];
   const interactionTargetsByEdgeId = new Map(
@@ -96,58 +123,48 @@ export default async function PublicLineageObjectRoute({
   );
   const engagementTarget = {
     kind: "lineage_object" as const,
-    ref: page.root.plantObjectId,
+    ref: passport.object.plantObjectId,
   };
+  const returnTo = publicLineageObjectPath(passport.object.plantObjectId);
   const engagement = await getEngagementSummary(engagementTarget);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
-      <header className="flex flex-col gap-5 border-b border-border pb-6">
-        <Link
-          href="/"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          OverGarden
-        </Link>
-        <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            Lineage graph
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {page.root.displayName}
-          </h1>
-          <PublicLineageNodeMeta node={page.root} />
-        </div>
-      </header>
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-8">
+      <PublicObjectPassportHero passport={passport} />
 
       <PublicEngagementPanel
         target={engagementTarget}
         summary={engagement}
-        returnTo={publicLineageObjectPath(page.root.plantObjectId)}
+        returnTo={returnTo}
         status={firstParam(query.engagement)}
       />
 
-      <section className="grid gap-4">
+      <PublicJournalPreviewSection passport={passport} />
+
+      <RelatedPublicContext passport={passport} />
+
+      <section className="grid gap-4 border-t border-border pt-6">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <GitBranch className="size-4" />
             Confirmed provenance
+          </p>
+          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            Public lineage
           </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            Public readback is limited to confirmed, active, public-entry-backed
-            object links.
+          <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+            This section shows only confirmed object links that are backed by
+            active public journal pages.
           </p>
         </div>
 
-        {page.edges.length === 0 ? (
+        {edges.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
             No confirmed public lineage is available for this object yet.
           </p>
         ) : (
           <ol className="grid gap-4">
-            {page.edges.map((edge) => {
+            {edges.map((edge) => {
               const subject = nodesById.get(edge.subjectPlantObjectId);
               const source = nodesById.get(edge.sourcePlantObjectId);
               if (!subject || !source) return null;
@@ -164,7 +181,7 @@ export default async function PublicLineageObjectRoute({
                   edge={edge}
                   subject={subject}
                   source={source}
-                  rootPlantObjectId={page.root.plantObjectId}
+                  rootPlantObjectId={passport.object.plantObjectId}
                   interactionTarget={interactionTarget ?? null}
                 />
               );
@@ -173,6 +190,317 @@ export default async function PublicLineageObjectRoute({
         )}
       </section>
     </main>
+  );
+}
+
+function PublicObjectPassportHero({
+  passport,
+}: {
+  passport: PublicObjectPassportPage;
+}) {
+  const object = passport.object;
+  const primaryIdentity =
+    object.varietyText ?? object.catalogCanonicalName ?? "Catalog match pending";
+
+  return (
+    <header className="grid gap-6 border-b border-border pb-6 lg:grid-cols-3 lg:items-start">
+      <div className="flex min-w-0 flex-col gap-5 lg:col-span-2">
+        <Link
+          href="/"
+          className={buttonVariants({
+            variant: "outline",
+            className: "self-start",
+          })}
+        >
+          OverGarden
+        </Link>
+        <div className="flex flex-col gap-3">
+          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Sprout className="size-4" />
+            Public living-object passport
+          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
+            {object.displayName}
+          </h1>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-md border border-border px-2 py-1">
+              {plantObjectKindLabel(object.objectKind)}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              {primaryIdentity}
+            </span>
+            {object.safeLocationLabel ? (
+              <span className="rounded-md border border-border px-2 py-1">
+                {object.safeLocationLabel}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <PassportFact
+            icon={<BookOpen className="size-4" />}
+            label="Public journal"
+            value={formatCount(object.publicEntryCount, "entry", "entries")}
+          />
+          <PassportFact
+            icon={<CalendarDays className="size-4" />}
+            label="Latest update"
+            value={formatDate(object.latestEntryDate)}
+          />
+          <PassportFact
+            icon={<ShieldCheck className="size-4" />}
+            label="Catalog state"
+            value={varietyStateLabel(object.varietyState)}
+          />
+          <PassportFact
+            icon={<Sprout className="size-4" />}
+            label={catalogIdentityLabel(object.catalogKind, object.objectKind)}
+            value={object.catalogCanonicalName ?? primaryIdentity}
+          />
+          <PassportFact
+            icon={<MapPin className="size-4" />}
+            label="Location"
+            value={object.safeLocationLabel ?? "Hidden"}
+          />
+          <PassportFact
+            icon={<UserRound className="size-4" />}
+            label="Caretaker"
+            value={passport.author?.displayName ?? "OverGarden gardener"}
+          />
+        </dl>
+
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={gardenObjectActivationPath(object.plantObjectId)}
+            className={buttonVariants({ size: "lg", className: "self-start" })}
+          >
+            <Sprout className="size-4" />
+            Start your own record
+          </Link>
+          {object.catalogPath ? (
+            <Link
+              href={object.catalogPath}
+              className={buttonVariants({
+                variant: "outline",
+                size: "lg",
+                className: "self-start",
+              })}
+            >
+              Open catalog match
+              <ArrowRight className="size-4" />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="grid gap-3">
+        <PassportCover passport={passport} />
+        {passport.author ? (
+          <Link
+            href={passport.author.profilePath}
+            className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-muted"
+          >
+            <span className="min-w-0">
+              <span className="block font-medium text-foreground">
+                {passport.author.displayName}
+              </span>
+              <span className="block truncate text-muted-foreground">
+                {passport.author.mention}
+              </span>
+            </span>
+            <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
+function PassportCover({ passport }: { passport: PublicObjectPassportPage }) {
+  if (!passport.coverMediaPublicUrl) {
+    return (
+      <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted text-sm text-muted-foreground">
+        No public photo yet
+      </div>
+    );
+  }
+
+  return (
+    <Image
+      src={passport.coverMediaPublicUrl}
+      alt={`${passport.object.displayName} public photo`}
+      width={704}
+      height={396}
+      sizes="(min-width: 1024px) 22rem, 100vw"
+      unoptimized
+      className="aspect-video w-full rounded-lg border border-border object-cover"
+      priority
+    />
+  );
+}
+
+function PassportFact({
+  icon,
+  label,
+  value,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="grid gap-2 rounded-lg border border-border p-3">
+      <dt className="flex items-center gap-2 text-xs font-medium uppercase text-muted-foreground">
+        {icon}
+        {label}
+      </dt>
+      <dd className="text-sm font-medium leading-5 text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function PublicJournalPreviewSection({
+  passport,
+}: {
+  passport: PublicObjectPassportPage;
+}) {
+  return (
+    <section className="grid gap-4 border-t border-border pt-6">
+      <div className="flex flex-col gap-1">
+        <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+          <BookOpen className="size-4" />
+          Recent public journal
+        </p>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          Logbook preview
+        </h2>
+      </div>
+
+      {passport.journalPreview.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+          No public journal entries are available for this object yet.
+        </p>
+      ) : (
+        <ol className="grid gap-4">
+          {passport.journalPreview.map((entry) => (
+            <li
+              key={entry.id}
+              className={`grid gap-4 rounded-lg border border-border p-4 ${
+                entry.mediaPublicUrl ? "sm:grid-cols-3" : ""
+              }`}
+            >
+              <article
+                className={`flex min-w-0 flex-col gap-3 ${
+                  entry.mediaPublicUrl ? "sm:col-span-2" : ""
+                }`}
+              >
+                <div className="flex flex-col gap-1">
+                  <time className="text-xs text-muted-foreground">
+                    {formatDate(entry.entryDate)}
+                  </time>
+                  <h3 className="text-base font-semibold text-foreground">
+                    {entry.title}
+                  </h3>
+                </div>
+                <p className="text-sm leading-6 text-foreground">
+                  {entry.bodyPreview}
+                </p>
+                <Link
+                  href={entry.publicPath}
+                  className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  Open journal entry
+                </Link>
+              </article>
+
+              {entry.mediaPublicUrl ? (
+                <Image
+                  src={entry.mediaPublicUrl}
+                  alt={`${entry.title} photo`}
+                  width={384}
+                  height={216}
+                  sizes="(min-width: 640px) 12rem, 100vw"
+                  unoptimized
+                  className="aspect-video w-full rounded-md border border-border object-cover sm:w-48"
+                />
+              ) : null}
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function RelatedPublicContext({
+  passport,
+}: {
+  passport: PublicObjectPassportPage;
+}) {
+  return (
+    <section className="grid gap-4 border-t border-border pt-6">
+      <div className="flex flex-col gap-1">
+        <p className="text-sm font-medium text-muted-foreground">
+          Related public context
+        </p>
+        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          Explore around this object
+        </h2>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {passport.object.catalogPath ? (
+          <RelatedContextLink
+            href={passport.object.catalogPath}
+            label="Catalog match"
+            value={
+              passport.object.catalogCanonicalName ??
+              passport.object.varietyText ??
+              "Public catalog"
+            }
+          />
+        ) : null}
+        {passport.author ? (
+          <RelatedContextLink
+            href={passport.author.profilePath}
+            label="Caretaker"
+            value={passport.author.displayName}
+          />
+        ) : null}
+        <RelatedContextLink
+          href={publicLineageObjectPath(passport.object.plantObjectId)}
+          label="Object history"
+          value="Confirmed provenance"
+        />
+      </div>
+    </section>
+  );
+}
+
+function RelatedContextLink({
+  href,
+  label,
+  value,
+}: {
+  href: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between gap-3 rounded-lg border border-border p-4 text-sm transition-colors hover:bg-muted"
+    >
+      <span className="min-w-0">
+        <span className="block text-xs font-medium uppercase text-muted-foreground">
+          {label}
+        </span>
+        <span className="block truncate font-medium text-foreground">
+          {value}
+        </span>
+      </span>
+      <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
+    </Link>
   );
 }
 
@@ -333,7 +661,8 @@ function PublicLineageNodeMeta({
   compact?: boolean;
 }) {
   const meta = [
-    node.varietyText ?? node.catalogCanonicalName ?? "Unknown variety",
+    plantObjectKindLabel(node.objectKind),
+    node.varietyText ?? node.catalogCanonicalName ?? "Catalog match pending",
     node.safeLocationLabel,
   ].filter(Boolean);
 
@@ -353,11 +682,40 @@ function PublicLineageNodeMeta({
           href={publicVarietyPath(node.catalogPublicSlug)}
           className="rounded-md border border-border px-2 py-1 font-medium text-primary underline-offset-4 hover:underline"
         >
-          {node.catalogCanonicalName ?? "Public variety"}
+          {node.catalogCanonicalName ?? "Public catalog"}
         </Link>
       ) : null}
     </div>
   );
+}
+
+function buildPublicLineageNodeMap(
+  passport: PublicObjectPassportPage,
+  lineagePage: PublicLineageGraphPage | null,
+) {
+  const rootNode: PublicLineageNode = {
+    plantObjectId: passport.object.plantObjectId,
+    displayName: passport.object.displayName,
+    objectKind: passport.object.objectKind,
+    varietyText: passport.object.varietyText,
+    varietyState: passport.object.varietyState,
+    catalogKind: passport.object.catalogKind,
+    catalogCanonicalName: passport.object.catalogCanonicalName,
+    catalogPublicSlug: passport.object.catalogPublicSlug,
+    safeLocationLabel: passport.object.safeLocationLabel,
+  };
+  const nodes = lineagePage?.nodes ?? [rootNode];
+
+  return new Map(nodes.map((node) => [node.plantObjectId, node]));
+}
+
+function gardenObjectActivationPath(plantObjectId: string) {
+  const params = new URLSearchParams({
+    source: "public-object",
+    object: plantObjectId,
+  });
+
+  return `/garden?${params.toString()}`;
 }
 
 function formatDate(value: Date | string) {
@@ -367,6 +725,10 @@ function formatDate(value: Date | string) {
     month: "short",
     day: "numeric",
   });
+}
+
+function formatCount(count: number, singular: string, plural: string) {
+  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function firstParam(value: string | string[] | undefined) {

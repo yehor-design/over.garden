@@ -23,6 +23,7 @@ export type PublicSurfaceKind =
   | "journal_entry"
   | "variety_aggregation"
   | "topic_aggregation"
+  | "object_passport"
   | "profile"
   | "lineage_graph"
   | "missing";
@@ -41,6 +42,7 @@ export type PublicSurfaceIndexReason =
   | "body_length_below_threshold"
   | "catalog_trust_below_threshold"
   | "topic_trust_below_threshold"
+  | "object_passport_noindex"
   | "public_profile_noindex"
   | "lineage_graph_noindex"
   | "missing_public_surface";
@@ -85,7 +87,7 @@ export type PublicSurfaceIndexInput =
       topicTrust: PublicTopicTrustState;
     }
   | {
-      kind: "profile" | "lineage_graph" | "missing";
+      kind: "object_passport" | "profile" | "lineage_graph" | "missing";
     };
 
 export interface StaticIndexablePublicSurface {
@@ -133,6 +135,9 @@ export function evaluatePublicSurfaceIndexability(
 
     case "topic_aggregation":
       return evaluateTopicAggregationIndexability(input);
+
+    case "object_passport":
+      return noindex(["object_passport_noindex"]);
 
     case "profile":
       return noindex(["public_profile_noindex"]);

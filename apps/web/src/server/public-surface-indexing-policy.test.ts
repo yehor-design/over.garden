@@ -128,8 +128,13 @@ describe("public surface indexing policy", () => {
     });
   });
 
-  it("keeps profile, lineage graph, and missing public surfaces out of the index and sitemap", () => {
-    for (const kind of ["profile", "lineage_graph", "missing"] as const) {
+  it("keeps object passport, profile, lineage graph, and missing public surfaces out of the index and sitemap", () => {
+    for (const kind of [
+      "object_passport",
+      "profile",
+      "lineage_graph",
+      "missing",
+    ] as const) {
       expect(evaluatePublicSurfaceIndexability({ kind })).toMatchObject({
         value: "noindex",
         isIndexable: false,

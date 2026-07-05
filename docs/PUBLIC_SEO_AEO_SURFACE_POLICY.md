@@ -33,7 +33,7 @@ Current decisions:
 - Variety and topic aggregation pages require all content-quality thresholds before they become indexable.
 - Current aggregation thresholds are at least 3 safe public entries, at least 600 aggregate body characters, and a trust gate. Variety aggregation must be backed by either a curated `confirmed` catalog item or a seeded item from an approved source-backed family. Topic aggregation must pass a curated-topic trust state before a future topic route can become indexable.
 - Topic/tag capture is only a signal layer. `journal_entry_topic_signals` may connect entries to explicit safe tags, object context, catalog context, catalog mentions, or operator-curated topics, but public topic membership must use only `accepted` + `eligible` signals for `curated` topics and must still pass the aggregation thresholds above.
-- Public profiles and full lineage graph pages are shareable but `noindex`.
+- Public living-object passport pages, public profiles, and full lineage graph pages are shareable but `noindex`.
 - Missing public surfaces are `noindex` and never sitemap-eligible.
 
 ## Sitemap Rule
@@ -50,7 +50,7 @@ The sitemap must not include:
 - invite, auth, reset, health, erasure, or pilot diagnostic routes;
 - public journal entries while `public_noindex = true`;
 - private, archived, public-gone, owner-scoped, provisional, rejected, merged, unsafe-source, untrusted-topic, or thin aggregation rows;
-- free tag, profile, or lineage graph URLs while they are policy `noindex`.
+- free tag, object passport, profile, or lineage graph URLs while they are policy `noindex`.
 
 ## Metadata And Structured Data Rule
 
