@@ -561,6 +561,7 @@ Forbidden evidence:
 - Google client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may name only env presence and exact authorized redirect URI presence.
 - Google Analytics / Google Tag Manager cookies, client IDs, session IDs, IP/user-agent values, referrers, private route paths, auth callback params, or Google Analytics report rows containing user-level data. Evidence may name only the public measurement id, public GTM container id, consent-banner presence, public-route script presence/absence after consent, route class, and HTTP status class.
 - Facebook App Secret values, OAuth tokens, callback query parameters, provider token responses, app access tokens, user access tokens, signed cookies, Meta user ids, or personal emails. Evidence may name only env presence, `FACEBOOK_LOGIN_PUBLIC_READY` false/true by class, exact Valid OAuth Redirect URI presence, and Meta app mode class.
+- Meta Ads attribution CAPI access tokens, Test Events codes, Meta cookies, client ids, user ids, emails, IP/user-agent values, raw URLs/referrers, callback params, private route paths, event payloads containing private garden data, or Meta report rows containing user-level data. Evidence may name only env enabled/disabled class, public Pixel id presence class, marketing consent state, public-route Pixel script presence/absence after consent, safe event class delivery, and CAPI success/failure class.
 
 ## Preflight
 
@@ -589,12 +590,19 @@ Forbidden evidence:
    - before analytics acceptance, the external Google Tag Manager container must not load;
    - private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the consent banner, GTM container, or Google Analytics tag;
    - do not record Google cookies, client ids, session ids, referrers, IP/user-agent values, private URLs, auth params, or user-level Analytics report rows.
-10. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
-11. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
-12. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
-13. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
-14. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
-15. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
+10. Confirm Meta Ads consent-first attribution scope when `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED=true`; otherwise record it as intentionally disabled:
+   - authored public, legal, and support pages render the Meta marketing consent banner before any Pixel script;
+   - before marketing acceptance, `connect.facebook.net/en_US/fbevents.js` must not load;
+   - after marketing acceptance on public pages, Meta Pixel may load and send only allowlisted class events;
+   - private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the Meta consent banner or Meta Pixel script;
+   - `first_entry_saved` may be sent through CAPI only after marketing consent and only as an event class, with no journal text, plant/catalog names, location, media, account identifiers, auth data, cookies, IP/user-agent values, raw URLs, or referrers;
+   - if using Meta Test Events, record only class-level success/failure and never the test code, access token, cookies, user-level report rows, or event payloads.
+11. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
+12. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
+13. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
+14. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
+15. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
+16. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
 
 Header probes:
 
@@ -631,20 +639,25 @@ Public visitor/crawler prerequisite:
    - When enabled, for an existing gardener email/password account, sign in once, use "Link Facebook sign-in" from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
    - When enabled, open `/admin` as a normal Facebook-created or Facebook-linked user and confirm `Access denied.`; Facebook must not be a path to admin capability.
    - If the Meta app is still in Development mode, keep `FACEBOOK_LOGIN_PUBLIC_READY` false and record the result as intentional production fallback, not production gardener proof.
-6. Create one first plant entry with:
+6. For Meta Ads attribution, only if `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED=true` for the smoke window:
+   - verify a public route does not load Pixel before marketing consent;
+   - accept marketing measurement and confirm only the allowlisted public event class appears in Meta Test Events;
+   - keep `/garden` Pixel-free and confirm the first private entry save can produce only `first_entry_saved` by class through CAPI;
+   - turn the kill switch back off unless the campaign is intentionally starting.
+7. Create one first plant entry with:
    - one space,
    - one plant object,
    - title/body entered by the operator but not copied into evidence,
    - `hidden` or safe region-level location only,
    - catalog selected, user-added, or Unknown.
-7. Attach one photo:
+8. Attach one photo:
    - create the presigned quarantine upload through the app,
    - upload the image,
    - process it server-side,
    - confirm authenticated readback displays only the public derivative.
-8. Open the object page and add a follow-up entry to the same object.
-9. Publish the first entry after accepting first-publication disclosure.
-10. Open the public `/journal/[slug]` URL:
+9. Open the object page and add a follow-up entry to the same object.
+10. Publish the first entry after accepting first-publication disclosure.
+11. Open the public `/journal/[slug]` URL:
 
 - status `200`,
 - SSR HTML visible without client JS dependency,
@@ -653,7 +666,7 @@ Public visitor/crawler prerequisite:
 - no quarantine/original media key,
 - derivative-only media if a photo was attached.
 
-11. From the public entry, open `/variety/[slug]` when linked:
+12. From the public entry, open `/variety/[slug]` when linked:
 
 - page renders only if there is safe public entry depth for that catalog item,
 - thin pages stay noindex,

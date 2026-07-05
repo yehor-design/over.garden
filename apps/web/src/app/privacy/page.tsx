@@ -12,6 +12,7 @@ import {
   MVP_RETENTION_RULES,
   SUPPORT_EMAIL,
 } from "@/lib/privacy/disclosures";
+import { MetaMarketingPrivacyControls } from "@/app/meta-marketing";
 
 export const metadata: Metadata = {
   title: "MVP privacy notice | OverGarden",
@@ -97,6 +98,7 @@ export default function PrivacyNoticePage() {
             {formatList(MVP_OPERATOR_EVIDENCE_FORBIDDEN_FIELDS)}.
           </p>
         </section>
+        <MetaMarketingPrivacyControls />
         <section className="grid gap-2">
           <h2 className="text-base font-semibold text-foreground">
             Review boundaries

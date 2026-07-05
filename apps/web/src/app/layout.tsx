@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleAnalytics } from "./google-analytics";
+import { MetaMarketingAttribution } from "./meta-marketing";
 import { ServiceWorkerRegister } from "./sw-register";
 
 const geistSans = Geist({
@@ -34,6 +35,7 @@ export default function RootLayout({
         {children}
         <ServiceWorkerRegister />
         <GoogleAnalytics />
+        <MetaMarketingAttribution />
       </body>
     </html>
   );

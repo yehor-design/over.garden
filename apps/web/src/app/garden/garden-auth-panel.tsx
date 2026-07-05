@@ -21,6 +21,7 @@ import {
   oauthCallbackPath,
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
+import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
 
 type SocialProviderId = typeof GOOGLE_PROVIDER_ID | typeof FACEBOOK_PROVIDER_ID;
 
@@ -77,6 +78,9 @@ export function GardenAuthPanel({
   async function signUp() {
     setIsPending(true);
     setMessage("");
+    void trackMetaMarketingEvent("signup_started", {
+      browserPixel: false,
+    });
 
     const { error } = await authClient.signUp.email({
       email: email.trim(),
@@ -95,6 +99,9 @@ export function GardenAuthPanel({
       return;
     }
 
+    void trackMetaMarketingEvent("account_created", {
+      browserPixel: false,
+    });
     setMessage(
       "Check your email to verify the account, then open your garden.",
     );

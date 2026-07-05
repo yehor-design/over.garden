@@ -85,6 +85,7 @@ import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
+import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
 import {
   JournalMentionTypeaheadPanel,
   applyMentionSuggestion,
@@ -429,6 +430,9 @@ export function FirstEntryComposer({
       await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
+      void trackMetaMarketingEvent("first_entry_saved", {
+        browserPixel: false,
+      });
       router.push(result.readbackUrl);
     } catch (error) {
       setSubmitState("failed");
@@ -465,6 +469,9 @@ export function FirstEntryComposer({
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
+      void trackMetaMarketingEvent("first_entry_saved", {
+        browserPixel: false,
+      });
       router.push(result.readbackUrl);
     } catch (error) {
       setSubmitState("failed");
