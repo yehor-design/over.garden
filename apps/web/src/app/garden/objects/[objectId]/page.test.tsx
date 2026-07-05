@@ -150,6 +150,40 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).toContain("First flowers");
     expect(html).not.toMatch(/leaderboard|streak|likes|followers|share modal/i);
   });
+
+  it("renders signed-in journal entries as object logbook readbacks with public links", async () => {
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-1",
+          title: "First public flowers",
+          body: "Two new flower clusters with the public-safe story.",
+          entryDate: "2026-07-04",
+          visibility: "public",
+          publicSlug: "first-public-flowers",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("Logbook entry");
+    expect(html).toContain("Direct object entry");
+    expect(html).toContain("Public page available");
+    expect(html).toContain("Open public page");
+    expect(html).toContain("/journal/first-public-flowers");
+    expect(html).toContain("Open living-object passport");
+    expect(html).toContain("/lineage/objects/object-1");
+    expect(html).not.toMatch(
+      /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
+    );
+  });
 });
 
 function plantObjectPage(
@@ -158,6 +192,8 @@ function plantObjectPage(
     title: string;
     body: string;
     entryDate: string;
+    visibility?: "private" | "public";
+    publicSlug?: string | null;
   }>,
 ) {
   return {
@@ -185,9 +221,9 @@ function plantObjectPage(
       body: entry.body,
       entry_date: entry.entryDate,
       entry_scope: "object",
-      visibility: "private",
+      visibility: entry.visibility ?? "private",
       lifecycle_state: "active",
-      public_slug: null,
+      public_slug: entry.publicSlug ?? null,
       public_gone_at: null,
       timelineRelation: "direct_object",
       mentionedObjects: [],

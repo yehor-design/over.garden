@@ -18,11 +18,19 @@ import type {
 } from "@/db/schema";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import {
+  publicJournalEntryPath,
+  publicLineageObjectPath,
+  publicProfilePath,
+} from "@/lib/garden/public-paths";
 import {
   normalizePlantObjectKind,
   resolveObjectKindForCatalogSelection,
 } from "@/lib/garden/catalog-object-kind";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   SELECTABLE_CATALOG_STATUSES,
@@ -43,6 +51,7 @@ const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
 const MAX_PUBLIC_SLUG_LENGTH = 96;
+const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -236,15 +245,35 @@ export interface PublicJournalEntryPage {
     coarseRegionCode: string | null;
   };
   plantObject: {
+    plantObjectId: string | null;
     displayName: string;
+    objectKind: PlantObjectKind | null;
     catalogCanonicalName: string | null;
     catalogPublicSlug: string | null;
+    publicPath: string | null;
     varietyText: string | null;
     varietyState: VarietyState;
     locationVisibility: LocationVisibility;
     coarseRegionCode: string | null;
   };
+  author: {
+    handle: string;
+    mention: string;
+    displayName: string;
+    avatarUrl: string | null;
+    profilePath: string;
+  } | null;
+  relatedEntries: PublicJournalEntryRelatedEntry[];
   media: EntryMediaReadback | null;
+}
+
+export interface PublicJournalEntryRelatedEntry {
+  id: string;
+  title: string;
+  bodyPreview: string;
+  entryDate: Date | string;
+  publicSlug: string;
+  publicPath: string;
 }
 
 export interface GonePublicJournalEntryPage {
@@ -1217,6 +1246,14 @@ export async function getPublicJournalEntryLookup(
     executor,
     row.entryId,
   ).executeTakeFirst();
+  const relatedRows =
+    row.entryScope === "object" && row.plantObjectId
+      ? await buildRelatedPublicJournalEntriesQuery(
+          executor,
+          row.plantObjectId,
+          row.entryId,
+        ).execute()
+      : [];
 
   return {
     status: "active",
@@ -1237,12 +1274,22 @@ export async function getPublicJournalEntryLookup(
         coarseRegionCode: row.spaceCoarseRegionCode,
       },
       plantObject: {
+        plantObjectId:
+          row.entryScope === "space" ? null : (row.plantObjectId ?? null),
         displayName:
           row.entryScope === "space"
             ? `${row.spaceDisplayName} space entry`
             : (row.objectDisplayName ?? "Garden entry"),
+        objectKind:
+          row.entryScope === "space"
+            ? null
+            : (row.objectKind as PlantObjectKind | null),
         catalogCanonicalName: row.catalogCanonicalName,
         catalogPublicSlug: row.catalogPublicSlug,
+        publicPath:
+          row.entryScope === "space" || !row.plantObjectId
+            ? null
+            : publicLineageObjectPath(row.plantObjectId),
         varietyText: row.varietyText,
         varietyState:
           row.entryScope === "space"
@@ -1257,6 +1304,12 @@ export async function getPublicJournalEntryLookup(
             ? row.spaceCoarseRegionCode
             : row.objectCoarseRegionCode,
       },
+      author: serializePublicJournalEntryAuthor({
+        handle: row.authorHandle,
+        displayName: row.authorDisplayName,
+        avatarUrl: row.authorAvatarUrl,
+      }),
+      relatedEntries: serializeRelatedPublicJournalEntries(relatedRows),
       media: media?.derivativeKey
         ? {
             id: media.id,
@@ -1266,6 +1319,59 @@ export async function getPublicJournalEntryLookup(
         : null,
     },
   };
+}
+
+function serializePublicJournalEntryAuthor(
+  input: {
+    handle: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+  },
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+): PublicJournalEntryPage["author"] {
+  if (!input.handle) return null;
+
+  return {
+    handle: input.handle,
+    mention: `@${input.handle}`,
+    displayName: input.displayName ?? `@${input.handle}`,
+    avatarUrl: input.avatarUrl,
+    profilePath: publicProfilePath(locale, input.handle),
+  };
+}
+
+function serializeRelatedPublicJournalEntries(
+  rows: Array<{
+    entryId: string;
+    title: string;
+    body: string;
+    entryDate: Date | string;
+    publicSlug: string;
+  }>,
+): PublicJournalEntryRelatedEntry[] {
+  return rows.map((row) => ({
+    id: row.entryId,
+    title: row.title,
+    bodyPreview: publicJournalEntryBodyPreview(row.body),
+    entryDate: row.entryDate,
+    publicSlug: row.publicSlug,
+    publicPath: publicJournalEntryPath(row.publicSlug),
+  }));
+}
+
+function publicJournalEntryBodyPreview(body: string) {
+  const normalized = body.replace(/\s+/g, " ").trim();
+  if (normalized.length <= 150) return normalized;
+
+  return `${normalized.slice(0, 147).trimEnd()}...`;
+}
+
+function normalizeRelatedPublicJournalEntryLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_RELATED_PUBLIC_JOURNAL_ENTRIES;
+  return Math.min(
+    Math.max(Math.trunc(limit), 1),
+    MAX_RELATED_PUBLIC_JOURNAL_ENTRIES,
+  );
 }
 
 export async function archiveJournalEntry(
@@ -1843,6 +1949,11 @@ export function buildPublicJournalEntryLookupQuery(
         .on("catalog_items.created_by_user_id", "is", null)
         .on("catalog_items.public_slug", "is not", null),
     )
+    .leftJoin(
+      "user_public_profiles",
+      "user_public_profiles.user_id",
+      "journal_entries.owner_user_id",
+    )
     .select([
       "journal_entries.id as entryId",
       "journal_entries.title as title",
@@ -1858,7 +1969,9 @@ export function buildPublicJournalEntryLookupQuery(
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
+      "plant_objects.id as plantObjectId",
       "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
@@ -1866,8 +1979,39 @@ export function buildPublicJournalEntryLookupQuery(
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
+      "user_public_profiles.handle as authorHandle",
+      "user_public_profiles.display_name as authorDisplayName",
+      "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
     .where("journal_entries.public_slug", "=", publicSlug);
+}
+
+export function buildRelatedPublicJournalEntriesQuery(
+  executor: QueryExecutor,
+  plantObjectId: string,
+  currentEntryId: string,
+  limit = MAX_RELATED_PUBLIC_JOURNAL_ENTRIES,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .select([
+      "journal_entries.id as entryId",
+      "journal_entries.title as title",
+      "journal_entries.body as body",
+      "journal_entries.entry_date as entryDate",
+      "journal_entries.public_slug as publicSlug",
+    ])
+    .where("journal_entries.plant_object_id", "=", plantObjectId)
+    .where("journal_entries.id", "!=", currentEntryId)
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.created_at", "desc")
+    .orderBy("journal_entries.id", "asc")
+    .limit(normalizeRelatedPublicJournalEntryLimit(limit))
+    .$narrowType<{ publicSlug: string }>();
 }
 
 export function buildProcessedMediaForEntriesQuery(

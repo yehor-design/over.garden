@@ -27,8 +27,70 @@ describe("public journal HTML renderer", () => {
     );
 
     expect(html).toContain("Space entry");
+    expect(html).toContain("Space logbook");
     expect(html).toContain("Balcony");
     expect(html).not.toContain("/variety/");
+    expect(html).not.toContain("/lineage/objects/");
+  });
+
+  it("renders a durable object logbook readback with safe related context", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({
+        publicNoindex: true,
+        author: {
+          handle: "green_thumb",
+          mention: "@green_thumb",
+          displayName: "Green Thumb",
+          avatarUrl: "https://media.over.garden/avatars/green-thumb.webp",
+          profilePath: "/@green_thumb",
+        },
+        relatedEntries: [
+          {
+            id: "entry-2",
+            title: "Second ripe cluster",
+            bodyPreview: "The next cluster colored up after a warmer week.",
+            entryDate: "2026-06-25",
+            publicSlug: "second-ripe-cluster",
+            publicPath: "/journal/second-ripe-cluster",
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain("Living-object logbook entry");
+    expect(html).toContain("Open living-object passport");
+    expect(html).toContain("/lineage/objects/object-1");
+    expect(html).toContain("Start a comparable journal");
+    expect(html).toContain("/garden?source=public-journal");
+    expect(html).toContain("Journal context");
+    expect(html).toContain("Green Thumb");
+    expect(html).toContain("/@green_thumb");
+    expect(html).toContain("Related public context");
+    expect(html).toContain("Follow the object history");
+    expect(html).toContain("Second ripe cluster");
+    expect(html).toContain("/journal/second-ripe-cluster");
+    expect(html).not.toMatch(
+      /owner_user_id|author_user_id|quarantine|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
+    );
+  });
+
+  it("renders only the public derivative media URL", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({
+        publicNoindex: true,
+        media: {
+          id: "media-1",
+          derivativeKey: "journal/public/entry-1.webp",
+          publicUrl: "https://media.over.garden/journal/public/entry-1.webp",
+        },
+      }),
+    );
+
+    expect(html).toContain(
+      'src="https://media.over.garden/journal/public/entry-1.webp"',
+    );
+    expect(html).not.toMatch(/derivative_key|derivativeKey/);
+    expect(html).not.toMatch(/quarantine|original|raw/i);
   });
 
   it("renders engagement forms and comment readback without private identifiers", () => {
@@ -69,9 +131,15 @@ describe("public journal HTML renderer", () => {
 function buildPage({
   publicNoindex,
   entryScope = "object",
+  author = null,
+  media = null,
+  relatedEntries = [],
 }: {
   publicNoindex: boolean;
   entryScope?: "object" | "space";
+  author?: PublicJournalEntryPage["author"];
+  media?: PublicJournalEntryPage["media"];
+  relatedEntries?: PublicJournalEntryPage["relatedEntries"];
 }): PublicJournalEntryPage {
   return {
     entry: {
@@ -90,14 +158,22 @@ function buildPage({
       coarseRegionCode: null,
     },
     plantObject: {
-      displayName: "Balcony tomato",
-      catalogCanonicalName: "Pomidor Cheri",
-      catalogPublicSlug: "pomidor-cheri-0000000101",
-      varietyText: "Pomidor Cheri",
-      varietyState: "selected",
+      plantObjectId: entryScope === "object" ? "object-1" : null,
+      displayName:
+        entryScope === "object" ? "Balcony tomato" : "Balcony space entry",
+      objectKind: entryScope === "object" ? "plant" : null,
+      catalogCanonicalName:
+        entryScope === "object" ? "Pomidor Cheri" : null,
+      catalogPublicSlug:
+        entryScope === "object" ? "pomidor-cheri-0000000101" : null,
+      publicPath: entryScope === "object" ? "/lineage/objects/object-1" : null,
+      varietyText: entryScope === "object" ? "Pomidor Cheri" : null,
+      varietyState: entryScope === "object" ? "selected" : "unknown",
       locationVisibility: "hidden",
       coarseRegionCode: null,
     },
-    media: null,
+    author,
+    relatedEntries,
+    media,
   };
 }

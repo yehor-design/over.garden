@@ -22,8 +22,10 @@ export function renderPublicJournalEntryHtml(
   engagement?: PublicEngagementSummary,
   engagementStatus?: string | null,
 ) {
-  const title = `${page.entry.title} | OverGarden`;
-  const description = summarize(page.entry.body);
+  const title = `${page.entry.title} logbook entry | OverGarden`;
+  const description = summarize(
+    `${page.entry.title}. ${page.plantObject.displayName}. ${page.entry.body}`,
+  );
   const robots = formatRobotsMetaContent(
     evaluatePublicSurfaceIndexability({
       kind: "journal_entry",
@@ -36,6 +38,10 @@ export function renderPublicJournalEntryHtml(
     page.entry.entryScope === "space"
       ? `Space entry · ${page.space.displayName}`
       : page.plantObject.displayName;
+  const objectPassportPath = page.plantObject.publicPath;
+  const guestStartPath = gardenJournalEntryActivationPath(
+    page.entry.publicSlug,
+  );
 
   return renderShell({
     title,
@@ -43,27 +49,52 @@ export function renderPublicJournalEntryHtml(
     robots,
     canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
     body: `
-      <main class="page">
-        <header class="header">
-          <a class="button" href="/">OverGarden</a>
-          <p class="eyebrow">
-            ${escapeHtml(entryContextLabel)}
-            ${page.entry.entryScope === "object" && varietyLink ? ` · ${varietyLink}` : page.entry.entryScope === "object" && page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}
-          </p>
-          <h1>${escapeHtml(page.entry.title)}</h1>
-          <div class="meta">
-            <time>${escapeHtml(formatDate(page.entry.entryDate))}</time>
-            ${locationLabel ? `<span>${escapeHtml(locationLabel)}</span>` : ""}
+      <main class="page logbook-page">
+        <nav class="topbar" aria-label="Primary">
+          <a class="button secondary" href="/">OverGarden</a>
+          ${objectPassportPath ? `<a class="button secondary" href="${escapeAttribute(objectPassportPath)}">Object passport</a>` : ""}
+        </nav>
+        <header class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Living-object logbook entry</p>
+            <h1>${escapeHtml(page.entry.title)}</h1>
+            <p class="dek">${escapeHtml(entryContextLabel)}${page.entry.entryScope === "object" && page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}</p>
+            <div class="meta" aria-label="Entry metadata">
+              <time>${escapeHtml(formatDate(page.entry.entryDate))}</time>
+              <span>${escapeHtml(page.entry.entryScope === "space" ? "Space logbook" : "Object logbook")}</span>
+              ${locationLabel ? `<span>${escapeHtml(locationLabel)}</span>` : `<span>Location hidden</span>`}
+            </div>
+            <div class="action-row">
+              ${
+                objectPassportPath
+                  ? `<a class="button" href="${escapeAttribute(objectPassportPath)}">Open living-object passport</a>`
+                  : ""
+              }
+              <a class="button secondary" href="${escapeAttribute(guestStartPath)}">Start a comparable journal</a>
+            </div>
           </div>
+          <aside class="context-card" aria-labelledby="journal-context-title">
+            <h2 id="journal-context-title">Journal context</h2>
+            <dl class="fact-list">
+              ${renderFact(page.entry.entryScope === "space" ? "Space" : "Living object", page.entry.entryScope === "space" ? page.space.displayName : page.plantObject.displayName)}
+              ${renderFact("Catalog identity", getCatalogContextLabel(page))}
+              ${renderFact("Public location", locationLabel ?? "Hidden")}
+              ${renderFact("Caretaker", page.author?.displayName ?? "OverGarden gardener")}
+            </dl>
+          </aside>
         </header>
-        <article class="article">
+        <article class="article" aria-label="Journal entry">
           ${
             page.media
               ? `<img class="photo" src="${escapeAttribute(page.media.publicUrl)}" alt="${escapeAttribute(`${page.entry.title} photo`)}" width="960" height="540" />`
               : ""
           }
-          <p>${escapeHtml(page.entry.body).replaceAll("\n", "<br />")}</p>
+          <div class="article-body">
+            <p class="section-label">Entry note</p>
+            <p>${escapeHtml(page.entry.body).replaceAll("\n", "<br />")}</p>
+          </div>
         </article>
+        ${renderRelatedPublicContext(page, varietyLink)}
         ${
           engagement
             ? renderEngagementHtml({
@@ -133,15 +164,140 @@ export function renderNotFoundJournalEntryHtml() {
   });
 }
 
+function renderFact(label: string, value: string) {
+  return `
+    <div class="fact">
+      <dt>${escapeHtml(label)}</dt>
+      <dd>${escapeHtml(value)}</dd>
+    </div>
+  `;
+}
+
+function getCatalogContextLabel(page: PublicJournalEntryPage) {
+  if (page.plantObject.catalogCanonicalName) {
+    return page.plantObject.catalogCanonicalName;
+  }
+
+  if (page.plantObject.varietyText) {
+    return page.plantObject.varietyText;
+  }
+
+  return page.entry.entryScope === "space"
+    ? "Space-level update"
+    : "Catalog match pending";
+}
+
+function renderRelatedPublicContext(
+  page: PublicJournalEntryPage,
+  varietyLink: string | null,
+) {
+  const contextLinks = [
+    page.plantObject.publicPath
+      ? renderContextLink({
+          label: "Object passport",
+          value: page.plantObject.displayName,
+          href: page.plantObject.publicPath,
+        })
+      : null,
+    varietyLink
+      ? renderContextLink({
+          label: "Catalog match",
+          value:
+            page.plantObject.catalogCanonicalName ??
+            page.plantObject.varietyText ??
+            "Public variety",
+          href: getPublicVarietyHref(page) ?? "",
+        })
+      : null,
+    page.author
+      ? renderContextLink({
+          label: "Caretaker profile",
+          value: page.author.mention,
+          href: page.author.profilePath,
+        })
+      : null,
+  ].filter(Boolean);
+
+  const relatedEntries = page.relatedEntries
+    .map(
+      (entry) => `
+        <li>
+          <a class="related-entry" href="${escapeAttribute(entry.publicPath)}">
+            <span>${escapeHtml(formatDate(entry.entryDate))}</span>
+            <strong>${escapeHtml(entry.title)}</strong>
+            <small>${escapeHtml(entry.bodyPreview)}</small>
+          </a>
+        </li>
+      `,
+    )
+    .join("");
+
+  if (contextLinks.length === 0 && !relatedEntries) return "";
+
+  return `
+    <section class="related-context" aria-labelledby="related-context-title">
+      <div>
+        <p class="section-label">Related public context</p>
+        <h2 id="related-context-title">Follow the object history</h2>
+      </div>
+      ${
+        contextLinks.length > 0
+          ? `<div class="context-link-grid">${contextLinks.join("")}</div>`
+          : ""
+      }
+      ${
+        relatedEntries
+          ? `<ol class="related-list">${relatedEntries}</ol>`
+          : ""
+      }
+    </section>
+  `;
+}
+
+function renderContextLink({
+  label,
+  value,
+  href,
+}: {
+  label: string;
+  value: string;
+  href: string;
+}) {
+  if (!href) return null;
+
+  return `
+    <a class="context-link" href="${escapeAttribute(href)}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </a>
+  `;
+}
+
 function getPublicVarietyLink(page: PublicJournalEntryPage) {
-  if (!page.plantObject.catalogPublicSlug) return null;
+  const href = getPublicVarietyHref(page);
+  if (!href) return null;
 
   const label =
     page.plantObject.catalogCanonicalName ??
     page.plantObject.varietyText ??
     "Variety";
 
-  return `<a class="inline-link" href="${escapeAttribute(publicVarietyPath(page.plantObject.catalogPublicSlug))}">${escapeHtml(label)}</a>`;
+  return `<a class="inline-link" href="${escapeAttribute(href)}">${escapeHtml(label)}</a>`;
+}
+
+function getPublicVarietyHref(page: PublicJournalEntryPage) {
+  if (!page.plantObject.catalogPublicSlug) return null;
+
+  return publicVarietyPath(page.plantObject.catalogPublicSlug);
+}
+
+function gardenJournalEntryActivationPath(publicSlug: string) {
+  const params = new URLSearchParams({
+    source: "public-journal",
+    entry: publicSlug,
+  });
+
+  return `/garden?${params.toString()}`;
 }
 
 function renderEngagementHtml({
@@ -300,16 +456,37 @@ function renderShell({
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       .page {
-        width: min(100%, 48rem);
+        width: min(100%, 72rem);
         margin: 0 auto;
         padding: 2rem 1.25rem;
       }
-      .header {
+      .topbar {
         display: flex;
-        flex-direction: column;
-        gap: 0.85rem;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: space-between;
+        margin-bottom: 1.5rem;
+      }
+      .hero {
+        display: grid;
+        gap: 1.25rem;
         border-bottom: 1px solid var(--border);
-        padding-bottom: 1.25rem;
+        padding-bottom: 1.5rem;
+      }
+      .hero-copy {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+      .context-card {
+        display: grid;
+        gap: 1rem;
+        align-self: start;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--panel);
+        padding: 1rem;
       }
       .button {
         align-self: flex-start;
@@ -321,6 +498,11 @@ function renderShell({
         font-size: 0.9rem;
         background: var(--panel);
       }
+      .button:hover,
+      .context-link:hover,
+      .related-entry:hover {
+        border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+      }
       .inline-link {
         color: var(--primary);
         text-decoration: none;
@@ -331,7 +513,9 @@ function renderShell({
       }
       .eyebrow,
       .meta,
-      .body-copy {
+      .body-copy,
+      .dek,
+      .section-label {
         color: var(--muted);
       }
       .eyebrow {
@@ -339,10 +523,21 @@ function renderShell({
         font-size: 0.92rem;
         font-weight: 600;
       }
+      .dek {
+        margin: 0;
+        max-width: 46rem;
+        font-size: 1rem;
+        line-height: 1.65;
+      }
       h1 {
         margin: 0;
         font-size: 2rem;
         line-height: 1.05;
+        letter-spacing: 0;
+      }
+      h2 {
+        margin: 0;
+        font-size: 1.05rem;
         letter-spacing: 0;
       }
       .meta {
@@ -357,17 +552,51 @@ function renderShell({
         padding: 0.3rem 0.5rem;
         background: var(--panel);
       }
+      .fact-list {
+        display: grid;
+        gap: 0.75rem;
+        margin: 0;
+      }
+      .fact {
+        display: grid;
+        gap: 0.15rem;
+      }
+      .fact dt {
+        color: var(--muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+      .fact dd {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        line-height: 1.35;
+      }
       .article {
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
-        padding-top: 1.5rem;
+        padding: 1.5rem 0;
       }
       .article p,
       .body-copy {
         margin: 0;
         font-size: 1rem;
         line-height: 1.75;
+      }
+      .article-body {
+        display: grid;
+        gap: 0.6rem;
+        max-width: 48rem;
+      }
+      .section-label {
+        margin: 0;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0;
+        text-transform: uppercase;
       }
       .photo {
         width: 100%;
@@ -376,6 +605,46 @@ function renderShell({
         border: 1px solid var(--border);
         border-radius: 0.5rem;
         background: var(--panel);
+      }
+      .related-context {
+        display: grid;
+        gap: 1rem;
+        border-top: 1px solid var(--border);
+        padding: 1.5rem 0 0;
+      }
+      .context-link-grid {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .context-link,
+      .related-entry {
+        display: grid;
+        gap: 0.25rem;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: var(--panel);
+        color: var(--text);
+        padding: 0.85rem;
+        text-decoration: none;
+      }
+      .context-link span,
+      .related-entry span,
+      .related-entry small {
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.45;
+      }
+      .context-link strong,
+      .related-entry strong {
+        font-size: 0.95rem;
+        line-height: 1.35;
+      }
+      .related-list {
+        display: grid;
+        gap: 0.75rem;
+        list-style: none;
+        margin: 0;
+        padding: 0;
       }
       .engagement {
         display: grid;
@@ -446,6 +715,15 @@ function renderShell({
       @media (min-width: 640px) {
         h1 {
           font-size: 2.75rem;
+        }
+        .context-link-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 960px) {
+        .hero {
+          grid-template-columns: minmax(0, 1fr) 22rem;
+          align-items: start;
         }
       }
     </style>

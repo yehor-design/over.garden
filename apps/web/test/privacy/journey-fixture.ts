@@ -16,6 +16,7 @@ import { POISON } from "./poison";
 
 export const JOURNEY = {
   entryId: "00000000-0000-4000-8000-0000000000a1",
+  plantObjectId: "00000000-0000-4000-8000-0000000000c3",
   mediaId: "00000000-0000-4000-8000-0000000000b2",
   catalogItemId: "00000000-0000-4000-8000-000000000101",
   publicSlug: "first-flowers-0000000000a1",
@@ -153,14 +154,19 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       coarseRegionCode: JOURNEY.regionCode,
     },
     plantObject: {
+      plantObjectId: JOURNEY.plantObjectId,
       displayName: JOURNEY.plantDisplayName,
+      objectKind: "plant",
       catalogCanonicalName: JOURNEY.catalogCanonicalName,
       catalogPublicSlug: JOURNEY.catalogPublicSlug,
+      publicPath: `/lineage/objects/${JOURNEY.plantObjectId}`,
       varietyText: "Помідор чері",
       varietyState: "selected",
       locationVisibility: "region",
       coarseRegionCode: JOURNEY.regionCode,
     },
+    author: null,
+    relatedEntries: [],
     // The renderer must only ever emit `publicUrl`. We poison `derivativeKey`
     // to prove the internal storage key is never written into the public HTML.
     media: {

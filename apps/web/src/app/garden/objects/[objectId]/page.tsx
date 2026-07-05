@@ -115,6 +115,9 @@ export default async function PlantObjectReadbackPage({
     provenancePanel,
     objectId,
   );
+  const objectPassportReadbackPath = hasActivePublicEntry(page)
+    ? publicLineageObjectPath(objectId)
+    : null;
   const valuePulseJournalEntryId =
     query.valuePulse === "1" && typeof query.entryId === "string"
       ? query.entryId.trim()
@@ -286,17 +289,40 @@ export default async function PlantObjectReadbackPage({
             {page.entries.map((entry) => (
               <li
                 key={entry.id}
-                className="rounded-lg border border-border p-4"
+                className="grid gap-4 rounded-lg border border-border p-4"
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <h3 className="text-base font-semibold text-foreground">
-                    {entry.title}
-                  </h3>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">
+                      Logbook entry
+                    </p>
+                    <h3 className="text-base font-semibold text-foreground">
+                      {entry.title}
+                    </h3>
+                  </div>
                   <time className="text-xs text-muted-foreground">
                     {formatDate(entry.entry_date)}
                   </time>
                 </div>
-                <p className="mt-3 text-sm leading-6 whitespace-pre-wrap text-foreground">
+                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-md border border-border px-2 py-1">
+                    {entry.timelineRelation === "mentioned_space"
+                      ? "Space-level mention"
+                      : "Direct object entry"}
+                  </span>
+                  <span className="rounded-md border border-border px-2 py-1">
+                    {entryPrivacyLabel({
+                      visibility: entry.visibility,
+                      isArchived: entry.lifecycle_state === "archived",
+                    })}
+                  </span>
+                  {entry.media ? (
+                    <span className="rounded-md border border-border px-2 py-1">
+                      Server-cleaned photo copy
+                    </span>
+                  ) : null}
+                </div>
+                <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
                   {entry.body}
                 </p>
                 {entry.media ? (
@@ -307,14 +333,14 @@ export default async function PlantObjectReadbackPage({
                     height={540}
                     sizes="(min-width: 640px) 36rem, 100vw"
                     unoptimized
-                    className="mt-4 aspect-video w-full max-w-xl rounded-md border border-border object-cover"
+                    className="aspect-video w-full max-w-xl rounded-md border border-border object-cover"
                   />
                 ) : null}
-                <p className="mt-3 text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {entryTimelineSummary(entry)}
                 </p>
                 {entry.timelineRelation === "mentioned_space" ? (
-                  <p className="mt-2 text-xs font-medium text-muted-foreground">
+                  <p className="text-xs font-medium text-muted-foreground">
                     Space entry mentioning{" "}
                     {entry.mentionedObjects
                       .map((object) => object.displayName)
@@ -340,6 +366,14 @@ export default async function PlantObjectReadbackPage({
                       Public page available. Not listed for search engines
                       during the pilot.
                     </span>
+                    {objectPassportReadbackPath ? (
+                      <Link
+                        href={objectPassportReadbackPath}
+                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                      >
+                        Open living-object passport
+                      </Link>
+                    ) : null}
                     <Link
                       href={publicJournalEntryPath(entry.public_slug)}
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
@@ -719,14 +753,7 @@ function getLineageReadbackPath(
   provenancePanel: ObjectProvenancePanel,
   objectId: string,
 ) {
-  const hasPublicActiveEntry = page.entries.some(
-    (entry) =>
-      entry.visibility === "public" &&
-      entry.lifecycle_state === "active" &&
-      entry.public_slug &&
-      !entry.public_gone_at,
-  );
-  if (!hasPublicActiveEntry) return null;
+  if (!hasActivePublicEntry(page)) return null;
 
   const hasConfirmedOwnObjectSource = provenancePanel.edges.some(
     (edge) =>
@@ -736,6 +763,16 @@ function getLineageReadbackPath(
   );
 
   return hasConfirmedOwnObjectSource ? publicLineageObjectPath(objectId) : null;
+}
+
+function hasActivePublicEntry(page: PlantObjectPage) {
+  return page.entries.some(
+    (entry) =>
+      entry.visibility === "public" &&
+      entry.lifecycle_state === "active" &&
+      entry.public_slug &&
+      !entry.public_gone_at,
+  );
 }
 
 function lineageObjectOptionLabel(option: LineagePlantObjectOption) {

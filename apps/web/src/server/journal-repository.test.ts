@@ -32,6 +32,7 @@ import {
   buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
   buildPublicProcessedMediaForEntryQuery,
+  buildRelatedPublicJournalEntriesQuery,
   buildPublishJournalEntryQuery,
   buildSpaceTimelineEntriesQuery,
   buildResolvePlantObjectCatalogQuery,
@@ -555,9 +556,15 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
+    expect(compiled.sql).toContain('left join "user_public_profiles"');
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."user_id" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain('"journal_entries"."entry_scope"');
-    expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
+    expect(compiled.sql).toContain('"plant_objects"."id" as "plantObjectId"');
+    expect(compiled.sql).toContain('"plant_objects"."object_kind"');
+    expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
@@ -591,13 +598,16 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
     expect(compiled.sql).toContain('left join "catalog_items"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug"');
+    expect(compiled.sql).toContain('left join "user_public_profiles"');
     expect(compiled.sql).toContain(
       '"journal_entries"."lifecycle_state" as "lifecycleState"',
     );
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" as "publicGoneAt"',
     );
-    expect(compiled.sql).not.toContain('"plant_objects"."object_kind"');
+    expect(compiled.sql).toContain('"plant_objects"."id" as "plantObjectId"');
+    expect(compiled.sql).toContain('"plant_objects"."object_kind"');
+    expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).not.toContain('as "ownerUserId"');
     expect(compiled.sql).not.toContain('as "owner_user_id"');
     expect(compiled.sql).not.toContain("client_mutation_id");
@@ -606,6 +616,39 @@ describe("journal repository query contracts", () => {
       "seeded",
       "confirmed",
       "first-flowers-abc123",
+    ]);
+  });
+
+  it("selects related public logbook entries for the same object only", () => {
+    const compiled = buildRelatedPublicJournalEntriesQuery(
+      testDb,
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000020",
+      2,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."plant_object_id" = $1',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."id" != $2');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).not.toMatch(
+      /owner_user_id|client_mutation_id|quarantine_key|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000020",
+      "public",
+      "active",
+      2,
     ]);
   });
 
