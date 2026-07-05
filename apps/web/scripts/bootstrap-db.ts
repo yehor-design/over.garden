@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
@@ -16,6 +17,7 @@ import {
 
 const envFile = argValue("--env-file") ?? ".env.local";
 const caFile = argValue("--ca-file");
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 
 loadEnv({ path: envFile });
 
@@ -66,7 +68,7 @@ const authOptions = {
 
 async function main() {
   const appSql = await readFile(
-    path.join(process.cwd(), "sql/0001_walking_skeleton.sql"),
+    path.join(scriptDir, "..", "sql/0001_walking_skeleton.sql"),
     "utf8",
   );
   await pool.query(appSql);

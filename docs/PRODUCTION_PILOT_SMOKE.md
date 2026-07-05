@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof
-Last updated: 2026-07-04
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke
+Last updated: 2026-07-05
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -29,6 +29,40 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
+
+## OVE-143 Canonical Launch Smoke
+
+Goal: prove the canonical production launch path on `https://over.garden` with a fresh authenticated account, one new journal object, one same-object follow-up, one photo through quarantine to a stripped public derivative, public publish/readback, archive to `410`, sitemap exclusion, worker index/unindex, and protected admin/erasure route boundaries.
+
+Result on 2026-07-05: pass.
+
+Execution notes:
+
+- The smoke was run from the repository root through Vercel production env so `apps/web/.env.local` could not override production DB/auth values.
+- The first production run exposed real schema drift: `journal_entry_topic_signals` was missing in production. The idempotent production DB bootstrap was run and completed successfully before the final smoke. This was not a destructive migration; it brought production back in line with `sql/0001_walking_skeleton.sql`.
+- The final smoke used a fresh email/password account created through the production Better Auth API, verified through a production-compatible email verification token, and signed in through the production auth endpoint. No email, password, token, cookie, user id, or callback query value is recorded.
+- The smoke pre-cleans only exact prior OVE-143 smoke publications before a new run so a failed proof cannot leave public smoke content indexed or readable.
+
+Redacted production evidence from the final pass:
+
+- Canonical origin: `https://over.garden`, public access without Vercel SSO.
+- Signed-out `/garden`: auth boundary rendered; Google and Facebook auth options visible.
+- Signed-in `/garden`: authenticated garden shell rendered with the production-issued auth cookie.
+- Journal write: first entry saved and read back; a same-object follow-up saved on the same object.
+- Media: private original upload accepted; server processing returned a readable public WebP copy on the `media.over.garden` host class. No quarantine key, derivative key, signed upload URL, or original object key is recorded.
+- Public publish: `/journal/[slug]` returned HTTP `200`, stayed `noindex, nofollow`, rendered derivative-only media, and kept location hidden.
+- Archive: the same public path returned HTTP `410` with `noindex, nofollow`; the archived path was absent from the sitemap.
+- Worker/search: `journal_entry_index` reached `done`; the Meilisearch `journal_entries` document matched the public-safe key contract (`body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, `title`) and had no forbidden owner/user ids, media keys, precise location, IP/user-agent, referrer, invite, or private state fields. `journal_entry_unindex` then reached `done`, and the Meilisearch document was absent after archive.
+- Public route policy: diagnostic/legal routes remained public `noindex`; localized landing and authored content routes remained indexable; sitemap contained policy-approved public routes only and excluded `/garden`, `/admin`, and auth routes.
+- Admin/erasure boundaries: signed-out `/admin` showed the auth boundary; the fresh normal account was blocked from `/admin` and `/garden/privacy/erasure-requests`; irreversible erasure was not executed. The Vercel production owner env name was verified, but the local Vercel CLI runtime did not expose the owner id value to this smoke, so the sealed owner credential login proof remains the previously recorded OVE-131 owner smoke. Owner id and owner email remain intentionally unrecorded.
+
+Standing re-run command shape:
+
+```bash
+vercel env run --environment=production -- env NODE_OPTIONS=--conditions=react-server OVE143_OWNER_ENV_LIST_VERIFIED=1 apps/web/node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json apps/web/scripts/smoke-canonical-launch.ts --base-url https://over.garden --env-file /private/tmp/ove143-empty.env
+```
+
+The command must be run from the repository root. Running it from `apps/web` is invalid for production proof if `apps/web/.env.local` exists, because local DB/auth values can override production values and create false evidence.
 
 ## OVE-131 Production Owner And Public-Smoke Proof
 

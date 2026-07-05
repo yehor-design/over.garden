@@ -33,6 +33,7 @@
     "smoke:garden-bg-official-varieties": "tsx scripts/smoke-garden-bg-official-varieties.ts",
     "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
+    "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "test": "vitest run",
     "test:watch": "vitest",
