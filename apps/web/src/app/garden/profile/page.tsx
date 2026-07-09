@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
-import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
+import { getInterfaceCopy } from "@/lib/interface-localization";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { ensureUserPublicProfile } from "@/server/public-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../garden-auth-panel";
@@ -29,16 +30,21 @@ const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 export default async function GardenPublicProfilePage({
   searchParams,
 }: GardenPublicProfilePageProps) {
-  const [session, params] = await Promise.all([
+  const [session, params, locale] = await Promise.all([
     getCurrentSession(),
     searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+    getRequestInterfaceLocale(),
   ]);
+  const copy = getInterfaceCopy(locale);
   const userId = session?.user?.id;
 
   if (!userId) {
     return (
-      <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <ProfileHeader />
+      <main
+        lang={locale}
+        className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
+        <ProfileHeader backLabel={copy.object.backToJournal} />
         <GardenAuthPanel />
       </main>
     );
@@ -46,12 +52,15 @@ export default async function GardenPublicProfilePage({
 
   const scope = scopedToUser(userId, getSessionId(session));
   const profile = await ensureUserPublicProfile(scope);
-  const publicPath = publicProfilePath(DEFAULT_PUBLIC_LOCALE, profile.handle);
+  const publicPath = publicProfilePath(locale, profile.handle);
   const status = profileStatusMessage(firstParam(params.status));
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <ProfileHeader />
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8"
+    >
+      <ProfileHeader backLabel={copy.object.backToJournal} />
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="flex flex-col gap-2">
@@ -112,7 +121,7 @@ export default async function GardenPublicProfilePage({
   );
 }
 
-function ProfileHeader() {
+function ProfileHeader({ backLabel }: { backLabel: string }) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -122,7 +131,7 @@ function ProfileHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {backLabel}
       </Link>
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">

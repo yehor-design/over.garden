@@ -1,11 +1,10 @@
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
-  selectPublicLocaleFromRequestHeaders,
 } from "@/lib/public-localization";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   generateMetadata as generateLocalizedHomeMetadata,
   renderLocalizedHomePage,
@@ -20,8 +19,7 @@ export async function generateMetadata() {
 }
 
 export default async function RootLocalePage() {
-  const requestHeaders = await headers();
-  const locale = selectPublicLocaleFromRequestHeaders(requestHeaders);
+  const locale = await getRequestInterfaceLocale();
 
   if (locale !== DEFAULT_PUBLIC_LOCALE) {
     redirect(localizedPath(locale, "/"));

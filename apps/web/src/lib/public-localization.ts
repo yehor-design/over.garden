@@ -3,8 +3,13 @@ export const PUBLIC_LOCALES = ["uk", "bg", "ru"] as const;
 export type PublicLocale = (typeof PUBLIC_LOCALES)[number];
 
 export const DEFAULT_PUBLIC_LOCALE: PublicLocale = "uk";
-export const UKRAINE_PUBLIC_LOCALES = ["uk"] as const satisfies readonly PublicLocale[];
-export const BULGARIA_PUBLIC_LOCALES = ["bg", "ru"] as const satisfies readonly PublicLocale[];
+export const UKRAINE_PUBLIC_LOCALES = [
+  "uk",
+] as const satisfies readonly PublicLocale[];
+export const BULGARIA_PUBLIC_LOCALES = [
+  "bg",
+  "ru",
+] as const satisfies readonly PublicLocale[];
 export const PREFIXED_PUBLIC_LOCALES = [
   "bg",
   "ru",
@@ -133,7 +138,10 @@ export function selectPublicLocaleFromAcceptLanguage(
         quality: Number.isFinite(quality) ? quality : 0,
       };
     })
-    .filter((entry) => entry.language.length > 0)
+    .filter(
+      (entry) =>
+        entry.language.length > 0 && entry.quality > 0 && entry.quality <= 1,
+    )
     .sort((left, right) => right.quality - left.quality);
 
   for (const entry of rankedLanguages) {

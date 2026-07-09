@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getObjectProvenancePanel: vi.fn(),
   resolveFollowUpValuePulsePrompt: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -39,6 +40,10 @@ vi.mock("@/server/follow-up-value-pulse", () => ({
 
 vi.mock("@/server/analytics-events", () => ({
   recordAnalyticsEventSafely: mocks.recordAnalyticsEventSafely,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("./catalog-resolve-control", () => ({
@@ -84,6 +89,34 @@ describe("/garden/objects/[objectId]", () => {
     mocks.resolveFollowUpValuePulsePrompt.mockResolvedValue({
       eligible: false,
     });
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+  });
+
+  it("keeps Ukrainian chrome on deep object readback without translating user content", async () => {
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-1",
+          title: "First flowers",
+          body: "Two new flower clusters.",
+          entryDate: "2026-07-04",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain('lang="uk"');
+    expect(html).toContain("Назад до журналу");
+    expect(html).toContain("Cherry tomato");
+    expect(html).toContain("First flowers");
+    expect(html).not.toContain("Перші квіти");
   });
 
   it("renders the first-save progress moment inside the object readback path", async () => {

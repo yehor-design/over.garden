@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import {
   localizedPath,
   PUBLIC_LOCALE_CONFIG,
@@ -30,7 +28,9 @@ export function LanguageSwitcher({
         const isCurrent = availableLocale === locale;
 
         return (
-          <Link
+          // A locale change must reload the root document so html lang and
+          // request-persisted preference change atomically.
+          <a
             key={availableLocale}
             href={localizedPath(availableLocale, basePath)}
             hrefLang={config.htmlLang}
@@ -42,7 +42,7 @@ export function LanguageSwitcher({
             }`}
           >
             {config.label}
-          </Link>
+          </a>
         );
       })}
     </nav>

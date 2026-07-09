@@ -22,13 +22,14 @@ import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import {
+  getInterfaceCopy,
+  type InterfaceLocale,
+} from "@/lib/interface-localization";
+import {
   gardenFirstEntryPreselectionPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import {
-  DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
-} from "@/lib/public-localization";
+import { localizedPath } from "@/lib/public-localization";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
@@ -41,6 +42,7 @@ import {
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   listMyPlantObjects,
   listMyRecentJournalEntries,
@@ -69,10 +71,12 @@ interface GardenPageProps {
 }
 
 export default async function GardenPage({ searchParams }: GardenPageProps) {
-  const [session, params] = await Promise.all([
+  const [session, params, locale] = await Promise.all([
     getCurrentSession(),
     searchParams ?? Promise.resolve(EMPTY_GARDEN_SEARCH_PARAMS),
+    getRequestInterfaceLocale(),
   ]);
+  const copy = getInterfaceCopy(locale);
   const userId = session?.user?.id;
   const initialCatalogItem = await resolveInitialCatalogSelection(params);
   const pendingWishlistItem = await resolvePendingWishlistSelection(params);
@@ -129,45 +133,48 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+    >
       <header className="flex flex-col gap-2 border-b border-border pb-5">
         <p className="text-sm font-medium text-muted-foreground">OverGarden</p>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex flex-col gap-1">
             <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              Garden workspace
+              {copy.workspace.title}
             </h1>
             <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
               {hasObjects
-                ? "Your owned living objects, recent changes, and next journal action in one private place."
-                : "Start with one private living object, then return here whenever its story changes."}
+                ? copy.workspace.returningDescription
+                : copy.workspace.emptyDescription}
             </p>
           </div>
           {userId ? (
             <div className="flex flex-col gap-2 text-sm sm:items-end">
               <Link
-                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/feed")}
+                href={localizedPath(locale, "/feed")}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Followed feed
+                {copy.navigation.followedFeed}
               </Link>
               <Link
-                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/notifications")}
+                href={localizedPath(locale, "/notifications")}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Notifications
+                {copy.navigation.notifications}
               </Link>
               <Link
-                href={localizedPath(DEFAULT_PUBLIC_LOCALE, "/bookmarks")}
+                href={localizedPath(locale, "/bookmarks")}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Bookmarks
+                {copy.navigation.bookmarks}
               </Link>
               <Link
                 href="/garden/lineage/claims"
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                Lineage claims
+                {copy.navigation.lineageClaims}
               </Link>
               {publicProfile ? (
                 <Link
@@ -179,13 +186,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
               ) : null}
               {publicProfile ? (
                 <Link
-                  href={publicProfilePath(
-                    DEFAULT_PUBLIC_LOCALE,
-                    publicProfile.handle,
-                  )}
+                  href={publicProfilePath(locale, publicProfile.handle)}
                   className="font-medium text-primary underline-offset-4 hover:underline"
                 >
-                  Public profile
+                  {copy.navigation.publicProfile}
                 </Link>
               ) : null}
               {session?.user?.email ? (
@@ -225,7 +229,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         <>
           {writeAccess.invited ? <GardenDraftResumePanel /> : null}
           {writeAccess.invited && pendingWishlistItem ? (
-            <PendingWishlistIntentPanel item={pendingWishlistItem} />
+            <PendingWishlistIntentPanel
+              item={pendingWishlistItem}
+              locale={locale}
+            />
           ) : null}
           {writeAccess.invited && saveProgressKind === "space-entry" ? (
             <SaveProgressMoment
@@ -284,7 +291,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
                     activationSource={activationSource}
                   />
                 ) : (
-                  <ClosedPilotWriteCallout />
+                  <ClosedPilotWriteCallout locale={locale} />
                 )}
               </section>
 
@@ -899,8 +906,10 @@ async function resolvePendingWishlistSelection(
 
 function PendingWishlistIntentPanel({
   item,
+  locale,
 }: {
   item: Awaited<ReturnType<typeof resolvePendingWishlistSelection>>;
+  locale: InterfaceLocale;
 }) {
   if (!item?.publicSlug) return null;
 
@@ -922,11 +931,11 @@ function PendingWishlistIntentPanel({
             name="catalogPublicSlug"
             value={item.publicSlug}
           />
-          <input type="hidden" name="locale" value={DEFAULT_PUBLIC_LOCALE} />
+          <input type="hidden" name="locale" value={locale} />
           <input
             type="hidden"
             name="returnTo"
-            value={localizedPath(DEFAULT_PUBLIC_LOCALE, "/wishlist")}
+            value={localizedPath(locale, "/wishlist")}
           />
           <button
             type="submit"

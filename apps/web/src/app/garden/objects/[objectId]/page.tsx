@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
+  getInterfaceCopy,
+  type InterfaceLocale,
+} from "@/lib/interface-localization";
+import {
   catalogSourceAttributionCaveat,
   catalogSourceAttributionSummary,
 } from "@/lib/catalog/catalog-source-attribution";
@@ -21,10 +25,12 @@ import {
   publicJournalEntryPath,
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
+import { localizedPath } from "@/lib/public-localization";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   getPlantObjectPage,
   type PlantObjectPage,
@@ -69,20 +75,27 @@ export default async function PlantObjectReadbackPage({
   params,
   searchParams,
 }: PlantObjectPageProps) {
-  const { objectId } = await params;
-  const query = await searchParams;
-  const session = await getCurrentSession();
+  const [{ objectId }, query, session, locale] = await Promise.all([
+    params,
+    searchParams,
+    getCurrentSession(),
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getInterfaceCopy(locale);
   const userId = session?.user?.id;
 
   if (!userId) {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+      <main
+        lang={locale}
+        className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+      >
         <header className="flex flex-col gap-2 border-b border-border pb-5">
           <Link href="/garden" className="text-sm text-muted-foreground">
-            Garden journal
+            {copy.object.gardenJournal}
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Living object
+            {copy.object.livingObject}
           </h1>
         </header>
         <GardenAuthPanel />
@@ -131,7 +144,10 @@ export default async function PlantObjectReadbackPage({
       : { eligible: false };
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+    >
       <header className="flex flex-col gap-4 border-b border-border pb-5">
         <Link
           href="/garden"
@@ -140,7 +156,7 @@ export default async function PlantObjectReadbackPage({
             className: "self-start",
           })}
         >
-          Back to journal
+          {copy.object.backToJournal}
         </Link>
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-muted-foreground">
@@ -196,7 +212,7 @@ export default async function PlantObjectReadbackPage({
           primaryHref="#follow-up-composer"
           primaryLabel="Add another entry"
           secondaryHref="/garden"
-          secondaryLabel="Back to journal"
+          secondaryLabel={copy.object.backToJournal}
         />
       ) : null}
 
@@ -257,7 +273,7 @@ export default async function PlantObjectReadbackPage({
             initialClientMutationId={crypto.randomUUID()}
           />
         ) : (
-          <ClosedPilotWriteCallout context="follow-up" />
+          <ClosedPilotWriteCallout context="follow-up" locale={locale} />
         )}
       </section>
 
@@ -266,6 +282,7 @@ export default async function PlantObjectReadbackPage({
         provenancePanel={provenancePanel}
         writeEnabled={writeAccess.invited}
         lineageReadbackPath={lineageReadbackPath}
+        locale={locale}
       />
 
       <section className="flex flex-col gap-4">
@@ -293,7 +310,7 @@ export default async function PlantObjectReadbackPage({
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                   <div className="flex min-w-0 flex-col gap-1">
-                    <p className="text-xs font-medium uppercase text-muted-foreground">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">
                       Logbook entry
                     </p>
                     <h3 className="text-base font-semibold text-foreground">
@@ -433,7 +450,10 @@ export default async function PlantObjectReadbackPage({
                         private. Pilot public pages are not listed for search
                         engines yet; that is not a secrecy guarantee.{" "}
                         <Link
-                          href="/first-publication-disclosure"
+                          href={localizedPath(
+                            locale,
+                            "/first-publication-disclosure",
+                          )}
                           className="text-primary underline-offset-4 hover:underline"
                         >
                           Read disclosure
@@ -463,11 +483,13 @@ function ProvenanceSection({
   provenancePanel,
   writeEnabled,
   lineageReadbackPath,
+  locale,
 }: {
   objectId: string;
   provenancePanel: ObjectProvenancePanel;
   writeEnabled: boolean;
   lineageReadbackPath: string | null;
+  locale: InterfaceLocale;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
@@ -602,7 +624,7 @@ function ProvenanceSection({
           </form>
         </div>
       ) : (
-        <ClosedPilotWriteCallout context="follow-up" />
+        <ClosedPilotWriteCallout context="follow-up" locale={locale} />
       )}
 
       {provenancePanel.edges.length === 0 ? (

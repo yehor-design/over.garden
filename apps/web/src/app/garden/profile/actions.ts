@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 import { publicProfilePath } from "@/lib/garden/public-paths";
+import { PUBLIC_LOCALES } from "@/lib/public-localization";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
   updateUserPublicHandle,
@@ -22,9 +22,9 @@ export async function updatePublicHandleAction(
 
   revalidatePath("/garden");
   revalidatePath("/garden/profile");
-  revalidatePath(
-    publicProfilePath(DEFAULT_PUBLIC_LOCALE, result.profile.handle),
-  );
+  for (const locale of PUBLIC_LOCALES) {
+    revalidatePath(publicProfilePath(locale, result.profile.handle));
+  }
 
   redirect(`/garden/profile?status=${handleStatusParam(result.status)}`);
 }

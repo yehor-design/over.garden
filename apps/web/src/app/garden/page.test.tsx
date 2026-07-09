@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   listMyRecentJournalEntries: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -44,6 +45,10 @@ vi.mock("@/server/catalog-repository", () => ({
 
 vi.mock("@/server/analytics-events", () => ({
   recordAnalyticsEventSafely: mocks.recordAnalyticsEventSafely,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("@/lib/auth/facebook-oauth", () => ({
@@ -101,6 +106,7 @@ describe("/garden workspace", () => {
     });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.listMyPlantObjects.mockResolvedValue([workspaceObject()]);
     mocks.listMySpaceJournalTimelines.mockResolvedValue([spaceTimeline()]);
     mocks.listMyRecentJournalEntries.mockResolvedValue([recentEntry()]);
@@ -128,7 +134,7 @@ describe("/garden workspace", () => {
       },
       8,
     );
-    expect(html).toContain("Garden workspace");
+    expect(html).toContain("Простір саду");
     expect(html).toContain("Update Cherry tomato");
     expect(html).toContain("Living objects");
     expect(html).toContain("Cherry tomato");
@@ -144,6 +150,26 @@ describe("/garden workspace", () => {
     expect(html).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
     );
+  });
+
+  it("keeps Bulgarian chrome and public navigation through the signed-in workspace", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain('lang="bg"');
+    expect(html).toContain("Градинско пространство");
+    expect(html).toContain("Следвани записи");
+    expect(html).toContain('href="/bg/feed"');
+    expect(html).toContain('href="/bg/notifications"');
+    expect(html).toContain('href="/bg/bookmarks"');
+    expect(html).toContain('href="/bg/@green_thumb"');
+    expect(html).toContain("Cherry tomato");
+    expect(html).not.toContain("Черешов домат");
   });
 
   it("pushes an empty signed-in workspace toward the first object path", async () => {
@@ -178,7 +204,7 @@ describe("/garden workspace", () => {
       }),
     );
 
-    expect(html).toContain("Garden workspace");
+    expect(html).toContain("Простір саду");
     expect(html).toContain("Next action");
     expect(html).toContain("Start with one living object");
     expect(html).toContain("Living objects");

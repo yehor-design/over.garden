@@ -2,11 +2,14 @@ import Link from "next/link";
 import { Lock, MailWarning } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 
 export function ClosedPilotWriteCallout({
   context = "garden",
+  locale = "uk",
 }: {
   context?: "garden" | "follow-up";
+  locale?: PublicLocale;
 }) {
   return (
     <section
@@ -24,11 +27,14 @@ export function ClosedPilotWriteCallout({
         You can still read everything that is public while you wait.
       </p>
       <div className="flex flex-wrap items-center gap-3">
-        <Link href="/" className={buttonVariants({ variant: "outline" })}>
+        <Link
+          href={localizedPath(locale, "/")}
+          className={buttonVariants({ variant: "outline" })}
+        >
           Explore what&apos;s public
         </Link>
         <Link
-          href="/privacy"
+          href={localizedPath(locale, "/privacy")}
           className={buttonVariants({ variant: "outline" })}
         >
           How your privacy is handled

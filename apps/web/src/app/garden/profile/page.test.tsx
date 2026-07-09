@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   ensureUserPublicProfile: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -14,6 +15,10 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("@/server/public-profile-repository", () => ({
   ensureUserPublicProfile: mocks.ensureUserPublicProfile,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("../garden-auth-panel", () => ({
@@ -42,6 +47,19 @@ describe("/garden/profile", () => {
       created_at: new Date("2026-07-04T08:00:00.000Z"),
       updated_at: new Date("2026-07-04T08:00:00.000Z"),
     });
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+  });
+
+  it("opens the public profile in the selected locale", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
+    const { default: GardenPublicProfilePage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPublicProfilePage({
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain('href="/bg/@green_thumb"');
   });
 
   it("ensures a signed-in gardener has one public handle", async () => {
