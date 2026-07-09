@@ -1,5 +1,6 @@
 import { getPublicJournalEntryLookup } from "@/server/journal-repository";
 import { getEngagementSummary } from "@/server/engagement-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
 import {
   renderGoneJournalEntryHtml,
@@ -18,17 +19,18 @@ export async function GET(
   { params }: PublicJournalEntryRouteContext,
 ) {
   const { slug } = await params;
+  const locale = await getRequestInterfaceLocale();
   const lookup = await getPublicJournalEntryLookup(slug);
 
   if (lookup.status === "gone") {
     return htmlResponse(
-      renderGoneJournalEntryHtml(lookup.entry.publicSlug),
+      renderGoneJournalEntryHtml(lookup.entry.publicSlug, locale),
       410,
     );
   }
 
   if (lookup.status === "not_found") {
-    return htmlResponse(renderNotFoundJournalEntryHtml(), 404);
+    return htmlResponse(renderNotFoundJournalEntryHtml(locale), 404);
   }
 
   const engagementTarget = {
@@ -39,7 +41,12 @@ export async function GET(
   const engagementStatus = new URL(request.url).searchParams.get("engagement");
 
   return htmlResponse(
-    renderPublicJournalEntryHtml(lookup.page, engagement, engagementStatus),
+    renderPublicJournalEntryHtml(
+      lookup.page,
+      engagement,
+      engagementStatus,
+      locale,
+    ),
     200,
   );
 }

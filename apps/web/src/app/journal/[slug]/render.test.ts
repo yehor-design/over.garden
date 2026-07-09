@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
-import { renderPublicJournalEntryHtml } from "./render";
+import {
+  renderGoneJournalEntryHtml,
+  renderNotFoundJournalEntryHtml,
+  renderPublicJournalEntryHtml,
+} from "./render";
 
 describe("public journal HTML renderer", () => {
   it("keeps published UGC noindex while public_noindex remains true", () => {
@@ -26,8 +30,8 @@ describe("public journal HTML renderer", () => {
       buildPage({ publicNoindex: true, entryScope: "space" }),
     );
 
-    expect(html).toContain("Space entry");
-    expect(html).toContain("Space logbook");
+    expect(html).toContain("Запис простору");
+    expect(html).toContain("Журнал простору");
     expect(html).toContain("Balcony");
     expect(html).not.toContain("/variety/");
     expect(html).not.toContain("/lineage/objects/");
@@ -57,16 +61,16 @@ describe("public journal HTML renderer", () => {
       }),
     );
 
-    expect(html).toContain("Living-object logbook entry");
-    expect(html).toContain("Open living-object passport");
+    expect(html).toContain("Запис у журналі живого об&#39;єкта");
+    expect(html).toContain("Відкрити паспорт живого об&#39;єкта");
     expect(html).toContain("/lineage/objects/object-1");
-    expect(html).toContain("Start a comparable journal");
+    expect(html).toContain("Почати подібний журнал");
     expect(html).toContain("/garden?source=public-journal");
-    expect(html).toContain("Journal context");
+    expect(html).toContain("Контекст журналу");
     expect(html).toContain("Green Thumb");
     expect(html).toContain("/@green_thumb");
-    expect(html).toContain("Related public context");
-    expect(html).toContain("Follow the object history");
+    expect(html).toContain("Пов&#39;язаний публічний контекст");
+    expect(html).toContain("Переглянути історію об&#39;єкта");
     expect(html).toContain("Second ripe cluster");
     expect(html).toContain("/journal/second-ripe-cluster");
     expect(html).not.toMatch(
@@ -121,10 +125,26 @@ describe("public journal HTML renderer", () => {
     expect(html).toContain("/api/engagement/bookmarks");
     expect(html).toContain("/api/engagement/comments");
     expect(html).toContain("Looks sturdy after rain.");
-    expect(html).toContain("Comment posted.");
+    expect(html).toContain("Коментар опубліковано.");
     expect(html).not.toMatch(
       /author_user_id|owner_user_id|quarantine|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
     );
+  });
+
+  it("localizes journal chrome and failure states without translating UGC", () => {
+    const page = buildPage({ publicNoindex: true });
+    const html = renderPublicJournalEntryHtml(page, undefined, null, "bg");
+    const goneHtml = renderGoneJournalEntryHtml("first-ripe-cluster", "ru");
+    const missingHtml = renderNotFoundJournalEntryHtml("bg");
+
+    expect(html).toContain('<html lang="bg">');
+    expect(html).toContain("Запис в дневника на жив обект");
+    expect(html).toContain("First ripe cluster");
+    expect(html).toContain(
+      "A public, first-hand growing note with safe content.",
+    );
+    expect(goneHtml).toContain("Запись удалена");
+    expect(missingHtml).toContain("Записът не е намерен");
   });
 });
 
@@ -162,8 +182,7 @@ function buildPage({
       displayName:
         entryScope === "object" ? "Balcony tomato" : "Balcony space entry",
       objectKind: entryScope === "object" ? "plant" : null,
-      catalogCanonicalName:
-        entryScope === "object" ? "Pomidor Cheri" : null,
+      catalogCanonicalName: entryScope === "object" ? "Pomidor Cheri" : null,
       catalogPublicSlug:
         entryScope === "object" ? "pomidor-cheri-0000000101" : null,
       publicPath: entryScope === "object" ? "/lineage/objects/object-1" : null,

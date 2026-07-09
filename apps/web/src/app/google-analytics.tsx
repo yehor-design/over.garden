@@ -4,6 +4,8 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 
 const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
 const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
@@ -60,7 +62,11 @@ export interface MicrosoftClarityPublicConfig {
 let initializedMicrosoftClarityProjectId: string | null = null;
 let initializingMicrosoftClarityProjectId: string | null = null;
 
-export function GoogleAnalytics() {
+export function GoogleAnalytics({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
   const pathname = usePathname();
   const storedConsent = useSyncExternalStore(
     subscribeToGoogleAnalyticsConsent,
@@ -99,6 +105,7 @@ export function GoogleAnalytics() {
 
   return (
     <AnalyticsConsentBanner
+      locale={locale}
       onAccept={() => setStoredConsent("accepted")}
       onDecline={() => setStoredConsent("declined")}
     />
@@ -213,15 +220,13 @@ export function AnalyticsPrivacyControls() {
         Public analytics
       </h2>
       <p className="text-muted-foreground">
-        Status: <strong>{statusLabel}</strong>. When allowed, OverGarden may
-        use Google Tag Manager / Google Analytics and Microsoft Clarity only on
+        Status: <strong>{statusLabel}</strong>. When allowed, OverGarden may use
+        Google Tag Manager / Google Analytics and Microsoft Clarity only on
         authored public, legal, and support pages. These tools do not run on
         private garden, auth, admin, invite, erasure, journal, lineage, API, or
         callback routes.
       </p>
-      <p className="text-xs leading-5 text-muted-foreground">
-        {clarityStatus}
-      </p>
+      <p className="text-xs leading-5 text-muted-foreground">{clarityStatus}</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={() => setConsent("accepted")}>
           Allow analytics
@@ -262,31 +267,29 @@ function stripPublicLocale(pathname: string): string {
 }
 
 function AnalyticsConsentBanner({
+  locale,
   onAccept,
   onDecline,
 }: {
+  locale: InterfaceLocale;
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const copy = getPublicSurfaceCopy(locale).analyticsConsent;
+
   return (
     <div
-      aria-label="Analytics consent"
+      aria-label={copy.label}
       className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-5 sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
-      <p className="text-sm leading-6 text-muted-foreground">
-        We use Google Tag Manager for analytics only on public, legal, and
-        support pages to understand what helps gardeners reach OverGarden. When
-        enabled, Microsoft Clarity can also provide consented session insights
-        on those same pages. These tools do not run on private garden, auth,
-        admin, invite, erasure, journal, lineage, API, or callback routes.
-      </p>
+      <p className="text-sm leading-6 text-muted-foreground">{copy.message}</p>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <Button onClick={onAccept} size="sm" type="button">
-          Accept analytics
+          {copy.accept}
         </Button>
         <Button onClick={onDecline} size="sm" type="button" variant="outline">
-          Decline
+          {copy.decline}
         </Button>
       </div>
     </div>
@@ -314,10 +317,7 @@ export function writeStoredGoogleAnalyticsConsent(
   if (typeof window === "undefined") return;
 
   try {
-    window.localStorage.setItem(
-      GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY,
-      consent,
-    );
+    window.localStorage.setItem(GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY, consent);
   } catch {
     // Private browsing or storage-denied contexts must not block the UI choice.
   }
@@ -349,7 +349,9 @@ function getServerGoogleAnalyticsConsent(): GoogleAnalyticsConsent {
 export function resolveMicrosoftClarityPublicConfig(
   env: Record<string, string | undefined> = MICROSOFT_CLARITY_PUBLIC_ENV,
 ): MicrosoftClarityPublicConfig {
-  const enabled = isAffirmativeAnalyticsFlag(env[MICROSOFT_CLARITY_ENABLED_ENV]);
+  const enabled = isAffirmativeAnalyticsFlag(
+    env[MICROSOFT_CLARITY_ENABLED_ENV],
+  );
   const projectId = configuredPublicEnvValue(
     env[MICROSOFT_CLARITY_PROJECT_ID_ENV],
   );

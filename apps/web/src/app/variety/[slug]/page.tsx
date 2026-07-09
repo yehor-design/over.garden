@@ -10,14 +10,18 @@ import {
   gardenFirstEntryPreselectionPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
-import { publicCatalogStatusLabel } from "@/lib/garden/pilot-ux-copy";
-import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
+import {
+  formatPublicCount,
+  getPublicSurfaceCopy,
+  publicCatalogStatusLabel,
+} from "@/lib/public-surface-localization";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { buildPublicVarietyJsonLd } from "@/server/public-variety-metadata";
 import { getPublicVarietyPage } from "@/server/public-variety-repository";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { PublicVarietySourceCredits } from "./source-credits";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +43,11 @@ const getCachedPublicVarietyPage = cache((slug: string) =>
 export async function generateMetadata({
   params,
 }: PublicVarietyRouteProps): Promise<Metadata> {
-  const { slug } = await params;
+  const [{ slug }, locale] = await Promise.all([
+    params,
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getPublicSurfaceCopy(locale);
   const page = await getCachedPublicVarietyPage(slug);
 
   if (!page) {
@@ -48,15 +56,15 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Variety | OverGarden",
+      title: `${copy.variety.title} | OverGarden`,
       robots: missingIndexState.robots,
     };
   }
 
-  const description = `Public garden journal entries for ${page.catalog.canonicalName}.`;
+  const description = `${copy.variety.title}: ${page.catalog.canonicalName}.`;
 
   return {
-    title: `${page.catalog.canonicalName} | OverGarden`,
+    title: `${page.catalog.canonicalName} · ${copy.variety.metadataSuffix} | OverGarden`,
     description,
     alternates: {
       canonical: publicVarietyPath(page.catalog.publicSlug),
@@ -69,14 +77,17 @@ export default async function PublicVarietyRoute({
   params,
   searchParams,
 }: PublicVarietyRouteProps) {
-  const { slug } = await params;
-  const query = await (searchParams ??
-    Promise.resolve(EMPTY_PUBLIC_VARIETY_SEARCH_PARAMS));
+  const [{ slug }, query, locale] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve(EMPTY_PUBLIC_VARIETY_SEARCH_PARAMS),
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getPublicSurfaceCopy(locale);
   const page = await getCachedPublicVarietyPage(slug);
 
   if (!page) notFound();
 
-  const jsonLd = buildPublicVarietyJsonLd(page);
+  const jsonLd = buildPublicVarietyJsonLd(page, locale);
   const wishlistStatus = firstParam(query.wishlist);
   const engagementStatus = firstParam(query.engagement);
   const engagementTarget = {
@@ -86,7 +97,10 @@ export default async function PublicVarietyRoute({
   const engagement = await getEngagementSummary(engagementTarget);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8">
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+    >
       {jsonLd ? (
         <script
           type="application/ld+json"
@@ -102,20 +116,20 @@ export default async function PublicVarietyRoute({
         </Link>
         <div className="flex flex-col gap-3">
           <p className="text-sm font-medium text-muted-foreground">
-            Public variety
+            {copy.variety.title}
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
             {page.catalog.canonicalName}
           </h1>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              {formatCount(page.entryCount, "entry", "entries")}
+              {formatPublicCount(locale, "entry", page.entryCount)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {formatCount(page.photoCount, "photo", "photos")}
+              {formatPublicCount(locale, "photo", page.photoCount)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {publicCatalogStatusLabel(page.catalog.status)}
+              {publicCatalogStatusLabel(locale, page.catalog.status)}
             </span>
           </div>
           <Link
@@ -126,7 +140,7 @@ export default async function PublicVarietyRoute({
             })}
           >
             <Sprout className="size-4" />
-            Log this variety
+            {copy.variety.logThisVariety}
           </Link>
           <form action={addCatalogPublicSlugToWishlistAction}>
             <input
@@ -134,7 +148,7 @@ export default async function PublicVarietyRoute({
               name="catalogPublicSlug"
               value={page.catalog.publicSlug}
             />
-            <input type="hidden" name="locale" value={DEFAULT_PUBLIC_LOCALE} />
+            <input type="hidden" name="locale" value={locale} />
             <input
               type="hidden"
               name="returnTo"
@@ -148,12 +162,12 @@ export default async function PublicVarietyRoute({
               })}
             >
               <Bookmark className="size-4" />
-              Save to wishlist
+              {copy.variety.saveToWishlist}
             </button>
           </form>
           {wishlistStatus === "saved" ? (
             <p className="text-sm text-muted-foreground">
-              Saved to your wishlist.
+              {copy.variety.savedToWishlist}
             </p>
           ) : null}
         </div>
@@ -163,7 +177,7 @@ export default async function PublicVarietyRoute({
         <section className="grid gap-4 border-b border-border pb-6">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-muted-foreground">
-              Growing note
+              {copy.variety.growingNote}
             </p>
             <h2 className="text-2xl font-semibold tracking-tight text-foreground">
               {page.seedProof.title}
@@ -183,13 +197,17 @@ export default async function PublicVarietyRoute({
         </section>
       ) : null}
 
-      <PublicVarietySourceCredits credits={page.sourceCredits} />
+      <PublicVarietySourceCredits
+        locale={locale}
+        credits={page.sourceCredits}
+      />
 
       <PublicEngagementPanel
         target={engagementTarget}
         summary={engagement}
         returnTo={publicVarietyPath(page.catalog.publicSlug)}
         status={engagementStatus}
+        locale={locale}
       />
 
       <ol className="grid gap-4">
@@ -207,7 +225,7 @@ export default async function PublicVarietyRoute({
             >
               <div className="flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <time>{formatDate(entry.entryDate)}</time>
+                  <time>{formatDate(entry.entryDate, locale)}</time>
                   {entry.safeLocationLabel ? (
                     <span>{entry.safeLocationLabel}</span>
                   ) : null}
@@ -224,14 +242,14 @@ export default async function PublicVarietyRoute({
                 href={entry.publicPath}
                 className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
-                Open source entry
+                {copy.variety.openSourceEntry}
               </Link>
             </article>
 
             {entry.media ? (
               <Image
                 src={entry.media.publicUrl}
-                alt={`${entry.title} photo`}
+                alt={`${entry.title} · ${copy.passport.publicPhotoSuffix}`}
                 width={448}
                 height={252}
                 sizes="(min-width: 640px) 14rem, 100vw"
@@ -246,17 +264,13 @@ export default async function PublicVarietyRoute({
   );
 }
 
-function formatDate(value: Date | string) {
+function formatDate(value: Date | string, locale: "uk" | "bg" | "ru") {
   const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
-}
-
-function formatCount(count: number, singular: string, plural: string) {
-  return `${count} ${count === 1 ? singular : plural}`;
 }
 
 function firstParam(value: string | string[] | undefined) {

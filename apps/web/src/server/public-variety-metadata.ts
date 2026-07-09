@@ -1,5 +1,7 @@
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import type { PublicVarietyPage } from "@/server/public-variety-repository";
 
@@ -29,6 +31,7 @@ export interface PublicVarietyCollectionPageJsonLd {
 
 export function buildPublicVarietyJsonLd(
   page: PublicVarietyPage,
+  locale: InterfaceLocale = "uk",
 ): PublicVarietyCollectionPageJsonLd | null {
   const indexState = evaluatePublicSurfaceIndexability({
     kind: "variety_aggregation",
@@ -41,11 +44,12 @@ export function buildPublicVarietyJsonLd(
   if (!indexState.isIndexable) return null;
 
   const siteUrl = absolutePublicUrl("/");
+  const copy = getPublicSurfaceCopy(locale);
 
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${page.catalog.canonicalName} garden journal entries`,
+    name: `${page.catalog.canonicalName} · ${copy.variety.collectionPageSuffix}`,
     url: absolutePublicUrl(publicVarietyPath(page.catalog.publicSlug)),
     isPartOf: {
       "@type": "WebSite",

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getPublicJournalEntryLookup: vi.fn(),
   getEngagementSummary: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -11,6 +12,10 @@ vi.mock("@/server/journal-repository", () => ({
 
 vi.mock("@/server/engagement-repository", () => ({
   getEngagementSummary: mocks.getEngagementSummary,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
@@ -28,6 +33,7 @@ describe("public journal route", () => {
       activeLikeCount: 0,
       comments: [],
     });
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
   });
 
   it("returns a safe 404 HTML response for an unknown public slug", async () => {
@@ -46,7 +52,7 @@ describe("public journal route", () => {
     expect(response.headers.get("content-type")).toBe(
       "text/html; charset=utf-8",
     );
-    expect(await response.text()).toContain("Entry not found");
+    expect(await response.text()).toContain("Записът не е намерен");
     expect(mocks.getPublicJournalEntryLookup).toHaveBeenCalledWith("missing");
   });
 
@@ -70,7 +76,7 @@ describe("public journal route", () => {
     const html = await response.text();
 
     expect(response.status).toBe(410);
-    expect(html).toContain("Entry removed");
+    expect(html).toContain("Записът е премахнат");
     expect(html).toContain('meta name="robots" content="noindex, nofollow"');
     expect(html).not.toMatch(
       /owner_user_id|journal text|quarantine|coordinates|latitude|longitude/i,
@@ -104,9 +110,10 @@ describe("public journal route", () => {
     const html = await response.text();
 
     expect(response.status).toBe(200);
-    expect(html).toContain("Living-object logbook entry");
-    expect(html).toContain("Saved to bookmarks.");
-    expect(html).toContain("Open living-object passport");
+    expect(html).toContain('<html lang="bg">');
+    expect(html).toContain("Запис в дневника на жив обект");
+    expect(html).toContain("Запазено в отметките.");
+    expect(html).toContain("Отворете паспорта на живия обект");
     expect(mocks.getEngagementSummary).toHaveBeenCalledWith({
       kind: "journal_entry",
       ref: "first-ripe-cluster",

@@ -38,7 +38,7 @@ export default async function RootLayout({
       <body className="flex min-h-full flex-col">
         {children}
         <ServiceWorkerRegister />
-        <GoogleAnalytics />
+        <GoogleAnalytics locale={locale} />
         <MetaMarketingAttribution />
       </body>
     </html>

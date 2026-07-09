@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   buildPublicVarietyJsonLd: vi.fn(),
   getEngagementSummary: vi.fn(),
   addCatalogPublicSlugToWishlistAction: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/public-variety-repository", () => ({
@@ -23,6 +24,10 @@ vi.mock("@/server/engagement-repository", () => ({
 vi.mock("@/app/wishlist/actions", () => ({
   addCatalogPublicSlugToWishlistAction:
     mocks.addCatalogPublicSlugToWishlistAction,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("./source-credits", () => ({
@@ -80,6 +85,7 @@ describe("/variety/[slug]", () => {
         },
       ],
     });
+    mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
   });
 
   it("renders catalog status through user-facing labels", async () => {
@@ -90,7 +96,7 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Pilot catalog");
+    expect(html).toContain("Пилотный каталог");
     expect(html).not.toContain(">seeded<");
     expect(html).not.toContain(">confirmed<");
   });
@@ -103,7 +109,7 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Save to wishlist");
+    expect(html).toContain("Сохранить в список желаний");
     expect(html).toContain("/api/engagement/likes");
     expect(html).toContain("/api/engagement/bookmarks");
     expect(html).toContain("/api/engagement/comments");
@@ -122,7 +128,7 @@ describe("/variety/[slug]", () => {
       }),
     );
 
-    expect(html).toContain("Saved to your wishlist.");
+    expect(html).toContain("Сохранено в ваш список желаний.");
   });
 
   it("keeps thin public variety metadata noindex", async () => {
@@ -146,8 +152,26 @@ describe("/variety/[slug]", () => {
         params: Promise.resolve({ slug: "missing-variety" }),
       }),
     ).resolves.toMatchObject({
-      title: "Variety | OverGarden",
+      title: "Публичный сорт | OverGarden",
       robots: { index: false, follow: false },
     });
+  });
+
+  it("localizes variety chrome and metadata without translating canonical catalog or journal values", async () => {
+    const { default: PublicVarietyRoute, generateMetadata } =
+      await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+    });
+    const html = renderToStaticMarkup(
+      await PublicVarietyRoute({
+        params: Promise.resolve({ slug: "pomidor-cheri-0000000101" }),
+      }),
+    );
+
+    expect(metadata.title).toBe("Pomidor Cheri · сорт | OverGarden");
+    expect(html).toContain("Публичный сорт");
+    expect(html).toContain("Pomidor Cheri");
+    expect(html).toContain("First ripe cluster");
   });
 });

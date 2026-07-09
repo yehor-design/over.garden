@@ -8,6 +8,7 @@ describe("PublicVarietySourceCredits", () => {
   it("renders required catalog source credits without raw payload markers", () => {
     const html = renderToStaticMarkup(
       <PublicVarietySourceCredits
+        locale="bg"
         credits={[
           {
             sourceSlug: "ua-state-register",
@@ -27,12 +28,13 @@ describe("PublicVarietySourceCredits", () => {
       />,
     );
 
-    expect(html).toContain("Source credits");
+    expect(html).toContain("Източници на данни");
+    expect(html).toContain("Източници и признание");
     expect(html).toContain("Ukraine State Register of Plant Varieties");
     expect(html).toContain("2025-07-15");
     expect(html).toContain("Creative Commons Attribution 4.0 International");
     expect(html).toContain("creativecommons.org/licenses/by/4.0");
-    expect(html).toContain("Attribution required");
+    expect(html).toContain("Посочването на източника е задължително");
     expect(html).not.toContain("RegisterVarietis");
     expect(html).not.toContain("rawPayload");
     expect(html).not.toContain("sourceOnlyFields");

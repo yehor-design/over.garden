@@ -172,7 +172,7 @@ describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
     const html = renderPublicJournalEntryHtml(publicJournalEntryPage());
 
     expect(html).toContain('name="robots" content="noindex, nofollow"');
-    expect(html).toContain(`Region: ${JOURNEY.regionLabel}`);
+    expect(html).toContain(`Регіон: ${JOURNEY.regionLabel}`);
     expect(html).toContain(JOURNEY.derivativePublicUrl);
     expectNoForbiddenValues("public journal HTML", html);
     expectNoPoisonSentinels("public journal HTML", html);

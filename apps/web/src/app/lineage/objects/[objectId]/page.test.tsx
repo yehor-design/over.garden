@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getPublicObjectPassportPage: vi.fn(),
   getPublicLineageGraphPage: vi.fn(),
   getEngagementSummary: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -24,6 +25,10 @@ vi.mock("@/server/public-lineage-repository", () => ({
 
 vi.mock("@/server/engagement-repository", () => ({
   getEngagementSummary: mocks.getEngagementSummary,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 const objectId = "00000000-0000-4000-8000-000000000101";
@@ -131,6 +136,7 @@ describe("/lineage/objects/[objectId]", () => {
     });
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
   });
 
   it("marks the object passport metadata noindex through the public surface policy", async () => {
@@ -139,9 +145,7 @@ describe("/lineage/objects/[objectId]", () => {
       params: Promise.resolve({ objectId }),
     });
 
-    expect(metadata.title).toBe(
-      "Balcony tomato living object | OverGarden",
-    );
+    expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
     expect(metadata.alternates?.canonical).toBe(`/lineage/objects/${objectId}`);
     expect(metadata.robots).toEqual({
       index: false,
@@ -159,12 +163,12 @@ describe("/lineage/objects/[objectId]", () => {
 
     expect(mocks.getPublicObjectPassportPage).toHaveBeenCalledWith(objectId);
     expect(mocks.getPublicLineageGraphPage).toHaveBeenCalledWith(objectId);
-    expect(html).toContain("Public living-object passport");
-    expect(html).toContain("Public journal");
-    expect(html).toContain("Recent public journal");
-    expect(html).toContain("Logbook preview");
-    expect(html).toContain("Related public context");
-    expect(html).toContain("Confirmed provenance");
+    expect(html).toContain("Публичен паспорт на жив обект");
+    expect(html).toContain("Публичен дневник");
+    expect(html).toContain("Последни публични записи");
+    expect(html).toContain("Преглед на дневника");
+    expect(html).toContain("Свързан публичен контекст");
+    expect(html).toContain("Потвърден произход");
     expect(html).toContain("/api/engagement/likes");
     expect(html).toContain("/api/engagement/bookmarks");
     expect(html).toContain("/api/engagement/comments");
@@ -199,5 +203,23 @@ describe("/lineage/objects/[objectId]", () => {
       index: false,
       follow: false,
     });
+  });
+
+  it("localizes passport chrome and metadata without translating the public object", async () => {
+    const { default: PublicLineageObjectRoute, generateMetadata } =
+      await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({ objectId }),
+    });
+    const html = renderToStaticMarkup(
+      await PublicLineageObjectRoute({
+        params: Promise.resolve({ objectId }),
+      }),
+    );
+
+    expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
+    expect(html).toContain("Публичен паспорт на жив обект");
+    expect(html).toContain("Balcony tomato");
+    expect(html).toContain("First flowering");
   });
 });

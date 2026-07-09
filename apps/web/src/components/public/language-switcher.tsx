@@ -4,6 +4,7 @@ import {
   PUBLIC_LOCALES,
   type PublicLocale,
 } from "@/lib/public-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 
 export function LanguageSwitcher({
   locale,
@@ -20,7 +21,7 @@ export function LanguageSwitcher({
 
   return (
     <nav
-      aria-label="Language switcher"
+      aria-label={getPublicSurfaceCopy(locale).accessibility.languageSwitcher}
       className="flex flex-wrap items-center gap-2 text-xs"
     >
       {availableLocales.map((availableLocale) => {

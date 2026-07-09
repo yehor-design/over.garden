@@ -1,15 +1,20 @@
 import { ExternalLink } from "lucide-react";
 
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import type { PublicCatalogSourceCredit } from "@/server/public-variety-repository";
 
 interface PublicVarietySourceCreditsProps {
+  locale: InterfaceLocale;
   credits: PublicCatalogSourceCredit[];
 }
 
 export function PublicVarietySourceCredits({
+  locale,
   credits,
 }: PublicVarietySourceCreditsProps) {
   if (credits.length === 0) return null;
+  const copy = getPublicSurfaceCopy(locale);
 
   return (
     <section
@@ -18,13 +23,13 @@ export function PublicVarietySourceCredits({
     >
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-muted-foreground">
-          Data sources
+          {copy.sourceCredits.dataSources}
         </p>
         <h2
           id="source-credits-heading"
           className="text-2xl font-semibold tracking-tight text-foreground"
         >
-          Source credits
+          {copy.sourceCredits.title}
         </h2>
       </div>
       <ol className="grid gap-3 md:grid-cols-2">
@@ -45,11 +50,11 @@ export function PublicVarietySourceCredits({
               </a>
               <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="rounded-md border border-border px-2 py-1">
-                  Version: {credit.sourceVersion}
+                  {copy.sourceCredits.versionLabel}: {credit.sourceVersion}
                 </span>
                 {credit.attributionRequired ? (
                   <span className="rounded-md border border-border px-2 py-1">
-                    Attribution required
+                    {copy.sourceCredits.attributionRequired}
                   </span>
                 ) : null}
               </div>

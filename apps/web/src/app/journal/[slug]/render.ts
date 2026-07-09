@@ -3,6 +3,11 @@ import {
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  formatPublicCount,
+  getPublicSurfaceCopy,
+} from "@/lib/public-surface-localization";
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
 import type {
   EngagementTarget,
@@ -21,22 +26,22 @@ export function renderPublicJournalEntryHtml(
   page: PublicJournalEntryPage,
   engagement?: PublicEngagementSummary,
   engagementStatus?: string | null,
+  locale: InterfaceLocale = "uk",
 ) {
-  const title = `${page.entry.title} logbook entry | OverGarden`;
-  const description = summarize(
-    `${page.entry.title}. ${page.plantObject.displayName}. ${page.entry.body}`,
-  );
+  const copy = getPublicSurfaceCopy(locale);
+  const title = `${page.entry.title} · ${copy.journal.metadataTitleSuffix} | OverGarden`;
+  const description = summarize(page.entry.body);
   const robots = formatRobotsMetaContent(
     evaluatePublicSurfaceIndexability({
       kind: "journal_entry",
       publicNoindex: page.entry.publicNoindex,
     }),
   );
-  const locationLabel = getPublicJournalLocationLabel(page);
-  const varietyLink = getPublicVarietyLink(page);
+  const locationLabel = getPublicJournalLocationLabel(page, locale);
+  const varietyLink = getPublicVarietyLink(page, locale);
   const entryContextLabel =
     page.entry.entryScope === "space"
-      ? `Space entry · ${page.space.displayName}`
+      ? `${copy.journal.spaceEntryPrefix} · ${page.space.displayName}`
       : page.plantObject.displayName;
   const objectPassportPath = page.plantObject.publicPath;
   const guestStartPath = gardenJournalEntryActivationPath(
@@ -48,53 +53,54 @@ export function renderPublicJournalEntryHtml(
     description,
     robots,
     canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
+    locale,
     body: `
       <main class="page logbook-page">
-        <nav class="topbar" aria-label="Primary">
+        <nav class="topbar" aria-label="${escapeAttribute(copy.journal.primaryNavigation)}">
           <a class="button secondary" href="/">OverGarden</a>
-          ${objectPassportPath ? `<a class="button secondary" href="${escapeAttribute(objectPassportPath)}">Object passport</a>` : ""}
+          ${objectPassportPath ? `<a class="button secondary" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.objectPassport)}</a>` : ""}
         </nav>
         <header class="hero">
           <div class="hero-copy">
-            <p class="eyebrow">Living-object logbook entry</p>
+            <p class="eyebrow">${escapeHtml(copy.journal.entryType)}</p>
             <h1>${escapeHtml(page.entry.title)}</h1>
             <p class="dek">${escapeHtml(entryContextLabel)}${page.entry.entryScope === "object" && page.plantObject.varietyText ? ` · ${escapeHtml(page.plantObject.varietyText)}` : ""}</p>
-            <div class="meta" aria-label="Entry metadata">
-              <time>${escapeHtml(formatDate(page.entry.entryDate))}</time>
-              <span>${escapeHtml(page.entry.entryScope === "space" ? "Space logbook" : "Object logbook")}</span>
-              ${locationLabel ? `<span>${escapeHtml(locationLabel)}</span>` : `<span>Location hidden</span>`}
+            <div class="meta" aria-label="${escapeAttribute(copy.journal.entryMetadata)}">
+              <time>${escapeHtml(formatDate(page.entry.entryDate, locale))}</time>
+              <span>${escapeHtml(page.entry.entryScope === "space" ? copy.journal.spaceLogbook : copy.journal.objectLogbook)}</span>
+              ${locationLabel ? `<span>${escapeHtml(locationLabel)}</span>` : `<span>${escapeHtml(copy.journal.locationHidden)}</span>`}
             </div>
             <div class="action-row">
               ${
                 objectPassportPath
-                  ? `<a class="button" href="${escapeAttribute(objectPassportPath)}">Open living-object passport</a>`
+                  ? `<a class="button" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.openObjectPassport)}</a>`
                   : ""
               }
-              <a class="button secondary" href="${escapeAttribute(guestStartPath)}">Start a comparable journal</a>
+              <a class="button secondary" href="${escapeAttribute(guestStartPath)}">${escapeHtml(copy.journal.startComparableJournal)}</a>
             </div>
           </div>
           <aside class="context-card" aria-labelledby="journal-context-title">
-            <h2 id="journal-context-title">Journal context</h2>
+            <h2 id="journal-context-title">${escapeHtml(copy.journal.journalContext)}</h2>
             <dl class="fact-list">
-              ${renderFact(page.entry.entryScope === "space" ? "Space" : "Living object", page.entry.entryScope === "space" ? page.space.displayName : page.plantObject.displayName)}
-              ${renderFact("Catalog identity", getCatalogContextLabel(page))}
-              ${renderFact("Public location", locationLabel ?? "Hidden")}
-              ${renderFact("Caretaker", page.author?.displayName ?? "OverGarden gardener")}
+              ${renderFact(page.entry.entryScope === "space" ? copy.journal.space : copy.journal.livingObject, page.entry.entryScope === "space" ? page.space.displayName : page.plantObject.displayName)}
+              ${renderFact(copy.journal.catalogIdentity, getCatalogContextLabel(page, locale))}
+              ${renderFact(copy.journal.publicLocation, locationLabel ?? copy.journal.hidden)}
+              ${renderFact(copy.journal.caretaker, page.author?.displayName ?? copy.journal.defaultCaretaker)}
             </dl>
           </aside>
         </header>
-        <article class="article" aria-label="Journal entry">
+        <article class="article" aria-label="${escapeAttribute(copy.journal.journalEntry)}">
           ${
             page.media
               ? `<img class="photo" src="${escapeAttribute(page.media.publicUrl)}" alt="${escapeAttribute(`${page.entry.title} photo`)}" width="960" height="540" />`
               : ""
           }
           <div class="article-body">
-            <p class="section-label">Entry note</p>
+            <p class="section-label">${escapeHtml(copy.journal.entryNote)}</p>
             <p>${escapeHtml(page.entry.body).replaceAll("\n", "<br />")}</p>
           </div>
         </article>
-        ${renderRelatedPublicContext(page, varietyLink)}
+        ${renderRelatedPublicContext(page, varietyLink, locale)}
         ${
           engagement
             ? renderEngagementHtml({
@@ -102,6 +108,7 @@ export function renderPublicJournalEntryHtml(
                 summary: engagement,
                 returnTo: publicJournalEntryPath(page.entry.publicSlug),
                 status: engagementStatus,
+                locale,
               })
             : ""
         }
@@ -110,11 +117,15 @@ export function renderPublicJournalEntryHtml(
   });
 }
 
-export function getPublicJournalLocationLabel(page: PublicJournalEntryPage) {
+export function getPublicJournalLocationLabel(
+  page: PublicJournalEntryPage,
+  locale: InterfaceLocale = "uk",
+) {
+  const copy = getPublicSurfaceCopy(locale);
   if (page.entry.entryScope === "space") {
     if (page.space.locationVisibility !== "region") return null;
     const label = getCoarseRegionLabel(page.space.coarseRegionCode);
-    return label ? `Region: ${label}` : null;
+    return label ? `${copy.journal.regionPrefix}: ${label}` : null;
   }
 
   if (page.plantObject.locationVisibility !== "region") return null;
@@ -126,38 +137,47 @@ export function getPublicJournalLocationLabel(page: PublicJournalEntryPage) {
       : null);
   const label = getCoarseRegionLabel(code);
 
-  return label ? `Region: ${label}` : null;
+  return label ? `${copy.journal.regionPrefix}: ${label}` : null;
 }
 
-export function renderGoneJournalEntryHtml(publicSlug: string) {
+export function renderGoneJournalEntryHtml(
+  publicSlug: string,
+  locale: InterfaceLocale = "uk",
+) {
+  const copy = getPublicSurfaceCopy(locale);
+
   return renderShell({
-    title: "Entry removed | OverGarden",
-    description: "This public garden journal entry has been removed.",
+    title: `${copy.journal.entryRemoved} | OverGarden`,
+    description: copy.journal.entryRemovedDescription,
     robots: "noindex, nofollow",
     canonicalPath: publicJournalEntryPath(publicSlug),
+    locale,
     body: `
       <main class="page">
         <header class="header">
           <a class="button" href="/">OverGarden</a>
-          <h1>Entry removed</h1>
-          <p class="body-copy">This public garden journal entry has been removed.</p>
+          <h1>${escapeHtml(copy.journal.entryRemoved)}</h1>
+          <p class="body-copy">${escapeHtml(copy.journal.entryRemovedDescription)}</p>
         </header>
       </main>
     `,
   });
 }
 
-export function renderNotFoundJournalEntryHtml() {
+export function renderNotFoundJournalEntryHtml(locale: InterfaceLocale = "uk") {
+  const copy = getPublicSurfaceCopy(locale);
+
   return renderShell({
-    title: "Entry not found | OverGarden",
-    description: "This garden journal entry is not available.",
+    title: `${copy.journal.entryNotFound} | OverGarden`,
+    description: copy.journal.entryNotFoundDescription,
     robots: "noindex, nofollow",
+    locale,
     body: `
       <main class="page">
         <header class="header">
           <a class="button" href="/">OverGarden</a>
-          <h1>Entry not found</h1>
-          <p class="body-copy">This garden journal entry is not available.</p>
+          <h1>${escapeHtml(copy.journal.entryNotFound)}</h1>
+          <p class="body-copy">${escapeHtml(copy.journal.entryNotFoundDescription)}</p>
         </header>
       </main>
     `,
@@ -173,7 +193,10 @@ function renderFact(label: string, value: string) {
   `;
 }
 
-function getCatalogContextLabel(page: PublicJournalEntryPage) {
+function getCatalogContextLabel(
+  page: PublicJournalEntryPage,
+  locale: InterfaceLocale,
+) {
   if (page.plantObject.catalogCanonicalName) {
     return page.plantObject.catalogCanonicalName;
   }
@@ -182,36 +205,40 @@ function getCatalogContextLabel(page: PublicJournalEntryPage) {
     return page.plantObject.varietyText;
   }
 
+  const copy = getPublicSurfaceCopy(locale);
+
   return page.entry.entryScope === "space"
-    ? "Space-level update"
-    : "Catalog match pending";
+    ? copy.journal.spaceLevelUpdate
+    : copy.journal.catalogMatchPending;
 }
 
 function renderRelatedPublicContext(
   page: PublicJournalEntryPage,
   varietyLink: string | null,
+  locale: InterfaceLocale,
 ) {
+  const copy = getPublicSurfaceCopy(locale);
   const contextLinks = [
     page.plantObject.publicPath
       ? renderContextLink({
-          label: "Object passport",
+          label: copy.journal.objectPassport,
           value: page.plantObject.displayName,
           href: page.plantObject.publicPath,
         })
       : null,
     varietyLink
       ? renderContextLink({
-          label: "Catalog match",
+          label: copy.journal.catalogMatch,
           value:
             page.plantObject.catalogCanonicalName ??
             page.plantObject.varietyText ??
-            "Public variety",
+            copy.journal.publicVariety,
           href: getPublicVarietyHref(page) ?? "",
         })
       : null,
     page.author
       ? renderContextLink({
-          label: "Caretaker profile",
+          label: copy.journal.caretakerProfile,
           value: page.author.mention,
           href: page.author.profilePath,
         })
@@ -223,7 +250,7 @@ function renderRelatedPublicContext(
       (entry) => `
         <li>
           <a class="related-entry" href="${escapeAttribute(entry.publicPath)}">
-            <span>${escapeHtml(formatDate(entry.entryDate))}</span>
+            <span>${escapeHtml(formatDate(entry.entryDate, locale))}</span>
             <strong>${escapeHtml(entry.title)}</strong>
             <small>${escapeHtml(entry.bodyPreview)}</small>
           </a>
@@ -237,19 +264,15 @@ function renderRelatedPublicContext(
   return `
     <section class="related-context" aria-labelledby="related-context-title">
       <div>
-        <p class="section-label">Related public context</p>
-        <h2 id="related-context-title">Follow the object history</h2>
+        <p class="section-label">${escapeHtml(copy.journal.relatedPublicContext)}</p>
+        <h2 id="related-context-title">${escapeHtml(copy.journal.followObjectHistory)}</h2>
       </div>
       ${
         contextLinks.length > 0
           ? `<div class="context-link-grid">${contextLinks.join("")}</div>`
           : ""
       }
-      ${
-        relatedEntries
-          ? `<ol class="related-list">${relatedEntries}</ol>`
-          : ""
-      }
+      ${relatedEntries ? `<ol class="related-list">${relatedEntries}</ol>` : ""}
     </section>
   `;
 }
@@ -273,14 +296,17 @@ function renderContextLink({
   `;
 }
 
-function getPublicVarietyLink(page: PublicJournalEntryPage) {
+function getPublicVarietyLink(
+  page: PublicJournalEntryPage,
+  locale: InterfaceLocale,
+) {
   const href = getPublicVarietyHref(page);
   if (!href) return null;
 
   const label =
     page.plantObject.catalogCanonicalName ??
     page.plantObject.varietyText ??
-    "Variety";
+    getPublicSurfaceCopy(locale).journal.variety;
 
   return `<a class="inline-link" href="${escapeAttribute(href)}">${escapeHtml(label)}</a>`;
 }
@@ -305,12 +331,16 @@ function renderEngagementHtml({
   summary,
   returnTo,
   status,
+  locale,
 }: {
   target: EngagementTarget;
   summary: PublicEngagementSummary;
   returnTo: string;
   status?: string | null;
+  locale: InterfaceLocale;
 }) {
+  const copy = getPublicSurfaceCopy(locale);
+
   return `
     <section class="engagement">
       <div class="engagement-actions">
@@ -319,47 +349,47 @@ function renderEngagementHtml({
             action: "/api/engagement/likes",
             target,
             returnTo,
-            label: "Like",
+            label: copy.engagement.like,
           })}
           ${renderActionForm({
             action: "/api/engagement/bookmarks",
             target,
             returnTo,
-            label: "Bookmark",
+            label: copy.engagement.bookmark,
           })}
         </div>
-        <p class="muted">${summary.activeLikeCount} like${summary.activeLikeCount === 1 ? "" : "s"}</p>
+        <p class="muted">${escapeHtml(formatLikeCount(summary.activeLikeCount, locale))}</p>
       </div>
-      ${status ? `<p class="muted">${escapeHtml(engagementStatusMessage(status))}</p>` : ""}
+      ${status ? `<p class="muted">${escapeHtml(engagementStatusMessage(status, locale))}</p>` : ""}
       <form method="post" action="/api/engagement/comments" class="comment-form">
         ${renderTargetFields(target, returnTo)}
         <label>
-          <span>Comment</span>
+          <span>${escapeHtml(copy.engagement.comment)}</span>
           <textarea name="body" maxlength="600" rows="3"></textarea>
         </label>
-        <button class="button" type="submit">Comment</button>
+        <button class="button" type="submit">${escapeHtml(copy.engagement.comment)}</button>
       </form>
       ${
         summary.comments.length === 0
-          ? `<p class="muted">No comments yet.</p>`
+          ? `<p class="muted">${escapeHtml(copy.engagement.noComments)}</p>`
           : `<ol class="comments">${summary.comments
               .map(
                 (comment) => `
                   <li class="comment">
                     <div class="comment-meta">
                       <strong>${escapeHtml(comment.authorLabel)}</strong>
-                      <time>${escapeHtml(formatDate(comment.createdAt))}</time>
+                      <time>${escapeHtml(formatDate(comment.createdAt, locale))}</time>
                     </div>
-                    ${comment.parentReplyToken ? `<p class="muted">Reply</p>` : ""}
+                    ${comment.parentReplyToken ? `<p class="muted">${escapeHtml(copy.engagement.reply)}</p>` : ""}
                     <p>${escapeHtml(comment.body).replaceAll("\n", "<br />")}</p>
                     <form method="post" action="/api/engagement/comments" class="reply-form">
                       ${renderTargetFields(target, returnTo)}
                       <input type="hidden" name="parentCommentId" value="${escapeAttribute(comment.replyToken)}" />
                       <label>
-                        <span>Reply</span>
+                        <span>${escapeHtml(copy.engagement.reply)}</span>
                         <textarea name="body" maxlength="600" rows="2"></textarea>
                       </label>
-                      <button class="button secondary" type="submit">Reply</button>
+                      <button class="button secondary" type="submit">${escapeHtml(copy.engagement.reply)}</button>
                     </form>
                   </li>
                 `,
@@ -397,20 +427,22 @@ function renderTargetFields(target: EngagementTarget, returnTo: string) {
   `;
 }
 
-function engagementStatusMessage(status: string) {
+function engagementStatusMessage(status: string, locale: InterfaceLocale) {
+  const copy = getPublicSurfaceCopy(locale);
+
   switch (status) {
     case "liked":
-      return "Liked.";
+      return copy.engagement.liked;
     case "unliked":
-      return "Like removed.";
+      return copy.engagement.unliked;
     case "like-rate-limited":
-      return "Too many like toggles. Try again later.";
+      return copy.engagement.likeRateLimited;
     case "bookmarked":
-      return "Saved to bookmarks.";
+      return copy.engagement.bookmarked;
     case "bookmark-removed":
-      return "Removed from bookmarks.";
+      return copy.engagement.bookmarkRemoved;
     case "commented":
-      return "Comment posted.";
+      return copy.engagement.commented;
     default:
       return "";
   }
@@ -422,15 +454,17 @@ function renderShell({
   robots,
   canonicalPath,
   body,
+  locale,
 }: {
   title: string;
   description: string;
   robots: string;
   canonicalPath?: string;
   body: string;
+  locale: InterfaceLocale;
 }) {
   return `<!doctype html>
-<html lang="en">
+<html lang="${escapeAttribute(locale)}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -734,13 +768,17 @@ function renderShell({
 </html>`;
 }
 
-function formatDate(value: Date | string) {
+function formatDate(value: Date | string, locale: InterfaceLocale) {
   const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",
   });
+}
+
+function formatLikeCount(count: number, locale: InterfaceLocale) {
+  return formatPublicCount(locale, "like", count);
 }
 
 function summarize(value: string) {

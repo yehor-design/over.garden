@@ -2,12 +2,18 @@ import { Bookmark, Heart, MessageCircle, Reply } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  formatPublicCount,
+  getPublicSurfaceCopy,
+} from "@/lib/public-surface-localization";
 import type {
   EngagementTarget,
   PublicEngagementSummary,
 } from "@/server/engagement-repository";
 
 interface PublicEngagementPanelProps {
+  locale: InterfaceLocale;
   target: EngagementTarget;
   summary: PublicEngagementSummary;
   returnTo: string;
@@ -15,11 +21,14 @@ interface PublicEngagementPanelProps {
 }
 
 export function PublicEngagementPanel({
+  locale,
   target,
   summary,
   returnTo,
   status,
 }: PublicEngagementPanelProps) {
+  const copy = getPublicSurfaceCopy(locale);
+
   return (
     <section className="grid gap-4 border-y border-border py-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -28,27 +37,26 @@ export function PublicEngagementPanel({
             action="/api/engagement/likes"
             target={target}
             returnTo={returnTo}
-            label="Like"
+            label={copy.engagement.like}
             icon={<Heart className="size-4" />}
           />
           <EngagementButtonForm
             action="/api/engagement/bookmarks"
             target={target}
             returnTo={returnTo}
-            label="Bookmark"
+            label={copy.engagement.bookmark}
             icon={<Bookmark className="size-4" />}
             variant="outline"
           />
         </div>
         <p className="text-sm text-muted-foreground">
-          {summary.activeLikeCount} like
-          {summary.activeLikeCount === 1 ? "" : "s"}
+          {formatPublicCount(locale, "like", summary.activeLikeCount)}
         </p>
       </div>
 
       {status ? (
         <p className="text-sm text-muted-foreground">
-          {engagementStatusMessage(status)}
+          {engagementStatusMessage(status, locale)}
         </p>
       ) : null}
 
@@ -59,7 +67,7 @@ export function PublicEngagementPanel({
       >
         <EngagementTargetFields target={target} returnTo={returnTo} />
         <label className="grid gap-2 text-sm font-medium text-foreground">
-          Comment
+          {copy.engagement.comment}
           <textarea
             name="body"
             maxLength={600}
@@ -72,12 +80,14 @@ export function PublicEngagementPanel({
           className={buttonVariants({ className: "self-start" })}
         >
           <MessageCircle className="size-4" />
-          Comment
+          {copy.engagement.comment}
         </button>
       </form>
 
       {summary.comments.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No comments yet.</p>
+        <p className="text-sm text-muted-foreground">
+          {copy.engagement.noComments}
+        </p>
       ) : (
         <ol className="grid gap-3">
           {summary.comments.map((comment) => (
@@ -90,11 +100,13 @@ export function PublicEngagementPanel({
                   {comment.authorLabel}
                 </p>
                 <time className="text-xs text-muted-foreground">
-                  {formatDate(comment.createdAt)}
+                  {formatDate(comment.createdAt, locale)}
                 </time>
               </div>
               {comment.parentReplyToken ? (
-                <p className="text-xs text-muted-foreground">Reply</p>
+                <p className="text-xs text-muted-foreground">
+                  {copy.engagement.reply}
+                </p>
               ) : null}
               <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
                 {comment.body}
@@ -111,7 +123,7 @@ export function PublicEngagementPanel({
                   value={comment.replyToken}
                 />
                 <label className="grid gap-2 text-sm font-medium text-foreground">
-                  Reply
+                  {copy.engagement.reply}
                   <textarea
                     name="body"
                     maxLength={600}
@@ -128,7 +140,7 @@ export function PublicEngagementPanel({
                   })}
                 >
                   <Reply className="size-4" />
-                  Reply
+                  {copy.engagement.reply}
                 </button>
               </form>
             </li>
@@ -187,28 +199,30 @@ function EngagementTargetFields({
   );
 }
 
-function engagementStatusMessage(status: string) {
+function engagementStatusMessage(status: string, locale: InterfaceLocale) {
+  const copy = getPublicSurfaceCopy(locale);
+
   switch (status) {
     case "liked":
-      return "Liked.";
+      return copy.engagement.liked;
     case "unliked":
-      return "Like removed.";
+      return copy.engagement.unliked;
     case "like-rate-limited":
-      return "Too many like toggles. Try again later.";
+      return copy.engagement.likeRateLimited;
     case "bookmarked":
-      return "Saved to bookmarks.";
+      return copy.engagement.bookmarked;
     case "bookmark-removed":
-      return "Removed from bookmarks.";
+      return copy.engagement.bookmarkRemoved;
     case "commented":
-      return "Comment posted.";
+      return copy.engagement.commented;
     default:
       return "";
   }
 }
 
-function formatDate(value: Date | string) {
+function formatDate(value: Date | string, locale: InterfaceLocale) {
   const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

@@ -108,12 +108,12 @@ describe("public analytics consent", () => {
     process.env.NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID = "clarity-project";
     mockedPathname = "/blog";
 
-    const html = renderToStaticMarkup(<GoogleAnalytics />);
+    const html = renderToStaticMarkup(<GoogleAnalytics locale="bg" />);
 
-    expect(html).toContain("Accept analytics");
-    expect(html).toContain("Decline");
+    expect(html).toContain("Приемете аналитиката");
+    expect(html).toContain("Откажете");
     expect(html).toContain("Microsoft Clarity");
-    expect(html).toContain("public, legal, and support pages");
+    expect(html).toContain("публични, правни и страници за поддръжка");
     expect(html).not.toContain("GTM-W979KSX3");
     expect(html).not.toContain("clarity-project");
     expect(html).not.toContain("clarity.ms");

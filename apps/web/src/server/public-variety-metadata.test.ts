@@ -47,7 +47,7 @@ describe("public variety metadata", () => {
     expect(jsonLd).toMatchObject({
       "@context": "https://schema.org",
       "@type": "CollectionPage",
-      name: "Pomidor Cheri garden journal entries",
+      name: "Pomidor Cheri · публічні записи саду",
       url: "https://example.test/variety/pomidor-cheri-0000000101",
       isPartOf: {
         "@type": "WebSite",
@@ -81,6 +81,20 @@ describe("public variety metadata", () => {
     expect(serialized).not.toContain("Creative Commons Attribution");
     expect(serialized).not.toContain("data.gov.ua");
     expect(serialized).not.toContain("creativecommons.org");
+  });
+
+  it("localizes JSON-LD collection chrome without translating catalog or journal content", () => {
+    vi.stubEnv("PUBLIC_SITE_URL", "https://example.test");
+    const page = buildPage({
+      entryCount: 3,
+      aggregateBodyLength: 900,
+    });
+
+    const jsonLd = buildPublicVarietyJsonLd(page, "ru");
+
+    expect(jsonLd?.name).toBe("Pomidor Cheri · Публичные записи сада");
+    expect(jsonLd?.about.name).toBe("Pomidor Cheri");
+    expect(jsonLd?.hasPart[0]?.headline).toBe("First ripe cluster");
   });
 
   it("omits JSON-LD when catalog trust is below the promotion gate", () => {

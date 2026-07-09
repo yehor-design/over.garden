@@ -63,7 +63,7 @@ describe("/", () => {
     );
 
     expect(html).toContain('lang="bg"');
-    expect(html).toContain('aria-label="Language switcher"');
+    expect(html).toContain('aria-label="Смяна на езика"');
     expect(html).toContain("Български");
     expect(html).toContain("Русский");
     expect(html).not.toContain("Українська");

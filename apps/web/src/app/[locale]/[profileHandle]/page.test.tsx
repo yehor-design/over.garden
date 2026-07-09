@@ -44,7 +44,7 @@ describe("/{locale}/@:handle public profile route", () => {
     });
 
     expect(metadata).toMatchObject({
-      title: "@green_thumb | OverGarden",
+      title: "@green_thumb · публічний профіль | OverGarden",
       alternates: {
         canonical: "/@green_thumb",
       },
@@ -76,8 +76,8 @@ describe("/{locale}/@:handle public profile route", () => {
     );
     expect(html).toContain("@green_thumb");
     expect(html).toContain("Green Thumb");
-    expect(html).toContain("Public entries");
-    expect(html).toContain("Confirmed lineage links");
+    expect(html).toContain("Публічні записи");
+    expect(html).toContain("Підтверджені зв&#x27;язки походження");
     expect(html).toContain("/journal/first-public-entry");
     expect(html).not.toMatch(
       /email|provider|account|session|ip_address|user_agent|raw user|00000000-0000|private journal|quarantine|derivative|invite|token|pending|unconfirmed/i,
@@ -96,7 +96,7 @@ describe("/{locale}/@:handle public profile route", () => {
         }),
       }),
     ).resolves.toMatchObject({
-      title: "Profile | OverGarden",
+      title: "Публічний профіль садівника | OverGarden",
       robots: {
         index: false,
         follow: false,
@@ -111,11 +111,55 @@ describe("/{locale}/@:handle public profile route", () => {
         }),
       }),
     ).resolves.toMatchObject({
-      title: "Profile | OverGarden",
+      title: "Публічний профіль садівника | OverGarden",
       robots: {
         index: false,
         follow: false,
       },
     });
+  });
+
+  it("uses the valid route locale for missing public-profile metadata", async () => {
+    mocks.getPublicProfilePageByHandle.mockResolvedValueOnce(null);
+    const { generateMetadata } = await import("./page");
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({
+          locale: "bg",
+          profileHandle: "@missing",
+        }),
+      }),
+    ).resolves.toMatchObject({
+      title: "Публичен профил на градинар | OverGarden",
+      robots: {
+        index: false,
+        follow: false,
+      },
+    });
+  });
+
+  it("localizes public profile chrome while preserving handle and display name", async () => {
+    const { default: LocalizedPublicProfileRoute, generateMetadata } =
+      await import("./page");
+    const metadata = await generateMetadata({
+      params: Promise.resolve({
+        locale: "bg",
+        profileHandle: "@green_thumb",
+      }),
+    });
+    const html = renderToStaticMarkup(
+      await LocalizedPublicProfileRoute({
+        params: Promise.resolve({
+          locale: "bg",
+          profileHandle: "@green_thumb",
+        }),
+      }),
+    );
+
+    expect(metadata.title).toBe("@green_thumb · публичен профил | OverGarden");
+    expect(html).toContain("Публичен профил на градинар");
+    expect(html).toContain("@green_thumb");
+    expect(html).toContain("Green Thumb");
   });
 });

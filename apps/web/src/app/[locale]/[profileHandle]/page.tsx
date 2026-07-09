@@ -11,6 +11,7 @@ import {
   isPublicLocale,
   localizedPath,
 } from "@/lib/public-localization";
+import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import {
   getPublicProfilePageByHandle,
@@ -34,6 +35,7 @@ export async function generateMetadata({
   const { locale: localeParam, profileHandle } = await params;
   const routeHandle = routeHandleFromSegment(profileHandle);
   const localeIsValid = isPublicLocale(localeParam);
+  const copy = getPublicSurfaceCopy(localeIsValid ? localeParam : "uk");
   const page =
     localeIsValid && routeHandle
       ? await getCachedPublicProfilePage(routeHandle)
@@ -44,7 +46,7 @@ export async function generateMetadata({
 
   if (!localeIsValid || !page) {
     return {
-      title: "Profile | OverGarden",
+      title: `${copy.profile.title} | OverGarden`,
       robots: indexState.robots,
     };
   }
@@ -52,8 +54,8 @@ export async function generateMetadata({
   const basePath = `/@${page.handle}`;
 
   return {
-    title: `${page.mention} | OverGarden`,
-    description: `Public OverGarden profile for ${page.mention}.`,
+    title: `${page.mention} · ${copy.profile.metadataSuffix} | OverGarden`,
+    description: `${copy.profile.title}: ${page.mention}.`,
     alternates: {
       canonical: publicProfilePath(localeParam, page.handle),
       languages: buildLanguageAlternates(basePath),
@@ -76,6 +78,7 @@ export default async function LocalizedPublicProfileRoute({
 
   const page = await getCachedPublicProfilePage(routeHandle);
   if (!page) notFound();
+  const copy = getPublicSurfaceCopy(localeParam);
 
   const basePath = `/@${page.handle}`;
 
@@ -98,10 +101,10 @@ export default async function LocalizedPublicProfileRoute({
           OverGarden
         </Link>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-          <PublicProfileAvatar page={page} />
+          <PublicProfileAvatar page={page} locale={localeParam} />
           <div className="flex min-w-0 flex-col gap-2">
             <p className="text-sm font-medium text-muted-foreground">
-              Public gardener profile
+              {copy.profile.title}
             </p>
             <h1 className="font-mono text-3xl font-semibold tracking-tight break-words text-foreground sm:text-5xl">
               {page.mention}
@@ -117,15 +120,15 @@ export default async function LocalizedPublicProfileRoute({
 
       <section className="grid gap-3 sm:grid-cols-3">
         <SummaryCard
-          label="Public entries"
+          label={copy.profile.publicEntries}
           value={page.summary.publicEntryCount}
         />
         <SummaryCard
-          label="Public objects"
+          label={copy.profile.publicObjects}
           value={page.summary.publicObjectCount}
         />
         <SummaryCard
-          label="Confirmed lineage links"
+          label={copy.profile.confirmedLineageLinks}
           value={page.summary.confirmedLineageEdgeCount}
         />
       </section>
@@ -133,16 +136,16 @@ export default async function LocalizedPublicProfileRoute({
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            Public journal links
+            {copy.profile.publicJournalLinks}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Only active public journal URLs are shown here.
+            {copy.profile.publicJournalLinksDescription}
           </p>
         </div>
 
         {page.links.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No public journal links are available for this handle yet.
+            {copy.profile.noPublicJournalLinks}
           </p>
         ) : (
           <ol className="grid gap-3">
@@ -153,10 +156,10 @@ export default async function LocalizedPublicProfileRoute({
                   className="flex flex-col gap-1 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
                 >
                   <span className="font-medium text-foreground">
-                    Public journal entry
+                    {copy.profile.publicJournalEntry}
                   </span>
                   <time className="text-sm text-muted-foreground">
-                    {formatDate(link.entryDate)}
+                    {formatDate(link.entryDate, localeParam)}
                   </time>
                 </Link>
               </li>
@@ -168,7 +171,13 @@ export default async function LocalizedPublicProfileRoute({
   );
 }
 
-function PublicProfileAvatar({ page }: { page: PublicProfilePage }) {
+function PublicProfileAvatar({
+  page,
+  locale,
+}: {
+  page: PublicProfilePage;
+  locale: "uk" | "bg" | "ru";
+}) {
   if (!page.avatarUrl) {
     return (
       <div className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-border bg-muted font-mono text-xl font-semibold text-muted-foreground">
@@ -180,7 +189,7 @@ function PublicProfileAvatar({ page }: { page: PublicProfilePage }) {
   return (
     <Image
       src={page.avatarUrl}
-      alt={`${page.mention} avatar`}
+      alt={`${page.mention} · ${getPublicSurfaceCopy(locale).profile.avatarSuffix}`}
       width={80}
       height={80}
       unoptimized
@@ -202,9 +211,9 @@ function routeHandleFromSegment(segment: string) {
   return segment.startsWith("@") ? segment : null;
 }
 
-function formatDate(value: Date | string) {
+function formatDate(value: Date | string, locale: "uk" | "bg" | "ru") {
   const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
+  return date.toLocaleDateString(locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

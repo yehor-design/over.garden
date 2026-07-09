@@ -20,6 +20,7 @@ describe("language switcher persistence", () => {
     );
 
     expect(html).not.toContain("data-next-link");
+    expect(html).toContain('aria-label="Смяна на езика"');
     expect(html).toContain('href="/bg/privacy"');
     expect(html).toContain('href="/ru/privacy"');
   });

@@ -1,7 +1,7 @@
 # Interface Locale Contract
 
 Status: active
-Issue: OVE-164
+Issues: OVE-164, OVE-165
 Date: 2026-07-09
 
 ## Purpose
@@ -71,6 +71,8 @@ These values may appear inside a localized interface exactly as stored. A transl
 - Pure or client-safe code imports locale types, resolver primitives, and copy contracts from `apps/web/src/lib/interface-localization.ts`.
 - Server components import `getRequestInterfaceLocale()` from `apps/web/src/server/interface-localization.ts` and pass the resolved locale or copy to client components explicitly.
 - Public URLs continue to use `localizedPath()` and their existing hreflang/indexability policy.
+- `apps/web/src/lib/public-surface-localization.ts` owns interface copy for public journal readback, object passports, variety aggregations, localized profiles, engagement controls, source-credit chrome, and public failure states. Unprefixed UGC routes resolve their interface locale from the request contract; localized profile routes use their validated route locale.
+- Public-surface metadata and JSON-LD may localize application-authored collection or page labels, but retain catalog names and journal headlines exactly as stored. Canonical URLs, hreflang, and the server-side indexability decision remain independent of locale copy.
 - Cross-locale language-switcher choices use plain document links; speculative navigation must never change preference state, and client navigation must not preserve a stale root document language.
 - Public links rendered from `/garden` must use the resolved locale rather than `DEFAULT_PUBLIC_LOCALE`.
 - Links between signed-in routes remain canonical unprefixed paths; the HTTP-only cookie carries locale continuity.
@@ -93,5 +95,6 @@ The executable contract covers:
 - persisted-locale redirects for allowlisted localized public routes without redirecting UGC paths;
 - request header and cookie server resolution;
 - locale-aware workspace metadata, navigation, public-profile links, and object chrome;
+- localized public journal, passport, variety, profile, engagement, source-credit, structured-data, not-found, and gone chrome across `uk`, `bg`, and `ru`;
 - unchanged user-authored object and journal text;
 - existing public canonical and hreflang tests.
