@@ -152,7 +152,7 @@ describe("/garden workspace", () => {
     );
   });
 
-  it("keeps Bulgarian chrome and public navigation through the signed-in workspace", async () => {
+  it("keeps Bulgarian route chrome while the root shell owns global navigation", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
@@ -163,13 +163,14 @@ describe("/garden workspace", () => {
 
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Градинско пространство");
-    expect(html).toContain("Следвани записи");
-    expect(html).toContain('href="/bg/feed"');
-    expect(html).toContain('href="/bg/notifications"');
-    expect(html).toContain('href="/bg/bookmarks"');
-    expect(html).toContain('href="/bg/@green_thumb"');
     expect(html).toContain("Cherry tomato");
     expect(html).not.toContain("Черешов домат");
+    expect(html).not.toContain("Следвани записи");
+    expect(html).not.toContain('href="/bg/feed"');
+    expect(html).not.toContain('href="/bg/notifications"');
+    expect(html).not.toContain('href="/bg/bookmarks"');
+    expect(html).not.toContain("gardener@example.com");
+    expect(mocks.ensureUserPublicProfile).not.toHaveBeenCalled();
   });
 
   it("pushes an empty signed-in workspace toward the first object path", async () => {

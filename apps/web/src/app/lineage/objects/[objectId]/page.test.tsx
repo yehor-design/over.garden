@@ -183,6 +183,7 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("/journal/first-flowering");
     expect(html).toContain("/variety/red-cherry-tomato-0000000101");
     expect(html).toContain("/garden?source=public-object");
+    expect(html).not.toContain('href="/">OverGarden</a>');
     expect(html).toContain(
       "https://media.over.garden/derivatives/first-flowering.webp",
     );

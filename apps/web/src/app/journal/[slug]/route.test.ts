@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getPublicJournalEntryLookup: vi.fn(),
   getEngagementSummary: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  getSiteShellSessionState: vi.fn(),
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -16,6 +17,10 @@ vi.mock("@/server/engagement-repository", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/server/site-shell-session", () => ({
+  getSiteShellSessionState: mocks.getSiteShellSessionState,
 }));
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
@@ -34,6 +39,9 @@ describe("public journal route", () => {
       comments: [],
     });
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
+    mocks.getSiteShellSessionState.mockResolvedValue({
+      isAuthenticated: false,
+    });
   });
 
   it("returns a safe 404 HTML response for an unknown public slug", async () => {
@@ -52,7 +60,9 @@ describe("public journal route", () => {
     expect(response.headers.get("content-type")).toBe(
       "text/html; charset=utf-8",
     );
-    expect(await response.text()).toContain("Записът не е намерен");
+    const html = await response.text();
+    expect(html).toContain("Записът не е намерен");
+    expect(html).toContain('data-site-shell="raw"');
     expect(mocks.getPublicJournalEntryLookup).toHaveBeenCalledWith("missing");
   });
 
@@ -85,6 +95,9 @@ describe("public journal route", () => {
   });
 
   it("returns active public logbook HTML with engagement state", async () => {
+    mocks.getSiteShellSessionState.mockResolvedValueOnce({
+      isAuthenticated: true,
+    });
     mocks.getPublicJournalEntryLookup.mockResolvedValue({
       status: "active",
       page: buildPage(),
@@ -114,6 +127,8 @@ describe("public journal route", () => {
     expect(html).toContain("Запис в дневника на жив обект");
     expect(html).toContain("Запазено в отметките.");
     expect(html).toContain("Отворете паспорта на живия обект");
+    expect(html).toContain(">Моето<");
+    expect(html).toContain("Моята градина");
     expect(mocks.getEngagementSummary).toHaveBeenCalledWith({
       kind: "journal_entry",
       ref: "first-ripe-cluster",

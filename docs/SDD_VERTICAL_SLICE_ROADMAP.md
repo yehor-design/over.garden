@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-03 (MVP scope recheck OVE-114-139)
+Last operational update: 2026-07-10 (Drive2-parity production reconstruction OVE-172-186)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -11,6 +11,12 @@ This is not the full product backlog. It is the living execution roadmap for the
 From this point forward, work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid execution slice unless it is embedded inside a user-visible path and proves integration through that path.
 
 ## Current Execution State
+
+The active UI/UX/IA reconstruction queue is Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilds production routes; there is no separate clickable-prototype phase. `OVE-172` now provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. The next production behaviors are `OVE-173` through `OVE-176` according to their Linear blockers; the remaining object, journal, profile, workspace, creation, social, community, responsive, and production-closeout slices follow the dependency graph in Linear.
+
+The earlier project `SDD Slice 15 - Drive2 Pattern Audit And Living-Journal Redesign` is superseded. `OVE-145` through `OVE-147` remain the completed research/synthesis record, and `OVE-148` through `OVE-150` remain historical completed implementations, but none of those completed cards is current visual approval. `OVE-151` through `OVE-156` are canceled with direct replacement relations to Slice 18.
+
+Localization foundations `OVE-164` and `OVE-165` remain completed and must not regress. Deep-surface localization `OVE-166` through `OVE-171` remains in backlog and is blocked by `OVE-186`, so translation resumes against the stabilized production IA rather than a moving redesign target.
 
 Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active MVP scope reconciliation and follow-up queue is Linear `OVE-114` through `OVE-139`. `OVE-114` is the docs reconciliation anchor; `OVE-115` through `OVE-139` are the vertical follow-up slices that convert the 2026-07-03 founder/operator MVP decision into product behavior.
 

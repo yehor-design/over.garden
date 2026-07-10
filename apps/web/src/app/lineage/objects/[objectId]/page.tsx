@@ -224,15 +224,6 @@ function PublicObjectPassportHero({
   return (
     <header className="grid gap-6 border-b border-border pb-6 lg:grid-cols-3 lg:items-start">
       <div className="flex min-w-0 flex-col gap-5 lg:col-span-2">
-        <Link
-          href="/"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          OverGarden
-        </Link>
         <div className="flex flex-col gap-3">
           <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <Sprout className="size-4" />

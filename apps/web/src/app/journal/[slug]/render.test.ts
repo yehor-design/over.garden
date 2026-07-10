@@ -62,6 +62,24 @@ describe("public journal HTML renderer", () => {
     );
 
     expect(html).toContain("Запис у журналі живого об&#39;єкта");
+    expect(html).toContain('data-site-shell="raw"');
+    expect(html).toContain('data-site-shell-region="header"');
+    expect(html).toContain('data-site-shell-region="sidebar"');
+    expect(html).toContain('data-site-shell-region="content"');
+    expect(html).toContain('data-site-shell-region="context"');
+    expect(html).toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).not.toContain("min-width: 20rem");
+    const mobileMenuStart = html.indexOf(
+      '<div class="site-shell-mobile-menu-panel">',
+    );
+    const mobileMenuEnd = html.indexOf("</div>", mobileMenuStart);
+    expect(html.slice(mobileMenuStart, mobileMenuEnd)).toContain(
+      'href="/privacy"',
+    );
+    expect(html).toContain('href="/objects"');
+    expect(html).toContain('href="/journals"');
+    expect(html).toContain('href="/knowledge"');
+    expect(html).not.toContain(">Моє<");
     expect(html).toContain("Відкрити паспорт живого об&#39;єкта");
     expect(html).toContain("/lineage/objects/object-1");
     expect(html).toContain("Почати подібний журнал");
@@ -94,7 +112,7 @@ describe("public journal HTML renderer", () => {
       'src="https://media.over.garden/journal/public/entry-1.webp"',
     );
     expect(html).not.toMatch(/derivative_key|derivativeKey/);
-    expect(html).not.toMatch(/quarantine|original|raw/i);
+    expect(html).not.toMatch(/quarantine|original/i);
   });
 
   it("renders engagement forms and comment readback without private identifiers", () => {
@@ -145,6 +163,25 @@ describe("public journal HTML renderer", () => {
     );
     expect(goneHtml).toContain("Запись удалена");
     expect(missingHtml).toContain("Записът не е намерен");
+    expect(goneHtml).toContain('data-site-shell="raw"');
+    expect(missingHtml).toContain('data-site-shell-region="mobile-navigation"');
+  });
+
+  it("adds the localized My navigation for an authenticated journal reader", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      undefined,
+      null,
+      "bg",
+      true,
+    );
+
+    expect(html).toContain(">Моето<");
+    expect(html).toContain("Моята градина");
+    expect(html).toContain("Добавяне на обект");
+    expect(html).toContain("Известия");
+    expect(html).toContain('href="/bg/notifications"');
+    expect(html).not.toMatch(/private-user|private-session|email/i);
   });
 });
 

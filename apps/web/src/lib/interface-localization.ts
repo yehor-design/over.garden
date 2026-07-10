@@ -19,12 +19,44 @@ export interface InterfaceCopy {
     workspaceDescription: string;
   };
   navigation: {
+    feed: string;
+    livingObjects: string;
+    journals: string;
+    knowledge: string;
+    myGarden: string;
+    addObject: string;
+    addUpdate: string;
+    drafts: string;
     garden: string;
     followedFeed: string;
     notifications: string;
     bookmarks: string;
+    wishlist: string;
     lineageClaims: string;
+    profile: string;
     publicProfile: string;
+    signIn: string;
+  };
+  shell: {
+    exploreSection: string;
+    mySection: string;
+    menuTitle: string;
+    menuDescription: string;
+    search: string;
+    openMenu: string;
+    closeMenu: string;
+    siteNavigation: string;
+    mobileNavigation: string;
+    contextTitle: string;
+    contextDescription: string;
+    startJournal: string;
+    privacy: string;
+    account: string;
+    loadingTitle: string;
+    errorEyebrow: string;
+    errorTitle: string;
+    errorDescription: string;
+    retry: string;
   };
   workspace: {
     title: string;
@@ -46,12 +78,46 @@ const INTERFACE_COPY = {
         "Приватний простір для живих об'єктів, датованих записів і наступних дій у саду.",
     },
     navigation: {
+      feed: "Стрічка",
+      livingObjects: "Живі об'єкти",
+      journals: "Журнали",
+      knowledge: "Знання",
+      myGarden: "Мій сад",
+      addObject: "Додати об'єкт",
+      addUpdate: "Новий запис",
+      drafts: "Чернетки",
       garden: "Сад",
       followedFeed: "Стрічка підписок",
       notifications: "Сповіщення",
       bookmarks: "Закладки",
+      wishlist: "Список бажань",
       lineageClaims: "Запити щодо походження",
+      profile: "Профіль",
       publicProfile: "Публічний профіль",
+      signIn: "Увійти",
+    },
+    shell: {
+      exploreSection: "Огляд",
+      mySection: "Моє",
+      menuTitle: "Навігація OverGarden",
+      menuDescription: "Публічні розділи та ваш особистий сад.",
+      search: "Пошук",
+      openMenu: "Відкрити навігацію",
+      closeMenu: "Закрити навігацію",
+      siteNavigation: "Основна навігація",
+      mobileNavigation: "Основна мобільна навігація",
+      contextTitle: "Далі",
+      contextDescription:
+        "Продовжуйте читати публічні історії або відкрийте власний журнал.",
+      startJournal: "Почати журнал",
+      privacy: "Приватність",
+      account: "Обліковий запис",
+      loadingTitle: "Завантаження OverGarden",
+      errorEyebrow: "Не вдалося відкрити розділ",
+      errorTitle: "Цю сторінку не вдалося завантажити",
+      errorDescription:
+        "Спробуйте ще раз. Ви можете продовжити навігацію в OverGarden, якщо помилка повториться.",
+      retry: "Спробувати ще раз",
     },
     workspace: {
       title: "Простір саду",
@@ -73,12 +139,46 @@ const INTERFACE_COPY = {
         "Лично пространство за живи обекти, датирани записи и следващи действия в градината.",
     },
     navigation: {
+      feed: "Поток",
+      livingObjects: "Живи обекти",
+      journals: "Дневници",
+      knowledge: "Знания",
+      myGarden: "Моята градина",
+      addObject: "Добавяне на обект",
+      addUpdate: "Нов запис",
+      drafts: "Чернови",
       garden: "Градина",
       followedFeed: "Следвани записи",
       notifications: "Известия",
       bookmarks: "Отметки",
+      wishlist: "Желани",
       lineageClaims: "Заявки за произход",
+      profile: "Профил",
       publicProfile: "Публичен профил",
+      signIn: "Вход",
+    },
+    shell: {
+      exploreSection: "Разглеждане",
+      mySection: "Моето",
+      menuTitle: "Навигация в OverGarden",
+      menuDescription: "Публичните раздели и вашата лична градина.",
+      search: "Търсене",
+      openMenu: "Отваряне на навигацията",
+      closeMenu: "Затваряне на навигацията",
+      siteNavigation: "Основна навигация",
+      mobileNavigation: "Основна мобилна навигация",
+      contextTitle: "Следващо",
+      contextDescription:
+        "Продължете с публичните истории или отворете свой дневник.",
+      startJournal: "Започване на дневник",
+      privacy: "Поверителност",
+      account: "Профил",
+      loadingTitle: "Зареждане на OverGarden",
+      errorEyebrow: "Разделът не може да се отвори",
+      errorTitle: "Тази страница не може да се зареди",
+      errorDescription:
+        "Опитайте отново. Ако грешката се повтори, можете да продължите да разглеждате OverGarden.",
+      retry: "Опитайте отново",
     },
     workspace: {
       title: "Градинско пространство",
@@ -100,12 +200,46 @@ const INTERFACE_COPY = {
         "Личное пространство для живых объектов, датированных записей и следующих действий в саду.",
     },
     navigation: {
+      feed: "Лента",
+      livingObjects: "Живые объекты",
+      journals: "Журналы",
+      knowledge: "Знания",
+      myGarden: "Мой сад",
+      addObject: "Добавить объект",
+      addUpdate: "Новая запись",
+      drafts: "Черновики",
       garden: "Сад",
       followedFeed: "Лента подписок",
       notifications: "Уведомления",
       bookmarks: "Закладки",
+      wishlist: "Список желаний",
       lineageClaims: "Заявки о происхождении",
+      profile: "Профиль",
       publicProfile: "Публичный профиль",
+      signIn: "Войти",
+    },
+    shell: {
+      exploreSection: "Обзор",
+      mySection: "Моё",
+      menuTitle: "Навигация OverGarden",
+      menuDescription: "Публичные разделы и ваш личный сад.",
+      search: "Поиск",
+      openMenu: "Открыть навигацию",
+      closeMenu: "Закрыть навигацию",
+      siteNavigation: "Основная навигация",
+      mobileNavigation: "Основная мобильная навигация",
+      contextTitle: "Дальше",
+      contextDescription:
+        "Продолжайте читать публичные истории или откройте свой журнал.",
+      startJournal: "Начать журнал",
+      privacy: "Конфиденциальность",
+      account: "Аккаунт",
+      loadingTitle: "Загрузка OverGarden",
+      errorEyebrow: "Не удалось открыть раздел",
+      errorTitle: "Не удалось загрузить эту страницу",
+      errorDescription:
+        "Попробуйте ещё раз. Если ошибка повторится, вы сможете продолжить навигацию по OverGarden.",
+      retry: "Повторить",
     },
     workspace: {
       title: "Пространство сада",

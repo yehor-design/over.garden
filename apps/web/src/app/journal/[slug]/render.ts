@@ -17,6 +17,12 @@ import {
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
 } from "@/server/public-surface-indexing-policy";
+import {
+  getSiteShellNavigation,
+  getSiteShellRouteContext,
+  isSiteShellItemActive,
+  type SiteShellNavigationItem,
+} from "@/lib/site-shell-navigation";
 
 // Pure HTML renderers for the public journal route. They live in their own
 // module so the public-facing bytes can be unit/privacy tested without the
@@ -27,6 +33,7 @@ export function renderPublicJournalEntryHtml(
   engagement?: PublicEngagementSummary,
   engagementStatus?: string | null,
   locale: InterfaceLocale = "uk",
+  isAuthenticated = false,
 ) {
   const copy = getPublicSurfaceCopy(locale);
   const title = `${page.entry.title} · ${copy.journal.metadataTitleSuffix} | OverGarden`;
@@ -54,12 +61,10 @@ export function renderPublicJournalEntryHtml(
     robots,
     canonicalPath: publicJournalEntryPath(page.entry.publicSlug),
     locale,
+    isAuthenticated,
     body: `
       <main class="page logbook-page">
-        <nav class="topbar" aria-label="${escapeAttribute(copy.journal.primaryNavigation)}">
-          <a class="button secondary" href="/">OverGarden</a>
-          ${objectPassportPath ? `<a class="button secondary" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.objectPassport)}</a>` : ""}
-        </nav>
+        ${objectPassportPath ? `<nav class="topbar" aria-label="${escapeAttribute(copy.journal.primaryNavigation)}"><a class="button secondary" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.objectPassport)}</a></nav>` : ""}
         <header class="hero">
           <div class="hero-copy">
             <p class="eyebrow">${escapeHtml(copy.journal.entryType)}</p>
@@ -143,6 +148,7 @@ export function getPublicJournalLocationLabel(
 export function renderGoneJournalEntryHtml(
   publicSlug: string,
   locale: InterfaceLocale = "uk",
+  isAuthenticated = false,
 ) {
   const copy = getPublicSurfaceCopy(locale);
 
@@ -152,10 +158,10 @@ export function renderGoneJournalEntryHtml(
     robots: "noindex, nofollow",
     canonicalPath: publicJournalEntryPath(publicSlug),
     locale,
+    isAuthenticated,
     body: `
       <main class="page">
         <header class="header">
-          <a class="button" href="/">OverGarden</a>
           <h1>${escapeHtml(copy.journal.entryRemoved)}</h1>
           <p class="body-copy">${escapeHtml(copy.journal.entryRemovedDescription)}</p>
         </header>
@@ -164,7 +170,10 @@ export function renderGoneJournalEntryHtml(
   });
 }
 
-export function renderNotFoundJournalEntryHtml(locale: InterfaceLocale = "uk") {
+export function renderNotFoundJournalEntryHtml(
+  locale: InterfaceLocale = "uk",
+  isAuthenticated = false,
+) {
   const copy = getPublicSurfaceCopy(locale);
 
   return renderShell({
@@ -172,10 +181,10 @@ export function renderNotFoundJournalEntryHtml(locale: InterfaceLocale = "uk") {
     description: copy.journal.entryNotFoundDescription,
     robots: "noindex, nofollow",
     locale,
+    isAuthenticated,
     body: `
       <main class="page">
         <header class="header">
-          <a class="button" href="/">OverGarden</a>
           <h1>${escapeHtml(copy.journal.entryNotFound)}</h1>
           <p class="body-copy">${escapeHtml(copy.journal.entryNotFoundDescription)}</p>
         </header>
@@ -455,6 +464,7 @@ function renderShell({
   canonicalPath,
   body,
   locale,
+  isAuthenticated,
 }: {
   title: string;
   description: string;
@@ -462,7 +472,32 @@ function renderShell({
   canonicalPath?: string;
   body: string;
   locale: InterfaceLocale;
+  isAuthenticated?: boolean;
 }) {
+  const pathname = canonicalPath ?? "/";
+  const navigation = getSiteShellNavigation(locale, isAuthenticated ?? false);
+  const context = getSiteShellRouteContext(pathname, locale);
+  const publicNavigation = renderRawNavigationSection(
+    navigation.labels.publicSection,
+    navigation.publicItems,
+    pathname,
+  );
+  const personalNavigation =
+    navigation.personalItems.length > 0
+      ? renderRawNavigationSection(
+          navigation.labels.personalSection,
+          navigation.personalItems,
+          pathname,
+        )
+      : "";
+  const mobileNavigation = renderRawMobileNavigation(
+    navigation.mobileItems,
+    pathname,
+  );
+  const sessionActions = isAuthenticated
+    ? `<a class="site-shell-header-action primary" href="/garden#first-entry-composer">${escapeHtml(navigation.personalItems.find((item) => item.key === "add-update")?.label ?? "")}</a><a class="site-shell-header-action secondary-action" href="/garden/profile">${escapeHtml(navigation.labels.account)}</a>`
+    : `<a class="site-shell-header-action primary" href="/garden">${escapeHtml(navigation.mobileItems.find((item) => item.key === "sign-in")?.label ?? "")}</a>`;
+
   return `<!doctype html>
 <html lang="${escapeAttribute(locale)}">
   <head>
@@ -475,12 +510,13 @@ function renderShell({
     <style>
       :root {
         color-scheme: light;
-        --border: rgb(215 222 214);
-        --muted: rgb(102 113 100);
-        --text: rgb(23 32 21);
-        --bg: rgb(251 253 248);
+        --border: rgb(226 229 225);
+        --muted: rgb(97 105 96);
+        --text: rgb(22 26 22);
+        --bg: rgb(255 255 255);
         --panel: rgb(255 255 255);
         --primary: rgb(29 95 56);
+        --accent: rgb(235 244 236);
       }
       * { box-sizing: border-box; }
       body {
@@ -488,6 +524,176 @@ function renderShell({
         background: var(--bg);
         color: var(--text);
         font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .site-shell {
+        min-height: 100dvh;
+      }
+      .site-shell-header {
+        position: sticky;
+        z-index: 30;
+        top: 0;
+        height: 3.5rem;
+        border-bottom: 1px solid rgb(255 255 255 / 0.12);
+        background: var(--text);
+        color: var(--bg);
+      }
+      .site-shell-header-inner {
+        display: flex;
+        width: min(100%, 80rem);
+        height: 100%;
+        margin: 0 auto;
+        padding: 0 1.25rem;
+        align-items: stretch;
+      }
+      .site-shell-brand {
+        display: flex;
+        width: 14rem;
+        align-items: center;
+        background: var(--primary);
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 700;
+        padding: 0 1rem;
+        text-decoration: none;
+      }
+      .site-shell-header-actions {
+        display: flex;
+        margin-left: auto;
+        align-items: center;
+        gap: 0.5rem;
+        padding-left: 0.75rem;
+      }
+      .site-shell-header-action {
+        border: 1px solid rgb(255 255 255 / 0.24);
+        border-radius: 0.45rem;
+        color: white;
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 0.4rem 0.65rem;
+        text-decoration: none;
+      }
+      .site-shell-header-action.primary {
+        border-color: var(--primary);
+        background: var(--primary);
+      }
+      .site-shell-grid {
+        display: grid;
+        width: min(100%, 80rem);
+        min-height: calc(100dvh - 3.5rem);
+        margin: 0 auto;
+      }
+      .site-shell-sidebar,
+      .site-shell-context {
+        display: none;
+      }
+      .site-shell-content {
+        min-width: 0;
+        padding-bottom: 4.25rem;
+      }
+      .site-shell-section {
+        display: grid;
+        gap: 0.35rem;
+      }
+      .site-shell-section + .site-shell-section {
+        border-top: 1px solid var(--border);
+        margin-top: 1rem;
+        padding-top: 1rem;
+      }
+      .site-shell-section-title {
+        margin: 0 0 0.25rem;
+        color: var(--muted);
+        font-size: 0.69rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .site-shell-link {
+        display: block;
+        border-radius: 0.4rem;
+        color: var(--muted);
+        font-size: 0.86rem;
+        font-weight: 600;
+        line-height: 1.25rem;
+        padding: 0.45rem 0.6rem;
+        text-decoration: none;
+      }
+      .site-shell-link:hover,
+      .site-shell-link[aria-current="page"] {
+        background: var(--accent);
+        color: var(--text);
+      }
+      .site-shell-context h2,
+      .site-shell-context p {
+        margin: 0;
+      }
+      .site-shell-context h2 {
+        font-size: 1.05rem;
+      }
+      .site-shell-context-copy {
+        color: var(--muted);
+        font-size: 0.86rem;
+        line-height: 1.55;
+      }
+      .site-shell-context-actions {
+        display: grid;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      .site-shell-mobile-nav {
+        position: fixed;
+        z-index: 20;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        min-height: 4.25rem;
+        border-top: 1px solid var(--border);
+        background: rgb(255 255 255 / 0.96);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .site-shell-mobile-nav a {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 0.63rem;
+        font-weight: 700;
+        line-height: 1.15;
+        padding: 0.5rem 0.2rem;
+        text-align: center;
+        text-decoration: none;
+      }
+      .site-shell-mobile-nav a[aria-current="page"] {
+        color: var(--primary);
+      }
+      .site-shell-mobile-menu {
+        display: none;
+        align-items: center;
+      }
+      .site-shell-mobile-menu summary {
+        cursor: pointer;
+        font-size: 0.78rem;
+        font-weight: 700;
+        list-style: none;
+        padding: 0.5rem;
+      }
+      .site-shell-mobile-menu summary::-webkit-details-marker {
+        display: none;
+      }
+      .site-shell-mobile-menu-panel {
+        position: fixed;
+        z-index: 40;
+        top: 3.5rem;
+        bottom: 0;
+        left: 0;
+        width: min(20rem, 88vw);
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+        color: var(--text);
+        padding: 1rem;
+        box-shadow: 1rem 0 2rem rgb(0 0 0 / 0.12);
       }
       .page {
         width: min(100%, 72rem);
@@ -755,17 +961,138 @@ function renderShell({
         }
       }
       @media (min-width: 960px) {
+        .site-shell-grid {
+          grid-template-columns: 14rem minmax(0, 1fr);
+        }
+        .site-shell-sidebar {
+          position: sticky;
+          top: 3.5rem;
+          display: block;
+          height: calc(100dvh - 3.5rem);
+          overflow-y: auto;
+          border-right: 1px solid var(--border);
+          padding: 1.25rem 0.75rem;
+        }
+        .site-shell-content {
+          padding-bottom: 0;
+        }
+        .site-shell-mobile-nav,
+        .site-shell-mobile-menu {
+          display: none;
+        }
         .hero {
           grid-template-columns: minmax(0, 1fr) 22rem;
           align-items: start;
         }
       }
+      @media (min-width: 1280px) {
+        .site-shell-grid {
+          grid-template-columns: 14rem minmax(0, 1fr) 18rem;
+        }
+        .site-shell-context {
+          position: sticky;
+          top: 3.5rem;
+          display: block;
+          height: calc(100dvh - 3.5rem);
+          overflow-y: auto;
+          border-left: 1px solid var(--border);
+          padding: 1.5rem 1.25rem;
+        }
+      }
+      @media (max-width: 959px) {
+        .site-shell-header-inner {
+          padding: 0 0.75rem;
+        }
+        .site-shell-mobile-menu {
+          display: flex;
+        }
+        .site-shell-brand {
+          width: auto;
+          margin-left: 0.25rem;
+        }
+        .site-shell-header-actions .secondary-action {
+          display: none;
+        }
+      }
     </style>
   </head>
   <body>
-    ${body}
+    <div class="site-shell" data-site-shell="raw">
+      <header class="site-shell-header" data-site-shell-region="header">
+        <div class="site-shell-header-inner">
+          <details class="site-shell-mobile-menu">
+            <summary aria-label="${escapeAttribute(navigation.labels.openMenu)}">${escapeHtml(navigation.labels.publicSection)}</summary>
+            <div class="site-shell-mobile-menu-panel">
+              <p class="site-shell-section-title">${escapeHtml(navigation.labels.menuTitle)}</p>
+              <p class="site-shell-context-copy">${escapeHtml(navigation.labels.menuDescription)}</p>
+              ${publicNavigation}
+              ${personalNavigation}
+              <a class="button secondary" href="${escapeAttribute(context.secondaryHref)}">${escapeHtml(context.secondaryLabel)}</a>
+            </div>
+          </details>
+          <a class="site-shell-brand" href="${escapeAttribute(navigation.publicItems[0]?.href ?? "/")}">OverGarden</a>
+          <div class="site-shell-header-actions">
+            <a class="site-shell-header-action secondary-action" href="${escapeAttribute(navigation.searchHref)}">${escapeHtml(navigation.labels.search)}</a>
+            ${sessionActions}
+          </div>
+        </div>
+      </header>
+      <div class="site-shell-grid">
+        <aside class="site-shell-sidebar" data-site-shell-region="sidebar">
+          ${publicNavigation}
+          ${personalNavigation}
+        </aside>
+        <div class="site-shell-content" data-site-shell-region="content">
+          ${body}
+        </div>
+        <aside class="site-shell-context" data-site-shell-region="context">
+          <p class="site-shell-section-title">${escapeHtml(navigation.labels.contextTitle)}</p>
+          <h2>${escapeHtml(context.title)}</h2>
+          <p class="site-shell-context-copy">${escapeHtml(context.description)}</p>
+          <div class="site-shell-context-actions">
+            <a class="button" href="${escapeAttribute(context.primaryHref)}">${escapeHtml(context.primaryLabel)}</a>
+            <a class="button secondary" href="${escapeAttribute(context.secondaryHref)}">${escapeHtml(context.secondaryLabel)}</a>
+          </div>
+        </aside>
+      </div>
+      <nav class="site-shell-mobile-nav" data-site-shell-region="mobile-navigation" aria-label="${escapeAttribute(navigation.labels.menuTitle)}">
+        ${mobileNavigation}
+      </nav>
+    </div>
   </body>
 </html>`;
+}
+
+function renderRawNavigationSection(
+  label: string,
+  items: readonly SiteShellNavigationItem[],
+  pathname: string,
+) {
+  return `<section class="site-shell-section"><p class="site-shell-section-title">${escapeHtml(label)}</p>${items
+    .map((item) => renderRawNavigationLink(item, pathname))
+    .join("")}</section>`;
+}
+
+function renderRawMobileNavigation(
+  items: readonly SiteShellNavigationItem[],
+  pathname: string,
+) {
+  return items
+    .map((item) => renderRawNavigationLink(item, pathname, true))
+    .join("");
+}
+
+function renderRawNavigationLink(
+  item: SiteShellNavigationItem,
+  pathname: string,
+  mobile = false,
+) {
+  const current = isSiteShellItemActive(pathname, item)
+    ? ' aria-current="page"'
+    : "";
+  const className = mobile ? "" : ' class="site-shell-link"';
+
+  return `<a${className} href="${escapeAttribute(item.href)}"${current}>${escapeHtml(item.label)}</a>`;
 }
 
 function formatDate(value: Date | string, locale: InterfaceLocale) {

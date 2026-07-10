@@ -52,20 +52,21 @@ describe("/", () => {
     expect(html).not.toContain("Українська");
     expect(html).not.toContain("Български");
     expect(html).not.toContain("Русский");
+    expect(html).not.toContain('href="/"');
     expect(html).not.toContain("/join?");
     expect(html).not.toContain("/admin");
     expect(html).not.toContain("/garden/pilot");
   });
 
-  it("renders the Bulgarian homepage with only Bulgarian and Russian choices", async () => {
+  it("renders Bulgarian route content while the root shell owns the locale switcher", async () => {
     const html = renderToStaticMarkup(
       await HomeRoute({ params: Promise.resolve({ locale: "bg" }) }),
     );
 
     expect(html).toContain('lang="bg"');
-    expect(html).toContain('aria-label="Смяна на езика"');
-    expect(html).toContain("Български");
-    expect(html).toContain("Русский");
+    expect(html).not.toContain('aria-label="Смяна на езика"');
+    expect(html).not.toContain("Български");
+    expect(html).not.toContain("Русский");
     expect(html).not.toContain("Українська");
     expect(html).not.toContain("/uk");
   });

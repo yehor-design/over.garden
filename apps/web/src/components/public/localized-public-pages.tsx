@@ -60,7 +60,6 @@ export function PublicLocalizedHeader({
 export function LocalizedHomePage({
   locale,
   content,
-  availableLocales,
 }: {
   locale: PublicLocale;
   content: LocalizedHomeContent;
@@ -71,12 +70,7 @@ export function LocalizedHomePage({
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-8 sm:px-8"
     >
-      <header className="flex flex-col justify-center gap-7 border-b border-border py-10 sm:py-14">
-        <PublicLocalizedHeader
-          locale={locale}
-          basePath="/"
-          availableLocales={availableLocales}
-        />
+      <header className="flex flex-col justify-center gap-7 border-b border-border py-8 sm:py-10">
         <div className="flex flex-col gap-4">
           <p className="text-sm font-medium text-muted-foreground">
             {content.eyebrow}

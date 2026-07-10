@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { SiteShell } from "@/components/site-shell/site-shell";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { getSiteShellSessionState } from "@/server/site-shell-session";
 import "./globals.css";
 import { GoogleAnalytics } from "./google-analytics";
 import { MetaMarketingAttribution } from "./meta-marketing";
@@ -28,7 +30,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getRequestInterfaceLocale();
+  const [locale, shellSession] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getSiteShellSessionState(),
+  ]);
 
   return (
     <html
@@ -36,7 +41,12 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        {children}
+        <SiteShell
+          locale={locale}
+          isAuthenticated={shellSession.isAuthenticated}
+        >
+          {children}
+        </SiteShell>
         <ServiceWorkerRegister />
         <GoogleAnalytics locale={locale} />
         <MetaMarketingAttribution />

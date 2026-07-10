@@ -72,5 +72,14 @@ describe("interface locale contract", () => {
       "Следвани записи",
     );
     expect(getInterfaceCopy("ru").object.backToJournal).toBe("Назад к журналу");
+    expect(getInterfaceCopy("uk").navigation.livingObjects).toBe(
+      "Живі об'єкти",
+    );
+    expect(getInterfaceCopy("bg").navigation.myGarden).toBe("Моята градина");
+    expect(getInterfaceCopy("ru").shell.openMenu).toBe("Открыть навигацию");
+    expect(getInterfaceCopy("bg").shell.loadingTitle).toBe(
+      "Зареждане на OverGarden",
+    );
+    expect(getInterfaceCopy("ru").shell.retry).toBe("Повторить");
   });
 });

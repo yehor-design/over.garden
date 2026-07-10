@@ -55,14 +55,14 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.39 0.105 151);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: oklch(0.97 0.006 145);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.94 0.025 145);
+  --accent-foreground: oklch(0.255 0.06 151);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -72,7 +72,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -126,5 +126,30 @@
   }
   html {
     @apply font-sans;
+    scroll-padding-top: 4.5rem;
+  }
+}
+
+@layer components {
+  .site-shell-layout {
+    @media (width >= 64rem) {
+      grid-template-columns: 14rem minmax(0, 1fr);
+    }
+
+    @media (width >= 80rem) {
+      grid-template-columns: 14rem minmax(0, 1fr) 18rem;
+    }
+  }
+
+  .site-shell-viewport-rail {
+    height: calc(100dvh - 3.5rem);
+  }
+
+  .site-shell-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .site-shell-mobile-label {
+    font-size: 0.625rem;
   }
 }

@@ -25,10 +25,7 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
-import {
-  gardenFirstEntryPreselectionPath,
-  publicProfilePath,
-} from "@/lib/garden/public-paths";
+import { gardenFirstEntryPreselectionPath } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
@@ -51,7 +48,6 @@ import {
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
-import { ensureUserPublicProfile } from "@/server/public-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
@@ -104,7 +100,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
     : { invited: false };
-  const publicProfile = scope ? await ensureUserPublicProfile(scope) : null;
   const objects = scope ? await listMyPlantObjects(scope, 20) : [];
   const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
   const recentEntries = scope ? await listMyRecentJournalEntries(scope, 8) : [];
@@ -138,66 +133,14 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
     >
       <header className="flex flex-col gap-2 border-b border-border pb-5">
-        <p className="text-sm font-medium text-muted-foreground">OverGarden</p>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              {copy.workspace.title}
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-              {hasObjects
-                ? copy.workspace.returningDescription
-                : copy.workspace.emptyDescription}
-            </p>
-          </div>
-          {userId ? (
-            <div className="flex flex-col gap-2 text-sm sm:items-end">
-              <Link
-                href={localizedPath(locale, "/feed")}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {copy.navigation.followedFeed}
-              </Link>
-              <Link
-                href={localizedPath(locale, "/notifications")}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {copy.navigation.notifications}
-              </Link>
-              <Link
-                href={localizedPath(locale, "/bookmarks")}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {copy.navigation.bookmarks}
-              </Link>
-              <Link
-                href="/garden/lineage/claims"
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {copy.navigation.lineageClaims}
-              </Link>
-              {publicProfile ? (
-                <Link
-                  href="/garden/profile"
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  @{publicProfile.handle}
-                </Link>
-              ) : null}
-              {publicProfile ? (
-                <Link
-                  href={publicProfilePath(locale, publicProfile.handle)}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {copy.navigation.publicProfile}
-                </Link>
-              ) : null}
-              {session?.user?.email ? (
-                <p className="text-muted-foreground">{session.user.email}</p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        <h1 className="text-3xl font-semibold text-foreground">
+          {copy.workspace.title}
+        </h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          {hasObjects
+            ? copy.workspace.returningDescription
+            : copy.workspace.emptyDescription}
+        </p>
       </header>
 
       {!userId ? (
@@ -227,7 +170,11 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
       {userId ? (
         <>
-          {writeAccess.invited ? <GardenDraftResumePanel /> : null}
+          {writeAccess.invited ? (
+            <div id="drafts">
+              <GardenDraftResumePanel />
+            </div>
+          ) : null}
           {writeAccess.invited && pendingWishlistItem ? (
             <PendingWishlistIntentPanel
               item={pendingWishlistItem}
