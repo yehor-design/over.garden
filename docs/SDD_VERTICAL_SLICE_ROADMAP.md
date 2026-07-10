@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-10 (Drive2-parity production reconstruction OVE-172-186)
+Last operational update: 2026-07-10 (Drive2-parity reconstruction plus deterministic visual fixtures)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -12,7 +12,7 @@ From this point forward, work must be shipped as narrow vertical SDD slices that
 
 ## Current Execution State
 
-The active UI/UX/IA reconstruction queue is Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilds production routes; there is no separate clickable-prototype phase. `OVE-172` now provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. The next production behaviors are `OVE-173` through `OVE-176` according to their Linear blockers; the remaining object, journal, profile, workspace, creation, social, community, responsive, and production-closeout slices follow the dependency graph in Linear.
+The active UI/UX/IA reconstruction queue is Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilds production routes; there is no separate clickable-prototype phase. `OVE-172` now provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. `OVE-187` is the production-refusing visual-data prerequisite for `OVE-173` through `OVE-186`: its versioned manifest deterministically seeds real repositories and routes with 4 profiles, 5 spaces, 30 mixed living objects, 80 journals, 16 generated raster derivatives, explicit dense/empty/404/410 scenarios, and a real five-plus-five public journal disclosure. The next production behaviors follow their Linear blockers and must use this fixture environment for desktop/mobile evidence instead of approving empty or one-record screens. The operator contract is `docs/VISUAL_FIXTURE_ENVIRONMENT.md`.
 
 The earlier project `SDD Slice 15 - Drive2 Pattern Audit And Living-Journal Redesign` is superseded. `OVE-145` through `OVE-147` remain the completed research/synthesis record, and `OVE-148` through `OVE-150` remain historical completed implementations, but none of those completed cards is current visual approval. `OVE-151` through `OVE-156` are canceled with direct replacement relations to Slice 18.
 

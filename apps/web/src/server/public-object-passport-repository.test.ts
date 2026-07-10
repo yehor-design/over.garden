@@ -105,7 +105,9 @@ describe("public object passport repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."public_gone_at" is null');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
     expect(compiled.sql).toContain(
       '"journal_entries"."public_slug" is not null',
     );
@@ -119,6 +121,15 @@ describe("public object passport repository query contracts", () => {
       "active",
       3,
     ]);
+  });
+
+  it("fetches one page-size overflow record for the real show-more state", () => {
+    const compiled = buildPublicObjectPassportTimelineQuery(
+      testDb,
+      plantObjectId,
+    ).compile();
+
+    expect(compiled.parameters.at(-1)).toBe(10);
   });
 
   it("suppresses hidden or unsupported region labels", () => {
@@ -163,31 +174,31 @@ describe("public object passport repository query contracts", () => {
         objectCoarseRegionCode: "UA-30",
         spaceLocationVisibility: "region",
         spaceCoarseRegionCode: "UA-32",
-        publicEntryCount: "2",
+        publicEntryCount: "10",
         firstEntryDate: new Date("2026-07-01T12:00:00.000Z"),
         latestEntryDate: new Date("2026-07-04T12:00:00.000Z"),
         authorHandle: "green_thumb",
         authorDisplayName: "Green Thumb",
         authorAvatarUrl: null,
       },
-      [
-        {
-          entryId: "00000000-0000-4000-8000-000000000301",
-          entryTitle: "First flowering",
-          entryBody: "Two new flower clusters opened after the balcony warmed.",
-          entryDate: new Date("2026-07-04T12:00:00.000Z"),
-          entryPublicSlug: "first-flowering",
-          mediaDerivativeKey: "derivatives/first-flowering.webp",
-        },
-      ],
+      Array.from({ length: 10 }, (_, index) => ({
+        entryId: `00000000-0000-4000-8000-${String(index + 301).padStart(12, "0")}`,
+        entryTitle: index === 0 ? "First flowering" : `Entry ${index + 1}`,
+        entryBody:
+          index === 0
+            ? "Two new flower clusters opened after the balcony warmed."
+            : `Public journal body ${index + 1}.`,
+        entryDate: new Date(`2026-07-0${Math.min(index + 1, 9)}T12:00:00.000Z`),
+        entryPublicSlug: index === 0 ? "first-flowering" : `entry-${index + 1}`,
+        mediaDerivativeKey:
+          index === 0 ? "derivatives/first-flowering.webp" : null,
+      })),
     );
 
     expect(page.object.catalogPath).toBe(
       "/variety/red-cherry-tomato-0000000101",
     );
-    expect(page.object.safeLocationLabel).toBe(
-      "Region: Ukraine - Kyiv City",
-    );
+    expect(page.object.safeLocationLabel).toBe("Region: Ukraine - Kyiv City");
     expect(page.author).toMatchObject({
       handle: "green_thumb",
       mention: "@green_thumb",
@@ -201,6 +212,9 @@ describe("public object passport repository query contracts", () => {
       mediaPublicUrl:
         "https://media.over.garden/derivatives/first-flowering.webp",
     });
+    expect(page.journalPreview).toHaveLength(5);
+    expect(page.journalContinuation).toHaveLength(5);
+    expect(page.journalContinuation.at(-1)?.title).toBe("Entry 10");
     expect(JSON.stringify(page)).not.toMatch(
       /quarantine_key|derivative_key|owner_user_id|email|phone|coordinates|location_visibility|coarse_region/i,
     );

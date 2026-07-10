@@ -23,7 +23,9 @@ import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 
-const MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW = 5;
+const PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE = 5;
+const MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW =
+  PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE * 2;
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -51,6 +53,7 @@ export interface PublicObjectPassportPage {
     profilePath: string;
   } | null;
   journalPreview: PublicObjectPassportJournalEntry[];
+  journalContinuation: PublicObjectPassportJournalEntry[];
   coverMediaPublicUrl: string | null;
 }
 
@@ -98,7 +101,8 @@ export async function getPublicObjectPassportPage(
   plantObjectId: string,
   executor: QueryExecutor = db,
 ): Promise<PublicObjectPassportPage | null> {
-  const normalizedPlantObjectId = normalizePublicObjectPassportId(plantObjectId);
+  const normalizedPlantObjectId =
+    normalizePublicObjectPassportId(plantObjectId);
   if (!normalizedPlantObjectId) return null;
 
   const root = await buildPublicObjectPassportRootQuery(
@@ -243,7 +247,7 @@ export function serializePublicObjectPassportPage(
   journalRows: PublicObjectPassportTimelineRow[],
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): PublicObjectPassportPage {
-  const journalPreview = journalRows.map((entry) => ({
+  const serializedJournal = journalRows.map((entry) => ({
     id: entry.entryId,
     title: entry.entryTitle,
     bodyPreview: publicJournalBodyPreview(entry.entryBody),
@@ -254,6 +258,14 @@ export function serializePublicObjectPassportPage(
       ? getPublicDerivativeUrl(entry.mediaDerivativeKey)
       : null,
   }));
+  const journalPreview = serializedJournal.slice(
+    0,
+    PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE,
+  );
+  const journalContinuation = serializedJournal.slice(
+    PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE,
+    MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW,
+  );
   const catalogPath = root.catalogPublicSlug
     ? publicVarietyPath(root.catalogPublicSlug)
     : null;
@@ -290,8 +302,9 @@ export function serializePublicObjectPassportPage(
     },
     author,
     journalPreview,
+    journalContinuation,
     coverMediaPublicUrl:
-      journalPreview.find((entry) => entry.mediaPublicUrl)?.mediaPublicUrl ??
+      serializedJournal.find((entry) => entry.mediaPublicUrl)?.mediaPublicUrl ??
       null,
   };
 }

@@ -85,6 +85,21 @@ describe("production site shell", () => {
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
   });
 
+  it("keeps the deterministic visual environment outside the product shell", async () => {
+    mocks.pathname = "/__visual-fixtures";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" isAuthenticated={false}>
+        <main>Visual fixture scenarios</main>
+      </SiteShell>,
+    );
+
+    expect(html).toContain('data-site-shell="excluded"');
+    expect(html).toContain("Visual fixture scenarios");
+    expect(html).not.toContain('data-site-shell-region="header"');
+    expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+  });
+
   it("keeps privacy reachable from the mobile menu utilities", async () => {
     const { SiteShellMobileUtilities } =
       await import("./site-shell-navigation");

@@ -38,6 +38,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",
+    "visual:fixtures:seed": "tsx scripts/visual-fixtures-seed.ts",
+    "visual:fixtures:reset": "tsx scripts/visual-fixtures-reset.ts",
+    "visual:fixtures:verify": "tsx scripts/visual-fixtures-verify.ts",
     "admin:bootstrap-owner": "tsx scripts/bootstrap-admin-owner.ts",
     "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
     "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"

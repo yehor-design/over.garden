@@ -41,6 +41,7 @@ import {
 import { SiteShellLocaleProvider } from "./site-shell-locale-context";
 
 const SHELL_EXCLUDED_PREFIXES = [
+  "/__visual-fixtures",
   "/admin",
   "/health",
   "/skeleton",

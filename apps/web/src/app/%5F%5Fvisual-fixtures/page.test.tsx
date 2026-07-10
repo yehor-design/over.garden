@@ -1,0 +1,112 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  getVisualFixtureStatus: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
+  tryResolveVisualFixtureEnvironment: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
+}));
+
+vi.mock("@/db", () => ({
+  db: {},
+}));
+
+vi.mock("@/lib/visual-fixtures/environment", async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import("@/lib/visual-fixtures/environment")>();
+  return {
+    ...original,
+    tryResolveVisualFixtureEnvironment:
+      mocks.tryResolveVisualFixtureEnvironment,
+  };
+});
+
+vi.mock("@/server/visual-fixtures/repository", () => ({
+  getVisualFixtureStatus: mocks.getVisualFixtureStatus,
+}));
+
+vi.mock("@/lib/storage", () => ({
+  getPublicDerivativeUrl: (key: string) =>
+    `/fixture-media/${encodeURIComponent(key)}`,
+}));
+
+describe("/__visual-fixtures", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.tryResolveVisualFixtureEnvironment.mockReturnValue({
+      databaseHostClass: "loopback",
+      databaseName: "overgarden",
+      target: "local",
+    });
+    mocks.getVisualFixtureStatus.mockResolvedValue({
+      version: "ove187-v1",
+      expected: {
+        actors: 4,
+        profiles: 4,
+        spaces: 5,
+        objects: 30,
+        entries: 80,
+        media: 16,
+      },
+      actual: {
+        actors: 4,
+        profiles: 4,
+        spaces: 5,
+        objects: 30,
+        entries: 80,
+        media: 16,
+      },
+      seeded: true,
+    });
+  });
+
+  it("returns not found without the explicit non-production environment gate", async () => {
+    mocks.tryResolveVisualFixtureEnvironment.mockReturnValue(null);
+    const { default: VisualFixtureIndexPage } = await import("./page");
+
+    await expect(VisualFixtureIndexPage()).rejects.toThrow("NEXT_NOT_FOUND");
+    expect(mocks.getVisualFixtureStatus).not.toHaveBeenCalled();
+  });
+
+  it("renders safe counts, real route scenarios, profiles, and all media aspects", async () => {
+    const { default: VisualFixtureIndexPage, metadata } =
+      await import("./page");
+    const html = renderToStaticMarkup(await VisualFixtureIndexPage());
+
+    expect(metadata.robots).toMatchObject({ index: false, follow: false });
+    expect(html).toContain('data-visual-fixture-index="true"');
+    expect(html).toContain("Deterministic visual environment");
+    expect(html).toContain("Fixture users");
+    expect(html).toContain("Public profiles");
+    expect(html).toContain("4");
+    expect(html).toContain("30");
+    expect(html).toContain("80");
+    expect(html).toContain('href="/journal/visual-fixture-');
+    expect(html).toContain('href="/lineage/objects/18700003-');
+    expect(html).toContain('href="/@demo_olena"');
+    expect(html).toContain("Expected 404");
+    expect(html).toContain("Expected 410");
+    expect(html).toContain("Not-found UI · 200");
+    expect(html).toContain("State coverage");
+    expect(html).toContain("Owner-only journals");
+    expect(html).toContain("Archived journals");
+    expect(html).toContain("Maximum-length copy");
+    expect(html).toContain("Public journal without media");
+    expect(html).toContain("Public journal with one image");
+    expect(html).toContain("square");
+    expect(html).toContain("landscape 4:3");
+    expect(html).toContain("portrait 3:4");
+    expect(html).toContain("wide 16:9");
+    expect(html.match(/<img/g)).toHaveLength(16);
+    expect(html.match(/loading="eager"/g)).toHaveLength(16);
+    expect(html).not.toMatch(
+      /@visual-fixtures\.invalid|owner_user_id|databaseName|quarantine_key|R2_ACCESS_KEY|postgresql:\/\//i,
+    );
+  });
+});

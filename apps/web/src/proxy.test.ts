@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   INTERFACE_LOCALE_COOKIE_NAME,
@@ -21,6 +21,32 @@ function responseFor(
 }
 
 describe("app route cache guardrail", () => {
+  it("hard-404s the visual fixture route before App Router unless the full environment gate passes", () => {
+    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "false");
+    const disabled = responseFor("/__visual-fixtures");
+
+    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://overgarden:test@localhost:5432/overgarden",
+    );
+    vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("VERCEL_ENV", "development");
+    const enabledLocal = responseFor("/__visual-fixtures");
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    const production = responseFor("/__visual-fixtures");
+    vi.unstubAllEnvs();
+
+    expect(disabled.status).toBe(404);
+    expect(disabled.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
+    expect(enabledLocal.status).toBe(200);
+    expect(production.status).toBe(404);
+  });
+
   it.each([
     "/",
     "/garden",

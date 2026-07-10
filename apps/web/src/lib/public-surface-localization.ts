@@ -80,6 +80,7 @@ interface PublicSurfaceCopy {
     logbookPreview: string;
     noPublicJournalEntries: string;
     openJournalEntry: string;
+    showMoreJournalEntries: string;
     relatedPublicContext: string;
     exploreObject: string;
     catalogMatch: string;
@@ -214,6 +215,7 @@ const COPY = {
       noPublicJournalEntries:
         "Для цього об'єкта ще немає публічних записів журналу.",
       openJournalEntry: "Відкрити запис журналу",
+      showMoreJournalEntries: "Показати ще записи",
       relatedPublicContext: "Пов'язаний публічний контекст",
       exploreObject: "Досліджуйте цей об'єкт",
       catalogMatch: "Збіг у каталозі",
@@ -351,6 +353,7 @@ const COPY = {
       noPublicJournalEntries:
         "За този обект все още няма публични записи в дневника.",
       openJournalEntry: "Отворете записа в дневника",
+      showMoreJournalEntries: "Покажи още записи",
       relatedPublicContext: "Свързан публичен контекст",
       exploreObject: "Разгледайте около този обект",
       catalogMatch: "Съвпадение в каталога",
@@ -487,6 +490,7 @@ const COPY = {
       noPublicJournalEntries:
         "Для этого объекта пока нет публичных записей журнала.",
       openJournalEntry: "Открыть запись журнала",
+      showMoreJournalEntries: "Показать ещё записи",
       relatedPublicContext: "Связанный публичный контекст",
       exploreObject: "Исследуйте этот объект",
       catalogMatch: "Совпадение в каталоге",

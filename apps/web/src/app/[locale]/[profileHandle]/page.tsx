@@ -208,7 +208,12 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 }
 
 function routeHandleFromSegment(segment: string) {
-  return segment.startsWith("@") ? segment : null;
+  try {
+    const decoded = decodeURIComponent(segment);
+    return decoded.startsWith("@") ? decoded : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatDate(value: Date | string, locale: "uk" | "bg" | "ru") {

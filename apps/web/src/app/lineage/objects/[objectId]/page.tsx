@@ -7,6 +7,7 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
+  ChevronDown,
   GitBranch,
   MapPin,
   ShieldCheck,
@@ -410,54 +411,92 @@ function PublicJournalPreviewSection({
           {copy.passport.noPublicJournalEntries}
         </p>
       ) : (
-        <ol className="grid gap-4">
-          {passport.journalPreview.map((entry) => (
-            <li
-              key={entry.id}
-              className={`grid gap-4 rounded-lg border border-border p-4 ${
-                entry.mediaPublicUrl ? "sm:grid-cols-3" : ""
-              }`}
-            >
-              <article
-                className={`flex min-w-0 flex-col gap-3 ${
-                  entry.mediaPublicUrl ? "sm:col-span-2" : ""
-                }`}
+        <>
+          <PublicJournalPreviewList
+            entries={passport.journalPreview}
+            locale={locale}
+          />
+          {passport.journalContinuation.length > 0 ? (
+            <details className="group grid gap-4">
+              <summary
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                  className:
+                    "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                })}
               >
-                <div className="flex flex-col gap-1">
-                  <time className="text-xs text-muted-foreground">
-                    {formatDate(entry.entryDate, locale)}
-                  </time>
-                  <h3 className="text-base font-semibold text-foreground">
-                    {entry.title}
-                  </h3>
-                </div>
-                <p className="text-sm leading-6 text-foreground">
-                  {entry.bodyPreview}
-                </p>
-                <Link
-                  href={entry.publicPath}
-                  className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
-                >
-                  {copy.passport.openJournalEntry}
-                </Link>
-              </article>
-
-              {entry.mediaPublicUrl ? (
-                <Image
-                  src={entry.mediaPublicUrl}
-                  alt={`${entry.title} · ${copy.passport.publicPhotoSuffix}`}
-                  width={384}
-                  height={216}
-                  sizes="(min-width: 640px) 12rem, 100vw"
-                  unoptimized
-                  className="aspect-video w-full rounded-md border border-border object-cover sm:w-48"
-                />
-              ) : null}
-            </li>
-          ))}
-        </ol>
+                {copy.passport.showMoreJournalEntries}
+                <ChevronDown className="transition-transform group-open:rotate-180" />
+              </summary>
+              <PublicJournalPreviewList
+                entries={passport.journalContinuation}
+                locale={locale}
+              />
+            </details>
+          ) : null}
+        </>
       )}
     </section>
+  );
+}
+
+function PublicJournalPreviewList({
+  entries,
+  locale,
+}: {
+  entries: PublicObjectPassportPage["journalPreview"];
+  locale: InterfaceLocale;
+}) {
+  const copy = getPublicSurfaceCopy(locale);
+
+  return (
+    <ol className="grid gap-4">
+      {entries.map((entry) => (
+        <li
+          key={entry.id}
+          className={`grid gap-4 rounded-lg border border-border p-4 ${
+            entry.mediaPublicUrl ? "sm:grid-cols-3" : ""
+          }`}
+        >
+          <article
+            className={`flex min-w-0 flex-col gap-3 ${
+              entry.mediaPublicUrl ? "sm:col-span-2" : ""
+            }`}
+          >
+            <div className="flex flex-col gap-1">
+              <time className="text-xs text-muted-foreground">
+                {formatDate(entry.entryDate, locale)}
+              </time>
+              <h3 className="text-base font-semibold text-foreground">
+                {entry.title}
+              </h3>
+            </div>
+            <p className="text-sm leading-6 text-foreground">
+              {entry.bodyPreview}
+            </p>
+            <Link
+              href={entry.publicPath}
+              className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              {copy.passport.openJournalEntry}
+            </Link>
+          </article>
+
+          {entry.mediaPublicUrl ? (
+            <Image
+              src={entry.mediaPublicUrl}
+              alt={`${entry.title} · ${copy.passport.publicPhotoSuffix}`}
+              width={384}
+              height={216}
+              sizes="(min-width: 640px) 12rem, 100vw"
+              unoptimized
+              className="aspect-video w-full rounded-md border border-border object-cover sm:w-48"
+            />
+          ) : null}
+        </li>
+      ))}
+    </ol>
   );
 }
 

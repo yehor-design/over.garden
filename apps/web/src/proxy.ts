@@ -12,6 +12,7 @@ import {
   localizedPath,
   stripLocalePrefix,
 } from "@/lib/public-localization";
+import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
@@ -181,6 +182,22 @@ function getLocaleRoutingResponse(
 // must not become the authorization layer.
 export function proxy(request: NextRequest) {
   const locale = resolveRequestLocale(request);
+  if (
+    normalizePathname(request.nextUrl.pathname) === "/__visual-fixtures" &&
+    !tryResolveVisualFixtureEnvironment(process.env)
+  ) {
+    return withAppRouteContract(
+      new NextResponse(null, {
+        status: 404,
+        headers: {
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      }),
+      request,
+      locale,
+    );
+  }
+
   const localeRoutingResponse = getLocaleRoutingResponse(request, locale);
 
   if (localeRoutingResponse) {
@@ -198,6 +215,10 @@ export function proxy(request: NextRequest) {
   // App HTML/RSC/API responses are pilot evidence and may be personalized.
   // Keep them out of intermediary caches even if DNS is proxied later.
   return withAppRouteContract(response, request, locale);
+}
+
+function normalizePathname(pathname: string) {
+  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 }
 
 export const config = {

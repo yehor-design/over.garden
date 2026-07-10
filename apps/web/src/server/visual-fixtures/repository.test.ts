@@ -1,0 +1,140 @@
+import {
+  DummyDriver,
+  Kysely,
+  PostgresAdapter,
+  PostgresIntrospector,
+  PostgresQueryCompiler,
+  type DatabaseIntrospector,
+  type Dialect,
+  type DialectAdapter,
+  type Driver,
+  type QueryCompiler,
+} from "kysely";
+import { describe, expect, it } from "vitest";
+
+import type { Database } from "@/db/schema";
+import { VISUAL_FIXTURE_MANIFEST } from "@/lib/visual-fixtures/manifest";
+import {
+  buildVisualFixtureResetQueries,
+  buildVisualFixtureSeedQueries,
+  buildVisualFixtureStatusQueries,
+} from "./repository";
+
+class TestPostgresDialect implements Dialect {
+  createDriver(): Driver {
+    return new DummyDriver();
+  }
+
+  createQueryCompiler(): QueryCompiler {
+    return new PostgresQueryCompiler();
+  }
+
+  createAdapter(): DialectAdapter {
+    return new PostgresAdapter();
+  }
+
+  createIntrospector(db: Kysely<unknown>): DatabaseIntrospector {
+    return new PostgresIntrospector(db);
+  }
+}
+
+const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
+
+describe("visual fixture repository query contracts", () => {
+  it("builds deterministic dependency-ordered upserts for only fixture-owned tables", () => {
+    const queries = buildVisualFixtureSeedQueries(
+      testDb,
+      VISUAL_FIXTURE_MANIFEST,
+    );
+
+    expect(queries.map(({ label }) => label)).toEqual([
+      "media_cleanup",
+      "actors",
+      "profiles",
+      "spaces",
+      "objects",
+      "entries",
+      "media",
+    ]);
+
+    const compiled = queries.map(({ query }) => query.compile());
+    const sql = compiled.map((item) => item.sql).join("\n");
+
+    expect(sql).toContain('delete from "media_assets"');
+    expect(sql).toContain('insert into "user"');
+    expect(sql).toContain('insert into "user_public_profiles"');
+    expect(sql).toContain('insert into "spaces"');
+    expect(sql).toContain('insert into "plant_objects"');
+    expect(sql).toContain('insert into "journal_entries"');
+    expect(sql).toContain('insert into "media_assets"');
+    expect(sql).toContain('on conflict ("id") do update');
+    expect(sql).toContain('on conflict ("user_id") do update');
+    expect(sql).not.toMatch(
+      /analytics_events|job_queue|meilisearch|search_documents|notifications/i,
+    );
+
+    const parameters = compiled.flatMap((item) => item.parameters);
+    expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.actors[0].id);
+    expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.entries[79].id);
+    expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.media[15].id);
+    expect(compiled[0].parameters).toEqual(
+      VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
+    );
+  });
+
+  it("builds an exact-id reset in reverse dependency order", () => {
+    const queries = buildVisualFixtureResetQueries(
+      testDb,
+      VISUAL_FIXTURE_MANIFEST,
+    );
+
+    expect(queries.map(({ label }) => label)).toEqual([
+      "media",
+      "entries",
+      "objects",
+      "spaces",
+      "profiles",
+      "actors",
+    ]);
+
+    const compiled = queries.map(({ query }) => query.compile());
+    const sql = compiled.map((item) => item.sql).join("\n");
+    expect(sql).not.toMatch(/\blike\b|analytics_events|job_queue/i);
+
+    const expectedIdGroups = [
+      VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.objects.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.spaces.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
+    ];
+
+    compiled.forEach((item, index) => {
+      expect(item.parameters).toEqual(expectedIdGroups[index]);
+    });
+  });
+
+  it("limits status queries to aggregate counts over exact manifest ids", () => {
+    const queries = buildVisualFixtureStatusQueries(
+      testDb,
+      VISUAL_FIXTURE_MANIFEST,
+    );
+    const compiled = queries.map(({ query }) => query.compile());
+    const sql = compiled.map((item) => item.sql).join("\n");
+
+    expect(queries.map(({ label }) => label)).toEqual([
+      "actors",
+      "profiles",
+      "spaces",
+      "objects",
+      "entries",
+      "media",
+    ]);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(6);
+    expect(sql).toContain('from "user_public_profiles"');
+    expect(sql).not.toMatch(
+      /email|body|owner_user_id|quarantine_key|derivative_key/i,
+    );
+  });
+});

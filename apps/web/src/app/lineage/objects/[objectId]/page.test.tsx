@@ -69,6 +69,17 @@ const objectPassportPage = {
         "https://media.over.garden/derivatives/first-flowering.webp",
     },
   ],
+  journalContinuation: [
+    {
+      id: "00000000-0000-4000-8000-000000000302",
+      title: "Sixth public update",
+      bodyPreview: "A real page-size overflow record.",
+      entryDate: new Date("2026-07-01T12:00:00.000Z"),
+      publicSlug: "sixth-public-update",
+      publicPath: "/journal/sixth-public-update",
+      mediaPublicUrl: null,
+    },
+  ],
   coverMediaPublicUrl:
     "https://media.over.garden/derivatives/first-flowering.webp",
 };
@@ -175,6 +186,8 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("Seed mother");
     expect(html).toContain("First flowering");
+    expect(html).toContain("Покажи още записи");
+    expect(html).toContain("Sixth public update");
     expect(html).toContain("Two new flower clusters opened");
     expect(html).toContain("Green Thumb");
     expect(html).toContain("@green_thumb");

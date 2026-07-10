@@ -84,6 +84,23 @@ describe("/{locale}/@:handle public profile route", () => {
     );
   });
 
+  it("accepts the URL-encoded at-sign form provided by the Next route segment", async () => {
+    const { default: LocalizedPublicProfileRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LocalizedPublicProfileRoute({
+        params: Promise.resolve({
+          locale: "uk",
+          profileHandle: "%40green_thumb",
+        }),
+      }),
+    );
+
+    expect(mocks.getPublicProfilePageByHandle).toHaveBeenCalledWith(
+      "@green_thumb",
+    );
+    expect(html).toContain("@green_thumb");
+  });
+
   it("keeps missing or non-handle localized routes noindex", async () => {
     mocks.getPublicProfilePageByHandle.mockResolvedValueOnce(null);
     const { generateMetadata } = await import("./page");
