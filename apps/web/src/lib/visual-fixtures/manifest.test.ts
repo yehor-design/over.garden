@@ -23,6 +23,9 @@ describe("visual fixture manifest", () => {
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
     expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(80);
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
+    expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(3);
+    expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(15);
+    expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize).toBe(8);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
   });
 
@@ -97,6 +100,14 @@ describe("visual fixture manifest", () => {
         "public-object-dense",
         "public-profile",
         "media-gallery",
+        "public-feed-empty",
+        "public-feed-typical",
+        "public-feed-dense",
+        "public-feed-loading",
+        "public-feed-error",
+        "public-feed-pagination",
+        "public-feed-exhausted",
+        "public-feed-context-empty",
       ]),
     );
     expect(
@@ -147,6 +158,14 @@ describe("visual fixture manifest", () => {
         "no-media-journal",
         "one-media-journal",
         "media-gallery",
+        "feed-empty",
+        "feed-typical",
+        "feed-dense",
+        "feed-loading",
+        "feed-error",
+        "feed-pagination",
+        "feed-exhausted",
+        "feed-context-empty",
       ]),
     );
     expect(
@@ -182,7 +201,7 @@ describe("visual fixture manifest", () => {
     }
   });
 
-  it("binds each image to a semantically matching object and one unique entry", () => {
+  it("binds each image to a semantically matching object and exercises exact one-media plus gallery cards", () => {
     const entriesById = new Map(
       VISUAL_FIXTURE_MANIFEST.entries.map((entry) => [entry.id, entry]),
     );
@@ -192,9 +211,17 @@ describe("visual fixture manifest", () => {
     const animalFiles = /cat|goats|dog|animal-yard/;
     const beeFiles = /bee|apiary|queen|hive/;
 
-    expect(
-      new Set(VISUAL_FIXTURE_MANIFEST.media.map((media) => media.entryId)).size,
-    ).toBe(VISUAL_FIXTURE_MANIFEST.media.length);
+    const mediaByEntry = Object.groupBy(
+      VISUAL_FIXTURE_MANIFEST.media,
+      (media) => media.entryId,
+    );
+    const mediaCounts = Object.values(mediaByEntry).map(
+      (items) => items?.length ?? 0,
+    );
+
+    expect(mediaCounts.filter((count) => count === 3)).toHaveLength(1);
+    expect(mediaCounts.some((count) => count === 1)).toBe(true);
+    expect(Math.max(...mediaCounts)).toBe(3);
 
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       const entry = entriesById.get(media.entryId);
@@ -209,6 +236,61 @@ describe("visual fixture manifest", () => {
       expect(entry?.lifecycleState).toBe("active");
       expect(object?.objectKind).toBe(expectedKind);
     }
+  });
+
+  it("provides honest mixed feed density, trusted-topic thresholds, and stable cursor anchors", () => {
+    const objectsById = new Map(
+      VISUAL_FIXTURE_MANIFEST.objects.map((object) => [object.id, object]),
+    );
+    const eligibleEntries = VISUAL_FIXTURE_MANIFEST.entries
+      .filter(
+        (entry) =>
+          entry.visibility === "public" &&
+          entry.lifecycleState === "active" &&
+          entry.publicGoneAt === null &&
+          entry.publishedAt !== null,
+      )
+      .toSorted(
+        (left, right) =>
+          right.publishedAt!.localeCompare(left.publishedAt!) ||
+          left.id.localeCompare(right.id),
+      );
+    const firstPageKinds = new Set(
+      eligibleEntries
+        .slice(0, VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize)
+        .map((entry) => objectsById.get(entry.objectId)?.objectKind),
+    );
+    const signalsByTopic = Object.groupBy(
+      VISUAL_FIXTURE_MANIFEST.topicSignals,
+      (signal) => signal.topicId,
+    );
+    const topicsBySlug = new Map(
+      VISUAL_FIXTURE_MANIFEST.topics.map((topic) => [topic.slug, topic]),
+    );
+    const typicalTopic = topicsBySlug.get(
+      VISUAL_FIXTURE_MANIFEST.feedEvidence.typicalTopicSlug,
+    );
+    const denseTopic = topicsBySlug.get(
+      VISUAL_FIXTURE_MANIFEST.feedEvidence.denseTopicSlug,
+    );
+    const emptyTopic = topicsBySlug.get(
+      VISUAL_FIXTURE_MANIFEST.feedEvidence.emptyTopicSlug,
+    );
+
+    expect(firstPageKinds).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    expect(signalsByTopic[typicalTopic!.id]).toHaveLength(4);
+    expect(signalsByTopic[denseTopic!.id]!.length).toBeGreaterThan(
+      VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize,
+    );
+    expect(signalsByTopic[emptyTopic!.id]).toBeUndefined();
+    expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageTwoCursor).toMatchObject({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      publishedAt: expect.stringMatching(/Z$/),
+    });
+    expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.exhaustedCursor).toMatchObject({
+      id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      publishedAt: expect.stringMatching(/Z$/),
+    });
   });
 
   it("binds every media row to an EXIF-free project raster with matching dimensions and digest", async () => {

@@ -34,6 +34,8 @@ describe("app route cache guardrail", () => {
     );
     vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
     vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
     vi.stubEnv("VERCEL_ENV", "development");
     const enabledLocal = responseFor("/__visual-fixtures");
 

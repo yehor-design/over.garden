@@ -96,12 +96,17 @@ export default async function VisualFixtureIndexPage() {
             </span>
           </div>
 
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3 lg:grid-cols-6">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4 lg:grid-cols-8">
             <CountFact label="Fixture users" value={status.actual.actors} />
             <CountFact label="Public profiles" value={status.actual.profiles} />
             <CountFact label="Spaces" value={status.actual.spaces} />
             <CountFact label="Living objects" value={status.actual.objects} />
             <CountFact label="Journal entries" value={status.actual.entries} />
+            <CountFact label="Trusted topics" value={status.actual.topics} />
+            <CountFact
+              label="Topic memberships"
+              value={status.actual.topicSignals}
+            />
             <CountFact label="Media" value={status.actual.media} />
           </dl>
 

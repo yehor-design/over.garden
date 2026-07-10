@@ -10,6 +10,8 @@ const LOCAL_ENV = {
   VISUAL_FIXTURES_TARGET: "local",
   VISUAL_FIXTURES_DATABASE: "overgarden",
   DATABASE_URL: "postgresql://overgarden:secret@localhost:5432/overgarden",
+  R2_ENDPOINT: "http://localhost:9000",
+  R2_PUBLIC_BASE_URL: "http://localhost:9000/overgarden-public",
   PUBLIC_SITE_URL: "http://localhost:3000",
   BETTER_AUTH_URL: "http://localhost:3000",
 } as const;
@@ -22,6 +24,8 @@ const STATUS = {
     spaces: 5,
     objects: 30,
     entries: 80,
+    topics: 3,
+    topicSignals: 15,
     media: 16,
   },
   actual: {
@@ -30,6 +34,8 @@ const STATUS = {
     spaces: 5,
     objects: 30,
     entries: 80,
+    topics: 3,
+    topicSignals: 15,
     media: 16,
   },
   seeded: true,
@@ -59,6 +65,7 @@ describe("visual fixture command boundary", () => {
       environment: {
         databaseHostClass: "loopback",
         databaseName: "overgarden",
+        objectStoreHostClass: "loopback",
         target: "local",
       },
       status: STATUS,
@@ -80,6 +87,7 @@ describe("visual fixture command boundary", () => {
       environment: {
         target: "local",
         databaseHostClass: "loopback",
+        objectStoreHostClass: "loopback",
       },
       counts: STATUS.actual,
       mediaObjects: 16,

@@ -22,6 +22,7 @@ import {
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 
 const PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE = 5;
 const MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW =
@@ -200,6 +201,8 @@ export function buildPublicObjectPassportTimelineQuery(
   plantObjectId: string,
   limit = MAX_PUBLIC_OBJECT_JOURNAL_PREVIEW,
 ) {
+  const firstMedia = buildFirstProcessedMediaPerEntryQuery(executor);
+
   return executor
     .selectFrom("journal_entries")
     .innerJoin("plant_objects", (join) =>
@@ -211,16 +214,14 @@ export function buildPublicObjectPassportTimelineQuery(
           "journal_entries.owner_user_id",
         ),
     )
-    .leftJoin("media_assets", (join) =>
+    .leftJoin(firstMedia, (join) =>
       join
-        .onRef("media_assets.journal_entry_id", "=", "journal_entries.id")
+        .onRef("first_public_media.journalEntryId", "=", "journal_entries.id")
         .onRef(
-          "media_assets.owner_user_id",
+          "first_public_media.ownerUserId",
           "=",
           "journal_entries.owner_user_id",
-        )
-        .on("media_assets.status", "=", "processed")
-        .on("media_assets.derivative_key", "is not", null),
+        ),
     )
     .select([
       "journal_entries.id as entryId",
@@ -228,7 +229,7 @@ export function buildPublicObjectPassportTimelineQuery(
       "journal_entries.body as entryBody",
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
-      "media_assets.derivative_key as mediaDerivativeKey",
+      "first_public_media.derivativeKey as mediaDerivativeKey",
     ])
     .where("plant_objects.id", "=", plantObjectId)
     .where("journal_entries.visibility", "=", "public")

@@ -11,6 +11,8 @@ const LOCAL_ENV = {
   VISUAL_FIXTURES_DATABASE: "overgarden",
   DATABASE_URL:
     "postgresql://overgarden:local-password@localhost:5432/overgarden",
+  R2_ENDPOINT: "http://localhost:9000",
+  R2_PUBLIC_BASE_URL: "http://localhost:9000/overgarden-public",
   PUBLIC_SITE_URL: "http://localhost:3000",
   BETTER_AUTH_URL: "http://localhost:3000",
 } as const;
@@ -20,6 +22,7 @@ describe("visual fixture environment guard", () => {
     expect(resolveVisualFixtureEnvironment(LOCAL_ENV)).toEqual({
       databaseHostClass: "loopback",
       databaseName: "overgarden",
+      objectStoreHostClass: "loopback",
       target: "local",
     });
   });
@@ -71,6 +74,20 @@ describe("visual fixture environment guard", () => {
           "postgresql://fixture:secret@db.example.test:5432/overgarden",
       }),
     ).toThrow("loopback");
+
+    expect(() =>
+      resolveVisualFixtureEnvironment({
+        ...LOCAL_ENV,
+        R2_ENDPOINT:
+          "https://fixture-account.r2.cloudflarestorage.example.test",
+      }),
+    ).toThrow("loopback object storage");
+    expect(() =>
+      resolveVisualFixtureEnvironment({
+        ...LOCAL_ENV,
+        R2_PUBLIC_BASE_URL: "https://media.over.garden",
+      }),
+    ).toThrow("production media origin");
   });
 
   it("accepts preview only with both Vercel preview and the explicit write gate", () => {
@@ -85,11 +102,14 @@ describe("visual fixture environment guard", () => {
       VERCEL_ENV: "preview",
       PUBLIC_SITE_URL: "https://over-garden-git-ove187.example.test",
       BETTER_AUTH_URL: "https://over-garden-git-ove187.example.test",
+      R2_ENDPOINT: "https://preview-storage.example.test",
+      R2_PUBLIC_BASE_URL: "https://preview-media.example.test",
     } as const;
 
     expect(resolveVisualFixtureEnvironment(preview)).toEqual({
       databaseHostClass: "remote-preview",
       databaseName: "overgarden_preview",
+      objectStoreHostClass: "remote-preview",
       target: "preview",
     });
 

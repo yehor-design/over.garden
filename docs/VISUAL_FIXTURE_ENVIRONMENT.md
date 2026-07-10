@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187
 Manifest version: `ove187-v1`
-Manifest SHA-256: `32c378378d0cd4d9098a826076f5b9f2aaf9b440006cabbd24fa2d5e19279e25`
+Manifest SHA-256: `d90bd3e66d017d487f8a2fe36c11604c8c962650996a8902432b6bd16ee7a729`
 
 ## Purpose
 
@@ -17,24 +17,30 @@ The manifest owns exactly:
 - 5 spaces;
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
 - 80 journal entries across public, private, archived, and public-gone states;
+- 3 curated journal topics and 15 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 9 real-route scenarios covering dense, typical, empty, HTTP 404, and HTTP
-  410 states.
+- 17 real-route scenarios covering public-feed empty, typical, dense, loading,
+  recoverable error, pagination, exhausted, and context-empty states alongside
+  the existing object/journal HTTP 404 and 410 states.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,
 and Russian, with short, normal, seasonal, multiline, and long records rather
-than one repeated filler template. Every raster is bound to one unique public
-entry on a semantically matching plant, animal, or bee-colony object. The
-committed raster sources are documented in
+than one repeated filler template. Every raster is bound to a semantically
+matching public plant, animal, or bee-colony entry. The feed includes exact
+no-media and one-media examples plus one bounded three-image gallery. The
+trusted fixture seed can attach that gallery while an application guard and a
+partial database unique index still enforce one-photo behavior for every
+non-fixture upload. The committed raster sources are documented in
 `apps/web/test/visual-fixtures/media/README.md`.
 
 The version also includes one deterministic 2026-07-10 current-day record and
 one exact input-boundary record with a 140-character title and 2,000-character
 body. The fixture index exposes a machine-readable state-coverage inventory for
 empty space/object, today, owner-only, archived, maximum-copy, no-media,
-one-media, and gallery states. Owner-only and archived coverage is reported as
-safe aggregate metadata with no public route, title, or body serialization.
+one-media, gallery, feed empty/typical/dense/loading/error/pagination/exhausted,
+and context-empty states. Owner-only and archived coverage is reported as safe
+aggregate metadata with no public route, title, or body serialization.
 
 The four public identities are `@demo_olena` (established gardener),
 `@demo_mariya` (apartment plant keeper), `@demo_danylo` (animal keeper), and
@@ -60,18 +66,23 @@ environment checks pass. The guard refuses:
 - disabled or malformed fixture configuration;
 - a database name that differs from `VISUAL_FIXTURES_DATABASE`;
 - any non-loopback Postgres host for a `local` target;
+- any non-loopback S3 endpoint or public media origin for a `local` target;
+- the canonical `https://media.over.garden` production media origin;
 - a Preview target without both `VERCEL_ENV=preview` and
   `VISUAL_FIXTURES_ALLOW_PREVIEW=true`.
 
-There is no browser query parameter, cookie, header, API mutation, or production
-fallback that can enable the fixture environment. Proxy evaluates the same pure
-environment contract and returns a hard HTTP `404` before App Router whenever
-the contract fails; the page repeats the guard before dynamic database/storage
-imports as defense in depth. The enabled route is `noindex` and is excluded
-from the product shell.
+No browser query parameter, cookie, header, API mutation, or production fallback
+can enable the fixture environment. Inside an already enabled, isolated fixture
+environment, the `__visualFeed` query parameter may select a read-only rendering
+state for screenshot evidence; the same parameter is ignored everywhere else.
+Proxy evaluates the pure environment contract and returns a hard HTTP `404`
+before App Router whenever the contract fails; the fixture index repeats the
+guard before dynamic database/storage imports as defense in depth. The enabled
+index is `noindex` and is excluded from the product shell.
 
-Fixture rows are identified by exact manifest IDs. Reset issues exact-ID deletes
-in reverse foreign-key order and deletes only the manifest's storage keys under
+Fixture rows are identified by exact manifest IDs. Reset removes media, topic
+memberships, topics, entries, objects, spaces, profiles, and actors in reverse
+foreign-key order and deletes only the manifest's storage keys under
 `visual-fixtures/ove187-v1/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
@@ -93,7 +104,15 @@ VISUAL_FIXTURES_ENABLED=true
 VISUAL_FIXTURES_TARGET=local
 VISUAL_FIXTURES_DATABASE=overgarden
 VISUAL_FIXTURES_ALLOW_PREVIEW=false
+R2_ENDPOINT=http://127.0.0.1:9000
+R2_FORCE_PATH_STYLE=true
+R2_PUBLIC_BASE_URL=http://127.0.0.1:9000/overgarden-public
 ```
+
+Use the matching local MinIO bucket names and credentials from `infra/.env`;
+do not point a local fixture command at Cloudflare R2. Successful command output
+reports both `databaseHostClass: loopback` and
+`objectStoreHostClass: loopback` without exposing endpoints or credentials.
 
 Seed or idempotently repair the dataset:
 
@@ -136,8 +155,30 @@ The expected final counts are:
   "spaces": 5,
   "objects": 30,
   "entries": 80,
+  "topics": 3,
+  "topicSignals": 15,
   "media": 16
 }
+```
+
+The fixture index links every public-feed state. The normal topic routes use
+real rows and repository filters:
+
+```text
+/?topic=quiet-evidence
+/?topic=seasonal-care
+/?topic=care-checks
+```
+
+The gated rendering routes cover loading, recoverable error, page two, final
+page, and an empty route-owned context rail:
+
+```text
+/?__visualFeed=loading
+/?__visualFeed=error
+/?__visualFeed=page-2
+/?__visualFeed=exhausted
+/?__visualFeed=context-empty
 ```
 
 The missing-journal and gone-journal scenarios return real HTTP `404` and

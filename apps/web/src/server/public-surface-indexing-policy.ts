@@ -1,7 +1,5 @@
 import "server-only";
 
-import { PUBLIC_LOCALES, localizedPath } from "@/lib/public-localization";
-
 export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
   minPublicEntryCount: 3,
   minAggregateBodyLength: 600,
@@ -17,6 +15,7 @@ export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
 
 export type PublicSurfaceKind =
   | "marketing_landing"
+  | "public_feed"
   | "editorial_blog"
   | "guide"
   | "aeo_answer"
@@ -34,6 +33,7 @@ export type PublicSurfaceIndexValue = "noindex" | "indexable";
 
 export type PublicSurfaceIndexReason =
   | "authored_useful_surface"
+  | "public_feed_noindex"
   | "workspace_route_noindex"
   | "auth_route_noindex"
   | "operator_route_noindex"
@@ -87,7 +87,12 @@ export type PublicSurfaceIndexInput =
       topicTrust: PublicTopicTrustState;
     }
   | {
-      kind: "object_passport" | "profile" | "lineage_graph" | "missing";
+      kind:
+        | "public_feed"
+        | "object_passport"
+        | "profile"
+        | "lineage_graph"
+        | "missing";
     };
 
 export interface StaticIndexablePublicSurface {
@@ -103,17 +108,7 @@ export interface StaticIndexablePublicSurface {
 
 export const AUTHORED_PUBLIC_SURFACE_LASTMOD = "2026-07-03T00:00:00.000Z";
 
-const STATIC_PUBLIC_SURFACES: StaticIndexablePublicSurface[] = [
-  ...PUBLIC_LOCALES.map(
-    (locale): StaticIndexablePublicSurface => ({
-      kind: "marketing_landing",
-      path: localizedPath(locale, "/"),
-      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
-      changeFrequency: "weekly",
-      priority: 0.8,
-    }),
-  ),
-];
+const STATIC_PUBLIC_SURFACES: StaticIndexablePublicSurface[] = [];
 
 export function evaluatePublicSurfaceIndexability(
   input: PublicSurfaceIndexInput,
@@ -124,6 +119,9 @@ export function evaluatePublicSurfaceIndexability(
     case "guide":
     case "aeo_answer":
       return indexable(["authored_useful_surface"]);
+
+    case "public_feed":
+      return noindex(["public_feed_noindex"]);
 
     case "journal_entry":
       return input.publicNoindex

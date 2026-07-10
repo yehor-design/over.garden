@@ -3,6 +3,7 @@ type EnvLike = Record<string, string | undefined>;
 export interface VisualFixtureEnvironment {
   databaseHostClass: "loopback" | "remote-preview";
   databaseName: string;
+  objectStoreHostClass: "loopback" | "remote-preview";
   target: "local" | "preview";
 }
 
@@ -23,6 +24,14 @@ export function resolveVisualFixtureEnvironment(
   const expectedDatabase = requiredValue(env, "VISUAL_FIXTURES_DATABASE");
   const databaseUrl = requiredValue(env, "DATABASE_URL");
   const parsedDatabase = parseDatabaseUrl(databaseUrl);
+  const objectStoreEndpoint = parseHttpUrl(
+    requiredValue(env, "R2_ENDPOINT"),
+    "R2_ENDPOINT",
+  );
+  const publicMediaBaseUrl = parseHttpUrl(
+    requiredValue(env, "R2_PUBLIC_BASE_URL"),
+    "R2_PUBLIC_BASE_URL",
+  );
 
   if (parsedDatabase.name !== expectedDatabase) {
     throw new Error(
@@ -36,10 +45,19 @@ export function resolveVisualFixtureEnvironment(
         "Local visual fixtures require a loopback Postgres connection.",
       );
     }
+    if (
+      !isLoopbackHost(objectStoreEndpoint.hostname) ||
+      !isLoopbackHost(publicMediaBaseUrl.hostname)
+    ) {
+      throw new Error(
+        "Local visual fixtures require loopback object storage and media origins.",
+      );
+    }
 
     return {
       databaseHostClass: "loopback",
       databaseName: parsedDatabase.name,
+      objectStoreHostClass: "loopback",
       target,
     };
   }
@@ -52,10 +70,19 @@ export function resolveVisualFixtureEnvironment(
       "Preview writes require VISUAL_FIXTURES_ALLOW_PREVIEW=true.",
     );
   }
+  if (
+    isLoopbackHost(objectStoreEndpoint.hostname) ||
+    isLoopbackHost(publicMediaBaseUrl.hostname)
+  ) {
+    throw new Error(
+      "Preview visual fixtures require isolated remote object storage.",
+    );
+  }
 
   return {
     databaseHostClass: "remote-preview",
     databaseName: parsedDatabase.name,
+    objectStoreHostClass: "remote-preview",
     target,
   };
 }
@@ -82,6 +109,12 @@ function rejectProduction(env: EnvLike) {
       );
     }
   }
+
+  if (isCanonicalProductionMediaOrigin(env.R2_PUBLIC_BASE_URL)) {
+    throw new Error(
+      "Visual fixtures are forbidden on the canonical production media origin.",
+    );
+  }
 }
 
 function isCanonicalProductionOrigin(value: string | undefined) {
@@ -90,6 +123,16 @@ function isCanonicalProductionOrigin(value: string | undefined) {
   try {
     const hostname = new URL(value).hostname.toLowerCase();
     return hostname === "over.garden" || hostname === "www.over.garden";
+  } catch {
+    return false;
+  }
+}
+
+function isCanonicalProductionMediaOrigin(value: string | undefined) {
+  if (!value?.trim()) return false;
+
+  try {
+    return new URL(value).hostname.toLowerCase() === "media.over.garden";
   } catch {
     return false;
   }
@@ -119,6 +162,21 @@ function parseDatabaseUrl(value: string) {
   }
 
   return { hostname: url.hostname.toLowerCase(), name };
+}
+
+function parseHttpUrl(value: string, name: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${name} must be a valid HTTP URL.`);
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${name} must use HTTP or HTTPS.`);
+  }
+
+  return { hostname: url.hostname.toLowerCase() };
 }
 
 function isLoopbackHost(hostname: string) {

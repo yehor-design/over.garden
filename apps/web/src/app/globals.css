@@ -152,4 +152,12 @@
   .site-shell-mobile-label {
     font-size: 0.625rem;
   }
+
+  .feed-filter-scroll {
+    scrollbar-width: none;
+  }
+
+  .feed-filter-scroll::-webkit-scrollbar {
+    display: none;
+  }
 }

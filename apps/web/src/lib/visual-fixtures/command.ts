@@ -46,7 +46,10 @@ export interface VisualFixtureCommandSummary {
   command: VisualFixtureCommand;
   version: string;
   manifestHash: string;
-  environment: Pick<VisualFixtureEnvironment, "target" | "databaseHostClass">;
+  environment: Pick<
+    VisualFixtureEnvironment,
+    "target" | "databaseHostClass" | "objectStoreHostClass"
+  >;
   counts: VisualFixtureCounts;
   seeded: boolean;
   mediaObjects: number;
@@ -138,6 +141,7 @@ export function createVisualFixtureCommandSummary({
     environment: {
       target: environment.target,
       databaseHostClass: environment.databaseHostClass,
+      objectStoreHostClass: environment.objectStoreHostClass,
     },
     counts: status.actual,
     seeded: status.seeded,

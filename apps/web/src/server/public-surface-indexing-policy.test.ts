@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  AUTHORED_PUBLIC_SURFACE_LASTMOD,
   evaluateNonDiscoveryRouteIndexability,
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
@@ -27,6 +26,18 @@ describe("public surface indexing policy", () => {
     expect(
       evaluatePublicSurfaceIndexability({ kind: "aeo_answer" }).isIndexable,
     ).toBe(true);
+  });
+
+  it("keeps the read-first public UGC feed out of indexing and sitemaps", () => {
+    expect(
+      evaluatePublicSurfaceIndexability({ kind: "public_feed" }),
+    ).toMatchObject({
+      value: "noindex",
+      isIndexable: false,
+      sitemapEligible: false,
+      robots: { index: false, follow: false },
+      reasons: ["public_feed_noindex"],
+    });
   });
 
   it("keeps public journal entries noindex until the entry is explicitly promoted", () => {
@@ -165,28 +176,6 @@ describe("public surface indexing policy", () => {
   });
 
   it("lists only static authored surfaces that the same policy marks sitemap-eligible", () => {
-    expect(listStaticIndexablePublicSurfaces()).toEqual([
-      {
-        kind: "marketing_landing",
-        path: "/",
-        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      },
-      {
-        kind: "marketing_landing",
-        path: "/bg",
-        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      },
-      {
-        kind: "marketing_landing",
-        path: "/ru",
-        lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      },
-    ]);
+    expect(listStaticIndexablePublicSurfaces()).toEqual([]);
   });
 });

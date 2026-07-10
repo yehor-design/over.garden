@@ -18,12 +18,19 @@ export async function generateMetadata() {
   });
 }
 
-export default async function RootLocalePage() {
+export default async function RootLocalePage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+} = {}) {
   const locale = await getRequestInterfaceLocale();
 
   if (locale !== DEFAULT_PUBLIC_LOCALE) {
     redirect(localizedPath(locale, "/"));
   }
 
-  return renderLocalizedHomePage(DEFAULT_PUBLIC_LOCALE);
+  return renderLocalizedHomePage(
+    DEFAULT_PUBLIC_LOCALE,
+    (await searchParams) ?? {},
+  );
 }

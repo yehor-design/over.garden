@@ -98,11 +98,20 @@ describe("public object passport repository query contracts", () => {
 
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('inner join "plant_objects"');
-    expect(compiled.sql).toContain('left join "media_assets"');
+    expect(compiled.sql).not.toContain('left join "media_assets"');
+    expect(compiled.sql).toContain('from "media_assets"');
+    expect(compiled.sql).toContain(
+      '"first_public_media"."journalEntryId" = "journal_entries"."id"',
+    );
+    expect(compiled.sql).toContain(
+      '"first_public_media"."ownerUserId" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).toContain('"media_assets"."status" = $1');
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
+    expect(compiled.sql).toContain("select distinct on");
+    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
     expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
     expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
     expect(compiled.sql).toContain(

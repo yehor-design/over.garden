@@ -729,6 +729,14 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('"journal_entries"."id" = $7');
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $8');
+    expect(compiled.sql).toContain("not exists");
+    expect(compiled.sql).toContain(
+      'from "media_assets" as "existing_entry_media"',
+    );
+    expect(compiled.sql).toContain(
+      '"existing_entry_media"."journal_entry_id" = $9',
+    );
+    expect(compiled.sql).toContain('"existing_entry_media"."id" != $10');
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       expect.any(Date),
@@ -738,6 +746,8 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000020",
       "00000000-0000-0000-0000-000000000020",
       "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000020",
+      "00000000-0000-0000-0000-000000000010",
     ]);
   });
 

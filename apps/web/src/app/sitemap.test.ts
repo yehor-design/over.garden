@@ -25,9 +25,6 @@ describe("/sitemap.xml", () => {
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
-      "https://over.garden/",
-      "https://over.garden/bg",
-      "https://over.garden/ru",
       "https://over.garden/blog",
       "https://over.garden/bg/blog",
       "https://over.garden/ru/blog",
@@ -51,11 +48,11 @@ describe("/sitemap.xml", () => {
     expect(urls.join(" ")).not.toContain("/join");
     expect(urls.join(" ")).not.toContain("/garden");
     expect(urls.join(" ")).not.toContain("/journal/");
-    expect(
-      entries.every((entry) => entry.lastModified instanceof Date),
-    ).toBe(true);
+    expect(entries.every((entry) => entry.lastModified instanceof Date)).toBe(
+      true,
+    );
     expect(entries[0]).toMatchObject({
-      url: "https://over.garden/",
+      url: "https://over.garden/blog",
       lastModified: new Date("2026-07-03T00:00:00.000Z"),
     });
     expect(entries.at(-1)).toMatchObject({

@@ -24,7 +24,7 @@ The source of truth is `apps/web/src/server/public-surface-indexing-policy.ts`.
 Current decisions:
 
 - Authored useful surfaces may be indexable and sitemap-eligible: marketing landing pages, editorial blog pages, guide pages, and AEO answer pages.
-- The localized homepages `/`, `/bg`, and `/ru` are the first authored marketing landing surfaces included in the sitemap. Ukrainian is the unprefixed canonical default for the primary domain.
+- OVE-173 replaces the localized authored homepages with a read-first public UGC feed. `/`, `/bg`, and `/ru` therefore emit `noindex, nofollow` and remain out of the sitemap until a later explicit quality gate promotes a safe, non-thin feed surface. Ukrainian remains the unprefixed canonical default for the primary domain.
 - Private workspace, auth, and operator route groups such as `/garden`, `/auth/*`, and `/admin/*` must emit `noindex, nofollow` route metadata. This metadata is a crawl-quality control, not a privacy boundary.
 - OVE-116 adds the first authored content foundation in `apps/web/src/server/public-seo-content.ts`: `/blog`, one blog article, one guide, one AEO answer page, and `/markets/ukraine` plus `/markets/bulgaria`.
 - OVE-117 moves the canonical public content routes into language-aware surfaces, superseded by the 2026-07-05 domain-default locale decision: Ukrainian uses unprefixed routes such as `/`, `/blog`, and `/markets/ukraine`; Bulgarian uses `/bg`; Russian remains available as `/ru` for the Bulgarian market.

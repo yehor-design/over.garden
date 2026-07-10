@@ -2345,8 +2345,18 @@ create table if not exists media_assets (
 create index if not exists media_assets_owner_created_idx
   on media_assets (owner_user_id, created_at desc);
 
-create unique index if not exists media_assets_one_per_entry_uidx
+-- Public read models support bounded galleries, but the shipped composer stays
+-- one-photo at the database boundary. Only the fail-closed visual-fixture
+-- namespace can attach multiple rows to one entry for deterministic UI proof.
+drop index if exists media_assets_one_per_entry_uidx;
+
+create unique index if not exists media_assets_one_non_fixture_per_entry_uidx
   on media_assets (journal_entry_id)
+  where journal_entry_id is not null
+    and quarantine_key not like 'visual-fixtures/%';
+
+create index if not exists media_assets_entry_created_idx
+  on media_assets (journal_entry_id, created_at asc, id asc)
   where journal_entry_id is not null;
 
 create table if not exists job_queue (

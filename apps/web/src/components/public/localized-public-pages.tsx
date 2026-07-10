@@ -5,13 +5,15 @@ import {
   CheckCircle2,
   HelpCircle,
   Globe2,
-  NotebookPen,
-  ShieldCheck,
   Sprout,
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { LanguageSwitcher } from "@/components/public/language-switcher";
+import {
+  PublicHomeFeed,
+  type PublicHomeFeedState,
+} from "@/components/public/public-home-feed";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import {
   buildAnswerPageJsonLd,
@@ -26,6 +28,11 @@ import type {
   LocalizedHomeContent,
   LocalizedRouteChrome,
 } from "@/server/public-localized-content";
+import type {
+  PublicFeedPage,
+  PublicFeedRequest,
+  TrustedPublicFeedTopic,
+} from "@/server/public-feed-repository";
 
 export function PublicLocalizedHeader({
   locale,
@@ -60,72 +67,30 @@ export function PublicLocalizedHeader({
 export function LocalizedHomePage({
   locale,
   content,
+  feed,
+  request,
+  topics,
+  isAuthenticated,
+  state,
 }: {
   locale: PublicLocale;
   content: LocalizedHomeContent;
-  availableLocales: readonly PublicLocale[];
+  feed: PublicFeedPage;
+  request: PublicFeedRequest;
+  topics: TrustedPublicFeedTopic[];
+  isAuthenticated: boolean;
+  state: PublicHomeFeedState;
 }) {
   return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-10 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col justify-center gap-7 border-b border-border py-8 sm:py-10">
-        <div className="flex flex-col gap-4">
-          <p className="text-sm font-medium text-muted-foreground">
-            {content.eyebrow}
-          </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
-            {content.heading}
-          </h1>
-          <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-            {content.intro}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Link href="/garden" className={buttonVariants({ size: "lg" })}>
-            <Sprout className="size-4" />
-            {content.primaryCta}
-            <ArrowRight className="size-4" />
-          </Link>
-          <Link
-            href="/garden"
-            className={buttonVariants({ variant: "outline", size: "lg" })}
-          >
-            {content.secondaryCta}
-          </Link>
-        </div>
-
-        <dl className="grid gap-3 pt-4 sm:grid-cols-3">
-          {content.featureCards.map((card, index) => (
-            <div
-              key={card.title}
-              className="flex flex-col gap-2 border-t border-border pt-3"
-            >
-              <dt className="flex items-center gap-2 text-sm font-medium text-foreground">
-                {index === 0 ? <NotebookPen className="size-4" /> : null}
-                {index === 1 ? <ShieldCheck className="size-4" /> : null}
-                {index === 2 ? <Sprout className="size-4" /> : null}
-                {card.title}
-              </dt>
-              <dd className="text-sm leading-6 text-muted-foreground">
-                {card.body}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </header>
-
-      <section className="grid gap-3 pb-8">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {content.sectionTitle}
-        </h2>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          {content.sectionBody}
-        </p>
-      </section>
-    </main>
+    <PublicHomeFeed
+      locale={locale}
+      copy={content.feed}
+      feed={feed}
+      request={request}
+      topics={topics}
+      isAuthenticated={isAuthenticated}
+      state={state}
+    />
   );
 }
 

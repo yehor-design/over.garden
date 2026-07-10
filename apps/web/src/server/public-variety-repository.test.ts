@@ -57,20 +57,23 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       'inner join "spaces" on "spaces"."id" = "journal_entries"."space_id"',
     );
-    expect(compiled.sql).toContain('left join "media_assets"');
+    expect(compiled.sql).not.toContain('left join "media_assets"');
+    expect(compiled.sql).toContain("from media_assets as public_media");
+    expect(compiled.sql).toContain("select count(*)");
+    expect(compiled.sql).not.toContain("case when exists");
     expect(compiled.sql).toContain(
       'coalesce(sum(char_length("journal_entries"."body")), 0)',
     );
     expect(compiled.sql).toContain('"catalog_items"."id"');
-    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
-    expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
+    expect(compiled.sql).toContain('"catalog_items"."public_slug" = $1');
+    expect(compiled.sql).toContain('"catalog_items"."status" in ($2, $3)');
     expect(compiled.sql).not.toContain("provisional");
     expect(compiled.sql).not.toContain("rejected");
     expect(compiled.sql).not.toContain("merged");
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
-    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $5');
+    expect(compiled.sql).toContain('"plant_objects"."variety_state" = $4');
     expect(compiled.sql).toContain(
       '"journal_entries"."owner_user_id" = "plant_objects"."owner_user_id"',
     );
@@ -78,10 +81,10 @@ describe("public variety repository query contracts", () => {
       '"journal_entries"."owner_user_id" = "spaces"."owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
+      'public_media.owner_user_id = "journal_entries"."owner_user_id"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $6');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $7');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -95,7 +98,6 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
     expect(compiled.parameters).toEqual([
-      "processed",
       "pomidor-cheri-0000000101",
       "seeded",
       "confirmed",
@@ -115,10 +117,13 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entries"."title"');
     expect(compiled.sql).toContain('"journal_entries"."body"');
     expect(compiled.sql).toContain('"journal_entries"."entry_date"');
+    expect(compiled.sql).toContain('from "media_assets"');
+    expect(compiled.sql).not.toContain('left join "media_assets"');
     expect(compiled.sql).toContain('"media_assets"."derivative_key"');
     expect(compiled.sql).toContain(
-      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
+      '"first_public_media"."ownerUserId" = "journal_entries"."owner_user_id"',
     );
+    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
     expect(compiled.sql).toContain('"catalog_items"."public_slug" = $2');
     expect(compiled.sql).toContain('"catalog_items"."status" in ($3, $4)');
     expect(compiled.sql).not.toContain("provisional");

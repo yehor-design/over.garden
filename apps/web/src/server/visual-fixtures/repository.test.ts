@@ -54,6 +54,8 @@ describe("visual fixture repository query contracts", () => {
       "spaces",
       "objects",
       "entries",
+      "topics",
+      "topic_signals",
       "media",
     ]);
 
@@ -66,6 +68,8 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('insert into "spaces"');
     expect(sql).toContain('insert into "plant_objects"');
     expect(sql).toContain('insert into "journal_entries"');
+    expect(sql).toContain('insert into "journal_topics"');
+    expect(sql).toContain('insert into "journal_entry_topic_signals"');
     expect(sql).toContain('insert into "media_assets"');
     expect(sql).toContain('on conflict ("id") do update');
     expect(sql).toContain('on conflict ("user_id") do update');
@@ -76,6 +80,10 @@ describe("visual fixture repository query contracts", () => {
     const parameters = compiled.flatMap((item) => item.parameters);
     expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.actors[0].id);
     expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.entries[79].id);
+    expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.topics[2].id);
+    expect(parameters).toContain(
+      VISUAL_FIXTURE_MANIFEST.topicSignals[14].journalEntryId,
+    );
     expect(parameters).toContain(VISUAL_FIXTURE_MANIFEST.media[15].id);
     expect(compiled[0].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
@@ -90,6 +98,8 @@ describe("visual fixture repository query contracts", () => {
 
     expect(queries.map(({ label }) => label)).toEqual([
       "media",
+      "topic_signals",
+      "topics",
       "entries",
       "objects",
       "spaces",
@@ -103,6 +113,8 @@ describe("visual fixture repository query contracts", () => {
 
     const expectedIdGroups = [
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.objects.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.spaces.map(({ id }) => id),
@@ -129,10 +141,14 @@ describe("visual fixture repository query contracts", () => {
       "spaces",
       "objects",
       "entries",
+      "topics",
+      "topicSignals",
       "media",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(6);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(8);
     expect(sql).toContain('from "user_public_profiles"');
+    expect(sql).toContain('from "journal_topics"');
+    expect(sql).toContain('from "journal_entry_topic_signals"');
     expect(sql).not.toMatch(
       /email|body|owner_user_id|quarantine_key|derivative_key/i,
     );

@@ -14,6 +14,8 @@ export interface VisualFixtureCounts {
   spaces: number;
   objects: number;
   entries: number;
+  topics: number;
+  topicSignals: number;
   media: number;
 }
 
@@ -186,6 +188,50 @@ export function buildVisualFixtureSeedQueries(
       }),
     );
 
+  const topics = executor
+    .insertInto("journal_topics")
+    .values(
+      manifest.topics.map((topic) => ({
+        id: topic.id,
+        slug: topic.slug,
+        label: topic.label,
+        trust_state: topic.trustState,
+        created_at: topic.createdAt,
+        updated_at: topic.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        slug: sql`excluded.slug`,
+        label: sql`excluded.label`,
+        trust_state: sql`excluded.trust_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const topicSignals = executor
+    .insertInto("journal_entry_topic_signals")
+    .values(
+      manifest.topicSignals.map((signal) => ({
+        journal_entry_id: signal.journalEntryId,
+        topic_id: signal.topicId,
+        signal_source: signal.signalSource,
+        review_state: signal.reviewState,
+        public_membership_state: signal.publicMembershipState,
+        created_at: signal.createdAt,
+        updated_at: signal.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc
+        .columns(["journal_entry_id", "topic_id", "signal_source"])
+        .doUpdateSet({
+          review_state: sql`excluded.review_state`,
+          public_membership_state: sql`excluded.public_membership_state`,
+          updated_at: sql`excluded.updated_at`,
+        }),
+    );
+
   const media = executor
     .insertInto("media_assets")
     .values(
@@ -220,6 +266,8 @@ export function buildVisualFixtureSeedQueries(
     { label: "spaces", query: spaces },
     { label: "objects", query: objects },
     { label: "entries", query: entries },
+    { label: "topics", query: topics },
+    { label: "topic_signals", query: topicSignals },
     { label: "media", query: media },
   ] as const;
 }
@@ -237,6 +285,22 @@ export function buildVisualFixtureResetQueries(
         "id",
         "in",
         manifest.media.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "topic_signals",
+      query: executor.deleteFrom("journal_entry_topic_signals").where(
+        "topic_id",
+        "in",
+        manifest.topics.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "topics",
+      query: executor.deleteFrom("journal_topics").where(
+        "id",
+        "in",
+        manifest.topics.map(({ id }) => id),
       ),
     },
     {
@@ -337,6 +401,28 @@ export function buildVisualFixtureStatusQueries(
         ),
     },
     {
+      label: "topics",
+      query: executor
+        .selectFrom("journal_topics")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.topics.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "topicSignals",
+      query: executor
+        .selectFrom("journal_entry_topic_signals")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "topic_id",
+          "in",
+          manifest.topics.map(({ id }) => id),
+        ),
+    },
+    {
       label: "media",
       query: executor
         .selectFrom("media_assets")
@@ -410,6 +496,8 @@ export function expectedVisualFixtureCounts(
     spaces: manifest.spaces.length,
     objects: manifest.objects.length,
     entries: manifest.entries.length,
+    topics: manifest.topics.length,
+    topicSignals: manifest.topicSignals.length,
     media: manifest.media.length,
   };
 }

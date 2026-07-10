@@ -120,5 +120,16 @@ export function buildAttachProcessedMediaAssetToEntryQuery(
           .where("journal_entries.owner_user_id", "=", scope.userId),
       ),
     )
+    .where((eb) =>
+      eb.not(
+        eb.exists(
+          eb
+            .selectFrom("media_assets as existing_entry_media")
+            .select("existing_entry_media.id")
+            .where("existing_entry_media.journal_entry_id", "=", journalEntryId)
+            .where("existing_entry_media.id", "!=", mediaAssetId),
+        ),
+      ),
+    )
     .returningAll();
 }

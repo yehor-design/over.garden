@@ -18,6 +18,7 @@ import {
   PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
   type PublicVarietyIndexState,
 } from "@/server/public-variety-indexing";
+import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 import {
   buildPublishedVarietySeedProofByCatalogItemIdQuery,
   type PublicVarietySeedProof,
@@ -234,17 +235,6 @@ export function buildPublicVarietySummaryQuery(
       "plant_objects.id",
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
-    .leftJoin("media_assets", (join) =>
-      join
-        .onRef("media_assets.journal_entry_id", "=", "journal_entries.id")
-        .onRef(
-          "media_assets.owner_user_id",
-          "=",
-          "journal_entries.owner_user_id",
-        )
-        .on("media_assets.status", "=", "processed")
-        .on("media_assets.derivative_key", "is not", null),
-    )
     .select(({ fn }) => [
       "catalog_items.id as catalogItemId",
       "catalog_items.canonical_name as catalogCanonicalName",
@@ -253,7 +243,14 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.source as catalogSource",
       "catalog_items.locale as catalogLocale",
       fn.count<number>("journal_entries.id").as("entryCount"),
-      fn.count<number>("media_assets.id").as("photoCount"),
+      sql<number>`coalesce(sum((
+        select count(*)
+        from media_assets as public_media
+        where public_media.journal_entry_id = ${sql.ref("journal_entries.id")}
+          and public_media.owner_user_id = ${sql.ref("journal_entries.owner_user_id")}
+          and public_media.status = 'processed'
+          and public_media.derivative_key is not null
+      )), 0)`.as("photoCount"),
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",
       ),
@@ -347,6 +344,8 @@ export function buildPublicVarietyEntriesQuery(
   publicSlug: string,
   limit = MAX_PUBLIC_VARIETY_ENTRIES,
 ) {
+  const firstMedia = buildFirstProcessedMediaPerEntryQuery(executor);
+
   return executor
     .selectFrom("journal_entries")
     .innerJoin(
@@ -360,16 +359,14 @@ export function buildPublicVarietyEntriesQuery(
       "catalog_items.id",
       "plant_objects.catalog_item_id",
     )
-    .leftJoin("media_assets", (join) =>
+    .leftJoin(firstMedia, (join) =>
       join
-        .onRef("media_assets.journal_entry_id", "=", "journal_entries.id")
+        .onRef("first_public_media.journalEntryId", "=", "journal_entries.id")
         .onRef(
-          "media_assets.owner_user_id",
+          "first_public_media.ownerUserId",
           "=",
           "journal_entries.owner_user_id",
-        )
-        .on("media_assets.status", "=", "processed")
-        .on("media_assets.derivative_key", "is not", null),
+        ),
     )
     .select([
       "journal_entries.id as entryId",
@@ -384,8 +381,8 @@ export function buildPublicVarietyEntriesQuery(
       "plant_objects.coarse_region_code as objectCoarseRegionCode",
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
-      "media_assets.id as mediaId",
-      "media_assets.derivative_key as mediaDerivativeKey",
+      "first_public_media.mediaId as mediaId",
+      "first_public_media.derivativeKey as mediaDerivativeKey",
     ])
     .where("catalog_items.public_slug", "=", publicSlug)
     .where("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])

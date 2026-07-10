@@ -52,6 +52,8 @@ describe("/__visual-fixtures", () => {
         spaces: 5,
         objects: 30,
         entries: 80,
+        topics: 3,
+        topicSignals: 15,
         media: 16,
       },
       actual: {
@@ -60,6 +62,8 @@ describe("/__visual-fixtures", () => {
         spaces: 5,
         objects: 30,
         entries: 80,
+        topics: 3,
+        topicSignals: 15,
         media: 16,
       },
       seeded: true,
@@ -87,6 +91,11 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("4");
     expect(html).toContain("30");
     expect(html).toContain("80");
+    expect(html).toContain("Trusted topics");
+    expect(html).toContain("Topic memberships");
+    expect(html).toContain("15");
+    expect(html).toContain('href="/?topic=seasonal-care"');
+    expect(html).toContain('href="/?__visualFeed=loading"');
     expect(html).toContain('href="/journal/visual-fixture-');
     expect(html).toContain('href="/lineage/objects/18700003-');
     expect(html).toContain('href="/@demo_olena"');

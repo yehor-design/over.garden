@@ -20,6 +20,14 @@ export type VisualFixtureMediaAspect =
   | "wide_16_9";
 export type VisualFixtureScenarioKind =
   | "fixture-index"
+  | "public-feed-empty"
+  | "public-feed-typical"
+  | "public-feed-dense"
+  | "public-feed-loading"
+  | "public-feed-error"
+  | "public-feed-pagination"
+  | "public-feed-exhausted"
+  | "public-feed-context-empty"
   | "public-journal-active"
   | "public-journal-gone"
   | "public-journal-missing"
@@ -37,7 +45,15 @@ export type VisualFixtureStateKind =
   | "maximum-copy"
   | "no-media-journal"
   | "one-media-journal"
-  | "media-gallery";
+  | "media-gallery"
+  | "feed-empty"
+  | "feed-typical"
+  | "feed-dense"
+  | "feed-loading"
+  | "feed-error"
+  | "feed-pagination"
+  | "feed-exhausted"
+  | "feed-context-empty";
 
 export interface VisualFixtureActor {
   id: string;
@@ -111,6 +127,38 @@ export interface VisualFixtureMedia {
   createdAt: string;
 }
 
+export interface VisualFixtureTopic {
+  id: string;
+  slug: string;
+  label: string;
+  trustState: "curated";
+  createdAt: string;
+}
+
+export interface VisualFixtureTopicSignal {
+  journalEntryId: string;
+  topicId: string;
+  signalSource: "operator_curated";
+  reviewState: "accepted";
+  publicMembershipState: "eligible";
+  createdAt: string;
+}
+
+export interface VisualFixtureFeedCursorAnchor {
+  id: string;
+  publishedAt: string;
+}
+
+export interface VisualFixtureFeedEvidence {
+  pageSize: 8;
+  typicalTopicSlug: string;
+  denseTopicSlug: string;
+  emptyTopicSlug: string;
+  galleryEntryId: string;
+  pageTwoCursor: VisualFixtureFeedCursorAnchor;
+  exhaustedCursor: VisualFixtureFeedCursorAnchor;
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -139,6 +187,9 @@ export interface VisualFixtureManifest {
   objects: readonly VisualFixtureObject[];
   entries: readonly VisualFixtureEntry[];
   media: readonly VisualFixtureMedia[];
+  topics: readonly VisualFixtureTopic[];
+  topicSignals: readonly VisualFixtureTopicSignal[];
+  feedEvidence: VisualFixtureFeedEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
   scenarios: readonly VisualFixtureScenario[];
 }
@@ -450,6 +501,15 @@ const entryCountsByObject = [
   ...Array.from({ length: 5 }, () => 2),
 ] as const;
 
+const feedObjectRecencyOrder = [
+  0, 18, 26, 6, 22, 27, 1, 23, 28, 7, 24, 29, 2, 19, 25, 3, 20, 4, 21, 5, 8, 9,
+  10, 11, 12, 13, 14, 15, 16, 17,
+] as const;
+
+const feedRecencyRankByObjectOffset = new Map<number, number>(
+  feedObjectRecencyOrder.map((objectOffset, rank) => [objectOffset, rank]),
+);
+
 const entries: readonly VisualFixtureEntry[] = buildEntries();
 
 interface MediaSeedSpec {
@@ -502,7 +562,7 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
   },
   {
     fileName: "greenhouse-cucumber-4x3.png",
-    objectIndex: 1,
+    objectIndex: 0,
     aspect: "landscape_4_3",
     width: 1448,
     height: 1086,
@@ -575,7 +635,6 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
   {
     fileName: "greenhouse-wide.png",
     objectIndex: 0,
-    publicEntryOffset: 1,
     aspect: "wide_16_9",
     width: 1672,
     height: 941,
@@ -649,7 +708,106 @@ const media: readonly VisualFixtureMedia[] = mediaSeedSpecs.map(
   },
 );
 
-const mediaEntryIds = new Set(media.map((item) => item.entryId));
+const topics: readonly VisualFixtureTopic[] = [
+  {
+    id: fixtureUuid(6, 1),
+    slug: "seasonal-care",
+    label: "Сезонний догляд",
+    trustState: "curated",
+    createdAt: timestampForIndex(401),
+  },
+  {
+    id: fixtureUuid(6, 2),
+    slug: "care-checks",
+    label: "Регулярні спостереження",
+    trustState: "curated",
+    createdAt: timestampForIndex(402),
+  },
+  {
+    id: fixtureUuid(6, 3),
+    slug: "quiet-evidence",
+    label: "Відновлення після стресу",
+    trustState: "curated",
+    createdAt: timestampForIndex(403),
+  },
+];
+
+const publicFeedEligibleEntries = entries.filter(
+  (entry) =>
+    entry.visibility === "public" &&
+    entry.lifecycleState === "active" &&
+    entry.publicGoneAt === null &&
+    entry.publishedAt !== null,
+);
+const publicFeedEntriesByKind = Object.groupBy(
+  publicFeedEligibleEntries,
+  (entry) =>
+    objects.find((object) => object.id === entry.objectId)?.objectKind ??
+    "plant",
+);
+const denseTopicEntries = [
+  publicFeedEntriesByKind.plant?.[0],
+  publicFeedEntriesByKind.animal?.[0],
+  publicFeedEntriesByKind.bee_colony?.[0],
+  publicFeedEntriesByKind.plant?.[1],
+  publicFeedEntriesByKind.animal?.[1],
+  publicFeedEntriesByKind.bee_colony?.[1],
+  publicFeedEntriesByKind.plant?.[2],
+  publicFeedEntriesByKind.animal?.[2],
+  publicFeedEntriesByKind.bee_colony?.[2],
+  publicFeedEntriesByKind.plant?.[3],
+  publicFeedEntriesByKind.animal?.[3],
+].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
+const typicalTopicEntries = [
+  publicFeedEntriesByKind.plant?.[0],
+  publicFeedEntriesByKind.animal?.[0],
+  publicFeedEntriesByKind.bee_colony?.[0],
+  publicFeedEntriesByKind.plant?.[1],
+].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
+const topicSignals: readonly VisualFixtureTopicSignal[] = [
+  ...typicalTopicEntries.map((entry, index) =>
+    createTopicSignal(entry, topics[0], 410 + index),
+  ),
+  ...denseTopicEntries.map((entry, index) =>
+    createTopicSignal(entry, topics[1], 420 + index),
+  ),
+];
+const sortedDenseTopicEntries = [...denseTopicEntries].sort(compareFeedEntries);
+const pageTwoAnchor = sortedDenseTopicEntries[7];
+const exhaustedAnchor = sortedDenseTopicEntries.at(-2);
+
+const mediaCountByEntry = new Map<string, number>();
+for (const item of media) {
+  mediaCountByEntry.set(
+    item.entryId,
+    (mediaCountByEntry.get(item.entryId) ?? 0) + 1,
+  );
+}
+const mediaEntryIds = new Set(mediaCountByEntry.keys());
+const galleryEntries = entries.filter(
+  (entry) => (mediaCountByEntry.get(entry.id) ?? 0) === 3,
+);
+
+if (!pageTwoAnchor || !exhaustedAnchor || galleryEntries.length !== 1) {
+  throw new Error("Visual fixture feed evidence is incomplete.");
+}
+
+const feedEvidence: VisualFixtureFeedEvidence = {
+  pageSize: 8,
+  typicalTopicSlug: topics[0].slug,
+  denseTopicSlug: topics[1].slug,
+  emptyTopicSlug: topics[2].slug,
+  galleryEntryId: galleryEntries[0].id,
+  pageTwoCursor: {
+    id: pageTwoAnchor.id,
+    publishedAt: pageTwoAnchor.publishedAt!,
+  },
+  exhaustedCursor: {
+    id: exhaustedAnchor.id,
+    publishedAt: exhaustedAnchor.publishedAt!,
+  },
+};
+
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
 );
@@ -675,7 +833,9 @@ const noMediaEntries = entries.filter(
     entry.publicGoneAt === null &&
     !mediaEntryIds.has(entry.id),
 );
-const oneMediaEntries = entries.filter((entry) => mediaEntryIds.has(entry.id));
+const oneMediaEntries = entries.filter(
+  (entry) => (mediaCountByEntry.get(entry.id) ?? 0) === 1,
+);
 
 const stateCoverage: readonly VisualFixtureStateCoverage[] = [
   coverageState(
@@ -750,6 +910,70 @@ const stateCoverage: readonly VisualFixtureStateCoverage[] = [
     "public",
     "/__visual-fixtures#media-gallery",
   ),
+  coverageState(
+    "feed-empty",
+    "Empty public feed",
+    "Curated trusted topic with zero eligible public journal entries.",
+    1,
+    "public",
+    `/?topic=${feedEvidence.emptyTopicSlug}`,
+  ),
+  coverageState(
+    "feed-typical",
+    "Typical mixed public feed",
+    "Four repository-backed plant, animal, and bee-colony updates.",
+    typicalTopicEntries.length,
+    "public",
+    `/?topic=${feedEvidence.typicalTopicSlug}`,
+  ),
+  coverageState(
+    "feed-dense",
+    "Dense mixed public feed",
+    "Page-size-plus-three eligible updates with real continuation.",
+    denseTopicEntries.length,
+    "public",
+    `/?topic=${feedEvidence.denseTopicSlug}`,
+  ),
+  coverageState(
+    "feed-loading",
+    "Public feed loading",
+    "Stable production loading composition under the fixture-only gate.",
+    1,
+    "public",
+    "/?__visualFeed=loading",
+  ),
+  coverageState(
+    "feed-error",
+    "Recoverable public feed error",
+    "Read-open route error with retry and knowledge continuation.",
+    1,
+    "public",
+    "/?__visualFeed=error",
+  ),
+  coverageState(
+    "feed-pagination",
+    "Public feed second page",
+    "Cursor-backed continuation using the same dense trusted topic.",
+    denseTopicEntries.length - feedEvidence.pageSize,
+    "public",
+    "/?__visualFeed=page-2",
+  ),
+  coverageState(
+    "feed-exhausted",
+    "Exhausted public feed",
+    "Final cursor window with no false continuation action.",
+    1,
+    "public",
+    "/?__visualFeed=exhausted",
+  ),
+  coverageState(
+    "feed-context-empty",
+    "Empty feed context rail",
+    "The feed remains useful when no trusted topic module is available.",
+    1,
+    "public",
+    "/?__visualFeed=context-empty",
+  ),
 ];
 
 const activeEntry = entries.find(
@@ -763,6 +987,62 @@ const scenarios: readonly VisualFixtureScenario[] = [
     "fixture-index",
     "Fixture overview",
     "/__visual-fixtures",
+    200,
+  ),
+  scenario(
+    "feed-empty",
+    "public-feed-empty",
+    "Empty public feed",
+    `/?topic=${feedEvidence.emptyTopicSlug}`,
+    200,
+  ),
+  scenario(
+    "feed-typical",
+    "public-feed-typical",
+    "Typical mixed public feed",
+    `/?topic=${feedEvidence.typicalTopicSlug}`,
+    200,
+  ),
+  scenario(
+    "feed-dense",
+    "public-feed-dense",
+    "Dense mixed public feed",
+    `/?topic=${feedEvidence.denseTopicSlug}`,
+    200,
+  ),
+  scenario(
+    "feed-loading",
+    "public-feed-loading",
+    "Public feed loading",
+    "/?__visualFeed=loading",
+    200,
+  ),
+  scenario(
+    "feed-error",
+    "public-feed-error",
+    "Recoverable public feed error",
+    "/?__visualFeed=error",
+    200,
+  ),
+  scenario(
+    "feed-page-2",
+    "public-feed-pagination",
+    "Public feed second page",
+    "/?__visualFeed=page-2",
+    200,
+  ),
+  scenario(
+    "feed-exhausted",
+    "public-feed-exhausted",
+    "Exhausted public feed",
+    "/?__visualFeed=exhausted",
+    200,
+  ),
+  scenario(
+    "feed-context-empty",
+    "public-feed-context-empty",
+    "Empty public feed context rail",
+    "/?__visualFeed=context-empty",
     200,
   ),
   scenario(
@@ -832,6 +1112,9 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   objects,
   entries,
   media,
+  topics,
+  topicSignals,
+  feedEvidence,
   stateCoverage,
   scenarios,
 };
@@ -855,11 +1138,14 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "objects", manifest.objects.length, 30);
   checkCount(errors, "entries", manifest.entries.length, 80);
   checkCount(errors, "media", manifest.media.length, 16);
+  checkCount(errors, "topics", manifest.topics.length, 3);
+  checkCount(errors, "topic signals", manifest.topicSignals.length, 15);
 
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
   const spaceIds = new Set(manifest.spaces.map((space) => space.id));
   const objectIds = new Set(manifest.objects.map((object) => object.id));
   const entryIds = new Set(manifest.entries.map((entry) => entry.id));
+  const topicIds = new Set(manifest.topics.map((topic) => topic.id));
   checkUnique(
     errors,
     "actor ids",
@@ -897,8 +1183,20 @@ export function validateVisualFixtureManifest(
   );
   checkUnique(
     errors,
-    "media entry ids",
-    manifest.media.map((item) => item.entryId),
+    "topic ids",
+    manifest.topics.map((topic) => topic.id),
+  );
+  checkUnique(
+    errors,
+    "topic slugs",
+    manifest.topics.map((topic) => topic.slug),
+  );
+  checkUnique(
+    errors,
+    "topic memberships",
+    manifest.topicSignals.map(
+      (signal) => `${signal.journalEntryId}:${signal.topicId}`,
+    ),
   );
   checkUnique(
     errors,
@@ -916,6 +1214,16 @@ export function validateVisualFixtureManifest(
     errors,
     "state coverage kinds",
     manifest.stateCoverage.map((state) => state.kind),
+  );
+  checkUnique(
+    errors,
+    "scenario ids",
+    manifest.scenarios.map((scenario) => scenario.id),
+  );
+  checkUnique(
+    errors,
+    "scenario kinds",
+    manifest.scenarios.map((scenario) => scenario.kind),
   );
 
   for (const actor of manifest.actors) {
@@ -954,6 +1262,41 @@ export function validateVisualFixtureManifest(
     }
     if (!item.derivativeKey.startsWith(`${manifest.namespace}/`)) {
       errors.push(`Media ${item.id} is outside the fixture namespace.`);
+    }
+  }
+  for (const signal of manifest.topicSignals) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.id === signal.journalEntryId,
+    );
+    if (!entry || !topicIds.has(signal.topicId)) {
+      errors.push("Topic signal references an unknown entry or topic.");
+      continue;
+    }
+    if (
+      entry.visibility !== "public" ||
+      entry.lifecycleState !== "active" ||
+      entry.publicGoneAt !== null
+    ) {
+      errors.push(`Topic signal exposes ineligible entry ${entry.id}.`);
+    }
+  }
+  const manifestMediaCounts = Object.groupBy(
+    manifest.media,
+    (item) => item.entryId,
+  );
+  if (
+    Object.values(manifestMediaCounts).filter(
+      (items) => (items?.length ?? 0) === 3,
+    ).length !== 1
+  ) {
+    errors.push("Manifest must contain exactly one three-image feed gallery.");
+  }
+  for (const anchor of [
+    manifest.feedEvidence.pageTwoCursor,
+    manifest.feedEvidence.exhaustedCursor,
+  ]) {
+    if (!entryIds.has(anchor.id) || !anchor.publishedAt.endsWith("Z")) {
+      errors.push("Feed cursor anchor is not a deterministic public entry.");
     }
   }
   for (const state of manifest.stateCoverage) {
@@ -1002,7 +1345,11 @@ function buildEntries(): readonly VisualFixtureEntry[] {
       const visibility: VisualFixtureVisibility = isPrivate
         ? "private"
         : "public";
-      const entryDate = dateDaysBefore((globalIndex - 1) * 3 + objectOffset);
+      const feedRecencyRank =
+        feedRecencyRankByObjectOffset.get(objectOffset) ?? objectOffset;
+      const entryDate = dateDaysBefore(
+        (ordinal - 1) * objects.length + feedRecencyRank,
+      );
       const publicSlug =
         visibility === "public"
           ? `visual-fixture-${slugPart(object.displayName)}-${String(globalIndex).padStart(3, "0")}`
@@ -1111,6 +1458,31 @@ function entryBody(
   const maximumLengthSource = `${body}\n\nЗа два тижні верхній шар ґрунту висихав нерівномірно, тому полив переніс на ранок і розділив на дві менші порції. Нові листки розгортаються без плям, нижні не втратили пружності, а опора більше не перетискає стебло.\n\nПорівняння з попередньою датою: приріст помітний, але не різкий; колір стабільний; слідів шкідників під листям не знайшов. Залишаю той самий режим ще на сім днів, щоб не змішувати вплив одразу кількох рішень.\n\nОкремо перевірив дренажні отвори, край контейнера й нижній бік листків. Застою води немає, запах ґрунту звичайний, дрібних комах або липких слідів не видно. Ці деталі фіксую зараз, щоб наступне порівняння спиралося не лише на загальне враження.\n\nПісля полудня порівняв температуру біля скла та в проході, перевірив тінь від сусідніх рослин і переконався, що листя не торкається гарячої поверхні. Провітрювання відкриваю поступово, без різкого протягу, а полив не поєдную з підживленням у той самий день.\n\nНа кожній китиці порахував зав'язь, позначив одну контрольну гілку м'якою стрічкою та перевірив, чи не змістилася опора після останнього підв'язування. Стиглі плоди зняв вчасно, пошкоджених або тріснутих не було.\n\nУвечері оглянув нижній бік листків при боковому світлі, протер полицю, прибрав сухі частини й записав фактичну витрату води. Запах, колір ґрунту та швидкість стікання залишилися звичними для цього контейнера.\n\nДля наступного порівняння залишаю незмінними об'єм горщика, склад суміші, положення опори й ранковий час огляду. Окремо перевірю вагу врожаю, інтервал між поливами, нову зав'язь і реакцію на коротше денне провітрювання.\n\nФінальний висновок сезону: рослина стабільна, зміни пояснюються погодою та навантаженням плодами, а не ознаками хвороби. Наступне рішення прийму лише після повторного огляду з тієї самої точки та порівняння фотографій.\n\nКонтрольну точку завершую без додаткового втручання: усі спостереження прив'язані до дат, фото й конкретних дій, тому наступний запис покаже реальну динаміку, а не випадкову різницю.`;
 
   return `${maximumLengthSource.slice(0, 1999)}…`;
+}
+
+function createTopicSignal(
+  entry: VisualFixtureEntry,
+  topic: VisualFixtureTopic,
+  timestampIndex: number,
+): VisualFixtureTopicSignal {
+  return {
+    journalEntryId: entry.id,
+    topicId: topic.id,
+    signalSource: "operator_curated",
+    reviewState: "accepted",
+    publicMembershipState: "eligible",
+    createdAt: timestampForIndex(timestampIndex),
+  };
+}
+
+function compareFeedEntries(
+  left: VisualFixtureEntry,
+  right: VisualFixtureEntry,
+) {
+  return (
+    right.publishedAt!.localeCompare(left.publishedAt!) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
 function createSpace(
