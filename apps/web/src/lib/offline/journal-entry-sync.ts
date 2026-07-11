@@ -4,6 +4,7 @@ import type {
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
+import { AUTH_INTENT_RETURN_HEADER } from "@/lib/auth/auth-intent-http-contract";
 import {
   getOfflineMutation,
   updateOfflineMutationPayload,
@@ -29,6 +30,18 @@ interface ProcessResponse {
 
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
+export class JournalEntrySyncError extends Error {
+  readonly status: number;
+  readonly authIntentUrl: string | null;
+
+  constructor(message: string, status: number, authIntentUrl: string | null) {
+    super(message);
+    this.name = "JournalEntrySyncError";
+    this.status = status;
+    this.authIntentUrl = authIntentUrl;
+  }
+}
+
 export async function submitJournalEntryPayload(
   payload: OfflineJournalEntryPayload,
   options: {
@@ -37,9 +50,10 @@ export async function submitJournalEntryPayload(
   } = {},
 ): Promise<FirstPlantEntryResponse> {
   const idempotencyKey = options.idempotencyKey ?? payload.clientMutationId;
+  const authReturnTo = journalEntryAuthReturnTo(payload);
   const mediaAssetId =
     payload.processedMediaAssetId ??
-    (await processPhotoIntent(payload.photoIntent ?? null));
+    (await processPhotoIntent(payload.photoIntent ?? null, authReturnTo));
 
   if (mediaAssetId && mediaAssetId !== payload.processedMediaAssetId) {
     await options.onProcessedMediaAsset?.(mediaAssetId);
@@ -53,15 +67,36 @@ export async function submitJournalEntryPayload(
 
   const response = await fetch("/api/garden/entries", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+    },
     body: JSON.stringify(requestBody),
   });
 
   if (!response.ok) {
-    throw new Error(await readSafeError(response, "Entry sync failed."));
+    const error = await readSafeSyncError(response, "Entry sync failed.");
+    throw new JournalEntrySyncError(
+      error.message,
+      response.status,
+      error.authIntentUrl,
+    );
   }
 
   return (await response.json()) as FirstPlantEntryResponse;
+}
+
+export function journalEntryAuthReturnTo(payload: OfflineJournalEntryPayload) {
+  if (
+    payload.target === "plant_object_entry" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      payload.plantObjectId,
+    )
+  ) {
+    return `/garden/objects/${payload.plantObjectId}`;
+  }
+
+  return "/garden";
 }
 
 export async function syncOfflineJournalEntryMutation(
@@ -150,7 +185,10 @@ export function buildJournalEntryRequestBodyForSync(
   };
 }
 
-async function processPhotoIntent(intent: OfflinePhotoIntent | null) {
+async function processPhotoIntent(
+  intent: OfflinePhotoIntent | null,
+  authReturnTo: string,
+) {
   if (!intent) return null;
 
   if (!ALLOWED_IMAGE_TYPES.has(intent.contentType)) {
@@ -165,13 +203,22 @@ async function processPhotoIntent(intent: OfflinePhotoIntent | null) {
 
   const uploadResponse = await fetch("/api/media/uploads", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+    },
     body: JSON.stringify({ contentType: intent.contentType }),
   });
 
   if (!uploadResponse.ok) {
-    throw new Error(
-      await readSafeError(uploadResponse, "Photo upload could not start."),
+    const error = await readSafeSyncError(
+      uploadResponse,
+      "Photo upload could not start.",
+    );
+    throw new JournalEntrySyncError(
+      error.message,
+      uploadResponse.status,
+      error.authIntentUrl,
     );
   }
 
@@ -188,13 +235,22 @@ async function processPhotoIntent(intent: OfflinePhotoIntent | null) {
 
   const processResponse = await fetch("/api/media/process", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+    },
     body: JSON.stringify({ mediaAssetId: upload.mediaAssetId }),
   });
 
   if (!processResponse.ok) {
-    throw new Error(
-      await readSafeError(processResponse, "Photo processing failed."),
+    const error = await readSafeSyncError(
+      processResponse,
+      "Photo processing failed.",
+    );
+    throw new JournalEntrySyncError(
+      error.message,
+      processResponse.status,
+      error.authIntentUrl,
     );
   }
 
@@ -209,11 +265,23 @@ async function processPhotoIntent(intent: OfflinePhotoIntent | null) {
   return processed.mediaAsset.id;
 }
 
-async function readSafeError(response: Response, fallback: string) {
+async function readSafeSyncError(response: Response, fallback: string) {
   const body = (await response.json().catch(() => null)) as {
     error?: unknown;
+    authIntentUrl?: unknown;
   } | null;
-  return typeof body?.error === "string" ? body.error : fallback;
+  const candidate =
+    typeof body?.authIntentUrl === "string" ? body.authIntentUrl : "";
+  const authIntentUrl =
+    candidate.length <= 2048 &&
+    /^\/auth\/intent\?intent=[A-Za-z0-9._~-]+$/.test(candidate)
+      ? candidate
+      : null;
+
+  return {
+    message: typeof body?.error === "string" ? body.error : fallback,
+    authIntentUrl,
+  };
 }
 
 function normalizeError(error: unknown) {

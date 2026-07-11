@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   resolveFollowUpValuePulsePrompt: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  createAuthIntentControlRef: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -44,6 +45,10 @@ vi.mock("@/server/analytics-events", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/server/auth-intent-control", () => ({
+  createAuthIntentControlRef: mocks.createAuthIntentControlRef,
 }));
 
 vi.mock("./catalog-resolve-control", () => ({
@@ -90,6 +95,9 @@ describe("/garden/objects/[objectId]", () => {
       eligible: false,
     });
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.createAuthIntentControlRef.mockImplementation(
+      (_namespace: string, source: string) => `publish-ref-${source}`,
+    );
   });
 
   it("keeps Ukrainian chrome on deep object readback without translating user content", async () => {
@@ -216,6 +224,45 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
     );
+  });
+
+  it("resumes publishing at only the exact private journal entry control", async () => {
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-2",
+          title: "Second private note",
+          body: "Private follow-up body.",
+          entryDate: "2026-07-05",
+        },
+        {
+          id: "entry-1",
+          title: "First private note",
+          body: "Private first body.",
+          entryDate: "2026-07-04",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({
+          authIntent: "publish",
+          authControl: "publish-ref-entry-2",
+        }),
+      }),
+    );
+
+    expect(html).toContain(
+      'id="entry-publish-publish-ref-entry-2" data-auth-intent-control="publish" data-auth-intent-control-ref="publish-ref-entry-2" autofocus=""',
+    );
+    expect(html).toContain(
+      'data-auth-intent-control-ref="publish-ref-entry-1"',
+    );
+    expect(html).not.toContain('id="entry-publish-publish-ref-entry-1"');
+    expect(html.match(/autofocus=""/g)).toHaveLength(1);
   });
 });
 

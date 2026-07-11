@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   toggleAnonymousEngagementLike: vi.fn(),
   revalidatePath: vi.fn(),
   cookies: vi.fn(),
+  createAuthIntentToken: vi.fn(),
+  createAuthIntentControlRef: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -53,6 +55,14 @@ vi.mock("@/server/engagement-repository", () => ({
   }),
 }));
 
+vi.mock("@/server/auth-intent-token", () => ({
+  createAuthIntentToken: mocks.createAuthIntentToken,
+}));
+
+vi.mock("@/server/auth-intent-control", () => ({
+  createAuthIntentControlRef: mocks.createAuthIntentControlRef,
+}));
+
 describe("engagement routes", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -75,6 +85,39 @@ describe("engagement routes", () => {
     mocks.cookies.mockResolvedValue({
       get: vi.fn(() => undefined),
     });
+    mocks.createAuthIntentToken.mockReturnValue("opaque-intent-token");
+    mocks.createAuthIntentControlRef.mockReturnValue("reply-a7d8f9c012345678");
+  });
+
+  it("resumes a signed-out reply at the exact opaque reply control", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { POST } = await import("./comments/route");
+
+    const response = await POST(
+      formRequest("/api/engagement/comments", {
+        targetKind: "journal_entry",
+        targetRef: "first-public-harvest",
+        returnTo: "/journal/first-public-harvest",
+        parentCommentId: "private-parent-reply-token",
+        body: "Reply draft must not travel through auth.",
+      }),
+    );
+
+    expect(response.status).toBe(303);
+    expect(mocks.createAuthIntentControlRef).toHaveBeenCalledWith(
+      "reply",
+      "private-parent-reply-token",
+    );
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "comment",
+      returnTo: "/journal/first-public-harvest",
+      target: { kind: "journal", ref: "first-public-harvest" },
+      control: "reply-a7d8f9c012345678",
+    });
+    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+      /private-parent-reply-token|Reply draft/i,
+    );
+    expect(mocks.addEngagementComment).not.toHaveBeenCalled();
   });
 
   it("routes signed-out comment intent to auth without mutating", async () => {
@@ -92,8 +135,16 @@ describe("engagement routes", () => {
 
     expect(mocks.addEngagementComment).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/garden?engagement=comment-auth&targetKind=journal_entry&targetRef=first-public-harvest&returnTo=%2Fjournal%2Ffirst-public-harvest",
+      "https://over.garden/auth/intent?intent=opaque-intent-token",
     );
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "comment",
+      returnTo: "/journal/first-public-harvest",
+      target: { kind: "journal", ref: "first-public-harvest" },
+    });
+    expect(
+      JSON.stringify(mocks.createAuthIntentToken.mock.calls),
+    ).not.toContain("Great result.");
   });
 
   it("posts signed-in comments inside the scoped account", async () => {
@@ -130,6 +181,32 @@ describe("engagement routes", () => {
     );
   });
 
+  it("never carries a protocol-confused return path into the auth token", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { POST } = await import("./comments/route");
+
+    const response = await POST(
+      formRequest("/api/engagement/comments", {
+        targetKind: "journal_entry",
+        targetRef: "first-public-harvest",
+        returnTo: "/\\attacker.example/steal",
+        body: "Private draft",
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/auth/intent?intent=opaque-intent-token",
+    );
+    expect(mocks.createAuthIntentToken).toHaveBeenLastCalledWith({
+      action: "comment",
+      returnTo: "/journal/first-public-harvest",
+      target: { kind: "journal", ref: "first-public-harvest" },
+    });
+    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+      /attacker|Private draft/i,
+    );
+  });
+
   it("routes signed-out bookmark intent to auth without mutating", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
     const { POST } = await import("./bookmarks/route");
@@ -144,8 +221,13 @@ describe("engagement routes", () => {
 
     expect(mocks.toggleEngagementBookmark).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
-      "https://over.garden/garden?engagement=bookmark-auth&targetKind=variety&targetRef=pomidor-cheri-0000000101&returnTo=%2Fvariety%2Fpomidor-cheri-0000000101",
+      "https://over.garden/auth/intent?intent=opaque-intent-token",
     );
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "bookmark",
+      returnTo: "/variety/pomidor-cheri-0000000101",
+      target: { kind: "collection", ref: "pomidor-cheri-0000000101" },
+    });
   });
 
   it("toggles signed-in bookmarks and revalidates the private shelf", async () => {

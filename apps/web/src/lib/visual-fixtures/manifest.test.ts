@@ -21,12 +21,100 @@ describe("visual fixture manifest", () => {
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(4);
     expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(5);
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.lineageEvidence.pendingIdentities,
+    ).toHaveLength(1);
+    expect(VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(80);
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
     expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(3);
     expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(15);
     expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize).toBe(8);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.intentEvidence.scenarios.length,
+    ).toBeGreaterThanOrEqual(19);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("covers every auth intent and edge state through opaque fixture routes", () => {
+    const scenarios = VISUAL_FIXTURE_MANIFEST.intentEvidence.scenarios;
+    const actions = new Set(scenarios.map((scenario) => scenario.action));
+    const states = new Set(scenarios.map((scenario) => scenario.state));
+
+    expect(actions).toEqual(
+      new Set([
+        "comment",
+        "bookmark",
+        "follow",
+        "claim",
+        "create_object",
+        "create_entry",
+        "save",
+        "publish",
+      ]),
+    );
+    expect(states).toEqual(
+      new Set([
+        "guest",
+        "already_authenticated",
+        "cancel",
+        "expired",
+        "invalid",
+        "deleted_410",
+        "now_private",
+        "insufficient_permission",
+        "draft_retained",
+      ]),
+    );
+    expect(new Set(scenarios.map((scenario) => scenario.id)).size).toBe(
+      scenarios.length,
+    );
+
+    for (const scenario of scenarios) {
+      expect(scenario.id).toMatch(/^ove174-i\d{3}$/);
+      expect(scenario.startPath).toBe(
+        `/__visual-fixtures/intent/${scenario.id}`,
+      );
+      expect(scenario.startPath).not.toContain("?");
+      expect(scenario.returnTo.startsWith("/")).toBe(true);
+      expect(scenario.resumePath).toContain(`authIntent=${scenario.action}`);
+      expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
+    }
+
+    const serialized = JSON.stringify(scenarios);
+    expect(serialized).not.toMatch(
+      /password|person@|private journal body|invite token|latitude|longitude|media key|session/i,
+    );
+    expect(
+      scenarios.find((scenario) => scenario.id === "ove174-i008"),
+    ).toMatchObject({ expectedStatus: 404 });
+    const claimScenario = scenarios.find(
+      (scenario) => scenario.id === "ove174-i004",
+    );
+    expect(claimScenario).toMatchObject({
+      action: "claim",
+      returnTo: "/garden/lineage/invitations/claim",
+    });
+    expect(claimScenario?.target).toBeUndefined();
+    expect(
+      scenarios.find((scenario) => scenario.id === "ove174-i018"),
+    ).toMatchObject({
+      action: "bookmark",
+      target: { kind: "profile", ref: "demo_olena" },
+      returnTo: "/@demo_olena",
+    });
+    expect(
+      scenarios
+        .filter((scenario) => scenario.state === "draft_retained")
+        .map((scenario) => scenario.draftKind),
+    ).toEqual(["first_entry", "first_entry", "follow_up_entry"]);
+    expect(
+      scenarios.find((scenario) => scenario.id === "ove174-i019"),
+    ).toMatchObject({
+      action: "save",
+      expectedStatus: 404,
+      draftKind: "follow_up_entry",
+    });
   });
 
   it("covers plants, animals, bee colonies, languages, visibility, and lifecycle edges", () => {

@@ -21,7 +21,12 @@ import { getPublicVarietyPage } from "@/server/public-variety-repository";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { addCatalogPublicSlugToWishlistAction } from "@/app/wishlist/actions";
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import {
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { getSiteShellSessionState } from "@/server/site-shell-session";
 import { PublicVarietySourceCredits } from "./source-credits";
 
 export const dynamic = "force-dynamic";
@@ -77,10 +82,11 @@ export default async function PublicVarietyRoute({
   params,
   searchParams,
 }: PublicVarietyRouteProps) {
-  const [{ slug }, query, locale] = await Promise.all([
+  const [{ slug }, query, locale, shellSession] = await Promise.all([
     params,
     searchParams ?? Promise.resolve(EMPTY_PUBLIC_VARIETY_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
+    getSiteShellSessionState(),
   ]);
   const copy = getPublicSurfaceCopy(locale);
   const page = await getCachedPublicVarietyPage(slug);
@@ -90,6 +96,8 @@ export default async function PublicVarietyRoute({
   const jsonLd = buildPublicVarietyJsonLd(page, locale);
   const wishlistStatus = firstParam(query.wishlist);
   const engagementStatus = firstParam(query.engagement);
+  const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
+  const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const engagementTarget = {
     kind: "variety" as const,
     ref: page.catalog.publicSlug,
@@ -203,11 +211,14 @@ export default async function PublicVarietyRoute({
       />
 
       <PublicEngagementPanel
+        isAuthenticated={shellSession.isAuthenticated}
         target={engagementTarget}
         summary={engagement}
         returnTo={publicVarietyPath(page.catalog.publicSlug)}
         status={engagementStatus}
         locale={locale}
+        resumeAction={resumeAction}
+        resumeControl={resumeControl}
       />
 
       <ol className="grid gap-4">

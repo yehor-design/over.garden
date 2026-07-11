@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   GardenAuthPanel,
+  resolveAuthCallbackPath,
   SocialAccountLinkPanel,
 } from "@/app/garden/garden-auth-panel";
 
@@ -74,6 +75,8 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(enabledHtml).toContain("Continue with Google");
     expect(enabledHtml).toContain("Continue with Facebook");
     expect(enabledHtml).toContain("Social sign-in did not finish.");
+    expect(enabledHtml).toContain('role="alert"');
+    expect(enabledHtml).toContain('aria-live="polite"');
     expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
     expect(enabledHtml).not.toContain("FACEBOOK_CLIENT_SECRET");
   });
@@ -87,5 +90,30 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(html).toContain("Link Facebook sign-in");
     expect(html).toContain("uses it only for sign-in");
     expect(html).not.toContain("client_secret");
+  });
+
+  it("uses the validated intent resume path for email and social auth", () => {
+    expect(
+      resolveAuthCallbackPath(
+        "/auth/intent/resume?intent=opaque-intent-token",
+        { pathname: "/auth/intent", search: "?intent=ignored" },
+      ),
+    ).toBe("/auth/intent/resume?intent=opaque-intent-token");
+    expect(
+      resolveAuthCallbackPath(null, {
+        pathname: "/garden",
+        search: "?source=homepage&error=provider_error",
+      }),
+    ).toBe("/garden?source=homepage");
+  });
+
+  it("can suppress local development defaults on redacted auth evidence surfaces", () => {
+    const html = renderToStaticMarkup(
+      <GardenAuthPanel prefillDevelopmentDefaults={false} />,
+    );
+
+    expect(html).not.toContain("gardener@over.garden");
+    expect(html).not.toContain("overgarden-local-gardener");
+    expect(html).not.toContain("Local Gardener");
   });
 });

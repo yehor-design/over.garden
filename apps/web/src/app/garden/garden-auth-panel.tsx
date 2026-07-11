@@ -22,6 +22,7 @@ import {
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
 import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
+import { cn } from "@/lib/utils";
 
 type SocialProviderId = typeof GOOGLE_PROVIDER_ID | typeof FACEBOOK_PROVIDER_ID;
 
@@ -42,23 +43,34 @@ const SOCIAL_PROVIDER_OPTIONS = [
 
 interface GardenAuthPanelProps {
   activationSource?: ActivationSource;
+  autoFocusEmail?: boolean;
   catalogName?: string | null;
+  embedded?: boolean;
   facebookSignInEnabled?: boolean;
   googleSignInEnabled?: boolean;
   initialMessage?: string | null;
   postAuthPath?: string | null;
+  prefillDevelopmentDefaults?: boolean;
+  prompt?: string | null;
+  title?: string | null;
 }
 
 export function GardenAuthPanel({
   activationSource = "direct_garden",
+  autoFocusEmail = false,
   catalogName,
+  embedded = false,
   facebookSignInEnabled = false,
   googleSignInEnabled = false,
   initialMessage = null,
   postAuthPath = null,
+  prefillDevelopmentDefaults = true,
+  prompt = null,
+  title = null,
 }: GardenAuthPanelProps) {
   const router = useRouter();
-  const useDevDefaults = shouldUseLocalDevAuthDefaults();
+  const useDevDefaults =
+    prefillDevelopmentDefaults && shouldUseLocalDevAuthDefaults();
   const [email, setEmail] = useState(
     useDevDefaults ? LOCAL_DEV_DEFAULT_EMAIL : "",
   );
@@ -139,7 +151,7 @@ export function GardenAuthPanel({
     setIsPending(true);
     setMessage("");
 
-    const callbackURL = currentOAuthCallbackPath();
+    const callbackURL = resolveAuthCallbackPath(postAuthPath);
     const { error } = await authClient.signIn.social({
       provider,
       callbackURL,
@@ -159,15 +171,18 @@ export function GardenAuthPanel({
 
   return (
     <section
-      className="flex max-w-xl flex-col gap-4 rounded-lg border border-border p-4"
+      className={cn(
+        "flex max-w-xl flex-col gap-4",
+        !embedded && "rounded-lg border border-border p-4",
+      )}
       data-testid="garden-auth-panel"
     >
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">
-          Garden workspace
+          {title ?? "Garden workspace"}
         </h2>
         <p className="text-sm text-muted-foreground">
-          {authPrompt({ activationSource, catalogName })}
+          {prompt ?? authPrompt({ activationSource, catalogName })}
         </p>
       </div>
 
@@ -176,6 +191,7 @@ export function GardenAuthPanel({
           <span className="font-medium text-foreground">Email</span>
           <input
             type="email"
+            autoFocus={autoFocusEmail}
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
@@ -254,6 +270,8 @@ export function GardenAuthPanel({
 
       {message ? (
         <p
+          role="alert"
+          aria-live="polite"
           className="text-sm text-destructive"
           data-testid="garden-auth-message"
         >
@@ -335,6 +353,8 @@ export function SocialAccountLinkPanel({
       </div>
       {message ? (
         <p
+          role="alert"
+          aria-live="polite"
           className="text-sm text-destructive"
           data-testid="social-link-message"
         >
@@ -370,6 +390,15 @@ function authPrompt({
 function currentOAuthCallbackPath() {
   if (typeof window === "undefined") return "/garden";
   return oauthCallbackPath(window.location);
+}
+
+export function resolveAuthCallbackPath(
+  postAuthPath: string | null,
+  location?: Pick<Location, "pathname" | "search">,
+) {
+  if (postAuthPath) return postAuthPath;
+  if (location) return oauthCallbackPath(location);
+  return currentOAuthCallbackPath();
 }
 
 function availableSocialProviderOptions({

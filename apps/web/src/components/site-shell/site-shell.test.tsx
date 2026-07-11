@@ -35,9 +35,14 @@ describe("production site shell", () => {
     expect(html).toContain('href="/knowledge"');
     expect(html).toContain("Живі об&#x27;єкти");
     expect(html).toContain("Увійти");
+    expect(html).toContain('data-site-shell-guest-actions="true"');
+    expect(html).toContain('name="action" value="create_object"');
+    expect(html).toContain('name="action" value="create_entry"');
+    expect(html).toContain('data-site-shell-action="add-guest"');
     expect(html).toContain('aria-label="Відкрити навігацію"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain(">Моє<");
+    expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
   });
 
   it("adds the complete Bulgarian My rail without serializing account data", async () => {

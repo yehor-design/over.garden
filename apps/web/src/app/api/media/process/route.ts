@@ -1,4 +1,8 @@
-import { requireCurrentUserId } from "@/server/auth-session";
+import {
+  AuthenticationRequiredError,
+  requireCurrentUserId,
+} from "@/server/auth-session";
+import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import {
   getMediaAssetForOwner,
   markMediaAssetFailed,
@@ -10,7 +14,17 @@ import { scopedToUser } from "@/server/request-scope";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentUserId();
+  let userId: string;
+  try {
+    userId = await requireCurrentUserId();
+  } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+    return authIntentRequiredResponse(request, {
+      action: "save",
+      fallbackReturnTo: "/garden",
+      message: "Sign in to continue this photo save.",
+    });
+  }
   const scope = scopedToUser(userId);
   const body = (await request.json()) as { mediaAssetId?: string };
 

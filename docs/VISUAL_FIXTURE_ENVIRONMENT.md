@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187
 Manifest version: `ove187-v1`
-Manifest SHA-256: `d90bd3e66d017d487f8a2fe36c11604c8c962650996a8902432b6bd16ee7a729`
+Manifest SHA-256: `08aab73bd3e708298746b937836cd4e4c8c99d85be8990f0703df7391f9f2698`
 
 ## Purpose
 
@@ -22,6 +22,18 @@ The manifest owns exactly:
 - 17 real-route scenarios covering public-feed empty, typical, dense, loading,
   recoverable error, pagination, exhausted, and context-empty states alongside
   the existing object/journal HTTP 404 and 410 states.
+- 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
+  Claim, Add object, Add journal entry, Save, and Publish across guest,
+  authenticated, cancel, expired, invalid, deleted, unavailable,
+  insufficient-permission, preserved-filter/cursor, profile-target, and
+  retained-draft states. The retained-draft starts write realistic synthetic
+  first-entry and follow-up payloads to IndexedDB before authentication instead
+  of representing retention with a query string alone. The first-entry draft
+  resumes to an accessible owner workspace, while the synthetic-owner follow-up
+  explicitly expects the permission-changed `404` boundary. The Claim start
+  signs a short-lived invite for deterministic pending-identity and provenance
+  rows, then traverses the real fragment handoff, encrypted HttpOnly cookie,
+  clean claim route, and intent-aware sign-in boundary.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,
@@ -81,8 +93,9 @@ guard before dynamic database/storage imports as defense in depth. The enabled
 index is `noindex` and is excluded from the product shell.
 
 Fixture rows are identified by exact manifest IDs. Reset removes media, topic
-memberships, topics, entries, objects, spaces, profiles, and actors in reverse
-foreign-key order and deletes only the manifest's storage keys under
+memberships, topics, entries, claimable lineage edges and pending identities,
+objects, spaces, profiles, and actors in reverse foreign-key order and deletes
+only the manifest's storage keys under
 `visual-fixtures/ove187-v1/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
@@ -154,6 +167,8 @@ The expected final counts are:
   "profiles": 4,
   "spaces": 5,
   "objects": 30,
+  "lineagePendingIdentities": 1,
+  "lineageEdges": 1,
   "entries": 80,
   "topics": 3,
   "topicSignals": 15,
@@ -189,6 +204,22 @@ streaming `loading.tsx` boundary, Next.js returns HTTP `200` plus injected
 labels this case `Not-found UI · 200` instead of claiming a hard 404. This is
 the framework's documented streamed-response contract, not a fixture seed
 failure.
+
+The intent section starts each authentication handoff through a gated route
+that exposes only its stable opaque scenario ID:
+
+```text
+/__visual-fixtures/intent/ove174-i001
+```
+
+That server route looks up the allowlisted action and target inside the
+manifest, issues the same encrypted fifteen-minute token as the product flow,
+and redirects to `/auth/intent`. Expired and modified-token scenarios are
+generated server-side. The index also links the expected resumed route with
+only the bounded `authIntent` focus enum; it never renders token bytes, target
+fields, draft content, actor credentials, invitation material, private entry
+content, or location data. These scenarios add no database rows and do not
+change the exact fixture reset namespace.
 
 ## Preview Use
 

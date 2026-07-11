@@ -51,6 +51,8 @@ describe("/__visual-fixtures", () => {
         profiles: 4,
         spaces: 5,
         objects: 30,
+        lineagePendingIdentities: 1,
+        lineageEdges: 1,
         entries: 80,
         topics: 3,
         topicSignals: 15,
@@ -61,6 +63,8 @@ describe("/__visual-fixtures", () => {
         profiles: 4,
         spaces: 5,
         objects: 30,
+        lineagePendingIdentities: 1,
+        lineageEdges: 1,
         entries: 80,
         topics: 3,
         topicSignals: 15,
@@ -91,6 +95,8 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("4");
     expect(html).toContain("30");
     expect(html).toContain("80");
+    expect(html).toContain("Pending lineage");
+    expect(html).toContain("Claimable edges");
     expect(html).toContain("Trusted topics");
     expect(html).toContain("Topic memberships");
     expect(html).toContain("15");
@@ -103,6 +109,16 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Expected 410");
     expect(html).toContain("Not-found UI · 200");
     expect(html).toContain("State coverage");
+    expect(html).toContain("Intent-aware authentication");
+    expect(html).toContain("Comment · guest start");
+    expect(html).toContain("Publish · permission recheck");
+    expect(html).toContain("Bookmark · profile target");
+    expect(html).toContain("Save · follow-up draft permission changed");
+    expect(html).toContain("Seed draft and start");
+    expect(html).toContain('href="/__visual-fixtures/intent/ove174-i001"');
+    expect(html).toContain("authIntent=comment");
+    expect(html).toContain("authIntent=create_object");
+    expect(html).not.toContain('name="targetRef"');
     expect(html).toContain("Owner-only journals");
     expect(html).toContain("Archived journals");
     expect(html).toContain("Maximum-length copy");

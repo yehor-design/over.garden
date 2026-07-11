@@ -2,6 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
+  redirect: vi.fn(),
+  cookies: vi.fn(),
+  cookieGet: vi.fn(),
+  cookieDelete: vi.fn(),
+  unsealLineageClaimToken: vi.fn(),
+  createAuthIntentToken: vi.fn(),
   requireCurrentRequestScope: vi.fn(async () => ({
     userId: "00000000-0000-4000-8000-000000000777",
     sessionId: "session-1",
@@ -17,11 +23,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }));
-
+vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/server/auth-session", () => ({
+  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
 }));
-
+vi.mock("@/server/auth-intent-token", () => ({
+  createAuthIntentToken: mocks.createAuthIntentToken,
+}));
+vi.mock("@/server/lineage-claim-cookie", () => ({
+  unsealLineageClaimToken: mocks.unsealLineageClaimToken,
+}));
 vi.mock("@/server/lineage-repository", () => ({
   resolveLineageInvitationClaim: mocks.resolveLineageInvitationClaim,
 }));
@@ -29,14 +42,26 @@ vi.mock("@/server/lineage-repository", () => ({
 describe("/garden/lineage/invitations/claim actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.cookies.mockResolvedValue({
+      get: mocks.cookieGet,
+      delete: mocks.cookieDelete,
+    });
+    mocks.cookieGet.mockReturnValue({ value: "v1.opaque.sealed.tag" });
+    mocks.unsealLineageClaimToken.mockReturnValue(
+      "v1.private-payload.private-signature",
+    );
+    mocks.createAuthIntentToken.mockReturnValue("opaque-claim-intent");
+    mocks.redirect.mockImplementation((url: string) => {
+      throw new Error(`NEXT_REDIRECT:${url}`);
+    });
   });
 
-  it("confirms an invitation claim through the signed-in scope only", async () => {
+  it("confirms using only the server-readable encrypted cookie", async () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
-    const formData = new FormData();
-    formData.set("token", "v1.payload.signature");
 
-    await confirmLineageInvitationClaimAction(formData);
+    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/lineage/claims?invitation=confirmed",
+    );
 
     expect(mocks.requireCurrentRequestScope).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
@@ -45,33 +70,80 @@ describe("/garden/lineage/invitations/claim actions", () => {
         sessionId: "session-1",
       },
       {
-        token: "v1.payload.signature",
+        token: "v1.private-payload.private-signature",
         decision: "confirmed",
       },
     );
+    expect(mocks.cookieDelete).toHaveBeenCalledWith({
+      name: "overgarden-lineage-claim",
+      path: "/garden/lineage/invitations/claim",
+    });
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/garden/lineage/invitations/claim",
     );
-    expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
-    expect(mocks.revalidatePath).toHaveBeenCalledWith(
-      "/garden/objects/00000000-0000-4000-8000-000000000101",
-    );
   });
 
-  it("declines an invitation claim without a write-eligibility grant", async () => {
+  it("declines without accepting a token from form data", async () => {
     const { declineLineageInvitationClaimAction } = await import("./actions");
-    const formData = new FormData();
-    formData.set("token", "v1.payload.signature");
 
-    await declineLineageInvitationClaimAction(formData);
+    await expect(declineLineageInvitationClaimAction()).rejects.toThrow(
+      "NEXT_REDIRECT:/garden/lineage/claims?invitation=declined",
+    );
 
-    expect(mocks.requireCurrentRequestScope).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
       expect.any(Object),
       {
-        token: "v1.payload.signature",
+        token: "v1.private-payload.private-signature",
         decision: "declined",
       },
     );
+    expect(mocks.cookieDelete).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed when the handoff cookie is absent or invalid", async () => {
+    mocks.unsealLineageClaimToken.mockReturnValueOnce(null);
+    const { confirmLineageInvitationClaimAction } = await import("./actions");
+
+    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
+      "Lineage invitation is unavailable.",
+    );
+
+    expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();
+    expect(mocks.cookieDelete).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
+  it("resumes the claim after a session expires without moving the invite token", async () => {
+    const { AuthenticationRequiredError } =
+      await import("@/server/auth-session");
+    mocks.requireCurrentRequestScope.mockRejectedValueOnce(
+      new AuthenticationRequiredError(),
+    );
+    const { confirmLineageInvitationClaimAction } = await import("./actions");
+
+    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
+      "NEXT_REDIRECT:/auth/intent?intent=opaque-claim-intent",
+    );
+
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "claim",
+      returnTo: "/garden/lineage/invitations/claim",
+    });
+    expect(mocks.cookies).not.toHaveBeenCalled();
+    expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();
+    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+      /private-payload|sealed\.tag/i,
+    );
+  });
+
+  it("does not misclassify an operational scope failure as authentication", async () => {
+    const failure = new Error("session store unavailable");
+    mocks.requireCurrentRequestScope.mockRejectedValueOnce(failure);
+    const { confirmLineageInvitationClaimAction } = await import("./actions");
+
+    await expect(confirmLineageInvitationClaimAction()).rejects.toBe(failure);
+
+    expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

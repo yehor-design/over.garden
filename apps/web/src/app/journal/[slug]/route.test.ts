@@ -113,7 +113,7 @@ describe("public journal route", () => {
 
     const response = await GET(
       new Request(
-        "https://over.garden/journal/first-ripe-cluster?engagement=bookmarked",
+        "https://over.garden/journal/first-ripe-cluster?engagement=bookmarked&authIntent=bookmark",
       ),
       {
         params: Promise.resolve({ slug: "first-ripe-cluster" }),
@@ -126,6 +126,7 @@ describe("public journal route", () => {
     expect(html).toContain('<html lang="bg">');
     expect(html).toContain("Запис в дневника на жив обект");
     expect(html).toContain("Запазено в отметките.");
+    expect(html).toContain('data-auth-intent-resumed="bookmark"');
     expect(html).toContain("Отворете паспорта на живия обект");
     expect(html).toContain(">Моето<");
     expect(html).toContain("Моята градина");

@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   getEngagementSummary: vi.fn(),
   addCatalogPublicSlugToWishlistAction: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  getSiteShellSessionState: vi.fn(),
 }));
 
 vi.mock("@/server/public-variety-repository", () => ({
@@ -28,6 +29,10 @@ vi.mock("@/app/wishlist/actions", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/server/site-shell-session", () => ({
+  getSiteShellSessionState: mocks.getSiteShellSessionState,
 }));
 
 vi.mock("./source-credits", () => ({
@@ -86,6 +91,9 @@ describe("/variety/[slug]", () => {
       ],
     });
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
+    mocks.getSiteShellSessionState.mockResolvedValue({
+      isAuthenticated: false,
+    });
   });
 
   it("renders catalog status through user-facing labels", async () => {
@@ -111,8 +119,11 @@ describe("/variety/[slug]", () => {
 
     expect(html).toContain("Сохранить в список желаний");
     expect(html).toContain("/api/engagement/likes");
-    expect(html).toContain("/api/engagement/bookmarks");
-    expect(html).toContain("/api/engagement/comments");
+    expect(html).toContain("/auth/intent/start");
+    expect(html).toContain('name="action" value="bookmark"');
+    expect(html).toContain('name="action" value="comment"');
+    expect(html).not.toContain("/api/engagement/bookmarks");
+    expect(html).not.toContain("/api/engagement/comments");
     expect(html).toContain('name="catalogPublicSlug"');
     expect(html).toContain('value="pomidor-cheri-0000000101"');
     expect(html).toContain("/garden?catalog=pomidor-cheri-0000000101");

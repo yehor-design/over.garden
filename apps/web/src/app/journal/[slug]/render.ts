@@ -2,6 +2,10 @@ import {
   publicJournalEntryPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
+import {
+  buildAuthIntentAnchor,
+  type AuthIntentAction,
+} from "@/lib/auth/auth-intent-contract";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -13,6 +17,7 @@ import type {
   EngagementTarget,
   PublicEngagementSummary,
 } from "@/server/engagement-repository";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import {
   evaluatePublicSurfaceIndexability,
   formatRobotsMetaContent,
@@ -34,6 +39,8 @@ export function renderPublicJournalEntryHtml(
   engagementStatus?: string | null,
   locale: InterfaceLocale = "uk",
   isAuthenticated = false,
+  resumeAction: AuthIntentAction | null = null,
+  resumeControl: string | null = null,
 ) {
   const copy = getPublicSurfaceCopy(locale);
   const title = `${page.entry.title} · ${copy.journal.metadataTitleSuffix} | OverGarden`;
@@ -114,6 +121,9 @@ export function renderPublicJournalEntryHtml(
                 returnTo: publicJournalEntryPath(page.entry.publicSlug),
                 status: engagementStatus,
                 locale,
+                isAuthenticated,
+                resumeAction,
+                resumeControl,
               })
             : ""
         }
@@ -341,17 +351,24 @@ function renderEngagementHtml({
   returnTo,
   status,
   locale,
+  isAuthenticated,
+  resumeAction,
+  resumeControl,
 }: {
   target: EngagementTarget;
   summary: PublicEngagementSummary;
   returnTo: string;
   status?: string | null;
   locale: InterfaceLocale;
+  isAuthenticated: boolean;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
 }) {
   const copy = getPublicSurfaceCopy(locale);
+  const intentTarget = engagementAuthIntentTarget(target);
 
   return `
-    <section class="engagement">
+    <section id="comments" class="engagement"${resumeAction ? ` data-auth-intent-resumed="${escapeAttribute(resumeAction)}"` : ""}>
       <div class="engagement-actions">
         <div class="action-row">
           ${renderActionForm({
@@ -360,30 +377,58 @@ function renderEngagementHtml({
             returnTo,
             label: copy.engagement.like,
           })}
-          ${renderActionForm({
-            action: "/api/engagement/bookmarks",
-            target,
-            returnTo,
-            label: copy.engagement.bookmark,
-          })}
+          ${
+            isAuthenticated
+              ? renderActionForm({
+                  action: "/api/engagement/bookmarks",
+                  target,
+                  returnTo,
+                  label: copy.engagement.bookmark,
+                  intentAction: "bookmark",
+                  autoFocus: resumeAction === "bookmark" && !resumeControl,
+                })
+              : renderAuthIntentForm({
+                  action: "bookmark",
+                  target: intentTarget,
+                  returnTo,
+                  label: copy.engagement.bookmark,
+                })
+          }
         </div>
         <p class="muted">${escapeHtml(formatLikeCount(summary.activeLikeCount, locale))}</p>
       </div>
       ${status ? `<p class="muted">${escapeHtml(engagementStatusMessage(status, locale))}</p>` : ""}
-      <form method="post" action="/api/engagement/comments" class="comment-form">
-        ${renderTargetFields(target, returnTo)}
-        <label>
-          <span>${escapeHtml(copy.engagement.comment)}</span>
-          <textarea name="body" maxlength="600" rows="3"></textarea>
-        </label>
-        <button class="button" type="submit">${escapeHtml(copy.engagement.comment)}</button>
-      </form>
+      ${resumeAction === "comment" || resumeAction === "bookmark" ? `<p class="intent-resumed" role="status">Sign-in complete. Confirm the action below to continue.</p>` : ""}
+      ${
+        isAuthenticated
+          ? `<form method="post" action="/api/engagement/comments" class="comment-form">
+              ${renderTargetFields(target, returnTo)}
+              <label>
+                <span>${escapeHtml(copy.engagement.comment)}</span>
+                <textarea id="engagement-comment" data-auth-intent-control="comment"${resumeAction === "comment" && !resumeControl ? " autofocus" : ""} name="body" maxlength="600" rows="3"></textarea>
+              </label>
+              <button class="button" type="submit">${escapeHtml(copy.engagement.comment)}</button>
+            </form>`
+          : renderAuthIntentForm({
+              action: "comment",
+              target: intentTarget,
+              returnTo,
+              label: copy.engagement.comment,
+              className: "comment-intent",
+            })
+      }
       ${
         summary.comments.length === 0
           ? `<p class="muted">${escapeHtml(copy.engagement.noComments)}</p>`
           : `<ol class="comments">${summary.comments
-              .map(
-                (comment) => `
+              .map((comment) => {
+                const replyControl = createAuthIntentControlRef(
+                  "reply",
+                  comment.replyToken,
+                );
+                const isResumedReply =
+                  resumeAction === "comment" && resumeControl === replyControl;
+                return `
                   <li class="comment">
                     <div class="comment-meta">
                       <strong>${escapeHtml(comment.authorLabel)}</strong>
@@ -391,20 +436,32 @@ function renderEngagementHtml({
                     </div>
                     ${comment.parentReplyToken ? `<p class="muted">${escapeHtml(copy.engagement.reply)}</p>` : ""}
                     <p>${escapeHtml(comment.body).replaceAll("\n", "<br />")}</p>
-                    <form method="post" action="/api/engagement/comments" class="reply-form">
-                      ${renderTargetFields(target, returnTo)}
-                      <input type="hidden" name="parentCommentId" value="${escapeAttribute(comment.replyToken)}" />
-                      <label>
-                        <span>${escapeHtml(copy.engagement.reply)}</span>
-                        <textarea name="body" maxlength="600" rows="2"></textarea>
-                      </label>
-                      <button class="button secondary" type="submit">${escapeHtml(copy.engagement.reply)}</button>
-                    </form>
+                    ${
+                      isAuthenticated
+                        ? `<form method="post" action="/api/engagement/comments" class="reply-form">
+                            ${renderTargetFields(target, returnTo)}
+                            <input type="hidden" name="parentCommentId" value="${escapeAttribute(comment.replyToken)}" />
+                            <label>
+                              <span>${escapeHtml(copy.engagement.reply)}</span>
+                              <textarea${isResumedReply ? ` id="${escapeAttribute(buildAuthIntentAnchor("comment", replyControl))}" autofocus` : ""} data-auth-intent-control="comment" data-auth-intent-control-ref="${escapeAttribute(replyControl)}" name="body" maxlength="600" rows="2"></textarea>
+                            </label>
+                            <button class="button secondary" type="submit">${escapeHtml(copy.engagement.reply)}</button>
+                          </form>`
+                        : renderAuthIntentForm({
+                            action: "comment",
+                            target: intentTarget,
+                            returnTo,
+                            control: replyControl,
+                            label: copy.engagement.reply,
+                            className: "reply-intent",
+                          })
+                    }
                   </li>
-                `,
-              )
+                `;
+              })
               .join("")}</ol>`
       }
+      ${renderRawAuthIntentFocusScript(resumeAction, resumeControl)}
     </section>
   `;
 }
@@ -414,18 +471,71 @@ function renderActionForm({
   target,
   returnTo,
   label,
+  intentAction,
+  autoFocus = false,
 }: {
   action: string;
   target: EngagementTarget;
   returnTo: string;
   label: string;
+  intentAction?: AuthIntentAction;
+  autoFocus?: boolean;
 }) {
   return `
     <form method="post" action="${escapeAttribute(action)}">
       ${renderTargetFields(target, returnTo)}
-      <button class="button" type="submit">${escapeHtml(label)}</button>
+      <button${intentAction ? ` id="engagement-${escapeAttribute(intentAction)}" data-auth-intent-control="${escapeAttribute(intentAction)}"` : ""}${autoFocus ? " autofocus" : ""} class="button" type="submit">${escapeHtml(label)}</button>
     </form>
   `;
+}
+
+function renderAuthIntentForm({
+  action,
+  target,
+  returnTo,
+  label,
+  className = "",
+  control,
+}: {
+  action: "comment" | "bookmark";
+  target: { kind: "journal" | "object" | "collection"; ref: string };
+  returnTo: string;
+  label: string;
+  className?: string;
+  control?: string;
+}) {
+  return `
+    <form method="post" action="/auth/intent/start" class="${escapeAttribute(className)}">
+      <input type="hidden" name="action" value="${escapeAttribute(action)}" />
+      <input type="hidden" name="returnTo" value="${escapeAttribute(returnTo)}" />
+      <input type="hidden" name="targetKind" value="${escapeAttribute(target.kind)}" />
+      <input type="hidden" name="targetRef" value="${escapeAttribute(target.ref)}" />
+      ${control ? `<input type="hidden" name="control" value="${escapeAttribute(control)}" />` : ""}
+      <button class="button${action === "bookmark" ? " secondary" : ""}" data-auth-intent-control="${escapeAttribute(action)}"${control ? ` data-auth-intent-control-ref="${escapeAttribute(control)}"` : ""} type="submit">${escapeHtml(label)}</button>
+    </form>
+  `;
+}
+
+function renderRawAuthIntentFocusScript(
+  action: AuthIntentAction | null,
+  control: string | null,
+) {
+  if (!action) return "";
+  const selector = control
+    ? `[data-auth-intent-control="${action}"][data-auth-intent-control-ref="${control}"]`
+    : `[data-auth-intent-control="${action}"]`;
+
+  return `<script data-auth-intent-focus-script="true">requestAnimationFrame(()=>{const target=document.querySelector(${JSON.stringify(selector)});if(target instanceof HTMLElement){target.focus({preventScroll:true});target.scrollIntoView({block:"center"});}});</script>`;
+}
+
+function engagementAuthIntentTarget(target: EngagementTarget) {
+  if (target.kind === "journal_entry") {
+    return { kind: "journal" as const, ref: target.ref };
+  }
+  if (target.kind === "lineage_object") {
+    return { kind: "object" as const, ref: target.ref };
+  }
+  return { kind: "collection" as const, ref: target.ref };
 }
 
 function renderTargetFields(target: EngagementTarget, returnTo: string) {

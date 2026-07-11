@@ -10,8 +10,14 @@ import {
 } from "./queue";
 import {
   buildJournalEntryRequestBodyForSync,
+  journalEntryAuthReturnTo,
+  JournalEntrySyncError,
+  submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "./journal-entry-sync";
+
+const AUTH_RETURN_HEADER = "x-overgarden-auth-return";
+const OBJECT_ID = "00000000-0000-4000-8000-000000000201";
 
 const payload: OfflineJournalEntryPayload = {
   spaceName: "Balcony",
@@ -172,12 +178,45 @@ describe("offline journal entry sync", () => {
     expect(JSON.stringify(body)).not.toContain("public_url");
   });
 
+  it("uses the garden as the first-entry authentication return target", () => {
+    expect(journalEntryAuthReturnTo(payload)).toBe("/garden");
+  });
+
+  it("uses the exact object as a follow-up authentication return target", () => {
+    expect(
+      journalEntryAuthReturnTo({
+        target: "plant_object_entry",
+        plantObjectId: OBJECT_ID,
+        title: "Second flowering wave",
+        body: "The same plant has stronger new leaves.",
+        entryDate: "2026-06-27",
+        clientMutationId: "payload-entry-id",
+      }),
+    ).toBe(`/garden/objects/${OBJECT_ID}`);
+  });
+
+  it("falls back to the garden when a follow-up object id is malformed", () => {
+    expect(
+      journalEntryAuthReturnTo({
+        target: "plant_object_entry",
+        plantObjectId: "not-a-safe-route-id",
+        title: "Second flowering wave",
+        body: "The same plant has stronger new leaves.",
+        entryDate: "2026-06-27",
+        clientMutationId: "payload-entry-id",
+      }),
+    ).toBe("/garden");
+  });
+
   it("syncs a queued entry through the canonical create endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         expect(String(input)).toBe("/api/garden/entries");
+        expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+          "/garden",
+        );
         requests.push(JSON.parse(String(init?.body)) as FirstPlantEntryRequest);
         return Response.json({
           space: {
@@ -221,12 +260,92 @@ describe("offline journal entry sync", () => {
     expect(synced?.syncResult).toEqual(result);
   });
 
+  it("surfaces an opaque re-auth destination without copying the draft into it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          {
+            error: "Sign in to save an entry.",
+            authIntentUrl: "/auth/intent?intent=opaque-save-intent",
+          },
+          { status: 401 },
+        ),
+      ),
+    );
+
+    let received: unknown;
+    try {
+      await submitJournalEntryPayload(payload);
+    } catch (error) {
+      received = error;
+    }
+
+    expect(received).toBeInstanceOf(JournalEntrySyncError);
+    expect(received).toMatchObject({
+      status: 401,
+      authIntentUrl: "/auth/intent?intent=opaque-save-intent",
+    });
+    expect(JSON.stringify(received)).not.toMatch(
+      /Two new flower clusters|Cherry tomato|payload-entry-id/i,
+    );
+  });
+
+  it("preserves a photo draft when authentication expires before upload", async () => {
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        expect(String(input)).toBe("/api/media/uploads");
+        expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+          "/garden",
+        );
+        return Response.json(
+          {
+            error: "Sign in to continue this photo save.",
+            authIntentUrl: "/auth/intent?intent=opaque-media-intent",
+          },
+          { status: 401 },
+        );
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const photoPayload: OfflineJournalEntryPayload = {
+      ...payload,
+      photoIntent: {
+        fileName: "private-garden-photo.jpg",
+        contentType: "image/jpeg",
+        size: 123,
+        blob: new Blob(["private-photo-bytes"], { type: "image/jpeg" }),
+      },
+    };
+
+    let received: unknown;
+    try {
+      await submitJournalEntryPayload(photoPayload);
+    } catch (error) {
+      received = error;
+    }
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(received).toBeInstanceOf(JournalEntrySyncError);
+    expect(received).toMatchObject({
+      status: 401,
+      authIntentUrl: "/auth/intent?intent=opaque-media-intent",
+    });
+    expect(JSON.stringify(received)).not.toMatch(
+      /private-garden-photo|private-photo-bytes|Two new flower clusters/i,
+    );
+  });
+
   it("syncs a queued existing-object follow-up through the canonical endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         expect(String(input)).toBe("/api/garden/entries");
+        expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+          `/garden/objects/${OBJECT_ID}`,
+        );
         requests.push(JSON.parse(String(init?.body)) as FirstPlantEntryRequest);
         return Response.json({
           space: {
@@ -258,7 +377,7 @@ describe("offline journal entry sync", () => {
       kind: "journal_entry",
       payload: {
         target: "plant_object_entry",
-        plantObjectId: "object-1",
+        plantObjectId: OBJECT_ID,
         title: "Second flowering wave",
         body: "The same plant has stronger new leaves.",
         entryDate: "2026-06-27",
@@ -273,7 +392,7 @@ describe("offline journal entry sync", () => {
 
     expect(requests).toHaveLength(1);
     expect(requests[0]?.target).toBe("plant_object_entry");
-    expect(requests[0]?.plantObjectId).toBe("object-1");
+    expect(requests[0]?.plantObjectId).toBe(OBJECT_ID);
     expect(requests[0]?.spaceName).toBeUndefined();
     expect(requests[0]?.plantName).toBeUndefined();
     expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
@@ -394,6 +513,9 @@ describe("offline journal entry sync", () => {
         const url = String(input);
 
         if (url === "/api/media/uploads") {
+          expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+            "/garden",
+          );
           return Response.json({
             mediaAssetId: "media-1",
             uploadUrl: "https://upload.example/quarantine/key",
@@ -406,6 +528,9 @@ describe("offline journal entry sync", () => {
         }
 
         if (url === "/api/media/process") {
+          expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+            "/garden",
+          );
           return Response.json({
             mediaAsset: {
               id: "media-1",
@@ -417,6 +542,9 @@ describe("offline journal entry sync", () => {
         }
 
         if (url === "/api/garden/entries") {
+          expect(new Headers(init?.headers).get(AUTH_RETURN_HEADER)).toBe(
+            "/garden",
+          );
           requests.push(
             JSON.parse(String(init?.body)) as FirstPlantEntryRequest,
           );

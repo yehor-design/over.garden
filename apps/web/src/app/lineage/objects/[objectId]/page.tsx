@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { cache, type ReactNode } from "react";
 import {
   ArrowRight,
+  BellPlus,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -16,7 +17,14 @@ import {
 } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  buildAuthIntentAnchor,
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+  type AuthIntentAction,
+} from "@/lib/auth/auth-intent-contract";
 import {
   publicLineageObjectPath,
   publicVarietyPath,
@@ -30,6 +38,7 @@ import {
 } from "@/lib/public-surface-localization";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { listLineageInteractionTargets } from "@/server/lineage-interactions-repository";
@@ -138,6 +147,8 @@ export default async function PublicLineageObjectRoute({
   };
   const returnTo = publicLineageObjectPath(passport.object.plantObjectId);
   const engagement = await getEngagementSummary(engagementTarget);
+  const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
+  const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
 
   return (
     <main
@@ -147,11 +158,14 @@ export default async function PublicLineageObjectRoute({
       <PublicObjectPassportHero passport={passport} locale={locale} />
 
       <PublicEngagementPanel
+        isAuthenticated={Boolean(userId)}
         target={engagementTarget}
         summary={engagement}
         returnTo={returnTo}
         status={firstParam(query.engagement)}
         locale={locale}
+        resumeAction={resumeAction}
+        resumeControl={resumeControl}
       />
 
       <PublicJournalPreviewSection passport={passport} locale={locale} />
@@ -185,9 +199,13 @@ export default async function PublicLineageObjectRoute({
               const interactionTargetId = interactionTargetsByEdgeId.get(
                 edge.id,
               )?.targetPlantObjectId;
-              const interactionTarget = interactionTargetId
+              const authorizedInteractionTarget = interactionTargetId
                 ? nodesById.get(interactionTargetId)
                 : null;
+              const publicInteractionTarget =
+                edge.subjectPlantObjectId === passport.object.plantObjectId
+                  ? source
+                  : subject;
 
               return (
                 <PublicLineageEdgeCard
@@ -196,7 +214,13 @@ export default async function PublicLineageObjectRoute({
                   subject={subject}
                   source={source}
                   rootPlantObjectId={passport.object.plantObjectId}
-                  interactionTarget={interactionTarget ?? null}
+                  interactionTarget={
+                    authorizedInteractionTarget ?? publicInteractionTarget
+                  }
+                  isAuthenticated={Boolean(userId)}
+                  canInteract={Boolean(authorizedInteractionTarget)}
+                  resumeAction={resumeAction}
+                  resumeControl={resumeControl}
                   locale={locale}
                 />
               );
@@ -581,6 +605,10 @@ function PublicLineageEdgeCard({
   source,
   rootPlantObjectId,
   interactionTarget,
+  isAuthenticated,
+  canInteract,
+  resumeAction,
+  resumeControl,
   locale,
 }: {
   edge: PublicLineageEdge;
@@ -588,6 +616,10 @@ function PublicLineageEdgeCard({
   source: PublicLineageNode;
   rootPlantObjectId: string;
   interactionTarget: PublicLineageNode | null;
+  isAuthenticated: boolean;
+  canInteract: boolean;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
   locale: InterfaceLocale;
 }) {
   const copy = getPublicSurfaceCopy(locale);
@@ -626,6 +658,10 @@ function PublicLineageEdgeCard({
           edge={edge}
           rootPlantObjectId={rootPlantObjectId}
           target={interactionTarget}
+          isAuthenticated={isAuthenticated}
+          canInteract={canInteract}
+          resumeAction={resumeAction}
+          resumeControl={resumeControl}
           locale={locale}
         />
       ) : null}
@@ -637,17 +673,34 @@ function LineageInteractionPanel({
   edge,
   rootPlantObjectId,
   target,
+  isAuthenticated,
+  canInteract,
+  resumeAction,
+  resumeControl,
   locale,
 }: {
   edge: PublicLineageEdge;
   rootPlantObjectId: string;
   target: PublicLineageNode;
+  isAuthenticated: boolean;
+  canInteract: boolean;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
   locale: InterfaceLocale;
 }) {
   const copy = getPublicSurfaceCopy(locale);
+  const followControl = createAuthIntentControlRef(
+    "follow",
+    `${edge.id}:${target.plantObjectId}`,
+  );
+  const isResumedFollow =
+    resumeAction === "follow" && resumeControl === followControl;
 
   return (
-    <div className="grid gap-3 border-t border-border pt-3">
+    <div
+      data-auth-intent-resumed={isResumedFollow ? "follow" : undefined}
+      className="grid gap-3 border-t border-border pt-3"
+    >
       <div className="flex flex-col gap-1">
         <p className="text-sm font-medium text-foreground">
           {copy.passport.lineageUpdatesFrom} {target.displayName}
@@ -657,68 +710,104 @@ function LineageInteractionPanel({
         </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <form action={followLineageNodeAction}>
-          <input type="hidden" name="edgeId" value={edge.id} />
-          <input
-            type="hidden"
-            name="targetPlantObjectId"
-            value={target.plantObjectId}
-          />
-          <input
-            type="hidden"
-            name="rootPlantObjectId"
-            value={rootPlantObjectId}
-          />
-          <button
-            type="submit"
-            className={buttonVariants({
-              variant: "outline",
-              className: "w-full md:w-auto",
-            })}
-          >
-            {copy.passport.followUpdates}
-          </button>
-        </form>
-
-        <form action={askLineageQuestionAction} className="grid gap-2">
-          <input type="hidden" name="edgeId" value={edge.id} />
-          <input
-            type="hidden"
-            name="targetPlantObjectId"
-            value={target.plantObjectId}
-          />
-          <input
-            type="hidden"
-            name="rootPlantObjectId"
-            value={rootPlantObjectId}
-          />
-          <input
-            type="hidden"
-            name="clientMutationId"
-            value={crypto.randomUUID()}
-          />
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              {copy.passport.askWithinLineage}
-            </span>
-            <textarea
-              name="questionText"
-              required
-              maxLength={360}
-              rows={3}
-              placeholder={copy.passport.lineageQuestionPlaceholder}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+      {canInteract ? (
+        <div className="grid gap-3 md:grid-cols-2">
+          <form action={followLineageNodeAction}>
+            <input type="hidden" name="edgeId" value={edge.id} />
+            <input
+              type="hidden"
+              name="targetPlantObjectId"
+              value={target.plantObjectId}
             />
-          </label>
-          <button
-            type="submit"
-            className={buttonVariants({ className: "justify-self-start" })}
-          >
-            {copy.passport.sendQuestion}
-          </button>
-        </form>
-      </div>
+            <input
+              type="hidden"
+              name="rootPlantObjectId"
+              value={rootPlantObjectId}
+            />
+            <button
+              id={
+                isResumedFollow
+                  ? buildAuthIntentAnchor("follow", followControl)
+                  : undefined
+              }
+              data-auth-intent-control="follow"
+              data-auth-intent-control-ref={followControl}
+              autoFocus={isResumedFollow}
+              type="submit"
+              className={buttonVariants({
+                variant: "outline",
+                className: "w-full md:w-auto",
+              })}
+            >
+              {copy.passport.followUpdates}
+            </button>
+          </form>
+
+          <form action={askLineageQuestionAction} className="grid gap-2">
+            <input type="hidden" name="edgeId" value={edge.id} />
+            <input
+              type="hidden"
+              name="targetPlantObjectId"
+              value={target.plantObjectId}
+            />
+            <input
+              type="hidden"
+              name="rootPlantObjectId"
+              value={rootPlantObjectId}
+            />
+            <input
+              type="hidden"
+              name="clientMutationId"
+              value={crypto.randomUUID()}
+            />
+            <label className="grid gap-1 text-sm">
+              <span className="font-medium text-foreground">
+                {copy.passport.askWithinLineage}
+              </span>
+              <textarea
+                name="questionText"
+                required
+                maxLength={360}
+                rows={3}
+                placeholder={copy.passport.lineageQuestionPlaceholder}
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
+              />
+            </label>
+            <button
+              type="submit"
+              className={buttonVariants({ className: "justify-self-start" })}
+            >
+              {copy.passport.sendQuestion}
+            </button>
+          </form>
+        </div>
+      ) : isAuthenticated ? (
+        <p
+          id={
+            isResumedFollow
+              ? buildAuthIntentAnchor("follow", followControl)
+              : undefined
+          }
+          role="status"
+          tabIndex={-1}
+          data-auth-intent-control="follow"
+          data-auth-intent-control-ref={followControl}
+          className="text-sm text-muted-foreground"
+        >
+          Following this lineage requires current writing access.
+        </p>
+      ) : (
+        <AuthIntentTrigger
+          action="follow"
+          returnTo={publicLineageObjectPath(rootPlantObjectId)}
+          target={{ kind: "object", ref: target.plantObjectId }}
+          control={followControl}
+          label={copy.passport.followUpdates}
+          icon={<BellPlus aria-hidden="true" />}
+          variant="outline"
+          className="w-fit"
+        />
+      )}
     </div>
   );
 }

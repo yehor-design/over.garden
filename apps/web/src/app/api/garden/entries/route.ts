@@ -10,6 +10,8 @@ import type {
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
+import { AuthenticationRequiredError } from "@/server/auth-session";
+import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import type {
   EntryScope,
   EntrySyncStatus,
@@ -42,10 +44,12 @@ export async function POST(request: Request) {
     if (error instanceof PilotWriteAccessError) {
       return Response.json({ error: error.message }, { status: 403 });
     }
-    return Response.json(
-      { error: "Sign in to save an entry." },
-      { status: 401 },
-    );
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+    return authIntentRequiredResponse(request, {
+      action: "save",
+      fallbackReturnTo: "/garden",
+      message: "Sign in to save an entry.",
+    });
   }
 
   const body = (await request

@@ -45,6 +45,16 @@ export function oauthErrorRecoveryMessage(error: QueryValue) {
   );
 }
 
+export function oauthErrorCodeForRedirect(error: QueryValue) {
+  const code = normalizeQueryValue(error);
+  if (!code) return null;
+
+  const normalized = normalizeOAuthErrorCode(code);
+  return Object.hasOwn(OAUTH_ERROR_MESSAGES, normalized)
+    ? normalized
+    : "oauth_error";
+}
+
 function normalizeQueryValue(value: QueryValue) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";

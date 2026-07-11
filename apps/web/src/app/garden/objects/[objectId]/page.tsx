@@ -3,11 +3,17 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { buttonVariants } from "@/components/ui/button";
+import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
+import {
+  buildAuthIntentAnchor,
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
 import {
   catalogSourceAttributionCaveat,
   catalogSourceAttributionSummary,
@@ -28,6 +34,7 @@ import {
 import { localizedPath } from "@/lib/public-localization";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { resolveFollowUpValuePulsePrompt } from "@/server/follow-up-value-pulse";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
@@ -68,6 +75,8 @@ interface PlantObjectPageProps {
     valuePulse?: string;
     entryId?: string;
     saveProgress?: string | string[];
+    authIntent?: string | string[];
+    authControl?: string | string[];
   }>;
 }
 
@@ -82,6 +91,8 @@ export default async function PlantObjectReadbackPage({
     getRequestInterfaceLocale(),
   ]);
   const copy = getInterfaceCopy(locale);
+  const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
+  const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const userId = session?.user?.id;
 
   if (!userId) {
@@ -148,6 +159,7 @@ export default async function PlantObjectReadbackPage({
       lang={locale}
       className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <AuthIntentFocus action={resumeAction} control={resumeControl} />
       <header className="flex flex-col gap-4 border-b border-border pb-5">
         <Link
           href="/garden"
@@ -303,174 +315,192 @@ export default async function PlantObjectReadbackPage({
           </p>
         ) : (
           <ol className="flex flex-col gap-3">
-            {page.entries.map((entry) => (
-              <li
-                key={entry.id}
-                className="grid gap-4 rounded-lg border border-border p-4"
-              >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                      Logbook entry
-                    </p>
-                    <h3 className="text-base font-semibold text-foreground">
-                      {entry.title}
-                    </h3>
+            {page.entries.map((entry) => {
+              const publishControl = createAuthIntentControlRef(
+                "publish",
+                entry.id,
+              );
+              const resumesThisPublish =
+                resumeAction === "publish" && resumeControl === publishControl;
+
+              return (
+                <li
+                  key={entry.id}
+                  className="grid gap-4 rounded-lg border border-border p-4"
+                >
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase">
+                        Logbook entry
+                      </p>
+                      <h3 className="text-base font-semibold text-foreground">
+                        {entry.title}
+                      </h3>
+                    </div>
+                    <time className="text-xs text-muted-foreground">
+                      {formatDate(entry.entry_date)}
+                    </time>
                   </div>
-                  <time className="text-xs text-muted-foreground">
-                    {formatDate(entry.entry_date)}
-                  </time>
-                </div>
-                <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  <span className="rounded-md border border-border px-2 py-1">
-                    {entry.timelineRelation === "mentioned_space"
-                      ? "Space-level mention"
-                      : "Direct object entry"}
-                  </span>
-                  <span className="rounded-md border border-border px-2 py-1">
-                    {entryPrivacyLabel({
-                      visibility: entry.visibility,
-                      isArchived: entry.lifecycle_state === "archived",
-                    })}
-                  </span>
-                  {entry.media ? (
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <span className="rounded-md border border-border px-2 py-1">
-                      Server-cleaned photo copy
+                      {entry.timelineRelation === "mentioned_space"
+                        ? "Space-level mention"
+                        : "Direct object entry"}
                     </span>
-                  ) : null}
-                </div>
-                <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                  {entry.body}
-                </p>
-                {entry.media ? (
-                  <Image
-                    src={entry.media.publicUrl}
-                    alt={`${entry.title} photo`}
-                    width={960}
-                    height={540}
-                    sizes="(min-width: 640px) 36rem, 100vw"
-                    unoptimized
-                    className="aspect-video w-full max-w-xl rounded-md border border-border object-cover"
-                  />
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  {entryTimelineSummary(entry)}
-                </p>
-                {entry.timelineRelation === "mentioned_space" ? (
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Space entry mentioning{" "}
-                    {entry.mentionedObjects
-                      .map((object) => object.displayName)
-                      .join(", ")}
-                    .
-                  </p>
-                ) : null}
-                {entry.lifecycle_state === "archived" ? (
-                  <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
-                    <span className="text-sm font-medium text-muted-foreground">
-                      Archived privately
+                    <span className="rounded-md border border-border px-2 py-1">
+                      {entryPrivacyLabel({
+                        visibility: entry.visibility,
+                        isArchived: entry.lifecycle_state === "archived",
+                      })}
                     </span>
-                    {entry.public_gone_at ? (
-                      <span className="text-xs text-muted-foreground">
-                        The old public page no longer shows the journal text and
-                        is removed from public discovery surfaces.
+                    {entry.media ? (
+                      <span className="rounded-md border border-border px-2 py-1">
+                        Server-cleaned photo copy
                       </span>
                     ) : null}
                   </div>
-                ) : entry.visibility === "public" && entry.public_slug ? (
-                  <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
-                    <span className="text-xs text-muted-foreground">
-                      Public page available. Not listed for search engines
-                      during the pilot.
-                    </span>
-                    {objectPassportReadbackPath ? (
+                  <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
+                    {entry.body}
+                  </p>
+                  {entry.media ? (
+                    <Image
+                      src={entry.media.publicUrl}
+                      alt={`${entry.title} photo`}
+                      width={960}
+                      height={540}
+                      sizes="(min-width: 640px) 36rem, 100vw"
+                      unoptimized
+                      className="aspect-video w-full max-w-xl rounded-md border border-border object-cover"
+                    />
+                  ) : null}
+                  <p className="text-xs text-muted-foreground">
+                    {entryTimelineSummary(entry)}
+                  </p>
+                  {entry.timelineRelation === "mentioned_space" ? (
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Space entry mentioning{" "}
+                      {entry.mentionedObjects
+                        .map((object) => object.displayName)
+                        .join(", ")}
+                      .
+                    </p>
+                  ) : null}
+                  {entry.lifecycle_state === "archived" ? (
+                    <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        Archived privately
+                      </span>
+                      {entry.public_gone_at ? (
+                        <span className="text-xs text-muted-foreground">
+                          The old public page no longer shows the journal text
+                          and is removed from public discovery surfaces.
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : entry.visibility === "public" && entry.public_slug ? (
+                    <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
+                      <span className="text-xs text-muted-foreground">
+                        Public page available. Not listed for search engines
+                        during the pilot.
+                      </span>
+                      {objectPassportReadbackPath ? (
+                        <Link
+                          href={objectPassportReadbackPath}
+                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                        >
+                          Open living-object passport
+                        </Link>
+                      ) : null}
                       <Link
-                        href={objectPassportReadbackPath}
+                        href={publicJournalEntryPath(entry.public_slug)}
                         className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                       >
-                        Open living-object passport
+                        Open public page
                       </Link>
-                    ) : null}
-                    <Link
-                      href={publicJournalEntryPath(entry.public_slug)}
-                      className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                    >
-                      Open public page
-                    </Link>
+                      <form
+                        action={archiveJournalEntryAction}
+                        className="flex w-full flex-col gap-3 pt-1"
+                      >
+                        <input type="hidden" name="entryId" value={entry.id} />
+                        <input type="hidden" name="objectId" value={objectId} />
+                        <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                          <input
+                            type="checkbox"
+                            name="archiveAccepted"
+                            required
+                            className="mt-1 size-4 rounded border-border"
+                          />
+                          <span>
+                            Archive this entry privately, remove it from public
+                            discovery surfaces, and stop its old public page
+                            from showing the journal text.
+                          </span>
+                        </label>
+                        <button
+                          type="submit"
+                          className={buttonVariants({
+                            variant: "destructive",
+                            className: "self-start",
+                          })}
+                        >
+                          Archive public entry
+                        </button>
+                      </form>
+                    </div>
+                  ) : (
                     <form
-                      action={archiveJournalEntryAction}
-                      className="flex w-full flex-col gap-3 pt-1"
+                      action={publishJournalEntryAction}
+                      className="mt-4 flex flex-col gap-3 border-t border-border pt-3"
                     >
                       <input type="hidden" name="entryId" value={entry.id} />
                       <input type="hidden" name="objectId" value={objectId} />
                       <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
                         <input
                           type="checkbox"
-                          name="archiveAccepted"
+                          name="publicationDisclosureAccepted"
                           required
                           className="mt-1 size-4 rounded border-border"
                         />
                         <span>
-                          Archive this entry privately, remove it from public
-                          discovery surfaces, and stop its old public page from
-                          showing the journal text.
+                          Publish this entry as a public page. People with the
+                          link can read its title, note, date, plant name,
+                          variety text, and chosen region if one is visible. If
+                          a photo is attached, only a server-cleaned public copy
+                          can appear; precise location and the original photo
+                          file stay private. Pilot public pages are not listed
+                          for search engines yet; that is not a secrecy
+                          guarantee.{" "}
+                          <Link
+                            href={localizedPath(
+                              locale,
+                              "/first-publication-disclosure",
+                            )}
+                            className="text-primary underline-offset-4 hover:underline"
+                          >
+                            Read disclosure
+                          </Link>
+                          .
                         </span>
                       </label>
                       <button
+                        id={
+                          resumesThisPublish
+                            ? buildAuthIntentAnchor("publish", publishControl)
+                            : undefined
+                        }
+                        data-auth-intent-control="publish"
+                        data-auth-intent-control-ref={publishControl}
+                        autoFocus={resumesThisPublish}
                         type="submit"
-                        className={buttonVariants({
-                          variant: "destructive",
-                          className: "self-start",
-                        })}
+                        className={buttonVariants({ className: "self-start" })}
                       >
-                        Archive public entry
+                        Publish entry
                       </button>
                     </form>
-                  </div>
-                ) : (
-                  <form
-                    action={publishJournalEntryAction}
-                    className="mt-4 flex flex-col gap-3 border-t border-border pt-3"
-                  >
-                    <input type="hidden" name="entryId" value={entry.id} />
-                    <input type="hidden" name="objectId" value={objectId} />
-                    <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                      <input
-                        type="checkbox"
-                        name="publicationDisclosureAccepted"
-                        required
-                        className="mt-1 size-4 rounded border-border"
-                      />
-                      <span>
-                        Publish this entry as a public page. People with the
-                        link can read its title, note, date, plant name, variety
-                        text, and chosen region if one is visible. If a photo is
-                        attached, only a server-cleaned public copy can appear;
-                        precise location and the original photo file stay
-                        private. Pilot public pages are not listed for search
-                        engines yet; that is not a secrecy guarantee.{" "}
-                        <Link
-                          href={localizedPath(
-                            locale,
-                            "/first-publication-disclosure",
-                          )}
-                          className="text-primary underline-offset-4 hover:underline"
-                        >
-                          Read disclosure
-                        </Link>
-                        .
-                      </span>
-                    </label>
-                    <button
-                      type="submit"
-                      className={buttonVariants({ className: "self-start" })}
-                    >
-                      Publish entry
-                    </button>
-                  </form>
-                )}
-              </li>
-            ))}
+                  )}
+                </li>
+              );
+            })}
           </ol>
         )}
       </section>

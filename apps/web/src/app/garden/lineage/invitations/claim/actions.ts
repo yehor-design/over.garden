@@ -1,30 +1,66 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  LINEAGE_CLAIM_COOKIE_NAME,
+  LINEAGE_INVITATION_CLAIM_PATH,
+} from "@/lib/lineage/claim-handoff";
+import {
+  AuthenticationRequiredError,
+  requireCurrentRequestScope,
+} from "@/server/auth-session";
+import { createAuthIntentToken } from "@/server/auth-intent-token";
+import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
 import { resolveLineageInvitationClaim } from "@/server/lineage-repository";
 
-const LINEAGE_INVITATION_CLAIM_PATH = "/garden/lineage/invitations/claim";
+const LINEAGE_CLAIMS_PATH = "/garden/lineage/claims";
 
-export async function confirmLineageInvitationClaimAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
-  const result = await resolveLineageInvitationClaim(scope, {
-    token: String(formData.get("token") ?? ""),
-    decision: "confirmed",
-  });
-
-  revalidateLineageInvitationClaimPaths(result.edge.subject_plant_object_id);
+export async function confirmLineageInvitationClaimAction() {
+  return resolveInvitationClaim("confirmed");
 }
 
-export async function declineLineageInvitationClaimAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+export async function declineLineageInvitationClaimAction() {
+  return resolveInvitationClaim("declined");
+}
+
+async function resolveInvitationClaim(decision: "confirmed" | "declined") {
+  const scope = await requireClaimScope();
+  const cookieStore = await cookies();
+  const token = unsealLineageClaimToken(
+    cookieStore.get(LINEAGE_CLAIM_COOKIE_NAME)?.value,
+  );
+  if (!token) {
+    throw new Error("Lineage invitation is unavailable.");
+  }
+
   const result = await resolveLineageInvitationClaim(scope, {
-    token: String(formData.get("token") ?? ""),
-    decision: "declined",
+    token,
+    decision,
   });
 
   revalidateLineageInvitationClaimPaths(result.edge.subject_plant_object_id);
+  cookieStore.delete({
+    name: LINEAGE_CLAIM_COOKIE_NAME,
+    path: LINEAGE_INVITATION_CLAIM_PATH,
+  });
+  redirect(`${LINEAGE_CLAIMS_PATH}?invitation=${decision}`);
+}
+
+async function requireClaimScope() {
+  try {
+    return await requireCurrentRequestScope();
+  } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+
+    const token = createAuthIntentToken({
+      action: "claim",
+      returnTo: LINEAGE_INVITATION_CLAIM_PATH,
+    });
+    redirect(`/auth/intent?intent=${encodeURIComponent(token)}`);
+  }
 }
 
 function revalidateLineageInvitationClaimPaths(subjectPlantObjectId: string) {

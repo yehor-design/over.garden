@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => ({
+  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   requireCurrentUserId: vi.fn(
     async () => "00000000-0000-0000-0000-000000000001",
   ),
@@ -18,13 +19,54 @@ const storageMock = vi.hoisted(() => ({
   })),
 }));
 
+const authIntentMock = vi.hoisted(() => ({
+  authIntentRequiredResponse: vi.fn(() =>
+    Response.json(
+      {
+        error: "Sign in to continue this photo save.",
+        authIntentUrl: "/auth/intent?intent=opaque-media-intent",
+      },
+      { status: 401 },
+    ),
+  ),
+}));
+
 vi.mock("@/server/auth-session", () => authMock);
 vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/lib/storage", () => storageMock);
+vi.mock("@/server/auth-intent-http", () => authIntentMock);
 
 import { POST } from "./route";
 
 describe("media upload API", () => {
+  it("returns an opaque authentication intent before reading a private upload body", async () => {
+    authMock.requireCurrentUserId.mockRejectedValueOnce(
+      new authMock.AuthenticationRequiredError(),
+    );
+    const privateBody = JSON.stringify({
+      contentType: "image/jpeg",
+      privateCaption: "A private balcony note",
+    });
+    const request = new Request("http://localhost/api/media/uploads", {
+      method: "POST",
+      headers: { "x-overgarden-auth-return": "/garden" },
+      body: privateBody,
+    });
+    const response = await POST(request);
+    const serialized = JSON.stringify(await response.json());
+
+    expect(response.status).toBe(401);
+    expect(authIntentMock.authIntentRequiredResponse).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({ action: "save", fallbackReturnTo: "/garden" }),
+    );
+    expect(serialized).toContain("opaque-media-intent");
+    expect(serialized).not.toMatch(/private balcony|caption/i);
+    expect(
+      mediaRepositoryMock.createQuarantinedMediaAsset,
+    ).not.toHaveBeenCalled();
+  });
+
   it("rejects attempts to pre-bind quarantined media to a journal entry", async () => {
     const response = await POST(
       new Request("http://localhost/api/media/uploads", {

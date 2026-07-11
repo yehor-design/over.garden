@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PublicJournalEntryPage } from "@/server/journal-repository";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import {
   renderGoneJournalEntryHtml,
   renderNotFoundJournalEntryHtml,
@@ -137,6 +138,8 @@ describe("public journal HTML renderer", () => {
         ],
       },
       "commented",
+      "uk",
+      true,
     );
 
     expect(html).toContain("/api/engagement/likes");
@@ -146,6 +149,93 @@ describe("public journal HTML renderer", () => {
     expect(html).toContain("Коментар опубліковано.");
     expect(html).not.toMatch(
       /author_user_id|owner_user_id|quarantine|derivative_key|ip_address|user_agent|email|phone|coordinates|latitude|longitude/i,
+    );
+  });
+
+  it("renders guest comment and bookmark intents before any draft field", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      {
+        target: { kind: "journal_entry", ref: "first-ripe-cluster" },
+        activeLikeCount: 0,
+        comments: [],
+      },
+      null,
+      "uk",
+      false,
+    );
+
+    expect(html).toContain("/auth/intent/start");
+    expect(html).toContain('name="action" value="comment"');
+    expect(html).toContain('name="action" value="bookmark"');
+    expect(html).not.toContain("/api/engagement/comments");
+    expect(html).not.toContain("/api/engagement/bookmarks");
+    expect(html).not.toContain('name="body"');
+  });
+
+  it("focuses the resumed raw-journal control without replaying a mutation", () => {
+    const html = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      {
+        target: { kind: "journal_entry", ref: "first-ripe-cluster" },
+        activeLikeCount: 0,
+        comments: [],
+      },
+      null,
+      "uk",
+      true,
+      "comment",
+    );
+
+    expect(html).toContain('data-auth-intent-resumed="comment"');
+    expect(html).toContain('data-auth-intent-control="comment"');
+    expect(html).toContain("autofocus");
+    expect(html).toContain("Sign-in complete");
+    expect(html).toContain('data-auth-intent-focus-script="true"');
+  });
+
+  it("uses an opaque locator to resume the exact raw-journal reply", () => {
+    const replyToken = "00000000-0000-4000-8000-000000000201";
+    const control = createAuthIntentControlRef("reply", replyToken);
+    const engagement = {
+      target: { kind: "journal_entry" as const, ref: "first-ripe-cluster" },
+      activeLikeCount: 0,
+      comments: [
+        {
+          key: "comment:public",
+          replyToken,
+          body: "Reply target.",
+          authorLabel: "@green_thumb",
+          authorHandle: "green_thumb",
+          parentReplyToken: null,
+          createdAt: "2026-07-04T08:00:00.000Z",
+        },
+      ],
+    };
+    const guestHtml = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      engagement,
+      null,
+      "uk",
+      false,
+    );
+    const resumedHtml = renderPublicJournalEntryHtml(
+      buildPage({ publicNoindex: true }),
+      engagement,
+      null,
+      "uk",
+      true,
+      "comment",
+      control,
+    );
+
+    expect(guestHtml).toContain(`name="control" value="${control}"`);
+    expect(guestHtml).not.toContain(replyToken);
+    expect(resumedHtml).toContain(
+      `id="comments-${control}" autofocus data-auth-intent-control="comment" data-auth-intent-control-ref="${control}"`,
+    );
+    expect(resumedHtml).not.toContain(
+      `id="engagement-comment" data-auth-intent-control="comment" autofocus`,
     );
   });
 

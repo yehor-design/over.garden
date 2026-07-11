@@ -26,7 +26,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function LineageClaimInboxPage() {
+export default async function LineageClaimInboxPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+} = {}) {
+  const params = await (searchParams ??
+    Promise.resolve<Record<string, string | string[] | undefined>>({}));
+  const invitationStatus = normalizeInvitationStatus(params.invitation);
   const session = await getCurrentSession();
   const userId = session?.user?.id;
 
@@ -49,6 +56,17 @@ export default async function LineageClaimInboxPage() {
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
       <LineageClaimInboxHeader claimCount={claims.length} />
 
+      {invitationStatus ? (
+        <p
+          role="status"
+          className="rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground"
+        >
+          {invitationStatus === "confirmed"
+            ? "Invitation confirmed. Its provenance can now contribute under the recorded visibility policy."
+            : "Invitation declined. It does not contribute to public lineage."}
+        </p>
+      ) : null}
+
       {claims.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
           No provenance claims are waiting for you.
@@ -68,11 +86,16 @@ export default async function LineageClaimInboxPage() {
   );
 }
 
-function LineageClaimInboxHeader({
-  claimCount,
-}: {
-  claimCount?: number;
-}) {
+function normalizeInvitationStatus(
+  value: string | string[] | undefined,
+): "confirmed" | "declined" | null {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return candidate === "confirmed" || candidate === "declined"
+    ? candidate
+    : null;
+}
+
+function LineageClaimInboxHeader({ claimCount }: { claimCount?: number }) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <div className="flex flex-wrap gap-3">

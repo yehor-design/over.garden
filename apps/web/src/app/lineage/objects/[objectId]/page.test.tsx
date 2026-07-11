@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
@@ -8,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   getPublicLineageGraphPage: vi.fn(),
   getEngagementSummary: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  resolvePilotWriteAccess: vi.fn(),
+  listLineageInteractionTargets: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -29,6 +32,14 @@ vi.mock("@/server/engagement-repository", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/server/pilot-write-access", () => ({
+  resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
+}));
+
+vi.mock("@/server/lineage-interactions-repository", () => ({
+  listLineageInteractionTargets: mocks.listLineageInteractionTargets,
 }));
 
 const objectId = "00000000-0000-4000-8000-000000000101";
@@ -148,6 +159,13 @@ describe("/lineage/objects/[objectId]", () => {
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: true });
+    mocks.listLineageInteractionTargets.mockResolvedValue([
+      {
+        edgeId: lineageGraphPage.edges[0].id,
+        targetPlantObjectId: sourceObjectId,
+      },
+    ]);
   });
 
   it("marks the object passport metadata noindex through the public surface policy", async () => {
@@ -181,8 +199,12 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Свързан публичен контекст");
     expect(html).toContain("Потвърден произход");
     expect(html).toContain("/api/engagement/likes");
-    expect(html).toContain("/api/engagement/bookmarks");
-    expect(html).toContain("/api/engagement/comments");
+    expect(html).toContain("/auth/intent/start");
+    expect(html).toContain('name="action" value="bookmark"');
+    expect(html).toContain('name="action" value="comment"');
+    expect(html).toContain('name="action" value="follow"');
+    expect(html).not.toContain("/api/engagement/bookmarks");
+    expect(html).not.toContain("/api/engagement/comments");
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("Seed mother");
     expect(html).toContain("First flowering");
@@ -203,6 +225,70 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).not.toMatch(
       /quarantine_key|quarantine|derivative_key|media key|ip_address|ipaddress|user_agent|useragent|user-agent|email|phone|coarse_region|location_visibility|coordinates|latitude|longitude|@private|draft|clientMutation|owner_user_id|source_reference_label|source_pending_identity_id/i,
     );
+  });
+
+  it("keeps signed-in follow and engagement mutations on their canonical authorization boundaries", async () => {
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "00000000-0000-4000-8000-000000000001" },
+      session: { id: "session-1" },
+    });
+    mocks.getSessionId.mockReturnValue("session-1");
+    const followControl = createAuthIntentControlRef(
+      "follow",
+      `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,
+    );
+    const { default: PublicLineageObjectRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicLineageObjectRoute({
+        params: Promise.resolve({ objectId }),
+        searchParams: Promise.resolve({
+          authIntent: "follow",
+          authControl: followControl,
+        }),
+      }),
+    );
+
+    expect(html).toContain("/api/engagement/bookmarks");
+    expect(html).toContain("/api/engagement/comments");
+    expect(html).toContain('data-auth-intent-control="follow"');
+    expect(html).toContain('data-auth-intent-resumed="follow"');
+    expect(html).toContain(`data-auth-intent-control-ref="${followControl}"`);
+    expect(html).toContain(`id="lineage-follow-${followControl}"`);
+    expect(html).not.toContain('id="lineage-follow"');
+    expect(html).toContain("autofocus");
+    expect(mocks.resolvePilotWriteAccess).toHaveBeenCalled();
+    expect(mocks.listLineageInteractionTargets).toHaveBeenCalled();
+  });
+
+  it("focuses a bounded status when resumed follow permission is no longer available", async () => {
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "00000000-0000-4000-8000-000000000001" },
+      session: { id: "session-1" },
+    });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: false });
+    const followControl = createAuthIntentControlRef(
+      "follow",
+      `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,
+    );
+    const { default: PublicLineageObjectRoute } = await import("./page");
+    const html = renderToStaticMarkup(
+      await PublicLineageObjectRoute({
+        params: Promise.resolve({ objectId }),
+        searchParams: Promise.resolve({
+          authIntent: "follow",
+          authControl: followControl,
+        }),
+      }),
+    );
+
+    expect(html).toContain(
+      "Following this lineage requires current writing access.",
+    );
+    expect(html).toContain(
+      `id="lineage-follow-${followControl}" role="status" tabindex="-1" data-auth-intent-control="follow" data-auth-intent-control-ref="${followControl}"`,
+    );
+    expect(html).not.toContain("Follow updates</button>");
+    expect(mocks.listLineageInteractionTargets).not.toHaveBeenCalled();
   });
 
   it("keeps missing object passport pages noindex", async () => {

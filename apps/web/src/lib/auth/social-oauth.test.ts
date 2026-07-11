@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { oauthCallbackPath, oauthErrorRecoveryMessage } from "./social-oauth";
+import {
+  oauthCallbackPath,
+  oauthErrorCodeForRedirect,
+  oauthErrorRecoveryMessage,
+} from "./social-oauth";
 
 describe("social OAuth client helpers", () => {
   it("keeps callback URLs path-scoped and strips stale OAuth errors", () => {
@@ -32,5 +36,15 @@ describe("social OAuth client helpers", () => {
     expect(oauthErrorRecoveryMessage("oauth_provider_not_found")).toContain(
       "not configured",
     );
+  });
+
+  it("reduces callback failures to a bounded recovery code", () => {
+    expect(oauthErrorCodeForRedirect("account-not-linked")).toBe(
+      "account_not_linked",
+    );
+    expect(oauthErrorCodeForRedirect("unknown private provider detail")).toBe(
+      "oauth_error",
+    );
+    expect(oauthErrorCodeForRedirect(undefined)).toBeNull();
   });
 });

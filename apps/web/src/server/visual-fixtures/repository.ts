@@ -13,6 +13,8 @@ export interface VisualFixtureCounts {
   profiles: number;
   spaces: number;
   objects: number;
+  lineagePendingIdentities: number;
+  lineageEdges: number;
   entries: number;
   topics: number;
   topicSignals: number;
@@ -35,6 +37,13 @@ export function buildVisualFixtureSeedQueries(
     "in",
     manifest.media.map(({ id }) => id),
   );
+  const lineageAuditCleanup = executor
+    .deleteFrom("lineage_provenance_edge_audit_events")
+    .where(
+      "edge_id",
+      "in",
+      manifest.lineageEvidence.edges.map(({ id }) => id),
+    );
 
   const actors = executor
     .insertInto("user")
@@ -78,6 +87,31 @@ export function buildVisualFixtureSeedQueries(
         normalized_handle: sql`excluded.normalized_handle`,
         display_name: sql`excluded.display_name`,
         avatar_url: sql`excluded.avatar_url`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const lineagePendingIdentities = executor
+    .insertInto("lineage_pending_source_identities")
+    .values(
+      manifest.lineageEvidence.pendingIdentities.map((identity) => ({
+        id: identity.id,
+        created_by_user_id: identity.createdByUserId,
+        display_label: identity.displayLabel,
+        invite_state: "pending",
+        claimed_by_user_id: null,
+        claimed_at: null,
+        created_at: identity.createdAt,
+        updated_at: identity.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        created_by_user_id: sql`excluded.created_by_user_id`,
+        display_label: sql`excluded.display_label`,
+        invite_state: sql`excluded.invite_state`,
+        claimed_by_user_id: null,
+        claimed_at: null,
         updated_at: sql`excluded.updated_at`,
       }),
     );
@@ -134,6 +168,47 @@ export function buildVisualFixtureSeedQueries(
         variety_state: sql`excluded.variety_state`,
         location_visibility: sql`excluded.location_visibility`,
         coarse_region_code: sql`excluded.coarse_region_code`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const lineageEdges = executor
+    .insertInto("lineage_provenance_edges")
+    .values(
+      manifest.lineageEvidence.edges.map((edge) => ({
+        id: edge.id,
+        owner_user_id: edge.ownerUserId,
+        subject_plant_object_id: edge.subjectObjectId,
+        source_kind: "pending_identity",
+        source_plant_object_id: null,
+        source_owner_user_id: null,
+        source_pending_identity_id: edge.sourcePendingIdentityId,
+        source_reference_kind: null,
+        source_reference_label: null,
+        edge_type: "provenance",
+        consent_state: "proposed",
+        visibility_policy: "owner_only_until_confirmed",
+        erasure_state: "active",
+        client_mutation_id: edge.clientMutationId,
+        created_at: edge.createdAt,
+        updated_at: edge.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        owner_user_id: sql`excluded.owner_user_id`,
+        subject_plant_object_id: sql`excluded.subject_plant_object_id`,
+        source_kind: sql`excluded.source_kind`,
+        source_plant_object_id: null,
+        source_owner_user_id: null,
+        source_pending_identity_id: sql`excluded.source_pending_identity_id`,
+        source_reference_kind: null,
+        source_reference_label: null,
+        edge_type: sql`excluded.edge_type`,
+        consent_state: sql`excluded.consent_state`,
+        visibility_policy: sql`excluded.visibility_policy`,
+        erasure_state: sql`excluded.erasure_state`,
+        client_mutation_id: sql`excluded.client_mutation_id`,
         updated_at: sql`excluded.updated_at`,
       }),
     );
@@ -260,11 +335,14 @@ export function buildVisualFixtureSeedQueries(
     );
 
   return [
+    { label: "lineage_audit_cleanup", query: lineageAuditCleanup },
     { label: "media_cleanup", query: mediaCleanup },
     { label: "actors", query: actors },
     { label: "profiles", query: profiles },
+    { label: "lineage_pending_identities", query: lineagePendingIdentities },
     { label: "spaces", query: spaces },
     { label: "objects", query: objects },
+    { label: "lineage_edges", query: lineageEdges },
     { label: "entries", query: entries },
     { label: "topics", query: topics },
     { label: "topic_signals", query: topicSignals },
@@ -309,6 +387,22 @@ export function buildVisualFixtureResetQueries(
         "id",
         "in",
         manifest.entries.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "lineage_edges",
+      query: executor.deleteFrom("lineage_provenance_edges").where(
+        "id",
+        "in",
+        manifest.lineageEvidence.edges.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "lineage_pending_identities",
+      query: executor.deleteFrom("lineage_pending_source_identities").where(
+        "id",
+        "in",
+        manifest.lineageEvidence.pendingIdentities.map(({ id }) => id),
       ),
     },
     {
@@ -388,6 +482,32 @@ export function buildVisualFixtureStatusQueries(
           "in",
           manifest.objects.map(({ id }) => id),
         ),
+    },
+    {
+      label: "lineagePendingIdentities",
+      query: executor
+        .selectFrom("lineage_pending_source_identities")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.lineageEvidence.pendingIdentities.map(({ id }) => id),
+        )
+        .where("invite_state", "=", "pending"),
+    },
+    {
+      label: "lineageEdges",
+      query: executor
+        .selectFrom("lineage_provenance_edges")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.lineageEvidence.edges.map(({ id }) => id),
+        )
+        .where("source_kind", "=", "pending_identity")
+        .where("consent_state", "=", "proposed")
+        .where("erasure_state", "=", "active"),
     },
     {
       label: "entries",
@@ -495,6 +615,8 @@ export function expectedVisualFixtureCounts(
     profiles: manifest.actors.length,
     spaces: manifest.spaces.length,
     objects: manifest.objects.length,
+    lineagePendingIdentities: manifest.lineageEvidence.pendingIdentities.length,
+    lineageEdges: manifest.lineageEvidence.edges.length,
     entries: manifest.entries.length,
     topics: manifest.topics.length,
     topicSignals: manifest.topicSignals.length,

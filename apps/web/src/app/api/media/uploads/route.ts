@@ -1,7 +1,11 @@
 import { randomUUID } from "node:crypto";
 
 import { createQuarantineUploadUrl } from "@/lib/storage";
-import { requireCurrentUserId } from "@/server/auth-session";
+import {
+  AuthenticationRequiredError,
+  requireCurrentUserId,
+} from "@/server/auth-session";
+import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import { createQuarantinedMediaAsset } from "@/server/media/media-repository";
 import { scopedToUser } from "@/server/request-scope";
 
@@ -14,7 +18,17 @@ const ALLOWED_CONTENT_TYPES = new Set([
 ]);
 
 export async function POST(request: Request) {
-  const userId = await requireCurrentUserId();
+  let userId: string;
+  try {
+    userId = await requireCurrentUserId();
+  } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+    return authIntentRequiredResponse(request, {
+      action: "save",
+      fallbackReturnTo: "/garden",
+      message: "Sign in to continue this photo save.",
+    });
+  }
   const scope = scopedToUser(userId);
   const body = (await request.json()) as {
     contentType?: string;

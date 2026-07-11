@@ -28,7 +28,7 @@ export function pilotInviteJoinUrl(token: string, baseUrl: string): string {
 
 export function lineageInvitationClaimPath(token: string): string {
   const params = new URLSearchParams({ token });
-  return `/garden/lineage/invitations/claim?${params.toString()}`;
+  return `/garden/lineage/invitations/claim#${params.toString()}`;
 }
 
 export function publicLineageObjectPath(plantObjectId: string): string {

@@ -52,6 +52,7 @@ import {
   listOfflineMutations,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
+  type OfflinePlantObjectEntryPayload,
   type OfflinePhotoIntent,
 } from "@/lib/offline/queue";
 import {
@@ -65,6 +66,7 @@ import {
 } from "@/lib/offline/drafts";
 import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
+  JournalEntrySyncError,
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
@@ -303,7 +305,7 @@ export function FollowUpEntryComposer({
       return;
     }
 
-    let payload: OfflineJournalEntryPayload;
+    let payload: OfflinePlantObjectEntryPayload;
     try {
       payload = await buildPayload();
     } catch {
@@ -340,6 +342,7 @@ export function FollowUpEntryComposer({
       );
       router.refresh();
     } catch (error) {
+      if (await resumeAuthentication(error, payload)) return;
       setSubmitState("failed");
       setMessage(journalSaveErrorMessage(error));
     }
@@ -384,13 +387,59 @@ export function FollowUpEntryComposer({
       );
       router.refresh();
     } catch (error) {
+      if (await resumeAuthentication(error)) return;
       setSubmitState("failed");
       setMessage(journalSaveErrorMessage(error));
       await refreshQueue();
     }
   }
 
-  async function buildPayload(): Promise<OfflineJournalEntryPayload> {
+  async function resumeAuthentication(
+    error: unknown,
+    payload?: OfflinePlantObjectEntryPayload,
+  ) {
+    if (
+      error instanceof JournalEntrySyncError &&
+      error.status === 401 &&
+      error.authIntentUrl
+    ) {
+      if (payload) {
+        try {
+          const savedDraft = await upsertOfflineDraft({
+            id: draftId,
+            kind: "follow_up_entry",
+            payload: {
+              clientMutationId: payload.clientMutationId,
+              plantObjectId: payload.plantObjectId,
+              draft: {
+                title: payload.title,
+                body: payload.body,
+                entryDate: payload.entryDate,
+              },
+              mentionSelections: payload.mentionSelections ?? [],
+              topicTagInput,
+              photoIntent: payload.photoIntent ?? null,
+            },
+          });
+          if (!savedDraft) throw new Error("Offline drafts are unavailable.");
+        } catch {
+          setSubmitState("failed");
+          setMessage(
+            "We couldn't preserve this draft on your device. Stay here and try again before signing in.",
+          );
+          return true;
+        }
+      }
+
+      setSubmitState("idle");
+      setMessage("Sign in to continue saving. Your local draft stays here.");
+      router.push(error.authIntentUrl);
+      return true;
+    }
+    return false;
+  }
+
+  async function buildPayload(): Promise<OfflinePlantObjectEntryPayload> {
     const photoIntent = photoFile
       ? await createComposerPhotoIntent(photoFile)
       : storedPhotoIntent;
@@ -683,6 +732,7 @@ export function FollowUpEntryComposer({
           ref={bodyTextareaRef}
           id="follow-up-entry-body"
           name="body"
+          data-auth-intent-control="create_entry"
           required
           minLength={1}
           maxLength={2000}
@@ -720,7 +770,11 @@ export function FollowUpEntryComposer({
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={submitState === "syncing"}>
+        <Button
+          type="submit"
+          data-auth-intent-control="save"
+          disabled={submitState === "syncing"}
+        >
           <UploadCloud className="size-4" />
           {isOnline ? "Save follow-up" : "Save on this device"}
         </Button>

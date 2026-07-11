@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -16,19 +17,28 @@ export async function POST(request: Request) {
   const returnTo = parseEngagementReturnTo(formData, target);
   const session = await getCurrentSession();
   const userId = session?.user?.id;
+  const parentCommentId =
+    typeof formData.get("parentCommentId") === "string"
+      ? String(formData.get("parentCommentId"))
+      : null;
 
   if (!userId) {
-    return redirectToEngagementAuth(request, target, returnTo, "comment");
+    return redirectToEngagementAuth(
+      request,
+      target,
+      returnTo,
+      "comment",
+      parentCommentId
+        ? createAuthIntentControlRef("reply", parentCommentId)
+        : undefined,
+    );
   }
 
   const scope = scopedToUser(userId, getSessionId(session));
   await addEngagementComment(scope, {
     target,
     body: String(formData.get("body") ?? ""),
-    parentCommentId:
-      typeof formData.get("parentCommentId") === "string"
-        ? String(formData.get("parentCommentId"))
-        : null,
+    parentCommentId,
   });
 
   revalidatePath(new URL(returnTo, request.url).pathname);

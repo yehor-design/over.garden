@@ -1,19 +1,35 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
+import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  buildAuthIntentAnchor,
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
+import { lineageInvitationClaimPath } from "@/lib/garden/public-paths";
+import {
+  LINEAGE_CLAIM_COOKIE_NAME,
+  LINEAGE_INVITATION_CLAIM_PATH,
+} from "@/lib/lineage/claim-handoff";
 import { getCurrentSession } from "@/server/auth-session";
+import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
+import { verifyLineageInviteToken } from "@/server/lineage-invite-token";
 import {
   getLineageInvitationClaimPreview,
   type LineageInvitationClaimPreview,
   type LineagePlantObjectOption,
 } from "@/server/lineage-repository";
-import { GardenAuthPanel } from "../../../garden-auth-panel";
 import {
   confirmLineageInvitationClaimAction,
   declineLineageInvitationClaimAction,
 } from "./actions";
+import { LineageClaimHandoff } from "./claim-handoff";
 
 export const dynamic = "force-dynamic";
 
@@ -37,14 +53,30 @@ export default async function LineageInvitationClaimPage({
 }: LineageInvitationClaimPageProps) {
   const params = await (searchParams ??
     Promise.resolve(EMPTY_CLAIM_SEARCH_PARAMS));
-  const token = normalizeFirstParam(params.token);
-  const session = await getCurrentSession();
+  const legacyToken = firstSearchParam(params.token)?.trim();
+  if (legacyToken) {
+    redirect(
+      verifyLineageInviteToken(legacyToken)
+        ? lineageInvitationClaimPath(legacyToken)
+        : LINEAGE_INVITATION_CLAIM_PATH,
+    );
+  }
+
+  const [cookieStore, session] = await Promise.all([
+    cookies(),
+    getCurrentSession(),
+  ]);
+  const token = unsealLineageClaimToken(
+    cookieStore.get(LINEAGE_CLAIM_COOKIE_NAME)?.value,
+  );
   const userId = session?.user?.id;
+  const resumeAction = normalizeAuthIntentResumeAction(params.authIntent);
+  const resumeControl = normalizeAuthIntentResumeControl(params.authControl);
 
   if (!token) {
     return (
       <LineageInvitationClaimShell>
-        <UnavailableInvite />
+        <LineageClaimHandoff />
       </LineageInvitationClaimShell>
     );
   }
@@ -52,7 +84,7 @@ export default async function LineageInvitationClaimPage({
   if (!userId) {
     return (
       <LineageInvitationClaimShell>
-        <GardenAuthPanel initialMessage="Sign in or create an account to review this lineage invitation. Details appear only after sign-in." />
+        <GuestClaimPrompt />
       </LineageInvitationClaimShell>
     );
   }
@@ -61,8 +93,12 @@ export default async function LineageInvitationClaimPage({
 
   return (
     <LineageInvitationClaimShell>
+      <AuthIntentFocus action={resumeAction} control={resumeControl} />
       {preview ? (
-        <LineageInvitationClaimCard token={token} preview={preview} />
+        <LineageInvitationClaimCard
+          preview={preview}
+          resumed={resumeAction === "claim"}
+        />
       ) : (
         <UnavailableInvite />
       )}
@@ -70,11 +106,11 @@ export default async function LineageInvitationClaimPage({
   );
 }
 
-function LineageInvitationClaimShell({
-  children,
-}: {
-  children: ReactNode;
-}) {
+function firstSearchParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function LineageInvitationClaimShell({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-8 sm:px-8">
       <header className="flex flex-col gap-4 border-b border-border pb-5">
@@ -103,11 +139,11 @@ function LineageInvitationClaimShell({
 }
 
 function LineageInvitationClaimCard({
-  token,
   preview,
+  resumed,
 }: {
-  token: string;
   preview: LineageInvitationClaimPreview;
+  resumed: boolean;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
@@ -145,8 +181,10 @@ function LineageInvitationClaimCard({
 
       <div className="flex flex-wrap gap-3 border-t border-border pt-3">
         <form action={confirmLineageInvitationClaimAction}>
-          <input type="hidden" name="token" value={token} />
           <button
+            id={resumed ? buildAuthIntentAnchor("claim") : undefined}
+            data-auth-intent-control="claim"
+            autoFocus={resumed}
             type="submit"
             className={buttonVariants({ className: "self-start" })}
           >
@@ -154,7 +192,6 @@ function LineageInvitationClaimCard({
           </button>
         </form>
         <form action={declineLineageInvitationClaimAction}>
-          <input type="hidden" name="token" value={token} />
           <button
             type="submit"
             className={buttonVariants({
@@ -166,6 +203,29 @@ function LineageInvitationClaimCard({
           </button>
         </form>
       </div>
+    </section>
+  );
+}
+
+function GuestClaimPrompt() {
+  return (
+    <section className="grid gap-4 rounded-lg border border-border p-4">
+      <div className="grid gap-1">
+        <h2 className="text-base font-semibold text-foreground">
+          Sign in to review this private invitation
+        </h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          Invitation details stay hidden until you sign in. Nothing joins the
+          public lineage graph unless you explicitly confirm it.
+        </p>
+      </div>
+      <AuthIntentTrigger
+        id={buildAuthIntentAnchor("claim")}
+        action="claim"
+        returnTo={LINEAGE_INVITATION_CLAIM_PATH}
+        label="Sign in to review invitation"
+        className="w-fit"
+      />
     </section>
   );
 }
@@ -190,9 +250,4 @@ function formatDate(value: Date | string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function normalizeFirstParam(value: string | string[] | undefined): string {
-  if (Array.isArray(value)) return value[0]?.trim() ?? "";
-  return typeof value === "string" ? value.trim() : "";
 }

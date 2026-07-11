@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
   createFirstPlantEntry: vi.fn(),
@@ -8,6 +9,11 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
+  createAuthIntentToken: vi.fn(),
+}));
+
+vi.mock("@/server/auth-session", () => ({
+  AuthenticationRequiredError: mocks.AuthenticationRequiredError,
 }));
 
 vi.mock("next/cache", () => ({
@@ -30,6 +36,10 @@ vi.mock("@/server/analytics-events", () => ({
   recordEntryLoggedEventSafely: mocks.recordEntryLoggedEventSafely,
 }));
 
+vi.mock("@/server/auth-intent-token", () => ({
+  createAuthIntentToken: mocks.createAuthIntentToken,
+}));
+
 describe("POST /api/garden/entries save progress readback", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -39,6 +49,75 @@ describe("POST /api/garden/entries save progress readback", () => {
       sessionId: "session-1",
     });
     mocks.isBackdatedEntryDate.mockReturnValue(false);
+    mocks.createAuthIntentToken.mockReturnValue("opaque-save-intent");
+  });
+
+  it("returns only an opaque save intent when the session expired before parsing the draft", async () => {
+    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
+      new mocks.AuthenticationRequiredError("Authentication is required."),
+    );
+    const { POST } = await import("./route");
+    const response = await POST(
+      jsonRequest({
+        target: "first_plant_entry",
+        title: "Private title",
+        body: "Private draft body",
+        preciseLocation: "42.0,23.0",
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({
+      error: "Sign in to save an entry.",
+      authIntentUrl: "/auth/intent?intent=opaque-save-intent",
+    });
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "save",
+      returnTo: "/garden",
+    });
+    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+      /Private title|Private draft|42\.0/i,
+    );
+    expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
+  });
+
+  it("preserves a safe follow-up route without parsing or serializing draft text", async () => {
+    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
+      new mocks.AuthenticationRequiredError("Authentication is required."),
+    );
+    const objectId = "00000000-0000-4000-8000-000000000901";
+    const { POST } = await import("./route");
+    const response = await POST(
+      jsonRequest(
+        {
+          target: "plant_object_entry",
+          plantObjectId: objectId,
+          body: "Private follow-up draft",
+        },
+        { "x-overgarden-auth-return": `/garden/objects/${objectId}` },
+      ),
+    );
+
+    expect(response.status).toBe(401);
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "save",
+      returnTo: `/garden/objects/${objectId}`,
+    });
+    expect(
+      JSON.stringify(mocks.createAuthIntentToken.mock.calls),
+    ).not.toContain("Private follow-up draft");
+  });
+
+  it("does not misclassify operational auth infrastructure failures as sign-out", async () => {
+    const failure = new Error("Database connection failed");
+    mocks.requireWriteEligibleRequestScope.mockRejectedValue(failure);
+    const { POST } = await import("./route");
+
+    await expect(
+      POST(jsonRequest({ target: "first_plant_entry" })),
+    ).rejects.toBe(failure);
+    expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 
   it("returns a first-save progress readback URL and safe aggregate events", async () => {
@@ -129,10 +208,10 @@ describe("POST /api/garden/entries save progress readback", () => {
   });
 });
 
-function jsonRequest(body: unknown) {
+function jsonRequest(body: unknown, headers: Record<string, string> = {}) {
   return new Request("http://local.test/api/garden/entries", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
 }

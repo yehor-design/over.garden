@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
 
+import {
+  buildAuthIntentResumeHref,
+  normalizeAuthIntentDraft,
+  type AuthIntentAction,
+  type AuthIntentTarget,
+} from "@/lib/auth/auth-intent-contract";
+
 export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v1";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
@@ -169,6 +176,59 @@ export interface VisualFixtureScenario {
   viewportTargets: readonly ("desktop" | "mobile-320")[];
 }
 
+export type VisualFixtureIntentState =
+  | "guest"
+  | "already_authenticated"
+  | "cancel"
+  | "expired"
+  | "invalid"
+  | "deleted_410"
+  | "now_private"
+  | "insufficient_permission"
+  | "draft_retained";
+
+export interface VisualFixtureIntentScenario {
+  id: string;
+  action: AuthIntentAction;
+  label: string;
+  state: VisualFixtureIntentState;
+  returnTo: string;
+  target?: AuthIntentTarget;
+  startPath: string;
+  resumePath: string;
+  tokenMode: "valid" | "expired" | "invalid";
+  draftKind?: "first_entry" | "follow_up_entry";
+  expectedStatus: 200 | 404 | 410;
+  viewportTargets: readonly ("desktop" | "mobile-320")[];
+}
+
+export interface VisualFixtureIntentEvidence {
+  scenarios: readonly VisualFixtureIntentScenario[];
+}
+
+export interface VisualFixtureLineagePendingIdentity {
+  id: string;
+  createdByUserId: string;
+  displayLabel: string;
+  createdAt: string;
+}
+
+export interface VisualFixtureLineageEdge {
+  id: string;
+  ownerUserId: string;
+  subjectObjectId: string;
+  sourcePendingIdentityId: string;
+  clientMutationId: string;
+  createdAt: string;
+}
+
+export interface VisualFixtureLineageEvidence {
+  pendingIdentities: readonly VisualFixtureLineagePendingIdentity[];
+  edges: readonly VisualFixtureLineageEdge[];
+  claimPendingIdentityId: string;
+  claimEdgeId: string;
+}
+
 export interface VisualFixtureStateCoverage {
   id: string;
   kind: VisualFixtureStateKind;
@@ -190,6 +250,8 @@ export interface VisualFixtureManifest {
   topics: readonly VisualFixtureTopic[];
   topicSignals: readonly VisualFixtureTopicSignal[];
   feedEvidence: VisualFixtureFeedEvidence;
+  lineageEvidence: VisualFixtureLineageEvidence;
+  intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
   scenarios: readonly VisualFixtureScenario[];
 }
@@ -490,6 +552,27 @@ const objects: readonly VisualFixtureObject[] = objectSeedSpecs.map(
     };
   },
 );
+
+const lineagePendingIdentity: VisualFixtureLineagePendingIdentity = {
+  id: fixtureUuid(7, 1),
+  createdByUserId: objects[0].ownerUserId,
+  displayLabel: "Олена зберегла насіння з першого врожаю",
+  createdAt: timestampForIndex(91),
+};
+const lineageEdge: VisualFixtureLineageEdge = {
+  id: fixtureUuid(8, 1),
+  ownerUserId: objects[0].ownerUserId,
+  subjectObjectId: objects[0].id,
+  sourcePendingIdentityId: lineagePendingIdentity.id,
+  clientMutationId: "visual-fixture-lineage-claim-1",
+  createdAt: timestampForIndex(92),
+};
+const lineageEvidence: VisualFixtureLineageEvidence = {
+  pendingIdentities: [lineagePendingIdentity],
+  edges: [lineageEdge],
+  claimPendingIdentityId: lineagePendingIdentity.id,
+  claimEdgeId: lineageEdge.id,
+};
 
 const entryCountsByObject = [
   12,
@@ -980,6 +1063,189 @@ const activeEntry = entries.find(
   (entry) => entry.visibility === "public" && entry.lifecycleState === "active",
 )!;
 const goneEntry = entries.find((entry) => entry.publicGoneAt !== null)!;
+const activeJournalPath = `/journal/${activeEntry.publicSlug}`;
+const goneJournalPath = `/journal/${goneEntry.publicSlug}`;
+const denseObjectPath = `/lineage/objects/${objects[0].id}`;
+
+const intentEvidence: VisualFixtureIntentEvidence = {
+  scenarios: [
+    intentScenario(
+      1,
+      "comment",
+      "Comment · guest start",
+      "guest",
+      activeJournalPath,
+      {
+        kind: "journal",
+        ref: activeEntry.publicSlug!,
+      },
+    ),
+    intentScenario(
+      2,
+      "bookmark",
+      "Bookmark · guest start",
+      "guest",
+      activeJournalPath,
+      { kind: "journal", ref: activeEntry.publicSlug! },
+    ),
+    intentScenario(
+      3,
+      "follow",
+      "Follow · guest start",
+      "guest",
+      denseObjectPath,
+      {
+        kind: "object",
+        ref: objects[0].id,
+      },
+    ),
+    intentScenario(
+      4,
+      "claim",
+      "Claim · guest start",
+      "guest",
+      "/garden/lineage/invitations/claim",
+    ),
+    intentScenario(
+      5,
+      "create_object",
+      "Add object · guest start",
+      "guest",
+      "/garden",
+    ),
+    intentScenario(
+      6,
+      "create_entry",
+      "Add journal entry · guest start",
+      "guest",
+      "/garden",
+    ),
+    {
+      ...intentScenario(
+        7,
+        "save",
+        "Save · retained first-entry draft",
+        "draft_retained",
+        "/garden?tab=drafts",
+      ),
+      draftKind: "first_entry",
+    },
+    intentScenario(
+      8,
+      "publish",
+      "Publish · permission recheck",
+      "insufficient_permission",
+      `/garden/objects/${objects[0].id}`,
+      { kind: "journal", ref: activeEntry.publicSlug! },
+      "valid",
+      404,
+    ),
+    intentScenario(
+      9,
+      "comment",
+      "Comment · already authenticated",
+      "already_authenticated",
+      activeJournalPath,
+      { kind: "journal", ref: activeEntry.publicSlug! },
+    ),
+    intentScenario(
+      10,
+      "comment",
+      "Comment · cancel",
+      "cancel",
+      activeJournalPath,
+      {
+        kind: "journal",
+        ref: activeEntry.publicSlug!,
+      },
+    ),
+    intentScenario(
+      11,
+      "comment",
+      "Comment · expired intent",
+      "expired",
+      activeJournalPath,
+      { kind: "journal", ref: activeEntry.publicSlug! },
+      "expired",
+    ),
+    intentScenario(
+      12,
+      "bookmark",
+      "Bookmark · invalid intent",
+      "invalid",
+      activeJournalPath,
+      { kind: "journal", ref: activeEntry.publicSlug! },
+      "invalid",
+    ),
+    intentScenario(
+      13,
+      "comment",
+      "Comment · deleted journal",
+      "deleted_410",
+      goneJournalPath,
+      { kind: "journal", ref: goneEntry.publicSlug! },
+      "valid",
+      410,
+    ),
+    intentScenario(
+      14,
+      "comment",
+      "Comment · now unavailable",
+      "now_private",
+      "/journal/visual-fixture-private-transition",
+      { kind: "journal", ref: "visual-fixture-private-transition" },
+      "valid",
+      404,
+    ),
+    intentScenario(
+      15,
+      "follow",
+      "Follow · insufficient permission",
+      "insufficient_permission",
+      denseObjectPath,
+      { kind: "object", ref: objects[0].id },
+    ),
+    intentScenario(
+      16,
+      "bookmark",
+      "Bookmark · preserved feed context",
+      "guest",
+      `/?topic=${feedEvidence.denseTopicSlug}&cursor=fixture-page-2&tab=journal&sort=newest`,
+      { kind: "collection", ref: feedEvidence.denseTopicSlug },
+    ),
+    {
+      ...intentScenario(
+        17,
+        "create_entry",
+        "Add journal entry · retained draft",
+        "draft_retained",
+        "/garden?tab=drafts&entry=fixture-draft-17",
+      ),
+      draftKind: "first_entry",
+    },
+    intentScenario(
+      18,
+      "bookmark",
+      "Bookmark · profile target",
+      "guest",
+      `/@${actors[0].handle}`,
+      { kind: "profile", ref: actors[0].handle },
+    ),
+    {
+      ...intentScenario(
+        19,
+        "save",
+        "Save · follow-up draft permission changed",
+        "draft_retained",
+        `/garden/objects/${objects[0].id}`,
+        { kind: "object", ref: objects[0].id },
+        "valid",
+        404,
+      ),
+      draftKind: "follow_up_entry",
+    },
+  ],
+};
 
 const scenarios: readonly VisualFixtureScenario[] = [
   scenario(
@@ -1115,6 +1381,8 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   topics,
   topicSignals,
   feedEvidence,
+  lineageEvidence,
+  intentEvidence,
   stateCoverage,
   scenarios,
 };
@@ -1146,6 +1414,9 @@ export function validateVisualFixtureManifest(
   const objectIds = new Set(manifest.objects.map((object) => object.id));
   const entryIds = new Set(manifest.entries.map((entry) => entry.id));
   const topicIds = new Set(manifest.topics.map((topic) => topic.id));
+  const pendingIdentityIds = new Set(
+    manifest.lineageEvidence.pendingIdentities.map((identity) => identity.id),
+  );
   checkUnique(
     errors,
     "actor ids",
@@ -1225,6 +1496,21 @@ export function validateVisualFixtureManifest(
     "scenario kinds",
     manifest.scenarios.map((scenario) => scenario.kind),
   );
+  checkUnique(
+    errors,
+    "intent scenario ids",
+    manifest.intentEvidence.scenarios.map((scenario) => scenario.id),
+  );
+  checkUnique(
+    errors,
+    "lineage pending identity ids",
+    manifest.lineageEvidence.pendingIdentities.map((identity) => identity.id),
+  );
+  checkUnique(
+    errors,
+    "lineage edge ids",
+    manifest.lineageEvidence.edges.map((edge) => edge.id),
+  );
 
   for (const actor of manifest.actors) {
     if (!actor.email.endsWith("@visual-fixtures.invalid")) {
@@ -1240,6 +1526,28 @@ export function validateVisualFixtureManifest(
     if (!actorIds.has(object.ownerUserId) || !spaceIds.has(object.spaceId)) {
       errors.push(`Object ${object.id} has an invalid owner or space.`);
     }
+  }
+  for (const identity of manifest.lineageEvidence.pendingIdentities) {
+    if (!actorIds.has(identity.createdByUserId)) {
+      errors.push(`Lineage identity ${identity.id} has an invalid creator.`);
+    }
+  }
+  for (const edge of manifest.lineageEvidence.edges) {
+    if (
+      !actorIds.has(edge.ownerUserId) ||
+      !objectIds.has(edge.subjectObjectId) ||
+      !pendingIdentityIds.has(edge.sourcePendingIdentityId)
+    ) {
+      errors.push(`Lineage edge ${edge.id} has an invalid fixture reference.`);
+    }
+  }
+  if (
+    !pendingIdentityIds.has(manifest.lineageEvidence.claimPendingIdentityId) ||
+    !manifest.lineageEvidence.edges.some(
+      (edge) => edge.id === manifest.lineageEvidence.claimEdgeId,
+    )
+  ) {
+    errors.push("Lineage claim evidence does not reference fixture rows.");
   }
   for (const entry of manifest.entries) {
     if (
@@ -1308,6 +1616,31 @@ export function validateVisualFixtureManifest(
     }
     if (state.access === "owner" && state.path !== null) {
       errors.push(`Owner-only state coverage ${state.id} exposes a route.`);
+    }
+  }
+  for (const intent of manifest.intentEvidence.scenarios) {
+    if (intent.startPath !== `/__visual-fixtures/intent/${intent.id}`) {
+      errors.push(
+        `Intent scenario ${intent.id} exposes an invalid start path.`,
+      );
+    }
+    try {
+      const draft = normalizeAuthIntentDraft({
+        action: intent.action,
+        returnTo: intent.returnTo,
+        ...(intent.target ? { target: intent.target } : {}),
+      });
+      if (intent.resumePath !== buildAuthIntentResumeHref(draft)) {
+        errors.push(`Intent scenario ${intent.id} has an invalid resume path.`);
+      }
+    } catch {
+      errors.push(`Intent scenario ${intent.id} has an invalid auth contract.`);
+    }
+    if (intent.state === "draft_retained" && !intent.draftKind) {
+      errors.push(`Intent scenario ${intent.id} does not seed a real draft.`);
+    }
+    if (intent.state !== "draft_retained" && intent.draftKind) {
+      errors.push(`Intent scenario ${intent.id} has an unexpected draft seed.`);
     }
   }
 
@@ -1517,6 +1850,38 @@ function scenario(
     path,
     expectedStatus,
     ...(expectedUiState ? { expectedUiState } : {}),
+    viewportTargets: ["desktop", "mobile-320"],
+  };
+}
+
+function intentScenario(
+  index: number,
+  action: AuthIntentAction,
+  label: string,
+  state: VisualFixtureIntentState,
+  returnTo: string,
+  target?: AuthIntentTarget,
+  tokenMode: VisualFixtureIntentScenario["tokenMode"] = "valid",
+  expectedStatus: VisualFixtureIntentScenario["expectedStatus"] = 200,
+): VisualFixtureIntentScenario {
+  const draft = normalizeAuthIntentDraft({
+    action,
+    returnTo,
+    ...(target ? { target } : {}),
+  });
+  const id = `ove174-i${String(index).padStart(3, "0")}`;
+
+  return {
+    id,
+    action,
+    label,
+    state,
+    returnTo: draft.returnTo,
+    ...(draft.target ? { target: draft.target } : {}),
+    startPath: `/__visual-fixtures/intent/${id}`,
+    resumePath: buildAuthIntentResumeHref(draft),
+    tokenMode,
+    expectedStatus,
     viewportTargets: ["desktop", "mobile-320"],
   };
 }

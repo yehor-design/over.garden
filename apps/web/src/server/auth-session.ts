@@ -5,6 +5,13 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
+export class AuthenticationRequiredError extends Error {
+  constructor() {
+    super("Authentication is required for this action.");
+    this.name = "AuthenticationRequiredError";
+  }
+}
+
 export async function getCurrentSession() {
   return auth.api.getSession({ headers: await headers() });
 }
@@ -14,7 +21,7 @@ export async function requireCurrentRequestScope(): Promise<RequestScope> {
   const userId = session?.user?.id;
 
   if (!userId) {
-    throw new Error("Authentication is required for this action.");
+    throw new AuthenticationRequiredError();
   }
 
   return scopedToUser(userId, getSessionId(session));
@@ -25,7 +32,7 @@ export async function requireCurrentUserId(): Promise<string> {
   const userId = session?.user?.id;
 
   if (!userId) {
-    throw new Error("Authentication is required for this action.");
+    throw new AuthenticationRequiredError();
   }
 
   return userId;

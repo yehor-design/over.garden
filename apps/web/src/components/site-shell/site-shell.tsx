@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, Search, SquarePen, UserRound, X } from "lucide-react";
+import {
+  CirclePlus,
+  Menu,
+  Search,
+  SquarePen,
+  UserRound,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 
+import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { LanguageSwitcher } from "@/components/public/language-switcher";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +31,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getInterfaceCopy,
+  type InterfaceLocale,
+} from "@/lib/interface-localization";
 import {
   getLanguageSwitcherLocales,
   stripLocalePrefix,
@@ -81,6 +92,7 @@ export function SiteShell({
   }
 
   const navigation = getSiteShellNavigation(locale, isAuthenticated);
+  const copy = getInterfaceCopy(locale);
   const context = getSiteShellRouteContext(pathname, locale);
   const languageBasePath = stripLocalePrefix(pathname).path;
   const languageSwitcherLocales = isLanguageSwitchablePath(languageBasePath)
@@ -154,7 +166,16 @@ export function SiteShell({
                               compact
                             />
                           </>
-                        ) : null}
+                        ) : (
+                          <>
+                            <Separator className="my-3" />
+                            <GuestMutationActions
+                              addObjectLabel={copy.navigation.addObject}
+                              addEntryLabel={copy.navigation.addUpdate}
+                              compact
+                            />
+                          </>
+                        )}
                       </div>
                       <div className="mt-auto flex flex-col gap-3 border-t border-border p-4">
                         <SiteShellMobileUtilities
@@ -279,19 +300,32 @@ export function SiteShell({
                       </Tooltip>
                     </>
                   ) : (
-                    <Link
-                      href="/garden"
-                      className={buttonVariants({
-                        variant: "outline",
-                        size: "sm",
-                        className:
-                          "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
-                      })}
-                    >
-                      {navigation.mobileItems.find(
-                        (item) => item.key === "sign-in",
-                      )?.label ?? ""}
-                    </Link>
+                    <>
+                      <span data-site-shell-action="add-guest">
+                        <AuthIntentTrigger
+                          action="create_entry"
+                          returnTo="/garden"
+                          label={copy.navigation.addUpdate}
+                          labelClassName="sr-only sm:not-sr-only"
+                          icon={<SquarePen aria-hidden="true" />}
+                          size="sm"
+                          className="border-background/30 bg-background text-foreground hover:bg-background/90"
+                        />
+                      </span>
+                      <Link
+                        href="/garden"
+                        className={buttonVariants({
+                          variant: "outline",
+                          size: "sm",
+                          className:
+                            "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
+                        })}
+                      >
+                        {navigation.mobileItems.find(
+                          (item) => item.key === "sign-in",
+                        )?.label ?? ""}
+                      </Link>
+                    </>
                   )}
                 </div>
               </div>
@@ -316,7 +350,15 @@ export function SiteShell({
                       pathname={pathname}
                     />
                   </>
-                ) : null}
+                ) : (
+                  <>
+                    <Separator className="my-4" />
+                    <GuestMutationActions
+                      addObjectLabel={copy.navigation.addObject}
+                      addEntryLabel={copy.navigation.addUpdate}
+                    />
+                  </>
+                )}
               </aside>
 
               <div
@@ -376,6 +418,43 @@ export function SiteShell({
         </TooltipProvider>
       </SiteShellContextRailProvider>
     </SiteShellLocaleProvider>
+  );
+}
+
+function GuestMutationActions({
+  addObjectLabel,
+  addEntryLabel,
+  compact = false,
+}: {
+  addObjectLabel: string;
+  addEntryLabel: string;
+  compact?: boolean;
+}) {
+  return (
+    <div
+      data-site-shell-guest-actions="true"
+      className={cn("grid gap-2", compact && "gap-1.5")}
+    >
+      <AuthIntentTrigger
+        action="create_object"
+        returnTo="/garden"
+        label={addObjectLabel}
+        icon={<CirclePlus aria-hidden="true" />}
+        variant="outline"
+        size="sm"
+        formClassName="w-full"
+        className="w-full justify-start"
+      />
+      <AuthIntentTrigger
+        action="create_entry"
+        returnTo="/garden"
+        label={addEntryLabel}
+        icon={<SquarePen aria-hidden="true" />}
+        size="sm"
+        formClassName="w-full"
+        className="w-full justify-start"
+      />
+    </div>
   );
 }
 

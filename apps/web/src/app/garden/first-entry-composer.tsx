@@ -82,6 +82,7 @@ import {
   type FirstEntryDraftPayload,
 } from "@/lib/offline/drafts";
 import {
+  JournalEntrySyncError,
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
@@ -403,7 +404,7 @@ export function FirstEntryComposer({
       return;
     }
 
-    let payload: OfflineJournalEntryPayload;
+    let payload: OfflineFirstPlantEntryPayload;
     try {
       payload = await buildPayload();
     } catch {
@@ -435,6 +436,7 @@ export function FirstEntryComposer({
       });
       router.push(result.readbackUrl);
     } catch (error) {
+      if (await resumeAuthentication(error, payload)) return;
       setSubmitState("failed");
       setMessage(journalSaveErrorMessage(error));
     }
@@ -474,13 +476,68 @@ export function FirstEntryComposer({
       });
       router.push(result.readbackUrl);
     } catch (error) {
+      if (await resumeAuthentication(error)) return;
       setSubmitState("failed");
       setMessage(journalSaveErrorMessage(error));
       await refreshQueue();
     }
   }
 
-  async function buildPayload(): Promise<OfflineJournalEntryPayload> {
+  async function resumeAuthentication(
+    error: unknown,
+    payload?: OfflineFirstPlantEntryPayload,
+  ) {
+    if (
+      error instanceof JournalEntrySyncError &&
+      error.status === 401 &&
+      error.authIntentUrl
+    ) {
+      if (payload) {
+        try {
+          const savedDraft = await upsertOfflineDraft({
+            id: FIRST_ENTRY_DRAFT_ID,
+            kind: "first_entry",
+            payload: {
+              clientMutationId: payload.clientMutationId,
+              draft: {
+                spaceName: payload.spaceName,
+                plantName: payload.plantName,
+                objectKind: payload.objectKind ?? "plant",
+                title: payload.title,
+                body: payload.body,
+                entryDate: payload.entryDate,
+                locationVisibility:
+                  payload.locationVisibility === "region" ? "region" : "hidden",
+                coarseRegionCode: payload.coarseRegionCode ?? "",
+              },
+              catalogQuery,
+              selectedCatalogItem,
+              userAddedCatalogName,
+              activationSource: payload.activationSource ?? null,
+              mentionSelections: payload.mentionSelections ?? [],
+              topicTagInput,
+              photoIntent: payload.photoIntent ?? null,
+            },
+          });
+          if (!savedDraft) throw new Error("Offline drafts are unavailable.");
+        } catch {
+          setSubmitState("failed");
+          setMessage(
+            "We couldn't preserve this draft on your device. Stay here and try again before signing in.",
+          );
+          return true;
+        }
+      }
+
+      setSubmitState("idle");
+      setMessage("Sign in to continue saving. Your local draft stays here.");
+      router.push(error.authIntentUrl);
+      return true;
+    }
+    return false;
+  }
+
+  async function buildPayload(): Promise<OfflineFirstPlantEntryPayload> {
     const photoIntent = photoFile
       ? await createComposerPhotoIntent(photoFile)
       : storedPhotoIntent;
@@ -804,6 +861,7 @@ export function FirstEntryComposer({
           Living object
           <input
             name="plantName"
+            data-auth-intent-control="create_object"
             required
             maxLength={120}
             value={draft.plantName}
@@ -1057,6 +1115,7 @@ export function FirstEntryComposer({
           ref={bodyTextareaRef}
           id="first-entry-body"
           name="body"
+          data-auth-intent-control="create_entry"
           required
           minLength={1}
           maxLength={2000}
@@ -1094,7 +1153,11 @@ export function FirstEntryComposer({
       </label>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={submitState === "syncing"}>
+        <Button
+          type="submit"
+          data-auth-intent-control="save"
+          disabled={submitState === "syncing"}
+        >
           <UploadCloud className="size-4" />
           {isOnline ? "Save first entry" : "Save on this device"}
         </Button>

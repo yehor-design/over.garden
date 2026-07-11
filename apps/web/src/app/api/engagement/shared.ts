@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
 
+import {
+  type AuthIntentDraft,
+  type AuthIntentTarget,
+  normalizeAuthIntentDraft,
+} from "@/lib/auth/auth-intent-contract";
+import { createAuthIntentToken } from "@/server/auth-intent-token";
 import type { EngagementTarget } from "@/server/engagement-repository";
 import {
   engagementTargetPath,
@@ -41,11 +47,38 @@ export function redirectToEngagementAuth(
   target: EngagementTarget,
   returnTo: string,
   intent: "bookmark" | "comment",
+  control?: string,
 ) {
-  const url = new URL("/garden", request.url);
-  url.searchParams.set("engagement", `${intent}-auth`);
-  url.searchParams.set("targetKind", target.kind);
-  url.searchParams.set("targetRef", target.ref);
-  url.searchParams.set("returnTo", returnTo || engagementTargetPath(target));
+  const normalizedReturnTo = returnTo || engagementTargetPath(target);
+  const draft = {
+    action: intent,
+    returnTo: normalizedReturnTo,
+    target: engagementAuthIntentTarget(target),
+    ...(control ? { control } : {}),
+  } as const;
+  let safeDraft: AuthIntentDraft;
+  try {
+    safeDraft = normalizeAuthIntentDraft(draft);
+  } catch {
+    safeDraft = normalizeAuthIntentDraft({
+      ...draft,
+      returnTo: engagementTargetPath(target),
+    });
+  }
+  const token = createAuthIntentToken(safeDraft);
+  const url = new URL("/auth/intent", request.url);
+  url.searchParams.set("intent", token);
   return NextResponse.redirect(url, 303);
+}
+
+function engagementAuthIntentTarget(
+  target: EngagementTarget,
+): AuthIntentTarget {
+  if (target.kind === "journal_entry") {
+    return { kind: "journal", ref: target.ref };
+  }
+  if (target.kind === "lineage_object") {
+    return { kind: "object", ref: target.ref };
+  }
+  return { kind: "collection", ref: target.ref };
 }

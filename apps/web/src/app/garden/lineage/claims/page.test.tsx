@@ -98,4 +98,17 @@ describe("/garden/lineage/claims", () => {
       /journal body|quarantine|derivative|media key|ip_address|ipaddress|user_agent|useragent|user-agent|email|phone|coarse_region|location_visibility|coordinates|@private|https?:\/\//i,
     );
   });
+
+  it("shows a bounded completion state after an invitation decision", async () => {
+    const { default: LineageClaimInboxPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await LineageClaimInboxPage({
+        searchParams: Promise.resolve({ invitation: "confirmed" }),
+      }),
+    );
+
+    expect(html).toContain("Invitation confirmed");
+    expect(html).toContain("recorded visibility policy");
+    expect(html).not.toMatch(/token|private-payload|opaque\.sealed/i);
+  });
 });

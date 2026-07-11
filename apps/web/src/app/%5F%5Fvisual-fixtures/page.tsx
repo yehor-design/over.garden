@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Database,
   ImageIcon,
+  KeyRound,
   ListChecks,
   MonitorSmartphone,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
   type VisualFixtureMediaAspect,
 } from "@/lib/visual-fixtures/manifest";
 import { cn } from "@/lib/utils";
+import { VisualIntentDraftTrigger } from "./visual-intent-draft-trigger";
 
 export const dynamic = "force-dynamic";
 
@@ -96,11 +98,19 @@ export default async function VisualFixtureIndexPage() {
             </span>
           </div>
 
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4 lg:grid-cols-8">
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-5 lg:grid-cols-10">
             <CountFact label="Fixture users" value={status.actual.actors} />
             <CountFact label="Public profiles" value={status.actual.profiles} />
             <CountFact label="Spaces" value={status.actual.spaces} />
             <CountFact label="Living objects" value={status.actual.objects} />
+            <CountFact
+              label="Pending lineage"
+              value={status.actual.lineagePendingIdentities}
+            />
+            <CountFact
+              label="Claimable edges"
+              value={status.actual.lineageEdges}
+            />
             <CountFact label="Journal entries" value={status.actual.entries} />
             <CountFact label="Trusted topics" value={status.actual.topics} />
             <CountFact
@@ -162,6 +172,68 @@ export default async function VisualFixtureIndexPage() {
                 </div>
               </li>
             ))}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section aria-labelledby="intent-heading" className="grid gap-4">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <KeyRound className="size-4" aria-hidden="true" />
+              Mutation boundaries and exact action recovery
+            </p>
+            <h2 id="intent-heading" className="mt-1 text-xl font-semibold">
+              Intent-aware authentication
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.intentEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.label}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {intentStateLabel(scenario.state)}
+                      </span>
+                    </div>
+                    <div className="mt-auto flex flex-wrap gap-2">
+                      {scenario.draftKind ? (
+                        <VisualIntentDraftTrigger
+                          kind={scenario.draftKind}
+                          objectId={scenario.target?.ref}
+                          startPath={scenario.startPath}
+                        />
+                      ) : (
+                        <Link
+                          href={scenario.startPath}
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                          })}
+                        >
+                          Start intent
+                          <ArrowUpRight aria-hidden="true" />
+                        </Link>
+                      )}
+                      <Link
+                        href={scenario.resumePath}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                        })}
+                      >
+                        Inspect resume
+                      </Link>
+                    </div>
+                  </div>
+                </li>
+              ),
+            )}
           </ol>
         </section>
 
@@ -333,4 +405,8 @@ function aspectLabel(aspect: VisualFixtureMediaAspect) {
     portrait_3_4: "portrait 3:4",
     wide_16_9: "wide 16:9",
   }[aspect];
+}
+
+function intentStateLabel(state: string) {
+  return state.replaceAll("_", " ");
 }

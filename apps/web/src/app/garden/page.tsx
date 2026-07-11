@@ -17,6 +17,7 @@ import {
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
 import { buttonVariants } from "@/components/ui/button";
+import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import type { JournalEntry } from "@/db/schema";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
@@ -28,6 +29,10 @@ import {
 import { gardenFirstEntryPreselectionPath } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
+import {
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import {
   catalogIdentityLabel,
@@ -81,6 +86,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     ? normalizeGardenReturnToParam(params.returnTo)
     : null;
   const saveProgressKind = normalizeSaveProgressMomentKind(params.saveProgress);
+  const resumeAction = normalizeAuthIntentResumeAction(params.authIntent);
+  const resumeControl = normalizeAuthIntentResumeControl(params.authControl);
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
@@ -170,6 +177,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
       {userId ? (
         <>
+          <AuthIntentFocus action={resumeAction} control={resumeControl} />
           {writeAccess.invited ? (
             <div id="drafts">
               <GardenDraftResumePanel />

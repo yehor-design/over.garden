@@ -2,6 +2,10 @@ import { getPublicJournalEntryLookup } from "@/server/journal-repository";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import {
+  normalizeAuthIntentResumeAction,
+  normalizeAuthIntentResumeControl,
+} from "@/lib/auth/auth-intent-contract";
 
 import {
   renderGoneJournalEntryHtml,
@@ -50,6 +54,12 @@ export async function GET(
   };
   const engagement = await getEngagementSummary(engagementTarget);
   const engagementStatus = new URL(request.url).searchParams.get("engagement");
+  const resumeAction = normalizeAuthIntentResumeAction(
+    new URL(request.url).searchParams.get("authIntent") ?? undefined,
+  );
+  const resumeControl = normalizeAuthIntentResumeControl(
+    new URL(request.url).searchParams.get("authControl") ?? undefined,
+  );
 
   return htmlResponse(
     renderPublicJournalEntryHtml(
@@ -58,6 +68,8 @@ export async function GET(
       engagementStatus,
       locale,
       shellSession.isAuthenticated,
+      resumeAction,
+      resumeControl,
     ),
     200,
   );

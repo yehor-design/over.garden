@@ -45,13 +45,14 @@ describe("garden public paths", () => {
     expect(path).not.toContain("referrer");
   });
 
-  it("builds a lineage invitation claim path with only the scoped token", () => {
+  it("keeps a lineage invitation token in the client-only URL fragment", () => {
     const token = "v1.payload.signature";
     const path = lineageInvitationClaimPath(token);
 
     expect(path).toBe(
-      `/garden/lineage/invitations/claim?token=${encodeURIComponent(token)}`,
+      `/garden/lineage/invitations/claim#token=${encodeURIComponent(token)}`,
     );
+    expect(path.split("#")[0]).not.toContain("token");
     expect(path).not.toContain("email");
     expect(path).not.toContain("phone");
     expect(path).not.toContain("referrer");

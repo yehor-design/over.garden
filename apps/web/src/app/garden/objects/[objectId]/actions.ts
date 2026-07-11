@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
 import {
@@ -9,9 +10,12 @@ import {
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
 import {
+  AuthenticationRequiredError,
   requireCurrentRequestScope,
   requireCurrentUserId,
 } from "@/server/auth-session";
+import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import { createAuthIntentToken } from "@/server/auth-intent-token";
 import {
   archiveJournalEntry,
   type ArchiveJournalEntryResult,
@@ -108,10 +112,10 @@ export async function createLineageInvitationAction(formData: FormData) {
 }
 
 export async function publishJournalEntryAction(formData: FormData) {
-  const userId = await requireCurrentUserId();
-  const scope = scopedToUser(userId);
   const entryId = String(formData.get("entryId") ?? "");
   const objectId = String(formData.get("objectId") ?? "");
+  const userId = await requireUserForPublishIntent({ entryId, objectId });
+  const scope = scopedToUser(userId);
   const disclosureAccepted =
     formData.get("publicationDisclosureAccepted") === "on";
 
@@ -126,6 +130,40 @@ export async function publishJournalEntryAction(formData: FormData) {
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);
   revalidatePath(result.publicUrl);
 }
+
+async function requireUserForPublishIntent({
+  entryId,
+  objectId,
+}: {
+  entryId: string;
+  objectId: string;
+}) {
+  try {
+    return await requireCurrentUserId();
+  } catch (error) {
+    if (!(error instanceof AuthenticationRequiredError)) throw error;
+    if (!UUID_PATTERN.test(entryId)) {
+      throw new Error(
+        "A valid journal entry is required to resume publishing.",
+      );
+    }
+
+    const returnTo = UUID_PATTERN.test(objectId)
+      ? `/garden/objects/${objectId}`
+      : "/garden";
+    const control = createAuthIntentControlRef("publish", entryId);
+    const token = createAuthIntentToken({
+      action: "publish",
+      returnTo,
+      control,
+    });
+
+    redirect(`/auth/intent?intent=${encodeURIComponent(token)}`);
+  }
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function archiveJournalEntryAction(formData: FormData) {
   const userId = await requireCurrentUserId();
