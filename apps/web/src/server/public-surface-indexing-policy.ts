@@ -16,6 +16,7 @@ export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
 export type PublicSurfaceKind =
   | "marketing_landing"
   | "public_feed"
+  | "catalog_browse"
   | "editorial_blog"
   | "guide"
   | "aeo_answer"
@@ -34,6 +35,7 @@ export type PublicSurfaceIndexValue = "noindex" | "indexable";
 export type PublicSurfaceIndexReason =
   | "authored_useful_surface"
   | "public_feed_noindex"
+  | "catalog_browse_noindex"
   | "workspace_route_noindex"
   | "auth_route_noindex"
   | "operator_route_noindex"
@@ -89,6 +91,7 @@ export type PublicSurfaceIndexInput =
   | {
       kind:
         | "public_feed"
+        | "catalog_browse"
         | "object_passport"
         | "profile"
         | "lineage_graph"
@@ -122,6 +125,9 @@ export function evaluatePublicSurfaceIndexability(
 
     case "public_feed":
       return noindex(["public_feed_noindex"]);
+
+    case "catalog_browse":
+      return noindex(["catalog_browse_noindex"]);
 
     case "journal_entry":
       return input.publicNoindex

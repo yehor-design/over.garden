@@ -8,6 +8,7 @@ import {
   pilotInviteJoinPath,
   pilotInviteJoinUrl,
   publicLineageObjectPath,
+  publicCatalogEvidencePath,
 } from "./public-paths";
 
 describe("garden public paths", () => {
@@ -68,6 +69,18 @@ describe("garden public paths", () => {
     expect(path).not.toContain("email");
     expect(path).not.toContain("phone");
     expect(path).not.toContain("referrer");
+  });
+
+  it("routes catalog evidence through a domain-correct canonical path", () => {
+    expect(publicCatalogEvidencePath("plant_variety", "cherry-tomato")).toBe(
+      "/variety/cherry-tomato",
+    );
+    expect(publicCatalogEvidencePath("species", "solanum-lycopersicum")).toBe(
+      "/species/solanum-lycopersicum",
+    );
+    expect(publicCatalogEvidencePath("breed", "carpathian-bee")).toBe(
+      "/breed/carpathian-bee",
+    );
   });
 
   it("builds a full invite URL from a base origin and token", () => {

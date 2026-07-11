@@ -45,11 +45,13 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v1",
+      version: "ove187-v2",
       expected: {
         actors: 4,
         profiles: 4,
         spaces: 5,
+        catalogItems: 19,
+        catalogNames: 29,
         objects: 30,
         lineagePendingIdentities: 1,
         lineageEdges: 1,
@@ -62,6 +64,8 @@ describe("/__visual-fixtures", () => {
         actors: 4,
         profiles: 4,
         spaces: 5,
+        catalogItems: 19,
+        catalogNames: 29,
         objects: 30,
         lineagePendingIdentities: 1,
         lineageEdges: 1,

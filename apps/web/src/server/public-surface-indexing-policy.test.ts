@@ -40,6 +40,17 @@ describe("public surface indexing policy", () => {
     });
   });
 
+  it("keeps public catalog browse out of indexing while deep evidence uses its own quality gate", () => {
+    expect(
+      evaluatePublicSurfaceIndexability({ kind: "catalog_browse" }),
+    ).toMatchObject({
+      value: "noindex",
+      sitemapEligible: false,
+      robots: { index: false, follow: false },
+      reasons: ["catalog_browse_noindex"],
+    });
+  });
+
   it("keeps public journal entries noindex until the entry is explicitly promoted", () => {
     const noindex = evaluatePublicSurfaceIndexability({
       kind: "journal_entry",

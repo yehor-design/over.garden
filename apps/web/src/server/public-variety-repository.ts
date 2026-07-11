@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
+  CatalogKind,
   CatalogItemStatus,
   Database,
   LocationVisibility,
@@ -31,6 +32,7 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export interface PublicVarietyPage {
   catalog: {
+    catalogKind: CatalogKind;
     canonicalName: string;
     publicSlug: string;
     status: Extract<CatalogItemStatus, "seeded" | "confirmed">;
@@ -47,6 +49,7 @@ export interface PublicVarietyPage {
 }
 
 export interface PublicVarietySitemapEntry {
+  catalogKind: CatalogKind;
   publicSlug: string;
   lastModified: Date | string;
   entryCount: number;
@@ -82,6 +85,7 @@ export interface PublicVarietyEntry {
 
 export async function getPublicVarietyPage(
   publicSlug: string,
+  expectedCatalogKind?: CatalogKind,
   executor: QueryExecutor = db,
 ): Promise<PublicVarietyPage | null> {
   const slug = normalizeCatalogPublicSlug(publicSlug);
@@ -90,12 +94,18 @@ export async function getPublicVarietyPage(
   const summary = await buildPublicVarietySummaryQuery(
     executor,
     slug,
+    expectedCatalogKind,
   ).executeTakeFirst();
 
   if (!summary?.catalogPublicSlug) return null;
 
   const [entries, seedProof, sourceCredits] = await Promise.all([
-    buildPublicVarietyEntriesQuery(executor, slug).execute(),
+    buildPublicVarietyEntriesQuery(
+      executor,
+      slug,
+      MAX_PUBLIC_VARIETY_ENTRIES,
+      expectedCatalogKind,
+    ).execute(),
     buildPublishedVarietySeedProofByCatalogItemIdQuery(
       executor,
       summary.catalogItemId,
@@ -110,6 +120,7 @@ export async function getPublicVarietyPage(
 
   return {
     catalog: {
+      catalogKind: summary.catalogKind,
       canonicalName: summary.catalogCanonicalName,
       publicSlug: summary.catalogPublicSlug,
       status: summary.catalogStatus as Extract<
@@ -211,6 +222,7 @@ export async function listIndexablePublicVarietySitemapEntries(
     await buildIndexablePublicVarietySitemapRowsQuery(executor).execute();
 
   return rows.map((row) => ({
+    catalogKind: row.catalogKind,
     publicSlug: row.publicSlug,
     lastModified: row.lastModified,
     entryCount: Number(row.entryCount),
@@ -221,8 +233,9 @@ export async function listIndexablePublicVarietySitemapEntries(
 export function buildPublicVarietySummaryQuery(
   executor: QueryExecutor,
   publicSlug: string,
+  expectedCatalogKind?: CatalogKind,
 ) {
-  return executor
+  let query = executor
     .selectFrom("catalog_items")
     .innerJoin(
       "plant_objects",
@@ -237,6 +250,7 @@ export function buildPublicVarietySummaryQuery(
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
     .select(({ fn }) => [
       "catalog_items.id as catalogItemId",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       "catalog_items.status as catalogStatus",
@@ -276,7 +290,14 @@ export function buildPublicVarietySummaryQuery(
       "catalog_items.status",
       "catalog_items.source",
       "catalog_items.locale",
+      "catalog_items.catalog_kind",
     ]);
+
+  if (expectedCatalogKind) {
+    query = query.where("catalog_items.catalog_kind", "=", expectedCatalogKind);
+  }
+
+  return query.$narrowType<{ catalogKind: CatalogKind }>();
 }
 
 export function buildIndexablePublicVarietySitemapRowsQuery(
@@ -296,6 +317,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     )
     .innerJoin("spaces", "spaces.id", "journal_entries.space_id")
     .select(({ fn }) => [
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.public_slug as publicSlug",
       fn.max<Date | string>("journal_entries.updated_at").as("lastModified"),
       fn.count<number>("journal_entries.id").as("entryCount"),
@@ -328,7 +350,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .groupBy("catalog_items.public_slug")
+    .groupBy(["catalog_items.catalog_kind", "catalog_items.public_slug"])
     .having(
       sql<boolean>`count(${sql.ref("journal_entries.id")}) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount}`,
     )
@@ -336,17 +358,18 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
       sql<boolean>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minAggregateBodyLength}`,
     )
     .orderBy("catalog_items.public_slug", "asc")
-    .$narrowType<{ publicSlug: string }>();
+    .$narrowType<{ catalogKind: CatalogKind; publicSlug: string }>();
 }
 
 export function buildPublicVarietyEntriesQuery(
   executor: QueryExecutor,
   publicSlug: string,
   limit = MAX_PUBLIC_VARIETY_ENTRIES,
+  expectedCatalogKind?: CatalogKind,
 ) {
   const firstMedia = buildFirstProcessedMediaPerEntryQuery(executor);
 
-  return executor
+  let query = executor
     .selectFrom("journal_entries")
     .innerJoin(
       "plant_objects",
@@ -397,7 +420,13 @@ export function buildPublicVarietyEntriesQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.public_slug", "is not", null);
+
+  if (expectedCatalogKind) {
+    query = query.where("catalog_items.catalog_kind", "=", expectedCatalogKind);
+  }
+
+  return query
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")

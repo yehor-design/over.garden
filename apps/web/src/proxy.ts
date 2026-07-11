@@ -104,6 +104,7 @@ function hasLocalizedPublicCounterpart(pathname: string) {
     "/bookmarks",
     "/wishlist",
     "/blog",
+    "/objects",
   ]);
   const nestedPrefixes = ["/blog/", "/guides/", "/answers/"];
 

@@ -7,12 +7,20 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v1";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v2";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
 export type VisualFixtureLocale = "uk" | "bg" | "ru";
 export type VisualFixtureObjectKind = "plant" | "animal" | "bee_colony";
+export type VisualFixtureCatalogKind = "plant_variety" | "species" | "breed";
+export type VisualFixtureCatalogStatus =
+  | "seeded"
+  | "confirmed"
+  | "provisional"
+  | "merged"
+  | "rejected";
+export type VisualFixtureCatalogLocale = VisualFixtureLocale | "en" | "la";
 export type VisualFixtureVarietyState =
   | "selected"
   | "unknown"
@@ -35,6 +43,21 @@ export type VisualFixtureScenarioKind =
   | "public-feed-pagination"
   | "public-feed-exhausted"
   | "public-feed-context-empty"
+  | "public-catalog-empty"
+  | "public-catalog-zero-results"
+  | "public-catalog-sparse"
+  | "public-catalog-page-size-minus-one"
+  | "public-catalog-page-size"
+  | "public-catalog-page-size-plus-one"
+  | "public-catalog-pagination"
+  | "public-catalog-combined-filters"
+  | "public-catalog-search-alias"
+  | "public-catalog-unavailable"
+  | "public-catalog-loading"
+  | "public-catalog-error"
+  | "public-catalog-variety"
+  | "public-catalog-species"
+  | "public-catalog-breed"
   | "public-journal-active"
   | "public-journal-gone"
   | "public-journal-missing"
@@ -92,6 +115,29 @@ export interface VisualFixtureObject {
   varietyState: VisualFixtureVarietyState;
   locationVisibility: "hidden" | "region";
   coarseRegionCode: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureCatalogItem {
+  id: string;
+  canonicalName: string;
+  normalizedName: string;
+  publicSlug: string;
+  catalogKind: VisualFixtureCatalogKind;
+  status: VisualFixtureCatalogStatus;
+  source: "visual_fixture";
+  sourceId: string;
+  locale: VisualFixtureCatalogLocale;
+  createdAt: string;
+}
+
+export interface VisualFixtureCatalogName {
+  id: string;
+  catalogItemId: string;
+  displayName: string;
+  normalizedName: string;
+  locale: VisualFixtureCatalogLocale;
+  isPrimary: boolean;
   createdAt: string;
 }
 
@@ -244,6 +290,8 @@ export interface VisualFixtureManifest {
   namespace: typeof VISUAL_FIXTURE_NAMESPACE;
   actors: readonly VisualFixtureActor[];
   spaces: readonly VisualFixtureSpace[];
+  catalogItems: readonly VisualFixtureCatalogItem[];
+  catalogNames: readonly VisualFixtureCatalogName[];
   objects: readonly VisualFixtureObject[];
   entries: readonly VisualFixtureEntry[];
   media: readonly VisualFixtureMedia[];
@@ -257,9 +305,259 @@ export interface VisualFixtureManifest {
 }
 
 const CREATED_AT_BASE = "2026-01-05T09:00:00.000Z";
-const TOMATO_CATALOG_ID = "00000000-0000-4000-8000-000000000101";
-const CUCUMBER_CATALOG_ID = "00000000-0000-4000-8000-000000000102";
-const BG_TOMATO_CATALOG_ID = "00000000-0000-4000-8000-000000000103";
+const CATALOG_IDS = {
+  tomatoVariety: fixtureUuid(9, 1),
+  cucumberVariety: fixtureUuid(9, 2),
+  bgTomatoVariety: fixtureUuid(9, 3),
+  rosemarySpecies: fixtureUuid(9, 4),
+  monsteraSpecies: fixtureUuid(9, 5),
+  calatheaSpecies: fixtureUuid(9, 6),
+  lemonSpecies: fixtureUuid(9, 7),
+  lavenderSpecies: fixtureUuid(9, 8),
+  sunflowerSpecies: fixtureUuid(9, 9),
+  strawberrySpecies: fixtureUuid(9, 10),
+  localGoatBreed: fixtureUuid(9, 11),
+  bulgarianGoatBreed: fixtureUuid(9, 12),
+  rhodeIslandBreed: fixtureUuid(9, 13),
+  longBantamBreed: fixtureUuid(9, 14),
+  domesticShorthairBreed: fixtureUuid(9, 15),
+  mixedDogBreed: fixtureUuid(9, 16),
+  carpathianBeeBreed: fixtureUuid(9, 17),
+  honeyBeeSpecies: fixtureUuid(9, 18),
+  unavailableRabbitSpecies: fixtureUuid(9, 19),
+} as const;
+
+interface CatalogSeedSpec {
+  id: string;
+  canonicalName: string;
+  publicSlug: string;
+  catalogKind: VisualFixtureCatalogKind;
+  locale: VisualFixtureCatalogLocale;
+  status?: VisualFixtureCatalogStatus;
+}
+
+const catalogSeedSpecs: readonly CatalogSeedSpec[] = [
+  catalogSeed(
+    CATALOG_IDS.tomatoVariety,
+    "Помідор чері",
+    "visual-pomidor-cheri",
+    "plant_variety",
+    "uk",
+  ),
+  catalogSeed(
+    CATALOG_IDS.cucumberVariety,
+    "Огірок Ніжинський",
+    "visual-nizhyn-cucumber",
+    "plant_variety",
+    "uk",
+  ),
+  catalogSeed(
+    CATALOG_IDS.bgTomatoVariety,
+    "Домат чери",
+    "visual-domat-cheri",
+    "plant_variety",
+    "bg",
+  ),
+  catalogSeed(
+    CATALOG_IDS.rosemarySpecies,
+    "Rosmarinus officinalis",
+    "visual-rosmarinus-officinalis",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.monsteraSpecies,
+    "Monstera deliciosa",
+    "visual-monstera-deliciosa",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.calatheaSpecies,
+    "Goeppertia orbifolia",
+    "visual-goeppertia-orbifolia",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.lemonSpecies,
+    "Citrus limon",
+    "visual-citrus-limon",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.lavenderSpecies,
+    "Lavandula angustifolia",
+    "visual-lavandula-angustifolia",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.sunflowerSpecies,
+    "Helianthus annuus",
+    "visual-helianthus-annuus",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.strawberrySpecies,
+    "Fragaria x ananassa",
+    "visual-fragaria-ananassa",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.localGoatBreed,
+    "Українська місцева коза",
+    "visual-ukrainian-local-goat",
+    "breed",
+    "uk",
+  ),
+  catalogSeed(
+    CATALOG_IDS.bulgarianGoatBreed,
+    "Българска бяла млечна коза",
+    "visual-bulgarian-white-dairy-goat",
+    "breed",
+    "bg",
+  ),
+  catalogSeed(
+    CATALOG_IDS.rhodeIslandBreed,
+    "Rhode Island Red",
+    "visual-rhode-island-red",
+    "breed",
+    "en",
+  ),
+  catalogSeed(
+    CATALOG_IDS.longBantamBreed,
+    "Бельгійська бородата бентамка д'Уккле, порцелянова кольорова лінія",
+    "visual-belgian-bearded-bantam-porcelain-line",
+    "breed",
+    "uk",
+  ),
+  catalogSeed(
+    CATALOG_IDS.domesticShorthairBreed,
+    "Domestic Shorthair",
+    "visual-domestic-shorthair",
+    "breed",
+    "en",
+  ),
+  catalogSeed(
+    CATALOG_IDS.mixedDogBreed,
+    "Mixed-breed dog",
+    "visual-mixed-breed-dog",
+    "breed",
+    "en",
+  ),
+  catalogSeed(
+    CATALOG_IDS.carpathianBeeBreed,
+    "Карпатська бджола",
+    "visual-karpatska-bdzhola",
+    "breed",
+    "uk",
+  ),
+  catalogSeed(
+    CATALOG_IDS.honeyBeeSpecies,
+    "Apis mellifera",
+    "visual-apis-mellifera",
+    "species",
+    "la",
+  ),
+  catalogSeed(
+    CATALOG_IDS.unavailableRabbitSpecies,
+    "Oryctolagus cuniculus",
+    "visual-oryctolagus-cuniculus-unavailable",
+    "species",
+    "la",
+    "rejected",
+  ),
+];
+
+const catalogItems: readonly VisualFixtureCatalogItem[] = catalogSeedSpecs.map(
+  (spec, offset) => ({
+    ...spec,
+    normalizedName: normalizeCatalogName(spec.canonicalName),
+    status: spec.status ?? "seeded",
+    source: "visual_fixture",
+    sourceId: `ove175-visual-${String(offset + 1).padStart(2, "0")}`,
+    createdAt: timestampForIndex(500 + offset),
+  }),
+);
+
+const catalogAliasSpecs: readonly Omit<
+  VisualFixtureCatalogName,
+  "id" | "normalizedName" | "isPrimary" | "createdAt"
+>[] = [
+  {
+    catalogItemId: CATALOG_IDS.tomatoVariety,
+    displayName: "Cherry tomato",
+    locale: "en",
+  },
+  {
+    catalogItemId: CATALOG_IDS.cucumberVariety,
+    displayName: "Ніжинський огірок",
+    locale: "uk",
+  },
+  {
+    catalogItemId: CATALOG_IDS.bgTomatoVariety,
+    displayName: "Чери домат",
+    locale: "bg",
+  },
+  {
+    catalogItemId: CATALOG_IDS.rosemarySpecies,
+    displayName: "Розмарин лікарський",
+    locale: "uk",
+  },
+  {
+    catalogItemId: CATALOG_IDS.monsteraSpecies,
+    displayName: "Монстера делициоза",
+    locale: "bg",
+  },
+  {
+    catalogItemId: CATALOG_IDS.calatheaSpecies,
+    displayName: "Калатея орбіфолія",
+    locale: "uk",
+  },
+  {
+    catalogItemId: CATALOG_IDS.lavenderSpecies,
+    displayName: "Теснолистна лавандула",
+    locale: "bg",
+  },
+  {
+    catalogItemId: CATALOG_IDS.carpathianBeeBreed,
+    displayName: "Карпатская пчела",
+    locale: "ru",
+  },
+  {
+    catalogItemId: CATALOG_IDS.honeyBeeSpecies,
+    displayName: "Медоносная пчела",
+    locale: "ru",
+  },
+  {
+    catalogItemId: CATALOG_IDS.unavailableRabbitSpecies,
+    displayName: "Європейський кріль",
+    locale: "uk",
+  },
+];
+
+const catalogNames: readonly VisualFixtureCatalogName[] = [
+  ...catalogItems.map((item, offset) => ({
+    id: fixtureUuid(9, 101 + offset),
+    catalogItemId: item.id,
+    displayName: item.canonicalName,
+    normalizedName: item.normalizedName,
+    locale: item.locale,
+    isPrimary: true,
+    createdAt: timestampForIndex(550 + offset),
+  })),
+  ...catalogAliasSpecs.map((alias, offset) => ({
+    ...alias,
+    id: fixtureUuid(9, 201 + offset),
+    normalizedName: normalizeCatalogName(alias.displayName),
+    isPrimary: false,
+    createdAt: timestampForIndex(600 + offset),
+  })),
+];
 
 const actors: readonly VisualFixtureActor[] = [
   {
@@ -334,14 +632,14 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName: "Черрі біля південної стінки",
     objectKind: "plant",
     spaceIndex: 2,
-    catalogItemId: TOMATO_CATALOG_ID,
+    catalogItemId: CATALOG_IDS.tomatoVariety,
     varietyState: "selected",
   },
   {
     displayName: "Ніжинський огірок на шпалері",
     objectKind: "plant",
     spaceIndex: 2,
-    catalogItemId: CUCUMBER_CATALOG_ID,
+    catalogItemId: CATALOG_IDS.cucumberVariety,
     varietyState: "selected",
   },
   {
@@ -368,55 +666,64 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName: "Розмарин у великому контейнері",
     objectKind: "plant",
     spaceIndex: 3,
+    catalogItemId: CATALOG_IDS.rosemarySpecies,
     varietyText: "Rosmarinus officinalis",
-    varietyState: "free_text",
+    varietyState: "selected",
   },
   {
     displayName: "Домати за балконската решетка",
     objectKind: "plant",
     spaceIndex: 3,
-    catalogItemId: BG_TOMATO_CATALOG_ID,
+    catalogItemId: CATALOG_IDS.bgTomatoVariety,
     varietyState: "selected",
   },
   {
     displayName: "Монстера до прозореца",
     objectKind: "plant",
     spaceIndex: 3,
-    varietyState: "unknown",
+    catalogItemId: CATALOG_IDS.monsteraSpecies,
+    varietyText: "Monstera deliciosa",
+    varietyState: "selected",
   },
   {
     displayName: "Калатея с чувствителни листа",
     objectKind: "plant",
     spaceIndex: 3,
-    varietyText: "Orbifolia",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.calatheaSpecies,
+    varietyText: "Goeppertia orbifolia",
+    varietyState: "selected",
   },
   {
     displayName: "Лимон от семка",
     objectKind: "plant",
     spaceIndex: 3,
-    varietyText: "Домашен разсад",
-    varietyState: "user_added",
+    catalogItemId: CATALOG_IDS.lemonSpecies,
+    varietyText: "Citrus limon",
+    varietyState: "selected",
   },
   {
     displayName: "Лавандула за опрашителите",
     objectKind: "plant",
     spaceIndex: 3,
-    varietyState: "unknown",
+    catalogItemId: CATALOG_IDS.lavenderSpecies,
+    varietyText: "Lavandula angustifolia",
+    varietyState: "selected",
   },
   {
     displayName: "Соняшник уздовж огорожі",
     objectKind: "plant",
     spaceIndex: 2,
-    varietyText: "Високорослий місцевий",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.sunflowerSpecies,
+    varietyText: "Helianthus annuus",
+    varietyState: "selected",
   },
   {
     displayName: "Полуниця після поділу куща",
     objectKind: "plant",
     spaceIndex: 2,
-    varietyText: "Ремонтантна без етикетки",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.strawberrySpecies,
+    varietyText: "Fragaria x ananassa",
+    varietyState: "selected",
   },
   {
     displayName: "М'ята, яку стримує окремий горщик",
@@ -435,7 +742,8 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName: "Маслина на остъкления балкон",
     objectKind: "plant",
     spaceIndex: 3,
-    varietyState: "unknown",
+    varietyText: "Olea europaea, balcony seedling",
+    varietyState: "free_text",
   },
   {
     displayName:
@@ -456,47 +764,58 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName: "Коза Зірка",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyText: "Українська місцева",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.localGoatBreed,
+    varietyText: "Українська місцева коза",
+    varietyState: "selected",
   },
   {
     displayName: "Коза Хмарка після переїзду",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyState: "unknown",
+    catalogItemId: CATALOG_IDS.bulgarianGoatBreed,
+    varietyText: "Българска бяла млечна коза",
+    varietyState: "selected",
   },
   {
     displayName: "Курка Ряба з відновленим пір'ям",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyText: "Домашня несучка",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.rhodeIslandBreed,
+    varietyText: "Rhode Island Red",
+    varietyState: "selected",
   },
   {
     displayName: "Півень Граф",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyState: "unknown",
+    catalogItemId: CATALOG_IDS.longBantamBreed,
+    varietyText:
+      "Бельгійська бородата бентамка д'Уккле, порцелянова кольорова лінія",
+    varietyState: "selected",
   },
   {
     displayName: "Кішка М'ята біля теплиці",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyText: "Безпородна",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.domesticShorthairBreed,
+    varietyText: "Domestic Shorthair",
+    varietyState: "selected",
   },
   {
     displayName: "Пес Бруно після реабілітації",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyText: "Метис",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.mixedDogBreed,
+    varietyText: "Mixed-breed dog",
+    varietyState: "selected",
   },
   {
     displayName: "Кролиця Лада",
     objectKind: "animal",
     spaceIndex: 4,
-    varietyState: "unknown",
+    catalogItemId: CATALOG_IDS.unavailableRabbitSpecies,
+    varietyText: "Oryctolagus cuniculus",
+    varietyState: "selected",
   },
   {
     displayName: "Їжак, що приходить до води",
@@ -508,15 +827,17 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName: "Семейство Север",
     objectKind: "bee_colony",
     spaceIndex: 5,
-    varietyText: "Карпатская линия",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.carpathianBeeBreed,
+    varietyText: "Карпатська бджола",
+    varietyState: "selected",
   },
   {
     displayName: "Семейство Липа",
     objectKind: "bee_colony",
     spaceIndex: 5,
-    varietyText: "Местная линия",
-    varietyState: "free_text",
+    catalogItemId: CATALOG_IDS.honeyBeeSpecies,
+    varietyText: "Apis mellifera",
+    varietyState: "selected",
   },
   {
     displayName: "Отводок Июнь",
@@ -1312,6 +1633,111 @@ const scenarios: readonly VisualFixtureScenario[] = [
     200,
   ),
   scenario(
+    "catalog-empty",
+    "public-catalog-empty",
+    "Empty bee taxonomy category",
+    "/objects?kind=bee_colony&identity=unavailable",
+    200,
+  ),
+  scenario(
+    "catalog-zero-results",
+    "public-catalog-zero-results",
+    "Catalog zero-result recovery",
+    "/objects?q=visual-fixture-no-match",
+    200,
+  ),
+  scenario(
+    "catalog-sparse",
+    "public-catalog-sparse",
+    "Sparse bee breed catalog",
+    "/ru/objects?kind=bee_colony&identity=breed",
+    200,
+  ),
+  scenario(
+    "catalog-page-size-minus-one",
+    "public-catalog-page-size-minus-one",
+    "Five provisional plant identities",
+    "/objects?kind=plant&identity=provisional",
+    200,
+  ),
+  scenario(
+    "catalog-page-size",
+    "public-catalog-page-size",
+    "Six animal breed identities",
+    "/objects?kind=animal&identity=breed",
+    200,
+  ),
+  scenario(
+    "catalog-page-size-plus-one",
+    "public-catalog-page-size-plus-one",
+    "Seven plant species with continuation",
+    "/objects?kind=plant&identity=species",
+    200,
+  ),
+  scenario(
+    "catalog-pagination",
+    "public-catalog-pagination",
+    "Plant species second page",
+    "/objects?kind=plant&identity=species&page=2",
+    200,
+  ),
+  scenario(
+    "catalog-combined-filters",
+    "public-catalog-combined-filters",
+    "Localized bee species search",
+    "/bg/objects?kind=bee_colony&identity=species&q=Apis",
+    200,
+  ),
+  scenario(
+    "catalog-search-alias",
+    "public-catalog-search-alias",
+    "Catalog alias search",
+    "/bg/objects?kind=plant&q=%D0%BB%D0%B0%D0%B2%D0%B0%D0%BD%D0%B4%D1%83%D0%BB%D0%B0",
+    200,
+  ),
+  scenario(
+    "catalog-unavailable",
+    "public-catalog-unavailable",
+    "Unavailable taxonomy remains explicit",
+    "/objects?kind=animal&identity=unavailable",
+    200,
+  ),
+  scenario(
+    "catalog-loading",
+    "public-catalog-loading",
+    "Public catalog loading",
+    "/bg/objects?__visualObjects=loading",
+    200,
+  ),
+  scenario(
+    "catalog-error",
+    "public-catalog-error",
+    "Recoverable public catalog error",
+    "/ru/objects?__visualObjects=error",
+    200,
+  ),
+  scenario(
+    "catalog-variety",
+    "public-catalog-variety",
+    "Plant variety evidence",
+    "/variety/visual-pomidor-cheri",
+    200,
+  ),
+  scenario(
+    "catalog-species",
+    "public-catalog-species",
+    "Plant species evidence",
+    "/species/visual-rosmarinus-officinalis",
+    200,
+  ),
+  scenario(
+    "catalog-breed",
+    "public-catalog-breed",
+    "Bee breed evidence",
+    "/breed/visual-karpatska-bdzhola",
+    200,
+  ),
+  scenario(
     "journal-active",
     "public-journal-active",
     "Published journal with media",
@@ -1375,6 +1801,8 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   namespace: VISUAL_FIXTURE_NAMESPACE,
   actors,
   spaces,
+  catalogItems,
+  catalogNames,
   objects,
   entries,
   media,
@@ -1404,6 +1832,8 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "actors", manifest.actors.length, 4);
   checkCount(errors, "spaces", manifest.spaces.length, 5);
   checkCount(errors, "objects", manifest.objects.length, 30);
+  checkCount(errors, "catalog items", manifest.catalogItems.length, 19);
+  checkCount(errors, "catalog names", manifest.catalogNames.length, 29);
   checkCount(errors, "entries", manifest.entries.length, 80);
   checkCount(errors, "media", manifest.media.length, 16);
   checkCount(errors, "topics", manifest.topics.length, 3);
@@ -1412,6 +1842,7 @@ export function validateVisualFixtureManifest(
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
   const spaceIds = new Set(manifest.spaces.map((space) => space.id));
   const objectIds = new Set(manifest.objects.map((object) => object.id));
+  const catalogItemIds = new Set(manifest.catalogItems.map((item) => item.id));
   const entryIds = new Set(manifest.entries.map((entry) => entry.id));
   const topicIds = new Set(manifest.topics.map((topic) => topic.id));
   const pendingIdentityIds = new Set(
@@ -1436,6 +1867,21 @@ export function validateVisualFixtureManifest(
     errors,
     "object ids",
     manifest.objects.map((object) => object.id),
+  );
+  checkUnique(
+    errors,
+    "catalog item ids",
+    manifest.catalogItems.map((item) => item.id),
+  );
+  checkUnique(
+    errors,
+    "catalog public slugs",
+    manifest.catalogItems.map((item) => item.publicSlug),
+  );
+  checkUnique(
+    errors,
+    "catalog name ids",
+    manifest.catalogNames.map((name) => name.id),
   );
   checkUnique(
     errors,
@@ -1525,6 +1971,28 @@ export function validateVisualFixtureManifest(
   for (const object of manifest.objects) {
     if (!actorIds.has(object.ownerUserId) || !spaceIds.has(object.spaceId)) {
       errors.push(`Object ${object.id} has an invalid owner or space.`);
+    }
+    if (
+      object.catalogItemId !== null &&
+      !catalogItemIds.has(object.catalogItemId)
+    ) {
+      errors.push(`Object ${object.id} references a non-fixture catalog row.`);
+    }
+  }
+  for (const item of manifest.catalogItems) {
+    if (
+      item.source !== "visual_fixture" ||
+      !item.sourceId.startsWith("ove175-visual-")
+    ) {
+      errors.push(`Catalog item ${item.id} has unsafe fixture provenance.`);
+    }
+    if (!item.publicSlug.startsWith("visual-")) {
+      errors.push(`Catalog item ${item.id} has a non-fixture public slug.`);
+    }
+  }
+  for (const name of manifest.catalogNames) {
+    if (!catalogItemIds.has(name.catalogItemId)) {
+      errors.push(`Catalog name ${name.id} references an unknown item.`);
     }
   }
   for (const identity of manifest.lineageEvidence.pendingIdentities) {
@@ -1816,6 +2284,28 @@ function compareFeedEntries(
     right.publishedAt!.localeCompare(left.publishedAt!) ||
     left.id.localeCompare(right.id)
   );
+}
+
+function catalogSeed(
+  id: string,
+  canonicalName: string,
+  publicSlug: string,
+  catalogKind: VisualFixtureCatalogKind,
+  locale: VisualFixtureCatalogLocale,
+  status?: VisualFixtureCatalogStatus,
+): CatalogSeedSpec {
+  return {
+    id,
+    canonicalName,
+    publicSlug,
+    catalogKind,
+    locale,
+    ...(status ? { status } : {}),
+  };
+}
+
+function normalizeCatalogName(value: string) {
+  return value.normalize("NFKC").trim().toLocaleLowerCase("en");
 }
 
 function createSpace(

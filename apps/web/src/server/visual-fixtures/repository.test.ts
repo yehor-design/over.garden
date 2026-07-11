@@ -54,6 +54,8 @@ describe("visual fixture repository query contracts", () => {
       "profiles",
       "lineage_pending_identities",
       "spaces",
+      "catalog_items",
+      "catalog_names",
       "objects",
       "lineage_edges",
       "entries",
@@ -70,6 +72,8 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('insert into "user"');
     expect(sql).toContain('insert into "user_public_profiles"');
     expect(sql).toContain('insert into "spaces"');
+    expect(sql).toContain('insert into "catalog_items"');
+    expect(sql).toContain('insert into "catalog_item_names"');
     expect(sql).toContain('insert into "plant_objects"');
     expect(sql).toContain('insert into "lineage_pending_source_identities"');
     expect(sql).toContain('insert into "lineage_provenance_edges"');
@@ -113,6 +117,8 @@ describe("visual fixture repository query contracts", () => {
       "lineage_edges",
       "lineage_pending_identities",
       "objects",
+      "catalog_names",
+      "catalog_items",
       "spaces",
       "profiles",
       "actors",
@@ -132,6 +138,8 @@ describe("visual fixture repository query contracts", () => {
         ({ id }) => id,
       ),
       VISUAL_FIXTURE_MANIFEST.objects.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.catalogNames.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.catalogItems.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.spaces.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
@@ -154,6 +162,8 @@ describe("visual fixture repository query contracts", () => {
       "actors",
       "profiles",
       "spaces",
+      "catalogItems",
+      "catalogNames",
       "objects",
       "lineagePendingIdentities",
       "lineageEdges",
@@ -162,7 +172,9 @@ describe("visual fixture repository query contracts", () => {
       "topicSignals",
       "media",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(10);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(12);
+    expect(sql).toContain('from "catalog_items"');
+    expect(sql).toContain('from "catalog_item_names"');
     expect(sql).toContain('from "user_public_profiles"');
     expect(sql).toContain('from "journal_topics"');
     expect(sql).toContain('from "journal_entry_topic_signals"');

@@ -1,11 +1,25 @@
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import type { CatalogKind } from "@/db/schema";
 
 export function publicJournalEntryPath(publicSlug: string): string {
   return `/journal/${encodeURIComponent(publicSlug)}`;
 }
 
 export function publicVarietyPath(publicSlug: string): string {
-  return `/variety/${encodeURIComponent(publicSlug)}`;
+  return publicCatalogEvidencePath("plant_variety", publicSlug);
+}
+
+export function publicCatalogEvidencePath(
+  catalogKind: CatalogKind,
+  publicSlug: string,
+): string {
+  const routeSegment: Record<CatalogKind, string> = {
+    plant_variety: "variety",
+    species: "species",
+    breed: "breed",
+  };
+
+  return `/${routeSegment[catalogKind]}/${encodeURIComponent(publicSlug)}`;
 }
 
 export function gardenFirstEntryHomepagePath(): string {
@@ -51,6 +65,15 @@ export function gardenFirstEntryPreselectionPath(publicSlug: string): string {
   const params = new URLSearchParams({
     catalog: publicSlug,
     source: "public-variety",
+  });
+
+  return `/garden?${params.toString()}`;
+}
+
+export function gardenCatalogPreselectionPath(publicSlug: string): string {
+  const params = new URLSearchParams({
+    catalog: publicSlug,
+    source: "public-catalog",
   });
 
   return `/garden?${params.toString()}`;

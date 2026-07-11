@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
 Status: implemented by OVE-187
-Manifest version: `ove187-v1`
-Manifest SHA-256: `08aab73bd3e708298746b937836cd4e4c8c99d85be8990f0703df7391f9f2698`
+Manifest version: `ove187-v2`
+Manifest SHA-256: `f71b1978e6103ba06622b36766c7b87c0b490a1ff6d4287887be7835bcfeab65`
 
 ## Purpose
 
@@ -16,12 +16,15 @@ The manifest owns exactly:
 - 4 synthetic users and 4 matching public profiles;
 - 5 spaces;
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
+- 19 synthetic catalog identities and 29 searchable primary/alias names with
+  explicit `visual_fixture` provenance;
 - 80 journal entries across public, private, archived, and public-gone states;
 - 3 curated journal topics and 15 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 17 real-route scenarios covering public-feed empty, typical, dense, loading,
-  recoverable error, pagination, exhausted, and context-empty states alongside
-  the existing object/journal HTTP 404 and 410 states.
+- 32 real-route scenarios covering public-feed and living-object-catalog empty,
+  sparse, typical, dense, loading, recoverable error, threshold pagination,
+  unavailable identity, aliases, and deep evidence states alongside the
+  existing object/journal HTTP 404 and 410 states.
 - 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Claim, Add object, Add journal entry, Save, and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
@@ -85,8 +88,9 @@ environment checks pass. The guard refuses:
 
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
-environment, the `__visualFeed` query parameter may select a read-only rendering
-state for screenshot evidence; the same parameter is ignored everywhere else.
+environment, the `__visualFeed` and `__visualObjects` query parameters may
+select read-only rendering states for screenshot evidence; the same parameters
+are ignored everywhere else.
 Proxy evaluates the pure environment contract and returns a hard HTTP `404`
 before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
@@ -94,9 +98,10 @@ index is `noindex` and is excluded from the product shell.
 
 Fixture rows are identified by exact manifest IDs. Reset removes media, topic
 memberships, topics, entries, claimable lineage edges and pending identities,
-objects, spaces, profiles, and actors in reverse foreign-key order and deletes
+objects, catalog names, catalog identities, spaces, profiles, and actors in
+reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v1/`. It does not use wildcard or prefix database
+`visual-fixtures/ove187-v2/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
 existing hidden or coarse-region privacy states.
@@ -166,6 +171,8 @@ The expected final counts are:
   "actors": 4,
   "profiles": 4,
   "spaces": 5,
+  "catalogItems": 19,
+  "catalogNames": 29,
   "objects": 30,
   "lineagePendingIdentities": 1,
   "lineageEdges": 1,
@@ -194,6 +201,21 @@ page, and an empty route-owned context rail:
 /?__visualFeed=page-2
 /?__visualFeed=exhausted
 /?__visualFeed=context-empty
+```
+
+The catalog scenarios exercise real SQL-backed taxonomy groups, URL-owned
+filters, aliases, and the six-card pagination boundary:
+
+```text
+/objects?kind=plant&identity=provisional
+/objects?kind=animal&identity=breed
+/objects?kind=plant&identity=species
+/objects?kind=plant&identity=species&page=2
+/objects?kind=bee_colony&identity=unavailable
+/objects?q=visual-fixture-no-match
+/bg/objects?kind=bee_colony&identity=species&q=Apis
+/bg/objects?__visualObjects=loading
+/ru/objects?__visualObjects=error
 ```
 
 The missing-journal and gone-journal scenarios return real HTTP `404` and

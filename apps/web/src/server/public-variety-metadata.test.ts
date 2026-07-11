@@ -97,6 +97,21 @@ describe("public variety metadata", () => {
     expect(jsonLd?.hasPart[0]?.headline).toBe("First ripe cluster");
   });
 
+  it("uses the catalog kind canonical path for species JSON-LD", () => {
+    vi.stubEnv("PUBLIC_SITE_URL", "https://example.test");
+    const page = buildPage({ entryCount: 3, aggregateBodyLength: 900 });
+    page.catalog.catalogKind = "species";
+    page.catalog.publicSlug = "solanum-lycopersicum";
+    page.catalog.canonicalName = "Solanum lycopersicum";
+
+    const jsonLd = buildPublicVarietyJsonLd(page, "uk");
+
+    expect(jsonLd?.url).toBe(
+      "https://example.test/species/solanum-lycopersicum",
+    );
+    expect(jsonLd?.name).toBe("Solanum lycopersicum · публічні записи про вид");
+  });
+
   it("omits JSON-LD when catalog trust is below the promotion gate", () => {
     const page = buildPage({
       entryCount: 3,
@@ -128,6 +143,7 @@ function buildPage({
 }): PublicVarietyPage {
   return {
     catalog: {
+      catalogKind: "plant_variety",
       canonicalName: "Pomidor Cheri",
       publicSlug: "pomidor-cheri-0000000101",
       status: "seeded",

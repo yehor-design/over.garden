@@ -241,6 +241,9 @@ describe("app route cache guardrail", () => {
     const ugcResponse = responseFor("/journal/field-note", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
+    const catalogResponse = responseFor("/objects", {
+      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
+    });
 
     expect(privacyResponse.status).toBe(307);
     expect(privacyResponse.headers.get("Location")).toBe(
@@ -252,6 +255,10 @@ describe("app route cache guardrail", () => {
     );
     expect(ugcResponse.status).toBe(200);
     expect(ugcResponse.headers.get("Content-Language")).toBe("bg");
+    expect(catalogResponse.status).toBe(307);
+    expect(catalogResponse.headers.get("Location")).toBe(
+      "https://over.garden/ru/objects",
+    );
   });
 
   it("canonicalizes a supported but non-canonical cookie value", () => {

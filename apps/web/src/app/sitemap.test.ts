@@ -13,8 +13,23 @@ describe("/sitemap.xml", () => {
   it("lists policy-approved indexable pages only and never noindex/internal routes", async () => {
     mocks.listIndexablePublicVarietySitemapEntries.mockResolvedValue([
       {
+        catalogKind: "plant_variety",
         publicSlug: "pomidor-cheri-0000000101",
         lastModified: "2026-06-20T12:00:00.000Z",
+        entryCount: 3,
+        aggregateBodyLength: 900,
+      },
+      {
+        catalogKind: "species",
+        publicSlug: "solanum-lycopersicum",
+        lastModified: "2026-06-21T12:00:00.000Z",
+        entryCount: 3,
+        aggregateBodyLength: 900,
+      },
+      {
+        catalogKind: "breed",
+        publicSlug: "carpathian-bee",
+        lastModified: "2026-06-22T12:00:00.000Z",
         entryCount: 3,
         aggregateBodyLength: 900,
       },
@@ -41,6 +56,8 @@ describe("/sitemap.xml", () => {
       "https://over.garden/bg/markets/bulgaria",
       "https://over.garden/ru/markets/bulgaria",
       "https://over.garden/variety/pomidor-cheri-0000000101",
+      "https://over.garden/species/solanum-lycopersicum",
+      "https://over.garden/breed/carpathian-bee",
     ]);
     expect(urls).not.toContain("https://over.garden/uk");
     expect(urls).not.toContain("https://over.garden/ru/markets/ukraine");
@@ -56,8 +73,8 @@ describe("/sitemap.xml", () => {
       lastModified: new Date("2026-07-03T00:00:00.000Z"),
     });
     expect(entries.at(-1)).toMatchObject({
-      url: "https://over.garden/variety/pomidor-cheri-0000000101",
-      lastModified: new Date("2026-06-20T12:00:00.000Z"),
+      url: "https://over.garden/breed/carpathian-bee",
+      lastModified: new Date("2026-06-22T12:00:00.000Z"),
     });
   });
 });

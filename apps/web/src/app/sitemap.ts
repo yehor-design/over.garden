@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-import { publicVarietyPath } from "@/lib/garden/public-paths";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import { listIndexableAuthoredPublicContentSitemapEntries } from "@/server/public-seo-content";
 import { listStaticIndexablePublicSurfaces } from "@/server/public-surface-indexing-policy";
@@ -28,7 +28,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: entry.priority,
     })),
     ...varietyEntries.map((entry) => ({
-      url: absolutePublicUrl(publicVarietyPath(entry.publicSlug)),
+      url: absolutePublicUrl(
+        publicCatalogEvidencePath(entry.catalogKind, entry.publicSlug),
+      ),
       lastModified: new Date(entry.lastModified),
       changeFrequency: "weekly" as const,
       priority: 0.6,

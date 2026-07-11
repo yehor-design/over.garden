@@ -218,6 +218,7 @@ export function publicVarietyPage(
 
   return {
     catalog: {
+      catalogKind: "plant_variety",
       canonicalName: JOURNEY.catalogCanonicalName,
       publicSlug: JOURNEY.catalogPublicSlug,
       status: "seeded",

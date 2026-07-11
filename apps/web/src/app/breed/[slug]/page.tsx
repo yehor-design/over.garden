@@ -11,11 +11,11 @@ export const dynamic = "force-dynamic";
 export function generateMetadata(
   props: PublicCatalogEvidenceRouteProps,
 ): Promise<Metadata> {
-  return generatePublicCatalogEvidenceMetadata("plant_variety", props);
+  return generatePublicCatalogEvidenceMetadata("breed", props);
 }
 
-export default function PublicVarietyRoute(
+export default function PublicBreedRoute(
   props: PublicCatalogEvidenceRouteProps,
 ) {
-  return renderPublicCatalogEvidenceRoute("plant_variety", props);
+  return renderPublicCatalogEvidenceRoute("breed", props);
 }

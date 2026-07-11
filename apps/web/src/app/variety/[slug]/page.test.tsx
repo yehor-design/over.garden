@@ -35,7 +35,7 @@ vi.mock("@/server/site-shell-session", () => ({
   getSiteShellSessionState: mocks.getSiteShellSessionState,
 }));
 
-vi.mock("./source-credits", () => ({
+vi.mock("@/app/variety/[slug]/source-credits", () => ({
   PublicVarietySourceCredits: () => <section>Source credits</section>,
 }));
 
@@ -54,6 +54,7 @@ describe("/variety/[slug]", () => {
     });
     mocks.getPublicVarietyPage.mockResolvedValue({
       catalog: {
+        catalogKind: "plant_variety",
         canonicalName: "Pomidor Cheri",
         publicSlug: "pomidor-cheri-0000000101",
         status: "seeded",

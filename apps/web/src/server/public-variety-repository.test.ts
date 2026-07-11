@@ -107,6 +107,18 @@ describe("public variety repository query contracts", () => {
     ]);
   });
 
+  it("can constrain a deep evidence page to its expected species or breed kind", () => {
+    const compiled = buildPublicVarietySummaryQuery(
+      testDb,
+      "solanum-lycopersicum",
+      "species",
+    ).compile();
+
+    expect(compiled.sql).toContain('"catalog_items"."catalog_kind"');
+    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" =');
+    expect(compiled.parameters).toContain("species");
+  });
+
   it("selects bounded entry readback with derivative media only", () => {
     const compiled = buildPublicVarietyEntriesQuery(
       testDb,
@@ -246,7 +258,9 @@ describe("public variety repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."public_slug" is not null',
     );
-    expect(compiled.sql).toContain('group by "catalog_items"."public_slug"');
+    expect(compiled.sql).toContain(
+      'group by "catalog_items"."catalog_kind", "catalog_items"."public_slug"',
+    );
     expect(compiled.sql).toContain(
       'having count("journal_entries"."id") >= $14 and coalesce(sum(char_length("journal_entries"."body")), 0) >= $15',
     );

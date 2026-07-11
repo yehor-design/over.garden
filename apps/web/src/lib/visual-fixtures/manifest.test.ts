@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v1");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v1");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v2");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v2");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(4);
     expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(5);
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
@@ -29,6 +29,8 @@ describe("visual fixture manifest", () => {
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
     expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(3);
     expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(15);
+    expect(VISUAL_FIXTURE_MANIFEST.catalogItems).toHaveLength(19);
+    expect(VISUAL_FIXTURE_MANIFEST.catalogNames.length).toBeGreaterThan(19);
     expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize).toBe(8);
     expect(
       VISUAL_FIXTURE_MANIFEST.intentEvidence.scenarios.length,
@@ -146,6 +148,79 @@ describe("visual fixture manifest", () => {
     ).toHaveLength(1);
   });
 
+  it("backs OVE-175 catalog thresholds with real synthetic taxonomy rows", () => {
+    const catalogById = new Map(
+      VISUAL_FIXTURE_MANIFEST.catalogItems.map((item) => [item.id, item]),
+    );
+    const publiclyVisibleObjectIds = new Set(
+      VISUAL_FIXTURE_MANIFEST.entries
+        .filter(
+          (entry) =>
+            entry.visibility === "public" &&
+            entry.lifecycleState === "active" &&
+            entry.publicGoneAt === null &&
+            entry.publishedAt !== null,
+        )
+        .map((entry) => entry.objectId),
+    );
+    const visibleObjects = VISUAL_FIXTURE_MANIFEST.objects.filter((object) =>
+      publiclyVisibleObjectIds.has(object.id),
+    );
+    const countCatalogGroups = (
+      objectKind: "plant" | "animal" | "bee_colony",
+      catalogKind: "plant_variety" | "species" | "breed",
+    ) =>
+      new Set(
+        visibleObjects
+          .filter((object) => object.objectKind === objectKind)
+          .flatMap((object) => {
+            const item = object.catalogItemId
+              ? catalogById.get(object.catalogItemId)
+              : undefined;
+            return item?.catalogKind === catalogKind &&
+              (item.status === "seeded" || item.status === "confirmed")
+              ? [item.id]
+              : [];
+          }),
+      ).size;
+
+    expect(
+      new Set(VISUAL_FIXTURE_MANIFEST.catalogItems.map((item) => item.source)),
+    ).toEqual(new Set(["visual_fixture"]));
+    expect(countCatalogGroups("plant", "species")).toBe(7);
+    expect(countCatalogGroups("animal", "breed")).toBe(6);
+    expect(countCatalogGroups("bee_colony", "breed")).toBe(1);
+    expect(
+      visibleObjects.filter((object) => {
+        const item = object.catalogItemId
+          ? catalogById.get(object.catalogItemId)
+          : undefined;
+        return object.objectKind === "animal" && item?.status === "rejected";
+      }),
+    ).toHaveLength(1);
+    expect(
+      visibleObjects.filter(
+        (object) =>
+          object.objectKind === "plant" &&
+          (object.varietyState === "free_text" ||
+            object.varietyState === "user_added"),
+      ),
+    ).toHaveLength(5);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.catalogItems.some(
+        (item) => item.status === "rejected",
+      ),
+    ).toBe(true);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.catalogItems.some(
+        (item) => item.canonicalName.length > 60,
+      ),
+    ).toBe(true);
+    expect(
+      new Set(VISUAL_FIXTURE_MANIFEST.catalogNames.map((name) => name.locale)),
+    ).toEqual(new Set(["uk", "bg", "ru", "en", "la"]));
+  });
+
   it("crosses real density thresholds and includes empty, typical, dense, and gone routes", () => {
     const entriesByObject = Object.groupBy(
       VISUAL_FIXTURE_MANIFEST.entries,
@@ -196,6 +271,21 @@ describe("visual fixture manifest", () => {
         "public-feed-pagination",
         "public-feed-exhausted",
         "public-feed-context-empty",
+        "public-catalog-empty",
+        "public-catalog-zero-results",
+        "public-catalog-sparse",
+        "public-catalog-page-size-minus-one",
+        "public-catalog-page-size",
+        "public-catalog-page-size-plus-one",
+        "public-catalog-pagination",
+        "public-catalog-combined-filters",
+        "public-catalog-search-alias",
+        "public-catalog-unavailable",
+        "public-catalog-loading",
+        "public-catalog-error",
+        "public-catalog-variety",
+        "public-catalog-species",
+        "public-catalog-breed",
       ]),
     );
     expect(
@@ -280,7 +370,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v1\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v2\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

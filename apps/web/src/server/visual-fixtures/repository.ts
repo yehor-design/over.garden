@@ -12,6 +12,8 @@ export interface VisualFixtureCounts {
   actors: number;
   profiles: number;
   spaces: number;
+  catalogItems: number;
+  catalogNames: number;
   objects: number;
   lineagePendingIdentities: number;
   lineageEdges: number;
@@ -136,6 +138,68 @@ export function buildVisualFixtureSeedQueries(
         location_visibility: sql`excluded.location_visibility`,
         coarse_region_code: sql`excluded.coarse_region_code`,
         updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const catalogItems = executor
+    .insertInto("catalog_items")
+    .values(
+      manifest.catalogItems.map((item) => ({
+        id: item.id,
+        canonical_name: item.canonicalName,
+        normalized_name: item.normalizedName,
+        public_slug: item.publicSlug,
+        catalog_kind: item.catalogKind,
+        status: item.status,
+        source: item.source,
+        source_id: item.sourceId,
+        locale: item.locale,
+        created_by_user_id: null,
+        merged_into_catalog_item_id: null,
+        reviewed_by_user_id: null,
+        reviewed_at: null,
+        created_at: item.createdAt,
+        updated_at: item.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        canonical_name: sql`excluded.canonical_name`,
+        normalized_name: sql`excluded.normalized_name`,
+        public_slug: sql`excluded.public_slug`,
+        catalog_kind: sql`excluded.catalog_kind`,
+        status: sql`excluded.status`,
+        source: sql`excluded.source`,
+        source_id: sql`excluded.source_id`,
+        locale: sql`excluded.locale`,
+        created_by_user_id: null,
+        merged_into_catalog_item_id: null,
+        reviewed_by_user_id: null,
+        reviewed_at: null,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const catalogNames = executor
+    .insertInto("catalog_item_names")
+    .values(
+      manifest.catalogNames.map((name) => ({
+        id: name.id,
+        catalog_item_id: name.catalogItemId,
+        display_name: name.displayName,
+        normalized_name: name.normalizedName,
+        locale: name.locale,
+        is_primary: name.isPrimary,
+        created_at: name.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        catalog_item_id: sql`excluded.catalog_item_id`,
+        display_name: sql`excluded.display_name`,
+        normalized_name: sql`excluded.normalized_name`,
+        locale: sql`excluded.locale`,
+        is_primary: sql`excluded.is_primary`,
       }),
     );
 
@@ -341,6 +405,8 @@ export function buildVisualFixtureSeedQueries(
     { label: "profiles", query: profiles },
     { label: "lineage_pending_identities", query: lineagePendingIdentities },
     { label: "spaces", query: spaces },
+    { label: "catalog_items", query: catalogItems },
+    { label: "catalog_names", query: catalogNames },
     { label: "objects", query: objects },
     { label: "lineage_edges", query: lineageEdges },
     { label: "entries", query: entries },
@@ -414,6 +480,22 @@ export function buildVisualFixtureResetQueries(
       ),
     },
     {
+      label: "catalog_names",
+      query: executor.deleteFrom("catalog_item_names").where(
+        "id",
+        "in",
+        manifest.catalogNames.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "catalog_items",
+      query: executor.deleteFrom("catalog_items").where(
+        "id",
+        "in",
+        manifest.catalogItems.map(({ id }) => id),
+      ),
+    },
+    {
       label: "spaces",
       query: executor.deleteFrom("spaces").where(
         "id",
@@ -470,6 +552,28 @@ export function buildVisualFixtureStatusQueries(
           "id",
           "in",
           manifest.spaces.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "catalogItems",
+      query: executor
+        .selectFrom("catalog_items")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.catalogItems.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "catalogNames",
+      query: executor
+        .selectFrom("catalog_item_names")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.catalogNames.map(({ id }) => id),
         ),
     },
     {
@@ -614,6 +718,8 @@ export function expectedVisualFixtureCounts(
     actors: manifest.actors.length,
     profiles: manifest.actors.length,
     spaces: manifest.spaces.length,
+    catalogItems: manifest.catalogItems.length,
+    catalogNames: manifest.catalogNames.length,
     objects: manifest.objects.length,
     lineagePendingIdentities: manifest.lineageEvidence.pendingIdentities.length,
     lineageEdges: manifest.lineageEvidence.edges.length,

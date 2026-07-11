@@ -1,4 +1,4 @@
-import { publicVarietyPath } from "@/lib/garden/public-paths";
+import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
@@ -49,8 +49,17 @@ export function buildPublicVarietyJsonLd(
   return {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: `${page.catalog.canonicalName} · ${copy.variety.collectionPageSuffix}`,
-    url: absolutePublicUrl(publicVarietyPath(page.catalog.publicSlug)),
+    name: `${page.catalog.canonicalName} · ${getCollectionPageSuffix(
+      page.catalog.catalogKind,
+      locale,
+      copy.variety.collectionPageSuffix,
+    )}`,
+    url: absolutePublicUrl(
+      publicCatalogEvidencePath(
+        page.catalog.catalogKind,
+        page.catalog.publicSlug,
+      ),
+    ),
     isPartOf: {
       "@type": "WebSite",
       name: "OverGarden",
@@ -67,6 +76,31 @@ export function buildPublicVarietyJsonLd(
       url: absolutePublicUrl(entry.publicPath),
     })),
   };
+}
+
+function getCollectionPageSuffix(
+  catalogKind: PublicVarietyPage["catalog"]["catalogKind"],
+  locale: InterfaceLocale,
+  varietySuffix: string,
+) {
+  if (catalogKind === "plant_variety") return varietySuffix;
+
+  const suffixes = {
+    uk: {
+      species: "публічні записи про вид",
+      breed: "публічні записи про породу або лінію",
+    },
+    bg: {
+      species: "публични записи за вида",
+      breed: "публични записи за породата или линията",
+    },
+    ru: {
+      species: "публичные записи о виде",
+      breed: "публичные записи о породе или линии",
+    },
+  } as const;
+
+  return suffixes[locale][catalogKind];
 }
 
 function toIsoDate(value: Date | string) {
