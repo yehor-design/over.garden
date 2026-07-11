@@ -16,6 +16,7 @@ interface PublicSurfaceCopy {
     entryType: string;
     metadataTitleSuffix: string;
     objectPassport: string;
+    backToJournals: string;
     primaryNavigation: string;
     entryMetadata: string;
     spaceEntryPrefix: string;
@@ -150,6 +151,7 @@ const COPY = {
       entryType: "Запис у журналі живого об'єкта",
       metadataTitleSuffix: "запис у журналі",
       objectPassport: "Паспорт об'єкта",
+      backToJournals: "Назад до журналів",
       primaryNavigation: "Основна навігація",
       entryMetadata: "Метадані запису",
       spaceEntryPrefix: "Запис простору",
@@ -286,6 +288,7 @@ const COPY = {
       entryType: "Запис в дневника на жив обект",
       metadataTitleSuffix: "запис в градински дневник",
       objectPassport: "Паспорт на обекта",
+      backToJournals: "Назад към дневниците",
       primaryNavigation: "Основна навигация",
       entryMetadata: "Метаданни на записа",
       spaceEntryPrefix: "Запис за пространство",
@@ -424,6 +427,7 @@ const COPY = {
       entryType: "Запись в журнале живого объекта",
       metadataTitleSuffix: "запись в садовом журнале",
       objectPassport: "Паспорт объекта",
+      backToJournals: "Назад к журналам",
       primaryNavigation: "Основная навигация",
       entryMetadata: "Метаданные записи",
       spaceEntryPrefix: "Запись пространства",

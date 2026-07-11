@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187
 Manifest version: `ove187-v2`
-Manifest SHA-256: `f71b1978e6103ba06622b36766c7b87c0b490a1ff6d4287887be7835bcfeab65`
+Manifest SHA-256: `70cbf5205034d627d0f940642b80b5fc1ada383fd0272c4c050c70634ef525d9`
 
 ## Purpose
 
@@ -19,12 +19,15 @@ The manifest owns exactly:
 - 19 synthetic catalog identities and 29 searchable primary/alias names with
   explicit `visual_fixture` provenance;
 - 80 journal entries across public, private, archived, and public-gone states;
-- 3 curated journal topics and 15 accepted, public-eligible memberships;
+- 6 curated journal topics and 39 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 32 real-route scenarios covering public-feed and living-object-catalog empty,
-  sparse, typical, dense, loading, recoverable error, threshold pagination,
-  unavailable identity, aliases, and deep evidence states alongside the
-  existing object/journal HTTP 404 and 410 states.
+- 43 real-route scenarios covering public-feed, living-object-catalog, and
+  public-journal-directory empty, sparse, typical, dense, loading, recoverable
+  error, threshold pagination, unavailable identity, aliases, and deep evidence
+  states alongside the existing object/journal HTTP 404 and 410 states;
+- 11 machine-checkable journal-directory queries with stable URLs, expected
+  counts, ordered entry IDs, and ordered public slugs across pagination and
+  filter boundaries;
 - 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Claim, Add object, Add journal entry, Save, and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
@@ -88,9 +91,10 @@ environment checks pass. The guard refuses:
 
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
-environment, the `__visualFeed` and `__visualObjects` query parameters may
-select read-only rendering states for screenshot evidence; the same parameters
-are ignored everywhere else.
+environment, the `__visualFeed`, `__visualObjects`, and `__visualJournals`
+query parameters may select read-only rendering states or the isolated journal
+corpus for screenshot evidence; the same parameters are ignored everywhere
+else.
 Proxy evaluates the pure environment contract and returns a hard HTTP `404`
 before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
@@ -160,9 +164,11 @@ pnpm visual:fixtures:verify
 `verify` performs seed twice, compares counts, creates one non-fixture database
 sentinel and one non-fixture public media sentinel, resets the exact fixture
 namespace, proves both survived, reseeds, checks all 16 fixture media objects
-with object-store HEAD requests, and removes both sentinels. Its JSON output is
-intentionally limited to the version, hash, environment class, aggregate
-counts, and boolean/count proof fields.
+with object-store HEAD requests, executes all 11 journal-directory count/order
+contracts against canonical Postgres, and removes both sentinels. Directory
+proof is explicitly scoped to manifest IDs because reset deliberately preserves
+unrelated local rows. Its JSON output is intentionally limited to the version,
+hash, environment class, aggregate counts, and boolean/count proof fields.
 
 The expected final counts are:
 
@@ -177,8 +183,8 @@ The expected final counts are:
   "lineagePendingIdentities": 1,
   "lineageEdges": 1,
   "entries": 80,
-  "topics": 3,
-  "topicSignals": 15,
+  "topics": 6,
+  "topicSignals": 39,
   "media": 16
 }
 ```
@@ -216,6 +222,23 @@ filters, aliases, and the six-card pagination boundary:
 /bg/objects?kind=bee_colony&identity=species&q=Apis
 /bg/objects?__visualObjects=loading
 /ru/objects?__visualObjects=error
+```
+
+The journal-directory scenarios exercise the canonical SQL-backed search and
+filter path. `__visualJournals=corpus` is accepted only after the full fixture
+environment gate succeeds and preserves unrelated local records outside the
+deterministic corpus:
+
+```text
+/journals?__visualJournals=corpus
+/journals?page=2&__visualJournals=corpus
+/journals?topic=watering-and-moisture&__visualJournals=corpus
+/journals?topic=stress-and-recovery&__visualJournals=corpus
+/journals?topic=season-preparation&__visualJournals=corpus
+/ru/journals?kind=bee_colony&season=summer&region=BG-23&__visualJournals=corpus
+/journals?q=visual-fixture-no-match&__visualJournals=corpus
+/bg/journals?__visualJournals=loading
+/ru/journals?__visualJournals=error
 ```
 
 The missing-journal and gone-journal scenarios return real HTTP `404` and

@@ -6,6 +6,8 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
+import { normalizePublicJournalDirectoryReturnTo } from "@/lib/public-journal-directory-navigation";
+import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 import {
   renderGoneJournalEntryHtml,
@@ -53,12 +55,18 @@ export async function GET(
     ref: lookup.page.entry.publicSlug,
   };
   const engagement = await getEngagementSummary(engagementTarget);
-  const engagementStatus = new URL(request.url).searchParams.get("engagement");
+  const requestUrl = new URL(request.url);
+  const engagementStatus = requestUrl.searchParams.get("engagement");
   const resumeAction = normalizeAuthIntentResumeAction(
-    new URL(request.url).searchParams.get("authIntent") ?? undefined,
+    requestUrl.searchParams.get("authIntent") ?? undefined,
   );
   const resumeControl = normalizeAuthIntentResumeControl(
-    new URL(request.url).searchParams.get("authControl") ?? undefined,
+    requestUrl.searchParams.get("authControl") ?? undefined,
+  );
+  const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
+    requestUrl.searchParams.get("from"),
+    locale,
+    Boolean(tryResolveVisualFixtureEnvironment(process.env)),
   );
 
   return htmlResponse(
@@ -70,6 +78,7 @@ export async function GET(
       shellSession.isAuthenticated,
       resumeAction,
       resumeControl,
+      directoryReturnTo,
     ),
     200,
   );

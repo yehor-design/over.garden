@@ -41,6 +41,7 @@ export function renderPublicJournalEntryHtml(
   isAuthenticated = false,
   resumeAction: AuthIntentAction | null = null,
   resumeControl: string | null = null,
+  directoryReturnTo: string | null = null,
 ) {
   const copy = getPublicSurfaceCopy(locale);
   const title = `${page.entry.title} · ${copy.journal.metadataTitleSuffix} | OverGarden`;
@@ -71,7 +72,10 @@ export function renderPublicJournalEntryHtml(
     isAuthenticated,
     body: `
       <main class="page logbook-page">
-        ${objectPassportPath ? `<nav class="topbar" aria-label="${escapeAttribute(copy.journal.primaryNavigation)}"><a class="button secondary" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.objectPassport)}</a></nav>` : ""}
+        <nav class="topbar" aria-label="${escapeAttribute(copy.journal.primaryNavigation)}">
+          <a class="button secondary" href="${escapeAttribute(directoryReturnTo ?? localizedJournalDirectoryPath(locale))}">${escapeHtml(copy.journal.backToJournals)}</a>
+          ${objectPassportPath ? `<a class="button secondary" href="${escapeAttribute(objectPassportPath)}">${escapeHtml(copy.journal.objectPassport)}</a>` : ""}
+        </nav>
         <header class="hero">
           <div class="hero-copy">
             <p class="eyebrow">${escapeHtml(copy.journal.entryType)}</p>
@@ -343,6 +347,10 @@ function gardenJournalEntryActivationPath(publicSlug: string) {
   });
 
   return `/garden?${params.toString()}`;
+}
+
+function localizedJournalDirectoryPath(locale: InterfaceLocale) {
+  return locale === "uk" ? "/journals" : `/${locale}/journals`;
 }
 
 function renderEngagementHtml({

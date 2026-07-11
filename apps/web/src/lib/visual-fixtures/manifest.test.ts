@@ -27,8 +27,8 @@ describe("visual fixture manifest", () => {
     expect(VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(80);
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
-    expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(3);
-    expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(15);
+    expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(6);
+    expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(39);
     expect(VISUAL_FIXTURE_MANIFEST.catalogItems).toHaveLength(19);
     expect(VISUAL_FIXTURE_MANIFEST.catalogNames.length).toBeGreaterThan(19);
     expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize).toBe(8);
@@ -221,6 +221,73 @@ describe("visual fixture manifest", () => {
     ).toEqual(new Set(["uk", "bg", "ru", "en", "la"]));
   });
 
+  it("backs OVE-176 journal discovery with exact ordered query evidence", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.journalDirectoryEvidence;
+    const byId = new Map(evidence.queries.map((query) => [query.id, query]));
+    const allExpectedSlugs = new Set(
+      evidence.queries.flatMap((query) => query.expectedOrderedPublicSlugs),
+    );
+    const ineligiblePublicSlugs = VISUAL_FIXTURE_MANIFEST.entries.flatMap(
+      (entry) =>
+        entry.publicSlug &&
+        (entry.visibility !== "public" ||
+          entry.lifecycleState !== "active" ||
+          entry.publicGoneAt !== null ||
+          entry.publishedAt === null)
+          ? [entry.publicSlug]
+          : [],
+    );
+
+    expect(evidence.pageSize).toBe(8);
+    expect(new Set(evidence.authoredLocales)).toEqual(
+      new Set(["uk", "bg", "ru"]),
+    );
+    expect(new Set(evidence.safeRegionCodes)).toEqual(
+      new Set(["UA-30", "BG-22", "BG-23"]),
+    );
+    expect(evidence.hiddenRegionEntryCount).toBeGreaterThan(0);
+    expect(byId.get("default")?.expectedCount).toBeGreaterThanOrEqual(24);
+    expect(byId.get("default")?.expectedOrderedPublicSlugs).toHaveLength(8);
+    expect(byId.get("page-two")?.expectedOrderedPublicSlugs).toHaveLength(8);
+    expect(byId.get("page-size-minus-one")).toMatchObject({
+      expectedCount: 7,
+    });
+    expect(
+      byId.get("page-size-minus-one")?.expectedOrderedPublicSlugs,
+    ).toHaveLength(7);
+    expect(byId.get("page-size")).toMatchObject({ expectedCount: 8 });
+    expect(byId.get("page-size")?.expectedOrderedPublicSlugs).toHaveLength(8);
+    expect(byId.get("page-size-plus-one")).toMatchObject({ expectedCount: 9 });
+    expect(
+      byId.get("page-size-plus-one")?.expectedOrderedPublicSlugs,
+    ).toHaveLength(8);
+    expect(byId.get("combined-safe-filters")?.expectedCount).toBeGreaterThan(0);
+    expect(byId.get("zero-results")).toMatchObject({
+      expectedCount: 0,
+      expectedOrderedPublicSlugs: [],
+    });
+    expect(byId.get("corrected-query")?.expectedCount).toBeGreaterThan(0);
+    expect(byId.get("reset")?.expectedOrderedPublicSlugs).toEqual(
+      byId.get("default")?.expectedOrderedPublicSlugs,
+    );
+    expect(
+      byId.get("exhausted")?.expectedOrderedPublicSlugs.length,
+    ).toBeGreaterThan(0);
+    expect(
+      byId.get("exhausted")?.expectedOrderedPublicSlugs.length,
+    ).toBeLessThanOrEqual(evidence.pageSize);
+    for (const query of evidence.queries) {
+      expect(query.path).toMatch(/^\/(?:bg\/|ru\/)?journals(?:\?|$)/);
+      expect(query.path).toContain("__visualJournals=corpus");
+      expect(new Set(query.expectedOrderedPublicSlugs).size).toBe(
+        query.expectedOrderedPublicSlugs.length,
+      );
+    }
+    for (const slug of ineligiblePublicSlugs) {
+      expect(allExpectedSlugs).not.toContain(slug);
+    }
+  });
+
   it("crosses real density thresholds and includes empty, typical, dense, and gone routes", () => {
     const entriesByObject = Object.groupBy(
       VISUAL_FIXTURE_MANIFEST.entries,
@@ -286,6 +353,17 @@ describe("visual fixture manifest", () => {
         "public-catalog-variety",
         "public-catalog-species",
         "public-catalog-breed",
+        "public-journal-directory-default",
+        "public-journal-directory-page-size-minus-one",
+        "public-journal-directory-page-size",
+        "public-journal-directory-page-size-plus-one",
+        "public-journal-directory-pagination",
+        "public-journal-directory-combined-filters",
+        "public-journal-directory-zero-results",
+        "public-journal-directory-corrected-query",
+        "public-journal-directory-loading",
+        "public-journal-directory-error",
+        "public-journal-directory-exhausted",
       ]),
     );
     expect(

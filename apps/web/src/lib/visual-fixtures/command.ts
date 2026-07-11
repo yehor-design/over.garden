@@ -30,6 +30,7 @@ import {
   type VisualFixtureCounts,
   type VisualFixtureStatus,
 } from "@/server/visual-fixtures/repository";
+import { verifyVisualFixtureJournalDirectoryEvidence } from "@/server/visual-fixtures/journal-directory-evidence";
 
 export type VisualFixtureCommand = "seed" | "reset" | "verify";
 
@@ -39,6 +40,7 @@ export interface VisualFixtureVerification {
   sentinelSurvived: boolean;
   mediaSentinelSurvived: boolean;
   mediaReachable: number;
+  journalDirectoryCases: number;
 }
 
 export interface VisualFixtureCommandSummary {
@@ -168,6 +170,7 @@ async function verifyVisualFixtures(
   if (!rerunStable) {
     throw new Error("Visual fixture seed is not idempotent.");
   }
+  await verifyVisualFixtureJournalDirectoryEvidence(runtime.database);
 
   await upsertVerificationSentinel(runtime.database);
   let sentinelSurvived = false;
@@ -201,6 +204,8 @@ async function verifyVisualFixtures(
     );
     const finalStatus = await seedVisualFixtures(runtime.database);
     assertSeeded(finalStatus);
+    const journalDirectoryCases =
+      await verifyVisualFixtureJournalDirectoryEvidence(runtime.database);
 
     const mediaReachability = await Promise.all(
       VISUAL_FIXTURE_MANIFEST.media.map((item) => {
@@ -226,6 +231,7 @@ async function verifyVisualFixtures(
         sentinelSurvived,
         mediaSentinelSurvived,
         mediaReachable,
+        journalDirectoryCases,
       },
     });
   } finally {

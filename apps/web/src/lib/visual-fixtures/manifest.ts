@@ -58,6 +58,17 @@ export type VisualFixtureScenarioKind =
   | "public-catalog-variety"
   | "public-catalog-species"
   | "public-catalog-breed"
+  | "public-journal-directory-default"
+  | "public-journal-directory-page-size-minus-one"
+  | "public-journal-directory-page-size"
+  | "public-journal-directory-page-size-plus-one"
+  | "public-journal-directory-pagination"
+  | "public-journal-directory-combined-filters"
+  | "public-journal-directory-zero-results"
+  | "public-journal-directory-corrected-query"
+  | "public-journal-directory-loading"
+  | "public-journal-directory-error"
+  | "public-journal-directory-exhausted"
   | "public-journal-active"
   | "public-journal-gone"
   | "public-journal-missing"
@@ -212,6 +223,23 @@ export interface VisualFixtureFeedEvidence {
   exhaustedCursor: VisualFixtureFeedCursorAnchor;
 }
 
+export interface VisualFixtureJournalDirectoryQueryEvidence {
+  id: string;
+  label: string;
+  path: string;
+  expectedCount: number;
+  expectedOrderedEntryIds: readonly string[];
+  expectedOrderedPublicSlugs: readonly string[];
+}
+
+export interface VisualFixtureJournalDirectoryEvidence {
+  pageSize: 8;
+  authoredLocales: readonly VisualFixtureLocale[];
+  safeRegionCodes: readonly string[];
+  hiddenRegionEntryCount: number;
+  queries: readonly VisualFixtureJournalDirectoryQueryEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -298,6 +326,7 @@ export interface VisualFixtureManifest {
   topics: readonly VisualFixtureTopic[];
   topicSignals: readonly VisualFixtureTopicSignal[];
   feedEvidence: VisualFixtureFeedEvidence;
+  journalDirectoryEvidence: VisualFixtureJournalDirectoryEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1134,6 +1163,27 @@ const topics: readonly VisualFixtureTopic[] = [
     trustState: "curated",
     createdAt: timestampForIndex(403),
   },
+  {
+    id: fixtureUuid(6, 4),
+    slug: "watering-and-moisture",
+    label: "Полив і вологість",
+    trustState: "curated",
+    createdAt: timestampForIndex(404),
+  },
+  {
+    id: fixtureUuid(6, 5),
+    slug: "stress-and-recovery",
+    label: "Проблеми та відновлення",
+    trustState: "curated",
+    createdAt: timestampForIndex(405),
+  },
+  {
+    id: fixtureUuid(6, 6),
+    slug: "season-preparation",
+    label: "Підготовка до сезону",
+    trustState: "curated",
+    createdAt: timestampForIndex(406),
+  },
 ];
 
 const publicFeedEligibleEntries = entries.filter(
@@ -1168,12 +1218,27 @@ const typicalTopicEntries = [
   publicFeedEntriesByKind.bee_colony?.[0],
   publicFeedEntriesByKind.plant?.[1],
 ].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
+const sortedPublicDirectoryEntries = [...publicFeedEligibleEntries].sort(
+  compareFeedEntries,
+);
+const directoryMinusOneEntries = sortedPublicDirectoryEntries.slice(0, 7);
+const directoryExactPageEntries = sortedPublicDirectoryEntries.slice(0, 8);
+const directoryPlusOneEntries = sortedPublicDirectoryEntries.slice(0, 9);
 const topicSignals: readonly VisualFixtureTopicSignal[] = [
   ...typicalTopicEntries.map((entry, index) =>
     createTopicSignal(entry, topics[0], 410 + index),
   ),
   ...denseTopicEntries.map((entry, index) =>
     createTopicSignal(entry, topics[1], 420 + index),
+  ),
+  ...directoryMinusOneEntries.map((entry, index) =>
+    createTopicSignal(entry, topics[3], 440 + index),
+  ),
+  ...directoryExactPageEntries.map((entry, index) =>
+    createTopicSignal(entry, topics[4], 450 + index),
+  ),
+  ...directoryPlusOneEntries.map((entry, index) =>
+    createTopicSignal(entry, topics[5], 460 + index),
   ),
 ];
 const sortedDenseTopicEntries = [...denseTopicEntries].sort(compareFeedEntries);
@@ -1211,6 +1276,8 @@ const feedEvidence: VisualFixtureFeedEvidence = {
     publishedAt: exhaustedAnchor.publishedAt!,
   },
 };
+
+const journalDirectoryEvidence = buildJournalDirectoryEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -1738,6 +1805,83 @@ const scenarios: readonly VisualFixtureScenario[] = [
     200,
   ),
   scenario(
+    "journal-directory-default",
+    "public-journal-directory-default",
+    "Journal directory default browse",
+    journalDirectoryEvidencePath("default"),
+    200,
+  ),
+  scenario(
+    "journal-directory-minus-one",
+    "public-journal-directory-page-size-minus-one",
+    "Journal directory with seven results",
+    journalDirectoryEvidencePath("page-size-minus-one"),
+    200,
+  ),
+  scenario(
+    "journal-directory-exact-page",
+    "public-journal-directory-page-size",
+    "Journal directory with one exact page",
+    journalDirectoryEvidencePath("page-size"),
+    200,
+  ),
+  scenario(
+    "journal-directory-plus-one",
+    "public-journal-directory-page-size-plus-one",
+    "Journal directory with real continuation",
+    journalDirectoryEvidencePath("page-size-plus-one"),
+    200,
+  ),
+  scenario(
+    "journal-directory-page-two",
+    "public-journal-directory-pagination",
+    "Journal directory second page",
+    journalDirectoryEvidencePath("page-two"),
+    200,
+  ),
+  scenario(
+    "journal-directory-combined",
+    "public-journal-directory-combined-filters",
+    "Bee journals by season and safe region",
+    journalDirectoryEvidencePath("combined-safe-filters"),
+    200,
+  ),
+  scenario(
+    "journal-directory-zero",
+    "public-journal-directory-zero-results",
+    "Journal directory zero-result recovery",
+    journalDirectoryEvidencePath("zero-results"),
+    200,
+  ),
+  scenario(
+    "journal-directory-corrected",
+    "public-journal-directory-corrected-query",
+    "Journal directory corrected query",
+    journalDirectoryEvidencePath("corrected-query"),
+    200,
+  ),
+  scenario(
+    "journal-directory-loading",
+    "public-journal-directory-loading",
+    "Journal directory loading",
+    "/bg/journals?__visualJournals=loading",
+    200,
+  ),
+  scenario(
+    "journal-directory-error",
+    "public-journal-directory-error",
+    "Recoverable journal directory error",
+    "/ru/journals?__visualJournals=error",
+    200,
+  ),
+  scenario(
+    "journal-directory-exhausted",
+    "public-journal-directory-exhausted",
+    "Journal directory final page",
+    journalDirectoryEvidencePath("exhausted"),
+    200,
+  ),
+  scenario(
     "journal-active",
     "public-journal-active",
     "Published journal with media",
@@ -1809,6 +1953,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   topics,
   topicSignals,
   feedEvidence,
+  journalDirectoryEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -1836,8 +1981,8 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "catalog names", manifest.catalogNames.length, 29);
   checkCount(errors, "entries", manifest.entries.length, 80);
   checkCount(errors, "media", manifest.media.length, 16);
-  checkCount(errors, "topics", manifest.topics.length, 3);
-  checkCount(errors, "topic signals", manifest.topicSignals.length, 15);
+  checkCount(errors, "topics", manifest.topics.length, 6);
+  checkCount(errors, "topic signals", manifest.topicSignals.length, 39);
 
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
   const spaceIds = new Set(manifest.spaces.map((space) => space.id));
@@ -1941,6 +2086,11 @@ export function validateVisualFixtureManifest(
     errors,
     "scenario kinds",
     manifest.scenarios.map((scenario) => scenario.kind),
+  );
+  checkUnique(
+    errors,
+    "journal directory evidence ids",
+    manifest.journalDirectoryEvidence.queries.map((query) => query.id),
   );
   checkUnique(
     errors,
@@ -2054,6 +2204,56 @@ export function validateVisualFixtureManifest(
       entry.publicGoneAt !== null
     ) {
       errors.push(`Topic signal exposes ineligible entry ${entry.id}.`);
+    }
+  }
+  const publicEntryById = new Map(
+    manifest.entries
+      .filter(
+        (entry) =>
+          entry.visibility === "public" &&
+          entry.lifecycleState === "active" &&
+          entry.publicGoneAt === null &&
+          entry.publishedAt !== null &&
+          entry.publicSlug !== null,
+      )
+      .map((entry) => [entry.id, entry]),
+  );
+  if (manifest.journalDirectoryEvidence.pageSize !== 8) {
+    errors.push(
+      "Journal directory evidence must use the production page size.",
+    );
+  }
+  if (manifest.journalDirectoryEvidence.hiddenRegionEntryCount < 1) {
+    errors.push("Journal directory evidence has no hidden-region record.");
+  }
+  for (const query of manifest.journalDirectoryEvidence.queries) {
+    if (!/^\/(?:bg\/|ru\/)?journals(?:\?|$)/.test(query.path)) {
+      errors.push(
+        `Journal directory evidence ${query.id} has an invalid path.`,
+      );
+    }
+    if (
+      query.expectedOrderedEntryIds.length !==
+      query.expectedOrderedPublicSlugs.length
+    ) {
+      errors.push(
+        `Journal directory evidence ${query.id} has mismatched order arrays.`,
+      );
+      continue;
+    }
+    query.expectedOrderedEntryIds.forEach((entryId, index) => {
+      const entry = publicEntryById.get(entryId);
+      if (
+        !entry ||
+        entry.publicSlug !== query.expectedOrderedPublicSlugs[index]
+      ) {
+        errors.push(
+          `Journal directory evidence ${query.id} references an ineligible or mismatched entry.`,
+        );
+      }
+    });
+    if (query.expectedOrderedEntryIds.length > 8) {
+      errors.push(`Journal directory evidence ${query.id} exceeds one page.`);
     }
   }
   const manifestMediaCounts = Object.groupBy(
@@ -2284,6 +2484,203 @@ function compareFeedEntries(
     right.publishedAt!.localeCompare(left.publishedAt!) ||
     left.id.localeCompare(right.id)
   );
+}
+
+function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence {
+  const pageSize = 8 as const;
+  const objectById = new Map(objects.map((object) => [object.id, object]));
+  const topicBySlug = new Map(topics.map((topic) => [topic.slug, topic]));
+  const entryIdsByTopic = new Map<string, Set<string>>();
+
+  for (const signal of topicSignals) {
+    const topic = topics.find((candidate) => candidate.id === signal.topicId);
+    if (!topic) continue;
+    const ids = entryIdsByTopic.get(topic.slug) ?? new Set<string>();
+    ids.add(signal.journalEntryId);
+    entryIdsByTopic.set(topic.slug, ids);
+  }
+
+  const forTopic = (slug: string) => {
+    if (!topicBySlug.has(slug)) {
+      throw new Error(`Visual fixture journal topic ${slug} is missing.`);
+    }
+    const ids = entryIdsByTopic.get(slug) ?? new Set<string>();
+    return sortedPublicDirectoryEntries.filter((entry) => ids.has(entry.id));
+  };
+  const combinedEntries = sortedPublicDirectoryEntries.filter((entry) => {
+    const object = objectById.get(entry.objectId);
+    return (
+      object?.objectKind === "bee_colony" &&
+      object.locationVisibility === "region" &&
+      object.coarseRegionCode === "BG-23" &&
+      fixtureSeason(entry.entryDate) === "summer"
+    );
+  });
+  const correctedQueryEntries = sortedPublicDirectoryEntries.filter((entry) =>
+    objectById
+      .get(entry.objectId)
+      ?.displayName.toLocaleLowerCase("uk")
+      .includes("черрі"),
+  );
+  const sparseEntries = forTopic("watering-and-moisture").filter(
+    (entry) => objectById.get(entry.objectId)?.objectKind === "bee_colony",
+  );
+  const finalPage = Math.max(
+    1,
+    Math.ceil(sortedPublicDirectoryEntries.length / pageSize),
+  );
+
+  return {
+    pageSize,
+    authoredLocales: ["uk", "bg", "ru"],
+    safeRegionCodes: ["UA-30", "BG-22", "BG-23"],
+    hiddenRegionEntryCount: sortedPublicDirectoryEntries.filter(
+      (entry) =>
+        objectById.get(entry.objectId)?.locationVisibility === "hidden",
+    ).length,
+    queries: [
+      journalDirectoryQuery(
+        "default",
+        "Default recent journals",
+        "/journals",
+        sortedPublicDirectoryEntries,
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "page-two",
+        "Second complete result page",
+        "/journals?page=2",
+        sortedPublicDirectoryEntries,
+        2,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "page-size-minus-one",
+        "Seven watering and moisture journals",
+        "/journals?topic=watering-and-moisture",
+        forTopic("watering-and-moisture"),
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "page-size",
+        "Eight stress and recovery journals",
+        "/journals?topic=stress-and-recovery",
+        forTopic("stress-and-recovery"),
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "page-size-plus-one",
+        "Nine season preparation journals",
+        "/journals?topic=season-preparation",
+        forTopic("season-preparation"),
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "sparse",
+        "Sparse bee-colony topic result",
+        "/ru/journals?kind=bee_colony&topic=watering-and-moisture",
+        sparseEntries,
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "combined-safe-filters",
+        "Bee journals in a public coarse region and summer",
+        "/ru/journals?kind=bee_colony&season=summer&region=BG-23",
+        combinedEntries,
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "zero-results",
+        "No-result recovery",
+        "/journals?q=visual-fixture-no-match",
+        [],
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "corrected-query",
+        "Corrected living-object query",
+        "/journals?q=%D0%A7%D0%B5%D1%80%D1%80%D1%96",
+        correctedQueryEntries,
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "reset",
+        "Reset to default browse",
+        "/journals",
+        sortedPublicDirectoryEntries,
+        1,
+        pageSize,
+      ),
+      journalDirectoryQuery(
+        "exhausted",
+        "Final result page",
+        `/journals?page=${finalPage}`,
+        sortedPublicDirectoryEntries,
+        finalPage,
+        pageSize,
+      ),
+    ],
+  };
+}
+
+function journalDirectoryQuery(
+  id: string,
+  label: string,
+  path: string,
+  entriesForQuery: readonly VisualFixtureEntry[],
+  page: number,
+  pageSize: number,
+): VisualFixtureJournalDirectoryQueryEvidence {
+  const pageEntries = entriesForQuery.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+  const publicSlugs = pageEntries.map((entry) => {
+    if (!entry.publicSlug) {
+      throw new Error(`Directory evidence entry ${entry.id} is not public.`);
+    }
+    return entry.publicSlug;
+  });
+
+  return {
+    id,
+    label,
+    path: appendVisualJournalCorpus(path),
+    expectedCount: entriesForQuery.length,
+    expectedOrderedEntryIds: pageEntries.map((entry) => entry.id),
+    expectedOrderedPublicSlugs: publicSlugs,
+  };
+}
+
+function appendVisualJournalCorpus(path: string) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}__visualJournals=corpus`;
+}
+
+function fixtureSeason(entryDate: string) {
+  const month = Number(entryDate.slice(5, 7));
+  if (month === 12 || month <= 2) return "winter";
+  if (month <= 5) return "spring";
+  if (month <= 8) return "summer";
+  return "autumn";
+}
+
+function journalDirectoryEvidencePath(id: string) {
+  const evidence = journalDirectoryEvidence.queries.find(
+    (query) => query.id === id,
+  );
+  if (!evidence) {
+    throw new Error(`Visual fixture journal directory case ${id} is missing.`);
+  }
+  return evidence.path;
 }
 
 function catalogSeed(

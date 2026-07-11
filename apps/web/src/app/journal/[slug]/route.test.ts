@@ -135,6 +135,35 @@ describe("public journal route", () => {
       ref: "first-ripe-cluster",
     });
   });
+
+  it("returns to the exact allowlisted journal directory state and rejects external return paths", async () => {
+    mocks.getPublicJournalEntryLookup.mockResolvedValue({
+      status: "active",
+      page: buildPage(),
+    });
+
+    const safeResponse = await GET(
+      new Request(
+        "https://over.garden/journal/first-ripe-cluster?from=%2Fbg%2Fjournals%3Fq%3D%D0%B4%D0%BE%D0%BC%D0%B0%D1%82%26kind%3Dplant%26page%3D2",
+      ),
+      { params: Promise.resolve({ slug: "first-ripe-cluster" }) },
+    );
+    const unsafeResponse = await GET(
+      new Request(
+        "https://over.garden/journal/first-ripe-cluster?from=https%3A%2F%2Fevil.example%2Fsteal",
+      ),
+      { params: Promise.resolve({ slug: "first-ripe-cluster" }) },
+    );
+    const safeHtml = await safeResponse.text();
+    const unsafeHtml = await unsafeResponse.text();
+
+    expect(safeHtml).toContain(
+      'href="/bg/journals?q=%D0%B4%D0%BE%D0%BC%D0%B0%D1%82&amp;kind=plant&amp;page=2"',
+    );
+    expect(safeHtml).toContain("Назад към дневниците");
+    expect(unsafeHtml).not.toContain("evil.example");
+    expect(unsafeHtml).toContain('href="/bg/journals"');
+  });
 });
 
 function buildPage(): PublicJournalEntryPage {

@@ -28,8 +28,8 @@ const STATUS = {
     lineagePendingIdentities: 1,
     lineageEdges: 1,
     entries: 80,
-    topics: 3,
-    topicSignals: 15,
+    topics: 6,
+    topicSignals: 39,
     media: 16,
   },
   actual: {
@@ -42,8 +42,8 @@ const STATUS = {
     lineagePendingIdentities: 1,
     lineageEdges: 1,
     entries: 80,
-    topics: 3,
-    topicSignals: 15,
+    topics: 6,
+    topicSignals: 39,
     media: 16,
   },
   seeded: true,
@@ -84,6 +84,7 @@ describe("visual fixture command boundary", () => {
         sentinelSurvived: true,
         mediaSentinelSurvived: true,
         mediaReachable: 16,
+        journalDirectoryCases: 11,
       },
     });
     const output = JSON.stringify(summary);
@@ -101,6 +102,7 @@ describe("visual fixture command boundary", () => {
       mediaObjects: 16,
       verification: {
         mediaSentinelSurvived: true,
+        journalDirectoryCases: 11,
       },
     });
     expect(output).not.toMatch(
