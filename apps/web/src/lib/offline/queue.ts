@@ -11,6 +11,7 @@ import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 
 export type OfflineMutationStatus = "queued" | "syncing" | "synced" | "failed";
 export type OfflineMutationKind = "journal_entry" | "photo_upload";
+export const OFFLINE_QUEUE_CHANGED_EVENT = "overgarden:offline-queue-changed";
 
 export interface OfflinePhotoIntent {
   fileName: string;
@@ -122,6 +123,7 @@ export async function enqueueOfflineMutation(
         updatedAt: now,
         lastError: undefined,
       });
+      notifyOfflineQueueChanged();
       return {
         ...existing,
         payload: input.payload,
@@ -145,6 +147,7 @@ export async function enqueueOfflineMutation(
   };
 
   await offlineDb.mutations.add(mutation);
+  notifyOfflineQueueChanged();
   return mutation;
 }
 
@@ -195,6 +198,7 @@ export async function updateOfflineMutationStatus(
     lastError: options.lastError,
     syncResult: options.syncResult,
   });
+  notifyOfflineQueueChanged();
 
   return offlineDb.mutations.get(id);
 }
@@ -209,8 +213,14 @@ export async function updateOfflineMutationPayload(
     payload,
     updatedAt: Date.now(),
   });
+  notifyOfflineQueueChanged();
 
   return offlineDb.mutations.get(id);
+}
+
+function notifyOfflineQueueChanged() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(OFFLINE_QUEUE_CHANGED_EVENT));
 }
 
 // A File from <input type="file"> is backed by the on-disk file. iOS Safari and

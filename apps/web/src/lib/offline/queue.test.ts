@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createOfflinePhotoIntent,
@@ -6,6 +6,7 @@ import {
   getOfflineMutation,
   listOfflineMutations,
   listQueuedMutations,
+  OFFLINE_QUEUE_CHANGED_EVENT,
   offlineDb,
   updateOfflineMutationPayload,
   updateOfflineMutationStatus,
@@ -31,6 +32,25 @@ describe("offline queue", () => {
     expect(mutation.idempotencyKey).toBe("entry-1");
     expect(queued).toHaveLength(1);
     expect(queued[0]?.payload).toEqual({ body: "Помідори чері" });
+  });
+
+  it("notifies workspace continuity surfaces after queue changes", async () => {
+    vi.stubGlobal("window", new EventTarget());
+    const listener = vi.fn();
+    window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, listener);
+
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Queued update" },
+      idempotencyKey: "entry-event-1",
+    });
+    await updateOfflineMutationStatus(mutation.id, "failed", {
+      lastError: "Offline",
+    });
+
+    expect(listener).toHaveBeenCalledTimes(2);
+    window.removeEventListener(OFFLINE_QUEUE_CHANGED_EVENT, listener);
+    vi.unstubAllGlobals();
   });
 
   it("updates queued payloads instead of duplicating the same idempotency key", async () => {

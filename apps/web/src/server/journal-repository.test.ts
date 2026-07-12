@@ -24,6 +24,7 @@ import {
   buildInsertJournalEntryQuery,
   buildMentionableObjectsInSpaceQuery,
   buildMyPlantObjectEntrySummariesQuery,
+  buildMyPlantObjectCoverMediaQuery,
   buildMyPlantObjectsQuery,
   buildObjectTimelineEntriesQuery,
   buildObjectJournalEntryCountQuery,
@@ -340,6 +341,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $3');
     expect(compiled.sql).toContain('"spaces"."owner_user_id" = $4');
     expect(compiled.sql).toContain("limit $5");
+    expect(compiled.sql).toContain("offset $6");
     expect(compiled.sql).not.toContain("journal_entries");
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("coordinates");
@@ -349,7 +351,21 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000001",
       "00000000-0000-0000-0000-000000000001",
       20,
+      0,
     ]);
+  });
+
+  it("uses a stable bounded inventory offset", () => {
+    const compiled = buildMyPlantObjectsQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      12,
+      12,
+    ).compile();
+
+    expect(compiled.sql).toContain("limit $5");
+    expect(compiled.sql).toContain("offset $6");
+    expect(compiled.parameters.slice(-2)).toEqual([12, 12]);
   });
 
   it("summarizes object workspace entries through owner-bound objects", () => {
@@ -376,6 +392,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       'group by "journal_entries"."plant_object_id"',
     );
+    expect(compiled.sql).toContain('as "archivedEntryCount"');
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("body");
     expect(compiled.parameters).toEqual([
@@ -384,6 +401,45 @@ describe("journal repository query contracts", () => {
       "object",
       "00000000-0000-0000-0000-000000000003",
       "00000000-0000-0000-0000-000000000004",
+    ]);
+  });
+
+  it("selects one owner-scoped processed cover without exposing storage keys", () => {
+    const compiled = buildMyPlantObjectCoverMediaQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      [
+        "00000000-0000-0000-0000-000000000003",
+        "00000000-0000-0000-0000-000000000004",
+      ],
+    ).compile();
+
+    expect(compiled.sql).toContain('from "media_assets"');
+    expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(compiled.sql).toContain(
+      '"media_assets"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain(
+      '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $1');
+    expect(compiled.sql).toContain('"plant_objects"."owner_user_id" = $2');
+    expect(compiled.sql).toContain('"media_assets"."status" = $6');
+    expect(compiled.sql).toContain(
+      '"media_assets"."derivative_key" is not null',
+    );
+    expect(compiled.sql).toContain(
+      'distinct on ("journal_entries"."plant_object_id")',
+    );
+    expect(compiled.sql).not.toContain("quarantine_key");
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000001",
+      "00000000-0000-0000-0000-000000000003",
+      "00000000-0000-0000-0000-000000000004",
+      "active",
+      "processed",
     ]);
   });
 

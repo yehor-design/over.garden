@@ -20,6 +20,7 @@ vi.mock("@/server/interface-localization", () => ({
 }));
 vi.mock("../garden-auth-panel", () => ({
   GardenAuthPanel: () => <section>Sign in panel</section>,
+  SocialAccountLinkPanel: () => <section>Account sign-in methods</section>,
 }));
 vi.mock("./owner-profile-editor", () => ({
   OwnerProfileEditor: ({
@@ -85,6 +86,7 @@ describe("/garden/profile", () => {
     expect(html).toContain('data-owner-profile-editor="v2"');
     expect(html).toContain('href="/@green_thumb"');
     expect(html).toContain("Blocked Keeper");
+    expect(html).toContain("Account sign-in methods");
     expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
   });
 

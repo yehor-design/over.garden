@@ -1,7 +1,7 @@
 # Garden Workspace Redesign Implementation Note
 
-Issue: OVE-150
-Date: 2026-07-05
+Issue: OVE-150, superseded by OVE-181
+Date: 2026-07-05; superseding implementation: 2026-07-12
 
 ## Decision
 
@@ -24,3 +24,24 @@ The workspace remains authenticated and uses scoped repository reads. Public/pri
 ## Product Assumption
 
 The useful MVP behavior is not a richer dashboard. It is a repeat-use habit loop: the gardener opens `/garden`, recognizes the owned object graph, and knows which single record to update next. This keeps the Drive2 retention mechanism while preserving OverGarden's safer living-object model for Ukraine and Bulgaria.
+
+## OVE-181 Superseding Implementation
+
+OVE-181 keeps the owned-object continuity mechanism but replaces the OVE-150
+settings/card composition. `/garden` now uses the shared product shell and an
+operational hierarchy: one next action, bounded spaces, mixed living-object
+inventory, recent journal continuity, and browser-local draft/sync recovery.
+Account-provider linking moves to `/garden/profile`; it is no longer the primary
+workspace content.
+
+The guest boundary is read-open and reversible. A visitor who opens `/garden`
+receives a contextual sign-in action plus direct routes back to public journals,
+objects, and knowledge. Authentication remains mandatory for private workspace
+data and mutations, not for exploring OverGarden.
+
+The implementation is approved only against realistic deterministic content:
+empty, sparse, typical, dense, offline, loading, partial-error, and full-error owner
+states plus a guest state at desktop and 320px. Dense evidence includes five
+spaces and twelve plant/animal/bee objects, crossing the four-space and
+ten-object page thresholds so pagination, wrapping, stale cues, drafts, and
+recovery affordances are visible before sign-off.

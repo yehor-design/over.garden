@@ -127,9 +127,7 @@ export function FollowUpEntryComposer({
   const [storedPhotoIntent, setStoredPhotoIntent] =
     useState<OfflinePhotoIntent | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(true);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(
     "Save a dated follow-up on this existing plant.",
@@ -158,6 +156,7 @@ export function FollowUpEntryComposer({
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
+      setIsOnline(navigator.onLine);
       void refreshQueue();
     }, 0);
 

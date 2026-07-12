@@ -163,9 +163,7 @@ export function FirstEntryComposer({
   const [storedPhotoIntent, setStoredPhotoIntent] =
     useState<OfflinePhotoIntent | null>(null);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(() =>
-    typeof navigator === "undefined" ? true : navigator.onLine,
-  );
+  const [isOnline, setIsOnline] = useState(true);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState(
     "Private by default. You choose later whether an entry becomes public.",
@@ -190,6 +188,7 @@ export function FirstEntryComposer({
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
+      setIsOnline(navigator.onLine);
       void refreshQueue();
     }, 0);
 

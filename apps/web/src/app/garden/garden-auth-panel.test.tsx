@@ -116,4 +116,15 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(html).not.toContain("overgarden-local-gardener");
     expect(html).not.toContain("Local Gardener");
   });
+
+  it("uses native form semantics with sign-in as the default submit action", () => {
+    const html = renderToStaticMarkup(
+      <GardenAuthPanel prefillDevelopmentDefaults={false} />,
+    );
+
+    expect(html).toContain("<form");
+    expect(html).toContain('type="password"');
+    expect(html).toContain('type="submit"');
+    expect(html).toContain('type="button"');
+  });
 });

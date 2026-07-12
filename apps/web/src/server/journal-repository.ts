@@ -168,7 +168,12 @@ export interface PlantObjectSummary {
   entryCount: number;
   publicEntryCount: number;
   privateEntryCount: number;
+  archivedEntryCount: number;
   latestEntryDate: Date | string | null;
+  coverMedia: {
+    publicUrl: string;
+    altText: string;
+  } | null;
 }
 
 export interface SpaceTimelineObjectSummary {
@@ -669,27 +674,34 @@ export async function createFirstPlantEntry(
 export async function listMyPlantObjects(
   scope: RequestScope,
   limit = 10,
+  offset = 0,
 ): Promise<PlantObjectSummary[]> {
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_ITEMS);
+  const boundedOffset = Math.max(0, Math.trunc(offset));
 
   const rows = await buildMyPlantObjectsQuery(
     db,
     scope,
     boundedLimit,
+    boundedOffset,
   ).execute();
   if (rows.length === 0) return [];
 
-  const entrySummaries = await buildMyPlantObjectEntrySummariesQuery(
-    db,
-    scope,
-    rows.map((row) => row.id),
-  ).execute();
+  const objectIds = rows.map((row) => row.id);
+  const [entrySummaries, coverRows] = await Promise.all([
+    buildMyPlantObjectEntrySummariesQuery(db, scope, objectIds).execute(),
+    buildMyPlantObjectCoverMediaQuery(db, scope, objectIds).execute(),
+  ]);
   const entrySummaryByObjectId = new Map(
     entrySummaries.map((summary) => [summary.plantObjectId, summary]),
+  );
+  const coverByObjectId = new Map(
+    coverRows.map((cover) => [cover.plantObjectId, cover]),
   );
 
   return rows.map((row) => {
     const entrySummary = entrySummaryByObjectId.get(row.id);
+    const cover = coverByObjectId.get(row.id);
 
     return {
       ...row,
@@ -699,7 +711,14 @@ export async function listMyPlantObjects(
       entryCount: normalizeCount(entrySummary?.entryCount),
       publicEntryCount: normalizeCount(entrySummary?.publicEntryCount),
       privateEntryCount: normalizeCount(entrySummary?.privateEntryCount),
+      archivedEntryCount: normalizeCount(entrySummary?.archivedEntryCount),
       latestEntryDate: entrySummary?.latestEntryDate ?? null,
+      coverMedia: cover
+        ? {
+            publicUrl: getPublicDerivativeUrl(cover.derivativeKey),
+            altText: cover.altText ?? `${row.displayName} journal photo`,
+          }
+        : null,
     };
   });
 }
@@ -708,8 +727,10 @@ export function buildMyPlantObjectsQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   limit: number,
+  offset = 0,
 ) {
   const boundedLimit = Math.min(Math.max(limit, 1), MAX_RECENT_ITEMS);
+  const boundedOffset = Math.max(0, Math.trunc(offset));
 
   return executor
     .selectFrom("plant_objects")
@@ -734,7 +755,8 @@ export function buildMyPlantObjectsQuery(
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("spaces.owner_user_id", "=", scope.userId)
     .orderBy("plant_objects.created_at", "desc")
-    .limit(boundedLimit);
+    .limit(boundedLimit)
+    .offset(boundedOffset);
 }
 
 export function buildMyPlantObjectEntrySummariesQuery(
@@ -764,6 +786,9 @@ export function buildMyPlantObjectEntrySummariesQuery(
         where ${sql.ref("journal_entries.visibility")} = 'private'
           and ${sql.ref("journal_entries.lifecycle_state")} = 'active'
       )::int`.as("privateEntryCount"),
+      sql<number>`count(*) filter (
+        where ${sql.ref("journal_entries.lifecycle_state")} = 'archived'
+      )::int`.as("archivedEntryCount"),
       fn.max<Date | string>("journal_entries.entry_date").as("latestEntryDate"),
     ])
     .where("journal_entries.owner_user_id", "=", scope.userId)
@@ -772,6 +797,50 @@ export function buildMyPlantObjectEntrySummariesQuery(
     .where("journal_entries.plant_object_id", "in", [...plantObjectIds])
     .groupBy("journal_entries.plant_object_id")
     .$narrowType<{ plantObjectId: string }>();
+}
+
+export function buildMyPlantObjectCoverMediaQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  plantObjectIds: readonly string[],
+) {
+  return executor
+    .selectFrom("media_assets")
+    .innerJoin("journal_entries", (join) =>
+      join
+        .onRef("journal_entries.id", "=", "media_assets.journal_entry_id")
+        .onRef(
+          "media_assets.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .select([
+      "journal_entries.plant_object_id as plantObjectId",
+      "media_assets.derivative_key as derivativeKey",
+      "media_assets.alt_text as altText",
+    ])
+    .distinctOn("journal_entries.plant_object_id")
+    .where("journal_entries.owner_user_id", "=", scope.userId)
+    .where("plant_objects.owner_user_id", "=", scope.userId)
+    .where("journal_entries.plant_object_id", "in", [...plantObjectIds])
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("media_assets.status", "=", "processed")
+    .where("media_assets.derivative_key", "is not", null)
+    .orderBy("journal_entries.plant_object_id", "asc")
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.created_at", "desc")
+    .orderBy("media_assets.created_at", "asc")
+    .$narrowType<{ plantObjectId: string; derivativeKey: string }>();
 }
 
 export async function listMySpaceJournalTimelines(
@@ -844,6 +913,64 @@ export async function listMySpaceJournalTimelines(
     objects: objectsBySpaceId.get(space.id) ?? [],
     entries: entriesBySpaceId.get(space.id) ?? [],
   }));
+}
+
+export async function getMySpaceJournalTimeline(
+  scope: RequestScope,
+  spaceId: string,
+  options: { objectLimit?: number; entryLimit?: number } = {},
+): Promise<SpaceJournalTimeline | null> {
+  const space = await buildSpaceByIdQuery(
+    db,
+    scope,
+    spaceId,
+  ).executeTakeFirst();
+  if (!space) return null;
+
+  const objectLimit = Math.min(
+    Math.max(Math.trunc(options.objectLimit ?? 20), 1),
+    MAX_RECENT_ITEMS,
+  );
+  const entryLimit = Math.min(
+    Math.max(Math.trunc(options.entryLimit ?? 5), 1),
+    MAX_RECENT_ITEMS,
+  );
+  const [objects, entries] = await Promise.all([
+    buildSpaceTimelineObjectsQuery(db, scope, [space.id])
+      .limit(objectLimit)
+      .execute(),
+    buildSpaceTimelineEntriesQuery(db, scope, [space.id])
+      .limit(entryLimit)
+      .execute(),
+  ]);
+  const mediaByEntryId = await getProcessedMediaByEntryId(
+    db,
+    scope,
+    entries.map((entry) => entry.id),
+  );
+  const mentionsByEntryId = await getMentionedObjectsByEntryId(
+    db,
+    scope,
+    entries.map((entry) => entry.id),
+  );
+
+  return {
+    space,
+    objects: objects.map((object) => ({
+      id: object.id,
+      displayName: object.displayName,
+      objectKind: object.objectKind as PlantObjectKind,
+      catalogKind: object.catalogKind as CatalogKind | null,
+      varietyText: object.varietyText,
+      varietyState: object.varietyState as VarietyState,
+    })),
+    entries: entries.map((entry) => ({
+      ...entry,
+      media: mediaByEntryId.get(entry.id) ?? null,
+      mentionedObjects: mentionsByEntryId.get(entry.id) ?? [],
+      timelineRelation: "space_timeline",
+    })),
+  };
 }
 
 export async function getPlantObjectPage(

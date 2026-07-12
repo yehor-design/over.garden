@@ -1,71 +1,55 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import type { ReactNode } from "react";
-import {
-  BookOpen,
-  Camera,
-  ClipboardList,
-  Clock3,
-  Leaf,
-  Plus,
-  ShieldCheck,
-  Sprout,
-} from "lucide-react";
+import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
 
+import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
+import { buttonVariants } from "@/components/ui/button";
 import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
 } from "@/lib/garden/activation";
-import { buttonVariants } from "@/components/ui/button";
-import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
-import type { JournalEntry } from "@/db/schema";
-import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
-import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
-import {
-  getInterfaceCopy,
-  type InterfaceLocale,
-} from "@/lib/interface-localization";
+import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import { gardenFirstEntryPreselectionPath } from "@/lib/garden/public-paths";
-import { localizedPath } from "@/lib/public-localization";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
-import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import {
-  catalogIdentityLabel,
-  entryPrivacyLabel,
-  entryScopeLabel,
-  plantObjectKindLabel,
-  varietyStateLabel,
-} from "@/lib/garden/pilot-ux-copy";
+import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
+import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { localizedPath } from "@/lib/public-localization";
+import { resolveVisualGardenWorkspaceScenario } from "@/lib/visual-fixtures/garden-workspace-scenarios";
+import type { VisualFixtureWorkspaceScenarioEvidence } from "@/lib/visual-fixtures/manifest";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
+import { loadGardenWorkspace } from "@/server/garden-workspace-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
-  listMyPlantObjects,
-  listMyRecentJournalEntries,
-  listMySpaceJournalTimelines,
-  type PlantObjectSummary,
+  getMySpaceJournalTimeline,
   type SpaceJournalTimeline,
 } from "@/server/journal-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
-import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
 import { createSpaceJournalEntryAction } from "./actions";
-import { GardenDraftResumePanel } from "./draft-resume-panel";
+import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { FirstEntryComposer } from "./first-entry-composer";
-import { GardenAuthPanel, SocialAccountLinkPanel } from "./garden-auth-panel";
+import { GardenAuthPanel } from "./garden-auth-panel";
+import { GardenWorkspaceView } from "./garden-workspace-view";
+import type { GardenWorkspaceLocalStateSnapshot } from "./garden-workspace-local-state";
+import GardenLoading from "./loading";
 import { SaveProgressMoment } from "./save-progress-moment";
 
 export const dynamic = "force-dynamic";
 
 type GardenSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_GARDEN_SEARCH_PARAMS: GardenSearchParams = {};
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MAX_GARDEN_PAGE = 100;
 
 interface GardenPageProps {
   searchParams?: Promise<GardenSearchParams>;
@@ -77,54 +61,93 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     searchParams ?? Promise.resolve(EMPTY_GARDEN_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
   ]);
-  const copy = getInterfaceCopy(locale);
-  const userId = session?.user?.id;
-  const initialCatalogItem = await resolveInitialCatalogSelection(params);
-  const pendingWishlistItem = await resolvePendingWishlistSelection(params);
+  const visualScenario = resolveVisualGardenWorkspaceScenario(
+    params.visualWorkspace,
+    process.env,
+  );
+  if (visualScenario?.state === "loading") return <GardenLoading />;
+
+  const userId = visualScenario
+    ? visualScenario.ownerActorId
+    : session?.user?.id;
   const engagementAuthMessage = engagementAuthPrompt(params.engagement);
   const engagementPostAuthPath = engagementAuthMessage
     ? normalizeGardenReturnToParam(params.returnTo)
     : null;
-  const saveProgressKind = normalizeSaveProgressMomentKind(params.saveProgress);
-  const resumeAction = normalizeAuthIntentResumeAction(params.authIntent);
-  const resumeControl = normalizeAuthIntentResumeControl(params.authControl);
+  const [initialCatalogItem, pendingWishlistItem] = await Promise.all([
+    resolveInitialCatalogSelection(params),
+    resolvePendingWishlistSelection(params),
+  ]);
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
-  const facebookSignInEnabled = isFacebookSignInEnabled();
-  const googleSignInEnabled = isGoogleSignInEnabled();
   const oauthMessage = oauthErrorRecoveryMessage(params.error);
-  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
 
   if (
     userId &&
+    !visualScenario &&
     engagementPostAuthPath &&
     engagementPostAuthPath !== "/garden"
   ) {
     redirect(engagementPostAuthPath);
   }
 
-  const writeAccess = scope
-    ? await resolvePilotWriteAccess(scope)
-    : { invited: false };
-  const objects = scope ? await listMyPlantObjects(scope, 20) : [];
-  const spaceTimelines = scope ? await listMySpaceJournalTimelines(scope) : [];
-  const recentEntries = scope ? await listMyRecentJournalEntries(scope, 8) : [];
-  const spaceJournalEntryCount = spaceTimelines.reduce(
-    (count, timeline) => count + timeline.entries.length,
-    0,
-  );
-  const hasObjects = objects.length > 0;
-  const today = new Date().toISOString().slice(0, 10);
-  const workspaceStats = summarizeWorkspace(objects, spaceTimelines, today);
-  const nextAction = chooseWorkspaceNextAction(objects, today);
-  const recentActivity = buildRecentActivityItems(
-    recentEntries,
-    objects,
-    spaceTimelines,
-  );
+  if (!userId) {
+    return (
+      <GuestGardenEntry
+        locale={locale}
+        activationSource={activationSource}
+        catalogName={initialCatalogItem?.displayName}
+        initialMessage={
+          oauthMessage ??
+          engagementAuthMessage ??
+          (pendingWishlistItem
+            ? `Sign in to save ${pendingWishlistItem.canonicalName} to your wishlist.`
+            : null)
+        }
+        postAuthPath={engagementPostAuthPath}
+      />
+    );
+  }
 
-  if (scope) {
+  const scope = scopedToUser(
+    userId,
+    visualScenario ? null : getSessionId(session),
+  );
+  const loadOptions = {
+    inventoryExpanded: firstParam(params.inventory) === "all",
+    inventoryPage: positivePage(params.inventoryPage),
+    spacesExpanded: firstParam(params.spaces) === "all",
+    spacesPage: positivePage(params.spacesPage),
+    faultSections: visualScenario?.faultSections ?? [],
+  };
+  const [writeAccess, workspace] = await Promise.all([
+    visualScenario
+      ? Promise.resolve({ invited: true })
+      : resolvePilotWriteAccess(scope),
+    loadGardenWorkspace(scope, loadOptions),
+  ]);
+  const workspaceForView = applyVisualWorkspaceSummary(
+    workspace,
+    visualScenario,
+  );
+  const requestedSpaceId = uuidParam(params.space);
+  const defaultSpaceId =
+    workspaceForView.spaces.status === "ready"
+      ? (workspaceForView.spaces.value.spaces[0]?.id ?? null)
+      : null;
+  const selectedSpaceId = requestedSpaceId || defaultSpaceId;
+  const selectedSpaceTimeline = selectedSpaceId
+    ? await getMySpaceJournalTimeline(scope, selectedSpaceId, {
+        objectLimit: 20,
+        entryLimit: 5,
+      })
+    : null;
+  const today = visualScenario
+    ? "2026-07-12"
+    : new Date().toISOString().slice(0, 10);
+
+  if (!visualScenario) {
     await recordAnalyticsEventSafely(scope, {
       eventName: "activation_started",
       properties: {
@@ -135,532 +158,252 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   }
 
   return (
+    <>
+      <AuthIntentFocus
+        action={normalizeAuthIntentResumeAction(params.authIntent)}
+        control={normalizeAuthIntentResumeControl(params.authControl)}
+      />
+      <GardenWorkspaceView
+        canWrite={writeAccess.invited}
+        locale={locale}
+        today={today}
+        workspace={workspaceForView}
+        localState={visualLocalState(visualScenario)}
+      >
+        {writeAccess.invited && pendingWishlistItem ? (
+          <PendingWishlistIntentPanel
+            item={pendingWishlistItem}
+            locale={locale}
+          />
+        ) : null}
+        {writeAccess.invited &&
+        normalizeSaveProgressMomentKind(params.saveProgress) ===
+          "space-entry" ? (
+          <SaveProgressMoment
+            kind="space-entry"
+            entryCount={selectedSpaceTimeline?.entries.length ?? 0}
+            spaceName={
+              selectedSpaceTimeline?.space.display_name ?? "your garden"
+            }
+            primaryHref="#space-journal"
+            primaryLabel="Return to space journal"
+            secondaryHref="#first-entry-composer"
+            secondaryLabel="Add another object"
+          />
+        ) : null}
+        <GardenWriteTools
+          canWrite={writeAccess.invited}
+          today={today}
+          locale={locale}
+          activationSource={activationSource}
+          initialCatalogItem={initialCatalogItem}
+          selectedSpaceTimeline={selectedSpaceTimeline}
+        />
+      </GardenWorkspaceView>
+    </>
+  );
+}
+
+function applyVisualWorkspaceSummary(
+  workspace: Awaited<ReturnType<typeof loadGardenWorkspace>>,
+  scenario: VisualFixtureWorkspaceScenarioEvidence | null,
+) {
+  if (!scenario || workspace.media.status !== "ready") return workspace;
+
+  return {
+    ...workspace,
+    media: {
+      status: "ready" as const,
+      value: {
+        processingCount: scenario.mediaProcessingCount,
+        failedCount: scenario.mediaFailedCount,
+      },
+    },
+  };
+}
+
+function visualLocalState(
+  scenario: VisualFixtureWorkspaceScenarioEvidence | null,
+): GardenWorkspaceLocalStateSnapshot | undefined {
+  if (!scenario) return undefined;
+
+  const objectId = scenario.expectedObjectIds[0] ?? "fixture-first-object";
+  const objectHref = `/garden/objects/${encodeURIComponent(objectId)}#follow-up-composer`;
+  const drafts = Array.from({ length: scenario.draftCount }, (_, index) => ({
+    id: `synthetic-workspace-draft-${index + 1}`,
+    title: `Synthetic draft ${index + 1}`,
+    subtitle: index === 0 ? "Object update · 12 Jul" : "First object · 11 Jul",
+    href: index === 0 ? objectHref : "/garden#first-entry-composer",
+  }));
+  const queued = Array.from({ length: scenario.queuedCount }, (_, index) => ({
+    id: `synthetic-workspace-queued-${index + 1}`,
+    title: `Synthetic queued update ${index + 1}`,
+    status: "queued" as const,
+    href: objectHref,
+  }));
+  const failed = Array.from({ length: scenario.failedCount }, (_, index) => ({
+    id: `synthetic-workspace-failed-${index + 1}`,
+    title: `Synthetic failed update ${index + 1}`,
+    status: "failed" as const,
+    href: objectHref,
+  }));
+
+  return {
+    online: scenario.online,
+    drafts,
+    mutations: [...queued, ...failed],
+  };
+}
+
+function GuestGardenEntry({
+  locale,
+  activationSource,
+  catalogName,
+  initialMessage,
+  postAuthPath,
+}: {
+  locale: InterfaceLocale;
+  activationSource: Parameters<typeof GardenAuthPanel>[0]["activationSource"];
+  catalogName?: string | null;
+  initialMessage?: string | null;
+  postAuthPath?: string | null;
+}) {
+  return (
     <main
       lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+      data-garden-workspace="guest"
+      className="mx-auto grid w-full max-w-4xl gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
-      <header className="flex flex-col gap-2 border-b border-border pb-5">
-        <h1 className="text-3xl font-semibold text-foreground">
-          {copy.workspace.title}
+      <header className="border-b border-border pb-5">
+        <p className="text-xs font-semibold text-muted-foreground uppercase">
+          Private workspace
+        </p>
+        <h1 className="mt-1 text-3xl font-semibold text-foreground">
+          Your private garden starts here
         </h1>
-        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {hasObjects
-            ? copy.workspace.returningDescription
-            : copy.workspace.emptyDescription}
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Sign in only to open your own objects, drafts, and journal continuity.
+          Public journals, living objects, and knowledge remain open without an
+          account.
         </p>
       </header>
 
-      {!userId ? (
-        <GardenAuthPanel
-          activationSource={activationSource}
-          catalogName={initialCatalogItem?.displayName}
-          facebookSignInEnabled={facebookSignInEnabled}
-          googleSignInEnabled={googleSignInEnabled}
-          initialMessage={
-            oauthMessage ??
-            engagementAuthMessage ??
-            (pendingWishlistItem
-              ? `Sign in to save ${pendingWishlistItem.canonicalName} to your wishlist.`
-              : null)
-          }
-          postAuthPath={engagementPostAuthPath}
-        />
-      ) : null}
-
-      {userId ? (
-        <SocialAccountLinkPanel
-          facebookSignInEnabled={facebookSignInEnabled}
-          googleSignInEnabled={googleSignInEnabled}
-          initialMessage={oauthMessage}
-        />
-      ) : null}
-
-      {userId ? (
-        <>
-          <AuthIntentFocus action={resumeAction} control={resumeControl} />
-          {writeAccess.invited ? (
-            <div id="drafts">
-              <GardenDraftResumePanel />
-            </div>
-          ) : null}
-          {writeAccess.invited && pendingWishlistItem ? (
-            <PendingWishlistIntentPanel
-              item={pendingWishlistItem}
-              locale={locale}
-            />
-          ) : null}
-          {writeAccess.invited && saveProgressKind === "space-entry" ? (
-            <SaveProgressMoment
-              kind={saveProgressKind}
-              entryCount={spaceJournalEntryCount}
-              spaceName="your garden"
-              primaryHref="#space-journals"
-              primaryLabel="Return to space timelines"
-              secondaryHref="#first-entry-composer"
-              secondaryLabel="Add another entry"
-            />
-          ) : null}
-          <WorkspaceOverview
-            canWrite={writeAccess.invited}
-            hasObjects={hasObjects}
-            stats={workspaceStats}
-            nextAction={nextAction}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <GardenAuthPanel
+            embedded
+            activationSource={activationSource}
+            catalogName={catalogName}
+            facebookSignInEnabled={isFacebookSignInEnabled()}
+            googleSignInEnabled={isGoogleSignInEnabled()}
+            initialMessage={initialMessage}
+            postAuthPath={postAuthPath}
+            title="Open your garden"
+            prompt="Use the same account that owns the garden you want to continue."
           />
-
-          <div className="grid gap-6 xl:grid-cols-3">
-            <div className="flex min-w-0 flex-col gap-6 xl:col-span-2">
-              <ObjectInventory
-                canWrite={writeAccess.invited}
-                objects={objects}
-                today={today}
-              />
-
-              <section
-                id="first-entry-composer"
-                className="flex flex-col gap-4 rounded-lg border border-border p-4"
-              >
-                <div className="flex flex-col gap-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">
-                    {hasObjects ? "Add object" : "Start workspace"}
-                  </p>
-                  <h2 className="text-lg font-semibold text-foreground">
-                    {hasObjects
-                      ? "Start another living object"
-                      : "First living object"}
-                  </h2>
-                  <p className="text-sm text-muted-foreground">
-                    {!writeAccess.invited
-                      ? "Your workspace structure is visible now; writing unlocks after a valid pilot invitation."
-                      : hasObjects
-                        ? "Create a separate record when the next plant, colony, or animal needs its own history."
-                        : "Save the first note with a catalog match, your own catalog name, or no match yet."}
-                  </p>
-                </div>
-
-                {writeAccess.invited ? (
-                  <FirstEntryComposer
-                    key={initialCatalogItem?.id ?? "first-entry"}
-                    today={today}
-                    initialClientMutationId={crypto.randomUUID()}
-                    initialCatalogItem={initialCatalogItem}
-                    activationSource={activationSource}
-                  />
-                ) : (
-                  <ClosedPilotWriteCallout locale={locale} />
-                )}
-              </section>
-
-              {hasObjects ? (
-                <section id="space-journals" className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase">
-                      Space timeline
-                    </p>
-                    <h2 className="text-lg font-semibold text-foreground">
-                      Space journals
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                      {writeAccess.invited
-                        ? "Write one dated story for a whole space and mention the objects it covers."
-                        : "Read the dated history for this space. New space notes unlock after write access is available."}
-                    </p>
-                  </div>
-
-                  <div className="grid gap-4">
-                    {spaceTimelines.map((timeline) => (
-                      <SpaceTimelinePanel
-                        key={timeline.space.id}
-                        canWrite={writeAccess.invited}
-                        timeline={timeline}
-                        today={today}
-                      />
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-            </div>
-
-            <aside className="flex min-w-0 flex-col gap-6 xl:sticky xl:top-6 xl:self-start">
-              <WorkspaceQuickActions
-                canWrite={writeAccess.invited}
-                hasObjects={hasObjects}
-                nextAction={nextAction}
-              />
-              <RecentActivityPanel items={recentActivity} />
-            </aside>
+        </div>
+        <aside className="border-t border-border pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
+          <p className="text-xs font-semibold text-muted-foreground uppercase">
+            Keep exploring
+          </p>
+          <h2 className="mt-1 text-lg font-semibold text-foreground">
+            Continue reading journals
+          </h2>
+          <div className="mt-4 flex flex-col gap-2">
+            <Link
+              href={localizedPath(locale, "/journals")}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
+            >
+              <BookOpenText aria-hidden="true" />
+              Public journals
+            </Link>
+            <Link
+              href={localizedPath(locale, "/objects")}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
+            >
+              <Sprout aria-hidden="true" />
+              Living objects
+            </Link>
+            <Link
+              href={localizedPath(locale, "/knowledge")}
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
+            >
+              <Compass aria-hidden="true" />
+              Knowledge
+            </Link>
           </div>
-        </>
-      ) : null}
+        </aside>
+      </div>
     </main>
   );
 }
 
-interface WorkspaceStats {
-  objectCount: number;
-  objectEntryCount: number;
-  publicEntryCount: number;
-  needsUpdateCount: number;
-  spaceCount: number;
-  spaceEntryCount: number;
-}
-
-interface WorkspaceNextAction {
-  title: string;
-  description: string;
-  href: string;
-  label: string;
-  object?: PlantObjectSummary;
-}
-
-interface RecentActivityItem {
-  id: string;
-  title: string;
-  href: string;
-  context: string;
-  date: Date | string;
-  scopeLabel: string;
-  privacyLabel: string;
-}
-
-function WorkspaceOverview({
+function GardenWriteTools({
   canWrite,
-  hasObjects,
-  stats,
-  nextAction,
+  today,
+  locale,
+  activationSource,
+  initialCatalogItem,
+  selectedSpaceTimeline,
 }: {
   canWrite: boolean;
-  hasObjects: boolean;
-  stats: WorkspaceStats;
-  nextAction: WorkspaceNextAction;
-}) {
-  const primaryHref = canWrite ? nextAction.href : "#first-entry-composer";
-  const primaryLabel = canWrite ? nextAction.label : "Check write access";
-
-  return (
-    <section className="grid gap-5 rounded-lg border border-border bg-muted/20 p-4 lg:grid-cols-3">
-      <div className="flex min-w-0 flex-col gap-4 lg:col-span-1">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Next action
-          </p>
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            {nextAction.title}
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {nextAction.description}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={primaryHref} className={buttonVariants()}>
-            <Plus className="size-4" aria-hidden="true" />
-            {primaryLabel}
-          </Link>
-          {hasObjects && canWrite ? (
-            <Link
-              href="#space-journals"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              <BookOpen className="size-4" aria-hidden="true" />
-              Space note
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <dl className="grid gap-3 sm:grid-cols-2 lg:col-span-2">
-        <WorkspaceMetric
-          icon={<Sprout className="size-4" aria-hidden="true" />}
-          label="Living objects"
-          value={stats.objectCount}
-          detail={
-            stats.spaceCount === 1
-              ? "1 workspace space"
-              : `${stats.spaceCount} workspace spaces`
-          }
-        />
-        <WorkspaceMetric
-          icon={<ClipboardList className="size-4" aria-hidden="true" />}
-          label="Journal entries"
-          value={stats.objectEntryCount + stats.spaceEntryCount}
-          detail={`${stats.objectEntryCount} object · ${stats.spaceEntryCount} space`}
-        />
-        <WorkspaceMetric
-          icon={<Clock3 className="size-4" aria-hidden="true" />}
-          label="Need update"
-          value={stats.needsUpdateCount}
-          detail="No note yet or stale direct update"
-        />
-        <WorkspaceMetric
-          icon={<ShieldCheck className="size-4" aria-hidden="true" />}
-          label="Public-safe"
-          value={stats.publicEntryCount}
-          detail="Everything else stays private"
-        />
-      </dl>
-    </section>
-  );
-}
-
-function WorkspaceMetric({
-  icon,
-  label,
-  value,
-  detail,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  detail: string;
+  today: string;
+  locale: InterfaceLocale;
+  activationSource: Parameters<
+    typeof FirstEntryComposer
+  >[0]["activationSource"];
+  initialCatalogItem: FirstEntryCatalogSelection | null;
+  selectedSpaceTimeline: SpaceJournalTimeline | null;
 }) {
   return (
-    <div className="flex min-w-0 gap-3 rounded-md border border-border bg-background/80 p-3">
-      <span className="mt-0.5 text-muted-foreground">{icon}</span>
-      <span className="min-w-0">
-        <dt className="text-xs font-medium text-muted-foreground uppercase">
-          {label}
-        </dt>
-        <dd className="mt-1 text-2xl font-semibold text-foreground">{value}</dd>
-        <dd className="mt-1 truncate text-xs text-muted-foreground">
-          {detail}
-        </dd>
-      </span>
+    <div className="flex flex-col gap-10 border-t border-border pt-8">
+      <section id="first-entry-composer" className="scroll-mt-20">
+        <p className="text-xs font-semibold text-muted-foreground uppercase">
+          Create
+        </p>
+        <h2 className="mt-1 text-xl font-semibold text-foreground">
+          Add living object
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
+          Start one recognizable plant, animal, or colony record. A space can be
+          created in the same path, so setup never blocks the first useful note.
+        </p>
+        <div className="mt-5" id="write-access">
+          {canWrite ? (
+            <FirstEntryComposer
+              key={initialCatalogItem?.id ?? "first-entry"}
+              today={today}
+              initialClientMutationId={crypto.randomUUID()}
+              initialCatalogItem={initialCatalogItem}
+              activationSource={activationSource}
+            />
+          ) : (
+            <ClosedPilotWriteCallout locale={locale} />
+          )}
+        </div>
+      </section>
+
+      {selectedSpaceTimeline ? (
+        <SpaceJournalTools
+          canWrite={canWrite}
+          timeline={selectedSpaceTimeline}
+          today={today}
+        />
+      ) : null}
     </div>
   );
 }
 
-function ObjectInventory({
-  canWrite,
-  objects,
-  today,
-}: {
-  canWrite: boolean;
-  objects: PlantObjectSummary[];
-  today: string;
-}) {
-  if (objects.length === 0) {
-    return (
-      <section className="flex flex-col gap-4 rounded-lg border border-dashed border-border p-4">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Inventory
-          </p>
-          <h2 className="text-lg font-semibold text-foreground">
-            No living objects yet
-          </h2>
-          <p className="text-sm leading-6 text-muted-foreground">
-            {canWrite
-              ? "Save the first entry to create the default space, first living object, and first dated record in one path."
-              : "Your private garden workspace is ready. Writing is still invite-only, so the first object starts after write access is unlocked."}
-          </p>
-        </div>
-        <Link
-          href="#first-entry-composer"
-          className={buttonVariants({ className: "w-fit" })}
-        >
-          <Leaf className="size-4" aria-hidden="true" />
-          {canWrite ? "Start first object" : "Check write access"}
-        </Link>
-      </section>
-    );
-  }
-
-  return (
-    <section className="flex min-w-0 flex-col gap-4 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs font-medium text-muted-foreground uppercase">
-            Inventory
-          </p>
-          <h2 className="text-lg font-semibold text-foreground">
-            Living objects
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            A dense workspace view for the things you own or care for.
-          </p>
-        </div>
-        <Link
-          href="#first-entry-composer"
-          className={buttonVariants({ variant: "outline", className: "w-fit" })}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {canWrite ? "Add object" : "Check write access"}
-        </Link>
-      </div>
-
-      <ol className="divide-y divide-border overflow-hidden rounded-md border border-border">
-        <li className="hidden grid-cols-5 gap-3 bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground uppercase md:grid">
-          <span>Object</span>
-          <span>Context</span>
-          <span>Entries</span>
-          <span>Status</span>
-          <span>Action</span>
-        </li>
-        {objects.map((object) => {
-          const updateState = objectUpdateState(object, today);
-          return (
-            <li
-              key={object.id}
-              className="grid gap-3 px-3 py-3 md:grid-cols-5 md:items-center"
-            >
-              <div className="min-w-0">
-                <Link
-                  href={`/garden/objects/${object.id}`}
-                  className="block truncate text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-                >
-                  {object.displayName}
-                </Link>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {plantObjectKindLabel(object.objectKind)} ·{" "}
-                  {object.spaceDisplayName}
-                </p>
-              </div>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {objectCatalogSummary(object)}
-              </p>
-              <p className="text-sm text-foreground">
-                {object.entryCount === 1
-                  ? "1 entry"
-                  : `${object.entryCount} entries`}
-                <span className="block text-xs text-muted-foreground">
-                  {objectPrivacySummary(object)}
-                </span>
-              </p>
-              <p className="text-sm text-foreground">
-                {updateState.label}
-                <span className="block text-xs text-muted-foreground">
-                  {updateState.detail}
-                </span>
-              </p>
-              <Link
-                href={
-                  canWrite
-                    ? `/garden/objects/${object.id}#follow-up-composer`
-                    : `/garden/objects/${object.id}`
-                }
-                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-              >
-                {canWrite ? "Add update/photo" : "View object"}
-              </Link>
-            </li>
-          );
-        })}
-      </ol>
-    </section>
-  );
-}
-
-function WorkspaceQuickActions({
-  canWrite,
-  hasObjects,
-  nextAction,
-}: {
-  canWrite: boolean;
-  hasObjects: boolean;
-  nextAction: WorkspaceNextAction;
-}) {
-  const primaryHref = canWrite ? nextAction.href : "#first-entry-composer";
-  const primaryLabel = canWrite ? nextAction.label : "Check write access";
-
-  return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-muted-foreground uppercase">
-          Fast actions
-        </p>
-        <h2 className="text-base font-semibold text-foreground">
-          Keep the record moving
-        </h2>
-      </div>
-      <div className="flex flex-col gap-2">
-        <Link
-          href={primaryHref}
-          className={buttonVariants({ className: "justify-start" })}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          {primaryLabel}
-        </Link>
-        <Link
-          href="#first-entry-composer"
-          className={buttonVariants({
-            variant: "outline",
-            className: "justify-start",
-          })}
-        >
-          <Sprout className="size-4" aria-hidden="true" />
-          {canWrite ? "Add object" : "Invite details"}
-        </Link>
-        {hasObjects ? (
-          <Link
-            href="#space-journals"
-            className={buttonVariants({
-              variant: "outline",
-              className: "justify-start",
-            })}
-          >
-            <BookOpen className="size-4" aria-hidden="true" />
-            {canWrite ? "Space journal" : "Read space timeline"}
-          </Link>
-        ) : null}
-        {hasObjects && canWrite ? (
-          <Link
-            href={nextAction.href}
-            className={buttonVariants({
-              variant: "outline",
-              className: "justify-start",
-            })}
-          >
-            <Camera className="size-4" aria-hidden="true" />
-            Attach update photo
-          </Link>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function RecentActivityPanel({ items }: { items: RecentActivityItem[] }) {
-  return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-1">
-        <p className="text-xs font-medium text-muted-foreground uppercase">
-          Recent activity
-        </p>
-        <h2 className="text-base font-semibold text-foreground">
-          Journal timeline
-        </h2>
-      </div>
-      {items.length === 0 ? (
-        <p className="rounded-md border border-dashed border-border p-3 text-sm leading-6 text-muted-foreground">
-          No dated activity yet. The first saved entry will appear here.
-        </p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex flex-col gap-1 border-b border-border pb-3 last:border-b-0 last:pb-0"
-            >
-              <Link
-                href={item.href}
-                className="text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-              >
-                {item.title}
-              </Link>
-              <p className="text-xs leading-5 text-muted-foreground">
-                {item.context} · {formatDate(item.date)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {item.scopeLabel} · {item.privacyLabel}
-              </p>
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function SpaceTimelinePanel({
+function SpaceJournalTools({
   canWrite,
   timeline,
   today,
@@ -669,31 +412,35 @@ function SpaceTimelinePanel({
   timeline: SpaceJournalTimeline;
   today: string;
 }) {
-  const clientMutationId = crypto.randomUUID();
-
   return (
-    <section
-      id={`space-${timeline.space.id}`}
-      className="grid gap-4 rounded-lg border border-border p-4"
-    >
-      <div className="flex flex-col gap-1">
-        <h3 className="text-base font-semibold text-foreground">
-          {timeline.space.display_name}
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          {timeline.objects.length === 1
-            ? "1 object in this space."
-            : `${timeline.objects.length} objects in this space.`}
-        </p>
+    <section id="space-journal" className="scroll-mt-20">
+      <p className="text-xs font-semibold text-muted-foreground uppercase">
+        Space journal tools
+      </p>
+      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-foreground">
+            {timeline.space.display_name}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            One note can mention several objects in this space.
+          </p>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          Showing {timeline.entries.length} recent space entries
+        </span>
       </div>
 
       {canWrite && timeline.objects.length > 0 ? (
-        <form action={createSpaceJournalEntryAction} className="grid gap-3">
+        <form
+          action={createSpaceJournalEntryAction}
+          className="mt-5 grid gap-3 border-y border-border py-5"
+        >
           <input type="hidden" name="spaceId" value={timeline.space.id} />
           <input
             type="hidden"
             name="clientMutationId"
-            value={clientMutationId}
+            value={crypto.randomUUID()}
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
@@ -717,23 +464,14 @@ function SpaceTimelinePanel({
             </label>
           </div>
           <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">Note</span>
+            <span className="font-medium text-foreground">Story</span>
             <textarea
               name="body"
               required
               maxLength={2000}
               rows={4}
-              placeholder="Write the story once, then attach the objects it mentions."
+              placeholder="Write the dated episode once, then mention the objects it covers."
               className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
-            />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">Tags / topics</span>
-            <input
-              name="topicTags"
-              maxLength={160}
-              placeholder="watering, pests, seedlings"
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             />
           </label>
           <fieldset className="grid gap-2">
@@ -744,7 +482,7 @@ function SpaceTimelinePanel({
               {timeline.objects.map((object) => (
                 <label
                   key={object.id}
-                  className="flex items-start gap-2 rounded-md border border-border px-3 py-2 text-sm"
+                  className="flex items-start gap-2 border-y border-border px-1 py-2 text-sm"
                 >
                   <input
                     type="checkbox"
@@ -752,19 +490,13 @@ function SpaceTimelinePanel({
                     value={object.id}
                     className="mt-1 size-4 rounded border-border"
                   />
-                  <span className="flex flex-col gap-0.5">
-                    <span className="font-medium text-foreground">
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-foreground">
                       {object.displayName}
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {plantObjectKindLabel(object.objectKind)} ·{" "}
-                      {object.varietyText
-                        ? `${catalogIdentityLabel(
-                            object.catalogKind,
-                            object.objectKind,
-                          )}: ${object.varietyText}`
-                        : "Unknown"}{" "}
-                      · {varietyStateLabel(object.varietyState)}
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {object.objectKind.replaceAll("_", " ")} ·{" "}
+                      {object.varietyText ?? "Unknown identity"}
                     </span>
                   </span>
                 </label>
@@ -773,57 +505,41 @@ function SpaceTimelinePanel({
           </fieldset>
           <button
             type="submit"
-            className="inline-flex w-fit items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className={buttonVariants({ className: "w-fit" })}
           >
+            <BookOpenText aria-hidden="true" />
             Save space entry
           </button>
         </form>
       ) : null}
 
-      <div className="grid gap-3">
-        <h4 className="text-sm font-semibold text-foreground">
-          Space timeline
-        </h4>
-        {timeline.entries.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No space-level entries yet.
-          </p>
-        ) : (
-          <ol className="grid gap-3">
-            {timeline.entries.map((entry) => (
-              <li
-                key={entry.id}
-                id={`space-entry-${entry.id}`}
-                className="rounded-lg border border-border p-4"
-              >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <h5 className="text-base font-semibold text-foreground">
-                    {entry.title}
-                  </h5>
-                  <time className="text-xs text-muted-foreground">
-                    {formatDate(entry.entry_date)}
-                  </time>
-                </div>
-                <p className="mt-3 text-sm leading-6 whitespace-pre-wrap text-foreground">
-                  {entry.body}
+      {timeline.entries.length > 0 ? (
+        <ol className="divide-y divide-border border-b border-border">
+          {timeline.entries.map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-start justify-between gap-3 py-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-foreground">
+                  {entry.title}
                 </p>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  {entryScopeLabel(entry.entry_scope)} ·{" "}
-                  {entryPrivacyLabel({
-                    visibility: entry.visibility,
-                    isArchived: entry.lifecycle_state === "archived",
-                  })}
-                  {entry.mentionedObjects.length > 0
-                    ? ` · Mentions ${entry.mentionedObjects
-                        .map((object) => object.displayName)
-                        .join(", ")}`
-                    : ""}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {entry.visibility === "public" ? "Public" : "Private"}
+                  {entry.lifecycle_state === "archived" ? " · Archived" : ""}
                 </p>
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
+              </div>
+              <time className="shrink-0 text-xs text-muted-foreground">
+                {formatDate(entry.entry_date)}
+              </time>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="border-b border-dashed border-border py-5 text-sm text-muted-foreground">
+          No space-level entries yet.
+        </p>
+      )}
     </section>
   );
 }
@@ -831,12 +547,10 @@ function SpaceTimelinePanel({
 async function resolveInitialCatalogSelection(
   searchParams: GardenSearchParams,
 ): Promise<FirstEntryCatalogSelection | null> {
-  const publicSlug = normalizeFirstParam(searchParams.catalog);
+  const publicSlug = firstParam(searchParams.catalog);
   if (!publicSlug) return null;
-
   const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
   if (!item) return null;
-
   return {
     id: item.id,
     displayName: item.canonicalName,
@@ -851,13 +565,10 @@ async function resolveInitialCatalogSelection(
 async function resolvePendingWishlistSelection(
   searchParams: GardenSearchParams,
 ) {
-  const publicSlug = normalizeFirstParam(searchParams.wishlist);
+  const publicSlug = firstParam(searchParams.wishlist);
   if (!publicSlug) return null;
-
   const item = await findSelectableCatalogItemByPublicSlug(publicSlug);
-  if (!item?.publicSlug) return null;
-
-  return item;
+  return item?.publicSlug ? item : null;
 }
 
 function PendingWishlistIntentPanel({
@@ -868,19 +579,13 @@ function PendingWishlistIntentPanel({
   locale: InterfaceLocale;
 }) {
   if (!item?.publicSlug) return null;
-
   return (
-    <section className="grid gap-3 rounded-lg border border-border p-4">
-      <div className="grid gap-1">
-        <h2 className="text-lg font-semibold text-foreground">
-          Save for later
-        </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
-          Add {item.canonicalName} to your wishlist without creating a garden
-          object yet.
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-3">
+    <section className="border-y border-border py-5">
+      <h2 className="text-lg font-semibold text-foreground">Save for later</h2>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Add {item.canonicalName} to your wishlist without creating an object.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
         <form action={addCatalogPublicSlugToWishlistAction}>
           <input
             type="hidden"
@@ -893,20 +598,15 @@ function PendingWishlistIntentPanel({
             name="returnTo"
             value={localizedPath(locale, "/wishlist")}
           />
-          <button
-            type="submit"
-            className={buttonVariants({ className: "w-fit" })}
-          >
+          <button type="submit" className={buttonVariants()}>
             Save to wishlist
           </button>
         </form>
         <Link
           href={gardenFirstEntryPreselectionPath(item.publicSlug)}
-          className={buttonVariants({
-            variant: "outline",
-            className: "w-fit",
-          })}
+          className={buttonVariants({ variant: "outline" })}
         >
+          <CirclePlus aria-hidden="true" />
           Start first entry
         </Link>
       </div>
@@ -915,18 +615,16 @@ function PendingWishlistIntentPanel({
 }
 
 function engagementAuthPrompt(value: string | string[] | undefined) {
-  const intent = normalizeFirstParam(value);
-  if (intent === "comment-auth") {
+  const intent = firstParam(value);
+  if (intent === "comment-auth")
     return "Sign in to comment on that public page.";
-  }
-  if (intent === "bookmark-auth") {
+  if (intent === "bookmark-auth")
     return "Sign in to bookmark that public page.";
-  }
   return null;
 }
 
 function normalizeGardenReturnToParam(value: string | string[] | undefined) {
-  const raw = normalizeFirstParam(value);
+  const raw = firstParam(value);
   if (
     raw.startsWith("/") &&
     !raw.startsWith("//") &&
@@ -938,206 +636,21 @@ function normalizeGardenReturnToParam(value: string | string[] | undefined) {
   return "/garden";
 }
 
-function normalizeFirstParam(value: string | string[] | undefined) {
+function firstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0]?.trim() ?? "";
   return typeof value === "string" ? value.trim() : "";
 }
 
-function summarizeWorkspace(
-  objects: PlantObjectSummary[],
-  spaceTimelines: SpaceJournalTimeline[],
-  today: string,
-): WorkspaceStats {
-  return {
-    objectCount: objects.length,
-    objectEntryCount: objects.reduce(
-      (count, object) => count + object.entryCount,
-      0,
-    ),
-    publicEntryCount:
-      objects.reduce((count, object) => count + object.publicEntryCount, 0) +
-      spaceTimelines.reduce(
-        (count, timeline) =>
-          count +
-          timeline.entries.filter(
-            (entry) =>
-              entry.visibility === "public" &&
-              entry.lifecycle_state === "active",
-          ).length,
-        0,
-      ),
-    needsUpdateCount: objects.filter((object) =>
-      isObjectUpdateDue(object, today),
-    ).length,
-    spaceCount: spaceTimelines.length,
-    spaceEntryCount: spaceTimelines.reduce(
-      (count, timeline) => count + timeline.entries.length,
-      0,
-    ),
-  };
+function positivePage(value: string | string[] | undefined) {
+  const parsed = Number.parseInt(firstParam(value), 10);
+  return Number.isFinite(parsed) && parsed > 0
+    ? Math.min(parsed, MAX_GARDEN_PAGE)
+    : 1;
 }
 
-function chooseWorkspaceNextAction(
-  objects: PlantObjectSummary[],
-  today: string,
-): WorkspaceNextAction {
-  if (objects.length === 0) {
-    return {
-      title: "Start with one living object",
-      description:
-        "Create the first private record before the workspace asks for anything else.",
-      href: "#first-entry-composer",
-      label: "Start first object",
-    };
-  }
-
-  const objectNeedingUpdate =
-    objects
-      .filter((object) => isObjectUpdateDue(object, today))
-      .sort(compareObjectsByOldestUpdate)[0] ?? null;
-  const object = objectNeedingUpdate ?? objects[0];
-
-  if (object.entryCount === 0) {
-    return {
-      title: `Finish first note for ${object.displayName}`,
-      description:
-        "This object exists, but it still needs a dated observation to become useful later.",
-      href: `/garden/objects/${object.id}#follow-up-composer`,
-      label: "Add first note",
-      object,
-    };
-  }
-
-  return {
-    title: objectNeedingUpdate
-      ? `Update ${object.displayName}`
-      : `Continue ${object.displayName}`,
-    description: objectNeedingUpdate
-      ? "The last direct object update is old enough that a fresh note would make this record more useful."
-      : "The workspace is current; add the next change when something observable happens.",
-    href: `/garden/objects/${object.id}#follow-up-composer`,
-    label: "Add update",
-    object,
-  };
-}
-
-function buildRecentActivityItems(
-  entries: JournalEntry[],
-  objects: PlantObjectSummary[],
-  spaceTimelines: SpaceJournalTimeline[],
-): RecentActivityItem[] {
-  const objectsById = new Map(objects.map((object) => [object.id, object]));
-  const spacesById = new Map(
-    spaceTimelines.map((timeline) => [
-      timeline.space.id,
-      timeline.space.display_name,
-    ]),
-  );
-
-  return entries.map((entry) => {
-    const object = entry.plant_object_id
-      ? objectsById.get(entry.plant_object_id)
-      : null;
-    const spaceName = spacesById.get(entry.space_id) ?? "Garden space";
-
-    return {
-      id: entry.id,
-      title: entry.title,
-      href: object
-        ? `/garden/objects/${object.id}`
-        : `/garden#space-${entry.space_id}`,
-      context: object ? object.displayName : spaceName,
-      date: entry.entry_date,
-      scopeLabel: entryScopeLabel(entry.entry_scope),
-      privacyLabel: entryPrivacyLabel({
-        visibility: entry.visibility,
-        isArchived: entry.lifecycle_state === "archived",
-      }),
-    };
-  });
-}
-
-function objectCatalogSummary(object: PlantObjectSummary) {
-  const identity = object.varietyText
-    ? `${catalogIdentityLabel(object.catalogKind, object.objectKind)}: ${
-        object.varietyText
-      }`
-    : "Unknown catalog match";
-
-  return `${identity} · ${varietyStateLabel(object.varietyState)}`;
-}
-
-function objectPrivacySummary(object: PlantObjectSummary) {
-  if (object.publicEntryCount > 0) {
-    return `${object.publicEntryCount} public · ${object.privateEntryCount} private`;
-  }
-
-  return "Private record";
-}
-
-function objectUpdateState(object: PlantObjectSummary, today: string) {
-  if (object.entryCount === 0 || !object.latestEntryDate) {
-    return {
-      label: "Needs first note",
-      detail: "No direct entries yet",
-    };
-  }
-
-  const daysSinceUpdate = daysBetween(object.latestEntryDate, today);
-  if (daysSinceUpdate > 14) {
-    return {
-      label: "Needs current note",
-      detail: `Last update ${formatRelativeDays(daysSinceUpdate)}`,
-    };
-  }
-
-  return {
-    label: "Current",
-    detail: `Last update ${formatRelativeDays(daysSinceUpdate)}`,
-  };
-}
-
-function isObjectUpdateDue(object: PlantObjectSummary, today: string) {
-  if (object.entryCount === 0 || !object.latestEntryDate) return true;
-  return daysBetween(object.latestEntryDate, today) > 14;
-}
-
-function compareObjectsByOldestUpdate(
-  left: PlantObjectSummary,
-  right: PlantObjectSummary,
-) {
-  return (
-    entryTimestamp(left.latestEntryDate) - entryTimestamp(right.latestEntryDate)
-  );
-}
-
-function daysBetween(left: Date | string, right: Date | string) {
-  const leftDate = parseDateOnly(left);
-  const rightDate = parseDateOnly(right);
-  const diffMs = rightDate.getTime() - leftDate.getTime();
-  return Math.max(0, Math.floor(diffMs / 86_400_000));
-}
-
-function parseDateOnly(value: Date | string) {
-  if (value instanceof Date) {
-    return new Date(
-      Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()),
-    );
-  }
-
-  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
-  return new Date(Date.UTC(year, (month ?? 1) - 1, day ?? 1));
-}
-
-function entryTimestamp(value: Date | string | null) {
-  if (!value) return 0;
-  return parseDateOnly(value).getTime();
-}
-
-function formatRelativeDays(days: number) {
-  if (days === 0) return "today";
-  if (days === 1) return "yesterday";
-  return `${days} days ago`;
+function uuidParam(value: string | string[] | undefined) {
+  const candidate = firstParam(value);
+  return UUID_PATTERN.test(candidate) ? candidate : "";
 }
 
 function formatDate(value: Date | string) {

@@ -3,13 +3,16 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
+import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
+import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { GardenAuthPanel } from "../garden-auth-panel";
+import { GardenAuthPanel, SocialAccountLinkPanel } from "../garden-auth-panel";
 import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
 
@@ -106,6 +109,14 @@ export default async function GardenPublicProfilePage({
         locale={locale}
         status={firstParam(params.status) ?? null}
       />
+
+      <section className="border-t border-border pt-7">
+        <SocialAccountLinkPanel
+          facebookSignInEnabled={isFacebookSignInEnabled()}
+          googleSignInEnabled={isGoogleSignInEnabled()}
+          initialMessage={oauthErrorRecoveryMessage(params.error)}
+        />
+      </section>
 
       <section
         id="blocked-profiles"

@@ -10,7 +10,9 @@ const missingAuthSecretMessage =
 const localDevelopmentSecretPrefix =
   "local-development-only-overgarden-better-auth-secret-";
 
-export function resolveBetterAuthSecret(env: EnvLike = process.env): string {
+export function resolveBetterAuthSecret(
+  env: EnvLike = readRuntimeAuthEnv(),
+): string {
   const configured = configuredBetterAuthSecret(env.BETTER_AUTH_SECRET);
   if (configured) return configured;
 
@@ -22,7 +24,7 @@ export function resolveBetterAuthSecret(env: EnvLike = process.env): string {
 }
 
 export function hasUsableBetterAuthSecret(
-  env: EnvLike = process.env,
+  env: EnvLike = readRuntimeAuthEnv(),
 ): boolean {
   return Boolean(configuredBetterAuthSecret(env.BETTER_AUTH_SECRET));
 }
@@ -57,6 +59,16 @@ function configuredBetterAuthSecret(value: string | undefined) {
   if (isBlockedBetterAuthSecret(trimmed)) return undefined;
 
   return trimmed;
+}
+
+// Keep these accesses explicit so production bundlers retain each runtime key.
+function readRuntimeAuthEnv(): EnvLike {
+  return {
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    NODE_ENV: process.env.NODE_ENV,
+    VERCEL: process.env.VERCEL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  };
 }
 
 function getLocalDevelopmentSecret() {

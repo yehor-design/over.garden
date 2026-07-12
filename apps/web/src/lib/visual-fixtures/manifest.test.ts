@@ -16,14 +16,14 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v4");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v4");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v5");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v5");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
     expect(VISUAL_FIXTURE_MANIFEST.profileBlocks).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.profileReports).toHaveLength(1);
-    expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(5);
+    expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(10);
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
     expect(
       VISUAL_FIXTURE_MANIFEST.lineageEvidence.pendingIdentities,
@@ -44,6 +44,66 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-181 with private empty, sparse, typical, dense, and recoverable workspace states", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.workspaceEvidence;
+    const byState = new Map(
+      evidence.scenarios.map((scenario) => [scenario.state, scenario]),
+    );
+    const dense = byState.get("dense");
+    const empty = byState.get("empty");
+    const sparse = byState.get("sparse");
+    const serialized = JSON.stringify(evidence);
+
+    expect(evidence.inventoryPreviewSize).toBe(8);
+    expect(evidence.spacePreviewSize).toBe(4);
+    expect(evidence.recentLimit).toBe(8);
+    expect(new Set(byState.keys())).toEqual(
+      new Set([
+        "guest",
+        "empty",
+        "sparse",
+        "typical",
+        "dense",
+        "offline",
+        "loading",
+        "partial-error",
+        "error",
+      ]),
+    );
+    expect(empty).toMatchObject({
+      expectedSpaceCount: 0,
+      expectedObjectCount: 0,
+      expectedRecentCount: 0,
+      draftCount: 0,
+    });
+    expect(sparse).toMatchObject({
+      expectedSpaceCount: 1,
+      expectedObjectCount: 1,
+      expectedRecentCount: 1,
+    });
+    expect(dense?.expectedSpaceCount).toBeGreaterThanOrEqual(5);
+    expect(dense?.expectedSpaceCount).toBeGreaterThan(4);
+    expect(dense?.expectedObjectCount).toBeGreaterThan(10);
+    expect(dense?.expectedPlantCount).toBeGreaterThan(0);
+    expect(dense?.expectedAnimalCount).toBeGreaterThan(0);
+    expect(dense?.expectedBeeColonyCount).toBeGreaterThan(0);
+    expect(dense?.expectedSpaceIds).toHaveLength(
+      dense?.expectedSpaceCount ?? 0,
+    );
+    expect(dense?.expectedObjectIds).toHaveLength(
+      dense?.expectedObjectCount ?? 0,
+    );
+    expect(byState.get("offline")).toMatchObject({
+      online: false,
+      draftCount: 2,
+      queuedCount: 1,
+      failedCount: 1,
+    });
+    expect(serialized).not.toMatch(
+      /@visual-fixtures\.invalid|email|password|token/i,
+    );
   });
 
   it("backs OVE-180 profiles with exact object-first public evidence and privacy states", () => {
@@ -543,6 +603,15 @@ describe("visual fixture manifest", () => {
         "public-profile-removed",
         "public-profile-blocked",
         "owner-profile-preview",
+        "owner-workspace-guest",
+        "owner-workspace-empty",
+        "owner-workspace-sparse",
+        "owner-workspace-typical",
+        "owner-workspace-dense",
+        "owner-workspace-offline",
+        "owner-workspace-loading",
+        "owner-workspace-partial-error",
+        "owner-workspace-error",
         "media-gallery",
         "public-feed-empty",
         "public-feed-typical",
@@ -661,7 +730,7 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.stateCoverage.map((state) => state.kind),
     );
 
-    expect(emptySpaces).toHaveLength(1);
+    expect(emptySpaces.length).toBeGreaterThanOrEqual(2);
     expect(
       VISUAL_FIXTURE_MANIFEST.entries.some(
         (entry) => entry.entryDate === "2026-07-10",
@@ -722,7 +791,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v4\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v5\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

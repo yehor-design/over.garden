@@ -186,60 +186,67 @@ export function GardenAuthPanel({
         </p>
       </div>
 
-      <div className="grid gap-3">
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-foreground">Email</span>
-          <input
-            type="email"
-            autoFocus={autoFocusEmail}
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            required
-          />
-        </label>
+      <form
+        className="grid gap-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void signIn();
+        }}
+      >
+        <div className="grid gap-3">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-foreground">Email</span>
+            <input
+              type="email"
+              autoFocus={autoFocusEmail}
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              required
+            />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-foreground">Password</span>
-          <input
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            minLength={8}
-            required
-          />
-        </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-foreground">Password</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+              minLength={8}
+              required
+            />
+          </label>
 
-        <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium text-foreground">
-            Name for new accounts
-          </span>
-          <input
-            type="text"
-            autoComplete="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-          />
-        </label>
-      </div>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-medium text-foreground">
+              Name for new accounts
+            </span>
+            <input
+              type="text"
+              autoComplete="name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
+            />
+          </label>
+        </div>
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={signUp} disabled={isPending}>
-          Create account
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={signIn}
-          disabled={isPending}
-        >
-          Sign in
-        </Button>
-      </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={() => void signUp()}
+            disabled={isPending}
+          >
+            Create account
+          </Button>
+          <Button type="submit" variant="outline" disabled={isPending}>
+            Sign in
+          </Button>
+        </div>
+      </form>
 
       {socialSignInOptions.length > 0 ? (
         <div className="grid gap-2 border-t border-border pt-4">

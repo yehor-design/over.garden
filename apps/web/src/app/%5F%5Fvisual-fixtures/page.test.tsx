@@ -45,14 +45,14 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v4",
+      version: "ove187-v5",
       expected: {
         actors: 8,
         profiles: 8,
         profileFollows: 9,
         profileBlocks: 1,
         profileReports: 1,
-        spaces: 5,
+        spaces: 10,
         catalogItems: 19,
         catalogNames: 29,
         objects: 30,
@@ -70,7 +70,7 @@ describe("/__visual-fixtures", () => {
         profileFollows: 9,
         profileBlocks: 1,
         profileReports: 1,
-        spaces: 5,
+        spaces: 10,
         catalogItems: 19,
         catalogNames: 29,
         objects: 30,
@@ -132,6 +132,12 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Living-object passport evidence");
     expect(html).toContain("Journal-entry V2 evidence");
     expect(html).toContain("Gardener-profile V2 evidence");
+    expect(html).toContain("Garden workspace V2 evidence");
+    expect(html).toContain("workspace dense");
+    expect(html).toContain("Drafts");
+    expect(html).toContain("Queued 1 · failed 1");
+    expect(html).toContain('href="/garden?visualWorkspace=dense"');
+    expect(html).toContain('href="/garden?visualWorkspace=offline"');
     expect(html).toContain("gardener dense");
     expect(html).toContain("blocked unavailable");
     expect(html).toContain("Profile follows");

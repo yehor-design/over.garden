@@ -12,6 +12,7 @@ import {
   KeyRound,
   ListChecks,
   MonitorSmartphone,
+  PanelsTopLeft,
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
@@ -198,6 +199,82 @@ export default async function VisualFixtureIndexPage() {
                 </div>
               </li>
             ))}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section
+          aria-labelledby="workspace-evidence-heading"
+          className="grid gap-4"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <PanelsTopLeft className="size-4" aria-hidden="true" />
+              Owner-scoped inventory, continuity, drafts, and recovery states
+            </p>
+            <h2
+              id="workspace-evidence-heading"
+              className="mt-1 text-xl font-semibold"
+            >
+              Garden workspace V2 evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.workspaceEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.id.replaceAll("-", " ")}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.online ? "online" : "offline"}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="Inventory"
+                        value={`${scenario.expectedObjectCount} objects`}
+                      />
+                      <PassportEvidenceFact
+                        label="Kinds"
+                        value={`${scenario.expectedPlantCount}P · ${scenario.expectedAnimalCount}A · ${scenario.expectedBeeColonyCount}B`}
+                      />
+                      <PassportEvidenceFact
+                        label="Spaces"
+                        value={String(scenario.expectedSpaceCount)}
+                      />
+                      <PassportEvidenceFact
+                        label="Recent"
+                        value={String(scenario.expectedRecentCount)}
+                      />
+                      <PassportEvidenceFact
+                        label="Drafts"
+                        value={String(scenario.draftCount)}
+                      />
+                      <PassportEvidenceFact
+                        label="Queue"
+                        value={`Queued ${scenario.queuedCount} · failed ${scenario.failedCount}`}
+                      />
+                    </dl>
+                    <Link
+                      href={scenario.path}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-auto w-fit",
+                      })}
+                    >
+                      Open workspace
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ),
+            )}
           </ol>
         </section>
 

@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended through OVE-180
-Manifest version: `ove187-v4`
-Manifest SHA-256: `b7d7bfe14aaf40428d06a402be36a5a1a98e9c1bbe77e21630bf92a099a22a31`
+Status: implemented by OVE-187, extended through OVE-181
+Manifest version: `ove187-v5`
+Manifest SHA-256: `863052d0321547fd3df5d853fcb5198f9d93fc71012abaf6b1a4f9b6d4942ce7`
 
 ## Purpose
 
@@ -16,7 +16,8 @@ The manifest owns exactly:
 - 8 synthetic users and 8 matching profile rows, including public, private,
   removed, empty, and maximum-copy states;
 - 9 deterministic profile follows, 1 active block, and 1 submitted report;
-- 5 spaces;
+- 10 spaces, including five owned by the dense mixed gardener, one empty-owner
+  recovery case, and one sparse-owner case;
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
 - 19 synthetic catalog identities and 29 searchable primary/alias names with
   explicit `visual_fixture` provenance;
@@ -24,7 +25,7 @@ The manifest owns exactly:
   object, and space-level states, plus 2 same-owner/same-space object mentions;
 - 7 curated journal topics and 40 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 74 real-route scenarios covering public-feed, living-object-catalog,
+- 83 real-route scenarios covering public-feed, living-object-catalog,
   public-journal-directory, and knowledge-hub empty, sparse, typical, dense,
   loading, recoverable error, threshold pagination, unavailable, aliases, long
   Cyrillic copy, and deep evidence states alongside the existing object/journal
@@ -54,6 +55,11 @@ The manifest owns exactly:
   maximum-handle/display-name/bio, hidden/coarse-region, visible/hidden
   relationship counters, guest, authenticated non-owner, owner, private,
   removed, and blocked outcomes with exact object/journal IDs and counts;
+- 9 garden-workspace states for guest, empty, sparse, typical, dense, offline,
+  loading, partial-error, and full-error behavior. Eight owner states are verified through
+  owner-scoped production queries with exact space/object/kind/recent-entry
+  counts and ordering; the offline state adds deterministic local drafts,
+  queued/failed work, and media-processing recovery without storing credentials;
 - 21 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Report profile, Block profile, Claim, Add object, Add journal entry, Save,
   and Publish across guest,
@@ -119,10 +125,10 @@ environment checks pass. The guard refuses:
 
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
-environment, the `__visualFeed`, `__visualObjects`, `__visualJournals`, and
-`__visualKnowledge` query parameters may select read-only rendering states or
-the isolated journal/knowledge corpus for screenshot evidence; the same
-parameters are ignored everywhere else.
+environment, the `__visualFeed`, `__visualObjects`, `__visualJournals`,
+`__visualKnowledge`, and `visualWorkspace` query parameters may select read-only
+rendering states or the isolated fixture corpus for screenshot evidence; the
+same parameters are ignored everywhere else.
 Proxy evaluates the pure environment contract and returns a hard HTTP `404`
 before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
@@ -133,7 +139,7 @@ memberships, topics, entries, claimable lineage edges and pending identities,
 objects, catalog names, catalog identities, spaces, profiles, and actors in
 reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v4/`. It does not use wildcard or prefix database
+`visual-fixtures/ove187-v5/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
 existing hidden or coarse-region privacy states.
@@ -198,7 +204,8 @@ passport contracts against canonical Postgres loaders, and removes both
 sentinels. It also executes all 17 journal-entry V2 contracts against the
 production public lookup and separately scoped owner-control query. Proof is
 extended by all 10 profile contracts against public, owner-preview, and
-relationship production loaders.
+relationship production loaders, plus all 8 owner workspace contracts against
+the scoped inventory, space, object, and recent-continuity queries. Proof is
 explicitly scoped to manifest IDs because reset
 deliberately preserves unrelated local rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
@@ -214,7 +221,7 @@ The expected final counts are:
   "profileFollows": 9,
   "profileBlocks": 1,
   "profileReports": 1,
-  "spaces": 5,
+  "spaces": 10,
   "catalogItems": 19,
   "catalogNames": 29,
   "objects": 30,
@@ -320,6 +327,30 @@ routes are:
 /bg/journal/visual-fixture-private-entry
 /ru/journal/visual-fixtures-missing-journal-v2
 ```
+
+The garden-workspace scenarios execute the production owner workspace against
+deterministic empty, sparse, typical, and dense owners. State overrides are accepted
+only after the complete environment gate succeeds; they do not create a
+production fallback or expose synthetic credentials:
+
+```text
+/garden?visualWorkspace=guest
+/garden?visualWorkspace=empty
+/garden?visualWorkspace=sparse
+/garden?visualWorkspace=typical
+/garden?visualWorkspace=dense
+/garden?visualWorkspace=offline
+/garden?visualWorkspace=loading
+/garden?visualWorkspace=partial-error
+/garden?visualWorkspace=error
+```
+
+The dense state proves five spaces and twelve mixed plant/animal/bee objects,
+crossing both the four-space and ten-object paginated disclosure thresholds,
+plus recent continuity, a local draft threshold, and one processing derivative.
+The offline state reuses that owner while exposing two browser-local drafts,
+one queued mutation, one failed mutation, and one failed media item with
+explicit local/server distinction.
 
 The intent section starts each authentication handoff through a gated route
 that exposes only its stable opaque scenario ID:

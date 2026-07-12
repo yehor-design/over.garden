@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v4";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v5";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -107,6 +107,15 @@ export type VisualFixtureScenarioKind =
   | "public-profile-removed"
   | "public-profile-blocked"
   | "owner-profile-preview"
+  | "owner-workspace-guest"
+  | "owner-workspace-empty"
+  | "owner-workspace-sparse"
+  | "owner-workspace-typical"
+  | "owner-workspace-dense"
+  | "owner-workspace-offline"
+  | "owner-workspace-loading"
+  | "owner-workspace-partial-error"
+  | "owner-workspace-error"
   | "media-gallery";
 export type VisualFixtureStateKind =
   | "empty-space"
@@ -506,6 +515,55 @@ export interface VisualFixtureProfileEvidence {
   scenarios: readonly VisualFixtureProfileScenarioEvidence[];
 }
 
+export type VisualFixtureWorkspaceState =
+  | "guest"
+  | "empty"
+  | "sparse"
+  | "typical"
+  | "dense"
+  | "offline"
+  | "loading"
+  | "partial-error"
+  | "error";
+
+export type VisualFixtureWorkspaceFaultSection =
+  | "inventory"
+  | "spaces"
+  | "recent"
+  | "inbox"
+  | "media";
+
+export interface VisualFixtureWorkspaceScenarioEvidence {
+  id: string;
+  state: VisualFixtureWorkspaceState;
+  ownerActorId: string | null;
+  path: string;
+  expectedSpaceCount: number;
+  expectedObjectCount: number;
+  expectedPlantCount: number;
+  expectedAnimalCount: number;
+  expectedBeeColonyCount: number;
+  expectedRecentCount: number;
+  expectedSpaceIds: readonly string[];
+  expectedObjectIds: readonly string[];
+  expectedRecentEntryIds: readonly string[];
+  online: boolean;
+  draftCount: number;
+  queuedCount: number;
+  failedCount: number;
+  mediaProcessingCount: number;
+  mediaFailedCount: number;
+  faultSections: readonly VisualFixtureWorkspaceFaultSection[];
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixtureWorkspaceEvidence {
+  inventoryPreviewSize: 8;
+  spacePreviewSize: 4;
+  recentLimit: 8;
+  scenarios: readonly VisualFixtureWorkspaceScenarioEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -602,6 +660,7 @@ export interface VisualFixtureManifest {
   passportEvidence: VisualFixturePassportEvidence;
   journalEntryEvidence: VisualFixtureJournalEntryEvidence;
   profileEvidence: VisualFixtureProfileEvidence;
+  workspaceEvidence: VisualFixtureWorkspaceEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1043,6 +1102,29 @@ const spaces: readonly VisualFixtureSpace[] = [
     null,
   ),
   createSpace(5, actors[3], "Пасека на склоне", "region", "BG-23"),
+  createSpace(
+    6,
+    actors[0],
+    "Порожній простір для наступного сезону",
+    "hidden",
+    null,
+  ),
+  createSpace(
+    7,
+    actors[0],
+    "Сезонні грядки та довга назва для перевірки перенесення",
+    "region",
+    "UA-30",
+  ),
+  createSpace(8, actors[0], "Тихий куточок для тварин", "hidden", null),
+  createSpace(
+    9,
+    actors[0],
+    "Навчальна пасіка без точної адреси",
+    "region",
+    "UA-30",
+  ),
+  createSpace(10, actors[5], "Одна полиця", "hidden", null),
 ];
 
 interface ObjectSeedSpec {
@@ -1086,7 +1168,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Салат у затіненому кутку",
     objectKind: "plant",
-    spaceIndex: 2,
+    spaceIndex: 8,
     varietyState: "unknown",
   },
   {
@@ -1139,7 +1221,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Соняшник уздовж огорожі",
     objectKind: "plant",
-    spaceIndex: 2,
+    spaceIndex: 7,
     catalogItemId: CATALOG_IDS.sunflowerSpecies,
     varietyText: "Helianthus annuus",
     varietyState: "selected",
@@ -1147,7 +1229,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Полуниця після поділу куща",
     objectKind: "plant",
-    spaceIndex: 2,
+    spaceIndex: 7,
     catalogItemId: CATALOG_IDS.strawberrySpecies,
     varietyText: "Fragaria x ananassa",
     varietyState: "selected",
@@ -1155,7 +1237,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "М'ята, яку стримує окремий горщик",
     objectKind: "plant",
-    spaceIndex: 2,
+    spaceIndex: 7,
     varietyState: "unknown",
   },
   {
@@ -1168,7 +1250,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Маслина на остъкления балкон",
     objectKind: "plant",
-    spaceIndex: 3,
+    spaceIndex: 10,
     varietyText: "Olea europaea, balcony seedling",
     varietyState: "free_text",
   },
@@ -1176,7 +1258,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
     displayName:
       "Довга назва експериментального томата для перевірки карток і перенесення рядків",
     objectKind: "plant",
-    spaceIndex: 2,
+    spaceIndex: 7,
     varietyText: "Насіння з домашнього обміну",
     varietyState: "user_added",
   },
@@ -1247,7 +1329,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Їжак, що приходить до води",
     objectKind: "animal",
-    spaceIndex: 2,
+    spaceIndex: 8,
     varietyState: "unknown",
   },
   {
@@ -1275,7 +1357,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Нуклеус с молодой маткой",
     objectKind: "bee_colony",
-    spaceIndex: 2,
+    spaceIndex: 9,
     varietyText: "Матка 2026",
     varietyState: "user_added",
   },
@@ -1326,7 +1408,9 @@ const entryCountsByObject = [
   12,
   5,
   4,
-  ...Array.from({ length: 14 }, () => 2),
+  ...Array.from({ length: 14 }, (_, index) =>
+    index === 10 ? 3 : index === 12 ? 1 : 2,
+  ),
   0,
   ...Array.from({ length: 7 }, () => 3),
   ...Array.from({ length: 5 }, () => 2),
@@ -1342,6 +1426,8 @@ const feedRecencyRankByObjectOffset = new Map<number, number>(
 );
 
 const entries: readonly VisualFixtureEntry[] = buildEntries();
+const workspaceEvidence: VisualFixtureWorkspaceEvidence =
+  buildWorkspaceEvidence();
 const spaceJournalEntry = entries.find((entry) => entry.entryScope === "space");
 if (!spaceJournalEntry) {
   throw new Error("Visual fixture space journal entry is missing.");
@@ -2598,6 +2684,15 @@ const scenarios: readonly VisualFixtureScenario[] = [
     profileEvidenceCase("empty-owner").path,
     200,
   ),
+  ...workspaceEvidence.scenarios.map((workspace) =>
+    scenario(
+      `workspace-${workspace.state}`,
+      workspaceScenarioKind(workspace.state),
+      `Garden workspace ${workspace.state}`,
+      workspace.path,
+      200,
+    ),
+  ),
   scenario(
     "media",
     "media-gallery",
@@ -2630,6 +2725,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   passportEvidence,
   journalEntryEvidence,
   profileEvidence,
+  workspaceEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -2655,7 +2751,7 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "profile follows", manifest.profileFollows.length, 9);
   checkCount(errors, "profile blocks", manifest.profileBlocks.length, 1);
   checkCount(errors, "profile reports", manifest.profileReports.length, 1);
-  checkCount(errors, "spaces", manifest.spaces.length, 5);
+  checkCount(errors, "spaces", manifest.spaces.length, 10);
   checkCount(errors, "objects", manifest.objects.length, 30);
   checkCount(errors, "catalog items", manifest.catalogItems.length, 19);
   checkCount(errors, "catalog names", manifest.catalogNames.length, 29);
@@ -2869,6 +2965,16 @@ export function validateVisualFixtureManifest(
     "profile evidence ids",
     manifest.profileEvidence.scenarios.map((scenario) => scenario.id),
   );
+  checkUnique(
+    errors,
+    "workspace evidence ids",
+    manifest.workspaceEvidence.scenarios.map((scenario) => scenario.id),
+  );
+  checkUnique(
+    errors,
+    "workspace evidence states",
+    manifest.workspaceEvidence.scenarios.map((scenario) => scenario.state),
+  );
 
   for (const actor of manifest.actors) {
     if (!actor.email.endsWith("@visual-fixtures.invalid")) {
@@ -2986,7 +3092,14 @@ export function validateVisualFixtureManifest(
     }
   }
   for (const object of manifest.objects) {
-    if (!actorIds.has(object.ownerUserId) || !spaceIds.has(object.spaceId)) {
+    const objectSpace = manifest.spaces.find(
+      (space) => space.id === object.spaceId,
+    );
+    if (
+      !actorIds.has(object.ownerUserId) ||
+      !objectSpace ||
+      objectSpace.ownerUserId !== object.ownerUserId
+    ) {
       errors.push(`Object ${object.id} has an invalid owner or space.`);
     }
     if (
@@ -3319,6 +3432,63 @@ export function validateVisualFixtureManifest(
     }
   }
 
+  for (const workspace of manifest.workspaceEvidence.scenarios) {
+    if (
+      workspace.path !==
+      `/garden?visualWorkspace=${encodeURIComponent(workspace.state)}`
+    ) {
+      errors.push(`Workspace evidence ${workspace.id} has an invalid path.`);
+    }
+    if (workspace.state === "guest") {
+      if (workspace.ownerActorId !== null) {
+        errors.push("Guest workspace evidence unexpectedly names an owner.");
+      }
+      continue;
+    }
+    if (!workspace.ownerActorId || !actorIds.has(workspace.ownerActorId)) {
+      errors.push(`Workspace evidence ${workspace.id} has an invalid owner.`);
+      continue;
+    }
+    const ownerSpaces = manifest.spaces.filter(
+      (space) => space.ownerUserId === workspace.ownerActorId,
+    );
+    const ownerObjects = manifest.objects.filter(
+      (object) => object.ownerUserId === workspace.ownerActorId,
+    );
+    const ownerEntries = manifest.entries.filter(
+      (entry) => entry.ownerUserId === workspace.ownerActorId,
+    );
+    if (
+      workspace.expectedSpaceCount !== ownerSpaces.length ||
+      workspace.expectedObjectCount !== ownerObjects.length ||
+      workspace.expectedPlantCount !==
+        ownerObjects.filter((object) => object.objectKind === "plant").length ||
+      workspace.expectedAnimalCount !==
+        ownerObjects.filter((object) => object.objectKind === "animal")
+          .length ||
+      workspace.expectedBeeColonyCount !==
+        ownerObjects.filter((object) => object.objectKind === "bee_colony")
+          .length ||
+      workspace.expectedRecentCount !==
+        Math.min(ownerEntries.length, manifest.workspaceEvidence.recentLimit)
+    ) {
+      errors.push(`Workspace evidence ${workspace.id} has stale counts.`);
+    }
+    if (
+      workspace.expectedSpaceIds.some(
+        (id) => !ownerSpaces.some((space) => space.id === id),
+      ) ||
+      workspace.expectedObjectIds.some(
+        (id) => !ownerObjects.some((object) => object.id === id),
+      ) ||
+      workspace.expectedRecentEntryIds.some(
+        (id) => !ownerEntries.some((entry) => entry.id === id),
+      )
+    ) {
+      errors.push(`Workspace evidence ${workspace.id} crosses owner scope.`);
+    }
+  }
+
   const serialized = JSON.stringify(manifest);
   if (
     /password|access[_-]?token|refresh[_-]?token|session[_-]?token|latitude|longitude|coordinates|gps|https:\/\/over\.garden|lorem ipsum/i.test(
@@ -3331,6 +3501,151 @@ export function validateVisualFixtureManifest(
   }
 
   return errors;
+}
+
+function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
+  const scenarioFor = (
+    id: string,
+    state: VisualFixtureWorkspaceState,
+    actor: VisualFixtureActor | null,
+    options: Partial<
+      Pick<
+        VisualFixtureWorkspaceScenarioEvidence,
+        | "online"
+        | "draftCount"
+        | "queuedCount"
+        | "failedCount"
+        | "mediaProcessingCount"
+        | "mediaFailedCount"
+        | "faultSections"
+      >
+    > = {},
+  ): VisualFixtureWorkspaceScenarioEvidence => {
+    const ownerSpaces = actor
+      ? spaces
+          .filter((space) => space.ownerUserId === actor.id)
+          .toSorted(compareCreatedDescending)
+      : [];
+    const ownerObjects = actor
+      ? objects
+          .filter((object) => object.ownerUserId === actor.id)
+          .toSorted(compareCreatedDescending)
+      : [];
+    const ownerEntries = actor
+      ? entries
+          .filter((entry) => entry.ownerUserId === actor.id)
+          .toSorted(compareWorkspaceEntries)
+      : [];
+
+    return {
+      id,
+      state,
+      ownerActorId: actor?.id ?? null,
+      path: `/garden?visualWorkspace=${encodeURIComponent(state)}`,
+      expectedSpaceCount: ownerSpaces.length,
+      expectedObjectCount: ownerObjects.length,
+      expectedPlantCount: ownerObjects.filter(
+        (object) => object.objectKind === "plant",
+      ).length,
+      expectedAnimalCount: ownerObjects.filter(
+        (object) => object.objectKind === "animal",
+      ).length,
+      expectedBeeColonyCount: ownerObjects.filter(
+        (object) => object.objectKind === "bee_colony",
+      ).length,
+      expectedRecentCount: Math.min(ownerEntries.length, 8),
+      expectedSpaceIds: ownerSpaces.map((space) => space.id),
+      expectedObjectIds: ownerObjects.map((object) => object.id),
+      expectedRecentEntryIds: ownerEntries.slice(0, 8).map((entry) => entry.id),
+      online: options.online ?? true,
+      draftCount: options.draftCount ?? 0,
+      queuedCount: options.queuedCount ?? 0,
+      failedCount: options.failedCount ?? 0,
+      mediaProcessingCount: options.mediaProcessingCount ?? 0,
+      mediaFailedCount: options.mediaFailedCount ?? 0,
+      faultSections: options.faultSections ?? [],
+      viewportTargets: ["desktop", "mobile-320"],
+    };
+  };
+
+  return {
+    inventoryPreviewSize: 8,
+    spacePreviewSize: 4,
+    recentLimit: 8,
+    scenarios: [
+      scenarioFor("workspace-guest", "guest", null),
+      scenarioFor("workspace-empty", "empty", actors[4]),
+      scenarioFor("workspace-sparse", "sparse", actors[5]),
+      scenarioFor("workspace-typical", "typical", actors[1], {
+        draftCount: 1,
+      }),
+      scenarioFor("workspace-dense", "dense", actors[0], {
+        draftCount: 2,
+        mediaProcessingCount: 1,
+      }),
+      scenarioFor("workspace-offline", "offline", actors[0], {
+        online: false,
+        draftCount: 2,
+        queuedCount: 1,
+        failedCount: 1,
+        mediaProcessingCount: 1,
+        mediaFailedCount: 1,
+      }),
+      scenarioFor("workspace-loading", "loading", actors[0]),
+      scenarioFor("workspace-partial-error", "partial-error", actors[0], {
+        faultSections: ["recent"],
+      }),
+      scenarioFor("workspace-error", "error", actors[0], {
+        faultSections: ["inventory", "spaces", "recent", "inbox", "media"],
+      }),
+    ],
+  };
+}
+
+function compareCreatedDescending(
+  left: { createdAt: string; id: string },
+  right: { createdAt: string; id: string },
+) {
+  return (
+    right.createdAt.localeCompare(left.createdAt) ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+function compareWorkspaceEntries(
+  left: VisualFixtureEntry,
+  right: VisualFixtureEntry,
+) {
+  return (
+    right.entryDate.localeCompare(left.entryDate) ||
+    right.createdAt.localeCompare(left.createdAt) ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+function workspaceScenarioKind(
+  state: VisualFixtureWorkspaceState,
+): VisualFixtureScenarioKind {
+  switch (state) {
+    case "guest":
+      return "owner-workspace-guest";
+    case "empty":
+      return "owner-workspace-empty";
+    case "sparse":
+      return "owner-workspace-sparse";
+    case "typical":
+      return "owner-workspace-typical";
+    case "dense":
+      return "owner-workspace-dense";
+    case "offline":
+      return "owner-workspace-offline";
+    case "loading":
+      return "owner-workspace-loading";
+    case "partial-error":
+      return "owner-workspace-partial-error";
+    case "error":
+      return "owner-workspace-error";
+  }
 }
 
 function buildEntries(): readonly VisualFixtureEntry[] {

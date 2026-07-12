@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   hasUsableBetterAuthSecret,
@@ -49,6 +49,23 @@ describe("Better Auth secret resolution", () => {
         BETTER_AUTH_SECRET: "  deployed-auth-secret-present-in-platform  ",
       }),
     ).toBe("deployed-auth-secret-present-in-platform");
+  });
+
+  it("reads the configured secret from the runtime environment by default", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv(
+      "BETTER_AUTH_SECRET",
+      "runtime-auth-secret-retained-by-the-production-bundle",
+    );
+
+    try {
+      expect(resolveBetterAuthSecret()).toBe(
+        "runtime-auth-secret-retained-by-the-production-bundle",
+      );
+      expect(hasUsableBetterAuthSecret()).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("rejects placeholder secrets in production-like runtimes", () => {

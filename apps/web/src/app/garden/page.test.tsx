@@ -1,18 +1,19 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { GardenWorkspaceReadModel } from "@/server/garden-workspace-repository";
+
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   scopedToUser: vi.fn(),
   resolvePilotWriteAccess: vi.fn(),
-  ensureUserPublicProfile: vi.fn(),
-  listMyPlantObjects: vi.fn(),
-  listMySpaceJournalTimelines: vi.fn(),
-  listMyRecentJournalEntries: vi.fn(),
+  loadGardenWorkspace: vi.fn(),
+  getMySpaceJournalTimeline: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  resolveVisualGardenWorkspaceScenario: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -28,14 +29,12 @@ vi.mock("@/server/pilot-write-access", () => ({
   resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
 }));
 
-vi.mock("@/server/public-profile-repository", () => ({
-  ensureUserPublicProfile: mocks.ensureUserPublicProfile,
+vi.mock("@/server/garden-workspace-repository", () => ({
+  loadGardenWorkspace: mocks.loadGardenWorkspace,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
-  listMyPlantObjects: mocks.listMyPlantObjects,
-  listMySpaceJournalTimelines: mocks.listMySpaceJournalTimelines,
-  listMyRecentJournalEntries: mocks.listMyRecentJournalEntries,
+  getMySpaceJournalTimeline: mocks.getMySpaceJournalTimeline,
 }));
 
 vi.mock("@/server/catalog-repository", () => ({
@@ -49,6 +48,11 @@ vi.mock("@/server/analytics-events", () => ({
 
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/lib/visual-fixtures/garden-workspace-scenarios", () => ({
+  resolveVisualGardenWorkspaceScenario:
+    mocks.resolveVisualGardenWorkspaceScenario,
 }));
 
 vi.mock("@/lib/auth/facebook-oauth", () => ({
@@ -71,20 +75,15 @@ vi.mock("./actions", () => ({
   createSpaceJournalEntryAction: vi.fn(),
 }));
 
-vi.mock("./draft-resume-panel", () => ({
-  GardenDraftResumePanel: () => <section>Draft resume panel</section>,
-}));
-
 vi.mock("./first-entry-composer", () => ({
   FirstEntryComposer: () => <form>First entry composer</form>,
 }));
 
 vi.mock("./garden-auth-panel", () => ({
   GardenAuthPanel: () => <section>Garden auth panel</section>,
-  SocialAccountLinkPanel: () => <section>Social account link panel</section>,
 }));
 
-describe("/garden workspace", () => {
+describe("/garden workspace V2", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
@@ -95,161 +94,330 @@ describe("/garden workspace", () => {
       },
     });
     mocks.getSessionId.mockReturnValue("session-1");
-    mocks.scopedToUser.mockReturnValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
+    mocks.scopedToUser.mockImplementation(
+      (userId: string, sessionId: string | null) => ({ userId, sessionId }),
+    );
     mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: true });
-    mocks.ensureUserPublicProfile.mockResolvedValue({
-      user_id: "00000000-0000-4000-8000-000000000001",
-      handle: "green_thumb",
-    });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.listMyPlantObjects.mockResolvedValue([workspaceObject()]);
-    mocks.listMySpaceJournalTimelines.mockResolvedValue([spaceTimeline()]);
-    mocks.listMyRecentJournalEntries.mockResolvedValue([recentEntry()]);
+    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValue(null);
+    mocks.loadGardenWorkspace.mockResolvedValue(workspaceModel());
+    mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
   });
 
-  it("renders a repeat-use workspace for a returning gardener", async () => {
+  it("renders the shared-shell operational home and preserves write paths", async () => {
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({}),
-      }),
+      await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(mocks.listMyPlantObjects).toHaveBeenCalledWith(
+    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000001",
         sessionId: "session-1",
       },
-      20,
-    );
-    expect(mocks.listMyRecentJournalEntries).toHaveBeenCalledWith(
       {
-        userId: "00000000-0000-4000-8000-000000000001",
-        sessionId: "session-1",
+        faultSections: [],
+        inventoryExpanded: false,
+        inventoryPage: 1,
+        spacesExpanded: false,
+        spacesPage: 1,
       },
-      8,
     );
-    expect(html).toContain("Простір саду");
+    expect(html).toContain('data-garden-workspace="operational-home"');
     expect(html).toContain("Update Cherry tomato");
-    expect(html).toContain("Living objects");
-    expect(html).toContain("Cherry tomato");
-    expect(html).toContain("3 entries");
-    expect(html).toContain("1 public · 2 private");
-    expect(html).toContain("Needs current note");
-    expect(html).toContain("Add update/photo");
-    expect(html).toContain("Recent activity");
+    expect(html).toContain("Plants");
+    expect(html).toContain("Animals");
+    expect(html).toContain("Bee colonies");
+    expect(html).toContain("Recent continuity");
     expect(html).toContain("Flowering changed");
-    expect(html).toContain('id="space-entry-entry-space-1"');
-    expect(html).toContain("Object note · Public page");
-    expect(html).toContain("Draft resume panel");
+    expect(html).toContain("Add living object");
     expect(html).toContain("First entry composer");
-    expect(html).not.toMatch(
-      /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
-    );
-  });
-
-  it("keeps Bulgarian route chrome while the root shell owns global navigation", async () => {
-    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
-    const { default: GardenPage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({}),
-      }),
-    );
-
-    expect(html).toContain('lang="bg"');
-    expect(html).toContain("Градинско пространство");
-    expect(html).toContain("Cherry tomato");
-    expect(html).not.toContain("Черешов домат");
-    expect(html).not.toContain("Следвани записи");
-    expect(html).not.toContain('href="/bg/feed"');
-    expect(html).not.toContain('href="/bg/notifications"');
-    expect(html).not.toContain('href="/bg/bookmarks"');
+    expect(html).toContain("Space journal tools");
+    expect(html).toContain("Shared morning round");
+    expect(html).not.toContain("Sign-in methods");
+    expect(html).not.toContain("Social account link panel");
     expect(html).not.toContain("gardener@example.com");
-    expect(mocks.ensureUserPublicProfile).not.toHaveBeenCalled();
+    expect(html).not.toMatch(
+      /owner_user_id|client_mutation_id|quarantine_key|latitude|longitude/i,
+    );
   });
 
-  it("pushes an empty signed-in workspace toward the first object path", async () => {
-    mocks.listMyPlantObjects.mockResolvedValueOnce([]);
-    mocks.listMySpaceJournalTimelines.mockResolvedValueOnce([]);
-    mocks.listMyRecentJournalEntries.mockResolvedValueOnce([]);
+  it("parses bounded inventory and space view-all pages from URL state", async () => {
+    const { default: GardenPage } = await import("./page");
+    await GardenPage({
+      searchParams: Promise.resolve({
+        inventory: "all",
+        inventoryPage: "999999999999999999999999",
+        spaces: "all",
+        spacesPage: "3",
+      }),
+    });
+
+    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(expect.anything(), {
+      faultSections: [],
+      inventoryExpanded: true,
+      inventoryPage: 100,
+      spacesExpanded: true,
+      spacesPage: 3,
+    });
+  });
+
+  it("rejects a malformed requested space before the owner query", async () => {
+    const { default: GardenPage } = await import("./page");
+    await GardenPage({
+      searchParams: Promise.resolve({ space: "not-a-uuid" }),
+    });
+
+    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
+      expect.anything(),
+      "space-1",
+      { objectLimit: 20, entryLimit: 5 },
+    );
+  });
+
+  it("keeps an empty signed-in user on the first-object path", async () => {
+    mocks.loadGardenWorkspace.mockResolvedValueOnce(emptyWorkspaceModel());
+    mocks.getMySpaceJournalTimeline.mockResolvedValueOnce(null);
+
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({}),
-      }),
+      await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
     expect(html).toContain("Start with one living object");
-    expect(html).toContain("No living objects yet");
     expect(html).toContain("Start first object");
-    expect(html).toContain("First living object");
+    expect(html).toContain("No spaces yet");
     expect(html).toContain("No dated activity yet");
     expect(html).toContain("First entry composer");
-    expect(html).not.toContain("Space journals");
+    expect(html).not.toContain("Space journal tools");
   });
 
-  it("keeps the signed-in workspace visible when writing is invite-only", async () => {
+  it("keeps inventory readable when closed-pilot writing is unavailable", async () => {
     mocks.resolvePilotWriteAccess.mockResolvedValueOnce({ invited: false });
-    mocks.listMyPlantObjects.mockResolvedValueOnce([]);
-    mocks.listMySpaceJournalTimelines.mockResolvedValueOnce([]);
-    mocks.listMyRecentJournalEntries.mockResolvedValueOnce([]);
+
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPage({
-        searchParams: Promise.resolve({}),
-      }),
+      await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("Простір саду");
-    expect(html).toContain("Next action");
-    expect(html).toContain("Start with one living object");
-    expect(html).toContain("Living objects");
-    expect(html).toContain("No living objects yet");
+    expect(html).toContain("Cherry tomato");
     expect(html).toContain("Check write access");
     expect(html).toContain("Writing is invite-only right now");
-    expect(html).toContain("Social account link panel");
     expect(html).not.toContain("First entry composer");
-    expect(html).not.toContain("Draft resume panel");
-    expect(mocks.listMyPlantObjects).toHaveBeenCalled();
-    expect(mocks.listMyRecentJournalEntries).toHaveBeenCalled();
   });
 
-  it("keeps signed-out visitors behind the garden auth panel", async () => {
+  it("shows a contextual reversible sign-in without querying private rows", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
+
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain("Your private garden starts here");
+    expect(html).toContain("Garden auth panel");
+    expect(html).toContain("Continue reading journals");
+    expect(html).toContain('href="/journals"');
+    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
+    expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
+  });
+
+  it("renders a deterministic owner on the real route without credentials or analytics", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValueOnce(
+      visualScenario("offline"),
+    );
+
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
       await GardenPage({
-        searchParams: Promise.resolve({}),
+        searchParams: Promise.resolve({ visualWorkspace: "offline" }),
       }),
     );
 
-    expect(html).toContain("Garden auth panel");
-    expect(mocks.listMyPlantObjects).not.toHaveBeenCalled();
-    expect(mocks.listMyRecentJournalEntries).not.toHaveBeenCalled();
+    expect(mocks.loadGardenWorkspace).toHaveBeenCalledWith(
+      {
+        userId: "00000000-0000-4000-8000-000000000099",
+        sessionId: null,
+      },
+      expect.objectContaining({ faultSections: [] }),
+    );
+    expect(html).toContain('data-garden-workspace="operational-home"');
+    expect(html).toContain("Offline");
+    expect(html).toContain("Synthetic draft 1");
+    expect(html).toContain("Waiting for sync");
+    expect(html).not.toContain("Garden auth panel");
+    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
+    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+  });
+
+  it("renders deterministic loading without querying owner rows", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualGardenWorkspaceScenario.mockReturnValueOnce(
+      visualScenario("loading"),
+    );
+
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({ visualWorkspace: "loading" }),
+      }),
+    );
+
+    expect(html).toContain('data-garden-workspace="loading"');
+    expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
+    expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
   });
 });
+
+function visualScenario(state: "offline" | "loading") {
+  return {
+    id: `workspace-${state}`,
+    state,
+    ownerActorId: "00000000-0000-4000-8000-000000000099",
+    path: `/garden?visualWorkspace=${state}`,
+    expectedSpaceCount: 5,
+    expectedObjectCount: 12,
+    expectedPlantCount: 10,
+    expectedAnimalCount: 1,
+    expectedBeeColonyCount: 1,
+    expectedRecentCount: 8,
+    expectedSpaceIds: ["space-1"],
+    expectedObjectIds: ["object-1"],
+    expectedRecentEntryIds: ["entry-1"],
+    online: state !== "offline",
+    draftCount: state === "offline" ? 2 : 0,
+    queuedCount: state === "offline" ? 1 : 0,
+    failedCount: state === "offline" ? 1 : 0,
+    mediaProcessingCount: state === "offline" ? 1 : 0,
+    mediaFailedCount: state === "offline" ? 1 : 0,
+    faultSections: [],
+    viewportTargets: ["desktop", "mobile-320"] as const,
+  };
+}
+
+function workspaceModel(): GardenWorkspaceReadModel {
+  return {
+    inventory: {
+      status: "ready",
+      value: {
+        totalCount: 3,
+        plantCount: 1,
+        animalCount: 1,
+        beeColonyCount: 1,
+        archivedEntryCount: 0,
+        objects: [workspaceObject()],
+        hasMore: false,
+        page: 1,
+        pageSize: 8,
+      },
+    },
+    spaces: {
+      status: "ready",
+      value: {
+        totalCount: 1,
+        spaces: [
+          {
+            id: "space-1",
+            displayName: "Balcony",
+            objectCount: 3,
+            plantCount: 1,
+            animalCount: 1,
+            beeColonyCount: 1,
+          },
+        ],
+        hasMore: false,
+        page: 1,
+        pageSize: 4,
+      },
+    },
+    recent: {
+      status: "ready",
+      value: [
+        {
+          id: "entry-1",
+          title: "Flowering changed",
+          entryScope: "object",
+          entryDate: new Date("2026-07-04T00:00:00.000Z"),
+          visibility: "public",
+          lifecycleState: "active",
+          objectId: "object-1",
+          objectDisplayName: "Cherry tomato",
+          spaceId: "space-1",
+          spaceDisplayName: "Balcony",
+        },
+      ],
+    },
+    inbox: {
+      status: "ready",
+      value: { notificationCount: 2, claimCount: 1 },
+    },
+    media: {
+      status: "ready",
+      value: { processingCount: 0, failedCount: 0 },
+    },
+    allFailed: false,
+  };
+}
+
+function emptyWorkspaceModel(): GardenWorkspaceReadModel {
+  return {
+    inventory: {
+      status: "ready",
+      value: {
+        totalCount: 0,
+        plantCount: 0,
+        animalCount: 0,
+        beeColonyCount: 0,
+        archivedEntryCount: 0,
+        objects: [],
+        hasMore: false,
+        page: 1,
+        pageSize: 8,
+      },
+    },
+    spaces: {
+      status: "ready",
+      value: {
+        totalCount: 0,
+        spaces: [],
+        hasMore: false,
+        page: 1,
+        pageSize: 4,
+      },
+    },
+    recent: { status: "ready", value: [] },
+    inbox: {
+      status: "ready",
+      value: { notificationCount: 0, claimCount: 0 },
+    },
+    media: {
+      status: "ready",
+      value: { processingCount: 0, failedCount: 0 },
+    },
+    allFailed: false,
+  };
+}
 
 function workspaceObject() {
   return {
     id: "object-1",
     displayName: "Cherry tomato",
-    objectKind: "plant",
+    objectKind: "plant" as const,
     spaceDisplayName: "Balcony",
     catalogItemId: null,
-    catalogKind: "plant_variety",
+    catalogKind: "plant_variety" as const,
     varietyText: "Cherry tomato",
-    varietyState: "selected",
+    varietyState: "selected" as const,
     createdAt: new Date("2026-06-01T00:00:00.000Z"),
     entryCount: 3,
     publicEntryCount: 1,
     privateEntryCount: 2,
+    archivedEntryCount: 0,
     latestEntryDate: new Date("2020-06-01T00:00:00.000Z"),
+    coverMedia: null,
   };
 }
 
@@ -273,40 +441,17 @@ function spaceTimeline() {
     ],
     entries: [
       {
-        ...recentEntry(),
         id: "entry-space-1",
-        plant_object_id: null,
         title: "Shared morning round",
+        body: "Watered the shared balcony containers.",
+        entry_date: new Date("2026-07-04T00:00:00.000Z"),
+        visibility: "private",
+        lifecycle_state: "active",
         entry_scope: "space",
         media: null,
         mentionedObjects: [],
         timelineRelation: "space_timeline",
       },
     ],
-  };
-}
-
-function recentEntry() {
-  return {
-    id: "entry-1",
-    owner_user_id: "00000000-0000-4000-8000-000000000001",
-    space_id: "space-1",
-    plant_object_id: "object-1",
-    title: "Flowering changed",
-    body: "Flowers opened on the east side.",
-    entry_scope: "object",
-    entry_date: new Date("2026-07-04T00:00:00.000Z"),
-    visibility: "public",
-    lifecycle_state: "active",
-    public_slug: "flowering-changed",
-    public_noindex: true,
-    published_at: new Date("2026-07-04T08:00:00.000Z"),
-    archived_at: null,
-    public_gone_at: null,
-    first_publication_disclosure_version: "2026-07-01",
-    first_publication_disclosed_at: new Date("2026-07-04T08:00:00.000Z"),
-    client_mutation_id: "mutation-private-test",
-    created_at: new Date("2026-07-04T08:00:00.000Z"),
-    updated_at: new Date("2026-07-04T08:00:00.000Z"),
   };
 }
