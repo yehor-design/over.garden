@@ -24,6 +24,8 @@ describe("production site shell", () => {
 
     expect(html).toContain('data-site-shell="root"');
     expect(html).toContain('data-site-shell-region="header"');
+    expect(html).toContain('data-site-shell-brand="true"');
+    expect(html).toContain("px-2.5 text-sm");
     expect(html).toContain('data-site-shell-region="sidebar"');
     expect(html).toContain('data-site-shell-region="content"');
     expect(html).toContain('data-site-shell-region="context"');

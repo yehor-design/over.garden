@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v2");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v2");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v3");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v3");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(4);
     expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(5);
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
@@ -25,7 +25,8 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.lineageEvidence.pendingIdentities,
     ).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges).toHaveLength(1);
-    expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(80);
+    expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(81);
+    expect(VISUAL_FIXTURE_MANIFEST.objectMentions).toHaveLength(2);
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
     expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(7);
     expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(40);
@@ -35,7 +36,53 @@ describe("visual fixture manifest", () => {
     expect(
       VISUAL_FIXTURE_MANIFEST.intentEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(19);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
+    ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-179 with real object and multi-object journal chapter edges", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.journalEntryEvidence;
+    const byId = new Map(
+      evidence.scenarios.map((scenario) => [scenario.id, scenario]),
+    );
+    const spaceEntry = VISUAL_FIXTURE_MANIFEST.entries.find(
+      (entry) => entry.entryScope === "space",
+    );
+
+    expect(spaceEntry).toMatchObject({ objectId: null, visibility: "public" });
+    expect(
+      VISUAL_FIXTURE_MANIFEST.objectMentions.filter(
+        (mention) => mention.journalEntryId === spaceEntry?.id,
+      ),
+    ).toHaveLength(2);
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.access)),
+    ).toEqual(new Set(["guest", "authenticated-reader", "owner"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.contextKind)),
+    ).toEqual(new Set(["object", "space"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.contentLength)),
+    ).toEqual(new Set(["short", "normal", "long"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.mediaState)),
+    ).toEqual(
+      new Set(["none", "square", "portrait", "landscape", "mixed-gallery"]),
+    );
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.expectedStatus)),
+    ).toEqual(new Set([200, 404, 410]));
+    expect(byId.get("space-multi-object")?.expectedMentionCount).toBe(2);
+    expect(byId.get("chronology-first")?.expectedNewer).toBe(false);
+    expect(byId.get("chronology-last")?.expectedOlder).toBe(false);
+    expect(byId.get("owner-controls")?.ownerActorId).toBeTruthy();
+
+    for (const scenario of evidence.scenarios) {
+      expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
+      expect(scenario.path).toMatch(/^\/(?:bg\/|ru\/)?journal\//);
+    }
   });
 
   it("covers every auth intent and edge state through opaque fixture routes", () => {
@@ -361,7 +408,7 @@ describe("visual fixture manifest", () => {
   it("crosses real density thresholds and includes empty, typical, dense, and gone routes", () => {
     const entriesByObject = Object.groupBy(
       VISUAL_FIXTURE_MANIFEST.entries,
-      (entry) => entry.objectId,
+      (entry) => entry.objectId ?? "space",
     );
     const emptyObject = VISUAL_FIXTURE_MANIFEST.objects.find(
       (object) => !entriesByObject[object.id],
@@ -497,7 +544,7 @@ describe("visual fixture manifest", () => {
     );
     expect(
       byId.get("owner-plant-dense")?.expectedTimelineEntryIds,
-    ).toHaveLength(12);
+    ).toHaveLength(13);
     expect(byId.get("owner-empty")?.expectedTimelineEntryIds).toEqual([]);
     expect(byId.get("public-unpublished")?.expectedStatus).toBe(404);
     expect(byId.get("public-gone")?.expectedStatus).toBe(410);
@@ -590,7 +637,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v2\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v3\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,
@@ -623,7 +670,9 @@ describe("visual fixture manifest", () => {
 
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       const entry = entriesById.get(media.entryId);
-      const object = entry ? objectsById.get(entry.objectId) : undefined;
+      const object = entry?.objectId
+        ? objectsById.get(entry.objectId)
+        : undefined;
       const expectedKind = beeFiles.test(media.fileName)
         ? "bee_colony"
         : animalFiles.test(media.fileName)
@@ -643,6 +692,7 @@ describe("visual fixture manifest", () => {
     const eligibleEntries = VISUAL_FIXTURE_MANIFEST.entries
       .filter(
         (entry) =>
+          entry.entryScope === "object" &&
           entry.visibility === "public" &&
           entry.lifecycleState === "active" &&
           entry.publicGoneAt === null &&
@@ -656,7 +706,11 @@ describe("visual fixture manifest", () => {
     const firstPageKinds = new Set(
       eligibleEntries
         .slice(0, VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize)
-        .map((entry) => objectsById.get(entry.objectId)?.objectKind),
+        .map((entry) =>
+          entry.objectId
+            ? objectsById.get(entry.objectId)?.objectKind
+            : undefined,
+        ),
     );
     const signalsByTopic = Object.groupBy(
       VISUAL_FIXTURE_MANIFEST.topicSignals,

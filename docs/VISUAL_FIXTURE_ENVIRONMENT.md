@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187
-Manifest version: `ove187-v2`
-Manifest SHA-256: `e321886eeae3eafc90471a8866ab1fd27963429a7a10e0d49691be2fa23ed7b1`
+Status: implemented by OVE-187, extended by OVE-179
+Manifest version: `ove187-v3`
+Manifest SHA-256: `2fda2016027549d316bbea1aad2e8d76f6ae56684973d82537b2747854d295e8`
 
 ## Purpose
 
@@ -18,7 +18,8 @@ The manifest owns exactly:
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
 - 19 synthetic catalog identities and 29 searchable primary/alias names with
   explicit `visual_fixture` provenance;
-- 80 journal entries across public, private, archived, and public-gone states;
+- 81 journal entries across public, private, archived, public-gone, direct
+  object, and space-level states, plus 2 same-owner/same-space object mentions;
 - 7 curated journal topics and 40 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
 - 67 real-route scenarios covering public-feed, living-object-catalog,
@@ -38,6 +39,13 @@ The manifest owns exactly:
   confirmed/provisional/unknown identities, no-media/cover/gallery states,
   empty/typical/dense chronology, long-name wrapping, archived history
   suppression, hard `404`, and hard `410` lifecycle boundaries;
+- 17 machine-checkable journal-entry V2 cases through the production public
+  read model and owner-control query. They cover guest, authenticated-reader,
+  and owner access; plant, animal, bee-colony, and multi-object space context;
+  short, normal, and long copy; no media, square, portrait, landscape, and
+  mixed galleries with alt/caption metadata; safe and hidden regions; first
+  and last chronology boundaries; and private `404`, missing `404`, and gone
+  `410` lifecycle states;
 - 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Claim, Add object, Add journal entry, Save, and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
@@ -115,7 +123,7 @@ memberships, topics, entries, claimable lineage edges and pending identities,
 objects, catalog names, catalog identities, spaces, profiles, and actors in
 reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v2/`. It does not use wildcard or prefix database
+`visual-fixtures/ove187-v3/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
 existing hidden or coarse-region privacy states.
@@ -177,7 +185,9 @@ namespace, proves both survived, reseeds, checks all 16 fixture media objects
 with object-store HEAD requests, executes all 11 journal-directory count/order
 contracts, all 10 knowledge entry/object contracts, and all 14 public/owner
 passport contracts against canonical Postgres loaders, and removes both
-sentinels. Proof is explicitly scoped to manifest IDs because reset
+sentinels. It also executes all 17 journal-entry V2 contracts against the
+production public lookup and separately scoped owner-control query. Proof is
+explicitly scoped to manifest IDs because reset
 deliberately preserves unrelated local rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
 production `server-only` queries. JSON output is limited to the version, hash,
@@ -195,7 +205,8 @@ The expected final counts are:
   "objects": 30,
   "lineagePendingIdentities": 1,
   "lineageEdges": 1,
-  "entries": 80,
+  "entries": 81,
+  "objectMentions": 2,
   "topics": 7,
   "topicSignals": 40,
   "media": 16
@@ -282,6 +293,18 @@ still exercises the shared App Router not-found UI; because the root shell has
 a streaming `loading.tsx` boundary, Next.js returns HTTP `200` plus injected
 `noindex` metadata for that streamed response. The fixture index labels only
 that case `Not-found UI · 200` instead of claiming a hard 404.
+
+The fixture index also links the complete journal-entry V2 evidence corpus,
+including localized readback and multi-object space context. Representative
+routes are:
+
+```text
+/journal/visual-fixture-living-object-001
+/journal/visual-fixture-living-object-006
+/journal/visual-fixture-space-multi-object-round
+/bg/journal/visual-fixture-private-entry
+/ru/journal/visual-fixtures-missing-journal-v2
+```
 
 The intent section starts each authentication handoff through a gated route
 that exposes only its stable opaque scenario ID:

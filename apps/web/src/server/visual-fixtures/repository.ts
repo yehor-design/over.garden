@@ -18,6 +18,7 @@ export interface VisualFixtureCounts {
   lineagePendingIdentities: number;
   lineageEdges: number;
   entries: number;
+  objectMentions: number;
   topics: number;
   topicSignals: number;
   media: number;
@@ -39,6 +40,13 @@ export function buildVisualFixtureSeedQueries(
     "in",
     manifest.media.map(({ id }) => id),
   );
+  const objectMentionsCleanup = executor
+    .deleteFrom("journal_entry_object_mentions")
+    .where(
+      "journal_entry_id",
+      "in",
+      manifest.entries.map(({ id }) => id),
+    );
   const lineageAuditCleanup = executor
     .deleteFrom("lineage_provenance_edge_audit_events")
     .where(
@@ -287,7 +295,7 @@ export function buildVisualFixtureSeedQueries(
         plant_object_id: entry.objectId,
         title: entry.title,
         body: entry.body,
-        entry_scope: "object",
+        entry_scope: entry.entryScope,
         entry_date: entry.entryDate,
         visibility: entry.visibility,
         lifecycle_state: entry.lifecycleState,
@@ -324,6 +332,24 @@ export function buildVisualFixtureSeedQueries(
         first_publication_disclosed_at: sql`excluded.first_publication_disclosed_at`,
         client_mutation_id: sql`excluded.client_mutation_id`,
         updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const objectMentions = executor
+    .insertInto("journal_entry_object_mentions")
+    .values(
+      manifest.objectMentions.map((mention) => ({
+        owner_user_id: mention.ownerUserId,
+        space_id: mention.spaceId,
+        journal_entry_id: mention.journalEntryId,
+        plant_object_id: mention.objectId,
+        created_at: mention.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["journal_entry_id", "plant_object_id"]).doUpdateSet({
+        owner_user_id: sql`excluded.owner_user_id`,
+        space_id: sql`excluded.space_id`,
       }),
     );
 
@@ -380,6 +406,8 @@ export function buildVisualFixtureSeedQueries(
         journal_entry_id: item.entryId,
         quarantine_key: item.quarantineKey,
         derivative_key: item.derivativeKey,
+        alt_text: item.altText,
+        caption: item.caption,
         status: "processed",
         original_deleted_at: item.createdAt,
         created_at: item.createdAt,
@@ -392,6 +420,8 @@ export function buildVisualFixtureSeedQueries(
         journal_entry_id: sql`excluded.journal_entry_id`,
         quarantine_key: sql`excluded.quarantine_key`,
         derivative_key: sql`excluded.derivative_key`,
+        alt_text: sql`excluded.alt_text`,
+        caption: sql`excluded.caption`,
         status: sql`excluded.status`,
         original_deleted_at: sql`excluded.original_deleted_at`,
         updated_at: sql`excluded.updated_at`,
@@ -401,6 +431,7 @@ export function buildVisualFixtureSeedQueries(
   return [
     { label: "lineage_audit_cleanup", query: lineageAuditCleanup },
     { label: "media_cleanup", query: mediaCleanup },
+    { label: "object_mentions_cleanup", query: objectMentionsCleanup },
     { label: "actors", query: actors },
     { label: "profiles", query: profiles },
     { label: "lineage_pending_identities", query: lineagePendingIdentities },
@@ -410,6 +441,7 @@ export function buildVisualFixtureSeedQueries(
     { label: "objects", query: objects },
     { label: "lineage_edges", query: lineageEdges },
     { label: "entries", query: entries },
+    { label: "object_mentions", query: objectMentions },
     { label: "topics", query: topics },
     { label: "topic_signals", query: topicSignals },
     { label: "media", query: media },
@@ -445,6 +477,14 @@ export function buildVisualFixtureResetQueries(
         "id",
         "in",
         manifest.topics.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "object_mentions",
+      query: executor.deleteFrom("journal_entry_object_mentions").where(
+        "journal_entry_id",
+        "in",
+        manifest.entries.map(({ id }) => id),
       ),
     },
     {
@@ -625,6 +665,17 @@ export function buildVisualFixtureStatusQueries(
         ),
     },
     {
+      label: "objectMentions",
+      query: executor
+        .selectFrom("journal_entry_object_mentions")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "journal_entry_id",
+          "in",
+          manifest.entries.map(({ id }) => id),
+        ),
+    },
+    {
       label: "topics",
       query: executor
         .selectFrom("journal_topics")
@@ -724,6 +775,7 @@ export function expectedVisualFixtureCounts(
     lineagePendingIdentities: manifest.lineageEvidence.pendingIdentities.length,
     lineageEdges: manifest.lineageEvidence.edges.length,
     entries: manifest.entries.length,
+    objectMentions: manifest.objectMentions.length,
     topics: manifest.topics.length,
     topicSignals: manifest.topicSignals.length,
     media: manifest.media.length,

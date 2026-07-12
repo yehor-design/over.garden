@@ -65,7 +65,8 @@ const QUERY_KEYS = new Set([
 const ROUTE_PATTERNS = [
   /^\/$/,
   /^\/(?:uk|bg|ru)$/,
-  /^\/(?:journal|variety)\/[a-z0-9][a-z0-9-]{0,95}$/,
+  /^\/variety\/[a-z0-9][a-z0-9-]{0,95}$/,
+  /^\/(?:(?:uk|bg|ru)\/)?journal\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/lineage\/objects\/[0-9a-f-]{36}$/,
   /^\/@[a-z0-9_]{2,40}$/,
   /^\/(?:uk|bg|ru)\/@[a-z0-9_]{2,40}$/,

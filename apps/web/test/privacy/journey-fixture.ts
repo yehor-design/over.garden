@@ -143,37 +143,46 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       title: JOURNEY.safeTitle,
       body: JOURNEY.safeBody,
       entryDate: JOURNEY.entryDate,
+      createdAt: JOURNEY.publishedAt,
       entryScope: "object",
       publicSlug: JOURNEY.publicSlug,
+      publicPath: `/journal/${JOURNEY.publicSlug}`,
       publicNoindex: true,
       publishedAt: JOURNEY.publishedAt,
     },
-    space: {
-      displayName: JOURNEY.spaceDisplayName,
-      locationVisibility: "region",
-      coarseRegionCode: JOURNEY.regionCode,
-    },
-    plantObject: {
-      plantObjectId: JOURNEY.plantObjectId,
-      displayName: JOURNEY.plantDisplayName,
-      objectKind: "plant",
-      catalogCanonicalName: JOURNEY.catalogCanonicalName,
-      catalogPublicSlug: JOURNEY.catalogPublicSlug,
-      publicPath: `/lineage/objects/${JOURNEY.plantObjectId}`,
-      varietyText: "Помідор чері",
-      varietyState: "selected",
-      locationVisibility: "region",
-      coarseRegionCode: JOURNEY.regionCode,
+    context: {
+      kind: "object",
+      space: {
+        displayName: JOURNEY.spaceDisplayName,
+        locationVisibility: "region",
+        coarseRegionCode: JOURNEY.regionCode,
+      },
+      object: {
+        plantObjectId: JOURNEY.plantObjectId,
+        displayName: JOURNEY.plantDisplayName,
+        objectKind: "plant",
+        catalogKind: "plant_variety",
+        catalogCanonicalName: JOURNEY.catalogCanonicalName,
+        catalogPublicSlug: JOURNEY.catalogPublicSlug,
+        publicPath: `/lineage/objects/${JOURNEY.plantObjectId}`,
+        varietyText: "Помідор чері",
+        varietyState: "selected",
+        locationVisibility: "region",
+        coarseRegionCode: JOURNEY.regionCode,
+      },
     },
     author: null,
+    topics: [],
     relatedEntries: [],
-    // The renderer must only ever emit `publicUrl`. We poison `derivativeKey`
-    // to prove the internal storage key is never written into the public HTML.
-    media: {
-      id: JOURNEY.mediaId,
-      derivativeKey: POISON.originalObjectKey,
-      publicUrl: JOURNEY.derivativePublicUrl,
-    },
+    adjacentEntries: { newer: null, older: null },
+    media: [
+      seedPrivateColumns({
+        id: JOURNEY.mediaId,
+        publicUrl: JOURNEY.derivativePublicUrl,
+        altText: "Cherry tomato flowers",
+        caption: null,
+      }),
+    ],
   };
 }
 
@@ -182,17 +191,21 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
 // (no supported code) and the precise string must never render.
 export function hiddenLocationJournalEntryPage(): PublicJournalEntryPage {
   const page = publicJournalEntryPage();
+  if (page.context.kind !== "object") return page;
   return {
     ...page,
-    space: {
-      ...page.space,
-      locationVisibility: "hidden",
-      coarseRegionCode: POISON.preciseCoordinates,
-    },
-    plantObject: {
-      ...page.plantObject,
-      locationVisibility: "hidden",
-      coarseRegionCode: POISON.streetAddress,
+    context: {
+      ...page.context,
+      space: {
+        ...page.context.space,
+        locationVisibility: "hidden",
+        coarseRegionCode: POISON.preciseCoordinates,
+      },
+      object: {
+        ...page.context.object,
+        locationVisibility: "hidden",
+        coarseRegionCode: POISON.streetAddress,
+      },
     },
   };
 }

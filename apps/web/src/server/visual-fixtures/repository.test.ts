@@ -50,6 +50,7 @@ describe("visual fixture repository query contracts", () => {
     expect(queries.map(({ label }) => label)).toEqual([
       "lineage_audit_cleanup",
       "media_cleanup",
+      "object_mentions_cleanup",
       "actors",
       "profiles",
       "lineage_pending_identities",
@@ -59,6 +60,7 @@ describe("visual fixture repository query contracts", () => {
       "objects",
       "lineage_edges",
       "entries",
+      "object_mentions",
       "topics",
       "topic_signals",
       "media",
@@ -78,9 +80,12 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('insert into "lineage_pending_source_identities"');
     expect(sql).toContain('insert into "lineage_provenance_edges"');
     expect(sql).toContain('insert into "journal_entries"');
+    expect(sql).toContain('insert into "journal_entry_object_mentions"');
     expect(sql).toContain('insert into "journal_topics"');
     expect(sql).toContain('insert into "journal_entry_topic_signals"');
     expect(sql).toContain('insert into "media_assets"');
+    expect(sql).toContain('"alt_text"');
+    expect(sql).toContain('"caption"');
     expect(sql).toContain('on conflict ("id") do update');
     expect(sql).toContain('on conflict ("user_id") do update');
     expect(sql).not.toMatch(
@@ -101,6 +106,9 @@ describe("visual fixture repository query contracts", () => {
     expect(compiled[1].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
     );
+    expect(compiled[2].parameters).toEqual(
+      VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
+    );
   });
 
   it("builds an exact-id reset in reverse dependency order", () => {
@@ -113,6 +121,7 @@ describe("visual fixture repository query contracts", () => {
       "media",
       "topic_signals",
       "topics",
+      "object_mentions",
       "entries",
       "lineage_edges",
       "lineage_pending_identities",
@@ -132,6 +141,7 @@ describe("visual fixture repository query contracts", () => {
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.lineageEvidence.pendingIdentities.map(
@@ -168,16 +178,18 @@ describe("visual fixture repository query contracts", () => {
       "lineagePendingIdentities",
       "lineageEdges",
       "entries",
+      "objectMentions",
       "topics",
       "topicSignals",
       "media",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(12);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(13);
     expect(sql).toContain('from "catalog_items"');
     expect(sql).toContain('from "catalog_item_names"');
     expect(sql).toContain('from "user_public_profiles"');
     expect(sql).toContain('from "journal_topics"');
     expect(sql).toContain('from "journal_entry_topic_signals"');
+    expect(sql).toContain('from "journal_entry_object_mentions"');
     expect(sql).toContain('from "lineage_pending_source_identities"');
     expect(sql).toContain('from "lineage_provenance_edges"');
     expect(sql).not.toMatch(

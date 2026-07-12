@@ -176,7 +176,7 @@ Invariants:
 
 Status: production Managed PostgreSQL plus worker/Meilisearch Droplet are provisioned for the pilot smoke.
 
-Last verified: 2026-07-01 for the OVE-78 production catalog seed rollout proof. Broader direct TLS database ping, schema count, worker health, redacted journal index/unindex smoke, DigitalOcean backup listing, and live worker restart/recovery smoke were last verified on 2026-06-29.
+Last verified: 2026-07-12 for the OVE-179 additive media-metadata schema proof. Broader direct TLS database ping, schema count, worker health, redacted journal index/unindex smoke, DigitalOcean backup listing, and live worker restart/recovery smoke were last verified on 2026-06-29.
 
 Project:
 
@@ -204,6 +204,7 @@ Operational state:
 - On 2026-06-29 (OVE-51), production bootstrap was rerun non-destructively through the app bootstrap path after canonical-domain smoke exposed that `pilot_invite_grants` had not been applied to the live database. Post-bootstrap schema probe confirmed `pilot_invite_grants` exists with `user_id`, `cohort`, `granted_at`, `created_at`, and `updated_at`. No schema drop, bulk delete, restore-over-production, or user-data export was performed.
 - OVE-69 seed-state guard: deployed catalog-source code and local proof imports do not prove that staging or production catalog rows exist. Use `docs/CATALOG_SEED_ROLLOUT_PROOF.md` and record only the final redacted evidence before claiming non-local seed availability.
 - On 2026-07-01 (OVE-78), production schema bootstrap was rerun non-destructively because the source-catalog tables required by the rollout command were missing from the live database. The OVE-78 production seed proof then passed against `https://over.garden` with generated timestamp `2026-07-01T12:16:18.722Z`, command code SHA `08db4d0adf8586fb91f8c4f29bf2f55ade15473d`, stable product identity on rerun, no duplicate same-concept suggestions, real `/garden` readback status `200` for every smoke case, and leak check `passed`. Staging still has no checked-in seed proof. No database URL, CA body, source-record ID, raw payload hash, invite token, email, user identifier, or private/source-only field was recorded.
+- On 2026-07-12 (OVE-179), production schema bootstrap was rerun non-destructively before the public journal-entry V2 deployment. A redacted schema probe confirmed `media_assets.alt_text`, `media_assets.caption`, and their bounded nonblank length constraints are present. No schema drop, bulk delete, row export, database URL, CA body, media key, journal text, user identifier, or precise location was read into evidence or recorded.
 
 Backup and PITR posture (OVE-39):
 

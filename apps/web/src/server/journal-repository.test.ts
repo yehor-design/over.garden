@@ -10,12 +10,13 @@ import {
   type Driver,
   type QueryCompiler,
 } from "kysely";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { scopedToUser } from "@/server/request-scope";
 import {
+  buildAdjacentPublicJournalEntryQuery,
   buildArchiveJournalEntryQuery,
   buildFindJournalEntryByIdQuery,
   buildFindExistingEntryByClientMutationQuery,
@@ -32,14 +33,18 @@ import {
   buildProcessedMediaForEntriesQuery,
   buildProcessedObjectMediaGalleryQuery,
   buildPublicEntrySlugsForObjectQuery,
+  buildPublicJournalEntryLifecycleQuery,
   buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
+  buildPublicJournalEntryTopicsQuery,
+  buildPublicMentionedObjectsForEntryQuery,
   buildPublicProcessedMediaForEntryQuery,
   buildRelatedPublicJournalEntriesQuery,
   buildPublishJournalEntryQuery,
   buildSpaceTimelineEntriesQuery,
   buildResolvePlantObjectCatalogQuery,
   buildUpdatePlantObjectLocationQuery,
+  serializePublicJournalEntryPage,
 } from "./journal-repository";
 import { buildAttachProcessedMediaAssetToEntryQuery } from "./media/media-repository";
 
@@ -679,6 +684,27 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
+  it("classifies journal lifecycle without selecting content or enrichment", () => {
+    const compiled = buildPublicJournalEntryLifecycleQuery(
+      testDb,
+      "first-flowers-abc123",
+    ).compile();
+
+    expect(compiled.sql).toContain('inner join "spaces"');
+    expect(compiled.sql).toContain('left join "plant_objects"');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $1');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" as "publicGoneAt"',
+    );
+    expect(compiled.sql).toContain(
+      '"plant_objects"."id" as "joinedPlantObjectId"',
+    );
+    expect(compiled.sql).not.toMatch(
+      /title|body|catalog_items|user_public_profiles|media_assets|topic|email|quarantine|coordinates|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toEqual(["first-flowers-abc123"]);
+  });
+
   it("selects related public logbook entries for the same object only", () => {
     const compiled = buildRelatedPublicJournalEntriesQuery(
       testDb,
@@ -708,6 +734,185 @@ describe("journal repository query contracts", () => {
       "active",
       2,
     ]);
+  });
+
+  it("selects only curated accepted topics for an active public entry", () => {
+    const compiled = buildPublicJournalEntryTopicsQuery(
+      testDb,
+      "00000000-0000-0000-0000-000000000020",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entry_topic_signals"');
+    expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(compiled.sql).toContain('inner join "journal_topics"');
+    expect(compiled.sql).toContain(
+      '"journal_entry_topic_signals"."review_state" =',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entry_topic_signals"."public_membership_state" =',
+    );
+    expect(compiled.sql).toContain('"journal_topics"."trust_state" =');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).not.toMatch(
+      /owner_user_id|body|email|moderation|quarantine|coordinates|latitude|longitude/i,
+    );
+  });
+
+  it("selects the nearest older entry with the complete public chronology predicate", () => {
+    const compiled = buildAdjacentPublicJournalEntryQuery(testDb, {
+      entryScope: "object",
+      plantObjectId: "00000000-0000-0000-0000-000000000003",
+      spaceId: "00000000-0000-0000-0000-000000000002",
+      currentEntryId: "00000000-0000-0000-0000-000000000020",
+      currentEntryDate: "2026-07-10",
+      currentCreatedAt: "2026-07-10T09:00:00.000Z",
+      direction: "older",
+    }).compile();
+
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain('"journal_entries"."plant_object_id" =');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."entry_date" <');
+    expect(compiled.sql).toContain('"journal_entries"."created_at" <');
+    expect(compiled.sql).toContain('"journal_entries"."id" >');
+    expect(compiled.sql).toContain('"journal_entries"."entry_date" desc');
+    expect(compiled.sql).toContain('"journal_entries"."created_at" desc');
+    expect(compiled.sql).toContain('"journal_entries"."id" asc');
+    expect(compiled.parameters.at(-1)).toBe(1);
+    expect(compiled.sql).not.toMatch(
+      /owner_user_id|client_mutation_id|quarantine_key|email|coordinates|latitude|longitude/i,
+    );
+  });
+
+  it("exposes space-entry mentions only when the root and mentioned object both have public anchors", () => {
+    const compiled = buildPublicMentionedObjectsForEntryQuery(
+      testDb,
+      "00000000-0000-0000-0000-000000000020",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "journal_entry_object_mentions"');
+    expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain('left join "catalog_items"');
+    expect(compiled.sql).toContain("exists");
+    expect(compiled.sql).toContain(
+      'from "journal_entries" as "object_public_entries"',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" =');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"object_public_entries"."visibility" =');
+    expect(compiled.sql).not.toMatch(
+      /client_mutation_id|quarantine_key|email|coordinates|latitude|longitude/i,
+    );
+  });
+
+  it("serializes a localized object-first journal chapter without private fields", () => {
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "https://media.over.garden");
+    const page = serializePublicJournalEntryPage({
+      root: {
+        entryId: "00000000-0000-4000-8000-000000000020",
+        title: "Перший урожай",
+        body: "Перший абзац.\n\nДругий абзац.",
+        entryDate: "2026-07-10",
+        entryCreatedAt: "2026-07-10T09:00:00.000Z",
+        entryScope: "object",
+        visibility: "public",
+        lifecycleState: "active",
+        publicSlug: "pershyi-urozhai",
+        publicNoindex: true,
+        publishedAt: "2026-07-10T10:00:00.000Z",
+        publicGoneAt: null,
+        spaceId: "00000000-0000-4000-8000-000000000002",
+        spaceDisplayName: "Теплиця",
+        spaceLocationVisibility: "region",
+        spaceCoarseRegionCode: "UA-30",
+        plantObjectId: "00000000-0000-4000-8000-000000000003",
+        objectDisplayName: "Черрі",
+        objectKind: "plant",
+        catalogKind: "plant_variety",
+        catalogCanonicalName: "Помідор чері",
+        catalogPublicSlug: "pomidor-cheri",
+        varietyText: "Помідор чері",
+        varietyState: "selected",
+        objectLocationVisibility: "region",
+        objectCoarseRegionCode: "UA-30",
+        authorHandle: "olena",
+        authorDisplayName: "Олена",
+        authorAvatarUrl: null,
+      },
+      mediaRows: [
+        {
+          id: "00000000-0000-4000-8000-000000000030",
+          derivativeKey: "public/first.webp",
+          altText: "Стиглі томати на кущі",
+          caption: "Перша китиця",
+        },
+      ],
+      topicRows: [{ slug: "harvest", label: "Врожай" }],
+      relatedRows: [
+        {
+          entryId: "00000000-0000-4000-8000-000000000021",
+          title: "Тиждень раніше",
+          body: "Коротка попередня нотатка.",
+          entryDate: "2026-07-03",
+          publicSlug: "tyzhden-ranishe",
+        },
+      ],
+      newerRow: null,
+      olderRow: {
+        entryId: "00000000-0000-4000-8000-000000000021",
+        title: "Тиждень раніше",
+        body: "Коротка попередня нотатка.",
+        entryDate: "2026-07-03",
+        publicSlug: "tyzhden-ranishe",
+      },
+      mentionedRows: [],
+      locale: "bg",
+    });
+
+    expect(page.entry.publicPath).toBe("/bg/journal/pershyi-urozhai");
+    expect(page.context.kind).toBe("object");
+    expect(page.context).toMatchObject({
+      kind: "object",
+      object: {
+        displayName: "Черрі",
+        publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000003",
+      },
+    });
+    expect(page.author?.profilePath).toBe("/bg/@olena");
+    expect(page.topics).toEqual([
+      { slug: "harvest", label: "Врожай", publicPath: "/bg/topics/harvest" },
+    ]);
+    expect(page.media).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000030",
+        publicUrl: expect.stringContaining("public/first.webp"),
+        altText: "Стиглі томати на кущі",
+        caption: "Перша китиця",
+      },
+    ]);
+    expect(page.adjacentEntries).toMatchObject({
+      newer: null,
+      older: { publicPath: "/bg/journal/tyzhden-ranishe" },
+    });
+    expect(page.relatedEntries[0]?.publicPath).toBe(
+      "/bg/journal/tyzhden-ranishe",
+    );
+    expect(JSON.stringify(page)).not.toMatch(
+      /ownerUserId|owner_user_id|email|quarantine|coordinates|latitude|longitude/i,
+    );
+    vi.unstubAllEnvs();
   });
 
   it("attaches only owner-scoped processed media to an entry", () => {
@@ -752,7 +957,7 @@ describe("journal repository query contracts", () => {
     ]);
   });
 
-  it("selects derivative-only public media for a published entry", () => {
+  it("selects a bounded ordered public gallery with safe readback metadata", () => {
     const compiled = buildPublicProcessedMediaForEntryQuery(
       testDb,
       "00000000-0000-0000-0000-000000000020",
@@ -774,12 +979,18 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
+    expect(compiled.sql).toContain('"media_assets"."alt_text" as "altText"');
+    expect(compiled.sql).toContain('"media_assets"."caption" as "caption"');
+    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
+    expect(compiled.sql).toContain('"media_assets"."id" asc');
+    expect(compiled.sql).toContain("limit $5");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       "public",
       "active",
       "processed",
+      6,
     ]);
   });
 

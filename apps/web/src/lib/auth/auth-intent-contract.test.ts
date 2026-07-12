@@ -69,6 +69,14 @@ describe("auth intent contract", () => {
     expect(buildAuthIntentResumeHref(intent)).toBe(
       "/journal/balcony-tomato-check?tab=history&cursor=eyJwYWdlIjoyfQ&authIntent=comment#comments",
     );
+
+    expect(
+      normalizeAuthIntentDraft({
+        action: "comment",
+        returnTo: "/bg/journal/balcony-tomato-check",
+        target: { kind: "journal", ref: "balcony-tomato-check" },
+      }).returnTo,
+    ).toBe("/bg/journal/balcony-tomato-check");
   });
 
   it("preserves one opaque control locator without exposing a raw private id", () => {

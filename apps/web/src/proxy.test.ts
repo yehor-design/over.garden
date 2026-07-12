@@ -11,10 +11,18 @@ const mocks = vi.hoisted(() => ({
   getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
     status: "not_found",
   }),
+  getPublicJournalEntryLifecycleLookup: vi.fn().mockResolvedValue({
+    status: "active",
+  }),
 }));
 
 vi.mock("@/server/public-object-passport-repository", () => ({
   getPublicObjectPassportLookup: mocks.getPublicObjectPassportLookup,
+}));
+
+vi.mock("@/server/journal-repository", () => ({
+  getPublicJournalEntryLifecycleLookup:
+    mocks.getPublicJournalEntryLifecycleLookup,
 }));
 
 async function responseFor(
@@ -139,15 +147,57 @@ describe("app route cache guardrail", () => {
       accept: "*/*",
       rsc: "1",
     });
-    const malformed = await responseFor(
-      "/lineage/objects/not-a-real-object",
-      { accept: "text/html" },
-    );
+    const malformed = await responseFor("/lineage/objects/not-a-real-object", {
+      accept: "text/html",
+    });
 
     expect(genericDocument.status).toBe(410);
     expect(headDocument.status).toBe(410);
     expect(rsc.status).toBe(200);
     expect(malformed.status).toBe(404);
+  });
+
+  it("hard-classifies root and localized public journal documents without intercepting RSC", async () => {
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "gone",
+      publicSlug: "removed-entry",
+    });
+    const gone = await responseFor("/journal/removed-entry", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const privateEntry = await responseFor("/bg/journal/private-entry", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
+      status: "active",
+    });
+    const active = await responseFor("/ru/journal/active-entry", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const rsc = await responseFor("/bg/journal/rsc-entry", {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+
+    expect(gone.status).toBe(410);
+    expect(gone.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await gone.text()).toContain("Запис видалено");
+    expect(privateEntry.status).toBe(404);
+    expect(privateEntry.headers.get("Content-Language")).toBe("bg");
+    expect(await privateEntry.text()).toContain("Записът не е намерен");
+    expect(active.status).toBe(200);
+    expect(rsc.status).toBe(200);
+    expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
+      "private-entry",
+    );
   });
 
   it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", async () => {
@@ -339,8 +389,10 @@ describe("app route cache guardrail", () => {
     expect(blogResponse.headers.get("Location")).toBe(
       "https://over.garden/ru/blog/field-note",
     );
-    expect(ugcResponse.status).toBe(200);
-    expect(ugcResponse.headers.get("Content-Language")).toBe("bg");
+    expect(ugcResponse.status).toBe(307);
+    expect(ugcResponse.headers.get("Location")).toBe(
+      "https://over.garden/bg/journal/field-note",
+    );
     expect(catalogResponse.status).toBe(307);
     expect(catalogResponse.headers.get("Location")).toBe(
       "https://over.garden/ru/objects",

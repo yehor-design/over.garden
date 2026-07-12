@@ -144,6 +144,7 @@ describe("/garden workspace", () => {
     expect(html).toContain("Add update/photo");
     expect(html).toContain("Recent activity");
     expect(html).toContain("Flowering changed");
+    expect(html).toContain('id="space-entry-entry-space-1"');
     expect(html).toContain("Object note · Public page");
     expect(html).toContain("Draft resume panel");
     expect(html).toContain("First entry composer");
@@ -270,7 +271,18 @@ function spaceTimeline() {
         varietyState: "selected",
       },
     ],
-    entries: [],
+    entries: [
+      {
+        ...recentEntry(),
+        id: "entry-space-1",
+        plant_object_id: null,
+        title: "Shared morning round",
+        entry_scope: "space",
+        media: null,
+        mentionedObjects: [],
+        timelineRelation: "space_timeline",
+      },
+    ],
   };
 }
 

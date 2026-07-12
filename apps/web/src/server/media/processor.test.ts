@@ -44,6 +44,8 @@ describe("processQuarantinedImage", () => {
       journal_entry_id: null,
       quarantine_key: "quarantine/user/photo.png",
       derivative_key: null,
+      alt_text: null,
+      caption: null,
       status: "quarantined",
       original_deleted_at: null,
       created_at: new Date("2026-06-26T00:00:00Z"),

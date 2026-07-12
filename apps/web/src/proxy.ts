@@ -17,6 +17,11 @@ import {
   renderGonePublicObjectPassportHtml,
   renderNotFoundPublicObjectPassportHtml,
 } from "@/lib/public-object-passport-lifecycle";
+import {
+  matchPublicJournalEntryPath,
+  renderGonePublicJournalEntryHtml,
+  renderNotFoundPublicJournalEntryHtml,
+} from "@/lib/public-journal-entry-lifecycle";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 export const APP_ROUTE_CACHE_CONTROL =
@@ -111,7 +116,7 @@ function hasLocalizedPublicCounterpart(pathname: string) {
     "/blog",
     "/objects",
   ]);
-  const nestedPrefixes = ["/blog/", "/guides/", "/answers/"];
+  const nestedPrefixes = ["/blog/", "/guides/", "/answers/", "/journal/"];
 
   return (
     exactPaths.has(pathname) ||
@@ -233,6 +238,42 @@ export async function proxy(request: NextRequest) {
     if (lookup.status === "not_found") {
       return withAppRouteContract(
         new NextResponse(renderNotFoundPublicObjectPassportHtml(locale), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
+  }
+
+  const publicJournalSlug = isDocumentNavigationRequest(request)
+    ? matchPublicJournalEntryPath(request.nextUrl.pathname)
+    : null;
+  if (publicJournalSlug) {
+    const { getPublicJournalEntryLifecycleLookup } =
+      await import("@/server/journal-repository");
+    const lookup =
+      await getPublicJournalEntryLifecycleLookup(publicJournalSlug);
+    if (lookup.status === "gone") {
+      return withAppRouteContract(
+        new NextResponse(renderGonePublicJournalEntryHtml(locale), {
+          status: 410,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
+    if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        new NextResponse(renderNotFoundPublicJournalEntryHtml(locale), {
           status: 404,
           headers: {
             "content-type": "text/html; charset=utf-8",

@@ -395,6 +395,8 @@ export interface LineageQuestions {
 }
 
 export interface MediaAssets {
+  alt_text: string | null;
+  caption: string | null;
   created_at: Generated<Timestamp>;
   derivative_key: string | null;
   id: Generated<string>;

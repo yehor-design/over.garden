@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v2";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v3";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -180,7 +180,8 @@ export interface VisualFixtureEntry {
   id: string;
   ownerUserId: string;
   spaceId: string;
-  objectId: string;
+  entryScope: "object" | "space";
+  objectId: string | null;
   locale: VisualFixtureLocale;
   title: string;
   body: string;
@@ -212,6 +213,15 @@ export interface VisualFixtureMedia {
   height: number;
   sha256: string;
   altText: string;
+  caption: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureObjectMention {
+  ownerUserId: string;
+  spaceId: string;
+  journalEntryId: string;
+  objectId: string;
   createdAt: string;
 }
 
@@ -371,6 +381,46 @@ export interface VisualFixturePassportEvidence {
   scenarios: readonly VisualFixturePassportScenarioEvidence[];
 }
 
+export type VisualFixtureJournalEntryAccess =
+  | "guest"
+  | "authenticated-reader"
+  | "owner";
+export type VisualFixtureJournalEntryContentLength =
+  | "short"
+  | "normal"
+  | "long";
+export type VisualFixtureJournalEntryMediaState =
+  | "none"
+  | "square"
+  | "portrait"
+  | "landscape"
+  | "mixed-gallery";
+
+export interface VisualFixtureJournalEntryScenarioEvidence {
+  id: string;
+  access: VisualFixtureJournalEntryAccess;
+  sessionActorId: string | null;
+  ownerActorId: string | null;
+  entryId: string | null;
+  publicSlug: string;
+  path: string;
+  expectedStatus: 200 | 404 | 410;
+  contextKind: "object" | "space";
+  objectKind: VisualFixtureObjectKind | null;
+  contentLength: VisualFixtureJournalEntryContentLength;
+  mediaState: VisualFixtureJournalEntryMediaState;
+  expectedMediaCount: number;
+  expectedMentionCount: number;
+  expectedNewer: boolean;
+  expectedOlder: boolean;
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixtureJournalEntryEvidence {
+  maxPublicMedia: 6;
+  scenarios: readonly VisualFixtureJournalEntryScenarioEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -453,6 +503,7 @@ export interface VisualFixtureManifest {
   catalogNames: readonly VisualFixtureCatalogName[];
   objects: readonly VisualFixtureObject[];
   entries: readonly VisualFixtureEntry[];
+  objectMentions: readonly VisualFixtureObjectMention[];
   media: readonly VisualFixtureMedia[];
   topics: readonly VisualFixtureTopic[];
   topicSignals: readonly VisualFixtureTopicSignal[];
@@ -460,6 +511,7 @@ export interface VisualFixtureManifest {
   journalDirectoryEvidence: VisualFixtureJournalDirectoryEvidence;
   knowledgeEvidence: VisualFixtureKnowledgeEvidence;
   passportEvidence: VisualFixturePassportEvidence;
+  journalEntryEvidence: VisualFixtureJournalEntryEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1077,6 +1129,20 @@ const feedRecencyRankByObjectOffset = new Map<number, number>(
 );
 
 const entries: readonly VisualFixtureEntry[] = buildEntries();
+const spaceJournalEntry = entries.find((entry) => entry.entryScope === "space");
+if (!spaceJournalEntry) {
+  throw new Error("Visual fixture space journal entry is missing.");
+}
+const objectMentions: readonly VisualFixtureObjectMention[] = [
+  objects[0],
+  objects[1],
+].map((object, index) => ({
+  ownerUserId: spaceJournalEntry.ownerUserId,
+  spaceId: spaceJournalEntry.spaceId,
+  journalEntryId: spaceJournalEntry.id,
+  objectId: object.id,
+  createdAt: timestampForIndex(390 + index),
+}));
 
 interface MediaSeedSpec {
   fileName: string;
@@ -1087,6 +1153,7 @@ interface MediaSeedSpec {
   height: number;
   sha256: string;
   altText: string;
+  caption?: string;
 }
 
 const mediaSeedSpecs: readonly MediaSeedSpec[] = [
@@ -1098,6 +1165,7 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
     height: 1254,
     sha256: "60866d360740532e5af6d19b8d537351e654fef449d59b67bf161ad8de27515c",
     altText: "Стиглі червоні томати на здоровому кущі в теплиці",
+    caption: "Стан плодів під час ранкового огляду",
   },
   {
     fileName: "balcony-herbs-square.png",
@@ -1134,6 +1202,7 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
     height: 1086,
     sha256: "b26bd268b89415e2ed455fc0d063a3eea5757c258770cb1fccb399c96aa71821",
     altText: "Огірки на вертикальній шпалері з ранковим м'яким світлом",
+    caption: "Сусідня шпалера в тому самому просторі",
   },
   {
     fileName: "indoor-monstera-4x3.png",
@@ -1206,6 +1275,7 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
     height: 941,
     sha256: "d060d1a32a8168ae8b38367693bbac94efeb1a936bd93afb18fa29ef93ce177b",
     altText: "Широкий огляд теплиці з різними культурами та чистими проходами",
+    caption: "Загальний вигляд простору для порівняння наступного тижня",
   },
   {
     fileName: "urban-balcony-wide.png",
@@ -1269,6 +1339,7 @@ const media: readonly VisualFixtureMedia[] = mediaSeedSpecs.map(
       height: spec.height,
       sha256: spec.sha256,
       altText: spec.altText,
+      caption: spec.caption ?? null,
       createdAt: timestampForIndex(100 + index),
     };
   },
@@ -1328,6 +1399,7 @@ const topics: readonly VisualFixtureTopic[] = [
 
 const publicFeedEligibleEntries = entries.filter(
   (entry) =>
+    entry.entryScope === "object" &&
     entry.visibility === "public" &&
     entry.lifecycleState === "active" &&
     entry.publicGoneAt === null &&
@@ -1425,6 +1497,7 @@ const feedEvidence: VisualFixtureFeedEvidence = {
 const journalDirectoryEvidence = buildJournalDirectoryEvidence();
 const knowledgeEvidence = buildKnowledgeEvidence();
 const passportEvidence = buildPassportEvidence();
+const journalEntryEvidence = buildJournalEntryEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -2264,6 +2337,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   catalogNames,
   objects,
   entries,
+  objectMentions,
   media,
   topics,
   topicSignals,
@@ -2271,6 +2345,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   journalDirectoryEvidence,
   knowledgeEvidence,
   passportEvidence,
+  journalEntryEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -2296,7 +2371,8 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "objects", manifest.objects.length, 30);
   checkCount(errors, "catalog items", manifest.catalogItems.length, 19);
   checkCount(errors, "catalog names", manifest.catalogNames.length, 29);
-  checkCount(errors, "entries", manifest.entries.length, 80);
+  checkCount(errors, "entries", manifest.entries.length, 81);
+  checkCount(errors, "object mentions", manifest.objectMentions.length, 2);
   checkCount(errors, "media", manifest.media.length, 16);
   checkCount(errors, "topics", manifest.topics.length, 7);
   checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
@@ -2375,6 +2451,13 @@ export function validateVisualFixtureManifest(
     "topic memberships",
     manifest.topicSignals.map(
       (signal) => `${signal.journalEntryId}:${signal.topicId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "object mentions",
+    manifest.objectMentions.map(
+      (mention) => `${mention.journalEntryId}:${mention.objectId}`,
     ),
   );
   checkUnique(
@@ -2507,7 +2590,9 @@ export function validateVisualFixtureManifest(
     if (
       !actorIds.has(entry.ownerUserId) ||
       !spaceIds.has(entry.spaceId) ||
-      !objectIds.has(entry.objectId)
+      (entry.entryScope === "object"
+        ? entry.objectId === null || !objectIds.has(entry.objectId)
+        : entry.objectId !== null)
     ) {
       errors.push(`Entry ${entry.id} has an invalid owner, space, or object.`);
     }
@@ -2516,6 +2601,25 @@ export function validateVisualFixtureManifest(
     }
     if (entry.body.length < 1 || entry.body.length > 2000) {
       errors.push(`Entry ${entry.id} has an invalid body length.`);
+    }
+  }
+  for (const mention of manifest.objectMentions) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.id === mention.journalEntryId,
+    );
+    const object = manifest.objects.find(
+      (candidate) => candidate.id === mention.objectId,
+    );
+    if (
+      !entry ||
+      entry.entryScope !== "space" ||
+      !object ||
+      entry.ownerUserId !== mention.ownerUserId ||
+      entry.spaceId !== mention.spaceId ||
+      object.ownerUserId !== mention.ownerUserId ||
+      object.spaceId !== mention.spaceId
+    ) {
+      errors.push("Object mention crosses a fixture owner or space boundary.");
     }
   }
   for (const item of manifest.media) {
@@ -2810,7 +2914,9 @@ function buildEntries(): readonly VisualFixtureEntry[] {
       const publicSlug =
         visibility === "public"
           ? `visual-fixture-${slugPart(object.displayName)}-${String(globalIndex).padStart(3, "0")}`
-          : null;
+          : globalIndex === 11
+            ? "visual-fixture-private-entry"
+            : null;
       const title = entryTitle(actor.locale, object, ordinal, globalIndex);
       const body = entryBody(actor.locale, object, ordinal, globalIndex);
       const publishedAt =
@@ -2820,6 +2926,7 @@ function buildEntries(): readonly VisualFixtureEntry[] {
         id: fixtureUuid(4, globalIndex),
         ownerUserId: object.ownerUserId,
         spaceId: object.spaceId,
+        entryScope: "object",
         objectId: object.id,
         locale: actor.locale,
         title,
@@ -2839,6 +2946,37 @@ function buildEntries(): readonly VisualFixtureEntry[] {
         createdAt: timestampForIndex(200 + globalIndex),
       });
     }
+  });
+
+  const sharedSpace = spaces[1];
+  const sharedSpaceActor = actors.find(
+    (actor) => actor.id === sharedSpace.ownerUserId,
+  );
+  if (!sharedSpaceActor) {
+    throw new Error("Visual fixture space journal owner is missing.");
+  }
+
+  result.push({
+    id: fixtureUuid(4, 81),
+    ownerUserId: sharedSpace.ownerUserId,
+    spaceId: sharedSpace.id,
+    entryScope: "space",
+    objectId: null,
+    locale: sharedSpaceActor.locale,
+    title: "Спільний ранковий обхід теплиці та сезонних грядок",
+    body: "Ранковий обхід почав із Черрі біля південної стінки та Ніжинського огірка на шпалері. В обох об'єктів листя пружне, нових плям або пошкоджень немає.\n\nТомат полив меншою порцією, бо верхній шар ґрунту ще зберігав вологу. Огірку перевірив опору й прибрав один сухий листок, не змінюючи решту режиму.\n\nНаступне порівняння зроблю через два дні в той самий ранковий час, щоб окремо оцінити реакцію кожного об'єкта.",
+    entryDate: "2026-07-09",
+    visibility: "public",
+    lifecycleState: "active",
+    publicSlug: "visual-fixture-space-multi-object-round",
+    publicNoindex: true,
+    publishedAt: "2026-07-09T12:00:00.000Z",
+    archivedAt: null,
+    publicGoneAt: null,
+    firstPublicationDisclosureVersion: "first-publication-v4",
+    firstPublicationDisclosedAt: "2026-07-09T12:00:00.000Z",
+    clientMutationId: `${VISUAL_FIXTURE_NAMESPACE}/entry-081`,
+    createdAt: timestampForIndex(281),
   });
 
   return result;
@@ -2942,6 +3080,283 @@ function compareFeedEntries(
   );
 }
 
+function buildJournalEntryEvidence(): VisualFixtureJournalEntryEvidence {
+  const publicActive = entries.filter(
+    (entry) =>
+      entry.visibility === "public" &&
+      entry.lifecycleState === "active" &&
+      entry.publicGoneAt === null &&
+      entry.publicSlug !== null,
+  );
+  const mediaByEntry = Object.groupBy(media, (item) => item.entryId);
+  const requireEntry = (
+    label: string,
+    predicate: (entry: VisualFixtureEntry) => boolean,
+  ) => {
+    const entry = entries.find(predicate);
+    if (!entry?.publicSlug) {
+      throw new Error(`Visual fixture journal evidence ${label} is missing.`);
+    }
+    return entry;
+  };
+  const entryWithMedia = (
+    label: string,
+    predicate: (item: VisualFixtureMedia) => boolean,
+  ) => {
+    const item = media.find(predicate);
+    return requireEntry(label, (entry) => entry.id === item?.entryId);
+  };
+  const objectEntries = (objectId: string) =>
+    publicActive
+      .filter(
+        (entry) => entry.entryScope === "object" && entry.objectId === objectId,
+      )
+      .sort(compareJournalChronology);
+
+  const denseChronology = objectEntries(objects[0].id);
+  const newestDense = denseChronology[0];
+  const oldestDense = denseChronology.at(-1);
+  if (!newestDense || !oldestDense) {
+    throw new Error("Visual fixture journal chronology evidence is missing.");
+  }
+
+  const gallery = requireEntry(
+    "gallery",
+    (entry) => (mediaByEntry[entry.id]?.length ?? 0) > 1,
+  );
+  const longEntry = requireEntry(
+    "long",
+    (entry) =>
+      entry.entryScope === "object" &&
+      entry.visibility === "public" &&
+      entry.lifecycleState === "active" &&
+      entry.body.length > 800,
+  );
+  const shortEntry = requireEntry(
+    "short",
+    (entry) =>
+      entry.entryScope === "object" &&
+      entry.visibility === "public" &&
+      entry.lifecycleState === "active" &&
+      entry.body.length < 180 &&
+      !mediaByEntry[entry.id],
+  );
+  const portrait = entryWithMedia(
+    "portrait",
+    (item) =>
+      item.aspect === "portrait_3_4" &&
+      (mediaByEntry[item.entryId]?.length ?? 0) === 1,
+  );
+  const landscape = entryWithMedia(
+    "landscape",
+    (item) =>
+      item.aspect === "landscape_4_3" &&
+      (mediaByEntry[item.entryId]?.length ?? 0) === 1 &&
+      objectKindForEntryId(item.entryId) === "plant",
+  );
+  const animal = entryWithMedia(
+    "animal",
+    (item) =>
+      objectKindForEntryId(item.entryId) === "animal" &&
+      (mediaByEntry[item.entryId]?.length ?? 0) === 1,
+  );
+  const bee = entryWithMedia(
+    "bee",
+    (item) =>
+      objectKindForEntryId(item.entryId) === "bee_colony" &&
+      item.aspect === "square",
+  );
+  const hidden = requireEntry(
+    "hidden location",
+    (entry) =>
+      entry.entryScope === "object" &&
+      entry.visibility === "public" &&
+      entry.lifecycleState === "active" &&
+      entry.objectId !== null &&
+      objects.find((object) => object.id === entry.objectId)
+        ?.locationVisibility === "hidden",
+  );
+  const privateEntry = requireEntry(
+    "private",
+    (entry) => entry.visibility === "private" && entry.publicSlug !== null,
+  );
+  const removedEntry = requireEntry(
+    "gone",
+    (entry) => entry.publicGoneAt !== null,
+  );
+  const differentReader = actors.find((actor) => actor.id !== bee.ownerUserId);
+  if (!differentReader) {
+    throw new Error("Visual fixture authenticated reader is missing.");
+  }
+
+  const activeScenario = (
+    id: string,
+    entry: VisualFixtureEntry,
+    access: VisualFixtureJournalEntryAccess,
+    locale: VisualFixtureLocale = entry.locale,
+  ): VisualFixtureJournalEntryScenarioEvidence => {
+    const relatedChronology = publicActive
+      .filter((candidate) =>
+        entry.entryScope === "object"
+          ? candidate.entryScope === "object" &&
+            candidate.objectId === entry.objectId
+          : candidate.entryScope === "space" &&
+            candidate.spaceId === entry.spaceId,
+      )
+      .sort(compareJournalChronology);
+    const position = relatedChronology.findIndex(
+      (candidate) => candidate.id === entry.id,
+    );
+    const entryMedia = mediaByEntry[entry.id] ?? [];
+    const object = entry.objectId
+      ? objects.find((candidate) => candidate.id === entry.objectId)
+      : null;
+
+    return {
+      id,
+      access,
+      sessionActorId:
+        access === "guest"
+          ? null
+          : access === "owner"
+            ? entry.ownerUserId
+            : differentReader.id,
+      ownerActorId: entry.ownerUserId,
+      entryId: entry.id,
+      publicSlug: entry.publicSlug!,
+      path: localizedJournalEntryPath(locale, entry.publicSlug!),
+      expectedStatus: 200,
+      contextKind: entry.entryScope,
+      objectKind: object?.objectKind ?? null,
+      contentLength: journalContentLength(entry.body),
+      mediaState: journalMediaState(entryMedia),
+      expectedMediaCount: entryMedia.length,
+      expectedMentionCount: objectMentions.filter(
+        (mention) => mention.journalEntryId === entry.id,
+      ).length,
+      expectedNewer: position > 0,
+      expectedOlder: position >= 0 && position < relatedChronology.length - 1,
+      viewportTargets: ["desktop", "mobile-320"],
+    };
+  };
+  const unavailableScenario = (
+    id: string,
+    entry: VisualFixtureEntry | null,
+    publicSlug: string,
+    expectedStatus: 404 | 410,
+    locale: VisualFixtureLocale,
+  ): VisualFixtureJournalEntryScenarioEvidence => {
+    const object = entry?.objectId
+      ? objects.find((candidate) => candidate.id === entry.objectId)
+      : null;
+    return {
+      id,
+      access: "guest",
+      sessionActorId: null,
+      ownerActorId: entry?.ownerUserId ?? null,
+      entryId: entry?.id ?? null,
+      publicSlug,
+      path: localizedJournalEntryPath(locale, publicSlug),
+      expectedStatus,
+      contextKind: entry?.entryScope ?? "object",
+      objectKind: object?.objectKind ?? null,
+      contentLength: entry ? journalContentLength(entry.body) : "normal",
+      mediaState: "none",
+      expectedMediaCount: 0,
+      expectedMentionCount: 0,
+      expectedNewer: false,
+      expectedOlder: false,
+      viewportTargets: ["desktop", "mobile-320"],
+    };
+  };
+
+  return {
+    maxPublicMedia: 6,
+    scenarios: [
+      activeScenario("recent-mixed-gallery", gallery, "guest", "uk"),
+      activeScenario("backdated-long", longEntry, "guest", "uk"),
+      activeScenario("short-no-media", shortEntry, "guest", "bg"),
+      activeScenario("portrait-media", portrait, "guest", "bg"),
+      activeScenario("landscape-media", landscape, "guest", "bg"),
+      activeScenario("animal-journal", animal, "guest", "uk"),
+      activeScenario("bee-square-media", bee, "guest", "ru"),
+      activeScenario("safe-region", newestDense, "guest", "uk"),
+      activeScenario("hidden-region", hidden, "guest", "uk"),
+      activeScenario("authenticated-reader", bee, "authenticated-reader", "ru"),
+      activeScenario("owner-controls", gallery, "owner", "uk"),
+      activeScenario("space-multi-object", spaceJournalEntry!, "guest", "uk"),
+      activeScenario("chronology-first", newestDense, "guest", "uk"),
+      activeScenario("chronology-last", oldestDense, "guest", "uk"),
+      unavailableScenario(
+        "private-404",
+        privateEntry,
+        privateEntry.publicSlug!,
+        404,
+        "bg",
+      ),
+      unavailableScenario(
+        "gone-410",
+        removedEntry,
+        removedEntry.publicSlug!,
+        410,
+        "uk",
+      ),
+      unavailableScenario(
+        "missing-404",
+        null,
+        "visual-fixtures-missing-journal-v2",
+        404,
+        "ru",
+      ),
+    ],
+  };
+}
+
+function compareJournalChronology(
+  left: VisualFixtureEntry,
+  right: VisualFixtureEntry,
+) {
+  return (
+    right.entryDate.localeCompare(left.entryDate) ||
+    right.createdAt.localeCompare(left.createdAt) ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+function objectKindForEntryId(entryId: string) {
+  const entry = entries.find((candidate) => candidate.id === entryId);
+  return entry?.objectId
+    ? (objects.find((object) => object.id === entry.objectId)?.objectKind ??
+        null)
+    : null;
+}
+
+function journalContentLength(
+  body: string,
+): VisualFixtureJournalEntryContentLength {
+  if (body.length < 180) return "short";
+  if (body.length > 800) return "long";
+  return "normal";
+}
+
+function journalMediaState(
+  entryMedia: readonly VisualFixtureMedia[],
+): VisualFixtureJournalEntryMediaState {
+  if (entryMedia.length === 0) return "none";
+  if (entryMedia.length > 1) return "mixed-gallery";
+  if (entryMedia[0]?.aspect === "square") return "square";
+  if (entryMedia[0]?.aspect === "portrait_3_4") return "portrait";
+  return "landscape";
+}
+
+function localizedJournalEntryPath(
+  locale: VisualFixtureLocale,
+  publicSlug: string,
+) {
+  const base = `/journal/${publicSlug}`;
+  return locale === "uk" ? base : `/${locale}${base}`;
+}
+
 function buildPassportEvidence(): VisualFixturePassportEvidence {
   const specs = [
     ["public-plant-typical", "guest-public", 1, 200],
@@ -3029,7 +3444,14 @@ function passportTimelineEntries(
   return entries
     .filter(
       (entry) =>
-        entry.objectId === objectId &&
+        (entry.objectId === objectId ||
+          (access === "signed-in-owner" &&
+            entry.entryScope === "space" &&
+            objectMentions.some(
+              (mention) =>
+                mention.journalEntryId === entry.id &&
+                mention.objectId === objectId,
+            ))) &&
         (access === "signed-in-owner" ||
           (entry.visibility === "public" &&
             entry.lifecycleState === "active" &&
@@ -3512,7 +3934,7 @@ function knowledgeRule(
   const matchedEntries = publicFeedEligibleEntries
     .filter((entry) => {
       if (topicEntryIds.has(entry.id)) return true;
-      const object = objectById.get(entry.objectId);
+      const object = entry.objectId ? objectById.get(entry.objectId) : null;
       const catalog = object?.catalogItemId
         ? catalogById.get(object.catalogItemId)
         : null;
@@ -3530,7 +3952,11 @@ function knowledgeRule(
     expectedCount: matchedEntries.length,
     expectedEntryIds: matchedEntries.map((entry) => entry.id),
     expectedObjectIds: [
-      ...new Set(matchedEntries.map((entry) => entry.objectId)),
+      ...new Set(
+        matchedEntries.flatMap((entry) =>
+          entry.objectId ? [entry.objectId] : [],
+        ),
+      ),
     ],
   };
 }
@@ -3649,7 +4075,7 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
     return sortedPublicDirectoryEntries.filter((entry) => ids.has(entry.id));
   };
   const combinedEntries = sortedPublicDirectoryEntries.filter((entry) => {
-    const object = objectById.get(entry.objectId);
+    const object = entry.objectId ? objectById.get(entry.objectId) : null;
     return (
       object?.objectKind === "bee_colony" &&
       object.locationVisibility === "region" &&
@@ -3658,13 +4084,14 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
     );
   });
   const correctedQueryEntries = sortedPublicDirectoryEntries.filter((entry) =>
-    objectById
-      .get(entry.objectId)
-      ?.displayName.toLocaleLowerCase("uk")
+    (entry.objectId ? objectById.get(entry.objectId) : null)?.displayName
+      .toLocaleLowerCase("uk")
       .includes("черрі"),
   );
   const sparseEntries = forTopic("watering-and-moisture").filter(
-    (entry) => objectById.get(entry.objectId)?.objectKind === "bee_colony",
+    (entry) =>
+      (entry.objectId ? objectById.get(entry.objectId) : null)?.objectKind ===
+      "bee_colony",
   );
   const finalPage = Math.max(
     1,
@@ -3677,7 +4104,8 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
     safeRegionCodes: ["UA-30", "BG-22", "BG-23"],
     hiddenRegionEntryCount: sortedPublicDirectoryEntries.filter(
       (entry) =>
-        objectById.get(entry.objectId)?.locationVisibility === "hidden",
+        (entry.objectId ? objectById.get(entry.objectId) : null)
+          ?.locationVisibility === "hidden",
     ).length,
     queries: [
       journalDirectoryQuery(

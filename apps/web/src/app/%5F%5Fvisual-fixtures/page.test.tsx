@@ -45,7 +45,7 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v2",
+      version: "ove187-v3",
       expected: {
         actors: 4,
         profiles: 4,
@@ -55,7 +55,8 @@ describe("/__visual-fixtures", () => {
         objects: 30,
         lineagePendingIdentities: 1,
         lineageEdges: 1,
-        entries: 80,
+        entries: 81,
+        objectMentions: 2,
         topics: 7,
         topicSignals: 40,
         media: 16,
@@ -69,7 +70,8 @@ describe("/__visual-fixtures", () => {
         objects: 30,
         lineagePendingIdentities: 1,
         lineageEdges: 1,
-        entries: 80,
+        entries: 81,
+        objectMentions: 2,
         topics: 7,
         topicSignals: 40,
         media: 16,
@@ -98,7 +100,7 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Public profiles");
     expect(html).toContain("4");
     expect(html).toContain("30");
-    expect(html).toContain("80");
+    expect(html).toContain("81");
     expect(html).toContain("Pending lineage");
     expect(html).toContain("Claimable edges");
     expect(html).toContain("Trusted topics");
@@ -122,6 +124,9 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Not-found UI · 200");
     expect(html).toContain("State coverage");
     expect(html).toContain("Living-object passport evidence");
+    expect(html).toContain("Journal-entry V2 evidence");
+    expect(html).toContain("space multi object");
+    expect(html).toContain("authenticated reader");
     expect(html).toContain("public plant dense");
     expect(html).toContain("owner bee archived");
     expect(html).toContain("guest public");

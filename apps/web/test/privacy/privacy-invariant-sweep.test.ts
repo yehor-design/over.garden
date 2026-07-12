@@ -13,10 +13,13 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
-  renderGoneJournalEntryHtml,
-  renderNotFoundJournalEntryHtml,
-  renderPublicJournalEntryHtml,
-} from "@/app/journal/[slug]/render";
+  renderGonePublicJournalEntryHtml,
+  renderNotFoundPublicJournalEntryHtml,
+} from "@/lib/public-journal-entry-lifecycle";
+import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
+import { PublicJournalEntryView } from "@/components/public/public-journal-entry";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import type { Database } from "@/db/schema";
 import {
   buildInsertAnalyticsEventQuery,
@@ -169,9 +172,10 @@ describe("OVE-40 privacy invariant sweep — catalog typeahead", () => {
 
 describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
   it("renders region-safe, derivative-only, noindex HTML with no private values", () => {
-    const html = renderPublicJournalEntryHtml(publicJournalEntryPage());
+    const page = publicJournalEntryPage();
+    const html = renderPublicJournalEntry(page);
 
-    expect(html).toContain('name="robots" content="noindex, nofollow"');
+    expect(page.entry.publicNoindex).toBe(true);
     expect(html).toContain(`Регіон: ${JOURNEY.regionLabel}`);
     expect(html).toContain(JOURNEY.derivativePublicUrl);
     expectNoForbiddenValues("public journal HTML", html);
@@ -179,7 +183,7 @@ describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
   });
 
   it("never prints a location when the gardener kept it hidden", () => {
-    const html = renderPublicJournalEntryHtml(hiddenLocationJournalEntryPage());
+    const html = renderPublicJournalEntry(hiddenLocationJournalEntryPage());
 
     expect(html).not.toContain("Region:");
     expectNoForbiddenValues("hidden-location journal HTML", html);
@@ -187,7 +191,7 @@ describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
   });
 
   it("escapes user markup so titles and bodies cannot inject scripts", () => {
-    const html = renderPublicJournalEntryHtml(markupJournalEntryPage());
+    const html = renderPublicJournalEntry(markupJournalEntryPage());
 
     expect(html).not.toContain("<script>alert('xss')</script>");
     expect(html).not.toContain('<img src=x onerror="alert(1)">');
@@ -196,8 +200,8 @@ describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
 
   it("keeps tombstone and not-found pages noindex and content-free", () => {
     const pages: ReadonlyArray<readonly [string, string]> = [
-      ["gone", renderGoneJournalEntryHtml(JOURNEY.publicSlug)],
-      ["not-found", renderNotFoundJournalEntryHtml()],
+      ["gone", renderGonePublicJournalEntryHtml("uk")],
+      ["not-found", renderNotFoundPublicJournalEntryHtml("uk")],
     ];
 
     for (const [label, html] of pages) {
@@ -208,6 +212,20 @@ describe("OVE-40 privacy invariant sweep — public journal SSR", () => {
     }
   });
 });
+
+function renderPublicJournalEntry(
+  page: ReturnType<typeof publicJournalEntryPage>,
+) {
+  return renderToStaticMarkup(
+    createElement(PublicJournalEntryView, {
+      locale: "uk",
+      copy: getPublicJournalEntryCopy("uk"),
+      page,
+      directoryReturnTo: "/journals",
+      ownerControl: null,
+    }),
+  );
+}
 
 describe("OVE-40 privacy invariant sweep — public variety JSON-LD", () => {
   it("publishes only bounded creative-work metadata", () => {

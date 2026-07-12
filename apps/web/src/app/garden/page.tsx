@@ -793,6 +793,7 @@ function SpaceTimelinePanel({
             {timeline.entries.map((entry) => (
               <li
                 key={entry.id}
+                id={`space-entry-${entry.id}`}
                 className="rounded-lg border border-border p-4"
               >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">

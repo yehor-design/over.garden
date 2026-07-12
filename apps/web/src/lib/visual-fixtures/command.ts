@@ -33,6 +33,7 @@ import {
 import { verifyVisualFixtureJournalDirectoryEvidence } from "@/server/visual-fixtures/journal-directory-evidence";
 import { verifyVisualFixtureKnowledgeEvidence } from "@/server/visual-fixtures/knowledge-evidence";
 import { verifyVisualFixturePassportEvidence } from "@/server/visual-fixtures/passport-evidence";
+import { verifyVisualFixtureJournalEntryEvidence } from "@/server/visual-fixtures/journal-entry-evidence";
 
 export type VisualFixtureCommand = "seed" | "reset" | "verify";
 
@@ -45,6 +46,7 @@ export interface VisualFixtureVerification {
   journalDirectoryCases: number;
   knowledgeEvidenceCases: number;
   passportEvidenceCases: number;
+  journalEntryEvidenceCases: number;
 }
 
 export interface VisualFixtureCommandSummary {
@@ -177,6 +179,7 @@ async function verifyVisualFixtures(
   await verifyVisualFixtureJournalDirectoryEvidence(runtime.database);
   await verifyVisualFixtureKnowledgeEvidence(runtime.database);
   await verifyVisualFixturePassportEvidence(runtime.database);
+  await verifyVisualFixtureJournalEntryEvidence(runtime.database);
 
   await upsertVerificationSentinel(runtime.database);
   let sentinelSurvived = false;
@@ -218,6 +221,8 @@ async function verifyVisualFixtures(
     const passportEvidenceCases = await verifyVisualFixturePassportEvidence(
       runtime.database,
     );
+    const journalEntryEvidenceCases =
+      await verifyVisualFixtureJournalEntryEvidence(runtime.database);
 
     const mediaReachability = await Promise.all(
       VISUAL_FIXTURE_MANIFEST.media.map((item) => {
@@ -246,6 +251,7 @@ async function verifyVisualFixtures(
         journalDirectoryCases,
         knowledgeEvidenceCases,
         passportEvidenceCases,
+        journalEntryEvidenceCases,
       },
     });
   } finally {

@@ -22,6 +22,7 @@ import {
   publicJournalEntryPath,
   publicLineageObjectPath,
   publicProfilePath,
+  publicTopicPath,
 } from "@/lib/garden/public-paths";
 import {
   normalizePlantObjectKind,
@@ -29,6 +30,7 @@ import {
 } from "@/lib/garden/catalog-object-kind";
 import {
   DEFAULT_PUBLIC_LOCALE,
+  localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
@@ -53,6 +55,9 @@ const MAX_RECENT_ITEMS = 20;
 const MAX_PUBLIC_SLUG_LENGTH = 96;
 const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
 const MAX_OBJECT_GALLERY_MEDIA = 6;
+const MAX_PUBLIC_JOURNAL_MEDIA = 6;
+const MAX_PUBLIC_JOURNAL_TOPICS = 8;
+const MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS = 6;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -242,28 +247,14 @@ export interface PublicJournalEntryPage {
     title: string;
     body: string;
     entryDate: Date | string;
+    createdAt: Date | string;
     entryScope: EntryScope;
     publicSlug: string;
+    publicPath: string;
     publicNoindex: boolean;
     publishedAt: Date | string | null;
   };
-  space: {
-    displayName: string;
-    locationVisibility: LocationVisibility;
-    coarseRegionCode: string | null;
-  };
-  plantObject: {
-    plantObjectId: string | null;
-    displayName: string;
-    objectKind: PlantObjectKind | null;
-    catalogCanonicalName: string | null;
-    catalogPublicSlug: string | null;
-    publicPath: string | null;
-    varietyText: string | null;
-    varietyState: VarietyState;
-    locationVisibility: LocationVisibility;
-    coarseRegionCode: string | null;
-  };
+  context: PublicJournalEntryContext;
   author: {
     handle: string;
     mention: string;
@@ -271,8 +262,73 @@ export interface PublicJournalEntryPage {
     avatarUrl: string | null;
     profilePath: string;
   } | null;
+  topics: PublicJournalEntryTopic[];
   relatedEntries: PublicJournalEntryRelatedEntry[];
-  media: EntryMediaReadback | null;
+  adjacentEntries: {
+    newer: PublicJournalEntryRelatedEntry | null;
+    older: PublicJournalEntryRelatedEntry | null;
+  };
+  media: PublicJournalEntryMedia[];
+}
+
+export interface PublicJournalEntrySpaceContext {
+  kind: "space";
+  space: PublicJournalEntrySafeSpace;
+  mentionedObjects: PublicJournalEntryMentionedObject[];
+}
+
+export interface PublicJournalEntryObjectContext {
+  kind: "object";
+  space: PublicJournalEntrySafeSpace;
+  object: PublicJournalEntryObject;
+}
+
+export type PublicJournalEntryContext =
+  | PublicJournalEntrySpaceContext
+  | PublicJournalEntryObjectContext;
+
+export interface PublicJournalEntrySafeSpace {
+  displayName: string;
+  locationVisibility: LocationVisibility;
+  coarseRegionCode: string | null;
+}
+
+export interface PublicJournalEntryObject {
+  plantObjectId: string;
+  displayName: string;
+  objectKind: PlantObjectKind;
+  catalogKind: CatalogKind | null;
+  catalogCanonicalName: string | null;
+  catalogPublicSlug: string | null;
+  publicPath: string;
+  varietyText: string | null;
+  varietyState: VarietyState;
+  locationVisibility: LocationVisibility;
+  coarseRegionCode: string | null;
+}
+
+export interface PublicJournalEntryMentionedObject {
+  plantObjectId: string;
+  displayName: string;
+  objectKind: PlantObjectKind;
+  catalogCanonicalName: string | null;
+  catalogPublicSlug: string | null;
+  publicPath: string;
+  varietyText: string | null;
+  varietyState: VarietyState;
+}
+
+export interface PublicJournalEntryMedia {
+  id: string;
+  publicUrl: string;
+  altText: string | null;
+  caption: string | null;
+}
+
+export interface PublicJournalEntryTopic {
+  slug: string;
+  label: string;
+  publicPath: string;
 }
 
 export interface PublicJournalEntryRelatedEntry {
@@ -282,6 +338,68 @@ export interface PublicJournalEntryRelatedEntry {
   entryDate: Date | string;
   publicSlug: string;
   publicPath: string;
+}
+
+interface PublicJournalEntryRootRow {
+  entryId: string;
+  title: string;
+  body: string;
+  entryDate: Date | string;
+  entryCreatedAt: Date | string;
+  entryScope: string;
+  visibility: string;
+  lifecycleState: string;
+  publicSlug: string | null;
+  publicNoindex: boolean;
+  publishedAt: Date | string | null;
+  publicGoneAt: Date | string | null;
+  spaceId: string;
+  spaceDisplayName: string;
+  spaceLocationVisibility: string;
+  spaceCoarseRegionCode: string | null;
+  plantObjectId: string | null;
+  objectDisplayName: string | null;
+  objectKind: string | null;
+  catalogKind: string | null;
+  catalogCanonicalName: string | null;
+  catalogPublicSlug: string | null;
+  varietyText: string | null;
+  varietyState: string | null;
+  objectLocationVisibility: string | null;
+  objectCoarseRegionCode: string | null;
+  authorHandle: string | null;
+  authorDisplayName: string | null;
+  authorAvatarUrl: string | null;
+}
+
+interface PublicJournalEntryMediaRow {
+  id: string;
+  derivativeKey: string;
+  altText: string | null;
+  caption: string | null;
+}
+
+interface PublicJournalEntryTopicRow {
+  slug: string;
+  label: string;
+}
+
+interface PublicJournalEntryMentionedObjectRow {
+  plantObjectId: string;
+  displayName: string;
+  objectKind: string;
+  varietyText: string | null;
+  varietyState: string;
+  catalogCanonicalName: string | null;
+  catalogPublicSlug: string | null;
+}
+
+interface PublicJournalEntryRelatedRow {
+  entryId: string;
+  title: string;
+  body: string;
+  entryDate: Date | string;
+  publicSlug: string;
 }
 
 export interface GonePublicJournalEntryPage {
@@ -302,6 +420,21 @@ export type PublicJournalEntryLookup =
   | {
       status: "not_found";
     };
+
+export type PublicJournalEntryLifecycleLookup =
+  | { status: "active" }
+  | { status: "gone"; publicSlug: string }
+  | { status: "not_found" };
+
+interface PublicJournalEntryLifecycleRow {
+  entryScope: string;
+  visibility: string;
+  lifecycleState: string;
+  publicSlug: string | null;
+  publicGoneAt: Date | string | null;
+  plantObjectId: string | null;
+  joinedPlantObjectId: string | null;
+}
 
 export interface FirstPlantEntryResult {
   space: PlantObjectPage["space"];
@@ -1287,14 +1420,51 @@ export async function publishJournalEntry(
 export async function getPublicJournalEntryPage(
   publicSlug: string,
   executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicJournalEntryPage | null> {
-  const lookup = await getPublicJournalEntryLookup(publicSlug, executor);
+  const lookup = await getPublicJournalEntryLookup(
+    publicSlug,
+    executor,
+    locale,
+  );
   return lookup.status === "active" ? lookup.page : null;
+}
+
+export async function getPublicJournalEntryLifecycleLookup(
+  publicSlug: string,
+  executor: QueryExecutor = db,
+): Promise<PublicJournalEntryLifecycleLookup> {
+  const slug = normalizePublicSlug(publicSlug);
+  if (!slug) return { status: "not_found" };
+
+  const row = (await buildPublicJournalEntryLifecycleQuery(
+    executor,
+    slug,
+  ).executeTakeFirst()) as PublicJournalEntryLifecycleRow | undefined;
+  if (!row?.publicSlug) return { status: "not_found" };
+
+  if (row.publicGoneAt !== null && row.lifecycleState === "archived") {
+    return { status: "gone", publicSlug: row.publicSlug };
+  }
+
+  const hasValidContext =
+    row.entryScope === "space" ||
+    (row.entryScope === "object" &&
+      row.plantObjectId !== null &&
+      row.joinedPlantObjectId !== null);
+
+  return row.visibility === "public" &&
+    row.lifecycleState === "active" &&
+    row.publicGoneAt === null &&
+    hasValidContext
+    ? { status: "active" }
+    : { status: "not_found" };
 }
 
 export async function getPublicJournalEntryLookup(
   publicSlug: string,
   executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicJournalEntryLookup> {
   const slug = normalizePublicSlug(publicSlug);
   if (!slug) return { status: "not_found" };
@@ -1324,82 +1494,169 @@ export async function getPublicJournalEntryLookup(
     return { status: "not_found" };
   }
 
-  const media = await buildPublicProcessedMediaForEntryQuery(
-    executor,
-    row.entryId,
-  ).executeTakeFirst();
-  const relatedRows =
-    row.entryScope === "object" && row.plantObjectId
-      ? await buildRelatedPublicJournalEntriesQuery(
-          executor,
-          row.plantObjectId,
-          row.entryId,
-        ).execute()
-      : [];
+  if (
+    row.entryScope === "object" &&
+    (!row.plantObjectId ||
+      !row.objectDisplayName ||
+      !row.objectKind ||
+      !row.varietyState ||
+      !row.objectLocationVisibility)
+  ) {
+    return { status: "not_found" };
+  }
+
+  const adjacentInput: Omit<AdjacentPublicJournalEntryQueryInput, "direction"> =
+    {
+      entryScope: row.entryScope as EntryScope,
+      plantObjectId: row.plantObjectId,
+      spaceId: row.spaceId,
+      currentEntryId: row.entryId,
+      currentEntryDate: row.entryDate,
+      currentCreatedAt: row.entryCreatedAt,
+    };
+  const [mediaRows, topicRows, relatedRows, newerRow, olderRow, mentionedRows] =
+    await Promise.all([
+      buildPublicProcessedMediaForEntryQuery(executor, row.entryId).execute(),
+      buildPublicJournalEntryTopicsQuery(executor, row.entryId).execute(),
+      row.entryScope === "object" && row.plantObjectId
+        ? buildRelatedPublicJournalEntriesQuery(
+            executor,
+            row.plantObjectId,
+            row.entryId,
+          ).execute()
+        : Promise.resolve([]),
+      buildAdjacentPublicJournalEntryQuery(executor, {
+        ...adjacentInput,
+        direction: "newer",
+      }).executeTakeFirst(),
+      buildAdjacentPublicJournalEntryQuery(executor, {
+        ...adjacentInput,
+        direction: "older",
+      }).executeTakeFirst(),
+      row.entryScope === "space"
+        ? buildPublicMentionedObjectsForEntryQuery(
+            executor,
+            row.entryId,
+          ).execute()
+        : Promise.resolve([]),
+    ]);
 
   return {
     status: "active",
-    page: {
-      entry: {
-        id: row.entryId,
-        title: row.title,
-        body: row.body,
-        entryDate: row.entryDate,
-        entryScope: row.entryScope as EntryScope,
-        publicSlug: row.publicSlug,
-        publicNoindex: row.publicNoindex,
-        publishedAt: row.publishedAt,
-      },
-      space: {
-        displayName: row.spaceDisplayName,
-        locationVisibility: row.spaceLocationVisibility as LocationVisibility,
-        coarseRegionCode: row.spaceCoarseRegionCode,
-      },
-      plantObject: {
-        plantObjectId:
-          row.entryScope === "space" ? null : (row.plantObjectId ?? null),
-        displayName:
-          row.entryScope === "space"
-            ? `${row.spaceDisplayName} space entry`
-            : (row.objectDisplayName ?? "Garden entry"),
-        objectKind:
-          row.entryScope === "space"
-            ? null
-            : (row.objectKind as PlantObjectKind | null),
-        catalogCanonicalName: row.catalogCanonicalName,
-        catalogPublicSlug: row.catalogPublicSlug,
-        publicPath:
-          row.entryScope === "space" || !row.plantObjectId
-            ? null
-            : publicLineageObjectPath(row.plantObjectId),
-        varietyText: row.varietyText,
-        varietyState:
-          row.entryScope === "space"
-            ? "unknown"
-            : (row.varietyState as VarietyState),
-        locationVisibility:
-          row.entryScope === "space"
-            ? (row.spaceLocationVisibility as LocationVisibility)
-            : (row.objectLocationVisibility as LocationVisibility),
-        coarseRegionCode:
-          row.entryScope === "space"
-            ? row.spaceCoarseRegionCode
-            : row.objectCoarseRegionCode,
-      },
-      author: serializePublicJournalEntryAuthor({
-        handle: row.authorHandle,
-        displayName: row.authorDisplayName,
-        avatarUrl: row.authorAvatarUrl,
-      }),
-      relatedEntries: serializeRelatedPublicJournalEntries(relatedRows),
-      media: media?.derivativeKey
-        ? {
-            id: media.id,
-            derivativeKey: media.derivativeKey,
-            publicUrl: getPublicDerivativeUrl(media.derivativeKey),
-          }
-        : null,
+    page: serializePublicJournalEntryPage({
+      root: row as PublicJournalEntryRootRow,
+      mediaRows: mediaRows as PublicJournalEntryMediaRow[],
+      topicRows: topicRows as PublicJournalEntryTopicRow[],
+      relatedRows: relatedRows as PublicJournalEntryRelatedRow[],
+      newerRow: (newerRow as PublicJournalEntryRelatedRow | undefined) ?? null,
+      olderRow: (olderRow as PublicJournalEntryRelatedRow | undefined) ?? null,
+      mentionedRows: mentionedRows as PublicJournalEntryMentionedObjectRow[],
+      locale,
+    }),
+  };
+}
+
+export function serializePublicJournalEntryPage(input: {
+  root: PublicJournalEntryRootRow;
+  mediaRows: PublicJournalEntryMediaRow[];
+  topicRows: PublicJournalEntryTopicRow[];
+  relatedRows: PublicJournalEntryRelatedRow[];
+  newerRow: PublicJournalEntryRelatedRow | null;
+  olderRow: PublicJournalEntryRelatedRow | null;
+  mentionedRows: PublicJournalEntryMentionedObjectRow[];
+  locale?: PublicLocale;
+}): PublicJournalEntryPage {
+  const locale = input.locale ?? DEFAULT_PUBLIC_LOCALE;
+  const root = input.root;
+  const space: PublicJournalEntrySafeSpace = {
+    displayName: root.spaceDisplayName,
+    locationVisibility: root.spaceLocationVisibility as LocationVisibility,
+    coarseRegionCode: root.spaceCoarseRegionCode,
+  };
+  const context: PublicJournalEntryContext =
+    root.entryScope === "object" &&
+    root.plantObjectId &&
+    root.objectDisplayName &&
+    root.objectKind &&
+    root.varietyState &&
+    root.objectLocationVisibility
+      ? {
+          kind: "object",
+          space,
+          object: {
+            plantObjectId: root.plantObjectId,
+            displayName: root.objectDisplayName,
+            objectKind: root.objectKind as PlantObjectKind,
+            catalogKind: root.catalogKind as CatalogKind | null,
+            catalogCanonicalName: root.catalogCanonicalName,
+            catalogPublicSlug: root.catalogPublicSlug,
+            publicPath: publicLineageObjectPath(root.plantObjectId),
+            varietyText: root.varietyText,
+            varietyState: root.varietyState as VarietyState,
+            locationVisibility:
+              root.objectLocationVisibility as LocationVisibility,
+            coarseRegionCode: root.objectCoarseRegionCode,
+          },
+        }
+      : {
+          kind: "space",
+          space,
+          mentionedObjects: input.mentionedRows.map((row) => ({
+            plantObjectId: row.plantObjectId,
+            displayName: row.displayName,
+            objectKind: row.objectKind as PlantObjectKind,
+            catalogCanonicalName: row.catalogCanonicalName,
+            catalogPublicSlug: row.catalogPublicSlug,
+            publicPath: publicLineageObjectPath(row.plantObjectId),
+            varietyText: row.varietyText,
+            varietyState: row.varietyState as VarietyState,
+          })),
+        };
+
+  return {
+    entry: {
+      id: root.entryId,
+      title: root.title,
+      body: root.body,
+      entryDate: root.entryDate,
+      createdAt: root.entryCreatedAt,
+      entryScope: root.entryScope as EntryScope,
+      publicSlug: root.publicSlug ?? "",
+      publicPath: localizedPath(
+        locale,
+        publicJournalEntryPath(root.publicSlug ?? ""),
+      ),
+      publicNoindex: root.publicNoindex,
+      publishedAt: root.publishedAt,
     },
+    context,
+    author: serializePublicJournalEntryAuthor(
+      {
+        handle: root.authorHandle,
+        displayName: root.authorDisplayName,
+        avatarUrl: root.authorAvatarUrl,
+      },
+      locale,
+    ),
+    topics: input.topicRows.map((row) => ({
+      slug: row.slug,
+      label: row.label,
+      publicPath: localizedPath(locale, publicTopicPath(row.slug)),
+    })),
+    relatedEntries: serializeRelatedPublicJournalEntries(
+      input.relatedRows,
+      locale,
+    ),
+    adjacentEntries: {
+      newer: serializeRelatedPublicJournalEntry(input.newerRow, locale),
+      older: serializeRelatedPublicJournalEntry(input.olderRow, locale),
+    },
+    media: input.mediaRows.map((row) => ({
+      id: row.id,
+      publicUrl: getPublicDerivativeUrl(row.derivativeKey),
+      altText: row.altText,
+      caption: row.caption,
+    })),
   };
 }
 
@@ -1430,15 +1687,25 @@ function serializeRelatedPublicJournalEntries(
     entryDate: Date | string;
     publicSlug: string;
   }>,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): PublicJournalEntryRelatedEntry[] {
-  return rows.map((row) => ({
+  return rows.map((row) => serializeRelatedPublicJournalEntry(row, locale)!);
+}
+
+function serializeRelatedPublicJournalEntry(
+  row: PublicJournalEntryRelatedRow | null,
+  locale: PublicLocale,
+): PublicJournalEntryRelatedEntry | null {
+  if (!row) return null;
+
+  return {
     id: row.entryId,
     title: row.title,
     bodyPreview: publicJournalEntryBodyPreview(row.body),
     entryDate: row.entryDate,
     publicSlug: row.publicSlug,
-    publicPath: publicJournalEntryPath(row.publicSlug),
-  }));
+    publicPath: localizedPath(locale, publicJournalEntryPath(row.publicSlug)),
+  };
 }
 
 function publicJournalEntryBodyPreview(body: string) {
@@ -2006,6 +2273,38 @@ export function buildPublicJournalEntryPageQuery(
     .where("journal_entries.public_gone_at", "is", null);
 }
 
+export function buildPublicJournalEntryLifecycleQuery(
+  executor: QueryExecutor,
+  publicSlug: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .innerJoin("spaces", (join) =>
+      join
+        .onRef("spaces.id", "=", "journal_entries.space_id")
+        .onRef("spaces.owner_user_id", "=", "journal_entries.owner_user_id"),
+    )
+    .leftJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .select([
+      "journal_entries.entry_scope as entryScope",
+      "journal_entries.visibility as visibility",
+      "journal_entries.lifecycle_state as lifecycleState",
+      "journal_entries.public_slug as publicSlug",
+      "journal_entries.public_gone_at as publicGoneAt",
+      "journal_entries.plant_object_id as plantObjectId",
+      "plant_objects.id as joinedPlantObjectId",
+    ])
+    .where("journal_entries.public_slug", "=", publicSlug);
+}
+
 export function buildPublicJournalEntryLookupQuery(
   executor: QueryExecutor,
   publicSlug: string,
@@ -2043,6 +2342,7 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.title as title",
       "journal_entries.body as body",
       "journal_entries.entry_date as entryDate",
+      "journal_entries.created_at as entryCreatedAt",
       "journal_entries.entry_scope as entryScope",
       "journal_entries.visibility as visibility",
       "journal_entries.lifecycle_state as lifecycleState",
@@ -2050,6 +2350,7 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.public_noindex as publicNoindex",
       "journal_entries.published_at as publishedAt",
       "journal_entries.public_gone_at as publicGoneAt",
+      "spaces.id as spaceId",
       "spaces.display_name as spaceDisplayName",
       "spaces.location_visibility as spaceLocationVisibility",
       "spaces.coarse_region_code as spaceCoarseRegionCode",
@@ -2057,6 +2358,7 @@ export function buildPublicJournalEntryLookupQuery(
       "plant_objects.display_name as objectDisplayName",
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.canonical_name as catalogCanonicalName",
       "catalog_items.public_slug as catalogPublicSlug",
       "plant_objects.variety_text as varietyText",
@@ -2096,6 +2398,211 @@ export function buildRelatedPublicJournalEntriesQuery(
     .orderBy("journal_entries.id", "asc")
     .limit(normalizeRelatedPublicJournalEntryLimit(limit))
     .$narrowType<{ publicSlug: string }>();
+}
+
+export function buildPublicJournalEntryTopicsQuery(
+  executor: QueryExecutor,
+  entryId: string,
+  limit = MAX_PUBLIC_JOURNAL_TOPICS,
+) {
+  return executor
+    .selectFrom("journal_entry_topic_signals")
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "journal_entry_topic_signals.journal_entry_id",
+    )
+    .innerJoin(
+      "journal_topics",
+      "journal_topics.id",
+      "journal_entry_topic_signals.topic_id",
+    )
+    .select(["journal_topics.slug as slug", "journal_topics.label as label"])
+    .where("journal_entries.id", "=", entryId)
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entry_topic_signals.review_state", "=", "accepted")
+    .where(
+      "journal_entry_topic_signals.public_membership_state",
+      "=",
+      "eligible",
+    )
+    .where("journal_topics.trust_state", "=", "curated")
+    .orderBy("journal_topics.label", "asc")
+    .orderBy("journal_topics.slug", "asc")
+    .limit(normalizePublicJournalTopicLimit(limit));
+}
+
+export interface AdjacentPublicJournalEntryQueryInput {
+  entryScope: EntryScope;
+  plantObjectId: string | null;
+  spaceId: string;
+  currentEntryId: string;
+  currentEntryDate: Date | string;
+  currentCreatedAt: Date | string;
+  direction: "newer" | "older";
+}
+
+export function buildAdjacentPublicJournalEntryQuery(
+  executor: QueryExecutor,
+  input: AdjacentPublicJournalEntryQueryInput,
+) {
+  const currentEntryDate = sql<Date>`${input.currentEntryDate}`;
+  const currentCreatedAt = sql<Date>`${input.currentCreatedAt}`;
+  let query = executor
+    .selectFrom("journal_entries")
+    .select([
+      "journal_entries.id as entryId",
+      "journal_entries.title as title",
+      "journal_entries.body as body",
+      "journal_entries.entry_date as entryDate",
+      "journal_entries.public_slug as publicSlug",
+    ])
+    .where("journal_entries.id", "!=", input.currentEntryId)
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null);
+
+  query =
+    input.entryScope === "object" && input.plantObjectId
+      ? query.where("journal_entries.plant_object_id", "=", input.plantObjectId)
+      : query
+          .where("journal_entries.entry_scope", "=", "space")
+          .where("journal_entries.space_id", "=", input.spaceId);
+
+  query = query.where((eb) => {
+    const dateOperator = input.direction === "newer" ? ">" : "<";
+    const createdOperator = input.direction === "newer" ? ">" : "<";
+    const idOperator = input.direction === "newer" ? "<" : ">";
+
+    return eb.or([
+      eb("journal_entries.entry_date", dateOperator, currentEntryDate),
+      eb.and([
+        eb("journal_entries.entry_date", "=", currentEntryDate),
+        eb("journal_entries.created_at", createdOperator, currentCreatedAt),
+      ]),
+      eb.and([
+        eb("journal_entries.entry_date", "=", currentEntryDate),
+        eb("journal_entries.created_at", "=", currentCreatedAt),
+        eb("journal_entries.id", idOperator, input.currentEntryId),
+      ]),
+    ]);
+  });
+
+  return (
+    input.direction === "newer"
+      ? query
+          .orderBy("journal_entries.entry_date", "asc")
+          .orderBy("journal_entries.created_at", "asc")
+          .orderBy("journal_entries.id", "desc")
+      : query
+          .orderBy("journal_entries.entry_date", "desc")
+          .orderBy("journal_entries.created_at", "desc")
+          .orderBy("journal_entries.id", "asc")
+  )
+    .limit(1)
+    .$narrowType<{ publicSlug: string }>();
+}
+
+export function buildPublicMentionedObjectsForEntryQuery(
+  executor: QueryExecutor,
+  entryId: string,
+  limit = MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS,
+) {
+  return executor
+    .selectFrom("journal_entry_object_mentions")
+    .innerJoin("journal_entries", (join) =>
+      join
+        .onRef(
+          "journal_entries.id",
+          "=",
+          "journal_entry_object_mentions.journal_entry_id",
+        )
+        .onRef(
+          "journal_entries.owner_user_id",
+          "=",
+          "journal_entry_object_mentions.owner_user_id",
+        ),
+    )
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef(
+          "plant_objects.id",
+          "=",
+          "journal_entry_object_mentions.plant_object_id",
+        )
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entry_object_mentions.owner_user_id",
+        )
+        .onRef(
+          "plant_objects.space_id",
+          "=",
+          "journal_entry_object_mentions.space_id",
+        ),
+    )
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.status", "in", [...SELECTABLE_CATALOG_STATUSES])
+        .on("catalog_items.created_by_user_id", "is", null)
+        .on("catalog_items.public_slug", "is not", null),
+    )
+    .select([
+      "plant_objects.id as plantObjectId",
+      "plant_objects.display_name as displayName",
+      "plant_objects.object_kind as objectKind",
+      "plant_objects.variety_text as varietyText",
+      "plant_objects.variety_state as varietyState",
+      "catalog_items.canonical_name as catalogCanonicalName",
+      "catalog_items.public_slug as catalogPublicSlug",
+    ])
+    .where("journal_entries.id", "=", entryId)
+    .where("journal_entries.entry_scope", "=", "space")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where((eb) =>
+      eb.exists(
+        eb
+          .selectFrom("journal_entries as object_public_entries")
+          .select("object_public_entries.id")
+          .whereRef(
+            "object_public_entries.plant_object_id",
+            "=",
+            "plant_objects.id",
+          )
+          .whereRef(
+            "object_public_entries.owner_user_id",
+            "=",
+            "plant_objects.owner_user_id",
+          )
+          .where("object_public_entries.entry_scope", "=", "object")
+          .where("object_public_entries.visibility", "=", "public")
+          .where("object_public_entries.lifecycle_state", "=", "active")
+          .where("object_public_entries.public_gone_at", "is", null)
+          .where("object_public_entries.public_slug", "is not", null),
+      ),
+    )
+    .orderBy("plant_objects.display_name", "asc")
+    .orderBy("plant_objects.id", "asc")
+    .limit(normalizePublicJournalMentionedObjectLimit(limit));
+}
+
+function normalizePublicJournalTopicLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_PUBLIC_JOURNAL_TOPICS;
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_PUBLIC_JOURNAL_TOPICS);
+}
+
+function normalizePublicJournalMentionedObjectLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS;
+  return Math.min(
+    Math.max(Math.trunc(limit), 1),
+    MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS,
+  );
 }
 
 export function buildProcessedMediaForEntriesQuery(
@@ -2138,6 +2645,7 @@ export function buildProcessedObjectMediaGalleryQuery(
 export function buildPublicProcessedMediaForEntryQuery(
   executor: QueryExecutor,
   entryId: string,
+  limit = MAX_PUBLIC_JOURNAL_MEDIA,
 ) {
   return executor
     .selectFrom("media_assets")
@@ -2149,6 +2657,8 @@ export function buildPublicProcessedMediaForEntryQuery(
     .select([
       "media_assets.id as id",
       "media_assets.derivative_key as derivativeKey",
+      "media_assets.alt_text as altText",
+      "media_assets.caption as caption",
     ])
     .whereRef(
       "media_assets.owner_user_id",
@@ -2160,7 +2670,15 @@ export function buildPublicProcessedMediaForEntryQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null);
+    .where("media_assets.derivative_key", "is not", null)
+    .orderBy("media_assets.created_at", "asc")
+    .orderBy("media_assets.id", "asc")
+    .limit(normalizePublicJournalMediaLimit(limit));
+}
+
+function normalizePublicJournalMediaLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_PUBLIC_JOURNAL_MEDIA;
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_PUBLIC_JOURNAL_MEDIA);
 }
 
 async function insertJournalEntry(

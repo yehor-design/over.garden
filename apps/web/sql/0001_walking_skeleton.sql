@@ -2336,11 +2336,42 @@ create table if not exists media_assets (
   journal_entry_id uuid references journal_entries(id) on delete cascade,
   quarantine_key text not null unique,
   derivative_key text unique,
+  alt_text text,
+  caption text,
   status text not null default 'quarantined' check (status in ('quarantined', 'processed', 'failed')),
   original_deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table media_assets
+  add column if not exists alt_text text,
+  add column if not exists caption text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'media_assets_alt_text_length_check'
+      and conrelid = 'media_assets'::regclass
+  ) then
+    alter table media_assets
+      add constraint media_assets_alt_text_length_check
+      check (alt_text is null or length(btrim(alt_text)) between 1 and 300);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'media_assets_caption_length_check'
+      and conrelid = 'media_assets'::regclass
+  ) then
+    alter table media_assets
+      add constraint media_assets_caption_length_check
+      check (caption is null or length(btrim(caption)) between 1 and 500);
+  end if;
+end $$;
 
 create index if not exists media_assets_owner_created_idx
   on media_assets (owner_user_id, created_at desc);
