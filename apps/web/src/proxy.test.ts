@@ -139,10 +139,15 @@ describe("app route cache guardrail", () => {
       accept: "*/*",
       rsc: "1",
     });
+    const malformed = await responseFor(
+      "/lineage/objects/not-a-real-object",
+      { accept: "text/html" },
+    );
 
     expect(genericDocument.status).toBe(410);
     expect(headDocument.status).toBe(410);
     expect(rsc.status).toBe(200);
+    expect(malformed.status).toBe(404);
   });
 
   it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", async () => {

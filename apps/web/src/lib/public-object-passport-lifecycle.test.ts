@@ -7,7 +7,7 @@ import {
 } from "./public-object-passport-lifecycle";
 
 describe("public object passport HTTP lifecycle", () => {
-  it("matches only canonical UUID passport documents", () => {
+  it("matches every exact passport document so malformed IDs receive a hard 404", () => {
     expect(
       matchPublicObjectPassportPath(
         "/lineage/objects/00000000-0000-4000-8000-000000000101",
@@ -15,7 +15,7 @@ describe("public object passport HTTP lifecycle", () => {
     ).toBe("00000000-0000-4000-8000-000000000101");
     expect(
       matchPublicObjectPassportPath("/lineage/objects/private-label"),
-    ).toBeNull();
+    ).toBe("private-label");
     expect(
       matchPublicObjectPassportPath(
         "/garden/objects/00000000-0000-4000-8000-000000000101",

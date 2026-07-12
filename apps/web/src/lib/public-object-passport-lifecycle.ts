@@ -3,7 +3,7 @@ import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
 import { localizedPath } from "@/lib/public-localization";
 
 const PUBLIC_OBJECT_PASSPORT_PATH =
-  /^\/lineage\/objects\/([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})\/?$/i;
+  /^\/lineage\/objects\/([^/]+)\/?$/i;
 
 export function matchPublicObjectPassportPath(pathname: string) {
   return PUBLIC_OBJECT_PASSPORT_PATH.exec(pathname)?.[1] ?? null;
