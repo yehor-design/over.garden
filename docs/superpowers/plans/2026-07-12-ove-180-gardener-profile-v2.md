@@ -79,8 +79,8 @@ TypeScript, Kysely/Postgres, shadcn/ui primitives, Vitest, Browser/Playwright.
 
 ### Task 7: Mainline and Linear closeout
 
-- [ ] Commit the verified vertical slice with a Conventional Commit.
-- [ ] Push `main`, verify exact-SHA CI and production deployment, and run
+- [x] Commit the verified vertical slice with a Conventional Commit.
+- [x] Push `main`, verify exact-SHA CI and production deployment, and run
       redacted live smoke without fixture identities or private content.
 - [x] Attach the complete screenshot gate to OVE-180.
 - [ ] Add the mainline closeout comment and move OVE-180 to Done only after
