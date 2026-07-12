@@ -17,6 +17,9 @@ describe("public SEO/AEO content foundation", () => {
     const paths = entries.map((entry) => entry.path);
 
     expect(paths).toEqual([
+      "/knowledge",
+      "/bg/knowledge",
+      "/ru/knowledge",
       "/blog",
       "/bg/blog",
       "/ru/blog",
@@ -57,6 +60,21 @@ describe("public SEO/AEO content foundation", () => {
       changeFrequency: "monthly",
       priority: 0.65,
     });
+  });
+
+  it("gives every authored guide and answer explicit editorial and evidence provenance", () => {
+    for (const item of [...listGuides(), ...listAnswerPages()]) {
+      expect(item.editorial).toMatchObject({
+        synthetic: false,
+        authoredLocale: "uk",
+      });
+      expect(item.editorial.updatedDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(item.knowledge.objectKinds.length).toBeGreaterThan(0);
+      expect(
+        item.knowledge.evidence.topicSlugs.length +
+          item.knowledge.evidence.catalogSlugs.length,
+      ).toBeGreaterThan(0);
+    }
   });
 
   it("keeps the authored public content manifest free of private payload surfaces", () => {

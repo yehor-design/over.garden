@@ -9,15 +9,18 @@ import {
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
+import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
 import {
   getLocalizedAnswerPage,
   getLocalizedRouteChrome,
 } from "@/server/public-localized-content";
+import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import { listAnswerPages } from "@/server/public-seo-content";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 
 interface LocalizedAnswerRouteProps {
   params: Promise<{ locale: string; slug: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export function generateStaticParams() {
@@ -31,6 +34,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: LocalizedAnswerRouteProps): Promise<Metadata> {
   const { locale: localeParam, slug } = await params;
 
@@ -45,7 +49,12 @@ export async function generateMetadata({
     };
   }
 
-  const page = getLocalizedAnswerPage(localeParam, slug);
+  const resolved = await resolveAnswer(
+    localeParam,
+    slug,
+    (await searchParams) ?? {},
+  );
+  const page = resolved.page;
 
   if (!page) {
     const missingState = evaluatePublicSurfaceIndexability({
@@ -58,14 +67,18 @@ export async function generateMetadata({
     };
   }
 
-  const indexState = evaluatePublicSurfaceIndexability({ kind: page.kind });
+  const indexState = evaluatePublicSurfaceIndexability({
+    kind: resolved.visualMode ? "missing" : page.kind,
+  });
 
   return {
     title: `${page.title} | OverGarden`,
     description: page.description,
     alternates: {
       canonical: localizedPath(localeParam, page.path),
-      languages: buildLanguageAlternates(page.path),
+      ...(resolved.visualMode
+        ? {}
+        : { languages: buildLanguageAlternates(page.path) }),
     },
     robots: indexState.robots,
     openGraph: {
@@ -76,14 +89,45 @@ export async function generateMetadata({
 
 export default async function AnswerRoute({
   params,
+  searchParams,
 }: LocalizedAnswerRouteProps) {
   const { locale: localeParam, slug } = await params;
 
   if (!isPublicLocale(localeParam)) notFound();
 
-  const page = getLocalizedAnswerPage(localeParam, slug);
+  const resolved = await resolveAnswer(
+    localeParam,
+    slug,
+    (await searchParams) ?? {},
+  );
+  const page = resolved.page;
 
   if (!page) notFound();
+
+  const evidenceResult =
+    resolved.visualMode === "loading" || resolved.visualMode === "error"
+      ? {
+          evidence: emptyEvidence(localeParam),
+          state: resolved.visualMode,
+        }
+      : await listPublicKnowledgeEvidence(
+          page.knowledge.evidence,
+          localeParam,
+          {
+            restrictToEntryIds: resolved.publicEntryIds,
+            visualCorpus: resolved.visualMode === "corpus",
+          },
+        ).then(
+          (evidence) => ({
+            evidence,
+            state:
+              evidence.totalCount > 0 ? ("ready" as const) : ("empty" as const),
+          }),
+          () => ({
+            evidence: emptyEvidence(localeParam),
+            state: "error" as const,
+          }),
+        );
 
   return (
     <LocalizedAnswerPage
@@ -91,6 +135,48 @@ export default async function AnswerRoute({
       page={page}
       chrome={getLocalizedRouteChrome(localeParam)}
       availableLocales={getLanguageSwitcherLocales(localeParam)}
+      evidence={evidenceResult.evidence}
+      evidenceState={evidenceResult.state}
+      visualCorpus={resolved.visualMode === "corpus"}
     />
   );
+}
+
+async function resolveAnswer(
+  locale: "uk" | "bg" | "ru",
+  slug: string,
+  searchParams: Record<string, string | string[] | undefined>,
+) {
+  const visualMode = resolveVisualFixturePublicKnowledgeMode(
+    searchParams,
+    process.env,
+  );
+  if (!visualMode) {
+    return {
+      page: getLocalizedAnswerPage(locale, slug),
+      publicEntryIds: null,
+      visualMode: null,
+    };
+  }
+  if (visualMode === "unavailable") {
+    return { page: null, publicEntryIds: [], visualMode };
+  }
+
+  const { loadVisualFixtureKnowledgeCorpus } =
+    await import("@/server/public-knowledge-visual-fixture");
+  const corpus = loadVisualFixtureKnowledgeCorpus(locale);
+  return {
+    page: corpus.answers.find((candidate) => candidate.slug === slug) ?? null,
+    publicEntryIds: corpus.publicEntryIds,
+    visualMode,
+  };
+}
+
+function emptyEvidence(locale: "uk" | "bg" | "ru") {
+  return {
+    items: [],
+    totalCount: 0,
+    hasMore: false,
+    allEvidencePath: localizedPath(locale, "/journals"),
+  };
 }

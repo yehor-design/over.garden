@@ -2,6 +2,7 @@ import "server-only";
 
 import type { MetadataRoute } from "next";
 
+import type { PlantObjectKind } from "@/db/schema";
 import { absolutePublicUrl } from "@/lib/garden/public-url";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -17,7 +18,11 @@ import {
 
 type AuthoredPublicContentKind = Extract<
   PublicSurfaceKind,
-  "marketing_landing" | "editorial_blog" | "guide" | "aeo_answer"
+  | "marketing_landing"
+  | "knowledge_hub"
+  | "editorial_blog"
+  | "guide"
+  | "aeo_answer"
 >;
 
 type SitemapFrequency = NonNullable<
@@ -52,6 +57,30 @@ export interface GuideStep {
   body: string;
 }
 
+export interface PublicKnowledgeEvidenceRule {
+  topicSlugs: readonly string[];
+  catalogSlugs: readonly string[];
+}
+
+export interface PublicKnowledgeFacet {
+  task: string;
+  objectKinds: readonly PlantObjectKind[];
+  evidence: PublicKnowledgeEvidenceRule;
+}
+
+export interface PublicKnowledgeEditorialMeta {
+  author: string;
+  source: string;
+  updatedDate: string;
+  authoredLocale: PublicLocale;
+  synthetic: boolean;
+}
+
+export interface PublicKnowledgeMedia {
+  publicUrl: string;
+  alt: string;
+}
+
 export interface GuideContent {
   kind: "guide";
   slug: string;
@@ -61,6 +90,9 @@ export interface GuideContent {
   outcome: string;
   steps: GuideStep[];
   relatedLinks: PublicContentLink[];
+  editorial: PublicKnowledgeEditorialMeta;
+  knowledge: PublicKnowledgeFacet;
+  media?: PublicKnowledgeMedia;
 }
 
 export interface AnswerFaq {
@@ -80,6 +112,9 @@ export interface AnswerPageContent {
   relatedVarieties: PublicContentLink[];
   relatedTopics: PublicContentLink[];
   faqs: AnswerFaq[];
+  editorial: PublicKnowledgeEditorialMeta;
+  knowledge: PublicKnowledgeFacet;
+  media?: PublicKnowledgeMedia;
 }
 
 export interface MarketLandingContent {
@@ -118,6 +153,7 @@ interface AuthoredPublicContentSitemapTemplate {
 }
 
 export const BLOG_INDEX_PATH = "/blog";
+export const KNOWLEDGE_HUB_PATH = "/knowledge";
 
 export const MARKET_LANDING_LOCALES: Record<
   MarketLandingContent["market"],
@@ -210,6 +246,21 @@ const GUIDES: GuideContent[] = [
           "The positioning behind OverGarden's public discovery surface.",
       },
     ],
+    editorial: {
+      author: "OverGarden editorial",
+      source: "OverGarden product and privacy guidance",
+      updatedDate: "2026-07-03",
+      authoredLocale: "uk",
+      synthetic: false,
+    },
+    knowledge: {
+      task: "start-and-continue-a-living-record",
+      objectKinds: ["plant"],
+      evidence: {
+        topicSlugs: ["care-checks"],
+        catalogSlugs: [],
+      },
+    },
   },
 ];
 
@@ -275,6 +326,21 @@ const ANSWER_PAGES: AnswerPageContent[] = [
           "The MVP does not promise automatic diagnosis. It creates a clean record so the gardener can compare the same plant across days and later contribute useful public proof.",
       },
     ],
+    editorial: {
+      author: "OverGarden editorial",
+      source: "OverGarden proof-first plant record guidance",
+      updatedDate: "2026-07-03",
+      authoredLocale: "uk",
+      synthetic: false,
+    },
+    knowledge: {
+      task: "observe-yellowing-before-changing-care",
+      objectKinds: ["plant"],
+      evidence: {
+        topicSlugs: ["watering-and-moisture", "stress-and-recovery"],
+        catalogSlugs: [],
+      },
+    },
   },
 ];
 
@@ -400,6 +466,14 @@ export function isMarketLandingAvailableInLocale(
 
 export function listIndexableAuthoredPublicContentSitemapEntries(): AuthoredPublicContentSitemapEntry[] {
   const entries: AuthoredPublicContentSitemapTemplate[] = [
+    {
+      kind: "knowledge_hub",
+      path: KNOWLEDGE_HUB_PATH,
+      lastModified: AUTHORED_PUBLIC_SURFACE_LASTMOD,
+      changeFrequency: "weekly",
+      priority: 0.75,
+      locales: PUBLIC_LOCALES,
+    },
     {
       kind: "editorial_blog",
       path: BLOG_INDEX_PATH,

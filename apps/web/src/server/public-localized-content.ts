@@ -185,6 +185,29 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
   },
 };
 
+const KNOWLEDGE_EDITORIAL_META: Record<
+  PublicLocale,
+  { author: string; guideSource: string; answerSource: string }
+> = {
+  uk: {
+    author: "Редакція OverGarden",
+    guideSource: "Продуктові й приватнісні принципи OverGarden",
+    answerSource: "Підхід OverGarden до журналу з перевірюваним досвідом",
+  },
+  bg: {
+    author: "Редакция OverGarden",
+    guideSource:
+      "Продуктови принципи и принципи за поверителност на OverGarden",
+    answerSource: "Подходът на OverGarden към дневник с проверим опит",
+  },
+  ru: {
+    author: "Редакция OverGarden",
+    guideSource:
+      "Продуктовые принципы и принципы конфиденциальности OverGarden",
+    answerSource: "Подход OverGarden к журналу с проверяемым опытом",
+  },
+};
+
 const BLOG_INDEX_CONTENT: Record<PublicLocale, LocalizedBlogIndexContent> = {
   uk: {
     title: "Нотатки OverGarden",
@@ -234,13 +257,13 @@ const BLOG_INDEX_CONTENT: Record<PublicLocale, LocalizedBlogIndexContent> = {
 const ROUTE_CHROME: Record<PublicLocale, LocalizedRouteChrome> = {
   uk: {
     fieldNotesBack: "Нотатки",
-    guideEyebrow: "Гайд",
+    guideEyebrow: "Посібник",
     answerEyebrow: "Відповідь",
     conciseAnswerTitle: "Коротка відповідь",
     proofDetailsTitle: "Що записати як доказ",
     relatedVarietiesTitle: "Пов'язані сорти",
     relatedTopicsTitle: "Пов'язані теми",
-    faqTitle: "FAQ",
+    faqTitle: "Поширені питання",
     recordPlantCta: "Записати свою рослину",
     relatedPathsTitle: "Пов'язані шляхи",
     nextStepTitle: "Наступний корисний крок",
@@ -253,13 +276,13 @@ const ROUTE_CHROME: Record<PublicLocale, LocalizedRouteChrome> = {
   },
   bg: {
     fieldNotesBack: "Бележки",
-    guideEyebrow: "Гайд",
+    guideEyebrow: "Ръководство",
     answerEyebrow: "Отговор",
     conciseAnswerTitle: "Кратък отговор",
     proofDetailsTitle: "Какво да запишете като доказателство",
     relatedVarietiesTitle: "Свързани сортове",
     relatedTopicsTitle: "Свързани теми",
-    faqTitle: "FAQ",
+    faqTitle: "Често задавани въпроси",
     recordPlantCta: "Запишете своето растение",
     relatedPathsTitle: "Свързани пътеки",
     nextStepTitle: "Следваща полезна стъпка",
@@ -272,13 +295,13 @@ const ROUTE_CHROME: Record<PublicLocale, LocalizedRouteChrome> = {
   },
   ru: {
     fieldNotesBack: "Заметки",
-    guideEyebrow: "Гайд",
+    guideEyebrow: "Руководство",
     answerEyebrow: "Ответ",
     conciseAnswerTitle: "Краткий ответ",
     proofDetailsTitle: "Что записать как доказательство",
     relatedVarietiesTitle: "Связанные сорта",
     relatedTopicsTitle: "Связанные темы",
-    faqTitle: "FAQ",
+    faqTitle: "Частые вопросы",
     recordPlantCta: "Записать свое растение",
     relatedPathsTitle: "Связанные пути",
     nextStepTitle: "Следующий полезный шаг",
@@ -418,7 +441,7 @@ const GUIDE_TRANSLATIONS: Record<
     "start-a-living-plant-record": {
       title: "Як почати живий запис рослини",
       description:
-        "Практичний перший workflow OverGarden: одна рослина, одна датована нотатка і одне повернення.",
+        "Практичний перший процес в OverGarden: одна рослина, одна датована нотатка і одне повернення.",
       outcome:
         "Наприкінці садівник має один збережений об'єкт рослини і перше спостереження, яке можна порівняти пізніше.",
       steps: [
@@ -432,7 +455,7 @@ const GUIDE_TRANSLATIONS: Record<
         },
         {
           title: "Додавайте фото лише коли воно допоможе порівнянню",
-          body: "Фото корисне, коли показує видимий етап або проблему. OverGarden показує публічно лише очищені derivative-копії без фото-метаданих.",
+          body: "Фото корисне, коли показує видимий етап або проблему. OverGarden показує публічно лише оброблені копії без фото-метаданих.",
         },
         {
           title: "Поверніться до того самого об'єкта",
@@ -458,7 +481,7 @@ const GUIDE_TRANSLATIONS: Record<
     "start-a-living-plant-record": {
       title: "Как да започнете жив запис на растение",
       description:
-        "Практичен първи workflow в OverGarden: едно растение, една датирана бележка и едно връщане.",
+        "Практичен първи процес в OverGarden: едно растение, една датирана бележка и едно връщане.",
       outcome:
         "Накрая градинарят има един запазен растителен обект и първо наблюдение, което може да сравни по-късно.",
       steps: [
@@ -472,7 +495,7 @@ const GUIDE_TRANSLATIONS: Record<
         },
         {
           title: "Добавете снимка само когато помага за сравнение",
-          body: "Снимката е полезна, когато показва видим етап или проблем. OverGarden показва публично само почистени derivative копия без фото метаданни.",
+          body: "Снимката е полезна, когато показва видим етап или проблем. OverGarden показва публично само обработени копия без фото метаданни.",
         },
         {
           title: "Върнете се към същия обект",
@@ -497,7 +520,7 @@ const GUIDE_TRANSLATIONS: Record<
     "start-a-living-plant-record": {
       title: "Как начать живую запись растения",
       description:
-        "Практичный первый workflow OverGarden: одно растение, одна датированная заметка и одно возвращение.",
+        "Практичный первый процесс в OverGarden: одно растение, одна датированная заметка и одно возвращение.",
       outcome:
         "В конце у садовода есть один сохраненный объект растения и первое наблюдение, которое можно сравнить позже.",
       steps: [
@@ -511,7 +534,7 @@ const GUIDE_TRANSLATIONS: Record<
         },
         {
           title: "Добавляйте фото только когда оно помогает сравнению",
-          body: "Фото полезно, когда показывает видимый этап или проблему. OverGarden публично показывает только очищенные derivative-копии без фото-метаданных.",
+          body: "Фото полезно, когда показывает видимый этап или проблему. OverGarden публично показывает только обработанные копии без фото-метаданных.",
         },
         {
           title: "Вернитесь к тому же объекту",
@@ -544,7 +567,7 @@ const ANSWER_TRANSLATIONS: Record<
       question: "Чому жовтіє листя томатів?",
       title: "Чому жовтіє листя томатів?",
       description:
-        "Коротка діагностична відповідь і proof-first план запису для жовтіння листя томатів.",
+        "Коротка діагностична відповідь і план перевірюваних спостережень для жовтіння листя томатів.",
       conciseAnswer:
         "Листя томатів часто жовтіє через водний стрес, поганий дренаж, старіння нижніх листків, дисбаланс живлення або стрес коренів. Найшвидша корисна дія - записати, де почалося жовтіння, чи грунт лишається мокрим або сухим, і що зміниться за кілька днів.",
       proofDetails: [
@@ -595,7 +618,7 @@ const ANSWER_TRANSLATIONS: Record<
         {
           question: "Чи OverGarden сам діагностує рослину?",
           answer:
-            "MVP не обіцяє автоматичну діагностику. Він створює чистий запис, щоб садівник міг порівнювати ту саму рослину в часі і згодом додати корисний публічний доказ.",
+            "Поточна версія OverGarden не обіцяє автоматичну діагностику. Вона створює чистий запис, щоб садівник міг порівнювати ту саму рослину в часі і згодом додати корисний публічний доказ.",
         },
       ],
     },
@@ -605,7 +628,7 @@ const ANSWER_TRANSLATIONS: Record<
       question: "Защо листата на доматите пожълтяват?",
       title: "Защо листата на доматите пожълтяват?",
       description:
-        "Кратък диагностичен отговор и proof-first план за запис при пожълтяване на доматени листа.",
+        "Кратък диагностичен отговор и план за проверими наблюдения при пожълтяване на доматени листа.",
       conciseAnswer:
         "Листата на доматите често пожълтяват от воден стрес, лош дренаж, стари долни листа, хранителен дисбаланс или стрес на корените. Най-бързата полезна стъпка е да запишете откъде започва пожълтяването, дали почвата стои мокра или суха и какво се променя след няколко дни.",
       proofDetails: [
@@ -656,7 +679,7 @@ const ANSWER_TRANSLATIONS: Record<
         {
           question: "OverGarden сам ли диагностицира растението?",
           answer:
-            "MVP не обещава автоматична диагностика. Той създава чист запис, за да може градинарят да сравнява същото растение през дните и по-късно да допринесе с публично доказателство.",
+            "Текущата версия на OverGarden не обещава автоматична диагностика. Тя създава чист запис, за да може градинарят да сравнява същото растение през дните и по-късно да допринесе с публично доказателство.",
         },
       ],
     },
@@ -666,7 +689,7 @@ const ANSWER_TRANSLATIONS: Record<
       question: "Почему желтеют листья томатов?",
       title: "Почему желтеют листья томатов?",
       description:
-        "Краткий диагностический ответ и proof-first план записи для пожелтения листьев томатов.",
+        "Краткий диагностический ответ и план проверяемых наблюдений при пожелтении листьев томатов.",
       conciseAnswer:
         "Листья томатов часто желтеют из-за водного стресса, плохого дренажа, старых нижних листьев, дисбаланса питания или стресса корней. Самый быстрый полезный шаг - записать, где началось пожелтение, остается ли почва мокрой или сухой, и что изменится через несколько дней.",
       proofDetails: [
@@ -717,7 +740,7 @@ const ANSWER_TRANSLATIONS: Record<
         {
           question: "OverGarden сам диагностирует растение?",
           answer:
-            "MVP не обещает автоматическую диагностику. Он создает чистую запись, чтобы садовод мог сравнить одно и то же растение по дням и позже внести полезное публичное доказательство.",
+            "Текущая версия OverGarden не обещает автоматическую диагностику. Она создает чистую запись, чтобы садовод мог сравнить одно и то же растение по дням и позже внести полезное публичное доказательство.",
         },
       ],
     },
@@ -906,10 +929,17 @@ function localizeGuide(
   guide: GuideContent,
 ): GuideContent {
   const translation = GUIDE_TRANSLATIONS[locale][guide.slug] ?? {};
+  const editorial = KNOWLEDGE_EDITORIAL_META[locale];
 
   return {
     ...guide,
     ...translation,
+    editorial: {
+      ...(translation.editorial ?? guide.editorial),
+      author: editorial.author,
+      source: editorial.guideSource,
+      authoredLocale: locale,
+    },
     steps: (translation.steps as GuideStep[] | undefined) ?? guide.steps,
     relatedLinks:
       (translation.relatedLinks as PublicContentLink[] | undefined) ??
@@ -922,10 +952,17 @@ function localizeAnswerPage(
   page: AnswerPageContent,
 ): AnswerPageContent {
   const translation = ANSWER_TRANSLATIONS[locale][page.slug] ?? {};
+  const editorial = KNOWLEDGE_EDITORIAL_META[locale];
 
   return {
     ...page,
     ...translation,
+    editorial: {
+      ...(translation.editorial ?? page.editorial),
+      author: editorial.author,
+      source: editorial.answerSource,
+      authoredLocale: locale,
+    },
     proofDetails: translation.proofDetails ?? page.proofDetails,
     relatedVarieties:
       (translation.relatedVarieties as PublicContentLink[] | undefined) ??

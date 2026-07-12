@@ -16,7 +16,11 @@ import type { Database } from "@/db/schema";
 import {
   buildPublicTopicAggregationEntriesQuery,
   buildPublicTopicAggregationStatsQuery,
+  buildPublicTopicKindsQuery,
+  buildPublicTopicListQuery,
   buildPublicTopicLookupQuery,
+  buildPublicTopicStatsListQuery,
+  serializePublicKnowledgeTopics,
 } from "./public-topic-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -58,19 +62,25 @@ describe("public topic repository query contracts", () => {
     expect(compiled.sql).toContain('from "journal_entry_topic_signals"');
     expect(compiled.sql).toContain('inner join "journal_topics"');
     expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain('inner join "spaces"');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."published_at" is not null',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."entry_scope" =');
     expect(compiled.sql).toContain(
       'coalesce(sum(char_length("journal_entries"."body")), 0)',
     );
-    expect(compiled.sql).toContain('"journal_topics"."slug" = $1');
-    expect(compiled.sql).toContain('"journal_topics"."trust_state" = $2');
+    expect(compiled.sql).toContain('"journal_topics"."slug" =');
+    expect(compiled.sql).toContain('"journal_topics"."trust_state" =');
     expect(compiled.sql).toContain(
-      '"journal_entry_topic_signals"."review_state" = $3',
+      '"journal_entry_topic_signals"."review_state" =',
     );
     expect(compiled.sql).toContain(
-      '"journal_entry_topic_signals"."public_membership_state" = $4',
+      '"journal_entry_topic_signals"."public_membership_state" =',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -78,20 +88,25 @@ describe("public topic repository query contracts", () => {
       '"journal_entries"."public_slug" is not null',
     );
     expect(compiled.sql).not.toContain('as "body"');
-    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).toContain(
+      '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).not.toContain("client_mutation_id");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("coordinates");
     expect(compiled.sql).not.toContain("latitude");
     expect(compiled.sql).not.toContain("longitude");
-    expect(compiled.parameters).toEqual([
-      "plants",
-      "curated",
-      "accepted",
-      "eligible",
-      "public",
-      "active",
-    ]);
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining([
+        "plants",
+        "curated",
+        "accepted",
+        "eligible",
+        "public",
+        "active",
+        "object",
+      ]),
+    );
   });
 
   it("projects only bounded entry cards for public topic pages", () => {
@@ -108,21 +123,94 @@ describe("public topic repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"journal_entries"."public_slug" as "publicSlug"',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
     expect(compiled.sql).not.toContain('"journal_entries"."body"');
-    expect(compiled.sql).not.toContain("owner_user_id");
+    expect(compiled.sql).toContain(
+      '"plant_objects"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
     expect(compiled.sql).not.toContain("media_assets");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.sql).not.toContain("coordinates");
-    expect(compiled.parameters).toEqual([
-      "plants",
-      "curated",
-      "accepted",
-      "eligible",
-      "public",
-      "active",
-      12,
-    ]);
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining([
+        "plants",
+        "curated",
+        "accepted",
+        "eligible",
+        "public",
+        "active",
+        "object",
+        12,
+      ]),
+    );
+  });
+
+  it("lists curated zero/one/dense topics with safe stats and object kinds", () => {
+    const topicSql = buildPublicTopicListQuery(testDb, [
+      "quiet-evidence",
+      "single-observation",
+      "care-checks",
+      "not safe",
+    ]).compile();
+    const statsSql = buildPublicTopicStatsListQuery(testDb, [
+      "00000000-0000-4000-8000-000000000001",
+    ]).compile();
+    const kindsSql = buildPublicTopicKindsQuery(testDb, [
+      "00000000-0000-4000-8000-000000000001",
+    ]).compile();
+
+    expect(topicSql.sql).toContain('"trust_state" =');
+    expect(topicSql.sql).toContain('"slug" in');
+    expect(topicSql.parameters).toEqual(
+      expect.arrayContaining([
+        "curated",
+        "quiet-evidence",
+        "single-observation",
+        "care-checks",
+      ]),
+    );
+    expect(topicSql.parameters).not.toContain("not safe");
+    expect(statsSql.sql).toContain('max("journal_entries"."published_at")');
+    expect(statsSql.sql).toContain('"journal_entries"."id" in');
+    expect(kindsSql.sql).toContain('"plant_objects"."object_kind" as "kind"');
+
+    const topics = serializePublicKnowledgeTopics(
+      [
+        { slug: "quiet-evidence", label: "Тиха тема" },
+        { slug: "single-observation", label: "Один запис" },
+        { slug: "care-checks", label: "Регулярні спостереження" },
+      ],
+      [
+        {
+          slug: "single-observation",
+          entryCount: 1,
+          aggregateBodyLength: 180,
+          latestPublishedAt: "2026-07-08T10:00:00.000Z",
+        },
+        {
+          slug: "care-checks",
+          entryCount: 11,
+          aggregateBodyLength: 2400,
+          latestPublishedAt: "2026-07-10T10:00:00.000Z",
+        },
+      ],
+      [
+        { slug: "single-observation", kind: "plant", count: 1 },
+        { slug: "care-checks", kind: "plant", count: 4 },
+        { slug: "care-checks", kind: "animal", count: 4 },
+        { slug: "care-checks", kind: "bee_colony", count: 3 },
+      ],
+    );
+
+    expect(topics.map((topic) => topic.entryCount)).toEqual([0, 1, 11]);
+    expect(topics[0]?.indexState.isIndexable).toBe(false);
+    expect(topics[1]?.indexState.reasons).toContain(
+      "entry_count_below_threshold",
+    );
+    expect(topics[2]).toMatchObject({
+      objectKinds: ["plant", "animal", "bee_colony"],
+      indexState: { isIndexable: true, sitemapEligible: true },
+    });
   });
 });

@@ -49,6 +49,10 @@ export function publicLineageObjectPath(plantObjectId: string): string {
   return `/lineage/objects/${encodeURIComponent(plantObjectId)}`;
 }
 
+export function publicTopicPath(slug: string): string {
+  return `/topics/${encodeURIComponent(slug)}`;
+}
+
 export function publicProfilePath(
   locale: PublicLocale,
   handle: string,

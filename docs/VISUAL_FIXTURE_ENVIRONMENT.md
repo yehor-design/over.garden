@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187
 Manifest version: `ove187-v2`
-Manifest SHA-256: `70cbf5205034d627d0f940642b80b5fc1ada383fd0272c4c050c70634ef525d9`
+Manifest SHA-256: `f2eb2a0c607914f5684fecd8bcb38047ddef6c5aa7ae14dfa3d724ddee936281`
 
 ## Purpose
 
@@ -19,15 +19,20 @@ The manifest owns exactly:
 - 19 synthetic catalog identities and 29 searchable primary/alias names with
   explicit `visual_fixture` provenance;
 - 80 journal entries across public, private, archived, and public-gone states;
-- 6 curated journal topics and 39 accepted, public-eligible memberships;
+- 7 curated journal topics and 40 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 43 real-route scenarios covering public-feed, living-object-catalog, and
-  public-journal-directory empty, sparse, typical, dense, loading, recoverable
-  error, threshold pagination, unavailable identity, aliases, and deep evidence
-  states alongside the existing object/journal HTTP 404 and 410 states;
+- 55 real-route scenarios covering public-feed, living-object-catalog,
+  public-journal-directory, and knowledge-hub empty, sparse, typical, dense,
+  loading, recoverable error, threshold pagination, unavailable, aliases, long
+  Cyrillic copy, and deep evidence states alongside the existing object/journal
+  HTTP 404 and 410 states;
 - 11 machine-checkable journal-directory queries with stable URLs, expected
   counts, ordered entry IDs, and ordered public slugs across pagination and
   filter boundaries;
+- 3 synthetic guides, 3 synthetic answers, 4 explicit topic evidence states,
+  and 10 machine-checkable knowledge rules with exact entry/object IDs across
+  zero, one, typical, dense, catalog-linked, long-answer, and derivative-media
+  boundaries;
 - 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Claim, Add object, Add journal entry, Save, and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
@@ -91,10 +96,10 @@ environment checks pass. The guard refuses:
 
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
-environment, the `__visualFeed`, `__visualObjects`, and `__visualJournals`
-query parameters may select read-only rendering states or the isolated journal
-corpus for screenshot evidence; the same parameters are ignored everywhere
-else.
+environment, the `__visualFeed`, `__visualObjects`, `__visualJournals`, and
+`__visualKnowledge` query parameters may select read-only rendering states or
+the isolated journal/knowledge corpus for screenshot evidence; the same
+parameters are ignored everywhere else.
 Proxy evaluates the pure environment contract and returns a hard HTTP `404`
 before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
@@ -165,10 +170,13 @@ pnpm visual:fixtures:verify
 sentinel and one non-fixture public media sentinel, resets the exact fixture
 namespace, proves both survived, reseeds, checks all 16 fixture media objects
 with object-store HEAD requests, executes all 11 journal-directory count/order
-contracts against canonical Postgres, and removes both sentinels. Directory
-proof is explicitly scoped to manifest IDs because reset deliberately preserves
-unrelated local rows. Its JSON output is intentionally limited to the version,
-hash, environment class, aggregate counts, and boolean/count proof fields.
+contracts and all 10 knowledge entry/object contracts against canonical
+Postgres, and removes both sentinels. Proof is explicitly scoped to manifest
+IDs because reset deliberately preserves unrelated local rows. The three
+fixture CLI commands run with the React Server condition because the knowledge
+proof deliberately reuses the production `server-only` query. JSON output is
+limited to the version, hash, environment class, aggregate counts, and
+boolean/count proof fields.
 
 The expected final counts are:
 
@@ -183,8 +191,8 @@ The expected final counts are:
   "lineagePendingIdentities": 1,
   "lineageEdges": 1,
   "entries": 80,
-  "topics": 6,
-  "topicSignals": 39,
+  "topics": 7,
+  "topicSignals": 40,
   "media": 16
 }
 ```
@@ -241,14 +249,34 @@ deterministic corpus:
 /ru/journals?__visualJournals=error
 ```
 
+The knowledge scenarios use the same public evidence repository and restrict
+all matches to fixture entry IDs. Synthetic authored copy is explicitly marked
+as non-expert visual data, remains `noindex`, and is unavailable when the full
+fixture environment gate is absent:
+
+```text
+/knowledge?__visualKnowledge=corpus
+/bg/knowledge?type=answer&kind=plant&__visualKnowledge=corpus
+/ru/knowledge?q=visual-fixture-no-match&__visualKnowledge=corpus
+/bg/knowledge?__visualKnowledge=loading
+/ru/knowledge?__visualKnowledge=error
+/guides/visual-seasonal-observation?__visualKnowledge=corpus
+/bg/guides/visual-honest-empty-evidence?__visualKnowledge=corpus
+/ru/answers/visual-long-recovery-answer?__visualKnowledge=corpus
+/answers/visual-unavailable-answer?__visualKnowledge=unavailable
+/topics/quiet-evidence?__visualKnowledge=corpus
+/bg/topics/single-observation?__visualKnowledge=corpus
+/ru/topics/care-checks?__visualKnowledge=corpus
+```
+
 The missing-journal and gone-journal scenarios return real HTTP `404` and
-`410` responses. The object-without-public-history scenario exercises the
-shared App Router not-found UI. Because the root shell intentionally has a
-streaming `loading.tsx` boundary, Next.js returns HTTP `200` plus injected
-`noindex` metadata for that streamed not-found response. The fixture index
-labels this case `Not-found UI · 200` instead of claiming a hard 404. This is
-the framework's documented streamed-response contract, not a fixture seed
-failure.
+`410` responses. The object-without-public-history and unavailable-knowledge
+scenarios exercise the shared App Router not-found UI. Because the root shell
+intentionally has a streaming `loading.tsx` boundary, Next.js returns HTTP
+`200` plus injected `noindex` metadata for those streamed not-found responses.
+The fixture index labels these cases `Not-found UI · 200` instead of claiming
+a hard 404. This is the framework's documented streamed-response contract, not
+a fixture seed failure.
 
 The intent section starts each authentication handoff through a gated route
 that exposes only its stable opaque scenario ID:

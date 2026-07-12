@@ -56,8 +56,8 @@ describe("/__visual-fixtures", () => {
         lineagePendingIdentities: 1,
         lineageEdges: 1,
         entries: 80,
-        topics: 6,
-        topicSignals: 39,
+        topics: 7,
+        topicSignals: 40,
         media: 16,
       },
       actual: {
@@ -70,8 +70,8 @@ describe("/__visual-fixtures", () => {
         lineagePendingIdentities: 1,
         lineageEdges: 1,
         entries: 80,
-        topics: 6,
-        topicSignals: 39,
+        topics: 7,
+        topicSignals: 40,
         media: 16,
       },
       seeded: true,
@@ -106,6 +106,14 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("15");
     expect(html).toContain('href="/?topic=seasonal-care"');
     expect(html).toContain('href="/?__visualFeed=loading"');
+    expect(html).toContain('href="/knowledge?__visualKnowledge=corpus"');
+    expect(html).toContain(
+      'href="/guides/visual-seasonal-observation?__visualKnowledge=corpus"',
+    );
+    expect(html).toContain(
+      'href="/ru/topics/care-checks?__visualKnowledge=corpus"',
+    );
+    expect(html).toContain("Long Cyrillic answer with evidence");
     expect(html).toContain('href="/journal/visual-fixture-');
     expect(html).toContain('href="/lineage/objects/18700003-');
     expect(html).toContain('href="/@demo_olena"');

@@ -1,10 +1,10 @@
-import GuideRoute, {
-  generateMetadata as generateLocalizedGuideMetadata,
-} from "../../[locale]/guides/[slug]/page";
+import TopicRoute, {
+  generateMetadata as generateLocalizedTopicMetadata,
+} from "../../[locale]/topics/[slug]/page";
 
 import { DEFAULT_PUBLIC_LOCALE } from "@/lib/public-localization";
 
-interface LegacyGuideRedirectProps {
+interface RootTopicRouteProps {
   params: Promise<{ slug: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
@@ -12,23 +12,22 @@ interface LegacyGuideRedirectProps {
 export function generateMetadata({
   params,
   searchParams,
-}: LegacyGuideRedirectProps) {
+}: RootTopicRouteProps) {
   return Promise.all([params, searchParams ?? Promise.resolve({})]).then(
     ([{ slug }, query]) =>
-      generateLocalizedGuideMetadata({
+      generateLocalizedTopicMetadata({
         params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
         searchParams: Promise.resolve(query),
       }),
   );
 }
 
-export default async function GuidePage({
+export default async function RootTopicRoute({
   params,
   searchParams,
-}: LegacyGuideRedirectProps) {
+}: RootTopicRouteProps) {
   const { slug } = await params;
-
-  return GuideRoute({
+  return TopicRoute({
     params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE, slug }),
     searchParams,
   });

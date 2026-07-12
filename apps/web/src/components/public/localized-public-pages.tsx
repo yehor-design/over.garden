@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -14,6 +15,19 @@ import {
   PublicHomeFeed,
   type PublicHomeFeedState,
 } from "@/components/public/public-home-feed";
+import {
+  PublicKnowledgeEvidenceList,
+  type PublicKnowledgeEvidenceState,
+} from "@/components/public/public-knowledge-evidence";
+import {
+  SiteShellContextRailModules,
+  SiteShellContextRailRegistration,
+  type SiteShellContextRailModule,
+} from "@/components/site-shell/site-shell-context-rail";
+import {
+  getPublicKnowledgeCopy,
+  type PublicKnowledgeCopy,
+} from "@/lib/public-knowledge-copy";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import {
   buildAnswerPageJsonLd,
@@ -33,6 +47,7 @@ import type {
   PublicFeedRequest,
   TrustedPublicFeedTopic,
 } from "@/server/public-feed-repository";
+import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 
 export function PublicLocalizedHeader({
   locale,
@@ -243,73 +258,112 @@ export function LocalizedGuidePage({
   guide,
   chrome,
   availableLocales,
+  knowledgeCopy = getPublicKnowledgeCopy(locale),
+  evidence = emptyKnowledgeEvidence(locale),
+  evidenceState = "empty",
+  visualCorpus = false,
 }: {
   locale: PublicLocale;
   guide: GuideContent;
   chrome: LocalizedRouteChrome;
   availableLocales: readonly PublicLocale[];
+  knowledgeCopy?: PublicKnowledgeCopy;
+  evidence?: PublicKnowledgeEvidence;
+  evidenceState?: PublicKnowledgeEvidenceState;
+  visualCorpus?: boolean;
 }) {
+  const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
+
   return (
     <main
       lang={locale}
+      data-trust-state="editorial"
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <SiteShellContextRailRegistration modules={contextModules} />
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
-          basePath={guide.path}
+          basePath={knowledgeDetailPath(guide.path, visualCorpus)}
           availableLocales={availableLocales}
-          backHref="/blog"
-          backLabel={chrome.fieldNotesBack}
+          backHref={knowledgeDetailPath("/knowledge", visualCorpus)}
+          backLabel={knowledgeCopy.backToKnowledge}
         />
         <div className="flex flex-col gap-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            {chrome.guideEyebrow}
+          <p className="text-xs font-semibold text-muted-foreground uppercase">
+            {knowledgeCopy.editorialLabel} · {chrome.guideEyebrow}
           </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          <h1 className="max-w-3xl text-3xl font-semibold text-foreground">
             {guide.title}
           </h1>
           <p className="max-w-3xl text-base leading-7 text-muted-foreground">
             {guide.description}
           </p>
         </div>
-        <p className="max-w-3xl rounded-lg border border-border p-4 text-sm leading-6 text-foreground">
-          {guide.outcome}
-        </p>
+        <dl className="grid gap-x-6 gap-y-2 border-y border-border py-3 text-xs text-muted-foreground sm:grid-cols-3">
+          <EditorialMeta
+            label={knowledgeCopy.bylineLabel}
+            value={guide.editorial.author}
+          />
+          <EditorialMeta
+            label={knowledgeCopy.sourceLabel}
+            value={guide.editorial.source}
+          />
+          <EditorialMeta
+            label={knowledgeCopy.updatedLabel}
+            value={formatDate(guide.editorial.updatedDate, locale)}
+          />
+        </dl>
+        {guide.media ? (
+          <figure className="relative aspect-video w-full max-w-3xl overflow-hidden rounded-md border border-border bg-muted">
+            <Image
+              src={guide.media.publicUrl}
+              alt={guide.media.alt}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+              priority
+              loading="eager"
+              unoptimized
+            />
+          </figure>
+        ) : null}
+        <div className="flex max-w-3xl items-start gap-3 border-l-2 border-primary pl-4 text-sm leading-6 text-foreground">
+          <CheckCircle2 className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <p>{guide.outcome}</p>
+        </div>
       </header>
 
-      <ol className="grid gap-4">
+      <ol className="grid border-x border-b border-border">
         {guide.steps.map((step, index) => (
           <li
             key={step.title}
-            className="grid gap-3 rounded-lg border border-border p-4"
+            className="flex flex-col gap-3 border-t border-border p-4 sm:flex-row"
           >
-            <div className="flex items-center gap-3">
-              <span className="flex size-8 items-center justify-center rounded-md border border-border text-sm font-semibold">
-                {index + 1}
-              </span>
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">
+            <span className="flex size-8 items-center justify-center rounded-md border border-border text-sm font-semibold">
+              {index + 1}
+            </span>
+            <div className="grid min-w-0 gap-2">
+              <h2 className="text-xl font-semibold text-foreground">
                 {step.title}
               </h2>
+              <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
+                {step.body}
+              </p>
             </div>
-            <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              {step.body}
-            </p>
           </li>
         ))}
       </ol>
 
-      <section className="grid gap-4 border-t border-border pt-6">
-        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
-          <CheckCircle2 className="size-5" />
-          {chrome.nextStepTitle}
-        </h2>
-        <LinkGrid locale={locale} links={guide.relatedLinks} />
-        <Link href="/garden" className={buttonVariants({ className: "w-fit" })}>
-          <Sprout className="size-4" />
-          {chrome.privateRecordCta}
-        </Link>
-      </section>
+      <PublicKnowledgeEvidenceList
+        locale={locale}
+        copy={knowledgeCopy}
+        evidence={evidence}
+        state={evidenceState}
+      />
+      <div className="border-t border-border pt-6 xl:hidden">
+        <SiteShellContextRailModules modules={contextModules} />
+      </div>
     </main>
   );
 }
@@ -319,19 +373,30 @@ export function LocalizedAnswerPage({
   page,
   chrome,
   availableLocales,
+  knowledgeCopy = getPublicKnowledgeCopy(locale),
+  evidence = emptyKnowledgeEvidence(locale),
+  evidenceState = "empty",
+  visualCorpus = false,
 }: {
   locale: PublicLocale;
   page: AnswerPageContent;
   chrome: LocalizedRouteChrome;
   availableLocales: readonly PublicLocale[];
+  knowledgeCopy?: PublicKnowledgeCopy;
+  evidence?: PublicKnowledgeEvidence;
+  evidenceState?: PublicKnowledgeEvidenceState;
+  visualCorpus?: boolean;
 }) {
   const jsonLd = buildAnswerPageJsonLd(page, locale);
+  const contextModules = knowledgeDetailContextModules(knowledgeCopy, evidence);
 
   return (
     <main
       lang={locale}
+      data-trust-state="editorial"
       className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 px-5 py-8 sm:px-8"
     >
+      <SiteShellContextRailRegistration modules={contextModules} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -339,27 +404,41 @@ export function LocalizedAnswerPage({
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <PublicLocalizedHeader
           locale={locale}
-          basePath={page.path}
+          basePath={knowledgeDetailPath(page.path, visualCorpus)}
           availableLocales={availableLocales}
-          backHref="/blog"
-          backLabel={chrome.fieldNotesBack}
+          backHref={knowledgeDetailPath("/knowledge", visualCorpus)}
+          backLabel={knowledgeCopy.backToKnowledge}
         />
         <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <HelpCircle className="size-4" />
-            {chrome.answerEyebrow}
+          <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase">
+            <HelpCircle className="size-4" aria-hidden="true" />
+            {knowledgeCopy.editorialLabel} · {chrome.answerEyebrow}
           </p>
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          <h1 className="max-w-3xl text-3xl font-semibold text-foreground">
             {page.question}
           </h1>
           <p className="max-w-3xl text-base leading-7 text-muted-foreground">
             {page.description}
           </p>
         </div>
+        <dl className="grid gap-x-6 gap-y-2 border-y border-border py-3 text-xs text-muted-foreground sm:grid-cols-3">
+          <EditorialMeta
+            label={knowledgeCopy.bylineLabel}
+            value={page.editorial.author}
+          />
+          <EditorialMeta
+            label={knowledgeCopy.sourceLabel}
+            value={page.editorial.source}
+          />
+          <EditorialMeta
+            label={knowledgeCopy.updatedLabel}
+            value={formatDate(page.editorial.updatedDate, locale)}
+          />
+        </dl>
       </header>
 
-      <section className="grid gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
+      <section className="grid gap-3 border-y border-border py-5">
+        <h2 className="text-xl font-semibold text-foreground">
           {chrome.conciseAnswerTitle}
         </h2>
         <p className="max-w-3xl text-base leading-7 text-foreground">
@@ -368,14 +447,14 @@ export function LocalizedAnswerPage({
       </section>
 
       <section className="grid gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-2xl font-semibold text-foreground">
           {chrome.proofDetailsTitle}
         </h2>
-        <ul className="grid gap-3">
+        <ul className="grid border-x border-b border-border">
           {page.proofDetails.map((detail) => (
             <li
               key={detail}
-              className="rounded-lg border border-border p-4 text-sm leading-6 text-muted-foreground"
+              className="border-t border-border p-4 text-sm leading-6 text-muted-foreground"
             >
               {detail}
             </li>
@@ -383,28 +462,15 @@ export function LocalizedAnswerPage({
         </ul>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2">
-        <RelatedLinkGroup
-          locale={locale}
-          title={chrome.relatedVarietiesTitle}
-          links={page.relatedVarieties}
-        />
-        <RelatedLinkGroup
-          locale={locale}
-          title={chrome.relatedTopicsTitle}
-          links={page.relatedTopics}
-        />
-      </section>
-
       <section className="grid gap-4 border-t border-border pt-6">
-        <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h2 className="text-2xl font-semibold text-foreground">
           {chrome.faqTitle}
         </h2>
-        <div className="grid gap-3">
+        <div className="grid border-x border-b border-border">
           {page.faqs.map((faq) => (
             <article
               key={faq.question}
-              className="grid gap-2 rounded-lg border border-border p-4"
+              className="grid gap-2 border-t border-border p-4"
             >
               <h3 className="text-base font-semibold text-foreground">
                 {faq.question}
@@ -415,13 +481,78 @@ export function LocalizedAnswerPage({
             </article>
           ))}
         </div>
-        <Link href="/garden" className={buttonVariants({ className: "w-fit" })}>
-          <Sprout className="size-4" />
-          {chrome.recordPlantCta}
-        </Link>
       </section>
+
+      <PublicKnowledgeEvidenceList
+        locale={locale}
+        copy={knowledgeCopy}
+        evidence={evidence}
+        state={evidenceState}
+      />
+      <div className="border-t border-border pt-6 xl:hidden">
+        <SiteShellContextRailModules modules={contextModules} />
+      </div>
     </main>
   );
+}
+
+function EditorialMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <dt>{label}</dt>
+      <dd className="font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function emptyKnowledgeEvidence(locale: PublicLocale): PublicKnowledgeEvidence {
+  return {
+    items: [],
+    totalCount: 0,
+    hasMore: false,
+    allEvidencePath: localizedPath(locale, "/journals"),
+  };
+}
+
+function knowledgeDetailPath(path: string, visualCorpus: boolean) {
+  return visualCorpus
+    ? `${path}?${new URLSearchParams({ __visualKnowledge: "corpus" })}`
+    : path;
+}
+
+function knowledgeDetailContextModules(
+  copy: PublicKnowledgeCopy,
+  evidence: PublicKnowledgeEvidence,
+): SiteShellContextRailModule[] {
+  const objects = new Map(
+    evidence.items.map((item) => [
+      item.card.object.publicPath,
+      item.card.object,
+    ]),
+  );
+
+  return [
+    {
+      key: "knowledge-detail-journals",
+      title: copy.journalEvidenceLabel,
+      items: evidence.items.map((item) => ({
+        href: item.card.publicPath,
+        label: item.card.title,
+        meta: item.card.object.displayName,
+      })),
+      emptyLabel: copy.emptyEvidenceTitle,
+    },
+    {
+      key: "knowledge-detail-objects",
+      title: copy.kindLabel,
+      items: [...objects.values()].map((object) => ({
+        href: object.publicPath,
+        label: object.displayName,
+        meta: object.identityLabel ?? undefined,
+      })),
+      emptyLabel: copy.emptyEvidenceTitle,
+    },
+  ];
 }
 
 export function LocalizedMarketLandingPage({
@@ -532,25 +663,6 @@ function RelatedLinks({
           {workspaceCta}
         </Link>
       ) : null}
-    </section>
-  );
-}
-
-function RelatedLinkGroup({
-  locale,
-  title,
-  links,
-}: {
-  locale: PublicLocale;
-  title: string;
-  links: PublicContentLink[];
-}) {
-  return (
-    <section className="grid gap-3">
-      <h2 className="text-xl font-semibold tracking-tight text-foreground">
-        {title}
-      </h2>
-      <LinkGrid locale={locale} links={links} />
     </section>
   );
 }

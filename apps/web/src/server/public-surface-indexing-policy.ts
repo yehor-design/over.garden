@@ -15,6 +15,7 @@ export const PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD = {
 
 export type PublicSurfaceKind =
   | "marketing_landing"
+  | "knowledge_hub"
   | "public_feed"
   | "catalog_browse"
   | "editorial_blog"
@@ -44,6 +45,7 @@ export type PublicSurfaceIndexReason =
   | "body_length_below_threshold"
   | "catalog_trust_below_threshold"
   | "topic_trust_below_threshold"
+  | "localized_ugc_projection_noindex"
   | "object_passport_noindex"
   | "public_profile_noindex"
   | "lineage_graph_noindex"
@@ -68,7 +70,11 @@ export type PublicSurfaceIndexInput =
   | {
       kind: Extract<
         PublicSurfaceKind,
-        "marketing_landing" | "editorial_blog" | "guide" | "aeo_answer"
+        | "marketing_landing"
+        | "knowledge_hub"
+        | "editorial_blog"
+        | "guide"
+        | "aeo_answer"
       >;
     }
   | {
@@ -87,6 +93,7 @@ export type PublicSurfaceIndexInput =
       entryCount: number;
       aggregateBodyLength: number;
       topicTrust: PublicTopicTrustState;
+      canonicalLocale?: boolean;
     }
   | {
       kind:
@@ -101,7 +108,11 @@ export type PublicSurfaceIndexInput =
 export interface StaticIndexablePublicSurface {
   kind: Extract<
     PublicSurfaceKind,
-    "marketing_landing" | "editorial_blog" | "guide" | "aeo_answer"
+    | "marketing_landing"
+    | "knowledge_hub"
+    | "editorial_blog"
+    | "guide"
+    | "aeo_answer"
   >;
   path: string;
   lastModified: string;
@@ -118,6 +129,7 @@ export function evaluatePublicSurfaceIndexability(
 ): PublicSurfaceIndexState {
   switch (input.kind) {
     case "marketing_landing":
+    case "knowledge_hub":
     case "editorial_blog":
     case "guide":
     case "aeo_answer":
@@ -138,6 +150,9 @@ export function evaluatePublicSurfaceIndexability(
       return evaluateVarietyAggregationIndexability(input);
 
     case "topic_aggregation":
+      if (input.canonicalLocale === false) {
+        return noindex(["localized_ugc_projection_noindex"]);
+      }
       return evaluateTopicAggregationIndexability(input);
 
     case "object_passport":

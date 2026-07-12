@@ -24,6 +24,9 @@ describe("public surface indexing policy", () => {
       evaluatePublicSurfaceIndexability({ kind: "guide" }).isIndexable,
     ).toBe(true);
     expect(
+      evaluatePublicSurfaceIndexability({ kind: "knowledge_hub" }).isIndexable,
+    ).toBe(true);
+    expect(
       evaluatePublicSurfaceIndexability({ kind: "aeo_answer" }).isIndexable,
     ).toBe(true);
   });
@@ -147,6 +150,23 @@ describe("public surface indexing policy", () => {
       value: "noindex",
       sitemapEligible: false,
       reasons: ["topic_trust_below_threshold"],
+    });
+  });
+
+  it("keeps localized UGC topic projections noindex without pretending the evidence was translated", () => {
+    const state = evaluatePublicSurfaceIndexability({
+      kind: "topic_aggregation",
+      entryCount: PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minPublicEntryCount,
+      aggregateBodyLength:
+        PUBLIC_AGGREGATION_INDEXABILITY_THRESHOLD.minAggregateBodyLength,
+      topicTrust: "curated",
+      canonicalLocale: false,
+    });
+
+    expect(state).toMatchObject({
+      value: "noindex",
+      sitemapEligible: false,
+      reasons: ["localized_ugc_projection_noindex"],
     });
   });
 

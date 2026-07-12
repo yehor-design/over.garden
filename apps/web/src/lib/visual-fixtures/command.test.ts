@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -28,8 +30,8 @@ const STATUS = {
     lineagePendingIdentities: 1,
     lineageEdges: 1,
     entries: 80,
-    topics: 6,
-    topicSignals: 39,
+    topics: 7,
+    topicSignals: 40,
     media: 16,
   },
   actual: {
@@ -42,14 +44,26 @@ const STATUS = {
     lineagePendingIdentities: 1,
     lineageEdges: 1,
     entries: 80,
-    topics: 6,
-    topicSignals: 39,
+    topics: 7,
+    topicSignals: 40,
     media: 16,
   },
   seeded: true,
 } as const;
 
 describe("visual fixture command boundary", () => {
+  it("runs every fixture CLI with the React Server condition", async () => {
+    const packageJson = JSON.parse(
+      await readFile(new URL("../../../package.json", import.meta.url), "utf8"),
+    ) as { scripts: Record<string, string> };
+
+    for (const command of ["seed", "reset", "verify"]) {
+      expect(packageJson.scripts[`visual:fixtures:${command}`]).toMatch(
+        /^NODE_OPTIONS=--conditions=react-server /,
+      );
+    }
+  });
+
   it("refuses Production before constructing database or object-store clients", async () => {
     let runtimeFactoryCalls = 0;
 
@@ -85,6 +99,7 @@ describe("visual fixture command boundary", () => {
         mediaSentinelSurvived: true,
         mediaReachable: 16,
         journalDirectoryCases: 11,
+        knowledgeEvidenceCases: 10,
       },
     });
     const output = JSON.stringify(summary);
@@ -103,6 +118,7 @@ describe("visual fixture command boundary", () => {
       verification: {
         mediaSentinelSurvived: true,
         journalDirectoryCases: 11,
+        knowledgeEvidenceCases: 10,
       },
     });
     expect(output).not.toMatch(

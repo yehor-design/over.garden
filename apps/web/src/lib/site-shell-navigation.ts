@@ -106,7 +106,14 @@ export function getSiteShellNavigation(
       "public",
       {
         match: "prefix",
-        paths: ["/knowledge", "/guides", "/answers", "/blog", "/markets"],
+        paths: [
+          "/knowledge",
+          "/guides",
+          "/answers",
+          "/topics",
+          "/blog",
+          "/markets",
+        ],
       },
     ),
   ];
@@ -283,6 +290,7 @@ export function getSiteShellRouteContext(
     normalizedPath.startsWith("/knowledge") ||
     normalizedPath.startsWith("/guides/") ||
     normalizedPath.startsWith("/answers/") ||
+    normalizedPath.startsWith("/topics/") ||
     normalizedPath.startsWith("/blog") ||
     normalizedPath.startsWith("/markets/")
   ) {

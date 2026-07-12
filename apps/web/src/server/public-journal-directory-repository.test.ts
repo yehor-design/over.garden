@@ -319,7 +319,9 @@ describe("public journal directory serialization", () => {
         displayName: "Черрі біля стінки",
         kind: "plant",
         identityLabel: "Помідор чері",
+        catalogSlug: "pomidor-cheri",
         catalogPath: "/variety/pomidor-cheri",
+        publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000201",
       },
       author: {
         displayName: "Олена",
@@ -411,6 +413,7 @@ function row(
     entryDate: "2026-07-10",
     publishedAt: "2026-07-10T12:00:00.000Z",
     publicSlug: "after-cold-night",
+    objectId: "00000000-0000-4000-8000-000000000201",
     objectDisplayName: "Тестовий живий об'єкт",
     objectKind: "animal",
     varietyText: null,

@@ -69,6 +69,18 @@ export type VisualFixtureScenarioKind =
   | "public-journal-directory-loading"
   | "public-journal-directory-error"
   | "public-journal-directory-exhausted"
+  | "public-knowledge-hub-default"
+  | "public-knowledge-hub-filtered"
+  | "public-knowledge-hub-zero-results"
+  | "public-knowledge-hub-loading"
+  | "public-knowledge-hub-error"
+  | "public-knowledge-guide-dense"
+  | "public-knowledge-guide-empty"
+  | "public-knowledge-answer-long"
+  | "public-knowledge-answer-unavailable"
+  | "public-knowledge-topic-zero"
+  | "public-knowledge-topic-one"
+  | "public-knowledge-topic-dense"
   | "public-journal-active"
   | "public-journal-gone"
   | "public-journal-missing"
@@ -240,6 +252,78 @@ export interface VisualFixtureJournalDirectoryEvidence {
   queries: readonly VisualFixtureJournalDirectoryQueryEvidence[];
 }
 
+export interface VisualFixtureKnowledgeEvidenceRule {
+  topicSlugs: readonly string[];
+  catalogSlugs: readonly string[];
+  expectedCount: number;
+  expectedEntryIds: readonly string[];
+  expectedObjectIds: readonly string[];
+}
+
+export interface VisualFixtureKnowledgeEditorial {
+  author: "OverGarden visual fixture";
+  source: "Synthetic OVE-177 visual fixture. Not expert guidance.";
+  updatedDate: string;
+  synthetic: true;
+}
+
+export interface VisualFixtureKnowledgeGuideTranslation {
+  title: string;
+  description: string;
+  outcome: string;
+  steps: readonly { title: string; body: string }[];
+}
+
+export interface VisualFixtureKnowledgeAnswerTranslation {
+  question: string;
+  title: string;
+  description: string;
+  conciseAnswer: string;
+  proofDetails: readonly string[];
+  faqs: readonly { question: string; answer: string }[];
+}
+
+interface VisualFixtureKnowledgeContentBase {
+  slug: string;
+  path: string;
+  objectKinds: readonly VisualFixtureObjectKind[];
+  editorial: VisualFixtureKnowledgeEditorial;
+  evidence: VisualFixtureKnowledgeEvidenceRule;
+  mediaId: string | null;
+}
+
+export interface VisualFixtureKnowledgeGuide extends VisualFixtureKnowledgeContentBase {
+  kind: "guide";
+  task: string;
+  translations: Record<
+    VisualFixtureLocale,
+    VisualFixtureKnowledgeGuideTranslation
+  >;
+}
+
+export interface VisualFixtureKnowledgeAnswer extends VisualFixtureKnowledgeContentBase {
+  kind: "answer";
+  task: string;
+  translations: Record<
+    VisualFixtureLocale,
+    VisualFixtureKnowledgeAnswerTranslation
+  >;
+}
+
+export interface VisualFixtureKnowledgeTopicEvidence {
+  slug: string;
+  state: "zero" | "one" | "typical" | "dense";
+  objectKinds: readonly VisualFixtureObjectKind[];
+  expectedEntryIds: readonly string[];
+  expectedObjectIds: readonly string[];
+}
+
+export interface VisualFixtureKnowledgeEvidence {
+  guides: readonly VisualFixtureKnowledgeGuide[];
+  answers: readonly VisualFixtureKnowledgeAnswer[];
+  topics: readonly VisualFixtureKnowledgeTopicEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -327,6 +411,7 @@ export interface VisualFixtureManifest {
   topicSignals: readonly VisualFixtureTopicSignal[];
   feedEvidence: VisualFixtureFeedEvidence;
   journalDirectoryEvidence: VisualFixtureJournalDirectoryEvidence;
+  knowledgeEvidence: VisualFixtureKnowledgeEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1184,6 +1269,13 @@ const topics: readonly VisualFixtureTopic[] = [
     trustState: "curated",
     createdAt: timestampForIndex(406),
   },
+  {
+    id: fixtureUuid(6, 7),
+    slug: "single-observation",
+    label: "Одне датоване спостереження",
+    trustState: "curated",
+    createdAt: timestampForIndex(407),
+  },
 ];
 
 const publicFeedEligibleEntries = entries.filter(
@@ -1218,6 +1310,10 @@ const typicalTopicEntries = [
   publicFeedEntriesByKind.bee_colony?.[0],
   publicFeedEntriesByKind.plant?.[1],
 ].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
+const singleObservationEntry = publicFeedEntriesByKind.plant?.[4];
+if (!singleObservationEntry) {
+  throw new Error("Visual fixture single-observation evidence is incomplete.");
+}
 const sortedPublicDirectoryEntries = [...publicFeedEligibleEntries].sort(
   compareFeedEntries,
 );
@@ -1240,6 +1336,7 @@ const topicSignals: readonly VisualFixtureTopicSignal[] = [
   ...directoryPlusOneEntries.map((entry, index) =>
     createTopicSignal(entry, topics[5], 460 + index),
   ),
+  createTopicSignal(singleObservationEntry, topics[6], 470),
 ];
 const sortedDenseTopicEntries = [...denseTopicEntries].sort(compareFeedEntries);
 const pageTwoAnchor = sortedDenseTopicEntries[7];
@@ -1278,6 +1375,7 @@ const feedEvidence: VisualFixtureFeedEvidence = {
 };
 
 const journalDirectoryEvidence = buildJournalDirectoryEvidence();
+const knowledgeEvidence = buildKnowledgeEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -1882,6 +1980,91 @@ const scenarios: readonly VisualFixtureScenario[] = [
     200,
   ),
   scenario(
+    "knowledge-hub-default",
+    "public-knowledge-hub-default",
+    "Knowledge hub with full synthetic corpus",
+    "/knowledge?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-hub-filtered",
+    "public-knowledge-hub-filtered",
+    "Filtered plant answers",
+    "/bg/knowledge?type=answer&kind=plant&__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-hub-zero",
+    "public-knowledge-hub-zero-results",
+    "Knowledge zero-result recovery",
+    "/ru/knowledge?q=visual-fixture-no-match&__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-hub-loading",
+    "public-knowledge-hub-loading",
+    "Knowledge loading composition",
+    "/bg/knowledge?__visualKnowledge=loading",
+    200,
+  ),
+  scenario(
+    "knowledge-hub-error",
+    "public-knowledge-hub-error",
+    "Recoverable knowledge error",
+    "/ru/knowledge?__visualKnowledge=error",
+    200,
+  ),
+  scenario(
+    "knowledge-guide-dense",
+    "public-knowledge-guide-dense",
+    "Guide with dense journal evidence",
+    "/guides/visual-seasonal-observation?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-guide-empty",
+    "public-knowledge-guide-empty",
+    "Guide with honest empty evidence",
+    "/bg/guides/visual-honest-empty-evidence?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-answer-long",
+    "public-knowledge-answer-long",
+    "Long Cyrillic answer with evidence",
+    "/ru/answers/visual-long-recovery-answer?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-answer-unavailable",
+    "public-knowledge-answer-unavailable",
+    "Unavailable synthetic answer",
+    "/answers/visual-unavailable-answer?__visualKnowledge=unavailable",
+    200,
+    "not_found",
+  ),
+  scenario(
+    "knowledge-topic-zero",
+    "public-knowledge-topic-zero",
+    "Curated topic without public evidence",
+    "/topics/quiet-evidence?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-topic-one",
+    "public-knowledge-topic-one",
+    "Curated topic with one observation",
+    "/bg/topics/single-observation?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
+    "knowledge-topic-dense",
+    "public-knowledge-topic-dense",
+    "Curated topic with dense mixed evidence",
+    "/ru/topics/care-checks?__visualKnowledge=corpus",
+    200,
+  ),
+  scenario(
     "journal-active",
     "public-journal-active",
     "Published journal with media",
@@ -1954,6 +2137,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   topicSignals,
   feedEvidence,
   journalDirectoryEvidence,
+  knowledgeEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -1981,8 +2165,8 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "catalog names", manifest.catalogNames.length, 29);
   checkCount(errors, "entries", manifest.entries.length, 80);
   checkCount(errors, "media", manifest.media.length, 16);
-  checkCount(errors, "topics", manifest.topics.length, 6);
-  checkCount(errors, "topic signals", manifest.topicSignals.length, 39);
+  checkCount(errors, "topics", manifest.topics.length, 7);
+  checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
 
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
   const spaceIds = new Set(manifest.spaces.map((space) => space.id));
@@ -2091,6 +2275,25 @@ export function validateVisualFixtureManifest(
     errors,
     "journal directory evidence ids",
     manifest.journalDirectoryEvidence.queries.map((query) => query.id),
+  );
+  const knowledgeContent = [
+    ...manifest.knowledgeEvidence.guides,
+    ...manifest.knowledgeEvidence.answers,
+  ];
+  checkUnique(
+    errors,
+    "knowledge content slugs",
+    knowledgeContent.map((content) => content.slug),
+  );
+  checkUnique(
+    errors,
+    "knowledge content paths",
+    knowledgeContent.map((content) => content.path),
+  );
+  checkUnique(
+    errors,
+    "knowledge topic states",
+    manifest.knowledgeEvidence.topics.map((topic) => topic.state),
   );
   checkUnique(
     errors,
@@ -2218,6 +2421,76 @@ export function validateVisualFixtureManifest(
       )
       .map((entry) => [entry.id, entry]),
   );
+  const catalogSlugs = new Set(
+    manifest.catalogItems.map((item) => item.publicSlug),
+  );
+  const topicSlugs = new Set(manifest.topics.map((topic) => topic.slug));
+  const mediaIds = new Set(manifest.media.map((item) => item.id));
+  for (const content of knowledgeContent) {
+    if (content.path !== `/${content.kind}s/${content.slug}`) {
+      errors.push(`Knowledge content ${content.slug} has an invalid path.`);
+    }
+    if (
+      !content.editorial.synthetic ||
+      !/synthetic.*not expert/i.test(content.editorial.source)
+    ) {
+      errors.push(`Knowledge content ${content.slug} has unsafe authorship.`);
+    }
+    if (content.mediaId !== null && !mediaIds.has(content.mediaId)) {
+      errors.push(`Knowledge content ${content.slug} has invalid media.`);
+    }
+    if (
+      content.evidence.expectedCount !==
+      content.evidence.expectedEntryIds.length
+    ) {
+      errors.push(`Knowledge content ${content.slug} has a count mismatch.`);
+    }
+    if (
+      content.evidence.topicSlugs.some((slug) => !topicSlugs.has(slug)) ||
+      content.evidence.catalogSlugs.some((slug) => !catalogSlugs.has(slug))
+    ) {
+      errors.push(`Knowledge content ${content.slug} has an unknown rule.`);
+    }
+    if (
+      content.evidence.expectedEntryIds.some(
+        (entryId) => !publicEntryById.has(entryId),
+      ) ||
+      content.evidence.expectedObjectIds.some(
+        (objectId) => !objectIds.has(objectId),
+      )
+    ) {
+      errors.push(
+        `Knowledge content ${content.slug} exposes invalid evidence.`,
+      );
+    }
+    if (
+      !(["uk", "bg", "ru"] as const).every((locale) => {
+        const translation = content.translations[locale];
+        return translation.title.trim() && translation.description.trim();
+      })
+    ) {
+      errors.push(`Knowledge content ${content.slug} lacks a translation.`);
+    }
+  }
+  for (const topic of manifest.knowledgeEvidence.topics) {
+    if (!topicSlugs.has(topic.slug)) {
+      errors.push(`Knowledge topic ${topic.slug} is not curated.`);
+    }
+    if (
+      topic.expectedEntryIds.some((entryId) => !publicEntryById.has(entryId)) ||
+      topic.expectedObjectIds.some((objectId) => !objectIds.has(objectId))
+    ) {
+      errors.push(`Knowledge topic ${topic.slug} exposes invalid evidence.`);
+    }
+    if (
+      (topic.state === "zero" && topic.expectedEntryIds.length !== 0) ||
+      (topic.state === "one" && topic.expectedEntryIds.length !== 1) ||
+      (topic.state === "dense" && topic.expectedEntryIds.length <= 8) ||
+      (topic.state === "typical" && topic.expectedEntryIds.length < 3)
+    ) {
+      errors.push(`Knowledge topic ${topic.slug} has the wrong state count.`);
+    }
+  }
   if (manifest.journalDirectoryEvidence.pageSize !== 8) {
     errors.push(
       "Journal directory evidence must use the production page size.",
@@ -2484,6 +2757,574 @@ function compareFeedEntries(
     right.publishedAt!.localeCompare(left.publishedAt!) ||
     left.id.localeCompare(right.id)
   );
+}
+
+function buildKnowledgeEvidence(): VisualFixtureKnowledgeEvidence {
+  const denseRule = knowledgeRule(["care-checks"], []);
+  const typicalRule = knowledgeRule(["seasonal-care"], []);
+  const emptyRule = knowledgeRule(["quiet-evidence"], []);
+  const recoveryRule = knowledgeRule(["stress-and-recovery"], []);
+  const oneRule = knowledgeRule(["single-observation"], []);
+  const catalogRule = knowledgeRule([], ["visual-pomidor-cheri"]);
+  const editorial: VisualFixtureKnowledgeEditorial = {
+    author: "OverGarden visual fixture",
+    source: "Synthetic OVE-177 visual fixture. Not expert guidance.",
+    updatedDate: "2026-07-10",
+    synthetic: true,
+  };
+
+  const guides: readonly VisualFixtureKnowledgeGuide[] = [
+    {
+      kind: "guide",
+      slug: "visual-seasonal-observation",
+      path: "/guides/visual-seasonal-observation",
+      task: "compare-two-dated-observations",
+      objectKinds: ["plant", "animal", "bee_colony"],
+      editorial,
+      evidence: denseRule,
+      mediaId: media[0]?.id ?? null,
+      translations: {
+        uk: {
+          title: "Як порівняти два спостереження без зайвих припущень",
+          description:
+            "Синтетичний приклад структури, у якій одна зміна перевіряється за датованим журналом і повторним спостереженням.",
+          outcome:
+            "Після проходження видно, що саме змінилося між двома датами, а що лишилося лише припущенням автора запису.",
+          steps: [
+            {
+              title: "Оберіть одну ознаку",
+              body: "Порівнюйте лише те, що можна назвати однаково в обох записах: стан листя, активність тварини, сила сім'ї або інший видимий сигнал.",
+            },
+            {
+              title: "Звірте дати і контекст",
+              body: "Перевірте інтервал між спостереженнями та зафіксовані дії. Не додавайте пояснень, яких немає в самому журналі.",
+            },
+            {
+              title: "Відокремте факт від тлумачення",
+              body: "Фотографія, вимір і повторюваний опис є спостереженнями. Причина зміни залишається версією, доки її не підтримує наступний запис.",
+            },
+            {
+              title: "Залиште перевірюваний наступний крок",
+              body: "Сформулюйте одну наступну перевірку, щоб новий запис міг підтвердити або спростувати попередню версію.",
+            },
+          ],
+        },
+        bg: {
+          title: "Как да сравните две наблюдения без излишни предположения",
+          description:
+            "Синтетичен пример за структура, в която една промяна се проверява чрез датиран дневник и повторно наблюдение.",
+          outcome:
+            "Накрая се вижда какво действително се е променило между две дати и какво остава само предположение.",
+          steps: [
+            {
+              title: "Изберете един признак",
+              body: "Сравнявайте само признак, който може да бъде назован еднакво и в двата записа: листа, активност, сила на семейство или друг видим сигнал.",
+            },
+            {
+              title: "Сверете датите и контекста",
+              body: "Проверете интервала и записаните действия, без да добавяте обяснения, които липсват в дневника.",
+            },
+            {
+              title: "Разделете факт от тълкуване",
+              body: "Снимка, измерване и повторяемо описание са наблюдения. Причината остава версия до следващото потвърждение.",
+            },
+            {
+              title: "Оставете проверима следваща стъпка",
+              body: "Формулирайте една проверка, която следващият запис може да потвърди или отхвърли.",
+            },
+          ],
+        },
+        ru: {
+          title: "Как сравнить два наблюдения без лишних предположений",
+          description:
+            "Синтетический пример структуры, где одно изменение проверяется датированным журналом и повторным наблюдением.",
+          outcome:
+            "В конце видно, что действительно изменилось между двумя датами, а что осталось лишь предположением.",
+          steps: [
+            {
+              title: "Выберите один признак",
+              body: "Сравнивайте только признак, который можно одинаково назвать в обеих записях: состояние листьев, активность, силу семьи или другой видимый сигнал.",
+            },
+            {
+              title: "Сверьте даты и контекст",
+              body: "Проверьте интервал и записанные действия, не добавляя объяснений, которых нет в журнале.",
+            },
+            {
+              title: "Отделите факт от толкования",
+              body: "Фотография, измерение и повторяемое описание являются наблюдениями. Причина остаётся версией до следующей проверки.",
+            },
+            {
+              title: "Оставьте проверяемый следующий шаг",
+              body: "Сформулируйте одну проверку, которую следующая запись сможет подтвердить или опровергнуть.",
+            },
+          ],
+        },
+      },
+    },
+    {
+      kind: "guide",
+      slug: "visual-routine-across-living-objects",
+      path: "/guides/visual-routine-across-living-objects",
+      task: "build-a-repeatable-care-check",
+      objectKinds: ["plant", "animal", "bee_colony"],
+      editorial,
+      evidence: typicalRule,
+      mediaId: null,
+      translations: {
+        uk: {
+          title: "Одна коротка перевірка для різних живих об'єктів",
+          description:
+            "Синтетичний насичений сценарій для рослин, тварин і бджолосімей без удаваної універсальної поради.",
+          outcome:
+            "Кожен об'єкт отримує власний спостережуваний сигнал, але журнал зберігає однаковий ритм повернення.",
+          steps: [
+            {
+              title: "Назвіть об'єкт",
+              body: "Почніть із конкретного живого об'єкта, а не загальної категорії.",
+            },
+            {
+              title: "Оберіть видимий сигнал",
+              body: "Запишіть лише те, що можна повторно перевірити без припущень.",
+            },
+            {
+              title: "Призначте повернення",
+              body: "Визначте наступну дату перевірки відповідно до реального ритму догляду.",
+            },
+          ],
+        },
+        bg: {
+          title: "Една кратка проверка за различни живи обекти",
+          description:
+            "Синтетичен плътен сценарий за растения, животни и пчелни семейства без привидно универсален съвет.",
+          outcome:
+            "Всеки обект има собствен наблюдаем сигнал, а дневникът запазва общ ритъм на връщане.",
+          steps: [
+            {
+              title: "Назовете обекта",
+              body: "Започнете с конкретен жив обект, не с обща категория.",
+            },
+            {
+              title: "Изберете видим сигнал",
+              body: "Запишете само това, което може да бъде проверено отново.",
+            },
+            {
+              title: "Определете връщане",
+              body: "Изберете следваща дата според реалния ритъм на грижата.",
+            },
+          ],
+        },
+        ru: {
+          title: "Одна короткая проверка для разных живых объектов",
+          description:
+            "Синтетический плотный сценарий для растений, животных и пчелиных семей без мнимого универсального совета.",
+          outcome:
+            "У каждого объекта остаётся свой наблюдаемый сигнал, а у журнала общий ритм возврата.",
+          steps: [
+            {
+              title: "Назовите объект",
+              body: "Начните с конкретного живого объекта, а не общей категории.",
+            },
+            {
+              title: "Выберите видимый сигнал",
+              body: "Запишите только то, что можно повторно проверить.",
+            },
+            {
+              title: "Назначьте возврат",
+              body: "Выберите следующую дату по реальному ритму ухода.",
+            },
+          ],
+        },
+      },
+    },
+    {
+      kind: "guide",
+      slug: "visual-honest-empty-evidence",
+      path: "/guides/visual-honest-empty-evidence",
+      task: "recognize-an-evidence-gap",
+      objectKinds: ["plant"],
+      editorial,
+      evidence: emptyRule,
+      mediaId: null,
+      translations: {
+        uk: {
+          title: "Що робити, коли пов'язаних журналів ще немає",
+          description:
+            "Синтетичний порожній стан, який не підміняє відсутній досвід вигаданими прикладами.",
+          outcome:
+            "Користувач бачить межу матеріалу та може повернутися до теми, коли з'являться реальні записи.",
+          steps: [
+            {
+              title: "Перевірте межу",
+              body: "Відсутність пов'язаних журналів означає лише відсутність публічного доказу за цим правилом.",
+            },
+            {
+              title: "Не узагальнюйте",
+              body: "Не перетворюйте один авторський орієнтир на твердження про всі об'єкти.",
+            },
+          ],
+        },
+        bg: {
+          title: "Какво да направите, когато още няма свързани дневници",
+          description:
+            "Синтетично празно състояние, което не заменя липсващия опит с измислени примери.",
+          outcome:
+            "Потребителят вижда границата на материала и може да се върне при появата на реални записи.",
+          steps: [
+            {
+              title: "Проверете границата",
+              body: "Липсата на дневници означава само липса на публично доказателство по това правило.",
+            },
+            {
+              title: "Не обобщавайте",
+              body: "Не превръщайте един авторски ориентир в твърдение за всички обекти.",
+            },
+          ],
+        },
+        ru: {
+          title: "Что делать, когда связанных журналов ещё нет",
+          description:
+            "Синтетическое пустое состояние, которое не заменяет отсутствующий опыт вымышленными примерами.",
+          outcome:
+            "Пользователь видит границу материала и может вернуться после появления реальных записей.",
+          steps: [
+            {
+              title: "Проверьте границу",
+              body: "Отсутствие журналов означает только отсутствие публичного доказательства по этому правилу.",
+            },
+            {
+              title: "Не обобщайте",
+              body: "Не превращайте один авторский ориентир в утверждение обо всех объектах.",
+            },
+          ],
+        },
+      },
+    },
+  ];
+
+  const answers: readonly VisualFixtureKnowledgeAnswer[] = [
+    {
+      kind: "answer",
+      slug: "visual-long-recovery-answer",
+      path: "/answers/visual-long-recovery-answer",
+      task: "review-a-long-recovery-sequence",
+      objectKinds: ["plant", "animal", "bee_colony"],
+      editorial,
+      evidence: recoveryRule,
+      mediaId: null,
+      translations: {
+        uk: {
+          question: "Як читати довгу історію відновлення живого об'єкта?",
+          title: "Як читати довгу історію відновлення живого об'єкта?",
+          description:
+            "Синтетична довга відповідь для перевірки ієрархії, перенесення тексту та переходу до реальних журналів.",
+          conciseAnswer:
+            "Почніть не з останнього позитивного запису, а з першої датованої зміни, після якої автор почав говорити про відновлення. Потім складіть послідовність із фактів: що було видно, яку одну дію зафіксували, коли з'явилося наступне спостереження і чи повторився результат. Не вважайте часовий збіг доведеною причиною. Якщо між записами змінювалися одразу кілька умов, журнал показує перебіг подій, але не дозволяє чесно приписати результат одній із них. Окремо перевірте, чи є невдалий або нейтральний повторний запис: саме він часто робить історію кориснішою за гладку розповідь про успіх. Наприкінці сформулюйте межу висновку одним реченням, щоб інший користувач міг порівняти власний об'єкт без копіювання чужого рішення.",
+          proofDetails: [
+            "Знайдіть перший запис із чіткою датою та спостережуваною зміною.",
+            "Випишіть кожну зафіксовану дію окремо від припущення автора.",
+            "Перевірте інтервали між записами й пропуски у спостереженнях.",
+            "Шукайте нейтральний, негативний або суперечливий повторний запис.",
+            "Порівнюйте лише об'єкти та умови, описані з достатньою ясністю.",
+          ],
+          faqs: [
+            {
+              question: "Чи останній запис є підсумком?",
+              answer:
+                "Лише якщо автор явно повернувся до попередньої зміни й описав результат, а не просто додав нову подію.",
+            },
+            {
+              question: "Чи можна повторити зафіксовану дію?",
+              answer:
+                "Журнал показує досвід конкретного об'єкта. Він не перетворює дію на універсальну рекомендацію.",
+            },
+            {
+              question: "Що робити з пропущеними датами?",
+              answer:
+                "Позначте прогалину як невідомий період і не домислюйте, що відбувалося між записами.",
+            },
+            {
+              question: "Навіщо читати кілька журналів?",
+              answer:
+                "Різні перебіги подій допомагають побачити межі схожості та не прийняти одиничний результат за правило.",
+            },
+          ],
+        },
+        bg: {
+          question: "Как да прочетете дълга история на възстановяване?",
+          title: "Как да прочетете дълга история на възстановяване?",
+          description:
+            "Синтетичен дълъг отговор за проверка на йерархията, пренасянето на текст и прехода към реални дневници.",
+          conciseAnswer:
+            "Започнете от първата датирана промяна, а не от последния положителен запис. Подредете видимите факти, записаното действие, следващото наблюдение и резултата. Времевото съвпадение не доказва причина. Ако са променени няколко условия, дневникът показва хода на събитията, но не доказва кое е довело до резултата. Потърсете и неутрален или неуспешен последващ запис, защото той показва границата на историята.",
+          proofDetails: [
+            "Намерете първия запис с ясна дата.",
+            "Отделете действията от предположенията.",
+            "Проверете интервалите и липсващите наблюдения.",
+            "Потърсете противоречив последващ запис.",
+            "Сравнявайте само ясно описани условия.",
+          ],
+          faqs: [
+            {
+              question: "Последният запис ли е извод?",
+              answer:
+                "Само ако се връща към предишната промяна и описва резултата.",
+            },
+            {
+              question: "Може ли действието да се повтори?",
+              answer:
+                "Това е опит с конкретен обект, не универсална препоръка.",
+            },
+            {
+              question: "Какво означават пропуснатите дати?",
+              answer:
+                "Те остават неизвестен период, който не трябва да се измисля.",
+            },
+            {
+              question: "Защо са нужни няколко дневника?",
+              answer:
+                "Те показват границите на сходството между отделни случаи.",
+            },
+          ],
+        },
+        ru: {
+          question: "Как читать длинную историю восстановления?",
+          title: "Как читать длинную историю восстановления?",
+          description:
+            "Синтетический длинный ответ для проверки иерархии, переноса текста и перехода к реальным журналам.",
+          conciseAnswer:
+            "Начните с первого датированного изменения, а не с последней положительной записи. Соберите последовательность видимых фактов, записанного действия, следующего наблюдения и результата. Совпадение по времени не доказывает причину. Если одновременно менялись несколько условий, журнал показывает ход событий, но не доказывает, какое из них привело к результату. Найдите нейтральную или неудачную повторную запись: она показывает границу истории и помогает не принять единичный опыт за универсальное правило.",
+          proofDetails: [
+            "Найдите первую запись с ясной датой.",
+            "Отделите действия от предположений.",
+            "Проверьте интервалы и пропуски.",
+            "Ищите противоречивую повторную запись.",
+            "Сравнивайте только ясно описанные условия.",
+          ],
+          faqs: [
+            {
+              question: "Последняя запись является итогом?",
+              answer:
+                "Только если она возвращается к прежнему изменению и описывает результат.",
+            },
+            {
+              question: "Можно повторить действие?",
+              answer:
+                "Это опыт конкретного объекта, а не универсальная рекомендация.",
+            },
+            {
+              question: "Что означают пропущенные даты?",
+              answer:
+                "Они остаются неизвестным периодом, который нельзя додумывать.",
+            },
+            {
+              question: "Зачем читать несколько журналов?",
+              answer:
+                "Они показывают границы сходства между отдельными случаями.",
+            },
+          ],
+        },
+      },
+    },
+    {
+      kind: "answer",
+      slug: "visual-single-observation-answer",
+      path: "/answers/visual-single-observation-answer",
+      task: "interpret-one-public-observation",
+      objectKinds: ["plant"],
+      editorial,
+      evidence: oneRule,
+      mediaId: null,
+      translations: {
+        uk: answerTranslation(
+          "Що можна сказати за одним датованим спостереженням?",
+          "Одне спостереження підтверджує лише стан конкретного об'єкта в конкретний момент. Воно ще не показує напрям зміни або повторюваність.",
+          "uk",
+        ),
+        bg: answerTranslation(
+          "Какво може да се каже от едно датирано наблюдение?",
+          "Едно наблюдение потвърждава само състоянието на конкретния обект в конкретен момент. То още не показва посока или повторяемост.",
+          "bg",
+        ),
+        ru: answerTranslation(
+          "Что можно сказать по одному датированному наблюдению?",
+          "Одно наблюдение подтверждает только состояние конкретного объекта в конкретный момент. Оно ещё не показывает направление или повторяемость.",
+          "ru",
+        ),
+      },
+    },
+    {
+      kind: "answer",
+      slug: "visual-catalog-comparison-answer",
+      path: "/answers/visual-catalog-comparison-answer",
+      task: "compare-records-with-shared-catalog-identity",
+      objectKinds: ["plant"],
+      editorial,
+      evidence: catalogRule,
+      mediaId: null,
+      translations: {
+        uk: answerTranslation(
+          "Навіщо порівнювати журнали зі спільною ідентичністю?",
+          "Спільна каталогова ідентичність звужує порівняння, але не робить умови вирощування однаковими. Дати й контекст кожного журналу залишаються обов'язковими.",
+          "uk",
+        ),
+        bg: answerTranslation(
+          "Защо да сравнявате дневници с обща идентичност?",
+          "Общата каталожна идентичност стеснява сравнението, но не прави условията еднакви. Датите и контекстът на всеки дневник остават задължителни.",
+          "bg",
+        ),
+        ru: answerTranslation(
+          "Зачем сравнивать журналы с общей идентичностью?",
+          "Общая каталоговая идентичность сужает сравнение, но не делает условия одинаковыми. Даты и контекст каждого журнала остаются обязательными.",
+          "ru",
+        ),
+      },
+    },
+  ];
+
+  return {
+    guides,
+    answers,
+    topics: [
+      knowledgeTopic("quiet-evidence", "zero"),
+      knowledgeTopic("single-observation", "one"),
+      knowledgeTopic("seasonal-care", "typical"),
+      knowledgeTopic("care-checks", "dense"),
+    ],
+  };
+}
+
+function knowledgeRule(
+  topicSlugs: readonly string[],
+  catalogSlugs: readonly string[],
+): VisualFixtureKnowledgeEvidenceRule {
+  const topicIds = new Set(
+    topics
+      .filter((topic) => topicSlugs.includes(topic.slug))
+      .map((topic) => topic.id),
+  );
+  const topicEntryIds = new Set(
+    topicSignals
+      .filter((signal) => topicIds.has(signal.topicId))
+      .map((signal) => signal.journalEntryId),
+  );
+  const catalogById = new Map(catalogItems.map((item) => [item.id, item]));
+  const objectById = new Map(objects.map((object) => [object.id, object]));
+  const matchedEntries = publicFeedEligibleEntries
+    .filter((entry) => {
+      if (topicEntryIds.has(entry.id)) return true;
+      const object = objectById.get(entry.objectId);
+      const catalog = object?.catalogItemId
+        ? catalogById.get(object.catalogItemId)
+        : null;
+      return Boolean(
+        catalog &&
+        (catalog.status === "seeded" || catalog.status === "confirmed") &&
+        catalogSlugs.includes(catalog.publicSlug),
+      );
+    })
+    .sort(compareFeedEntries);
+
+  return {
+    topicSlugs,
+    catalogSlugs,
+    expectedCount: matchedEntries.length,
+    expectedEntryIds: matchedEntries.map((entry) => entry.id),
+    expectedObjectIds: [
+      ...new Set(matchedEntries.map((entry) => entry.objectId)),
+    ],
+  };
+}
+
+function knowledgeTopic(
+  slug: string,
+  state: VisualFixtureKnowledgeTopicEvidence["state"],
+): VisualFixtureKnowledgeTopicEvidence {
+  const rule = knowledgeRule([slug], []);
+  const objectById = new Map(objects.map((object) => [object.id, object]));
+  return {
+    slug,
+    state,
+    objectKinds: [
+      ...new Set(
+        rule.expectedObjectIds.flatMap((objectId) => {
+          const kind = objectById.get(objectId)?.objectKind;
+          return kind ? [kind] : [];
+        }),
+      ),
+    ],
+    expectedEntryIds: rule.expectedEntryIds,
+    expectedObjectIds: rule.expectedObjectIds,
+  };
+}
+
+function answerTranslation(
+  question: string,
+  conciseAnswer: string,
+  locale: VisualFixtureLocale,
+): VisualFixtureKnowledgeAnswerTranslation {
+  const chrome = {
+    uk: {
+      description:
+        "Синтетичний тестовий матеріал для перевірки переходу до доказів без експертної претензії.",
+      details: [
+        "Перевірте дату і конкретний живий об'єкт.",
+        "Відокремте спостереження від пояснення автора.",
+        "Шукайте наступний запис перед узагальненням.",
+      ],
+      faqQuestion: "Чи цього достатньо для висновку?",
+      faqAnswer:
+        "Ні. Це межа одного синтетичного сценарію, а не готова рекомендація.",
+      contextQuestion: "Де перевірити контекст?",
+      contextAnswer:
+        "У пов'язаному публічному журналі та паспорті живого об'єкта.",
+    },
+    bg: {
+      description:
+        "Синтетичен тестов материал за проверка на прехода към доказателства без експертна претенция.",
+      details: [
+        "Проверете датата и конкретния жив обект.",
+        "Отделете наблюдението от обяснението на автора.",
+        "Потърсете следващ запис преди обобщение.",
+      ],
+      faqQuestion: "Достатъчно ли е това за извод?",
+      faqAnswer:
+        "Не. Това е граница на синтетичен сценарий, а не готова препоръка.",
+      contextQuestion: "Къде да проверите контекста?",
+      contextAnswer: "В свързания публичен дневник и паспорта на живия обект.",
+    },
+    ru: {
+      description:
+        "Синтетический тестовый материал для проверки перехода к доказательствам без экспертной претензии.",
+      details: [
+        "Проверьте дату и конкретный живой объект.",
+        "Отделите наблюдение от объяснения автора.",
+        "Найдите следующую запись до обобщения.",
+      ],
+      faqQuestion: "Этого достаточно для вывода?",
+      faqAnswer:
+        "Нет. Это граница синтетического сценария, а не готовая рекомендация.",
+      contextQuestion: "Где проверить контекст?",
+      contextAnswer: "В связанном публичном журнале и паспорте живого объекта.",
+    },
+  }[locale];
+
+  return {
+    question,
+    title: question,
+    description: chrome.description,
+    conciseAnswer,
+    proofDetails: chrome.details,
+    faqs: [
+      {
+        question: chrome.faqQuestion,
+        answer: chrome.faqAnswer,
+      },
+      {
+        question: chrome.contextQuestion,
+        answer: chrome.contextAnswer,
+      },
+    ],
+  };
 }
 
 function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence {

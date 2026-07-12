@@ -2,11 +2,16 @@ import { describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   listIndexablePublicVarietySitemapEntries: vi.fn(),
+  listPublicKnowledgeTopics: vi.fn(),
 }));
 
 vi.mock("@/server/public-variety-repository", () => ({
   listIndexablePublicVarietySitemapEntries:
     mocks.listIndexablePublicVarietySitemapEntries,
+}));
+
+vi.mock("@/server/public-topic-repository", () => ({
+  listPublicKnowledgeTopics: mocks.listPublicKnowledgeTopics,
 }));
 
 describe("/sitemap.xml", () => {
@@ -34,12 +39,35 @@ describe("/sitemap.xml", () => {
         aggregateBodyLength: 900,
       },
     ]);
+    mocks.listPublicKnowledgeTopics.mockResolvedValue([
+      {
+        slug: "care-checks",
+        label: "Регулярні спостереження",
+        entryCount: 5,
+        aggregateBodyLength: 1200,
+        latestPublishedAt: "2026-06-23T12:00:00.000Z",
+        objectKinds: ["plant", "animal", "bee_colony"],
+        indexState: { sitemapEligible: true },
+      },
+      {
+        slug: "quiet-evidence",
+        label: "Тиха тема",
+        entryCount: 0,
+        aggregateBodyLength: 0,
+        latestPublishedAt: null,
+        objectKinds: [],
+        indexState: { sitemapEligible: false },
+      },
+    ]);
 
     const { default: sitemap } = await import("./sitemap");
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
 
     expect(urls).toEqual([
+      "https://over.garden/knowledge",
+      "https://over.garden/bg/knowledge",
+      "https://over.garden/ru/knowledge",
       "https://over.garden/blog",
       "https://over.garden/bg/blog",
       "https://over.garden/ru/blog",
@@ -58,6 +86,7 @@ describe("/sitemap.xml", () => {
       "https://over.garden/variety/pomidor-cheri-0000000101",
       "https://over.garden/species/solanum-lycopersicum",
       "https://over.garden/breed/carpathian-bee",
+      "https://over.garden/topics/care-checks",
     ]);
     expect(urls).not.toContain("https://over.garden/uk");
     expect(urls).not.toContain("https://over.garden/ru/markets/ukraine");
@@ -69,12 +98,12 @@ describe("/sitemap.xml", () => {
       true,
     );
     expect(entries[0]).toMatchObject({
-      url: "https://over.garden/blog",
+      url: "https://over.garden/knowledge",
       lastModified: new Date("2026-07-03T00:00:00.000Z"),
     });
     expect(entries.at(-1)).toMatchObject({
-      url: "https://over.garden/breed/carpathian-bee",
-      lastModified: new Date("2026-06-22T12:00:00.000Z"),
+      url: "https://over.garden/topics/care-checks",
+      lastModified: new Date("2026-06-23T12:00:00.000Z"),
     });
   });
 });

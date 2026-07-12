@@ -27,8 +27,8 @@ describe("visual fixture manifest", () => {
     expect(VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.entries).toHaveLength(80);
     expect(VISUAL_FIXTURE_MANIFEST.media).toHaveLength(16);
-    expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(6);
-    expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(39);
+    expect(VISUAL_FIXTURE_MANIFEST.topics).toHaveLength(7);
+    expect(VISUAL_FIXTURE_MANIFEST.topicSignals).toHaveLength(40);
     expect(VISUAL_FIXTURE_MANIFEST.catalogItems).toHaveLength(19);
     expect(VISUAL_FIXTURE_MANIFEST.catalogNames.length).toBeGreaterThan(19);
     expect(VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize).toBe(8);
@@ -221,6 +221,76 @@ describe("visual fixture manifest", () => {
     ).toEqual(new Set(["uk", "bg", "ru", "en", "la"]));
   });
 
+  it("backs OVE-177 knowledge routes with exact synthetic evidence and edge states", () => {
+    const knowledge = VISUAL_FIXTURE_MANIFEST.knowledgeEvidence;
+    const entryIds = new Set(
+      VISUAL_FIXTURE_MANIFEST.entries.map((entry) => entry.id),
+    );
+    const objectIds = new Set(
+      VISUAL_FIXTURE_MANIFEST.objects.map((object) => object.id),
+    );
+    const mediaIds = new Set(
+      VISUAL_FIXTURE_MANIFEST.media.map((item) => item.id),
+    );
+
+    expect(knowledge.guides).toHaveLength(3);
+    expect(knowledge.answers).toHaveLength(3);
+    expect(knowledge.topics.length).toBeGreaterThanOrEqual(4);
+    expect(new Set(knowledge.topics.map((topic) => topic.state))).toEqual(
+      new Set(["zero", "one", "dense", "typical"]),
+    );
+    expect(
+      new Set(knowledge.topics.flatMap((topic) => topic.objectKinds)),
+    ).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    expect(
+      [...knowledge.guides, ...knowledge.answers].map(
+        (content) => content.evidence.expectedEntryIds.length,
+      ),
+    ).toEqual(expect.arrayContaining([0, 1, 8, 11]));
+
+    for (const content of [...knowledge.guides, ...knowledge.answers]) {
+      expect(content.path).toBe(`/${content.kind}s/${content.slug}`);
+      expect(content.editorial.synthetic).toBe(true);
+      expect(content.editorial.source).toMatch(/synthetic.*not expert/i);
+      expect(content.evidence.expectedEntryIds).toHaveLength(
+        content.evidence.expectedCount,
+      );
+      expect(
+        content.evidence.expectedEntryIds.every((id) => entryIds.has(id)),
+      ).toBe(true);
+      expect(
+        content.evidence.expectedObjectIds.every((id) => objectIds.has(id)),
+      ).toBe(true);
+      expect(Object.keys(content.translations).sort()).toEqual([
+        "bg",
+        "ru",
+        "uk",
+      ]);
+      if (content.mediaId) expect(mediaIds.has(content.mediaId)).toBe(true);
+    }
+
+    const longAnswer = knowledge.answers.find(
+      (answer) => answer.slug === "visual-long-recovery-answer",
+    );
+    expect(longAnswer?.translations.uk.conciseAnswer.length).toBeGreaterThan(
+      400,
+    );
+    expect(
+      longAnswer?.translations.uk.proofDetails.length,
+    ).toBeGreaterThanOrEqual(5);
+    expect(longAnswer?.translations.uk.faqs.length).toBeGreaterThanOrEqual(4);
+    expect(
+      [...knowledge.guides, ...knowledge.answers].some(
+        (content) => content.mediaId,
+      ),
+    ).toBe(true);
+    expect(
+      VISUAL_FIXTURE_MANIFEST.scenarios.find(
+        (scenario) => scenario.kind === "public-knowledge-answer-unavailable",
+      ),
+    ).toMatchObject({ expectedStatus: 200, expectedUiState: "not_found" });
+  });
+
   it("backs OVE-176 journal discovery with exact ordered query evidence", () => {
     const evidence = VISUAL_FIXTURE_MANIFEST.journalDirectoryEvidence;
     const byId = new Map(evidence.queries.map((query) => [query.id, query]));
@@ -364,6 +434,18 @@ describe("visual fixture manifest", () => {
         "public-journal-directory-loading",
         "public-journal-directory-error",
         "public-journal-directory-exhausted",
+        "public-knowledge-hub-default",
+        "public-knowledge-hub-filtered",
+        "public-knowledge-hub-zero-results",
+        "public-knowledge-hub-loading",
+        "public-knowledge-hub-error",
+        "public-knowledge-guide-dense",
+        "public-knowledge-guide-empty",
+        "public-knowledge-answer-long",
+        "public-knowledge-answer-unavailable",
+        "public-knowledge-topic-zero",
+        "public-knowledge-topic-one",
+        "public-knowledge-topic-dense",
       ]),
     );
     expect(

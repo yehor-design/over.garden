@@ -12,6 +12,7 @@ import type {
 import {
   publicCatalogEvidencePath,
   publicJournalEntryPath,
+  publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -77,7 +78,9 @@ export interface PublicJournalDirectoryCard {
     kind: PlantObjectKind;
     identityLabel: string | null;
     catalogKind: CatalogKind | null;
+    catalogSlug: string | null;
     catalogPath: string | null;
+    publicPath: string;
   };
   author: {
     handle: string;
@@ -322,7 +325,9 @@ export function serializePublicJournalDirectoryPage(
           row.catalogCanonicalName ?? row.varietyText,
         ),
         catalogKind: catalogPath ? catalogKind : null,
+        catalogSlug: catalogPath ? row.catalogPublicSlug : null,
         catalogPath,
+        publicPath: publicLineageObjectPath(row.objectId),
       },
       author: authorHandle
         ? {

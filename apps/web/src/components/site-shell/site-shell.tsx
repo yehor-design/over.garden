@@ -504,6 +504,7 @@ function isLanguageSwitchablePath(pathname: string) {
     "/blog",
     "/guides",
     "/answers",
+    "/topics",
     "/feed",
     "/notifications",
     "/bookmarks",
