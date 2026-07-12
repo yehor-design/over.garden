@@ -28,11 +28,21 @@ describe("auth intent contract", () => {
       },
       {
         action: "follow",
-        returnTo: "/lineage/objects/18700003-0000-4000-8000-000000000002",
+        returnTo: "/@demo_olena",
         target: {
-          kind: "object",
-          ref: "18700003-0000-4000-8000-000000000002",
+          kind: "profile",
+          ref: "demo_olena",
         },
+      },
+      {
+        action: "report",
+        returnTo: "/bg/@demo_olena",
+        target: { kind: "profile", ref: "demo_olena" },
+      },
+      {
+        action: "block",
+        returnTo: "/ru/@demo_olena",
+        target: { kind: "profile", ref: "demo_olena" },
       },
       {
         action: "claim",
@@ -131,6 +141,15 @@ describe("auth intent contract", () => {
     expect(normalizeAuthIntentResumeAction("publish")).toBe("publish");
     expect(normalizeAuthIntentResumeAction(["save", "comment"])).toBe("save");
     expect(normalizeAuthIntentResumeAction("delete-account")).toBeNull();
+    expect(
+      buildAuthIntentResumeHref(
+        normalizeAuthIntentDraft({
+          action: "block",
+          returnTo: "/bg/@demo_olena",
+          target: { kind: "profile", ref: "demo_olena" },
+        }),
+      ),
+    ).toBe("/bg/@demo_olena?authIntent=block#profile-block");
   });
 
   it.each([
@@ -170,16 +189,18 @@ describe("auth intent contract", () => {
   it("rejects incompatible target kinds and missing required targets", () => {
     expect(() =>
       normalizeAuthIntentDraft({
-        action: "follow",
-        returnTo: "/@demo_olena",
-        target: { kind: "profile", ref: "demo_olena" },
-      }),
-    ).toThrow(AuthIntentContractError);
-
-    expect(() =>
-      normalizeAuthIntentDraft({
         action: "comment",
         returnTo: "/journal/entry",
+      }),
+    ).toThrow(AuthIntentContractError);
+    expect(() =>
+      normalizeAuthIntentDraft({
+        action: "block",
+        returnTo: "/@demo_olena",
+        target: {
+          kind: "object",
+          ref: "18700003-0000-4000-8000-000000000002",
+        },
       }),
     ).toThrow(AuthIntentContractError);
   });

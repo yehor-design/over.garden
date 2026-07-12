@@ -127,6 +127,8 @@ function intentTitle(action: AuthIntentAction) {
     comment: "Sign in to comment",
     bookmark: "Sign in to bookmark",
     follow: "Sign in to follow updates",
+    report: "Sign in to report this profile",
+    block: "Sign in to block this profile",
     claim: "Sign in to review this claim",
     create_object: "Sign in to add a living object",
     create_entry: "Sign in to add an update",

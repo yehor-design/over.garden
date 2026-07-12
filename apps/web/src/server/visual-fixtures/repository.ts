@@ -11,6 +11,9 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export interface VisualFixtureCounts {
   actors: number;
   profiles: number;
+  profileFollows: number;
+  profileBlocks: number;
+  profileReports: number;
   spaces: number;
   catalogItems: number;
   catalogNames: number;
@@ -81,14 +84,23 @@ export function buildVisualFixtureSeedQueries(
   const profiles = executor
     .insertInto("user_public_profiles")
     .values(
-      manifest.actors.map((actor) => ({
-        user_id: actor.id,
-        handle: actor.handle,
-        normalized_handle: actor.handle.toLowerCase(),
-        display_name: actor.displayName,
+      manifest.profiles.map((profile) => ({
+        user_id: profile.userId,
+        handle: profile.handle,
+        normalized_handle: profile.handle.toLowerCase(),
+        display_name: profile.displayName,
         avatar_url: null,
-        created_at: actor.createdAt,
-        updated_at: actor.createdAt,
+        avatar_media_asset_id: profile.avatarMediaAssetId,
+        bio: profile.bio,
+        languages: [...profile.languages],
+        location_visibility: profile.locationVisibility,
+        coarse_region_code: profile.coarseRegionCode,
+        profile_visibility: profile.profileVisibility,
+        profile_lifecycle_state: profile.profileLifecycleState,
+        relationship_visibility: profile.relationshipVisibility,
+        removed_at: profile.removedAt,
+        created_at: profile.createdAt,
+        updated_at: profile.createdAt,
       })),
     )
     .onConflict((oc) =>
@@ -97,6 +109,74 @@ export function buildVisualFixtureSeedQueries(
         normalized_handle: sql`excluded.normalized_handle`,
         display_name: sql`excluded.display_name`,
         avatar_url: sql`excluded.avatar_url`,
+        avatar_media_asset_id: sql`excluded.avatar_media_asset_id`,
+        bio: sql`excluded.bio`,
+        languages: sql`excluded.languages`,
+        location_visibility: sql`excluded.location_visibility`,
+        coarse_region_code: sql`excluded.coarse_region_code`,
+        profile_visibility: sql`excluded.profile_visibility`,
+        profile_lifecycle_state: sql`excluded.profile_lifecycle_state`,
+        relationship_visibility: sql`excluded.relationship_visibility`,
+        removed_at: sql`excluded.removed_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const profileFollows = executor
+    .insertInto("profile_follows")
+    .values(
+      manifest.profileFollows.map((follow) => ({
+        id: follow.id,
+        follower_user_id: follow.followerUserId,
+        target_user_id: follow.targetUserId,
+        follow_state: follow.state,
+        created_at: follow.createdAt,
+        updated_at: follow.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["follower_user_id", "target_user_id"]).doUpdateSet({
+        follow_state: sql`excluded.follow_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const profileBlocks = executor
+    .insertInto("profile_blocks")
+    .values(
+      manifest.profileBlocks.map((block) => ({
+        id: block.id,
+        blocker_user_id: block.blockerUserId,
+        blocked_user_id: block.blockedUserId,
+        block_state: block.state,
+        created_at: block.createdAt,
+        updated_at: block.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["blocker_user_id", "blocked_user_id"]).doUpdateSet({
+        block_state: sql`excluded.block_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const profileReports = executor
+    .insertInto("profile_reports")
+    .values(
+      manifest.profileReports.map((report) => ({
+        id: report.id,
+        reporter_user_id: report.reporterUserId,
+        target_user_id: report.targetUserId,
+        report_reason: report.reason,
+        report_state: report.state,
+        created_at: report.createdAt,
+        updated_at: report.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["reporter_user_id", "target_user_id"]).doUpdateSet({
+        report_reason: sql`excluded.report_reason`,
+        report_state: sql`excluded.report_state`,
         updated_at: sql`excluded.updated_at`,
       }),
     );
@@ -433,7 +513,6 @@ export function buildVisualFixtureSeedQueries(
     { label: "media_cleanup", query: mediaCleanup },
     { label: "object_mentions_cleanup", query: objectMentionsCleanup },
     { label: "actors", query: actors },
-    { label: "profiles", query: profiles },
     { label: "lineage_pending_identities", query: lineagePendingIdentities },
     { label: "spaces", query: spaces },
     { label: "catalog_items", query: catalogItems },
@@ -445,6 +524,10 @@ export function buildVisualFixtureSeedQueries(
     { label: "topics", query: topics },
     { label: "topic_signals", query: topicSignals },
     { label: "media", query: media },
+    { label: "profiles", query: profiles },
+    { label: "profile_follows", query: profileFollows },
+    { label: "profile_blocks", query: profileBlocks },
+    { label: "profile_reports", query: profileReports },
   ] as const;
 }
 
@@ -455,6 +538,30 @@ export function buildVisualFixtureResetQueries(
   const actorIds = manifest.actors.map(({ id }) => id);
 
   return [
+    {
+      label: "profile_reports",
+      query: executor.deleteFrom("profile_reports").where(
+        "id",
+        "in",
+        manifest.profileReports.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "profile_blocks",
+      query: executor.deleteFrom("profile_blocks").where(
+        "id",
+        "in",
+        manifest.profileBlocks.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "profile_follows",
+      query: executor.deleteFrom("profile_follows").where(
+        "id",
+        "in",
+        manifest.profileFollows.map(({ id }) => id),
+      ),
+    },
     {
       label: "media",
       query: executor.deleteFrom("media_assets").where(
@@ -545,9 +652,11 @@ export function buildVisualFixtureResetQueries(
     },
     {
       label: "profiles",
-      query: executor
-        .deleteFrom("user_public_profiles")
-        .where("user_id", "in", actorIds),
+      query: executor.deleteFrom("user_public_profiles").where(
+        "user_id",
+        "in",
+        manifest.profiles.map(({ userId }) => userId),
+      ),
     },
     {
       label: "actors",
@@ -580,7 +689,40 @@ export function buildVisualFixtureStatusQueries(
         .where(
           "user_id",
           "in",
-          manifest.actors.map(({ id }) => id),
+          manifest.profiles.map(({ userId }) => userId),
+        ),
+    },
+    {
+      label: "profileFollows",
+      query: executor
+        .selectFrom("profile_follows")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.profileFollows.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "profileBlocks",
+      query: executor
+        .selectFrom("profile_blocks")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.profileBlocks.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "profileReports",
+      query: executor
+        .selectFrom("profile_reports")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.profileReports.map(({ id }) => id),
         ),
     },
     {
@@ -767,7 +909,10 @@ export function expectedVisualFixtureCounts(
 ): VisualFixtureCounts {
   return {
     actors: manifest.actors.length,
-    profiles: manifest.actors.length,
+    profiles: manifest.profiles.length,
+    profileFollows: manifest.profileFollows.length,
+    profileBlocks: manifest.profileBlocks.length,
+    profileReports: manifest.profileReports.length,
     spaces: manifest.spaces.length,
     catalogItems: manifest.catalogItems.length,
     catalogNames: manifest.catalogNames.length,

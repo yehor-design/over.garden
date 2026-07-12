@@ -77,7 +77,7 @@ export function SiteShellContextRailModules({
           {module.items.length > 0 ? (
             <ul className="flex flex-col border-t border-border">
               {module.items.map((item) => (
-                <li key={`${module.key}:${item.href}`}>
+                <li key={`${module.key}:${item.href}:${item.label}`}>
                   <Link
                     href={item.href}
                     className="flex min-h-10 items-center justify-between gap-3 border-b border-border py-2 text-sm font-medium text-foreground transition-colors hover:text-primary"

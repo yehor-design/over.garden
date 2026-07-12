@@ -52,7 +52,6 @@ describe("visual fixture repository query contracts", () => {
       "media_cleanup",
       "object_mentions_cleanup",
       "actors",
-      "profiles",
       "lineage_pending_identities",
       "spaces",
       "catalog_items",
@@ -64,6 +63,10 @@ describe("visual fixture repository query contracts", () => {
       "topics",
       "topic_signals",
       "media",
+      "profiles",
+      "profile_follows",
+      "profile_blocks",
+      "profile_reports",
     ]);
 
     const compiled = queries.map(({ query }) => query.compile());
@@ -73,6 +76,9 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('delete from "lineage_provenance_edge_audit_events"');
     expect(sql).toContain('insert into "user"');
     expect(sql).toContain('insert into "user_public_profiles"');
+    expect(sql).toContain('insert into "profile_follows"');
+    expect(sql).toContain('insert into "profile_blocks"');
+    expect(sql).toContain('insert into "profile_reports"');
     expect(sql).toContain('insert into "spaces"');
     expect(sql).toContain('insert into "catalog_items"');
     expect(sql).toContain('insert into "catalog_item_names"');
@@ -118,6 +124,9 @@ describe("visual fixture repository query contracts", () => {
     );
 
     expect(queries.map(({ label }) => label)).toEqual([
+      "profile_reports",
+      "profile_blocks",
+      "profile_follows",
       "media",
       "topic_signals",
       "topics",
@@ -138,6 +147,9 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).not.toMatch(/\blike\b|analytics_events|job_queue/i);
 
     const expectedIdGroups = [
+      VISUAL_FIXTURE_MANIFEST.profileReports.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.profileBlocks.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.profileFollows.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
@@ -151,7 +163,7 @@ describe("visual fixture repository query contracts", () => {
       VISUAL_FIXTURE_MANIFEST.catalogNames.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.catalogItems.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.spaces.map(({ id }) => id),
-      VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.profiles.map(({ userId }) => userId),
       VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id),
     ];
 
@@ -171,6 +183,9 @@ describe("visual fixture repository query contracts", () => {
     expect(queries.map(({ label }) => label)).toEqual([
       "actors",
       "profiles",
+      "profileFollows",
+      "profileBlocks",
+      "profileReports",
       "spaces",
       "catalogItems",
       "catalogNames",
@@ -183,7 +198,7 @@ describe("visual fixture repository query contracts", () => {
       "topicSignals",
       "media",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(13);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(16);
     expect(sql).toContain('from "catalog_items"');
     expect(sql).toContain('from "catalog_item_names"');
     expect(sql).toContain('from "user_public_profiles"');

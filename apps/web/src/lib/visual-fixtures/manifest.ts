@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v3";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v4";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -99,7 +99,14 @@ export type VisualFixtureScenarioKind =
   | "owner-object-dense"
   | "owner-object-animal"
   | "owner-object-archived"
-  | "public-profile"
+  | "public-profile-empty"
+  | "public-profile-typical"
+  | "public-profile-dense"
+  | "public-profile-long"
+  | "public-profile-private"
+  | "public-profile-removed"
+  | "public-profile-blocked"
+  | "owner-profile-preview"
   | "media-gallery";
 export type VisualFixtureStateKind =
   | "empty-space"
@@ -127,6 +134,47 @@ export interface VisualFixtureActor {
   email: string;
   locale: VisualFixtureLocale;
   role: "gardener" | "apartment_keeper" | "animal_keeper" | "beekeeper";
+  createdAt: string;
+}
+
+export interface VisualFixtureProfile {
+  userId: string;
+  handle: string;
+  displayName: string | null;
+  avatarMediaAssetId: string | null;
+  bio: string | null;
+  languages: readonly ("uk" | "bg" | "ru" | "en")[];
+  locationVisibility: "hidden" | "region";
+  coarseRegionCode: string | null;
+  profileVisibility: "public" | "private";
+  profileLifecycleState: "active" | "removed";
+  relationshipVisibility: "counts" | "hidden";
+  removedAt: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureProfileFollow {
+  id: string;
+  followerUserId: string;
+  targetUserId: string;
+  state: "active" | "removed";
+  createdAt: string;
+}
+
+export interface VisualFixtureProfileBlock {
+  id: string;
+  blockerUserId: string;
+  blockedUserId: string;
+  state: "active" | "removed";
+  createdAt: string;
+}
+
+export interface VisualFixtureProfileReport {
+  id: string;
+  reporterUserId: string;
+  targetUserId: string;
+  reason: "spam" | "harassment" | "privacy" | "impersonation" | "other";
+  state: "submitted" | "reviewed" | "dismissed" | "actioned";
   createdAt: string;
 }
 
@@ -421,6 +469,43 @@ export interface VisualFixtureJournalEntryEvidence {
   scenarios: readonly VisualFixtureJournalEntryScenarioEvidence[];
 }
 
+export type VisualFixtureProfileAccess =
+  | "guest"
+  | "authenticated-non-owner"
+  | "owner";
+export type VisualFixtureProfileContentState =
+  | "empty"
+  | "typical"
+  | "dense"
+  | "long";
+
+export interface VisualFixtureProfileScenarioEvidence {
+  id: string;
+  access: VisualFixtureProfileAccess;
+  sessionActorId: string | null;
+  profileActorId: string | null;
+  handle: string;
+  path: string;
+  expectedStatus: 200 | 404;
+  contentState: VisualFixtureProfileContentState;
+  expectedPublicObjectCount: number;
+  expectedPublicEntryCount: number;
+  expectedObjectIds: readonly string[];
+  expectedJournalEntryIds: readonly string[];
+  expectedFollowerCount: number | null;
+  expectedFollowingCount: number | null;
+  expectedAvatar: boolean;
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixtureProfileEvidence {
+  objectPreviewSize: 6;
+  objectLimit: 12;
+  journalPreviewSize: 8;
+  journalLimit: 16;
+  scenarios: readonly VisualFixtureProfileScenarioEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -498,6 +583,10 @@ export interface VisualFixtureManifest {
   version: typeof VISUAL_FIXTURE_MANIFEST_VERSION;
   namespace: typeof VISUAL_FIXTURE_NAMESPACE;
   actors: readonly VisualFixtureActor[];
+  profiles: readonly VisualFixtureProfile[];
+  profileFollows: readonly VisualFixtureProfileFollow[];
+  profileBlocks: readonly VisualFixtureProfileBlock[];
+  profileReports: readonly VisualFixtureProfileReport[];
   spaces: readonly VisualFixtureSpace[];
   catalogItems: readonly VisualFixtureCatalogItem[];
   catalogNames: readonly VisualFixtureCatalogName[];
@@ -512,6 +601,7 @@ export interface VisualFixtureManifest {
   knowledgeEvidence: VisualFixtureKnowledgeEvidence;
   passportEvidence: VisualFixturePassportEvidence;
   journalEntryEvidence: VisualFixtureJournalEntryEvidence;
+  profileEvidence: VisualFixtureProfileEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -810,6 +900,129 @@ const actors: readonly VisualFixtureActor[] = [
     role: "beekeeper",
     createdAt: CREATED_AT_BASE,
   },
+  {
+    id: fixtureUuid(1, 5),
+    handle: "demo_new_keeper",
+    displayName: "Новий доглядач",
+    email: "new-keeper@visual-fixtures.invalid",
+    locale: "uk",
+    role: "gardener",
+    createdAt: CREATED_AT_BASE,
+  },
+  {
+    id: fixtureUuid(1, 6),
+    handle: "demo_private",
+    displayName: "Приватний тестовий профіль",
+    email: "private-profile@visual-fixtures.invalid",
+    locale: "uk",
+    role: "apartment_keeper",
+    createdAt: CREATED_AT_BASE,
+  },
+  {
+    id: fixtureUuid(1, 7),
+    handle: "demo_removed",
+    displayName: "Видалений тестовий профіль",
+    email: "removed-profile@visual-fixtures.invalid",
+    locale: "bg",
+    role: "animal_keeper",
+    createdAt: CREATED_AT_BASE,
+  },
+  {
+    id: fixtureUuid(1, 8),
+    handle: "visual_profile_with_long_namex",
+    displayName: "Профіль із максимально довгими полями",
+    email: "long-profile@visual-fixtures.invalid",
+    locale: "ru",
+    role: "beekeeper",
+    createdAt: CREATED_AT_BASE,
+  },
+];
+
+const profiles: readonly VisualFixtureProfile[] = [
+  createProfile(actors[0], {
+    avatarMediaAssetId: fixtureUuid(5, 1),
+    bio: "Веду датований журнал теплиці, сезонних грядок і домашнього насіння. Публікую не лише успіхи, а й помилки, щоб наступний сезон спирався на перевірені спостереження.",
+    languages: ["uk", "en"],
+    locationVisibility: "region",
+    coarseRegionCode: "UA-30",
+  }),
+  createProfile(actors[1], {
+    avatarMediaAssetId: fixtureUuid(5, 6),
+    bio: "Градски растения, малък балкон и наблюдения без идеализирани резултати.",
+    languages: ["bg", "en"],
+  }),
+  createProfile(actors[2], {
+    avatarMediaAssetId: fixtureUuid(5, 3),
+    bio: "Щоденник відновлення, годівлі та спокійних змін у поведінці тварин.",
+    languages: ["uk"],
+  }),
+  createProfile(actors[3], {
+    avatarMediaAssetId: fixtureUuid(5, 4),
+    bio: "Наблюдения за семьями, рамками и сезонными изменениями без раскрытия точного места пасеки.",
+    languages: ["ru", "bg"],
+    locationVisibility: "region",
+    coarseRegionCode: "BG-23",
+  }),
+  createProfile(actors[4], {
+    displayName: null,
+    relationshipVisibility: "hidden",
+  }),
+  createProfile(actors[5], {
+    bio: "Цей synthetic профіль доводить однаковий 404 без пояснення причини.",
+    profileVisibility: "private",
+  }),
+  createProfile(actors[6], {
+    bio: "Цей synthetic профіль не повинен рендеритися після lifecycle removal.",
+    profileLifecycleState: "removed",
+    removedAt: timestampForIndex(707),
+  }),
+  createProfile(actors[7], {
+    displayName:
+      "Дуже довге ім’я тестового доглядача для перевірки перенесення в усіх контейнерах".slice(
+        0,
+        80,
+      ),
+    bio: "Довгий синтетичний опис перевіряє перенесення рядків, висоту профілю, mobile layout і відсутність перекриття сусідніх блоків. "
+      .repeat(8)
+      .slice(0, 600),
+    languages: ["uk", "bg", "ru", "en"],
+    locationVisibility: "region",
+    coarseRegionCode: "UA-32",
+    relationshipVisibility: "hidden",
+  }),
+];
+
+const profileFollows: readonly VisualFixtureProfileFollow[] = [
+  createProfileFollow(1, actors[1], actors[0], "active"),
+  createProfileFollow(2, actors[2], actors[0], "active"),
+  createProfileFollow(3, actors[3], actors[0], "active"),
+  createProfileFollow(4, actors[4], actors[0], "active"),
+  createProfileFollow(5, actors[5], actors[0], "active"),
+  createProfileFollow(6, actors[0], actors[1], "active"),
+  createProfileFollow(7, actors[0], actors[2], "active"),
+  createProfileFollow(8, actors[0], actors[5], "active"),
+  createProfileFollow(9, actors[0], actors[3], "removed"),
+];
+
+const profileBlocks: readonly VisualFixtureProfileBlock[] = [
+  {
+    id: fixtureUuid(11, 1),
+    blockerUserId: actors[1].id,
+    blockedUserId: actors[0].id,
+    state: "active",
+    createdAt: timestampForIndex(711),
+  },
+];
+
+const profileReports: readonly VisualFixtureProfileReport[] = [
+  {
+    id: fixtureUuid(12, 1),
+    reporterUserId: actors[2].id,
+    targetUserId: actors[0].id,
+    reason: "privacy",
+    state: "submitted",
+    createdAt: timestampForIndex(712),
+  },
 ];
 
 const spaces: readonly VisualFixtureSpace[] = [
@@ -1034,7 +1247,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Їжак, що приходить до води",
     objectKind: "animal",
-    spaceIndex: 4,
+    spaceIndex: 2,
     varietyState: "unknown",
   },
   {
@@ -1062,7 +1275,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   {
     displayName: "Нуклеус с молодой маткой",
     objectKind: "bee_colony",
-    spaceIndex: 5,
+    spaceIndex: 2,
     varietyText: "Матка 2026",
     varietyState: "user_added",
   },
@@ -1498,6 +1711,7 @@ const journalDirectoryEvidence = buildJournalDirectoryEvidence();
 const knowledgeEvidence = buildKnowledgeEvidence();
 const passportEvidence = buildPassportEvidence();
 const journalEntryEvidence = buildJournalEntryEvidence();
+const profileEvidence = buildProfileEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -1852,6 +2066,22 @@ const intentEvidence: VisualFixtureIntentEvidence = {
       ),
       draftKind: "follow_up_entry",
     },
+    intentScenario(
+      20,
+      "report",
+      "Report profile · guest start",
+      "guest",
+      `/@${actors[0].handle}`,
+      { kind: "profile", ref: actors[0].handle },
+    ),
+    intentScenario(
+      21,
+      "block",
+      "Block profile · guest start",
+      "guest",
+      `/@${actors[0].handle}`,
+      { kind: "profile", ref: actors[0].handle },
+    ),
   ],
 };
 
@@ -2313,10 +2543,59 @@ const scenarios: readonly VisualFixtureScenario[] = [
     200,
   ),
   scenario(
-    "profile",
-    "public-profile",
-    "Public fixture profile",
-    `/@${actors[0].handle}`,
+    "profile-empty",
+    "public-profile-empty",
+    "Empty new keeper profile",
+    profileEvidenceCase("empty-guest").path,
+    200,
+  ),
+  scenario(
+    "profile-typical",
+    "public-profile-typical",
+    "Typical apartment keeper profile",
+    profileEvidenceCase("apartment-typical").path,
+    200,
+  ),
+  scenario(
+    "profile-dense",
+    "public-profile-dense",
+    "Dense established gardener profile",
+    profileEvidenceCase("gardener-dense").path,
+    200,
+  ),
+  scenario(
+    "profile-long",
+    "public-profile-long",
+    "Maximum-length profile fields",
+    profileEvidenceCase("long-fields").path,
+    200,
+  ),
+  scenario(
+    "profile-private",
+    "public-profile-private",
+    "Private profile generic not found",
+    profileEvidenceCase("private-unavailable").path,
+    404,
+  ),
+  scenario(
+    "profile-removed",
+    "public-profile-removed",
+    "Removed profile generic not found",
+    profileEvidenceCase("removed-unavailable").path,
+    404,
+  ),
+  scenario(
+    "profile-blocked",
+    "public-profile-blocked",
+    "Blocked profile generic not found",
+    profileEvidenceCase("blocked-unavailable").path,
+    404,
+  ),
+  scenario(
+    "owner-profile-preview",
+    "owner-profile-preview",
+    "Owner profile editor and exact preview",
+    profileEvidenceCase("empty-owner").path,
     200,
   ),
   scenario(
@@ -2332,6 +2611,10 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   version: VISUAL_FIXTURE_MANIFEST_VERSION,
   namespace: VISUAL_FIXTURE_NAMESPACE,
   actors,
+  profiles,
+  profileFollows,
+  profileBlocks,
+  profileReports,
   spaces,
   catalogItems,
   catalogNames,
@@ -2346,6 +2629,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   knowledgeEvidence,
   passportEvidence,
   journalEntryEvidence,
+  profileEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -2366,7 +2650,11 @@ export function validateVisualFixtureManifest(
   manifest: VisualFixtureManifest,
 ): string[] {
   const errors: string[] = [];
-  checkCount(errors, "actors", manifest.actors.length, 4);
+  checkCount(errors, "actors", manifest.actors.length, 8);
+  checkCount(errors, "profiles", manifest.profiles.length, 8);
+  checkCount(errors, "profile follows", manifest.profileFollows.length, 9);
+  checkCount(errors, "profile blocks", manifest.profileBlocks.length, 1);
+  checkCount(errors, "profile reports", manifest.profileReports.length, 1);
   checkCount(errors, "spaces", manifest.spaces.length, 5);
   checkCount(errors, "objects", manifest.objects.length, 30);
   checkCount(errors, "catalog items", manifest.catalogItems.length, 19);
@@ -2378,10 +2666,14 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
 
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
+  const profileUserIds = new Set(
+    manifest.profiles.map((profile) => profile.userId),
+  );
   const spaceIds = new Set(manifest.spaces.map((space) => space.id));
   const objectIds = new Set(manifest.objects.map((object) => object.id));
   const catalogItemIds = new Set(manifest.catalogItems.map((item) => item.id));
   const entryIds = new Set(manifest.entries.map((entry) => entry.id));
+  const mediaIds = new Set(manifest.media.map((item) => item.id));
   const topicIds = new Set(manifest.topics.map((topic) => topic.id));
   const pendingIdentityIds = new Set(
     manifest.lineageEvidence.pendingIdentities.map((identity) => identity.id),
@@ -2395,6 +2687,52 @@ export function validateVisualFixtureManifest(
     errors,
     "actor handles",
     manifest.actors.map((actor) => actor.handle),
+  );
+  checkUnique(
+    errors,
+    "profile user ids",
+    manifest.profiles.map((profile) => profile.userId),
+  );
+  checkUnique(
+    errors,
+    "profile handles",
+    manifest.profiles.map((profile) => profile.handle),
+  );
+  checkUnique(
+    errors,
+    "profile follow ids",
+    manifest.profileFollows.map((follow) => follow.id),
+  );
+  checkUnique(
+    errors,
+    "profile follow pairs",
+    manifest.profileFollows.map(
+      (follow) => `${follow.followerUserId}:${follow.targetUserId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "profile block ids",
+    manifest.profileBlocks.map((block) => block.id),
+  );
+  checkUnique(
+    errors,
+    "profile block pairs",
+    manifest.profileBlocks.map(
+      (block) => `${block.blockerUserId}:${block.blockedUserId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "profile report ids",
+    manifest.profileReports.map((report) => report.id),
+  );
+  checkUnique(
+    errors,
+    "profile report pairs",
+    manifest.profileReports.map(
+      (report) => `${report.reporterUserId}:${report.targetUserId}`,
+    ),
   );
   checkUnique(
     errors,
@@ -2526,10 +2864,120 @@ export function validateVisualFixtureManifest(
     "lineage edge ids",
     manifest.lineageEvidence.edges.map((edge) => edge.id),
   );
+  checkUnique(
+    errors,
+    "profile evidence ids",
+    manifest.profileEvidence.scenarios.map((scenario) => scenario.id),
+  );
 
   for (const actor of manifest.actors) {
     if (!actor.email.endsWith("@visual-fixtures.invalid")) {
       errors.push(`Actor ${actor.id} does not use the reserved email domain.`);
+    }
+  }
+  for (const profile of manifest.profiles) {
+    if (!actorIds.has(profile.userId)) {
+      errors.push(`Profile ${profile.handle} references an unknown actor.`);
+    }
+    if (
+      profile.handle.length < 3 ||
+      profile.handle.length > 30 ||
+      !/^[a-z0-9][a-z0-9_]{2,29}$/.test(profile.handle)
+    ) {
+      errors.push(`Profile ${profile.handle} has an invalid handle.`);
+    }
+    if (
+      (profile.displayName?.length ?? 0) > 80 ||
+      (profile.bio?.length ?? 0) > 600
+    ) {
+      errors.push(`Profile ${profile.handle} exceeds a public copy limit.`);
+    }
+    if (
+      (profile.locationVisibility === "hidden" &&
+        profile.coarseRegionCode !== null) ||
+      (profile.locationVisibility === "region" &&
+        profile.coarseRegionCode === null)
+    ) {
+      errors.push(`Profile ${profile.handle} has an invalid region contract.`);
+    }
+    if (
+      (profile.profileLifecycleState === "active" && profile.removedAt) ||
+      (profile.profileLifecycleState === "removed" && !profile.removedAt)
+    ) {
+      errors.push(
+        `Profile ${profile.handle} has an invalid lifecycle contract.`,
+      );
+    }
+    if (profile.avatarMediaAssetId) {
+      const avatar = manifest.media.find(
+        (item) => item.id === profile.avatarMediaAssetId,
+      );
+      if (!avatar || avatar.ownerUserId !== profile.userId) {
+        errors.push(
+          `Profile ${profile.handle} has an invalid avatar derivative.`,
+        );
+      }
+    }
+  }
+  for (const follow of manifest.profileFollows) {
+    if (
+      !profileUserIds.has(follow.followerUserId) ||
+      !profileUserIds.has(follow.targetUserId) ||
+      follow.followerUserId === follow.targetUserId
+    ) {
+      errors.push(`Profile follow ${follow.id} has invalid actors.`);
+    }
+  }
+  for (const block of manifest.profileBlocks) {
+    if (
+      !profileUserIds.has(block.blockerUserId) ||
+      !profileUserIds.has(block.blockedUserId) ||
+      block.blockerUserId === block.blockedUserId
+    ) {
+      errors.push(`Profile block ${block.id} has invalid actors.`);
+    }
+  }
+  for (const report of manifest.profileReports) {
+    if (
+      !profileUserIds.has(report.reporterUserId) ||
+      !profileUserIds.has(report.targetUserId) ||
+      report.reporterUserId === report.targetUserId
+    ) {
+      errors.push(`Profile report ${report.id} has invalid actors.`);
+    }
+  }
+  for (const scenario of manifest.profileEvidence.scenarios) {
+    if (
+      scenario.profileActorId &&
+      !profileUserIds.has(scenario.profileActorId)
+    ) {
+      errors.push(
+        `Profile evidence ${scenario.id} has an invalid profile actor.`,
+      );
+    }
+    if (scenario.sessionActorId && !actorIds.has(scenario.sessionActorId)) {
+      errors.push(
+        `Profile evidence ${scenario.id} has an invalid session actor.`,
+      );
+    }
+    if (
+      scenario.expectedObjectIds.some((id) => !objectIds.has(id)) ||
+      scenario.expectedJournalEntryIds.some((id) => !entryIds.has(id))
+    ) {
+      errors.push(
+        `Profile evidence ${scenario.id} references unknown evidence.`,
+      );
+    }
+    if (
+      scenario.expectedAvatar &&
+      !manifest.profiles.some(
+        (profile) =>
+          profile.userId === scenario.profileActorId &&
+          profile.avatarMediaAssetId &&
+          mediaIds.has(profile.avatarMediaAssetId),
+      )
+    ) {
+      errors.push(`Profile evidence ${scenario.id} expects an invalid avatar.`);
     }
   }
   for (const space of manifest.spaces) {
@@ -2662,7 +3110,6 @@ export function validateVisualFixtureManifest(
     manifest.catalogItems.map((item) => item.publicSlug),
   );
   const topicSlugs = new Set(manifest.topics.map((topic) => topic.slug));
-  const mediaIds = new Set(manifest.media.map((item) => item.id));
   for (const content of knowledgeContent) {
     if (content.path !== `/${content.kind}s/${content.slug}`) {
       errors.push(`Knowledge content ${content.slug} has an invalid path.`);
@@ -3078,6 +3525,237 @@ function compareFeedEntries(
     right.publishedAt!.localeCompare(left.publishedAt!) ||
     left.id.localeCompare(right.id)
   );
+}
+
+function buildProfileEvidence(): VisualFixtureProfileEvidence {
+  const profileByActorId = new Map(
+    profiles.map((profile) => [profile.userId, profile]),
+  );
+  const activePublicProfileIds = new Set(
+    profiles
+      .filter(
+        (profile) =>
+          profile.profileVisibility === "public" &&
+          profile.profileLifecycleState === "active" &&
+          profile.removedAt === null,
+      )
+      .map((profile) => profile.userId),
+  );
+  const activeBlockPairs = new Set(
+    profileBlocks
+      .filter((block) => block.state === "active")
+      .flatMap((block) => [
+        `${block.blockerUserId}:${block.blockedUserId}`,
+        `${block.blockedUserId}:${block.blockerUserId}`,
+      ]),
+  );
+
+  const relationshipCounts = (actorId: string) => ({
+    followers: profileFollows.filter(
+      (follow) =>
+        follow.targetUserId === actorId &&
+        follow.state === "active" &&
+        activePublicProfileIds.has(follow.followerUserId) &&
+        !activeBlockPairs.has(`${actorId}:${follow.followerUserId}`),
+    ).length,
+    following: profileFollows.filter(
+      (follow) =>
+        follow.followerUserId === actorId &&
+        follow.state === "active" &&
+        activePublicProfileIds.has(follow.targetUserId) &&
+        !activeBlockPairs.has(`${actorId}:${follow.targetUserId}`),
+    ).length,
+  });
+
+  const publicProjection = (actorId: string) => {
+    const actorEntries = entries
+      .filter(
+        (entry) =>
+          entry.ownerUserId === actorId &&
+          entry.visibility === "public" &&
+          entry.lifecycleState === "active" &&
+          entry.publicGoneAt === null &&
+          entry.publicSlug !== null &&
+          entry.publishedAt !== null,
+      )
+      .sort(compareFeedEntries);
+    const objectEntries = Object.groupBy(
+      actorEntries.filter(
+        (entry) => entry.entryScope === "object" && entry.objectId,
+      ),
+      (entry) => entry.objectId!,
+    );
+    const publicObjects = objects
+      .filter(
+        (object) =>
+          object.ownerUserId === actorId &&
+          (objectEntries[object.id]?.length ?? 0) > 0,
+      )
+      .sort((left, right) => {
+        const leftLatest = objectEntries[left.id]!.map(
+          (entry) => entry.entryDate,
+        )
+          .sort()
+          .at(-1)!;
+        const rightLatest = objectEntries[right.id]!.map(
+          (entry) => entry.entryDate,
+        )
+          .sort()
+          .at(-1)!;
+        return (
+          rightLatest.localeCompare(leftLatest) ||
+          right.createdAt.localeCompare(left.createdAt) ||
+          left.id.localeCompare(right.id)
+        );
+      });
+
+    return {
+      expectedPublicObjectCount: publicObjects.length,
+      expectedPublicEntryCount: actorEntries.length,
+      expectedObjectIds: publicObjects.slice(0, 12).map((object) => object.id),
+      expectedJournalEntryIds: actorEntries
+        .slice(0, 16)
+        .map((entry) => entry.id),
+    };
+  };
+
+  const scenarioFor = ({
+    id,
+    profileActor,
+    access,
+    sessionActor = null,
+    contentState,
+    expectedStatus = 200,
+    path,
+  }: {
+    id: string;
+    profileActor: VisualFixtureActor;
+    access: VisualFixtureProfileAccess;
+    sessionActor?: VisualFixtureActor | null;
+    contentState: VisualFixtureProfileContentState;
+    expectedStatus?: 200 | 404;
+    path?: string;
+  }): VisualFixtureProfileScenarioEvidence => {
+    const profile = profileByActorId.get(profileActor.id);
+    if (!profile)
+      throw new Error(`Fixture profile ${profileActor.id} is missing.`);
+    const availableProjection = expectedStatus === 200;
+    const projection = availableProjection
+      ? publicProjection(profileActor.id)
+      : {
+          expectedPublicObjectCount: 0,
+          expectedPublicEntryCount: 0,
+          expectedObjectIds: [],
+          expectedJournalEntryIds: [],
+        };
+    const counts = relationshipCounts(profileActor.id);
+    const relationshipsVisible =
+      availableProjection && profile.relationshipVisibility === "counts";
+    const avatar = profile.avatarMediaAssetId
+      ? media.find(
+          (item) =>
+            item.id === profile.avatarMediaAssetId &&
+            item.ownerUserId === profileActor.id,
+        )
+      : null;
+
+    return {
+      id,
+      access,
+      sessionActorId: sessionActor?.id ?? null,
+      profileActorId: profileActor.id,
+      handle: profile.handle,
+      path: path ?? localizedFixtureProfilePath(profileActor),
+      expectedStatus,
+      contentState,
+      ...projection,
+      expectedFollowerCount: relationshipsVisible ? counts.followers : null,
+      expectedFollowingCount: relationshipsVisible ? counts.following : null,
+      expectedAvatar: availableProjection && Boolean(avatar),
+      viewportTargets: ["desktop", "mobile-320"],
+    };
+  };
+
+  return {
+    objectPreviewSize: 6,
+    objectLimit: 12,
+    journalPreviewSize: 8,
+    journalLimit: 16,
+    scenarios: [
+      scenarioFor({
+        id: "gardener-dense",
+        profileActor: actors[0],
+        access: "guest",
+        contentState: "dense",
+      }),
+      scenarioFor({
+        id: "apartment-typical",
+        profileActor: actors[1],
+        access: "guest",
+        contentState: "typical",
+      }),
+      scenarioFor({
+        id: "animal-specialist",
+        profileActor: actors[2],
+        access: "authenticated-non-owner",
+        sessionActor: actors[3],
+        contentState: "typical",
+      }),
+      scenarioFor({
+        id: "beekeeper-specialist",
+        profileActor: actors[3],
+        access: "guest",
+        contentState: "typical",
+      }),
+      scenarioFor({
+        id: "empty-guest",
+        profileActor: actors[4],
+        access: "guest",
+        contentState: "empty",
+      }),
+      scenarioFor({
+        id: "empty-owner",
+        profileActor: actors[4],
+        access: "owner",
+        sessionActor: actors[4],
+        contentState: "empty",
+        path: "/garden/profile",
+      }),
+      scenarioFor({
+        id: "long-fields",
+        profileActor: actors[7],
+        access: "guest",
+        contentState: "long",
+      }),
+      scenarioFor({
+        id: "private-unavailable",
+        profileActor: actors[5],
+        access: "guest",
+        contentState: "empty",
+        expectedStatus: 404,
+      }),
+      scenarioFor({
+        id: "removed-unavailable",
+        profileActor: actors[6],
+        access: "guest",
+        contentState: "empty",
+        expectedStatus: 404,
+      }),
+      scenarioFor({
+        id: "blocked-unavailable",
+        profileActor: actors[0],
+        access: "authenticated-non-owner",
+        sessionActor: actors[1],
+        contentState: "dense",
+        expectedStatus: 404,
+      }),
+    ],
+  };
+}
+
+function localizedFixtureProfilePath(actor: VisualFixtureActor) {
+  const prefix = actor.locale === "uk" ? "" : `/${actor.locale}`;
+  return `${prefix}/@${actor.handle}`;
 }
 
 function buildJournalEntryEvidence(): VisualFixtureJournalEntryEvidence {
@@ -4262,6 +4940,16 @@ function passportEvidenceCase(id: string) {
   return evidence;
 }
 
+function profileEvidenceCase(id: string) {
+  const evidence = profileEvidence.scenarios.find(
+    (scenario) => scenario.id === id,
+  );
+  if (!evidence) {
+    throw new Error(`Visual fixture profile case ${id} is missing.`);
+  }
+  return evidence;
+}
+
 function catalogSeed(
   id: string,
   canonicalName: string,
@@ -4282,6 +4970,45 @@ function catalogSeed(
 
 function normalizeCatalogName(value: string) {
   return value.normalize("NFKC").trim().toLocaleLowerCase("en");
+}
+
+function createProfile(
+  actor: VisualFixtureActor,
+  overrides: Partial<
+    Omit<VisualFixtureProfile, "userId" | "handle" | "createdAt">
+  > = {},
+): VisualFixtureProfile {
+  return {
+    userId: actor.id,
+    handle: actor.handle,
+    displayName: actor.displayName,
+    avatarMediaAssetId: null,
+    bio: null,
+    languages: [actor.locale],
+    locationVisibility: "hidden",
+    coarseRegionCode: null,
+    profileVisibility: "public",
+    profileLifecycleState: "active",
+    relationshipVisibility: "counts",
+    removedAt: null,
+    createdAt: actor.createdAt,
+    ...overrides,
+  };
+}
+
+function createProfileFollow(
+  index: number,
+  follower: VisualFixtureActor,
+  target: VisualFixtureActor,
+  state: "active" | "removed",
+): VisualFixtureProfileFollow {
+  return {
+    id: fixtureUuid(10, index),
+    followerUserId: follower.id,
+    targetUserId: target.id,
+    state,
+    createdAt: timestampForIndex(710 + index),
+  };
 }
 
 function createSpace(
@@ -4372,7 +5099,7 @@ function coverageState(
 }
 
 function fixtureUuid(group: number, index: number) {
-  return `1870000${group}-0000-4000-8000-${String(index).padStart(12, "0")}`;
+  return `187000${String(group).padStart(2, "0")}-0000-4000-8000-${String(index).padStart(12, "0")}`;
 }
 
 function timestampForIndex(index: number) {

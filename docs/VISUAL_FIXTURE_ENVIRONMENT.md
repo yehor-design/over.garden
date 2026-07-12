@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended by OVE-179
-Manifest version: `ove187-v3`
-Manifest SHA-256: `2fda2016027549d316bbea1aad2e8d76f6ae56684973d82537b2747854d295e8`
+Status: implemented by OVE-187, extended through OVE-180
+Manifest version: `ove187-v4`
+Manifest SHA-256: `b7d7bfe14aaf40428d06a402be36a5a1a98e9c1bbe77e21630bf92a099a22a31`
 
 ## Purpose
 
@@ -13,7 +13,9 @@ must never be enabled in Production.
 
 The manifest owns exactly:
 
-- 4 synthetic users and 4 matching public profiles;
+- 8 synthetic users and 8 matching profile rows, including public, private,
+  removed, empty, and maximum-copy states;
+- 9 deterministic profile follows, 1 active block, and 1 submitted report;
 - 5 spaces;
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
 - 19 synthetic catalog identities and 29 searchable primary/alias names with
@@ -22,7 +24,7 @@ The manifest owns exactly:
   object, and space-level states, plus 2 same-owner/same-space object mentions;
 - 7 curated journal topics and 40 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 67 real-route scenarios covering public-feed, living-object-catalog,
+- 74 real-route scenarios covering public-feed, living-object-catalog,
   public-journal-directory, and knowledge-hub empty, sparse, typical, dense,
   loading, recoverable error, threshold pagination, unavailable, aliases, long
   Cyrillic copy, and deep evidence states alongside the existing object/journal
@@ -46,8 +48,15 @@ The manifest owns exactly:
   mixed galleries with alt/caption metadata; safe and hidden regions; first
   and last chronology boundaries; and private `404`, missing `404`, and gone
   `410` lifecycle states;
-- 19 intent-authentication scenarios covering Comment, Bookmark, Follow,
-  Claim, Add object, Add journal entry, Save, and Publish across guest,
+- 10 machine-checkable gardener-profile V2 cases through the production public,
+  owner-preview, and relationship loaders. They cover empty, typical, dense,
+  mixed-object, plant, animal, bee-colony, no-avatar, raster-avatar,
+  maximum-handle/display-name/bio, hidden/coarse-region, visible/hidden
+  relationship counters, guest, authenticated non-owner, owner, private,
+  removed, and blocked outcomes with exact object/journal IDs and counts;
+- 21 intent-authentication scenarios covering Comment, Bookmark, Follow,
+  Report profile, Block profile, Claim, Add object, Add journal entry, Save,
+  and Publish across guest,
   authenticated, cancel, expired, invalid, deleted, unavailable,
   insufficient-permission, preserved-filter/cursor, profile-target, and
   retained-draft states. The retained-draft starts write realistic synthetic
@@ -78,7 +87,8 @@ one-media, gallery, feed empty/typical/dense/loading/error/pagination/exhausted,
 and context-empty states. Owner-only and archived coverage is reported as safe
 aggregate metadata with no public route, title, or body serialization.
 
-The four public identities are `@demo_olena` (established gardener),
+The four content-rich public identities are `@demo_olena` (established mixed
+gardener),
 `@demo_mariya` (apartment plant keeper), `@demo_danylo` (animal keeper), and
 `@demo_nikolay` (beekeeper). They are synthetic readback identities and have no
 seeded password or social-provider credential. Do not create or document shared
@@ -123,7 +133,7 @@ memberships, topics, entries, claimable lineage edges and pending identities,
 objects, catalog names, catalog identities, spaces, profiles, and actors in
 reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v3/`. It does not use wildcard or prefix database
+`visual-fixtures/ove187-v4/`. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
 existing hidden or coarse-region privacy states.
@@ -187,6 +197,8 @@ contracts, all 10 knowledge entry/object contracts, and all 14 public/owner
 passport contracts against canonical Postgres loaders, and removes both
 sentinels. It also executes all 17 journal-entry V2 contracts against the
 production public lookup and separately scoped owner-control query. Proof is
+extended by all 10 profile contracts against public, owner-preview, and
+relationship production loaders.
 explicitly scoped to manifest IDs because reset
 deliberately preserves unrelated local rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
@@ -197,8 +209,11 @@ The expected final counts are:
 
 ```json
 {
-  "actors": 4,
-  "profiles": 4,
+  "actors": 8,
+  "profiles": 8,
+  "profileFollows": 9,
+  "profileBlocks": 1,
+  "profileReports": 1,
   "spaces": 5,
   "catalogItems": 19,
   "catalogNames": 29,

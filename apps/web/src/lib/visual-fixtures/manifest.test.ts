@@ -16,9 +16,13 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v3");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v3");
-    expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(4);
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v4");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v4");
+    expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
+    expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
+    expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
+    expect(VISUAL_FIXTURE_MANIFEST.profileBlocks).toHaveLength(1);
+    expect(VISUAL_FIXTURE_MANIFEST.profileReports).toHaveLength(1);
     expect(VISUAL_FIXTURE_MANIFEST.spaces).toHaveLength(5);
     expect(VISUAL_FIXTURE_MANIFEST.objects).toHaveLength(30);
     expect(
@@ -40,6 +44,66 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-180 profiles with exact object-first public evidence and privacy states", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.profileEvidence;
+    const byId = new Map(
+      evidence.scenarios.map((scenario) => [scenario.id, scenario]),
+    );
+    const dense = byId.get("gardener-dense");
+    const long = VISUAL_FIXTURE_MANIFEST.profiles.find(
+      (profile) => profile.handle === "visual_profile_with_long_namex",
+    );
+
+    expect(evidence.objectPreviewSize).toBe(6);
+    expect(evidence.objectLimit).toBe(12);
+    expect(evidence.journalPreviewSize).toBe(8);
+    expect(evidence.journalLimit).toBe(16);
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.contentState)),
+    ).toEqual(new Set(["empty", "typical", "dense", "long"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.access)),
+    ).toEqual(new Set(["guest", "authenticated-non-owner", "owner"]));
+    expect(
+      evidence.scenarios.filter((scenario) => scenario.expectedStatus === 404),
+    ).toHaveLength(3);
+    expect(dense?.expectedPublicObjectCount).toBeGreaterThan(6);
+    expect(dense?.expectedPublicEntryCount).toBeGreaterThan(8);
+    expect(dense?.expectedObjectIds.length).toBeLessThanOrEqual(12);
+    expect(dense?.expectedJournalEntryIds.length).toBeLessThanOrEqual(16);
+    expect(dense).toMatchObject({
+      expectedFollowerCount: 3,
+      expectedFollowingCount: 1,
+      expectedAvatar: true,
+    });
+    expect(long?.handle).toHaveLength(30);
+    expect(long?.displayName).toHaveLength(80);
+    expect(long?.bio).toHaveLength(600);
+    expect(long?.relationshipVisibility).toBe("hidden");
+    expect(
+      evidence.scenarios.find((scenario) => scenario.id === "empty-guest"),
+    ).toMatchObject({
+      expectedPublicObjectCount: 0,
+      expectedPublicEntryCount: 0,
+      expectedAvatar: false,
+    });
+
+    for (const scenario of evidence.scenarios) {
+      expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
+      expect(scenario.expectedObjectIds).toHaveLength(
+        Math.min(scenario.expectedPublicObjectCount, 12),
+      );
+      expect(scenario.expectedJournalEntryIds).toHaveLength(
+        Math.min(scenario.expectedPublicEntryCount, 16),
+      );
+    }
+
+    const serialized = JSON.stringify(evidence);
+    expect(serialized).not.toMatch(
+      /@visual-fixtures\.invalid|email|quarantine|latitude|longitude|precise/i,
+    );
   });
 
   it("backs OVE-179 with real object and multi-object journal chapter edges", () => {
@@ -95,6 +159,8 @@ describe("visual fixture manifest", () => {
         "comment",
         "bookmark",
         "follow",
+        "report",
+        "block",
         "claim",
         "create_object",
         "create_entry",
@@ -163,6 +229,18 @@ describe("visual fixture manifest", () => {
       action: "save",
       expectedStatus: 404,
       draftKind: "follow_up_entry",
+    });
+    expect(
+      scenarios.find((scenario) => scenario.id === "ove174-i020"),
+    ).toMatchObject({
+      action: "report",
+      target: { kind: "profile", ref: "demo_olena" },
+    });
+    expect(
+      scenarios.find((scenario) => scenario.id === "ove174-i021"),
+    ).toMatchObject({
+      action: "block",
+      target: { kind: "profile", ref: "demo_olena" },
     });
   });
 
@@ -457,7 +535,14 @@ describe("visual fixture manifest", () => {
         "owner-object-dense",
         "owner-object-animal",
         "owner-object-archived",
-        "public-profile",
+        "public-profile-empty",
+        "public-profile-typical",
+        "public-profile-dense",
+        "public-profile-long",
+        "public-profile-private",
+        "public-profile-removed",
+        "public-profile-blocked",
+        "owner-profile-preview",
         "media-gallery",
         "public-feed-empty",
         "public-feed-typical",
@@ -637,7 +722,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v3\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v4\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

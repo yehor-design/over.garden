@@ -103,6 +103,18 @@ export default async function VisualFixtureIndexPage() {
           <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-4 lg:grid-cols-6">
             <CountFact label="Fixture users" value={status.actual.actors} />
             <CountFact label="Public profiles" value={status.actual.profiles} />
+            <CountFact
+              label="Profile follows"
+              value={status.actual.profileFollows}
+            />
+            <CountFact
+              label="Profile blocks"
+              value={status.actual.profileBlocks}
+            />
+            <CountFact
+              label="Profile reports"
+              value={status.actual.profileReports}
+            />
             <CountFact label="Spaces" value={status.actual.spaces} />
             <CountFact
               label="Catalog identities"
@@ -186,6 +198,82 @@ export default async function VisualFixtureIndexPage() {
                 </div>
               </li>
             ))}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section
+          aria-labelledby="profile-evidence-heading"
+          className="grid gap-4"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <UsersRound className="size-4" aria-hidden="true" />
+              Public-safe identity through production profile loaders
+            </p>
+            <h2
+              id="profile-evidence-heading"
+              className="mt-1 text-xl font-semibold"
+            >
+              Gardener-profile V2 evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.profileEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.id.replaceAll("-", " ")}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.expectedStatus}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="Access"
+                        value={scenario.access.replaceAll("-", " ")}
+                      />
+                      <PassportEvidenceFact
+                        label="Content"
+                        value={scenario.contentState}
+                      />
+                      <PassportEvidenceFact
+                        label="Objects"
+                        value={`${scenario.expectedPublicObjectCount} · load ${scenario.expectedObjectIds.length}`}
+                      />
+                      <PassportEvidenceFact
+                        label="Journals"
+                        value={`${scenario.expectedPublicEntryCount} · load ${scenario.expectedJournalEntryIds.length}`}
+                      />
+                      <PassportEvidenceFact
+                        label="Avatar"
+                        value={scenario.expectedAvatar ? "raster" : "none"}
+                      />
+                      <PassportEvidenceFact
+                        label="Viewports"
+                        value="desktop + 320"
+                      />
+                    </dl>
+                    <Link
+                      href={scenario.path}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-auto w-fit",
+                      })}
+                    >
+                      Open profile
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ),
+            )}
           </ol>
         </section>
 

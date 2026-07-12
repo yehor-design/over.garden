@@ -449,6 +449,34 @@ export interface PlantObjects {
   variety_text: string | null;
 }
 
+export interface ProfileBlocks {
+  block_state: Generated<string>;
+  blocked_user_id: string;
+  blocker_user_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface ProfileFollows {
+  created_at: Generated<Timestamp>;
+  follow_state: Generated<string>;
+  follower_user_id: string;
+  id: Generated<string>;
+  target_user_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface ProfileReports {
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  report_reason: string;
+  report_state: Generated<string>;
+  reporter_user_id: string;
+  target_user_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface Session {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -481,11 +509,20 @@ export interface User {
 }
 
 export interface UserPublicProfiles {
+  avatar_media_asset_id: string | null;
   avatar_url: string | null;
+  bio: string | null;
+  coarse_region_code: string | null;
   created_at: Generated<Timestamp>;
   display_name: string | null;
   handle: string;
+  languages: Generated<string[]>;
+  location_visibility: Generated<string>;
   normalized_handle: string;
+  profile_lifecycle_state: Generated<string>;
+  profile_visibility: Generated<string>;
+  relationship_visibility: Generated<string>;
+  removed_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
   user_id: string;
 }
@@ -555,6 +592,9 @@ export interface DB {
   pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;
   plant_objects: PlantObjects;
+  profile_blocks: ProfileBlocks;
+  profile_follows: ProfileFollows;
+  profile_reports: ProfileReports;
   session: Session;
   spaces: Spaces;
   user: User;

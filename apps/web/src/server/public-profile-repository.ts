@@ -6,18 +6,26 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
+  CatalogKind,
   Database,
   NewUserPublicProfile,
+  PlantObjectKind,
   UserPublicProfile,
 } from "@/db/schema";
+import {
+  publicLineageObjectPath,
+  publicJournalEntryPath,
+  publicProfilePath,
+} from "@/lib/garden/public-paths";
+import {
+  normalizeCoarseRegionCode,
+  type CoarseRegionCode,
+} from "@/lib/garden/regions";
 import {
   DEFAULT_PUBLIC_LOCALE,
   type PublicLocale,
 } from "@/lib/public-localization";
-import {
-  publicJournalEntryPath,
-  publicProfilePath,
-} from "@/lib/garden/public-paths";
+import { getPublicDerivativeUrl } from "@/lib/storage";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -28,6 +36,18 @@ const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_]{2,29}$/;
 const DEFAULT_HANDLE_HASH_LENGTH = 10;
 const DEFAULT_HANDLE_PREFIX = "gardener";
 const MAX_PROFILE_LINKS = 5;
+export const PUBLIC_PROFILE_OBJECT_PREVIEW_SIZE = 6;
+export const PUBLIC_PROFILE_OBJECT_LIMIT = 12;
+export const PUBLIC_PROFILE_JOURNAL_PREVIEW_SIZE = 8;
+export const PUBLIC_PROFILE_JOURNAL_LIMIT = 16;
+const PUBLIC_PROFILE_MEDIA_LIMIT = 96;
+
+const PUBLIC_PROFILE_LANGUAGES = new Set<PublicProfileLanguage>([
+  "uk",
+  "bg",
+  "ru",
+  "en",
+]);
 
 const RESERVED_PUBLIC_HANDLES = new Set([
   "about",
@@ -117,6 +137,67 @@ export interface PublicProfilePage {
   links: PublicProfileLink[];
 }
 
+export type PublicProfileLanguage = "uk" | "bg" | "ru" | "en";
+
+export interface PublicProfileObjectEvidence {
+  objectId: string;
+  displayName: string;
+  objectKind: PlantObjectKind;
+  identityLabel: string | null;
+  identityState: "confirmed" | "provisional" | "unknown";
+  latestEntryDate: Date | string;
+  publicEntryCount: number;
+  publicPath: string;
+  coverImageUrl: string | null;
+  coverImageAlt: string;
+}
+
+export interface PublicProfileJournalEvidence {
+  entryId: string;
+  title: string;
+  bodyPreview: string;
+  entryDate: Date | string;
+  publishedAt: Date | string;
+  publicPath: string;
+  context: {
+    kind: "object" | "space";
+    label: string;
+    publicPath: string | null;
+    objectKind: PlantObjectKind | null;
+  };
+  coverImageUrl: string | null;
+  coverImageAlt: string;
+}
+
+export interface PublicProfileEvidencePage {
+  handle: string;
+  mention: `@${string}`;
+  displayName: string;
+  avatarUrl: string | null;
+  avatarAlt: string;
+  bio: string | null;
+  languages: PublicProfileLanguage[];
+  coarseRegionCode: CoarseRegionCode | null;
+  summary: {
+    publicEntryCount: number;
+    publicObjectCount: number;
+    objectKinds: {
+      plant: number;
+      animal: number;
+      beeColony: number;
+    };
+    confirmedLineageEdgeCount: number;
+    relationships: {
+      followers: number;
+      following: number;
+    } | null;
+  };
+  objects: PublicProfileObjectEvidence[];
+  journals: PublicProfileJournalEvidence[];
+  hasMoreObjects: boolean;
+  hasMoreJournals: boolean;
+}
+
 export interface PublicHandleMentionTarget {
   handle: string;
   mention: `@${string}`;
@@ -133,11 +214,20 @@ interface PublicProfileInternalRow {
   handle: string;
   displayName: string | null;
   avatarUrl: string | null;
+  avatarMediaAssetId: string | null;
+  bio: string | null;
+  languages: string[];
+  locationVisibility: string;
+  coarseRegionCode: string | null;
+  relationshipVisibility: string;
 }
 
 interface PublicProfileEntrySummaryRow {
   publicEntryCount: string | number | bigint;
   publicObjectCount: string | number | bigint;
+  publicPlantCount?: string | number | bigint;
+  publicAnimalCount?: string | number | bigint;
+  publicBeeColonyCount?: string | number | bigint;
 }
 
 interface PublicProfileLineageSummaryRow {
@@ -147,6 +237,49 @@ interface PublicProfileLineageSummaryRow {
 interface PublicProfileLinkRow {
   publicSlug: string | null;
   entryDate: Date | string;
+}
+
+interface PublicProfileCountRow {
+  count: string | number | bigint;
+}
+
+interface PublicProfileObjectRow {
+  objectId: string;
+  displayName: string;
+  objectKind: string;
+  catalogCanonicalName: string | null;
+  catalogKind: string | null;
+  varietyText: string | null;
+  varietyState: string;
+  latestEntryDate: Date | string;
+  publicEntryCount: string | number | bigint;
+}
+
+interface PublicProfileJournalRow {
+  entryId: string;
+  publicSlug: string | null;
+  title: string;
+  body: string;
+  entryDate: Date | string;
+  publishedAt: Date | string | null;
+  entryScope: string;
+  objectId: string | null;
+  objectDisplayName: string | null;
+  objectKind: string | null;
+  spaceDisplayName: string;
+}
+
+interface PublicProfileObjectMediaRow {
+  objectId: string;
+  entryId: string;
+  derivativeKey: string | null;
+  altText: string | null;
+}
+
+interface PublicProfileJournalMediaRow {
+  entryId: string;
+  derivativeKey: string | null;
+  altText: string | null;
 }
 
 export async function ensureUserPublicProfile(
@@ -267,6 +400,136 @@ export async function getPublicProfilePageByHandle(
   });
 }
 
+export async function getPublicProfileEvidencePageByHandle(
+  rawHandle: string,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  executor: QueryExecutor = db,
+): Promise<PublicProfileEvidencePage | null> {
+  const validation = normalizePublicHandleInput(rawHandle);
+  if (!validation.ok) return null;
+
+  const profile = await buildPublicProfileByNormalizedHandleQuery(
+    executor,
+    validation.normalizedHandle,
+  ).executeTakeFirst();
+
+  if (!profile) return null;
+
+  return loadPublicProfileEvidencePage(profile, locale, executor);
+}
+
+export async function getPublicProfileEvidencePreviewByUserId(
+  userId: string,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
+  executor: QueryExecutor = db,
+): Promise<PublicProfileEvidencePage | null> {
+  const profile = await buildPublicProfilePreviewByUserIdQuery(
+    executor,
+    userId,
+  ).executeTakeFirst();
+  if (!profile) return null;
+
+  return loadPublicProfileEvidencePage(profile, locale, executor);
+}
+
+export async function getPublicProfileLifecycleLookup(
+  rawHandle: string,
+  executor: QueryExecutor = db,
+): Promise<{ status: "active" } | { status: "not_found" }> {
+  const validation = normalizePublicHandleInput(rawHandle);
+  if (!validation.ok) return { status: "not_found" };
+
+  const row = await buildPublicProfileLifecycleQuery(
+    executor,
+    validation.normalizedHandle,
+  ).executeTakeFirst();
+  if (
+    !row ||
+    row.profileVisibility !== "public" ||
+    row.profileLifecycleState !== "active" ||
+    row.removedAt
+  ) {
+    return { status: "not_found" };
+  }
+
+  return { status: "active" };
+}
+
+async function loadPublicProfileEvidencePage(
+  profile: PublicProfileInternalRow,
+  locale: PublicLocale,
+  executor: QueryExecutor,
+) {
+  const [
+    entrySummary,
+    lineageSummary,
+    followerSummary,
+    followingSummary,
+    objects,
+    journals,
+    objectMedia,
+    avatar,
+  ] = await Promise.all([
+    buildPublicProfileEntrySummaryQuery(
+      executor,
+      profile.userId,
+    ).executeTakeFirst(),
+    buildPublicProfileLineageSummaryQuery(
+      executor,
+      profile.userId,
+    ).executeTakeFirst(),
+    buildPublicProfileFollowerCountQuery(
+      executor,
+      profile.userId,
+    ).executeTakeFirst(),
+    buildPublicProfileFollowingCountQuery(
+      executor,
+      profile.userId,
+    ).executeTakeFirst(),
+    buildPublicProfileObjectEvidenceQuery(executor, profile.userId).execute(),
+    buildPublicProfileJournalEvidenceQuery(executor, profile.userId).execute(),
+    buildPublicProfileObjectMediaEvidenceQuery(
+      executor,
+      profile.userId,
+    ).execute(),
+    profile.avatarMediaAssetId
+      ? buildPublicProfileAvatarEvidenceQuery(
+          executor,
+          profile.userId,
+          profile.avatarMediaAssetId,
+        ).executeTakeFirst()
+      : Promise.resolve(null),
+  ]);
+  const journalIds = journals.flatMap((entry) =>
+    entry.publicSlug ? [entry.entryId] : [],
+  );
+  const journalMedia =
+    journalIds.length > 0
+      ? await buildPublicProfileJournalMediaEvidenceQuery(
+          executor,
+          profile.userId,
+          journalIds,
+        ).execute()
+      : [];
+
+  return serializePublicProfileEvidencePage({
+    locale,
+    profile: {
+      ...profile,
+      avatarDerivativeKey: avatar?.derivativeKey ?? null,
+      avatarAltText: avatar?.altText ?? null,
+    },
+    entrySummary,
+    lineageSummary,
+    followerSummary,
+    followingSummary,
+    objects,
+    objectMedia,
+    journals,
+    journalMedia,
+  });
+}
+
 export async function resolvePublicHandleMentionTarget(
   rawHandle: string,
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
@@ -331,7 +594,10 @@ export function defaultPublicHandleForUserId(userId: string) {
 }
 
 export function serializePublicProfilePage(input: {
-  profile: PublicProfileInternalRow;
+  profile: Pick<
+    PublicProfileInternalRow,
+    "userId" | "handle" | "displayName" | "avatarUrl"
+  >;
   entrySummary?: PublicProfileEntrySummaryRow | null;
   lineageSummary?: PublicProfileLineageSummaryRow | null;
   links: PublicProfileLinkRow[];
@@ -359,6 +625,136 @@ export function serializePublicProfilePage(input: {
           ]
         : [],
     ),
+  };
+}
+
+export function serializePublicProfileEvidencePage(input: {
+  locale: PublicLocale;
+  profile: {
+    userId: string;
+    handle: string;
+    displayName: string | null;
+    bio: string | null;
+    languages: string[];
+    locationVisibility: string;
+    coarseRegionCode: string | null;
+    relationshipVisibility: string;
+    avatarDerivativeKey: string | null;
+    avatarAltText: string | null;
+  };
+  entrySummary?: PublicProfileEntrySummaryRow | null;
+  lineageSummary?: PublicProfileLineageSummaryRow | null;
+  followerSummary?: PublicProfileCountRow | null;
+  followingSummary?: PublicProfileCountRow | null;
+  objects: PublicProfileObjectRow[];
+  objectMedia: PublicProfileObjectMediaRow[];
+  journals: PublicProfileJournalRow[];
+  journalMedia: PublicProfileJournalMediaRow[];
+}): PublicProfileEvidencePage {
+  const displayName = input.profile.displayName ?? `@${input.profile.handle}`;
+  const objectMedia = firstObjectMediaByObject(input.objectMedia);
+  const journalMedia = firstJournalMediaByEntry(input.journalMedia);
+  const objects = input.objects
+    .slice(0, PUBLIC_PROFILE_OBJECT_LIMIT)
+    .flatMap((row) => {
+      const objectKind = normalizePlantObjectKind(row.objectKind);
+      if (!objectKind) return [];
+      const cover = objectMedia.get(row.objectId);
+      const identity = publicObjectIdentity(row);
+
+      return [
+        {
+          objectId: row.objectId,
+          displayName: row.displayName,
+          objectKind,
+          identityLabel: identity.label,
+          identityState: identity.state,
+          latestEntryDate: row.latestEntryDate,
+          publicEntryCount: numericCount(row.publicEntryCount),
+          publicPath: publicLineageObjectPath(row.objectId),
+          coverImageUrl: publicMediaUrl(cover?.derivativeKey),
+          coverImageAlt: cover?.altText?.trim() || row.displayName,
+        },
+      ];
+    });
+  const journals = input.journals
+    .slice(0, PUBLIC_PROFILE_JOURNAL_LIMIT)
+    .flatMap((row) => {
+      if (!row.publicSlug || !row.publishedAt) return [];
+      const objectKind = normalizePlantObjectKind(row.objectKind);
+      const isObject =
+        row.entryScope === "object" &&
+        row.objectId &&
+        row.objectDisplayName &&
+        objectKind;
+      const cover = journalMedia.get(row.entryId);
+
+      return [
+        {
+          entryId: row.entryId,
+          title: row.title,
+          bodyPreview: boundedBodyPreview(row.body),
+          entryDate: row.entryDate,
+          publishedAt: row.publishedAt,
+          publicPath: publicJournalEntryPath(row.publicSlug),
+          context: isObject
+            ? {
+                kind: "object" as const,
+                label: row.objectDisplayName as string,
+                publicPath: publicLineageObjectPath(row.objectId as string),
+                objectKind: objectKind as PlantObjectKind,
+              }
+            : {
+                kind: "space" as const,
+                label: row.spaceDisplayName,
+                publicPath: null,
+                objectKind: null,
+              },
+          coverImageUrl: publicMediaUrl(cover?.derivativeKey),
+          coverImageAlt:
+            cover?.altText?.trim() ||
+            (isObject ? (row.objectDisplayName as string) : row.title),
+        },
+      ];
+    });
+  const publicObjectCount = numericCount(input.entrySummary?.publicObjectCount);
+  const publicEntryCount = numericCount(input.entrySummary?.publicEntryCount);
+
+  return {
+    handle: input.profile.handle,
+    mention: `@${input.profile.handle}`,
+    displayName,
+    avatarUrl: publicMediaUrl(input.profile.avatarDerivativeKey),
+    avatarAlt: input.profile.avatarAltText?.trim() || displayName,
+    bio: input.profile.bio?.trim() || null,
+    languages: normalizeProfileLanguages(input.profile.languages),
+    coarseRegionCode:
+      input.profile.locationVisibility === "region"
+        ? normalizeCoarseRegionCode(input.profile.coarseRegionCode)
+        : null,
+    summary: {
+      publicEntryCount,
+      publicObjectCount,
+      objectKinds: {
+        plant: numericCount(input.entrySummary?.publicPlantCount),
+        animal: numericCount(input.entrySummary?.publicAnimalCount),
+        beeColony: numericCount(input.entrySummary?.publicBeeColonyCount),
+      },
+      confirmedLineageEdgeCount: numericCount(
+        input.lineageSummary?.confirmedLineageEdgeCount,
+      ),
+      relationships:
+        input.profile.relationshipVisibility === "counts"
+          ? {
+              followers: numericCount(input.followerSummary?.count),
+              following: numericCount(input.followingSummary?.count),
+            }
+          : null,
+    },
+    objects,
+    journals,
+    hasMoreObjects: publicObjectCount > objects.length,
+    hasMoreJournals: publicEntryCount > journals.length,
   };
 }
 
@@ -413,8 +809,68 @@ export function buildPublicProfileByNormalizedHandleQuery(
       "handle",
       "display_name as displayName",
       "avatar_url as avatarUrl",
+      "avatar_media_asset_id as avatarMediaAssetId",
+      "bio",
+      "languages",
+      "location_visibility as locationVisibility",
+      "coarse_region_code as coarseRegionCode",
+      "relationship_visibility as relationshipVisibility",
+    ])
+    .where("normalized_handle", "=", normalizedHandle)
+    .where("profile_visibility", "=", "public")
+    .where("profile_lifecycle_state", "=", "active")
+    .where("removed_at", "is", null);
+}
+
+export function buildPublicProfilePreviewByUserIdQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("user_public_profiles")
+    .select([
+      "user_id as userId",
+      "handle",
+      "display_name as displayName",
+      "avatar_url as avatarUrl",
+      "avatar_media_asset_id as avatarMediaAssetId",
+      "bio",
+      "languages",
+      "location_visibility as locationVisibility",
+      "coarse_region_code as coarseRegionCode",
+      "relationship_visibility as relationshipVisibility",
+    ])
+    .where("user_id", "=", userId)
+    .where("profile_lifecycle_state", "=", "active")
+    .where("removed_at", "is", null);
+}
+
+export function buildPublicProfileLifecycleQuery(
+  executor: QueryExecutor,
+  normalizedHandle: string,
+) {
+  return executor
+    .selectFrom("user_public_profiles")
+    .select([
+      "profile_visibility as profileVisibility",
+      "profile_lifecycle_state as profileLifecycleState",
+      "removed_at as removedAt",
     ])
     .where("normalized_handle", "=", normalizedHandle);
+}
+
+export function buildPublicProfileAvatarEvidenceQuery(
+  executor: QueryExecutor,
+  userId: string,
+  mediaAssetId: string,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .select(["derivative_key as derivativeKey", "alt_text as altText"])
+    .where("id", "=", mediaAssetId)
+    .where("owner_user_id", "=", userId)
+    .where("status", "=", "processed")
+    .where("derivative_key", "is not", null);
 }
 
 export function buildPublicProfileEntrySummaryQuery(
@@ -423,17 +879,42 @@ export function buildPublicProfileEntrySummaryQuery(
 ) {
   return executor
     .selectFrom("journal_entries")
+    .leftJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
     .select(({ fn }) => [
       fn.count<number>("journal_entries.id").as("publicEntryCount"),
       sql<number>`count(distinct ${sql.ref(
         "journal_entries.plant_object_id",
       )})`.as("publicObjectCount"),
+      sql<number>`count(distinct case when ${sql.ref(
+        "plant_objects.object_kind",
+      )} = 'plant' then ${sql.ref("journal_entries.plant_object_id")} end)`.as(
+        "publicPlantCount",
+      ),
+      sql<number>`count(distinct case when ${sql.ref(
+        "plant_objects.object_kind",
+      )} = 'animal' then ${sql.ref("journal_entries.plant_object_id")} end)`.as(
+        "publicAnimalCount",
+      ),
+      sql<number>`count(distinct case when ${sql.ref(
+        "plant_objects.object_kind",
+      )} = 'bee_colony' then ${sql.ref(
+        "journal_entries.plant_object_id",
+      )} end)`.as("publicBeeColonyCount"),
     ])
     .where("journal_entries.owner_user_id", "=", userId)
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null);
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null);
 }
 
 export function buildPublicProfileLineageSummaryQuery(
@@ -499,6 +980,267 @@ export function buildPublicProfileLineageSummaryQuery(
     .where("lineage_provenance_edges.erasure_state", "=", "active");
 }
 
+export function buildPublicProfileObjectEvidenceQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("plant_objects")
+    .innerJoin("journal_entries", (join) =>
+      join
+        .onRef("journal_entries.plant_object_id", "=", "plant_objects.id")
+        .onRef(
+          "journal_entries.owner_user_id",
+          "=",
+          "plant_objects.owner_user_id",
+        )
+        .on("journal_entries.entry_scope", "=", "object")
+        .on("journal_entries.visibility", "=", "public")
+        .on("journal_entries.lifecycle_state", "=", "active")
+        .on("journal_entries.public_gone_at", "is", null)
+        .on("journal_entries.public_slug", "is not", null)
+        .on("journal_entries.published_at", "is not", null),
+    )
+    .leftJoin("catalog_items", (join) =>
+      join
+        .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
+        .on("catalog_items.created_by_user_id", "is", null)
+        .on("catalog_items.status", "in", ["seeded", "confirmed"]),
+    )
+    .select([
+      "plant_objects.id as objectId",
+      "plant_objects.display_name as displayName",
+      "plant_objects.object_kind as objectKind",
+      "catalog_items.canonical_name as catalogCanonicalName",
+      "catalog_items.catalog_kind as catalogKind",
+      "plant_objects.variety_text as varietyText",
+      "plant_objects.variety_state as varietyState",
+      sql<Date | string>`max(${sql.ref("journal_entries.entry_date")})`.as(
+        "latestEntryDate",
+      ),
+      sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
+        "publicEntryCount",
+      ),
+    ])
+    .where("plant_objects.owner_user_id", "=", userId)
+    .groupBy([
+      "plant_objects.id",
+      "plant_objects.display_name",
+      "plant_objects.object_kind",
+      "catalog_items.canonical_name",
+      "catalog_items.catalog_kind",
+      "plant_objects.variety_text",
+      "plant_objects.variety_state",
+    ])
+    .orderBy(sql`max(${sql.ref("journal_entries.entry_date")})`, "desc")
+    .orderBy("plant_objects.created_at", "desc")
+    .orderBy("plant_objects.id", "asc")
+    .limit(PUBLIC_PROFILE_OBJECT_LIMIT + 1);
+}
+
+export function buildPublicProfileJournalEvidenceQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .innerJoin("spaces", (join) =>
+      join
+        .onRef("spaces.id", "=", "journal_entries.space_id")
+        .onRef("spaces.owner_user_id", "=", "journal_entries.owner_user_id"),
+    )
+    .leftJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .onRef("plant_objects.space_id", "=", "journal_entries.space_id"),
+    )
+    .select([
+      "journal_entries.id as entryId",
+      "journal_entries.public_slug as publicSlug",
+      "journal_entries.title",
+      "journal_entries.body",
+      "journal_entries.entry_date as entryDate",
+      "journal_entries.published_at as publishedAt",
+      "journal_entries.entry_scope as entryScope",
+      "plant_objects.id as objectId",
+      "plant_objects.display_name as objectDisplayName",
+      "plant_objects.object_kind as objectKind",
+      "spaces.display_name as spaceDisplayName",
+    ])
+    .where("journal_entries.owner_user_id", "=", userId)
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null)
+    .orderBy("journal_entries.published_at", "desc")
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.created_at", "desc")
+    .orderBy("journal_entries.id", "asc")
+    .limit(PUBLIC_PROFILE_JOURNAL_LIMIT + 1);
+}
+
+export function buildPublicProfileObjectMediaEvidenceQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .innerJoin("journal_entries", (join) =>
+      join
+        .onRef("journal_entries.id", "=", "media_assets.journal_entry_id")
+        .onRef(
+          "journal_entries.owner_user_id",
+          "=",
+          "media_assets.owner_user_id",
+        )
+        .on("journal_entries.entry_scope", "=", "object")
+        .on("journal_entries.visibility", "=", "public")
+        .on("journal_entries.lifecycle_state", "=", "active")
+        .on("journal_entries.public_gone_at", "is", null)
+        .on("journal_entries.public_slug", "is not", null)
+        .on("journal_entries.published_at", "is not", null),
+    )
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .select([
+      "plant_objects.id as objectId",
+      "journal_entries.id as entryId",
+      "media_assets.derivative_key as derivativeKey",
+      "media_assets.alt_text as altText",
+    ])
+    .where("media_assets.owner_user_id", "=", userId)
+    .where("media_assets.status", "=", "processed")
+    .where("media_assets.derivative_key", "is not", null)
+    .orderBy("journal_entries.published_at", "desc")
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("media_assets.created_at", "asc")
+    .orderBy("media_assets.id", "asc")
+    .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
+}
+
+export function buildPublicProfileJournalMediaEvidenceQuery(
+  executor: QueryExecutor,
+  userId: string,
+  entryIds: readonly string[],
+) {
+  return executor
+    .selectFrom("media_assets")
+    .innerJoin("journal_entries", (join) =>
+      join
+        .onRef("journal_entries.id", "=", "media_assets.journal_entry_id")
+        .onRef(
+          "journal_entries.owner_user_id",
+          "=",
+          "media_assets.owner_user_id",
+        )
+        .on("journal_entries.visibility", "=", "public")
+        .on("journal_entries.lifecycle_state", "=", "active")
+        .on("journal_entries.public_gone_at", "is", null)
+        .on("journal_entries.public_slug", "is not", null)
+        .on("journal_entries.published_at", "is not", null),
+    )
+    .select([
+      "journal_entries.id as entryId",
+      "media_assets.derivative_key as derivativeKey",
+      "media_assets.alt_text as altText",
+    ])
+    .where("media_assets.owner_user_id", "=", userId)
+    .where("media_assets.status", "=", "processed")
+    .where("media_assets.derivative_key", "is not", null)
+    .where("journal_entries.id", "in", [...entryIds])
+    .orderBy("journal_entries.published_at", "desc")
+    .orderBy("media_assets.created_at", "asc")
+    .orderBy("media_assets.id", "asc")
+    .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
+}
+
+export function buildPublicProfileFollowerCountQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("profile_follows")
+    .innerJoin("user_public_profiles as follower_profiles", (join) =>
+      join
+        .onRef(
+          "follower_profiles.user_id",
+          "=",
+          "profile_follows.follower_user_id",
+        )
+        .on("follower_profiles.profile_visibility", "=", "public")
+        .on("follower_profiles.profile_lifecycle_state", "=", "active")
+        .on("follower_profiles.removed_at", "is", null),
+    )
+    .select(({ fn }) => [fn.count<number>("profile_follows.id").as("count")])
+    .where("profile_follows.target_user_id", "=", userId)
+    .where("profile_follows.follow_state", "=", "active")
+    .where((eb) =>
+      eb.not(
+        eb.exists(
+          eb
+            .selectFrom("profile_blocks")
+            .select("profile_blocks.id")
+            .where("profile_blocks.block_state", "=", "active")
+            .where(sql<boolean>`(
+              (${sql.ref("profile_blocks.blocker_user_id")} = ${userId}
+                and ${sql.ref("profile_blocks.blocked_user_id")} = ${sql.ref("profile_follows.follower_user_id")})
+              or
+              (${sql.ref("profile_blocks.blocker_user_id")} = ${sql.ref("profile_follows.follower_user_id")}
+                and ${sql.ref("profile_blocks.blocked_user_id")} = ${userId})
+            )`),
+        ),
+      ),
+    );
+}
+
+export function buildPublicProfileFollowingCountQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("profile_follows")
+    .innerJoin("user_public_profiles as target_profiles", (join) =>
+      join
+        .onRef("target_profiles.user_id", "=", "profile_follows.target_user_id")
+        .on("target_profiles.profile_visibility", "=", "public")
+        .on("target_profiles.profile_lifecycle_state", "=", "active")
+        .on("target_profiles.removed_at", "is", null),
+    )
+    .select(({ fn }) => [fn.count<number>("profile_follows.id").as("count")])
+    .where("profile_follows.follower_user_id", "=", userId)
+    .where("profile_follows.follow_state", "=", "active")
+    .where((eb) =>
+      eb.not(
+        eb.exists(
+          eb
+            .selectFrom("profile_blocks")
+            .select("profile_blocks.id")
+            .where("profile_blocks.block_state", "=", "active")
+            .where(sql<boolean>`(
+              (${sql.ref("profile_blocks.blocker_user_id")} = ${userId}
+                and ${sql.ref("profile_blocks.blocked_user_id")} = ${sql.ref("profile_follows.target_user_id")})
+              or
+              (${sql.ref("profile_blocks.blocker_user_id")} = ${sql.ref("profile_follows.target_user_id")}
+                and ${sql.ref("profile_blocks.blocked_user_id")} = ${userId})
+            )`),
+        ),
+      ),
+    );
+}
+
 export function buildPublicProfileLinksQuery(
   executor: QueryExecutor,
   userId: string,
@@ -522,6 +1264,68 @@ export function buildPublicProfileLinksQuery(
 
 function numericCount(value: string | number | bigint | null | undefined) {
   return Number(value ?? 0);
+}
+
+function firstObjectMediaByObject(rows: PublicProfileObjectMediaRow[]) {
+  const result = new Map<string, PublicProfileObjectMediaRow>();
+  for (const row of rows) {
+    if (!row.derivativeKey || result.has(row.objectId)) continue;
+    result.set(row.objectId, row);
+  }
+  return result;
+}
+
+function firstJournalMediaByEntry(rows: PublicProfileJournalMediaRow[]) {
+  const result = new Map<string, PublicProfileJournalMediaRow>();
+  for (const row of rows) {
+    if (!row.derivativeKey || result.has(row.entryId)) continue;
+    result.set(row.entryId, row);
+  }
+  return result;
+}
+
+function publicMediaUrl(key: string | null | undefined) {
+  return key ? getPublicDerivativeUrl(key) : null;
+}
+
+function publicObjectIdentity(row: PublicProfileObjectRow): {
+  label: string | null;
+  state: PublicProfileObjectEvidence["identityState"];
+} {
+  if (row.catalogCanonicalName && normalizeCatalogKind(row.catalogKind)) {
+    return { label: row.catalogCanonicalName, state: "confirmed" };
+  }
+  if (row.varietyText?.trim()) {
+    return { label: row.varietyText.trim(), state: "provisional" };
+  }
+  return { label: null, state: "unknown" };
+}
+
+function normalizeCatalogKind(value: string | null): CatalogKind | null {
+  return value === "plant_variety" || value === "species" || value === "breed"
+    ? value
+    : null;
+}
+
+function normalizePlantObjectKind(
+  value: string | null,
+): PlantObjectKind | null {
+  return value === "plant" || value === "animal" || value === "bee_colony"
+    ? value
+    : null;
+}
+
+function normalizeProfileLanguages(values: readonly string[]) {
+  return [...new Set(values)].filter((value): value is PublicProfileLanguage =>
+    PUBLIC_PROFILE_LANGUAGES.has(value as PublicProfileLanguage),
+  );
+}
+
+function boundedBodyPreview(body: string, limit = 220) {
+  const normalized = body.replace(/\s+/g, " ").trim();
+  return normalized.length <= limit
+    ? normalized
+    : `${normalized.slice(0, limit - 1).trimEnd()}...`;
 }
 
 function isPostgresUniqueViolation(error: unknown) {

@@ -19,10 +19,13 @@ const LOCAL_ENV = {
 } as const;
 
 const STATUS = {
-  version: "ove187-v3",
+  version: "ove187-v4",
   expected: {
-    actors: 4,
-    profiles: 4,
+    actors: 8,
+    profiles: 8,
+    profileFollows: 9,
+    profileBlocks: 1,
+    profileReports: 1,
     spaces: 5,
     catalogItems: 19,
     catalogNames: 29,
@@ -36,8 +39,11 @@ const STATUS = {
     media: 16,
   },
   actual: {
-    actors: 4,
-    profiles: 4,
+    actors: 8,
+    profiles: 8,
+    profileFollows: 9,
+    profileBlocks: 1,
+    profileReports: 1,
     spaces: 5,
     catalogItems: 19,
     catalogNames: 29,
@@ -104,6 +110,7 @@ describe("visual fixture command boundary", () => {
         knowledgeEvidenceCases: 10,
         passportEvidenceCases: 14,
         journalEntryEvidenceCases: 17,
+        profileEvidenceCases: 10,
       },
     });
     const output = JSON.stringify(summary);
@@ -111,7 +118,7 @@ describe("visual fixture command boundary", () => {
     expect(summary).toMatchObject({
       ok: true,
       command: "verify",
-      version: "ove187-v3",
+      version: "ove187-v4",
       environment: {
         target: "local",
         databaseHostClass: "loopback",

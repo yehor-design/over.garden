@@ -70,6 +70,31 @@ describe("POST /auth/intent/start", () => {
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 
+  it.each(["follow", "report", "block"])(
+    "accepts a %s intent for a profile handle containing an underscore",
+    async (action) => {
+      const { POST } = await import("./route");
+      const response = await POST(
+        formRequest({
+          action,
+          returnTo: "/bg/@demo_olena",
+          targetKind: "profile",
+          targetRef: "demo_olena",
+        }),
+      );
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get("location")).toBe(
+        "https://over.garden/auth/intent?intent=opaque-intent-token",
+      );
+      expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+        action,
+        returnTo: "/bg/@demo_olena",
+        target: { kind: "profile", ref: "demo_olena" },
+      });
+    },
+  );
+
   it.each([
     { action: "comment", returnTo: "https://attacker.example" },
     { action: "delete", returnTo: "/garden" },

@@ -22,6 +22,10 @@ import {
   renderGonePublicJournalEntryHtml,
   renderNotFoundPublicJournalEntryHtml,
 } from "@/lib/public-journal-entry-lifecycle";
+import {
+  matchPublicProfilePath,
+  renderNotFoundPublicProfileHtml,
+} from "@/lib/public-profile-lifecycle";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 export const APP_ROUTE_CACHE_CONTROL =
@@ -207,6 +211,28 @@ export async function proxy(request: NextRequest) {
       request,
       locale,
     );
+  }
+
+  const publicProfileHandle = isDocumentNavigationRequest(request)
+    ? matchPublicProfilePath(request.nextUrl.pathname)
+    : null;
+  if (publicProfileHandle) {
+    const { getPublicProfileLifecycleLookup } =
+      await import("@/server/public-profile-repository");
+    const lookup = await getPublicProfileLifecycleLookup(publicProfileHandle);
+    if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        new NextResponse(renderNotFoundPublicProfileHtml(locale), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
   }
 
   const localeRoutingResponse = getLocaleRoutingResponse(request, locale);

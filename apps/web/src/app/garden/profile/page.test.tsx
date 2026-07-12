@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
-  ensureUserPublicProfile: vi.fn(),
+  getOwnerProfileWorkspace: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
 }));
 
@@ -12,99 +12,116 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
-
-vi.mock("@/server/public-profile-repository", () => ({
-  ensureUserPublicProfile: mocks.ensureUserPublicProfile,
+vi.mock("@/server/owner-profile-repository", () => ({
+  getOwnerProfileWorkspace: mocks.getOwnerProfileWorkspace,
 }));
-
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
-
 vi.mock("../garden-auth-panel", () => ({
   GardenAuthPanel: () => <section>Sign in panel</section>,
 }));
+vi.mock("./owner-profile-editor", () => ({
+  OwnerProfileEditor: ({
+    workspace,
+  }: {
+    workspace: { preview: { mention: string } };
+  }) => (
+    <section data-owner-profile-editor="v2">
+      {workspace.preview.mention}
+    </section>
+  ),
+}));
+vi.mock("./actions", () => ({
+  unblockProfileAction: vi.fn(),
+}));
+
+const WORKSPACE = {
+  editor: {
+    handle: "green_thumb",
+    avatarMediaAssetId: null,
+    displayName: "Olena",
+    bio: null,
+    languages: ["uk"],
+    locationVisibility: "hidden",
+    coarseRegionCode: null,
+    profileVisibility: "public",
+    relationshipVisibility: "counts",
+  },
+  preview: { mention: "@green_thumb" },
+  avatarOptions: [],
+  relationshipCounts: { followers: 0, following: 0 },
+  blockedProfiles: [
+    { handle: "blocked_keeper", displayName: "Blocked Keeper" },
+  ],
+};
 
 describe("/garden/profile", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
-    mocks.getSessionId.mockReturnValue("session-1");
     mocks.getCurrentSession.mockResolvedValue({
-      user: {
-        id: "00000000-0000-4000-8000-000000000001",
-      },
-      session: {
-        id: "session-1",
-      },
+      user: { id: "00000000-0000-4000-8000-000000000001" },
+      session: { id: "session-1" },
     });
-    mocks.ensureUserPublicProfile.mockResolvedValue({
-      user_id: "00000000-0000-4000-8000-000000000001",
-      handle: "green_thumb",
-      normalized_handle: "green_thumb",
-      display_name: null,
-      avatar_url: null,
-      created_at: new Date("2026-07-04T08:00:00.000Z"),
-      updated_at: new Date("2026-07-04T08:00:00.000Z"),
-    });
+    mocks.getSessionId.mockReturnValue("session-1");
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.getOwnerProfileWorkspace.mockResolvedValue(WORKSPACE);
   });
 
-  it("opens the public profile in the selected locale", async () => {
-    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
-    const { default: GardenPublicProfilePage } = await import("./page");
+  it("loads the scoped owner workspace and exact preview", async () => {
+    const { default: Page } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPublicProfilePage({
-        searchParams: Promise.resolve({}),
-      }),
+      await Page({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain('href="/bg/@green_thumb"');
+    expect(mocks.getOwnerProfileWorkspace).toHaveBeenCalledWith(
+      {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+      "uk",
+    );
+    expect(html).toContain('data-owner-profile-editor="v2"');
+    expect(html).toContain('href="/@green_thumb"');
+    expect(html).toContain("Blocked Keeper");
+    expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
   });
 
-  it("ensures a signed-in gardener has one public handle", async () => {
-    const { default: GardenPublicProfilePage } = await import("./page");
-    const html = renderToStaticMarkup(
-      await GardenPublicProfilePage({
-        searchParams: Promise.resolve({}),
-      }),
-    );
-
-    expect(mocks.ensureUserPublicProfile).toHaveBeenCalledWith({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
+  it("does not link a private profile as publicly available", async () => {
+    mocks.getOwnerProfileWorkspace.mockResolvedValueOnce({
+      ...WORKSPACE,
+      editor: { ...WORKSPACE.editor, profileVisibility: "private" },
     });
-    expect(html).toContain("@green_thumb");
-    expect(html).toContain("/@green_thumb");
-    expect(html).toContain("Save handle");
-    expect(html).not.toMatch(
-      /email|provider|session-1|quarantine|invite|token|00000000-0000/i,
+    const { default: Page } = await import("./page");
+    const html = renderToStaticMarkup(
+      await Page({ searchParams: Promise.resolve({}) }),
     );
+
+    expect(html).not.toContain('href="/@green_thumb"');
   });
 
-  it("renders deterministic guardrail copy from action status params", async () => {
-    const { default: GardenPublicProfilePage } = await import("./page");
+  it("localizes blocked-state management", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
+    const { default: Page } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPublicProfilePage({
-        searchParams: Promise.resolve({ status: "reserved" }),
+      await Page({
+        searchParams: Promise.resolve({ relationshipStatus: "unblocked" }),
       }),
     );
 
-    expect(html).toContain(
-      "That handle is reserved for OverGarden routes or support.",
-    );
+    expect(html).toContain("Блокирани профили");
+    expect(html).toContain("Профилът е разблокиран.");
   });
 
-  it("shows the auth panel without creating a profile when signed out", async () => {
+  it("shows auth without creating an owner workspace when signed out", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
-    const { default: GardenPublicProfilePage } = await import("./page");
+    const { default: Page } = await import("./page");
     const html = renderToStaticMarkup(
-      await GardenPublicProfilePage({
-        searchParams: Promise.resolve({}),
-      }),
+      await Page({ searchParams: Promise.resolve({}) }),
     );
 
     expect(html).toContain("Sign in panel");
-    expect(mocks.ensureUserPublicProfile).not.toHaveBeenCalled();
+    expect(mocks.getOwnerProfileWorkspace).not.toHaveBeenCalled();
   });
 });

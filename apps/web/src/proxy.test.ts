@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   getPublicJournalEntryLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
+  getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
+    status: "active",
+  }),
 }));
 
 vi.mock("@/server/public-object-passport-repository", () => ({
@@ -23,6 +26,10 @@ vi.mock("@/server/public-object-passport-repository", () => ({
 vi.mock("@/server/journal-repository", () => ({
   getPublicJournalEntryLifecycleLookup:
     mocks.getPublicJournalEntryLifecycleLookup,
+}));
+
+vi.mock("@/server/public-profile-repository", () => ({
+  getPublicProfileLifecycleLookup: mocks.getPublicProfileLifecycleLookup,
 }));
 
 async function responseFor(
@@ -197,6 +204,38 @@ describe("app route cache guardrail", () => {
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
       "private-entry",
+    );
+  });
+
+  it("hard-classifies unavailable public profiles without exposing their state", async () => {
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const unavailable = await responseFor("/bg/@private_garden", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "active",
+    });
+    const active = await responseFor("/ru/@active_garden", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const rsc = await responseFor("/@rsc_garden", {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+
+    expect(unavailable.status).toBe(404);
+    expect(unavailable.headers.get("Content-Language")).toBe("bg");
+    expect(unavailable.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await unavailable.text()).toContain("Профилът не е намерен");
+    expect(active.status).toBe(200);
+    expect(rsc.status).toBe(200);
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "private_garden",
     );
   });
 

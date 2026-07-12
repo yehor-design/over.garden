@@ -221,6 +221,15 @@ create table if not exists user_public_profiles (
   normalized_handle text not null,
   display_name text,
   avatar_url text,
+  avatar_media_asset_id uuid,
+  bio text,
+  languages text[] not null default array[]::text[],
+  location_visibility text not null default 'hidden',
+  coarse_region_code text,
+  profile_visibility text not null default 'public',
+  profile_lifecycle_state text not null default 'active',
+  relationship_visibility text not null default 'counts',
+  removed_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint user_public_profiles_handle_check
@@ -236,7 +245,33 @@ create table if not exists user_public_profiles (
     check (
       avatar_url is null
       or (char_length(avatar_url) between 8 and 500 and avatar_url ~ '^https://')
-    )
+    ),
+  constraint user_public_profiles_bio_check
+    check (bio is null or char_length(btrim(bio)) between 1 and 600),
+  constraint user_public_profiles_languages_check
+    check (
+      cardinality(languages) <= 4
+      and languages <@ array['uk', 'bg', 'ru', 'en']::text[]
+    ),
+  constraint user_public_profiles_location_visibility_check
+    check (location_visibility in ('region', 'hidden')),
+  constraint user_public_profiles_coarse_region_code_check
+    check (
+      (location_visibility = 'hidden' and coarse_region_code is null)
+      or (
+        location_visibility = 'region'
+        and coarse_region_code ~ '^(UA|BG)-[0-9]{2}$'
+      )
+    ),
+  constraint user_public_profiles_profile_visibility_check
+    check (profile_visibility in ('public', 'private')),
+  constraint user_public_profiles_lifecycle_check
+    check (
+      (profile_lifecycle_state = 'active' and removed_at is null)
+      or (profile_lifecycle_state = 'removed' and removed_at is not null)
+    ),
+  constraint user_public_profiles_relationship_visibility_check
+    check (relationship_visibility in ('counts', 'hidden'))
 );
 
 alter table user_public_profiles
@@ -244,6 +279,15 @@ alter table user_public_profiles
   add column if not exists normalized_handle text,
   add column if not exists display_name text,
   add column if not exists avatar_url text,
+  add column if not exists avatar_media_asset_id uuid,
+  add column if not exists bio text,
+  add column if not exists languages text[] not null default array[]::text[],
+  add column if not exists location_visibility text not null default 'hidden',
+  add column if not exists coarse_region_code text,
+  add column if not exists profile_visibility text not null default 'public',
+  add column if not exists profile_lifecycle_state text not null default 'active',
+  add column if not exists relationship_visibility text not null default 'counts',
+  add column if not exists removed_at timestamptz,
   add column if not exists created_at timestamptz default now(),
   add column if not exists updated_at timestamptz default now();
 
@@ -258,6 +302,95 @@ begin
     alter table user_public_profiles
       add constraint user_public_profiles_handle_check
       check (handle ~ '^[a-z0-9][a-z0-9_]{2,29}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_bio_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_bio_check
+      check (bio is null or char_length(btrim(bio)) between 1 and 600);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_languages_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_languages_check
+      check (
+        cardinality(languages) <= 4
+        and languages <@ array['uk', 'bg', 'ru', 'en']::text[]
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_location_visibility_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_location_visibility_check
+      check (location_visibility in ('region', 'hidden'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_coarse_region_code_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_coarse_region_code_check
+      check (
+        (location_visibility = 'hidden' and coarse_region_code is null)
+        or (
+          location_visibility = 'region'
+          and coarse_region_code ~ '^(UA|BG)-[0-9]{2}$'
+        )
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_profile_visibility_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_profile_visibility_check
+      check (profile_visibility in ('public', 'private'));
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_lifecycle_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_lifecycle_check
+      check (
+        (profile_lifecycle_state = 'active' and removed_at is null)
+        or (profile_lifecycle_state = 'removed' and removed_at is not null)
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_relationship_visibility_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_relationship_visibility_check
+      check (relationship_visibility in ('counts', 'hidden'));
   end if;
 
   if not exists (
@@ -321,6 +454,141 @@ create unique index if not exists user_public_profiles_normalized_handle_uidx
 
 create index if not exists user_public_profiles_updated_idx
   on user_public_profiles (updated_at desc);
+
+-- Profile-level social controls for OVE-180. These tables store only internal
+-- actor/target ids, bounded state/reason enums, and timestamps. OVE-183 extends
+-- these relationships into followed-feed and notification read models.
+create table if not exists profile_follows (
+  id uuid primary key default gen_random_uuid(),
+  follower_user_id uuid not null,
+  target_user_id uuid not null,
+  follow_state text not null default 'active' check (
+    follow_state in ('active', 'removed')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint profile_follows_cross_user_check
+    check (follower_user_id <> target_user_id),
+  constraint profile_follows_actor_target_uidx
+    unique (follower_user_id, target_user_id)
+);
+
+create table if not exists profile_blocks (
+  id uuid primary key default gen_random_uuid(),
+  blocker_user_id uuid not null,
+  blocked_user_id uuid not null,
+  block_state text not null default 'active' check (
+    block_state in ('active', 'removed')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint profile_blocks_cross_user_check
+    check (blocker_user_id <> blocked_user_id),
+  constraint profile_blocks_actor_target_uidx
+    unique (blocker_user_id, blocked_user_id)
+);
+
+create table if not exists profile_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_user_id uuid not null,
+  target_user_id uuid not null,
+  report_reason text not null check (
+    report_reason in ('spam', 'harassment', 'privacy', 'impersonation', 'other')
+  ),
+  report_state text not null default 'submitted' check (
+    report_state in ('submitted', 'reviewed', 'dismissed', 'actioned')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint profile_reports_cross_user_check
+    check (reporter_user_id <> target_user_id),
+  constraint profile_reports_actor_target_uidx
+    unique (reporter_user_id, target_user_id)
+);
+
+do $$
+begin
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_follows_follower_user_id_fkey'
+        and conrelid = 'profile_follows'::regclass
+    ) then
+      alter table profile_follows
+        add constraint profile_follows_follower_user_id_fkey
+        foreign key (follower_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_follows_target_user_id_fkey'
+        and conrelid = 'profile_follows'::regclass
+    ) then
+      alter table profile_follows
+        add constraint profile_follows_target_user_id_fkey
+        foreign key (target_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_blocks_blocker_user_id_fkey'
+        and conrelid = 'profile_blocks'::regclass
+    ) then
+      alter table profile_blocks
+        add constraint profile_blocks_blocker_user_id_fkey
+        foreign key (blocker_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_blocks_blocked_user_id_fkey'
+        and conrelid = 'profile_blocks'::regclass
+    ) then
+      alter table profile_blocks
+        add constraint profile_blocks_blocked_user_id_fkey
+        foreign key (blocked_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_reports_reporter_user_id_fkey'
+        and conrelid = 'profile_reports'::regclass
+    ) then
+      alter table profile_reports
+        add constraint profile_reports_reporter_user_id_fkey
+        foreign key (reporter_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'profile_reports_target_user_id_fkey'
+        and conrelid = 'profile_reports'::regclass
+    ) then
+      alter table profile_reports
+        add constraint profile_reports_target_user_id_fkey
+        foreign key (target_user_id) references "user"(id) on delete cascade;
+    end if;
+  end if;
+end $$;
+
+create index if not exists profile_follows_target_active_idx
+  on profile_follows (target_user_id, created_at desc)
+  where follow_state = 'active';
+
+create index if not exists profile_follows_actor_active_idx
+  on profile_follows (follower_user_id, created_at desc)
+  where follow_state = 'active';
+
+create index if not exists profile_blocks_blocker_active_idx
+  on profile_blocks (blocker_user_id, created_at desc)
+  where block_state = 'active';
+
+create index if not exists profile_blocks_blocked_active_idx
+  on profile_blocks (blocked_user_id, created_at desc)
+  where block_state = 'active';
+
+create index if not exists profile_reports_target_state_idx
+  on profile_reports (target_user_id, report_state, created_at desc);
 
 create table if not exists spaces (
   id uuid primary key default gen_random_uuid(),
@@ -1275,7 +1543,10 @@ with owners as (
   select distinct owner_user_id
   from journal_entries
   where owner_user_id is not null
-    and (space_id is null or plant_object_id is null)
+    and (
+      space_id is null
+      or (entry_scope = 'object' and plant_object_id is null)
+    )
 ),
 existing_spaces as (
   select distinct on (owner_user_id) owner_user_id, id
@@ -1320,13 +1591,23 @@ object_map as (
 update journal_entries
 set
   space_id = coalesce(journal_entries.space_id, space_map.id),
-  plant_object_id = coalesce(journal_entries.plant_object_id, object_map.id)
+  plant_object_id = case
+    when journal_entries.entry_scope = 'object'
+      then coalesce(journal_entries.plant_object_id, object_map.id)
+    else null
+  end
 from space_map
 inner join object_map
   on object_map.owner_user_id = space_map.owner_user_id
  and object_map.space_id = space_map.id
 where journal_entries.owner_user_id = space_map.owner_user_id
-  and (journal_entries.space_id is null or journal_entries.plant_object_id is null);
+  and (
+    journal_entries.space_id is null
+    or (
+      journal_entries.entry_scope = 'object'
+      and journal_entries.plant_object_id is null
+    )
+  );
 
 alter table journal_entries
   alter column owner_user_id set not null,
@@ -2389,6 +2670,22 @@ create unique index if not exists media_assets_one_non_fixture_per_entry_uidx
 create index if not exists media_assets_entry_created_idx
   on media_assets (journal_entry_id, created_at asc, id asc)
   where journal_entry_id is not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_avatar_media_asset_id_fkey'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_avatar_media_asset_id_fkey
+      foreign key (avatar_media_asset_id)
+      references media_assets(id)
+      on delete set null;
+  end if;
+end $$;
 
 create table if not exists job_queue (
   id uuid primary key default gen_random_uuid(),

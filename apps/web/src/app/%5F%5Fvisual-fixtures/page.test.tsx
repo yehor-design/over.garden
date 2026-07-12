@@ -45,10 +45,13 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v3",
+      version: "ove187-v4",
       expected: {
-        actors: 4,
-        profiles: 4,
+        actors: 8,
+        profiles: 8,
+        profileFollows: 9,
+        profileBlocks: 1,
+        profileReports: 1,
         spaces: 5,
         catalogItems: 19,
         catalogNames: 29,
@@ -62,8 +65,11 @@ describe("/__visual-fixtures", () => {
         media: 16,
       },
       actual: {
-        actors: 4,
-        profiles: 4,
+        actors: 8,
+        profiles: 8,
+        profileFollows: 9,
+        profileBlocks: 1,
+        profileReports: 1,
         spaces: 5,
         catalogItems: 19,
         catalogNames: 29,
@@ -98,7 +104,7 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Deterministic visual environment");
     expect(html).toContain("Fixture users");
     expect(html).toContain("Public profiles");
-    expect(html).toContain("4");
+    expect(html).toContain("8");
     expect(html).toContain("30");
     expect(html).toContain("81");
     expect(html).toContain("Pending lineage");
@@ -125,6 +131,10 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("State coverage");
     expect(html).toContain("Living-object passport evidence");
     expect(html).toContain("Journal-entry V2 evidence");
+    expect(html).toContain("Gardener-profile V2 evidence");
+    expect(html).toContain("gardener dense");
+    expect(html).toContain("blocked unavailable");
+    expect(html).toContain("Profile follows");
     expect(html).toContain("space multi object");
     expect(html).toContain("authenticated reader");
     expect(html).toContain("public plant dense");
