@@ -1,23 +1,16 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { cache, type ReactNode } from "react";
-import {
-  ArrowRight,
-  BellPlus,
-  BookOpen,
-  CalendarDays,
-  ChevronDown,
-  GitBranch,
-  MapPin,
-  ShieldCheck,
-  Sprout,
-  UserRound,
-} from "lucide-react";
+import { cache } from "react";
+import { BellPlus, GitBranch } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
+import {
+  LivingObjectPassportContextRail,
+  LivingObjectPassportOverview,
+  PublicLivingObjectPassportTimeline,
+} from "@/components/living-object-passport/living-object-passport";
 import { buttonVariants } from "@/components/ui/button";
 import {
   buildAuthIntentAnchor,
@@ -30,11 +23,8 @@ import {
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
 import {
-  formatPublicCount,
   getPublicSurfaceCopy,
-  publicCatalogIdentityLabel,
   publicObjectKindLabel,
-  publicVarietyStateLabel,
 } from "@/lib/public-surface-localization";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -53,6 +43,7 @@ import {
   getPublicObjectPassportPage,
   type PublicObjectPassportPage,
 } from "@/server/public-object-passport-repository";
+import { buildPublicObjectPassportPresentation } from "@/server/public-object-passport-presentation";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { scopedToUser } from "@/server/request-scope";
 import { askLineageQuestionAction, followLineageNodeAction } from "./actions";
@@ -149,30 +140,29 @@ export default async function PublicLineageObjectRoute({
   const engagement = await getEngagementSummary(engagementTarget);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
+  const presentation = buildPublicObjectPassportPresentation(passport, locale, {
+    confirmedProvenanceCount: edges.length,
+  });
 
   return (
     <main
       lang={locale}
-      className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-5 py-8 sm:px-8"
+      className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
-      <PublicObjectPassportHero passport={passport} locale={locale} />
-
-      <PublicEngagementPanel
-        isAuthenticated={Boolean(userId)}
-        target={engagementTarget}
-        summary={engagement}
-        returnTo={returnTo}
-        status={firstParam(query.engagement)}
+      <LivingObjectPassportContextRail
+        passport={presentation}
         locale={locale}
-        resumeAction={resumeAction}
-        resumeControl={resumeControl}
+      />
+      <LivingObjectPassportOverview passport={presentation} locale={locale} />
+      <PublicLivingObjectPassportTimeline
+        passport={presentation}
+        locale={locale}
       />
 
-      <PublicJournalPreviewSection passport={passport} locale={locale} />
-
-      <RelatedPublicContext passport={passport} locale={locale} />
-
-      <section className="grid gap-4 border-t border-border pt-6">
+      <section
+        id="passport-provenance"
+        className="grid gap-4 border-t border-border pt-5"
+      >
         <div className="flex flex-col gap-1">
           <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <GitBranch className="size-4" />
@@ -228,374 +218,18 @@ export default async function PublicLineageObjectRoute({
           </ol>
         )}
       </section>
+
+      <PublicEngagementPanel
+        isAuthenticated={Boolean(userId)}
+        target={engagementTarget}
+        summary={engagement}
+        returnTo={returnTo}
+        status={firstParam(query.engagement)}
+        locale={locale}
+        resumeAction={resumeAction}
+        resumeControl={resumeControl}
+      />
     </main>
-  );
-}
-
-function PublicObjectPassportHero({
-  passport,
-  locale,
-}: {
-  passport: PublicObjectPassportPage;
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicSurfaceCopy(locale);
-  const object = passport.object;
-  const primaryIdentity =
-    object.varietyText ??
-    object.catalogCanonicalName ??
-    copy.journal.catalogMatchPending;
-
-  return (
-    <header className="grid gap-6 border-b border-border pb-6 lg:grid-cols-3 lg:items-start">
-      <div className="flex min-w-0 flex-col gap-5 lg:col-span-2">
-        <div className="flex flex-col gap-3">
-          <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Sprout className="size-4" />
-            {copy.passport.title}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            {object.displayName}
-          </h1>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border px-2 py-1">
-              {publicObjectKindLabel(locale, object.objectKind)}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {primaryIdentity}
-            </span>
-            {object.safeLocationLabel ? (
-              <span className="rounded-md border border-border px-2 py-1">
-                {object.safeLocationLabel}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <PassportFact
-            icon={<BookOpen className="size-4" />}
-            label={copy.passport.publicJournal}
-            value={formatPublicCount(locale, "entry", object.publicEntryCount)}
-          />
-          <PassportFact
-            icon={<CalendarDays className="size-4" />}
-            label={copy.passport.latestUpdate}
-            value={formatDate(object.latestEntryDate, locale)}
-          />
-          <PassportFact
-            icon={<ShieldCheck className="size-4" />}
-            label={copy.passport.catalogState}
-            value={publicVarietyStateLabel(locale, object.varietyState)}
-          />
-          <PassportFact
-            icon={<Sprout className="size-4" />}
-            label={publicCatalogIdentityLabel(
-              locale,
-              object.catalogKind,
-              object.objectKind,
-            )}
-            value={object.catalogCanonicalName ?? primaryIdentity}
-          />
-          <PassportFact
-            icon={<MapPin className="size-4" />}
-            label={copy.passport.location}
-            value={object.safeLocationLabel ?? copy.passport.hidden}
-          />
-          <PassportFact
-            icon={<UserRound className="size-4" />}
-            label={copy.passport.caretaker}
-            value={
-              passport.author?.displayName ?? copy.passport.defaultCaretaker
-            }
-          />
-        </dl>
-
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={gardenObjectActivationPath(object.plantObjectId)}
-            className={buttonVariants({ size: "lg", className: "self-start" })}
-          >
-            <Sprout className="size-4" />
-            {copy.passport.startOwnRecord}
-          </Link>
-          {object.catalogPath ? (
-            <Link
-              href={object.catalogPath}
-              className={buttonVariants({
-                variant: "outline",
-                size: "lg",
-                className: "self-start",
-              })}
-            >
-              {copy.passport.openCatalogMatch}
-              <ArrowRight className="size-4" />
-            </Link>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        <PassportCover passport={passport} locale={locale} />
-        {passport.author ? (
-          <Link
-            href={passport.author.profilePath}
-            className="flex items-center justify-between gap-3 rounded-lg border border-border p-3 text-sm transition-colors hover:bg-muted"
-          >
-            <span className="min-w-0">
-              <span className="block font-medium text-foreground">
-                {passport.author.displayName}
-              </span>
-              <span className="block truncate text-muted-foreground">
-                {passport.author.mention}
-              </span>
-            </span>
-            <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-          </Link>
-        ) : null}
-      </div>
-    </header>
-  );
-}
-
-function PassportCover({
-  passport,
-  locale,
-}: {
-  passport: PublicObjectPassportPage;
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicSurfaceCopy(locale);
-
-  if (!passport.coverMediaPublicUrl) {
-    return (
-      <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-dashed border-border bg-muted text-sm text-muted-foreground">
-        {copy.passport.noPublicPhoto}
-      </div>
-    );
-  }
-
-  return (
-    <Image
-      src={passport.coverMediaPublicUrl}
-      alt={`${passport.object.displayName} · ${copy.passport.publicPhotoSuffix}`}
-      width={704}
-      height={396}
-      sizes="(min-width: 1024px) 22rem, 100vw"
-      unoptimized
-      className="aspect-video w-full rounded-lg border border-border object-cover"
-      priority
-    />
-  );
-}
-
-function PassportFact({
-  icon,
-  label,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="grid gap-2 rounded-lg border border-border p-3">
-      <dt className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase">
-        {icon}
-        {label}
-      </dt>
-      <dd className="text-sm leading-5 font-medium text-foreground">{value}</dd>
-    </div>
-  );
-}
-
-function PublicJournalPreviewSection({
-  passport,
-  locale,
-}: {
-  passport: PublicObjectPassportPage;
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicSurfaceCopy(locale);
-
-  return (
-    <section className="grid gap-4 border-t border-border pt-6">
-      <div className="flex flex-col gap-1">
-        <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-          <BookOpen className="size-4" />
-          {copy.passport.recentPublicJournal}
-        </p>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {copy.passport.logbookPreview}
-        </h2>
-      </div>
-
-      {passport.journalPreview.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          {copy.passport.noPublicJournalEntries}
-        </p>
-      ) : (
-        <>
-          <PublicJournalPreviewList
-            entries={passport.journalPreview}
-            locale={locale}
-          />
-          {passport.journalContinuation.length > 0 ? (
-            <details className="group grid gap-4">
-              <summary
-                className={buttonVariants({
-                  variant: "outline",
-                  size: "sm",
-                  className:
-                    "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-                })}
-              >
-                {copy.passport.showMoreJournalEntries}
-                <ChevronDown className="transition-transform group-open:rotate-180" />
-              </summary>
-              <PublicJournalPreviewList
-                entries={passport.journalContinuation}
-                locale={locale}
-              />
-            </details>
-          ) : null}
-        </>
-      )}
-    </section>
-  );
-}
-
-function PublicJournalPreviewList({
-  entries,
-  locale,
-}: {
-  entries: PublicObjectPassportPage["journalPreview"];
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicSurfaceCopy(locale);
-
-  return (
-    <ol className="grid gap-4">
-      {entries.map((entry) => (
-        <li
-          key={entry.id}
-          className={`grid gap-4 rounded-lg border border-border p-4 ${
-            entry.mediaPublicUrl ? "sm:grid-cols-3" : ""
-          }`}
-        >
-          <article
-            className={`flex min-w-0 flex-col gap-3 ${
-              entry.mediaPublicUrl ? "sm:col-span-2" : ""
-            }`}
-          >
-            <div className="flex flex-col gap-1">
-              <time className="text-xs text-muted-foreground">
-                {formatDate(entry.entryDate, locale)}
-              </time>
-              <h3 className="text-base font-semibold text-foreground">
-                {entry.title}
-              </h3>
-            </div>
-            <p className="text-sm leading-6 text-foreground">
-              {entry.bodyPreview}
-            </p>
-            <Link
-              href={entry.publicPath}
-              className="self-start text-sm font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {copy.passport.openJournalEntry}
-            </Link>
-          </article>
-
-          {entry.mediaPublicUrl ? (
-            <Image
-              src={entry.mediaPublicUrl}
-              alt={`${entry.title} · ${copy.passport.publicPhotoSuffix}`}
-              width={384}
-              height={216}
-              sizes="(min-width: 640px) 12rem, 100vw"
-              unoptimized
-              className="aspect-video w-full rounded-md border border-border object-cover sm:w-48"
-            />
-          ) : null}
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function RelatedPublicContext({
-  passport,
-  locale,
-}: {
-  passport: PublicObjectPassportPage;
-  locale: InterfaceLocale;
-}) {
-  const copy = getPublicSurfaceCopy(locale);
-
-  return (
-    <section className="grid gap-4 border-t border-border pt-6">
-      <div className="flex flex-col gap-1">
-        <p className="text-sm font-medium text-muted-foreground">
-          {copy.passport.relatedPublicContext}
-        </p>
-        <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          {copy.passport.exploreObject}
-        </h2>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {passport.object.catalogPath ? (
-          <RelatedContextLink
-            href={passport.object.catalogPath}
-            label={copy.passport.catalogMatch}
-            value={
-              passport.object.catalogCanonicalName ??
-              passport.object.varietyText ??
-              copy.passport.publicCatalog
-            }
-          />
-        ) : null}
-        {passport.author ? (
-          <RelatedContextLink
-            href={passport.author.profilePath}
-            label={copy.passport.caretaker}
-            value={passport.author.displayName}
-          />
-        ) : null}
-        <RelatedContextLink
-          href={publicLineageObjectPath(passport.object.plantObjectId)}
-          label={copy.passport.objectHistory}
-          value={copy.passport.confirmedProvenance}
-        />
-      </div>
-    </section>
-  );
-}
-
-function RelatedContextLink({
-  href,
-  label,
-  value,
-}: {
-  href: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between gap-3 rounded-lg border border-border p-4 text-sm transition-colors hover:bg-muted"
-    >
-      <span className="min-w-0">
-        <span className="block text-xs font-medium text-muted-foreground uppercase">
-          {label}
-        </span>
-        <span className="block truncate font-medium text-foreground">
-          {value}
-        </span>
-      </span>
-      <ArrowRight className="size-4 shrink-0 text-muted-foreground" />
-    </Link>
   );
 }
 
@@ -891,15 +525,6 @@ function buildPublicLineageNodeMap(
   const nodes = lineagePage?.nodes ?? [rootNode];
 
   return new Map(nodes.map((node) => [node.plantObjectId, node]));
-}
-
-function gardenObjectActivationPath(plantObjectId: string) {
-  const params = new URLSearchParams({
-    source: "public-object",
-    object: plantObjectId,
-  });
-
-  return `/garden?${params.toString()}`;
 }
 
 function formatDate(value: Date | string, locale: InterfaceLocale) {

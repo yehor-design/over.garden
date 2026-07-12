@@ -119,6 +119,9 @@ describe("site shell navigation contract", () => {
       objects && isSiteShellItemActive("/lineage/objects/object-1", objects),
     ).toBe(true);
     expect(
+      objects && isSiteShellItemActive("/garden/objects/object-1", objects),
+    ).toBe(true);
+    expect(
       knowledge &&
         isSiteShellItemActive(
           "/ru/guides/start-a-living-plant-record",
@@ -140,6 +143,9 @@ describe("site shell navigation contract", () => {
     expect(
       getSiteShellRouteContext("/lineage/objects/object-1", "uk").key,
     ).toBe("living-object");
+    expect(getSiteShellRouteContext("/garden/objects/object-1", "uk").key).toBe(
+      "living-object",
+    );
     expect(getSiteShellRouteContext("/garden", "bg")).toMatchObject({
       key: "garden",
       title: "Моята градина",

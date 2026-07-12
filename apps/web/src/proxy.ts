@@ -12,6 +12,11 @@ import {
   localizedPath,
   stripLocalePrefix,
 } from "@/lib/public-localization";
+import {
+  matchPublicObjectPassportPath,
+  renderGonePublicObjectPassportHtml,
+  renderNotFoundPublicObjectPassportHtml,
+} from "@/lib/public-object-passport-lifecycle";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 
 export const APP_ROUTE_CACHE_CONTROL =
@@ -40,7 +45,7 @@ function isPrefetchRequest(request: NextRequest) {
 }
 
 function isDocumentNavigationRequest(request: NextRequest) {
-  if (request.method !== "GET") return false;
+  if (request.method !== "GET" && request.method !== "HEAD") return false;
   if (request.nextUrl.pathname.startsWith("/api/")) return false;
   if (isPrefetchRequest(request)) return false;
   if (
@@ -55,7 +60,7 @@ function isDocumentNavigationRequest(request: NextRequest) {
   if (destination && destination !== "document") return false;
 
   const accept = request.headers.get("accept")?.toLowerCase();
-  return !accept || accept.includes("text/html");
+  return !accept || accept.includes("text/html") || accept.includes("*/*");
 }
 
 function withAppRouteContract(
@@ -181,7 +186,7 @@ function getLocaleRoutingResponse(
 // Next 16 renamed Middleware to Proxy. Better Auth handles its own cookies in
 // the route handler via nextCookies(); this proxy stays deliberately light and
 // must not become the authorization layer.
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const locale = resolveRequestLocale(request);
   if (
     normalizePathname(request.nextUrl.pathname) === "/__visual-fixtures" &&
@@ -203,6 +208,41 @@ export function proxy(request: NextRequest) {
 
   if (localeRoutingResponse) {
     return withAppRouteContract(localeRoutingResponse, request, locale);
+  }
+
+  const publicObjectId = isDocumentNavigationRequest(request)
+    ? matchPublicObjectPassportPath(request.nextUrl.pathname)
+    : null;
+  if (publicObjectId) {
+    const { getPublicObjectPassportLookup } =
+      await import("@/server/public-object-passport-repository");
+    const lookup = await getPublicObjectPassportLookup(publicObjectId);
+    if (lookup.status === "gone") {
+      return withAppRouteContract(
+        new NextResponse(renderGonePublicObjectPassportHtml(locale), {
+          status: 410,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
+    if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        new NextResponse(renderNotFoundPublicObjectPassportHtml(locale), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
   }
 
   const requestHeaders = new Headers(request.headers);

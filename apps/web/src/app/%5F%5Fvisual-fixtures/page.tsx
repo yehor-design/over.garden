@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   CheckCircle2,
   Database,
+  Fingerprint,
   ImageIcon,
   KeyRound,
   ListChecks,
@@ -180,6 +181,76 @@ export default async function VisualFixtureIndexPage() {
                 </div>
               </li>
             ))}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section aria-labelledby="passport-heading" className="grid gap-4">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Fingerprint className="size-4" aria-hidden="true" />
+              Public lifecycle and owner scope through production loaders
+            </p>
+            <h2 id="passport-heading" className="mt-1 text-xl font-semibold">
+              Living-object passport evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.passportEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.id.replaceAll("-", " ")}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.expectedStatus}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="Access"
+                        value={scenario.access.replaceAll("-", " ")}
+                      />
+                      <PassportEvidenceFact
+                        label="Kind"
+                        value={scenario.objectKind.replaceAll("_", " ")}
+                      />
+                      <PassportEvidenceFact
+                        label="Identity"
+                        value={scenario.identityState}
+                      />
+                      <PassportEvidenceFact
+                        label="Timeline"
+                        value={`${scenario.timelineState} · ${scenario.expectedTimelineCount}`}
+                      />
+                      <PassportEvidenceFact
+                        label="Media"
+                        value={`${scenario.mediaState} · ${scenario.expectedMediaAspects.length}`}
+                      />
+                      <PassportEvidenceFact
+                        label="Viewports"
+                        value="desktop + 320"
+                      />
+                    </dl>
+                    <Link
+                      href={scenario.path}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-auto w-fit",
+                      })}
+                    >
+                      Open passport
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ),
+            )}
           </ol>
         </section>
 
@@ -393,6 +464,23 @@ function CountFact({ label, value }: { label: string; value: number }) {
     <div className="min-w-0 bg-background px-3 py-4">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+function PassportEvidenceFact({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-medium break-words text-foreground">
+        {value}
+      </dd>
     </div>
   );
 }

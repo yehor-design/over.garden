@@ -121,6 +121,11 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Expected 410");
     expect(html).toContain("Not-found UI · 200");
     expect(html).toContain("State coverage");
+    expect(html).toContain("Living-object passport evidence");
+    expect(html).toContain("public plant dense");
+    expect(html).toContain("owner bee archived");
+    expect(html).toContain("guest public");
+    expect(html).toContain("desktop + 320");
     expect(html).toContain("Intent-aware authentication");
     expect(html).toContain("Comment · guest start");
     expect(html).toContain("Publish · permission recheck");

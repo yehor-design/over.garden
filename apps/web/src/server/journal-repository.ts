@@ -52,6 +52,7 @@ const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
 const MAX_PUBLIC_SLUG_LENGTH = 96;
 const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
+const MAX_OBJECT_GALLERY_MEDIA = 6;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -194,13 +195,16 @@ export interface PlantObjectPage {
     object_kind: PlantObjectKind;
     catalog_item_id: PlantObject["catalog_item_id"];
     catalog_kind: CatalogKind | null;
+    catalog_canonical_name: string | null;
+    catalog_public_slug: string | null;
     variety_text: PlantObject["variety_text"];
-    variety_state: PlantObject["variety_state"];
+    variety_state: VarietyState;
     location_visibility: PlantObject["location_visibility"];
     coarse_region_code: PlantObject["coarse_region_code"];
     source_credit: PlantObjectCatalogSourceCredit | null;
   };
   entries: JournalEntryReadback[];
+  gallery_media: EntryMediaReadback[];
 }
 
 export interface PlantObjectCatalogSourceCredit {
@@ -465,8 +469,10 @@ export async function createFirstPlantEntry(
           object_kind: plantObject.object_kind as PlantObjectKind,
           catalog_item_id: plantObject.catalog_item_id,
           catalog_kind: selectedCatalogItem?.catalogKind ?? null,
+          catalog_canonical_name: selectedCatalogItem?.canonicalName ?? null,
+          catalog_public_slug: selectedCatalogItem?.publicSlug ?? null,
           variety_text: plantObject.variety_text,
-          variety_state: plantObject.variety_state,
+          variety_state: plantObject.variety_state as VarietyState,
           location_visibility: plantObject.location_visibility,
           coarse_region_code: plantObject.coarse_region_code,
           source_credit: null,
@@ -725,22 +731,16 @@ export async function getPlantObjectPage(
     scope,
     objectId,
   ).execute();
-  const mediaByEntryId = await getProcessedMediaByEntryId(
-    executor,
-    scope,
-    entryRows.map((entry) => entry.id),
-  );
-  const mentionsByEntryId = await getMentionedObjectsByEntryId(
-    executor,
-    scope,
-    entryRows.map((entry) => entry.id),
-  );
-  const sourceCredit = objectRow.catalogItemId
-    ? await readPlantObjectCatalogSourceCredit(
-        executor,
-        objectRow.catalogItemId,
-      )
-    : null;
+  const entryIds = entryRows.map((entry) => entry.id);
+  const [mediaByEntryId, mentionsByEntryId, galleryMedia, sourceCredit] =
+    await Promise.all([
+      getProcessedMediaByEntryId(executor, scope, entryIds),
+      getMentionedObjectsByEntryId(executor, scope, entryIds),
+      readProcessedObjectMediaGallery(executor, scope, entryIds),
+      objectRow.catalogItemId
+        ? readPlantObjectCatalogSourceCredit(executor, objectRow.catalogItemId)
+        : Promise.resolve(null),
+    ]);
 
   return {
     space: {
@@ -755,8 +755,10 @@ export async function getPlantObjectPage(
       object_kind: objectRow.objectKind as PlantObjectKind,
       catalog_item_id: objectRow.catalogItemId,
       catalog_kind: objectRow.catalogKind as CatalogKind | null,
+      catalog_canonical_name: objectRow.catalogCanonicalName,
+      catalog_public_slug: objectRow.catalogPublicSlug,
       variety_text: objectRow.varietyText,
-      variety_state: objectRow.varietyState,
+      variety_state: objectRow.varietyState as VarietyState,
       location_visibility: objectRow.objectLocationVisibility,
       coarse_region_code: objectRow.objectCoarseRegionCode,
       source_credit: sourceCredit,
@@ -767,6 +769,7 @@ export async function getPlantObjectPage(
       mentionedObjects: mentionsByEntryId.get(entry.id) ?? [],
       timelineRelation,
     })),
+    gallery_media: galleryMedia,
   };
 }
 
@@ -890,8 +893,10 @@ export async function createPlantObjectJournalEntry(
           object_kind: target.objectKind as PlantObjectKind,
           catalog_item_id: target.catalogItemId,
           catalog_kind: target.catalogKind as CatalogKind | null,
+          catalog_canonical_name: target.catalogCanonicalName,
+          catalog_public_slug: target.catalogPublicSlug,
           variety_text: target.varietyText,
-          variety_state: target.varietyState,
+          variety_state: target.varietyState as VarietyState,
           location_visibility: target.objectLocationVisibility,
           coarse_region_code: target.objectCoarseRegionCode,
           source_credit: null,
@@ -944,8 +949,10 @@ export async function createPlantObjectJournalEntry(
         object_kind: target.objectKind as PlantObjectKind,
         catalog_item_id: target.catalogItemId,
         catalog_kind: target.catalogKind as CatalogKind | null,
+        catalog_canonical_name: target.catalogCanonicalName,
+        catalog_public_slug: target.catalogPublicSlug,
         variety_text: target.varietyText,
-        variety_state: target.varietyState,
+        variety_state: target.varietyState as VarietyState,
         location_visibility: target.objectLocationVisibility,
         coarse_region_code: target.objectCoarseRegionCode,
         source_credit: null,
@@ -1134,8 +1141,10 @@ export async function resolvePlantObjectCatalog(
         object_kind: resolved.object_kind as PlantObjectKind,
         catalog_item_id: resolved.catalog_item_id,
         catalog_kind: selectedCatalogItem.catalogKind,
+        catalog_canonical_name: selectedCatalogItem.canonicalName,
+        catalog_public_slug: selectedCatalogItem.publicSlug,
         variety_text: resolved.variety_text,
-        variety_state: resolved.variety_state,
+        variety_state: resolved.variety_state as VarietyState,
         location_visibility: resolved.location_visibility,
         coarse_region_code: resolved.coarse_region_code,
         source_credit: null,
@@ -1750,6 +1759,8 @@ export function buildPlantObjectPageObjectQuery(
       "plant_objects.object_kind as objectKind",
       "plant_objects.catalog_item_id as catalogItemId",
       "catalog_items.catalog_kind as catalogKind",
+      "catalog_items.canonical_name as catalogCanonicalName",
+      "catalog_items.public_slug as catalogPublicSlug",
       "plant_objects.variety_text as varietyText",
       "plant_objects.variety_state as varietyState",
       "plant_objects.location_visibility as objectLocationVisibility",
@@ -2103,6 +2114,25 @@ export function buildProcessedMediaForEntriesQuery(
     .where("journal_entry_id", "in", entryIds)
     .where("status", "=", "processed")
     .where("derivative_key", "is not", null);
+}
+
+export function buildProcessedObjectMediaGalleryQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: readonly string[],
+  limit = MAX_OBJECT_GALLERY_MEDIA,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .select(["id", "derivative_key as derivativeKey"])
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "in", entryIds)
+    .where("status", "=", "processed")
+    .where("derivative_key", "is not", null)
+    .orderBy("created_at", "asc")
+    .orderBy("id", "asc")
+    .limit(normalizeObjectGalleryLimit(limit))
+    .$narrowType<{ derivativeKey: string }>();
 }
 
 export function buildPublicProcessedMediaForEntryQuery(
@@ -2591,6 +2621,7 @@ async function getProcessedMediaByEntryId(
 
   for (const media of mediaRows) {
     if (!media.journalEntryId || !media.derivativeKey) continue;
+    if (mediaByEntryId.has(media.journalEntryId)) continue;
     mediaByEntryId.set(media.journalEntryId, {
       id: media.id,
       derivativeKey: media.derivativeKey,
@@ -2599,4 +2630,28 @@ async function getProcessedMediaByEntryId(
   }
 
   return mediaByEntryId;
+}
+
+async function readProcessedObjectMediaGallery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  entryIds: string[],
+): Promise<EntryMediaReadback[]> {
+  if (entryIds.length === 0) return [];
+  const rows = await buildProcessedObjectMediaGalleryQuery(
+    executor,
+    scope,
+    entryIds,
+  ).execute();
+
+  return rows.map((row) => ({
+    id: row.id,
+    derivativeKey: row.derivativeKey,
+    publicUrl: getPublicDerivativeUrl(row.derivativeKey),
+  }));
+}
+
+function normalizeObjectGalleryLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_OBJECT_GALLERY_MEDIA;
+  return Math.min(Math.max(Math.trunc(limit), 1), MAX_OBJECT_GALLERY_MEDIA);
 }

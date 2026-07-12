@@ -14,10 +14,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  buildPublicObjectPassportLifecycleQuery,
+  buildPublicObjectPassportGalleryQuery,
   buildPublicObjectPassportRootQuery,
   buildPublicObjectPassportTimelineQuery,
   publicObjectPassportLocationLabel,
   serializePublicObjectPassportPage,
+  classifyPublicObjectPassportLifecycle,
 } from "./public-object-passport-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -89,6 +92,53 @@ describe("public object passport repository query contracts", () => {
     ]);
   });
 
+  it("classifies public lifecycle without selecting private object content", () => {
+    const compiled = buildPublicObjectPassportLifecycleQuery(
+      testDb,
+      plantObjectId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "plant_objects"');
+    expect(compiled.sql).toContain('left join "journal_entries"');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain("publicAnchorCount");
+    expect(compiled.sql).toContain("activePublicCount");
+    expect(compiled.sql).toContain("gonePublicCount");
+    expect(compiled.sql).not.toMatch(
+      /display_name|title|body|email|owner_user_id as|coarse_region|location_visibility|media_assets|quarantine|derivative/i,
+    );
+  });
+
+  it("returns gone only for a previously public passport with no active anchor", () => {
+    expect(
+      classifyPublicObjectPassportLifecycle({
+        plantObjectId,
+        publicAnchorCount: 3,
+        activePublicCount: 0,
+        gonePublicCount: 3,
+      }),
+    ).toBe("gone");
+    expect(
+      classifyPublicObjectPassportLifecycle({
+        plantObjectId,
+        publicAnchorCount: 1,
+        activePublicCount: 1,
+        gonePublicCount: 0,
+      }),
+    ).toBe("not_found");
+    expect(
+      classifyPublicObjectPassportLifecycle({
+        plantObjectId,
+        publicAnchorCount: 0,
+        activePublicCount: 0,
+        gonePublicCount: 0,
+      }),
+    ).toBe("not_found");
+  });
+
   it("reads the public journal preview with processed derivative media only", () => {
     const compiled = buildPublicObjectPassportTimelineQuery(
       testDb,
@@ -132,13 +182,39 @@ describe("public object passport repository query contracts", () => {
     ]);
   });
 
+  it("reads a bounded public derivative gallery across all visible entries", () => {
+    const compiled = buildPublicObjectPassportGalleryQuery(
+      testDb,
+      plantObjectId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "media_assets"');
+    expect(compiled.sql).toContain('inner join "journal_entries"');
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain('"media_assets"."status" = $1');
+    expect(compiled.sql).toContain(
+      '"media_assets"."derivative_key" is not null',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_gone_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"journal_entries"."public_slug" is not null',
+    );
+    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
+    expect(compiled.parameters.at(-1)).toBe(6);
+    expect(compiled.sql).not.toMatch(/quarantine_key|owner_user_id as|email/i);
+  });
+
   it("fetches one page-size overflow record for the real show-more state", () => {
     const compiled = buildPublicObjectPassportTimelineQuery(
       testDb,
       plantObjectId,
     ).compile();
 
-    expect(compiled.parameters.at(-1)).toBe(10);
+    expect(compiled.parameters.at(-1)).toBe(40);
   });
 
   it("suppresses hidden or unsupported region labels", () => {
@@ -202,6 +278,16 @@ describe("public object passport repository query contracts", () => {
         mediaDerivativeKey:
           index === 0 ? "derivatives/first-flowering.webp" : null,
       })),
+      [
+        {
+          mediaId: "media-1",
+          mediaDerivativeKey: "derivatives/first-flowering.webp",
+        },
+        {
+          mediaId: "media-2",
+          mediaDerivativeKey: "derivatives/portrait.webp",
+        },
+      ],
     );
 
     expect(page.object.catalogPath).toBe(
@@ -224,6 +310,11 @@ describe("public object passport repository query contracts", () => {
     expect(page.journalPreview).toHaveLength(5);
     expect(page.journalContinuation).toHaveLength(5);
     expect(page.journalContinuation.at(-1)?.title).toBe("Entry 10");
+    expect(page.timelineHasMore).toBe(false);
+    expect(page.galleryMediaPublicUrls).toEqual([
+      "https://media.over.garden/derivatives/first-flowering.webp",
+      "https://media.over.garden/derivatives/portrait.webp",
+    ]);
     expect(JSON.stringify(page)).not.toMatch(
       /quarantine_key|derivative_key|owner_user_id|email|phone|coordinates|location_visibility|coarse_region/i,
     );

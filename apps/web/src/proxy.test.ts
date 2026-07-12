@@ -7,7 +7,17 @@ import {
 } from "@/lib/interface-localization";
 import { APP_ROUTE_CACHE_CONTROL, config, proxy } from "./proxy";
 
-function responseFor(
+const mocks = vi.hoisted(() => ({
+  getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
+    status: "not_found",
+  }),
+}));
+
+vi.mock("@/server/public-object-passport-repository", () => ({
+  getPublicObjectPassportLookup: mocks.getPublicObjectPassportLookup,
+}));
+
+async function responseFor(
   path: string,
   headers?: HeadersInit,
   init?: Pick<RequestInit, "method">,
@@ -21,9 +31,9 @@ function responseFor(
 }
 
 describe("app route cache guardrail", () => {
-  it("hard-404s the visual fixture route before App Router unless the full environment gate passes", () => {
+  it("hard-404s the visual fixture route before App Router unless the full environment gate passes", async () => {
     vi.stubEnv("VISUAL_FIXTURES_ENABLED", "false");
-    const disabled = responseFor("/__visual-fixtures");
+    const disabled = await responseFor("/__visual-fixtures");
 
     vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
     vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
@@ -37,10 +47,10 @@ describe("app route cache guardrail", () => {
     vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
     vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
     vi.stubEnv("VERCEL_ENV", "development");
-    const enabledLocal = responseFor("/__visual-fixtures");
+    const enabledLocal = await responseFor("/__visual-fixtures");
 
     vi.stubEnv("VERCEL_ENV", "production");
-    const production = responseFor("/__visual-fixtures");
+    const production = await responseFor("/__visual-fixtures");
     vi.unstubAllEnvs();
 
     expect(disabled.status).toBe(404);
@@ -60,13 +70,82 @@ describe("app route cache guardrail", () => {
     "/journal/smoke-slug",
     "/variety/smoke-variety",
     "/api/garden/entries",
-  ])("sends explicit no-store cache control for %s", (path) => {
-    expect(responseFor(path).headers.get("Cache-Control")).toBe(
+  ])("sends explicit no-store cache control for %s", async (path) => {
+    expect((await responseFor(path)).headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,
     );
   });
 
-  it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", () => {
+  it("returns a real 410 tombstone only for a previously public gone passport", async () => {
+    const objectId = "00000000-0000-4000-8000-000000000101";
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: objectId,
+    });
+    const gone = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    expect(gone.status).toBe(410);
+    expect(gone.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(gone.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
+    expect(await gone.text()).toContain("Паспорт видалено");
+
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "active",
+      page: {},
+    });
+    const active = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const rsc = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+    const unpublished = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    expect(active.status).toBe(200);
+    expect(rsc.status).toBe(200);
+    expect(unpublished.status).toBe(404);
+    expect(await unpublished.text()).toContain("Паспорт не знайдено");
+    expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(3);
+  });
+
+  it("classifies generic HTTP document clients without intercepting RSC", async () => {
+    const objectId = "00000000-0000-4000-8000-000000000102";
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: objectId,
+    });
+
+    const genericDocument = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "*/*",
+    });
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: objectId,
+    });
+    const headDocument = await responseFor(
+      `/lineage/objects/${objectId}`,
+      { accept: "*/*" },
+      { method: "HEAD" },
+    );
+    const rsc = await responseFor(`/lineage/objects/${objectId}`, {
+      accept: "*/*",
+      rsc: "1",
+    });
+
+    expect(genericDocument.status).toBe(410);
+    expect(headDocument.status).toBe(410);
+    expect(rsc.status).toBe(200);
+  });
+
+  it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", async () => {
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
     expect(matcher.test("/")).toBe(true);
@@ -80,9 +159,11 @@ describe("app route cache guardrail", () => {
     expect(matcher.test("/photos/derivative.webp")).toBe(false);
   });
 
-  it("redirects legacy Ukrainian-prefixed public URLs to unprefixed canonicals", () => {
-    const rootResponse = responseFor("/uk");
-    const nestedResponse = responseFor("/uk/blog/first-public-garden-log");
+  it("redirects legacy Ukrainian-prefixed public URLs to unprefixed canonicals", async () => {
+    const rootResponse = await responseFor("/uk");
+    const nestedResponse = await responseFor(
+      "/uk/blog/first-public-garden-log",
+    );
 
     expect(rootResponse.status).toBe(308);
     expect(rootResponse.headers.get("Location")).toBe("https://over.garden/");
@@ -99,11 +180,11 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("redirects Bulgarian country traffic from the root to /bg", () => {
-    const bgResponse = responseFor("/", {
+  it("redirects Bulgarian country traffic from the root to /bg", async () => {
+    const bgResponse = await responseFor("/", {
       "x-vercel-ip-country": "BG",
     });
-    const uaResponse = responseFor("/", {
+    const uaResponse = await responseFor("/", {
       "x-vercel-ip-country": "UA",
     });
 
@@ -115,8 +196,8 @@ describe("app route cache guardrail", () => {
     expect(uaResponse.status).toBe(200);
   });
 
-  it("persists a localized public route and forwards it into signed-in routes", () => {
-    const publicResponse = responseFor("/bg");
+  it("persists a localized public route and forwards it into signed-in routes", async () => {
+    const publicResponse = await responseFor("/bg");
     const setCookie = publicResponse.headers.get("set-cookie");
 
     expect(publicResponse.status).toBe(200);
@@ -126,7 +207,7 @@ describe("app route cache guardrail", () => {
     expect(setCookie).toMatch(/SameSite=lax/i);
     expect(setCookie).not.toMatch(/journal|invite|email|location|token/i);
 
-    const gardenResponse = responseFor("/garden", {
+    const gardenResponse = await responseFor("/garden", {
       cookie: String(setCookie).split(";", 1)[0],
       "accept-language": "uk;q=1",
       "x-vercel-ip-country": "UA",
@@ -141,8 +222,8 @@ describe("app route cache guardrail", () => {
     ).toBe("bg");
   });
 
-  it("lets a localized route override a previous preference", () => {
-    const response = responseFor("/ru/feed", {
+  it("lets a localized route override a previous preference", async () => {
+    const response = await responseFor("/ru/feed", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
       "accept-language": "uk;q=1",
       "x-vercel-ip-country": "UA",
@@ -154,12 +235,12 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("does not change the persisted preference during route prefetch", () => {
-    const nextPrefetch = responseFor("/ru", {
+  it("does not change the persisted preference during route prefetch", async () => {
+    const nextPrefetch = await responseFor("/ru", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
       "next-router-prefetch": "1",
     });
-    const browserPrefetch = responseFor("/ru", {
+    const browserPrefetch = await responseFor("/ru", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
       purpose: "prefetch",
     });
@@ -170,8 +251,8 @@ describe("app route cache guardrail", () => {
     expect(browserPrefetch.headers.get("set-cookie")).toBeNull();
   });
 
-  it("keeps mutations, APIs, RSC requests, and server actions out of locale persistence and canonical redirects", () => {
-    const mutation = responseFor(
+  it("keeps mutations, APIs, RSC requests, and server actions out of locale persistence and canonical redirects", async () => {
+    const mutation = await responseFor(
       "/privacy",
       {
         cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
@@ -179,15 +260,15 @@ describe("app route cache guardrail", () => {
       },
       { method: "POST" },
     );
-    const apiRequest = responseFor("/api/garden/entries", {
+    const apiRequest = await responseFor("/api/garden/entries", {
       "x-vercel-ip-country": "BG",
     });
-    const rscRequest = responseFor("/privacy", {
+    const rscRequest = await responseFor("/privacy", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
       rsc: "1",
       accept: "text/x-component",
     });
-    const serverAction = responseFor(
+    const serverAction = await responseFor(
       "/ru/privacy",
       {
         cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
@@ -205,16 +286,16 @@ describe("app route cache guardrail", () => {
     expect(serverAction.headers.get("Content-Language")).toBe("ru");
   });
 
-  it("honors a valid preference at the root and ignores invalid cookie values", () => {
-    const persistedRussian = responseFor("/", {
+  it("honors a valid preference at the root and ignores invalid cookie values", async () => {
+    const persistedRussian = await responseFor("/", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
       "x-vercel-ip-country": "BG",
     });
-    const persistedUkrainian = responseFor("/", {
+    const persistedUkrainian = await responseFor("/", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
       "x-vercel-ip-country": "BG",
     });
-    const invalidPreference = responseFor("/", {
+    const invalidPreference = await responseFor("/", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=en`,
       "accept-language": "ru;q=1",
     });
@@ -231,17 +312,17 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("keeps already-localized unprefixed public routes in the persisted locale", () => {
-    const privacyResponse = responseFor("/privacy", {
+  it("keeps already-localized unprefixed public routes in the persisted locale", async () => {
+    const privacyResponse = await responseFor("/privacy", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
-    const blogResponse = responseFor("/blog/field-note", {
+    const blogResponse = await responseFor("/blog/field-note", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
     });
-    const ugcResponse = responseFor("/journal/field-note", {
+    const ugcResponse = await responseFor("/journal/field-note", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
-    const catalogResponse = responseFor("/objects", {
+    const catalogResponse = await responseFor("/objects", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
     });
 
@@ -261,8 +342,8 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("canonicalizes a supported but non-canonical cookie value", () => {
-    const response = responseFor("/garden", {
+  it("canonicalizes a supported but non-canonical cookie value", async () => {
+    const response = await responseFor("/garden", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=BG`,
     });
 
@@ -272,11 +353,11 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("serves canonical unprefixed Ukrainian profiles and redirects other preferences", () => {
-    const ukrainianProfile = responseFor("/@green_thumb", {
+  it("serves canonical unprefixed Ukrainian profiles and redirects other preferences", async () => {
+    const ukrainianProfile = await responseFor("/@green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
     });
-    const bulgarianProfile = responseFor("/@green_thumb", {
+    const bulgarianProfile = await responseFor("/@green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
 

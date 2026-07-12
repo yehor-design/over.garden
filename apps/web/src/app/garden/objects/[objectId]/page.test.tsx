@@ -121,7 +121,7 @@ describe("/garden/objects/[objectId]", () => {
     );
 
     expect(html).toContain('lang="uk"');
-    expect(html).toContain("Назад до журналу");
+    expect(html).toContain("До моєї градини");
     expect(html).toContain("Cherry tomato");
     expect(html).toContain("First flowers");
     expect(html).not.toContain("Перші квіти");
@@ -151,7 +151,7 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).toContain("Cherry tomato now has its first dated note");
     expect(html).toContain("1 / 4 starter notes");
     expect(html).toContain("#follow-up-composer");
-    expect(html).toContain("Journal entries");
+    expect(html).toContain("Повна історія об&#x27;єкта");
     expect(html).toContain("First flowers");
     expect(html).not.toMatch(/leaderboard|streak|likes|followers|share modal/i);
   });
@@ -186,7 +186,7 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).toContain("Cherry tomato now has 2 dated notes");
     expect(html).toContain("Add dated entry");
     expect(html).toContain("Follow-up composer");
-    expect(html).toContain("Journal entries");
+    expect(html).toContain("Повна історія об&#x27;єкта");
     expect(html).toContain("Second flowering wave");
     expect(html).toContain("First flowers");
     expect(html).not.toMatch(/leaderboard|streak|likes|followers|share modal/i);
@@ -214,12 +214,11 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("Logbook entry");
-    expect(html).toContain("Direct object entry");
+    expect(html).toContain("Запис об&#x27;єкта");
     expect(html).toContain("Public page available");
     expect(html).toContain("Open public page");
     expect(html).toContain("/journal/first-public-flowers");
-    expect(html).toContain("Open living-object passport");
+    expect(html).toContain("Open public passport");
     expect(html).toContain("/lineage/objects/object-1");
     expect(html).not.toMatch(
       /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
@@ -289,6 +288,8 @@ function plantObjectPage(
       object_kind: "plant",
       catalog_kind: "plant_variety",
       catalog_item_id: null,
+      catalog_canonical_name: null,
+      catalog_public_slug: null,
       variety_text: "Cherry tomato",
       variety_state: "selected",
       location_visibility: "hidden",
@@ -309,5 +310,6 @@ function plantObjectPage(
       mentionedObjects: [],
       media: null,
     })),
+    gallery_media: [],
   };
 }

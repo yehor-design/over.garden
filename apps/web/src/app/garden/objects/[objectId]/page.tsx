@@ -1,7 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  LivingObjectPassportContextRail,
+  LivingObjectPassportOverview,
+  OwnerLivingObjectPassportTimeline,
+} from "@/components/living-object-passport/living-object-passport";
 import { buttonVariants } from "@/components/ui/button";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
@@ -13,18 +17,12 @@ import {
   buildAuthIntentAnchor,
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
+  type AuthIntentAction,
 } from "@/lib/auth/auth-intent-contract";
 import {
   catalogSourceAttributionCaveat,
   catalogSourceAttributionSummary,
 } from "@/lib/catalog/catalog-source-attribution";
-import {
-  catalogIdentityLabel,
-  entryPrivacyLabel,
-  entryScopeLabel,
-  plantObjectKindLabel,
-  varietyStateLabel,
-} from "@/lib/garden/pilot-ux-copy";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
@@ -32,7 +30,6 @@ import {
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
@@ -49,6 +46,7 @@ import {
   type ObjectProvenancePanel,
 } from "@/server/lineage-repository";
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
+import { buildOwnerObjectPassportPresentation } from "@/server/owner-object-passport-presentation";
 import { scopedToUser } from "@/server/request-scope";
 import { ClosedPilotWriteCallout } from "../../closed-pilot-write-callout";
 import { GardenAuthPanel } from "../../garden-auth-panel";
@@ -129,7 +127,6 @@ export default async function PlantObjectReadbackPage({
   }
 
   const today = new Date().toISOString().slice(0, 10);
-  const locationLabel = getObjectLocationLabel(page);
   const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
   const sourceAttributionCaveat = page.plantObject.source_credit
     ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
@@ -153,67 +150,24 @@ export default async function PlantObjectReadbackPage({
           journalEntryId: valuePulseJournalEntryId,
         })
       : { eligible: false };
+  const presentation = buildOwnerObjectPassportPresentation(
+    page,
+    provenancePanel,
+    locale,
+  );
+  const entriesById = new Map(page.entries.map((entry) => [entry.id, entry]));
 
   return (
     <main
       lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-5 py-8 sm:px-8"
+      className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
-        <Link
-          href="/garden"
-          className={buttonVariants({
-            variant: "outline",
-            className: "self-start",
-          })}
-        >
-          {copy.object.backToJournal}
-        </Link>
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-muted-foreground">
-            {page.space.display_name}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            {page.plantObject.display_name}
-          </h1>
-          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border px-2 py-1">
-              {locationLabel}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {plantObjectKindLabel(page.plantObject.object_kind)}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {`${catalogIdentityLabel(
-                page.plantObject.catalog_kind,
-                page.plantObject.object_kind,
-              )}: ${page.plantObject.variety_text ?? "Unknown"}`}
-            </span>
-            <span className="rounded-md border border-border px-2 py-1">
-              {varietyStateLabel(page.plantObject.variety_state)}
-            </span>
-          </div>
-          {page.plantObject.source_credit ? (
-            <div className="mt-2 flex flex-col gap-1 rounded-md border border-border bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
-              <p>
-                {catalogSourceAttributionSummary(
-                  page.plantObject.source_credit,
-                )}
-              </p>
-              {sourceAttributionCaveat ? (
-                <p>{sourceAttributionCaveat}</p>
-              ) : null}
-              <Link
-                href={page.plantObject.source_credit.sourceUrl}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Open source
-              </Link>
-            </div>
-          ) : null}
-        </div>
-      </header>
+      <LivingObjectPassportContextRail
+        passport={presentation}
+        locale={locale}
+      />
+      <LivingObjectPassportOverview passport={presentation} locale={locale} />
 
       {saveProgressKind === "first-entry" ||
       saveProgressKind === "follow-up" ? (
@@ -225,22 +179,6 @@ export default async function PlantObjectReadbackPage({
           primaryLabel="Add another entry"
           secondaryHref="/garden"
           secondaryLabel={copy.object.backToJournal}
-        />
-      ) : null}
-
-      <LocationPrivacyControl
-        objectId={objectId}
-        currentLocationVisibility={page.plantObject.location_visibility}
-        currentCoarseRegionCode={page.plantObject.coarse_region_code}
-        action={updatePlantObjectLocationAction}
-      />
-
-      {canResolveCatalogState(page.plantObject.variety_state) ? (
-        <CatalogResolveControl
-          objectId={page.plantObject.id}
-          currentVarietyText={page.plantObject.variety_text}
-          currentVarietyState={page.plantObject.variety_state as VarietyState}
-          action={resolvePlantObjectCatalogAction}
         />
       ) : null}
 
@@ -266,7 +204,7 @@ export default async function PlantObjectReadbackPage({
 
       <section
         id="follow-up-composer"
-        className="grid gap-4 rounded-lg border border-border p-4"
+        className="grid gap-4 border-t border-border pt-5"
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-foreground">
@@ -289,6 +227,75 @@ export default async function PlantObjectReadbackPage({
         )}
       </section>
 
+      <OwnerLivingObjectPassportTimeline
+        passport={presentation}
+        locale={locale}
+        renderEntryActions={(timelineEntry) => {
+          const entry = entriesById.get(timelineEntry.id);
+          return entry ? (
+            <OwnerEntryActions
+              entry={entry}
+              objectId={objectId}
+              objectPassportReadbackPath={objectPassportReadbackPath}
+              resumeAction={resumeAction}
+              resumeControl={resumeControl}
+              locale={locale}
+            />
+          ) : null;
+        }}
+      />
+
+      <section
+        id="passport-management"
+        className="grid gap-5 border-t border-border pt-5"
+      >
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase">
+            Owner controls
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-foreground">
+            Passport management
+          </h2>
+        </div>
+
+        <div id="passport-privacy" className="min-w-0">
+          <LocationPrivacyControl
+            objectId={objectId}
+            currentLocationVisibility={page.plantObject.location_visibility}
+            currentCoarseRegionCode={page.plantObject.coarse_region_code}
+            action={updatePlantObjectLocationAction}
+          />
+        </div>
+
+        {canResolveCatalogState(page.plantObject.variety_state) ? (
+          <div id="passport-catalog" className="min-w-0">
+            <CatalogResolveControl
+              objectId={page.plantObject.id}
+              currentVarietyText={page.plantObject.variety_text}
+              currentVarietyState={
+                page.plantObject.variety_state as VarietyState
+              }
+              action={resolvePlantObjectCatalogAction}
+            />
+          </div>
+        ) : null}
+
+        {page.plantObject.source_credit ? (
+          <div className="grid gap-1 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
+            <p>
+              {catalogSourceAttributionSummary(page.plantObject.source_credit)}
+            </p>
+            {sourceAttributionCaveat ? <p>{sourceAttributionCaveat}</p> : null}
+            <Link
+              href={page.plantObject.source_credit.sourceUrl}
+              className="w-fit font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Open source
+            </Link>
+          </div>
+        ) : null}
+      </section>
+
       <ProvenanceSection
         objectId={objectId}
         provenancePanel={provenancePanel}
@@ -296,215 +303,148 @@ export default async function PlantObjectReadbackPage({
         lineageReadbackPath={lineageReadbackPath}
         locale={locale}
       />
-
-      <section className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg font-semibold text-foreground">
-            Journal entries
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            {page.entries.length === 1
-              ? "1 entry saved for this object."
-              : `${page.entries.length} entries saved for this object.`}
-          </p>
-        </div>
-
-        {page.entries.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No entries for this object yet.
-          </p>
-        ) : (
-          <ol className="flex flex-col gap-3">
-            {page.entries.map((entry) => {
-              const publishControl = createAuthIntentControlRef(
-                "publish",
-                entry.id,
-              );
-              const resumesThisPublish =
-                resumeAction === "publish" && resumeControl === publishControl;
-
-              return (
-                <li
-                  key={entry.id}
-                  className="grid gap-4 rounded-lg border border-border p-4"
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                    <div className="flex min-w-0 flex-col gap-1">
-                      <p className="text-xs font-medium text-muted-foreground uppercase">
-                        Logbook entry
-                      </p>
-                      <h3 className="text-base font-semibold text-foreground">
-                        {entry.title}
-                      </h3>
-                    </div>
-                    <time className="text-xs text-muted-foreground">
-                      {formatDate(entry.entry_date)}
-                    </time>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="rounded-md border border-border px-2 py-1">
-                      {entry.timelineRelation === "mentioned_space"
-                        ? "Space-level mention"
-                        : "Direct object entry"}
-                    </span>
-                    <span className="rounded-md border border-border px-2 py-1">
-                      {entryPrivacyLabel({
-                        visibility: entry.visibility,
-                        isArchived: entry.lifecycle_state === "archived",
-                      })}
-                    </span>
-                    {entry.media ? (
-                      <span className="rounded-md border border-border px-2 py-1">
-                        Server-cleaned photo copy
-                      </span>
-                    ) : null}
-                  </div>
-                  <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                    {entry.body}
-                  </p>
-                  {entry.media ? (
-                    <Image
-                      src={entry.media.publicUrl}
-                      alt={`${entry.title} photo`}
-                      width={960}
-                      height={540}
-                      sizes="(min-width: 640px) 36rem, 100vw"
-                      unoptimized
-                      className="aspect-video w-full max-w-xl rounded-md border border-border object-cover"
-                    />
-                  ) : null}
-                  <p className="text-xs text-muted-foreground">
-                    {entryTimelineSummary(entry)}
-                  </p>
-                  {entry.timelineRelation === "mentioned_space" ? (
-                    <p className="text-xs font-medium text-muted-foreground">
-                      Space entry mentioning{" "}
-                      {entry.mentionedObjects
-                        .map((object) => object.displayName)
-                        .join(", ")}
-                      .
-                    </p>
-                  ) : null}
-                  {entry.lifecycle_state === "archived" ? (
-                    <div className="mt-4 flex flex-col gap-1 border-t border-border pt-3">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        Archived privately
-                      </span>
-                      {entry.public_gone_at ? (
-                        <span className="text-xs text-muted-foreground">
-                          The old public page no longer shows the journal text
-                          and is removed from public discovery surfaces.
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : entry.visibility === "public" && entry.public_slug ? (
-                    <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-3">
-                      <span className="text-xs text-muted-foreground">
-                        Public page available. Not listed for search engines
-                        during the pilot.
-                      </span>
-                      {objectPassportReadbackPath ? (
-                        <Link
-                          href={objectPassportReadbackPath}
-                          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                        >
-                          Open living-object passport
-                        </Link>
-                      ) : null}
-                      <Link
-                        href={publicJournalEntryPath(entry.public_slug)}
-                        className="text-sm font-medium text-primary underline-offset-4 hover:underline"
-                      >
-                        Open public page
-                      </Link>
-                      <form
-                        action={archiveJournalEntryAction}
-                        className="flex w-full flex-col gap-3 pt-1"
-                      >
-                        <input type="hidden" name="entryId" value={entry.id} />
-                        <input type="hidden" name="objectId" value={objectId} />
-                        <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                          <input
-                            type="checkbox"
-                            name="archiveAccepted"
-                            required
-                            className="mt-1 size-4 rounded border-border"
-                          />
-                          <span>
-                            Archive this entry privately, remove it from public
-                            discovery surfaces, and stop its old public page
-                            from showing the journal text.
-                          </span>
-                        </label>
-                        <button
-                          type="submit"
-                          className={buttonVariants({
-                            variant: "destructive",
-                            className: "self-start",
-                          })}
-                        >
-                          Archive public entry
-                        </button>
-                      </form>
-                    </div>
-                  ) : (
-                    <form
-                      action={publishJournalEntryAction}
-                      className="mt-4 flex flex-col gap-3 border-t border-border pt-3"
-                    >
-                      <input type="hidden" name="entryId" value={entry.id} />
-                      <input type="hidden" name="objectId" value={objectId} />
-                      <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          name="publicationDisclosureAccepted"
-                          required
-                          className="mt-1 size-4 rounded border-border"
-                        />
-                        <span>
-                          Publish this entry as a public page. People with the
-                          link can read its title, note, date, plant name,
-                          variety text, and chosen region if one is visible. If
-                          a photo is attached, only a server-cleaned public copy
-                          can appear; precise location and the original photo
-                          file stay private. Pilot public pages are not listed
-                          for search engines yet; that is not a secrecy
-                          guarantee.{" "}
-                          <Link
-                            href={localizedPath(
-                              locale,
-                              "/first-publication-disclosure",
-                            )}
-                            className="text-primary underline-offset-4 hover:underline"
-                          >
-                            Read disclosure
-                          </Link>
-                          .
-                        </span>
-                      </label>
-                      <button
-                        id={
-                          resumesThisPublish
-                            ? buildAuthIntentAnchor("publish", publishControl)
-                            : undefined
-                        }
-                        data-auth-intent-control="publish"
-                        data-auth-intent-control-ref={publishControl}
-                        autoFocus={resumesThisPublish}
-                        type="submit"
-                        className={buttonVariants({ className: "self-start" })}
-                      >
-                        Publish entry
-                      </button>
-                    </form>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </section>
     </main>
+  );
+}
+
+function OwnerEntryActions({
+  entry,
+  objectId,
+  objectPassportReadbackPath,
+  resumeAction,
+  resumeControl,
+  locale,
+}: {
+  entry: PlantObjectPage["entries"][number];
+  objectId: string;
+  objectPassportReadbackPath: string | null;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
+  locale: InterfaceLocale;
+}) {
+  if (entry.lifecycle_state === "archived") {
+    return (
+      <div data-owner-entry-controls="archived" className="grid gap-1">
+        <span className="text-sm font-medium text-muted-foreground">
+          Archived privately
+        </span>
+        {entry.public_gone_at ? (
+          <span className="text-xs text-muted-foreground">
+            The old public page no longer shows the journal text and is removed
+            from public discovery surfaces.
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (entry.visibility === "public" && entry.public_slug) {
+    return (
+      <div
+        data-owner-entry-controls="public"
+        className="flex flex-wrap items-center gap-3"
+      >
+        <span className="text-xs text-muted-foreground">
+          Public page available. Not listed for search engines during the pilot.
+        </span>
+        {objectPassportReadbackPath ? (
+          <Link
+            href={objectPassportReadbackPath}
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Open public passport
+          </Link>
+        ) : null}
+        <Link
+          href={publicJournalEntryPath(entry.public_slug)}
+          className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Open public page
+        </Link>
+        <form
+          action={archiveJournalEntryAction}
+          className="flex w-full flex-col gap-3 pt-1"
+        >
+          <input type="hidden" name="entryId" value={entry.id} />
+          <input type="hidden" name="objectId" value={objectId} />
+          <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+            <input
+              type="checkbox"
+              name="archiveAccepted"
+              required
+              className="mt-1 size-4 rounded border-border"
+            />
+            <span>
+              Archive this entry privately, remove it from public discovery
+              surfaces, and stop its old public page from showing the journal
+              text.
+            </span>
+          </label>
+          <button
+            type="submit"
+            className={buttonVariants({
+              variant: "destructive",
+              size: "sm",
+              className: "self-start",
+            })}
+          >
+            Archive public entry
+          </button>
+        </form>
+      </div>
+    );
+  }
+
+  const publishControl = createAuthIntentControlRef("publish", entry.id);
+  const resumesThisPublish =
+    resumeAction === "publish" && resumeControl === publishControl;
+
+  return (
+    <form
+      data-owner-entry-controls="private"
+      action={publishJournalEntryAction}
+      className="flex flex-col gap-3"
+    >
+      <input type="hidden" name="entryId" value={entry.id} />
+      <input type="hidden" name="objectId" value={objectId} />
+      <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+        <input
+          type="checkbox"
+          name="publicationDisclosureAccepted"
+          required
+          className="mt-1 size-4 rounded border-border"
+        />
+        <span>
+          Publish this entry as a public page. People with the link can read its
+          title, note, date, object identity, and chosen region if one is
+          visible. If a photo is attached, only a server-cleaned public copy can
+          appear; precise location and the original photo stay private. Pilot
+          public pages are not listed for search engines yet; that is not a
+          secrecy guarantee.{" "}
+          <Link
+            href={localizedPath(locale, "/first-publication-disclosure")}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            Read disclosure
+          </Link>
+          .
+        </span>
+      </label>
+      <button
+        id={
+          resumesThisPublish
+            ? buildAuthIntentAnchor("publish", publishControl)
+            : undefined
+        }
+        data-auth-intent-control="publish"
+        data-auth-intent-control-ref={publishControl}
+        autoFocus={resumesThisPublish}
+        type="submit"
+        className={buttonVariants({ size: "sm", className: "self-start" })}
+      >
+        Publish entry
+      </button>
+    </form>
   );
 }
 
@@ -522,7 +462,10 @@ function ProvenanceSection({
   locale: InterfaceLocale;
 }) {
   return (
-    <section className="grid gap-4 rounded-lg border border-border p-4">
+    <section
+      id="passport-provenance"
+      className="grid gap-4 border-t border-border pt-5"
+    >
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
         <p className="text-sm text-muted-foreground">
@@ -770,34 +713,6 @@ function formatDate(value: Date | string) {
 
 function canResolveCatalogState(value: string) {
   return value === "unknown" || value === "user_added";
-}
-
-function getObjectLocationLabel(page: PlantObjectPage) {
-  if (page.plantObject.location_visibility !== "region") {
-    return "Location: Hidden";
-  }
-
-  return `Region: ${
-    getCoarseRegionLabel(page.plantObject.coarse_region_code) ??
-    "Unsupported region"
-  }`;
-}
-
-function entryTimelineSummary(entry: PlantObjectPage["entries"][number]) {
-  const parts = [
-    entry.timelineRelation === "mentioned_space"
-      ? "Space-level mention"
-      : "Direct object entry",
-    entryScopeLabel(entry.entry_scope),
-    entryPrivacyLabel({
-      visibility: entry.visibility,
-      isArchived: entry.lifecycle_state === "archived",
-    }),
-    entry.media ? "Server-cleaned photo copy" : null,
-    entry.public_gone_at ? "Old public page archived" : null,
-  ].filter(Boolean);
-
-  return parts.join(" · ");
 }
 
 function getLineageReadbackPath(

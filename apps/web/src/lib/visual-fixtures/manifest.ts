@@ -87,6 +87,18 @@ export type VisualFixtureScenarioKind =
   | "public-object-empty"
   | "public-object-typical"
   | "public-object-dense"
+  | "public-object-long-name"
+  | "public-object-animal"
+  | "public-object-bee-colony"
+  | "public-object-provisional"
+  | "public-object-unknown"
+  | "public-object-mixed-history"
+  | "public-object-gone"
+  | "public-object-missing"
+  | "owner-object-empty"
+  | "owner-object-dense"
+  | "owner-object-animal"
+  | "owner-object-archived"
   | "public-profile"
   | "media-gallery";
 export type VisualFixtureStateKind =
@@ -324,6 +336,41 @@ export interface VisualFixtureKnowledgeEvidence {
   topics: readonly VisualFixtureKnowledgeTopicEvidence[];
 }
 
+export type VisualFixturePassportAccess = "guest-public" | "signed-in-owner";
+export type VisualFixturePassportIdentityState =
+  | "confirmed"
+  | "provisional"
+  | "unknown";
+export type VisualFixturePassportMediaState = "none" | "cover" | "gallery";
+export type VisualFixturePassportTimelineState =
+  | "empty"
+  | "one"
+  | "typical"
+  | "dense";
+
+export interface VisualFixturePassportScenarioEvidence {
+  id: string;
+  access: VisualFixturePassportAccess;
+  objectId: string;
+  ownerActorId: string;
+  path: string;
+  expectedStatus: 200 | 404 | 410;
+  objectKind: VisualFixtureObjectKind;
+  identityState: VisualFixturePassportIdentityState;
+  mediaState: VisualFixturePassportMediaState;
+  timelineState: VisualFixturePassportTimelineState;
+  expectedTimelineCount: number;
+  expectedTimelineEntryIds: readonly string[];
+  expectedMediaAspects: readonly VisualFixtureMediaAspect[];
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixturePassportEvidence {
+  timelinePreviewSize: 5;
+  maxPublicTimeline: 40;
+  scenarios: readonly VisualFixturePassportScenarioEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -412,6 +459,7 @@ export interface VisualFixtureManifest {
   feedEvidence: VisualFixtureFeedEvidence;
   journalDirectoryEvidence: VisualFixtureJournalDirectoryEvidence;
   knowledgeEvidence: VisualFixtureKnowledgeEvidence;
+  passportEvidence: VisualFixturePassportEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1376,6 +1424,7 @@ const feedEvidence: VisualFixtureFeedEvidence = {
 
 const journalDirectoryEvidence = buildJournalDirectoryEvidence();
 const knowledgeEvidence = buildKnowledgeEvidence();
+const passportEvidence = buildPassportEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -2088,10 +2137,9 @@ const scenarios: readonly VisualFixtureScenario[] = [
   scenario(
     "object-empty",
     "public-object-empty",
-    "Object without public history",
+    "Unpublished object passport",
     `/lineage/objects/${objects[17].id}`,
-    200,
-    "not_found",
+    404,
   ),
   scenario(
     "object-typical",
@@ -2105,6 +2153,90 @@ const scenarios: readonly VisualFixtureScenario[] = [
     "public-object-dense",
     "Dense object passport",
     `/lineage/objects/${objects[0].id}`,
+    200,
+  ),
+  scenario(
+    "object-long-name",
+    "public-object-long-name",
+    "Long-name object passport",
+    passportEvidenceCase("public-plant-long-name").path,
+    200,
+  ),
+  scenario(
+    "object-animal",
+    "public-object-animal",
+    "Animal passport with care chronology",
+    passportEvidenceCase("public-animal-typical").path,
+    200,
+  ),
+  scenario(
+    "object-bee-colony",
+    "public-object-bee-colony",
+    "Bee-colony passport with apiary-safe context",
+    passportEvidenceCase("public-bee-typical").path,
+    200,
+  ),
+  scenario(
+    "object-provisional",
+    "public-object-provisional",
+    "Provisional identity passport",
+    passportEvidenceCase("public-plant-provisional").path,
+    200,
+  ),
+  scenario(
+    "object-unknown",
+    "public-object-unknown",
+    "Unknown identity passport",
+    passportEvidenceCase("public-bee-unknown").path,
+    200,
+  ),
+  scenario(
+    "object-mixed-history",
+    "public-object-mixed-history",
+    "Public passport suppressing archived history",
+    passportEvidenceCase("public-bee-mixed-history").path,
+    200,
+  ),
+  scenario(
+    "object-gone",
+    "public-object-gone",
+    "Deleted public object passport",
+    passportEvidenceCase("public-gone").path,
+    410,
+  ),
+  scenario(
+    "object-missing",
+    "public-object-missing",
+    "Unknown object passport",
+    `/lineage/objects/${fixtureUuid(3, 999)}`,
+    404,
+  ),
+  scenario(
+    "owner-object-empty",
+    "owner-object-empty",
+    "Signed-in owner empty passport",
+    passportEvidenceCase("owner-empty").path,
+    200,
+  ),
+  scenario(
+    "owner-object-dense",
+    "owner-object-dense",
+    "Signed-in owner dense passport",
+    passportEvidenceCase("owner-plant-dense").path,
+    200,
+  ),
+  scenario(
+    "owner-object-animal",
+    "owner-object-animal",
+    "Signed-in owner animal passport",
+    passportEvidenceCase("owner-animal-typical").path,
+    200,
+  ),
+  scenario(
+    "owner-object-archived",
+    "owner-object-archived",
+    "Signed-in owner archived passport history",
+    passportEvidenceCase("owner-bee-archived").path,
     200,
   ),
   scenario(
@@ -2138,6 +2270,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   feedEvidence,
   journalDirectoryEvidence,
   knowledgeEvidence,
+  passportEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -2559,6 +2692,56 @@ export function validateVisualFixtureManifest(
       errors.push(`Owner-only state coverage ${state.id} exposes a route.`);
     }
   }
+  for (const passport of manifest.passportEvidence.scenarios) {
+    const object = manifest.objects.find(
+      (candidate) => candidate.id === passport.objectId,
+    );
+    if (!object || object.ownerUserId !== passport.ownerActorId) {
+      errors.push(
+        `Passport evidence ${passport.id} has an invalid owner object.`,
+      );
+      continue;
+    }
+    if (object.objectKind !== passport.objectKind) {
+      errors.push(
+        `Passport evidence ${passport.id} has the wrong object kind.`,
+      );
+    }
+    if (!passport.path.includes(passport.objectId)) {
+      errors.push(`Passport evidence ${passport.id} has an invalid route.`);
+    }
+    const expectedEntries =
+      passport.expectedStatus === 200
+        ? passportTimelineEntries(passport.objectId, passport.access)
+        : [];
+    const expectedIds = expectedEntries.map((entry) => entry.id);
+    if (
+      expectedIds.length !== passport.expectedTimelineCount ||
+      expectedIds.some(
+        (entryId, index) =>
+          passport.expectedTimelineEntryIds[index] !== entryId,
+      )
+    ) {
+      errors.push(`Passport evidence ${passport.id} has stale timeline proof.`);
+    }
+    const expectedIdSet = new Set(expectedIds);
+    const expectedAspects = manifest.media
+      .filter((item) => expectedIdSet.has(item.entryId))
+      .sort(
+        (left, right) =>
+          left.createdAt.localeCompare(right.createdAt) ||
+          left.id.localeCompare(right.id),
+      )
+      .map((item) => item.aspect);
+    if (
+      expectedAspects.length !== passport.expectedMediaAspects.length ||
+      expectedAspects.some(
+        (aspect, index) => passport.expectedMediaAspects[index] !== aspect,
+      )
+    ) {
+      errors.push(`Passport evidence ${passport.id} has stale media proof.`);
+    }
+  }
   for (const intent of manifest.intentEvidence.scenarios) {
     if (intent.startPath !== `/__visual-fixtures/intent/${intent.id}`) {
       errors.push(
@@ -2757,6 +2940,123 @@ function compareFeedEntries(
     right.publishedAt!.localeCompare(left.publishedAt!) ||
     left.id.localeCompare(right.id)
   );
+}
+
+function buildPassportEvidence(): VisualFixturePassportEvidence {
+  const specs = [
+    ["public-plant-typical", "guest-public", 1, 200],
+    ["public-plant-dense", "guest-public", 0, 200],
+    ["public-plant-long-name", "guest-public", 16, 200],
+    ["public-animal-typical", "guest-public", 18, 200],
+    ["public-bee-typical", "guest-public", 26, 200],
+    ["public-plant-provisional", "guest-public", 3, 200],
+    ["public-bee-unknown", "guest-public", 28, 200],
+    ["public-bee-mixed-history", "guest-public", 29, 200],
+    ["public-unpublished", "guest-public", 17, 404],
+    ["public-gone", "guest-public", 25, 410],
+    ["owner-empty", "signed-in-owner", 17, 200],
+    ["owner-plant-dense", "signed-in-owner", 0, 200],
+    ["owner-animal-typical", "signed-in-owner", 18, 200],
+    ["owner-bee-archived", "signed-in-owner", 29, 200],
+  ] as const satisfies readonly (readonly [
+    string,
+    VisualFixturePassportAccess,
+    number,
+    200 | 404 | 410,
+  ])[];
+
+  return {
+    timelinePreviewSize: 5,
+    maxPublicTimeline: 40,
+    scenarios: specs.map(([id, access, objectIndex, expectedStatus]) => {
+      const object = objects[objectIndex];
+      if (!object) {
+        throw new Error(`Passport evidence object ${objectIndex} is missing.`);
+      }
+      const timelineEntries =
+        expectedStatus === 200
+          ? passportTimelineEntries(object.id, access)
+          : [];
+      const entryIds = new Set(timelineEntries.map((entry) => entry.id));
+      const expectedMediaAspects = media
+        .filter((item) => entryIds.has(item.entryId))
+        .sort(
+          (left, right) =>
+            left.createdAt.localeCompare(right.createdAt) ||
+            left.id.localeCompare(right.id),
+        )
+        .map((item) => item.aspect);
+
+      return {
+        id,
+        access,
+        objectId: object.id,
+        ownerActorId: object.ownerUserId,
+        path:
+          access === "signed-in-owner"
+            ? `/garden/objects/${object.id}`
+            : `/lineage/objects/${object.id}`,
+        expectedStatus,
+        objectKind: object.objectKind,
+        identityState: passportIdentityState(object),
+        mediaState:
+          expectedMediaAspects.length === 0
+            ? "none"
+            : expectedMediaAspects.length === 1
+              ? "cover"
+              : "gallery",
+        timelineState:
+          timelineEntries.length === 0
+            ? "empty"
+            : timelineEntries.length === 1
+              ? "one"
+              : timelineEntries.length > 5
+                ? "dense"
+                : "typical",
+        expectedTimelineCount: timelineEntries.length,
+        expectedTimelineEntryIds: timelineEntries.map((entry) => entry.id),
+        expectedMediaAspects,
+        viewportTargets: ["desktop", "mobile-320"],
+      };
+    }),
+  };
+}
+
+function passportTimelineEntries(
+  objectId: string,
+  access: VisualFixturePassportAccess,
+) {
+  return entries
+    .filter(
+      (entry) =>
+        entry.objectId === objectId &&
+        (access === "signed-in-owner" ||
+          (entry.visibility === "public" &&
+            entry.lifecycleState === "active" &&
+            entry.publicGoneAt === null &&
+            entry.publicSlug !== null)),
+    )
+    .sort(
+      (left, right) =>
+        right.entryDate.localeCompare(left.entryDate) ||
+        right.createdAt.localeCompare(left.createdAt) ||
+        left.id.localeCompare(right.id),
+    );
+}
+
+function passportIdentityState(
+  object: VisualFixtureObject,
+): VisualFixturePassportIdentityState {
+  if (object.catalogItemId && object.varietyState === "selected") {
+    return "confirmed";
+  }
+  if (
+    object.varietyState === "user_added" ||
+    object.varietyState === "free_text"
+  ) {
+    return "provisional";
+  }
+  return "unknown";
 }
 
 function buildKnowledgeEvidence(): VisualFixtureKnowledgeEvidence {
@@ -3522,6 +3822,16 @@ function journalDirectoryEvidencePath(id: string) {
     throw new Error(`Visual fixture journal directory case ${id} is missing.`);
   }
   return evidence.path;
+}
+
+function passportEvidenceCase(id: string) {
+  const evidence = passportEvidence.scenarios.find(
+    (scenario) => scenario.id === id,
+  );
+  if (!evidence) {
+    throw new Error(`Visual fixture passport case ${id} is missing.`);
+  }
+  return evidence;
 }
 
 function catalogSeed(

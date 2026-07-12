@@ -34,19 +34,19 @@ export function LocationPrivacyControl({
   }
 
   return (
-    <section className="grid gap-3 rounded-lg border border-border p-4">
+    <section className="grid min-w-0 gap-3 rounded-lg border border-border p-4">
       <h2 className="text-lg font-semibold text-foreground">
         Location privacy
       </h2>
-      <form action={action} className="grid gap-3 sm:grid-cols-3">
+      <form action={action} className="grid min-w-0 gap-3 sm:grid-cols-3">
         <input type="hidden" name="objectId" value={objectId} />
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           Location
           <select
             name="locationVisibility"
             value={locationVisibility}
             onChange={(event) => updateLocationVisibility(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="hidden">Hidden</option>
             <option value="region">Region</option>
@@ -55,7 +55,7 @@ export function LocationPrivacyControl({
             {locationVisibilityHelpText(locationVisibility)}
           </span>
         </label>
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           Coarse region
           <select
             name="coarseRegionCode"
@@ -63,7 +63,7 @@ export function LocationPrivacyControl({
             disabled={locationVisibility === "hidden"}
             value={coarseRegionCode}
             onChange={(event) => setCoarseRegionCode(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
+            className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
             <option value="">Choose region</option>
             {COARSE_REGION_OPTIONS.map((region) => (

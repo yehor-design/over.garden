@@ -86,7 +86,7 @@ export function getSiteShellNavigation(
       "public",
       {
         match: "prefix",
-        paths: ["/objects", "/lineage/objects", "/variety"],
+        paths: ["/objects", "/lineage/objects", "/garden/objects", "/variety"],
       },
     ),
     item(
@@ -261,6 +261,7 @@ export function getSiteShellRouteContext(
 
   if (
     normalizedPath.startsWith("/lineage/objects/") ||
+    normalizedPath.startsWith("/garden/objects/") ||
     normalizedPath.startsWith("/variety/") ||
     normalizedPath.startsWith("/objects")
   ) {

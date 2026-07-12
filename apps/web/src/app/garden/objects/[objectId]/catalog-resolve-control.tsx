@@ -113,7 +113,7 @@ export function CatalogResolveControl({
   }
 
   return (
-    <section className="grid gap-4 rounded-lg border border-border p-4">
+    <section className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">
           Match this object to the catalog
@@ -124,19 +124,19 @@ export function CatalogResolveControl({
         </p>
       </div>
 
-      <form action={action} className="grid gap-3">
+      <form action={action} className="grid min-w-0 gap-3">
         <input type="hidden" name="objectId" value={objectId} />
         <input type="hidden" name="catalogItemId" value={selected?.id ?? ""} />
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           Catalog match
-          <span className="relative">
+          <span className="relative min-w-0">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               maxLength={120}
               value={query}
               onChange={(event) => updateQuery(event.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               placeholder="Search seeded catalog"
               autoComplete="off"
             />

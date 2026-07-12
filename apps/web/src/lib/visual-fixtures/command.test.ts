@@ -100,6 +100,7 @@ describe("visual fixture command boundary", () => {
         mediaReachable: 16,
         journalDirectoryCases: 11,
         knowledgeEvidenceCases: 10,
+        passportEvidenceCases: 14,
       },
     });
     const output = JSON.stringify(summary);
@@ -119,6 +120,7 @@ describe("visual fixture command boundary", () => {
         mediaSentinelSurvived: true,
         journalDirectoryCases: 11,
         knowledgeEvidenceCases: 10,
+        passportEvidenceCases: 14,
       },
     });
     expect(output).not.toMatch(

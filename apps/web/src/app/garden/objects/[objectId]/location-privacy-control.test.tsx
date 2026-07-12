@@ -16,6 +16,7 @@ describe("LocationPrivacyControl", () => {
 
     expect(html).toContain("region can appear");
     expect(html).toContain("Exact location is never shown");
+    expect(html).toContain("min-w-0");
     expect(html).not.toMatch(
       /\b(address|coordinates?|latitude|longitude|ip_address|user[_ -]?agent)\b/i,
     );

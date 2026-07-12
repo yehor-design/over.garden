@@ -30,6 +30,7 @@ import {
   buildPlantObjectPageObjectQuery,
   buildPriorPublicationDisclosureQuery,
   buildProcessedMediaForEntriesQuery,
+  buildProcessedObjectMediaGalleryQuery,
   buildPublicEntrySlugsForObjectQuery,
   buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
@@ -803,5 +804,25 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000021",
       "processed",
     ]);
+  });
+
+  it("selects a bounded owner-only object gallery from already scoped entry ids", () => {
+    const compiled = buildProcessedObjectMediaGalleryQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      [
+        "00000000-0000-0000-0000-000000000020",
+        "00000000-0000-0000-0000-000000000021",
+      ],
+    ).compile();
+
+    expect(compiled.sql).toContain('from "media_assets"');
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.sql).toContain('"journal_entry_id" in ($2, $3)');
+    expect(compiled.sql).toContain('"status" = $4');
+    expect(compiled.sql).toContain('"derivative_key" is not null');
+    expect(compiled.sql).toContain('"created_at" asc');
+    expect(compiled.parameters.at(-1)).toBe(6);
+    expect(compiled.sql).not.toContain("quarantine_key");
   });
 });

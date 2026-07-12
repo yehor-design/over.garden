@@ -398,6 +398,18 @@ describe("visual fixture manifest", () => {
         "public-object-empty",
         "public-object-typical",
         "public-object-dense",
+        "public-object-long-name",
+        "public-object-animal",
+        "public-object-bee-colony",
+        "public-object-provisional",
+        "public-object-unknown",
+        "public-object-mixed-history",
+        "public-object-gone",
+        "public-object-missing",
+        "owner-object-empty",
+        "owner-object-dense",
+        "owner-object-animal",
+        "owner-object-archived",
         "public-profile",
         "media-gallery",
         "public-feed-empty",
@@ -453,9 +465,57 @@ describe("visual fixture manifest", () => {
         (scenario) => scenario.kind === "public-object-empty",
       ),
     ).toMatchObject({
-      expectedStatus: 200,
-      expectedUiState: "not_found",
+      expectedStatus: 404,
     });
+  });
+
+  it("declares exact OVE-178 passport evidence across kind, identity, access, media, density, and lifecycle", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.passportEvidence;
+    const byId = new Map(
+      evidence.scenarios.map((scenario) => [scenario.id, scenario]),
+    );
+
+    expect(evidence.timelinePreviewSize).toBe(5);
+    expect(evidence.maxPublicTimeline).toBe(40);
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.objectKind)),
+    ).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.identityState)),
+    ).toEqual(new Set(["confirmed", "provisional", "unknown"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.access)),
+    ).toEqual(new Set(["guest-public", "signed-in-owner"]));
+    expect(
+      new Set(evidence.scenarios.map((scenario) => scenario.mediaState)),
+    ).toEqual(new Set(["none", "cover", "gallery"]));
+    expect(
+      byId.get("public-plant-dense")?.expectedTimelineEntryIds,
+    ).toHaveLength(10);
+    expect(byId.get("public-plant-long-name")?.path).toContain(
+      "18700003-0000-4000-8000-000000000017",
+    );
+    expect(
+      byId.get("owner-plant-dense")?.expectedTimelineEntryIds,
+    ).toHaveLength(12);
+    expect(byId.get("owner-empty")?.expectedTimelineEntryIds).toEqual([]);
+    expect(byId.get("public-unpublished")?.expectedStatus).toBe(404);
+    expect(byId.get("public-gone")?.expectedStatus).toBe(410);
+    expect(byId.get("public-bee-mixed-history")?.expectedTimelineCount).toBe(1);
+
+    for (const scenario of evidence.scenarios) {
+      expect(scenario.path).toContain(scenario.objectId);
+      expect(scenario.expectedTimelineCount).toBe(
+        scenario.expectedTimelineEntryIds.length,
+      );
+      expect(new Set(scenario.expectedTimelineEntryIds).size).toBe(
+        scenario.expectedTimelineEntryIds.length,
+      );
+      expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
+      expect(JSON.stringify(scenario)).not.toMatch(
+        /title|body|email|coordinate|latitude|longitude|quarantine|derivativeKey/i,
+      );
+    }
   });
 
   it("makes every required visual edge state explicit at its real data boundary", () => {

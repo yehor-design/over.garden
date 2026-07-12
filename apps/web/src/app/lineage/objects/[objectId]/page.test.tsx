@@ -93,6 +93,10 @@ const objectPassportPage = {
   ],
   coverMediaPublicUrl:
     "https://media.over.garden/derivatives/first-flowering.webp",
+  galleryMediaPublicUrls: [
+    "https://media.over.garden/derivatives/first-flowering.webp",
+  ],
+  timelineHasMore: false,
 };
 
 const lineageGraphPage = {
@@ -192,11 +196,10 @@ describe("/lineage/objects/[objectId]", () => {
 
     expect(mocks.getPublicObjectPassportPage).toHaveBeenCalledWith(objectId);
     expect(mocks.getPublicLineageGraphPage).toHaveBeenCalledWith(objectId);
-    expect(html).toContain("Публичен паспорт на жив обект");
-    expect(html).toContain("Публичен дневник");
-    expect(html).toContain("Последни публични записи");
-    expect(html).toContain("Преглед на дневника");
-    expect(html).toContain("Свързан публичен контекст");
+    expect(html).toContain("Публичен паспорт");
+    expect(html).toContain("Публичен дневник на обекта");
+    expect(html).toContain("Хронология");
+    expect(html).toContain("Прочетете последния запис");
     expect(html).toContain("Потвърден произход");
     expect(html).toContain("/api/engagement/likes");
     expect(html).toContain("/auth/intent/start");
@@ -208,16 +211,15 @@ describe("/lineage/objects/[objectId]", () => {
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("Seed mother");
     expect(html).toContain("First flowering");
-    expect(html).toContain("Покажи още записи");
     expect(html).toContain("Sixth public update");
     expect(html).toContain("Two new flower clusters opened");
     expect(html).toContain("Green Thumb");
     expect(html).toContain("@green_thumb");
     expect(html).toContain("Red Cherry");
-    expect(html).toContain("Region: Ukraine - Kyiv City");
+    expect(html).toContain("Регион: Ukraine - Kyiv City");
     expect(html).toContain("/journal/first-flowering");
     expect(html).toContain("/variety/red-cherry-tomato-0000000101");
-    expect(html).toContain("/garden?source=public-object");
+    expect(html).not.toContain("/garden?source=public-object");
     expect(html).not.toContain('href="/">OverGarden</a>');
     expect(html).toContain(
       "https://media.over.garden/derivatives/first-flowering.webp",
@@ -318,7 +320,7 @@ describe("/lineage/objects/[objectId]", () => {
     );
 
     expect(metadata.title).toBe("Balcony tomato · жив обект | OverGarden");
-    expect(html).toContain("Публичен паспорт на жив обект");
+    expect(html).toContain("Публичен паспорт");
     expect(html).toContain("Balcony tomato");
     expect(html).toContain("First flowering");
   });
