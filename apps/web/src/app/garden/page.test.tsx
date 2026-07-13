@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   resolveVisualGardenWorkspaceScenario: vi.fn(),
+  resolveVisualJournalCreationScenario: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -55,6 +56,11 @@ vi.mock("@/lib/visual-fixtures/garden-workspace-scenarios", () => ({
     mocks.resolveVisualGardenWorkspaceScenario,
 }));
 
+vi.mock("@/lib/visual-fixtures/journal-creation-scenarios", () => ({
+  resolveVisualJournalCreationScenario:
+    mocks.resolveVisualJournalCreationScenario,
+}));
+
 vi.mock("@/lib/auth/facebook-oauth", () => ({
   isFacebookSignInEnabled: () => false,
 }));
@@ -76,7 +82,18 @@ vi.mock("./actions", () => ({
 }));
 
 vi.mock("./first-entry-composer", () => ({
-  FirstEntryComposer: () => <form>First entry composer</form>,
+  FirstEntryComposer: (props: {
+    initialSpace?: { id: string; displayName: string } | null;
+    visualScenario?: { id: string } | null;
+  }) => (
+    <form
+      data-initial-space-id={props.initialSpace?.id ?? ""}
+      data-initial-space-name={props.initialSpace?.displayName ?? ""}
+      data-visual-create={props.visualScenario?.id ?? ""}
+    >
+      First entry composer
+    </form>
+  ),
 }));
 
 vi.mock("./garden-auth-panel", () => ({
@@ -102,6 +119,7 @@ describe("/garden workspace V2", () => {
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.resolveVisualGardenWorkspaceScenario.mockReturnValue(null);
+    mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
     mocks.loadGardenWorkspace.mockResolvedValue(workspaceModel());
     mocks.getMySpaceJournalTimeline.mockResolvedValue(spaceTimeline());
   });
@@ -134,6 +152,8 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("Flowering changed");
     expect(html).toContain("Add living object");
     expect(html).toContain("First entry composer");
+    expect(html).toContain('data-initial-space-id="space-1"');
+    expect(html).toContain('data-initial-space-name="Balcony"');
     expect(html).toContain("Space journal tools");
     expect(html).toContain("Shared morning round");
     expect(html).not.toContain("Sign-in methods");
@@ -270,7 +290,64 @@ describe("/garden workspace V2", () => {
     expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
     expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
   });
+
+  it("renders a credential-free first-entry fixture on the real owner form", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualJournalCreationScenario.mockReturnValueOnce(
+      visualCreationScenario("first-entry"),
+    );
+
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({ visualCreate: "ove182-c001" }),
+      }),
+    );
+
+    expect(html).toContain('data-visual-create="ove182-c001"');
+    expect(mocks.scopedToUser).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000099",
+      null,
+    );
+    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
+      expect.anything(),
+      "space-1",
+      { objectLimit: 20, entryLimit: 5 },
+    );
+    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
+    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+  });
 });
+
+function visualCreationScenario(flow: "first-entry" | "follow-up") {
+  return {
+    id: "ove182-c001",
+    flow,
+    state: "minimum",
+    label: "Minimum form",
+    ownerActorId: "00000000-0000-4000-8000-000000000099",
+    objectId: flow === "follow-up" ? "object-1" : null,
+    spaceId: "space-1",
+    objectKind: "plant",
+    objectName: "Cherry tomato",
+    entryTitle: "First flowers",
+    entryBody: "Two new flower clusters.",
+    entryDate: "2026-07-12",
+    catalogQuery: null,
+    userAddedCatalogName: null,
+    locationVisibility: "hidden",
+    coarseRegionCode: null,
+    topicTagInput: "",
+    mediaFileName: null,
+    online: true,
+    submitState: "idle",
+    message: "Private by default.",
+    detailsOpen: false,
+    path: "/garden?visualCreate=ove182-c001",
+    expectedStatus: 200,
+    viewportTargets: ["desktop", "mobile-320"] as const,
+  };
+}
 
 function visualScenario(state: "offline" | "loading") {
   return {

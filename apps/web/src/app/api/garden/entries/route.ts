@@ -80,6 +80,7 @@ export async function POST(request: Request) {
             topicTags: body.topicTags ?? [],
           })
         : await createFirstPlantEntry(scope, {
+            spaceId: body.spaceId ?? "",
             spaceName: body.spaceName ?? "",
             plantName: body.plantName ?? "",
             objectKind: body.objectKind ?? "",

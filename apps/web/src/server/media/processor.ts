@@ -1,22 +1,24 @@
 import "server-only";
 
 import {
-  deleteQuarantineObject,
   getPublicDerivativeUrl,
   getQuarantineObjectBuffer,
   putPublicDerivativeObject,
 } from "@/lib/storage";
 import type { MediaAsset } from "@/db/schema";
+import { MAX_COMPOSER_IMAGE_BYTES } from "@/lib/media/image-limits";
 import { createPublicImageDerivative } from "./derivatives";
 
 export async function processQuarantinedImage(asset: MediaAsset) {
-  const original = await getQuarantineObjectBuffer(asset.quarantine_key);
+  const original = await getQuarantineObjectBuffer(
+    asset.quarantine_key,
+    MAX_COMPOSER_IMAGE_BYTES,
+  );
   const derivative = await createPublicImageDerivative(original);
   const derivativeKey = asset.quarantine_key
     .replace(/^quarantine\//, "derivatives/")
     .replace(/\.[^.]+$/, `.${derivative.extension}`);
 
-  await deleteQuarantineObject(asset.quarantine_key);
   await putPublicDerivativeObject(
     derivativeKey,
     derivative.buffer,

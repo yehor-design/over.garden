@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended through OVE-181
-Manifest version: `ove187-v5`
-Manifest SHA-256: `863052d0321547fd3df5d853fcb5198f9d93fc71012abaf6b1a4f9b6d4942ce7`
+Status: implemented by OVE-187, extended through OVE-182
+Manifest version: `ove187-v6`
+Manifest SHA-256: `1eaa3393048b3cae39dcb9e0bebaaca10636374af44d5ab2b47c54efe4186a6f`
 
 ## Purpose
 
@@ -60,6 +60,11 @@ The manifest owns exactly:
   owner-scoped production queries with exact space/object/kind/recent-entry
   counts and ordering; the offline state adds deterministic local drafts,
   queued/failed work, and media-processing recovery without storing credentials;
+- 20 journal-creation scenarios on the real first-object and next-update forms.
+  Eleven first-entry and nine follow-up cases cover plant, animal, and bee
+  colony creation; minimum, optional, provisional, Unknown, maximum-copy,
+  media, draft, explicit-publish, backdated, privacy, offline, recoverable
+  error, cancel, and idempotent duplicate-retry states at desktop and 320px;
 - 21 intent-authentication scenarios covering Comment, Bookmark, Follow,
   Report profile, Block profile, Claim, Add object, Add journal entry, Save,
   and Publish across guest,
@@ -139,7 +144,8 @@ memberships, topics, entries, claimable lineage edges and pending identities,
 objects, catalog names, catalog identities, spaces, profiles, and actors in
 reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v5/`. It does not use wildcard or prefix database
+`visual-fixtures/ove187-v6/` plus the exact retired v5 filenames during
+migration cleanup. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
 existing hidden or coarse-region privacy states.
@@ -211,6 +217,29 @@ deliberately preserves unrelated local rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
 production `server-only` queries. JSON output is limited to the version, hash,
 environment class, aggregate counts, and boolean/count proof fields.
+
+Run all twenty OVE-182 creation contracts through the canonical journal
+repositories, then verify the persisted readback without creating anything
+again:
+
+```bash
+pnpm visual:fixtures:journal-create -- run all
+pnpm visual:fixtures:journal-create -- verify all
+```
+
+Use a manifest scenario ID instead of `all` for one case, or remove only the
+exact scenario-owned rows and derivative key:
+
+```bash
+pnpm visual:fixtures:journal-create -- reset ove182-c005
+```
+
+`run` resets each selected scenario before applying it. Server-write cases use
+the production first-entry/follow-up repositories, deterministic internal IDs,
+the real publication repository where specified, and two concurrent canonical
+calls for duplicate-retry cases. Draft, offline, recoverable-error, and cancel
+cases intentionally leave server tables unchanged; submitting their real form
+creates the owner-scoped Dexie draft or mutation state on that browser.
 
 The expected final counts are:
 
@@ -352,6 +381,27 @@ The offline state reuses that owner while exposing two browser-local drafts,
 one queued mutation, one failed mutation, and one failed media item with
 explicit local/server distinction.
 
+The journal-creation scenarios resolve only after the complete fixture
+environment gate succeeds. They render the same first-object and follow-up
+forms as normal owner routes with deterministic safe field values. Submitting
+a server-write case calls the local/Preview-only evidence endpoint, executes
+the canonical repository path, and returns to the real owner readback. Draft,
+offline, error, and cancel submissions use the normal owner-scoped IndexedDB
+boundaries and do not create server rows:
+
+```text
+/garden?visualCreate=ove182-c001#first-entry-composer
+/garden?visualCreate=ove182-c011#first-entry-composer
+/garden/objects/18700003-0000-4000-8000-000000000001?visualCreate=ove182-c012#follow-up-composer
+/garden/objects/18700003-0000-4000-8000-000000000001?visualCreate=ove182-c020#follow-up-composer
+```
+
+The fixture index lists all twenty cases with exact payload class,
+preconditions, expected IDs, post-save route, and Reset/Run/Verify controls.
+Normal `/garden` and owner-object routes remain fully writable; scenario
+actions can touch only their manifest-owned IDs and deterministic derivative
+keys.
+
 The intent section starts each authentication handoff through a gated route
 that exposes only its stable opaque scenario ID:
 
@@ -374,7 +424,10 @@ Preview use is opt-in and must target an isolated Preview database and buckets.
 Set `VISUAL_FIXTURES_TARGET=preview`, the exact Preview database name,
 `VERCEL_ENV=preview`, and `VISUAL_FIXTURES_ALLOW_PREVIEW=true`. Do not reuse
 Production storage or database credentials. Run seed/reset commands from a
-trusted operator environment; the product exposes no write endpoint.
+trusted operator environment. The journal-creation endpoint exists only after
+the same full fixture guard succeeds and accepts requests only on the exact
+configured Preview host; it hard-404s on Production, canonical OverGarden
+origins, arbitrary hosts, or incomplete fixture configuration.
 
 ## Troubleshooting
 

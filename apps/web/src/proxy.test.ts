@@ -49,6 +49,14 @@ describe("app route cache guardrail", () => {
   it("hard-404s the visual fixture route before App Router unless the full environment gate passes", async () => {
     vi.stubEnv("VISUAL_FIXTURES_ENABLED", "false");
     const disabled = await responseFor("/__visual-fixtures");
+    const disabledNested = await responseFor(
+      "/__visual-fixtures/intent/ove174-i001",
+    );
+    const disabledApi = await responseFor(
+      "/api/__visual-fixtures/journal-creation",
+      undefined,
+      { method: "POST" },
+    );
 
     vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
     vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
@@ -69,6 +77,8 @@ describe("app route cache guardrail", () => {
     vi.unstubAllEnvs();
 
     expect(disabled.status).toBe(404);
+    expect(disabledNested.status).toBe(404);
+    expect(disabledApi.status).toBe(404);
     expect(disabled.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
     expect(enabledLocal.status).toBe(200);
     expect(production.status).toBe(404);

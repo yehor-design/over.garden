@@ -1,6 +1,7 @@
 import "server-only";
 
 import sharp from "sharp";
+import { MAX_IMAGE_INPUT_PIXELS } from "@/lib/media/image-limits";
 
 export interface PublicImageDerivativeOptions {
   maxWidth?: number;
@@ -22,7 +23,10 @@ export async function createPublicImageDerivative(
     quality = 82,
   }: PublicImageDerivativeOptions = {},
 ): Promise<PublicImageDerivative> {
-  const buffer = await sharp(input, { failOn: "none" })
+  const buffer = await sharp(input, {
+    failOn: "error",
+    limitInputPixels: MAX_IMAGE_INPUT_PIXELS,
+  })
     .rotate()
     .resize({
       width: maxWidth,

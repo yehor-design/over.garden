@@ -14,6 +14,7 @@ import {
   MonitorSmartphone,
   PanelsTopLeft,
   ShieldCheck,
+  SquarePen,
   UsersRound,
 } from "lucide-react";
 
@@ -27,6 +28,7 @@ import {
 } from "@/lib/visual-fixtures/manifest";
 import { cn } from "@/lib/utils";
 import { VisualIntentDraftTrigger } from "./visual-intent-draft-trigger";
+import { VisualJournalCreationControls } from "./visual-journal-creation-controls";
 
 export const dynamic = "force-dynamic";
 
@@ -271,6 +273,95 @@ export default async function VisualFixtureIndexPage() {
                       Open workspace
                       <ArrowUpRight aria-hidden="true" />
                     </Link>
+                  </div>
+                </li>
+              ),
+            )}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section
+          aria-labelledby="creation-evidence-heading"
+          className="grid gap-4"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <SquarePen className="size-4" aria-hidden="true" />
+              Real first-object and next-update forms
+            </p>
+            <h2
+              id="creation-evidence-heading"
+              className="mt-1 text-xl font-semibold"
+            >
+              Journal creation V2 evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.creationEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.label}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.flow === "first-entry" ? "first" : "next"}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="State"
+                        value={scenario.state}
+                      />
+                      <PassportEvidenceFact
+                        label="Kind"
+                        value={scenario.objectKind.replaceAll("_", " ")}
+                      />
+                      <PassportEvidenceFact
+                        label="Network"
+                        value={scenario.online ? "online" : "offline"}
+                      />
+                      <PassportEvidenceFact
+                        label="Save"
+                        value={scenario.submitState}
+                      />
+                      <PassportEvidenceFact
+                        label="Media"
+                        value={scenario.mediaFileName ? "selected" : "none"}
+                      />
+                      <PassportEvidenceFact
+                        label="Viewports"
+                        value="desktop + 320"
+                      />
+                      <PassportEvidenceFact
+                        label="Payload"
+                        value={scenario.payloadClass}
+                      />
+                      <PassportEvidenceFact
+                        label="Server"
+                        value={scenario.expectedServerWrite ? "write" : "none"}
+                      />
+                    </dl>
+                    <dl className="grid gap-1 text-xs">
+                      <PassportEvidenceFact
+                        label="Expected object"
+                        value={scenario.expectedObjectId}
+                      />
+                      <PassportEvidenceFact
+                        label="Expected entry"
+                        value={scenario.expectedEntryId}
+                      />
+                    </dl>
+                    <VisualJournalCreationControls
+                      scenarioId={scenario.id}
+                      startPath={scenario.startPath}
+                      postSavePath={scenario.postSavePath}
+                      expectedServerWrite={scenario.expectedServerWrite}
+                    />
                   </div>
                 </li>
               ),
@@ -527,6 +618,7 @@ export default async function VisualFixtureIndexPage() {
                       {scenario.draftKind ? (
                         <VisualIntentDraftTrigger
                           kind={scenario.draftKind}
+                          ownerUserId={VISUAL_FIXTURE_MANIFEST.actors[0].id}
                           objectId={scenario.target?.ref}
                           startPath={scenario.startPath}
                         />

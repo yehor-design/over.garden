@@ -33,6 +33,7 @@ export interface FirstEntryCatalogSelection {
 export interface FirstPlantEntryRequest {
   target?: JournalEntryTarget;
   plantObjectId?: string | null;
+  spaceId?: string | null;
   spaceName?: string;
   plantName?: string;
   objectKind?: PlantObjectKind | null;

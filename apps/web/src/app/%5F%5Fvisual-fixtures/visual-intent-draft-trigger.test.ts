@@ -11,6 +11,7 @@ import { offlineDb } from "@/lib/offline/queue";
 import { seedVisualIntentDraft } from "./visual-intent-draft-trigger";
 
 const OBJECT_ID = "18700003-0000-4000-8000-000000000001";
+const OWNER_ID = "18700001-0000-4000-8000-000000000001";
 
 describe("visual auth-intent draft trigger", () => {
   beforeEach(async () => {
@@ -18,9 +19,14 @@ describe("visual auth-intent draft trigger", () => {
   });
 
   it("persists a realistic first-entry draft in IndexedDB", async () => {
-    await seedVisualIntentDraft({ kind: "first_entry" });
-    const saved =
-      await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+    await seedVisualIntentDraft({
+      kind: "first_entry",
+      ownerUserId: OWNER_ID,
+    });
+    const saved = await getOfflineDraft<FirstEntryDraftPayload>(
+      OWNER_ID,
+      FIRST_ENTRY_DRAFT_ID,
+    );
 
     expect(saved).toMatchObject({
       id: FIRST_ENTRY_DRAFT_ID,
@@ -34,9 +40,11 @@ describe("visual auth-intent draft trigger", () => {
   it("persists a realistic follow-up draft for the exact object", async () => {
     await seedVisualIntentDraft({
       kind: "follow_up_entry",
+      ownerUserId: OWNER_ID,
       objectId: OBJECT_ID,
     });
     const saved = await getOfflineDraft<FollowUpEntryDraftPayload>(
+      OWNER_ID,
       followUpEntryDraftId(OBJECT_ID),
     );
 

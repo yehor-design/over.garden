@@ -45,7 +45,6 @@ export async function markMediaAssetProcessed(
     .set({
       derivative_key: derivativeKey,
       status: "processed",
-      original_deleted_at: new Date(),
       updated_at: new Date(),
     })
     .where("id", "=", id)
@@ -57,7 +56,7 @@ export async function markMediaAssetProcessed(
 export async function markMediaAssetFailed(
   scope: RequestScope,
   id: string,
-): Promise<MediaAsset> {
+): Promise<MediaAsset | undefined> {
   return db
     .updateTable("media_assets")
     .set({
@@ -66,6 +65,25 @@ export async function markMediaAssetFailed(
     })
     .where("id", "=", id)
     .where("owner_user_id", "=", scope.userId)
+    .where("status", "!=", "processed")
+    .returningAll()
+    .executeTakeFirst();
+}
+
+export async function markMediaAssetOriginalDeleted(
+  scope: RequestScope,
+  id: string,
+): Promise<MediaAsset> {
+  return db
+    .updateTable("media_assets")
+    .set({
+      original_deleted_at: new Date(),
+      updated_at: new Date(),
+    })
+    .where("id", "=", id)
+    .where("owner_user_id", "=", scope.userId)
+    .where("status", "=", "processed")
+    .where("derivative_key", "is not", null)
     .returningAll()
     .executeTakeFirstOrThrow();
 }

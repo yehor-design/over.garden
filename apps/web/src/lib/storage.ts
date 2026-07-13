@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
@@ -17,6 +18,7 @@ import {
 export interface CreateQuarantineUploadUrlInput {
   objectKey: string;
   contentType: string;
+  contentLength: number;
   expiresInSeconds?: number;
 }
 
@@ -46,6 +48,7 @@ function r2Client() {
 export async function createQuarantineUploadUrl({
   objectKey,
   contentType,
+  contentLength,
   expiresInSeconds = numberServerEnv("R2_UPLOAD_URL_TTL_SECONDS", 900),
 }: CreateQuarantineUploadUrlInput): Promise<QuarantineUploadUrl> {
   const bucket = requiredServerEnv("R2_QUARANTINE_BUCKET");
@@ -53,6 +56,7 @@ export async function createQuarantineUploadUrl({
     Bucket: bucket,
     Key: objectKey,
     ContentType: contentType,
+    ContentLength: contentLength,
     Metadata: {
       privacy_state: "quarantine",
     },
@@ -68,8 +72,10 @@ export async function createQuarantineUploadUrl({
   };
 }
 
-
-export async function getQuarantineObjectBuffer(objectKey: string): Promise<Buffer> {
+export async function getQuarantineObjectBuffer(
+  objectKey: string,
+  maxBytes: number,
+): Promise<Buffer> {
   const response = await r2Client().send(
     new GetObjectCommand({
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
@@ -77,8 +83,15 @@ export async function getQuarantineObjectBuffer(objectKey: string): Promise<Buff
     }),
   );
 
+  if ((response.ContentLength ?? 0) > maxBytes) {
+    throw new Error("Quarantine object exceeds the allowed image size.");
+  }
+
   const bytes = await response.Body?.transformToByteArray();
   if (!bytes) throw new Error(`Quarantine object ${objectKey} has no body.`);
+  if (bytes.byteLength > maxBytes) {
+    throw new Error("Quarantine object exceeds the allowed image size.");
+  }
   return Buffer.from(bytes);
 }
 
@@ -94,6 +107,23 @@ export async function putPublicDerivativeObject(
       Body: body,
       ContentType: contentType,
       CacheControl: "public, max-age=31536000, immutable",
+    }),
+  );
+}
+
+export async function copyPublicDerivativeObject(
+  sourceObjectKey: string,
+  destinationObjectKey: string,
+): Promise<void> {
+  const bucket = requiredServerEnv("R2_PUBLIC_BUCKET");
+  await r2Client().send(
+    new CopyObjectCommand({
+      Bucket: bucket,
+      Key: destinationObjectKey,
+      CopySource: `${bucket}/${sourceObjectKey}`,
+      CacheControl: "public, max-age=31536000, immutable",
+      MetadataDirective: "REPLACE",
+      ContentType: "image/png",
     }),
   );
 }

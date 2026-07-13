@@ -707,8 +707,10 @@ create index if not exists catalog_items_merged_into_idx
   on catalog_items (merged_into_catalog_item_id)
   where merged_into_catalog_item_id is not null;
 
-create unique index if not exists catalog_items_owner_normalized_locale_uidx
-  on catalog_items (created_by_user_id, normalized_name, locale);
+drop index if exists catalog_items_owner_normalized_locale_uidx;
+
+create unique index if not exists catalog_items_owner_normalized_locale_kind_uidx
+  on catalog_items (created_by_user_id, normalized_name, locale, catalog_kind);
 
 create unique index if not exists catalog_items_source_source_id_uidx
   on catalog_items (source, source_id);

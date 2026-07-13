@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const authMock = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-  requireCurrentUserId: vi.fn(
-    async () => "00000000-0000-0000-0000-000000000001",
-  ),
+}));
+
+const pilotMock = vi.hoisted(() => ({
+  PilotWriteAccessError: class PilotWriteAccessError extends Error {},
+  requireWriteEligibleRequestScope: vi.fn(async () => ({
+    userId: "00000000-0000-0000-0000-000000000001",
+    sessionId: "session-1",
+  })),
 }));
 
 const mediaRepositoryMock = vi.hoisted(() => ({
@@ -32,6 +37,7 @@ const authIntentMock = vi.hoisted(() => ({
 }));
 
 vi.mock("@/server/auth-session", () => authMock);
+vi.mock("@/server/pilot-write-access", () => pilotMock);
 vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/lib/storage", () => storageMock);
 vi.mock("@/server/auth-intent-http", () => authIntentMock);
@@ -39,8 +45,12 @@ vi.mock("@/server/auth-intent-http", () => authIntentMock);
 import { POST } from "./route";
 
 describe("media upload API", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("returns an opaque authentication intent before reading a private upload body", async () => {
-    authMock.requireCurrentUserId.mockRejectedValueOnce(
+    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
       new authMock.AuthenticationRequiredError(),
     );
     const privateBody = JSON.stringify({
@@ -67,12 +77,31 @@ describe("media upload API", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("rejects authenticated users who are outside the closed pilot", async () => {
+    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
+      new pilotMock.PilotWriteAccessError("Invite required."),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({ contentType: "image/jpeg", sizeBytes: 123 }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(
+      mediaRepositoryMock.createQuarantinedMediaAsset,
+    ).not.toHaveBeenCalled();
+  });
+
   it("rejects attempts to pre-bind quarantined media to a journal entry", async () => {
     const response = await POST(
       new Request("http://localhost/api/media/uploads", {
         method: "POST",
         body: JSON.stringify({
           contentType: "image/jpeg",
+          sizeBytes: 123,
           journalEntryId: "00000000-0000-0000-0000-000000000020",
         }),
       }),
@@ -94,6 +123,7 @@ describe("media upload API", () => {
         method: "POST",
         body: JSON.stringify({
           contentType: "image/webp",
+          sizeBytes: 123,
         }),
       }),
     );
@@ -115,6 +145,31 @@ describe("media upload API", () => {
         /^quarantine\/00000000-0000-0000-0000-000000000001\/.+\.webp$/,
       ),
       contentType: "image/webp",
+      contentLength: 123,
     });
+  });
+
+  it("rejects missing and oversized byte contracts before creating quarantine rows", async () => {
+    const missing = await POST(
+      new Request("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({ contentType: "image/jpeg" }),
+      }),
+    );
+    const oversized = await POST(
+      new Request("http://localhost/api/media/uploads", {
+        method: "POST",
+        body: JSON.stringify({
+          contentType: "image/jpeg",
+          sizeBytes: 12 * 1024 * 1024 + 1,
+        }),
+      }),
+    );
+
+    expect(missing.status).toBe(400);
+    expect(oversized.status).toBe(400);
+    expect(
+      mediaRepositoryMock.createQuarantinedMediaAsset,
+    ).not.toHaveBeenCalled();
   });
 });

@@ -198,7 +198,7 @@ function getLocaleRoutingResponse(
 export async function proxy(request: NextRequest) {
   const locale = resolveRequestLocale(request);
   if (
-    normalizePathname(request.nextUrl.pathname) === "/__visual-fixtures" &&
+    isVisualFixturePath(normalizePathname(request.nextUrl.pathname)) &&
     !tryResolveVisualFixtureEnvironment(process.env)
   ) {
     return withAppRouteContract(
@@ -323,6 +323,15 @@ export async function proxy(request: NextRequest) {
   // App HTML/RSC/API responses are pilot evidence and may be personalized.
   // Keep them out of intermediary caches even if DNS is proxied later.
   return withAppRouteContract(response, request, locale);
+}
+
+function isVisualFixturePath(pathname: string) {
+  return (
+    pathname === "/__visual-fixtures" ||
+    pathname.startsWith("/__visual-fixtures/") ||
+    pathname === "/api/__visual-fixtures" ||
+    pathname.startsWith("/api/__visual-fixtures/")
+  );
 }
 
 function normalizePathname(pathname: string) {

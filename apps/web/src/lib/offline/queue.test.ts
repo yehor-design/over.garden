@@ -1,17 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  claimOfflineMutationForSync,
   createOfflinePhotoIntent,
-  enqueueOfflineMutation,
-  getOfflineMutation,
-  listOfflineMutations,
-  listQueuedMutations,
+  enqueueOfflineMutation as enqueueOwnedOfflineMutation,
+  getOfflineMutation as getOwnedOfflineMutation,
+  listOfflineMutations as listOwnedOfflineMutations,
+  listQueuedMutations as listOwnedQueuedMutations,
   OFFLINE_QUEUE_CHANGED_EVENT,
   offlineDb,
-  updateOfflineMutationPayload,
-  updateOfflineMutationStatus,
+  updateOfflineMutationPayload as updateOwnedOfflineMutationPayload,
+  updateOfflineMutationStatus as updateOwnedOfflineMutationStatus,
   type OfflineJournalEntryPayload,
 } from "./queue";
+
+const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
+const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
+
+function enqueueOfflineMutation(
+  input: Omit<
+    Parameters<typeof enqueueOwnedOfflineMutation>[0],
+    "ownerUserId"
+  > & { ownerUserId?: string },
+) {
+  return enqueueOwnedOfflineMutation({
+    ...input,
+    ownerUserId: input.ownerUserId ?? OWNER_A,
+  });
+}
+
+function getOfflineMutation(id: string) {
+  return getOwnedOfflineMutation(OWNER_A, id);
+}
+
+function listOfflineMutations(
+  statuses?: Parameters<typeof listOwnedOfflineMutations>[1],
+) {
+  return listOwnedOfflineMutations(OWNER_A, statuses);
+}
+
+function listQueuedMutations() {
+  return listOwnedQueuedMutations(OWNER_A);
+}
+
+function updateOfflineMutationStatus(
+  id: string,
+  status: Parameters<typeof updateOwnedOfflineMutationStatus>[2],
+  options?: Parameters<typeof updateOwnedOfflineMutationStatus>[3],
+) {
+  return updateOwnedOfflineMutationStatus(OWNER_A, id, status, options);
+}
+
+function updateOfflineMutationPayload(
+  id: string,
+  payload: Parameters<typeof updateOwnedOfflineMutationPayload>[2],
+) {
+  return updateOwnedOfflineMutationPayload(OWNER_A, id, payload);
+}
 
 describe("offline queue", () => {
   beforeEach(async () => {
@@ -200,5 +245,70 @@ describe("offline queue", () => {
       readbackUrl: "/garden/objects/object-1",
     });
     expect(all).toHaveLength(1);
+  });
+
+  it("isolates mutations by owner while allowing the same idempotency key", async () => {
+    const ownerAMutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload: { body: "Owner A private draft" },
+      idempotencyKey: "shared-client-key",
+    });
+    const ownerBMutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_B,
+      kind: "journal_entry",
+      payload: { body: "Owner B private draft" },
+      idempotencyKey: "shared-client-key",
+    });
+
+    expect(await listOwnedOfflineMutations(OWNER_A)).toEqual([ownerAMutation]);
+    expect(await listOwnedOfflineMutations(OWNER_B)).toEqual([ownerBMutation]);
+    expect(
+      await getOwnedOfflineMutation(OWNER_B, ownerAMutation.id),
+    ).toBeUndefined();
+  });
+
+  it("atomically deduplicates concurrent enqueue attempts for one owner", async () => {
+    const mutations = await Promise.all(
+      Array.from({ length: 8 }, (_, index) =>
+        enqueueOfflineMutation({
+          ownerUserId: OWNER_A,
+          kind: "journal_entry",
+          payload: { body: `Draft ${index}` },
+          idempotencyKey: "concurrent-client-key",
+        }),
+      ),
+    );
+    const stored = await listOwnedOfflineMutations(OWNER_A);
+
+    expect(new Set(mutations.map((mutation) => mutation.id))).toHaveLength(1);
+    expect(stored).toHaveLength(1);
+    expect(stored[0]?.idempotencyKey).toBe("concurrent-client-key");
+  });
+
+  it("prevents parallel sync claims and recovers an expired sync lease", async () => {
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Lease-protected update" },
+      idempotencyKey: "lease-client-key",
+    });
+
+    const firstClaim = await claimOfflineMutationForSync(OWNER_A, mutation.id);
+    const parallelClaim = await claimOfflineMutationForSync(
+      OWNER_A,
+      mutation.id,
+    );
+
+    expect(firstClaim?.status).toBe("syncing");
+    expect(parallelClaim).toBeUndefined();
+
+    await offlineDb?.mutations.update(mutation.id, {
+      status: "syncing",
+      syncLeaseExpiresAt: Date.now() - 1,
+    });
+    const recovered = await claimOfflineMutationForSync(OWNER_A, mutation.id);
+
+    expect(recovered?.status).toBe("syncing");
+    expect(recovered?.syncLeaseExpiresAt).toBeGreaterThan(Date.now());
   });
 });

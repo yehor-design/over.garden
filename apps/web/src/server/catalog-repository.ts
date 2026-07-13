@@ -8,6 +8,7 @@ import type {
   CatalogKind,
   Database,
   JsonValue,
+  PlantObjectKind,
 } from "@/db/schema";
 import {
   catalogSuggestionTrustMetadata,
@@ -79,6 +80,7 @@ export interface UserAddedCatalogCandidate {
 
 interface CreateUserAddedCatalogCandidateInput {
   displayName: string;
+  objectKind: PlantObjectKind;
 }
 
 interface CatalogTypeaheadSearchDeps {
@@ -253,12 +255,27 @@ export async function createUserAddedCatalogCandidate(
   const displayName = normalizeUserAddedCatalogName(input.displayName);
   const normalizedName = normalizeCatalogQuery(displayName);
   const locale = DEFAULT_USER_ADDED_LOCALE;
+  const catalogKind: CatalogKind =
+    input.objectKind === "plant" ? "plant_variety" : "species";
 
-  const item = await buildUpsertUserAddedCatalogItemQuery(executor, scope, {
+  const catalogIdentity = {
     displayName,
     normalizedName,
     locale,
-  }).executeTakeFirstOrThrow();
+    catalogKind,
+  };
+  const insertedItem = await buildUpsertUserAddedCatalogItemQuery(
+    executor,
+    scope,
+    catalogIdentity,
+  ).executeTakeFirst();
+  const item =
+    insertedItem ??
+    (await buildFindUserAddedCatalogItemQuery(
+      executor,
+      scope,
+      catalogIdentity,
+    ).executeTakeFirstOrThrow());
 
   await buildInsertCatalogItemNameQuery(executor, {
     catalogItemId: item.id,
@@ -402,35 +419,61 @@ export function buildUpsertUserAddedCatalogItemQuery(
     displayName: string;
     normalizedName: string;
     locale: string;
+    catalogKind: CatalogKind;
+  },
+) {
+  return (
+    executor
+      .insertInto("catalog_items")
+      .values({
+        canonical_name: input.displayName,
+        normalized_name: input.normalizedName,
+        catalog_kind: input.catalogKind,
+        status: "provisional",
+        source: "user_added",
+        source_id: null,
+        created_by_user_id: scope.userId,
+        locale: input.locale,
+      })
+      // A targetless conflict keeps deployments compatible with both the legacy
+      // owner/name/locale index and its owner/name/locale/kind replacement.
+      .onConflict((oc) => oc.doNothing())
+      .returning([
+        "id",
+        "canonical_name as canonicalName",
+        "normalized_name as normalizedName",
+        "locale",
+        "status",
+        "source",
+      ])
+  );
+}
+
+export function buildFindUserAddedCatalogItemQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    normalizedName: string;
+    locale: string;
+    catalogKind: CatalogKind;
   },
 ) {
   return executor
-    .insertInto("catalog_items")
-    .values({
-      canonical_name: input.displayName,
-      normalized_name: input.normalizedName,
-      catalog_kind: "plant_variety",
-      status: "provisional",
-      source: "user_added",
-      source_id: null,
-      created_by_user_id: scope.userId,
-      locale: input.locale,
-    })
-    .onConflict((oc) =>
-      oc
-        .columns(["created_by_user_id", "normalized_name", "locale"])
-        .doUpdateSet({
-          updated_at: new Date(),
-        }),
-    )
-    .returning([
+    .selectFrom("catalog_items")
+    .select([
       "id",
       "canonical_name as canonicalName",
       "normalized_name as normalizedName",
       "locale",
       "status",
       "source",
-    ]);
+    ])
+    .where("created_by_user_id", "=", scope.userId)
+    .where("normalized_name", "=", input.normalizedName)
+    .where("locale", "=", input.locale)
+    .where("catalog_kind", "=", input.catalogKind)
+    .where("status", "=", "provisional")
+    .where("source", "=", "user_added");
 }
 
 export function buildInsertCatalogItemNameQuery(

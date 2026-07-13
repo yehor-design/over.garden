@@ -16,10 +16,12 @@ type VisualIntentDraftKind = "first_entry" | "follow_up_entry";
 
 export function VisualIntentDraftTrigger({
   kind,
+  ownerUserId,
   objectId,
   startPath,
 }: {
   kind: VisualIntentDraftKind;
+  ownerUserId: string;
   objectId?: string;
   startPath: string;
 }) {
@@ -30,7 +32,11 @@ export function VisualIntentDraftTrigger({
     setPending(true);
     setFailed(false);
     try {
-      const saved = await seedVisualIntentDraft({ kind, objectId });
+      const saved = await seedVisualIntentDraft({
+        kind,
+        ownerUserId,
+        objectId,
+      });
       if (!saved) throw new Error("IndexedDB is unavailable.");
       window.location.assign(startPath);
     } catch {
@@ -66,9 +72,11 @@ export function VisualIntentDraftTrigger({
 
 export async function seedVisualIntentDraft({
   kind,
+  ownerUserId,
   objectId,
 }: {
   kind: VisualIntentDraftKind;
+  ownerUserId: string;
   objectId?: string;
 }) {
   if (kind === "follow_up_entry") {
@@ -85,6 +93,7 @@ export async function seedVisualIntentDraft({
       photoIntent: null,
     };
     return upsertOfflineDraft({
+      ownerUserId,
       id: followUpEntryDraftId(objectId),
       kind,
       payload,
@@ -111,6 +120,7 @@ export async function seedVisualIntentDraft({
     photoIntent: null,
   };
   return upsertOfflineDraft({
+    ownerUserId,
     id: FIRST_ENTRY_DRAFT_ID,
     kind,
     payload,

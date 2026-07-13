@@ -18,6 +18,7 @@ import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
+  buildFindUserAddedCatalogItemQuery,
   buildCatalogTypeaheadQuery,
   buildFindSelectableCatalogItemByPublicSlugQuery,
   buildFindSelectableCatalogItemQuery,
@@ -443,17 +444,16 @@ describe("catalog repository query contracts", () => {
     expect(compiled.parameters).toEqual(["seeded", "confirmed"]);
   });
 
-  it("upserts user-added candidates by owner, normalized name, and locale", () => {
+  it("inserts user-added candidates with a schema-compatible conflict fallback", () => {
     const compiled = buildUpsertUserAddedCatalogItemQuery(testDb, scope, {
       displayName: "Бабусин перець",
       normalizedName: "бабусин перець",
       locale: "und",
+      catalogKind: "plant_variety",
     }).compile();
 
     expect(compiled.sql).toContain('insert into "catalog_items"');
-    expect(compiled.sql).toContain(
-      'on conflict ("created_by_user_id", "normalized_name", "locale") do update',
-    );
+    expect(compiled.sql).toContain("on conflict do nothing");
     expect(compiled.sql).toContain("returning");
     expect(compiled.parameters).toEqual([
       "Бабусин перець",
@@ -464,8 +464,43 @@ describe("catalog repository query contracts", () => {
       null,
       "00000000-0000-0000-0000-000000000001",
       "und",
-      expect.any(Date),
     ]);
+  });
+
+  it("reads a conflicting user-added candidate only inside the owner and kind scope", () => {
+    const compiled = buildFindUserAddedCatalogItemQuery(testDb, scope, {
+      normalizedName: "місцева руда кішка",
+      locale: "und",
+      catalogKind: "species",
+    }).compile();
+
+    expect(compiled.sql).toContain('from "catalog_items"');
+    expect(compiled.sql).toContain('"created_by_user_id" = $1');
+    expect(compiled.sql).toContain('"normalized_name" = $2');
+    expect(compiled.sql).toContain('"locale" = $3');
+    expect(compiled.sql).toContain('"catalog_kind" = $4');
+    expect(compiled.sql).toContain('"status" = $5');
+    expect(compiled.sql).toContain('"source" = $6');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000001",
+      "місцева руда кішка",
+      "und",
+      "species",
+      "provisional",
+      "user_added",
+    ]);
+  });
+
+  it("stores user-added animal and bee identities as provisional species", () => {
+    const compiled = buildUpsertUserAddedCatalogItemQuery(testDb, scope, {
+      displayName: "Місцева руда кішка",
+      normalizedName: "місцева руда кішка",
+      locale: "und",
+      catalogKind: "species",
+    }).compile();
+
+    expect(compiled.parameters).toContain("species");
+    expect(compiled.sql).toContain('"catalog_kind"');
   });
 
   it("stores the user-added display name as a primary alias without global identity", () => {

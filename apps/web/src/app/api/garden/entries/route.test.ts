@@ -135,6 +135,7 @@ describe("POST /api/garden/entries save progress readback", () => {
     const response = await POST(
       jsonRequest({
         target: "first_plant_entry",
+        spaceId: "00000000-0000-4000-8000-000000000301",
         spaceName: "Balcony",
         plantName: "Cherry tomato",
         title: "First flowers",
@@ -154,7 +155,10 @@ describe("POST /api/garden/entries save progress readback", () => {
     );
     expect(mocks.createFirstPlantEntry).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ topicTags: ["watering", "seedlings"] }),
+      expect.objectContaining({
+        spaceId: "00000000-0000-4000-8000-000000000301",
+        topicTags: ["watering", "seedlings"],
+      }),
     );
     expect(mocks.recordAnalyticsEventSafely).toHaveBeenCalledWith(
       expect.anything(),

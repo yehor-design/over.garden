@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v5");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v5");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v6");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v6");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
@@ -44,6 +44,86 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-182 with complete first-object and next-update form states", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.creationEvidence;
+    const first = evidence.scenarios.filter(
+      (scenario) => scenario.flow === "first-entry",
+    );
+    const next = evidence.scenarios.filter(
+      (scenario) => scenario.flow === "follow-up",
+    );
+    const states = new Set(
+      evidence.scenarios.map((scenario) => scenario.state),
+    );
+
+    expect(evidence.scenarios).toHaveLength(20);
+    expect(first).toHaveLength(11);
+    expect(next).toHaveLength(9);
+    expect(new Set(first.map((scenario) => scenario.objectKind))).toEqual(
+      new Set(["plant", "animal", "bee_colony"]),
+    );
+    expect(states).toEqual(
+      new Set([
+        "minimum",
+        "optional",
+        "provisional",
+        "unknown-long",
+        "media",
+        "draft",
+        "publish",
+        "backdated",
+        "privacy",
+        "offline",
+        "error",
+        "cancel",
+        "duplicate",
+      ]),
+    );
+    expect(
+      first.every((scenario) => scenario.path.startsWith("/garden?")),
+    ).toBe(true);
+    expect(
+      next.every((scenario) =>
+        scenario.path.startsWith(`/garden/objects/${scenario.objectId}?`),
+      ),
+    ).toBe(true);
+
+    for (const scenario of evidence.scenarios) {
+      expect(scenario.ownerActorId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(scenario.viewportTargets).toEqual(["desktop", "mobile-320"]);
+      expect(scenario.entryDate).toMatch(/^2026-\d{2}-\d{2}$/);
+      expect(scenario.startPath).toBe(scenario.path);
+      expect(scenario.clientMutationId).toBe(`${scenario.id}-mutation`);
+      expect(scenario.expectedSpaceId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(scenario.expectedObjectId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(scenario.expectedEntryId).toMatch(/^[0-9a-f-]{36}$/);
+      expect(scenario.resetOwnedEntryIds).toEqual([scenario.expectedEntryId]);
+      expect(scenario.postSavePath === null).toBe(
+        !scenario.expectedServerWrite,
+      );
+
+      if (scenario.flow === "first-entry") {
+        expect(scenario.spaceId).toBeNull();
+        expect(scenario.objectId).toBeNull();
+        expect(scenario.preconditionEntryIds).toEqual([]);
+        expect(scenario.resetOwnedSpaceIds).toEqual([scenario.expectedSpaceId]);
+        expect(scenario.resetOwnedObjectIds).toEqual([
+          scenario.expectedObjectId,
+        ]);
+      } else {
+        expect(scenario.spaceId).toBe(scenario.expectedSpaceId);
+        expect(scenario.objectId).toBe(scenario.expectedObjectId);
+        expect(scenario.preconditionEntryIds.length).toBeGreaterThanOrEqual(0);
+        expect(scenario.resetOwnedSpaceIds).toEqual([]);
+        expect(scenario.resetOwnedObjectIds).toEqual([]);
+      }
+    }
+
+    expect(JSON.stringify(evidence)).not.toMatch(
+      /email|password|token|latitude|longitude|coordinate|quarantine|household|property[_ -]?id/i,
+    );
   });
 
   it("backs OVE-181 with private empty, sparse, typical, dense, and recoverable workspace states", () => {
@@ -791,7 +871,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v5\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v6\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

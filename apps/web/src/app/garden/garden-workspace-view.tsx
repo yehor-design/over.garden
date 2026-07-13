@@ -40,6 +40,7 @@ import {
 } from "./garden-workspace-local-state";
 
 interface GardenWorkspaceViewProps {
+  ownerUserId: string;
   canWrite: boolean;
   locale: InterfaceLocale;
   today: string;
@@ -49,6 +50,7 @@ interface GardenWorkspaceViewProps {
 }
 
 export function GardenWorkspaceView({
+  ownerUserId,
   canWrite,
   locale,
   today,
@@ -90,6 +92,7 @@ export function GardenWorkspaceView({
           </Link>
         </section>
         <GardenWorkspaceLocalState
+          ownerUserId={ownerUserId}
           locale={locale}
           nextAction={{ href: "/garden", label: "Retry workspace" }}
           recent={[]}
@@ -166,6 +169,7 @@ export function GardenWorkspaceView({
       <WorkspaceSummary workspace={workspace} today={today} />
 
       <GardenWorkspaceLocalState
+        ownerUserId={ownerUserId}
         locale={locale}
         nextAction={{ href: nextAction.href, label: nextAction.label }}
         recent={recent}

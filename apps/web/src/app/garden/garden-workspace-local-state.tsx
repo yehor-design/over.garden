@@ -56,6 +56,7 @@ export interface GardenWorkspaceLocalStateSnapshot {
 }
 
 interface GardenWorkspaceLocalStateProps {
+  ownerUserId: string;
   locale: InterfaceLocale;
   nextAction: { href: string; label: string };
   recent: GardenWorkspaceRecentEntry[];
@@ -71,6 +72,7 @@ const EMPTY_LOCAL_STATE: GardenWorkspaceLocalStateSnapshot = {
 };
 
 export function GardenWorkspaceLocalState({
+  ownerUserId,
   locale,
   nextAction,
   recent,
@@ -85,22 +87,26 @@ export function GardenWorkspaceLocalState({
   const refresh = useCallback(async () => {
     if (initialState) return;
 
-    const [drafts, mutations] = await Promise.all([
-      listOfflineDrafts(["first_entry", "follow_up_entry"]),
-      listOfflineMutations(["queued", "syncing", "failed"]),
-    ]);
+    try {
+      const [drafts, mutations] = await Promise.all([
+        listOfflineDrafts(ownerUserId, ["first_entry", "follow_up_entry"]),
+        listOfflineMutations(ownerUserId, ["queued", "syncing", "failed"]),
+      ]);
 
-    setLocalState({
-      online: navigator.onLine,
-      drafts: drafts.map(summarizeDraft),
-      mutations: mutations.map((mutation) => ({
-        id: mutation.id,
-        title: mutationTitle(mutation.payload),
-        status: mutation.status,
-        href: mutationHref(mutation.payload),
-      })),
-    });
-  }, [initialState]);
+      setLocalState({
+        online: navigator.onLine,
+        drafts: drafts.map(summarizeDraft),
+        mutations: mutations.map((mutation) => ({
+          id: mutation.id,
+          title: mutationTitle(mutation.payload),
+          status: mutation.status,
+          href: mutationHref(mutation.payload),
+        })),
+      });
+    } catch {
+      setLocalState({ ...EMPTY_LOCAL_STATE, online: navigator.onLine });
+    }
+  }, [initialState, ownerUserId]);
 
   useEffect(() => {
     if (initialState) return;
@@ -166,7 +172,11 @@ export function GardenWorkspaceLocalState({
 
         {hasLocalWork ? (
           <div className="mt-4 grid gap-5 lg:mt-2 lg:grid-cols-2 lg:gap-3">
-            <LocalDraftList drafts={localState.drafts} onRefresh={refresh} />
+            <LocalDraftList
+              ownerUserId={ownerUserId}
+              drafts={localState.drafts}
+              onRefresh={refresh}
+            />
             <LocalMutationList mutations={localState.mutations} />
           </div>
         ) : (
@@ -207,9 +217,11 @@ export function GardenWorkspaceLocalState({
 }
 
 function LocalDraftList({
+  ownerUserId,
   drafts,
   onRefresh,
 }: {
+  ownerUserId: string;
   drafts: GardenWorkspaceDraftView[];
   onRefresh: () => Promise<void>;
 }) {
@@ -245,7 +257,9 @@ function LocalDraftList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => void discardDraft(draft.id, onRefresh)}
+                  onClick={() =>
+                    void discardDraft(ownerUserId, draft.id, onRefresh)
+                  }
                 >
                   Discard
                 </Button>
@@ -319,8 +333,12 @@ function ConnectionState({ online }: { online: boolean }) {
   );
 }
 
-async function discardDraft(id: string, refresh: () => Promise<void>) {
-  await deleteOfflineDraft(id);
+async function discardDraft(
+  ownerUserId: string,
+  id: string,
+  refresh: () => Promise<void>,
+) {
+  await deleteOfflineDraft(ownerUserId, id);
   await refresh();
 }
 

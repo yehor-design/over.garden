@@ -2,24 +2,59 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createOfflinePhotoIntent,
-  enqueueOfflineMutation,
-  listQueuedMutations,
+  enqueueOfflineMutation as enqueueOwnedOfflineMutation,
+  listQueuedMutations as listOwnedQueuedMutations,
   offlineDb,
+  type OfflineDraftRecord,
   type OfflineJournalEntryPayload,
 } from "./queue";
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
-  deleteOfflineDraft,
+  deleteOfflineDraft as deleteOwnedOfflineDraft,
   FIRST_ENTRY_DRAFT_ID,
   followUpEntryDraftId,
-  getOfflineDraft,
+  getOfflineDraft as getOwnedOfflineDraft,
   hasPersistableFirstEntryDraft,
   hasPersistableFollowUpDraft,
-  listOfflineDrafts,
-  upsertOfflineDraft,
+  listOfflineDrafts as listOwnedOfflineDrafts,
+  upsertOfflineDraft as upsertOwnedOfflineDraft,
   type FirstEntryDraftPayload,
   type FollowUpEntryDraftPayload,
+  type JournalDraftPayload,
 } from "./drafts";
+
+const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
+const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
+
+function enqueueOfflineMutation(
+  input: Omit<Parameters<typeof enqueueOwnedOfflineMutation>[0], "ownerUserId">,
+) {
+  return enqueueOwnedOfflineMutation({ ...input, ownerUserId: OWNER_A });
+}
+
+function listQueuedMutations() {
+  return listOwnedQueuedMutations(OWNER_A);
+}
+
+function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
+  input: Pick<OfflineDraftRecord<TPayload>, "id" | "kind" | "payload">,
+) {
+  return upsertOwnedOfflineDraft({ ...input, ownerUserId: OWNER_A });
+}
+
+function getOfflineDraft<TPayload extends JournalDraftPayload>(id: string) {
+  return getOwnedOfflineDraft<TPayload>(OWNER_A, id);
+}
+
+function listOfflineDrafts(
+  kinds?: Parameters<typeof listOwnedOfflineDrafts>[1],
+) {
+  return listOwnedOfflineDrafts(OWNER_A, kinds);
+}
+
+function deleteOfflineDraft(id: string) {
+  return deleteOwnedOfflineDraft(OWNER_A, id);
+}
 
 describe("offline journal drafts", () => {
   beforeEach(async () => {
@@ -257,7 +292,65 @@ describe("offline journal drafts", () => {
       "Edited after auth return.",
     );
   });
+
+  it("keeps the same logical draft isolated between browser accounts", async () => {
+    const ownerAPayload = minimalFirstEntryDraft("Owner A private note");
+    const ownerBPayload = minimalFirstEntryDraft("Owner B private note");
+
+    await upsertOwnedOfflineDraft({
+      ownerUserId: OWNER_A,
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload: ownerAPayload,
+    });
+    await upsertOwnedOfflineDraft({
+      ownerUserId: OWNER_B,
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload: ownerBPayload,
+    });
+
+    expect(
+      (
+        await getOwnedOfflineDraft<FirstEntryDraftPayload>(
+          OWNER_A,
+          FIRST_ENTRY_DRAFT_ID,
+        )
+      )?.payload.draft.body,
+    ).toBe("Owner A private note");
+    expect(
+      (
+        await getOwnedOfflineDraft<FirstEntryDraftPayload>(
+          OWNER_B,
+          FIRST_ENTRY_DRAFT_ID,
+        )
+      )?.payload.draft.body,
+    ).toBe("Owner B private note");
+    expect(await listOwnedOfflineDrafts(OWNER_A)).toHaveLength(1);
+    expect(await listOwnedOfflineDrafts(OWNER_B)).toHaveLength(1);
+  });
 });
+
+function minimalFirstEntryDraft(body: string): FirstEntryDraftPayload {
+  return {
+    clientMutationId: crypto.randomUUID(),
+    draft: {
+      spaceName: "Balcony",
+      plantName: "Cherry tomato",
+      objectKind: "plant",
+      title: "Private update",
+      body,
+      entryDate: "2026-07-13",
+      locationVisibility: "hidden",
+      coarseRegionCode: "",
+    },
+    catalogQuery: "",
+    selectedCatalogItem: null,
+    userAddedCatalogName: null,
+    activationSource: "direct_garden",
+    photoIntent: null,
+  };
+}
 
 function firstEntryPayloadFromDraft(
   payload: FirstEntryDraftPayload,

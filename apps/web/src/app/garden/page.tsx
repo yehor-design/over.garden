@@ -21,7 +21,11 @@ import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { localizedPath } from "@/lib/public-localization";
 import { resolveVisualGardenWorkspaceScenario } from "@/lib/visual-fixtures/garden-workspace-scenarios";
-import type { VisualFixtureWorkspaceScenarioEvidence } from "@/lib/visual-fixtures/manifest";
+import { resolveVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-scenarios";
+import type {
+  VisualFixtureCreationScenarioEvidence,
+  VisualFixtureWorkspaceScenarioEvidence,
+} from "@/lib/visual-fixtures/manifest";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
@@ -65,11 +69,17 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     params.visualWorkspace,
     process.env,
   );
+  const creationScenario = resolveVisualJournalCreationScenario(
+    params.visualCreate,
+    "first-entry",
+    process.env,
+  );
   if (visualScenario?.state === "loading") return <GardenLoading />;
 
-  const userId = visualScenario
-    ? visualScenario.ownerActorId
-    : session?.user?.id;
+  const userId =
+    creationScenario?.ownerActorId ??
+    visualScenario?.ownerActorId ??
+    session?.user?.id;
   const engagementAuthMessage = engagementAuthPrompt(params.engagement);
   const engagementPostAuthPath = engagementAuthMessage
     ? normalizeGardenReturnToParam(params.returnTo)
@@ -112,7 +122,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
 
   const scope = scopedToUser(
     userId,
-    visualScenario ? null : getSessionId(session),
+    visualScenario || creationScenario ? null : getSessionId(session),
   );
   const loadOptions = {
     inventoryExpanded: firstParam(params.inventory) === "all",
@@ -122,7 +132,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     faultSections: visualScenario?.faultSections ?? [],
   };
   const [writeAccess, workspace] = await Promise.all([
-    visualScenario
+    visualScenario || creationScenario
       ? Promise.resolve({ invited: true })
       : resolvePilotWriteAccess(scope),
     loadGardenWorkspace(scope, loadOptions),
@@ -136,18 +146,20 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     workspaceForView.spaces.status === "ready"
       ? (workspaceForView.spaces.value.spaces[0]?.id ?? null)
       : null;
-  const selectedSpaceId = requestedSpaceId || defaultSpaceId;
+  const selectedSpaceId =
+    requestedSpaceId || creationScenario?.spaceId || defaultSpaceId;
   const selectedSpaceTimeline = selectedSpaceId
     ? await getMySpaceJournalTimeline(scope, selectedSpaceId, {
         objectLimit: 20,
         entryLimit: 5,
       })
     : null;
-  const today = visualScenario
-    ? "2026-07-12"
-    : new Date().toISOString().slice(0, 10);
+  const today =
+    visualScenario || creationScenario
+      ? "2026-07-12"
+      : new Date().toISOString().slice(0, 10);
 
-  if (!visualScenario) {
+  if (!visualScenario && !creationScenario) {
     await recordAnalyticsEventSafely(scope, {
       eventName: "activation_started",
       properties: {
@@ -164,6 +176,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         control={normalizeAuthIntentResumeControl(params.authControl)}
       />
       <GardenWorkspaceView
+        ownerUserId={userId}
         canWrite={writeAccess.invited}
         locale={locale}
         today={today}
@@ -198,6 +211,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           activationSource={activationSource}
           initialCatalogItem={initialCatalogItem}
           selectedSpaceTimeline={selectedSpaceTimeline}
+          visualScenario={creationScenario}
+          ownerUserId={userId}
         />
       </GardenWorkspaceView>
     </>
@@ -348,13 +363,16 @@ function GuestGardenEntry({
 }
 
 function GardenWriteTools({
+  ownerUserId,
   canWrite,
   today,
   locale,
   activationSource,
   initialCatalogItem,
   selectedSpaceTimeline,
+  visualScenario,
 }: {
+  ownerUserId: string;
   canWrite: boolean;
   today: string;
   locale: InterfaceLocale;
@@ -363,6 +381,7 @@ function GardenWriteTools({
   >[0]["activationSource"];
   initialCatalogItem: FirstEntryCatalogSelection | null;
   selectedSpaceTimeline: SpaceJournalTimeline | null;
+  visualScenario: VisualFixtureCreationScenarioEvidence | null;
 }) {
   return (
     <div className="flex flex-col gap-10 border-t border-border pt-8">
@@ -380,11 +399,21 @@ function GardenWriteTools({
         <div className="mt-5" id="write-access">
           {canWrite ? (
             <FirstEntryComposer
+              ownerUserId={ownerUserId}
               key={initialCatalogItem?.id ?? "first-entry"}
               today={today}
               initialClientMutationId={crypto.randomUUID()}
+              initialSpace={
+                selectedSpaceTimeline
+                  ? {
+                      id: selectedSpaceTimeline.space.id,
+                      displayName: selectedSpaceTimeline.space.display_name,
+                    }
+                  : null
+              }
               initialCatalogItem={initialCatalogItem}
               activationSource={activationSource}
+              visualScenario={visualScenario}
             />
           ) : (
             <ClosedPilotWriteCallout locale={locale} />

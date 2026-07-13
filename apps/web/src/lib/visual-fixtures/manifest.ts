@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v5";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v6";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -564,6 +564,71 @@ export interface VisualFixtureWorkspaceEvidence {
   scenarios: readonly VisualFixtureWorkspaceScenarioEvidence[];
 }
 
+export type VisualFixtureCreationFlow = "first-entry" | "follow-up";
+export type VisualFixtureCreationState =
+  | "minimum"
+  | "optional"
+  | "provisional"
+  | "unknown-long"
+  | "media"
+  | "draft"
+  | "publish"
+  | "backdated"
+  | "privacy"
+  | "offline"
+  | "error"
+  | "cancel"
+  | "duplicate";
+
+export interface VisualFixtureCreationScenarioEvidence {
+  id: string;
+  flow: VisualFixtureCreationFlow;
+  state: VisualFixtureCreationState;
+  label: string;
+  ownerActorId: string;
+  objectId: string | null;
+  spaceId: string | null;
+  spaceName: string;
+  objectKind: VisualFixtureObjectKind;
+  objectName: string;
+  entryTitle: string;
+  entryBody: string;
+  entryDate: string;
+  catalogQuery: string | null;
+  userAddedCatalogName: string | null;
+  locationVisibility: "hidden" | "region";
+  coarseRegionCode: string | null;
+  topicTagInput: string;
+  mediaFileName: string | null;
+  online: boolean;
+  submitState: "idle" | "queued" | "syncing" | "synced" | "failed";
+  message: string;
+  detailsOpen: boolean;
+  path: string;
+  startPath: string;
+  payloadClass: string;
+  clientMutationId: string;
+  preconditionEntryIds: readonly string[];
+  expectedSpaceId: string;
+  expectedObjectId: string;
+  expectedEntryId: string;
+  expectedMediaAssetIds: readonly string[];
+  expectedServerWrite: boolean;
+  expectedEntryVisibility: "private" | "public";
+  postSavePath: string | null;
+  resetOwnedSpaceIds: readonly string[];
+  resetOwnedObjectIds: readonly string[];
+  resetOwnedEntryIds: readonly string[];
+  resetOwnedMediaAssetIds: readonly string[];
+  dexieDraftKey: string | null;
+  expectedStatus: 200;
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixtureCreationEvidence {
+  scenarios: readonly VisualFixtureCreationScenarioEvidence[];
+}
+
 export interface VisualFixtureScenario {
   id: string;
   kind: VisualFixtureScenarioKind;
@@ -661,6 +726,7 @@ export interface VisualFixtureManifest {
   journalEntryEvidence: VisualFixtureJournalEntryEvidence;
   profileEvidence: VisualFixtureProfileEvidence;
   workspaceEvidence: VisualFixtureWorkspaceEvidence;
+  creationEvidence: VisualFixtureCreationEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
@@ -1428,6 +1494,188 @@ const feedRecencyRankByObjectOffset = new Map<number, number>(
 const entries: readonly VisualFixtureEntry[] = buildEntries();
 const workspaceEvidence: VisualFixtureWorkspaceEvidence =
   buildWorkspaceEvidence();
+const visualLongCreationTitle =
+  "Довгий заголовок перевіряє перенесення без зміни ширини форми на вузькому екрані, зберігаючи дію доступною та зрозумілою для всіх".slice(
+    0,
+    140,
+  );
+const visualLongCreationBody =
+  "Сьогоднішнє спостереження описує стан живого об'єкта, помітну зміну, безпечний контекст і наступну дію без точної адреси чи координат. "
+    .repeat(20)
+    .slice(0, 2000);
+const creationEvidence: VisualFixtureCreationEvidence = {
+  scenarios: [
+    creationScenario(1, {
+      flow: "first-entry",
+      state: "minimum",
+      label: "First plant · minimum useful input",
+      objectName: "Томат біля вікна",
+      entryBody: "З'явився перший бутон.",
+    }),
+    creationScenario(2, {
+      flow: "first-entry",
+      state: "optional",
+      label: "First animal · optional details open",
+      objectKind: "animal",
+      objectName: "Марта",
+      entryBody: "Спокійно поїла після ранкової прогулянки.",
+      topicTagInput: "поведінка, годування",
+      detailsOpen: true,
+    }),
+    creationScenario(3, {
+      flow: "first-entry",
+      state: "provisional",
+      label: "First bee colony · provisional catalog name",
+      objectKind: "bee_colony",
+      objectName: "Карпатська сім'я",
+      entryBody: "Сім'я спокійна, розплід рівномірний.",
+      catalogQuery: "Локальна карпатська лінія",
+      userAddedCatalogName: "Локальна карпатська лінія",
+      detailsOpen: true,
+    }),
+    creationScenario(4, {
+      flow: "first-entry",
+      state: "unknown-long",
+      label: "First object · Unknown identity and maximum copy",
+      objectName: "Невідомий саджанець із дуже довгою робочою назвою",
+      entryTitle: visualLongCreationTitle,
+      entryBody: visualLongCreationBody,
+      detailsOpen: true,
+    }),
+    creationScenario(5, {
+      flow: "first-entry",
+      state: "media",
+      label: "First object · optional photo selected",
+      objectName: "Балконний розмарин",
+      entryBody: "Нові пагони стали щільнішими.",
+      mediaFileName: "rosemary-first-update.jpg",
+    }),
+    creationScenario(6, {
+      flow: "first-entry",
+      state: "draft",
+      label: "First object · restored local draft",
+      objectName: "Чернетка лимона",
+      entryBody: "Листя відновило тургор після поливу.",
+      message: "Draft restored on this device.",
+    }),
+    creationScenario(7, {
+      flow: "first-entry",
+      state: "privacy",
+      label: "First object · region privacy",
+      objectName: "Лаванда",
+      entryBody: "Перші квіти відкрилися цього ранку.",
+      locationVisibility: "region",
+      coarseRegionCode: "UA-32",
+      detailsOpen: true,
+    }),
+    creationScenario(8, {
+      flow: "first-entry",
+      state: "offline",
+      label: "First object · offline queued",
+      objectName: "Офлайн перець",
+      entryBody: "Збережено під час роботи без мережі.",
+      online: false,
+      submitState: "queued",
+      message: "Saved on this device. It will sync when you are online.",
+    }),
+    creationScenario(9, {
+      flow: "first-entry",
+      state: "error",
+      label: "First object · recoverable media error",
+      objectName: "Монстера після пересадки",
+      entryBody: "Є новий листок, але фото потребує повторного вибору.",
+      submitState: "failed",
+      message:
+        "Photo could not be prepared. Choose it again or save without it.",
+    }),
+    creationScenario(10, {
+      flow: "first-entry",
+      state: "cancel",
+      label: "First object · cancel with draft retained",
+      objectName: "Чернетка перед виходом",
+      entryBody: "Незавершений запис лишається на цьому пристрої.",
+      message: "Cancel returns to the garden and keeps this local draft.",
+    }),
+    creationScenario(11, {
+      flow: "first-entry",
+      state: "duplicate",
+      label: "First object · duplicate retry readback",
+      objectName: "Томат без дубліката",
+      entryBody: "Повторна відправка повернула вже створений запис.",
+      submitState: "synced",
+      message: "Already saved. No duplicate object or entry was created.",
+    }),
+    creationScenario(12, {
+      flow: "follow-up",
+      state: "minimum",
+      label: "Next update · minimum useful input",
+      entryBody: "Сьогодні відкрилася нова квітка.",
+    }),
+    creationScenario(13, {
+      flow: "follow-up",
+      state: "media",
+      label: "Next update · optional photo selected",
+      entryBody: "Фото показує нову китицю плодів.",
+      mediaFileName: "next-update-fruit.jpg",
+    }),
+    creationScenario(14, {
+      flow: "follow-up",
+      state: "draft",
+      label: "Next update · restored local draft",
+      entryBody: "Чернетка порівнює стан із попереднім тижнем.",
+      message: "Draft restored on this device.",
+    }),
+    creationScenario(15, {
+      flow: "follow-up",
+      state: "publish",
+      label: "Next update · private save before explicit publish",
+      entryBody: "Запис готовий до окремого підтвердження публікації.",
+      submitState: "synced",
+      message:
+        "Saved privately. Publishing remains a separate explicit action.",
+    }),
+    creationScenario(16, {
+      flow: "follow-up",
+      state: "backdated",
+      label: "Next update · backdated observation",
+      entryBody: "Відновлено спостереження з травневого огляду.",
+      entryDate: "2026-05-12",
+      detailsOpen: true,
+    }),
+    creationScenario(17, {
+      flow: "follow-up",
+      state: "privacy",
+      label: "Next update · private by default",
+      entryBody: "Особисте спостереження без публічного розкриття.",
+      message: "Private by default. Publish only after reviewing the entry.",
+    }),
+    creationScenario(18, {
+      flow: "follow-up",
+      state: "offline",
+      label: "Next update · offline queued",
+      entryBody: "Наступний запис збережено без мережі.",
+      online: false,
+      submitState: "queued",
+      message: "Saved on this device. It will sync when you are online.",
+    }),
+    creationScenario(19, {
+      flow: "follow-up",
+      state: "error",
+      label: "Next update · recoverable save error",
+      entryBody: "Текст лишився у формі після помилки відправлення.",
+      submitState: "failed",
+      message: "Save failed. The draft is still here and can be retried.",
+    }),
+    creationScenario(20, {
+      flow: "follow-up",
+      state: "duplicate",
+      label: "Next update · duplicate retry readback",
+      entryBody: "Повторна відправка не створила другий запис.",
+      submitState: "synced",
+      message: "Already saved. No duplicate journal entry was created.",
+    }),
+  ],
+};
 const spaceJournalEntry = entries.find((entry) => entry.entryScope === "space");
 if (!spaceJournalEntry) {
   throw new Error("Visual fixture space journal entry is missing.");
@@ -2726,6 +2974,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   journalEntryEvidence,
   profileEvidence,
   workspaceEvidence,
+  creationEvidence,
   lineageEvidence,
   intentEvidence,
   stateCoverage,
@@ -2760,6 +3009,12 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "media", manifest.media.length, 16);
   checkCount(errors, "topics", manifest.topics.length, 7);
   checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
+  checkCount(
+    errors,
+    "journal creation scenarios",
+    manifest.creationEvidence.scenarios.length,
+    20,
+  );
 
   const actorIds = new Set(manifest.actors.map((actor) => actor.id));
   const profileUserIds = new Set(
@@ -2975,6 +3230,52 @@ export function validateVisualFixtureManifest(
     "workspace evidence states",
     manifest.workspaceEvidence.scenarios.map((scenario) => scenario.state),
   );
+  checkUnique(
+    errors,
+    "journal creation scenario ids",
+    manifest.creationEvidence.scenarios.map((scenario) => scenario.id),
+  );
+
+  for (const creation of manifest.creationEvidence.scenarios) {
+    const fixtureObject = creation.objectId
+      ? manifest.objects.find((object) => object.id === creation.objectId)
+      : null;
+    if (
+      !actorIds.has(creation.ownerActorId) ||
+      (creation.flow === "first-entry" &&
+        (creation.spaceId !== null || creation.objectId !== null)) ||
+      (creation.flow === "follow-up" &&
+        (!creation.spaceId ||
+          !spaceIds.has(creation.spaceId) ||
+          !fixtureObject ||
+          fixtureObject.ownerUserId !== creation.ownerActorId ||
+          fixtureObject.spaceId !== creation.spaceId))
+    ) {
+      errors.push(
+        `Journal creation scenario ${creation.id} has an invalid owner context.`,
+      );
+    }
+    if (
+      creation.entryTitle.length < 1 ||
+      creation.entryTitle.length > 140 ||
+      creation.entryBody.length < 1 ||
+      creation.entryBody.length > 2000
+    ) {
+      errors.push(
+        `Journal creation scenario ${creation.id} exceeds copy limits.`,
+      );
+    }
+    if (
+      (creation.locationVisibility === "hidden" &&
+        creation.coarseRegionCode !== null) ||
+      (creation.locationVisibility === "region" &&
+        creation.coarseRegionCode === null)
+    ) {
+      errors.push(
+        `Journal creation scenario ${creation.id} has an invalid region contract.`,
+      );
+    }
+  }
 
   for (const actor of manifest.actors) {
     if (!actor.email.endsWith("@visual-fixtures.invalid")) {
@@ -5340,6 +5641,137 @@ function createSpace(
     locationVisibility,
     coarseRegionCode,
     createdAt: timestampForIndex(index),
+  };
+}
+
+type VisualFixtureCreationScenarioInput = Pick<
+  VisualFixtureCreationScenarioEvidence,
+  "flow" | "state" | "label"
+> &
+  Partial<
+    Pick<
+      VisualFixtureCreationScenarioEvidence,
+      | "objectKind"
+      | "objectName"
+      | "entryTitle"
+      | "entryBody"
+      | "entryDate"
+      | "catalogQuery"
+      | "userAddedCatalogName"
+      | "locationVisibility"
+      | "coarseRegionCode"
+      | "topicTagInput"
+      | "mediaFileName"
+      | "online"
+      | "submitState"
+      | "message"
+      | "detailsOpen"
+    >
+  >;
+
+function creationScenario(
+  index: number,
+  input: VisualFixtureCreationScenarioInput,
+): VisualFixtureCreationScenarioEvidence {
+  const followUpTargets = [
+    objects[0],
+    objects[18],
+    objects[26],
+    objects[17],
+    objects[1],
+    objects[19],
+    objects[27],
+    objects[20],
+    objects[28],
+  ];
+  const fixtureObject =
+    input.flow === "follow-up" ? followUpTargets[index - 12] : null;
+  if (input.flow === "follow-up" && !fixtureObject) {
+    throw new Error(`Journal creation target ${index} is missing.`);
+  }
+  const firstEntryOwner = actors[4];
+  const id = `ove182-c${String(index).padStart(3, "0")}`;
+  const objectName = input.objectName ?? fixtureObject?.displayName ?? "Object";
+  const objectId = fixtureObject?.id ?? null;
+  const ownerActorId = fixtureObject?.ownerUserId ?? firstEntryOwner.id;
+  const spaceId = fixtureObject?.spaceId ?? null;
+  const expectedSpaceId = fixtureObject?.spaceId ?? fixtureUuid(17, index);
+  const expectedObjectId = fixtureObject?.id ?? fixtureUuid(18, index);
+  const expectedEntryId = fixtureUuid(19, index);
+  const expectedServerWrite = !["draft", "offline", "error", "cancel"].includes(
+    input.state,
+  );
+  const expectedMediaAssetIds =
+    expectedServerWrite && input.mediaFileName ? [fixtureUuid(20, index)] : [];
+  const path =
+    input.flow === "first-entry"
+      ? `/garden?visualCreate=${id}#first-entry-composer`
+      : `/garden/objects/${fixtureObject!.id}?visualCreate=${id}#follow-up-composer`;
+  const postSavePath = expectedServerWrite
+    ? `/garden/objects/${expectedObjectId}?visualCreateResult=${id}`
+    : null;
+
+  return {
+    id,
+    flow: input.flow,
+    state: input.state,
+    label: input.label,
+    ownerActorId,
+    objectId,
+    spaceId,
+    spaceName:
+      input.flow === "first-entry"
+        ? `Scenario space ${String(index).padStart(2, "0")}`
+        : (spaces.find((space) => space.id === fixtureObject!.spaceId)
+            ?.displayName ?? "Fixture space"),
+    objectKind: input.objectKind ?? fixtureObject?.objectKind ?? "plant",
+    objectName,
+    entryTitle: input.entryTitle ?? `Update: ${objectName}`,
+    entryBody: input.entryBody ?? "A short useful observation.",
+    entryDate: input.entryDate ?? "2026-07-12",
+    catalogQuery: input.catalogQuery ?? null,
+    userAddedCatalogName: input.userAddedCatalogName ?? null,
+    locationVisibility: input.locationVisibility ?? "hidden",
+    coarseRegionCode:
+      input.locationVisibility === "region"
+        ? (input.coarseRegionCode ?? "UA-32")
+        : null,
+    topicTagInput: input.topicTagInput ?? "",
+    mediaFileName: input.mediaFileName ?? null,
+    online: input.online ?? true,
+    submitState: input.submitState ?? "idle",
+    message:
+      input.message ??
+      "Private by default. You choose later whether an entry becomes public.",
+    detailsOpen: input.detailsOpen ?? false,
+    path,
+    startPath: path,
+    payloadClass: `${input.flow}:${input.state}`,
+    clientMutationId: `${id}-mutation`,
+    preconditionEntryIds: fixtureObject
+      ? entries
+          .filter((entry) => entry.objectId === fixtureObject.id)
+          .map((entry) => entry.id)
+      : [],
+    expectedSpaceId,
+    expectedObjectId,
+    expectedEntryId,
+    expectedMediaAssetIds,
+    expectedServerWrite,
+    expectedEntryVisibility: input.state === "publish" ? "public" : "private",
+    postSavePath,
+    resetOwnedSpaceIds: input.flow === "first-entry" ? [expectedSpaceId] : [],
+    resetOwnedObjectIds: input.flow === "first-entry" ? [expectedObjectId] : [],
+    resetOwnedEntryIds: [expectedEntryId],
+    resetOwnedMediaAssetIds: expectedMediaAssetIds,
+    dexieDraftKey:
+      input.state === "draft" || input.state === "cancel"
+        ? input.flow === "first-entry"
+          ? "first-entry"
+          : `follow-up-entry:${fixtureObject!.id}`
+        : null,
+    expectedStatus: 200,
+    viewportTargets: ["desktop", "mobile-320"],
   };
 }
 

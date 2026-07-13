@@ -45,7 +45,7 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v5",
+      version: "ove187-v6",
       expected: {
         actors: 8,
         profiles: 8,
@@ -133,6 +133,12 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Journal-entry V2 evidence");
     expect(html).toContain("Gardener-profile V2 evidence");
     expect(html).toContain("Garden workspace V2 evidence");
+    expect(html).toContain("Journal creation V2 evidence");
+    expect(html).toContain("Reset");
+    expect(html).toContain("Run");
+    expect(html).toContain("Verify");
+    expect(html).toContain("Expected object");
+    expect(html).toContain("Expected entry");
     expect(html).toContain("workspace dense");
     expect(html).toContain("Drafts");
     expect(html).toContain("Queued 1 · failed 1");

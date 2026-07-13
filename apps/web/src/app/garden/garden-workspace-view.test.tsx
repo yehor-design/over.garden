@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import type { GardenWorkspaceReadModel } from "@/server/garden-workspace-repository";
 import { GardenWorkspaceView } from "./garden-workspace-view";
 
+const OWNER_ID = "00000000-0000-4000-8000-0000000000a1";
+
 describe("GardenWorkspaceView", () => {
   it("renders an operational home with mixed inventory, continuity, and local work", () => {
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
+        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -65,6 +68,7 @@ describe("GardenWorkspaceView", () => {
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
+        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -81,6 +85,7 @@ describe("GardenWorkspaceView", () => {
   it("renders one recoverable full-error state inside the shared shell content", () => {
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
+        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"
@@ -121,6 +126,7 @@ describe("GardenWorkspaceView", () => {
 
     const html = renderToStaticMarkup(
       <GardenWorkspaceView
+        ownerUserId={OWNER_ID}
         canWrite
         locale="uk"
         today="2026-07-12"

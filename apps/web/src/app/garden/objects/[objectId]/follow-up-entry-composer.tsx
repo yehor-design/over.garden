@@ -22,11 +22,13 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
+import type { PlantObjectKind } from "@/db/schema";
 import {
   clearComposerPhotoIntent,
   COMPOSER_PHOTO_ACCEPT,
+  composerPhotoSelectionError,
   createComposerPhotoIntent,
-  isSupportedComposerPhoto,
 } from "@/lib/garden/composer-photo-selection";
 import type {
   JournalMentionSelection,
@@ -50,6 +52,7 @@ import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
+  updateOfflineMutationStatus,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
   type OfflinePlantObjectEntryPayload,
@@ -67,9 +70,11 @@ import {
 import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
   JournalEntrySyncError,
-  submitJournalEntryPayload,
+  submitOnlineJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
+import type { VisualFixtureCreationScenarioEvidence } from "@/lib/visual-fixtures/manifest";
+import { runVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-client";
 import {
   JournalMentionTypeaheadPanel,
   applyMentionSuggestion,
@@ -83,21 +88,34 @@ import {
 import { JournalVoiceInputControl } from "../../journal-voice-input-control";
 
 interface FollowUpEntryComposerProps {
+  ownerUserId: string;
   objectId: string;
   objectDisplayName: string;
+  objectKind: PlantObjectKind;
   today: string;
   initialClientMutationId: string;
+  visualScenario?: VisualFixtureCreationScenarioEvidence | null;
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
 
 export function FollowUpEntryComposer({
+  ownerUserId,
   objectId,
   objectDisplayName,
+  objectKind,
   today,
   initialClientMutationId,
+  visualScenario = null,
 }: FollowUpEntryComposerProps) {
+  useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
+  const objectNoun =
+    objectKind === "animal"
+      ? "animal"
+      : objectKind === "bee_colony"
+        ? "bee colony"
+        : "plant";
   const draftPersistencePausedRef = useRef(false);
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -105,19 +123,21 @@ export function FollowUpEntryComposer({
   const photoIntentRequestRef = useRef(0);
   const draftId = followUpEntryDraftId(objectId);
   const [clientMutationId, setClientMutationId] = useState(
-    initialClientMutationId,
+    visualScenario?.clientMutationId ?? initialClientMutationId,
   );
   const [draft, setDraft] = useState<FollowUpEntryDraftFields>({
-    title: "",
-    body: "",
-    entryDate: today,
+    title: visualScenario?.entryTitle ?? "",
+    body: visualScenario?.entryBody ?? "",
+    entryDate: visualScenario?.entryDate ?? today,
   });
   const [activeMentionToken, setActiveMentionToken] =
     useState<ActiveMentionToken | null>(null);
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
-  const [topicTagInput, setTopicTagInput] = useState("");
+  const [topicTagInput, setTopicTagInput] = useState(
+    visualScenario?.topicTagInput ?? "",
+  );
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -125,36 +145,52 @@ export function FollowUpEntryComposer({
     useState<MentionTypeaheadStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [storedPhotoIntent, setStoredPhotoIntent] =
-    useState<OfflinePhotoIntent | null>(null);
+    useState<OfflinePhotoIntent | null>(
+      visualScenario?.mediaFileName
+        ? {
+            fileName: visualScenario.mediaFileName,
+            contentType: "image/jpeg",
+            size: 2_400_000,
+          }
+        : null,
+    );
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [isOnline, setIsOnline] = useState(visualScenario?.online ?? true);
+  const [submitState, setSubmitState] = useState<SubmitState>(
+    visualScenario?.submitState ?? "idle",
+  );
   const [message, setMessage] = useState(
-    "Save a dated follow-up on this existing plant.",
+    visualScenario?.message ?? `Save a dated follow-up on this ${objectNoun}.`,
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
 
   const refreshQueue = useCallback(async () => {
-    const localMutations = await listOfflineMutations([
-      "queued",
-      "syncing",
-      "failed",
-      "synced",
-    ]);
-    setMutations(
-      localMutations
-        .filter(
-          (mutation) =>
-            mutation.kind === "journal_entry" &&
-            isObjectEntryMutationForObject(mutation, objectId),
-        )
-        .slice(-5)
-        .reverse(),
-    );
-  }, [objectId]);
+    try {
+      const localMutations = await listOfflineMutations(ownerUserId, [
+        "queued",
+        "syncing",
+        "failed",
+        "synced",
+      ]);
+      setMutations(
+        localMutations
+          .filter(
+            (mutation) =>
+              mutation.kind === "journal_entry" &&
+              isObjectEntryMutationForObject(mutation, objectId),
+          )
+          .slice(-5)
+          .reverse(),
+      );
+    } catch {
+      setMutations([]);
+    }
+  }, [objectId, ownerUserId]);
 
   useEffect(() => {
+    if (visualScenario) return;
+
     const refreshTimer = window.setTimeout(() => {
       setIsOnline(navigator.onLine);
       void refreshQueue();
@@ -177,13 +213,15 @@ export function FollowUpEntryComposer({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [refreshQueue]);
+  }, [refreshQueue, visualScenario]);
 
   useEffect(() => {
+    if (visualScenario) return;
+
     let cancelled = false;
 
-    void getOfflineDraft<FollowUpEntryDraftPayload>(draftId).then(
-      (storedDraft) => {
+    void getOfflineDraft<FollowUpEntryDraftPayload>(ownerUserId, draftId)
+      .then((storedDraft) => {
         if (cancelled) return;
 
         if (storedDraft && storedDraft.payload.plantObjectId === objectId) {
@@ -198,16 +236,18 @@ export function FollowUpEntryComposer({
         }
 
         setDraftHydrated(true);
-      },
-    );
+      })
+      .catch(() => {
+        if (!cancelled) setDraftHydrated(true);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, [draftId, objectId]);
+  }, [draftId, objectId, ownerUserId, visualScenario]);
 
   useEffect(() => {
-    if (!draftHydrated) return;
+    if (!draftHydrated || visualScenario) return;
 
     const payload: FollowUpEntryDraftPayload = {
       clientMutationId,
@@ -223,12 +263,13 @@ export function FollowUpEntryComposer({
 
       if (hasPersistableFollowUpDraft(payload, today)) {
         void upsertOfflineDraft({
+          ownerUserId,
           id: draftId,
           kind: "follow_up_entry",
           payload,
-        });
+        }).catch(() => undefined);
       } else {
-        void deleteOfflineDraft(draftId);
+        void deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       }
     }, 250);
 
@@ -242,9 +283,11 @@ export function FollowUpEntryComposer({
     draftId,
     mentionSelections,
     objectId,
+    ownerUserId,
     storedPhotoIntent,
     today,
     topicTagInput,
+    visualScenario,
   ]);
 
   const photoHelp = useMemo(() => {
@@ -298,6 +341,11 @@ export function FollowUpEntryComposer({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (visualScenario) {
+      await handleVisualScenarioSubmit(visualScenario);
+      return;
+    }
+
     if (photoError) {
       setSubmitState("failed");
       setMessage(photoError);
@@ -316,7 +364,14 @@ export function FollowUpEntryComposer({
     }
 
     if (!isOnline) {
-      await enqueuePayload(payload);
+      try {
+        await enqueuePayload(payload);
+      } catch {
+        setSubmitState("failed");
+        setMessage(
+          "Offline storage is unavailable in this browser. Your text is still in the form; reconnect before saving.",
+        );
+      }
       return;
     }
 
@@ -324,11 +379,12 @@ export function FollowUpEntryComposer({
     setMessage("Saving private follow-up...");
 
     try {
-      const result = await submitJournalEntryPayload(payload, {
+      const result = await submitOnlineJournalEntryPayload(payload, {
+        ownerUserId,
         idempotencyKey: clientMutationId,
       });
       draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(draftId);
+      await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       router.push(
@@ -347,8 +403,114 @@ export function FollowUpEntryComposer({
     }
   }
 
+  async function handleVisualScenarioSubmit(
+    scenario: VisualFixtureCreationScenarioEvidence,
+  ) {
+    setSubmitState("syncing");
+    setMessage("Running deterministic journal evidence...");
+
+    try {
+      if (scenario.expectedServerWrite) {
+        const readbackPath = await runVisualJournalCreationScenario(
+          scenario.id,
+        );
+        setSubmitState("synced");
+        setMessage("Scenario saved through the canonical repository.");
+        router.push(readbackPath);
+        router.refresh();
+        return;
+      }
+
+      const payload = await buildPayload();
+      if (scenario.state === "draft" || scenario.state === "cancel") {
+        await persistVisualDraft(payload);
+        setSubmitState("idle");
+        setMessage(
+          scenario.state === "cancel"
+            ? "Cancel keeps this owner-scoped draft on this device."
+            : "Owner-scoped draft saved on this device.",
+        );
+        return;
+      }
+
+      const mutation = await enqueueOfflineMutation({
+        ownerUserId,
+        kind: "journal_entry",
+        payload,
+        idempotencyKey: scenario.clientMutationId,
+      });
+      if (scenario.state === "error") {
+        await updateOfflineMutationStatus(ownerUserId, mutation.id, "failed", {
+          lastError: "Recoverable fixture save failure.",
+        });
+        setSubmitState("failed");
+        setMessage("Save failed. The owner-scoped queue item can be retried.");
+      } else {
+        setSubmitState("queued");
+        setMessage("Saved in the owner-scoped offline queue.");
+      }
+      await refreshQueue();
+    } catch (error) {
+      setSubmitState("failed");
+      setMessage(journalSaveErrorMessage(error));
+    }
+  }
+
+  async function persistVisualDraft(payload: OfflinePlantObjectEntryPayload) {
+    const persistedPayload = persistedDraftPayload(payload);
+    await upsertOfflineDraft({
+      ownerUserId,
+      id: draftId,
+      kind: "follow_up_entry",
+      payload: persistedPayload,
+    });
+  }
+
+  function persistedDraftPayload(
+    payload: OfflinePlantObjectEntryPayload,
+  ): FollowUpEntryDraftPayload {
+    return {
+      clientMutationId: payload.clientMutationId,
+      plantObjectId: payload.plantObjectId,
+      draft: {
+        title: payload.title,
+        body: payload.body,
+        entryDate: payload.entryDate,
+      },
+      mentionSelections: payload.mentionSelections ?? [],
+      topicTagInput,
+      photoIntent: payload.photoIntent ?? null,
+    };
+  }
+
+  async function handleCancel() {
+    try {
+      const payload = await buildPayload();
+      const persistedPayload = persistedDraftPayload(payload);
+      draftPersistencePausedRef.current = true;
+
+      if (
+        visualScenario?.state === "cancel" ||
+        hasPersistableFollowUpDraft(persistedPayload, today)
+      ) {
+        await persistVisualDraft(payload);
+      } else {
+        await deleteOfflineDraft(ownerUserId, draftId);
+      }
+
+      router.push(`/garden/objects/${objectId}`);
+    } catch {
+      draftPersistencePausedRef.current = false;
+      setSubmitState("failed");
+      setMessage(
+        "We couldn't preserve this draft on your device. Stay here and try again.",
+      );
+    }
+  }
+
   async function enqueuePayload(payload: OfflineJournalEntryPayload) {
     const mutation = await enqueueOfflineMutation({
+      ownerUserId,
       kind: "journal_entry",
       payload,
       idempotencyKey: clientMutationId,
@@ -356,7 +518,7 @@ export function FollowUpEntryComposer({
 
     setSubmitState("queued");
     draftPersistencePausedRef.current = true;
-    await deleteOfflineDraft(draftId);
+    await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
     setMessage(
       mutation.status === "queued"
         ? localSavedMessage("follow-up")
@@ -370,9 +532,11 @@ export function FollowUpEntryComposer({
     setMessage("Sending saved follow-up to your garden...");
 
     try {
-      const result = await syncOfflineJournalEntryMutation(mutation);
+      const result = await syncOfflineJournalEntryMutation(mutation, {
+        expectedOwnerUserId: ownerUserId,
+      });
       draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(draftId);
+      await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
@@ -405,6 +569,7 @@ export function FollowUpEntryComposer({
       if (payload) {
         try {
           const savedDraft = await upsertOfflineDraft({
+            ownerUserId,
             id: draftId,
             kind: "follow_up_entry",
             payload: {
@@ -571,10 +736,11 @@ export function FollowUpEntryComposer({
       return;
     }
 
-    if (!isSupportedComposerPhoto(file)) {
+    const selectionError = composerPhotoSelectionError(file);
+    if (selectionError) {
       setPhotoFile(null);
       setStoredPhotoIntent(clearComposerPhotoIntent());
-      setPhotoError("Use a JPEG, PNG, or WebP photo.");
+      setPhotoError(selectionError);
       resetPhotoInput();
       setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       return;
@@ -640,7 +806,11 @@ export function FollowUpEntryComposer({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form
+      onSubmit={handleSubmit}
+      data-visual-creation-scenario={visualScenario?.id}
+      className="grid gap-4"
+    >
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
           {isOnline ? (
@@ -655,9 +825,56 @@ export function FollowUpEntryComposer({
         </span>
       </div>
 
-      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+      <p className="text-sm leading-6 text-muted-foreground">
+        Updating{" "}
+        <strong className="font-semibold text-foreground">
+          {objectDisplayName}
+        </strong>
+        . The object and space stay attached automatically.
+      </p>
+
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label
+            htmlFor="follow-up-entry-body"
+            className="text-sm font-medium text-foreground"
+          >
+            What changed?
+          </label>
+          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
+        </div>
+        <textarea
+          ref={bodyTextareaRef}
+          id="follow-up-entry-body"
+          name="body"
+          data-auth-intent-control="create_entry"
+          required
+          minLength={1}
+          maxLength={2000}
+          value={draft.body}
+          onChange={(event) =>
+            updateBody(
+              event.currentTarget.value,
+              event.currentTarget.selectionStart,
+            )
+          }
+          onClick={refreshActiveMentionToken}
+          onKeyUp={refreshActiveMentionToken}
+          className="min-h-32 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="A short observation is enough. You can add details later."
+        />
+        <JournalMentionTypeaheadPanel
+          status={mentionStatus}
+          suggestions={mentionSuggestions}
+          selections={mentionSelections}
+          onSelect={selectMentionSuggestion}
+          onRemove={removeMentionSelection}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 border-y border-border py-3">
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Start with photo
+          Optional photo
           <input
             ref={photoInputRef}
             type="file"
@@ -666,7 +883,7 @@ export function FollowUpEntryComposer({
             onChange={(event) =>
               handlePhotoChange(event.currentTarget.files?.[0])
             }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
+            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-11 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground sm:file:h-9"
           />
         </label>
         {hasSelectedPhoto ? (
@@ -691,101 +908,87 @@ export function FollowUpEntryComposer({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-          Entry title
-          <input
-            name="title"
-            required
-            maxLength={140}
-            value={draft.title}
-            onChange={(event) => updateTitle(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="Second flowering wave"
-          />
-        </label>
+      <details
+        open={visualScenario?.detailsOpen || undefined}
+        className="group border-y border-border py-3"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
+          More details
+          <span className="ml-2 font-normal text-muted-foreground">
+            title, date, topics
+          </span>
+        </summary>
+        <div className="mt-4 grid gap-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
+              Entry title
+              <input
+                name="title"
+                required
+                maxLength={140}
+                value={draft.title}
+                onChange={(event) => updateTitle(event.target.value)}
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                placeholder="Second flowering wave"
+              />
+            </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Date
-          <input
-            type="date"
-            name="entryDate"
-            value={draft.entryDate}
-            onChange={(event) => updateDraft("entryDate", event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-        </label>
-      </div>
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+              Date
+              <input
+                type="date"
+                name="entryDate"
+                value={draft.entryDate}
+                onChange={(event) =>
+                  updateDraft("entryDate", event.target.value)
+                }
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              />
+            </label>
+          </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor="follow-up-entry-body"
-            className="text-sm font-medium text-foreground"
-          >
-            Note
+          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+            Tags / topics
+            <input
+              name="topicTags"
+              maxLength={160}
+              value={topicTagInput}
+              onChange={(event) => updateTopicTagInput(event.target.value)}
+              className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              placeholder="watering, pests, seedlings"
+            />
           </label>
-          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
         </div>
-        <textarea
-          ref={bodyTextareaRef}
-          id="follow-up-entry-body"
-          name="body"
-          data-auth-intent-control="create_entry"
-          required
-          minLength={1}
-          maxLength={2000}
-          value={draft.body}
-          onChange={(event) =>
-            updateBody(
-              event.currentTarget.value,
-              event.currentTarget.selectionStart,
-            )
-          }
-          onClick={refreshActiveMentionToken}
-          onKeyUp={refreshActiveMentionToken}
-          className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="Compared with the previous entry, the new leaves are stronger and the soil stayed moist longer."
-        />
-        <JournalMentionTypeaheadPanel
-          status={mentionStatus}
-          suggestions={mentionSuggestions}
-          selections={mentionSelections}
-          onSelect={selectMentionSuggestion}
-          onRemove={removeMentionSelection}
-        />
-      </div>
+      </details>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Tags / topics
-        <input
-          name="topicTags"
-          maxLength={160}
-          value={topicTagInput}
-          onChange={(event) => updateTopicTagInput(event.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="watering, pests, seedlings"
-        />
-      </label>
+      <p
+        className={
+          submitState === "failed"
+            ? "text-sm text-destructive"
+            : "text-sm text-muted-foreground"
+        }
+      >
+        {message}
+      </p>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="sticky bottom-2 z-10 flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"
           disabled={submitState === "syncing"}
+          className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
           {isOnline ? "Save follow-up" : "Save on this device"}
         </Button>
-        <p
-          className={
-            submitState === "failed"
-              ? "text-sm text-destructive"
-              : "text-sm text-muted-foreground"
-          }
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => void handleCancel()}
+          className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
         >
-          {message}
-        </p>
+          Cancel
+        </Button>
       </div>
 
       {mutations.length > 0 ? (
@@ -829,6 +1032,7 @@ export function FollowUpEntryComposer({
                     <Button
                       type="button"
                       variant="outline"
+                      className="min-h-11 sm:min-h-8"
                       disabled={
                         !isOnline ||
                         mutation.status === "syncing" ||
@@ -875,15 +1079,19 @@ function statusIcon(status: OfflineMutation["status"]) {
 }
 
 function mutationTitle(mutation: OfflineMutation) {
+  if (mutation.status === "synced") return "Saved follow-up";
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   return payload.title || "Untitled follow-up";
 }
 
 function mutationSubtitle(mutation: OfflineMutation) {
+  if (mutation.status === "synced") {
+    return "Saved to garden · Local private copy removed";
+  }
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   const parts = [
     offlineSaveStatusSentence(mutation.status),
-    "Follow-up for this plant",
+    "Follow-up for this living object",
     payload.entryDate,
     payload.photoIntent ? "Photo will upload later" : null,
   ].filter(Boolean);

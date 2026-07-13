@@ -19,6 +19,7 @@ export const OFFLINE_DRAFTS_CHANGED_EVENT = "overgarden-offline-drafts-changed";
 export type DraftLocationVisibility = "hidden" | "region";
 
 export interface FirstEntryDraftFields {
+  spaceId?: string | null;
   spaceName: string;
   plantName: string;
   objectKind: PlantObjectKind;
@@ -67,14 +68,19 @@ export function followUpEntryDraftId(objectId: string) {
 }
 
 export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
-  input: Pick<OfflineDraftRecord<TPayload>, "id" | "kind" | "payload">,
+  input: Pick<
+    OfflineDraftRecord<TPayload>,
+    "ownerUserId" | "id" | "kind" | "payload"
+  >,
 ): Promise<OfflineDraftRecord<TPayload> | undefined> {
   if (!offlineDb) return undefined;
 
   const now = Date.now();
-  const existing = await offlineDb.drafts.get(input.id);
+  const ownerUserId = requireOwnerUserId(input.ownerUserId);
+  const existing = await offlineDb.drafts.get([ownerUserId, input.id]);
   const record: OfflineDraftRecord<TPayload> = {
     id: input.id,
+    ownerUserId,
     kind: input.kind,
     payload: input.payload,
     createdAt: existing?.createdAt ?? now,
@@ -87,32 +93,40 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
 }
 
 export async function getOfflineDraft<TPayload extends JournalDraftPayload>(
+  ownerUserId: string,
   id: string,
 ): Promise<OfflineDraftRecord<TPayload> | undefined> {
   if (!offlineDb) return undefined;
-  return offlineDb.drafts.get(id) as Promise<
+  return offlineDb.drafts.get([requireOwnerUserId(ownerUserId), id]) as Promise<
     OfflineDraftRecord<TPayload> | undefined
   >;
 }
 
 export async function listOfflineDrafts(
+  ownerUserId: string,
   kinds?: OfflineDraftKind[],
 ): Promise<JournalDraftRecord[]> {
   if (!offlineDb) return [];
-
-  const records =
-    kinds && kinds.length > 0
-      ? await offlineDb.drafts.where("kind").anyOf(kinds).toArray()
-      : await offlineDb.drafts.toArray();
+  const owner = requireOwnerUserId(ownerUserId);
+  const records = await offlineDb.drafts
+    .where("ownerUserId")
+    .equals(owner)
+    .filter(
+      (record) => !kinds || kinds.length === 0 || kinds.includes(record.kind),
+    )
+    .toArray();
 
   return (records as JournalDraftRecord[]).sort(
     (left, right) => right.updatedAt - left.updatedAt,
   );
 }
 
-export async function deleteOfflineDraft(id: string): Promise<void> {
+export async function deleteOfflineDraft(
+  ownerUserId: string,
+  id: string,
+): Promise<void> {
   if (!offlineDb) return;
-  await offlineDb.drafts.delete(id);
+  await offlineDb.drafts.delete([requireOwnerUserId(ownerUserId), id]);
   notifyDraftsChanged();
 }
 
@@ -122,13 +136,13 @@ export function hasPersistableFirstEntryDraft(
 ) {
   return (
     hasText(
-      payload.draft.spaceName,
       payload.draft.plantName,
       payload.draft.title,
       payload.draft.body,
       payload.catalogQuery,
       payload.userAddedCatalogName,
     ) ||
+    (!payload.draft.spaceId && hasText(payload.draft.spaceName)) ||
     payload.selectedCatalogItem !== null ||
     (payload.mentionSelections?.length ?? 0) > 0 ||
     hasText(payload.topicTagInput) ||
@@ -159,4 +173,10 @@ function hasText(...values: Array<string | null | undefined>) {
 function notifyDraftsChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(OFFLINE_DRAFTS_CHANGED_EVENT));
+}
+
+function requireOwnerUserId(ownerUserId: string) {
+  const normalized = ownerUserId.trim();
+  if (!normalized) throw new Error("Offline data requires an owner user id.");
+  return normalized;
 }

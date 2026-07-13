@@ -1,15 +1,17 @@
 import type { MediaAsset } from "@/db/schema";
+import { MAX_COMPOSER_IMAGE_BYTES } from "@/lib/media/image-limits";
 import { describe, expect, it, vi } from "vitest";
 
 const storageMock = vi.hoisted(() => ({
   calls: [] as string[],
-}));
-
-vi.mock("@/lib/storage", () => ({
   getQuarantineObjectBuffer: vi.fn(async () => {
     storageMock.calls.push("get-original");
     return Buffer.from("original");
   }),
+}));
+
+vi.mock("@/lib/storage", () => ({
+  getQuarantineObjectBuffer: storageMock.getQuarantineObjectBuffer,
   deleteQuarantineObject: vi.fn(async () => {
     storageMock.calls.push("delete-original");
   }),
@@ -35,7 +37,7 @@ vi.mock("./derivatives", () => ({
 import { processQuarantinedImage } from "./processor";
 
 describe("processQuarantinedImage", () => {
-  it("deletes the quarantine original before publishing the public derivative", async () => {
+  it("publishes the derivative while leaving original cleanup to the durable route", async () => {
     storageMock.calls = [];
 
     const result = await processQuarantinedImage({
@@ -55,9 +57,12 @@ describe("processQuarantinedImage", () => {
     expect(storageMock.calls).toEqual([
       "get-original",
       "create-derivative",
-      "delete-original",
       "put-derivative",
     ]);
+    expect(storageMock.getQuarantineObjectBuffer).toHaveBeenCalledWith(
+      "quarantine/user/photo.png",
+      MAX_COMPOSER_IMAGE_BYTES,
+    );
     expect(result.derivativeKey).toBe("derivatives/user/photo.webp");
     expect(result.publicUrl).toBe(
       "https://media.over.garden/derivatives/user/photo.webp",

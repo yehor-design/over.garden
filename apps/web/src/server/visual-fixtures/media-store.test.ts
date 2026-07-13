@@ -67,7 +67,7 @@ describe("visual fixture media store", () => {
     );
   });
 
-  it("deletes only exact manifest derivative and quarantine keys", async () => {
+  it("deletes only exact current and retired manifest media keys", async () => {
     const store = new RecordingObjectStore();
 
     const deleted = await deleteVisualFixtureMedia(
@@ -81,14 +81,31 @@ describe("visual fixture media store", () => {
     const expectedQuarantineKeys = VISUAL_FIXTURE_MANIFEST.media.map(
       ({ quarantineKey }) => quarantineKey,
     );
-    expect(deleted).toBe(
-      expectedDerivativeKeys.length + expectedQuarantineKeys.length,
+    const retiredDerivativeKeys = VISUAL_FIXTURE_MANIFEST.media.map(
+      ({ fileName }) => `visual-fixtures/ove187-v5/${fileName}`,
     );
-    expect(store.publicDeletes).toEqual(expectedDerivativeKeys);
-    expect(store.quarantineDeletes).toEqual(expectedQuarantineKeys);
+    const retiredQuarantineKeys = VISUAL_FIXTURE_MANIFEST.media.map(
+      ({ fileName }) => `visual-fixtures/ove187-v5/quarantine/${fileName}`,
+    );
+    expect(deleted).toBe(
+      expectedDerivativeKeys.length +
+        expectedQuarantineKeys.length +
+        retiredDerivativeKeys.length +
+        retiredQuarantineKeys.length,
+    );
+    expect(store.publicDeletes).toEqual([
+      ...expectedDerivativeKeys,
+      ...retiredDerivativeKeys,
+    ]);
+    expect(store.quarantineDeletes).toEqual([
+      ...expectedQuarantineKeys,
+      ...retiredQuarantineKeys,
+    ]);
     expect(
       [...store.publicDeletes, ...store.quarantineDeletes].every((key) =>
-        key.startsWith(`${VISUAL_FIXTURE_NAMESPACE}/`),
+        [VISUAL_FIXTURE_NAMESPACE, "visual-fixtures/ove187-v5"].some(
+          (namespace) => key.startsWith(`${namespace}/`),
+        ),
       ),
     ).toBe(true);
   });

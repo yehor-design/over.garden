@@ -15,12 +15,25 @@ import {
   type JournalDraftRecord,
 } from "@/lib/offline/drafts";
 
-export function GardenDraftResumePanel() {
+export function GardenDraftResumePanel({
+  ownerUserId,
+}: {
+  ownerUserId: string;
+}) {
   const [drafts, setDrafts] = useState<JournalDraftRecord[]>([]);
 
   const refreshDrafts = useCallback(async () => {
-    setDrafts(await listOfflineDrafts(["first_entry", "follow_up_entry"]));
-  }, []);
+    try {
+      setDrafts(
+        await listOfflineDrafts(ownerUserId, [
+          "first_entry",
+          "follow_up_entry",
+        ]),
+      );
+    } catch {
+      setDrafts([]);
+    }
+  }, [ownerUserId]);
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
@@ -78,7 +91,9 @@ export function GardenDraftResumePanel() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => void discardDraft(draft.id, refreshDrafts)}
+                  onClick={() =>
+                    void discardDraft(ownerUserId, draft.id, refreshDrafts)
+                  }
                 >
                   <Trash2 className="size-4" />
                   Discard
@@ -92,8 +107,12 @@ export function GardenDraftResumePanel() {
   );
 }
 
-async function discardDraft(id: string, refreshDrafts: () => Promise<void>) {
-  await deleteOfflineDraft(id);
+async function discardDraft(
+  ownerUserId: string,
+  id: string,
+  refreshDrafts: () => Promise<void>,
+) {
+  await deleteOfflineDraft(ownerUserId, id);
   await refreshDrafts();
 }
 

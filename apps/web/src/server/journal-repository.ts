@@ -66,7 +66,8 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewJournalEntryRow = Insertable<Database["journal_entries"]>;
 
 export interface CreateFirstPlantEntryInput {
-  spaceName: string;
+  spaceId?: string | null;
+  spaceName?: string | null;
   plantName: string;
   objectKind?: string | null;
   catalogItemId?: string | null;
@@ -81,6 +82,11 @@ export interface CreateFirstPlantEntryInput {
   mediaAssetId?: string | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
+  internalDeterministicIds?: {
+    spaceId: string;
+    plantObjectId: string;
+    entryId: string;
+  };
 }
 
 export interface CreateJournalEntryInput {
@@ -98,6 +104,9 @@ export interface CreatePlantObjectJournalEntryInput {
   mediaAssetId?: string | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
+  internalDeterministicIds?: {
+    entryId: string;
+  };
 }
 
 export interface CreateSpaceJournalEntryInput {
@@ -213,6 +222,7 @@ export interface PlantObjectPage {
     coarse_region_code: PlantObject["coarse_region_code"];
     source_credit: PlantObjectCatalogSourceCredit | null;
   };
+  hasPriorPublicationDisclosure: boolean;
   entries: JournalEntryReadback[];
   gallery_media: EntryMediaReadback[];
 }
@@ -480,44 +490,56 @@ export async function createFirstPlantEntry(
   );
 
   if (existing) {
-    if (existing.entry_scope !== "object" || !existing.plant_object_id) {
-      throw new Error(
-        "Client mutation id already belongs to another journal entry.",
-      );
-    }
-
-    const mediaAttached = await attachMediaAssetToEntryIfPresent(
+    return readExistingFirstPlantEntryResult(
       db,
       scope,
+      existing,
       normalized.mediaAssetId,
-      existing.id,
     );
-
-    const page = await getPlantObjectPage(scope, existing.plant_object_id);
-    if (!page)
-      throw new Error("Existing journal entry is outside the request scope.");
-
-    return {
-      space: page.space,
-      plantObject: page.plantObject,
-      entry: existing,
-      isNewEntry: false,
-      mediaAttached,
-      priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
-    };
   }
 
   return db.transaction().execute(async (trx) => {
-    const space = await trx
-      .insertInto("spaces")
-      .values({
-        owner_user_id: scope.userId,
-        display_name: normalized.spaceName,
-        location_visibility: normalized.locationVisibility,
-        coarse_region_code: normalized.coarseRegionCode,
-      })
-      .returningAll()
-      .executeTakeFirstOrThrow();
+    await buildJournalMutationAdvisoryLockQuery(
+      scope,
+      normalized.clientMutationId,
+    ).execute(trx);
+    const existingAfterLock = await findJournalEntryByClientMutation(
+      scope,
+      normalized.clientMutationId,
+      trx,
+    );
+    if (existingAfterLock) {
+      return readExistingFirstPlantEntryResult(
+        trx,
+        scope,
+        existingAfterLock,
+        normalized.mediaAssetId,
+      );
+    }
+
+    const space = normalized.spaceId
+      ? await buildOwnedSpaceForFirstEntryQuery(
+          trx,
+          scope,
+          normalized.spaceId,
+        ).executeTakeFirst()
+      : await trx
+          .insertInto("spaces")
+          .values({
+            ...(normalized.internalDeterministicIds
+              ? { id: normalized.internalDeterministicIds.spaceId }
+              : {}),
+            owner_user_id: scope.userId,
+            display_name: normalized.spaceName,
+            location_visibility: normalized.locationVisibility,
+            coarse_region_code: normalized.coarseRegionCode,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
+
+    if (!space) {
+      throw new Error("Selected space was not found.");
+    }
 
     const selectedCatalogItem = normalized.catalogItemId
       ? await findSelectableCatalogItem(trx, normalized.catalogItemId)
@@ -531,12 +553,16 @@ export async function createFirstPlantEntry(
       !selectedCatalogItem && normalized.userAddedCatalogName
         ? await createUserAddedCatalogCandidate(trx, scope, {
             displayName: normalized.userAddedCatalogName,
+            objectKind: normalized.objectKind,
           })
         : null;
 
     const plantObject = await trx
       .insertInto("plant_objects")
       .values({
+        ...(normalized.internalDeterministicIds
+          ? { id: normalized.internalDeterministicIds.plantObjectId }
+          : {}),
         owner_user_id: scope.userId,
         space_id: space.id,
         display_name: normalized.plantName,
@@ -556,13 +582,16 @@ export async function createFirstPlantEntry(
           : userAddedCatalogItem
             ? "user_added"
             : "unknown",
-        location_visibility: normalized.locationVisibility,
-        coarse_region_code: normalized.coarseRegionCode,
+        location_visibility: space.location_visibility,
+        coarse_region_code: space.coarse_region_code,
       })
       .returningAll()
       .executeTakeFirstOrThrow();
 
     const entry = await insertJournalEntry(trx, {
+      ...(normalized.internalDeterministicIds
+        ? { id: normalized.internalDeterministicIds.entryId }
+        : {}),
       owner_user_id: scope.userId,
       space_id: space.id,
       plant_object_id: plantObject.id,
@@ -669,6 +698,43 @@ export async function createFirstPlantEntry(
       priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
     };
   });
+}
+
+async function readExistingFirstPlantEntryResult(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  existing: JournalEntry,
+  mediaAssetId: string | null,
+): Promise<FirstPlantEntryResult> {
+  if (existing.entry_scope !== "object" || !existing.plant_object_id) {
+    throw new Error(
+      "Client mutation id already belongs to another journal entry.",
+    );
+  }
+
+  const mediaAttached = await attachMediaAssetToEntryIfPresent(
+    executor,
+    scope,
+    mediaAssetId,
+    existing.id,
+  );
+  const page = await getPlantObjectPage(
+    scope,
+    existing.plant_object_id,
+    executor,
+  );
+  if (!page) {
+    throw new Error("Existing journal entry is outside the request scope.");
+  }
+
+  return {
+    space: page.space,
+    plantObject: page.plantObject,
+    entry: existing,
+    isNewEntry: false,
+    mediaAttached,
+    priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
+  };
 }
 
 export async function listMyPlantObjects(
@@ -992,15 +1058,21 @@ export async function getPlantObjectPage(
     objectId,
   ).execute();
   const entryIds = entryRows.map((entry) => entry.id);
-  const [mediaByEntryId, mentionsByEntryId, galleryMedia, sourceCredit] =
-    await Promise.all([
-      getProcessedMediaByEntryId(executor, scope, entryIds),
-      getMentionedObjectsByEntryId(executor, scope, entryIds),
-      readProcessedObjectMediaGallery(executor, scope, entryIds),
-      objectRow.catalogItemId
-        ? readPlantObjectCatalogSourceCredit(executor, objectRow.catalogItemId)
-        : Promise.resolve(null),
-    ]);
+  const [
+    mediaByEntryId,
+    mentionsByEntryId,
+    galleryMedia,
+    sourceCredit,
+    priorPublicationDisclosure,
+  ] = await Promise.all([
+    getProcessedMediaByEntryId(executor, scope, entryIds),
+    getMentionedObjectsByEntryId(executor, scope, entryIds),
+    readProcessedObjectMediaGallery(executor, scope, entryIds),
+    objectRow.catalogItemId
+      ? readPlantObjectCatalogSourceCredit(executor, objectRow.catalogItemId)
+      : Promise.resolve(null),
+    buildPriorPublicationDisclosureQuery(executor, scope).executeTakeFirst(),
+  ]);
 
   return {
     space: {
@@ -1023,6 +1095,7 @@ export async function getPlantObjectPage(
       coarse_region_code: objectRow.objectCoarseRegionCode,
       source_credit: sourceCredit,
     },
+    hasPriorPublicationDisclosure: Boolean(priorPublicationDisclosure),
     entries: entryRows.map(({ timelineRelation, ...entry }) => ({
       ...entry,
       media: mediaByEntryId.get(entry.id) ?? null,
@@ -1109,6 +1182,9 @@ export async function createPlantObjectJournalEntry(
       normalized.plantObjectId,
     );
     const entry = await insertJournalEntry(trx, {
+      ...(normalized.internalDeterministicIds
+        ? { id: normalized.internalDeterministicIds.entryId }
+        : {}),
       owner_user_id: scope.userId,
       space_id: target.spaceId,
       plant_object_id: target.objectId,
@@ -1901,6 +1977,14 @@ export function buildFindExistingEntryByClientMutationQuery(
     .where("client_mutation_id", "=", clientMutationId);
 }
 
+export function buildJournalMutationAdvisoryLockQuery(
+  scope: RequestScope,
+  clientMutationId: string,
+) {
+  const lockKey = `${scope.userId.length}:${scope.userId}:${clientMutationId}`;
+  return sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`;
+}
+
 export function buildFindJournalEntryByIdQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -2179,6 +2263,14 @@ export function buildSpaceByIdQuery(
     .select(["id", "display_name", "location_visibility", "coarse_region_code"])
     .where("id", "=", spaceId)
     .where("owner_user_id", "=", scope.userId);
+}
+
+export function buildOwnedSpaceForFirstEntryQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  spaceId: string,
+) {
+  return buildSpaceByIdQuery(executor, scope, spaceId);
 }
 
 export function buildSpaceTimelineObjectsQuery(
@@ -2975,12 +3067,19 @@ function normalizeCreateFirstPlantEntryInput(
     200,
   );
 
+  const spaceId = normalizeOptionalText(input.spaceId, "Space id", 200);
+  const spaceName = normalizeOptionalText(
+    input.spaceName,
+    "Space name",
+    MAX_NAME_LENGTH,
+  );
+  if (!spaceId && !spaceName) {
+    throw new Error("Choose an existing space or name a new space.");
+  }
+
   return {
-    spaceName: normalizeRequiredText(
-      input.spaceName,
-      "Space name",
-      MAX_NAME_LENGTH,
-    ),
+    spaceId,
+    spaceName: spaceName ?? "",
     plantName: normalizeRequiredText(
       input.plantName,
       "Plant name",
@@ -3010,6 +3109,7 @@ function normalizeCreateFirstPlantEntryInput(
     mediaAssetId,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
+    internalDeterministicIds: input.internalDeterministicIds ?? null,
   };
 }
 
@@ -3037,6 +3137,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
     ),
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
+    internalDeterministicIds: input.internalDeterministicIds ?? null,
   };
 }
 

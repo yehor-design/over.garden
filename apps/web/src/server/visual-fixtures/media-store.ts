@@ -13,6 +13,9 @@ import { booleanServerEnv, requiredServerEnv } from "@/lib/env";
 import type { VisualFixtureManifest } from "@/lib/visual-fixtures/manifest";
 
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES = [
+  "visual-fixtures/ove187-v5",
+] as const;
 
 export interface VisualFixturePutObjectInput {
   key: string;
@@ -58,14 +61,29 @@ export async function deleteVisualFixtureMedia(
   store: VisualFixtureObjectStore,
   manifest: VisualFixtureManifest,
 ): Promise<number> {
-  for (const item of manifest.media) {
-    assertNamespaceKey(item.derivativeKey, manifest.namespace);
-    assertNamespaceKey(item.quarantineKey, manifest.namespace);
-    await store.deletePublicObject(item.derivativeKey);
-    await store.deleteQuarantineObject(item.quarantineKey);
+  const namespaces = [
+    manifest.namespace,
+    ...RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES,
+  ];
+
+  for (const namespace of namespaces) {
+    for (const item of manifest.media) {
+      const derivativeKey =
+        namespace === manifest.namespace
+          ? item.derivativeKey
+          : `${namespace}/${item.fileName}`;
+      const quarantineKey =
+        namespace === manifest.namespace
+          ? item.quarantineKey
+          : `${namespace}/quarantine/${item.fileName}`;
+      assertNamespaceKey(derivativeKey, namespace);
+      assertNamespaceKey(quarantineKey, namespace);
+      await store.deletePublicObject(derivativeKey);
+      await store.deleteQuarantineObject(quarantineKey);
+    }
   }
 
-  return manifest.media.length * 2;
+  return manifest.media.length * namespaces.length * 2;
 }
 
 export function createVisualFixtureObjectStore(

@@ -434,7 +434,14 @@ function PassportTimeline({
       ) : (
         <>
           <ol className="grid gap-3">
-            {renderTimelineEntries(preview, locale, copy, renderEntryActions)}
+            {renderTimelineEntries(
+              preview,
+              locale,
+              copy,
+              renderEntryActions,
+              undefined,
+              true,
+            )}
           </ol>
           {continuation.length > 0 ? (
             <details className="group border-t border-border pt-3">
@@ -474,6 +481,7 @@ function renderTimelineEntries(
   copy: ReturnType<typeof getLivingObjectPassportCopy>,
   renderEntryActions?: (entry: LivingObjectPassportTimelineEntry) => ReactNode,
   precedingYear?: string,
+  eagerFirstMedia = false,
 ) {
   return entries.map((entry, index) => {
     const showYear =
@@ -538,6 +546,7 @@ function renderTimelineEntries(
                   width={240}
                   height={180}
                   sizes="(min-width: 640px) 8rem, 100vw"
+                  loading={eagerFirstMedia && index === 0 ? "eager" : "lazy"}
                   unoptimized
                   className="aspect-4/3 w-full rounded-md border border-border object-cover sm:w-32"
                 />

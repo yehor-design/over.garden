@@ -42,6 +42,7 @@
     "visual:fixtures:seed": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-seed.ts",
     "visual:fixtures:reset": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-reset.ts",
     "visual:fixtures:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-verify.ts",
+    "visual:fixtures:journal-create": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-journal-creation.ts",
     "admin:bootstrap-owner": "tsx scripts/bootstrap-admin-owner.ts",
     "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
     "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"

@@ -22,6 +22,8 @@ import {
   buildFindExistingEntryByClientMutationQuery,
   buildInsertJournalEntryObjectMentionsQuery,
   buildInsertJournalEntryQuery,
+  buildJournalMutationAdvisoryLockQuery,
+  buildOwnedSpaceForFirstEntryQuery,
   buildMentionableObjectsInSpaceQuery,
   buildMyPlantObjectEntrySummariesQuery,
   buildMyPlantObjectCoverMediaQuery,
@@ -70,6 +72,22 @@ class TestPostgresDialect implements Dialect {
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 
 describe("journal repository query contracts", () => {
+  it("reuses only an owner-scoped space for first-object creation", () => {
+    const compiled = buildOwnedSpaceForFirstEntryQuery(
+      testDb,
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "00000000-0000-0000-0000-000000000002",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "spaces"');
+    expect(compiled.sql).toContain('"id" = $1');
+    expect(compiled.sql).toContain('"owner_user_id" = $2');
+    expect(compiled.parameters).toEqual([
+      "00000000-0000-0000-0000-000000000002",
+      "00000000-0000-0000-0000-000000000001",
+    ]);
+  });
+
   it("binds entry idempotency to owner_user_id and client_mutation_id", () => {
     const compiled = buildInsertJournalEntryQuery(testDb, {
       owner_user_id: "00000000-0000-0000-0000-000000000001",
@@ -87,6 +105,19 @@ describe("journal repository query contracts", () => {
       'on conflict ("owner_user_id", "client_mutation_id") do nothing',
     );
     expect(compiled.sql).toContain("returning *");
+  });
+
+  it("serializes first-entry creation by owner and client mutation before inserts", () => {
+    const compiled = buildJournalMutationAdvisoryLockQuery(
+      scopedToUser("00000000-0000-0000-0000-000000000001"),
+      "mutation-1",
+    ).compile(testDb);
+
+    expect(compiled.sql).toContain("pg_advisory_xact_lock");
+    expect(compiled.sql).toContain("hashtextextended");
+    expect(compiled.parameters).toEqual([
+      "36:00000000-0000-0000-0000-000000000001:mutation-1",
+    ]);
   });
 
   it("inserts a space-level entry without a direct plant object", () => {

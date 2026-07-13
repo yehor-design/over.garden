@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import type { PlantObjectKind } from "@/db/schema";
+import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import type {
   ActivationSource,
   FirstEntryCatalogSelection,
@@ -33,12 +34,15 @@ import type {
   JournalMentionSuggestion,
 } from "@/lib/garden/journal-mentions";
 import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
-import { defaultObjectKindForCatalogSelection } from "@/lib/garden/catalog-object-kind";
+import {
+  defaultObjectKindForCatalogSelection,
+  objectKindAfterCatalogSelection,
+} from "@/lib/garden/catalog-object-kind";
 import {
   clearComposerPhotoIntent,
   COMPOSER_PHOTO_ACCEPT,
+  composerPhotoSelectionError,
   createComposerPhotoIntent,
-  isSupportedComposerPhoto,
 } from "@/lib/garden/composer-photo-selection";
 import {
   nextJournalTitleValue,
@@ -67,6 +71,7 @@ import {
 import {
   enqueueOfflineMutation,
   listOfflineMutations,
+  updateOfflineMutationStatus,
   type OfflineFirstPlantEntryPayload,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
@@ -83,10 +88,12 @@ import {
 } from "@/lib/offline/drafts";
 import {
   JournalEntrySyncError,
-  submitJournalEntryPayload,
+  submitOnlineJournalEntryPayload,
   syncOfflineJournalEntryMutation,
 } from "@/lib/offline/journal-entry-sync";
 import { trackMetaMarketingEvent } from "@/lib/meta-marketing/client";
+import type { VisualFixtureCreationScenarioEvidence } from "@/lib/visual-fixtures/manifest";
+import { runVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-client";
 import {
   JournalMentionTypeaheadPanel,
   applyMentionSuggestion,
@@ -98,12 +105,16 @@ import {
   type MentionTypeaheadStatus,
 } from "./journal-mention-typeahead";
 import { JournalVoiceInputControl } from "./journal-voice-input-control";
+import { JournalObjectKindSelector } from "./journal-object-kind-selector";
 
 interface FirstEntryComposerProps {
+  ownerUserId: string;
   today: string;
   initialClientMutationId: string;
+  initialSpace?: { id: string; displayName: string } | null;
   initialCatalogItem?: FirstEntryCatalogSelection | null;
   activationSource?: ActivationSource | null;
+  visualScenario?: VisualFixtureCreationScenarioEvidence | null;
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
@@ -112,11 +123,15 @@ type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
 export function FirstEntryComposer({
+  ownerUserId,
   today,
   initialClientMutationId,
+  initialSpace = null,
   initialCatalogItem = null,
   activationSource = null,
+  visualScenario = null,
 }: FirstEntryComposerProps) {
+  useScrollToHashOnMount("first-entry-composer");
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
   const titleEditedByUserRef = useRef(false);
@@ -124,20 +139,28 @@ export function FirstEntryComposer({
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
   const [clientMutationId, setClientMutationId] = useState(
-    initialClientMutationId,
+    visualScenario?.clientMutationId ?? initialClientMutationId,
   );
   const [draft, setDraft] = useState<FirstEntryDraftFields>({
-    spaceName: "",
-    plantName: "",
-    objectKind: "plant" as PlantObjectKind,
-    title: "",
-    body: "",
-    entryDate: today,
-    locationVisibility: "hidden",
-    coarseRegionCode: "",
+    spaceId: visualScenario?.spaceId ?? initialSpace?.id ?? null,
+    spaceName: visualScenario?.spaceName ?? initialSpace?.displayName ?? "",
+    plantName: visualScenario?.objectName ?? "",
+    objectKind: visualScenario
+      ? visualScenario.objectKind
+      : initialCatalogItem
+        ? defaultObjectKindForCatalogSelection(
+            initialCatalogItem.catalogKind,
+            initialCatalogItem.source,
+          )
+        : ("plant" as PlantObjectKind),
+    title: visualScenario?.entryTitle ?? "",
+    body: visualScenario?.entryBody ?? "",
+    entryDate: visualScenario?.entryDate ?? today,
+    locationVisibility: visualScenario?.locationVisibility ?? "hidden",
+    coarseRegionCode: visualScenario?.coarseRegionCode ?? "",
   });
   const [catalogQuery, setCatalogQuery] = useState(
-    initialCatalogItem?.displayName ?? "",
+    visualScenario?.catalogQuery ?? initialCatalogItem?.displayName ?? "",
   );
   const [catalogSuggestions, setCatalogSuggestions] = useState<
     CatalogSuggestion[]
@@ -146,14 +169,16 @@ export function FirstEntryComposer({
     useState<CatalogSuggestion | null>(initialCatalogItem);
   const [userAddedCatalogName, setUserAddedCatalogName] = useState<
     string | null
-  >(null);
+  >(visualScenario?.userAddedCatalogName ?? null);
   const [catalogStatus, setCatalogStatus] = useState<CatalogStatus>("idle");
   const [activeMentionToken, setActiveMentionToken] =
     useState<ActiveMentionToken | null>(null);
   const [mentionSelections, setMentionSelections] = useState<
     JournalMentionSelection[]
   >([]);
-  const [topicTagInput, setTopicTagInput] = useState("");
+  const [topicTagInput, setTopicTagInput] = useState(
+    visualScenario?.topicTagInput ?? "",
+  );
   const [mentionSuggestions, setMentionSuggestions] = useState<
     JournalMentionSuggestion[]
   >([]);
@@ -161,32 +186,49 @@ export function FirstEntryComposer({
     useState<MentionTypeaheadStatus>("idle");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [storedPhotoIntent, setStoredPhotoIntent] =
-    useState<OfflinePhotoIntent | null>(null);
+    useState<OfflinePhotoIntent | null>(
+      visualScenario?.mediaFileName
+        ? {
+            fileName: visualScenario.mediaFileName,
+            contentType: "image/jpeg",
+            size: 2_400_000,
+          }
+        : null,
+    );
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isOnline, setIsOnline] = useState(true);
-  const [submitState, setSubmitState] = useState<SubmitState>("idle");
+  const [isOnline, setIsOnline] = useState(visualScenario?.online ?? true);
+  const [submitState, setSubmitState] = useState<SubmitState>(
+    visualScenario?.submitState ?? "idle",
+  );
   const [message, setMessage] = useState(
-    "Private by default. You choose later whether an entry becomes public.",
+    visualScenario?.message ??
+      "Private by default. You choose later whether an entry becomes public.",
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
 
   const refreshQueue = useCallback(async () => {
-    const localMutations = await listOfflineMutations([
-      "queued",
-      "syncing",
-      "failed",
-      "synced",
-    ]);
-    setMutations(
-      localMutations
-        .filter((mutation) => mutation.kind === "journal_entry")
-        .slice(-6)
-        .reverse(),
-    );
-  }, []);
+    try {
+      const localMutations = await listOfflineMutations(ownerUserId, [
+        "queued",
+        "syncing",
+        "failed",
+        "synced",
+      ]);
+      setMutations(
+        localMutations
+          .filter((mutation) => mutation.kind === "journal_entry")
+          .slice(-6)
+          .reverse(),
+      );
+    } catch {
+      setMutations([]);
+    }
+  }, [ownerUserId]);
 
   useEffect(() => {
+    if (visualScenario) return;
+
     const refreshTimer = window.setTimeout(() => {
       setIsOnline(navigator.onLine);
       void refreshQueue();
@@ -209,18 +251,30 @@ export function FirstEntryComposer({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [refreshQueue]);
+  }, [refreshQueue, visualScenario]);
 
   useEffect(() => {
+    if (visualScenario) return;
+
     let cancelled = false;
 
-    void getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID).then(
-      (storedDraft) => {
+    void getOfflineDraft<FirstEntryDraftPayload>(
+      ownerUserId,
+      FIRST_ENTRY_DRAFT_ID,
+    )
+      .then((storedDraft) => {
         if (cancelled) return;
 
         if (storedDraft) {
           setClientMutationId(storedDraft.payload.clientMutationId);
-          setDraft(storedDraft.payload.draft);
+          setDraft({
+            ...storedDraft.payload.draft,
+            spaceId:
+              storedDraft.payload.draft.spaceId ??
+              (storedDraft.payload.draft.spaceName === initialSpace?.displayName
+                ? (initialSpace?.id ?? null)
+                : null),
+          });
           titleEditedByUserRef.current =
             storedDraft.payload.draft.title.trim().length > 0;
           setCatalogQuery(
@@ -237,16 +291,18 @@ export function FirstEntryComposer({
         }
 
         setDraftHydrated(true);
-      },
-    );
+      })
+      .catch(() => {
+        if (!cancelled) setDraftHydrated(true);
+      });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialSpace, ownerUserId, visualScenario]);
 
   useEffect(() => {
-    if (!draftHydrated) return;
+    if (!draftHydrated || visualScenario) return;
 
     const payload: FirstEntryDraftPayload = {
       clientMutationId,
@@ -265,12 +321,15 @@ export function FirstEntryComposer({
 
       if (hasPersistableFirstEntryDraft(payload, today)) {
         void upsertOfflineDraft({
+          ownerUserId,
           id: FIRST_ENTRY_DRAFT_ID,
           kind: "first_entry",
           payload,
-        });
+        }).catch(() => undefined);
       } else {
-        void deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
+        void deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
+          () => undefined,
+        );
       }
     }, 250);
 
@@ -285,13 +344,17 @@ export function FirstEntryComposer({
     draftHydrated,
     selectedCatalogItem,
     mentionSelections,
+    ownerUserId,
     storedPhotoIntent,
     today,
     topicTagInput,
     userAddedCatalogName,
+    visualScenario,
   ]);
 
   useEffect(() => {
+    if (visualScenario) return;
+
     const query = catalogQuery.trim();
 
     if (
@@ -331,7 +394,7 @@ export function FirstEntryComposer({
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [catalogQuery, selectedCatalogItem, userAddedCatalogName]);
+  }, [catalogQuery, selectedCatalogItem, userAddedCatalogName, visualScenario]);
 
   useEffect(() => {
     if (!activeMentionToken) {
@@ -397,6 +460,11 @@ export function FirstEntryComposer({
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (visualScenario) {
+      await handleVisualScenarioSubmit(visualScenario);
+      return;
+    }
+
     if (photoError) {
       setSubmitState("failed");
       setMessage(photoError);
@@ -415,7 +483,14 @@ export function FirstEntryComposer({
     }
 
     if (!isOnline) {
-      await enqueuePayload(payload);
+      try {
+        await enqueuePayload(payload);
+      } catch {
+        setSubmitState("failed");
+        setMessage(
+          "Offline storage is unavailable in this browser. Your text is still in the form; reconnect before saving.",
+        );
+      }
       return;
     }
 
@@ -423,11 +498,14 @@ export function FirstEntryComposer({
     setMessage("Saving private entry...");
 
     try {
-      const result = await submitJournalEntryPayload(payload, {
+      const result = await submitOnlineJournalEntryPayload(payload, {
+        ownerUserId,
         idempotencyKey: clientMutationId,
       });
       draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
+      await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
+        () => undefined,
+      );
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       void trackMetaMarketingEvent("first_entry_saved", {
@@ -441,8 +519,123 @@ export function FirstEntryComposer({
     }
   }
 
+  async function handleVisualScenarioSubmit(
+    scenario: VisualFixtureCreationScenarioEvidence,
+  ) {
+    setSubmitState("syncing");
+    setMessage("Running deterministic journal evidence...");
+
+    try {
+      if (scenario.expectedServerWrite) {
+        const readbackPath = await runVisualJournalCreationScenario(
+          scenario.id,
+        );
+        setSubmitState("synced");
+        setMessage("Scenario saved through the canonical repository.");
+        router.push(readbackPath);
+        return;
+      }
+
+      const payload = await buildPayload();
+      if (scenario.state === "draft" || scenario.state === "cancel") {
+        await persistVisualDraft(payload);
+        setSubmitState("idle");
+        setMessage(
+          scenario.state === "cancel"
+            ? "Cancel keeps this owner-scoped draft on this device."
+            : "Owner-scoped draft saved on this device.",
+        );
+        return;
+      }
+
+      const mutation = await enqueueOfflineMutation({
+        ownerUserId,
+        kind: "journal_entry",
+        payload,
+        idempotencyKey: scenario.clientMutationId,
+      });
+      if (scenario.state === "error") {
+        await updateOfflineMutationStatus(ownerUserId, mutation.id, "failed", {
+          lastError: "Recoverable fixture save failure.",
+        });
+        setSubmitState("failed");
+        setMessage("Save failed. The owner-scoped queue item can be retried.");
+      } else {
+        setSubmitState("queued");
+        setMessage("Saved in the owner-scoped offline queue.");
+      }
+      await refreshQueue();
+    } catch (error) {
+      setSubmitState("failed");
+      setMessage(journalSaveErrorMessage(error));
+    }
+  }
+
+  async function persistVisualDraft(payload: OfflineFirstPlantEntryPayload) {
+    const persistedPayload = persistedDraftPayload(payload);
+    await upsertOfflineDraft({
+      ownerUserId,
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload: persistedPayload,
+    });
+  }
+
+  function persistedDraftPayload(
+    payload: OfflineFirstPlantEntryPayload,
+  ): FirstEntryDraftPayload {
+    return {
+      clientMutationId: payload.clientMutationId,
+      draft: {
+        spaceId: payload.spaceId ?? null,
+        spaceName: payload.spaceName ?? "",
+        plantName: payload.plantName,
+        objectKind: payload.objectKind ?? "plant",
+        title: payload.title,
+        body: payload.body,
+        entryDate: payload.entryDate,
+        locationVisibility:
+          payload.locationVisibility === "region" ? "region" : "hidden",
+        coarseRegionCode: payload.coarseRegionCode ?? "",
+      },
+      catalogQuery,
+      selectedCatalogItem,
+      userAddedCatalogName,
+      activationSource: payload.activationSource ?? null,
+      mentionSelections: payload.mentionSelections ?? [],
+      topicTagInput,
+      photoIntent: payload.photoIntent ?? null,
+    };
+  }
+
+  async function handleCancel() {
+    try {
+      const payload = await buildPayload();
+      const persistedPayload = persistedDraftPayload(payload);
+      draftPersistencePausedRef.current = true;
+
+      if (
+        visualScenario?.state === "cancel" ||
+        hasPersistableFirstEntryDraft(persistedPayload, today)
+      ) {
+        await persistVisualDraft(payload);
+      } else {
+        await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID);
+      }
+
+      router.push("/garden");
+    } catch {
+      draftPersistencePausedRef.current = false;
+      setSubmitState("failed");
+      setMessage(
+        "We couldn't preserve this draft on your device. Stay here and try again.",
+      );
+    }
+  }
+
   async function enqueuePayload(payload: OfflineJournalEntryPayload) {
     const mutation = await enqueueOfflineMutation({
+      ownerUserId,
       kind: "journal_entry",
       payload,
       idempotencyKey: clientMutationId,
@@ -450,7 +643,9 @@ export function FirstEntryComposer({
 
     setSubmitState("queued");
     draftPersistencePausedRef.current = true;
-    await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
+    await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
+      () => undefined,
+    );
     setMessage(
       mutation.status === "queued"
         ? localSavedMessage("entry")
@@ -464,9 +659,13 @@ export function FirstEntryComposer({
     setMessage("Sending saved entry to your garden...");
 
     try {
-      const result = await syncOfflineJournalEntryMutation(mutation);
+      const result = await syncOfflineJournalEntryMutation(mutation, {
+        expectedOwnerUserId: ownerUserId,
+      });
       draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(FIRST_ENTRY_DRAFT_ID);
+      await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
+        () => undefined,
+      );
       setSubmitState("synced");
       setMessage("Saved to your garden.");
       await refreshQueue();
@@ -494,12 +693,14 @@ export function FirstEntryComposer({
       if (payload) {
         try {
           const savedDraft = await upsertOfflineDraft({
+            ownerUserId,
             id: FIRST_ENTRY_DRAFT_ID,
             kind: "first_entry",
             payload: {
               clientMutationId: payload.clientMutationId,
               draft: {
-                spaceName: payload.spaceName,
+                spaceId: payload.spaceId ?? null,
+                spaceName: payload.spaceName ?? "",
                 plantName: payload.plantName,
                 objectKind: payload.objectKind ?? "plant",
                 title: payload.title,
@@ -544,6 +745,8 @@ export function FirstEntryComposer({
     return {
       target: "first_plant_entry",
       ...draft,
+      spaceId: draft.spaceId,
+      spaceName: draft.spaceName,
       objectKind: draft.objectKind,
       catalogItemId: selectedCatalogItem?.id ?? null,
       userAddedCatalogName:
@@ -574,6 +777,33 @@ export function FirstEntryComposer({
         ? withSuggestedTitle(next)
         : next;
     });
+  }
+
+  function updateSpaceChoice(value: string) {
+    draftPersistencePausedRef.current = false;
+    setDraft((current) =>
+      value === initialSpace?.id
+        ? {
+            ...current,
+            spaceId: initialSpace.id,
+            spaceName: initialSpace.displayName,
+          }
+        : { ...current, spaceId: null, spaceName: "" },
+    );
+  }
+
+  function updateObjectKind(value: PlantObjectKind) {
+    draftPersistencePausedRef.current = false;
+    setDraft((current) => ({ ...current, objectKind: value }));
+
+    if (selectedCatalogItem) {
+      setSelectedCatalogItem(null);
+      setCatalogQuery("");
+    }
+    if (userAddedCatalogName) {
+      setUserAddedCatalogName(null);
+      setCatalogQuery("");
+    }
   }
 
   function updateTitle(value: string) {
@@ -702,7 +932,8 @@ export function FirstEntryComposer({
       withSuggestedTitle(
         {
           ...current,
-          objectKind: defaultObjectKindForCatalogSelection(
+          objectKind: objectKindAfterCatalogSelection(
+            current.objectKind,
             suggestion.catalogKind,
             suggestion.source,
           ),
@@ -750,10 +981,11 @@ export function FirstEntryComposer({
       return;
     }
 
-    if (!isSupportedComposerPhoto(file)) {
+    const selectionError = composerPhotoSelectionError(file);
+    if (selectionError) {
       setPhotoFile(null);
       setStoredPhotoIntent(clearComposerPhotoIntent());
-      setPhotoError("Use a JPEG, PNG, or WebP photo.");
+      setPhotoError(selectionError);
       resetPhotoInput();
       setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       return;
@@ -827,7 +1059,11 @@ export function FirstEntryComposer({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4">
+    <form
+      onSubmit={handleSubmit}
+      data-visual-creation-scenario={visualScenario?.id}
+      className="grid gap-4"
+    >
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
           {isOnline ? (
@@ -842,22 +1078,14 @@ export function FirstEntryComposer({
         </span>
       </div>
 
+      <JournalObjectKindSelector
+        value={draft.objectKind}
+        onChange={updateObjectKind}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Space
-          <input
-            name="spaceName"
-            required
-            maxLength={120}
-            value={draft.spaceName}
-            onChange={(event) => updateDraft("spaceName", event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="Balcony"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Living object
+          Name
           <input
             name="plantName"
             data-auth-intent-control="create_object"
@@ -865,182 +1093,97 @@ export function FirstEntryComposer({
             maxLength={120}
             value={draft.plantName}
             onChange={(event) => updateDraft("plantName", event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="Cherry tomato or Carpathian colony"
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+            placeholder={
+              draft.objectKind === "animal"
+                ? "Marta or backyard flock"
+                : draft.objectKind === "bee_colony"
+                  ? "Carpathian colony"
+                  : "Cherry tomato"
+            }
           />
         </label>
-      </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Location
-          <select
-            name="locationVisibility"
-            value={draft.locationVisibility}
-            onChange={(event) => updateLocationVisibility(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <option value="hidden">Hidden</option>
-            <option value="region">Region</option>
-          </select>
-          <span className="text-xs leading-5 font-normal text-muted-foreground">
-            {locationVisibilityHelpText(draft.locationVisibility)}
-          </span>
-        </label>
-
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Coarse region
-          <select
-            name="coarseRegionCode"
-            required={draft.locationVisibility === "region"}
-            disabled={draft.locationVisibility === "hidden"}
-            value={draft.coarseRegionCode}
-            onChange={(event) =>
-              updateDraft("coarseRegionCode", event.target.value)
-            }
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
-          >
-            <option value="">Choose region</option>
-            {COARSE_REGION_OPTIONS.map((region) => (
-              <option key={region.value} value={region.value}>
-                {region.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Catalog match
-          <span className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              name="catalogQuery"
-              maxLength={120}
-              value={catalogQuery}
-              onChange={(event) => updateCatalogQuery(event.target.value)}
-              className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Search catalog or keep without match"
-              autoComplete="off"
-            />
-            {catalogQuery ? (
-              <button
-                type="button"
-                onClick={chooseUnknownCatalog}
-                className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Clear catalog match"
-              >
-                <X className="size-4" />
-              </button>
-            ) : null}
-          </span>
-        </label>
-
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          {selectedCatalogItem ? (
-            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
-              <span>
-                Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
-                {selectedCatalogTrust?.trustLabel} ·{" "}
-                {catalogKindLabel(
-                  selectedCatalogItem.catalogKind,
-                  draft.objectKind,
-                )}{" "}
-                · {plantObjectKindLabel(draft.objectKind)}
-              </span>
-              <span className="text-muted-foreground">
-                {selectedCatalogTrust?.disambiguationLabel} ·{" "}
-                {selectedCatalogTrust?.sourceCaveat}
-              </span>
-            </span>
-          ) : userAddedCatalogName ? (
-            <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
-              <span>
-                Saved with your catalog name: {userAddedCatalogName} ·{" "}
-                {userAddedCatalogTrust.trustLabel}
-              </span>
-              <span className="text-muted-foreground">
-                {userAddedCatalogTrust.sourceCaveat}
-              </span>
-            </span>
-          ) : (
-            <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              No catalog match yet · Safe to save and match later
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={chooseUnknownCatalog}
-            className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
-          >
-            Keep without match
-          </button>
-          {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
-            <button
-              type="button"
-              onClick={addMissingCatalogName}
-              className="rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted"
+        {initialSpace ? (
+          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+            Space
+            <select
+              name="spaceChoice"
+              value={draft.spaceId ?? "new"}
+              onChange={(event) => updateSpaceChoice(event.target.value)}
+              className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
             >
-              Use this name
-            </button>
-          ) : null}
-          {catalogStatus === "loading" ? (
-            <span className="text-muted-foreground">Searching...</span>
-          ) : null}
-          {catalogStatus === "failed" ? (
-            <span className="text-destructive">
-              Suggestions unavailable. Unknown still works.
-            </span>
-          ) : null}
-        </div>
-
-        {catalogSuggestions.length > 0 ? (
-          <ul className="grid gap-2">
-            {catalogSuggestions.map((suggestion) => {
-              const trust = catalogSuggestionTrustMetadata(suggestion);
-              const hasAliasCollision = catalogAliasCollisionKeys.has(
-                catalogSuggestionAliasCollisionKey(suggestion),
-              );
-
-              return (
-                <li key={suggestion.id}>
-                  <button
-                    type="button"
-                    onClick={() => selectCatalogSuggestion(suggestion)}
-                    className="flex w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-medium text-foreground">
-                        {suggestion.displayName}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {suggestion.canonicalName} · {trust.disambiguationLabel}
-                      </span>
-                      {hasAliasCollision ? (
-                        <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                          Same searched name appears in multiple catalog
-                          choices. Compare type and source before choosing.
-                        </span>
-                      ) : null}
-                      <span className="mt-1 block text-xs leading-5 text-muted-foreground">
-                        {trust.sourceCaveat}
-                      </span>
-                    </span>
-                    <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-                      {trust.trustLabel}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+              <option value={initialSpace.id}>
+                {initialSpace.displayName}
+              </option>
+              <option value="new">Create a new space</option>
+            </select>
+          </label>
         ) : null}
       </div>
 
-      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+      {!draft.spaceId ? (
         <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Start with photo
+          New space name
+          <input
+            name="spaceName"
+            required
+            maxLength={120}
+            value={draft.spaceName}
+            onChange={(event) => updateDraft("spaceName", event.target.value)}
+            className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+            placeholder="Balcony"
+          />
+          <span className="text-xs leading-5 font-normal text-muted-foreground">
+            A space groups related living objects. You can rename it later.
+          </span>
+        </label>
+      ) : (
+        <input type="hidden" name="spaceId" value={draft.spaceId} />
+      )}
+
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label
+            htmlFor="first-entry-body"
+            className="text-sm font-medium text-foreground"
+          >
+            First update
+          </label>
+          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
+        </div>
+        <textarea
+          ref={bodyTextareaRef}
+          id="first-entry-body"
+          name="body"
+          data-auth-intent-control="create_entry"
+          required
+          minLength={1}
+          maxLength={2000}
+          value={draft.body}
+          onChange={(event) =>
+            updateBody(
+              event.currentTarget.value,
+              event.currentTarget.selectionStart,
+            )
+          }
+          onClick={refreshActiveMentionToken}
+          onKeyUp={refreshActiveMentionToken}
+          className="min-h-32 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="What happened today? A short observation is enough."
+        />
+        <JournalMentionTypeaheadPanel
+          status={mentionStatus}
+          suggestions={mentionSuggestions}
+          selections={mentionSelections}
+          onSelect={selectMentionSuggestion}
+          onRemove={removeMentionSelection}
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 border-y border-border py-3">
+        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          Optional photo
           <input
             ref={photoInputRef}
             type="file"
@@ -1049,7 +1192,7 @@ export function FirstEntryComposer({
             onChange={(event) =>
               handlePhotoChange(event.currentTarget.files?.[0])
             }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-8 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground"
+            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-11 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground sm:file:h-9"
           />
         </label>
         {hasSelectedPhoto ? (
@@ -1074,101 +1217,264 @@ export function FirstEntryComposer({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-          Entry title
-          <input
-            name="title"
-            required
-            maxLength={140}
-            value={draft.title}
-            onChange={(event) => updateTitle(event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="First flowers"
-          />
-        </label>
+      <details
+        open={visualScenario?.detailsOpen || undefined}
+        className="group border-y border-border py-3"
+      >
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
+          More details
+          <span className="ml-2 font-normal text-muted-foreground">
+            catalog, date, privacy, topics
+          </span>
+        </summary>
+        <div className="mt-4 grid gap-4">
+          {draft.spaceId ? (
+            <p className="text-sm leading-6 text-muted-foreground">
+              Location privacy follows the selected space. Exact location is
+              never requested or stored.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                Location
+                <select
+                  name="locationVisibility"
+                  value={draft.locationVisibility}
+                  onChange={(event) =>
+                    updateLocationVisibility(event.target.value)
+                  }
+                  className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                >
+                  <option value="hidden">Hidden</option>
+                  <option value="region">Region</option>
+                </select>
+                <span className="text-xs leading-5 font-normal text-muted-foreground">
+                  {locationVisibilityHelpText(draft.locationVisibility)}
+                </span>
+              </label>
 
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Date
-          <input
-            type="date"
-            name="entryDate"
-            value={draft.entryDate}
-            onChange={(event) => updateDraft("entryDate", event.target.value)}
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          />
-        </label>
-      </div>
+              <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+                Coarse region
+                <select
+                  name="coarseRegionCode"
+                  required={draft.locationVisibility === "region"}
+                  disabled={draft.locationVisibility === "hidden"}
+                  value={draft.coarseRegionCode}
+                  onChange={(event) =>
+                    updateDraft("coarseRegionCode", event.target.value)
+                  }
+                  className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60 sm:h-10"
+                >
+                  <option value="">Choose region</option>
+                  {COARSE_REGION_OPTIONS.map((region) => (
+                    <option key={region.value} value={region.value}>
+                      {region.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor="first-entry-body"
-            className="text-sm font-medium text-foreground"
-          >
-            Note
+          <div className="flex flex-col gap-2">
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+              Catalog match
+              <span className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  name="catalogQuery"
+                  maxLength={120}
+                  value={catalogQuery}
+                  onChange={(event) => updateCatalogQuery(event.target.value)}
+                  className="h-11 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                  placeholder="Search catalog or keep without match"
+                  autoComplete="off"
+                />
+                {catalogQuery ? (
+                  <button
+                    type="button"
+                    onClick={chooseUnknownCatalog}
+                    className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    aria-label="Clear catalog match"
+                  >
+                    <X className="size-4" />
+                  </button>
+                ) : null}
+              </span>
+            </label>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {selectedCatalogItem ? (
+                <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                  <span>
+                    Matched in catalog: {selectedCatalogItem.displayName} ·{" "}
+                    {selectedCatalogTrust?.trustLabel} ·{" "}
+                    {catalogKindLabel(
+                      selectedCatalogItem.catalogKind,
+                      draft.objectKind,
+                    )}{" "}
+                    · {plantObjectKindLabel(draft.objectKind)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {selectedCatalogTrust?.disambiguationLabel} ·{" "}
+                    {selectedCatalogTrust?.sourceCaveat}
+                  </span>
+                </span>
+              ) : userAddedCatalogName ? (
+                <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
+                  <span>
+                    Saved with your catalog name: {userAddedCatalogName} ·{" "}
+                    {userAddedCatalogTrust.trustLabel}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {userAddedCatalogTrust.sourceCaveat}
+                  </span>
+                </span>
+              ) : (
+                <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
+                  No catalog match yet · Safe to save and match later
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={chooseUnknownCatalog}
+                className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+              >
+                Keep without match
+              </button>
+              {!selectedCatalogItem && catalogQuery.trim().length >= 2 ? (
+                <button
+                  type="button"
+                  onClick={addMissingCatalogName}
+                  className="min-h-11 rounded-md border border-border px-2 py-1 font-medium text-foreground hover:bg-muted sm:min-h-0"
+                >
+                  Use this name
+                </button>
+              ) : null}
+              {catalogStatus === "loading" ? (
+                <span className="text-muted-foreground">Searching...</span>
+              ) : null}
+              {catalogStatus === "failed" ? (
+                <span className="text-destructive">
+                  Suggestions unavailable. Unknown still works.
+                </span>
+              ) : null}
+            </div>
+
+            {catalogSuggestions.length > 0 ? (
+              <ul className="grid gap-2">
+                {catalogSuggestions.map((suggestion) => {
+                  const trust = catalogSuggestionTrustMetadata(suggestion);
+                  const hasAliasCollision = catalogAliasCollisionKeys.has(
+                    catalogSuggestionAliasCollisionKey(suggestion),
+                  );
+
+                  return (
+                    <li key={suggestion.id}>
+                      <button
+                        type="button"
+                        onClick={() => selectCatalogSuggestion(suggestion)}
+                        className="flex min-h-11 w-full items-start justify-between gap-3 rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium text-foreground">
+                            {suggestion.displayName}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            {suggestion.canonicalName} ·{" "}
+                            {trust.disambiguationLabel}
+                          </span>
+                          {hasAliasCollision ? (
+                            <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                              Same searched name appears in multiple catalog
+                              choices. Compare type and source before choosing.
+                            </span>
+                          ) : null}
+                          <span className="mt-1 block text-xs leading-5 text-muted-foreground">
+                            {trust.sourceCaveat}
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
+                          {trust.trustLabel}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
+              Entry title
+              <input
+                name="title"
+                required
+                maxLength={140}
+                value={draft.title}
+                onChange={(event) => updateTitle(event.target.value)}
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+                placeholder="First flowers"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+              Date
+              <input
+                type="date"
+                name="entryDate"
+                value={draft.entryDate}
+                onChange={(event) =>
+                  updateDraft("entryDate", event.target.value)
+                }
+                className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              />
+            </label>
+          </div>
+
+          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+            Tags / topics
+            <input
+              name="topicTags"
+              maxLength={160}
+              value={topicTagInput}
+              onChange={(event) => updateTopicTagInput(event.target.value)}
+              className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              placeholder="watering, pests, seedlings"
+            />
           </label>
-          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
         </div>
-        <textarea
-          ref={bodyTextareaRef}
-          id="first-entry-body"
-          name="body"
-          data-auth-intent-control="create_entry"
-          required
-          minLength={1}
-          maxLength={2000}
-          value={draft.body}
-          onChange={(event) =>
-            updateBody(
-              event.currentTarget.value,
-              event.currentTarget.selectionStart,
-            )
-          }
-          onClick={refreshActiveMentionToken}
-          onKeyUp={refreshActiveMentionToken}
-          className="min-h-36 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="The plant recovered after repotting and has two new flower clusters."
-        />
-        <JournalMentionTypeaheadPanel
-          status={mentionStatus}
-          suggestions={mentionSuggestions}
-          selections={mentionSelections}
-          onSelect={selectMentionSuggestion}
-          onRemove={removeMentionSelection}
-        />
-      </div>
+      </details>
 
-      <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Tags / topics
-        <input
-          name="topicTags"
-          maxLength={160}
-          value={topicTagInput}
-          onChange={(event) => updateTopicTagInput(event.target.value)}
-          className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="watering, pests, seedlings"
-        />
-      </label>
+      <p
+        className={
+          submitState === "failed"
+            ? "text-sm text-destructive"
+            : "text-sm text-muted-foreground"
+        }
+      >
+        {message}
+      </p>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="sticky bottom-2 z-10 flex items-center gap-2 border border-border bg-background p-3 shadow-sm sm:static sm:flex-wrap sm:border-0 sm:p-0 sm:shadow-none">
         <Button
           type="submit"
           data-auth-intent-control="save"
           disabled={submitState === "syncing"}
+          className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
           {isOnline ? "Save first entry" : "Save on this device"}
         </Button>
-        <p
-          className={
-            submitState === "failed"
-              ? "text-sm text-destructive"
-              : "text-sm text-muted-foreground"
-          }
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => void handleCancel()}
+          className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
         >
-          {message}
-        </p>
+          Cancel
+        </Button>
       </div>
 
       {mutations.length > 0 ? (
@@ -1209,6 +1515,7 @@ export function FirstEntryComposer({
                     <Button
                       type="button"
                       variant="outline"
+                      className="min-h-11 sm:min-h-8"
                       disabled={
                         !isOnline ||
                         mutation.status === "syncing" ||
@@ -1244,16 +1551,20 @@ function statusIcon(status: OfflineMutation["status"]) {
 }
 
 function mutationTitle(mutation: OfflineMutation) {
+  if (mutation.status === "synced") return "Saved entry";
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   return payload.title || "Untitled entry";
 }
 
 function mutationSubtitle(mutation: OfflineMutation) {
+  if (mutation.status === "synced") {
+    return "Saved to garden · Local private copy removed";
+  }
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   if (payload.target === "plant_object_entry") {
     const parts = [
       offlineSaveStatusSentence(mutation.status),
-      "Follow-up for an existing plant",
+      "Follow-up for an existing living object",
       payload.entryDate,
       payload.photoIntent ? "Photo will upload later" : null,
     ].filter(Boolean);

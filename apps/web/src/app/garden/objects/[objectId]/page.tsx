@@ -30,6 +30,10 @@ import {
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import { localizedPath } from "@/lib/public-localization";
+import {
+  resolveVisualJournalCreationResultScenario,
+  resolveVisualJournalCreationScenario,
+} from "@/lib/visual-fixtures/journal-creation-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { recordAnalyticsEventSafely } from "@/server/analytics-events";
@@ -75,6 +79,8 @@ interface PlantObjectPageProps {
     saveProgress?: string | string[];
     authIntent?: string | string[];
     authControl?: string | string[];
+    visualCreate?: string | string[];
+    visualCreateResult?: string | string[];
   }>;
 }
 
@@ -91,7 +97,24 @@ export default async function PlantObjectReadbackPage({
   const copy = getInterfaceCopy(locale);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
-  const userId = session?.user?.id;
+  const visualCreationCandidate = resolveVisualJournalCreationScenario(
+    query.visualCreate,
+    "follow-up",
+    process.env,
+  );
+  const visualCreationScenario =
+    visualCreationCandidate?.objectId === objectId
+      ? visualCreationCandidate
+      : null;
+  const visualCreationResultScenario =
+    resolveVisualJournalCreationResultScenario(
+      query.visualCreateResult,
+      objectId,
+      process.env,
+    );
+  const fixtureScenario =
+    visualCreationScenario ?? visualCreationResultScenario;
+  const userId = fixtureScenario?.ownerActorId ?? session?.user?.id;
 
   if (!userId) {
     return (
@@ -112,21 +135,30 @@ export default async function PlantObjectReadbackPage({
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const writeAccess = await resolvePilotWriteAccess(scope);
+  const scope = scopedToUser(
+    userId,
+    fixtureScenario ? null : getSessionId(session),
+  );
+  const writeAccess = fixtureScenario
+    ? { invited: true }
+    : await resolvePilotWriteAccess(scope);
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
   const provenancePanel = await getObjectProvenancePanel(scope, objectId);
   if (!provenancePanel) notFound();
-  await recordOwnRecordRevisited(scope, page);
+  if (!fixtureScenario) {
+    await recordOwnRecordRevisited(scope, page);
+  }
   const showProgressMoment = isObjectProgressMomentEligible(
     page.entries.length,
   );
-  if (showProgressMoment) {
+  if (showProgressMoment && !fixtureScenario) {
     await recordProgressMomentShown(scope, page);
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = fixtureScenario
+    ? "2026-07-12"
+    : new Date().toISOString().slice(0, 10);
   const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
   const sourceAttributionCaveat = page.plantObject.source_credit
     ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
@@ -160,6 +192,7 @@ export default async function PlantObjectReadbackPage({
   return (
     <main
       lang={locale}
+      data-visual-creation-result={visualCreationResultScenario?.id}
       className="mx-auto flex w-full max-w-5xl flex-col gap-7 px-4 py-4 sm:px-6 sm:py-5"
     >
       <AuthIntentFocus action={resumeAction} control={resumeControl} />
@@ -217,10 +250,13 @@ export default async function PlantObjectReadbackPage({
 
         {writeAccess.invited ? (
           <FollowUpEntryComposer
+            ownerUserId={userId}
             objectId={objectId}
             objectDisplayName={page.plantObject.display_name}
+            objectKind={page.plantObject.object_kind}
             today={today}
             initialClientMutationId={crypto.randomUUID()}
+            visualScenario={visualCreationScenario}
           />
         ) : (
           <ClosedPilotWriteCallout context="follow-up" locale={locale} />
@@ -237,6 +273,9 @@ export default async function PlantObjectReadbackPage({
               entry={entry}
               objectId={objectId}
               objectPassportReadbackPath={objectPassportReadbackPath}
+              requiresFirstPublicationDisclosure={
+                !page.hasPriorPublicationDisclosure
+              }
               resumeAction={resumeAction}
               resumeControl={resumeControl}
               locale={locale}
@@ -311,6 +350,7 @@ function OwnerEntryActions({
   entry,
   objectId,
   objectPassportReadbackPath,
+  requiresFirstPublicationDisclosure,
   resumeAction,
   resumeControl,
   locale,
@@ -318,6 +358,7 @@ function OwnerEntryActions({
   entry: PlantObjectPage["entries"][number];
   objectId: string;
   objectPassportReadbackPath: string | null;
+  requiresFirstPublicationDisclosure: boolean;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
   locale: InterfaceLocale;
@@ -407,29 +448,36 @@ function OwnerEntryActions({
     >
       <input type="hidden" name="entryId" value={entry.id} />
       <input type="hidden" name="objectId" value={objectId} />
-      <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-        <input
-          type="checkbox"
-          name="publicationDisclosureAccepted"
-          required
-          className="mt-1 size-4 rounded border-border"
-        />
-        <span>
-          Publish this entry as a public page. People with the link can read its
-          title, note, date, object identity, and chosen region if one is
-          visible. If a photo is attached, only a server-cleaned public copy can
-          appear; precise location and the original photo stay private. Pilot
-          public pages are not listed for search engines yet; that is not a
-          secrecy guarantee.{" "}
-          <Link
-            href={localizedPath(locale, "/first-publication-disclosure")}
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            Read disclosure
-          </Link>
-          .
-        </span>
-      </label>
+      {requiresFirstPublicationDisclosure ? (
+        <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+          <input
+            type="checkbox"
+            name="publicationDisclosureAccepted"
+            required
+            className="mt-1 size-4 rounded border-border"
+          />
+          <span>
+            Publish this entry as a public page. People with the link can read
+            its title, note, date, object identity, and chosen region if one is
+            visible. If a photo is attached, only a server-cleaned public copy
+            can appear; precise location and the original photo stay private.
+            Pilot public pages are not listed for search engines yet; that is
+            not a secrecy guarantee.{" "}
+            <Link
+              href={localizedPath(locale, "/first-publication-disclosure")}
+              className="text-primary underline-offset-4 hover:underline"
+            >
+              Read disclosure
+            </Link>
+            .
+          </span>
+        </label>
+      ) : (
+        <p className="text-xs leading-5 text-muted-foreground">
+          Publish this private entry using the public-sharing choices you have
+          already reviewed.
+        </p>
+      )}
       <button
         id={
           resumesThisPublish

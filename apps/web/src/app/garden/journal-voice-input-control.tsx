@@ -95,6 +95,7 @@ export function JournalVoiceInputControl({
           type="button"
           variant="outline"
           size="sm"
+          className="min-h-11 sm:min-h-7"
           onClick={cancelDictation}
         >
           <MicOff className="size-4" />
@@ -105,6 +106,7 @@ export function JournalVoiceInputControl({
           type="button"
           variant="outline"
           size="sm"
+          className="min-h-11 sm:min-h-7"
           onClick={startDictation}
         >
           <Mic className="size-4" />

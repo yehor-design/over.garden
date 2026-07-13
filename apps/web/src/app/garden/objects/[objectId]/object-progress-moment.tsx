@@ -46,7 +46,10 @@ export function ObjectProgressMoment({
             label="Earlier photo"
             entry={photoComparison.earlier}
           />
-          <ProgressPhotoCard label="Latest photo" entry={photoComparison.latest} />
+          <ProgressPhotoCard
+            label="Latest photo"
+            entry={photoComparison.latest}
+          />
         </div>
       ) : null}
 
@@ -74,6 +77,7 @@ export function ObjectProgressMoment({
                 width={96}
                 height={96}
                 sizes="96px"
+                loading={index === 0 ? "eager" : "lazy"}
                 unoptimized
                 className="size-20 shrink-0 rounded-md border border-border object-cover sm:size-24"
               />

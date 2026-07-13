@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { FirstPlantEntryRequest } from "@/lib/garden/entry-contracts";
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
-  enqueueOfflineMutation,
-  getOfflineMutation,
+  enqueueOfflineMutation as enqueueOwnedOfflineMutation,
+  getOfflineMutation as getOwnedOfflineMutation,
   offlineDb,
   type OfflineJournalEntryPayload,
 } from "./queue";
@@ -12,14 +12,43 @@ import {
   buildJournalEntryRequestBodyForSync,
   journalEntryAuthReturnTo,
   JournalEntrySyncError,
+  submitOnlineJournalEntryPayload,
   submitJournalEntryPayload,
-  syncOfflineJournalEntryMutation,
+  syncOfflineJournalEntryMutation as syncOwnedOfflineJournalEntryMutation,
 } from "./journal-entry-sync";
 
 const AUTH_RETURN_HEADER = "x-overgarden-auth-return";
 const OBJECT_ID = "00000000-0000-4000-8000-000000000201";
+const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
+const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
+
+function enqueueOfflineMutation(
+  input: Omit<
+    Parameters<typeof enqueueOwnedOfflineMutation>[0],
+    "ownerUserId"
+  > & { ownerUserId?: string },
+) {
+  return enqueueOwnedOfflineMutation({
+    ...input,
+    ownerUserId: input.ownerUserId ?? OWNER_A,
+  });
+}
+
+function getOfflineMutation(id: string) {
+  return getOwnedOfflineMutation(OWNER_A, id);
+}
+
+function syncOfflineJournalEntryMutation(
+  mutation: Parameters<typeof syncOwnedOfflineJournalEntryMutation>[0],
+  options: Parameters<typeof syncOwnedOfflineJournalEntryMutation>[1] = {
+    expectedOwnerUserId: OWNER_A,
+  },
+) {
+  return syncOwnedOfflineJournalEntryMutation(mutation, options);
+}
 
 const payload: OfflineJournalEntryPayload = {
+  spaceId: "00000000-0000-4000-8000-000000000301",
   spaceName: "Balcony",
   plantName: "Cherry tomato",
   catalogItemId: "00000000-0000-4000-8000-000000000101",
@@ -45,6 +74,7 @@ describe("offline journal entry sync", () => {
     );
 
     expect(body.clientMutationId).toBe("queue-entry-id");
+    expect(body.spaceId).toBe("00000000-0000-4000-8000-000000000301");
     expect(body.objectKind).toBe("plant");
     expect(body.catalogItemId).toBe("00000000-0000-4000-8000-000000000101");
     expect(body.mediaAssetId).toBe("media-1");
@@ -208,6 +238,33 @@ describe("offline journal entry sync", () => {
     ).toBe("/garden");
   });
 
+  it("submits online directly when the local receipt queue is unavailable", async () => {
+    const directResult = {
+      entry: { id: "entry-direct" },
+      plantObject: { id: "object-direct" },
+      readbackUrl: "/garden/objects/object-direct",
+    };
+    const enqueueMutation = vi.fn().mockRejectedValue(new Error("blocked"));
+    const submitDirect = vi.fn().mockResolvedValue(directResult);
+    const syncMutation = vi.fn();
+
+    const result = await submitOnlineJournalEntryPayload(
+      payload,
+      { ownerUserId: OWNER_A, idempotencyKey: "direct-idempotency-key" },
+      {
+        enqueueMutation,
+        submitDirect,
+        syncMutation,
+      },
+    );
+
+    expect(result).toBe(directResult);
+    expect(submitDirect).toHaveBeenCalledWith(payload, {
+      idempotencyKey: "direct-idempotency-key",
+    });
+    expect(syncMutation).not.toHaveBeenCalled();
+  });
+
   it("syncs a queued entry through the canonical create endpoint", async () => {
     const requests: FirstPlantEntryRequest[] = [];
     vi.stubGlobal(
@@ -257,7 +314,11 @@ describe("offline journal entry sync", () => {
     expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
     expect(result.readbackUrl).toBe("/garden/objects/object-1");
     expect(synced?.status).toBe("synced");
-    expect(synced?.syncResult).toEqual(result);
+    expect(synced?.syncResult).toEqual({
+      readbackUrl: result.readbackUrl,
+      entryId: result.entry.id,
+      plantObjectId: result.plantObject.id,
+    });
   });
 
   it("surfaces an opaque re-auth destination without copying the draft into it", async () => {
@@ -309,13 +370,16 @@ describe("offline journal entry sync", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
+    const photoBlob = new Blob(["private-photo-bytes"], {
+      type: "image/jpeg",
+    });
     const photoPayload: OfflineJournalEntryPayload = {
       ...payload,
       photoIntent: {
         fileName: "private-garden-photo.jpg",
         contentType: "image/jpeg",
-        size: 123,
-        blob: new Blob(["private-photo-bytes"], { type: "image/jpeg" }),
+        size: photoBlob.size,
+        blob: photoBlob,
       },
     };
 
@@ -399,7 +463,11 @@ describe("offline journal entry sync", () => {
     expect(requests[0]?.syncStatus).toBe("offline_synced");
     expect(result.readbackUrl).toBe("/garden/objects/object-1");
     expect(synced?.status).toBe("synced");
-    expect(synced?.syncResult).toEqual(result);
+    expect(synced?.syncResult).toEqual({
+      readbackUrl: result.readbackUrl,
+      entryId: result.entry.id,
+      plantObjectId: result.plantObject.id,
+    });
   });
 
   it("marks failed sync without losing entry body or photo intent", async () => {
@@ -409,13 +477,14 @@ describe("offline journal entry sync", () => {
         Response.json({ error: "Server unavailable." }, { status: 503 }),
       ),
     );
+    const photoBlob = new Blob(["photo"], { type: "image/jpeg" });
     const failedPayload: OfflineJournalEntryPayload = {
       ...payload,
       photoIntent: {
         fileName: "tomato.jpg",
         contentType: "image/jpeg",
-        size: 123,
-        blob: new Blob(["photo"], { type: "image/jpeg" }),
+        size: photoBlob.size,
+        blob: photoBlob,
       },
     };
     const mutation = await enqueueOfflineMutation({
@@ -577,13 +646,14 @@ describe("offline journal entry sync", () => {
         throw new Error(`Unexpected request: ${url}`);
       }),
     );
+    const photoBlob = new Blob(["photo"], { type: "image/jpeg" });
     const photoPayload: OfflineJournalEntryPayload = {
       ...payload,
       photoIntent: {
         fileName: "tomato.jpg",
         contentType: "image/jpeg",
-        size: 123,
-        blob: new Blob(["photo"], { type: "image/jpeg" }),
+        size: photoBlob.size,
+        blob: photoBlob,
       },
     };
     const mutation = await enqueueOfflineMutation({
@@ -596,6 +666,17 @@ describe("offline journal entry sync", () => {
     const synced = await getOfflineMutation(mutation.id);
 
     expect(requests).toHaveLength(1);
+    const uploadRequest = (
+      vi
+        .mocked(fetch)
+        .mock.calls.find(
+          ([input]) => String(input) === "/api/media/uploads",
+        )?.[1] as RequestInit | undefined
+    )?.body;
+    expect(JSON.parse(String(uploadRequest))).toEqual({
+      contentType: "image/jpeg",
+      sizeBytes: photoBlob.size,
+    });
     expect(requests[0]?.clientMutationId).toBe("queue-entry-id");
     expect(requests[0]?.catalogItemId).toBe(
       "00000000-0000-4000-8000-000000000101",
@@ -606,9 +687,66 @@ describe("offline journal entry sync", () => {
     expect(JSON.stringify(requests[0])).not.toContain("derivatives/photo");
     expect(JSON.stringify(requests[0])).not.toContain("tomato.jpg");
     expect(JSON.stringify(requests[0])).not.toContain("photoIntent");
-    expect(
-      (synced?.payload as OfflineJournalEntryPayload).processedMediaAssetId,
-    ).toBe("media-1");
+    expect(JSON.stringify(synced?.payload)).not.toContain("media-1");
     expect(synced?.status).toBe("synced");
+  });
+
+  it("refuses to sync a mutation owned by another account", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const mutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload,
+      idempotencyKey: "owner-isolation-key",
+    });
+
+    await expect(
+      syncOfflineJournalEntryMutation(mutation, {
+        expectedOwnerUserId: OWNER_B,
+      }),
+    ).rejects.toThrow("does not belong to the active account");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("removes private body and photo bytes after canonical sync succeeds", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          space: { id: "space-1", displayName: "Balcony" },
+          plantObject: { id: "object-1", displayName: "Cherry tomato" },
+          entry: {
+            id: "entry-1",
+            title: "Private title",
+            body: "Private body",
+          },
+          readbackUrl: "/garden/objects/object-1",
+        }),
+      ),
+    );
+    const mutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload: {
+        ...payload,
+        body: "Private body",
+        photoIntent: null,
+        processedMediaAssetId: "media-private-1",
+      },
+      idempotencyKey: "redaction-key",
+    });
+
+    await syncOfflineJournalEntryMutation(mutation, {
+      expectedOwnerUserId: OWNER_A,
+    });
+    const synced = await getOwnedOfflineMutation(OWNER_A, mutation.id);
+    const serialized = JSON.stringify(synced);
+
+    expect(synced?.status).toBe("synced");
+    expect(serialized).not.toContain("Private body");
+    expect(serialized).not.toContain("Private title");
+    expect(serialized).not.toContain("media-private-1");
+    expect(serialized).toContain("/garden/objects/object-1");
   });
 });

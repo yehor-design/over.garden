@@ -8,25 +8,54 @@ export function defaultObjectKindForCatalogSelection(
   return source === "ua_official_bee_breed" ? "bee_colony" : "animal";
 }
 
+export function objectKindAfterCatalogSelection(
+  currentObjectKind: PlantObjectKind,
+  catalogKind: CatalogKind | string | null | undefined,
+  source: string | null | undefined,
+): PlantObjectKind {
+  if (catalogKind === "species") {
+    return normalizePlantObjectKind(currentObjectKind);
+  }
+
+  return defaultObjectKindForCatalogSelection(catalogKind, source);
+}
+
 export function resolveObjectKindForCatalogSelection(
   requestedObjectKind: PlantObjectKind | string | null | undefined,
   catalogKind: CatalogKind | string | null | undefined,
   source: string | null | undefined,
 ): PlantObjectKind {
   const normalized = requestedObjectKind?.trim() ?? "";
+  const objectKind = normalizePlantObjectKind(normalized);
+
+  if (catalogKind === "plant_variety") {
+    if (objectKind !== "plant") {
+      throw new Error(
+        "Plant-variety catalog identities require a plant object.",
+      );
+    }
+    return objectKind;
+  }
 
   if (catalogKind !== "breed") {
-    return normalizePlantObjectKind(normalized);
+    return objectKind;
   }
 
-  if (!normalized || normalized === "plant") {
+  if (!normalized) {
     return defaultObjectKindForCatalogSelection(catalogKind, source);
   }
-  if (normalized === "bee_colony" || normalized === "animal") {
-    return normalized;
+  if (source === "ua_official_bee_breed") {
+    if (objectKind !== "bee_colony") {
+      throw new Error(
+        "Bee-breed catalog identities require a bee colony object.",
+      );
+    }
+    return objectKind;
   }
-
-  throw new Error("Object kind must be plant, bee colony, or animal.");
+  if (objectKind !== "animal") {
+    throw new Error("Breed catalog identities require an animal object.");
+  }
+  return objectKind;
 }
 
 export function normalizePlantObjectKind(

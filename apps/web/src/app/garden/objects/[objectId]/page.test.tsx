@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
+  resolveVisualJournalCreationScenario: vi.fn(),
+  resolveVisualJournalCreationResultScenario: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -51,12 +53,29 @@ vi.mock("@/server/auth-intent-control", () => ({
   createAuthIntentControlRef: mocks.createAuthIntentControlRef,
 }));
 
+vi.mock("@/lib/visual-fixtures/journal-creation-scenarios", () => ({
+  resolveVisualJournalCreationScenario:
+    mocks.resolveVisualJournalCreationScenario,
+  resolveVisualJournalCreationResultScenario:
+    mocks.resolveVisualJournalCreationResultScenario,
+}));
+
 vi.mock("./catalog-resolve-control", () => ({
   CatalogResolveControl: () => <section>Catalog resolve</section>,
 }));
 
 vi.mock("./follow-up-entry-composer", () => ({
-  FollowUpEntryComposer: () => <form>Follow-up composer</form>,
+  FollowUpEntryComposer: (props: {
+    objectKind: string;
+    visualScenario?: { id: string } | null;
+  }) => (
+    <form
+      data-object-kind={props.objectKind}
+      data-visual-create={props.visualScenario?.id ?? ""}
+    >
+      Follow-up composer
+    </form>
+  ),
 }));
 
 vi.mock("./follow-up-value-pulse", () => ({
@@ -82,10 +101,9 @@ describe("/garden/objects/[objectId]", () => {
       },
     });
     mocks.getSessionId.mockReturnValue("session-1");
-    mocks.scopedToUser.mockReturnValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
+    mocks.scopedToUser.mockImplementation(
+      (userId: string, sessionId: string | null) => ({ userId, sessionId }),
+    );
     mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: true });
     mocks.getObjectProvenancePanel.mockResolvedValue({
       sourceObjectOptions: [],
@@ -98,6 +116,8 @@ describe("/garden/objects/[objectId]", () => {
     mocks.createAuthIntentControlRef.mockImplementation(
       (_namespace: string, source: string) => `publish-ref-${source}`,
     );
+    mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
+    mocks.resolveVisualJournalCreationResultScenario.mockReturnValue(null);
   });
 
   it("keeps Ukrainian chrome on deep object readback without translating user content", async () => {
@@ -263,6 +283,107 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toContain('id="entry-publish-publish-ref-entry-1"');
     expect(html.match(/autofocus=""/g)).toHaveLength(1);
   });
+
+  it("renders a credential-free follow-up fixture without analytics or write gating", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualJournalCreationScenario.mockReturnValueOnce({
+      id: "ove182-c012",
+      flow: "follow-up",
+      ownerActorId: "00000000-0000-4000-8000-000000000099",
+      objectId: "object-1",
+    });
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "entry-1",
+          title: "First flowers",
+          body: "Two new flower clusters.",
+          entryDate: "2026-07-04",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({ visualCreate: "ove182-c012" }),
+      }),
+    );
+
+    expect(html).toContain('data-object-kind="plant"');
+    expect(html).toContain('data-visual-create="ove182-c012"');
+    expect(mocks.scopedToUser).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000099",
+      null,
+    );
+    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
+    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+  });
+
+  it("renders the canonical scenario result for its fixture owner", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualJournalCreationResultScenario.mockReturnValueOnce({
+      id: "ove182-c001",
+      ownerActorId: "00000000-0000-4000-8000-000000000099",
+      expectedObjectId: "object-1",
+    });
+    mocks.getPlantObjectPage.mockResolvedValue(
+      plantObjectPage([
+        {
+          id: "expected-entry",
+          title: "First fixture update",
+          body: "Canonical repository readback.",
+          entryDate: "2026-07-12",
+        },
+      ]),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({ visualCreateResult: "ove182-c001" }),
+      }),
+    );
+
+    expect(html).toContain('data-visual-creation-result="ove182-c001"');
+    expect(html).toContain("Canonical repository readback.");
+    expect(html).not.toContain('data-visual-create="ove182-c001"');
+    expect(mocks.scopedToUser).toHaveBeenCalledWith(
+      "00000000-0000-4000-8000-000000000099",
+      null,
+    );
+    expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
+    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+  });
+
+  it("asks for the full publication disclosure only before the first publish", async () => {
+    mocks.getPlantObjectPage.mockResolvedValueOnce(
+      plantObjectPage(
+        [
+          {
+            id: "entry-private",
+            title: "Later private note",
+            body: "Ready for another explicit publication.",
+            entryDate: "2026-07-12",
+          },
+        ],
+        true,
+      ),
+    );
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("public-sharing choices you have already reviewed");
+    expect(html).not.toContain('name="publicationDisclosureAccepted"');
+  });
 });
 
 function plantObjectPage(
@@ -274,6 +395,7 @@ function plantObjectPage(
     visibility?: "private" | "public";
     publicSlug?: string | null;
   }>,
+  hasPriorPublicationDisclosure = false,
 ) {
   return {
     space: {
@@ -296,6 +418,7 @@ function plantObjectPage(
       coarse_region_code: null,
       source_credit: null,
     },
+    hasPriorPublicationDisclosure,
     entries: entries.map((entry) => ({
       id: entry.id,
       title: entry.title,
