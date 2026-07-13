@@ -170,10 +170,11 @@ describe("public surface indexing policy", () => {
     });
   });
 
-  it("keeps object passport, profile, lineage graph, and missing public surfaces out of the index and sitemap", () => {
+  it("keeps object passport, profile, community, lineage graph, and missing public surfaces out of the index and sitemap", () => {
     for (const kind of [
       "object_passport",
       "profile",
+      "community",
       "lineage_graph",
       "missing",
     ] as const) {

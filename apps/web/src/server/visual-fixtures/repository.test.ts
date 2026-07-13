@@ -49,6 +49,11 @@ describe("visual fixture repository query contracts", () => {
 
     expect(queries.map(({ label }) => label)).toEqual([
       "lineage_audit_cleanup",
+      "community_audit_cleanup",
+      "community_reports_cleanup",
+      "community_contributions_cleanup",
+      "community_memberships_cleanup",
+      "community_profile_blocks_cleanup",
       "media_cleanup",
       "object_mentions_cleanup",
       "actors",
@@ -61,6 +66,13 @@ describe("visual fixture repository query contracts", () => {
       "entries",
       "object_mentions",
       "topics",
+      "communities",
+      "community_rules",
+      "community_memberships",
+      "community_moderators",
+      "community_contributions",
+      "community_reports",
+      "community_audit_events",
       "topic_signals",
       "media",
       "profiles",
@@ -81,6 +93,7 @@ describe("visual fixture repository query contracts", () => {
 
     expect(sql).toContain('delete from "media_assets"');
     expect(sql).toContain('delete from "lineage_provenance_edge_audit_events"');
+    expect(sql).toContain('delete from "community_moderation_audit_log"');
     expect(sql).toContain('insert into "user"');
     expect(sql).toContain('insert into "user_public_profiles"');
     expect(sql).toContain('insert into "profile_follows"');
@@ -102,6 +115,13 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('insert into "journal_entries"');
     expect(sql).toContain('insert into "journal_entry_object_mentions"');
     expect(sql).toContain('insert into "journal_topics"');
+    expect(sql).toContain('insert into "communities"');
+    expect(sql).toContain('insert into "community_rules"');
+    expect(sql).toContain('insert into "community_memberships"');
+    expect(sql).toContain('insert into "community_moderators"');
+    expect(sql).toContain('insert into "community_contributions"');
+    expect(sql).toContain('insert into "community_contribution_reports"');
+    expect(sql).toContain('insert into "community_moderation_audit_log"');
     expect(sql).toContain('insert into "journal_entry_topic_signals"');
     expect(sql).toContain('insert into "media_assets"');
     expect(sql).toContain('"alt_text"');
@@ -123,21 +143,36 @@ describe("visual fixture repository query contracts", () => {
     expect(compiled[0].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.lineageEvidence.edges.map(({ id }) => id),
     );
-    expect(compiled[1].parameters).toEqual(
+    const actorIds = VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id);
+    const communityIds =
+      VISUAL_FIXTURE_MANIFEST.communityEvidence.communities.map(({ id }) => id);
+    expect(compiled[1].parameters).toEqual([...communityIds, ...actorIds]);
+    expect(compiled[2].parameters).toEqual([...actorIds, ...communityIds]);
+    expect(compiled[3].parameters).toEqual([...communityIds, ...actorIds]);
+    expect(compiled[4].parameters).toEqual([...communityIds, ...actorIds]);
+    expect(compiled[5].parameters).toEqual([...actorIds, ...actorIds]);
+    expect(compiled[6].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
     );
-    expect(compiled[2].parameters).toEqual(
+    expect(compiled[7].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
     );
   });
 
-  it("builds an exact-id reset in reverse dependency order", () => {
+  it("builds a manifest-bounded reset in reverse dependency order", () => {
     const queries = buildVisualFixtureResetQueries(
       testDb,
       VISUAL_FIXTURE_MANIFEST,
     );
 
     expect(queries.map(({ label }) => label)).toEqual([
+      "community_audit_events",
+      "community_reports",
+      "community_contributions",
+      "community_moderators",
+      "community_memberships",
+      "community_rules",
+      "communities",
       "notification_receipts",
       "notification_preferences",
       "engagement_comment_reports",
@@ -167,7 +202,17 @@ describe("visual fixture repository query contracts", () => {
     const sql = compiled.map((item) => item.sql).join("\n");
     expect(sql).not.toMatch(/\blike\b|analytics_events|job_queue/i);
 
+    const actorIds = VISUAL_FIXTURE_MANIFEST.actors.map(({ id }) => id);
+    const communityIds =
+      VISUAL_FIXTURE_MANIFEST.communityEvidence.communities.map(({ id }) => id);
     const expectedIdGroups = [
+      [...communityIds, ...actorIds],
+      [...actorIds, ...communityIds],
+      [...communityIds, ...actorIds],
+      VISUAL_FIXTURE_MANIFEST.communityEvidence.moderators.map(({ id }) => id),
+      [...communityIds, ...actorIds],
+      VISUAL_FIXTURE_MANIFEST.communityEvidence.rules.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.communityEvidence.communities.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.socialEvidence.notificationReceipts.map(
         ({ id }) => id,
       ),
@@ -180,7 +225,7 @@ describe("visual fixture repository query contracts", () => {
       VISUAL_FIXTURE_MANIFEST.socialEvidence.follows.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.socialEvidence.wishlistItems.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.profileReports.map(({ id }) => id),
-      VISUAL_FIXTURE_MANIFEST.profileBlocks.map(({ id }) => id),
+      [...actorIds, ...actorIds],
       VISUAL_FIXTURE_MANIFEST.profileFollows.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
@@ -236,8 +281,15 @@ describe("visual fixture repository query contracts", () => {
       "topics",
       "topicSignals",
       "media",
+      "communities",
+      "communityRules",
+      "communityMemberships",
+      "communityModerators",
+      "communityContributions",
+      "communityReports",
+      "communityAuditEvents",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(23);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(30);
     expect(sql).toContain('from "catalog_items"');
     expect(sql).toContain('from "catalog_item_names"');
     expect(sql).toContain('from "user_public_profiles"');
@@ -249,6 +301,13 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('from "engagement_comments"');
     expect(sql).toContain('from "notification_receipts"');
     expect(sql).toContain('from "wishlist_items"');
+    expect(sql).toContain('from "communities"');
+    expect(sql).toContain('from "community_rules"');
+    expect(sql).toContain('from "community_memberships"');
+    expect(sql).toContain('from "community_moderators"');
+    expect(sql).toContain('from "community_contributions"');
+    expect(sql).toContain('from "community_contribution_reports"');
+    expect(sql).toContain('from "community_moderation_audit_log"');
     expect(sql).not.toMatch(
       /email|body|quarantine_key|derivative_key|comment_text/i,
     );

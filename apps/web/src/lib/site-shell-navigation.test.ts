@@ -40,6 +40,23 @@ describe("site shell navigation contract", () => {
     );
   });
 
+  it("adds communities to public navigation only after the server readiness gate passes", () => {
+    const hidden = getSiteShellNavigation("uk", false, false);
+    const ready = getSiteShellNavigation("uk", false, true);
+
+    expect(hidden.publicItems.some((item) => item.key === "communities")).toBe(
+      false,
+    );
+    expect(
+      ready.publicItems.find((item) => item.key === "communities"),
+    ).toMatchObject({
+      label: "Спільноти",
+      href: "/communities",
+      matchPaths: ["/communities"],
+    });
+    expect(ready.mobileItems).toHaveLength(5);
+  });
+
   it("adds localized My navigation without prefixing private routes", () => {
     const navigation = getSiteShellNavigation("bg", true);
 

@@ -17,6 +17,9 @@ const mocks = vi.hoisted(() => ({
   getPublicProfileLifecycleLookup: vi.fn().mockResolvedValue({
     status: "active",
   }),
+  getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
+    status: "found",
+  }),
 }));
 
 vi.mock("@/server/public-object-passport-repository", () => ({
@@ -30,6 +33,10 @@ vi.mock("@/server/journal-repository", () => ({
 
 vi.mock("@/server/public-profile-repository", () => ({
   getPublicProfileLifecycleLookup: mocks.getPublicProfileLifecycleLookup,
+}));
+
+vi.mock("@/server/community-repository", () => ({
+  getPublicCommunityLifecycleLookup: mocks.getPublicCommunityLifecycleLookup,
 }));
 
 async function responseFor(
@@ -246,6 +253,39 @@ describe("app route cache guardrail", () => {
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
       "private_garden",
+    );
+  });
+
+  it("hard-classifies unavailable communities without intercepting active or RSC routes", async () => {
+    mocks.getPublicCommunityLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+    const unavailable = await responseFor("/bg/communities/missing-community", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+
+    mocks.getPublicCommunityLifecycleLookup.mockResolvedValueOnce({
+      status: "found",
+      communityId: "00000000-0000-4000-8000-000000000501",
+    });
+    const active = await responseFor("/communities/observation-and-care", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const rsc = await responseFor("/communities/rsc-community", {
+      accept: "text/x-component",
+      rsc: "1",
+    });
+
+    expect(unavailable.status).toBe(404);
+    expect(unavailable.headers.get("Content-Language")).toBe("bg");
+    expect(unavailable.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(await unavailable.text()).toContain("Общността не е намерена");
+    expect(active.status).toBe(200);
+    expect(rsc.status).toBe(200);
+    expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalledWith(
+      "missing-community",
     );
   });
 

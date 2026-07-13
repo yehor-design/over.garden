@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v7");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v7");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v8");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v8");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
@@ -44,6 +44,79 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-184 with DB-connected community density, actor, and moderation states", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.communityEvidence;
+    const states = new Set(
+      evidence.scenarios.map((scenario) => scenario.state),
+    );
+    const dense = evidence.scenarios.find(
+      (scenario) => scenario.state === "dense",
+    );
+    const guest = evidence.scenarios.find(
+      (scenario) => scenario.state === "guest",
+    );
+    const contributionKinds = new Set(
+      evidence.contributions.flatMap((contribution) => {
+        const entry = VISUAL_FIXTURE_MANIFEST.entries.find(
+          (candidate) => candidate.id === contribution.journalEntryId,
+        );
+        const object = VISUAL_FIXTURE_MANIFEST.objects.find(
+          (candidate) => candidate.id === entry?.objectId,
+        );
+        return object ? [object.objectKind] : [];
+      }),
+    );
+
+    expect(evidence.pageSize).toBe(12);
+    expect(evidence.communities).toHaveLength(4);
+    expect(evidence.rules.length).toBeGreaterThanOrEqual(9);
+    expect(evidence.memberships.length).toBeGreaterThanOrEqual(12);
+    expect(evidence.moderators.length).toBeGreaterThanOrEqual(4);
+    expect(evidence.contributions.length).toBeGreaterThanOrEqual(24);
+    expect(evidence.reports.length).toBeGreaterThanOrEqual(1);
+    expect(evidence.auditEvents.length).toBeGreaterThanOrEqual(1);
+    expect(dense?.expectedItemCount).toBeGreaterThan(12);
+    expect(dense?.expectedHasNextPage).toBe(true);
+    expect(guest?.expectedItemCount).toBe(1);
+    expect(guest?.path).toContain("kind=animal");
+    expect(contributionKinds).toEqual(
+      new Set(["plant", "animal", "bee_colony"]),
+    );
+    expect(states).toEqual(
+      new Set([
+        "empty",
+        "typical",
+        "dense",
+        "guest",
+        "non-member",
+        "member",
+        "moderator",
+        "blocked",
+        "banned",
+        "pending-report",
+        "removed-content",
+        "archived",
+        "closed-discussion",
+        "closed-participation",
+        "no-results",
+        "loading",
+        "error",
+        "unavailable",
+      ]),
+    );
+    expect(
+      evidence.scenarios.every(
+        (scenario) =>
+          scenario.viewportTargets[0] === "desktop" &&
+          scenario.viewportTargets[1] === "mobile-320" &&
+          scenario.path.includes(`visualCommunity=${scenario.id}`),
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(evidence)).not.toMatch(
+      /email|password|token|quarantine|latitude|longitude|coordinates|precise/i,
+    );
   });
 
   it("backs OVE-183 with multi-actor social utility and safety states", () => {
@@ -774,6 +847,13 @@ describe("visual fixture manifest", () => {
         "owner-workspace-loading",
         "owner-workspace-partial-error",
         "owner-workspace-error",
+        "community-empty",
+        "community-typical",
+        "community-dense",
+        "community-safety",
+        "community-loading",
+        "community-error",
+        "community-unavailable",
         "media-gallery",
         "public-feed-empty",
         "public-feed-typical",
@@ -953,7 +1033,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v7\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v8\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

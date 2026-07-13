@@ -22,6 +22,7 @@ export interface InterfaceCopy {
     feed: string;
     livingObjects: string;
     journals: string;
+    communities: string;
     knowledge: string;
     myGarden: string;
     addObject: string;
@@ -81,6 +82,7 @@ const INTERFACE_COPY = {
       feed: "Стрічка",
       livingObjects: "Живі об'єкти",
       journals: "Журнали",
+      communities: "Спільноти",
       knowledge: "Знання",
       myGarden: "Мій сад",
       addObject: "Додати об'єкт",
@@ -142,6 +144,7 @@ const INTERFACE_COPY = {
       feed: "Поток",
       livingObjects: "Живи обекти",
       journals: "Дневници",
+      communities: "Общности",
       knowledge: "Знания",
       myGarden: "Моята градина",
       addObject: "Добавяне на обект",
@@ -203,6 +206,7 @@ const INTERFACE_COPY = {
       feed: "Лента",
       livingObjects: "Живые объекты",
       journals: "Журналы",
+      communities: "Сообщества",
       knowledge: "Знания",
       myGarden: "Мой сад",
       addObject: "Добавить объект",

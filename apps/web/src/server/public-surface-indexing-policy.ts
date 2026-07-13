@@ -26,6 +26,7 @@ export type PublicSurfaceKind =
   | "topic_aggregation"
   | "object_passport"
   | "profile"
+  | "community"
   | "lineage_graph"
   | "missing";
 
@@ -48,6 +49,7 @@ export type PublicSurfaceIndexReason =
   | "localized_ugc_projection_noindex"
   | "object_passport_noindex"
   | "public_profile_noindex"
+  | "community_noindex"
   | "lineage_graph_noindex"
   | "missing_public_surface";
 
@@ -101,6 +103,7 @@ export type PublicSurfaceIndexInput =
         | "catalog_browse"
         | "object_passport"
         | "profile"
+        | "community"
         | "lineage_graph"
         | "missing";
     };
@@ -160,6 +163,9 @@ export function evaluatePublicSurfaceIndexability(
 
     case "profile":
       return noindex(["public_profile_noindex"]);
+
+    case "community":
+      return noindex(["community_noindex"]);
 
     case "lineage_graph":
       return noindex(["lineage_graph_noindex"]);

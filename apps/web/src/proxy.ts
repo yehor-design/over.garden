@@ -18,6 +18,10 @@ import {
   renderNotFoundPublicObjectPassportHtml,
 } from "@/lib/public-object-passport-lifecycle";
 import {
+  matchPublicCommunityPath,
+  renderNotFoundPublicCommunityHtml,
+} from "@/lib/public-community-lifecycle";
+import {
   matchPublicJournalEntryPath,
   renderGonePublicJournalEntryHtml,
   renderNotFoundPublicJournalEntryHtml,
@@ -211,6 +215,28 @@ export async function proxy(request: NextRequest) {
       request,
       locale,
     );
+  }
+
+  const publicCommunitySlug = isDocumentNavigationRequest(request)
+    ? matchPublicCommunityPath(request.nextUrl.pathname)
+    : null;
+  if (publicCommunitySlug) {
+    const { getPublicCommunityLifecycleLookup } =
+      await import("@/server/community-repository");
+    const lookup = await getPublicCommunityLifecycleLookup(publicCommunitySlug);
+    if (lookup.status === "not_found") {
+      return withAppRouteContract(
+        new NextResponse(renderNotFoundPublicCommunityHtml(locale), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
   }
 
   const publicProfileHandle = isDocumentNavigationRequest(request)

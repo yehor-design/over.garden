@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended through OVE-183
-Manifest version: `ove187-v7`
-Manifest SHA-256: `451a036ed0fe07a71d580503fc0f67a59c3b5397f6fba48d6e9fd44435582ba4`
+Status: implemented by OVE-187, extended through OVE-184
+Manifest version: `ove187-v8`
+Manifest SHA-256: `6ab79d02c843b79a74fff9109b9409e5e02bcce331fab3915957ea37b95a4710`
 
 ## Purpose
 
@@ -30,7 +30,7 @@ The manifest owns exactly:
   object, and space-level states, plus 2 same-owner/same-space object mentions;
 - 7 curated journal topics and 40 accepted, public-eligible memberships;
 - 16 generated EXIF-free PNG derivatives in 1:1, 4:3, 3:4, and 16:9;
-- 83 real-route scenarios covering public-feed, living-object-catalog,
+- 90 real-route scenarios covering public-feed, living-object-catalog,
   public-journal-directory, and knowledge-hub empty, sparse, typical, dense,
   loading, recoverable error, threshold pagination, unavailable, aliases, long
   Cyrillic copy, and deep evidence states alongside the existing object/journal
@@ -90,6 +90,14 @@ The manifest owns exactly:
   ordinary, reporter, reported, blocked, moderator-safe, dense, and empty
   actors to exact routes, IDs, counts, pagination states, and reversible or
   final transitions.
+- 4 thematic community archetypes, 9 active rules, 14 memberships, 4 moderator
+  assignments, 24 canonical journal references, 1 submitted report, and 1
+  append-only moderation audit event. Eighteen machine-checkable community
+  scenarios cover empty, typical, page-plus-one dense, plant/animal/mixed,
+  long-copy, cover/no-cover, guest, non-member, member, moderator, blocked,
+  banned, pending-report, removed-content, archived read-only evidence with an
+  allowed member leave action, closed-discussion, closed-participation,
+  no-results, loading, error, and hard `404` behavior.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,
@@ -143,10 +151,11 @@ environment checks pass. The guard refuses:
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
 environment, the `__visualFeed`, `__visualObjects`, `__visualJournals`,
-`__visualKnowledge`, `visualWorkspace`, and `visualSocial` query parameters may
-select rendering states or the isolated fixture corpus for screenshot
-evidence. `visualSocial` may also bind a manifest-owned synthetic actor to a
-mutation only inside the already enabled local/Preview fixture environment;
+`__visualKnowledge`, `visualWorkspace`, `visualSocial`, and `visualCommunity`
+query parameters may select rendering states or the isolated fixture corpus for
+screenshot evidence. `visualSocial` and `visualCommunity` may also bind a
+manifest-owned synthetic actor to a mutation only inside the already enabled
+local/Preview fixture environment;
 guest scenarios, mismatched surfaces/IDs, conflicting fields, canonical
 origins, and Production all fail closed. The parameters are ignored everywhere
 else.
@@ -155,12 +164,14 @@ before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
 index is `noindex` and is excluded from the product shell.
 
-Fixture rows are identified by exact manifest IDs. Reset removes media, topic
-memberships, topics, entries, claimable lineage edges and pending identities,
-objects, catalog names, catalog identities, spaces, profiles, and actors in
-reverse foreign-key order and deletes
-only the manifest's storage keys under
-`visual-fixtures/ove187-v7/` plus the exact retired v5 and v6 filenames during
+Fixture rows are identified by exact manifest IDs. Community mutation cleanup
+is additionally bounded to the intersection of manifest-owned community and
+actor IDs, so random IDs created by real join, contribute, report, block, and
+moderation actions are repaired without touching unrelated rows. Reset removes
+media, topic memberships, topics, entries, claimable lineage edges and pending
+identities, objects, catalog names, catalog identities, spaces, profiles, and
+actors in reverse foreign-key order and deletes only the manifest's storage
+keys under `visual-fixtures/ove187-v8/` plus the exact retired v5, v6, and v7 filenames during
 migration cleanup. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
@@ -231,9 +242,12 @@ the scoped inventory, space, object, and recent-continuity queries. All 15
 social return-loop contracts run through the canonical engagement, followed
 feed, notification, bookmark, and wishlist repositories; they fail on hidden
 item leakage, pagination drift, unsafe media, copied private payload text, or a
-non-grouping grouped state. Proof is
-explicitly scoped to manifest IDs because reset
-deliberately preserves unrelated local rows. The three fixture CLI commands
+non-grouping grouped state. All 18 community contracts run through the
+production public directory/detail, membership, block, moderation, and
+readiness queries, including the database-backed archived read-only lifecycle.
+Proof is explicitly scoped to manifest IDs and bounded manifest
+actor/community pairs because reset deliberately preserves unrelated local
+rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
 production `server-only` queries. JSON output is limited to the version, hash,
 environment class, aggregate counts, and boolean/count proof fields.
@@ -287,7 +301,14 @@ The expected final counts are:
   "objectMentions": 2,
   "topics": 7,
   "topicSignals": 40,
-  "media": 16
+  "media": 16,
+  "communities": 4,
+  "communityRules": 9,
+  "communityMemberships": 14,
+  "communityModerators": 4,
+  "communityContributions": 24,
+  "communityReports": 1,
+  "communityAuditEvents": 1
 }
 ```
 
@@ -306,6 +327,25 @@ creating shared credentials. Representative routes are:
 Use `/__visual-fixtures` for the exact manifest-owned journal slugs and all 15
 links. The social verifier executes the same repositories as these pages, not
 mock projections.
+
+The community evidence routes bind exact guest/member/moderator actors only
+inside the fail-closed fixture environment and continue to reference canonical
+public journals rather than copied posts. Representative routes are:
+
+```text
+/communities/visual-new-community?visualCommunity=ove184-community-empty
+/communities/visual-observation-and-care?visualCommunity=ove184-community-typical
+/communities/visual-care-across-every-living-object?visualCommunity=ove184-community-dense
+/communities/visual-observation-and-care?visualCommunity=ove184-community-moderator
+/communities/visual-observation-and-care?visualCommunity=ove184-community-pending-report
+/communities/visual-community-unavailable?visualCommunity=ove184-community-unavailable
+```
+
+The unavailable scenario returns an actual HTTP `404` from the public lifecycle
+boundary before App Router streaming. All community detail responses remain
+`noindex, nofollow`; the 17-case verifier checks exact visible/hidden canonical
+contribution IDs, actor membership, block suppression, pagination, and
+moderation-state outcomes.
 
 The fixture index links every public-feed state. The normal topic routes use
 real rows and repository filters:

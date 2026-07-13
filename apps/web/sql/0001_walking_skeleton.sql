@@ -2159,6 +2159,397 @@ create index if not exists journal_entry_topic_signals_topic_public_idx
 create index if not exists journal_entry_topic_signals_entry_idx
   on journal_entry_topic_signals (journal_entry_id);
 
+-- First bounded moderated community (OVE-184). Community state references the
+-- canonical topic and canonical public journal rows; it never copies journal
+-- text, profile presentation, location, media storage, auth, or request data.
+create table if not exists communities (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null,
+  content_key text not null,
+  journal_topic_id uuid not null references journal_topics(id) on delete restrict,
+  lifecycle_state text not null default 'draft' check (
+    lifecycle_state in ('draft', 'active', 'archived')
+  ),
+  participation_state text not null default 'open' check (
+    participation_state in ('open', 'closed')
+  ),
+  minimum_ready_contributions integer not null default 1 check (
+    minimum_ready_contributions between 1 and 20
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint communities_slug_check
+    check (slug ~ '^[a-z0-9][a-z0-9-]{1,63}$'),
+  constraint communities_content_key_check
+    check (content_key ~ '^[a-z0-9][a-z0-9-]{1,63}$')
+);
+
+create table if not exists community_rules (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  rule_key text not null check (rule_key ~ '^[a-z0-9][a-z0-9-]{1,63}$'),
+  sort_order integer not null check (sort_order between 1 and 20),
+  rule_state text not null default 'active' check (
+    rule_state in ('active', 'retired')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint community_rules_key_uidx unique (community_id, rule_key),
+  constraint community_rules_order_uidx unique (community_id, sort_order)
+);
+
+create table if not exists community_memberships (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  user_id uuid not null,
+  membership_state text not null default 'active' check (
+    membership_state in ('active', 'left', 'banned')
+  ),
+  joined_at timestamptz not null default now(),
+  left_at timestamptz,
+  banned_at timestamptz,
+  updated_at timestamptz not null default now(),
+  constraint community_memberships_state_check check (
+    (membership_state = 'active' and left_at is null and banned_at is null)
+    or (membership_state = 'left' and left_at is not null and banned_at is null)
+    or (membership_state = 'banned' and banned_at is not null)
+  ),
+  constraint community_memberships_actor_uidx unique (community_id, user_id)
+);
+
+create table if not exists community_moderators (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  user_id uuid not null,
+  assignment_state text not null default 'active' check (
+    assignment_state in ('active', 'revoked')
+  ),
+  granted_by_user_id uuid,
+  granted_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  updated_at timestamptz not null default now(),
+  constraint community_moderators_state_check check (
+    (assignment_state = 'active' and revoked_at is null)
+    or (assignment_state = 'revoked' and revoked_at is not null)
+  ),
+  constraint community_moderators_actor_uidx unique (community_id, user_id)
+);
+
+create table if not exists community_contributions (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  journal_entry_id uuid not null references journal_entries(id) on delete restrict,
+  contributor_user_id uuid not null,
+  contribution_state text not null default 'active' check (
+    contribution_state in ('active', 'removed')
+  ),
+  discussion_state text not null default 'open' check (
+    discussion_state in ('open', 'closed')
+  ),
+  removed_by_user_id uuid,
+  removal_reason text check (
+    removal_reason is null or removal_reason in (
+      'rule_violation',
+      'spam',
+      'harassment',
+      'privacy',
+      'misinformation',
+      'off_topic',
+      'other'
+    )
+  ),
+  added_at timestamptz not null default now(),
+  removed_at timestamptz,
+  updated_at timestamptz not null default now(),
+  constraint community_contributions_state_check check (
+    (contribution_state = 'active' and removed_at is null and removed_by_user_id is null)
+    or (contribution_state = 'removed' and removed_at is not null and removed_by_user_id is not null)
+  ),
+  constraint community_contributions_journal_uidx
+    unique (community_id, journal_entry_id)
+);
+
+create table if not exists community_contribution_reports (
+  id uuid primary key default gen_random_uuid(),
+  contribution_id uuid not null references community_contributions(id) on delete cascade,
+  reporter_user_id uuid not null,
+  report_reason text not null check (
+    report_reason in (
+      'spam',
+      'harassment',
+      'privacy',
+      'misinformation',
+      'off_topic',
+      'other'
+    )
+  ),
+  report_state text not null default 'submitted' check (
+    report_state in ('submitted', 'reviewed', 'dismissed', 'actioned')
+  ),
+  resolved_by_user_id uuid,
+  resolved_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint community_reports_resolution_check check (
+    (report_state in ('submitted', 'reviewed') and resolved_at is null and resolved_by_user_id is null)
+    or (report_state in ('dismissed', 'actioned') and resolved_at is not null and resolved_by_user_id is not null)
+  ),
+  constraint community_reports_actor_contribution_uidx
+    unique (reporter_user_id, contribution_id)
+);
+
+-- Append-only moderation evidence. Repository code exposes inserts and reads,
+-- never update/delete builders, and records bounded state transitions only.
+create table if not exists community_moderation_audit_log (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid not null references communities(id) on delete cascade,
+  actor_user_id uuid not null,
+  target_kind text not null check (
+    target_kind in ('community', 'contribution', 'membership', 'report')
+  ),
+  target_id uuid not null,
+  action text not null check (
+    action in (
+      'remove_contribution',
+      'restore_contribution',
+      'close_discussion',
+      'open_discussion',
+      'ban_member',
+      'restore_member',
+      'dismiss_report',
+      'action_report',
+      'close_community',
+      'open_community'
+    )
+  ),
+  reason text not null check (
+    reason in (
+      'rule_violation',
+      'spam',
+      'harassment',
+      'privacy',
+      'misinformation',
+      'off_topic',
+      'other'
+    )
+  ),
+  previous_state text not null check (char_length(previous_state) between 1 and 40),
+  new_state text not null check (char_length(new_state) between 1 and 40),
+  created_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_memberships_user_id_fkey'
+        and conrelid = 'community_memberships'::regclass
+    ) then
+      alter table community_memberships
+        add constraint community_memberships_user_id_fkey
+        foreign key (user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_moderators_user_id_fkey'
+        and conrelid = 'community_moderators'::regclass
+    ) then
+      alter table community_moderators
+        add constraint community_moderators_user_id_fkey
+        foreign key (user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_moderators_granted_by_user_id_fkey'
+        and conrelid = 'community_moderators'::regclass
+    ) then
+      alter table community_moderators
+        add constraint community_moderators_granted_by_user_id_fkey
+        foreign key (granted_by_user_id) references "user"(id) on delete set null;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_contributions_contributor_user_id_fkey'
+        and conrelid = 'community_contributions'::regclass
+    ) then
+      alter table community_contributions
+        add constraint community_contributions_contributor_user_id_fkey
+        foreign key (contributor_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_contributions_removed_by_user_id_fkey'
+        and conrelid = 'community_contributions'::regclass
+    ) then
+      alter table community_contributions
+        add constraint community_contributions_removed_by_user_id_fkey
+        foreign key (removed_by_user_id) references "user"(id) on delete restrict;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_reports_reporter_user_id_fkey'
+        and conrelid = 'community_contribution_reports'::regclass
+    ) then
+      alter table community_contribution_reports
+        add constraint community_reports_reporter_user_id_fkey
+        foreign key (reporter_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_reports_resolved_by_user_id_fkey'
+        and conrelid = 'community_contribution_reports'::regclass
+    ) then
+      alter table community_contribution_reports
+        add constraint community_reports_resolved_by_user_id_fkey
+        foreign key (resolved_by_user_id) references "user"(id) on delete restrict;
+    end if;
+
+    if not exists (
+      select 1 from pg_constraint
+      where conname = 'community_moderation_audit_actor_user_id_fkey'
+        and conrelid = 'community_moderation_audit_log'::regclass
+    ) then
+      alter table community_moderation_audit_log
+        add constraint community_moderation_audit_actor_user_id_fkey
+        foreign key (actor_user_id) references "user"(id) on delete restrict;
+    end if;
+  end if;
+end $$;
+
+create unique index if not exists communities_slug_uidx
+  on communities (slug);
+
+create index if not exists communities_lifecycle_updated_idx
+  on communities (lifecycle_state, updated_at desc);
+
+create index if not exists community_rules_active_order_idx
+  on community_rules (community_id, sort_order)
+  where rule_state = 'active';
+
+create unique index if not exists community_memberships_actor_uidx
+  on community_memberships (community_id, user_id);
+
+create index if not exists community_memberships_state_joined_idx
+  on community_memberships (community_id, membership_state, joined_at desc);
+
+create unique index if not exists community_moderators_actor_uidx
+  on community_moderators (community_id, user_id);
+
+create index if not exists community_moderators_active_idx
+  on community_moderators (community_id, granted_at desc)
+  where assignment_state = 'active';
+
+create unique index if not exists community_contributions_journal_uidx
+  on community_contributions (community_id, journal_entry_id);
+
+create index if not exists community_contributions_active_added_idx
+  on community_contributions (community_id, added_at desc, id asc)
+  where contribution_state = 'active';
+
+create unique index if not exists community_reports_actor_contribution_uidx
+  on community_contribution_reports (reporter_user_id, contribution_id);
+
+create index if not exists community_reports_queue_idx
+  on community_contribution_reports (report_state, created_at asc)
+  where report_state in ('submitted', 'reviewed');
+
+create index if not exists community_moderation_audit_created_idx
+  on community_moderation_audit_log (community_id, created_at desc);
+
+-- Canonical pilot identity and code-owned rule keys. This is real product
+-- configuration, not synthetic activity; readiness still requires a real
+-- public contribution and active moderator at read time.
+insert into journal_topics (id, slug, label, trust_state)
+values (
+  '018f1840-0000-4000-8000-000000000001',
+  'observation-and-care',
+  'Спостереження і догляд',
+  'curated'
+)
+on conflict (slug) do update set
+  label = excluded.label,
+  trust_state = 'curated',
+  updated_at = now();
+
+insert into communities (
+  id,
+  slug,
+  content_key,
+  journal_topic_id,
+  lifecycle_state,
+  participation_state,
+  minimum_ready_contributions
+)
+select
+  '018f1840-0000-4000-8000-000000000002',
+  'observation-and-care',
+  'observation-and-care',
+  journal_topics.id,
+  'active',
+  'open',
+  1
+from journal_topics
+where journal_topics.slug = 'observation-and-care'
+on conflict (slug) do update set
+  content_key = excluded.content_key,
+  journal_topic_id = excluded.journal_topic_id,
+  updated_at = now();
+
+insert into community_rules (id, community_id, rule_key, sort_order, rule_state)
+values
+  (
+    '018f1840-0000-4000-8000-000000000011',
+    (select id from communities where slug = 'observation-and-care'),
+    'share-observed-evidence',
+    1,
+    'active'
+  ),
+  (
+    '018f1840-0000-4000-8000-000000000012',
+    (select id from communities where slug = 'observation-and-care'),
+    'protect-people-and-places',
+    2,
+    'active'
+  ),
+  (
+    '018f1840-0000-4000-8000-000000000013',
+    (select id from communities where slug = 'observation-and-care'),
+    'disagree-with-care',
+    3,
+    'active'
+  )
+on conflict (community_id, rule_key) do update set
+  sort_order = excluded.sort_order,
+  rule_state = 'active',
+  updated_at = now();
+
+insert into community_moderators (
+  community_id,
+  user_id,
+  assignment_state,
+  granted_by_user_id
+)
+select
+  communities.id,
+  admin_user_roles.user_id,
+  'active',
+  admin_user_roles.user_id
+from admin_user_roles
+cross join communities
+where admin_user_roles.role = 'owner'
+  and communities.slug = 'observation-and-care'
+on conflict (community_id, user_id) do update set
+  assignment_state = 'active',
+  revoked_at = null,
+  updated_at = now();
+
 -- Lineage pending source identities (OVE-124). These rows represent a
 -- non-user provenance source before they join and claim/confirm the edge.
 -- Store only internal ids, a bounded contact-free display label, enum state,

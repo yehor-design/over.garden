@@ -84,6 +84,7 @@ describe("visual fixture media store", () => {
     const retiredNamespaces = [
       "visual-fixtures/ove187-v5",
       "visual-fixtures/ove187-v6",
+      "visual-fixtures/ove187-v7",
     ];
     const retiredDerivativeKeys = retiredNamespaces.flatMap((namespace) =>
       VISUAL_FIXTURE_MANIFEST.media.map(

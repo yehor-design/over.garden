@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteShell } from "@/components/site-shell/site-shell";
+import { hasReadyCommunityNavigation } from "@/server/community-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import "./globals.css";
@@ -30,9 +31,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, shellSession] = await Promise.all([
+  const [locale, shellSession, communitiesReady] = await Promise.all([
     getRequestInterfaceLocale(),
     getSiteShellSessionState(),
+    hasReadyCommunityNavigation().catch(() => false),
   ]);
 
   return (
@@ -44,6 +46,7 @@ export default async function RootLayout({
         <SiteShell
           locale={locale}
           isAuthenticated={shellSession.isAuthenticated}
+          communitiesReady={communitiesReady}
         >
           {children}
         </SiteShell>

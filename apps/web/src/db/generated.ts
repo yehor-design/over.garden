@@ -198,6 +198,89 @@ export interface CatalogSourceSnapshots {
   verified_at: Timestamp;
 }
 
+export interface Communities {
+  content_key: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  journal_topic_id: string;
+  lifecycle_state: Generated<string>;
+  minimum_ready_contributions: Generated<number>;
+  participation_state: Generated<string>;
+  slug: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CommunityContributionReports {
+  contribution_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  report_reason: string;
+  report_state: Generated<string>;
+  reporter_user_id: string;
+  resolved_at: Timestamp | null;
+  resolved_by_user_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CommunityContributions {
+  added_at: Generated<Timestamp>;
+  community_id: string;
+  contribution_state: Generated<string>;
+  contributor_user_id: string;
+  discussion_state: Generated<string>;
+  id: Generated<string>;
+  journal_entry_id: string;
+  removal_reason: string | null;
+  removed_at: Timestamp | null;
+  removed_by_user_id: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface CommunityMemberships {
+  banned_at: Timestamp | null;
+  community_id: string;
+  id: Generated<string>;
+  joined_at: Generated<Timestamp>;
+  left_at: Timestamp | null;
+  membership_state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
+export interface CommunityModerationAuditLog {
+  action: string;
+  actor_user_id: string;
+  community_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  new_state: string;
+  previous_state: string;
+  reason: string;
+  target_id: string;
+  target_kind: string;
+}
+
+export interface CommunityModerators {
+  assignment_state: Generated<string>;
+  community_id: string;
+  granted_at: Generated<Timestamp>;
+  granted_by_user_id: string | null;
+  id: Generated<string>;
+  revoked_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
+export interface CommunityRules {
+  community_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  rule_key: string;
+  rule_state: Generated<string>;
+  sort_order: number;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface EngagementBookmarks {
   bookmark_state: Generated<string>;
   created_at: Generated<Timestamp>;
@@ -615,6 +698,13 @@ export interface DB {
   catalog_source_refresh_events: CatalogSourceRefreshEvents;
   catalog_source_refresh_records: CatalogSourceRefreshRecords;
   catalog_source_snapshots: CatalogSourceSnapshots;
+  communities: Communities;
+  community_contribution_reports: CommunityContributionReports;
+  community_contributions: CommunityContributions;
+  community_memberships: CommunityMemberships;
+  community_moderation_audit_log: CommunityModerationAuditLog;
+  community_moderators: CommunityModerators;
+  community_rules: CommunityRules;
   engagement_bookmarks: EngagementBookmarks;
   engagement_comment_reports: EngagementCommentReports;
   engagement_comments: EngagementComments;

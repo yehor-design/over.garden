@@ -13,6 +13,13 @@ import type {
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
+  Communities as CommunitiesTable,
+  CommunityContributionReports as CommunityContributionReportsTable,
+  CommunityContributions as CommunityContributionsTable,
+  CommunityMemberships as CommunityMembershipsTable,
+  CommunityModerationAuditLog as CommunityModerationAuditLogTable,
+  CommunityModerators as CommunityModeratorsTable,
+  CommunityRules as CommunityRulesTable,
   EngagementBookmarks as EngagementBookmarksTable,
   EngagementCommentReports as EngagementCommentReportsTable,
   EngagementComments as EngagementCommentsTable,
@@ -142,6 +149,44 @@ export type EngagementCommentReportState =
   | "dismissed"
   | "actioned";
 export type NotificationReceiptState = "unread" | "read" | "dismissed";
+export type CommunityLifecycleState = "draft" | "active" | "archived";
+export type CommunityParticipationState = "open" | "closed";
+export type CommunityRuleState = "active" | "retired";
+export type CommunityMembershipState = "active" | "left" | "banned";
+export type CommunityModeratorState = "active" | "revoked";
+export type CommunityContributionState = "active" | "removed";
+export type CommunityDiscussionState = "open" | "closed";
+export type CommunityReportReason =
+  | "spam"
+  | "harassment"
+  | "privacy"
+  | "misinformation"
+  | "off_topic"
+  | "other";
+export type CommunityReportState =
+  | "submitted"
+  | "reviewed"
+  | "dismissed"
+  | "actioned";
+export type CommunityModerationReason =
+  | "rule_violation"
+  | CommunityReportReason;
+export type CommunityModerationTargetKind =
+  | "community"
+  | "contribution"
+  | "membership"
+  | "report";
+export type CommunityModerationAction =
+  | "remove_contribution"
+  | "restore_contribution"
+  | "close_discussion"
+  | "open_discussion"
+  | "ban_member"
+  | "restore_member"
+  | "dismiss_report"
+  | "action_report"
+  | "close_community"
+  | "open_community";
 export type JournalTopicTrustState = "curated" | "provisional" | "rejected";
 export type JournalEntryTopicSignalSource =
   | "explicit_tag"
@@ -183,6 +228,24 @@ export type CatalogSourceRefreshEvent =
 export type CatalogSourceRefreshRecord =
   Selectable<CatalogSourceRefreshRecordsTable>;
 export type CatalogSourceSnapshot = Selectable<CatalogSourceSnapshotsTable>;
+export type Community = Selectable<CommunitiesTable>;
+export type NewCommunity = Insertable<CommunitiesTable>;
+export type CommunityRule = Selectable<CommunityRulesTable>;
+export type NewCommunityRule = Insertable<CommunityRulesTable>;
+export type CommunityMembership = Selectable<CommunityMembershipsTable>;
+export type NewCommunityMembership = Insertable<CommunityMembershipsTable>;
+export type CommunityModerator = Selectable<CommunityModeratorsTable>;
+export type NewCommunityModerator = Insertable<CommunityModeratorsTable>;
+export type CommunityContribution = Selectable<CommunityContributionsTable>;
+export type NewCommunityContribution = Insertable<CommunityContributionsTable>;
+export type CommunityContributionReport =
+  Selectable<CommunityContributionReportsTable>;
+export type NewCommunityContributionReport =
+  Insertable<CommunityContributionReportsTable>;
+export type CommunityModerationAuditEntry =
+  Selectable<CommunityModerationAuditLogTable>;
+export type NewCommunityModerationAuditEntry =
+  Insertable<CommunityModerationAuditLogTable>;
 export type NewAnalyticsEvent = Insertable<AnalyticsEventsTable>;
 export type NewCatalogAliasProjection =
   Insertable<CatalogAliasProjectionsTable>;

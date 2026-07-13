@@ -6,6 +6,7 @@ import {
   DatabaseZap,
   FileSearch,
   ShieldCheck,
+  ShieldAlert,
   Sprout,
   UsersRound,
 } from "lucide-react";
@@ -28,6 +29,13 @@ export const metadata: Metadata = {
 };
 
 const ADMIN_LINKS = [
+  {
+    href: "/admin/communities",
+    label: "Community moderation",
+    detail: "Reports, participation, removals, and member safety",
+    required: "Assigned moderator only",
+    icon: ShieldAlert,
+  },
   {
     href: "/admin/users",
     label: "Sealed owner",

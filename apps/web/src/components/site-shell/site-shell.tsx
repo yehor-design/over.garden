@@ -73,10 +73,12 @@ export function SiteShell({
   children,
   locale,
   isAuthenticated,
+  communitiesReady = false,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
   isAuthenticated: boolean;
+  communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
   const [routeContextModules, setRouteContextModules] = useState<
@@ -91,7 +93,11 @@ export function SiteShell({
     );
   }
 
-  const navigation = getSiteShellNavigation(locale, isAuthenticated);
+  const navigation = getSiteShellNavigation(
+    locale,
+    isAuthenticated,
+    communitiesReady,
+  );
   const copy = getInterfaceCopy(locale);
   const context = getSiteShellRouteContext(pathname, locale);
   const languageBasePath = stripLocalePrefix(pathname).path;
@@ -514,6 +520,7 @@ function isLanguageSwitchablePath(pathname: string) {
     "/objects",
     "/journals",
     "/journal",
+    "/communities",
     "/knowledge",
   ].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }

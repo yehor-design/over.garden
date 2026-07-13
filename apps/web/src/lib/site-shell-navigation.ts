@@ -8,6 +8,7 @@ export type SiteShellNavigationKey =
   | "feed"
   | "living-objects"
   | "journals"
+  | "communities"
   | "knowledge"
   | "garden"
   | "add-object"
@@ -54,6 +55,7 @@ export type SiteShellRouteContextKey =
   | "feed"
   | "living-object"
   | "journal"
+  | "community"
   | "knowledge"
   | "garden"
   | "profile"
@@ -72,6 +74,7 @@ export interface SiteShellRouteContext {
 export function getSiteShellNavigation(
   locale: InterfaceLocale,
   isAuthenticated: boolean,
+  communitiesReady = false,
 ): SiteShellNavigation {
   const copy = getInterfaceCopy(locale);
   const publicItems: SiteShellNavigationItem[] = [
@@ -99,6 +102,20 @@ export function getSiteShellNavigation(
         paths: ["/journals", "/journal"],
       },
     ),
+    ...(communitiesReady
+      ? [
+          item(
+            "communities" as const,
+            copy.navigation.communities,
+            localizedPath(locale, "/communities"),
+            "public" as const,
+            {
+              match: "prefix" as const,
+              paths: ["/communities"],
+            },
+          ),
+        ]
+      : []),
     item(
       "knowledge",
       copy.navigation.knowledge,
@@ -269,6 +286,19 @@ export function getSiteShellRouteContext(
       ...base,
       key: "living-object",
       title: copy.navigation.livingObjects,
+      primaryHref: publicHref("/journals"),
+      primaryLabel: copy.navigation.journals,
+    };
+  }
+
+  if (
+    normalizedPath === "/communities" ||
+    normalizedPath.startsWith("/communities/")
+  ) {
+    return {
+      ...base,
+      key: "community",
+      title: copy.navigation.communities,
       primaryHref: publicHref("/journals"),
       primaryLabel: copy.navigation.journals,
     };

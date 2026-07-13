@@ -51,6 +51,7 @@ const TARGET_KINDS = new Set<AuthIntentTargetKind>([
   "collection",
 ]);
 const QUERY_KEYS = new Set([
+  "q",
   "topic",
   "cursor",
   "kind",
@@ -76,6 +77,7 @@ const ROUTE_PATTERNS = [
   /^\/@[a-z0-9_]{2,40}$/,
   /^\/(?:uk|bg|ru)\/@[a-z0-9_]{2,40}$/,
   /^\/(?:(?:uk|bg|ru)\/)?topics\/[a-z0-9][a-z0-9-]{0,95}$/,
+  /^\/(?:(?:uk|bg|ru)\/)?communities\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/(?:uk|bg|ru)\/(?:objects|journals|knowledge|feed|notifications|bookmarks|wishlist)$/,
   /^\/garden$/,
   /^\/garden\/objects\/[0-9a-f-]{36}$/,
@@ -120,6 +122,7 @@ const UUID_PATTERN =
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{0,95}$/;
 const HANDLE_PATTERN = /^[a-z0-9_]{2,40}$/;
 const SAFE_QUERY_VALUE_PATTERN = /^[A-Za-z0-9._~-]+$/;
+const SAFE_SEARCH_QUERY_PATTERN = /^[\p{L}\p{N}\p{M}\p{Zs}.'’_-]+$/u;
 const CONTROL_PATTERN = /^[a-z][a-z0-9-]{2,63}$/;
 
 export function normalizeAuthIntentDraft(input: unknown): AuthIntentDraft {
@@ -283,12 +286,16 @@ function normalizeReturnTo(value: unknown): string {
   }
 
   for (const [key, queryValue] of url.searchParams) {
-    const maximumLength = key === "cursor" ? 512 : 96;
+    const maximumLength = key === "cursor" ? 512 : key === "q" ? 100 : 96;
+    const safeValue =
+      key === "q"
+        ? SAFE_SEARCH_QUERY_PATTERN.test(queryValue)
+        : SAFE_QUERY_VALUE_PATTERN.test(queryValue);
     if (
       !QUERY_KEYS.has(key) ||
       queryValue.length === 0 ||
       queryValue.length > maximumLength ||
-      !SAFE_QUERY_VALUE_PATTERN.test(queryValue)
+      !safeValue
     ) {
       throw new AuthIntentContractError();
     }

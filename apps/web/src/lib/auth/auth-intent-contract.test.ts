@@ -87,6 +87,20 @@ describe("auth intent contract", () => {
         target: { kind: "journal", ref: "balcony-tomato-check" },
       }).returnTo,
     ).toBe("/bg/journal/balcony-tomato-check");
+
+    const communityIntent = normalizeAuthIntentDraft({
+      action: "report",
+      returnTo:
+        "/bg/communities/observation-and-care?q=домати+після+спеки&kind=plant&cursor=eyJpZCI6IjEifQ",
+      target: { kind: "collection", ref: "observation-and-care" },
+      control: "contribution-00000000-0000-4000-8000-000000000201",
+    });
+    expect(communityIntent.returnTo).toBe(
+      "/bg/communities/observation-and-care?q=%D0%B4%D0%BE%D0%BC%D0%B0%D1%82%D0%B8+%D0%BF%D1%96%D1%81%D0%BB%D1%8F+%D1%81%D0%BF%D0%B5%D0%BA%D0%B8&kind=plant&cursor=eyJpZCI6IjEifQ",
+    );
+    expect(buildAuthIntentResumeHref(communityIntent)).toContain(
+      "authControl=contribution-00000000-0000-4000-8000-000000000201",
+    );
   });
 
   it("preserves one opaque control locator without exposing a raw private id", () => {
@@ -160,6 +174,7 @@ describe("auth intent contract", () => {
     "/journal/entry?next=https://attacker.example",
     "/unknown/private-route",
     "/journal/entry?email=person%40example.com",
+    "/communities/observation-and-care?q=%3Cscript%3E",
     `/journal/${"a".repeat(120)}`,
   ])("rejects unsafe return location %s", (returnTo) => {
     expect(() =>

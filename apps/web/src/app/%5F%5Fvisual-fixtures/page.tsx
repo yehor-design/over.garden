@@ -176,6 +176,31 @@ export default async function VisualFixtureIndexPage() {
               value={status.actual.topicSignals}
             />
             <CountFact label="Media" value={status.actual.media} />
+            <CountFact label="Communities" value={status.actual.communities} />
+            <CountFact
+              label="Community rules"
+              value={status.actual.communityRules}
+            />
+            <CountFact
+              label="Community memberships"
+              value={status.actual.communityMemberships}
+            />
+            <CountFact
+              label="Community moderators"
+              value={status.actual.communityModerators}
+            />
+            <CountFact
+              label="Community contributions"
+              value={status.actual.communityContributions}
+            />
+            <CountFact
+              label="Community reports"
+              value={status.actual.communityReports}
+            />
+            <CountFact
+              label="Community audit events"
+              value={status.actual.communityAuditEvents}
+            />
           </dl>
 
           <div className="grid gap-1 text-xs text-muted-foreground">
@@ -256,6 +281,92 @@ export default async function VisualFixtureIndexPage() {
                       })}
                     >
                       Open social state
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ),
+            )}
+          </ol>
+        </section>
+
+        <Separator />
+
+        <section
+          aria-labelledby="community-evidence-heading"
+          className="grid gap-4"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <UsersRound className="size-4" aria-hidden="true" />
+              Guest-readable, actor-scoped, moderated canonical journals
+            </p>
+            <h2
+              id="community-evidence-heading"
+              className="mt-1 text-xl font-semibold"
+            >
+              Moderated-community V2 evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.communityEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.state.replaceAll("-", " ")}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.expectedStatus}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="Actor"
+                        value={scenario.actorRole.replaceAll("-", " ")}
+                      />
+                      <PassportEvidenceFact
+                        label="Visible"
+                        value={String(
+                          scenario.expectedVisibleContributionIds.length,
+                        )}
+                      />
+                      <PassportEvidenceFact
+                        label="Total"
+                        value={String(scenario.expectedItemCount)}
+                      />
+                      <PassportEvidenceFact
+                        label="Hidden"
+                        value={String(
+                          scenario.expectedHiddenContributionIds.length,
+                        )}
+                      />
+                      <PassportEvidenceFact
+                        label="Next page"
+                        value={scenario.expectedHasNextPage ? "yes" : "no"}
+                      />
+                      <PassportEvidenceFact
+                        label="Moderation"
+                        value={scenario.expectedModerationOutcome.replaceAll(
+                          "-",
+                          " ",
+                        )}
+                      />
+                    </dl>
+                    <code className="line-clamp-2 text-xs break-all text-muted-foreground">
+                      {scenario.path}
+                    </code>
+                    <Link
+                      href={scenario.path}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-auto w-fit",
+                      })}
+                    >
+                      Open community state
                       <ArrowUpRight aria-hidden="true" />
                     </Link>
                   </div>

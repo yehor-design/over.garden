@@ -37,6 +37,7 @@ import { verifyVisualFixtureJournalEntryEvidence } from "@/server/visual-fixture
 import { verifyVisualFixtureProfileEvidence } from "@/server/visual-fixtures/profile-evidence";
 import { verifyVisualFixtureGardenWorkspaceEvidence } from "@/server/visual-fixtures/garden-workspace-evidence";
 import { verifyVisualFixtureSocialReturnEvidence } from "@/server/visual-fixtures/social-return-evidence";
+import { verifyVisualFixtureCommunityEvidence } from "@/server/visual-fixtures/community-evidence";
 
 export type VisualFixtureCommand = "seed" | "reset" | "verify";
 
@@ -53,6 +54,7 @@ export interface VisualFixtureVerification {
   profileEvidenceCases: number;
   workspaceEvidenceCases: number;
   socialEvidenceCases: number;
+  communityEvidenceCases: number;
 }
 
 export interface VisualFixtureCommandSummary {
@@ -189,6 +191,7 @@ async function verifyVisualFixtures(
   await verifyVisualFixtureProfileEvidence(runtime.database);
   await verifyVisualFixtureGardenWorkspaceEvidence(runtime.database);
   await verifyVisualFixtureSocialReturnEvidence(runtime.database);
+  await verifyVisualFixtureCommunityEvidence(runtime.database);
 
   await upsertVerificationSentinel(runtime.database);
   let sentinelSurvived = false;
@@ -240,6 +243,9 @@ async function verifyVisualFixtures(
     const socialEvidenceCases = await verifyVisualFixtureSocialReturnEvidence(
       runtime.database,
     );
+    const communityEvidenceCases = await verifyVisualFixtureCommunityEvidence(
+      runtime.database,
+    );
 
     const mediaReachability = await Promise.all(
       VISUAL_FIXTURE_MANIFEST.media.map((item) => {
@@ -272,6 +278,7 @@ async function verifyVisualFixtures(
         profileEvidenceCases,
         workspaceEvidenceCases,
         socialEvidenceCases,
+        communityEvidenceCases,
       },
     });
   } finally {

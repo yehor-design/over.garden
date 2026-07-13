@@ -19,6 +19,7 @@ import {
   Sprout,
   SquarePen,
   UserRound,
+  UsersRound,
 } from "lucide-react";
 
 import {
@@ -33,6 +34,7 @@ const NAVIGATION_ICONS: Record<SiteShellNavigationKey, LucideIcon> = {
   feed: Newspaper,
   "living-objects": Sprout,
   journals: NotebookText,
+  communities: UsersRound,
   knowledge: BookOpenText,
   garden: LayoutDashboard,
   "add-object": CirclePlus,

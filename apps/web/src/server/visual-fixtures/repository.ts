@@ -32,6 +32,13 @@ export interface VisualFixtureCounts {
   topics: number;
   topicSignals: number;
   media: number;
+  communities: number;
+  communityRules: number;
+  communityMemberships: number;
+  communityModerators: number;
+  communityContributions: number;
+  communityReports: number;
+  communityAuditEvents: number;
 }
 
 export interface VisualFixtureStatus {
@@ -45,6 +52,10 @@ export function buildVisualFixtureSeedQueries(
   executor: QueryExecutor,
   manifest: VisualFixtureManifest,
 ) {
+  const actorIds = manifest.actors.map(({ id }) => id);
+  const communityIds = manifest.communityEvidence.communities.map(
+    ({ id }) => id,
+  );
   const mediaCleanup = executor.deleteFrom("media_assets").where(
     "id",
     "in",
@@ -64,6 +75,33 @@ export function buildVisualFixtureSeedQueries(
       "in",
       manifest.lineageEvidence.edges.map(({ id }) => id),
     );
+  const communityAuditCleanup = executor
+    .deleteFrom("community_moderation_audit_log")
+    .where("community_id", "in", communityIds)
+    .where("actor_user_id", "in", actorIds);
+  const communityReportsCleanup = executor
+    .deleteFrom("community_contribution_reports")
+    .where("reporter_user_id", "in", actorIds)
+    .where(
+      "contribution_id",
+      "in",
+      executor
+        .selectFrom("community_contributions")
+        .select("id")
+        .where("community_id", "in", communityIds),
+    );
+  const communityContributionsCleanup = executor
+    .deleteFrom("community_contributions")
+    .where("community_id", "in", communityIds)
+    .where("contributor_user_id", "in", actorIds);
+  const communityMembershipsCleanup = executor
+    .deleteFrom("community_memberships")
+    .where("community_id", "in", communityIds)
+    .where("user_id", "in", actorIds);
+  const communityProfileBlocksCleanup = executor
+    .deleteFrom("profile_blocks")
+    .where("blocker_user_id", "in", actorIds)
+    .where("blocked_user_id", "in", actorIds);
 
   const actors = executor
     .insertInto("user")
@@ -461,6 +499,185 @@ export function buildVisualFixtureSeedQueries(
       }),
     );
 
+  const communities = executor
+    .insertInto("communities")
+    .values(
+      manifest.communityEvidence.communities.map((community) => ({
+        id: community.id,
+        slug: community.slug,
+        content_key: community.contentKey,
+        journal_topic_id: community.topicId,
+        lifecycle_state: community.lifecycleState,
+        participation_state: community.participationState,
+        minimum_ready_contributions: community.minimumReadyContributions,
+        created_at: community.createdAt,
+        updated_at: community.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        slug: sql`excluded.slug`,
+        content_key: sql`excluded.content_key`,
+        journal_topic_id: sql`excluded.journal_topic_id`,
+        lifecycle_state: sql`excluded.lifecycle_state`,
+        participation_state: sql`excluded.participation_state`,
+        minimum_ready_contributions: sql`excluded.minimum_ready_contributions`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityRules = executor
+    .insertInto("community_rules")
+    .values(
+      manifest.communityEvidence.rules.map((rule) => ({
+        id: rule.id,
+        community_id: rule.communityId,
+        rule_key: rule.key,
+        sort_order: rule.order,
+        rule_state: rule.state,
+        created_at: rule.createdAt,
+        updated_at: rule.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        community_id: sql`excluded.community_id`,
+        rule_key: sql`excluded.rule_key`,
+        sort_order: sql`excluded.sort_order`,
+        rule_state: sql`excluded.rule_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityMemberships = executor
+    .insertInto("community_memberships")
+    .values(
+      manifest.communityEvidence.memberships.map((membership) => ({
+        id: membership.id,
+        community_id: membership.communityId,
+        user_id: membership.userId,
+        membership_state: membership.state,
+        joined_at: membership.joinedAt,
+        left_at: membership.leftAt,
+        banned_at: membership.bannedAt,
+        updated_at: membership.joinedAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        community_id: sql`excluded.community_id`,
+        user_id: sql`excluded.user_id`,
+        membership_state: sql`excluded.membership_state`,
+        joined_at: sql`excluded.joined_at`,
+        left_at: sql`excluded.left_at`,
+        banned_at: sql`excluded.banned_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityModerators = executor
+    .insertInto("community_moderators")
+    .values(
+      manifest.communityEvidence.moderators.map((moderator) => ({
+        id: moderator.id,
+        community_id: moderator.communityId,
+        user_id: moderator.userId,
+        assignment_state: moderator.state,
+        granted_by_user_id: moderator.grantedByUserId,
+        granted_at: moderator.grantedAt,
+        revoked_at: moderator.revokedAt,
+        updated_at: moderator.grantedAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        community_id: sql`excluded.community_id`,
+        user_id: sql`excluded.user_id`,
+        assignment_state: sql`excluded.assignment_state`,
+        granted_by_user_id: sql`excluded.granted_by_user_id`,
+        granted_at: sql`excluded.granted_at`,
+        revoked_at: sql`excluded.revoked_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityContributions = executor
+    .insertInto("community_contributions")
+    .values(
+      manifest.communityEvidence.contributions.map((contribution) => ({
+        id: contribution.id,
+        community_id: contribution.communityId,
+        journal_entry_id: contribution.journalEntryId,
+        contributor_user_id: contribution.contributorUserId,
+        contribution_state: contribution.state,
+        discussion_state: contribution.discussionState,
+        removed_by_user_id: contribution.removedByUserId,
+        removal_reason: contribution.removalReason,
+        added_at: contribution.addedAt,
+        removed_at: contribution.removedAt,
+        updated_at: contribution.addedAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        community_id: sql`excluded.community_id`,
+        journal_entry_id: sql`excluded.journal_entry_id`,
+        contributor_user_id: sql`excluded.contributor_user_id`,
+        contribution_state: sql`excluded.contribution_state`,
+        discussion_state: sql`excluded.discussion_state`,
+        removed_by_user_id: sql`excluded.removed_by_user_id`,
+        removal_reason: sql`excluded.removal_reason`,
+        added_at: sql`excluded.added_at`,
+        removed_at: sql`excluded.removed_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityReports = executor
+    .insertInto("community_contribution_reports")
+    .values(
+      manifest.communityEvidence.reports.map((report) => ({
+        id: report.id,
+        contribution_id: report.contributionId,
+        reporter_user_id: report.reporterUserId,
+        report_reason: report.reason,
+        report_state: report.state,
+        resolved_by_user_id: report.resolvedByUserId,
+        resolved_at: report.resolvedAt,
+        created_at: report.createdAt,
+        updated_at: report.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        contribution_id: sql`excluded.contribution_id`,
+        reporter_user_id: sql`excluded.reporter_user_id`,
+        report_reason: sql`excluded.report_reason`,
+        report_state: sql`excluded.report_state`,
+        resolved_by_user_id: sql`excluded.resolved_by_user_id`,
+        resolved_at: sql`excluded.resolved_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const communityAuditEvents = executor
+    .insertInto("community_moderation_audit_log")
+    .values(
+      manifest.communityEvidence.auditEvents.map((event) => ({
+        id: event.id,
+        community_id: event.communityId,
+        actor_user_id: event.actorUserId,
+        target_kind: event.targetKind,
+        target_id: event.targetId,
+        action: event.action,
+        reason: event.reason,
+        previous_state: event.previousState,
+        new_state: event.newState,
+        created_at: event.createdAt,
+      })),
+    )
+    .onConflict((oc) => oc.column("id").doNothing());
+
   const topicSignals = executor
     .insertInto("journal_entry_topic_signals")
     .values(
@@ -676,6 +893,20 @@ export function buildVisualFixtureSeedQueries(
 
   return [
     { label: "lineage_audit_cleanup", query: lineageAuditCleanup },
+    { label: "community_audit_cleanup", query: communityAuditCleanup },
+    { label: "community_reports_cleanup", query: communityReportsCleanup },
+    {
+      label: "community_contributions_cleanup",
+      query: communityContributionsCleanup,
+    },
+    {
+      label: "community_memberships_cleanup",
+      query: communityMembershipsCleanup,
+    },
+    {
+      label: "community_profile_blocks_cleanup",
+      query: communityProfileBlocksCleanup,
+    },
     { label: "media_cleanup", query: mediaCleanup },
     { label: "object_mentions_cleanup", query: objectMentionsCleanup },
     { label: "actors", query: actors },
@@ -688,6 +919,13 @@ export function buildVisualFixtureSeedQueries(
     { label: "entries", query: entries },
     { label: "object_mentions", query: objectMentions },
     { label: "topics", query: topics },
+    { label: "communities", query: communities },
+    { label: "community_rules", query: communityRules },
+    { label: "community_memberships", query: communityMemberships },
+    { label: "community_moderators", query: communityModerators },
+    { label: "community_contributions", query: communityContributions },
+    { label: "community_reports", query: communityReports },
+    { label: "community_audit_events", query: communityAuditEvents },
     { label: "topic_signals", query: topicSignals },
     { label: "media", query: media },
     { label: "profiles", query: profiles },
@@ -709,8 +947,70 @@ export function buildVisualFixtureResetQueries(
   manifest: VisualFixtureManifest,
 ) {
   const actorIds = manifest.actors.map(({ id }) => id);
+  const communityIds = manifest.communityEvidence.communities.map(
+    ({ id }) => id,
+  );
 
   return [
+    {
+      label: "community_audit_events",
+      query: executor
+        .deleteFrom("community_moderation_audit_log")
+        .where("community_id", "in", communityIds)
+        .where("actor_user_id", "in", actorIds),
+    },
+    {
+      label: "community_reports",
+      query: executor
+        .deleteFrom("community_contribution_reports")
+        .where("reporter_user_id", "in", actorIds)
+        .where(
+          "contribution_id",
+          "in",
+          executor
+            .selectFrom("community_contributions")
+            .select("id")
+            .where("community_id", "in", communityIds),
+        ),
+    },
+    {
+      label: "community_contributions",
+      query: executor
+        .deleteFrom("community_contributions")
+        .where("community_id", "in", communityIds)
+        .where("contributor_user_id", "in", actorIds),
+    },
+    {
+      label: "community_moderators",
+      query: executor.deleteFrom("community_moderators").where(
+        "id",
+        "in",
+        manifest.communityEvidence.moderators.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "community_memberships",
+      query: executor
+        .deleteFrom("community_memberships")
+        .where("community_id", "in", communityIds)
+        .where("user_id", "in", actorIds),
+    },
+    {
+      label: "community_rules",
+      query: executor.deleteFrom("community_rules").where(
+        "id",
+        "in",
+        manifest.communityEvidence.rules.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "communities",
+      query: executor.deleteFrom("communities").where(
+        "id",
+        "in",
+        manifest.communityEvidence.communities.map(({ id }) => id),
+      ),
+    },
     {
       label: "notification_receipts",
       query: executor.deleteFrom("notification_receipts").where(
@@ -779,11 +1079,10 @@ export function buildVisualFixtureResetQueries(
     },
     {
       label: "profile_blocks",
-      query: executor.deleteFrom("profile_blocks").where(
-        "id",
-        "in",
-        manifest.profileBlocks.map(({ id }) => id),
-      ),
+      query: executor
+        .deleteFrom("profile_blocks")
+        .where("blocker_user_id", "in", actorIds)
+        .where("blocked_user_id", "in", actorIds),
     },
     {
       label: "profile_follows",
@@ -1160,6 +1459,83 @@ export function buildVisualFixtureStatusQueries(
           manifest.media.map(({ id }) => id),
         ),
     },
+    {
+      label: "communities",
+      query: executor
+        .selectFrom("communities")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.communities.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityRules",
+      query: executor
+        .selectFrom("community_rules")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.rules.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityMemberships",
+      query: executor
+        .selectFrom("community_memberships")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.memberships.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityModerators",
+      query: executor
+        .selectFrom("community_moderators")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.moderators.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityContributions",
+      query: executor
+        .selectFrom("community_contributions")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.contributions.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityReports",
+      query: executor
+        .selectFrom("community_contribution_reports")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.reports.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "communityAuditEvents",
+      query: executor
+        .selectFrom("community_moderation_audit_log")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.communityEvidence.auditEvents.map(({ id }) => id),
+        ),
+    },
   ] as const;
 }
 
@@ -1242,6 +1618,13 @@ export function expectedVisualFixtureCounts(
     topics: manifest.topics.length,
     topicSignals: manifest.topicSignals.length,
     media: manifest.media.length,
+    communities: manifest.communityEvidence.communities.length,
+    communityRules: manifest.communityEvidence.rules.length,
+    communityMemberships: manifest.communityEvidence.memberships.length,
+    communityModerators: manifest.communityEvidence.moderators.length,
+    communityContributions: manifest.communityEvidence.contributions.length,
+    communityReports: manifest.communityEvidence.reports.length,
+    communityAuditEvents: manifest.communityEvidence.auditEvents.length,
   };
 }
 

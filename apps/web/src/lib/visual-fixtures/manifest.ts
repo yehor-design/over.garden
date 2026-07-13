@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v7";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v8";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -121,6 +121,13 @@ export type VisualFixtureScenarioKind =
   | "social-notifications"
   | "social-bookmarks"
   | "social-wishlist"
+  | "community-empty"
+  | "community-typical"
+  | "community-dense"
+  | "community-safety"
+  | "community-loading"
+  | "community-error"
+  | "community-unavailable"
   | "media-gallery";
 export type VisualFixtureStateKind =
   | "empty-space"
@@ -846,6 +853,178 @@ export interface VisualFixtureSocialEvidence {
   transitions: readonly VisualFixtureSocialTransition[];
 }
 
+export interface VisualFixtureCommunity {
+  id: string;
+  slug: string;
+  contentKey: string;
+  topicId: string;
+  lifecycleState: "active" | "archived";
+  participationState: "open" | "closed";
+  minimumReadyContributions: number;
+  coverMediaId: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureCommunityRule {
+  id: string;
+  communityId: string;
+  key: string;
+  order: number;
+  state: "active" | "retired";
+  createdAt: string;
+}
+
+export interface VisualFixtureCommunityMembership {
+  id: string;
+  communityId: string;
+  userId: string;
+  state: "active" | "left" | "banned";
+  joinedAt: string;
+  leftAt: string | null;
+  bannedAt: string | null;
+}
+
+export interface VisualFixtureCommunityModerator {
+  id: string;
+  communityId: string;
+  userId: string;
+  state: "active" | "revoked";
+  grantedByUserId: string | null;
+  grantedAt: string;
+  revokedAt: string | null;
+}
+
+export interface VisualFixtureCommunityContribution {
+  id: string;
+  communityId: string;
+  journalEntryId: string;
+  contributorUserId: string;
+  state: "active" | "removed";
+  discussionState: "open" | "closed";
+  removedByUserId: string | null;
+  removalReason:
+    | "rule_violation"
+    | "spam"
+    | "harassment"
+    | "privacy"
+    | "misinformation"
+    | "off_topic"
+    | "other"
+    | null;
+  addedAt: string;
+  removedAt: string | null;
+}
+
+export interface VisualFixtureCommunityReport {
+  id: string;
+  contributionId: string;
+  reporterUserId: string;
+  reason:
+    | "spam"
+    | "harassment"
+    | "privacy"
+    | "misinformation"
+    | "off_topic"
+    | "other";
+  state: "submitted" | "reviewed" | "dismissed" | "actioned";
+  resolvedByUserId: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureCommunityAuditEvent {
+  id: string;
+  communityId: string;
+  actorUserId: string;
+  targetKind: "community" | "contribution" | "membership" | "report";
+  targetId: string;
+  action:
+    | "remove_contribution"
+    | "restore_contribution"
+    | "close_discussion"
+    | "open_discussion"
+    | "ban_member"
+    | "restore_member"
+    | "dismiss_report"
+    | "action_report"
+    | "close_community"
+    | "open_community";
+  reason:
+    | "rule_violation"
+    | "spam"
+    | "harassment"
+    | "privacy"
+    | "misinformation"
+    | "off_topic"
+    | "other";
+  previousState: string;
+  newState: string;
+  createdAt: string;
+}
+
+export type VisualFixtureCommunityScenarioState =
+  | "empty"
+  | "typical"
+  | "dense"
+  | "guest"
+  | "non-member"
+  | "member"
+  | "moderator"
+  | "blocked"
+  | "banned"
+  | "pending-report"
+  | "removed-content"
+  | "archived"
+  | "closed-discussion"
+  | "closed-participation"
+  | "no-results"
+  | "loading"
+  | "error"
+  | "unavailable";
+
+export interface VisualFixtureCommunityScenario {
+  id: string;
+  state: VisualFixtureCommunityScenarioState;
+  actorRole:
+    | "guest"
+    | "non-member"
+    | "member"
+    | "moderator"
+    | "blocked-member"
+    | "banned-member";
+  actorId: string | null;
+  communitySlug: string;
+  path: string;
+  expectedStatus: 200 | 404;
+  expectedVisibleContributionIds: readonly string[];
+  expectedHiddenContributionIds: readonly string[];
+  expectedItemCount: number;
+  expectedHasNextPage: boolean;
+  expectedMembershipState: "active" | "left" | "banned" | null;
+  expectedModerationOutcome: string;
+  viewportTargets: readonly ["desktop", "mobile-320"];
+}
+
+export interface VisualFixtureCommunityEvidence {
+  pageSize: 12;
+  actorRoles: {
+    memberActorId: string;
+    nonMemberActorId: string;
+    moderatorActorId: string;
+    blockedMemberActorId: string;
+    bannedMemberActorId: string;
+    reporterActorId: string;
+  };
+  communities: readonly VisualFixtureCommunity[];
+  rules: readonly VisualFixtureCommunityRule[];
+  memberships: readonly VisualFixtureCommunityMembership[];
+  moderators: readonly VisualFixtureCommunityModerator[];
+  contributions: readonly VisualFixtureCommunityContribution[];
+  reports: readonly VisualFixtureCommunityReport[];
+  auditEvents: readonly VisualFixtureCommunityAuditEvent[];
+  scenarios: readonly VisualFixtureCommunityScenario[];
+}
+
 export interface VisualFixtureStateCoverage {
   id: string;
   kind: VisualFixtureStateKind;
@@ -884,6 +1063,7 @@ export interface VisualFixtureManifest {
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
   socialEvidence: VisualFixtureSocialEvidence;
+  communityEvidence: VisualFixtureCommunityEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
   scenarios: readonly VisualFixtureScenario[];
 }
@@ -2160,6 +2340,8 @@ const topicSignals: readonly VisualFixtureTopicSignal[] = [
   ),
   createTopicSignal(singleObservationEntry, topics[6], 470),
 ];
+
+const communityEvidence = buildCommunityEvidence();
 const sortedDenseTopicEntries = [...denseTopicEntries].sort(compareFeedEntries);
 const pageTwoAnchor = sortedDenseTopicEntries[7];
 const exhaustedAnchor = sortedDenseTopicEntries.at(-2);
@@ -3097,6 +3279,28 @@ const scenarios: readonly VisualFixtureScenario[] = [
       200,
     ),
   ),
+  ...communityEvidence.scenarios
+    .filter((community) =>
+      [
+        "empty",
+        "typical",
+        "dense",
+        "moderator",
+        "loading",
+        "error",
+        "unavailable",
+      ].includes(community.state),
+    )
+    .map((community) =>
+      scenario(
+        `community-${community.state}`,
+        communityScenarioKind(community.state),
+        `Community ${community.state}`,
+        community.path,
+        community.expectedStatus,
+        community.expectedStatus === 404 ? "not_found" : undefined,
+      ),
+    ),
   scenario(
     "media",
     "media-gallery",
@@ -3134,6 +3338,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   lineageEvidence,
   intentEvidence,
   socialEvidence,
+  communityEvidence,
   stateCoverage,
   scenarios,
 };
@@ -3166,6 +3371,18 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "media", manifest.media.length, 16);
   checkCount(errors, "topics", manifest.topics.length, 7);
   checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
+  checkCount(
+    errors,
+    "communities",
+    manifest.communityEvidence.communities.length,
+    4,
+  );
+  checkCount(
+    errors,
+    "community scenarios",
+    manifest.communityEvidence.scenarios.length,
+    18,
+  );
   checkCount(
     errors,
     "social comments",
@@ -3225,6 +3442,14 @@ export function validateVisualFixtureManifest(
   const entryIds = new Set(manifest.entries.map((entry) => entry.id));
   const mediaIds = new Set(manifest.media.map((item) => item.id));
   const topicIds = new Set(manifest.topics.map((topic) => topic.id));
+  const communityIds = new Set(
+    manifest.communityEvidence.communities.map((community) => community.id),
+  );
+  const communityContributionIds = new Set(
+    manifest.communityEvidence.contributions.map(
+      (contribution) => contribution.id,
+    ),
+  );
   const pendingIdentityIds = new Set(
     manifest.lineageEvidence.pendingIdentities.map((identity) => identity.id),
   );
@@ -3370,6 +3595,150 @@ export function validateVisualFixtureManifest(
     "social scenario ids",
     manifest.socialEvidence.scenarios.map((scenario) => scenario.id),
   );
+  checkUnique(
+    errors,
+    "community ids",
+    manifest.communityEvidence.communities.map((community) => community.id),
+  );
+  checkUnique(
+    errors,
+    "community slugs",
+    manifest.communityEvidence.communities.map((community) => community.slug),
+  );
+  checkUnique(
+    errors,
+    "community membership pairs",
+    manifest.communityEvidence.memberships.map(
+      (membership) => `${membership.communityId}:${membership.userId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "community contribution pairs",
+    manifest.communityEvidence.contributions.map(
+      (contribution) =>
+        `${contribution.communityId}:${contribution.journalEntryId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "community scenario ids",
+    manifest.communityEvidence.scenarios.map((scenario) => scenario.id),
+  );
+  for (const community of manifest.communityEvidence.communities) {
+    const cover = community.coverMediaId
+      ? manifest.media.find((item) => item.id === community.coverMediaId)
+      : null;
+    const coverBelongsToActiveContribution = cover
+      ? manifest.communityEvidence.contributions.some(
+          (contribution) =>
+            contribution.communityId === community.id &&
+            contribution.journalEntryId === cover.entryId &&
+            contribution.state === "active",
+        )
+      : community.coverMediaId === null;
+    if (!topicIds.has(community.topicId) || !coverBelongsToActiveContribution) {
+      errors.push(
+        `Community ${community.id} has invalid topic or cover evidence.`,
+      );
+    }
+  }
+  for (const rule of manifest.communityEvidence.rules) {
+    if (!communityIds.has(rule.communityId) || rule.key.trim().length < 2) {
+      errors.push(`Community rule ${rule.id} has an invalid contract.`);
+    }
+  }
+  for (const membership of manifest.communityEvidence.memberships) {
+    const transitionValid =
+      (membership.state === "active" &&
+        membership.leftAt === null &&
+        membership.bannedAt === null) ||
+      (membership.state === "left" &&
+        membership.leftAt !== null &&
+        membership.bannedAt === null) ||
+      (membership.state === "banned" && membership.bannedAt !== null);
+    if (
+      !communityIds.has(membership.communityId) ||
+      !actorIds.has(membership.userId) ||
+      !transitionValid
+    ) {
+      errors.push(`Community membership ${membership.id} is invalid.`);
+    }
+  }
+  for (const moderator of manifest.communityEvidence.moderators) {
+    if (
+      !communityIds.has(moderator.communityId) ||
+      !actorIds.has(moderator.userId) ||
+      (moderator.grantedByUserId !== null &&
+        !actorIds.has(moderator.grantedByUserId))
+    ) {
+      errors.push(`Community moderator ${moderator.id} is invalid.`);
+    }
+  }
+  for (const contribution of manifest.communityEvidence.contributions) {
+    const entry = manifest.entries.find(
+      (candidate) => candidate.id === contribution.journalEntryId,
+    );
+    const stateValid =
+      (contribution.state === "active" &&
+        contribution.removedAt === null &&
+        contribution.removedByUserId === null) ||
+      (contribution.state === "removed" &&
+        contribution.removedAt !== null &&
+        contribution.removedByUserId !== null);
+    if (
+      !communityIds.has(contribution.communityId) ||
+      !entry ||
+      entry.ownerUserId !== contribution.contributorUserId ||
+      entry.entryScope !== "object" ||
+      entry.visibility !== "public" ||
+      entry.lifecycleState !== "active" ||
+      entry.publicGoneAt !== null ||
+      entry.publicSlug === null ||
+      entry.publishedAt === null ||
+      !stateValid
+    ) {
+      errors.push(`Community contribution ${contribution.id} is invalid.`);
+    }
+  }
+  for (const report of manifest.communityEvidence.reports) {
+    if (
+      !communityContributionIds.has(report.contributionId) ||
+      !actorIds.has(report.reporterUserId)
+    ) {
+      errors.push(`Community report ${report.id} is invalid.`);
+    }
+  }
+  for (const audit of manifest.communityEvidence.auditEvents) {
+    if (
+      !communityIds.has(audit.communityId) ||
+      !actorIds.has(audit.actorUserId) ||
+      !audit.targetId
+    ) {
+      errors.push(`Community audit event ${audit.id} is invalid.`);
+    }
+  }
+  for (const scenario of manifest.communityEvidence.scenarios) {
+    const knownRoute = manifest.communityEvidence.communities.some(
+      (community) => community.slug === scenario.communitySlug,
+    );
+    if (
+      (scenario.actorId !== null && !actorIds.has(scenario.actorId)) ||
+      (scenario.expectedStatus === 200 && !knownRoute) ||
+      (scenario.expectedStatus === 404 && knownRoute) ||
+      !scenario.path.includes(`visualCommunity=${scenario.id}`) ||
+      scenario.expectedVisibleContributionIds.length !==
+        Math.min(scenario.expectedItemCount, 12) ||
+      scenario.expectedVisibleContributionIds.some(
+        (id) => !communityContributionIds.has(id),
+      ) ||
+      scenario.expectedHiddenContributionIds.some(
+        (id) => !communityContributionIds.has(id),
+      )
+    ) {
+      errors.push(`Community scenario ${scenario.id} is invalid.`);
+    }
+  }
   checkUnique(
     errors,
     "space ids",
@@ -4326,6 +4695,38 @@ function workspaceScenarioKind(
       return "owner-workspace-partial-error";
     case "error":
       return "owner-workspace-error";
+  }
+}
+
+function communityScenarioKind(
+  state: VisualFixtureCommunityScenarioState,
+): VisualFixtureScenarioKind {
+  switch (state) {
+    case "empty":
+    case "closed-participation":
+      return "community-empty";
+    case "typical":
+    case "guest":
+    case "non-member":
+    case "member":
+    case "archived":
+      return "community-typical";
+    case "dense":
+    case "no-results":
+      return "community-dense";
+    case "loading":
+      return "community-loading";
+    case "error":
+      return "community-error";
+    case "unavailable":
+      return "community-unavailable";
+    case "moderator":
+    case "blocked":
+    case "banned":
+    case "pending-report":
+    case "removed-content":
+    case "closed-discussion":
+      return "community-safety";
   }
 }
 
@@ -6942,6 +7343,486 @@ function creationScenario(
     expectedStatus: 200,
     viewportTargets: ["desktop", "mobile-320"],
   };
+}
+
+function buildCommunityEvidence(): VisualFixtureCommunityEvidence {
+  const plantEntries = publicFeedEntriesByKind.plant ?? [];
+  const animalEntries = publicFeedEntriesByKind.animal ?? [];
+  const beeEntries = publicFeedEntriesByKind.bee_colony ?? [];
+  const typicalEntries = [
+    plantEntries[0],
+    animalEntries[0],
+    beeEntries[0],
+    plantEntries[1],
+  ].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
+  const denseEntries = [
+    ...plantEntries.slice(0, 7),
+    ...animalEntries.slice(0, 4),
+    ...beeEntries.slice(0, 4),
+  ];
+  const removedEntry = plantEntries[7];
+  if (
+    typicalEntries.length !== 4 ||
+    denseEntries.length !== 15 ||
+    !removedEntry
+  ) {
+    throw new Error("Visual community evidence is incomplete.");
+  }
+
+  const communities: readonly VisualFixtureCommunity[] = [
+    {
+      id: fixtureUuid(20, 1),
+      slug: "visual-new-community",
+      contentKey: "visual-new-community",
+      topicId: topics[6].id,
+      lifecycleState: "active",
+      participationState: "closed",
+      minimumReadyContributions: 1,
+      coverMediaId: null,
+      createdAt: timestampForIndex(801),
+    },
+    {
+      id: fixtureUuid(20, 2),
+      slug: "visual-observation-and-care",
+      contentKey: "observation-and-care",
+      topicId: topics[0].id,
+      lifecycleState: "active",
+      participationState: "open",
+      minimumReadyContributions: 1,
+      coverMediaId:
+        media.find((item) => item.entryId === typicalEntries[0].id)?.id ?? null,
+      createdAt: timestampForIndex(802),
+    },
+    {
+      id: fixtureUuid(20, 3),
+      slug: "visual-care-across-every-living-object",
+      contentKey: "visual-care-across-every-living-object",
+      topicId: topics[1].id,
+      lifecycleState: "active",
+      participationState: "open",
+      minimumReadyContributions: 1,
+      coverMediaId:
+        media.find((item) => item.entryId === denseEntries[0].id)?.id ?? null,
+      createdAt: timestampForIndex(803),
+    },
+    {
+      id: fixtureUuid(20, 4),
+      slug: "visual-archived-observations",
+      contentKey: "observation-and-care",
+      topicId: topics[2].id,
+      lifecycleState: "archived",
+      participationState: "closed",
+      minimumReadyContributions: 1,
+      coverMediaId:
+        media.find((item) => item.entryId === typicalEntries[0].id)?.id ?? null,
+      createdAt: timestampForIndex(804),
+    },
+  ];
+
+  const ruleKeys = [
+    "share-observed-evidence",
+    "protect-people-and-places",
+    "disagree-with-care",
+  ] as const;
+  const rules: VisualFixtureCommunityRule[] = communities
+    .slice(1)
+    .flatMap((community, communityIndex) =>
+      ruleKeys.map((key, index) => ({
+        id: fixtureUuid(21, communityIndex * 10 + index + 1),
+        communityId: community.id,
+        key,
+        order: index + 1,
+        state: "active" as const,
+        createdAt: timestampForIndex(810 + communityIndex * 10 + index),
+      })),
+    );
+
+  const moderatorActor = actors[7];
+  const bannedActor = actors[4];
+  const nonMemberActor = actors[5];
+  const blockedActor = actors[1];
+  const reporterActor = actors[2];
+  const typicalOwnerIds = uniqueStrings(
+    typicalEntries.map((entry) => entry.ownerUserId),
+  );
+  const denseOwnerIds = uniqueStrings(
+    denseEntries.map((entry) => entry.ownerUserId),
+  );
+  const membershipSpecs = [
+    ...typicalOwnerIds.map((userId) => ({
+      communityId: communities[1].id,
+      userId,
+      state: "active" as const,
+    })),
+    {
+      communityId: communities[1].id,
+      userId: moderatorActor.id,
+      state: "active" as const,
+    },
+    {
+      communityId: communities[1].id,
+      userId: bannedActor.id,
+      state: "banned" as const,
+    },
+    {
+      communityId: communities[1].id,
+      userId: actors[6].id,
+      state: "left" as const,
+    },
+    ...uniqueStrings([...denseOwnerIds, blockedActor.id]).map((userId) => ({
+      communityId: communities[2].id,
+      userId,
+      state: "active" as const,
+    })),
+    {
+      communityId: communities[2].id,
+      userId: moderatorActor.id,
+      state: "active" as const,
+    },
+    ...typicalOwnerIds.map((userId) => ({
+      communityId: communities[3].id,
+      userId,
+      state: "active" as const,
+    })),
+  ];
+  const memberships: readonly VisualFixtureCommunityMembership[] =
+    membershipSpecs.map((spec, index) => {
+      const transitionAt = timestampForIndex(850 + index);
+      return {
+        id: fixtureUuid(22, index + 1),
+        ...spec,
+        joinedAt: timestampForIndex(830 + index),
+        leftAt: spec.state === "left" ? transitionAt : null,
+        bannedAt: spec.state === "banned" ? transitionAt : null,
+      };
+    });
+
+  const moderators: readonly VisualFixtureCommunityModerator[] =
+    communities.map((community, index) => ({
+      id: fixtureUuid(23, index + 1),
+      communityId: community.id,
+      userId: moderatorActor.id,
+      state: "active",
+      grantedByUserId: moderatorActor.id,
+      grantedAt: timestampForIndex(870 + index),
+      revokedAt: null,
+    }));
+
+  const typicalContributions = typicalEntries.map((entry, index) =>
+    communityContribution({
+      index: index + 1,
+      communityId: communities[1].id,
+      entry,
+      discussionState: index === 1 ? "closed" : "open",
+    }),
+  );
+  const removedContribution = communityContribution({
+    index: 5,
+    communityId: communities[1].id,
+    entry: removedEntry,
+    state: "removed",
+    removedByUserId: moderatorActor.id,
+    removalReason: "off_topic",
+  });
+  const denseContributions = denseEntries.map((entry, index) =>
+    communityContribution({
+      index: 20 + index,
+      communityId: communities[2].id,
+      entry,
+      discussionState: index === 2 ? "closed" : "open",
+    }),
+  );
+  const archivedContributions = typicalEntries.map((entry, index) =>
+    communityContribution({
+      index: 40 + index,
+      communityId: communities[3].id,
+      entry,
+      discussionState: "closed",
+    }),
+  );
+  const contributions = [
+    ...typicalContributions,
+    removedContribution,
+    ...denseContributions,
+    ...archivedContributions,
+  ];
+
+  const reports: readonly VisualFixtureCommunityReport[] = [
+    {
+      id: fixtureUuid(25, 1),
+      contributionId: typicalContributions[0].id,
+      reporterUserId: reporterActor.id,
+      reason: "privacy",
+      state: "submitted",
+      resolvedByUserId: null,
+      resolvedAt: null,
+      createdAt: timestampForIndex(920),
+    },
+  ];
+  const auditEvents: readonly VisualFixtureCommunityAuditEvent[] = [
+    {
+      id: fixtureUuid(26, 1),
+      communityId: communities[1].id,
+      actorUserId: moderatorActor.id,
+      targetKind: "contribution",
+      targetId: removedContribution.id,
+      action: "remove_contribution",
+      reason: "off_topic",
+      previousState: "active",
+      newState: "removed",
+      createdAt: timestampForIndex(921),
+    },
+  ];
+
+  const typicalActiveIds = typicalContributions.map(({ id }) => id).reverse();
+  const denseActiveIds = denseContributions.map(({ id }) => id).reverse();
+  const archivedActiveIds = archivedContributions.map(({ id }) => id).reverse();
+  const blockedHiddenIds = denseContributions
+    .filter((contribution) => contribution.contributorUserId === actors[0].id)
+    .map(({ id }) => id);
+  const scenarios: readonly VisualFixtureCommunityScenario[] = [
+    communityScenario("empty", "empty", communities[0], null, "guest", [], {
+      moderationOutcome: "closed-participation",
+    }),
+    communityScenario(
+      "typical",
+      "typical",
+      communities[1],
+      null,
+      "guest",
+      typicalActiveIds,
+      { hiddenIds: [removedContribution.id] },
+    ),
+    communityScenario(
+      "dense",
+      "dense",
+      communities[2],
+      null,
+      "guest",
+      denseActiveIds,
+      { hasNextPage: true },
+    ),
+    communityScenario(
+      "guest",
+      "guest",
+      communities[1],
+      null,
+      "guest",
+      [typicalContributions[1].id],
+      { query: "kind=animal" },
+    ),
+    communityScenario(
+      "non-member",
+      "non-member",
+      communities[1],
+      nonMemberActor.id,
+      "non-member",
+      typicalActiveIds,
+    ),
+    communityScenario(
+      "member",
+      "member",
+      communities[1],
+      typicalEntries[0].ownerUserId,
+      "member",
+      typicalActiveIds,
+      { membershipState: "active" },
+    ),
+    communityScenario(
+      "moderator",
+      "moderator",
+      communities[1],
+      moderatorActor.id,
+      "moderator",
+      typicalActiveIds,
+      { membershipState: "active", moderationOutcome: "queue-visible" },
+    ),
+    communityScenario(
+      "blocked",
+      "blocked",
+      communities[2],
+      blockedActor.id,
+      "blocked-member",
+      denseActiveIds.filter((id) => !blockedHiddenIds.includes(id)),
+      {
+        hiddenIds: blockedHiddenIds,
+        membershipState: "active",
+        moderationOutcome: "blocked-authors-hidden",
+      },
+    ),
+    communityScenario(
+      "banned",
+      "banned",
+      communities[1],
+      bannedActor.id,
+      "banned-member",
+      typicalActiveIds,
+      { membershipState: "banned", moderationOutcome: "mutations-denied" },
+    ),
+    communityScenario(
+      "pending-report",
+      "pending-report",
+      communities[1],
+      reporterActor.id,
+      "member",
+      typicalActiveIds,
+      { membershipState: "active", moderationOutcome: "report-submitted" },
+    ),
+    communityScenario(
+      "removed-content",
+      "removed-content",
+      communities[1],
+      moderatorActor.id,
+      "moderator",
+      typicalActiveIds,
+      {
+        hiddenIds: [removedContribution.id],
+        membershipState: "active",
+        moderationOutcome: "removed-from-feed",
+      },
+    ),
+    communityScenario(
+      "archived",
+      "archived",
+      communities[3],
+      typicalEntries[0].ownerUserId,
+      "member",
+      archivedActiveIds,
+      {
+        membershipState: "active",
+        moderationOutcome: "archived-read-only",
+      },
+    ),
+    communityScenario(
+      "closed-discussion",
+      "closed-discussion",
+      communities[1],
+      moderatorActor.id,
+      "moderator",
+      typicalActiveIds,
+      { membershipState: "active", moderationOutcome: "discussion-closed" },
+    ),
+    communityScenario(
+      "closed-participation",
+      "closed-participation",
+      communities[0],
+      nonMemberActor.id,
+      "non-member",
+      [],
+      { moderationOutcome: "contributions-disabled" },
+    ),
+    communityScenario(
+      "no-results",
+      "no-results",
+      communities[2],
+      null,
+      "guest",
+      [],
+      { query: "q=no-such-observation" },
+    ),
+    communityScenario("loading", "loading", communities[2], null, "guest", []),
+    communityScenario("error", "error", communities[2], null, "guest", []),
+    communityScenario(
+      "unavailable",
+      "unavailable",
+      {
+        ...communities[0],
+        slug: "visual-community-unavailable",
+      },
+      null,
+      "guest",
+      [],
+      { expectedStatus: 404 },
+    ),
+  ];
+
+  return {
+    pageSize: 12,
+    actorRoles: {
+      memberActorId: typicalEntries[0].ownerUserId,
+      nonMemberActorId: nonMemberActor.id,
+      moderatorActorId: moderatorActor.id,
+      blockedMemberActorId: blockedActor.id,
+      bannedMemberActorId: bannedActor.id,
+      reporterActorId: reporterActor.id,
+    },
+    communities,
+    rules,
+    memberships,
+    moderators,
+    contributions,
+    reports,
+    auditEvents,
+    scenarios,
+  };
+}
+
+function communityContribution(input: {
+  index: number;
+  communityId: string;
+  entry: VisualFixtureEntry;
+  state?: "active" | "removed";
+  discussionState?: "open" | "closed";
+  removedByUserId?: string;
+  removalReason?: VisualFixtureCommunityContribution["removalReason"];
+}): VisualFixtureCommunityContribution {
+  const state = input.state ?? "active";
+  const addedAt = timestampForIndex(880 + input.index);
+  return {
+    id: fixtureUuid(24, input.index),
+    communityId: input.communityId,
+    journalEntryId: input.entry.id,
+    contributorUserId: input.entry.ownerUserId,
+    state,
+    discussionState: input.discussionState ?? "open",
+    removedByUserId:
+      state === "removed" ? (input.removedByUserId ?? actors[7].id) : null,
+    removalReason:
+      state === "removed" ? (input.removalReason ?? "rule_violation") : null,
+    addedAt,
+    removedAt: state === "removed" ? timestampForIndex(919) : null,
+  };
+}
+
+function communityScenario(
+  suffix: string,
+  state: VisualFixtureCommunityScenarioState,
+  community: Pick<VisualFixtureCommunity, "slug">,
+  actorId: string | null,
+  actorRole: VisualFixtureCommunityScenario["actorRole"],
+  visibleIds: readonly string[],
+  options: {
+    hiddenIds?: readonly string[];
+    hasNextPage?: boolean;
+    membershipState?: "active" | "left" | "banned" | null;
+    moderationOutcome?: string;
+    query?: string;
+    expectedStatus?: 200 | 404;
+  } = {},
+): VisualFixtureCommunityScenario {
+  const id = `ove184-community-${suffix}`;
+  const query = new URLSearchParams(options.query ?? "");
+  query.set("visualCommunity", id);
+  return {
+    id,
+    state,
+    actorRole,
+    actorId,
+    communitySlug: community.slug,
+    path: `/communities/${community.slug}?${query.toString()}`,
+    expectedStatus: options.expectedStatus ?? 200,
+    expectedVisibleContributionIds: visibleIds.slice(0, 12),
+    expectedHiddenContributionIds: options.hiddenIds ?? [],
+    expectedItemCount: visibleIds.length,
+    expectedHasNextPage: options.hasNextPage ?? false,
+    expectedMembershipState: options.membershipState ?? null,
+    expectedModerationOutcome: options.moderationOutcome ?? "none",
+    viewportTargets: ["desktop", "mobile-320"],
+  };
+}
+
+function uniqueStrings(values: readonly string[]) {
+  return [...new Set(values)];
 }
 
 function scenario(

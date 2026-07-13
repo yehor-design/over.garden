@@ -45,7 +45,7 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v7",
+      version: "ove187-v8",
       expected: {
         actors: 8,
         profiles: 8,
@@ -70,6 +70,13 @@ describe("/__visual-fixtures", () => {
         topics: 7,
         topicSignals: 40,
         media: 16,
+        communities: 4,
+        communityRules: 9,
+        communityMemberships: 14,
+        communityModerators: 4,
+        communityContributions: 24,
+        communityReports: 1,
+        communityAuditEvents: 1,
       },
       actual: {
         actors: 8,
@@ -95,6 +102,13 @@ describe("/__visual-fixtures", () => {
         topics: 7,
         topicSignals: 40,
         media: 16,
+        communities: 4,
+        communityRules: 9,
+        communityMemberships: 14,
+        communityModerators: 4,
+        communityContributions: 24,
+        communityReports: 1,
+        communityAuditEvents: 1,
       },
       seeded: true,
     });
@@ -166,6 +180,13 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("Notification receipts");
     expect(html).toContain("Wishlist items");
     expect(html).toContain("Social return-loop V2 evidence");
+    expect(html).toContain("Moderated-community V2 evidence");
+    expect(html).toContain("Community contributions");
+    expect(html).toContain("pending report");
+    expect(html).toContain("Open community state");
+    expect(html).toContain(
+      'href="/communities/visual-care-across-every-living-object?visualCommunity=ove184-community-dense"',
+    );
     expect(html).toContain("comments page plus one");
     expect(html).toContain("notifications grouped");
     expect(html).toContain("bookmarks dense");
