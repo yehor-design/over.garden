@@ -56,6 +56,18 @@ DNS and edge invariants:
   - `www.over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
 - Because the app DNS records are DNS-only, app HTML responses should not carry Cloudflare cache status. If the app domain is proxied later, any HTML `cf-cache-status: HIT` is a launch blocker and must be fixed before pilot traffic resumes.
 
+Domain reputation incident (OVE-188):
+
+- Status: `open` as of 2026-07-13. This is a protective-DNS reputation incident, not an authoritative DNS drift.
+- Direct Cloudflare authoritative queries return `76.76.21.21` for both `over.garden` and `www.over.garden`. Cloudflare, Cloudflare Security, Google Public DNS, and Quad9 agree.
+- The default resolver on an A1 Bulgaria connection replaces both answers with an A1 Net Protect sinkhole. Cisco Umbrella independently replaces both answers with its security sinkhole; Cisco Talos reports `Untrusted` reputation with `Phishing` and `Spam` threat categories.
+- Bounded safety evidence on 2026-07-13: Google Safe Browsing reported no unsafe content; the observed VirusTotal domain analysis reported zero detections and ESET clean; canonical TLS, Vercel routes, exact deployed commit, production logs, and current application asset origins showed no compromise indicator. This supports a false-positive hypothesis but does not waive repeat checks after deployments.
+- Reproduce without logging private resolver/client data: `cd apps/web && pnpm smoke:protective-dns`. Exit `2` means at least one checked resolver disagrees with authoritative DNS; exit `1` means the check itself failed; exit `0` means all automated resolver comparisons pass.
+- Required upstream remediation without A1 support: request global false-positive review from Whalebone at `domain-report@whalebone.io` and security reclassification through the authenticated Cisco Talos Reputation Center. ESET escalation is not currently justified because the observed ESET result is clean.
+- User-side custom DNS, VPN, hosts overrides, temporary passthrough, allowlisting, or changing the domain are workarounds and do not close the incident.
+- Completion gate: the default A1 resolver and Cisco Umbrella return the authoritative address, and a normal A1-connected browser loads canonical HTTPS without a bypass. Keep OVE-188 out of `Done` while this gate fails.
+- Full redacted process and evidence rules: `docs/DOMAIN_REPUTATION_INCIDENT_RUNBOOK.md`.
+
 Dashboard links:
 
 - Cloudflare zone DNS: `https://dash.cloudflare.com/cb03b15042adc74edfe2d8201636300a/over.garden/dns/records`

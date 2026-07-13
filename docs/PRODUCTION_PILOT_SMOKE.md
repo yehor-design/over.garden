@@ -177,6 +177,18 @@ Canonical smoke bar:
 - Public journal and variety HTML stay `noindex, nofollow`, location-safe, and free of quarantine/original keys. The public derivative host class may be recorded as `media.over.garden`; derivative keys, signed URLs, raw journal text, EXIF, precise location, cookies, invite links, and emails must not be recorded.
 - Worker/search proof from OVE-36/OVE-39 remains valid unless worker, search, job payload, or worker env changes. A fresh live worker/search round-trip is required after such changes.
 
+### Protective DNS reputation gate (OVE-188)
+
+Run from `apps/web`:
+
+```bash
+pnpm smoke:protective-dns
+```
+
+The command compares the system resolver and major protective/public resolvers with authoritative Cloudflare DNS without printing the system resolver or visitor address. Exit `0` means automated resolver parity, exit `1` means the check could not complete, and exit `2` means at least one resolver replaced or disagreed with the authoritative answer.
+
+An automated pass is necessary but not sufficient. Before pilot traffic is considered reachable on A1, a normal browser on the default A1 connection must load `https://over.garden` and `https://www.over.garden` without custom DNS, VPN, hosts override, provider bypass, or a temporary allow action. Follow `docs/DOMAIN_REPUTATION_INCIDENT_RUNBOOK.md`; do not treat a user workaround as production closure.
+
 ## OVE-91 HTML Cache Guardrail
 
 Goal: pilot evidence should never be polluted by stale or cross-user HTML from an intermediary cache. During the closed pilot, public SSR routes are intentionally treated as no-store too, even when they are crawler-visible, because H1/H4/H6 learning is more important than caching public shells before real UGC depth exists.
