@@ -65,7 +65,7 @@ describe("/{locale}/bookmarks", () => {
       userId: "00000000-0000-4000-8000-000000000001",
       sessionId: "session-1",
     });
-    expect(html).toContain("Bookmarks");
+    expect(html).toContain("Закладки");
     expect(html).toContain("First ripe cluster");
     expect(html).toContain("/journal/first-ripe-cluster");
     expect(html).toContain("/api/engagement/bookmarks");
@@ -84,6 +84,6 @@ describe("/{locale}/bookmarks", () => {
     );
 
     expect(mocks.listEngagementBookmarks).not.toHaveBeenCalled();
-    expect(html).toContain("Sign in to open your bookmarks.");
+    expect(html).toContain("Увійдіть, щоб відкрити закладки.");
   });
 });

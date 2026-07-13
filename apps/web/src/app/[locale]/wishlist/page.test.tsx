@@ -94,7 +94,7 @@ describe("/{locale}/wishlist", () => {
       }),
     );
 
-    expect(html).toContain("Sign in to open your wishlist.");
+    expect(html).toContain("Увійдіть, щоб відкрити список бажань.");
     expect(mocks.listWishlistShelfItems).not.toHaveBeenCalled();
   });
 
@@ -110,15 +110,15 @@ describe("/{locale}/wishlist", () => {
       userId: "00000000-0000-4000-8000-000000000001",
       sessionId: "session-1",
     });
-    expect(html).toContain("Wishlist");
+    expect(html).toContain("Хочу спробувати");
     expect(html).toContain("Pomidor Cheri");
-    expect(html).toContain("Try later");
+    expect(html).toContain("Спробувати пізніше");
     expect(html).toContain("/variety/pomidor-cheri-0000000101");
     expect(html).toContain(
       "/garden?catalog=pomidor-cheri-0000000101&amp;source=public-variety",
     );
-    expect(html).toContain("Start growing");
-    expect(html).toContain("Remove");
+    expect(html).toContain("Почати вести журнал");
+    expect(html).toContain("Прибрати");
     expect(html).not.toMatch(
       /00000000-0000|session-1|private journal|journal body|plant_objects|quarantine|derivative|media key|ip_address|user_agent|email|phone|coordinates|invite|token/i,
     );

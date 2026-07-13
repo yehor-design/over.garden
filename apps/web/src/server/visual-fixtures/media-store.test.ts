@@ -81,11 +81,19 @@ describe("visual fixture media store", () => {
     const expectedQuarantineKeys = VISUAL_FIXTURE_MANIFEST.media.map(
       ({ quarantineKey }) => quarantineKey,
     );
-    const retiredDerivativeKeys = VISUAL_FIXTURE_MANIFEST.media.map(
-      ({ fileName }) => `visual-fixtures/ove187-v5/${fileName}`,
+    const retiredNamespaces = [
+      "visual-fixtures/ove187-v5",
+      "visual-fixtures/ove187-v6",
+    ];
+    const retiredDerivativeKeys = retiredNamespaces.flatMap((namespace) =>
+      VISUAL_FIXTURE_MANIFEST.media.map(
+        ({ fileName }) => `${namespace}/${fileName}`,
+      ),
     );
-    const retiredQuarantineKeys = VISUAL_FIXTURE_MANIFEST.media.map(
-      ({ fileName }) => `visual-fixtures/ove187-v5/quarantine/${fileName}`,
+    const retiredQuarantineKeys = retiredNamespaces.flatMap((namespace) =>
+      VISUAL_FIXTURE_MANIFEST.media.map(
+        ({ fileName }) => `${namespace}/quarantine/${fileName}`,
+      ),
     );
     expect(deleted).toBe(
       expectedDerivativeKeys.length +
@@ -103,8 +111,8 @@ describe("visual fixture media store", () => {
     ]);
     expect(
       [...store.publicDeletes, ...store.quarantineDeletes].every((key) =>
-        [VISUAL_FIXTURE_NAMESPACE, "visual-fixtures/ove187-v5"].some(
-          (namespace) => key.startsWith(`${namespace}/`),
+        [VISUAL_FIXTURE_NAMESPACE, ...retiredNamespaces].some((namespace) =>
+          key.startsWith(`${namespace}/`),
         ),
       ),
     ).toBe(true);

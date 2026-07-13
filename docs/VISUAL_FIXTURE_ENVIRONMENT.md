@@ -1,8 +1,8 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended through OVE-182
-Manifest version: `ove187-v6`
-Manifest SHA-256: `1eaa3393048b3cae39dcb9e0bebaaca10636374af44d5ab2b47c54efe4186a6f`
+Status: implemented by OVE-187, extended through OVE-183
+Manifest version: `ove187-v7`
+Manifest SHA-256: `451a036ed0fe07a71d580503fc0f67a59c3b5397f6fba48d6e9fd44435582ba4`
 
 ## Purpose
 
@@ -16,6 +16,11 @@ The manifest owns exactly:
 - 8 synthetic users and 8 matching profile rows, including public, private,
   removed, empty, and maximum-copy states;
 - 9 deterministic profile follows, 1 active block, and 1 submitted report;
+- 24 comments/replies across active, deleted, reported, removed, nested,
+  long-copy, blocked-author, exact-page, and page-plus-one states;
+- 16 private bookmarks, 8 direct object/topic follows, 2 comment reports,
+  2 opaque notification receipts, 2 explicit notification preference rows,
+  and 14 wishlist items;
 - 10 spaces, including five owned by the dense mixed gardener, one empty-owner
   recovery case, and one sparse-owner case;
 - 30 living objects: 18 plants, 8 animals, and 4 bee colonies;
@@ -78,6 +83,13 @@ The manifest owns exactly:
   signs a short-lived invite for deterministic pending-identity and provenance
   rows, then traverses the real fragment handoff, encrypted HttpOnly cookie,
   clean claim route, and intent-aware sign-in boundary.
+- 15 social return-loop scenarios covering guest-open zero/one/exact-page/
+  page-plus-one/nested/moderated/blocked/closed comments, a 12-plus-one
+  chronological followed feed, dense/individual/grouped/empty notifications,
+  block-filtered dense/empty bookmarks, and a 12-plus-one wishlist. They bind
+  ordinary, reporter, reported, blocked, moderator-safe, dense, and empty
+  actors to exact routes, IDs, counts, pagination states, and reversible or
+  final transitions.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,
@@ -131,9 +143,13 @@ environment checks pass. The guard refuses:
 No browser query parameter, cookie, header, API mutation, or production fallback
 can enable the fixture environment. Inside an already enabled, isolated fixture
 environment, the `__visualFeed`, `__visualObjects`, `__visualJournals`,
-`__visualKnowledge`, and `visualWorkspace` query parameters may select read-only
-rendering states or the isolated fixture corpus for screenshot evidence; the
-same parameters are ignored everywhere else.
+`__visualKnowledge`, `visualWorkspace`, and `visualSocial` query parameters may
+select rendering states or the isolated fixture corpus for screenshot
+evidence. `visualSocial` may also bind a manifest-owned synthetic actor to a
+mutation only inside the already enabled local/Preview fixture environment;
+guest scenarios, mismatched surfaces/IDs, conflicting fields, canonical
+origins, and Production all fail closed. The parameters are ignored everywhere
+else.
 Proxy evaluates the pure environment contract and returns a hard HTTP `404`
 before App Router whenever the contract fails; the fixture index repeats the
 guard before dynamic database/storage imports as defense in depth. The enabled
@@ -144,7 +160,7 @@ memberships, topics, entries, claimable lineage edges and pending identities,
 objects, catalog names, catalog identities, spaces, profiles, and actors in
 reverse foreign-key order and deletes
 only the manifest's storage keys under
-`visual-fixtures/ove187-v6/` plus the exact retired v5 filenames during
+`visual-fixtures/ove187-v7/` plus the exact retired v5 and v6 filenames during
 migration cleanup. It does not use wildcard or prefix database
 deletes. It does not write analytics, notifications, jobs, or search documents.
 The content contains no precise coordinates; spaces and objects use only the
@@ -211,7 +227,11 @@ sentinels. It also executes all 17 journal-entry V2 contracts against the
 production public lookup and separately scoped owner-control query. Proof is
 extended by all 10 profile contracts against public, owner-preview, and
 relationship production loaders, plus all 8 owner workspace contracts against
-the scoped inventory, space, object, and recent-continuity queries. Proof is
+the scoped inventory, space, object, and recent-continuity queries. All 15
+social return-loop contracts run through the canonical engagement, followed
+feed, notification, bookmark, and wishlist repositories; they fail on hidden
+item leakage, pagination drift, unsafe media, copied private payload text, or a
+non-grouping grouped state. Proof is
 explicitly scoped to manifest IDs because reset
 deliberately preserves unrelated local rows. The three fixture CLI commands
 run with the React Server condition because these proofs deliberately reuse
@@ -250,6 +270,13 @@ The expected final counts are:
   "profileFollows": 9,
   "profileBlocks": 1,
   "profileReports": 1,
+  "engagementComments": 24,
+  "engagementBookmarks": 16,
+  "engagementFollows": 8,
+  "engagementCommentReports": 2,
+  "notificationReceipts": 2,
+  "notificationPreferences": 2,
+  "wishlistItems": 14,
   "spaces": 10,
   "catalogItems": 19,
   "catalogNames": 29,
@@ -263,6 +290,22 @@ The expected final counts are:
   "media": 16
 }
 ```
+
+The social evidence routes bind exact guest or synthetic-actor states without
+creating shared credentials. Representative routes are:
+
+```text
+/journal/{fixture-slug}?visualSocial=comments-page-plus-one
+/journal/{fixture-slug}?visualSocial=comments-blocked
+/feed?visualSocial=feed-dense
+/notifications?visualSocial=notifications-grouped&view=grouped
+/bookmarks?visualSocial=bookmarks-dense
+/wishlist?visualSocial=wishlist-dense
+```
+
+Use `/__visual-fixtures` for the exact manifest-owned journal slugs and all 15
+links. The social verifier executes the same repositories as these pages, not
+mock projections.
 
 The fixture index links every public-feed state. The normal topic routes use
 real rows and repository filters:

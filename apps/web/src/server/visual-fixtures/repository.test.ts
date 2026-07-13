@@ -67,6 +67,13 @@ describe("visual fixture repository query contracts", () => {
       "profile_follows",
       "profile_blocks",
       "profile_reports",
+      "engagement_comments",
+      "engagement_bookmarks",
+      "engagement_follows",
+      "engagement_comment_reports",
+      "notification_receipts",
+      "notification_preferences",
+      "wishlist_items",
     ]);
 
     const compiled = queries.map(({ query }) => query.compile());
@@ -79,6 +86,13 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('insert into "profile_follows"');
     expect(sql).toContain('insert into "profile_blocks"');
     expect(sql).toContain('insert into "profile_reports"');
+    expect(sql).toContain('insert into "engagement_comments"');
+    expect(sql).toContain('insert into "engagement_bookmarks"');
+    expect(sql).toContain('insert into "engagement_follows"');
+    expect(sql).toContain('insert into "engagement_comment_reports"');
+    expect(sql).toContain('insert into "notification_receipts"');
+    expect(sql).toContain('insert into "notification_preferences"');
+    expect(sql).toContain('insert into "wishlist_items"');
     expect(sql).toContain('insert into "spaces"');
     expect(sql).toContain('insert into "catalog_items"');
     expect(sql).toContain('insert into "catalog_item_names"');
@@ -95,7 +109,7 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('on conflict ("id") do update');
     expect(sql).toContain('on conflict ("user_id") do update');
     expect(sql).not.toMatch(
-      /analytics_events|job_queue|meilisearch|search_documents|notifications/i,
+      /analytics_events|job_queue|meilisearch|search_documents|email_delivery|push_payload/i,
     );
 
     const parameters = compiled.flatMap((item) => item.parameters);
@@ -124,6 +138,13 @@ describe("visual fixture repository query contracts", () => {
     );
 
     expect(queries.map(({ label }) => label)).toEqual([
+      "notification_receipts",
+      "notification_preferences",
+      "engagement_comment_reports",
+      "engagement_comments",
+      "engagement_bookmarks",
+      "engagement_follows",
+      "wishlist_items",
       "profile_reports",
       "profile_blocks",
       "profile_follows",
@@ -147,6 +168,17 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).not.toMatch(/\blike\b|analytics_events|job_queue/i);
 
     const expectedIdGroups = [
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.notificationReceipts.map(
+        ({ id }) => id,
+      ),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.notificationPreferences.map(
+        ({ ownerUserId }) => ownerUserId,
+      ),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.commentReports.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.comments.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.bookmarks.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.follows.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.socialEvidence.wishlistItems.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.profileReports.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.profileBlocks.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.profileFollows.map(({ id }) => id),
@@ -186,6 +218,13 @@ describe("visual fixture repository query contracts", () => {
       "profileFollows",
       "profileBlocks",
       "profileReports",
+      "engagementComments",
+      "engagementBookmarks",
+      "engagementFollows",
+      "engagementCommentReports",
+      "notificationReceipts",
+      "notificationPreferences",
+      "wishlistItems",
       "spaces",
       "catalogItems",
       "catalogNames",
@@ -198,7 +237,7 @@ describe("visual fixture repository query contracts", () => {
       "topicSignals",
       "media",
     ]);
-    expect(sql.match(/count\(\*\)/g)).toHaveLength(16);
+    expect(sql.match(/count\(\*\)/g)).toHaveLength(23);
     expect(sql).toContain('from "catalog_items"');
     expect(sql).toContain('from "catalog_item_names"');
     expect(sql).toContain('from "user_public_profiles"');
@@ -207,8 +246,11 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('from "journal_entry_object_mentions"');
     expect(sql).toContain('from "lineage_pending_source_identities"');
     expect(sql).toContain('from "lineage_provenance_edges"');
+    expect(sql).toContain('from "engagement_comments"');
+    expect(sql).toContain('from "notification_receipts"');
+    expect(sql).toContain('from "wishlist_items"');
     expect(sql).not.toMatch(
-      /email|body|owner_user_id|quarantine_key|derivative_key/i,
+      /email|body|quarantine_key|derivative_key|comment_text/i,
     );
   });
 });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, Tags } from "lucide-react";
+import type { ReactNode } from "react";
 
 import {
   PublicKnowledgeEvidenceList,
@@ -26,6 +27,7 @@ export function PublicKnowledgeTopicPage({
   evidence,
   evidenceState,
   visualCorpus = false,
+  actions,
 }: {
   locale: PublicLocale;
   copy: PublicKnowledgeCopy;
@@ -33,6 +35,7 @@ export function PublicKnowledgeTopicPage({
   evidence: PublicKnowledgeEvidence;
   evidenceState: PublicKnowledgeEvidenceState;
   visualCorpus?: boolean;
+  actions?: ReactNode;
 }) {
   const contextModules = topicContextModules(copy, topic, evidence);
 
@@ -72,6 +75,9 @@ export function PublicKnowledgeTopicPage({
               ? copy.topicIndexable
               : copy.topicNoindex}
           </p>
+          {actions ? (
+            <div className="flex flex-wrap gap-2">{actions}</div>
+          ) : null}
         </div>
       </header>
 

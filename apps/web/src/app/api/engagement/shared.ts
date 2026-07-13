@@ -46,7 +46,7 @@ export function redirectToEngagementAuth(
   request: Request,
   target: EngagementTarget,
   returnTo: string,
-  intent: "bookmark" | "comment",
+  intent: "bookmark" | "comment" | "follow" | "report" | "block",
   control?: string,
 ) {
   const normalizedReturnTo = returnTo || engagementTargetPath(target);

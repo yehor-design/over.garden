@@ -12,6 +12,7 @@ import {
 } from "@/lib/public-localization";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
+import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   addCatalogPublicSlugToWishlist,
   removeCatalogPublicSlugFromWishlist,
@@ -58,7 +59,8 @@ export async function removeCatalogPublicSlugFromWishlistAction(
   );
   const locale = normalizeLocaleField(formData.get("locale"));
   const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const visualActor = resolveVisualSocialMutationActor(formData, ["wishlist"]);
+  const userId = visualActor?.actorId ?? session?.user?.id;
 
   if (!userId) {
     return redirect(
@@ -66,11 +68,22 @@ export async function removeCatalogPublicSlugFromWishlistAction(
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
+  const scope = scopedToUser(
+    userId,
+    visualActor ? null : getSessionId(session),
+  );
   await removeCatalogPublicSlugFromWishlist(scope, publicSlug);
 
   revalidateWishlistPaths(locale, publicSlug);
-  redirect(withStatusParam(localizedPath(locale, "/wishlist"), "removed"));
+  const returnTo = localizedPath(locale, "/wishlist");
+  redirect(
+    withStatusParam(
+      visualActor
+        ? `${returnTo}?visualSocial=${encodeURIComponent(visualActor.scenario.id)}`
+        : returnTo,
+      "removed",
+    ),
+  );
 }
 
 function revalidateWishlistPaths(

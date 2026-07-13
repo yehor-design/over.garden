@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
@@ -115,6 +115,11 @@ export async function blockProfile(
 
     await buildUpsertProfileBlockQuery(trx, scope, target.userId).execute();
     await buildRemoveBlockedProfileFollowsQuery(
+      trx,
+      scope,
+      target.userId,
+    ).execute();
+    await buildRemoveBlockedObjectFollowsQuery(
       trx,
       scope,
       target.userId,
@@ -306,6 +311,44 @@ export function buildRemoveBlockedProfileFollowsQuery(
         eb.and([
           eb("follower_user_id", "=", targetUserId),
           eb("target_user_id", "=", scope.userId),
+        ]),
+      ]),
+    )
+    .returning("id");
+}
+
+export function buildRemoveBlockedObjectFollowsQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  targetUserId: string,
+) {
+  return executor
+    .updateTable("engagement_follows")
+    .set({ follow_state: "removed", updated_at: new Date() })
+    .where("target_kind", "=", "lineage_object")
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb("follower_user_id", "=", scope.userId),
+          eb(
+            "target_ref",
+            "in",
+            executor
+              .selectFrom("plant_objects")
+              .select(sql<string>`plant_objects.id::text`.as("id"))
+              .where("owner_user_id", "=", targetUserId),
+          ),
+        ]),
+        eb.and([
+          eb("follower_user_id", "=", targetUserId),
+          eb(
+            "target_ref",
+            "in",
+            executor
+              .selectFrom("plant_objects")
+              .select(sql<string>`plant_objects.id::text`.as("id"))
+              .where("owner_user_id", "=", scope.userId),
+          ),
         ]),
       ]),
     )

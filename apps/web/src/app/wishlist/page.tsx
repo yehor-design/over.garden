@@ -10,8 +10,15 @@ export function generateMetadata() {
   });
 }
 
-export default async function WishlistRoute() {
+interface WishlistRouteProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function WishlistRoute({
+  searchParams,
+}: WishlistRouteProps) {
   return LocalizedWishlistRoute({
     params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE }),
+    searchParams,
   });
 }

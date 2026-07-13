@@ -16,8 +16,8 @@ import {
 
 describe("visual fixture manifest", () => {
   it("contains the complete deterministic baseline", () => {
-    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v6");
-    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v6");
+    expect(VISUAL_FIXTURE_MANIFEST_VERSION).toBe("ove187-v7");
+    expect(VISUAL_FIXTURE_NAMESPACE).toBe("visual-fixtures/ove187-v7");
     expect(VISUAL_FIXTURE_MANIFEST.actors).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profiles).toHaveLength(8);
     expect(VISUAL_FIXTURE_MANIFEST.profileFollows).toHaveLength(9);
@@ -44,6 +44,88 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.journalEntryEvidence.scenarios.length,
     ).toBeGreaterThanOrEqual(15);
     expect(validateVisualFixtureManifest(VISUAL_FIXTURE_MANIFEST)).toEqual([]);
+  });
+
+  it("backs OVE-183 with multi-actor social utility and safety states", () => {
+    const evidence = VISUAL_FIXTURE_MANIFEST.socialEvidence;
+    const states = new Set(
+      evidence.scenarios.map((scenario) => scenario.state),
+    );
+    const actorBookmarkCounts = Object.groupBy(
+      evidence.bookmarks.filter((bookmark) => bookmark.state === "active"),
+      (bookmark) => bookmark.ownerUserId,
+    );
+    const actorWishlistCounts = Object.groupBy(
+      evidence.wishlistItems,
+      (item) => item.ownerUserId,
+    );
+
+    expect(evidence.commentPageSize).toBe(8);
+    expect(evidence.feedPageSize).toBe(12);
+    expect(evidence.notificationPageSize).toBe(12);
+    expect(evidence.bookmarkPageSize).toBe(12);
+    expect(evidence.comments).toHaveLength(24);
+    expect(evidence.follows).toHaveLength(8);
+    expect(evidence.bookmarks).toHaveLength(16);
+    expect(evidence.commentReports).toHaveLength(2);
+    expect(evidence.notificationReceipts).toHaveLength(2);
+    expect(evidence.notificationPreferences).toHaveLength(2);
+    expect(evidence.wishlistItems).toHaveLength(14);
+    expect(states).toEqual(
+      new Set([
+        "zero",
+        "one",
+        "page",
+        "page-plus-one",
+        "nested-long-moderated",
+        "closed",
+        "blocked",
+        "dense",
+        "grouped",
+        "individual",
+        "empty",
+      ]),
+    );
+    expect(
+      evidence.comments.filter((comment) => comment.parentCommentId),
+    ).toHaveLength(4);
+    expect(
+      evidence.comments.some((comment) => comment.body.length === 600),
+    ).toBe(true);
+    expect(new Set(evidence.comments.map((comment) => comment.state))).toEqual(
+      new Set(["active", "deleted", "reported", "removed"]),
+    );
+    expect(
+      actorBookmarkCounts[evidence.actorRoles.denseCollectionActorId]?.length,
+    ).toBeGreaterThan(12);
+    expect(
+      actorWishlistCounts[evidence.actorRoles.denseCollectionActorId]?.length,
+    ).toBeGreaterThan(12);
+    expect(
+      actorBookmarkCounts[evidence.actorRoles.emptyCollectionActorId],
+    ).toBeUndefined();
+    expect(evidence.transitions.map((transition) => transition.action)).toEqual(
+      expect.arrayContaining([
+        "comment",
+        "reply",
+        "follow",
+        "bookmark",
+        "delete",
+        "report",
+        "block",
+        "notification_receipt",
+      ]),
+    );
+    expect(
+      evidence.scenarios.every(
+        (scenario) =>
+          scenario.viewportTargets[0] === "desktop" &&
+          scenario.viewportTargets[1] === "mobile-320",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(evidence)).not.toMatch(
+      /@visual-fixtures\.invalid|password|latitude|longitude|coordinates|quarantine|push_payload|email_payload/i,
+    );
   });
 
   it("backs OVE-182 with complete first-object and next-update form states", () => {
@@ -871,7 +953,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v6\/[a-z0-9-]+\.png$/,
+        /^visual-fixtures\/ove187-v7\/[a-z0-9-]+\.png$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

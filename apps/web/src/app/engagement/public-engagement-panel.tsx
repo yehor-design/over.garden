@@ -1,4 +1,18 @@
-import { Bookmark, Heart, MessageCircle, Reply } from "lucide-react";
+import { randomUUID } from "node:crypto";
+
+import {
+  Ban,
+  Bookmark,
+  Flag,
+  Heart,
+  MessageCircle,
+  MoreHorizontal,
+  Reply,
+  Trash2,
+  UserMinus,
+  UserPlus,
+} from "lucide-react";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
@@ -16,6 +30,7 @@ import {
 import type {
   EngagementTarget,
   PublicEngagementSummary,
+  PublicEngagementComment,
 } from "@/server/engagement-repository";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 
@@ -30,6 +45,59 @@ interface PublicEngagementPanelProps {
   resumeControl?: string | null;
 }
 
+export function EngagementFollowControl({
+  isAuthenticated,
+  locale,
+  target,
+  returnTo,
+  following = false,
+  resumeAction = null,
+}: {
+  isAuthenticated: boolean;
+  locale: InterfaceLocale;
+  target: EngagementTarget & { kind: "lineage_object" | "topic" };
+  returnTo: string;
+  following?: boolean;
+  resumeAction?: AuthIntentAction | null;
+}) {
+  const copy = getPublicSurfaceCopy(locale);
+  const label = following ? copy.engagement.unfollow : copy.engagement.follow;
+  const icon = following ? (
+    <UserMinus className="size-4" />
+  ) : (
+    <UserPlus className="size-4" />
+  );
+
+  if (!isAuthenticated) {
+    return (
+      <AuthIntentTrigger
+        action="follow"
+        returnTo={returnTo}
+        target={engagementAuthIntentTarget(target)}
+        label={label}
+        icon={icon}
+        variant="outline"
+      />
+    );
+  }
+
+  return (
+    <EngagementButtonForm
+      action="/api/engagement/follows"
+      intentAction="follow"
+      target={target}
+      returnTo={returnTo}
+      label={label}
+      icon={icon}
+      variant="outline"
+      stateName="followState"
+      stateValue={following ? "removed" : "active"}
+      pressed={following}
+      autoFocus={resumeAction === "follow"}
+    />
+  );
+}
+
 export function PublicEngagementPanel({
   isAuthenticated,
   locale,
@@ -42,6 +110,7 @@ export function PublicEngagementPanel({
 }: PublicEngagementPanelProps) {
   const copy = getPublicSurfaceCopy(locale);
   const intentTarget = engagementAuthIntentTarget(target);
+  const threads = buildCommentThreads(summary.comments);
 
   return (
     <section
@@ -62,11 +131,14 @@ export function PublicEngagementPanel({
             <EngagementButtonForm
               action="/api/engagement/bookmarks"
               intentAction="bookmark"
-              target={target}
+              target={{ kind: target.kind, ref: target.ref }}
               returnTo={returnTo}
               label={copy.engagement.bookmark}
               icon={<Bookmark className="size-4" />}
               variant="outline"
+              stateName="bookmarkState"
+              stateValue={summary.viewerBookmarked ? "removed" : "active"}
+              pressed={Boolean(summary.viewerBookmarked)}
               autoFocus={resumeAction === "bookmark"}
             />
           ) : (
@@ -79,6 +151,16 @@ export function PublicEngagementPanel({
               variant="outline"
             />
           )}
+          {target.kind === "lineage_object" || target.kind === "topic" ? (
+            <EngagementFollowControl
+              isAuthenticated={isAuthenticated}
+              locale={locale}
+              target={{ kind: target.kind, ref: target.ref }}
+              returnTo={returnTo}
+              following={summary.viewerFollowing}
+              resumeAction={resumeControl ? null : resumeAction}
+            />
+          ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
           {formatPublicCount(locale, "like", summary.activeLikeCount)}
@@ -91,9 +173,13 @@ export function PublicEngagementPanel({
         </p>
       ) : null}
 
-      {resumeAction === "comment" || resumeAction === "bookmark" ? (
+      {resumeAction === "comment" ||
+      resumeAction === "bookmark" ||
+      resumeAction === "follow" ||
+      resumeAction === "report" ||
+      resumeAction === "block" ? (
         <p className="text-sm font-medium text-foreground" role="status">
-          Sign-in complete. Confirm the action below to continue.
+          {copy.engagement.signInComplete}
         </p>
       ) : null}
 
@@ -104,6 +190,7 @@ export function PublicEngagementPanel({
           className="grid gap-3"
         >
           <EngagementTargetFields target={target} returnTo={returnTo} />
+          <input type="hidden" name="clientMutationId" value={randomUUID()} />
           <label className="grid gap-2 text-sm font-medium text-foreground">
             {copy.engagement.comment}
             <textarea
@@ -135,42 +222,62 @@ export function PublicEngagementPanel({
         />
       )}
 
-      {summary.comments.length === 0 ? (
+      {threads.length === 0 ? (
         <p className="text-sm text-muted-foreground">
           {copy.engagement.noComments}
         </p>
       ) : (
         <ol className="grid gap-3">
-          {summary.comments.map((comment) => {
+          {threads.map(({ root, replies }) => {
             const replyControl = createAuthIntentControlRef(
               "reply",
-              comment.replyToken,
+              root.replyToken,
             );
             const isResumedReply =
               resumeAction === "comment" && resumeControl === replyControl;
 
             return (
               <li
-                key={comment.key}
+                key={root.key}
                 className="grid gap-3 rounded-lg border border-border p-3"
               >
-                <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-                  <p className="text-sm font-medium text-foreground">
-                    {comment.authorLabel}
-                  </p>
-                  <time className="text-xs text-muted-foreground">
-                    {formatDate(comment.createdAt, locale)}
-                  </time>
-                </div>
-                {comment.parentReplyToken ? (
-                  <p className="text-xs text-muted-foreground">
-                    {copy.engagement.reply}
-                  </p>
-                ) : null}
+                <CommentHeader comment={root} locale={locale} />
                 <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
-                  {comment.body}
+                  {root.body}
                 </p>
-                {isAuthenticated ? (
+                <CommentActions
+                  comment={root}
+                  isAuthenticated={isAuthenticated}
+                  locale={locale}
+                  target={target}
+                  returnTo={returnTo}
+                  resumeAction={resumeAction}
+                  resumeControl={resumeControl}
+                />
+
+                {replies.length > 0 ? (
+                  <ol className="grid gap-3 border-l border-border pl-4">
+                    {replies.map((reply) => (
+                      <li key={reply.key} className="grid gap-2">
+                        <CommentHeader comment={reply} locale={locale} />
+                        <p className="text-sm leading-6 whitespace-pre-wrap text-foreground">
+                          {reply.body}
+                        </p>
+                        <CommentActions
+                          comment={reply}
+                          isAuthenticated={isAuthenticated}
+                          locale={locale}
+                          target={target}
+                          returnTo={returnTo}
+                          resumeAction={resumeAction}
+                          resumeControl={resumeControl}
+                        />
+                      </li>
+                    ))}
+                  </ol>
+                ) : null}
+
+                {isActiveComment(root) && isAuthenticated ? (
                   <form
                     method="post"
                     action="/api/engagement/comments"
@@ -183,7 +290,12 @@ export function PublicEngagementPanel({
                     <input
                       type="hidden"
                       name="parentCommentId"
-                      value={comment.replyToken}
+                      value={root.replyToken}
+                    />
+                    <input
+                      type="hidden"
+                      name="clientMutationId"
+                      value={randomUUID()}
                     />
                     <label className="grid gap-2 text-sm font-medium text-foreground">
                       {copy.engagement.reply}
@@ -214,7 +326,7 @@ export function PublicEngagementPanel({
                       {copy.engagement.reply}
                     </button>
                   </form>
-                ) : (
+                ) : isActiveComment(root) ? (
                   <AuthIntentTrigger
                     action="comment"
                     returnTo={returnTo}
@@ -226,13 +338,204 @@ export function PublicEngagementPanel({
                     size="sm"
                     className="w-fit"
                   />
-                )}
+                ) : null}
               </li>
             );
           })}
         </ol>
       )}
+
+      {summary.hasMoreComments && summary.nextCommentCursor ? (
+        <Link
+          href={appendCommentCursor(returnTo, summary.nextCommentCursor)}
+          className={buttonVariants({
+            variant: "outline",
+            className: "w-fit",
+          })}
+        >
+          <MessageCircle className="size-4" />
+          {copy.engagement.showMoreComments}
+        </Link>
+      ) : null}
     </section>
+  );
+}
+
+function CommentHeader({
+  comment,
+  locale,
+}: {
+  comment: PublicEngagementComment;
+  locale: InterfaceLocale;
+}) {
+  return (
+    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+      <p className="text-sm font-medium text-foreground">
+        {comment.authorHandle ? (
+          <Link href={`/@${comment.authorHandle}`}>{comment.authorLabel}</Link>
+        ) : (
+          comment.authorLabel
+        )}
+      </p>
+      <time className="text-xs text-muted-foreground">
+        {formatDate(comment.createdAt, locale)}
+      </time>
+    </div>
+  );
+}
+
+function CommentActions({
+  comment,
+  isAuthenticated,
+  locale,
+  target,
+  returnTo,
+  resumeAction,
+  resumeControl,
+}: {
+  comment: PublicEngagementComment;
+  isAuthenticated: boolean;
+  locale: InterfaceLocale;
+  target: EngagementTarget;
+  returnTo: string;
+  resumeAction: AuthIntentAction | null;
+  resumeControl: string | null;
+}) {
+  if (comment.state && comment.state !== "active") return null;
+  const copy = getPublicSurfaceCopy(locale);
+
+  if (comment.isOwn && isAuthenticated) {
+    return (
+      <form method="post" action="/api/engagement/comments/delete">
+        <EngagementTargetFields target={target} returnTo={returnTo} />
+        <input type="hidden" name="commentId" value={comment.replyToken} />
+        <button
+          type="submit"
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          <Trash2 className="size-4" />
+          {copy.engagement.deleteComment}
+        </button>
+      </form>
+    );
+  }
+
+  const reportControl = createAuthIntentControlRef(
+    "report",
+    comment.replyToken,
+  );
+  const blockControl = createAuthIntentControlRef("block", comment.replyToken);
+  const resumed =
+    (resumeAction === "report" && resumeControl === reportControl) ||
+    (resumeAction === "block" && resumeControl === blockControl);
+
+  return (
+    <details
+      open={resumed}
+      className="relative w-fit"
+      id={
+        resumed && resumeAction
+          ? buildAuthIntentAnchor(resumeAction, resumeControl)
+          : undefined
+      }
+    >
+      <summary
+        title={copy.engagement.moreActions}
+        className={buttonVariants({
+          variant: "ghost",
+          size: "icon",
+          className: "cursor-pointer list-none",
+        })}
+      >
+        <MoreHorizontal className="size-4" />
+        <span className="sr-only">{copy.engagement.moreActions}</span>
+      </summary>
+      <div className="absolute top-full left-0 z-20 mt-1 grid min-w-56 gap-2 border border-border bg-popover p-2 text-popover-foreground shadow-md">
+        {isAuthenticated ? (
+          <>
+            <form
+              method="post"
+              action="/api/engagement/comments/report"
+              className="grid gap-2"
+            >
+              <EngagementTargetFields target={target} returnTo={returnTo} />
+              <input
+                type="hidden"
+                name="commentId"
+                value={comment.replyToken}
+              />
+              <select
+                name="reason"
+                defaultValue="other"
+                aria-label={copy.engagement.reportComment}
+                className="h-9 border border-border bg-background px-2 text-sm"
+              >
+                <option value="spam">
+                  {copy.engagement.reportReasons.spam}
+                </option>
+                <option value="harassment">
+                  {copy.engagement.reportReasons.harassment}
+                </option>
+                <option value="privacy">
+                  {copy.engagement.reportReasons.privacy}
+                </option>
+                <option value="misinformation">
+                  {copy.engagement.reportReasons.misinformation}
+                </option>
+                <option value="other">
+                  {copy.engagement.reportReasons.other}
+                </option>
+              </select>
+              <button
+                type="submit"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                <Flag className="size-4" />
+                {copy.engagement.reportComment}
+              </button>
+            </form>
+            <form method="post" action="/api/engagement/comments/block">
+              <EngagementTargetFields target={target} returnTo={returnTo} />
+              <input
+                type="hidden"
+                name="commentId"
+                value={comment.replyToken}
+              />
+              <button
+                type="submit"
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
+              >
+                <Ban className="size-4" />
+                {copy.engagement.blockAuthor}
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            <AuthIntentTrigger
+              action="report"
+              returnTo={returnTo}
+              target={engagementAuthIntentTarget(target)}
+              control={reportControl}
+              label={copy.engagement.reportComment}
+              icon={<Flag className="size-4" />}
+              variant="ghost"
+              size="sm"
+            />
+            <AuthIntentTrigger
+              action="block"
+              returnTo={returnTo}
+              target={engagementAuthIntentTarget(target)}
+              control={blockControl}
+              label={copy.engagement.blockAuthor}
+              icon={<Ban className="size-4" />}
+              variant="ghost"
+              size="sm"
+            />
+          </>
+        )}
+      </div>
+    </details>
   );
 }
 
@@ -245,6 +548,9 @@ function EngagementButtonForm({
   variant,
   intentAction,
   autoFocus = false,
+  stateName,
+  stateValue,
+  pressed,
 }: {
   action: string;
   target: EngagementTarget;
@@ -254,15 +560,28 @@ function EngagementButtonForm({
   variant?: "outline";
   intentAction?: AuthIntentAction;
   autoFocus?: boolean;
+  stateName?: string;
+  stateValue?: string;
+  pressed?: boolean;
 }) {
   return (
     <form method="post" action={action}>
       <EngagementTargetFields target={target} returnTo={returnTo} />
+      {stateName && stateValue ? (
+        <input type="hidden" name={stateName} value={stateValue} />
+      ) : null}
       <button
-        id={intentAction === "bookmark" ? "engagement-bookmark" : undefined}
+        id={
+          intentAction === "bookmark"
+            ? "engagement-bookmark"
+            : intentAction === "follow" && autoFocus
+              ? "lineage-follow"
+              : undefined
+        }
         data-auth-intent-control={intentAction}
         autoFocus={autoFocus}
         type="submit"
+        aria-pressed={pressed}
         className={buttonVariants({
           variant,
           className: "self-start",
@@ -303,6 +622,32 @@ function EngagementTargetFields({
   );
 }
 
+function buildCommentThreads(comments: PublicEngagementComment[]) {
+  const roots = comments.filter((comment) => !comment.parentReplyToken);
+  const repliesByRoot = new Map<string, PublicEngagementComment[]>();
+  for (const comment of comments) {
+    if (!comment.parentReplyToken) continue;
+    const replies = repliesByRoot.get(comment.parentReplyToken) ?? [];
+    replies.push(comment);
+    repliesByRoot.set(comment.parentReplyToken, replies);
+  }
+  return roots.map((root) => ({
+    root,
+    replies: repliesByRoot.get(root.replyToken) ?? [],
+  }));
+}
+
+function isActiveComment(comment: PublicEngagementComment) {
+  return !comment.state || comment.state === "active";
+}
+
+function appendCommentCursor(returnTo: string, cursor: string) {
+  const url = new URL(returnTo, "https://over.garden");
+  url.searchParams.set("cursor", cursor);
+  url.hash = "comments";
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 function engagementStatusMessage(status: string, locale: InterfaceLocale) {
   const copy = getPublicSurfaceCopy(locale);
 
@@ -319,6 +664,18 @@ function engagementStatusMessage(status: string, locale: InterfaceLocale) {
       return copy.engagement.bookmarkRemoved;
     case "commented":
       return copy.engagement.commented;
+    case "followed":
+      return copy.engagement.followed;
+    case "unfollowed":
+      return copy.engagement.unfollowed;
+    case "comment-deleted":
+      return copy.engagement.commentDeleted;
+    case "comment-reported":
+      return copy.engagement.commentReported;
+    case "comment-author-blocked":
+      return copy.engagement.commentAuthorBlocked;
+    case "comment-unavailable":
+      return copy.engagement.commentUnavailable;
     default:
       return "";
   }

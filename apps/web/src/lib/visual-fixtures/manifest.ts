@@ -7,7 +7,7 @@ import {
   type AuthIntentTarget,
 } from "@/lib/auth/auth-intent-contract";
 
-export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v6";
+export const VISUAL_FIXTURE_MANIFEST_VERSION = "ove187-v7";
 export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
@@ -116,6 +116,11 @@ export type VisualFixtureScenarioKind =
   | "owner-workspace-loading"
   | "owner-workspace-partial-error"
   | "owner-workspace-error"
+  | "social-comments"
+  | "social-followed-feed"
+  | "social-notifications"
+  | "social-bookmarks"
+  | "social-wishlist"
   | "media-gallery";
 export type VisualFixtureStateKind =
   | "empty-space"
@@ -692,6 +697,155 @@ export interface VisualFixtureLineageEvidence {
   claimEdgeId: string;
 }
 
+export type VisualFixtureSocialTargetKind =
+  | "journal_entry"
+  | "lineage_object"
+  | "variety"
+  | "topic";
+
+export interface VisualFixtureEngagementComment {
+  id: string;
+  targetKind: VisualFixtureSocialTargetKind;
+  targetRef: string;
+  authorUserId: string;
+  parentCommentId: string | null;
+  clientMutationId: string;
+  body: string;
+  state: "active" | "deleted" | "reported" | "removed";
+  createdAt: string;
+}
+
+export interface VisualFixtureEngagementBookmark {
+  id: string;
+  ownerUserId: string;
+  targetKind: VisualFixtureSocialTargetKind;
+  targetRef: string;
+  state: "active" | "removed";
+  createdAt: string;
+}
+
+export interface VisualFixtureEngagementFollow {
+  id: string;
+  followerUserId: string;
+  targetKind: "lineage_object" | "topic";
+  targetRef: string;
+  state: "active" | "removed";
+  createdAt: string;
+}
+
+export interface VisualFixtureEngagementCommentReport {
+  id: string;
+  reporterUserId: string;
+  commentId: string;
+  reason: "spam" | "harassment" | "privacy" | "misinformation" | "other";
+  state: "submitted" | "reviewed" | "dismissed" | "actioned";
+  createdAt: string;
+}
+
+export interface VisualFixtureNotificationReceipt {
+  id: string;
+  ownerUserId: string;
+  eventKey: string;
+  state: "unread" | "read" | "dismissed";
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface VisualFixtureNotificationPreference {
+  ownerUserId: string;
+  comments: boolean;
+  replies: boolean;
+  follows: boolean;
+  mentions: boolean;
+  claims: boolean;
+  system: boolean;
+  createdAt: string;
+}
+
+export interface VisualFixtureWishlistItem {
+  id: string;
+  ownerUserId: string;
+  catalogItemId: string;
+  sourceSurface: "catalog_item" | "public_variety";
+  createdAt: string;
+}
+
+export type VisualFixtureSocialSurface =
+  | "journal"
+  | "feed"
+  | "notifications"
+  | "bookmarks"
+  | "wishlist";
+
+export interface VisualFixtureSocialScenario {
+  id: string;
+  surface: VisualFixtureSocialSurface;
+  state:
+    | "zero"
+    | "one"
+    | "page"
+    | "page-plus-one"
+    | "nested-long-moderated"
+    | "closed"
+    | "blocked"
+    | "dense"
+    | "grouped"
+    | "individual"
+    | "empty";
+  actorId: string | null;
+  path: string;
+  targetKind: VisualFixtureSocialTargetKind | null;
+  targetRef: string | null;
+  expectedVisibleIds: readonly string[];
+  expectedHiddenIds: readonly string[];
+  expectedItemCount: number;
+  expectedHasNextPage: boolean;
+  expectedStatus: 200 | 410;
+  viewportTargets: readonly ("desktop" | "mobile-320")[];
+}
+
+export interface VisualFixtureSocialTransition {
+  action:
+    | "comment"
+    | "reply"
+    | "follow"
+    | "bookmark"
+    | "delete"
+    | "report"
+    | "block"
+    | "notification_receipt";
+  actorId: string;
+  targetId: string;
+  from: string;
+  to: string;
+  finality: "reversible" | "actor-final" | "moderator-final";
+}
+
+export interface VisualFixtureSocialEvidence {
+  commentPageSize: 8;
+  feedPageSize: 12;
+  notificationPageSize: 12;
+  bookmarkPageSize: 12;
+  actorRoles: {
+    ordinaryReaderActorId: string;
+    reporterActorId: string;
+    reportedActorId: string;
+    blockedActorId: string;
+    moderatorSafeActorId: string;
+    emptyCollectionActorId: string;
+    denseCollectionActorId: string;
+  };
+  comments: readonly VisualFixtureEngagementComment[];
+  bookmarks: readonly VisualFixtureEngagementBookmark[];
+  follows: readonly VisualFixtureEngagementFollow[];
+  commentReports: readonly VisualFixtureEngagementCommentReport[];
+  notificationReceipts: readonly VisualFixtureNotificationReceipt[];
+  notificationPreferences: readonly VisualFixtureNotificationPreference[];
+  wishlistItems: readonly VisualFixtureWishlistItem[];
+  scenarios: readonly VisualFixtureSocialScenario[];
+  transitions: readonly VisualFixtureSocialTransition[];
+}
+
 export interface VisualFixtureStateCoverage {
   id: string;
   kind: VisualFixtureStateKind;
@@ -729,6 +883,7 @@ export interface VisualFixtureManifest {
   creationEvidence: VisualFixtureCreationEvidence;
   lineageEvidence: VisualFixtureLineageEvidence;
   intentEvidence: VisualFixtureIntentEvidence;
+  socialEvidence: VisualFixtureSocialEvidence;
   stateCoverage: readonly VisualFixtureStateCoverage[];
   scenarios: readonly VisualFixtureScenario[];
 }
@@ -2046,6 +2201,7 @@ const knowledgeEvidence = buildKnowledgeEvidence();
 const passportEvidence = buildPassportEvidence();
 const journalEntryEvidence = buildJournalEntryEvidence();
 const profileEvidence = buildProfileEvidence();
+const socialEvidence = buildSocialEvidence();
 
 const emptySpaces = spaces.filter(
   (space) => !objects.some((object) => object.spaceId === space.id),
@@ -2977,6 +3133,7 @@ export const VISUAL_FIXTURE_MANIFEST: VisualFixtureManifest = {
   creationEvidence,
   lineageEvidence,
   intentEvidence,
+  socialEvidence,
   stateCoverage,
   scenarios,
 };
@@ -3009,6 +3166,48 @@ export function validateVisualFixtureManifest(
   checkCount(errors, "media", manifest.media.length, 16);
   checkCount(errors, "topics", manifest.topics.length, 7);
   checkCount(errors, "topic signals", manifest.topicSignals.length, 40);
+  checkCount(
+    errors,
+    "social comments",
+    manifest.socialEvidence.comments.length,
+    24,
+  );
+  checkCount(
+    errors,
+    "social bookmarks",
+    manifest.socialEvidence.bookmarks.length,
+    16,
+  );
+  checkCount(
+    errors,
+    "social follows",
+    manifest.socialEvidence.follows.length,
+    8,
+  );
+  checkCount(
+    errors,
+    "social comment reports",
+    manifest.socialEvidence.commentReports.length,
+    2,
+  );
+  checkCount(
+    errors,
+    "social notification receipts",
+    manifest.socialEvidence.notificationReceipts.length,
+    2,
+  );
+  checkCount(
+    errors,
+    "social notification preferences",
+    manifest.socialEvidence.notificationPreferences.length,
+    2,
+  );
+  checkCount(
+    errors,
+    "social wishlist items",
+    manifest.socialEvidence.wishlistItems.length,
+    14,
+  );
   checkCount(
     errors,
     "journal creation scenarios",
@@ -3084,6 +3283,92 @@ export function validateVisualFixtureManifest(
     manifest.profileReports.map(
       (report) => `${report.reporterUserId}:${report.targetUserId}`,
     ),
+  );
+  checkUnique(
+    errors,
+    "social comment ids",
+    manifest.socialEvidence.comments.map((comment) => comment.id),
+  );
+  checkUnique(
+    errors,
+    "social comment mutations",
+    manifest.socialEvidence.comments.map(
+      (comment) => `${comment.authorUserId}:${comment.clientMutationId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social bookmark ids",
+    manifest.socialEvidence.bookmarks.map((bookmark) => bookmark.id),
+  );
+  checkUnique(
+    errors,
+    "social bookmark owners and targets",
+    manifest.socialEvidence.bookmarks.map(
+      (bookmark) =>
+        `${bookmark.ownerUserId}:${bookmark.targetKind}:${bookmark.targetRef}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social follow ids",
+    manifest.socialEvidence.follows.map((follow) => follow.id),
+  );
+  checkUnique(
+    errors,
+    "social follow actors and targets",
+    manifest.socialEvidence.follows.map(
+      (follow) =>
+        `${follow.followerUserId}:${follow.targetKind}:${follow.targetRef}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social comment report ids",
+    manifest.socialEvidence.commentReports.map((report) => report.id),
+  );
+  checkUnique(
+    errors,
+    "social comment report actors and targets",
+    manifest.socialEvidence.commentReports.map(
+      (report) => `${report.reporterUserId}:${report.commentId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social notification receipt ids",
+    manifest.socialEvidence.notificationReceipts.map((receipt) => receipt.id),
+  );
+  checkUnique(
+    errors,
+    "social notification receipt owners and events",
+    manifest.socialEvidence.notificationReceipts.map(
+      (receipt) => `${receipt.ownerUserId}:${receipt.eventKey}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social notification preference owners",
+    manifest.socialEvidence.notificationPreferences.map(
+      (preference) => preference.ownerUserId,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social wishlist ids",
+    manifest.socialEvidence.wishlistItems.map((item) => item.id),
+  );
+  checkUnique(
+    errors,
+    "social wishlist owners and catalog items",
+    manifest.socialEvidence.wishlistItems.map(
+      (item) => `${item.ownerUserId}:${item.catalogItemId}`,
+    ),
+  );
+  checkUnique(
+    errors,
+    "social scenario ids",
+    manifest.socialEvidence.scenarios.map((scenario) => scenario.id),
   );
   checkUnique(
     errors,
@@ -3351,6 +3636,101 @@ export function validateVisualFixtureManifest(
       report.reporterUserId === report.targetUserId
     ) {
       errors.push(`Profile report ${report.id} has invalid actors.`);
+    }
+  }
+  const socialCommentIds = new Set(
+    manifest.socialEvidence.comments.map((comment) => comment.id),
+  );
+  const socialTargetExists = (
+    kind: VisualFixtureSocialTargetKind,
+    ref: string,
+  ) => {
+    if (kind === "journal_entry") {
+      return manifest.entries.some((entry) => entry.publicSlug === ref);
+    }
+    if (kind === "lineage_object") return objectIds.has(ref);
+    if (kind === "variety") {
+      return manifest.catalogItems.some((item) => item.publicSlug === ref);
+    }
+    return manifest.topics.some((topic) => topic.slug === ref);
+  };
+  for (const comment of manifest.socialEvidence.comments) {
+    if (
+      !actorIds.has(comment.authorUserId) ||
+      !socialTargetExists(comment.targetKind, comment.targetRef) ||
+      (comment.parentCommentId !== null &&
+        !socialCommentIds.has(comment.parentCommentId)) ||
+      comment.body.trim().length < 1 ||
+      comment.body.length > 600
+    ) {
+      errors.push(`Social comment ${comment.id} has an invalid contract.`);
+    }
+  }
+  for (const bookmark of manifest.socialEvidence.bookmarks) {
+    if (
+      !actorIds.has(bookmark.ownerUserId) ||
+      !socialTargetExists(bookmark.targetKind, bookmark.targetRef)
+    ) {
+      errors.push(`Social bookmark ${bookmark.id} has an invalid contract.`);
+    }
+  }
+  for (const follow of manifest.socialEvidence.follows) {
+    if (
+      !actorIds.has(follow.followerUserId) ||
+      !socialTargetExists(follow.targetKind, follow.targetRef)
+    ) {
+      errors.push(`Social follow ${follow.id} has an invalid contract.`);
+    }
+  }
+  for (const report of manifest.socialEvidence.commentReports) {
+    if (
+      !actorIds.has(report.reporterUserId) ||
+      !socialCommentIds.has(report.commentId)
+    ) {
+      errors.push(
+        `Social comment report ${report.id} has an invalid contract.`,
+      );
+    }
+  }
+  for (const receipt of manifest.socialEvidence.notificationReceipts) {
+    if (
+      !actorIds.has(receipt.ownerUserId) ||
+      !/^[a-f0-9]{32}$/.test(receipt.eventKey) ||
+      (receipt.state === "read") !== Boolean(receipt.readAt)
+    ) {
+      errors.push(`Social notification receipt ${receipt.id} is invalid.`);
+    }
+  }
+  for (const preference of manifest.socialEvidence.notificationPreferences) {
+    if (!actorIds.has(preference.ownerUserId)) {
+      errors.push(
+        `Social notification preference ${preference.ownerUserId} is invalid.`,
+      );
+    }
+  }
+  for (const item of manifest.socialEvidence.wishlistItems) {
+    if (
+      !actorIds.has(item.ownerUserId) ||
+      !catalogItemIds.has(item.catalogItemId)
+    ) {
+      errors.push(`Social wishlist item ${item.id} has an invalid contract.`);
+    }
+  }
+  for (const scenario of manifest.socialEvidence.scenarios) {
+    if (
+      (scenario.actorId !== null && !actorIds.has(scenario.actorId)) ||
+      (scenario.targetKind !== null &&
+        (!scenario.targetRef ||
+          !socialTargetExists(scenario.targetKind, scenario.targetRef))) ||
+      !scenario.path.includes(`visualSocial=${scenario.id}`) ||
+      scenario.expectedItemCount !== scenario.expectedVisibleIds.length
+    ) {
+      errors.push(`Social scenario ${scenario.id} has an invalid contract.`);
+    }
+  }
+  for (const transition of manifest.socialEvidence.transitions) {
+    if (!actorIds.has(transition.actorId) || !transition.targetId) {
+      errors.push(`Social transition ${transition.action} has invalid actors.`);
     }
   }
   for (const scenario of manifest.profileEvidence.scenarios) {
@@ -4367,6 +4747,795 @@ function buildProfileEvidence(): VisualFixtureProfileEvidence {
       }),
     ],
   };
+}
+
+function buildSocialEvidence(): VisualFixtureSocialEvidence {
+  const publicActiveEntries = entries.filter(
+    (entry) =>
+      entry.visibility === "public" &&
+      entry.lifecycleState === "active" &&
+      entry.publicGoneAt === null &&
+      entry.publicSlug !== null &&
+      entry.publishedAt !== null,
+  );
+  const ownerEntries = publicActiveEntries.filter(
+    (entry) => entry.ownerUserId === actors[0].id,
+  );
+  const followedEntries = publicActiveEntries
+    .filter((entry) => entry.ownerUserId === actors[2].id)
+    .sort(compareFeedEntries);
+  const blockedEntry = publicActiveEntries.find(
+    (entry) => entry.ownerUserId === actors[1].id,
+  );
+  const closedEntry = entries.find(
+    (entry) => entry.publicGoneAt !== null && entry.publicSlug !== null,
+  );
+  const objectForActor = (actor: VisualFixtureActor, offset = 0) =>
+    objects.filter((object) => object.ownerUserId === actor.id)[offset];
+  const ownerObject = objectForActor(actors[0]);
+  const followedObject = objectForActor(actors[2]);
+  const followedObjectRemoved = objectForActor(actors[2], 1);
+  const blockedObject = objectForActor(actors[1]);
+  const beekeeperObject = objectForActor(actors[3]);
+  const unavailableObject = objects.find(
+    (object) =>
+      !entries.some(
+        (entry) =>
+          entry.objectId === object.id &&
+          entry.visibility === "public" &&
+          entry.lifecycleState === "active" &&
+          entry.publicGoneAt === null,
+      ),
+  );
+
+  if (
+    ownerEntries.length < 5 ||
+    followedEntries.length <= 12 ||
+    !blockedEntry ||
+    !closedEntry ||
+    !ownerObject ||
+    !followedObject ||
+    !followedObjectRemoved ||
+    !blockedObject ||
+    !beekeeperObject ||
+    !unavailableObject ||
+    topics.length < 2
+  ) {
+    throw new Error(
+      "Visual fixture social evidence prerequisites are incomplete.",
+    );
+  }
+
+  const zeroTarget = ownerEntries[0];
+  const oneTarget = ownerEntries[1];
+  const pageTarget = ownerEntries[2];
+  const denseTarget = ownerEntries[3];
+  const comments: VisualFixtureEngagementComment[] = [];
+  const addComment = (
+    index: number,
+    targetRef: string,
+    author: VisualFixtureActor,
+    state: VisualFixtureEngagementComment["state"] = "active",
+    parentCommentId: string | null = null,
+    body = `Synthetic discussion observation ${String(index).padStart(2, "0")}.`,
+  ) => {
+    const comment: VisualFixtureEngagementComment = {
+      id: fixtureUuid(21, index),
+      targetKind: "journal_entry",
+      targetRef,
+      authorUserId: author.id,
+      parentCommentId,
+      clientMutationId: `ove183-fixture-comment-${String(index).padStart(3, "0")}`,
+      body,
+      state,
+      createdAt: timestampForIndex(800 + index),
+    };
+    comments.push(comment);
+    return comment;
+  };
+
+  const oneComment = addComment(1, oneTarget.publicSlug!, actors[2]);
+  const exactPageComments = Array.from({ length: 8 }, (_, offset) =>
+    addComment(
+      2 + offset,
+      pageTarget.publicSlug!,
+      [actors[2], actors[3], actors[4], actors[7]][offset % 4],
+    ),
+  );
+  const denseRoots = Array.from({ length: 10 }, (_, offset) => {
+    const index = 10 + offset;
+    const state =
+      index === 13
+        ? "removed"
+        : index === 16
+          ? "reported"
+          : index === 17
+            ? "deleted"
+            : "active";
+    const author =
+      index === 18
+        ? actors[1]
+        : [actors[2], actors[3], actors[4], actors[7]][offset % 4];
+    const body =
+      index === 19
+        ? "Довгий синтетичний коментар перевіряє перенесення, висоту рядка й доступність меню дій без контактних даних або приватного місця. "
+            .repeat(8)
+            .slice(0, 600)
+        : undefined;
+    return addComment(
+      index,
+      denseTarget.publicSlug!,
+      author,
+      state,
+      null,
+      body,
+    );
+  });
+  const nestedRoot = denseRoots.at(-1)!;
+  const nestedReplies = [
+    addComment(20, denseTarget.publicSlug!, actors[0], "active", nestedRoot.id),
+    addComment(21, denseTarget.publicSlug!, actors[3], "active", nestedRoot.id),
+    addComment(
+      22,
+      denseTarget.publicSlug!,
+      actors[4],
+      "removed",
+      nestedRoot.id,
+    ),
+  ];
+  const externalRoot = addComment(
+    23,
+    followedEntries[0].publicSlug!,
+    actors[0],
+  );
+  const replyNotification = addComment(
+    24,
+    followedEntries[0].publicSlug!,
+    actors[3],
+    "active",
+    externalRoot.id,
+  );
+
+  const follows: readonly VisualFixtureEngagementFollow[] = [
+    socialFollow(1, actors[0], "lineage_object", followedObject.id, "active"),
+    socialFollow(
+      2,
+      actors[0],
+      "lineage_object",
+      followedObjectRemoved.id,
+      "removed",
+    ),
+    socialFollow(3, actors[0], "lineage_object", blockedObject.id, "active"),
+    socialFollow(4, actors[0], "topic", topics[0].slug, "removed"),
+    socialFollow(5, actors[2], "topic", topics[0].slug, "active"),
+    socialFollow(6, actors[2], "lineage_object", ownerObject.id, "active"),
+    socialFollow(7, actors[3], "lineage_object", ownerObject.id, "active"),
+    socialFollow(
+      8,
+      actors[4],
+      "lineage_object",
+      unavailableObject.id,
+      "active",
+    ),
+  ];
+
+  const bookmarkTargets: Array<{
+    kind: VisualFixtureSocialTargetKind;
+    ref: string;
+  }> = [
+    ...ownerEntries.slice(0, 6).map((entry) => ({
+      kind: "journal_entry" as const,
+      ref: entry.publicSlug!,
+    })),
+    ...followedEntries.slice(0, 2).map((entry) => ({
+      kind: "journal_entry" as const,
+      ref: entry.publicSlug!,
+    })),
+    { kind: "journal_entry", ref: blockedEntry.publicSlug! },
+    { kind: "lineage_object", ref: ownerObject.id },
+    { kind: "lineage_object", ref: followedObject.id },
+    { kind: "lineage_object", ref: beekeeperObject.id },
+    { kind: "variety", ref: catalogItems[0].publicSlug },
+    { kind: "topic", ref: topics[0].slug },
+  ];
+  const bookmarks: readonly VisualFixtureEngagementBookmark[] = [
+    ...bookmarkTargets.map((target, offset) =>
+      socialBookmark(1 + offset, actors[0], target.kind, target.ref, "active"),
+    ),
+    socialBookmark(
+      30,
+      actors[0],
+      "journal_entry",
+      followedEntries[2].publicSlug!,
+      "removed",
+    ),
+    socialBookmark(
+      31,
+      actors[2],
+      "journal_entry",
+      ownerEntries[0].publicSlug!,
+      "active",
+    ),
+  ];
+
+  const selectableCatalogItems = catalogItems.filter(
+    (item) => item.status === "seeded" || item.status === "confirmed",
+  );
+  const wishlistItems: readonly VisualFixtureWishlistItem[] = [
+    ...selectableCatalogItems.slice(0, 13).map(
+      (item, offset) =>
+        ({
+          id: fixtureUuid(26, 1 + offset),
+          ownerUserId: actors[0].id,
+          catalogItemId: item.id,
+          sourceSurface: offset % 2 === 0 ? "public_variety" : "catalog_item",
+          createdAt: timestampForIndex(980 + offset),
+        }) satisfies VisualFixtureWishlistItem,
+    ),
+    {
+      id: fixtureUuid(26, 20),
+      ownerUserId: actors[2].id,
+      catalogItemId: selectableCatalogItems[13].id,
+      sourceSurface: "catalog_item",
+      createdAt: timestampForIndex(1000),
+    },
+  ];
+
+  const commentReports: readonly VisualFixtureEngagementCommentReport[] = [
+    {
+      id: fixtureUuid(24, 1),
+      reporterUserId: actors[2].id,
+      commentId: denseRoots[4].id,
+      reason: "misinformation",
+      state: "submitted",
+      createdAt: timestampForIndex(950),
+    },
+    {
+      id: fixtureUuid(24, 2),
+      reporterUserId: actors[4].id,
+      commentId: denseRoots[6].id,
+      reason: "privacy",
+      state: "reviewed",
+      createdAt: timestampForIndex(951),
+    },
+  ];
+
+  const activeInboxComments = comments
+    .filter(
+      (comment) =>
+        comment.state === "active" &&
+        comment.parentCommentId === null &&
+        ownerEntries.some((entry) => entry.publicSlug === comment.targetRef) &&
+        comment.authorUserId !== actors[0].id &&
+        comment.authorUserId !== actors[1].id,
+    )
+    .sort(
+      (left, right) =>
+        right.createdAt.localeCompare(left.createdAt) ||
+        left.id.localeCompare(right.id),
+    );
+  const objectFollowInbox = follows
+    .filter(
+      (follow) =>
+        follow.state === "active" &&
+        follow.targetKind === "lineage_object" &&
+        follow.targetRef === ownerObject.id &&
+        follow.followerUserId !== actors[1].id,
+    )
+    .map((follow) => ({
+      key: fixtureNotificationEventKey("object_follow", follow.id),
+      createdAt: follow.createdAt,
+    }));
+  const commentInbox = activeInboxComments.map((comment) => ({
+    key: fixtureNotificationEventKey("comment", comment.id),
+    createdAt: comment.createdAt,
+  }));
+  const replyInbox = [
+    {
+      key: fixtureNotificationEventKey("reply", replyNotification.id),
+      createdAt: replyNotification.createdAt,
+    },
+  ];
+  const expectedNotificationKeys = [
+    ...objectFollowInbox,
+    ...replyInbox,
+    ...commentInbox,
+  ]
+    .sort(
+      (left, right) =>
+        right.createdAt.localeCompare(left.createdAt) ||
+        left.key.localeCompare(right.key),
+    )
+    .slice(0, 12)
+    .map((event) => event.key);
+  const notificationReceipts: readonly VisualFixtureNotificationReceipt[] = [
+    {
+      id: fixtureUuid(25, 1),
+      ownerUserId: actors[0].id,
+      eventKey: expectedNotificationKeys[0],
+      state: "read",
+      readAt: timestampForIndex(970),
+      createdAt: timestampForIndex(970),
+    },
+    {
+      id: fixtureUuid(25, 2),
+      ownerUserId: actors[0].id,
+      eventKey: fixtureNotificationEventKey("comment", oneComment.id),
+      state: "dismissed",
+      readAt: null,
+      createdAt: timestampForIndex(971),
+    },
+  ];
+  const notificationPreferences: readonly VisualFixtureNotificationPreference[] =
+    [
+      {
+        ownerUserId: actors[0].id,
+        comments: true,
+        replies: true,
+        follows: true,
+        mentions: true,
+        claims: true,
+        system: true,
+        createdAt: timestampForIndex(972),
+      },
+      {
+        ownerUserId: actors[4].id,
+        comments: true,
+        replies: false,
+        follows: false,
+        mentions: false,
+        claims: false,
+        system: false,
+        createdAt: timestampForIndex(973),
+      },
+    ];
+
+  const denseVisibleRoots = denseRoots
+    .filter((comment) => comment.state !== "removed")
+    .sort(
+      (left, right) =>
+        left.createdAt.localeCompare(right.createdAt) ||
+        left.id.localeCompare(right.id),
+    )
+    .slice(0, 8);
+  const denseVisibleRootIds = new Set(
+    denseVisibleRoots.map((comment) => comment.id),
+  );
+  const denseVisibleIds = [
+    ...denseVisibleRoots.map((comment) => comment.id),
+    ...nestedReplies
+      .filter(
+        (comment) =>
+          denseVisibleRootIds.has(comment.parentCommentId!) &&
+          comment.parentCommentId === nestedRoot.id &&
+          comment.state !== "removed",
+      )
+      .map((comment) => comment.id),
+  ];
+  const blockedVisibleRoots = denseRoots
+    .filter(
+      (comment) =>
+        comment.state !== "removed" && comment.authorUserId !== actors[1].id,
+    )
+    .sort(
+      (left, right) =>
+        left.createdAt.localeCompare(right.createdAt) ||
+        left.id.localeCompare(right.id),
+    )
+    .slice(0, 8);
+  const blockedVisibleRootIds = new Set(
+    blockedVisibleRoots.map((comment) => comment.id),
+  );
+  const blockedVisibleIds = [
+    ...blockedVisibleRoots.map((comment) => comment.id),
+    ...nestedReplies
+      .filter(
+        (comment) =>
+          blockedVisibleRootIds.has(comment.parentCommentId!) &&
+          comment.parentCommentId === nestedRoot.id &&
+          comment.state !== "removed",
+      )
+      .map((comment) => comment.id),
+  ];
+  const visibleBookmarkRefs = bookmarkTargets
+    .filter((target) => target.ref !== blockedEntry.publicSlug)
+    .map((target) => target.ref);
+  const visualPath = (base: string, id: string) =>
+    `${base}${base.includes("?") ? "&" : "?"}visualSocial=${id}`;
+  const scenario = (
+    input: Omit<VisualFixtureSocialScenario, "viewportTargets">,
+  ): VisualFixtureSocialScenario => ({
+    ...input,
+    viewportTargets: ["desktop", "mobile-320"],
+  });
+
+  return {
+    commentPageSize: 8,
+    feedPageSize: 12,
+    notificationPageSize: 12,
+    bookmarkPageSize: 12,
+    actorRoles: {
+      ordinaryReaderActorId: actors[4].id,
+      reporterActorId: actors[2].id,
+      reportedActorId: actors[3].id,
+      blockedActorId: actors[1].id,
+      moderatorSafeActorId: actors[4].id,
+      emptyCollectionActorId: actors[4].id,
+      denseCollectionActorId: actors[0].id,
+    },
+    comments,
+    bookmarks,
+    follows,
+    commentReports,
+    notificationReceipts,
+    notificationPreferences,
+    wishlistItems,
+    scenarios: [
+      scenario({
+        id: "comments-zero",
+        surface: "journal",
+        state: "zero",
+        actorId: null,
+        path: visualPath(`/journal/${zeroTarget.publicSlug}`, "comments-zero"),
+        targetKind: "journal_entry",
+        targetRef: zeroTarget.publicSlug,
+        expectedVisibleIds: [],
+        expectedHiddenIds: [],
+        expectedItemCount: 0,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-one",
+        surface: "journal",
+        state: "one",
+        actorId: null,
+        path: visualPath(`/journal/${oneTarget.publicSlug}`, "comments-one"),
+        targetKind: "journal_entry",
+        targetRef: oneTarget.publicSlug,
+        expectedVisibleIds: [oneComment.id],
+        expectedHiddenIds: [],
+        expectedItemCount: 1,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-exact-page",
+        surface: "journal",
+        state: "page",
+        actorId: null,
+        path: visualPath(
+          `/journal/${pageTarget.publicSlug}`,
+          "comments-exact-page",
+        ),
+        targetKind: "journal_entry",
+        targetRef: pageTarget.publicSlug,
+        expectedVisibleIds: exactPageComments.map((comment) => comment.id),
+        expectedHiddenIds: [],
+        expectedItemCount: 8,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-page-plus-one",
+        surface: "journal",
+        state: "page-plus-one",
+        actorId: null,
+        path: visualPath(
+          `/journal/${denseTarget.publicSlug}`,
+          "comments-page-plus-one",
+        ),
+        targetKind: "journal_entry",
+        targetRef: denseTarget.publicSlug,
+        expectedVisibleIds: denseVisibleIds,
+        expectedHiddenIds: [
+          denseRoots[3].id,
+          denseRoots[9].id,
+          ...nestedReplies.map((comment) => comment.id),
+        ],
+        expectedItemCount: denseVisibleIds.length,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-dense",
+        surface: "journal",
+        state: "nested-long-moderated",
+        actorId: actors[2].id,
+        path: visualPath(
+          `/journal/${denseTarget.publicSlug}`,
+          "comments-dense",
+        ),
+        targetKind: "journal_entry",
+        targetRef: denseTarget.publicSlug,
+        expectedVisibleIds: denseVisibleIds,
+        expectedHiddenIds: [
+          denseRoots[3].id,
+          denseRoots[9].id,
+          ...nestedReplies.map((comment) => comment.id),
+        ],
+        expectedItemCount: denseVisibleIds.length,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-blocked",
+        surface: "journal",
+        state: "blocked",
+        actorId: actors[0].id,
+        path: visualPath(
+          `/journal/${denseTarget.publicSlug}`,
+          "comments-blocked",
+        ),
+        targetKind: "journal_entry",
+        targetRef: denseTarget.publicSlug,
+        expectedVisibleIds: blockedVisibleIds,
+        expectedHiddenIds: [
+          denseRoots[8].id,
+          denseRoots[3].id,
+          nestedReplies[2].id,
+        ],
+        expectedItemCount: blockedVisibleIds.length,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "comments-closed",
+        surface: "journal",
+        state: "closed",
+        actorId: actors[2].id,
+        path: visualPath(
+          `/journal/${closedEntry.publicSlug}`,
+          "comments-closed",
+        ),
+        targetKind: "journal_entry",
+        targetRef: closedEntry.publicSlug,
+        expectedVisibleIds: [],
+        expectedHiddenIds: [],
+        expectedItemCount: 0,
+        expectedHasNextPage: false,
+        expectedStatus: 410,
+      }),
+      scenario({
+        id: "feed-dense",
+        surface: "feed",
+        state: "dense",
+        actorId: actors[0].id,
+        path: "/feed?visualSocial=feed-dense",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: followedEntries
+          .slice(0, 12)
+          .map((entry) => entry.id),
+        expectedHiddenIds: publicActiveEntries
+          .filter((entry) => entry.ownerUserId === actors[1].id)
+          .map((entry) => entry.id),
+        expectedItemCount: 12,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "notifications-dense",
+        surface: "notifications",
+        state: "dense",
+        actorId: actors[0].id,
+        path: "/notifications?visualSocial=notifications-dense",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: expectedNotificationKeys,
+        expectedHiddenIds: [
+          fixtureNotificationEventKey("comment", oneComment.id),
+        ],
+        expectedItemCount: 12,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "notifications-individual",
+        surface: "notifications",
+        state: "individual",
+        actorId: actors[0].id,
+        path: "/notifications?visualSocial=notifications-individual&view=individual",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: expectedNotificationKeys,
+        expectedHiddenIds: [],
+        expectedItemCount: 12,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "notifications-grouped",
+        surface: "notifications",
+        state: "grouped",
+        actorId: actors[0].id,
+        path: "/notifications?visualSocial=notifications-grouped&view=grouped",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: expectedNotificationKeys,
+        expectedHiddenIds: [],
+        expectedItemCount: 12,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "notifications-empty",
+        surface: "notifications",
+        state: "empty",
+        actorId: actors[4].id,
+        path: "/notifications?visualSocial=notifications-empty",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: [],
+        expectedHiddenIds: expectedNotificationKeys,
+        expectedItemCount: 0,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "bookmarks-dense",
+        surface: "bookmarks",
+        state: "dense",
+        actorId: actors[0].id,
+        path: "/bookmarks?visualSocial=bookmarks-dense",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: visibleBookmarkRefs,
+        expectedHiddenIds: [blockedEntry.publicSlug!],
+        expectedItemCount: visibleBookmarkRefs.length,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "bookmarks-empty",
+        surface: "bookmarks",
+        state: "empty",
+        actorId: actors[4].id,
+        path: "/bookmarks?visualSocial=bookmarks-empty",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: [],
+        expectedHiddenIds: visibleBookmarkRefs,
+        expectedItemCount: 0,
+        expectedHasNextPage: false,
+        expectedStatus: 200,
+      }),
+      scenario({
+        id: "wishlist-dense",
+        surface: "wishlist",
+        state: "dense",
+        actorId: actors[0].id,
+        path: "/wishlist?visualSocial=wishlist-dense",
+        targetKind: null,
+        targetRef: null,
+        expectedVisibleIds: selectableCatalogItems
+          .slice(0, 13)
+          .map((item) => item.publicSlug),
+        expectedHiddenIds: [],
+        expectedItemCount: 13,
+        expectedHasNextPage: true,
+        expectedStatus: 200,
+      }),
+    ],
+    transitions: [
+      socialTransition(
+        "comment",
+        actors[4],
+        denseTarget.publicSlug!,
+        "none",
+        "active",
+        "actor-final",
+      ),
+      socialTransition(
+        "reply",
+        actors[4],
+        nestedRoot.id,
+        "none",
+        "active",
+        "actor-final",
+      ),
+      socialTransition(
+        "follow",
+        actors[0],
+        followedObject.id,
+        "removed",
+        "active",
+        "reversible",
+      ),
+      socialTransition(
+        "bookmark",
+        actors[0],
+        ownerEntries[0].publicSlug!,
+        "removed",
+        "active",
+        "reversible",
+      ),
+      socialTransition(
+        "delete",
+        actors[3],
+        denseRoots[7].id,
+        "active",
+        "deleted",
+        "actor-final",
+      ),
+      socialTransition(
+        "report",
+        actors[2],
+        denseRoots[4].id,
+        "none",
+        "submitted",
+        "actor-final",
+      ),
+      socialTransition(
+        "block",
+        actors[0],
+        actors[1].id,
+        "none",
+        "active",
+        "reversible",
+      ),
+      socialTransition(
+        "notification_receipt",
+        actors[0],
+        expectedNotificationKeys[0],
+        "unread",
+        "read",
+        "reversible",
+      ),
+    ],
+  };
+}
+
+function socialFollow(
+  index: number,
+  actor: VisualFixtureActor,
+  targetKind: VisualFixtureEngagementFollow["targetKind"],
+  targetRef: string,
+  state: VisualFixtureEngagementFollow["state"],
+): VisualFixtureEngagementFollow {
+  return {
+    id: fixtureUuid(23, index),
+    followerUserId: actor.id,
+    targetKind,
+    targetRef,
+    state,
+    createdAt: timestampForIndex(900 + index),
+  };
+}
+
+function socialBookmark(
+  index: number,
+  actor: VisualFixtureActor,
+  targetKind: VisualFixtureSocialTargetKind,
+  targetRef: string,
+  state: VisualFixtureEngagementBookmark["state"],
+): VisualFixtureEngagementBookmark {
+  return {
+    id: fixtureUuid(22, index),
+    ownerUserId: actor.id,
+    targetKind,
+    targetRef,
+    state,
+    createdAt: timestampForIndex(920 + index),
+  };
+}
+
+function socialTransition(
+  action: VisualFixtureSocialTransition["action"],
+  actor: VisualFixtureActor,
+  targetId: string,
+  from: string,
+  to: string,
+  finality: VisualFixtureSocialTransition["finality"],
+): VisualFixtureSocialTransition {
+  return { action, actorId: actor.id, targetId, from, to, finality };
+}
+
+function fixtureNotificationEventKey(kind: string, sourceId: string) {
+  return createHash("sha256")
+    .update(`overgarden-notification:${kind}:${sourceId}`)
+    .digest("hex")
+    .slice(0, 32);
 }
 
 function localizedFixtureProfilePath(actor: VisualFixtureActor) {

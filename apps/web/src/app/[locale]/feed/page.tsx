@@ -1,27 +1,36 @@
+import { ArrowRight, Leaf, UserRound } from "lucide-react";
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import {
+  MySocialLayout,
+  SocialEmptyState,
+} from "@/components/social/my-social-layout";
 import {
   buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
+  type PublicLocale,
 } from "@/lib/public-localization";
+import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
+import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import {
-  listFollowedFeedStories,
-  type FollowedFeedStory,
-  type SocialObjectReadback,
-} from "@/server/social-readback-repository";
 import { scopedToUser } from "@/server/request-scope";
+import {
+  listFollowedFeedPage,
+  type FollowedFeedItem,
+  type FollowedFeedObjectKind,
+  type FollowedFeedSource,
+} from "@/server/social-return-repository";
 import { GardenAuthPanel } from "../../garden/garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
 interface LocalizedFeedRouteProps {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({
@@ -29,7 +38,6 @@ export async function generateMetadata({
 }: LocalizedFeedRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
-
   return {
     title: "Followed feed | OverGarden",
     alternates: isPublicLocale(localeParam)
@@ -38,158 +46,286 @@ export async function generateMetadata({
           languages: buildLanguageAlternates("/feed"),
         }
       : undefined,
-    robots: {
-      index: false,
-      follow: false,
-    },
+    robots: { index: false, follow: false },
   };
 }
 
 export default async function LocalizedFollowedFeedRoute({
   params,
+  searchParams,
 }: LocalizedFeedRouteProps) {
-  const { locale: localeParam } = await params;
+  const [{ locale: localeParam }, query] = await Promise.all([
+    params,
+    searchParams ??
+      Promise.resolve({} as Record<string, string | string[] | undefined>),
+  ]);
   if (!isPublicLocale(localeParam)) notFound();
-
+  const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const visualScenario = resolveVisualSocialScenario(
+    query.visualSocial,
+    "feed",
+    process.env,
+  );
+  const userId = visualScenario?.actorId ?? session?.user?.id;
 
   if (!userId) {
     return (
-      <FeedShell locale={localeParam}>
-        <GardenAuthPanel initialMessage="Sign in to open your followed feed." />
-      </FeedShell>
+      <MySocialLayout
+        locale={localeParam}
+        active="feed"
+        title={copy.feed.title}
+        description={copy.feed.description}
+      >
+        <GardenAuthPanel initialMessage={copy.feed.signIn} />
+      </MySocialLayout>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const stories = await listFollowedFeedStories(scope);
+  const source = parseSource(firstParam(query.source));
+  const objectKind = parseObjectKind(firstParam(query.kind));
+  const page = await listFollowedFeedPage(
+    scopedToUser(userId, visualScenario ? null : getSessionId(session)),
+    {
+      source,
+      objectKind,
+      cursor: firstParam(query.cursor),
+      locale: localeParam,
+    },
+  );
 
   return (
-    <FeedShell locale={localeParam} storyCount={stories.length}>
-      {stories.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
-          Follow a lineage object from a public lineage graph to see its public
-          journal links here.
-        </p>
+    <MySocialLayout
+      locale={localeParam}
+      active="feed"
+      title={copy.feed.title}
+      description={copy.feed.description}
+      count={page.items.length}
+      controls={
+        <FeedFilters
+          locale={localeParam}
+          source={source}
+          objectKind={objectKind}
+          visualScenarioId={visualScenario?.id ?? null}
+        />
+      }
+    >
+      {page.items.length === 0 ? (
+        <SocialEmptyState>{copy.feed.empty}</SocialEmptyState>
       ) : (
-        <ol className="grid gap-3">
-          {stories.map((story) => (
-            <FollowedFeedStoryCard key={story.key} story={story} />
+        <ol className="divide-y divide-border border-y border-border">
+          {page.items.map((item, index) => (
+            <FollowedFeedCard
+              key={item.key}
+              item={item}
+              locale={localeParam}
+              eagerMedia={index < 3}
+            />
           ))}
         </ol>
       )}
-    </FeedShell>
+      {page.nextCursor ? (
+        <Link
+          href={feedHref(
+            localeParam,
+            source,
+            objectKind,
+            page.nextCursor,
+            visualScenario?.id,
+          )}
+          className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium text-foreground hover:bg-muted"
+        >
+          {copy.feed.more}
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
+      ) : null}
+    </MySocialLayout>
   );
 }
 
-function FeedShell({
+function FeedFilters({
   locale,
-  storyCount,
-  children,
+  source,
+  objectKind,
+  visualScenarioId,
 }: {
-  locale: "uk" | "bg" | "ru";
-  storyCount?: number;
-  children: ReactNode;
+  locale: PublicLocale;
+  source: FollowedFeedSource;
+  objectKind: FollowedFeedObjectKind;
+  visualScenarioId: string | null;
 }) {
-  return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/garden"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Garden
-          </Link>
-          <Link
-            href={localizedPath(locale, "/notifications")}
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Notifications
-          </Link>
-        </div>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Followed feed
-          </h1>
-          {typeof storyCount === "number" ? (
-            <p className="text-sm text-muted-foreground">
-              {storyCount} public journal link{storyCount === 1 ? "" : "s"}
-            </p>
-          ) : null}
-        </div>
-      </header>
-
-      {children}
-    </main>
-  );
-}
-
-function FollowedFeedStoryCard({ story }: { story: FollowedFeedStory }) {
-  return (
-    <li>
-      <Link
-        href={story.href}
-        className="grid gap-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/60"
-      >
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-sm font-medium text-muted-foreground">
-              Public journal entry
-            </p>
-            <h2 className="text-base font-semibold break-words text-foreground">
-              {story.targetObject.displayName}
-            </h2>
-          </div>
-          <time className="text-xs text-muted-foreground">
-            {formatDate(story.entryDate)}
-          </time>
-        </div>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          {story.ownerMention ? (
-            <span className="rounded-md border border-border px-2 py-1 font-mono">
-              {story.ownerMention}
-            </span>
-          ) : null}
-          <ObjectMeta object={story.targetObject} />
-        </div>
-      </Link>
-    </li>
-  );
-}
-
-function ObjectMeta({ object }: { object: SocialObjectReadback }) {
-  const meta = [
-    object.varietyText ?? "Unknown variety",
-    object.catalogKind ? object.catalogKind.replaceAll("_", " ") : null,
-  ].filter(Boolean);
+  const copy = getSocialSurfaceCopy(locale);
+  const sources: Array<[FollowedFeedSource, string]> = [
+    ["all", copy.feed.all],
+    ["people", copy.feed.people],
+    ["objects", copy.feed.objects],
+    ["topics", copy.feed.topics],
+  ];
+  const kinds: Array<[FollowedFeedObjectKind, string]> = [
+    ["all", copy.feed.everyKind],
+    ["plant", copy.feed.plants],
+    ["animal", copy.feed.animals],
+    ["bee_colony", copy.feed.bees],
+  ];
 
   return (
     <>
-      {meta.map((item) => (
-        <span key={item} className="rounded-md border border-border px-2 py-1">
-          {item}
-        </span>
-      ))}
+      <div
+        className="flex overflow-x-auto border border-border"
+        role="group"
+        aria-label={copy.feed.sourceFiltersLabel}
+      >
+        {sources.map(([value, label]) => (
+          <Link
+            key={value}
+            href={feedHref(locale, value, objectKind, null, visualScenarioId)}
+            aria-current={source === value ? "true" : undefined}
+            className={filterClass(source === value)}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+      <div
+        className="flex overflow-x-auto border border-border"
+        role="group"
+        aria-label={copy.feed.kindFiltersLabel}
+      >
+        {kinds.map(([value, label]) => (
+          <Link
+            key={value}
+            href={feedHref(locale, source, value, null, visualScenarioId)}
+            aria-current={objectKind === value ? "true" : undefined}
+            className={filterClass(objectKind === value)}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
     </>
   );
 }
 
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
+function FollowedFeedCard({
+  item,
+  locale,
+  eagerMedia,
+}: {
+  item: FollowedFeedItem;
+  locale: PublicLocale;
+  eagerMedia: boolean;
+}) {
+  const copy = getSocialSurfaceCopy(locale);
+  return (
+    <li>
+      <article className="grid gap-4 py-5 sm:flex sm:items-start">
+        <div className="grid min-w-0 gap-3 sm:flex-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <Link
+              href={item.author.href}
+              className="flex items-center gap-1.5 font-medium text-foreground hover:underline"
+            >
+              <UserRound className="size-4" aria-hidden="true" />
+              {item.author.label}
+            </Link>
+            <time className="text-muted-foreground">
+              {formatDate(item.publishedAt, locale)}
+            </time>
+          </div>
+          <div className="grid gap-1">
+            <Link href={item.href} className="group grid gap-1">
+              <h2 className="text-lg font-semibold text-foreground group-hover:underline">
+                {item.title}
+              </h2>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {item.excerpt}
+              </p>
+            </Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <Link
+              href={item.object.href}
+              className="flex items-center gap-1 border border-border px-2 py-1 hover:text-foreground"
+            >
+              <Leaf className="size-3.5" aria-hidden="true" />
+              {item.object.displayName}
+              {item.object.varietyText ? ` · ${item.object.varietyText}` : ""}
+            </Link>
+            {item.reasons.map((reason) => (
+              <span key={reason} className="border border-border px-2 py-1">
+                {reason === "people"
+                  ? copy.feed.fromPerson
+                  : reason === "topics"
+                    ? copy.feed.fromTopic
+                    : copy.feed.fromObject}
+              </span>
+            ))}
+          </div>
+        </div>
+        {item.mediaUrl ? (
+          <Link
+            href={item.href}
+            className="relative aspect-4/3 overflow-hidden bg-muted sm:w-44 sm:shrink-0"
+          >
+            <Image
+              src={item.mediaUrl}
+              alt=""
+              fill
+              loading={eagerMedia ? "eager" : "lazy"}
+              sizes="(min-width: 640px) 176px, 100vw"
+              className="object-cover"
+            />
+          </Link>
+        ) : null}
+      </article>
+    </li>
+  );
+}
+
+function feedHref(
+  locale: PublicLocale,
+  source: FollowedFeedSource,
+  objectKind: FollowedFeedObjectKind,
+  cursor?: string | null,
+  visualScenarioId?: string | null,
+) {
+  const params = new URLSearchParams();
+  if (source !== "all") params.set("source", source);
+  if (objectKind !== "all") params.set("kind", objectKind);
+  if (cursor) params.set("cursor", cursor);
+  if (visualScenarioId) params.set("visualSocial", visualScenarioId);
+  const path = localizedPath(locale, "/feed");
+  return params.size ? `${path}?${params}` : path;
+}
+
+function filterClass(active: boolean) {
+  return `min-h-9 shrink-0 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
+    active
+      ? "bg-foreground text-background"
+      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+  }`;
+}
+
+function parseSource(value: string | undefined): FollowedFeedSource {
+  return value === "people" || value === "objects" || value === "topics"
+    ? value
+    : "all";
+}
+
+function parseObjectKind(value: string | undefined): FollowedFeedObjectKind {
+  return value === "plant" || value === "animal" || value === "bee_colony"
+    ? value
+    : "all";
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function formatDate(value: Date | string, locale: PublicLocale) {
+  return new Date(value).toLocaleDateString(locale, {
     day: "numeric",
+    month: "short",
+    year: "numeric",
   });
 }

@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
-  listNotificationCenter: vi.fn(),
+  listNotificationCenterPage: vi.fn(),
+  getNotificationPreferences: vi.fn(),
+  groupNotificationEvents: vi.fn((events) =>
+    events.map((event: Record<string, unknown>) => ({ ...event, count: 1 })),
+  ),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -19,8 +23,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
-vi.mock("@/server/social-readback-repository", () => ({
-  listNotificationCenter: mocks.listNotificationCenter,
+vi.mock("@/server/social-return-repository", () => ({
+  listNotificationCenterPage: mocks.listNotificationCenterPage,
+  getNotificationPreferences: mocks.getNotificationPreferences,
+  groupNotificationEvents: mocks.groupNotificationEvents,
 }));
 
 vi.mock("../../garden/garden-auth-panel", () => ({
@@ -38,48 +44,32 @@ describe("/{locale}/notifications", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.listNotificationCenter.mockResolvedValue([
-      {
-        key: "notification:safe",
-        kind: "lineage_claim_request",
-        createdAt: "2026-07-04T08:00:00.000Z",
-        summary: "Lineage claim needs review",
-        detail: "Balcony tomato claims provenance from Seed mother.",
-        primaryObject: {
-          displayName: "Balcony tomato",
-          objectKind: "plant",
-          catalogKind: "plant_variety",
-          varietyText: "Red Cherry",
-          varietyState: "selected",
+    mocks.getNotificationPreferences.mockResolvedValue({
+      comments: true,
+      replies: true,
+      follows: true,
+      mentions: true,
+      claims: true,
+      system: true,
+    });
+    mocks.listNotificationCenterPage.mockResolvedValue({
+      items: [
+        {
+          key: "a".repeat(32),
+          kind: "claim",
+          createdAt: "2026-07-04T08:00:00.000Z",
+          summaryKey: "claim_decided",
+          actorMention: "@green_thumb",
+          targetLabel: "Balcony tomato",
+          href: "/garden/lineage/claims",
+          actionKind: "review_claims",
+          groupKey: "claim:safe",
+          read: false,
         },
-        secondaryObject: {
-          displayName: "Seed mother",
-          objectKind: "plant",
-          catalogKind: "plant_variety",
-          varietyText: "Red Cherry",
-          varietyState: "selected",
-        },
-        actorMention: null,
-        actionKind: "review_claims",
-      },
-      {
-        key: "notification:follow",
-        kind: "lineage_follow",
-        createdAt: "2026-07-04T09:00:00.000Z",
-        summary: "@green_thumb followed Seed mother",
-        detail: null,
-        primaryObject: {
-          displayName: "Seed mother",
-          objectKind: "plant",
-          catalogKind: "plant_variety",
-          varietyText: "Red Cherry",
-          varietyState: "selected",
-        },
-        secondaryObject: null,
-        actorMention: "@green_thumb",
-        actionKind: "open_followed_feed",
-      },
-    ]);
+      ],
+      nextCursor: null,
+      unreadCount: 1,
+    });
   });
 
   it("keeps notification metadata private and localized", async () => {
@@ -111,8 +101,8 @@ describe("/{locale}/notifications", () => {
       }),
     );
 
-    expect(html).toContain("Sign in to open notifications.");
-    expect(mocks.listNotificationCenter).not.toHaveBeenCalled();
+    expect(html).toContain("Увійдіть, щоб відкрити сповіщення.");
+    expect(mocks.listNotificationCenterPage).not.toHaveBeenCalled();
   });
 
   it("renders bounded notification events without private payload fields", async () => {
@@ -123,18 +113,23 @@ describe("/{locale}/notifications", () => {
       }),
     );
 
-    expect(mocks.listNotificationCenter).toHaveBeenCalledWith({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
-    expect(html).toContain("Notifications");
-    expect(html).toContain("Lineage claim needs review");
-    expect(html).toContain(
-      "Balcony tomato claims provenance from Seed mother.",
+    expect(mocks.listNotificationCenterPage).toHaveBeenCalledWith(
+      {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+      "uk",
+      expect.objectContaining({ filter: "all", unreadOnly: false }),
     );
-    expect(html).toContain("@green_thumb followed Seed mother");
+    expect(html).toContain("Сповіщення");
+    expect(html).toContain("Статус запиту про походження змінено");
+    expect(html).toContain("@green_thumb");
+    expect(html).toContain("Balcony tomato");
     expect(html).toContain("/garden/lineage/claims");
-    expect(html).toContain("/feed");
+    expect(html).toContain("/api/notifications/receipts");
+    expect(html).toMatch(
+      /aria-current="true"[^>]*href="\/notifications\?view=individual"/,
+    );
     expect(html).not.toMatch(
       /00000000-0000|session-1|journal body|private journal|quarantine|derivative|media key|ip_address|user_agent|email|phone|coordinates|invite|token|source_reference_label|client_mutation/i,
     );

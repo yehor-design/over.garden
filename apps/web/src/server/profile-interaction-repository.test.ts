@@ -18,6 +18,7 @@ import {
   buildProfileInteractionTargetQuery,
   buildProfileViewerBlockQuery,
   buildProfileViewerFollowQuery,
+  buildRemoveBlockedObjectFollowsQuery,
   buildRemoveBlockedProfileFollowsQuery,
   buildRemoveProfileBlockQuery,
   buildRemoveProfileFollowQuery,
@@ -135,6 +136,11 @@ describe("profile interaction repository", () => {
       scope,
       targetUserId,
     ).compile();
+    const removeObjectFollows = buildRemoveBlockedObjectFollowsQuery(
+      testDb,
+      scope,
+      targetUserId,
+    ).compile();
     const unblock = buildRemoveProfileBlockQuery(
       testDb,
       scope,
@@ -151,6 +157,14 @@ describe("profile interaction repository", () => {
     ).toHaveLength(2);
     expect(
       removeFollows.parameters.filter((value) => value === targetUserId),
+    ).toHaveLength(2);
+    expect(removeObjectFollows.sql).toContain('update "engagement_follows"');
+    expect(removeObjectFollows.sql).toContain('from "plant_objects"');
+    expect(
+      removeObjectFollows.parameters.filter((value) => value === actorUserId),
+    ).toHaveLength(2);
+    expect(
+      removeObjectFollows.parameters.filter((value) => value === targetUserId),
     ).toHaveLength(2);
     expect(unblock.sql).toContain('update "profile_blocks"');
     expect(unblock.sql).toContain('"blocker_user_id" =');

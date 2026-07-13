@@ -137,7 +137,9 @@ export default async function PublicLineageObjectRoute({
     ref: passport.object.plantObjectId,
   };
   const returnTo = publicLineageObjectPath(passport.object.plantObjectId);
-  const engagement = await getEngagementSummary(engagementTarget);
+  const engagement = await getEngagementSummary(engagementTarget, scope, {
+    commentCursor: firstParam(query.cursor),
+  });
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const presentation = buildPublicObjectPassportPresentation(passport, locale, {

@@ -4,6 +4,7 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   parseEngagementReturnTo,
   parseEngagementTarget,
@@ -16,7 +17,8 @@ export async function POST(request: Request) {
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const visualActor = resolveVisualSocialMutationActor(formData, ["journal"]);
+  const userId = visualActor?.actorId ?? session?.user?.id;
   const parentCommentId =
     typeof formData.get("parentCommentId") === "string"
       ? String(formData.get("parentCommentId"))
@@ -34,10 +36,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
+  const scope = scopedToUser(
+    userId,
+    visualActor ? null : getSessionId(session),
+  );
   await addEngagementComment(scope, {
     target,
     body: String(formData.get("body") ?? ""),
+    clientMutationId: String(formData.get("clientMutationId") ?? ""),
     parentCommentId,
   });
 

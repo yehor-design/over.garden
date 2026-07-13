@@ -78,7 +78,7 @@ describe("PublicEngagementPanel", () => {
     expect(html).toContain('data-auth-intent-resumed="comment"');
     expect(html).toContain('data-auth-intent-control="comment"');
     expect(html).toContain("autofocus");
-    expect(html).toContain("Sign-in complete");
+    expect(html).toContain("Вхід завершено.");
   });
 
   it("returns a guest reply to the exact opaque comment control", () => {

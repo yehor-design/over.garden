@@ -52,6 +52,8 @@ interface PublicSurfaceCopy {
   engagement: {
     like: string;
     bookmark: string;
+    follow: string;
+    unfollow: string;
     comment: string;
     reply: string;
     noComments: string;
@@ -61,6 +63,25 @@ interface PublicSurfaceCopy {
     bookmarked: string;
     bookmarkRemoved: string;
     commented: string;
+    followed: string;
+    unfollowed: string;
+    deleteComment: string;
+    reportComment: string;
+    blockAuthor: string;
+    commentDeleted: string;
+    commentReported: string;
+    commentAuthorBlocked: string;
+    commentUnavailable: string;
+    showMoreComments: string;
+    signInComplete: string;
+    moreActions: string;
+    reportReasons: {
+      spam: string;
+      harassment: string;
+      privacy: string;
+      misinformation: string;
+      other: string;
+    };
   };
   passport: {
     title: string;
@@ -187,6 +208,8 @@ const COPY = {
     engagement: {
       like: "Подобається",
       bookmark: "Зберегти",
+      follow: "Стежити",
+      unfollow: "Не стежити",
       comment: "Коментар",
       reply: "Відповісти",
       noComments: "Коментарів ще немає.",
@@ -196,6 +219,25 @@ const COPY = {
       bookmarked: "Збережено в закладках.",
       bookmarkRemoved: "Прибрано із закладок.",
       commented: "Коментар опубліковано.",
+      followed: "Ви стежите за оновленнями.",
+      unfollowed: "Підписку скасовано.",
+      deleteComment: "Видалити коментар",
+      reportComment: "Поскаржитися",
+      blockAuthor: "Заблокувати автора",
+      commentDeleted: "Коментар видалено.",
+      commentReported: "Скаргу надіслано на розгляд.",
+      commentAuthorBlocked: "Автора заблоковано.",
+      commentUnavailable: "Коментар більше недоступний.",
+      showMoreComments: "Показати більше коментарів",
+      signInComplete: "Вхід завершено. Підтвердьте дію нижче, щоб продовжити.",
+      moreActions: "Інші дії",
+      reportReasons: {
+        spam: "Спам",
+        harassment: "Переслідування",
+        privacy: "Порушення приватності",
+        misinformation: "Недостовірна інформація",
+        other: "Інше",
+      },
     },
     passport: {
       title: "Публічний паспорт живого об'єкта",
@@ -325,6 +367,8 @@ const COPY = {
     engagement: {
       like: "Харесвам",
       bookmark: "Запази",
+      follow: "Следвай",
+      unfollow: "Спри следването",
       comment: "Коментар",
       reply: "Отговор",
       noComments: "Все още няма коментари.",
@@ -335,6 +379,26 @@ const COPY = {
       bookmarked: "Запазено в отметките.",
       bookmarkRemoved: "Премахнато от отметките.",
       commented: "Коментарът е публикуван.",
+      followed: "Следите новите публикации.",
+      unfollowed: "Следването е прекратено.",
+      deleteComment: "Изтрий коментара",
+      reportComment: "Докладвай",
+      blockAuthor: "Блокирай автора",
+      commentDeleted: "Коментарът е изтрит.",
+      commentReported: "Сигналът е изпратен за преглед.",
+      commentAuthorBlocked: "Авторът е блокиран.",
+      commentUnavailable: "Коментарът вече не е достъпен.",
+      showMoreComments: "Покажи още коментари",
+      signInComplete:
+        "Влизането е завършено. Потвърдете действието по-долу, за да продължите.",
+      moreActions: "Още действия",
+      reportReasons: {
+        spam: "Спам",
+        harassment: "Тормоз",
+        privacy: "Нарушаване на поверителността",
+        misinformation: "Невярна информация",
+        other: "Друго",
+      },
     },
     passport: {
       title: "Публичен паспорт на жив обект",
@@ -463,6 +527,8 @@ const COPY = {
     engagement: {
       like: "Нравится",
       bookmark: "Сохранить",
+      follow: "Подписаться",
+      unfollow: "Отписаться",
       comment: "Комментарий",
       reply: "Ответить",
       noComments: "Комментариев пока нет.",
@@ -473,6 +539,26 @@ const COPY = {
       bookmarked: "Сохранено в закладках.",
       bookmarkRemoved: "Удалено из закладок.",
       commented: "Комментарий опубликован.",
+      followed: "Вы подписались на обновления.",
+      unfollowed: "Подписка отменена.",
+      deleteComment: "Удалить комментарий",
+      reportComment: "Пожаловаться",
+      blockAuthor: "Заблокировать автора",
+      commentDeleted: "Комментарий удалён.",
+      commentReported: "Жалоба отправлена на проверку.",
+      commentAuthorBlocked: "Автор заблокирован.",
+      commentUnavailable: "Комментарий больше недоступен.",
+      showMoreComments: "Показать больше комментариев",
+      signInComplete:
+        "Вход завершён. Подтвердите действие ниже, чтобы продолжить.",
+      moreActions: "Другие действия",
+      reportReasons: {
+        spam: "Спам",
+        harassment: "Преследование",
+        privacy: "Нарушение приватности",
+        misinformation: "Недостоверная информация",
+        other: "Другое",
+      },
     },
     passport: {
       title: "Публичный паспорт живого объекта",

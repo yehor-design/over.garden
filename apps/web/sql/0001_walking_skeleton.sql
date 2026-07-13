@@ -809,11 +809,14 @@ create table if not exists engagement_comments (
   ),
   author_user_id uuid not null,
   parent_comment_id uuid references engagement_comments(id) on delete set null,
+  client_mutation_id text not null check (
+    char_length(client_mutation_id) between 16 and 160
+  ),
   body text not null check (
     length(btrim(body)) between 1 and 600
   ),
   comment_state text not null default 'active' check (
-    comment_state in ('active', 'deleted', 'reported')
+    comment_state in ('active', 'deleted', 'reported', 'removed')
   ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -863,8 +866,99 @@ create table if not exists engagement_likes (
     unique (target_kind, target_ref, anonymous_device_hash)
 );
 
+-- Direct follows complete the OVE-183 public utility loop for living objects
+-- and curated topics. Profile follows keep their existing dedicated table.
+-- No copied target content or visibility state is stored here.
+create table if not exists engagement_follows (
+  id uuid primary key default gen_random_uuid(),
+  follower_user_id uuid not null,
+  target_kind text not null check (
+    target_kind in ('lineage_object', 'topic')
+  ),
+  target_ref text not null constraint engagement_follows_target_ref_check check (
+    char_length(target_ref) between 1 and 160
+    and target_ref !~ '[[:cntrl:][:space:]?#]'
+  ),
+  follow_state text not null default 'active' check (
+    follow_state in ('active', 'removed')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint engagement_follows_actor_target_uidx
+    unique (follower_user_id, target_kind, target_ref)
+);
+
+-- A report is actor-scoped intake, not a reader-controlled moderation flag.
+-- Moderator removal remains an explicit engagement_comments state transition.
+create table if not exists engagement_comment_reports (
+  id uuid primary key default gen_random_uuid(),
+  reporter_user_id uuid not null,
+  comment_id uuid not null references engagement_comments(id) on delete cascade,
+  report_reason text not null check (
+    report_reason in ('spam', 'harassment', 'privacy', 'misinformation', 'other')
+  ),
+  report_state text not null default 'submitted' check (
+    report_state in ('submitted', 'reviewed', 'dismissed', 'actioned')
+  ),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint engagement_comment_reports_actor_comment_uidx
+    unique (reporter_user_id, comment_id)
+);
+
+-- Notification rows are derived from canonical activity. Persist only an
+-- opaque event receipt and explicit in-product category preferences; never
+-- copy comment text, journal text, location, media, or delivery payloads.
+create table if not exists notification_receipts (
+  id uuid primary key default gen_random_uuid(),
+  owner_user_id uuid not null,
+  event_key text not null check (event_key ~ '^[a-f0-9]{32}$'),
+  receipt_state text not null default 'unread' check (
+    receipt_state in ('unread', 'read', 'dismissed')
+  ),
+  read_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint notification_receipts_owner_event_uidx
+    unique (owner_user_id, event_key)
+);
+
+create table if not exists notification_preferences (
+  owner_user_id uuid primary key,
+  comments_enabled boolean not null default true,
+  replies_enabled boolean not null default true,
+  follows_enabled boolean not null default true,
+  mentions_enabled boolean not null default true,
+  claims_enabled boolean not null default true,
+  system_enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 do $$
 begin
+  alter table engagement_comments
+    add column if not exists client_mutation_id text;
+
+  update engagement_comments
+  set client_mutation_id = 'legacy-comment:' || id::text
+  where client_mutation_id is null;
+
+  alter table engagement_comments
+    alter column client_mutation_id set not null;
+
+  alter table engagement_comments
+    drop constraint if exists engagement_comments_client_mutation_id_check;
+  alter table engagement_comments
+    add constraint engagement_comments_client_mutation_id_check
+    check (char_length(client_mutation_id) between 16 and 160);
+
+  alter table engagement_comments
+    drop constraint if exists engagement_comments_comment_state_check;
+  alter table engagement_comments
+    add constraint engagement_comments_comment_state_check
+    check (comment_state in ('active', 'deleted', 'reported', 'removed'));
+
   alter table engagement_comments
     drop constraint if exists engagement_comments_target_ref_check;
   alter table engagement_comments
@@ -914,8 +1008,55 @@ begin
         add constraint engagement_bookmarks_owner_user_id_fkey
         foreign key (owner_user_id) references "user"(id) on delete cascade;
     end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'engagement_follows_follower_user_id_fkey'
+        and conrelid = 'engagement_follows'::regclass
+    ) then
+      alter table engagement_follows
+        add constraint engagement_follows_follower_user_id_fkey
+        foreign key (follower_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'engagement_comment_reports_reporter_user_id_fkey'
+        and conrelid = 'engagement_comment_reports'::regclass
+    ) then
+      alter table engagement_comment_reports
+        add constraint engagement_comment_reports_reporter_user_id_fkey
+        foreign key (reporter_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'notification_receipts_owner_user_id_fkey'
+        and conrelid = 'notification_receipts'::regclass
+    ) then
+      alter table notification_receipts
+        add constraint notification_receipts_owner_user_id_fkey
+        foreign key (owner_user_id) references "user"(id) on delete cascade;
+    end if;
+
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'notification_preferences_owner_user_id_fkey'
+        and conrelid = 'notification_preferences'::regclass
+    ) then
+      alter table notification_preferences
+        add constraint notification_preferences_owner_user_id_fkey
+        foreign key (owner_user_id) references "user"(id) on delete cascade;
+    end if;
   end if;
 end $$;
+
+create unique index if not exists engagement_comments_author_mutation_uidx
+  on engagement_comments (author_user_id, client_mutation_id);
 
 create index if not exists engagement_comments_target_created_idx
   on engagement_comments (target_kind, target_ref, created_at asc)
@@ -931,6 +1072,21 @@ create index if not exists engagement_bookmarks_owner_created_idx
 create index if not exists engagement_likes_target_active_idx
   on engagement_likes (target_kind, target_ref, updated_at desc)
   where like_state = 'active';
+
+create index if not exists engagement_follows_actor_updated_idx
+  on engagement_follows (follower_user_id, updated_at desc)
+  where follow_state = 'active';
+
+create index if not exists engagement_follows_target_updated_idx
+  on engagement_follows (target_kind, target_ref, updated_at desc)
+  where follow_state = 'active';
+
+create index if not exists engagement_comment_reports_comment_created_idx
+  on engagement_comment_reports (comment_id, created_at desc)
+  where report_state = 'submitted';
+
+create index if not exists notification_receipts_owner_state_updated_idx
+  on notification_receipts (owner_user_id, receipt_state, updated_at desc);
 
 create table if not exists catalog_source_snapshots (
   id uuid primary key default gen_random_uuid(),

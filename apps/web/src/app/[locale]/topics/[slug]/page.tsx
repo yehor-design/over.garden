@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PublicKnowledgeTopicPage } from "@/components/public/public-knowledge-topic";
+import { EngagementFollowControl } from "@/app/engagement/public-engagement-panel";
+import { normalizeAuthIntentResumeAction } from "@/lib/auth/auth-intent-contract";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import {
   DEFAULT_PUBLIC_LOCALE,
@@ -9,9 +11,12 @@ import {
   localizedPath,
 } from "@/lib/public-localization";
 import { resolveVisualFixturePublicKnowledgeMode } from "@/lib/visual-fixtures/public-knowledge-scenarios";
+import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getEngagementFollowState } from "@/server/engagement-repository";
 import { listPublicKnowledgeEvidence } from "@/server/public-knowledge-evidence-repository";
 import { getPublicTopicAggregationPage } from "@/server/public-topic-repository";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
+import { scopedToUser } from "@/server/request-scope";
 
 interface PublicTopicRouteProps {
   params: Promise<{ locale: string; slug: string }>;
@@ -63,15 +68,26 @@ export default async function TopicRoute({
   const { locale: localeParam, slug } = await params;
   if (!isPublicLocale(localeParam)) notFound();
 
-  const visual = await resolveVisualTopicRequest(
-    localeParam,
-    (await searchParams) ?? {},
-  );
+  const query = (await searchParams) ?? {};
+  const [visual, session] = await Promise.all([
+    resolveVisualTopicRequest(localeParam, query),
+    getCurrentSession().catch(() => null),
+  ]);
   if (visual.mode === "unavailable") notFound();
   const topic = await getPublicTopicAggregationPage(slug, {
     restrictToEntryIds: visual.publicEntryIds,
   }).catch(() => null);
   if (!topic) notFound();
+  const userId = session?.user?.id;
+  const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
+  const followTarget = {
+    kind: "topic" as const,
+    ref: topic.topic.slug,
+  };
+  const following = scope
+    ? await getEngagementFollowState(scope, followTarget).catch(() => false)
+    : false;
+  const returnTo = localizedPath(localeParam, `/topics/${topic.topic.slug}`);
 
   const evidenceResult =
     visual.mode === "loading" || visual.mode === "error"
@@ -103,8 +119,24 @@ export default async function TopicRoute({
       evidence={evidenceResult.evidence}
       evidenceState={evidenceResult.state}
       visualCorpus={visual.mode === "corpus"}
+      actions={
+        <EngagementFollowControl
+          isAuthenticated={Boolean(userId)}
+          locale={localeParam}
+          target={followTarget}
+          returnTo={returnTo}
+          following={following}
+          resumeAction={normalizeAuthIntentResumeAction(
+            firstParam(query.authIntent) ?? undefined,
+          )}
+        />
+      }
     />
   );
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function missingTopicMetadata(): Metadata {

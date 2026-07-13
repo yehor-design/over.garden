@@ -1,28 +1,47 @@
+import {
+  Bell,
+  Check,
+  CheckCheck,
+  ChevronDown,
+  EyeOff,
+  MailOpen,
+  Settings2,
+} from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
 
+import {
+  MySocialLayout,
+  SocialEmptyState,
+} from "@/components/social/my-social-layout";
 import { buttonVariants } from "@/components/ui/button";
 import {
   buildLanguageAlternates,
   isPublicLocale,
   localizedPath,
+  type PublicLocale,
 } from "@/lib/public-localization";
+import { getSocialSurfaceCopy } from "@/lib/social-surface-copy";
+import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { scopedToUser } from "@/server/request-scope";
 import {
-  listNotificationCenter,
-  type NotificationActionKind,
-  type NotificationCenterEvent,
-  type SocialObjectReadback,
-} from "@/server/social-readback-repository";
+  getNotificationPreferences,
+  groupNotificationEvents,
+  listNotificationCenterPage,
+  type GroupedNotificationEvent,
+  type NotificationEvent,
+  type NotificationFilter,
+  type NotificationPreferences,
+} from "@/server/social-return-repository";
 import { GardenAuthPanel } from "../../garden/garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
 interface LocalizedNotificationsRouteProps {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export async function generateMetadata({
@@ -30,7 +49,6 @@ export async function generateMetadata({
 }: LocalizedNotificationsRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
-
   return {
     title: "Notifications | OverGarden",
     alternates: isPublicLocale(localeParam)
@@ -39,224 +57,408 @@ export async function generateMetadata({
           languages: buildLanguageAlternates("/notifications"),
         }
       : undefined,
-    robots: {
-      index: false,
-      follow: false,
-    },
+    robots: { index: false, follow: false },
   };
 }
 
 export default async function LocalizedNotificationsRoute({
   params,
+  searchParams,
 }: LocalizedNotificationsRouteProps) {
-  const { locale: localeParam } = await params;
+  const [{ locale: localeParam }, query] = await Promise.all([
+    params,
+    searchParams ??
+      Promise.resolve({} as Record<string, string | string[] | undefined>),
+  ]);
   if (!isPublicLocale(localeParam)) notFound();
-
+  const copy = getSocialSurfaceCopy(localeParam);
   const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const visualScenario = resolveVisualSocialScenario(
+    query.visualSocial,
+    "notifications",
+    process.env,
+  );
+  const userId = visualScenario?.actorId ?? session?.user?.id;
 
   if (!userId) {
     return (
-      <NotificationsShell locale={localeParam}>
-        <GardenAuthPanel initialMessage="Sign in to open notifications." />
-      </NotificationsShell>
+      <MySocialLayout
+        locale={localeParam}
+        active="notifications"
+        title={copy.notifications.title}
+        description={copy.notifications.description}
+      >
+        <GardenAuthPanel initialMessage={copy.notifications.signIn} />
+      </MySocialLayout>
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
-  const events = await listNotificationCenter(scope);
+  const scope = scopedToUser(
+    userId,
+    visualScenario ? null : getSessionId(session),
+  );
+  const filter = parseFilter(firstParam(query.filter));
+  const unreadOnly = firstParam(query.unread) === "1";
+  const grouped = firstParam(query.view) !== "individual";
+  const [page, preferences] = await Promise.all([
+    listNotificationCenterPage(scope, localeParam, {
+      filter,
+      unreadOnly,
+      cursor: firstParam(query.cursor),
+    }),
+    getNotificationPreferences(scope),
+  ]);
+  const events: Array<NotificationEvent | GroupedNotificationEvent> = grouped
+    ? groupNotificationEvents(page.items)
+    : page.items;
+  const returnTo = notificationHref(localeParam, {
+    filter,
+    unreadOnly,
+    grouped,
+    cursor: firstParam(query.cursor),
+    visualScenarioId: visualScenario?.id,
+  });
 
   return (
-    <NotificationsShell locale={localeParam} eventCount={events.length}>
+    <MySocialLayout
+      locale={localeParam}
+      active="notifications"
+      title={copy.notifications.title}
+      description={copy.notifications.description}
+      count={page.unreadCount}
+      countLabel={copy.common.unreadCount(page.unreadCount)}
+      controls={
+        <NotificationFilters
+          locale={localeParam}
+          filter={filter}
+          unreadOnly={unreadOnly}
+          grouped={grouped}
+          visualScenarioId={visualScenario?.id ?? null}
+        />
+      }
+    >
+      <NotificationSettings
+        locale={localeParam}
+        preferences={preferences}
+        visualScenarioId={visualScenario?.id ?? null}
+      />
       {events.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-border p-4 text-sm leading-6 text-muted-foreground">
-          No notifications yet. Review lineage claims or follow a lineage object
-          to keep new activity here.
-        </p>
+        <SocialEmptyState>{copy.notifications.empty}</SocialEmptyState>
       ) : (
-        <ol className="grid gap-3">
+        <ol className="divide-y divide-border border-y border-border">
           {events.map((event) => (
-            <NotificationCard
+            <NotificationRow
               key={event.key}
               event={event}
               locale={localeParam}
+              returnTo={returnTo}
+              visualScenarioId={visualScenario?.id ?? null}
             />
           ))}
         </ol>
       )}
-    </NotificationsShell>
-  );
-}
-
-function NotificationsShell({
-  locale,
-  eventCount,
-  children,
-}: {
-  locale: "uk" | "bg" | "ru";
-  eventCount?: number;
-  children: ReactNode;
-}) {
-  return (
-    <main
-      lang={locale}
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
-    >
-      <header className="flex flex-col gap-4 border-b border-border pb-5">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href="/garden"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Garden
-          </Link>
-          <Link
-            href={localizedPath(locale, "/feed")}
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Followed feed
-          </Link>
-          <Link
-            href="/garden/lineage/claims"
-            className={buttonVariants({
-              variant: "outline",
-              className: "self-start",
-            })}
-          >
-            Lineage claims
-          </Link>
-        </div>
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Notifications
-          </h1>
-          {typeof eventCount === "number" ? (
-            <p className="text-sm text-muted-foreground">
-              {eventCount} current event{eventCount === 1 ? "" : "s"}
-            </p>
-          ) : null}
-        </div>
-      </header>
-
-      {children}
-    </main>
-  );
-}
-
-function NotificationCard({
-  event,
-  locale,
-}: {
-  event: NotificationCenterEvent;
-  locale: "uk" | "bg" | "ru";
-}) {
-  const action = notificationAction(event.actionKind, locale);
-
-  return (
-    <li className="grid gap-3 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="grid min-w-0 gap-1">
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {notificationKindLabel(event.kind)}
-          </p>
-          <h2 className="text-base font-semibold break-words text-foreground">
-            {event.summary}
-          </h2>
-          {event.detail ? (
-            <p className="text-sm leading-6 break-words text-muted-foreground">
-              {event.detail}
-            </p>
-          ) : null}
-        </div>
-        <time className="text-xs whitespace-nowrap text-muted-foreground">
-          {formatDate(event.createdAt)}
-        </time>
-      </div>
-
-      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        {event.actorMention ? (
-          <span className="rounded-md border border-border px-2 py-1 font-mono">
-            {event.actorMention}
-          </span>
-        ) : null}
-        {event.primaryObject ? (
-          <ObjectMeta object={event.primaryObject} />
-        ) : null}
-        {event.secondaryObject ? (
-          <ObjectMeta object={event.secondaryObject} />
-        ) : null}
-      </div>
-
-      {action ? (
+      {page.nextCursor ? (
         <Link
-          href={action.href}
-          className={buttonVariants({ className: "w-fit" })}
+          href={notificationHref(localeParam, {
+            filter,
+            unreadOnly,
+            grouped,
+            cursor: page.nextCursor,
+            visualScenarioId: visualScenario?.id,
+          })}
+          className="flex min-h-11 items-center justify-center gap-2 border border-border px-4 text-sm font-medium hover:bg-muted"
         >
-          {action.label}
+          {copy.notifications.more}
+          <ChevronDown className="size-4" aria-hidden="true" />
         </Link>
       ) : null}
-    </li>
+    </MySocialLayout>
   );
 }
 
-function notificationKindLabel(kind: NotificationCenterEvent["kind"]) {
-  switch (kind) {
-    case "lineage_claim_request":
-      return "Claim";
-    case "lineage_claim_decision":
-      return "Claim decision";
-    case "lineage_question":
-      return "Question";
-    case "lineage_follow":
-      return "Follow";
-  }
-}
-
-function notificationAction(
-  actionKind: NotificationActionKind | null,
-  locale: "uk" | "bg" | "ru",
-) {
-  switch (actionKind) {
-    case "review_claims":
-      return { href: "/garden/lineage/claims", label: "Review" };
-    case "open_lineage_questions":
-      return { href: "/garden/lineage/questions", label: "Open" };
-    case "open_followed_feed":
-      return { href: localizedPath(locale, "/feed"), label: "Open feed" };
-    default:
-      return null;
-  }
-}
-
-function ObjectMeta({ object }: { object: SocialObjectReadback }) {
-  const meta = [
-    object.displayName,
-    object.varietyText ?? "Unknown variety",
-    object.catalogKind ? object.catalogKind.replaceAll("_", " ") : null,
-  ].filter(Boolean);
-
+function NotificationFilters({
+  locale,
+  filter,
+  unreadOnly,
+  grouped,
+  visualScenarioId,
+}: {
+  locale: PublicLocale;
+  filter: NotificationFilter;
+  unreadOnly: boolean;
+  grouped: boolean;
+  visualScenarioId: string | null;
+}) {
+  const copy = getSocialSurfaceCopy(locale);
+  const filters: Array<[NotificationFilter, string]> = [
+    ["all", copy.notifications.all],
+    ["comments", copy.notifications.comments],
+    ["follows", copy.notifications.follows],
+    ["mentions", copy.notifications.mentions],
+    ["claims", copy.notifications.claims],
+    ["system", copy.notifications.system],
+  ];
   return (
     <>
-      {meta.map((item) => (
-        <span key={item} className="rounded-md border border-border px-2 py-1">
-          {item}
-        </span>
-      ))}
+      <div
+        className="flex overflow-x-auto border border-border"
+        role="group"
+        aria-label={copy.notifications.filtersLabel}
+      >
+        {filters.map(([value, label]) => (
+          <Link
+            key={value}
+            href={notificationHref(locale, {
+              filter: value,
+              unreadOnly,
+              grouped,
+              visualScenarioId,
+            })}
+            aria-current={filter === value ? "true" : undefined}
+            className={filterClass(filter === value)}
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+      <Link
+        href={notificationHref(locale, {
+          filter,
+          unreadOnly: !unreadOnly,
+          grouped,
+          visualScenarioId,
+        })}
+        aria-current={unreadOnly ? "true" : undefined}
+        className={filterClass(unreadOnly)}
+      >
+        <MailOpen className="size-4" aria-hidden="true" />
+        {copy.notifications.unread}
+      </Link>
+      <Link
+        href={notificationHref(locale, {
+          filter,
+          unreadOnly,
+          grouped: !grouped,
+          visualScenarioId,
+        })}
+        aria-current={grouped ? "true" : undefined}
+        className={filterClass(grouped)}
+      >
+        <Bell className="size-4" aria-hidden="true" />
+        {copy.notifications.grouped}
+      </Link>
     </>
   );
 }
 
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
+function NotificationSettings({
+  locale,
+  preferences,
+  visualScenarioId,
+}: {
+  locale: PublicLocale;
+  preferences: NotificationPreferences;
+  visualScenarioId: string | null;
+}) {
+  const copy = getSocialSurfaceCopy(locale);
+  const options: Array<[keyof NotificationPreferences, string]> = [
+    ["comments", copy.notifications.comments],
+    ["replies", copy.notifications.replies],
+    ["follows", copy.notifications.follows],
+    ["mentions", copy.notifications.mentions],
+    ["claims", copy.notifications.claims],
+    ["system", copy.notifications.system],
+  ];
+  return (
+    <details className="border-y border-border py-3">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium">
+        <Settings2 className="size-4" aria-hidden="true" />
+        {copy.notifications.settings}
+      </summary>
+      <form
+        method="post"
+        action="/api/notifications/preferences"
+        className="mt-4 grid gap-3 sm:grid-cols-2"
+      >
+        <input type="hidden" name="locale" value={locale} />
+        {visualScenarioId ? (
+          <input type="hidden" name="visualSocial" value={visualScenarioId} />
+        ) : null}
+        {options.map(([key, label]) => (
+          <label key={key} className="flex min-h-9 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name={key}
+              defaultChecked={preferences[key]}
+              className="size-4 accent-primary"
+            />
+            {label}
+          </label>
+        ))}
+        <button
+          type="submit"
+          className={buttonVariants({ className: "w-fit sm:col-span-2" })}
+        >
+          <Check className="size-4" aria-hidden="true" />
+          {copy.notifications.saveSettings}
+        </button>
+      </form>
+    </details>
+  );
+}
+
+function NotificationRow({
+  event,
+  locale,
+  returnTo,
+  visualScenarioId,
+}: {
+  event: NotificationEvent | GroupedNotificationEvent;
+  locale: PublicLocale;
+  returnTo: string;
+  visualScenarioId: string | null;
+}) {
+  const copy = getSocialSurfaceCopy(locale);
+  const eventKeys = "eventKeys" in event ? event.eventKeys : [event.key];
+  const count = "count" in event ? event.count : 1;
+  const summary =
+    copy.notifications.summaries[event.summaryKey] ?? event.summaryKey;
+  return (
+    <li className={`grid gap-3 py-4 ${event.read ? "opacity-70" : ""}`}>
+      <div className="flex gap-3">
+        <span
+          className={`mt-2 size-2 shrink-0 rounded-full ${event.read ? "bg-muted" : "bg-primary"}`}
+          aria-hidden="true"
+        />
+        <div className="min-w-0 flex-1">
+          <Link href={event.href} className="grid gap-1 hover:underline">
+            <p className="font-medium text-foreground">
+              {summary}
+              {count > 1 ? ` (${count})` : ""}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {[event.actorMention, event.targetLabel]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </Link>
+          <time className="text-xs text-muted-foreground">
+            {formatDate(event.createdAt, locale)}
+          </time>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2 pl-5">
+        <ReceiptForm
+          eventKeys={eventKeys}
+          state={event.read ? "unread" : "read"}
+          returnTo={returnTo}
+          label={
+            event.read
+              ? copy.notifications.markUnread
+              : copy.notifications.markRead
+          }
+          icon={event.read ? <MailOpen /> : <CheckCheck />}
+          visualScenarioId={visualScenarioId}
+        />
+        <ReceiptForm
+          eventKeys={eventKeys}
+          state="dismissed"
+          returnTo={returnTo}
+          label={copy.notifications.dismiss}
+          icon={<EyeOff />}
+          visualScenarioId={visualScenarioId}
+        />
+      </div>
+    </li>
+  );
+}
+
+function ReceiptForm({
+  eventKeys,
+  state,
+  returnTo,
+  label,
+  icon,
+  visualScenarioId,
+}: {
+  eventKeys: string[];
+  state: "read" | "unread" | "dismissed";
+  returnTo: string;
+  label: string;
+  icon: React.ReactNode;
+  visualScenarioId: string | null;
+}) {
+  return (
+    <form method="post" action="/api/notifications/receipts">
+      {eventKeys.map((eventKey) => (
+        <input key={eventKey} type="hidden" name="eventKey" value={eventKey} />
+      ))}
+      {visualScenarioId ? (
+        <input type="hidden" name="visualSocial" value={visualScenarioId} />
+      ) : null}
+      <input type="hidden" name="receiptState" value={state} />
+      <input type="hidden" name="returnTo" value={returnTo} />
+      <button
+        type="submit"
+        title={label}
+        className={buttonVariants({ variant: "ghost", size: "icon" })}
+      >
+        {icon}
+        <span className="sr-only">{label}</span>
+      </button>
+    </form>
+  );
+}
+
+function notificationHref(
+  locale: PublicLocale,
+  input: {
+    filter: NotificationFilter;
+    unreadOnly: boolean;
+    grouped: boolean;
+    cursor?: string | null;
+    visualScenarioId?: string | null;
+  },
+) {
+  const params = new URLSearchParams();
+  if (input.filter !== "all") params.set("filter", input.filter);
+  if (input.unreadOnly) params.set("unread", "1");
+  if (!input.grouped) params.set("view", "individual");
+  if (input.cursor) params.set("cursor", input.cursor);
+  if (input.visualScenarioId) {
+    params.set("visualSocial", input.visualScenarioId);
+  }
+  const path = localizedPath(locale, "/notifications");
+  return params.size ? `${path}?${params}` : path;
+}
+
+function filterClass(active: boolean) {
+  return `flex min-h-9 shrink-0 items-center gap-2 border-r border-border px-3 py-2 text-sm last:border-r-0 ${
+    active
+      ? "bg-foreground text-background"
+      : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+  }`;
+}
+
+function parseFilter(value: string | undefined): NotificationFilter {
+  return value === "comments" ||
+    value === "follows" ||
+    value === "mentions" ||
+    value === "claims" ||
+    value === "system"
+    ? value
+    : "all";
+}
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function formatDate(value: Date | string, locale: PublicLocale) {
+  return new Date(value).toLocaleString(locale, {
     day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }

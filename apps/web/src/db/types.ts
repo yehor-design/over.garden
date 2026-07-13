@@ -14,7 +14,9 @@ import type {
   CatalogSourceRefreshRecords as CatalogSourceRefreshRecordsTable,
   CatalogSourceSnapshots as CatalogSourceSnapshotsTable,
   EngagementBookmarks as EngagementBookmarksTable,
+  EngagementCommentReports as EngagementCommentReportsTable,
   EngagementComments as EngagementCommentsTable,
+  EngagementFollows as EngagementFollowsTable,
   EngagementLikes as EngagementLikesTable,
   ErasureRequests as ErasureRequestsTable,
   Health as HealthTable,
@@ -30,6 +32,8 @@ import type {
   LineageProvenanceEdges as LineageProvenanceEdgesTable,
   LineageQuestions as LineageQuestionsTable,
   MediaAssets as MediaAssetsTable,
+  NotificationPreferences as NotificationPreferencesTable,
+  NotificationReceipts as NotificationReceiptsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
   PilotInterviewLearnings as PilotInterviewLearningsTable,
   PlantObjects as PlantObjectsTable,
@@ -117,9 +121,27 @@ export type EngagementTargetKind =
   | "lineage_object"
   | "variety"
   | "topic";
-export type EngagementCommentState = "active" | "deleted" | "reported";
+export type EngagementCommentState =
+  | "active"
+  | "deleted"
+  | "reported"
+  | "removed";
 export type EngagementBookmarkState = "active" | "removed";
 export type EngagementLikeState = "active" | "removed";
+export type EngagementFollowTargetKind = "lineage_object" | "topic";
+export type EngagementFollowState = "active" | "removed";
+export type EngagementCommentReportReason =
+  | "spam"
+  | "harassment"
+  | "privacy"
+  | "misinformation"
+  | "other";
+export type EngagementCommentReportState =
+  | "submitted"
+  | "reviewed"
+  | "dismissed"
+  | "actioned";
+export type NotificationReceiptState = "unread" | "read" | "dismissed";
 export type JournalTopicTrustState = "curated" | "provisional" | "rejected";
 export type JournalEntryTopicSignalSource =
   | "explicit_tag"
@@ -189,8 +211,7 @@ export type NewJournalEntryObjectMention =
   Insertable<JournalEntryObjectMentionsTable>;
 export type JournalTopic = Selectable<JournalTopicsTable>;
 export type NewJournalTopic = Insertable<JournalTopicsTable>;
-export type JournalEntryTopicSignal =
-  Selectable<JournalEntryTopicSignalsTable>;
+export type JournalEntryTopicSignal = Selectable<JournalEntryTopicSignalsTable>;
 export type NewJournalEntryTopicSignal =
   Insertable<JournalEntryTopicSignalsTable>;
 export type LineageNodeFollow = Selectable<LineageNodeFollowsTable>;
@@ -219,8 +240,18 @@ export type EngagementBookmark = Selectable<EngagementBookmarksTable>;
 export type NewEngagementBookmark = Insertable<EngagementBookmarksTable>;
 export type EngagementComment = Selectable<EngagementCommentsTable>;
 export type NewEngagementComment = Insertable<EngagementCommentsTable>;
+export type EngagementCommentReport = Selectable<EngagementCommentReportsTable>;
+export type NewEngagementCommentReport =
+  Insertable<EngagementCommentReportsTable>;
+export type EngagementFollow = Selectable<EngagementFollowsTable>;
+export type NewEngagementFollow = Insertable<EngagementFollowsTable>;
 export type EngagementLike = Selectable<EngagementLikesTable>;
 export type NewEngagementLike = Insertable<EngagementLikesTable>;
+export type NotificationPreference = Selectable<NotificationPreferencesTable>;
+export type NewNotificationPreference =
+  Insertable<NotificationPreferencesTable>;
+export type NotificationReceipt = Selectable<NotificationReceiptsTable>;
+export type NewNotificationReceipt = Insertable<NotificationReceiptsTable>;
 export type PilotInterviewLearning = Selectable<PilotInterviewLearningsTable>;
 export type NewPilotInterviewLearning =
   Insertable<PilotInterviewLearningsTable>;

@@ -10,8 +10,15 @@ export function generateMetadata() {
   });
 }
 
-export default async function NotificationsRoute() {
+interface NotificationsRouteProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function NotificationsRoute({
+  searchParams,
+}: NotificationsRouteProps) {
   return LocalizedNotificationsRoute({
     params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE }),
+    searchParams,
   });
 }

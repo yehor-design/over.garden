@@ -15,6 +15,7 @@ import type { VisualFixtureManifest } from "@/lib/visual-fixtures/manifest";
 const IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 const RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES = [
   "visual-fixtures/ove187-v5",
+  "visual-fixtures/ove187-v6",
 ] as const;
 
 export interface VisualFixturePutObjectInput {

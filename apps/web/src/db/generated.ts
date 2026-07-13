@@ -208,13 +208,34 @@ export interface EngagementBookmarks {
   updated_at: Generated<Timestamp>;
 }
 
+export interface EngagementCommentReports {
+  comment_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  report_reason: string;
+  report_state: Generated<string>;
+  reporter_user_id: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface EngagementComments {
   author_user_id: string;
   body: string;
+  client_mutation_id: string;
   comment_state: Generated<string>;
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   parent_comment_id: string | null;
+  target_kind: string;
+  target_ref: string;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface EngagementFollows {
+  created_at: Generated<Timestamp>;
+  follow_state: Generated<string>;
+  follower_user_id: string;
+  id: Generated<string>;
   target_kind: string;
   target_ref: string;
   updated_at: Generated<Timestamp>;
@@ -408,6 +429,28 @@ export interface MediaAssets {
   updated_at: Generated<Timestamp>;
 }
 
+export interface NotificationPreferences {
+  claims_enabled: Generated<boolean>;
+  comments_enabled: Generated<boolean>;
+  created_at: Generated<Timestamp>;
+  follows_enabled: Generated<boolean>;
+  mentions_enabled: Generated<boolean>;
+  owner_user_id: string;
+  replies_enabled: Generated<boolean>;
+  system_enabled: Generated<boolean>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface NotificationReceipts {
+  created_at: Generated<Timestamp>;
+  event_key: string;
+  id: Generated<string>;
+  owner_user_id: string;
+  read_at: Timestamp | null;
+  receipt_state: Generated<string>;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface PilotInterviewLearnings {
   activation_result: string;
   created_at: Generated<Timestamp>;
@@ -573,7 +616,9 @@ export interface DB {
   catalog_source_refresh_records: CatalogSourceRefreshRecords;
   catalog_source_snapshots: CatalogSourceSnapshots;
   engagement_bookmarks: EngagementBookmarks;
+  engagement_comment_reports: EngagementCommentReports;
   engagement_comments: EngagementComments;
+  engagement_follows: EngagementFollows;
   engagement_likes: EngagementLikes;
   erasure_requests: ErasureRequests;
   health: Health;
@@ -589,6 +634,8 @@ export interface DB {
   lineage_provenance_edges: LineageProvenanceEdges;
   lineage_questions: LineageQuestions;
   media_assets: MediaAssets;
+  notification_preferences: NotificationPreferences;
+  notification_receipts: NotificationReceipts;
   pilot_interview_learnings: PilotInterviewLearnings;
   pilot_invite_grants: PilotInviteGrants;
   plant_objects: PlantObjects;

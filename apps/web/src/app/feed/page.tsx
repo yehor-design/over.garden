@@ -10,8 +10,15 @@ export function generateMetadata() {
   });
 }
 
-export default async function FollowedFeedRoute() {
+interface FollowedFeedRouteProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function FollowedFeedRoute({
+  searchParams,
+}: FollowedFeedRouteProps) {
   return LocalizedFollowedFeedRoute({
     params: Promise.resolve({ locale: DEFAULT_PUBLIC_LOCALE }),
+    searchParams,
   });
 }

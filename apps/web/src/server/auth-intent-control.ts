@@ -7,6 +7,8 @@ import { resolveBetterAuthSecret } from "@/lib/auth-secret";
 export type AuthIntentControlNamespace =
   | "reply"
   | "follow"
+  | "report"
+  | "block"
   | "publish"
   | "claim";
 

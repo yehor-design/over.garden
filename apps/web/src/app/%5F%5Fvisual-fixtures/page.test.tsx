@@ -45,13 +45,20 @@ describe("/__visual-fixtures", () => {
       target: "local",
     });
     mocks.getVisualFixtureStatus.mockResolvedValue({
-      version: "ove187-v6",
+      version: "ove187-v7",
       expected: {
         actors: 8,
         profiles: 8,
         profileFollows: 9,
         profileBlocks: 1,
         profileReports: 1,
+        engagementComments: 24,
+        engagementBookmarks: 16,
+        engagementFollows: 8,
+        engagementCommentReports: 2,
+        notificationReceipts: 2,
+        notificationPreferences: 2,
+        wishlistItems: 14,
         spaces: 10,
         catalogItems: 19,
         catalogNames: 29,
@@ -70,6 +77,13 @@ describe("/__visual-fixtures", () => {
         profileFollows: 9,
         profileBlocks: 1,
         profileReports: 1,
+        engagementComments: 24,
+        engagementBookmarks: 16,
+        engagementFollows: 8,
+        engagementCommentReports: 2,
+        notificationReceipts: 2,
+        notificationPreferences: 2,
+        wishlistItems: 14,
         spaces: 10,
         catalogItems: 19,
         catalogNames: 29,
@@ -147,6 +161,17 @@ describe("/__visual-fixtures", () => {
     expect(html).toContain("gardener dense");
     expect(html).toContain("blocked unavailable");
     expect(html).toContain("Profile follows");
+    expect(html).toContain("Engagement comments");
+    expect(html).toContain("Engagement bookmarks");
+    expect(html).toContain("Notification receipts");
+    expect(html).toContain("Wishlist items");
+    expect(html).toContain("Social return-loop V2 evidence");
+    expect(html).toContain("comments page plus one");
+    expect(html).toContain("notifications grouped");
+    expect(html).toContain("bookmarks dense");
+    expect(html).toContain("wishlist dense");
+    expect(html).toContain('href="/feed?visualSocial=feed-dense"');
+    expect(html).toContain("Open social state");
     expect(html).toContain("space multi object");
     expect(html).toContain("authenticated reader");
     expect(html).toContain("public plant dense");

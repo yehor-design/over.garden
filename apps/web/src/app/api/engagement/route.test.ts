@@ -4,12 +4,17 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   addEngagementComment: vi.fn(),
-  toggleEngagementBookmark: vi.fn(),
+  blockEngagementCommentAuthor: vi.fn(),
+  deleteEngagementComment: vi.fn(),
+  reportEngagementComment: vi.fn(),
+  setEngagementBookmark: vi.fn(),
+  setEngagementFollow: vi.fn(),
   toggleAnonymousEngagementLike: vi.fn(),
   revalidatePath: vi.fn(),
   cookies: vi.fn(),
   createAuthIntentToken: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
+  resolveVisualSocialMutationActor: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -34,7 +39,11 @@ vi.mock("@/server/request-scope", () => ({
 
 vi.mock("@/server/engagement-repository", () => ({
   addEngagementComment: mocks.addEngagementComment,
-  toggleEngagementBookmark: mocks.toggleEngagementBookmark,
+  blockEngagementCommentAuthor: mocks.blockEngagementCommentAuthor,
+  deleteEngagementComment: mocks.deleteEngagementComment,
+  reportEngagementComment: mocks.reportEngagementComment,
+  setEngagementBookmark: mocks.setEngagementBookmark,
+  setEngagementFollow: mocks.setEngagementFollow,
   toggleAnonymousEngagementLike: mocks.toggleAnonymousEngagementLike,
   engagementTargetPath: (target: { kind: string; ref: string }) =>
     target.kind === "variety"
@@ -63,6 +72,10 @@ vi.mock("@/server/auth-intent-control", () => ({
   createAuthIntentControlRef: mocks.createAuthIntentControlRef,
 }));
 
+vi.mock("@/server/visual-fixtures/social-actor", () => ({
+  resolveVisualSocialMutationActor: mocks.resolveVisualSocialMutationActor,
+}));
+
 describe("engagement routes", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -75,9 +88,15 @@ describe("engagement routes", () => {
     mocks.addEngagementComment.mockResolvedValue({
       key: "comment:key",
     });
-    mocks.toggleEngagementBookmark.mockResolvedValue({
+    mocks.setEngagementBookmark.mockResolvedValue({
       active: true,
     });
+    mocks.setEngagementFollow.mockResolvedValue({ active: true });
+    mocks.deleteEngagementComment.mockResolvedValue({
+      target: { kind: "journal_entry", ref: "first-public-harvest" },
+    });
+    mocks.reportEngagementComment.mockResolvedValue({ reportId: "opaque" });
+    mocks.blockEngagementCommentAuthor.mockResolvedValue({ handle: "reader" });
     mocks.toggleAnonymousEngagementLike.mockResolvedValue({
       liked: true,
       activeLikeCount: 1,
@@ -87,6 +106,7 @@ describe("engagement routes", () => {
     });
     mocks.createAuthIntentToken.mockReturnValue("opaque-intent-token");
     mocks.createAuthIntentControlRef.mockReturnValue("reply-a7d8f9c012345678");
+    mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
   });
 
   it("resumes a signed-out reply at the exact opaque reply control", async () => {
@@ -156,6 +176,7 @@ describe("engagement routes", () => {
         targetRef: "first-public-harvest",
         returnTo: "/journal/first-public-harvest",
         body: "This stayed contact-free.",
+        clientMutationId: "comment-submit-000000000001",
       }),
     );
 
@@ -170,6 +191,7 @@ describe("engagement routes", () => {
           ref: "first-public-harvest",
         },
         body: "This stayed contact-free.",
+        clientMutationId: "comment-submit-000000000001",
         parentCommentId: null,
       },
     );
@@ -179,6 +201,38 @@ describe("engagement routes", () => {
     expect(response.headers.get("location")).toBe(
       "https://over.garden/journal/first-public-harvest?engagement=commented",
     );
+  });
+
+  it("posts an isolated visual-fixture comment in the manifest actor scope", async () => {
+    const actorId = "18700001-0000-4000-8000-000000000003";
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
+      actorId,
+      scenario: { id: "comments-dense" },
+    });
+    const { POST } = await import("./comments/route");
+
+    await POST(
+      formRequest("/api/engagement/comments", {
+        targetKind: "journal_entry",
+        targetRef: "visual-fixture-living-object-004",
+        returnTo:
+          "/journal/visual-fixture-living-object-004?visualSocial=comments-dense",
+        body: "Fixture interaction stays isolated.",
+        clientMutationId: "visual-comment-submit-000000000001",
+      }),
+    );
+
+    expect(mocks.addEngagementComment).toHaveBeenCalledWith(
+      { userId: actorId, sessionId: null },
+      expect.objectContaining({
+        target: {
+          kind: "journal_entry",
+          ref: "visual-fixture-living-object-004",
+        },
+      }),
+    );
+    expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 
   it("never carries a protocol-confused return path into the auth token", async () => {
@@ -219,7 +273,7 @@ describe("engagement routes", () => {
       }),
     );
 
-    expect(mocks.toggleEngagementBookmark).not.toHaveBeenCalled();
+    expect(mocks.setEngagementBookmark).not.toHaveBeenCalled();
     expect(response.headers.get("location")).toBe(
       "https://over.garden/auth/intent?intent=opaque-intent-token",
     );
@@ -238,10 +292,11 @@ describe("engagement routes", () => {
         targetKind: "variety",
         targetRef: "pomidor-cheri-0000000101",
         returnTo: "/variety/pomidor-cheri-0000000101",
+        bookmarkState: "active",
       }),
     );
 
-    expect(mocks.toggleEngagementBookmark).toHaveBeenCalledWith(
+    expect(mocks.setEngagementBookmark).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000001",
         sessionId: "session-1",
@@ -251,6 +306,7 @@ describe("engagement routes", () => {
           kind: "variety",
           ref: "pomidor-cheri-0000000101",
         },
+        bookmarkState: "active",
       },
     );
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/bookmarks");
@@ -284,6 +340,114 @@ describe("engagement routes", () => {
     expect(response.headers.get("set-cookie")).toContain(
       "og_engagement_device=",
     );
+  });
+
+  it("sets an explicit signed-in object follow state and refreshes the feed", async () => {
+    const { POST } = await import("./follows/route");
+    const objectId = "00000000-0000-4000-8000-000000000101";
+
+    const response = await POST(
+      formRequest("/api/engagement/follows", {
+        targetKind: "lineage_object",
+        targetRef: objectId,
+        returnTo: `/lineage/objects/${objectId}`,
+        followState: "active",
+      }),
+    );
+
+    expect(mocks.setEngagementFollow).toHaveBeenCalledWith(
+      {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+      {
+        target: { kind: "lineage_object", ref: objectId },
+        followState: "active",
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/feed");
+    expect(response.headers.get("location")).toContain("engagement=followed");
+  });
+
+  it("keeps a signed-out report reason and comment id out of auth intent", async () => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { POST } = await import("./comments/report/route");
+
+    const response = await POST(
+      formRequest("/api/engagement/comments/report", {
+        targetKind: "journal_entry",
+        targetRef: "first-public-harvest",
+        returnTo: "/journal/first-public-harvest",
+        commentId: "00000000-0000-4000-8000-000000000201",
+        reason: "privacy",
+      }),
+    );
+
+    expect(mocks.reportEngagementComment).not.toHaveBeenCalled();
+    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
+      action: "report",
+      returnTo: "/journal/first-public-harvest",
+      target: { kind: "journal", ref: "first-public-harvest" },
+      control: "reply-a7d8f9c012345678",
+    });
+    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+      /privacy|00000000-0000-4000-8000-000000000201/,
+    );
+    expect(response.status).toBe(303);
+  });
+
+  it("executes signed-in comment report, delete, and block in owner scope", async () => {
+    const commentId = "00000000-0000-4000-8000-000000000201";
+    const fields = {
+      targetKind: "journal_entry",
+      targetRef: "first-public-harvest",
+      returnTo: "/journal/first-public-harvest",
+      commentId,
+    };
+    const [{ POST: report }, { POST: remove }, { POST: block }] =
+      await Promise.all([
+        import("./comments/report/route"),
+        import("./comments/delete/route"),
+        import("./comments/block/route"),
+      ]);
+
+    await report(
+      formRequest("/api/engagement/comments/report", {
+        ...fields,
+        reason: "misinformation",
+      }),
+    );
+    await remove(formRequest("/api/engagement/comments/delete", fields));
+    await block(formRequest("/api/engagement/comments/block", fields));
+
+    const expectedScope = {
+      userId: "00000000-0000-4000-8000-000000000001",
+      sessionId: "session-1",
+    };
+    expect(mocks.reportEngagementComment).toHaveBeenCalledWith(expectedScope, {
+      commentId,
+      reason: "misinformation",
+      target: {
+        kind: "journal_entry",
+        ref: "first-public-harvest",
+      },
+    });
+    expect(mocks.deleteEngagementComment).toHaveBeenCalledWith(
+      expectedScope,
+      commentId,
+    );
+    expect(mocks.blockEngagementCommentAuthor).toHaveBeenCalledWith(
+      expectedScope,
+      {
+        commentId,
+        target: {
+          kind: "journal_entry",
+          ref: "first-public-harvest",
+        },
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/notifications");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/bookmarks");
   });
 });
 

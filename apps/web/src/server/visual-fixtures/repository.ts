@@ -14,6 +14,13 @@ export interface VisualFixtureCounts {
   profileFollows: number;
   profileBlocks: number;
   profileReports: number;
+  engagementComments: number;
+  engagementBookmarks: number;
+  engagementFollows: number;
+  engagementCommentReports: number;
+  notificationReceipts: number;
+  notificationPreferences: number;
+  wishlistItems: number;
   spaces: number;
   catalogItems: number;
   catalogNames: number;
@@ -508,6 +515,165 @@ export function buildVisualFixtureSeedQueries(
       }),
     );
 
+  const engagementComments = executor
+    .insertInto("engagement_comments")
+    .values(
+      manifest.socialEvidence.comments.map((comment) => ({
+        id: comment.id,
+        target_kind: comment.targetKind,
+        target_ref: comment.targetRef,
+        author_user_id: comment.authorUserId,
+        parent_comment_id: comment.parentCommentId,
+        client_mutation_id: comment.clientMutationId,
+        body: comment.body,
+        comment_state: comment.state,
+        created_at: comment.createdAt,
+        updated_at: comment.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("id").doUpdateSet({
+        target_kind: sql`excluded.target_kind`,
+        target_ref: sql`excluded.target_ref`,
+        author_user_id: sql`excluded.author_user_id`,
+        parent_comment_id: sql`excluded.parent_comment_id`,
+        client_mutation_id: sql`excluded.client_mutation_id`,
+        body: sql`excluded.body`,
+        comment_state: sql`excluded.comment_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const engagementBookmarks = executor
+    .insertInto("engagement_bookmarks")
+    .values(
+      manifest.socialEvidence.bookmarks.map((bookmark) => ({
+        id: bookmark.id,
+        owner_user_id: bookmark.ownerUserId,
+        target_kind: bookmark.targetKind,
+        target_ref: bookmark.targetRef,
+        bookmark_state: bookmark.state,
+        created_at: bookmark.createdAt,
+        updated_at: bookmark.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["owner_user_id", "target_kind", "target_ref"]).doUpdateSet({
+        bookmark_state: sql`excluded.bookmark_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const engagementFollows = executor
+    .insertInto("engagement_follows")
+    .values(
+      manifest.socialEvidence.follows.map((follow) => ({
+        id: follow.id,
+        follower_user_id: follow.followerUserId,
+        target_kind: follow.targetKind,
+        target_ref: follow.targetRef,
+        follow_state: follow.state,
+        created_at: follow.createdAt,
+        updated_at: follow.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc
+        .columns(["follower_user_id", "target_kind", "target_ref"])
+        .doUpdateSet({
+          follow_state: sql`excluded.follow_state`,
+          updated_at: sql`excluded.updated_at`,
+        }),
+    );
+
+  const engagementCommentReports = executor
+    .insertInto("engagement_comment_reports")
+    .values(
+      manifest.socialEvidence.commentReports.map((report) => ({
+        id: report.id,
+        reporter_user_id: report.reporterUserId,
+        comment_id: report.commentId,
+        report_reason: report.reason,
+        report_state: report.state,
+        created_at: report.createdAt,
+        updated_at: report.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["reporter_user_id", "comment_id"]).doUpdateSet({
+        report_reason: sql`excluded.report_reason`,
+        report_state: sql`excluded.report_state`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const notificationReceipts = executor
+    .insertInto("notification_receipts")
+    .values(
+      manifest.socialEvidence.notificationReceipts.map((receipt) => ({
+        id: receipt.id,
+        owner_user_id: receipt.ownerUserId,
+        event_key: receipt.eventKey,
+        receipt_state: receipt.state,
+        read_at: receipt.readAt,
+        created_at: receipt.createdAt,
+        updated_at: receipt.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["owner_user_id", "event_key"]).doUpdateSet({
+        receipt_state: sql`excluded.receipt_state`,
+        read_at: sql`excluded.read_at`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const notificationPreferences = executor
+    .insertInto("notification_preferences")
+    .values(
+      manifest.socialEvidence.notificationPreferences.map((preference) => ({
+        owner_user_id: preference.ownerUserId,
+        comments_enabled: preference.comments,
+        replies_enabled: preference.replies,
+        follows_enabled: preference.follows,
+        mentions_enabled: preference.mentions,
+        claims_enabled: preference.claims,
+        system_enabled: preference.system,
+        created_at: preference.createdAt,
+        updated_at: preference.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.column("owner_user_id").doUpdateSet({
+        comments_enabled: sql`excluded.comments_enabled`,
+        replies_enabled: sql`excluded.replies_enabled`,
+        follows_enabled: sql`excluded.follows_enabled`,
+        mentions_enabled: sql`excluded.mentions_enabled`,
+        claims_enabled: sql`excluded.claims_enabled`,
+        system_enabled: sql`excluded.system_enabled`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
+  const wishlistItems = executor
+    .insertInto("wishlist_items")
+    .values(
+      manifest.socialEvidence.wishlistItems.map((item) => ({
+        id: item.id,
+        owner_user_id: item.ownerUserId,
+        catalog_item_id: item.catalogItemId,
+        source_surface: item.sourceSurface,
+        created_at: item.createdAt,
+        updated_at: item.createdAt,
+      })),
+    )
+    .onConflict((oc) =>
+      oc.columns(["owner_user_id", "catalog_item_id"]).doUpdateSet({
+        source_surface: sql`excluded.source_surface`,
+        updated_at: sql`excluded.updated_at`,
+      }),
+    );
+
   return [
     { label: "lineage_audit_cleanup", query: lineageAuditCleanup },
     { label: "media_cleanup", query: mediaCleanup },
@@ -528,6 +694,13 @@ export function buildVisualFixtureSeedQueries(
     { label: "profile_follows", query: profileFollows },
     { label: "profile_blocks", query: profileBlocks },
     { label: "profile_reports", query: profileReports },
+    { label: "engagement_comments", query: engagementComments },
+    { label: "engagement_bookmarks", query: engagementBookmarks },
+    { label: "engagement_follows", query: engagementFollows },
+    { label: "engagement_comment_reports", query: engagementCommentReports },
+    { label: "notification_receipts", query: notificationReceipts },
+    { label: "notification_preferences", query: notificationPreferences },
+    { label: "wishlist_items", query: wishlistItems },
   ] as const;
 }
 
@@ -538,6 +711,64 @@ export function buildVisualFixtureResetQueries(
   const actorIds = manifest.actors.map(({ id }) => id);
 
   return [
+    {
+      label: "notification_receipts",
+      query: executor.deleteFrom("notification_receipts").where(
+        "id",
+        "in",
+        manifest.socialEvidence.notificationReceipts.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "notification_preferences",
+      query: executor.deleteFrom("notification_preferences").where(
+        "owner_user_id",
+        "in",
+        manifest.socialEvidence.notificationPreferences.map(
+          ({ ownerUserId }) => ownerUserId,
+        ),
+      ),
+    },
+    {
+      label: "engagement_comment_reports",
+      query: executor.deleteFrom("engagement_comment_reports").where(
+        "id",
+        "in",
+        manifest.socialEvidence.commentReports.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "engagement_comments",
+      query: executor.deleteFrom("engagement_comments").where(
+        "id",
+        "in",
+        manifest.socialEvidence.comments.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "engagement_bookmarks",
+      query: executor.deleteFrom("engagement_bookmarks").where(
+        "id",
+        "in",
+        manifest.socialEvidence.bookmarks.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "engagement_follows",
+      query: executor.deleteFrom("engagement_follows").where(
+        "id",
+        "in",
+        manifest.socialEvidence.follows.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "wishlist_items",
+      query: executor.deleteFrom("wishlist_items").where(
+        "id",
+        "in",
+        manifest.socialEvidence.wishlistItems.map(({ id }) => id),
+      ),
+    },
     {
       label: "profile_reports",
       query: executor.deleteFrom("profile_reports").where(
@@ -723,6 +954,85 @@ export function buildVisualFixtureStatusQueries(
           "id",
           "in",
           manifest.profileReports.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "engagementComments",
+      query: executor
+        .selectFrom("engagement_comments")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.comments.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "engagementBookmarks",
+      query: executor
+        .selectFrom("engagement_bookmarks")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.bookmarks.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "engagementFollows",
+      query: executor
+        .selectFrom("engagement_follows")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.follows.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "engagementCommentReports",
+      query: executor
+        .selectFrom("engagement_comment_reports")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.commentReports.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "notificationReceipts",
+      query: executor
+        .selectFrom("notification_receipts")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.notificationReceipts.map(({ id }) => id),
+        ),
+    },
+    {
+      label: "notificationPreferences",
+      query: executor
+        .selectFrom("notification_preferences")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "owner_user_id",
+          "in",
+          manifest.socialEvidence.notificationPreferences.map(
+            ({ ownerUserId }) => ownerUserId,
+          ),
+        ),
+    },
+    {
+      label: "wishlistItems",
+      query: executor
+        .selectFrom("wishlist_items")
+        .select((eb) => eb.fn.countAll<number>().as("count"))
+        .where(
+          "id",
+          "in",
+          manifest.socialEvidence.wishlistItems.map(({ id }) => id),
         ),
     },
     {
@@ -913,6 +1223,14 @@ export function expectedVisualFixtureCounts(
     profileFollows: manifest.profileFollows.length,
     profileBlocks: manifest.profileBlocks.length,
     profileReports: manifest.profileReports.length,
+    engagementComments: manifest.socialEvidence.comments.length,
+    engagementBookmarks: manifest.socialEvidence.bookmarks.length,
+    engagementFollows: manifest.socialEvidence.follows.length,
+    engagementCommentReports: manifest.socialEvidence.commentReports.length,
+    notificationReceipts: manifest.socialEvidence.notificationReceipts.length,
+    notificationPreferences:
+      manifest.socialEvidence.notificationPreferences.length,
+    wishlistItems: manifest.socialEvidence.wishlistItems.length,
     spaces: manifest.spaces.length,
     catalogItems: manifest.catalogItems.length,
     catalogNames: manifest.catalogNames.length,

@@ -16,6 +16,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
+import { resolveVisualSocialScenario } from "@/lib/visual-fixtures/social-return-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getEngagementSummary } from "@/server/engagement-repository";
 import { getPublicJournalEntryLookup } from "@/server/journal-repository";
@@ -79,18 +80,25 @@ export default async function PublicJournalEntryRoute({
   if (lookup.status !== "active") notFound();
 
   const session = await getCurrentSession();
-  const userId = session?.user?.id;
+  const visualScenario = resolveVisualSocialScenario(
+    query.visualSocial,
+    "journal",
+    process.env,
+  );
+  const userId = visualScenario?.actorId ?? session?.user?.id;
+  const scope = userId
+    ? scopedToUser(userId, visualScenario ? null : getSessionId(session))
+    : null;
   const engagementTarget = {
     kind: "journal_entry" as const,
     ref: lookup.page.entry.publicSlug,
   };
   const [engagement, ownerControl] = await Promise.all([
-    getEngagementSummary(engagementTarget),
-    userId
-      ? getOwnerJournalEntryControl(
-          scopedToUser(userId, getSessionId(session)),
-          lookup.page.entry.publicSlug,
-        )
+    getEngagementSummary(engagementTarget, scope, {
+      commentCursor: firstParam(query.cursor),
+    }),
+    scope
+      ? getOwnerJournalEntryControl(scope, lookup.page.entry.publicSlug)
       : Promise.resolve(null),
   ]);
   const directoryReturnTo = normalizePublicJournalDirectoryReturnTo(
@@ -98,6 +106,9 @@ export default async function PublicJournalEntryRoute({
     locale,
     Boolean(tryResolveVisualFixtureEnvironment(process.env)),
   );
+  const engagementReturnTo = visualScenario
+    ? `${lookup.page.entry.publicPath}?visualSocial=${visualScenario.id}`
+    : lookup.page.entry.publicPath;
 
   return (
     <PublicJournalEntryView
@@ -112,7 +123,7 @@ export default async function PublicJournalEntryRoute({
         locale={locale}
         target={engagementTarget}
         summary={engagement}
-        returnTo={lookup.page.entry.publicPath}
+        returnTo={engagementReturnTo}
         status={firstParam(query.engagement)}
         resumeAction={normalizeAuthIntentResumeAction(
           firstParam(query.authIntent) ?? undefined,

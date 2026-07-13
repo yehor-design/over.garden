@@ -22,9 +22,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   images: {
+    dangerouslyAllowLocalIP:
+      process.env.VISUAL_FIXTURES_ENABLED === "true" &&
+      process.env.VISUAL_FIXTURES_TARGET === "local",
     remotePatterns: [
       { protocol: "https", hostname: "media.over.garden" },
       { protocol: "http", hostname: "localhost", port: "9000" },
+      { protocol: "http", hostname: "127.0.0.1", port: "9000" },
     ],
   },
   // Pin the workspace root to the MONOREPO root (two levels up from apps/web).

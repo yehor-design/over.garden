@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   ArrowUpRight,
+  BellRing,
   BookOpenText,
   CheckCircle2,
   Database,
@@ -118,6 +119,34 @@ export default async function VisualFixtureIndexPage() {
               label="Profile reports"
               value={status.actual.profileReports}
             />
+            <CountFact
+              label="Engagement comments"
+              value={status.actual.engagementComments}
+            />
+            <CountFact
+              label="Engagement bookmarks"
+              value={status.actual.engagementBookmarks}
+            />
+            <CountFact
+              label="Engagement follows"
+              value={status.actual.engagementFollows}
+            />
+            <CountFact
+              label="Comment reports"
+              value={status.actual.engagementCommentReports}
+            />
+            <CountFact
+              label="Notification receipts"
+              value={status.actual.notificationReceipts}
+            />
+            <CountFact
+              label="Notification preferences"
+              value={status.actual.notificationPreferences}
+            />
+            <CountFact
+              label="Wishlist items"
+              value={status.actual.wishlistItems}
+            />
             <CountFact label="Spaces" value={status.actual.spaces} />
             <CountFact
               label="Catalog identities"
@@ -155,6 +184,85 @@ export default async function VisualFixtureIndexPage() {
               {VISUAL_FIXTURE_MANIFEST_HASH}
             </code>
           </div>
+        </section>
+
+        <Separator />
+
+        <section
+          aria-labelledby="social-evidence-heading"
+          className="grid gap-4"
+        >
+          <div>
+            <p className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <BellRing className="size-4" aria-hidden="true" />
+              Real scoped repositories, deterministic actors, and exact edges
+            </p>
+            <h2
+              id="social-evidence-heading"
+              className="mt-1 text-xl font-semibold"
+            >
+              Social return-loop V2 evidence
+            </h2>
+          </div>
+
+          <ol className="grid gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {VISUAL_FIXTURE_MANIFEST.socialEvidence.scenarios.map(
+              (scenario) => (
+                <li key={scenario.id} className="min-w-0 bg-background p-4">
+                  <div className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="min-w-0 text-sm font-semibold break-words">
+                        {scenario.id.replaceAll("-", " ")}
+                      </h3>
+                      <span className="shrink-0 rounded-md border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                        {scenario.expectedStatus}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                      <PassportEvidenceFact
+                        label="Surface"
+                        value={scenario.surface}
+                      />
+                      <PassportEvidenceFact
+                        label="State"
+                        value={scenario.state}
+                      />
+                      <PassportEvidenceFact
+                        label="Actor"
+                        value={socialActorRole(scenario.actorId)}
+                      />
+                      <PassportEvidenceFact
+                        label="Visible"
+                        value={String(scenario.expectedItemCount)}
+                      />
+                      <PassportEvidenceFact
+                        label="Hidden"
+                        value={String(scenario.expectedHiddenIds.length)}
+                      />
+                      <PassportEvidenceFact
+                        label="Next page"
+                        value={scenario.expectedHasNextPage ? "yes" : "no"}
+                      />
+                    </dl>
+                    <code className="line-clamp-2 text-xs break-all text-muted-foreground">
+                      {scenario.path}
+                    </code>
+                    <Link
+                      href={scenario.path}
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-auto w-fit",
+                      })}
+                    >
+                      Open social state
+                      <ArrowUpRight aria-hidden="true" />
+                    </Link>
+                  </div>
+                </li>
+              ),
+            )}
+          </ol>
         </section>
 
         <Separator />
@@ -792,6 +900,18 @@ export default async function VisualFixtureIndexPage() {
       </div>
     </main>
   );
+}
+
+function socialActorRole(actorId: string | null) {
+  if (!actorId) return "guest";
+  const roles = VISUAL_FIXTURE_MANIFEST.socialEvidence.actorRoles;
+  if (actorId === roles.denseCollectionActorId) return "dense owner";
+  if (actorId === roles.emptyCollectionActorId) return "empty owner";
+  if (actorId === roles.reporterActorId) return "reporter";
+  if (actorId === roles.reportedActorId) return "reported";
+  if (actorId === roles.blockedActorId) return "blocked";
+  if (actorId === roles.moderatorSafeActorId) return "moderator-safe";
+  return "reader";
 }
 
 function CountFact({ label, value }: { label: string; value: number }) {

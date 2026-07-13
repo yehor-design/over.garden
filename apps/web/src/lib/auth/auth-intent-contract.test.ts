@@ -195,11 +195,11 @@ describe("auth intent contract", () => {
     ).toThrow(AuthIntentContractError);
     expect(() =>
       normalizeAuthIntentDraft({
-        action: "block",
+        action: "claim",
         returnTo: "/@demo_olena",
         target: {
-          kind: "object",
-          ref: "18700003-0000-4000-8000-000000000002",
+          kind: "profile",
+          ref: "demo_olena",
         },
       }),
     ).toThrow(AuthIntentContractError);
