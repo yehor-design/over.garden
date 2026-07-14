@@ -546,7 +546,6 @@ async function verifyPublicRoutes(base: string) {
   const routes = [
     ["/health", "noindex"],
     ["/robots.txt", "Sitemap:"],
-    ["/sitemap.xml", "https://over.garden/uk"],
     ["/support", "noindex"],
     ["/privacy", "noindex"],
     ["/uk", "index, follow"],
@@ -571,10 +570,11 @@ async function verifyPublicRoutes(base: string) {
   }
 
   const sitemap = await fetch(`${base}/sitemap.xml`);
-  const sitemapText = await sitemap.text();
-  assert(!sitemapText.includes("/garden"), "sitemap excludes workspace routes");
-  assert(!sitemapText.includes("/admin"), "sitemap excludes admin routes");
-  assert(!sitemapText.includes("/auth/"), "sitemap excludes auth routes");
+  assertSitemapPolicyContract({
+    status: sitemap.status,
+    contentType: sitemap.headers.get("content-type"),
+    xml: await sitemap.text(),
+  });
 
   return {
     diagnosticRoutesClass: "public_noindex",
@@ -584,6 +584,43 @@ async function verifyPublicRoutes(base: string) {
     sitemapClass: "policy_allowed_only",
     robotsClass: "sitemap_advertised",
   };
+}
+
+export function assertSitemapPolicyContract(input: {
+  status: number;
+  contentType: string | null;
+  xml: string;
+}) {
+  assertEqual(input.status, 200, "sitemap status");
+  assertIncludes(input.contentType ?? "", "application/xml", "sitemap content type");
+  assertIncludes(
+    input.xml,
+    '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    "sitemap root",
+  );
+
+  const locations = Array.from(
+    input.xml.matchAll(/<loc>([^<]+)<\/loc>/g),
+    (match) => match[1],
+  );
+  assert(locations.length > 0, "sitemap must contain at least one public URL");
+
+  const localePrefixes = new Set(["uk", "bg", "ru"]);
+  const forbiddenRouteRoots = new Set(["garden", "admin", "auth"]);
+  for (const location of locations) {
+    const url = new URL(location);
+    assertEqual(url.origin, "https://over.garden", "sitemap URL origin");
+    assert(!url.username && !url.password, "sitemap URL excludes credentials");
+    assert(!url.search && !url.hash, "sitemap URL excludes query and fragment");
+    const segments = url.pathname.split("/").filter(Boolean);
+    const routeRoot = localePrefixes.has(segments[0] ?? "")
+      ? segments[1]
+      : segments[0];
+    assert(
+      !routeRoot || !forbiddenRouteRoots.has(routeRoot),
+      `sitemap excludes /${routeRoot} routes`,
+    );
+  }
 }
 
 async function verifyAdminAndErasureGates(
