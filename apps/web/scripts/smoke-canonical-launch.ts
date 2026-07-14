@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import { config as loadEnv } from "dotenv";
 import { createEmailVerificationToken } from "better-auth/api";
@@ -496,16 +498,32 @@ function requiredEnv(name: string) {
   return value;
 }
 
-async function verifyAuthSurfaces(base: string, jar: CookieJar, signOutJar: CookieJar) {
+async function verifyAuthSurfaces(
+  base: string,
+  jar: CookieJar,
+  signOutJar: CookieJar,
+) {
   const garden = await htmlResponse(base, signOutJar, "/garden");
   assertEqual(garden.status, 200, "signed-out garden status");
-  assertIncludes(garden.text, "Sign in", "signed-out garden auth boundary");
-  assertIncludes(garden.text, "Google", "production Google sign-in option");
-  assertIncludes(garden.text, "Facebook", "production Facebook sign-in option");
+  assertIncludes(
+    garden.text,
+    'data-testid="garden-auth-panel"',
+    "signed-out garden auth boundary",
+  );
+  assertIncludes(
+    garden.text,
+    'data-testid="google-sign-in-button"',
+    "production Google sign-in option",
+  );
+  assertIncludes(
+    garden.text,
+    'data-testid="facebook-sign-in-button"',
+    "production Facebook sign-in option",
+  );
 
   const authedGarden = await htmlResponse(base, jar, "/garden");
   assertEqual(authedGarden.status, 200, "signed-in garden status");
-  assertIncludes(authedGarden.text, "Garden journal", "signed-in garden shell");
+  assertAuthenticatedGardenShell(authedGarden.text);
 
   return {
     signedOutGardenBoundary: true,
@@ -514,6 +532,14 @@ async function verifyAuthSurfaces(base: string, jar: CookieJar, signOutJar: Cook
     facebookProviderVisible: true,
     signedInGardenReadback: true,
   };
+}
+
+export function assertAuthenticatedGardenShell(html: string) {
+  assertIncludes(
+    html,
+    'data-garden-workspace="operational-home"',
+    "signed-in garden shell",
+  );
 }
 
 async function verifyPublicRoutes(base: string) {
@@ -900,12 +926,19 @@ function getSetCookieHeaders(headers: Headers): string[] {
   return combined ? combined.split(/,(?=\s*[^;,]+=)/) : [];
 }
 
-main()
-  .catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    const loaded = await import("../src/db").catch(() => null);
-    await loaded?.db.destroy();
-  });
+async function runCli() {
+  await main()
+    .catch((error) => {
+      console.error(error instanceof Error ? error.message : error);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      const loaded = await import("../src/db").catch(() => null);
+      await loaded?.db.destroy();
+    });
+}
+
+const isDirectExecution =
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isDirectExecution) void runCli();
