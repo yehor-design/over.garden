@@ -141,6 +141,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Verify Drive2-parity closeout coverage
+        run: pnpm drive2:closeout:check
+
       - name: Test
         run: pnpm test
 
@@ -153,6 +156,7 @@ jobs:
       - name: Verify responsive and accessibility matrix
         env:
           PUBLIC_SITE_URL: http://localhost:3000
+          DATABASE_POOL_MAX: "4"
           VISUAL_FIXTURES_ENABLED: "true"
           VISUAL_FIXTURES_TARGET: local
           VISUAL_FIXTURES_DATABASE: overgarden
@@ -160,6 +164,11 @@ jobs:
           ACCESSIBILITY_BASE_URL: http://localhost:3000
         run: |
           pnpm visual:fixtures:seed
+          pnpm visual:fixtures:journal-create -- reset all
+          pnpm visual:fixtures:journal-create -- run all
+          pnpm visual:fixtures:journal-create -- verify all
+          pnpm visual:fixtures:journal-create -- reset all
+          pnpm visual:fixtures:verify
           pnpm start --hostname 127.0.0.1 --port 3000 > /tmp/overgarden-a11y-server.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid"' EXIT

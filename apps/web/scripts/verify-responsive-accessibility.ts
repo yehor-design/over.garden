@@ -7,6 +7,7 @@ import { chromium, type Browser, type Page } from "playwright";
 import {
   browserSafeFixturePath,
   CORE_JOURNEY_SCENARIOS,
+  CORE_JOURNEY_EVIDENCE_SCENARIO_IDS,
   CORE_JOURNEY_VIEWPORTS,
   type CoreJourneyScenario,
   type CoreJourneyViewportId,
@@ -20,7 +21,7 @@ const AXE_VIEWPORTS = new Set<CoreJourneyViewportId>([
   "desktop-1440",
 ]);
 const LINEAGE_CLAIM_HANDOFF_SCENARIO_ID = "intent:ove174-i004";
-const EVIDENCE_SCREENSHOTS = new Map([
+const EVIDENCE_SCREENSHOTS = new Map<string, string>([
   ["main:ove187-feed-dense@mobile-320", "ove-185-after-mobile-feed.png"],
   ["creation:ove182-c004@desktop-1440", "ove-185-after-desktop-creation.png"],
   [
@@ -31,6 +32,18 @@ const EVIDENCE_SCREENSHOTS = new Map([
     "creation:ove182-c007@zoom-200-reflow",
     "ove-185-after-zoom-200-creation.png",
   ],
+  ...Object.entries(CORE_JOURNEY_EVIDENCE_SCENARIO_IDS).flatMap(
+    ([archetype, scenarioId]) => [
+      [
+        `${scenarioId}@mobile-320`,
+        `ove-186-after-mobile-${archetype}.png`,
+      ] as const,
+      [
+        `${scenarioId}@desktop-1440`,
+        `ove-186-after-desktop-${archetype}.png`,
+      ] as const,
+    ],
+  ),
 ]);
 
 interface Failure {
@@ -265,7 +278,7 @@ function addStructureFailures(
 function expectedBrowserStatus(scenario: CoreJourneyScenario): number {
   if (scenario.fixture.collection === "intent") return 200;
   if (
-    scenario.fixture.collection === "profile" &&
+    scenario.id === "profile:blocked-unavailable" &&
     scenario.expectedStatus === 404
   ) {
     return 200;
@@ -353,6 +366,20 @@ async function runMatrix(
             viewportId: viewport.id,
             check: "http-status",
             detail: `${status} expected ${expectedStatus}`,
+          });
+        }
+
+        if (
+          scenario.archetype === "profile" &&
+          scenario.expectedStatus === 200 &&
+          scenario.path !== "/garden/profile" &&
+          (await page.locator('[data-public-profile="v2"]').count()) !== 1
+        ) {
+          failures.push({
+            scenarioId: scenario.id,
+            viewportId: viewport.id,
+            check: "core-content",
+            detail: "missing-public-profile-v2",
           });
         }
 

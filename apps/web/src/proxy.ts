@@ -34,6 +34,7 @@ import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/enviro
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
+const INTERNAL_PROFILE_REWRITE_HEADER = "x-overgarden-internal-profile-rewrite";
 
 function getCountryCode(request: NextRequest) {
   return (
@@ -138,9 +139,18 @@ function getLocaleRoutingResponse(
 ) {
   const { pathname } = request.nextUrl;
   const isDocumentNavigation = isDocumentNavigationRequest(request);
+  const strippedPath = stripLocalePrefix(pathname);
+  const rootProfileHandle = strippedPath.locale
+    ? null
+    : matchPublicProfilePath(pathname);
+  const isInternalDefaultProfileRewrite =
+    request.headers.get(INTERNAL_PROFILE_REWRITE_HEADER) === "1" &&
+    strippedPath.locale === DEFAULT_PUBLIC_LOCALE &&
+    matchPublicProfilePath(pathname) !== null;
 
   if (
     isDocumentNavigation &&
+    !isInternalDefaultProfileRewrite &&
     (pathname === "/uk" || pathname.startsWith("/uk/"))
   ) {
     const url = request.nextUrl.clone();
@@ -149,13 +159,14 @@ function getLocaleRoutingResponse(
     return NextResponse.redirect(url, { status: 308 });
   }
 
-  if (pathname.startsWith("/@") && pathname.length > 2) {
+  if (rootProfileHandle) {
     const url = request.nextUrl.clone();
+    const rootProfilePath = `/@${rootProfileHandle}`;
 
     if (locale !== DEFAULT_PUBLIC_LOCALE) {
       if (!isDocumentNavigation) return null;
 
-      url.pathname = localizedPath(locale, pathname);
+      url.pathname = localizedPath(locale, rootProfilePath);
       return NextResponse.redirect(url, { status: 307 });
     }
 
@@ -163,7 +174,8 @@ function getLocaleRoutingResponse(
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
-    url.pathname = `/uk${pathname}`;
+    requestHeaders.set(INTERNAL_PROFILE_REWRITE_HEADER, "1");
+    url.pathname = `/uk${rootProfilePath}`;
     return NextResponse.rewrite(url, {
       request: {
         headers: requestHeaders,

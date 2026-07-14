@@ -49,6 +49,22 @@ export const CORE_JOURNEY_ARCHETYPES = [
 
 export type CoreJourneyArchetype = (typeof CORE_JOURNEY_ARCHETYPES)[number];
 
+export const CORE_JOURNEY_EVIDENCE_SCENARIO_IDS = {
+  shell: "shell:ove187-feed-typical",
+  feed: "main:ove187-feed-typical",
+  catalog: "main:ove187-catalog-page-size-plus-one",
+  "journal-directory": "main:ove187-journal-directory-plus-one",
+  knowledge: "main:ove187-knowledge-guide-dense",
+  "object-passport": "passport:public-plant-dense",
+  "journal-entry": "journal-entry:recent-mixed-gallery",
+  profile: "profile:gardener-dense",
+  workspace: "workspace:workspace-dense",
+  creation: "creation:ove182-c005",
+  "auth-intent": "intent:ove174-i001",
+  social: "social:comments-dense",
+  community: "community:ove184-community-typical",
+} as const satisfies Record<CoreJourneyArchetype, string>;
+
 export const CORE_JOURNEY_REQUIRED_STATES = [
   "empty",
   "typical",
@@ -223,7 +239,11 @@ function mainScenario(fixture: VisualFixtureScenario): CoreJourneyScenario {
   const id = `main:${fixture.id}`;
   const states = stateFromText(`${fixture.kind} ${fixture.id}`);
 
-  if (archetype === "feed" || archetype === "catalog") states.push("guest");
+  if (
+    ["feed", "catalog", "journal-directory", "knowledge"].includes(archetype)
+  ) {
+    states.push("guest");
+  }
   if (fixture.id === "ove187-feed-dense") states.push("mixed-media");
   if (fixture.id === "ove187-catalog-empty") states.push("no-media");
 

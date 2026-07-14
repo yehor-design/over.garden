@@ -587,7 +587,11 @@ function ProfileJournalRow({
 }) {
   return (
     <article className="grid gap-3 py-4 sm:flex">
-      <Link href={journal.publicPath} className="block shrink-0">
+      <Link
+        href={journal.publicPath}
+        aria-label={journal.title}
+        className="block shrink-0"
+      >
         {journal.coverImageUrl ? (
           <Image
             src={journal.coverImageUrl}

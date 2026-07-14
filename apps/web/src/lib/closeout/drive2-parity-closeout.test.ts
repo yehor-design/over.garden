@@ -1,0 +1,106 @@
+import { describe, expect, it } from "vitest";
+
+import { AUTH_INTENT_ACTIONS } from "@/lib/auth/auth-intent-contract";
+import {
+  CORE_JOURNEY_ARCHETYPES,
+  CORE_JOURNEY_SCENARIOS,
+  CORE_JOURNEY_VIEWPORTS,
+} from "@/lib/accessibility/core-journey-matrix";
+import {
+  assertDrive2ParityCloseoutCoverage,
+  buildDrive2ParityCloseoutCoverage,
+  DRIVE2_CLOSEOUT_REQUIRED_OBJECT_KINDS,
+} from "./drive2-parity-closeout";
+
+describe("OVE-186 Drive2-parity closeout coverage", () => {
+  it("produces a zero-gap report from the stable v8 fixture matrix", () => {
+    const report = buildDrive2ParityCloseoutCoverage();
+
+    expect(() => assertDrive2ParityCloseoutCoverage(report)).not.toThrow();
+    expect(report.issue).toBe("OVE-186");
+    expect(report.evidenceClass).toBe("local-deterministic-fixture");
+    expect(report.fixture).toEqual({
+      version: "ove187-v8",
+      manifestHash:
+        "6ab79d02c843b79a74fff9109b9409e5e02bcce331fab3915957ea37b95a4710",
+      namespace: "visual-fixtures/ove187-v8",
+    });
+    expect(report.summary).toMatchObject({
+      scenarioCount: 171,
+      routeViewportCheckCount: 642,
+      archetypeCount: CORE_JOURNEY_ARCHETYPES.length,
+      viewportCount: CORE_JOURNEY_VIEWPORTS.length,
+    });
+    expect(report.missing).toEqual({
+      archetypes: [],
+      states: [],
+      viewports: [],
+      mobileDesktopArchetypes: [],
+      objectKinds: [],
+      authIntentActions: [],
+      guestJourneyScenarios: [],
+      authenticatedJourneyScenarios: [],
+      screenshotEvidenceArchetypes: [],
+      unsafeEvidencePaths: [],
+    });
+    expect(report.screenshotEvidence).toHaveLength(
+      CORE_JOURNEY_ARCHETYPES.length,
+    );
+  });
+
+  it("keeps every archetype reproducible at 320px and 1440px", () => {
+    const report = buildDrive2ParityCloseoutCoverage();
+
+    expect(Object.keys(report.archetypes).sort()).toEqual(
+      [...CORE_JOURNEY_ARCHETYPES].sort(),
+    );
+    for (const archetype of CORE_JOURNEY_ARCHETYPES) {
+      expect(report.archetypes[archetype].viewportIds).toEqual(
+        expect.arrayContaining(["mobile-320", "desktop-1440"]),
+      );
+      expect(report.archetypes[archetype].scenarioCount).toBeGreaterThan(0);
+    }
+  });
+
+  it("binds all mutation intents and all living-object kinds into the closeout", () => {
+    const report = buildDrive2ParityCloseoutCoverage();
+
+    expect(report.authIntentActions).toEqual([...AUTH_INTENT_ACTIONS]);
+    expect(report.objectKinds).toEqual([
+      ...DRIVE2_CLOSEOUT_REQUIRED_OBJECT_KINDS,
+    ]);
+    expect(
+      report.journeys.authenticated.map(({ scenarioId }) => scenarioId),
+    ).toEqual(
+      expect.arrayContaining([
+        "intent:ove174-i001",
+        "intent:ove174-i002",
+        "intent:ove174-i003",
+        "intent:ove174-i005",
+        "workspace:workspace-dense",
+        "creation:ove182-c001",
+        "creation:ove182-c002",
+        "creation:ove182-c003",
+        "creation:ove182-c012",
+        "social:feed-dense",
+        "social:notifications-dense",
+      ]),
+    );
+  });
+
+  it("fails closed when a required journey archetype disappears", () => {
+    const scenarios = CORE_JOURNEY_SCENARIOS.filter(
+      ({ archetype }) => archetype !== "community",
+    );
+    const report = buildDrive2ParityCloseoutCoverage({ scenarios });
+
+    expect(report.missing.archetypes).toContain("community");
+    expect(report.missing.screenshotEvidenceArchetypes).toContain("community");
+    expect(report.missing.authenticatedJourneyScenarios).toContain(
+      "community:ove184-community-member",
+    );
+    expect(() => assertDrive2ParityCloseoutCoverage(report)).toThrow(
+      /OVE-186 closeout coverage is incomplete/,
+    );
+  });
+});

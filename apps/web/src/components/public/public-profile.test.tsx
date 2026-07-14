@@ -85,6 +85,7 @@ describe("PublicProfileView", () => {
     );
     expect(html).toContain("Томат Чорний принц");
     expect(html).toContain("Перший урожай після спеки");
+    expect(html).toContain('aria-label="Перший урожай після спеки"');
     expect(html).toContain("Показати ще 1");
     expect(html).toContain('data-auth-intent-control="follow"');
     expect(html).toContain('data-auth-intent-control="report"');

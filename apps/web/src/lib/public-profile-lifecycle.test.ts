@@ -8,7 +8,9 @@ import {
 describe("public profile HTTP lifecycle", () => {
   it("matches exact root and localized handle documents", () => {
     expect(matchPublicProfilePath("/@demo_olena")).toBe("demo_olena");
+    expect(matchPublicProfilePath("/%40demo_olena")).toBe("demo_olena");
     expect(matchPublicProfilePath("/bg/@demo_mariya/")).toBe("demo_mariya");
+    expect(matchPublicProfilePath("/bg/%40demo_mariya/")).toBe("demo_mariya");
     expect(matchPublicProfilePath("/ru/@demo_danylo")).toBe("demo_danylo");
     expect(matchPublicProfilePath("/@demo_olena/journals")).toBeNull();
     expect(matchPublicProfilePath("/garden/profile")).toBeNull();

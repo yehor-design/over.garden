@@ -29,7 +29,13 @@ const PROFILE_NOT_FOUND_COPY: Record<
 
 export function matchPublicProfilePath(pathname: string) {
   const basePath = stripLocalePrefix(pathname).path;
-  return PUBLIC_PROFILE_PATH.exec(basePath)?.[1]?.toLowerCase() ?? null;
+  let decodedPath: string;
+  try {
+    decodedPath = decodeURIComponent(basePath);
+  } catch {
+    return null;
+  }
+  return PUBLIC_PROFILE_PATH.exec(decodedPath)?.[1]?.toLowerCase() ?? null;
 }
 
 export function renderNotFoundPublicProfileHtml(locale: InterfaceLocale) {

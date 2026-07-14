@@ -1166,6 +1166,50 @@ export async function createPlantObjectJournalEntry(
   }
 
   return db.transaction().execute(async (trx) => {
+    await buildJournalMutationAdvisoryLockQuery(
+      scope,
+      normalized.clientMutationId,
+    ).execute(trx);
+    const existingAfterLock = await findJournalEntryByClientMutation(
+      scope,
+      normalized.clientMutationId,
+      trx,
+    );
+    if (existingAfterLock) {
+      if (
+        existingAfterLock.entry_scope !== "object" ||
+        existingAfterLock.plant_object_id !== normalized.plantObjectId
+      ) {
+        throw new Error(
+          "Client mutation id already belongs to another plant object.",
+        );
+      }
+
+      const mediaAttached = await attachMediaAssetToEntryIfPresent(
+        trx,
+        scope,
+        normalized.mediaAssetId,
+        existingAfterLock.id,
+      );
+      const page = await getPlantObjectPage(
+        scope,
+        existingAfterLock.plant_object_id,
+        trx,
+      );
+      if (!page) {
+        throw new Error("Existing journal entry is outside the request scope.");
+      }
+
+      return {
+        space: page.space,
+        plantObject: page.plantObject,
+        entry: existingAfterLock,
+        isNewEntry: false,
+        mediaAttached,
+        priorObjectEntryCount: Math.max(page.entries.length - 1, 0),
+      };
+    }
+
     const target = await buildPlantObjectPageObjectQuery(
       trx,
       scope,
@@ -1335,6 +1379,42 @@ export async function createSpaceJournalEntry(
   }
 
   return db.transaction().execute(async (trx) => {
+    await buildJournalMutationAdvisoryLockQuery(
+      scope,
+      normalized.clientMutationId,
+    ).execute(trx);
+    const existingAfterLock = await findJournalEntryByClientMutation(
+      scope,
+      normalized.clientMutationId,
+      trx,
+    );
+    if (existingAfterLock) {
+      if (
+        existingAfterLock.entry_scope !== "space" ||
+        existingAfterLock.space_id !== normalized.spaceId
+      ) {
+        throw new Error(
+          "Client mutation id already belongs to another journal entry.",
+        );
+      }
+
+      const existingMentions = await readMentionedObjectsForEntry(
+        trx,
+        scope,
+        existingAfterLock.id,
+      );
+      return {
+        space: await requireSpaceInScope(
+          trx,
+          scope,
+          existingAfterLock.space_id,
+        ),
+        entry: existingAfterLock,
+        mentionedObjects: existingMentions,
+        isNewEntry: false,
+      };
+    }
+
     const space = await requireSpaceInScope(trx, scope, normalized.spaceId);
     const mentionedObjects = await readMentionableObjectsInSpace(trx, scope, {
       spaceId: normalized.spaceId,

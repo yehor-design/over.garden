@@ -37,6 +37,34 @@ describe("visual journal creation evidence orchestration", () => {
     expect(result.duplicateStable).toBe(true);
   });
 
+  it("runs the follow-up duplicate scenario concurrently with one stable mutation", async () => {
+    const scenario = scenarioFor("follow-up", "duplicate");
+    const before = snapshotFor(scenario, false);
+    const after = snapshotFor(scenario, true);
+    const dependencies = dependenciesFor([before, after]);
+
+    const result = await executeVisualJournalCreationEvidence(
+      "run",
+      scenario,
+      dependencies,
+    );
+
+    expect(dependencies.resetScenario).toHaveBeenCalledOnce();
+    expect(dependencies.createFollowUp).toHaveBeenCalledTimes(2);
+    expect(dependencies.createFollowUp).toHaveBeenCalledWith(
+      { userId: scenario.ownerActorId, sessionId: null },
+      expect.objectContaining({
+        clientMutationId: scenario.clientMutationId,
+        internalDeterministicIds: {
+          entryId: scenario.expectedEntryId,
+        },
+        plantObjectId: scenario.expectedObjectId,
+      }),
+    );
+    expect(result.canonicalCreateCalls).toBe(2);
+    expect(result.duplicateStable).toBe(true);
+  });
+
   it("keeps offline evidence out of server tables", async () => {
     const scenario = scenarioFor("first-entry", "offline");
     const empty = snapshotFor(scenario, false);

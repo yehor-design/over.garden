@@ -168,5 +168,11 @@ describe("site shell navigation contract", () => {
       title: "Моята градина",
       primaryHref: "/garden#first-entry-composer",
     });
+    expect(getSiteShellRouteContext("/%40green_thumb", "uk").key).toBe(
+      "profile",
+    );
+    expect(getSiteShellRouteContext("/bg/%40green_thumb", "bg").key).toBe(
+      "profile",
+    );
   });
 });

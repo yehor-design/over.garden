@@ -386,7 +386,13 @@ function item(
 function normalizeSiteShellPath(pathname: string) {
   const pathOnly = pathname.split(/[?#]/, 1)[0] || "/";
   const { path } = stripLocalePrefix(pathOnly);
+  const browserDecodedProfilePath = path.replace(/^\/%40/i, "/@");
 
-  if (path.length > 1 && path.endsWith("/")) return path.slice(0, -1);
-  return path;
+  if (
+    browserDecodedProfilePath.length > 1 &&
+    browserDecodedProfilePath.endsWith("/")
+  ) {
+    return browserDecodedProfilePath.slice(0, -1);
+  }
+  return browserDecodedProfilePath;
 }

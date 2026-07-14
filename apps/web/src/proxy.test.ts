@@ -506,6 +506,15 @@ describe("app route cache guardrail", () => {
     const bulgarianProfile = await responseFor("/@green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
+    const encodedUkrainianProfile = await responseFor("/%40green_thumb", {
+      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
+    });
+    const encodedBulgarianProfile = await responseFor("/%40green_thumb", {
+      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+    });
+    const internalUkrainianRewrite = await responseFor("/uk/@green_thumb", {
+      "x-overgarden-internal-profile-rewrite": "1",
+    });
 
     expect(ukrainianProfile.status).toBe(200);
     expect(ukrainianProfile.headers.get("x-middleware-rewrite")).toBe(
@@ -516,5 +525,15 @@ describe("app route cache guardrail", () => {
     expect(bulgarianProfile.headers.get("Location")).toBe(
       "https://over.garden/bg/@green_thumb",
     );
+    expect(encodedUkrainianProfile.status).toBe(200);
+    expect(encodedUkrainianProfile.headers.get("x-middleware-rewrite")).toBe(
+      "https://over.garden/uk/@green_thumb",
+    );
+    expect(encodedBulgarianProfile.status).toBe(307);
+    expect(encodedBulgarianProfile.headers.get("Location")).toBe(
+      "https://over.garden/bg/@green_thumb",
+    );
+    expect(internalUkrainianRewrite.status).toBe(200);
+    expect(internalUkrainianRewrite.headers.get("Location")).toBeNull();
   });
 });
