@@ -1,12 +1,14 @@
 # Interface Locale Contract
 
 Status: active
-Issues: OVE-164, OVE-165
-Date: 2026-07-09
+Issues: OVE-164 through OVE-171
+Date: 2026-07-14
 
 ## Purpose
 
-OverGarden resolves one interface locale for public and signed-in requests so a visitor does not fall back to English when moving from a localized public page into `/garden` or a deeper product route. This contract owns locale resolution and continuity; OVE-165 through OVE-170 own complete copy coverage for their respective surfaces.
+OverGarden resolves one interface locale for public and signed-in requests so a visitor does not fall back to English when moving from a localized public page into `/garden` or a deeper product route. This contract owns locale resolution and continuity; OVE-165 through OVE-170 own complete copy coverage for their respective surfaces, and OVE-171 owns the final route-and-state coverage gate.
+
+OVE-166, OVE-167, and OVE-170 depend only on the OVE-164 locale foundation. OVE-168 and OVE-169 also depend on the completed OVE-165 public-surface copy contract. These five surface slices may execute independently and in parallel; OVE-171 depends on all five. OVE-186 and its external OVE-188 protective-DNS blocker do not block localization implementation or local/preview proof.
 
 ## Supported Locales And Canonical URLs
 

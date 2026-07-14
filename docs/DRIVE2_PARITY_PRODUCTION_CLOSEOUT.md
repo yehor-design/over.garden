@@ -150,5 +150,8 @@ Before moving OVE-186 to `Done`, all of the following must be true:
 5. `pnpm smoke:protective-dns` exits `0`, and a fresh normal A1 browser reaches
    canonical HTTPS. OVE-188 remains a hard blocker while Cisco Umbrella or A1
    returns a sinkhole.
-6. Linear contains only redacted evidence and OVE-166 through OVE-171 are
-   unblocked only after OVE-186 is actually `Done`.
+6. Linear contains only redacted evidence. OVE-166 through OVE-170 may proceed
+   independently while OVE-188 remains open, and OVE-171 is blocked only by
+   those five localization slices. If any localization commit lands before
+   OVE-186 closes, rerun every exact-SHA, deployment, production-smoke, and
+   protective-DNS gate against the new final `main` commit.
