@@ -10,6 +10,8 @@ OverGarden resolves one interface locale for public and signed-in requests so a 
 
 OVE-166, OVE-167, and OVE-170 depend only on the OVE-164 locale foundation. OVE-168 and OVE-169 also depend on the completed OVE-165 public-surface copy contract. These five surface slices may execute independently and in parallel; OVE-171 depends on all five. OVE-186 and its external OVE-188 protective-DNS blocker do not block localization implementation or local/preview proof.
 
+`docs/LOCALIZATION_COVERAGE_BASELINE_2026-07-14.md` is the binding incremental-work boundary. OVE-166 through OVE-170 extend only the verified partial or missing surfaces recorded there; already shipped locale contracts remain regression inputs and must not be rebuilt wholesale.
+
 ## Supported Locales And Canonical URLs
 
 The supported interface locales are exactly `uk`, `bg`, and `ru`. The deterministic fallback is `uk`.
