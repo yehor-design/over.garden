@@ -2,7 +2,7 @@
 
 Status: active operational runbook
 Owner: founder/operator
-Last verified: 2026-07-13
+Last verified: 2026-07-14
 
 Use this runbook when a protective DNS provider, browser reputation service, or ISP security product replaces the authoritative `over.garden` address or displays a malware/phishing block page.
 
@@ -16,16 +16,17 @@ Use this runbook when a protective DNS provider, browser reputation service, or 
 
 ## Current OVE-188 Incident
 
-Observed on 2026-07-13:
+Initially observed on 2026-07-13 and rechecked on 2026-07-14:
 
 - Cloudflare authoritative DNS returns `76.76.21.21` for `over.garden` and `www.over.garden`.
 - Cloudflare, Cloudflare Security, Google Public DNS, and Quad9 return the authoritative address.
-- The default A1-connected system resolver returns an A1 Net Protect sinkhole for both hostnames.
-- Cisco Umbrella returns its own security sinkhole for both hostnames. Cisco Talos classifies the domain as `Untrusted` with `Phishing` and `Spam` threat categories.
+- Whalebone confirmed removal of the domain from its global threat database and closed false-positive ticket `39030` on 2026-07-14.
+- The current default A1-connected system resolver now returns the authoritative address for both hostnames. Normal system-DNS HTTPS requests to apex and `www` reach Vercel and complete the Bulgarian route response without a DNS workaround.
+- Cisco Umbrella still returns `146.112.61.108` for both hostnames instead of the authoritative address. Cisco reputation remediation remains open.
 - Google Safe Browsing reports no unsafe content. VirusTotal's observed scan reported zero detections, including a clean ESET result.
 - The canonical Vercel deployment, TLS certificates, HTTP redirects, public routes, production logs, repository state, and loaded application asset origins showed no evidence of a compromised deployment during the bounded audit.
 
-These facts support a false-positive hypothesis, but they do not prove that future code or deployments are safe. Repeat the checks after every relevant production change until providers clear the domain.
+The Whalebone/A1 result confirms that branch of the incident was a false positive. OVE-188 remains open because Cisco Umbrella still disagrees with authoritative DNS and a fresh normal-browser closure check is still required. These facts do not prove that future code or deployments are safe; repeat the checks after every relevant production change until the full closure gate passes.
 
 ## Deterministic DNS Check
 
