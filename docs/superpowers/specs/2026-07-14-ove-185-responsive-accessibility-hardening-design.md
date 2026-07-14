@@ -75,8 +75,9 @@ Interaction gates separately prove:
   trigger focus, and retains the privacy route;
 - reduced-motion preference caps animation and transition duration without
   removing state feedback;
-- 200% text scaling retains the file input, progressive detail, and save action
-  without horizontal page scroll or lost controls;
+- 200% text scaling retains the file input, progressive detail, save action,
+  320px mobile shell, navigation, and sign-in without horizontal page scroll or
+  lost controls;
 - a guest mutation reaches the shared `/auth/intent` boundary and remains
   keyboard reachable;
 - report and block controls stay visible, reachable, and non-overflowing at
@@ -93,7 +94,10 @@ verified; other 404/410 routes must return their literal expected status.
 The shared shell gains localized skip navigation, a focusable content target,
 safe-area-aware mobile content clearance, a stable bottom-navigation stacking
 layer, global visible focus, and reduced-motion handling. Header actions move
-to their full-text desktop form only when width can support 200% text.
+to their full-text desktop form only when width can support 200% text. Mobile
+header targets remain physically stable at 44px under text-only scaling; search
+remains available through the drawer/journals route and returns to the header at `sm`,
+while sign-in uses a named icon control before its desktop text variant.
 
 Shared shadcn Button sizing provides a 44px mobile target while retaining the
 existing compact desktop density. Labels wrap instead of clipping, and the

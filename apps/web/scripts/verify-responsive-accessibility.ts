@@ -19,6 +19,7 @@ const AXE_VIEWPORTS = new Set<CoreJourneyViewportId>([
   "mobile-320",
   "desktop-1440",
 ]);
+const LINEAGE_CLAIM_HANDOFF_SCENARIO_ID = "intent:ove174-i004";
 const EVIDENCE_SCREENSHOTS = new Map([
   ["main:ove187-feed-dense@mobile-320", "ove-185-after-mobile-feed.png"],
   ["creation:ove182-c004@desktop-1440", "ove-185-after-desktop-creation.png"],
@@ -341,14 +342,7 @@ async function runMatrix(
           }
         }
         stage = "stability";
-        await waitForStablePage(page);
-        if (scenario.fixture.collection === "intent") {
-          await page.waitForTimeout(250);
-          await page
-            .waitForLoadState("load", { timeout: 15_000 })
-            .catch(() => undefined);
-          await waitForStablePage(page);
-        }
+        await waitForScenarioStable(page, scenario);
         summary.pageChecks += 1;
 
         const status = response?.status() ?? 0;
@@ -419,6 +413,27 @@ async function runMatrix(
 
     await context.close();
   }
+}
+
+async function waitForScenarioStable(
+  page: Page,
+  scenario: CoreJourneyScenario,
+): Promise<void> {
+  // This fixture completes a client-side token handoff before its final UI renders.
+  if (scenario.id === LINEAGE_CLAIM_HANDOFF_SCENARIO_ID) {
+    await page
+      .locator('[data-auth-intent-control="claim"]')
+      .waitFor({ state: "visible", timeout: 15_000 });
+  }
+
+  await waitForStablePage(page);
+  if (scenario.fixture.collection !== "intent") return;
+
+  await page.waitForTimeout(250);
+  await page
+    .waitForLoadState("load", { timeout: 15_000 })
+    .catch(() => undefined);
+  await waitForStablePage(page);
 }
 
 async function openScenario(
@@ -549,10 +564,10 @@ async function runLargeTextCheck(
   browser: Browser,
   baseUrl: URL,
 ): Promise<void> {
-  const context = await browser.newContext({
+  const creationContext = await browser.newContext({
     viewport: { width: 640, height: 900 },
   });
-  const page = await context.newPage();
+  const page = await creationContext.newPage();
   await openScenario(page, baseUrl, "creation:ove182-c007");
   await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
   await page.evaluate(
@@ -574,7 +589,39 @@ async function runLargeTextCheck(
       throw new Error(`Large-text creation flow lost ${selector}.`);
     }
   }
-  await context.close();
+  await creationContext.close();
+
+  const mobileContext = await browser.newContext({
+    viewport: { width: 320, height: 844 },
+  });
+  const mobilePage = await mobileContext.newPage();
+  await openScenario(mobilePage, baseUrl, "shell:ove187-feed-typical");
+  await mobilePage.addStyleTag({
+    content: "html { font-size: 200% !important; }",
+  });
+  await mobilePage.evaluate(
+    () =>
+      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+  );
+  const mobileStructure = await readPageStructure(mobilePage);
+  if (
+    mobileStructure.horizontalOverflow > 1 ||
+    mobileStructure.offscreenControlCount > 0
+  ) {
+    throw new Error("200% mobile text scaling loses content or controls.");
+  }
+  const mobileHeaderActions = [
+    '[data-site-shell-region="header"] button[aria-label]:visible',
+    '[data-site-shell-action="sign-in-mobile"]:visible',
+    '[data-site-shell-region="mobile-navigation"]:visible',
+  ];
+  for (const selector of mobileHeaderActions) {
+    const control = mobilePage.locator(selector).first();
+    if ((await control.count()) === 0 || !(await control.isVisible())) {
+      throw new Error(`Large-text mobile shell lost ${selector}.`);
+    }
+  }
+  await mobileContext.close();
 }
 
 async function runAuthIntentCheck(

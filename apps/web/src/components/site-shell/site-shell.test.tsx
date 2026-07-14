@@ -25,7 +25,8 @@ describe("production site shell", () => {
     expect(html).toContain('data-site-shell="root"');
     expect(html).toContain('data-site-shell-region="header"');
     expect(html).toContain('data-site-shell-brand="true"');
-    expect(html).toContain("px-2.5 text-sm");
+    expect(html).toContain("site-shell-header-inner");
+    expect(html).toContain("site-shell-brand");
     expect(html).toContain('data-site-shell-region="sidebar"');
     expect(html).toContain('data-site-shell-region="content"');
     expect(html).toContain('data-site-shell-region="context"');
@@ -41,6 +42,9 @@ describe("production site shell", () => {
     expect(html).toContain('name="action" value="create_object"');
     expect(html).toContain('name="action" value="create_entry"');
     expect(html).toContain('data-site-shell-action="add-guest"');
+    expect(html).toContain('data-site-shell-action="sign-in-mobile"');
+    expect(html).toContain('aria-label="Увійти"');
+    expect(html).toContain("site-shell-header-icon");
     expect(html).toContain('aria-label="Відкрити навігацію"');
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain(">Моє<");

@@ -194,3 +194,44 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.site-shell-header-inner {
+  height: 56px;
+  padding-inline: 12px;
+}
+
+.site-shell-header-icon {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+}
+
+.site-shell-brand {
+  margin-left: 4px;
+  padding-inline: 10px;
+  font-size: 0.75rem;
+}
+
+.site-shell-header-actions {
+  gap: 6px;
+  padding-left: 12px;
+}
+
+@media (width >= 40rem) {
+  .site-shell-header-inner {
+    padding-inline: 20px;
+  }
+
+  .site-shell-brand {
+    padding-inline: 16px;
+    font-size: 0.875rem;
+  }
+}
+
+@media (width >= 48rem) {
+  .site-shell-header-icon {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+}

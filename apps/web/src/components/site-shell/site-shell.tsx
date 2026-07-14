@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   CirclePlus,
+  LogIn,
   Menu,
   Search,
   SquarePen,
@@ -123,7 +124,7 @@ export function SiteShell({
               data-site-shell-region="header"
               className="sticky top-0 z-40 border-b border-foreground/15 bg-foreground text-background"
             >
-              <div className="mx-auto flex h-14 w-full max-w-7xl items-stretch px-3 sm:px-5">
+              <div className="site-shell-header-inner mx-auto flex w-full max-w-7xl items-stretch">
                 <div className="flex items-center lg:hidden">
                   <Sheet>
                     <SheetTrigger
@@ -132,7 +133,7 @@ export function SiteShell({
                           variant="ghost"
                           size="icon-lg"
                           aria-label={navigation.labels.openMenu}
-                          className="text-background hover:bg-background/10 hover:text-background"
+                          className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                         />
                       }
                     >
@@ -209,12 +210,12 @@ export function SiteShell({
                 <Link
                   data-site-shell-brand="true"
                   href={navigation.publicItems[0]?.href ?? "/"}
-                  className="ml-1 flex min-w-0 shrink-0 items-center bg-primary px-2.5 text-sm font-semibold text-primary-foreground sm:px-4 lg:ml-0 lg:w-56"
+                  className="site-shell-brand flex min-w-0 shrink-0 items-center bg-primary font-semibold text-primary-foreground lg:ml-0 lg:w-56"
                 >
                   <span className="truncate">OverGarden</span>
                 </Link>
 
-                <div className="ml-auto flex items-center gap-1.5 pl-3">
+                <div className="site-shell-header-actions ml-auto flex items-center">
                   {languageSwitcherLocales.length > 1 ? (
                     <div className="hidden rounded-md bg-background p-1 text-foreground md:block">
                       <LanguageSwitcher
@@ -224,25 +225,29 @@ export function SiteShell({
                       />
                     </div>
                   ) : null}
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <Link
-                          href={navigation.searchHref}
-                          aria-label={navigation.labels.search}
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "icon",
-                            className:
-                              "text-background hover:bg-background/10 hover:text-background",
-                          })}
-                        />
-                      }
-                    >
-                      <Search aria-hidden="true" />
-                    </TooltipTrigger>
-                    <TooltipContent>{navigation.labels.search}</TooltipContent>
-                  </Tooltip>
+                  <span className="hidden sm:inline-flex">
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Link
+                            href={navigation.searchHref}
+                            aria-label={navigation.labels.search}
+                            className={buttonVariants({
+                              variant: "ghost",
+                              size: "icon",
+                              className:
+                                "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
+                            })}
+                          />
+                        }
+                      >
+                        <Search aria-hidden="true" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {navigation.labels.search}
+                      </TooltipContent>
+                    </Tooltip>
+                  </span>
                   {isAuthenticated ? (
                     <>
                       <span className="md:hidden">
@@ -261,7 +266,7 @@ export function SiteShell({
                                   variant: "ghost",
                                   size: "icon",
                                   className:
-                                    "text-background hover:bg-background/10 hover:text-background",
+                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
                                 })}
                               />
                             }
@@ -290,27 +295,29 @@ export function SiteShell({
                           )?.label ?? ""}
                         </Link>
                       </span>
-                      <Tooltip>
-                        <TooltipTrigger
-                          render={
-                            <Link
-                              href="/garden/profile"
-                              aria-label={navigation.labels.account}
-                              className={buttonVariants({
-                                variant: "ghost",
-                                size: "icon",
-                                className:
-                                  "text-background hover:bg-background/10 hover:text-background",
-                              })}
-                            />
-                          }
-                        >
-                          <UserRound aria-hidden="true" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {navigation.labels.account}
-                        </TooltipContent>
-                      </Tooltip>
+                      <span className="hidden md:inline-flex">
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Link
+                                href="/garden/profile"
+                                aria-label={navigation.labels.account}
+                                className={buttonVariants({
+                                  variant: "ghost",
+                                  size: "icon",
+                                  className:
+                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
+                                })}
+                              />
+                            }
+                          >
+                            <UserRound aria-hidden="true" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {navigation.labels.account}
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
                     </>
                   ) : (
                     <>
@@ -328,19 +335,51 @@ export function SiteShell({
                           className="border-background/30 bg-background text-foreground hover:bg-background/90"
                         />
                       </span>
-                      <Link
-                        href="/garden"
-                        className={buttonVariants({
-                          variant: "outline",
-                          size: "sm",
-                          className:
-                            "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
-                        })}
-                      >
-                        {navigation.mobileItems.find(
-                          (item) => item.key === "sign-in",
-                        )?.label ?? ""}
-                      </Link>
+                      <span className="md:hidden">
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <Link
+                                data-site-shell-action="sign-in-mobile"
+                                href="/garden"
+                                aria-label={
+                                  navigation.mobileItems.find(
+                                    (item) => item.key === "sign-in",
+                                  )?.label ?? ""
+                                }
+                                className={buttonVariants({
+                                  variant: "ghost",
+                                  size: "icon",
+                                  className:
+                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
+                                })}
+                              />
+                            }
+                          >
+                            <LogIn aria-hidden="true" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {navigation.mobileItems.find(
+                              (item) => item.key === "sign-in",
+                            )?.label ?? ""}
+                          </TooltipContent>
+                        </Tooltip>
+                      </span>
+                      <span className="hidden md:inline-flex">
+                        <Link
+                          href="/garden"
+                          className={buttonVariants({
+                            variant: "outline",
+                            size: "sm",
+                            className:
+                              "border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background",
+                          })}
+                        >
+                          {navigation.mobileItems.find(
+                            (item) => item.key === "sign-in",
+                          )?.label ?? ""}
+                        </Link>
+                      </span>
                     </>
                   )}
                 </div>
