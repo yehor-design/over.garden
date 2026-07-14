@@ -416,7 +416,7 @@ function JournalResult({
                   },
                   visualCorpus,
                 )}
-                className="hover:text-primary hover:underline"
+                className="inline-flex min-h-6 items-center hover:text-primary hover:underline"
               >
                 #{topic.label}
               </Link>
@@ -483,7 +483,7 @@ function ResultMedia({
       )}
     >
       {media.length === 0 ? (
-        <div className="flex h-full items-center justify-center gap-2 p-3 text-center text-xs text-muted-foreground">
+        <div className="flex h-full items-center justify-center gap-2 p-3 text-center text-xs text-foreground">
           <ImageOff className="size-4" aria-hidden="true" />
           {copy.noPublicPhoto}
         </div>
@@ -512,7 +512,12 @@ function ResultMedia({
 
 function DirectoryLoading({ label }: { label: string }) {
   return (
-    <div aria-label={label} aria-busy="true" className="grid gap-px bg-border">
+    <div
+      role="status"
+      aria-label={label}
+      aria-busy="true"
+      className="grid gap-px bg-border"
+    >
       {[0, 1, 2].map((item) => (
         <div key={item} className="grid gap-4 bg-background p-4 md:grid-cols-5">
           <Skeleton className="aspect-4/3 w-full md:aspect-square" />
@@ -612,6 +617,7 @@ function DirectoryPagination({
               },
               visualCorpus,
             )}
+            aria-label={copy.previousPage}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
             <ArrowLeft aria-hidden="true" />

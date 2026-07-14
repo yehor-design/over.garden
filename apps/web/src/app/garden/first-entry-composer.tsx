@@ -1062,7 +1062,7 @@ export function FirstEntryComposer({
     <form
       onSubmit={handleSubmit}
       data-visual-creation-scenario={visualScenario?.id}
-      className="grid gap-4"
+      className="grid min-w-0 gap-4"
     >
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
@@ -1083,8 +1083,8 @@ export function FirstEntryComposer({
         onChange={updateObjectKind}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           Name
           <input
             name="plantName"
@@ -1093,7 +1093,7 @@ export function FirstEntryComposer({
             maxLength={120}
             value={draft.plantName}
             onChange={(event) => updateDraft("plantName", event.target.value)}
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+            className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
             placeholder={
               draft.objectKind === "animal"
                 ? "Marta or backyard flock"
@@ -1105,13 +1105,13 @@ export function FirstEntryComposer({
         </label>
 
         {initialSpace ? (
-          <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+          <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
             Space
             <select
               name="spaceChoice"
               value={draft.spaceId ?? "new"}
               onChange={(event) => updateSpaceChoice(event.target.value)}
-              className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+              className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
             >
               <option value={initialSpace.id}>
                 {initialSpace.displayName}
@@ -1123,7 +1123,7 @@ export function FirstEntryComposer({
       </div>
 
       {!draft.spaceId ? (
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           New space name
           <input
             name="spaceName"
@@ -1131,7 +1131,7 @@ export function FirstEntryComposer({
             maxLength={120}
             value={draft.spaceName}
             onChange={(event) => updateDraft("spaceName", event.target.value)}
-            className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
+            className="h-11 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
             placeholder="Balcony"
           />
           <span className="text-xs leading-5 font-normal text-muted-foreground">
@@ -1169,7 +1169,7 @@ export function FirstEntryComposer({
           }
           onClick={refreshActiveMentionToken}
           onKeyUp={refreshActiveMentionToken}
-          className="min-h-32 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="min-h-32 min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           placeholder="What happened today? A short observation is enough."
         />
         <JournalMentionTypeaheadPanel
@@ -1219,7 +1219,7 @@ export function FirstEntryComposer({
 
       <details
         open={visualScenario?.detailsOpen || undefined}
-        className="group border-y border-border py-3"
+        className="group min-w-0 border-y border-border py-3"
       >
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
           More details

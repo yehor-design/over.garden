@@ -90,7 +90,7 @@ export function SiteShellMobileNavigation({
     <nav
       data-site-shell-region="mobile-navigation"
       aria-label={ariaLabel}
-      className="site-shell-safe-bottom fixed inset-x-0 bottom-0 border-t border-border bg-background/95 backdrop-blur lg:hidden"
+      className="site-shell-safe-bottom fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 backdrop-blur lg:hidden"
     >
       <ul className="mx-auto grid h-17 max-w-lg grid-cols-5">
         {items.map((item) => {

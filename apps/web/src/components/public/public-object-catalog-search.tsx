@@ -124,7 +124,7 @@ export function PublicObjectCatalogSearch({
               }
             }}
             placeholder={copy.searchPlaceholder}
-            className="h-10 w-full rounded-md border border-input bg-background pr-10 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-11 w-full rounded-md border border-input bg-background pr-14 pl-9 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10 sm:pr-10 sm:text-sm"
           />
           {value ? (
             <Button
@@ -133,13 +133,17 @@ export function PublicObjectCatalogSearch({
               size="icon-sm"
               onClick={clear}
               aria-label={copy.clearSearch}
-              className="absolute top-1/2 right-1.5 -translate-y-1/2"
+              className="absolute top-1/2 right-0 -translate-y-1/2 sm:right-1.5"
             >
               <X aria-hidden="true" />
             </Button>
           ) : null}
         </div>
-        <Button type="submit" className="shrink-0">
+        <Button
+          type="submit"
+          aria-label={copy.searchSubmit}
+          className="shrink-0"
+        >
           <Search data-icon="inline-start" aria-hidden="true" />
           <span className="hidden sm:inline">{copy.searchSubmit}</span>
         </Button>

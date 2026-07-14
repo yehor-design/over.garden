@@ -135,7 +135,7 @@ export function LivingObjectPassportOverview({
             <span className="rounded-md border border-border px-2 py-1 font-medium text-foreground">
               {passport.status.label}
             </span>
-            <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground">
+            <span className="rounded-md bg-muted px-2 py-1 text-foreground">
               {passport.identity.state}
             </span>
             {passport.status.latestDate ? (

@@ -675,6 +675,7 @@ function CommunityContributionRow({
       {item.coverUrl ? (
         <Link
           href={item.href}
+          aria-label={`${copy.readJournal}: ${item.title}`}
           className="relative order-first aspect-4/3 overflow-hidden rounded-md bg-muted sm:order-none sm:w-48 sm:shrink-0"
         >
           <CommunityMedia

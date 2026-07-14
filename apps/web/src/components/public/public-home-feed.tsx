@@ -233,7 +233,7 @@ function FeedFilters({
               })}
             >
               {topic.label}
-              <span className="text-xs text-muted-foreground tabular-nums">
+              <span className="text-xs text-secondary-foreground tabular-nums">
                 {topic.entryCount}
               </span>
             </Link>
@@ -314,7 +314,7 @@ function PublicFeedCard({
                   kind: "all",
                   topic: topic.slug,
                 })}
-                className="hover:text-primary hover:underline"
+                className="inline-flex min-h-6 items-center hover:text-primary hover:underline"
               >
                 #{topic.label}
               </Link>
@@ -402,6 +402,7 @@ function FeedMediaGrid({ entry }: { entry: PublicFeedEntry }) {
 function PublicFeedLoading({ label }: { label: string }) {
   return (
     <div
+      role="status"
       aria-label={label}
       aria-busy="true"
       className="flex flex-col gap-4 py-5"

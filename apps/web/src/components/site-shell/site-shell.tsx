@@ -113,6 +113,12 @@ export function SiteShell({
             data-site-shell="root"
             className="flex min-h-dvh min-w-0 flex-1 flex-col bg-background"
           >
+            <a
+              href="#main-content"
+              className="sr-only z-50 rounded-md bg-background px-3 py-2 text-sm font-medium text-foreground shadow-lg focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:outline-2 focus:outline-offset-2 focus:outline-ring"
+            >
+              {copy.shell.skipToContent}
+            </a>
             <header
               data-site-shell-region="header"
               className="sticky top-0 z-40 border-b border-foreground/15 bg-foreground text-background"
@@ -210,7 +216,7 @@ export function SiteShell({
 
                 <div className="ml-auto flex items-center gap-1.5 pl-3">
                   {languageSwitcherLocales.length > 1 ? (
-                    <div className="hidden rounded-md bg-background p-1 text-foreground sm:block">
+                    <div className="hidden rounded-md bg-background p-1 text-foreground md:block">
                       <LanguageSwitcher
                         locale={locale}
                         basePath={languageBasePath}
@@ -239,7 +245,7 @@ export function SiteShell({
                   </Tooltip>
                   {isAuthenticated ? (
                     <>
-                      <span className="sm:hidden">
+                      <span className="md:hidden">
                         <Tooltip>
                           <TooltipTrigger
                             render={
@@ -269,7 +275,7 @@ export function SiteShell({
                           </TooltipContent>
                         </Tooltip>
                       </span>
-                      <span className="hidden sm:contents">
+                      <span className="hidden md:contents">
                         <Link
                           data-site-shell-action="add-desktop"
                           href="/garden#first-entry-composer"
@@ -308,12 +314,15 @@ export function SiteShell({
                     </>
                   ) : (
                     <>
-                      <span data-site-shell-action="add-guest">
+                      <span
+                        data-site-shell-action="add-guest"
+                        className="hidden md:inline-flex"
+                      >
                         <AuthIntentTrigger
                           action="create_entry"
                           returnTo="/garden"
                           label={copy.navigation.addUpdate}
-                          labelClassName="sr-only sm:not-sr-only"
+                          labelClassName="sr-only md:not-sr-only"
                           icon={<SquarePen aria-hidden="true" />}
                           size="sm"
                           className="border-background/30 bg-background text-foreground hover:bg-background/90"
@@ -369,8 +378,10 @@ export function SiteShell({
               </aside>
 
               <div
+                id="main-content"
                 data-site-shell-region="content"
-                className="min-w-0 pb-17 lg:pb-0"
+                tabIndex={-1}
+                className="site-shell-content-safe-bottom min-w-0 outline-none"
               >
                 {children}
               </div>

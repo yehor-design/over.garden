@@ -265,7 +265,7 @@ function PublicObjectCatalogCardView({
             unoptimized
           />
         ) : (
-          <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+          <div className="flex h-full items-center justify-center gap-2 text-sm text-foreground">
             <ImageOff aria-hidden="true" />
             {copy.noImage}
           </div>
@@ -443,6 +443,7 @@ function CatalogError({
 function CatalogLoading({ copy }: { copy: PublicObjectCatalogCopy }) {
   return (
     <div
+      role="status"
       aria-label={copy.loadingLabel}
       aria-busy="true"
       className="grid gap-4 py-5 sm:grid-cols-2"

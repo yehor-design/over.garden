@@ -227,7 +227,11 @@ function WorkspaceSummary({
     workspace.recent.status === "ready" ? workspace.recent.value : [];
 
   return (
-    <dl className="grid grid-cols-2 border-b border-border bg-foreground text-background sm:grid-cols-4">
+    <div
+      role="list"
+      aria-label="Garden summary"
+      className="grid grid-cols-2 border-b border-border bg-foreground text-background sm:grid-cols-4"
+    >
       <SummaryFact label="Objects" value={inventory?.totalCount ?? "—"} />
       <SummaryFact label="Spaces" value={spaces?.totalCount ?? "—"} />
       <SummaryFact label="Recent" value={recent.length} />
@@ -240,7 +244,7 @@ function WorkspaceSummary({
             : "—"
         }
       />
-    </dl>
+    </div>
   );
 }
 
@@ -252,11 +256,16 @@ function SummaryFact({
   value: number | string;
 }) {
   return (
-    <div className="min-w-0 border-r border-background/20 px-4 py-4 last:border-r-0 sm:px-5">
-      <dt className="text-xs font-medium text-background/70 uppercase">
+    <div
+      role="listitem"
+      className="min-w-0 border-r border-background/20 px-4 py-4 last:border-r-0 sm:px-5"
+    >
+      <span className="text-xs font-medium text-background/70 uppercase">
         {label}
-      </dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums">{value}</dd>
+      </span>
+      <span className="mt-1 block text-2xl font-semibold tabular-nums">
+        {value}
+      </span>
     </div>
   );
 }
@@ -372,7 +381,11 @@ function InventorySection({
         }
       />
 
-      <div className="mt-4 grid grid-cols-3 border-y border-border bg-muted/30">
+      <div
+        role="list"
+        aria-label="Inventory by kind"
+        className="mt-4 grid grid-cols-3 border-y border-border bg-muted/30"
+      >
         <KindFact
           icon={<Leaf aria-hidden="true" />}
           label="Plants"
@@ -442,14 +455,17 @@ function KindFact({
   value: number;
 }) {
   return (
-    <div className="min-w-0 border-r border-border px-3 py-3 last:border-r-0">
-      <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <div
+      role="listitem"
+      className="min-w-0 border-r border-border px-3 py-3 last:border-r-0"
+    >
+      <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <span className="[&>svg]:size-3.5">{icon}</span>
         <span className="truncate">{label}</span>
-      </dt>
-      <dd className="mt-1 text-lg font-semibold text-foreground tabular-nums">
+      </span>
+      <span className="mt-1 block text-lg font-semibold text-foreground tabular-nums">
         {value}
-      </dd>
+      </span>
     </div>
   );
 }

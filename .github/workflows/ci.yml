@@ -36,6 +36,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      meilisearch:
+        image: getmeili/meilisearch:v1.48.1
+        env:
+          MEILI_MASTER_KEY: overgarden-ci-meili-key
+          MEILI_NO_ANALYTICS: "true"
+        ports:
+          - 7700:7700
     defaults:
       run:
         working-directory: apps/web
@@ -109,6 +116,19 @@ jobs:
           docker logs overgarden-ci-minio || true
           exit 1
 
+      - name: Verify Meilisearch service
+        run: |
+          for attempt in {1..30}; do
+            if curl -fsS http://localhost:7700/health >/dev/null 2>&1; then
+              echo "Meilisearch is ready."
+              exit 0
+            fi
+            sleep 2
+          done
+
+          echo "Meilisearch did not become ready in time."
+          exit 1
+
       - name: Bootstrap schema and object storage
         run: pnpm local:bootstrap
 
@@ -126,6 +146,34 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Verify responsive and accessibility matrix
+        env:
+          PUBLIC_SITE_URL: http://localhost:3000
+          VISUAL_FIXTURES_ENABLED: "true"
+          VISUAL_FIXTURES_TARGET: local
+          VISUAL_FIXTURES_DATABASE: overgarden
+          VISUAL_FIXTURES_ALLOW_PREVIEW: "false"
+          ACCESSIBILITY_BASE_URL: http://localhost:3000
+        run: |
+          pnpm visual:fixtures:seed
+          pnpm start --hostname 127.0.0.1 --port 3000 > /tmp/overgarden-a11y-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:3000/__visual-fixtures >/dev/null 2>&1; then
+              pnpm test:a11y
+              exit 0
+            fi
+            sleep 1
+          done
+
+          cat /tmp/overgarden-a11y-server.log
+          exit 1
 
   matching:
     name: Python matching tier

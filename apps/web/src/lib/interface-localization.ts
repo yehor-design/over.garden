@@ -46,6 +46,7 @@ export interface InterfaceCopy {
     search: string;
     openMenu: string;
     closeMenu: string;
+    skipToContent: string;
     siteNavigation: string;
     mobileNavigation: string;
     contextTitle: string;
@@ -106,6 +107,7 @@ const INTERFACE_COPY = {
       search: "Пошук",
       openMenu: "Відкрити навігацію",
       closeMenu: "Закрити навігацію",
+      skipToContent: "Перейти до основного вмісту",
       siteNavigation: "Основна навігація",
       mobileNavigation: "Основна мобільна навігація",
       contextTitle: "Далі",
@@ -168,6 +170,7 @@ const INTERFACE_COPY = {
       search: "Търсене",
       openMenu: "Отваряне на навигацията",
       closeMenu: "Затваряне на навигацията",
+      skipToContent: "Към основното съдържание",
       siteNavigation: "Основна навигация",
       mobileNavigation: "Основна мобилна навигация",
       contextTitle: "Следващо",
@@ -230,6 +233,7 @@ const INTERFACE_COPY = {
       search: "Поиск",
       openMenu: "Открыть навигацию",
       closeMenu: "Закрыть навигацию",
+      skipToContent: "Перейти к основному содержанию",
       siteNavigation: "Основная навигация",
       mobileNavigation: "Основная мобильная навигация",
       contextTitle: "Дальше",

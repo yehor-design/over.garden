@@ -319,6 +319,7 @@ function KnowledgeResults({
 function KnowledgeLoading({ label }: { label: string }) {
   return (
     <div
+      role="status"
       aria-label={label}
       aria-busy="true"
       className="grid gap-px bg-border py-5"

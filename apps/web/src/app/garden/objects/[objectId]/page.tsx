@@ -512,7 +512,7 @@ function ProvenanceSection({
   return (
     <section
       id="passport-provenance"
-      className="grid gap-4 border-t border-border pt-5"
+      className="grid min-w-0 gap-4 border-t border-border pt-5"
     >
       <div className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
@@ -522,11 +522,11 @@ function ProvenanceSection({
       </div>
 
       {writeEnabled ? (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-3">
           {provenancePanel.sourceObjectOptions.length > 0 ? (
             <form
               action={createProvenanceEdgeAction}
-              className="grid gap-3 rounded-md border border-border p-3"
+              className="grid min-w-0 gap-3 rounded-md border border-border p-3"
             >
               <input type="hidden" name="objectId" value={objectId} />
               <input type="hidden" name="sourceKind" value="own_object" />
@@ -535,12 +535,12 @@ function ProvenanceSection({
                 name="clientMutationId"
                 value={crypto.randomUUID()}
               />
-              <label className="grid gap-1 text-sm font-medium text-foreground">
+              <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
                 Source object
                 <select
                   name="sourcePlantObjectId"
                   required
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 >
                   {provenancePanel.sourceObjectOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -565,7 +565,7 @@ function ProvenanceSection({
 
           <form
             action={createProvenanceEdgeAction}
-            className="grid gap-3 rounded-md border border-border p-3"
+            className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
             <input type="hidden" name="objectId" value={objectId} />
             <input type="hidden" name="sourceKind" value="source_reference" />
@@ -574,12 +574,12 @@ function ProvenanceSection({
               name="clientMutationId"
               value={crypto.randomUUID()}
             />
-            <label className="grid gap-1 text-sm font-medium text-foreground">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
               Source type
               <select
                 name="sourceReferenceKind"
                 required
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 defaultValue="person"
               >
                 <option value="person">Person</option>
@@ -589,13 +589,13 @@ function ProvenanceSection({
                 <option value="other">Other</option>
               </select>
             </label>
-            <label className="grid gap-1 text-sm font-medium text-foreground">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
               Private source label
               <input
                 name="sourceReferenceLabel"
                 required
                 maxLength={120}
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 placeholder="Seed packet from spring swap"
               />
             </label>
@@ -613,7 +613,7 @@ function ProvenanceSection({
 
           <form
             action={createLineageInvitationAction}
-            className="grid gap-3 rounded-md border border-border p-3"
+            className="grid min-w-0 gap-3 rounded-md border border-border p-3"
           >
             <input type="hidden" name="objectId" value={objectId} />
             <input
@@ -621,13 +621,13 @@ function ProvenanceSection({
               name="clientMutationId"
               value={crypto.randomUUID()}
             />
-            <label className="grid gap-1 text-sm font-medium text-foreground">
+            <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
               Invited source label
               <input
                 name="pendingSourceLabel"
                 required
                 maxLength={120}
-                className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 placeholder="Maria's saved seeds"
               />
             </label>

@@ -1,6 +1,6 @@
 # Deterministic Visual Fixture Environment
 
-Status: implemented by OVE-187, extended through OVE-184
+Status: implemented by OVE-187, extended through OVE-184, consumed by OVE-185
 Manifest version: `ove187-v8`
 Manifest SHA-256: `6ab79d02c843b79a74fff9109b9409e5e02bcce331fab3915957ea37b95a4710`
 
@@ -98,6 +98,41 @@ The manifest owns exactly:
   banned, pending-report, removed-content, archived read-only evidence with an
   allowed member leave action, closed-discussion, closed-participation,
   no-results, loading, error, and hard `404` behavior.
+
+## OVE-185 Responsive And Accessibility Matrix
+
+OVE-185 consumes this unchanged v8 manifest as a release gate; it does not add
+fixture records, substitute screenshot-only content, or apply scenario-specific
+styles. `CORE_JOURNEY_SCENARIOS` maps 171 stable IDs across thirteen core
+archetypes to identical records at every viewport. Every scenario runs at
+320px and 1440px, while high-risk dense, long-copy, loading, error, pagination,
+composer, social, and moderation states also run at 360px, 390px, 640px, 768px,
+1024px, and 1280px. The 640px check represents the CSS viewport produced by a
+1280px page at 200% reflow; a separate browser interaction applies 200% root
+text scaling.
+
+The 642 route/viewport checks fail on horizontal document overflow, visible
+controls outside the viewport, missing or duplicated page semantics, unexpected
+HTTP behavior, uncaught page errors, and critical/serious Axe violations on
+representative core screens. Additional interactions prove skip navigation,
+mobile Sheet focus trap and focus return, reduced motion, large-text creation,
+auth-intent reachability, and mobile report/block controls.
+
+Run the gate against a seeded local environment and built or development server:
+
+```bash
+cd apps/web
+pnpm exec playwright install chromium
+ACCESSIBILITY_BASE_URL=http://127.0.0.1:3000 pnpm test:a11y
+```
+
+The browser install is a one-time local prerequisite; CI installs the same
+pinned Chromium runtime automatically. Set `ACCESSIBILITY_EVIDENCE_DIR` to
+write the four deterministic review images.
+The runner refuses canonical OverGarden Production origins. Any non-loopback
+Preview requires `ACCESSIBILITY_ALLOW_PREVIEW=true` in addition to the existing
+isolated Preview fixture controls. Evidence routes are tested to exclude tokens,
+precise coordinates, quarantine keys, and email-like identities.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,

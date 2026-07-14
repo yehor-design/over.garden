@@ -127,6 +127,20 @@
   html {
     @apply font-sans;
     scroll-padding-top: 4.5rem;
+    text-size-adjust: 100%;
+  }
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [tabindex]:not([tabindex="-1"]) {
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
   }
 }
 
@@ -149,6 +163,14 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .site-shell-content-safe-bottom {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom));
+
+    @media (width >= 64rem) {
+      padding-bottom: 0;
+    }
+  }
+
   .site-shell-mobile-label {
     font-size: 0.625rem;
   }
@@ -159,5 +181,16 @@
 
   .feed-filter-scroll::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

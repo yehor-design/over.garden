@@ -38,11 +38,11 @@ export function JournalObjectKindSelector({
   onChange: (value: PlantObjectKind) => void;
 }) {
   return (
-    <fieldset className="grid gap-2">
+    <fieldset className="grid min-w-0 gap-2">
       <legend className="text-sm font-medium text-foreground">
         Living object type
       </legend>
-      <div className="grid grid-cols-3 gap-2" role="group">
+      <div className="grid min-w-0 grid-cols-3 gap-2" role="group">
         {OBJECT_KIND_OPTIONS.map((option) => {
           const Icon = option.icon;
           const selected = option.value === value;

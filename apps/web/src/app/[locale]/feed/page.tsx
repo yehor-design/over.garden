@@ -265,6 +265,7 @@ function FollowedFeedCard({
         {item.mediaUrl ? (
           <Link
             href={item.href}
+            aria-label={item.title}
             className="relative aspect-4/3 overflow-hidden bg-muted sm:w-44 sm:shrink-0"
           >
             <Image
