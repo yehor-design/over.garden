@@ -72,6 +72,20 @@ These examples identify ownership; they are not an exhaustive string list:
 - Operator routes still expose authored English labels such as `Access denied`
   and unlocalized form/status copy.
 
+## Cross-Project Sequencing
+
+- OVE-161 blocks OVE-167 because approved aliases, locale variants, trust
+  metadata, and no-match behavior change the real first-entry typeahead states
+  that OVE-167 localizes.
+- OVE-161 blocks OVE-168 because the owner catalog resolve/readback copy must
+  target the same final canonical selection and ambiguity contract.
+- OVE-163 blocks OVE-170 because OVE-158 through OVE-162 add the operator
+  matching queue, approval, alias, duplicate-review, rollout-proof, and failure
+  states that OVE-170 must cover.
+- OVE-166 and OVE-169 remain independent of deterministic matching. OVE-171 is
+  blocked directly only by OVE-166 through OVE-170; OVE-161 and OVE-163 are
+  inherited transitively to keep the DAG explicit without duplicate blockers.
+
 ## Implementation Rules
 
 1. OVE-166 through OVE-170 are incremental delta slices. They must extend or
