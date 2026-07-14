@@ -114,6 +114,10 @@ describe("public analytics consent", () => {
     expect(html).toContain("Откажете");
     expect(html).toContain("Microsoft Clarity");
     expect(html).toContain("публични, правни и страници за поддръжка");
+    expect(html).toContain('data-analytics-consent-banner="true"');
+    expect(html).toContain('data-analytics-consent-actions="true"');
+    expect(html).toContain("analytics-consent-banner");
+    expect(html).toContain("w-full min-w-0 sm:w-auto");
     expect(html).not.toContain("GTM-W979KSX3");
     expect(html).not.toContain("clarity-project");
     expect(html).not.toContain("clarity.ms");

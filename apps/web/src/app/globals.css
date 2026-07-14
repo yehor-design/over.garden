@@ -217,6 +217,13 @@
   padding-left: 12px;
 }
 
+.analytics-consent-banner {
+  bottom: 12px;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 @media (width >= 40rem) {
   .site-shell-header-inner {
     padding-inline: 20px;
@@ -225,6 +232,11 @@
   .site-shell-brand {
     padding-inline: 16px;
     font-size: 0.875rem;
+  }
+
+  .analytics-consent-banner {
+    bottom: 20px;
+    max-height: calc(100dvh - 40px);
   }
 }
 

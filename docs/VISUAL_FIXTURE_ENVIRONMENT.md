@@ -116,8 +116,8 @@ controls outside the viewport, missing or duplicated page semantics, unexpected
 HTTP behavior, uncaught page errors, and critical/serious Axe violations on
 representative core screens. Additional interactions prove skip navigation,
 mobile Sheet focus trap and focus return, reduced motion, large-text creation,
-320px mobile-shell text scaling, auth-intent reachability, and mobile
-report/block controls.
+320px mobile-shell and analytics-consent text scaling, auth-intent
+reachability, and mobile report/block controls.
 
 Run the gate against a seeded local environment and built or development server:
 

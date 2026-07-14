@@ -76,8 +76,8 @@ Interaction gates separately prove:
 - reduced-motion preference caps animation and transition duration without
   removing state feedback;
 - 200% text scaling retains the file input, progressive detail, save action,
-  320px mobile shell, navigation, and sign-in without horizontal page scroll or
-  lost controls;
+  320px mobile shell, analytics consent, navigation, and sign-in without
+  horizontal page scroll or lost controls;
 - a guest mutation reaches the shared `/auth/intent` boundary and remains
   keyboard reachable;
 - report and block controls stay visible, reachable, and non-overflowing at
@@ -98,6 +98,8 @@ to their full-text desktop form only when width can support 200% text. Mobile
 header targets remain physically stable at 44px under text-only scaling; search
 remains available through the drawer/journals route and returns to the header at `sm`,
 while sign-in uses a named icon control before its desktop text variant.
+Public analytics consent stacks its decisions on narrow screens and remains
+bounded to the viewport with internal scrolling at high text scale.
 
 Shared shadcn Button sizing provides a 44px mobile target while retaining the
 existing compact desktop density. Labels wrap instead of clipping, and the

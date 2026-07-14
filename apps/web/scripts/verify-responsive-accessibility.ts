@@ -596,6 +596,9 @@ async function runLargeTextCheck(
   });
   const mobilePage = await mobileContext.newPage();
   await openScenario(mobilePage, baseUrl, "shell:ove187-feed-typical");
+  await mobilePage
+    .locator('[data-analytics-consent-banner="true"]')
+    .waitFor({ state: "visible", timeout: 5_000 });
   await mobilePage.addStyleTag({
     content: "html { font-size: 200% !important; }",
   });
@@ -603,12 +606,51 @@ async function runLargeTextCheck(
     () =>
       new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
   );
+  const consentBanner = mobilePage.locator(
+    '[data-analytics-consent-banner="true"]',
+  );
+  const consentBounds = await consentBanner.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return {
+      bottom: rect.bottom,
+      top: rect.top,
+      viewportHeight: window.innerHeight,
+    };
+  });
+  if (
+    consentBounds.top < -1 ||
+    consentBounds.bottom > consentBounds.viewportHeight + 1
+  ) {
+    throw new Error("200% analytics consent escapes the mobile viewport.");
+  }
+  const consentActions = consentBanner.locator("button");
+  for (let index = 0; index < (await consentActions.count()); index += 1) {
+    const action = consentActions.nth(index);
+    await action.scrollIntoViewIfNeeded();
+    const actionBounds = await action.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        bottom: rect.bottom,
+        top: rect.top,
+        viewportHeight: window.innerHeight,
+      };
+    });
+    if (
+      !(await action.isVisible()) ||
+      actionBounds.top < -1 ||
+      actionBounds.bottom > actionBounds.viewportHeight + 1
+    ) {
+      throw new Error("200% analytics consent lost a decision control.");
+    }
+  }
   const mobileStructure = await readPageStructure(mobilePage);
   if (
     mobileStructure.horizontalOverflow > 1 ||
     mobileStructure.offscreenControlCount > 0
   ) {
-    throw new Error("200% mobile text scaling loses content or controls.");
+    throw new Error(
+      `200% mobile text scaling loses content or controls (${mobileStructure.horizontalOverflow}px overflow, ${mobileStructure.offscreenControlCount} offscreen controls).`,
+    );
   }
   const mobileHeaderActions = [
     '[data-site-shell-region="header"] button[aria-label]:visible',

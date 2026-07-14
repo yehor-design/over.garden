@@ -280,15 +280,30 @@ function AnalyticsConsentBanner({
   return (
     <div
       aria-label={copy.label}
-      className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-5 sm:flex sm:items-center sm:gap-4"
+      data-analytics-consent-banner="true"
+      className="analytics-consent-banner fixed inset-x-3 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
       <p className="text-sm leading-6 text-muted-foreground">{copy.message}</p>
-      <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
-        <Button onClick={onAccept} size="sm" type="button">
+      <div
+        data-analytics-consent-actions="true"
+        className="mt-3 grid min-w-0 gap-2 sm:mt-0 sm:flex sm:shrink-0 sm:flex-wrap"
+      >
+        <Button
+          className="w-full min-w-0 sm:w-auto"
+          onClick={onAccept}
+          size="sm"
+          type="button"
+        >
           {copy.accept}
         </Button>
-        <Button onClick={onDecline} size="sm" type="button" variant="outline">
+        <Button
+          className="w-full min-w-0 sm:w-auto"
+          onClick={onDecline}
+          size="sm"
+          type="button"
+          variant="outline"
+        >
           {copy.decline}
         </Button>
       </div>
