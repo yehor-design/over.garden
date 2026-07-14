@@ -210,7 +210,7 @@ export function SiteShell({
                 <Link
                   data-site-shell-brand="true"
                   href={navigation.publicItems[0]?.href ?? "/"}
-                  className="site-shell-brand flex min-w-0 shrink-0 items-center bg-primary font-semibold text-primary-foreground lg:ml-0 lg:w-56"
+                  className="site-shell-brand flex min-w-0 items-center bg-primary font-semibold text-primary-foreground lg:ml-0 lg:w-56"
                 >
                   <span className="truncate">OverGarden</span>
                 </Link>
