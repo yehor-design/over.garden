@@ -181,7 +181,7 @@ async function main() {
     "/api/media/uploads",
     {
       method: "POST",
-      body: { contentType: "image/png" },
+      body: { contentType: "image/png", sizeBytes: image.byteLength },
     },
   );
   await uploadBinary(upload.uploadUrl, image, "image/png");
@@ -230,7 +230,16 @@ async function main() {
     },
   );
   const firstReadback = await textRequest(base, jar, firstEntry.readbackUrl);
-  assertIncludes(firstReadback, "Server-cleaned photo copy", "entry readback media");
+  assertIncludes(
+    firstReadback,
+    'data-passport-audience="owner"',
+    "entry owner passport readback",
+  );
+  assertIncludes(
+    firstReadback,
+    `alt="${SMOKE_TITLE} photo"`,
+    "entry readback derivative media",
+  );
   assertNoPrivateMarkers(firstReadback, ["quarantine/"]);
 
   const followUp = await jsonRequest<EntryResponse>(
@@ -299,8 +308,14 @@ async function main() {
     { idempotencyKey: unindexKey },
   );
   const goneHtml = await waitForPublicPage(base, publicPath, 410);
-  assertIncludes(goneHtml, "Entry removed", "archive tombstone");
+  assertIncludes(
+    goneHtml,
+    "<header><span>OverGarden</span></header>",
+    "archive tombstone shell",
+  );
   assertIncludes(goneHtml, "noindex, nofollow", "archive tombstone robots");
+  assert(!goneHtml.includes(SMOKE_TITLE), "archive tombstone hides entry title");
+  assert(!goneHtml.includes(SMOKE_BODY), "archive tombstone hides entry body");
   assertNoPrivateMarkers(goneHtml, FORBIDDEN_PRIVATE_CONTENT_MARKERS);
 
   const unindexedJob = await waitForJob(modules.db, unindexKey);
@@ -548,25 +563,51 @@ async function verifyPublicRoutes(base: string) {
     ["/robots.txt", "Sitemap:"],
     ["/support", "noindex"],
     ["/privacy", "noindex"],
-    ["/uk", "index, follow"],
-    ["/bg", "index, follow"],
-    ["/ru", "index, follow"],
-    ["/uk/blog/ai-garden-advice-vs-real-garden-proof", "index, follow"],
-    ["/uk/guides/start-a-living-plant-record", "index, follow"],
-    ["/uk/answers/why-are-tomato-leaves-yellow", "index, follow"],
+    ["/", "noindex"],
+    ["/bg", "noindex"],
+    ["/ru", "noindex"],
+    ["/blog/ai-garden-advice-vs-real-garden-proof", "index, follow"],
+    ["/guides/start-a-living-plant-record", "index, follow"],
+    ["/answers/why-are-tomato-leaves-yellow", "index, follow"],
   ] as const;
 
   for (const [path, expected] of routes) {
     const response = await fetch(`${base}${path}`, {
       headers: { Accept: path.endsWith(".xml") ? "application/xml" : "text/html" },
-      redirect: "manual",
     });
-    assert(
-      response.status >= 200 && response.status < 400,
-      `route ${path} must be public`,
-    );
-    const text = await response.text();
-    assertIncludes(text, expected, `route ${path} policy marker`);
+    assertPublicRoutePolicyContract({
+      base,
+      path,
+      finalUrl: response.url,
+      status: response.status,
+      text: await response.text(),
+      expectedMarker: expected,
+    });
+  }
+
+  const legacyUkrainianRedirects = [
+    ["/uk", "/"],
+    [
+      "/uk/blog/ai-garden-advice-vs-real-garden-proof",
+      "/blog/ai-garden-advice-vs-real-garden-proof",
+    ],
+    [
+      "/uk/guides/start-a-living-plant-record",
+      "/guides/start-a-living-plant-record",
+    ],
+    [
+      "/uk/answers/why-are-tomato-leaves-yellow",
+      "/answers/why-are-tomato-leaves-yellow",
+    ],
+  ] as const;
+  for (const [path, expectedLocation] of legacyUkrainianRedirects) {
+    const response = await fetch(`${base}${path}`, { redirect: "manual" });
+    assertCanonicalLegacyRedirect({
+      path,
+      status: response.status,
+      location: response.headers.get("location"),
+      expectedLocation,
+    });
   }
 
   const sitemap = await fetch(`${base}/sitemap.xml`);
@@ -579,11 +620,43 @@ async function verifyPublicRoutes(base: string) {
   return {
     diagnosticRoutesClass: "public_noindex",
     legalRoutesClass: "public_noindex",
-    localizedLandingClass: "indexable",
+    localizedLandingClass: "public_feed_noindex",
     authoredContentClass: "indexable",
     sitemapClass: "policy_allowed_only",
     robotsClass: "sitemap_advertised",
+    legacyUkrainianRoutesClass: "canonical_unprefixed_redirect",
   };
+}
+
+export function assertPublicRoutePolicyContract(input: {
+  base: string;
+  path: string;
+  finalUrl: string;
+  status: number;
+  text: string;
+  expectedMarker: string;
+}) {
+  assertEqual(input.status, 200, `route ${input.path} status`);
+  assertEqual(
+    new URL(input.finalUrl).origin,
+    new URL(input.base).origin,
+    `route ${input.path} final origin`,
+  );
+  assertIncludes(input.text, input.expectedMarker, `route ${input.path} policy marker`);
+}
+
+export function assertCanonicalLegacyRedirect(input: {
+  path: string;
+  status: number;
+  location: string | null;
+  expectedLocation: string;
+}) {
+  assertEqual(input.status, 308, `legacy route ${input.path} status`);
+  assertEqual(
+    input.location,
+    input.expectedLocation,
+    `legacy route ${input.path} location`,
+  );
 }
 
 export function assertSitemapPolicyContract(input: {
@@ -775,8 +848,10 @@ async function waitForPublicPage(base: string, path: string, status: number) {
   return waitFor(async () => {
     const response = await fetch(`${base}${path}`, {
       headers: { Accept: "text/html" },
-      redirect: "manual",
     });
+    if (new URL(response.url).origin !== new URL(base).origin) {
+      throw new Error("public page redirected outside the canonical origin");
+    }
     if (response.status !== status) {
       throw new RetryableError(`public page pending ${status}: ${response.status}`);
     }

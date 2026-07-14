@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertAuthenticatedGardenShell,
+  assertCanonicalLegacyRedirect,
+  assertPublicRoutePolicyContract,
   assertSitemapPolicyContract,
 } from "./smoke-canonical-launch";
 
@@ -24,6 +26,49 @@ describe("canonical launch smoke workspace contract", () => {
         /signed-in garden shell/,
       );
     }
+  });
+});
+
+describe("canonical launch public route contract", () => {
+  it("accepts a same-origin localized final page after canonical redirects", () => {
+    expect(() =>
+      assertPublicRoutePolicyContract({
+        base: "https://over.garden",
+        path: "/privacy",
+        finalUrl: "https://over.garden/bg/privacy",
+        status: 200,
+        text: '<meta name="robots" content="noindex, nofollow"/>',
+        expectedMarker: "noindex",
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ["an external redirect", "https://example.com/privacy", 200, "noindex"],
+    ["a non-final response", "https://over.garden/privacy", 307, "noindex"],
+    ["a missing policy marker", "https://over.garden/privacy", 200, "index"],
+  ])("rejects %s", (_label, finalUrl, status, text) => {
+    expect(() =>
+      assertPublicRoutePolicyContract({
+        base: "https://over.garden",
+        path: "/privacy",
+        finalUrl,
+        status,
+        text,
+        expectedMarker: "noindex",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts the permanent Ukrainian-default canonical redirect", () => {
+    expect(() =>
+      assertCanonicalLegacyRedirect({
+        path: "/uk/blog/example",
+        status: 308,
+        location: "/blog/example",
+        expectedLocation: "/blog/example",
+      }),
+    ).not.toThrow();
   });
 });
 
