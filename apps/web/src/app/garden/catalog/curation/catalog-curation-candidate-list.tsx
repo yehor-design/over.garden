@@ -8,7 +8,8 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -49,8 +50,12 @@ interface CatalogMatchSuggestion {
   targetLocale: string | null;
   sourceScript: string;
   targetScript: string | null;
-  status: "pending";
+  status: "pending" | "rejected";
   generatedAt: Date | string;
+  reviewedAt?: Date | string | null;
+  decisionReasonCode?: string | null;
+  decisionResult?: "catalog_merged" | "suggestion_rejected" | null;
+  decisionAffectedObjectCount?: number | null;
 }
 
 interface CatalogCurationCandidateListProps {
@@ -59,7 +64,18 @@ interface CatalogCurationCandidateListProps {
   mergeAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
   rescanAction: (formData: FormData) => void | Promise<void>;
+  approveSuggestionAction: CatalogMatchSuggestionAction;
+  rejectSuggestionAction: CatalogMatchSuggestionAction;
 }
+
+interface CatalogMatchSuggestionActionResult {
+  outcome: "approved" | "rejected" | "stale";
+  message: string;
+}
+
+type CatalogMatchSuggestionAction = (
+  formData: FormData,
+) => Promise<CatalogMatchSuggestionActionResult>;
 
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -78,6 +94,8 @@ export function CatalogCurationCandidateList({
   mergeAction,
   rejectAction,
   rescanAction,
+  approveSuggestionAction,
+  rejectSuggestionAction,
 }: CatalogCurationCandidateListProps) {
   if (candidates.length === 0) {
     return (
@@ -97,6 +115,8 @@ export function CatalogCurationCandidateList({
             mergeAction={mergeAction}
             rejectAction={rejectAction}
             rescanAction={rescanAction}
+            approveSuggestionAction={approveSuggestionAction}
+            rejectSuggestionAction={rejectSuggestionAction}
           />
         </li>
       ))}
@@ -110,6 +130,8 @@ interface CatalogCurationCandidateCardProps {
   mergeAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
   rescanAction: (formData: FormData) => void | Promise<void>;
+  approveSuggestionAction: CatalogMatchSuggestionAction;
+  rejectSuggestionAction: CatalogMatchSuggestionAction;
 }
 
 function CatalogCurationCandidateCard({
@@ -118,6 +140,8 @@ function CatalogCurationCandidateCard({
   mergeAction,
   rejectAction,
   rescanAction,
+  approveSuggestionAction,
+  rejectSuggestionAction,
 }: CatalogCurationCandidateCardProps) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
@@ -262,7 +286,11 @@ function CatalogCurationCandidateCard({
         </div>
       </div>
 
-      <CatalogMatchSuggestions suggestions={candidate.matchSuggestions} />
+      <CatalogMatchSuggestions
+        suggestions={candidate.matchSuggestions}
+        approveAction={approveSuggestionAction}
+        rejectAction={rejectSuggestionAction}
+      />
 
       <div className="grid gap-3 border-t border-border pt-4">
         <form action={mergeAction} className="grid gap-3">
@@ -389,8 +417,12 @@ function CatalogCurationCandidateCard({
 
 function CatalogMatchSuggestions({
   suggestions,
+  approveAction,
+  rejectAction,
 }: {
   suggestions: CatalogMatchSuggestion[];
+  approveAction: CatalogMatchSuggestionAction;
+  rejectAction: CatalogMatchSuggestionAction;
 }) {
   return (
     <section className="grid gap-3 border-t border-border pt-4">
@@ -399,7 +431,8 @@ function CatalogMatchSuggestions({
           Deterministic match suggestions
         </h3>
         <p className="text-xs leading-5 text-muted-foreground">
-          Pending evidence only. No catalog or garden records were changed.
+          Review deterministic evidence before changing catalog identity.
+          Rejected evidence stays recorded without changing garden records.
         </p>
       </div>
 
@@ -412,6 +445,7 @@ function CatalogMatchSuggestions({
           {suggestions.map((suggestion) => {
             const noSafeMatch = suggestion.matchType === "no_safe_match";
             const lowConfidence = suggestion.confidenceBucket === "low";
+            const rejected = suggestion.status === "rejected";
 
             return (
               <li key={suggestion.id} className="grid gap-2 py-3">
@@ -420,9 +454,11 @@ function CatalogMatchSuggestions({
                     <p className="font-medium break-words text-foreground">
                       {noSafeMatch
                         ? "No safe catalog match"
-                        : lowConfidence
-                          ? `Held: ${suggestion.targetDisplayName}`
-                          : `Suggested target: ${suggestion.targetDisplayName}`}
+                        : rejected
+                          ? `Rejected match: ${suggestion.targetDisplayName}`
+                          : lowConfidence
+                            ? `Held: ${suggestion.targetDisplayName}`
+                            : `Suggested target: ${suggestion.targetDisplayName}`}
                     </p>
                     {!noSafeMatch &&
                     suggestion.targetCanonicalName &&
@@ -434,6 +470,11 @@ function CatalogMatchSuggestions({
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2 text-xs">
+                    {rejected ? (
+                      <span className="rounded-md border border-destructive/40 px-2 py-1 font-medium text-destructive">
+                        Rejected
+                      </span>
+                    ) : null}
                     <span className="rounded-md border border-border px-2 py-1 font-medium text-foreground">
                       {suggestion.score}/100
                     </span>
@@ -478,6 +519,29 @@ function CatalogMatchSuggestions({
                     </dd>
                   </div>
                 </dl>
+
+                {rejected ? (
+                  <div className="grid gap-1 border-t border-border pt-2 text-xs text-muted-foreground">
+                    <p>
+                      <span className="font-medium text-foreground">
+                        Review reason:
+                      </span>{" "}
+                      {decisionReasonLabel(suggestion.decisionReasonCode)}
+                    </p>
+                    {suggestion.reviewedAt ? (
+                      <p>
+                        Reviewed {formatDate(suggestion.reviewedAt)}. Catalog
+                        identity and journal history were unchanged.
+                      </p>
+                    ) : null}
+                  </div>
+                ) : !noSafeMatch && suggestion.targetCatalogItemId ? (
+                  <CatalogMatchSuggestionDecisionControls
+                    suggestionId={suggestion.id}
+                    approveAction={approveAction}
+                    rejectAction={rejectAction}
+                  />
+                ) : null}
               </li>
             );
           })}
@@ -499,6 +563,112 @@ function CatalogRescanButton({ queued }: { queued: boolean }) {
       <RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />
       {pending ? "Queueing..." : queued ? "Refresh queued" : "Refresh matches"}
     </button>
+  );
+}
+
+function CatalogMatchSuggestionDecisionControls({
+  suggestionId,
+  approveAction,
+  rejectAction,
+}: {
+  suggestionId: string;
+  approveAction: CatalogMatchSuggestionAction;
+  rejectAction: CatalogMatchSuggestionAction;
+}) {
+  const router = useRouter();
+  const [feedback, setFeedback] = useState<
+    | CatalogMatchSuggestionActionResult
+    | { outcome: "error"; message: string }
+    | null
+  >(null);
+  const [pendingDecision, startDecision] = useTransition();
+
+  function submitDecision(
+    event: FormEvent<HTMLFormElement>,
+    action: CatalogMatchSuggestionAction,
+  ) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setFeedback(null);
+
+    startDecision(async () => {
+      try {
+        const result = await action(formData);
+        setFeedback(result);
+        if (result.outcome !== "stale") router.refresh();
+      } catch {
+        setFeedback({
+          outcome: "error",
+          message:
+            "The decision could not be applied. Refresh the evidence and try again.",
+        });
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-2 border-t border-border pt-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <form onSubmit={(event) => submitDecision(event, approveAction)}>
+          <input type="hidden" name="suggestionId" value={suggestionId} />
+          <button
+            type="submit"
+            disabled={pendingDecision || feedback?.outcome === "stale"}
+            className={buttonVariants()}
+          >
+            <CheckCircle2 className="size-4" />
+            {pendingDecision ? "Applying..." : "Approve match"}
+          </button>
+        </form>
+
+        <form
+          onSubmit={(event) => submitDecision(event, rejectAction)}
+          className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end"
+        >
+          <input type="hidden" name="suggestionId" value={suggestionId} />
+          <label className="grid min-w-0 flex-1 gap-1 text-xs font-medium text-foreground">
+            Rejection reason
+            <select
+              name="reasonCode"
+              defaultValue="not_same_entity"
+              disabled={pendingDecision || feedback?.outcome === "stale"}
+              className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <option value="not_same_entity">Incorrect identity</option>
+              <option value="wrong_catalog_kind">Wrong catalog kind</option>
+              <option value="locale_or_script_mismatch">
+                Locale or script mismatch
+              </option>
+              <option value="insufficient_evidence">
+                Insufficient evidence
+              </option>
+              <option value="other_review_reason">Other review reason</option>
+            </select>
+          </label>
+          <button
+            type="submit"
+            disabled={pendingDecision || feedback?.outcome === "stale"}
+            className={buttonVariants({ variant: "outline" })}
+          >
+            <XCircle className="size-4" />
+            {pendingDecision ? "Applying..." : "Reject suggestion"}
+          </button>
+        </form>
+      </div>
+
+      {feedback ? (
+        <p
+          role={feedback.outcome === "error" ? "alert" : "status"}
+          className={
+            feedback.outcome === "error"
+              ? "text-xs text-destructive"
+              : "text-xs text-muted-foreground"
+          }
+        >
+          {feedback.message}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -540,6 +710,19 @@ function reasonLabel(value: string) {
     unmatchable_input: "input cannot be matched safely",
   };
   return labels[value] ?? value.replaceAll("_", " ");
+}
+
+function decisionReasonLabel(value: string | null | undefined) {
+  const labels: Record<string, string> = {
+    approved_canonical_match: "Approved canonical match",
+    not_same_entity: "Incorrect identity",
+    wrong_catalog_kind: "Wrong catalog kind",
+    locale_or_script_mismatch: "Locale or script mismatch",
+    insufficient_evidence: "Insufficient evidence",
+    other_review_reason: "Other review reason",
+    legacy_review: "Legacy review decision",
+  };
+  return value ? (labels[value] ?? value.replaceAll("_", " ")) : "Unknown";
 }
 
 function catalogKindLabel(value: string) {

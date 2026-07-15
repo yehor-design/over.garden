@@ -478,7 +478,8 @@ export function buildFindUserAddedCatalogItemQuery(
     .where("locale", "=", input.locale)
     .where("catalog_kind", "=", input.catalogKind)
     .where("status", "=", "provisional")
-    .where("source", "=", "user_added");
+    .where("source", "=", "user_added")
+    .forUpdate();
 }
 
 export function buildInsertCatalogItemNameQuery(
@@ -510,6 +511,7 @@ export function buildEnqueueCatalogTypeaheadReindexJobQuery(
   const payload = {
     kind: CATALOG_TYPEAHEAD_REINDEX_KIND,
   } satisfies JsonValue;
+  const now = new Date();
 
   return executor
     .insertInto("job_queue")
@@ -523,7 +525,22 @@ export function buildEnqueueCatalogTypeaheadReindexJobQuery(
         .column("idempotency_key")
         .where("idempotency_key", "is not", null)
         .doUpdateSet({
-          updated_at: new Date(),
+          status: sql<string>`case
+            when job_queue.status = 'processing' then job_queue.status
+            else 'pending'
+          end`,
+          available_at: now,
+          locked_at: sql<Date | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_at
+            else null
+          end`,
+          locked_by: sql<string | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_by
+            else null
+          end`,
+          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
+          last_error: null,
+          updated_at: now,
         }),
     )
     .returningAll();

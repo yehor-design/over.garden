@@ -76,7 +76,11 @@ The catalog typeahead rebuild job uses payload `{ "kind":
 "catalog_typeahead_reindex" }` on the `matching` queue. The worker rebuilds the
 `catalog_typeahead` index only from `seeded`/`confirmed` catalog rows with no
 `created_by_user_id`, so provisional user-added names stay out of global search
-until a later curation slice promotes them.
+until a later curation slice promotes them. The shared OVE-159 curation
+enqueuer revives a completed or failed idempotent rebuild as `pending`; an
+already processing rebuild keeps its claim and receives `rerun_requested`, so
+completion schedules one fresh pass rather than swallowing the approved
+catalog mutation.
 
 Saving a provisional user-added catalog name also enqueues `{ "kind":
 "catalog_match_suggestions_refresh", "sourceCatalogItemId": "..." }`. The
@@ -92,6 +96,18 @@ kind, count, and threshold columns. The curation surface still reads provisional
 `catalog_items` directly, so worker downtime does not block a gardener save or
 hide the candidate. Operators can enqueue a bounded per-candidate refresh from
 `/garden/catalog/curation`.
+
+OVE-159 keeps operator rejection durable across idempotent refreshes. The
+worker leaves a rejected source/target suggestion and its decision audit intact
+when the matching evidence is unchanged; a changed aggregate affected-object
+count or an `updated_at`-only importer touch is not a reason to reopen it.
+Opaque source/target semantic fingerprints bind the decision to the exact
+scored alias without persisting additional private source text. Material
+source/target matching input changes may reopen the same deterministic key as
+`pending`, and the upsert then
+clears the previous review fields so the new evidence requires a fresh human
+decision. Python still never applies the catalog merge: approval remains a
+locked TypeScript/Postgres curator transaction that preserves journal rows.
 
 An idempotent rescan does not reset an actively processing row. It marks
 `rerun_requested`, preserves the current lock, and lets the claim-token-scoped
@@ -154,6 +170,8 @@ cd services/matching
 container build -t overgarden/matching:local .
 uv run python -m py_compile app/catalog_matching.py app/main.py app/search.py app/worker.py
 uv run --frozen pytest
+uv run --env-file ../../apps/web/.env.local \
+  python -m scripts.smoke_catalog_match_rejection_replay
 MEILISEARCH_HOST='http://localhost:7700' \
   MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' \
   uv run python -m app.search

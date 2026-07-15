@@ -56,11 +56,13 @@ vi.mock("@/server/variety-seed-proof-repository", () => ({
 }));
 
 vi.mock("./actions", () => ({
+  approveCatalogMatchSuggestionAction: vi.fn(),
   confirmCatalogCandidateAction: vi.fn(),
   holdCatalogSourceCandidateAction: vi.fn(),
   mergeCatalogCandidateAction: vi.fn(),
   promoteCatalogSourceCandidateAction: vi.fn(),
   rejectCatalogCandidateAction: vi.fn(),
+  rejectCatalogMatchSuggestionAction: vi.fn(),
   rejectCatalogSourceCandidateAction: vi.fn(),
   rescanCatalogMatchSuggestionsAction: vi.fn(),
   upsertVarietySeedProofAction: vi.fn(),

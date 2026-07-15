@@ -132,6 +132,9 @@ export interface CatalogMatchSuggestions {
   catalog_kind: string;
   confidence_bucket: string;
   created_at: Generated<Timestamp>;
+  decision_affected_object_count: number | null;
+  decision_reason_code: string | null;
+  decision_result: string | null;
   generated_at: Generated<Timestamp>;
   id: Generated<string>;
   match_type: string;
@@ -145,13 +148,18 @@ export interface CatalogMatchSuggestions {
   score: number;
   source_catalog_item_id: string;
   source_locale: Generated<string>;
+  source_matching_fingerprint: string | null;
   source_script: string;
+  source_updated_at_snapshot: Timestamp | null;
   status: Generated<string>;
   suggestion_kind: Generated<string>;
   target_canonical_name: string | null;
   target_catalog_item_id: string | null;
+  target_catalog_item_name_id: string | null;
   target_locale: string | null;
+  target_matching_fingerprint: string | null;
   target_script: string | null;
+  target_updated_at_snapshot: Timestamp | null;
   updated_at: Generated<Timestamp>;
 }
 

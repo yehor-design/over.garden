@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
+import json
 import re
 import unicodedata
 from typing import Any, Mapping, Sequence
@@ -14,7 +16,7 @@ from psycopg.types.json import Jsonb
 from rapidfuzz import fuzz
 
 CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND = "catalog_match_suggestions_refresh"
-MATCHER_VERSION = "ove158-v2"
+MATCHER_VERSION = "ove159-v3"
 MATCH_EVIDENCE_SCHEMA_VERSION = "ove158.catalogMatchEvidence.v2"
 MATCH_SCORE_HIGH = 95
 MATCH_SCORE_MEDIUM = 85
@@ -29,6 +31,7 @@ select
   catalog_items.normalized_name,
   catalog_items.catalog_kind,
   catalog_items.locale,
+  catalog_items.updated_at,
   count(plant_objects.id)::integer as affected_object_count
 from catalog_items
 left join plant_objects
@@ -49,7 +52,8 @@ select
   catalog_items.catalog_kind,
   catalog_item_names.display_name,
   catalog_item_names.normalized_name,
-  catalog_item_names.locale
+  catalog_item_names.locale,
+  catalog_items.updated_at as target_updated_at
 from catalog_item_names
 inner join catalog_items
   on catalog_items.id = catalog_item_names.catalog_item_id
@@ -78,8 +82,13 @@ UPSERT_MATCH_SUGGESTION_SQL = """
 insert into catalog_match_suggestions (
   source_catalog_item_id,
   target_catalog_item_id,
+  target_catalog_item_name_id,
   candidate_key,
   target_canonical_name,
+  source_updated_at_snapshot,
+  target_updated_at_snapshot,
+  source_matching_fingerprint,
+  target_matching_fingerprint,
   suggestion_kind,
   match_type,
   score,
@@ -100,13 +109,18 @@ insert into catalog_match_suggestions (
   updated_at
 )
 values (
-  %s, %s, %s, %s, 'canonical_match', %s, %s, %s, 'pending', %s,
+  %s, %s, %s, %s, %s, %s, %s, %s, %s, 'canonical_match', %s, %s, %s, 'pending', %s,
   %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, now(), now()
 )
 on conflict (source_catalog_item_id, candidate_key, suggestion_kind)
 do update set
   target_catalog_item_id = excluded.target_catalog_item_id,
+  target_catalog_item_name_id = excluded.target_catalog_item_name_id,
   target_canonical_name = excluded.target_canonical_name,
+  source_updated_at_snapshot = excluded.source_updated_at_snapshot,
+  target_updated_at_snapshot = excluded.target_updated_at_snapshot,
+  source_matching_fingerprint = excluded.source_matching_fingerprint,
+  target_matching_fingerprint = excluded.target_matching_fingerprint,
   match_type = excluded.match_type,
   score = excluded.score,
   confidence_bucket = excluded.confidence_bucket,
@@ -122,9 +136,43 @@ do update set
   affected_object_count = excluded.affected_object_count,
   safe_evidence = excluded.safe_evidence,
   matcher_version = excluded.matcher_version,
+  reviewed_at = null,
+  reviewed_by_user_id = null,
+  decision_reason_code = null,
+  decision_result = null,
+  decision_affected_object_count = null,
   generated_at = now(),
   updated_at = now()
 where catalog_match_suggestions.status in ('pending', 'stale')
+   or (
+     catalog_match_suggestions.status = 'rejected'
+     and (
+       catalog_match_suggestions.source_matching_fingerprint
+         is distinct from excluded.source_matching_fingerprint
+       or catalog_match_suggestions.target_matching_fingerprint
+         is distinct from excluded.target_matching_fingerprint
+       or catalog_match_suggestions.target_catalog_item_id
+         is distinct from excluded.target_catalog_item_id
+       or catalog_match_suggestions.target_catalog_item_name_id
+         is distinct from excluded.target_catalog_item_name_id
+       or catalog_match_suggestions.target_canonical_name
+         is distinct from excluded.target_canonical_name
+       or catalog_match_suggestions.match_type is distinct from excluded.match_type
+       or catalog_match_suggestions.score is distinct from excluded.score
+       or catalog_match_suggestions.confidence_bucket
+         is distinct from excluded.confidence_bucket
+       or catalog_match_suggestions.reason_codes is distinct from excluded.reason_codes
+       or catalog_match_suggestions.normalized_input
+         is distinct from excluded.normalized_input
+       or catalog_match_suggestions.matched_name is distinct from excluded.matched_name
+       or catalog_match_suggestions.source_locale is distinct from excluded.source_locale
+       or catalog_match_suggestions.target_locale is distinct from excluded.target_locale
+       or catalog_match_suggestions.source_script is distinct from excluded.source_script
+       or catalog_match_suggestions.target_script is distinct from excluded.target_script
+       or catalog_match_suggestions.catalog_kind is distinct from excluded.catalog_kind
+       or catalog_match_suggestions.matcher_version is distinct from excluded.matcher_version
+     )
+   )
 """
 
 _ICU_CASEFOLD = icu.Normalizer2.getNFKCCasefoldInstance()
@@ -153,8 +201,13 @@ _TRANSLIT_ASCII_REPLACEMENTS = str.maketrans(
 @dataclass(frozen=True)
 class CatalogMatchSuggestion:
     target_catalog_item_id: str | None
+    target_catalog_item_name_id: str | None
     candidate_key: str
     target_canonical_name: str | None
+    source_updated_at_snapshot: Any
+    target_updated_at_snapshot: Any | None
+    source_matching_fingerprint: str
+    target_matching_fingerprint: str | None
     score: int
     confidence_bucket: str
     match_type: str
@@ -191,6 +244,12 @@ def build_catalog_match_suggestions(
     source_script = script_hint(source_name)
     catalog_kind = _required_text(source, "catalog_kind")
     affected_object_count = max(int(source.get("affected_object_count") or 0), 0)
+    source_matching_fingerprint = _matching_fingerprint(
+        source_name,
+        _required_text(source, "normalized_name"),
+        source_locale,
+        catalog_kind,
+    )
 
     best_by_target: dict[str, CatalogMatchSuggestion] = {}
     evaluated_scores: list[int] = []
@@ -202,8 +261,10 @@ def build_catalog_match_suggestions(
             continue
 
         target_id = _required_identifier(candidate, "target_catalog_item_id")
+        target_name_id = _required_identifier(candidate, "target_catalog_item_name_id")
         matched_name = _required_text(candidate, "display_name")
         canonical_name = _required_text(candidate, "canonical_name")
+        target_normalized_name = _required_text(candidate, "normalized_name")
         target_locale = _locale(candidate.get("locale"))
         target_script = script_hint(matched_name)
         candidate_normalized = normalize_catalog_name(matched_name)
@@ -222,8 +283,21 @@ def build_catalog_match_suggestions(
         reasons = (*reason_codes, "same_catalog_kind")
         suggestion = CatalogMatchSuggestion(
             target_catalog_item_id=target_id,
+            target_catalog_item_name_id=target_name_id,
             candidate_key=target_id,
             target_canonical_name=canonical_name,
+            source_updated_at_snapshot=source.get("updated_at"),
+            target_updated_at_snapshot=candidate.get("target_updated_at"),
+            source_matching_fingerprint=source_matching_fingerprint,
+            target_matching_fingerprint=_matching_fingerprint(
+                target_id,
+                canonical_name,
+                catalog_kind,
+                target_name_id,
+                matched_name,
+                target_normalized_name,
+                target_locale,
+            ),
             score=score,
             confidence_bucket=_confidence_bucket(score),
             match_type=match_type,
@@ -272,8 +346,13 @@ def build_catalog_match_suggestions(
     return [
         CatalogMatchSuggestion(
             target_catalog_item_id=None,
+            target_catalog_item_name_id=None,
             candidate_key="no-safe-match",
             target_canonical_name=None,
+            source_updated_at_snapshot=source.get("updated_at"),
+            target_updated_at_snapshot=None,
+            source_matching_fingerprint=source_matching_fingerprint,
+            target_matching_fingerprint=None,
             score=score,
             confidence_bucket="none",
             match_type="no_safe_match",
@@ -329,8 +408,13 @@ def refresh_catalog_match_suggestions(conn: Any, source_catalog_item_id: str) ->
                 (
                     source_catalog_item_id,
                     suggestion.target_catalog_item_id,
+                    suggestion.target_catalog_item_name_id,
                     suggestion.candidate_key,
                     suggestion.target_canonical_name,
+                    suggestion.source_updated_at_snapshot,
+                    suggestion.target_updated_at_snapshot,
+                    suggestion.source_matching_fingerprint,
+                    suggestion.target_matching_fingerprint,
                     suggestion.match_type,
                     suggestion.score,
                     suggestion.confidence_bucket,
@@ -437,6 +521,11 @@ def _confidence_bucket(score: int) -> str:
     if score >= MATCH_SCORE_MEDIUM:
         return "medium"
     return "low"
+
+
+def _matching_fingerprint(*values: str) -> str:
+    payload = json.dumps(values, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _suggestion_rank(suggestion: CatalogMatchSuggestion) -> tuple[Any, ...]:

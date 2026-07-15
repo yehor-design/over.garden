@@ -17,11 +17,13 @@ import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
+  approveCatalogMatchSuggestionAction,
   confirmCatalogCandidateAction,
   holdCatalogSourceCandidateAction,
   mergeCatalogCandidateAction,
   promoteCatalogSourceCandidateAction,
   rejectCatalogCandidateAction,
+  rejectCatalogMatchSuggestionAction,
   rejectCatalogSourceCandidateAction,
   rescanCatalogMatchSuggestionsAction,
   upsertVarietySeedProofAction,
@@ -178,6 +180,8 @@ export default async function CatalogCurationPage({
         mergeAction={mergeCatalogCandidateAction}
         rejectAction={rejectCatalogCandidateAction}
         rescanAction={rescanCatalogMatchSuggestionsAction}
+        approveSuggestionAction={approveCatalogMatchSuggestionAction}
+        rejectSuggestionAction={rejectCatalogMatchSuggestionAction}
       />
     </main>
   );

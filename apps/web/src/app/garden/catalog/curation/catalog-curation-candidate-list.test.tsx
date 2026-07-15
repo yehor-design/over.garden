@@ -3,10 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 describe("CatalogCurationCandidateList", () => {
   it("highlights pilot-origin candidates with aggregate-safe context only", () => {
+    const CandidateList = CatalogCurationCandidateList as unknown as (
+      props: Record<string, unknown>,
+    ) => React.ReactNode;
     const html = renderToStaticMarkup(
-      <CatalogCurationCandidateList
+      <CandidateList
         candidates={[
           {
             id: "00000000-0000-4000-8000-000000000201",
@@ -47,6 +54,8 @@ describe("CatalogCurationCandidateList", () => {
         mergeAction={vi.fn()}
         rejectAction={vi.fn()}
         rescanAction={vi.fn()}
+        approveSuggestionAction={vi.fn()}
+        rejectSuggestionAction={vi.fn()}
       />,
     );
 
@@ -63,8 +72,72 @@ describe("CatalogCurationCandidateList", () => {
     expect(html).toContain("Fuzzy name");
     expect(html).toContain("Plant variety");
     expect(html).toContain("Refresh matches");
+    expect(html).toContain("Approve match");
+    expect(html).toContain("Reject suggestion");
+    expect(html).toContain("Incorrect identity");
     expect(html).not.toContain("Refresh queued");
     expect(html).not.toContain("00000000-0000-0000-0000-000000000001");
+  });
+
+  it("renders rejected suggestion history without mutation controls", () => {
+    const CandidateList = CatalogCurationCandidateList as unknown as (
+      props: Record<string, unknown>,
+    ) => React.ReactNode;
+    const html = renderToStaticMarkup(
+      <CandidateList
+        candidates={[
+          {
+            id: "00000000-0000-4000-8000-000000000204",
+            displayName: "Rosova gradina",
+            normalizedName: "rosova gradina",
+            catalogKind: "species",
+            locale: "bg",
+            status: "provisional",
+            source: "user_added",
+            createdAt: "2026-07-14T12:00:00.000Z",
+            affectedObjectCount: 1,
+            pilotOrigin: false,
+            invitedPilotUserCount: 0,
+            matchSuggestions: [
+              {
+                id: "00000000-0000-4000-8000-000000000304",
+                targetCatalogItemId: "00000000-0000-4000-8000-000000000104",
+                targetDisplayName: "Розова градина",
+                targetCanonicalName: "Rosa",
+                catalogKind: "species",
+                score: 88,
+                confidenceBucket: "medium",
+                matchType: "fuzzy_name",
+                reasonCodes: ["rapidfuzz_name_similarity"],
+                normalizedInput: "rosova gradina",
+                matchedName: "Розова градина",
+                sourceLocale: "bg",
+                targetLocale: "bg",
+                sourceScript: "latin",
+                targetScript: "cyrillic",
+                status: "rejected",
+                generatedAt: "2026-07-14T12:00:00.000Z",
+                reviewedAt: "2026-07-15T08:00:00.000Z",
+                decisionReasonCode: "not_same_entity",
+                decisionResult: "suggestion_rejected",
+                decisionAffectedObjectCount: 0,
+              },
+            ],
+          },
+        ]}
+        confirmAction={vi.fn()}
+        mergeAction={vi.fn()}
+        rejectAction={vi.fn()}
+        rescanAction={vi.fn()}
+        approveSuggestionAction={vi.fn()}
+        rejectSuggestionAction={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain("Rejected match");
+    expect(html).toContain("Incorrect identity");
+    expect(html).not.toContain("Approve match");
+    expect(html).not.toContain("Reject suggestion");
   });
 
   it("renders an explicit no-safe-match state without inventing a target", () => {
@@ -110,6 +183,8 @@ describe("CatalogCurationCandidateList", () => {
         mergeAction={vi.fn()}
         rejectAction={vi.fn()}
         rescanAction={vi.fn()}
+        approveSuggestionAction={vi.fn()}
+        rejectSuggestionAction={vi.fn()}
       />,
     );
 
@@ -165,6 +240,8 @@ describe("CatalogCurationCandidateList", () => {
         mergeAction={vi.fn()}
         rejectAction={vi.fn()}
         rescanAction={vi.fn()}
+        approveSuggestionAction={vi.fn()}
+        rejectSuggestionAction={vi.fn()}
       />,
     );
 

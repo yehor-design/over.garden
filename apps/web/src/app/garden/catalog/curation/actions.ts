@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import {
+  approveCatalogMatchSuggestion,
   confirmCatalogCurationCandidate,
   enqueueCatalogMatchSuggestionsRefresh,
   mergeCatalogCurationCandidate,
   rejectCatalogCurationCandidate,
+  rejectCatalogMatchSuggestion,
   type CatalogCurationDecisionResult,
 } from "@/server/catalog-curation-repository";
 import {
@@ -21,6 +23,11 @@ import { requireCurrentRequestScope } from "@/server/auth-session";
 import { upsertVarietySeedProof } from "@/server/variety-seed-proof-repository";
 
 const CURATION_PATH = "/garden/catalog/curation";
+
+export interface CatalogMatchSuggestionActionResult {
+  outcome: "approved" | "rejected" | "stale";
+  message: string;
+}
 
 export async function confirmCatalogCandidateAction(formData: FormData) {
   const scope = await requireCurrentRequestScope();
@@ -65,6 +72,58 @@ export async function rescanCatalogMatchSuggestionsAction(formData: FormData) {
   });
 
   revalidatePath(CURATION_PATH);
+}
+
+export async function approveCatalogMatchSuggestionAction(
+  formData: FormData,
+): Promise<CatalogMatchSuggestionActionResult> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  const result = await approveCatalogMatchSuggestion(scope, {
+    suggestionId: String(formData.get("suggestionId") ?? ""),
+  });
+
+  revalidateCatalogMatchSuggestionPaths(result);
+
+  if (result.outcome === "stale") {
+    return {
+      outcome: "stale",
+      message: "This suggestion changed before review. Nothing was applied.",
+    };
+  }
+
+  return {
+    outcome: "approved",
+    message: `Match approved for ${result.affectedObjectCount} affected object${result.affectedObjectCount === 1 ? "" : "s"}.`,
+  };
+}
+
+export async function rejectCatalogMatchSuggestionAction(
+  formData: FormData,
+): Promise<CatalogMatchSuggestionActionResult> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  const result = await rejectCatalogMatchSuggestion(scope, {
+    suggestionId: String(formData.get("suggestionId") ?? ""),
+    reasonCode: String(formData.get("reasonCode") ?? ""),
+  });
+
+  revalidatePath(CURATION_PATH);
+
+  if (result.outcome === "stale") {
+    return {
+      outcome: "stale",
+      message: "This suggestion changed before review. Nothing was applied.",
+    };
+  }
+
+  return {
+    outcome: "rejected",
+    message:
+      "Suggestion rejected. Catalog identity and journal history were unchanged.",
+  };
 }
 
 export async function upsertVarietySeedProofAction(formData: FormData) {
@@ -139,5 +198,23 @@ function revalidateCatalogSourceCandidatePaths(
 
   if (result.catalogPublicSlug) {
     revalidatePath(publicVarietyPath(result.catalogPublicSlug));
+  }
+}
+
+function revalidateCatalogMatchSuggestionPaths(result: {
+  outcome: "approved" | "rejected" | "stale";
+  targetPublicSlug: string | null;
+  publicEntryPaths: string[];
+}) {
+  revalidatePath(CURATION_PATH);
+
+  if (result.outcome !== "approved") return;
+
+  revalidatePath("/garden");
+  if (result.targetPublicSlug) {
+    revalidatePath(publicVarietyPath(result.targetPublicSlug));
+  }
+  for (const publicEntryPath of result.publicEntryPaths) {
+    revalidatePath(publicEntryPath);
   }
 }

@@ -740,7 +740,18 @@ create table if not exists catalog_match_suggestions (
   id uuid primary key default gen_random_uuid(),
   source_catalog_item_id uuid not null references catalog_items(id) on delete cascade,
   target_catalog_item_id uuid references catalog_items(id) on delete cascade,
+  target_catalog_item_name_id uuid,
   candidate_key text not null check (char_length(candidate_key) between 1 and 80),
+  source_updated_at_snapshot timestamptz,
+  target_updated_at_snapshot timestamptz,
+  source_matching_fingerprint text check (
+    source_matching_fingerprint is null
+    or source_matching_fingerprint ~ '^[0-9a-f]{64}$'
+  ),
+  target_matching_fingerprint text check (
+    target_matching_fingerprint is null
+    or target_matching_fingerprint ~ '^[0-9a-f]{64}$'
+  ),
   suggestion_kind text not null default 'canonical_match' check (suggestion_kind = 'canonical_match'),
   match_type text not null check (
     match_type in ('normalized_exact', 'transliteration_exact', 'fuzzy_name', 'no_safe_match')
@@ -835,6 +846,12 @@ create table if not exists catalog_match_suggestions (
   generated_at timestamptz not null default now(),
   reviewed_at timestamptz,
   reviewed_by_user_id uuid,
+  decision_reason_code text,
+  decision_result text,
+  decision_affected_object_count integer check (
+    decision_affected_object_count is null
+    or decision_affected_object_count >= 0
+  ),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint catalog_match_suggestions_source_target_check check (
@@ -862,16 +879,48 @@ create table if not exists catalog_match_suggestions (
   constraint catalog_match_suggestions_source_not_target_check check (
     target_catalog_item_id is null or source_catalog_item_id <> target_catalog_item_id
   ),
+  constraint catalog_match_suggestions_target_snapshot_check check (
+    matcher_version = 'ove158-v2'
+    or (
+      source_updated_at_snapshot is not null
+      and (
+        (target_catalog_item_id is null and target_updated_at_snapshot is null)
+        or (target_catalog_item_id is not null and target_updated_at_snapshot is not null)
+      )
+    )
+  ),
   constraint catalog_match_suggestions_review_metadata_check check (
     (
       status in ('pending', 'stale')
       and reviewed_at is null
       and reviewed_by_user_id is null
+      and decision_reason_code is null
+      and decision_result is null
+      and decision_affected_object_count is null
     )
     or (
-      status in ('approved', 'rejected')
+      status = 'approved'
       and reviewed_at is not null
       and reviewed_by_user_id is not null
+      and decision_reason_code = 'approved_canonical_match'
+      and decision_result = 'catalog_merged'
+      and decision_affected_object_count is not null
+      and target_catalog_item_id is not null
+    )
+    or (
+      status = 'rejected'
+      and reviewed_at is not null
+      and reviewed_by_user_id is not null
+      and decision_reason_code in (
+        'not_same_entity',
+        'wrong_catalog_kind',
+        'locale_or_script_mismatch',
+        'insufficient_evidence',
+        'other_review_reason',
+        'legacy_review'
+      )
+      and decision_result = 'suggestion_rejected'
+      and decision_affected_object_count = 0
     )
   ),
   constraint catalog_match_suggestions_source_candidate_kind_uidx unique (
@@ -884,19 +933,100 @@ create table if not exists catalog_match_suggestions (
 alter table catalog_match_suggestions
   add column if not exists reviewed_at timestamptz,
   add column if not exists reviewed_by_user_id uuid,
-  add column if not exists target_canonical_name text;
+  add column if not exists target_canonical_name text,
+  add column if not exists source_updated_at_snapshot timestamptz,
+  add column if not exists target_updated_at_snapshot timestamptz,
+  add column if not exists target_catalog_item_name_id uuid,
+  add column if not exists source_matching_fingerprint text,
+  add column if not exists target_matching_fingerprint text,
+  add column if not exists decision_reason_code text,
+  add column if not exists decision_result text,
+  add column if not exists decision_affected_object_count integer;
 
 alter table catalog_match_suggestions
   drop constraint if exists catalog_match_suggestions_safe_evidence_check,
   drop constraint if exists catalog_match_suggestions_reason_codes_check,
   drop constraint if exists catalog_match_suggestions_source_target_check,
-  drop constraint if exists catalog_match_suggestions_target_canonical_name_check;
+  drop constraint if exists catalog_match_suggestions_target_canonical_name_check,
+  drop constraint if exists catalog_match_suggestions_target_snapshot_check,
+  drop constraint if exists catalog_match_suggestions_matching_fingerprint_check,
+  drop constraint if exists catalog_match_suggestions_decision_reason_check,
+  drop constraint if exists catalog_match_suggestions_decision_result_check,
+  drop constraint if exists catalog_match_suggestions_decision_affected_count_check,
+  drop constraint if exists catalog_match_suggestions_review_metadata_check;
 
 update catalog_match_suggestions as suggestions
 set target_canonical_name = targets.canonical_name
 from catalog_items as targets
 where suggestions.target_catalog_item_id = targets.id
   and suggestions.target_canonical_name is null;
+
+update catalog_match_suggestions as suggestions
+set source_updated_at_snapshot = source_items.updated_at
+from catalog_items as source_items
+where suggestions.source_catalog_item_id = source_items.id
+  and suggestions.source_updated_at_snapshot is null;
+
+update catalog_match_suggestions as suggestions
+set target_updated_at_snapshot = target_items.updated_at
+from catalog_items as target_items
+where suggestions.target_catalog_item_id = target_items.id
+  and suggestions.target_updated_at_snapshot is null;
+
+-- OVE-159 decisions require alias-bound semantic fingerprints. Older pending
+-- evidence cannot satisfy that contract, so it is retired rather than being
+-- silently approved under weaker timestamp-only validation.
+update catalog_match_suggestions
+set status = 'stale',
+    updated_at = now()
+where status = 'pending'
+  and (
+    source_matching_fingerprint is null
+    or (
+      target_catalog_item_id is not null
+      and (
+        target_catalog_item_name_id is null
+        or target_matching_fingerprint is null
+      )
+    )
+  );
+
+update catalog_match_suggestions
+set
+  decision_reason_code = case
+    when status = 'approved' then 'approved_canonical_match'
+    else 'legacy_review'
+  end,
+  decision_result = case
+    when status = 'approved' then 'catalog_merged'
+    else 'suggestion_rejected'
+  end,
+  decision_affected_object_count = case
+    when status = 'approved' then affected_object_count
+    else 0
+  end
+where status in ('approved', 'rejected')
+  and decision_result is null;
+
+alter table catalog_match_suggestions
+  alter column source_updated_at_snapshot drop not null,
+  alter column source_matching_fingerprint drop not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_match_suggestions_target_name_fkey'
+      and conrelid = 'catalog_match_suggestions'::regclass
+  ) then
+    alter table catalog_match_suggestions
+      add constraint catalog_match_suggestions_target_name_fkey
+      foreign key (target_catalog_item_name_id)
+      references catalog_item_names(id)
+      on delete restrict;
+  end if;
+end $$;
 
 -- Rewrite legacy v1 rows from the safe relational columns only. This removes
 -- the duplicated raw gardener-entered source name before the strict v2
@@ -1020,33 +1150,99 @@ alter table catalog_match_suggestions
     and safe_evidence->'reasonCodes' = to_jsonb(reason_codes)
     and safe_evidence->'thresholds'
       = '{"high": 95, "medium": 85, "low": 70}'::jsonb
+  ),
+  add constraint catalog_match_suggestions_target_snapshot_check check (
+    matcher_version = 'ove158-v2'
+    or (
+      source_updated_at_snapshot is not null
+      and (
+        (target_catalog_item_id is null and target_updated_at_snapshot is null)
+        or (target_catalog_item_id is not null and target_updated_at_snapshot is not null)
+      )
+    )
+  ),
+  add constraint catalog_match_suggestions_matching_fingerprint_check check (
+    (
+      source_matching_fingerprint is null
+      or source_matching_fingerprint ~ '^[0-9a-f]{64}$'
+    )
+    and (
+      target_matching_fingerprint is null
+      or target_matching_fingerprint ~ '^[0-9a-f]{64}$'
+    )
+    and (
+      matcher_version = 'ove158-v2'
+      or (
+        source_matching_fingerprint is not null
+        and (
+          (
+            target_catalog_item_id is null
+            and target_catalog_item_name_id is null
+            and target_matching_fingerprint is null
+          )
+          or (
+            target_catalog_item_id is not null
+            and target_catalog_item_name_id is not null
+            and target_matching_fingerprint is not null
+          )
+        )
+      )
+    )
+  ),
+  add constraint catalog_match_suggestions_decision_reason_check check (
+    decision_reason_code is null
+    or decision_reason_code in (
+      'approved_canonical_match',
+      'not_same_entity',
+      'wrong_catalog_kind',
+      'locale_or_script_mismatch',
+      'insufficient_evidence',
+      'other_review_reason',
+      'legacy_review'
+    )
+  ),
+  add constraint catalog_match_suggestions_decision_result_check check (
+    decision_result is null
+    or decision_result in ('catalog_merged', 'suggestion_rejected')
+  ),
+  add constraint catalog_match_suggestions_decision_affected_count_check check (
+    decision_affected_object_count is null
+    or decision_affected_object_count >= 0
+  ),
+  add constraint catalog_match_suggestions_review_metadata_check check (
+    (
+      status in ('pending', 'stale')
+      and reviewed_at is null
+      and reviewed_by_user_id is null
+      and decision_reason_code is null
+      and decision_result is null
+      and decision_affected_object_count is null
+    )
+    or (
+      status = 'approved'
+      and reviewed_at is not null
+      and reviewed_by_user_id is not null
+      and decision_reason_code = 'approved_canonical_match'
+      and decision_result = 'catalog_merged'
+      and decision_affected_object_count is not null
+      and target_catalog_item_id is not null
+    )
+    or (
+      status = 'rejected'
+      and reviewed_at is not null
+      and reviewed_by_user_id is not null
+      and decision_reason_code in (
+        'not_same_entity',
+        'wrong_catalog_kind',
+        'locale_or_script_mismatch',
+        'insufficient_evidence',
+        'other_review_reason',
+        'legacy_review'
+      )
+      and decision_result = 'suggestion_rejected'
+      and decision_affected_object_count = 0
+    )
   );
-
-do $$
-begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'catalog_match_suggestions_review_metadata_check'
-      and conrelid = 'catalog_match_suggestions'::regclass
-  ) then
-    alter table catalog_match_suggestions
-      add constraint catalog_match_suggestions_review_metadata_check
-      check (
-        (
-          status in ('pending', 'stale')
-          and reviewed_at is null
-          and reviewed_by_user_id is null
-        )
-        or (
-          status in ('approved', 'rejected')
-          and reviewed_at is not null
-          and reviewed_by_user_id is not null
-        )
-      );
-  end if;
-
-end $$;
 
 create index if not exists catalog_match_suggestions_source_status_score_idx
   on catalog_match_suggestions (source_catalog_item_id, status, score desc, generated_at desc);

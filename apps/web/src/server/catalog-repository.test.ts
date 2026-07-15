@@ -482,6 +482,7 @@ describe("catalog repository query contracts", () => {
     expect(compiled.sql).toContain('"catalog_kind" = $4');
     expect(compiled.sql).toContain('"status" = $5');
     expect(compiled.sql).toContain('"source" = $6');
+    expect(compiled.sql).toContain("for update");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000001",
       "місцева руда кішка",
@@ -528,10 +529,20 @@ describe("catalog repository query contracts", () => {
   it("enqueues catalog typeahead reindex work on the matching worker queue", () => {
     const compiled =
       buildEnqueueCatalogTypeaheadReindexJobQuery(testDb).compile();
+    const normalizedSql = compiled.sql.replace(/\s+/g, " ");
 
     expect(compiled.sql).toContain('insert into "job_queue"');
     expect(compiled.sql).toContain(
       'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
+    );
+    expect(normalizedSql).toContain(
+      "case when job_queue.status = 'processing' then job_queue.status else 'pending' end",
+    );
+    expect(normalizedSql).toContain(
+      "\"rerun_requested\" = (job_queue.status = 'processing')",
+    );
+    expect(normalizedSql).toContain(
+      "case when job_queue.status = 'processing' then job_queue.locked_at else null end",
     );
     expect(JSON.stringify(compiled.parameters)).not.toContain("owner");
     expect(JSON.stringify(compiled.parameters)).not.toContain("journal");
@@ -539,6 +550,8 @@ describe("catalog repository query contracts", () => {
       "matching",
       { kind: "catalog_typeahead_reindex" },
       "catalog-typeahead-reindex",
+      expect.any(Date),
+      null,
       expect.any(Date),
     ]);
   });

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
@@ -57,9 +59,29 @@ export interface CatalogMatchSuggestionReadModel {
   targetLocale: string | null;
   sourceScript: string;
   targetScript: string | null;
-  status: "pending";
+  status: "pending" | "rejected";
   generatedAt: Date | string;
+  reviewedAt: Date | string | null;
+  decisionReasonCode: CatalogMatchSuggestionDecisionReason | null;
+  decisionResult: CatalogMatchSuggestionDecisionResult | null;
+  decisionAffectedObjectCount: number | null;
 }
+
+export type CatalogMatchSuggestionRejectionReason =
+  | "not_same_entity"
+  | "wrong_catalog_kind"
+  | "locale_or_script_mismatch"
+  | "insufficient_evidence"
+  | "other_review_reason";
+
+type CatalogMatchSuggestionDecisionReason =
+  | "approved_canonical_match"
+  | CatalogMatchSuggestionRejectionReason
+  | "legacy_review";
+
+type CatalogMatchSuggestionDecisionResult =
+  | "catalog_merged"
+  | "suggestion_rejected";
 
 export interface CatalogCurationDecisionInput {
   candidateId: string;
@@ -69,8 +91,24 @@ export interface MergeCatalogCurationCandidateInput extends CatalogCurationDecis
   targetCatalogItemId: string;
 }
 
+export interface CatalogMatchSuggestionDecisionInput {
+  suggestionId: string;
+}
+
+export interface RejectCatalogMatchSuggestionInput extends CatalogMatchSuggestionDecisionInput {
+  reasonCode: string;
+}
+
 export interface CatalogCurationDecisionResult {
   candidate: CatalogItem;
+  affectedObjectCount: number;
+  publicEntryPaths: string[];
+}
+
+export interface CatalogMatchSuggestionReviewResult {
+  outcome: "approved" | "rejected" | "stale";
+  candidate: CatalogItem | null;
+  targetPublicSlug: string | null;
   affectedObjectCount: number;
   publicEntryPaths: string[];
 }
@@ -114,8 +152,17 @@ export async function listPendingCatalogCurationCandidates(
       targetLocale: row.targetLocale,
       sourceScript: row.sourceScript,
       targetScript: row.targetScript,
-      status: "pending",
+      status: row.status as "pending" | "rejected",
       generatedAt: row.generatedAt,
+      reviewedAt: row.reviewedAt,
+      decisionReasonCode:
+        row.decisionReasonCode as CatalogMatchSuggestionDecisionReason | null,
+      decisionResult:
+        row.decisionResult as CatalogMatchSuggestionDecisionResult | null,
+      decisionAffectedObjectCount:
+        row.decisionAffectedObjectCount === null
+          ? null
+          : Number(row.decisionAffectedObjectCount),
     });
     suggestionsByCandidate.set(row.sourceCatalogItemId, suggestions);
   }
@@ -148,6 +195,112 @@ export async function enqueueCatalogMatchSuggestionsRefresh(
       candidateId,
     ).executeTakeFirst();
     return { candidateId };
+  });
+}
+
+export async function approveCatalogMatchSuggestion(
+  scope: RequestScope,
+  input: CatalogMatchSuggestionDecisionInput,
+): Promise<CatalogMatchSuggestionReviewResult> {
+  const suggestionId = normalizeCurationCandidateId(input.suggestionId);
+  const now = new Date();
+
+  return db.transaction().execute(async (trx) => {
+    const suggestion = await requirePendingCatalogMatchSuggestion(
+      trx,
+      suggestionId,
+    );
+
+    if (!isCurrentCatalogMatchSuggestion(suggestion)) {
+      await buildStaleCatalogMatchSuggestionQuery(
+        trx,
+        suggestionId,
+        now,
+      ).executeTakeFirst();
+      return staleCatalogMatchSuggestionResult();
+    }
+
+    const publicEntryPaths = await publicEntryPathsForCandidate(
+      trx,
+      suggestion.sourceCatalogItemId,
+    );
+    const affectedObjects =
+      await buildUpdateObjectsForMergedCatalogCandidateQuery(trx, {
+        candidateId: suggestion.sourceCatalogItemId,
+        targetCatalogItemId: suggestion.targetCatalogItemId,
+        varietyText: suggestion.targetCanonicalName,
+        now,
+      }).execute();
+    const candidate = await buildMergeCatalogCurationCandidateQuery(
+      trx,
+      scope,
+      {
+        candidateId: suggestion.sourceCatalogItemId,
+        targetCatalogItemId: suggestion.targetCatalogItemId,
+        now,
+      },
+    ).executeTakeFirstOrThrow();
+
+    await buildApproveCatalogMatchSuggestionQuery(trx, scope, {
+      suggestionId,
+      decisionAffectedObjectCount: affectedObjects.length,
+      now,
+    }).executeTakeFirstOrThrow();
+    await buildStaleOtherCatalogMatchSuggestionsQuery(trx, {
+      sourceCatalogItemId: suggestion.sourceCatalogItemId,
+      approvedSuggestionId: suggestionId,
+      now,
+    }).execute();
+    await buildEnqueueCatalogTypeaheadReindexJobQuery(trx).executeTakeFirst();
+
+    return {
+      outcome: "approved",
+      candidate,
+      targetPublicSlug: suggestion.targetPublicSlug,
+      affectedObjectCount: affectedObjects.length,
+      publicEntryPaths,
+    };
+  });
+}
+
+export async function rejectCatalogMatchSuggestion(
+  scope: RequestScope,
+  input: RejectCatalogMatchSuggestionInput,
+): Promise<CatalogMatchSuggestionReviewResult> {
+  const suggestionId = normalizeCurationCandidateId(input.suggestionId);
+  const reasonCode = normalizeCatalogMatchSuggestionRejectionReason(
+    input.reasonCode,
+  );
+  const now = new Date();
+
+  return db.transaction().execute(async (trx) => {
+    const suggestion = await requirePendingCatalogMatchSuggestion(
+      trx,
+      suggestionId,
+    );
+
+    if (!isCurrentCatalogMatchSuggestion(suggestion)) {
+      await buildStaleCatalogMatchSuggestionQuery(
+        trx,
+        suggestionId,
+        now,
+      ).executeTakeFirst();
+      return staleCatalogMatchSuggestionResult();
+    }
+
+    await buildRejectCatalogMatchSuggestionQuery(trx, scope, {
+      suggestionId,
+      reasonCode,
+      now,
+    }).executeTakeFirstOrThrow();
+
+    return {
+      outcome: "rejected",
+      candidate: null,
+      targetPublicSlug: null,
+      affectedObjectCount: 0,
+      publicEntryPaths: [],
+    };
   });
 }
 
@@ -397,7 +550,7 @@ export function buildPendingCatalogMatchSuggestionsQuery(
       "catalog_match_suggestions.id as id",
       "catalog_match_suggestions.source_catalog_item_id as sourceCatalogItemId",
       "catalog_match_suggestions.target_catalog_item_id as targetCatalogItemId",
-      "target_items.canonical_name as targetCanonicalName",
+      "catalog_match_suggestions.target_canonical_name as targetCanonicalName",
       "catalog_match_suggestions.catalog_kind as catalogKind",
       "catalog_match_suggestions.score as score",
       "catalog_match_suggestions.confidence_bucket as confidenceBucket",
@@ -411,18 +564,23 @@ export function buildPendingCatalogMatchSuggestionsQuery(
       "catalog_match_suggestions.target_script as targetScript",
       "catalog_match_suggestions.status as status",
       "catalog_match_suggestions.generated_at as generatedAt",
+      "catalog_match_suggestions.reviewed_at as reviewedAt",
+      "catalog_match_suggestions.decision_reason_code as decisionReasonCode",
+      "catalog_match_suggestions.decision_result as decisionResult",
+      "catalog_match_suggestions.decision_affected_object_count as decisionAffectedObjectCount",
     ])
     .where(
       "catalog_match_suggestions.source_catalog_item_id",
       "in",
       candidateIds,
     )
-    .where("catalog_match_suggestions.status", "=", "pending")
+    .where("catalog_match_suggestions.status", "in", ["pending", "rejected"])
     .where("source_items.status", "=", "provisional")
     .where("source_items.source", "=", "user_added")
     .where("source_items.created_by_user_id", "is not", null)
     .where((eb) =>
       eb.or([
+        eb("catalog_match_suggestions.status", "=", "rejected"),
         eb("catalog_match_suggestions.target_catalog_item_id", "is", null),
         eb.and([
           eb("target_items.status", "in", ["seeded", "confirmed"]),
@@ -436,8 +594,74 @@ export function buildPendingCatalogMatchSuggestionsQuery(
       ]),
     )
     .orderBy("catalog_match_suggestions.source_catalog_item_id", "asc")
+    .orderBy(
+      sql`case when catalog_match_suggestions.status = 'pending' then 0 else 1 end`,
+      "asc",
+    )
     .orderBy("catalog_match_suggestions.score", "desc")
-    .orderBy("target_items.canonical_name", "asc");
+    .orderBy("catalog_match_suggestions.target_canonical_name", "asc");
+}
+
+export function buildCatalogMatchSuggestionForDecisionQuery(
+  executor: QueryExecutor,
+  suggestionId: string,
+) {
+  return executor
+    .selectFrom("catalog_match_suggestions")
+    .innerJoin(
+      "catalog_items as source_items",
+      "source_items.id",
+      "catalog_match_suggestions.source_catalog_item_id",
+    )
+    .innerJoin(
+      "catalog_items as target_items",
+      "target_items.id",
+      "catalog_match_suggestions.target_catalog_item_id",
+    )
+    .select([
+      "catalog_match_suggestions.id as suggestionId",
+      "catalog_match_suggestions.source_catalog_item_id as sourceCatalogItemId",
+      "catalog_match_suggestions.target_catalog_item_id as targetCatalogItemId",
+      "catalog_match_suggestions.target_catalog_item_name_id as targetCatalogItemNameId",
+      "catalog_match_suggestions.catalog_kind as catalogKind",
+      "catalog_match_suggestions.source_locale as sourceLocale",
+      "catalog_match_suggestions.target_canonical_name as targetCanonicalName",
+      "catalog_match_suggestions.source_matching_fingerprint as sourceMatchingFingerprint",
+      "catalog_match_suggestions.target_matching_fingerprint as targetMatchingFingerprint",
+      "source_items.status as sourceStatus",
+      "source_items.source as sourceSource",
+      "source_items.created_by_user_id as sourceCreatedByUserId",
+      "source_items.catalog_kind as sourceCatalogKind",
+      "source_items.locale as currentSourceLocale",
+      "source_items.canonical_name as currentSourceCanonicalName",
+      "source_items.normalized_name as currentSourceNormalizedName",
+      "target_items.status as targetStatus",
+      "target_items.created_by_user_id as targetCreatedByUserId",
+      "target_items.catalog_kind as targetCatalogKind",
+      "target_items.canonical_name as currentTargetCanonicalName",
+      "target_items.public_slug as targetPublicSlug",
+    ])
+    .where("catalog_match_suggestions.id", "=", suggestionId)
+    .where("catalog_match_suggestions.status", "=", "pending")
+    .where("catalog_match_suggestions.suggestion_kind", "=", "canonical_match")
+    .forUpdate();
+}
+
+export function buildCatalogItemNameForDecisionQuery(
+  executor: QueryExecutor,
+  catalogItemNameId: string,
+) {
+  return executor
+    .selectFrom("catalog_item_names")
+    .select([
+      "id",
+      "catalog_item_id as catalogItemId",
+      "display_name as displayName",
+      "normalized_name as normalizedName",
+      "locale",
+    ])
+    .where("id", "=", catalogItemNameId)
+    .forUpdate();
 }
 
 export function buildConfirmCatalogCurationCandidateQuery(
@@ -532,6 +756,91 @@ export function buildStaleCatalogMatchSuggestionsQuery(
     .where("status", "=", "pending");
 }
 
+export function buildStaleCatalogMatchSuggestionQuery(
+  executor: QueryExecutor,
+  suggestionId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      status: "stale",
+      updated_at: now,
+    })
+    .where("id", "=", suggestionId)
+    .where("status", "=", "pending")
+    .returning(["id"]);
+}
+
+export function buildStaleOtherCatalogMatchSuggestionsQuery(
+  executor: QueryExecutor,
+  input: {
+    sourceCatalogItemId: string;
+    approvedSuggestionId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      status: "stale",
+      updated_at: input.now,
+    })
+    .where("source_catalog_item_id", "=", input.sourceCatalogItemId)
+    .where("id", "!=", input.approvedSuggestionId)
+    .where("status", "=", "pending");
+}
+
+export function buildApproveCatalogMatchSuggestionQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    suggestionId: string;
+    decisionAffectedObjectCount: number;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      status: "approved",
+      reviewed_at: input.now,
+      reviewed_by_user_id: scope.userId,
+      decision_reason_code: "approved_canonical_match",
+      decision_result: "catalog_merged",
+      decision_affected_object_count: input.decisionAffectedObjectCount,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.suggestionId)
+    .where("status", "=", "pending")
+    .returning(["id"]);
+}
+
+export function buildRejectCatalogMatchSuggestionQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    suggestionId: string;
+    reasonCode: CatalogMatchSuggestionRejectionReason;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      status: "rejected",
+      reviewed_at: input.now,
+      reviewed_by_user_id: scope.userId,
+      decision_reason_code: input.reasonCode,
+      decision_result: "suggestion_rejected",
+      decision_affected_object_count: 0,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.suggestionId)
+    .where("status", "=", "pending")
+    .returning(["id"]);
+}
+
 export function buildUpdateObjectsForConfirmedCatalogCandidateQuery(
   executor: QueryExecutor,
   input: {
@@ -610,6 +919,42 @@ async function requirePendingCatalogCurationCandidate(
   return candidate;
 }
 
+async function requirePendingCatalogMatchSuggestion(
+  executor: QueryExecutor,
+  suggestionId: string,
+) {
+  const suggestion = await buildCatalogMatchSuggestionForDecisionQuery(
+    executor,
+    suggestionId,
+  ).executeTakeFirst();
+
+  if (
+    !suggestion ||
+    !suggestion.targetCatalogItemId ||
+    !suggestion.targetCanonicalName
+  ) {
+    throw new Error("Pending catalog match suggestion was not found.");
+  }
+
+  const targetName = suggestion.targetCatalogItemNameId
+    ? await buildCatalogItemNameForDecisionQuery(
+        executor,
+        suggestion.targetCatalogItemNameId,
+      ).executeTakeFirst()
+    : null;
+
+  return {
+    ...suggestion,
+    targetCatalogItemId: suggestion.targetCatalogItemId,
+    targetCanonicalName: suggestion.targetCanonicalName,
+    currentTargetNameId: targetName?.id ?? null,
+    currentTargetNameCatalogItemId: targetName?.catalogItemId ?? null,
+    currentTargetDisplayName: targetName?.displayName ?? null,
+    currentTargetNormalizedName: targetName?.normalizedName ?? null,
+    currentTargetLocale: targetName?.locale ?? null,
+  };
+}
+
 async function publicEntryPathsForCandidate(
   executor: QueryExecutor,
   candidateId: string,
@@ -628,6 +973,113 @@ function normalizeCurationCandidateId(value: string | null | undefined) {
   const normalized = normalizeCatalogItemId(value);
   if (!normalized) throw new Error("Catalog candidate id is required.");
   return normalized;
+}
+
+export function normalizeCatalogMatchSuggestionRejectionReason(
+  value: string | null | undefined,
+): CatalogMatchSuggestionRejectionReason {
+  switch (value) {
+    case "not_same_entity":
+    case "wrong_catalog_kind":
+    case "locale_or_script_mismatch":
+    case "insufficient_evidence":
+    case "other_review_reason":
+      return value;
+    default:
+      throw new Error("A valid catalog match rejection reason is required.");
+  }
+}
+
+function isCurrentCatalogMatchSuggestion(input: {
+  sourceCatalogItemId: string;
+  targetCatalogItemId: string;
+  targetCatalogItemNameId: string | null;
+  catalogKind: string;
+  sourceLocale: string;
+  targetCanonicalName: string | null;
+  sourceMatchingFingerprint: string | null;
+  targetMatchingFingerprint: string | null;
+  sourceStatus: string;
+  sourceSource: string;
+  sourceCreatedByUserId: string | null;
+  sourceCatalogKind: string;
+  currentSourceLocale: string;
+  currentSourceCanonicalName: string;
+  currentSourceNormalizedName: string | null;
+  targetStatus: string;
+  targetCreatedByUserId: string | null;
+  targetCatalogKind: string;
+  currentTargetCanonicalName: string;
+  currentTargetNameId: string | null;
+  currentTargetNameCatalogItemId: string | null;
+  currentTargetDisplayName: string | null;
+  currentTargetNormalizedName: string | null;
+  currentTargetLocale: string | null;
+}) {
+  const currentSourceLocale = normalizeMatchingLocale(
+    input.currentSourceLocale,
+  );
+  const currentTargetLocale = normalizeMatchingLocale(
+    input.currentTargetLocale,
+  );
+
+  return (
+    input.sourceCatalogItemId !== input.targetCatalogItemId &&
+    input.sourceStatus === "provisional" &&
+    input.sourceSource === "user_added" &&
+    input.sourceCreatedByUserId !== null &&
+    input.targetCreatedByUserId === null &&
+    (input.targetStatus === "seeded" || input.targetStatus === "confirmed") &&
+    input.catalogKind === input.sourceCatalogKind &&
+    input.catalogKind === input.targetCatalogKind &&
+    input.sourceLocale === currentSourceLocale &&
+    input.targetCanonicalName === input.currentTargetCanonicalName &&
+    input.currentSourceNormalizedName !== null &&
+    input.sourceMatchingFingerprint !== null &&
+    input.sourceMatchingFingerprint ===
+      buildCatalogMatchFingerprint([
+        input.currentSourceCanonicalName,
+        input.currentSourceNormalizedName,
+        currentSourceLocale,
+        input.sourceCatalogKind,
+      ]) &&
+    input.targetCatalogItemNameId !== null &&
+    input.targetMatchingFingerprint !== null &&
+    input.currentTargetNameId === input.targetCatalogItemNameId &&
+    input.currentTargetNameCatalogItemId === input.targetCatalogItemId &&
+    input.currentTargetDisplayName !== null &&
+    input.currentTargetNormalizedName !== null &&
+    input.currentTargetLocale !== null &&
+    input.targetMatchingFingerprint ===
+      buildCatalogMatchFingerprint([
+        input.targetCatalogItemId,
+        input.currentTargetCanonicalName,
+        input.targetCatalogKind,
+        input.currentTargetNameId,
+        input.currentTargetDisplayName,
+        input.currentTargetNormalizedName,
+        currentTargetLocale,
+      ])
+  );
+}
+
+export function buildCatalogMatchFingerprint(values: readonly string[]) {
+  return createHash("sha256").update(JSON.stringify(values)).digest("hex");
+}
+
+function normalizeMatchingLocale(value: string | null) {
+  const locale = value?.trim().toLowerCase().slice(0, 16) ?? "";
+  return locale.length >= 2 ? locale : "und";
+}
+
+function staleCatalogMatchSuggestionResult(): CatalogMatchSuggestionReviewResult {
+  return {
+    outcome: "stale",
+    candidate: null,
+    targetPublicSlug: null,
+    affectedObjectCount: 0,
+    publicEntryPaths: [],
+  };
 }
 
 function normalizeCurationLimit(limit: number) {

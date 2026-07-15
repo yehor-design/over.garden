@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   assertCatalogCuratorAccess: vi.fn(),
   confirmCatalogCurationCandidate: vi.fn(),
   enqueueCatalogMatchSuggestionsRefresh: vi.fn(),
+  approveCatalogMatchSuggestion: vi.fn(),
+  rejectCatalogMatchSuggestion: vi.fn(),
   mergeCatalogCurationCandidate: vi.fn(),
   rejectCatalogCurationCandidate: vi.fn(),
   promoteCatalogSourceCandidate: vi.fn(),
@@ -27,11 +29,13 @@ vi.mock("@/server/catalog-curator-auth", () => ({
 }));
 
 vi.mock("@/server/catalog-curation-repository", () => ({
+  approveCatalogMatchSuggestion: mocks.approveCatalogMatchSuggestion,
   confirmCatalogCurationCandidate: mocks.confirmCatalogCurationCandidate,
   enqueueCatalogMatchSuggestionsRefresh:
     mocks.enqueueCatalogMatchSuggestionsRefresh,
   mergeCatalogCurationCandidate: mocks.mergeCatalogCurationCandidate,
   rejectCatalogCurationCandidate: mocks.rejectCatalogCurationCandidate,
+  rejectCatalogMatchSuggestion: mocks.rejectCatalogMatchSuggestion,
 }));
 
 vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
@@ -67,6 +71,20 @@ describe("catalog curation actions", () => {
       ],
     });
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
+      publicEntryPaths: [],
+    });
+    mocks.approveCatalogMatchSuggestion.mockResolvedValue({
+      outcome: "approved",
+      candidate: { public_slug: null },
+      targetPublicSlug: null,
+      affectedObjectCount: 0,
+      publicEntryPaths: [],
+    });
+    mocks.rejectCatalogMatchSuggestion.mockResolvedValue({
+      outcome: "rejected",
+      candidate: { public_slug: null },
+      targetPublicSlug: null,
+      affectedObjectCount: 0,
       publicEntryPaths: [],
     });
     mocks.enqueueCatalogMatchSuggestionsRefresh.mockResolvedValue({
@@ -152,6 +170,123 @@ describe("catalog curation actions", () => {
       "/garden/catalog/curation",
     );
     expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+  });
+
+  it("approves a deterministic suggestion only behind the curator gate", async () => {
+    mocks.approveCatalogMatchSuggestion.mockResolvedValue({
+      outcome: "approved",
+      candidate: { public_slug: null },
+      targetPublicSlug: "pomidor-cheri-0000000101",
+      affectedObjectCount: 2,
+      publicEntryPaths: ["/journal/catalog-match-entry"],
+    });
+    const actions = (await import("./actions")) as Record<string, unknown>;
+    const action = actions.approveCatalogMatchSuggestionAction;
+    expect(typeof action).toBe("function");
+
+    const formData = new FormData();
+    formData.set("suggestionId", "00000000-0000-4000-8000-000000000301");
+    const result = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+
+    expect(mocks.assertCatalogCuratorAccess).toHaveBeenCalledOnce();
+    expect(mocks.approveCatalogMatchSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: expect.any(String) }),
+      { suggestionId: "00000000-0000-4000-8000-000000000301" },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/garden");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/variety/pomidor-cheri-0000000101",
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/journal/catalog-match-entry",
+    );
+    expect(result).toEqual({
+      outcome: "approved",
+      message: "Match approved for 2 affected objects.",
+    });
+  });
+
+  it("returns an explicit stale outcome without garden or public revalidation", async () => {
+    mocks.approveCatalogMatchSuggestion.mockResolvedValue({
+      outcome: "stale",
+      candidate: null,
+      targetPublicSlug: null,
+      affectedObjectCount: 0,
+      publicEntryPaths: [],
+    });
+
+    const { approveCatalogMatchSuggestionAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("suggestionId", "00000000-0000-4000-8000-000000000301");
+
+    const result = await approveCatalogMatchSuggestionAction(formData);
+
+    expect(result.outcome).toBe("stale");
+    expect(result.message).toContain("Nothing was applied");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+  });
+
+  it("blocks suggestion decisions before repository writes for a non-curator", async () => {
+    mocks.assertCatalogCuratorAccess.mockImplementation(() => {
+      throw new Error("Catalog curation access denied.");
+    });
+
+    const {
+      approveCatalogMatchSuggestionAction,
+      rejectCatalogMatchSuggestionAction,
+    } = await import("./actions");
+    const formData = new FormData();
+    formData.set("suggestionId", "00000000-0000-4000-8000-000000000301");
+    formData.set("reasonCode", "not_same_entity");
+
+    await expect(approveCatalogMatchSuggestionAction(formData)).rejects.toThrow(
+      "Catalog curation access denied.",
+    );
+    await expect(rejectCatalogMatchSuggestionAction(formData)).rejects.toThrow(
+      "Catalog curation access denied.",
+    );
+    expect(mocks.approveCatalogMatchSuggestion).not.toHaveBeenCalled();
+    expect(mocks.rejectCatalogMatchSuggestion).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("rejects a deterministic suggestion with a bounded reason and no garden revalidation", async () => {
+    const actions = (await import("./actions")) as Record<string, unknown>;
+    const action = actions.rejectCatalogMatchSuggestionAction;
+    expect(typeof action).toBe("function");
+
+    const formData = new FormData();
+    formData.set("suggestionId", "00000000-0000-4000-8000-000000000301");
+    formData.set("reasonCode", "not_same_entity");
+    const result = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+
+    expect(mocks.rejectCatalogMatchSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: expect.any(String) }),
+      {
+        suggestionId: "00000000-0000-4000-8000-000000000301",
+        reasonCode: "not_same_entity",
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+    expect(result.outcome).toBe("rejected");
+    expect(result.message).toContain("journal history were unchanged");
   });
 
   it("rejects source candidate promotion before repository writes for a non-operator", async () => {

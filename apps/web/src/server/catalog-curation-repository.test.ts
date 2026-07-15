@@ -16,6 +16,8 @@ import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildConfirmCatalogCurationCandidateQuery,
+  buildCatalogItemNameForDecisionQuery,
+  buildCatalogMatchFingerprint,
   buildMergeCatalogCurationCandidateQuery,
   buildPendingCatalogMatchSuggestionsQuery,
   buildPendingCatalogCurationCandidatesQuery,
@@ -24,6 +26,7 @@ import {
   buildStaleCatalogMatchSuggestionsQuery,
   buildUpdateObjectsForConfirmedCatalogCandidateQuery,
   buildUpdateObjectsForMergedCatalogCandidateQuery,
+  normalizeCatalogMatchSuggestionRejectionReason,
 } from "./catalog-curation-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -48,6 +51,136 @@ const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const scope = scopedToUser("00000000-0000-0000-0000-000000000001");
 
 describe("catalog curation repository query contracts", () => {
+  it("locks one pending suggestion and both catalog identities before review", async () => {
+    const repository =
+      (await import("./catalog-curation-repository")) as Record<
+        string,
+        unknown
+      >;
+    const builder = repository.buildCatalogMatchSuggestionForDecisionQuery;
+
+    expect(typeof builder).toBe("function");
+    const compiled = (
+      builder as (
+        executor: Kysely<Database>,
+        suggestionId: string,
+      ) => { compile(): { sql: string; parameters: readonly unknown[] } }
+    )(testDb, "00000000-0000-4000-8000-000000000301").compile();
+
+    expect(compiled.sql).toContain('from "catalog_match_suggestions"');
+    expect(compiled.sql).toContain(
+      'inner join "catalog_items" as "source_items"',
+    );
+    expect(compiled.sql).toContain(
+      'inner join "catalog_items" as "target_items"',
+    );
+    expect(compiled.sql).toContain('"catalog_match_suggestions"."status" = $2');
+    expect(compiled.sql).toContain("target_catalog_item_name_id");
+    expect(compiled.sql).toContain("source_matching_fingerprint");
+    expect(compiled.sql).toContain("target_matching_fingerprint");
+    expect(compiled.sql).toContain("for update");
+    expect(compiled.sql).not.toContain("journal_entries");
+  });
+
+  it("locks and reads the exact alias that supplied matching evidence", () => {
+    const compiled = buildCatalogItemNameForDecisionQuery(
+      testDb,
+      "00000000-0000-4000-8000-000000000311",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_item_names"');
+    expect(compiled.sql).toContain('"id" = $1');
+    expect(compiled.sql).toContain("for update");
+    expect(compiled.sql).toContain("normalizedName");
+  });
+
+  it("uses the same stable UTF-8 semantic fingerprint contract as the worker", () => {
+    expect(buildCatalogMatchFingerprint(["a", "б", "uk"])).toBe(
+      "9eb1dcce6971f5add2a31c28cfedccaa01e473bf6ab429a1cc896e1835caf457",
+    );
+  });
+
+  it("approves one suggestion with reviewer and action-result metadata", async () => {
+    const repository =
+      (await import("./catalog-curation-repository")) as Record<
+        string,
+        unknown
+      >;
+    const builder = repository.buildApproveCatalogMatchSuggestionQuery;
+
+    expect(typeof builder).toBe("function");
+    const now = new Date("2026-07-15T08:00:00.000Z");
+    const compiled = (
+      builder as (
+        executor: Kysely<Database>,
+        requestScope: ReturnType<typeof scopedToUser>,
+        input: {
+          suggestionId: string;
+          decisionAffectedObjectCount: number;
+          now: Date;
+        },
+      ) => { compile(): { sql: string; parameters: readonly unknown[] } }
+    )(testDb, scope, {
+      suggestionId: "00000000-0000-4000-8000-000000000301",
+      decisionAffectedObjectCount: 2,
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('update "catalog_match_suggestions"');
+    expect(compiled.sql).toContain('"status" = $1');
+    expect(compiled.sql).toContain('"decision_reason_code" = $4');
+    expect(compiled.sql).toContain('"decision_result" = $5');
+    expect(compiled.sql).toContain('"decision_affected_object_count" = $6');
+    expect(compiled.parameters).toContain("approved");
+    expect(compiled.parameters).toContain("approved_canonical_match");
+    expect(compiled.parameters).toContain("catalog_merged");
+  });
+
+  it("rejects one suggestion with a bounded reason and no catalog mutation", async () => {
+    const repository =
+      (await import("./catalog-curation-repository")) as Record<
+        string,
+        unknown
+      >;
+    const builder = repository.buildRejectCatalogMatchSuggestionQuery;
+
+    expect(typeof builder).toBe("function");
+    const compiled = (
+      builder as (
+        executor: Kysely<Database>,
+        requestScope: ReturnType<typeof scopedToUser>,
+        input: {
+          suggestionId: string;
+          reasonCode: string;
+          now: Date;
+        },
+      ) => { compile(): { sql: string; parameters: readonly unknown[] } }
+    )(testDb, scope, {
+      suggestionId: "00000000-0000-4000-8000-000000000301",
+      reasonCode: "not_same_entity",
+      now: new Date("2026-07-15T08:00:00.000Z"),
+    }).compile();
+
+    expect(compiled.sql).toContain('update "catalog_match_suggestions"');
+    expect(compiled.parameters).toContain("rejected");
+    expect(compiled.parameters).toContain("not_same_entity");
+    expect(compiled.parameters).toContain("suggestion_rejected");
+    expect(compiled.sql).not.toContain("catalog_items");
+    expect(compiled.sql).not.toContain("plant_objects");
+  });
+
+  it("rejects arbitrary decision reasons before building a write", () => {
+    expect(
+      normalizeCatalogMatchSuggestionRejectionReason("not_same_entity"),
+    ).toBe("not_same_entity");
+    expect(() =>
+      normalizeCatalogMatchSuggestionRejectionReason("freeform operator note"),
+    ).toThrow("A valid catalog match rejection reason is required.");
+    expect(() =>
+      normalizeCatalogMatchSuggestionRejectionReason(undefined),
+    ).toThrow("A valid catalog match rejection reason is required.");
+  });
+
   it("lists pending provisional names with aggregate-safe metadata only", () => {
     const compiled = buildPendingCatalogCurationCandidatesQuery(
       testDb,
@@ -92,7 +225,7 @@ describe("catalog curation repository query contracts", () => {
     expect(JSON.stringify(compiled.parameters)).not.toContain("00000000");
   });
 
-  it("reads only pending deterministic match evidence for provisional user names", () => {
+  it("reads pending and rejected match evidence for provisional user names", () => {
     const compiled = buildPendingCatalogMatchSuggestionsQuery(testDb, [
       "00000000-0000-4000-8000-000000000201",
     ]).compile();
@@ -104,9 +237,11 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain(
       'left join "catalog_items" as "target_items"',
     );
-    expect(compiled.sql).toContain('"catalog_match_suggestions"."status" = $2');
-    expect(compiled.sql).toContain('"source_items"."status" = $3');
-    expect(compiled.sql).toContain('"source_items"."source" = $4');
+    expect(compiled.sql).toContain(
+      '"catalog_match_suggestions"."status" in ($2, $3)',
+    );
+    expect(compiled.sql).toContain('"source_items"."status" = $4');
+    expect(compiled.sql).toContain('"source_items"."source" = $5');
     expect(compiled.sql).toContain(
       '"source_items"."created_by_user_id" is not null',
     );
@@ -114,6 +249,8 @@ describe("catalog curation repository query contracts", () => {
       '"target_items"."created_by_user_id" is null',
     );
     expect(compiled.sql).not.toContain("safe_evidence");
+    expect(compiled.parameters).toContain("pending");
+    expect(compiled.parameters).toContain("rejected");
     for (const forbidden of [
       "journal_entries",
       "owner_user_id",
