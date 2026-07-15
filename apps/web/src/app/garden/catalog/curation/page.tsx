@@ -32,6 +32,7 @@ import {
   rejectCatalogCandidateAction,
   rejectCatalogMatchSuggestionAction,
   rejectCatalogSourceCandidateAction,
+  refreshCatalogFuzzyDuplicateQaAction,
   rescanCatalogMatchSuggestionsAction,
   upsertVarietySeedProofAction,
 } from "./actions";
@@ -195,7 +196,10 @@ export default async function CatalogCurationPage({
         rejectAction={rejectCatalogSourceCandidateAction}
       />
 
-      <CatalogEntityResolutionReport report={entityResolutionReport} />
+      <CatalogEntityResolutionReport
+        report={entityResolutionReport}
+        refreshAction={refreshCatalogFuzzyDuplicateQaAction}
+      />
 
       <CatalogSourceProvenanceList provenanceRows={provenanceRows} />
 

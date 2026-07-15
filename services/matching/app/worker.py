@@ -25,6 +25,10 @@ from app.catalog_matching import (
     CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
     refresh_catalog_match_suggestions,
 )
+from app.catalog_fuzzy_duplicates import (
+    CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+    refresh_catalog_fuzzy_duplicate_suggestions,
+)
 from app.search import (
     CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
@@ -57,7 +61,8 @@ where queue_name = %s
         case
           when payload->>'kind' in (
             '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}',
-            '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}'
+            '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}',
+            '{CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND}'
           ) then %s
           else %s
         end || ' seconds'
@@ -152,6 +157,15 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
                 CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
             ),
         )
+        return
+
+    if kind == CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND:
+        _require_exact_payload_shape(
+            payload,
+            CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+            {"kind"},
+        )
+        refresh_catalog_fuzzy_duplicate_suggestions(conn)
         return
 
     if kind == JOURNAL_ENTRY_INDEX_KIND:

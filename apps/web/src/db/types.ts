@@ -6,6 +6,7 @@ import type {
   AdminUserRoles as AdminUserRolesTable,
   AnalyticsEvents as AnalyticsEventsTable,
   CatalogAliasProjections as CatalogAliasProjectionsTable,
+  CatalogFuzzyDuplicateSuggestions as CatalogFuzzyDuplicateSuggestionsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
   CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
@@ -231,6 +232,10 @@ export type AdminRoleAuditEntry = Selectable<AdminRoleAuditLogTable>;
 export type NewAdminRoleAuditEntry = Insertable<AdminRoleAuditLogTable>;
 export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
 export type CatalogAliasProjection = Selectable<CatalogAliasProjectionsTable>;
+export type CatalogFuzzyDuplicateSuggestion =
+  Selectable<CatalogFuzzyDuplicateSuggestionsTable>;
+export type NewCatalogFuzzyDuplicateSuggestion =
+  Insertable<CatalogFuzzyDuplicateSuggestionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
 export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;

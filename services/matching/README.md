@@ -15,6 +15,8 @@ Python: RapidFuzz, Splink, PyICU, CyrTranslit, and Meilisearch tooling.
   suggestions for provisional catalog names; it never applies a merge.
 - `app/catalog_aliases.py` — deterministic Ukrainian, Bulgarian, and Russian
   alias variants for global catalog identities; every candidate remains review-gated.
+- `app/catalog_fuzzy_duplicates.py` — bounded RapidFuzz near-duplicate QA for
+  source-backed identities; it persists advisory pairs and never mutates catalog state.
 
 ## Develop
 
@@ -61,7 +63,7 @@ source of truth. The worker keeps the long-lived Postgres connection in
 autocommit mode and uses explicit transactions for claim/done/failed state
 changes, so per-job read queries cannot trap status updates in an uncommitted
 outer transaction. It also reclaims stale `processing` rows after
-`WORKER_VT_SECONDS`; catalog matching uses the longer bounded
+`WORKER_VT_SECONDS`; catalog matching, alias generation, and fuzzy QA use the longer bounded
 `CATALOG_MATCH_WORKER_VT_SECONDS` lease because they scan larger deterministic
 candidate sets. Job handlers must remain idempotent.
 
@@ -122,6 +124,18 @@ then either projects one approved alias and queues reindex atomically or records
 a bounded rejection without search mutation. See
 `docs/CATALOG_ALIAS_SUGGESTION_REVIEW.md`.
 
+OVE-162 consumes the closed payload `{ "kind":
+"catalog_fuzzy_duplicate_qa_refresh" }`. The worker reads only safe source-backed
+catalog identity columns, selects candidate pairs through bounded rare-trigram
+blocking, then applies RapidFuzz. Exact normalized duplicates stay in the OVE-89
+exact group. Same-locale near matches are advisory merge-review candidates;
+cross-locale pairs require a higher score and are held for locale/provenance
+review. An atomic refresh replaces only `catalog_fuzzy_duplicate_suggestions`.
+Current labels and source families are joined by the redacted v2 report, and
+stale timestamp snapshots fail closed to `hold`. Splink remains available for a
+future calibrated clustering expansion but is not needed for this bounded pair
+graph; no black-box model or automatic merge is introduced.
+
 An idempotent rescan does not reset an actively processing row. It marks
 `rerun_requested`, preserves the current lock, and lets the claim-token-scoped
 completion return the job to `pending`. This prevents a concurrent refresh from
@@ -175,6 +189,9 @@ records. Thresholds are provisional pilot guardrails documented in
 `tests/test_catalog_aliases.py` proves supported-locale generation,
 mixed/unsupported fail-closed behavior, collision holding, existing-alias
 suppression, privacy-bounded queries, and durable accepted/rejected replay.
+`tests/test_catalog_fuzzy_duplicates.py` proves same-locale scoring,
+cross-locale holding, exact/kind separation, deterministic ordering, closed
+evidence, live psycopg UUID handling, bounded failure, and atomic advisory refresh.
 
 ## Local Apple Container smoke
 
@@ -184,11 +201,12 @@ the matching-tier regression smoke is:
 ```bash
 cd services/matching
 container build -t overgarden/matching:local .
-uv run python -m py_compile app/catalog_aliases.py app/catalog_matching.py app/main.py app/search.py app/worker.py
+uv run python -m py_compile app/catalog_aliases.py app/catalog_fuzzy_duplicates.py app/catalog_matching.py app/main.py app/search.py app/worker.py
 uv run --frozen pytest
 uv run --env-file ../../apps/web/.env.local \
   python -m scripts.smoke_catalog_match_rejection_replay
 cd ../../apps/web && pnpm smoke:catalog-alias-approval
+pnpm smoke:catalog-fuzzy-duplicate-qa
 MEILISEARCH_HOST='http://localhost:7700' \
   MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' \
   uv run python -m app.search

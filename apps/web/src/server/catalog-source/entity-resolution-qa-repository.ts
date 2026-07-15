@@ -2,14 +2,20 @@ import { createHash } from "node:crypto";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
-import type { Database } from "@/db/schema";
+import type { Database, JsonValue } from "@/db/schema";
 import { SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES } from "@/server/search/catalog-documents";
 
 const MAX_ENTITY_RESOLUTION_ROWS = 240;
 const MAX_ENTITY_RESOLUTION_CLUSTERS = 120;
+const MATCHING_QUEUE = "matching";
+const CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND =
+  "catalog_fuzzy_duplicate_qa_refresh";
+const CATALOG_FUZZY_DUPLICATE_QA_IDEMPOTENCY_KEY =
+  "catalog-fuzzy-duplicate-qa-refresh";
 
 const ENTITY_RESOLUTION_CLUSTER_KIND_LIMITS = {
   likely_duplicate: 24,
+  fuzzy_duplicate: 24,
   source_disagreement: 24,
   alias_collision: 48,
   manual_review_required: 24,
@@ -22,6 +28,7 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export type CatalogEntityResolutionClusterKind =
   | "canonical_concept"
   | "likely_duplicate"
+  | "fuzzy_duplicate"
   | "alias_collision"
   | "source_disagreement"
   | "blocked_projection"
@@ -70,8 +77,39 @@ export interface CatalogEntityResolutionSourceCandidateSummaryRow {
   rowCount: number | string | bigint;
 }
 
+export interface CatalogEntityResolutionFuzzyDuplicateRow {
+  pairKey: string;
+  leftCatalogItemId: string;
+  leftCanonicalName: string;
+  leftNormalizedName: string | null;
+  leftCatalogKind: string;
+  leftStatus: string;
+  leftSource: string;
+  leftPublicSlug: string | null;
+  leftLocale: string;
+  rightCatalogItemId: string;
+  rightCanonicalName: string;
+  rightNormalizedName: string | null;
+  rightCatalogKind: string;
+  rightStatus: string;
+  rightSource: string;
+  rightPublicSlug: string | null;
+  rightLocale: string;
+  score: number | string | bigint;
+  scoreBucket: string;
+  reasonCodes: string[];
+  localeRelation: string;
+  recommendedAction: string;
+  matcherVersion: string;
+  generatedAt: Date | string;
+  evidenceStatus: "current" | "stale";
+  totalCount: number | string | bigint;
+}
+
 export interface CatalogEntityResolutionClusterMember {
   label: string;
+  normalizedLabel?: string;
+  locale?: string;
   catalogKind?: string;
   source?: string;
   status?: string;
@@ -89,12 +127,17 @@ export interface CatalogEntityResolutionCluster {
   reason: string;
   recommendedAction: CatalogEntityResolutionRecommendedAction;
   actionHref: string;
+  fuzzyScore?: number;
+  fuzzyScoreBucket?: string;
+  reasonCodes?: string[];
+  localeRelation?: "same_locale" | "cross_locale";
+  evidenceStatus?: "current" | "stale";
   members: CatalogEntityResolutionClusterMember[];
 }
 
 export interface CatalogEntityResolutionQaReport {
-  schemaVersion: "ove89.catalogEntityResolutionQa.v1";
-  issue: "OVE-89";
+  schemaVersion: "ove162.catalogEntityResolutionQa.v2";
+  issue: "OVE-162";
   generatedAt: string;
   evidenceSafety: "linear_safe_redacted";
   summary: {
@@ -102,6 +145,8 @@ export interface CatalogEntityResolutionQaReport {
     sourceBackedCatalogRowsReviewed: number;
     aliasCollisionRowsReviewed: number;
     sourceCandidateGroupsReviewed: number;
+    fuzzyDuplicatePairCount: number;
+    fuzzyDuplicateRowsReviewed: number;
     groups: Array<{
       kind: CatalogEntityResolutionClusterKind;
       label: string;
@@ -118,6 +163,11 @@ export const CATALOG_ENTITY_RESOLUTION_CLUSTER_GROUPS: Array<{
   label: string;
   nextAction: string;
 }> = [
+  {
+    kind: "fuzzy_duplicate",
+    label: "Fuzzy duplicate",
+    nextAction: "Merge review or hold",
+  },
   {
     kind: "likely_duplicate",
     label: "Likely duplicate",
@@ -160,11 +210,19 @@ const FORBIDDEN_ENTITY_RESOLUTION_EVIDENCE_MARKERS = [
   "sourceRecordKey",
   "source_record_id",
   "source_record_key",
+  "email",
+  "ipAddress",
+  "ip_address",
+  "userAgent",
+  "user_agent",
+  "cookie",
+  "token",
   "journalTitle",
   "journalBody",
   "ownerUserId",
   "owner_user_id",
   "mediaAsset",
+  "media_assets",
   "quarantineKey",
   "derivativeKey",
   "preciseLocation",
@@ -186,12 +244,17 @@ export async function readCatalogEntityResolutionQaReport(
     await buildCatalogEntityResolutionSourceCandidateSummaryQuery(
       executor,
     ).execute();
+  const fuzzyDuplicateRows =
+    await buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(
+      executor,
+    ).execute();
 
   return buildCatalogEntityResolutionQaReport({
     generatedAt: new Date().toISOString(),
     catalogRows,
     aliasCollisionRows,
     sourceCandidateRows,
+    fuzzyDuplicateRows,
   });
 }
 
@@ -200,16 +263,18 @@ export function buildCatalogEntityResolutionQaReport(input: {
   catalogRows: CatalogEntityResolutionCatalogRow[];
   aliasCollisionRows: CatalogEntityResolutionAliasCollisionRow[];
   sourceCandidateRows: CatalogEntityResolutionSourceCandidateSummaryRow[];
+  fuzzyDuplicateRows: CatalogEntityResolutionFuzzyDuplicateRow[];
 }): CatalogEntityResolutionQaReport {
   const clusters = limitEntityResolutionClusters([
     ...buildCatalogConceptClusters(input.catalogRows),
     ...buildAliasCollisionClusters(input.aliasCollisionRows),
     ...buildSourceCandidateClusters(input.sourceCandidateRows),
+    ...buildFuzzyDuplicateClusters(input.fuzzyDuplicateRows),
   ]);
 
   const report: CatalogEntityResolutionQaReport = {
-    schemaVersion: "ove89.catalogEntityResolutionQa.v1",
-    issue: "OVE-89",
+    schemaVersion: "ove162.catalogEntityResolutionQa.v2",
+    issue: "OVE-162",
     generatedAt: input.generatedAt,
     evidenceSafety: "linear_safe_redacted",
     summary: {
@@ -217,18 +282,119 @@ export function buildCatalogEntityResolutionQaReport(input: {
       sourceBackedCatalogRowsReviewed: input.catalogRows.length,
       aliasCollisionRowsReviewed: input.aliasCollisionRows.length,
       sourceCandidateGroupsReviewed: input.sourceCandidateRows.length,
+      fuzzyDuplicatePairCount: input.fuzzyDuplicateRows[0]
+        ? numberValue(input.fuzzyDuplicateRows[0].totalCount)
+        : 0,
+      fuzzyDuplicateRowsReviewed: input.fuzzyDuplicateRows.length,
       groups: CATALOG_ENTITY_RESOLUTION_CLUSTER_GROUPS.map((group) => ({
         ...group,
-        count: clusters.filter((cluster) => cluster.kind === group.kind)
-          .length,
+        count: clusters.filter((cluster) => cluster.kind === group.kind).length,
       })),
     },
     clusters,
     leakCheck: "passed",
   };
 
-  assertCatalogEntityResolutionReportSafe(report);
+  assertCatalogEntityResolutionEvidenceSafe(report);
   return report;
+}
+
+export function buildCatalogEntityResolutionFuzzyDuplicateRowsQuery(
+  executor: QueryExecutor,
+  limit = MAX_ENTITY_RESOLUTION_ROWS,
+) {
+  return executor
+    .selectFrom("catalog_fuzzy_duplicate_suggestions")
+    .innerJoin(
+      "catalog_items as fuzzy_left_catalog_item",
+      "fuzzy_left_catalog_item.id",
+      "catalog_fuzzy_duplicate_suggestions.left_catalog_item_id",
+    )
+    .innerJoin(
+      "catalog_items as fuzzy_right_catalog_item",
+      "fuzzy_right_catalog_item.id",
+      "catalog_fuzzy_duplicate_suggestions.right_catalog_item_id",
+    )
+    .select([
+      "catalog_fuzzy_duplicate_suggestions.pair_key as pairKey",
+      "fuzzy_left_catalog_item.id as leftCatalogItemId",
+      "fuzzy_left_catalog_item.canonical_name as leftCanonicalName",
+      "fuzzy_left_catalog_item.normalized_name as leftNormalizedName",
+      "fuzzy_left_catalog_item.catalog_kind as leftCatalogKind",
+      "fuzzy_left_catalog_item.status as leftStatus",
+      "fuzzy_left_catalog_item.source as leftSource",
+      "fuzzy_left_catalog_item.public_slug as leftPublicSlug",
+      "fuzzy_left_catalog_item.locale as leftLocale",
+      "fuzzy_right_catalog_item.id as rightCatalogItemId",
+      "fuzzy_right_catalog_item.canonical_name as rightCanonicalName",
+      "fuzzy_right_catalog_item.normalized_name as rightNormalizedName",
+      "fuzzy_right_catalog_item.catalog_kind as rightCatalogKind",
+      "fuzzy_right_catalog_item.status as rightStatus",
+      "fuzzy_right_catalog_item.source as rightSource",
+      "fuzzy_right_catalog_item.public_slug as rightPublicSlug",
+      "fuzzy_right_catalog_item.locale as rightLocale",
+      "catalog_fuzzy_duplicate_suggestions.score as score",
+      "catalog_fuzzy_duplicate_suggestions.score_bucket as scoreBucket",
+      "catalog_fuzzy_duplicate_suggestions.reason_codes as reasonCodes",
+      "catalog_fuzzy_duplicate_suggestions.locale_relation as localeRelation",
+      "catalog_fuzzy_duplicate_suggestions.recommended_action as recommendedAction",
+      "catalog_fuzzy_duplicate_suggestions.matcher_version as matcherVersion",
+      "catalog_fuzzy_duplicate_suggestions.generated_at as generatedAt",
+      sql<number | string | bigint>`count(*) over()`.as("totalCount"),
+      sql<"current" | "stale">`case
+        when ${sql.ref("fuzzy_left_catalog_item.updated_at")}
+          = ${sql.ref("catalog_fuzzy_duplicate_suggestions.left_updated_at_snapshot")}
+         and ${sql.ref("fuzzy_right_catalog_item.updated_at")}
+          = ${sql.ref("catalog_fuzzy_duplicate_suggestions.right_updated_at_snapshot")}
+        then 'current'
+        else 'stale'
+      end`.as("evidenceStatus"),
+    ])
+    .orderBy("catalog_fuzzy_duplicate_suggestions.score", "desc")
+    .orderBy("catalog_fuzzy_duplicate_suggestions.pair_key", "asc")
+    .limit(normalizeEntityResolutionLimit(limit))
+    .$castTo<CatalogEntityResolutionFuzzyDuplicateRow>();
+}
+
+export function buildEnqueueCatalogFuzzyDuplicateQaRefreshJobQuery(
+  executor: QueryExecutor,
+) {
+  const payload = {
+    kind: CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
+  } satisfies JsonValue;
+  const now = new Date();
+
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: MATCHING_QUEUE,
+      payload,
+      idempotency_key: CATALOG_FUZZY_DUPLICATE_QA_IDEMPOTENCY_KEY,
+    })
+    .onConflict((oc) =>
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doUpdateSet({
+          status: sql<string>`case
+            when job_queue.status = 'processing' then job_queue.status
+            else 'pending'
+          end`,
+          available_at: now,
+          locked_at: sql<Date | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_at
+            else null
+          end`,
+          locked_by: sql<string | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_by
+            else null
+          end`,
+          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
+          last_error: null,
+          updated_at: now,
+        }),
+    )
+    .returningAll();
 }
 
 export function buildCatalogEntityResolutionCatalogRowsQuery(
@@ -335,12 +501,11 @@ export function buildCatalogEntityResolutionAliasCollisionRowsQuery(
       ...SOURCE_BACKED_CONCEPT_DEDUPE_SOURCE_VALUES,
     ])
     .groupBy("catalog_item_names.normalized_name")
-    .having(
+    .having(sql<number>`count(distinct ${sql.ref("catalog_items.id")})`, ">", 1)
+    .orderBy(
       sql<number>`count(distinct ${sql.ref("catalog_items.id")})`,
-      ">",
-      1,
+      "desc",
     )
-    .orderBy(sql<number>`count(distinct ${sql.ref("catalog_items.id")})`, "desc")
     .orderBy("catalog_item_names.normalized_name", "asc")
     .limit(normalizeEntityResolutionLimit(limit))
     .$castTo<CatalogEntityResolutionAliasCollisionRow>();
@@ -350,9 +515,15 @@ export function buildCatalogEntityResolutionSourceCandidateSummaryQuery(
   executor: QueryExecutor,
   limit = MAX_ENTITY_RESOLUTION_ROWS,
 ) {
-  const reviewStatus = sql<string | null>`catalog_source_records.allowed_projection #>> '{reviewQueue,reviewStatus}'`;
-  const curatorDecision = sql<string | null>`catalog_source_records.allowed_projection #>> '{reviewQueue,curatorDecision}'`;
-  const candidateKind = sql<string | null>`catalog_source_records.allowed_projection #>> '{reviewQueue,candidateKind}'`;
+  const reviewStatus = sql<
+    string | null
+  >`catalog_source_records.allowed_projection #>> '{reviewQueue,reviewStatus}'`;
+  const curatorDecision = sql<
+    string | null
+  >`catalog_source_records.allowed_projection #>> '{reviewQueue,curatorDecision}'`;
+  const candidateKind = sql<
+    string | null
+  >`catalog_source_records.allowed_projection #>> '{reviewQueue,candidateKind}'`;
 
   return executor
     .selectFrom("catalog_source_records")
@@ -369,7 +540,9 @@ export function buildCatalogEntityResolutionSourceCandidateSummaryQuery(
       reviewStatus.as("reviewStatus"),
       curatorDecision.as("curatorDecision"),
       candidateKind.as("candidateKind"),
-      sql<string | null>`min(catalog_source_records.allowed_projection #>> '{reviewQueue,displayName}')`.as(
+      sql<
+        string | null
+      >`min(catalog_source_records.allowed_projection #>> '{reviewQueue,displayName}')`.as(
         "sampleDisplayName",
       ),
       sql<number>`count(*)::int`.as("rowCount"),
@@ -524,6 +697,62 @@ function buildSourceCandidateClusters(
   });
 }
 
+function buildFuzzyDuplicateClusters(
+  rows: CatalogEntityResolutionFuzzyDuplicateRow[],
+): CatalogEntityResolutionCluster[] {
+  return rows.map((row) => {
+    const evidenceStatus =
+      row.evidenceStatus === "current" ? "current" : "stale";
+    const localeRelation =
+      row.localeRelation === "same_locale" ? "same_locale" : "cross_locale";
+    const recommendedAction =
+      evidenceStatus === "stale" || localeRelation === "cross_locale"
+        ? "hold"
+        : "merge_review";
+    const score = numberValue(row.score);
+
+    return {
+      id: clusterId("fuzzy_duplicate", [row.pairKey]),
+      kind: "fuzzy_duplicate",
+      title: `${row.leftCanonicalName} and ${row.rightCanonicalName} are a ${score}% near match`,
+      riskLevel: "review_needed",
+      reason:
+        evidenceStatus === "stale"
+          ? "Catalog inputs changed after this RapidFuzz run. Hold the pair and refresh evidence before any review decision."
+          : localeRelation === "cross_locale"
+            ? "RapidFuzz found a cross-locale near-name match. Keep the concepts separate until locale and source provenance are reviewed."
+            : "RapidFuzz found a deterministic same-locale near-name match. Review the pair manually; this evidence cannot merge catalog rows.",
+      recommendedAction,
+      actionHref: "/garden/catalog/curation",
+      fuzzyScore: score,
+      fuzzyScoreBucket: row.scoreBucket,
+      reasonCodes: row.reasonCodes,
+      localeRelation,
+      evidenceStatus,
+      members: [
+        fuzzyCatalogRowMember({
+          label: row.leftCanonicalName,
+          normalizedLabel: row.leftNormalizedName,
+          catalogKind: row.leftCatalogKind,
+          source: row.leftSource,
+          status: row.leftStatus,
+          publicSlug: row.leftPublicSlug,
+          locale: row.leftLocale,
+        }),
+        fuzzyCatalogRowMember({
+          label: row.rightCanonicalName,
+          normalizedLabel: row.rightNormalizedName,
+          catalogKind: row.rightCatalogKind,
+          source: row.rightSource,
+          status: row.rightStatus,
+          publicSlug: row.rightPublicSlug,
+          locale: row.rightLocale,
+        }),
+      ],
+    } satisfies CatalogEntityResolutionCluster;
+  });
+}
+
 function limitEntityResolutionClusters(
   clusters: CatalogEntityResolutionCluster[],
 ) {
@@ -577,16 +806,46 @@ function catalogRowMember(
   };
 }
 
-function assertCatalogEntityResolutionReportSafe(
-  report: CatalogEntityResolutionQaReport,
-) {
-  const serialized = JSON.stringify(report);
-  for (const marker of FORBIDDEN_ENTITY_RESOLUTION_EVIDENCE_MARKERS) {
-    if (serialized.includes(marker)) {
+function fuzzyCatalogRowMember(input: {
+  label: string;
+  normalizedLabel: string | null;
+  catalogKind: string;
+  source: string;
+  status: string;
+  publicSlug: string | null;
+  locale: string;
+}): CatalogEntityResolutionClusterMember {
+  return {
+    label: input.label,
+    normalizedLabel: input.normalizedLabel ?? undefined,
+    catalogKind: input.catalogKind,
+    source: input.source,
+    status: input.status,
+    publicSlug: input.publicSlug,
+    locale: input.locale,
+  };
+}
+
+export function assertCatalogEntityResolutionEvidenceSafe(value: unknown) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      assertCatalogEntityResolutionEvidenceSafe(item);
+    }
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+
+  for (const [key, child] of Object.entries(value)) {
+    if (
+      FORBIDDEN_ENTITY_RESOLUTION_EVIDENCE_MARKERS.includes(
+        key as (typeof FORBIDDEN_ENTITY_RESOLUTION_EVIDENCE_MARKERS)[number],
+      )
+    ) {
       throw new Error(
-        `Entity-resolution QA report contains forbidden marker: ${marker}`,
+        `Entity-resolution QA report contains forbidden field: ${key}`,
       );
     }
+    assertCatalogEntityResolutionEvidenceSafe(child);
   }
 }
 
@@ -598,7 +857,7 @@ function clusterId(
     .update(parts.filter(Boolean).join("|"))
     .digest("hex")
     .slice(0, 12);
-  return `ove89:${kind}:${hash}`;
+  return `ove162:${kind}:${hash}`;
 }
 
 function groupBy<T>(items: T[], keyForItem: (item: T) => string) {

@@ -308,8 +308,8 @@ function bgSmokeOutput() {
 
 function entityResolutionQaReport(): CatalogEntityResolutionQaReport {
   return {
-    schemaVersion: "ove89.catalogEntityResolutionQa.v1",
-    issue: "OVE-89",
+    schemaVersion: "ove162.catalogEntityResolutionQa.v2",
+    issue: "OVE-162",
     generatedAt: "2026-07-02T00:00:00.000Z",
     evidenceSafety: "linear_safe_redacted",
     summary: {
@@ -317,7 +317,15 @@ function entityResolutionQaReport(): CatalogEntityResolutionQaReport {
       sourceBackedCatalogRowsReviewed: 24,
       aliasCollisionRowsReviewed: 2,
       sourceCandidateGroupsReviewed: 4,
+      fuzzyDuplicatePairCount: 0,
+      fuzzyDuplicateRowsReviewed: 0,
       groups: [
+        {
+          kind: "fuzzy_duplicate",
+          label: "Fuzzy duplicate",
+          count: 0,
+          nextAction: "Merge review or hold",
+        },
         {
           kind: "likely_duplicate",
           label: "Likely duplicate",

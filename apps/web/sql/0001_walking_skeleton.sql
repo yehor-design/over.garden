@@ -1251,6 +1251,70 @@ create index if not exists catalog_match_suggestions_target_status_idx
   on catalog_match_suggestions (target_catalog_item_id, status)
   where target_catalog_item_id is not null;
 
+-- Advisory fuzzy duplicate evidence (OVE-162). RapidFuzz runs off the request
+-- path and stores only catalog pair identity, bounded score/reason enums, input
+-- timestamps, and matcher metadata. Labels and source families are joined from
+-- current catalog rows by the operator-safe report; this table never stores raw
+-- source payloads, source-record keys, user data, journal text, or media data.
+create table if not exists catalog_fuzzy_duplicate_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  pair_key text not null check (pair_key ~ '^[a-f0-9]{64}$'),
+  left_catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  right_catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  left_updated_at_snapshot timestamptz not null,
+  right_updated_at_snapshot timestamptz not null,
+  score smallint not null check (score between 0 and 100),
+  score_bucket text not null check (score_bucket in ('high', 'medium')),
+  reason_codes text[] not null,
+  locale_relation text not null,
+  recommended_action text not null check (recommended_action in ('merge_review', 'hold')),
+  matcher_version text not null check (matcher_version = 'ove162-v1'),
+  generated_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_fuzzy_duplicate_suggestions_distinct_pair_check check (
+    left_catalog_item_id <> right_catalog_item_id
+  ),
+  constraint catalog_fuzzy_duplicate_suggestions_pair_uidx unique (
+    left_catalog_item_id,
+    right_catalog_item_id
+  ),
+  constraint catalog_fuzzy_duplicate_suggestions_reason_codes_check check (
+    cardinality(reason_codes) between 3 and 4
+    and reason_codes <@ array[
+      'rapidfuzz_name_similarity',
+      'same_catalog_kind',
+      'same_locale',
+      'cross_locale',
+      'cross_locale_review_only'
+    ]::text[]
+    and reason_codes @> array[
+      'rapidfuzz_name_similarity',
+      'same_catalog_kind'
+    ]::text[]
+  ),
+  constraint catalog_fuzzy_duplicate_suggestions_locale_relation_check check (
+    (
+      locale_relation = 'same_locale'
+      and reason_codes @> array['same_locale']::text[]
+      and recommended_action = 'merge_review'
+    )
+    or (
+      locale_relation = 'cross_locale'
+      and reason_codes @> array[
+        'cross_locale',
+        'cross_locale_review_only'
+      ]::text[]
+      and recommended_action = 'hold'
+    )
+  )
+);
+
+create unique index if not exists catalog_fuzzy_duplicate_suggestions_pair_key_uidx
+  on catalog_fuzzy_duplicate_suggestions (pair_key);
+
+create index if not exists catalog_fuzzy_duplicate_suggestions_score_generated_idx
+  on catalog_fuzzy_duplicate_suggestions (score desc, generated_at desc);
+
 -- Personal planning shelf (OVE-136). Wishlist rows intentionally store only a
 -- signed-in owner, a reusable catalog item, bounded source-surface metadata,
 -- and timestamps. They are not journal entries and never store garden object
@@ -3935,6 +3999,24 @@ alter table job_queue
       and jsonb_typeof(payload->'catalogItemId') = 'string'
       and payload->>'kind' = 'catalog_alias_suggestions_refresh'
       and payload->>'catalogItemId' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    )
+  );
+
+alter table job_queue
+  drop constraint if exists job_queue_catalog_fuzzy_duplicate_payload_check;
+
+alter table job_queue
+  add constraint job_queue_catalog_fuzzy_duplicate_payload_check check (
+    not (
+      jsonb_typeof(payload) = 'object'
+      and payload->>'kind' = 'catalog_fuzzy_duplicate_qa_refresh'
+    )
+    or (
+      jsonb_typeof(payload) = 'object'
+      and payload ? 'kind'
+      and payload - array['kind']::text[] = '{}'::jsonb
+      and jsonb_typeof(payload->'kind') = 'string'
+      and payload->>'kind' = 'catalog_fuzzy_duplicate_qa_refresh'
     )
   );
 

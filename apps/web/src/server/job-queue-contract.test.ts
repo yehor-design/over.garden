@@ -33,6 +33,14 @@ const consumedJobContracts = new Map<
     },
   ],
   [
+    "matching:catalog_fuzzy_duplicate_qa_refresh",
+    {
+      consumer: "services/matching/app/worker.py",
+      consumerToken: "CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND",
+      testedBy: "services/matching/tests/test_worker.py",
+    },
+  ],
+  [
     "matching:catalog_typeahead_reindex",
     {
       consumer: "services/matching/app/worker.py",
@@ -112,6 +120,11 @@ describe("job queue producer/consumer contract", () => {
         source: "server/catalog-source/breed-seed-import.ts",
         queueName: "matching",
         kind: "catalog_typeahead_reindex",
+      },
+      {
+        source: "server/catalog-source/entity-resolution-qa-repository.ts",
+        queueName: "matching",
+        kind: "catalog_fuzzy_duplicate_qa_refresh",
       },
       {
         source:

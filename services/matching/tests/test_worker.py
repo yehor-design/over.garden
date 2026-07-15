@@ -58,6 +58,33 @@ def test_worker_handles_catalog_alias_suggestion_refresh(monkeypatch):
     ]
 
 
+def test_worker_handles_catalog_fuzzy_duplicate_qa_refresh(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        worker,
+        "refresh_catalog_fuzzy_duplicate_suggestions",
+        lambda conn: calls.append(conn),
+        raising=False,
+    )
+
+    worker._handle("conn", {"kind": "catalog_fuzzy_duplicate_qa_refresh"})
+
+    assert calls == ["conn"]
+
+
+def test_worker_rejects_extra_fuzzy_qa_payload_keys_without_echoing_them():
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {
+                "kind": "catalog_fuzzy_duplicate_qa_refresh",
+                "journalBody": "do-not-leak",
+            },
+        )
+
+    assert "do-not-leak" not in str(error.value)
+
+
 def test_worker_rejects_private_fields_in_catalog_alias_payload(monkeypatch):
     monkeypatch.setattr(
         worker,
@@ -204,6 +231,7 @@ def test_claim_sql_reclaims_stale_processing_jobs():
     assert "locked_at <= now()" in worker.CLAIM_JOB_SQL
     assert "for update skip locked" in worker.CLAIM_JOB_SQL.lower()
     assert "catalog_match_suggestions_refresh" in worker.CLAIM_JOB_SQL
+    assert "catalog_fuzzy_duplicate_qa_refresh" in worker.CLAIM_JOB_SQL
 
 
 def test_completion_updates_are_claim_scoped_and_preserve_requested_reruns():

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   rejectCatalogAliasSuggestion: vi.fn(),
   confirmCatalogCurationCandidate: vi.fn(),
   enqueueCatalogMatchSuggestionsRefresh: vi.fn(),
+  enqueueCatalogFuzzyDuplicateQaRefresh: vi.fn(),
   approveCatalogMatchSuggestion: vi.fn(),
   rejectCatalogMatchSuggestion: vi.fn(),
   mergeCatalogCurationCandidate: vi.fn(),
@@ -52,6 +53,11 @@ vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
   promoteCatalogSourceCandidate: mocks.promoteCatalogSourceCandidate,
   holdCatalogSourceCandidate: mocks.holdCatalogSourceCandidate,
   rejectCatalogSourceCandidate: mocks.rejectCatalogSourceCandidate,
+}));
+
+vi.mock("@/server/catalog-source/fuzzy-duplicate-qa-job-repository", () => ({
+  enqueueCatalogFuzzyDuplicateQaRefresh:
+    mocks.enqueueCatalogFuzzyDuplicateQaRefresh,
 }));
 
 vi.mock("@/server/variety-seed-proof-repository", () => ({
@@ -110,6 +116,9 @@ describe("catalog curation actions", () => {
     });
     mocks.enqueueCatalogMatchSuggestionsRefresh.mockResolvedValue({
       candidateId: "00000000-0000-4000-8000-000000000201",
+    });
+    mocks.enqueueCatalogFuzzyDuplicateQaRefresh.mockResolvedValue({
+      kind: "catalog_fuzzy_duplicate_qa_refresh",
     });
     mocks.promoteCatalogSourceCandidate.mockResolvedValue({
       sourceRecordId: "00000000-0000-4000-8000-000000066001",
@@ -191,6 +200,20 @@ describe("catalog curation actions", () => {
       "/garden/catalog/curation",
     );
     expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+  });
+
+  it("queues the global fuzzy QA refresh behind the operator gate", async () => {
+    const { refreshCatalogFuzzyDuplicateQaAction } = await import("./actions");
+
+    const result = await refreshCatalogFuzzyDuplicateQaAction();
+
+    expect(mocks.assertCatalogCuratorAccess).toHaveBeenCalledOnce();
+    expect(mocks.enqueueCatalogFuzzyDuplicateQaRefresh).toHaveBeenCalledOnce();
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+    expect(result).toBeUndefined();
   });
 
   it("queues bounded alias generation behind the operator gate", async () => {

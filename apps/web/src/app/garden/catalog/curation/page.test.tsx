@@ -75,6 +75,7 @@ vi.mock("./actions", () => ({
   rejectCatalogCandidateAction: vi.fn(),
   rejectCatalogMatchSuggestionAction: vi.fn(),
   rejectCatalogSourceCandidateAction: vi.fn(),
+  refreshCatalogFuzzyDuplicateQaAction: vi.fn(),
   rescanCatalogMatchSuggestionsAction: vi.fn(),
   upsertVarietySeedProofAction: vi.fn(),
 }));
@@ -127,8 +128,8 @@ describe("/garden/catalog/curation", () => {
       statuses: [],
     });
     mocks.readCatalogEntityResolutionQaReport.mockResolvedValue({
-      schemaVersion: "ove89.catalogEntityResolutionQa.v1",
-      issue: "OVE-89",
+      schemaVersion: "ove162.catalogEntityResolutionQa.v2",
+      issue: "OVE-162",
       generatedAt: "2026-07-02T00:00:00.000Z",
       evidenceSafety: "linear_safe_redacted",
       summary: {
@@ -136,6 +137,8 @@ describe("/garden/catalog/curation", () => {
         sourceBackedCatalogRowsReviewed: 0,
         aliasCollisionRowsReviewed: 0,
         sourceCandidateGroupsReviewed: 0,
+        fuzzyDuplicatePairCount: 0,
+        fuzzyDuplicateRowsReviewed: 0,
         groups: [],
       },
       clusters: [],

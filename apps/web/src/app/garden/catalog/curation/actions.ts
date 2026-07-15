@@ -24,6 +24,7 @@ import {
   rejectCatalogSourceCandidate,
   type CatalogSourceCandidateDecisionResult,
 } from "@/server/catalog-source/candidate-review-repository";
+import { enqueueCatalogFuzzyDuplicateQaRefresh } from "@/server/catalog-source/fuzzy-duplicate-qa-job-repository";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { upsertVarietySeedProof } from "@/server/variety-seed-proof-repository";
 
@@ -37,6 +38,14 @@ export interface CatalogMatchSuggestionActionResult {
 export interface CatalogAliasSuggestionActionResult {
   outcome: "queued" | "approved" | "rejected" | "stale" | "collision";
   message: string;
+}
+
+export async function refreshCatalogFuzzyDuplicateQaAction(): Promise<void> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  await enqueueCatalogFuzzyDuplicateQaRefresh();
+  revalidatePath(CURATION_PATH);
 }
 
 export async function generateCatalogAliasSuggestionsAction(

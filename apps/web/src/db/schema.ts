@@ -31,6 +31,7 @@ export type {
   CatalogKind,
   CatalogItemName,
   CatalogItemStatus,
+  CatalogFuzzyDuplicateSuggestion,
   CatalogMatchConfidenceBucket,
   CatalogMatchSuggestion,
   CatalogMatchSuggestionStatus,

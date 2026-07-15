@@ -144,7 +144,7 @@ cd apps/web
 pnpm catalog:sources:entity-resolution-qa
 ```
 
-The report uses schema `ove89.catalogEntityResolutionQa.v1` and must show `leakCheck = "passed"` before its output is attached to Linear. It reads only safe catalog/source-review fields, not raw payloads or source-only metadata. Any duplicate, alias-collision, source-disagreement, blocked, or manual-review cluster is evidence for operator review before OVE-90 production proof.
+The current report uses schema `ove162.catalogEntityResolutionQa.v2` (superseding the OVE-89 v1 runtime contract) and must show `leakCheck = "passed"` before its output is attached to Linear. It reads only safe catalog/source-review fields plus bounded advisory RapidFuzz evidence, never raw payloads or source-only metadata. Any exact duplicate, fuzzy duplicate, alias collision, source disagreement, blocked, or manual-review cluster is evidence for operator review before OVE-90 production proof.
 
 For OVE-85, use the BG-specific successor target:
 

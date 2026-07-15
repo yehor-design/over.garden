@@ -107,6 +107,23 @@ export interface CatalogAliasProjections {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogFuzzyDuplicateSuggestions {
+  generated_at: Generated<Timestamp>;
+  id: Generated<string>;
+  left_catalog_item_id: string;
+  left_updated_at_snapshot: Timestamp;
+  locale_relation: string;
+  matcher_version: string;
+  pair_key: string;
+  reason_codes: string[];
+  recommended_action: string;
+  right_catalog_item_id: string;
+  right_updated_at_snapshot: Timestamp;
+  score: number;
+  score_bucket: string;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogItemNames {
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
@@ -738,6 +755,7 @@ export interface DB {
   admin_user_roles: AdminUserRoles;
   analytics_events: AnalyticsEvents;
   catalog_alias_projections: CatalogAliasProjections;
+  catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
   catalog_match_suggestions: CatalogMatchSuggestions;
