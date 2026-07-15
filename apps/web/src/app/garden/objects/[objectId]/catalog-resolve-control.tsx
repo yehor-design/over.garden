@@ -4,7 +4,12 @@ import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import type { CatalogKind, VarietyState } from "@/db/schema";
+import type { VarietyState } from "@/db/schema";
+import {
+  catalogItemIdForSelection,
+  parseCatalogTypeaheadResponse,
+} from "@/lib/garden/catalog-typeahead-contract";
+import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
 import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import {
   catalogKindLabel,
@@ -20,15 +25,7 @@ interface CatalogResolveControlProps {
 
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
-interface CatalogSuggestion {
-  id: string;
-  displayName: string;
-  canonicalName: string;
-  catalogKind: CatalogKind;
-  locale: string;
-  status: string;
-  source: string;
-}
+type CatalogSuggestion = FirstEntryCatalogSelection;
 
 export function CatalogResolveControl({
   objectId,
@@ -67,7 +64,7 @@ export function CatalogResolveControl({
         if (!response.ok) throw new Error("Catalog suggestions unavailable.");
 
         const body = (await response.json()) as unknown;
-        setSuggestions(parseCatalogSuggestions(body));
+        setSuggestions(parseCatalogTypeaheadResponse(body));
         setStatus("ready");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -126,7 +123,11 @@ export function CatalogResolveControl({
 
       <form action={action} className="grid min-w-0 gap-3">
         <input type="hidden" name="objectId" value={objectId} />
-        <input type="hidden" name="catalogItemId" value={selected?.id ?? ""} />
+        <input
+          type="hidden"
+          name="catalogItemId"
+          value={catalogItemIdForSelection(selected) ?? ""}
+        />
 
         <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
           Catalog match
@@ -226,44 +227,4 @@ export function CatalogResolveControl({
       </form>
     </section>
   );
-}
-
-function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
-  if (!value || typeof value !== "object") return [];
-
-  const suggestions = (value as { suggestions?: unknown }).suggestions;
-  if (!Array.isArray(suggestions)) return [];
-
-  return suggestions.flatMap((suggestion) => {
-    if (!suggestion || typeof suggestion !== "object") return [];
-
-    const candidate = suggestion as Partial<CatalogSuggestion>;
-    if (
-      typeof candidate.id !== "string" ||
-      typeof candidate.displayName !== "string" ||
-      typeof candidate.canonicalName !== "string" ||
-      !isSelectableCatalogKind(candidate.catalogKind) ||
-      typeof candidate.locale !== "string" ||
-      typeof candidate.status !== "string" ||
-      typeof candidate.source !== "string"
-    ) {
-      return [];
-    }
-
-    return [
-      {
-        id: candidate.id,
-        displayName: candidate.displayName,
-        canonicalName: candidate.canonicalName,
-        catalogKind: candidate.catalogKind,
-        locale: candidate.locale,
-        status: candidate.status,
-        source: candidate.source,
-      },
-    ];
-  });
-}
-
-function isSelectableCatalogKind(value: unknown): value is CatalogKind {
-  return value === "plant_variety" || value === "species" || value === "breed";
 }

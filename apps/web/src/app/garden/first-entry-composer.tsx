@@ -45,6 +45,10 @@ import {
   createComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
 import {
+  catalogItemIdForSelection,
+  parseCatalogTypeaheadResponse,
+} from "@/lib/garden/catalog-typeahead-contract";
+import {
   nextJournalTitleValue,
   suggestJournalEntryTitle,
 } from "@/lib/garden/journal-title-prefill";
@@ -378,7 +382,7 @@ export function FirstEntryComposer({
         if (!response.ok) throw new Error("Catalog suggestions unavailable.");
 
         const body = (await response.json()) as unknown;
-        setCatalogSuggestions(parseCatalogSuggestions(body));
+        setCatalogSuggestions(parseCatalogTypeaheadResponse(body));
         setCatalogStatus("ready");
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -748,7 +752,7 @@ export function FirstEntryComposer({
       spaceId: draft.spaceId,
       spaceName: draft.spaceName,
       objectKind: draft.objectKind,
-      catalogItemId: selectedCatalogItem?.id ?? null,
+      catalogItemId: catalogItemIdForSelection(selectedCatalogItem),
       userAddedCatalogName:
         !selectedCatalogItem && userAddedCatalogName
           ? userAddedCatalogName
@@ -1597,55 +1601,6 @@ function mutationSubtitle(mutation: OfflineMutation) {
 function mutationReadbackUrl(mutation: OfflineMutation) {
   const result = mutation.syncResult as { readbackUrl?: unknown } | undefined;
   return typeof result?.readbackUrl === "string" ? result.readbackUrl : null;
-}
-
-function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
-  if (!value || typeof value !== "object") return [];
-
-  const suggestions = (value as { suggestions?: unknown }).suggestions;
-  if (!Array.isArray(suggestions)) return [];
-
-  return suggestions.flatMap((suggestion) => {
-    if (!suggestion || typeof suggestion !== "object") return [];
-
-    const candidate = suggestion as Partial<CatalogSuggestion>;
-    if (
-      typeof candidate.id !== "string" ||
-      typeof candidate.displayName !== "string" ||
-      typeof candidate.canonicalName !== "string" ||
-      !isSelectableCatalogKind(candidate.catalogKind) ||
-      typeof candidate.locale !== "string" ||
-      !isSelectableCatalogStatus(candidate.status) ||
-      typeof candidate.source !== "string"
-    ) {
-      return [];
-    }
-
-    return [
-      {
-        id: candidate.id,
-        displayName: candidate.displayName,
-        canonicalName: candidate.canonicalName,
-        catalogKind: candidate.catalogKind,
-        locale: candidate.locale,
-        status: candidate.status,
-        source: candidate.source,
-        ...catalogSuggestionTrustMetadata(candidate),
-      },
-    ];
-  });
-}
-
-function isSelectableCatalogKind(
-  value: unknown,
-): value is CatalogSuggestion["catalogKind"] {
-  return value === "plant_variety" || value === "species" || value === "breed";
-}
-
-function isSelectableCatalogStatus(
-  value: unknown,
-): value is CatalogSuggestion["status"] {
-  return value === "seeded" || value === "confirmed";
 }
 
 function catalogSuggestionAliasCollisionKeys(suggestions: CatalogSuggestion[]) {

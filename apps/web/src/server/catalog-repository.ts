@@ -48,7 +48,11 @@ interface CatalogSearchClient {
   index(indexName: string): {
     search(
       query: string,
-      options: { limit: number },
+      options: {
+        limit: number;
+        matchingStrategy: "all";
+        showRankingScoreDetails: true;
+      },
     ): Promise<{ hits?: unknown[] }>;
   };
 }
@@ -137,6 +141,8 @@ export async function searchCatalogSuggestionsWithMeili(
     .index(CATALOG_TYPEAHEAD_INDEX)
     .search(normalizedQuery, {
       limit: normalizedLimit * 3,
+      matchingStrategy: "all",
+      showRankingScoreDetails: true,
     });
 
   const hits = Array.isArray(result.hits) ? result.hits : [];
@@ -609,8 +615,35 @@ function meiliHitMatchesCatalogQuery(
     );
   }
 
-  return [hit.normalizedName, hit.displayName, hit.canonicalName].some(
-    (value) => textMatchesCatalogQuery(value, normalizedQuery),
+  const exactTextMatch = [
+    hit.normalizedName,
+    hit.displayName,
+    hit.canonicalName,
+  ].some((value) => textMatchesCatalogQuery(value, normalizedQuery));
+
+  return exactTextMatch || hasBoundedMeiliTypoEvidence(hit);
+}
+
+function hasBoundedMeiliTypoEvidence(hit: Record<string, unknown>) {
+  const details = hit._rankingScoreDetails;
+  if (!isCatalogSearchHitRecord(details)) return false;
+
+  const exactness = details.exactness;
+  const typo = details.typo;
+  if (!isCatalogSearchHitRecord(exactness) || !isCatalogSearchHitRecord(typo)) {
+    return false;
+  }
+
+  const maxMatchingWords = exactness.maxMatchingWords;
+  const typoCount = typo.typoCount;
+  const maxTypoCount = typo.maxTypoCount;
+
+  return (
+    typeof maxMatchingWords === "number" &&
+    maxMatchingWords > 0 &&
+    typoCount === 1 &&
+    typeof maxTypoCount === "number" &&
+    maxTypoCount >= typoCount
   );
 }
 

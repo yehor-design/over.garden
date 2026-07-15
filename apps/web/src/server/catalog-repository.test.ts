@@ -100,14 +100,26 @@ describe("catalog repository query contracts", () => {
     ]);
   });
 
-  it("queries the dedicated Meili index and filters unsafe or fuzzy-only hits", async () => {
-    const calls: Array<{ indexName: string; query: string; limit: number }> =
-      [];
+  it("accepts one evidence-backed Meili typo while filtering unproven fuzzy hits", async () => {
+    const calls: Array<{
+      indexName: string;
+      query: string;
+      limit: number;
+      matchingStrategy: string;
+      showRankingScoreDetails: boolean;
+    }> = [];
     const client = {
       index(indexName: string) {
         return {
-          async search(query: string, options: { limit: number }) {
-            calls.push({ indexName, query, limit: options.limit });
+          async search(
+            query: string,
+            options: {
+              limit: number;
+              matchingStrategy: string;
+              showRankingScoreDetails: boolean;
+            },
+          ) {
+            calls.push({ indexName, query, ...options });
             return {
               hits: [
                 {
@@ -118,6 +130,13 @@ describe("catalog repository query contracts", () => {
                   locale: "uk",
                   status: "seeded",
                   source: "internal_seed",
+                  _rankingScoreDetails: {
+                    exactness: {
+                      matchingWords: 0,
+                      maxMatchingWords: 1,
+                    },
+                    typo: { typoCount: 1, maxTypoCount: 1 },
+                  },
                 },
                 {
                   catalogItemId: "00000000-0000-4000-8000-000000000101",
@@ -127,6 +146,15 @@ describe("catalog repository query contracts", () => {
                   locale: "uk",
                   status: "seeded",
                   source: "internal_seed",
+                },
+                {
+                  catalogItemId: "00000000-0000-4000-8000-000000000301",
+                  displayName: "Refresh New 64",
+                  canonicalName: "Refresh New 64",
+                  catalogKind: "plant_variety",
+                  locale: "en",
+                  status: "seeded",
+                  source: "ua_state_register",
                 },
                 {
                   catalogItemId: "00000000-0000-4000-8000-000000000201",
@@ -147,12 +175,30 @@ describe("catalog repository query contracts", () => {
 
     await expect(
       searchCatalogSuggestionsWithMeili("  ПОМДОР  ", 5, client),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000101",
+        displayName: "Помідор чері",
+        canonicalName: "Помідор чері",
+        catalogKind: "plant_variety",
+        locale: "uk",
+        status: "seeded",
+        source: "internal_seed",
+        trustState: "candidate",
+        trustLabel: "Candidate",
+        sourceLabel: "OverGarden pilot seed",
+        sourceCaveat:
+          "Pilot seed row. Use your own name or Unknown if this is not exact.",
+        disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
+      },
+    ]);
     expect(calls).toEqual([
       {
         indexName: "catalog_typeahead",
         query: "помдор",
         limit: 15,
+        matchingStrategy: "all",
+        showRankingScoreDetails: true,
       },
     ]);
 
@@ -175,6 +221,37 @@ describe("catalog repository query contracts", () => {
         disambiguationLabel: "Plant variety · OverGarden pilot seed · uk",
       },
     ]);
+  });
+
+  it("rejects Meili fuzzy evidence without a ranked word or with more than one typo", async () => {
+    const hit = {
+      catalogItemId: "00000000-0000-4000-8000-000000000101",
+      displayName: "Помідор чері",
+      canonicalName: "Помідор чері",
+      catalogKind: "plant_variety",
+      locale: "uk",
+      status: "seeded",
+      source: "internal_seed",
+    };
+
+    for (const _rankingScoreDetails of [
+      {
+        exactness: { matchingWords: 0, maxMatchingWords: 0 },
+        typo: { typoCount: 1, maxTypoCount: 1 },
+      },
+      {
+        exactness: { matchingWords: 0, maxMatchingWords: 1 },
+        typo: { typoCount: 2, maxTypoCount: 2 },
+      },
+    ]) {
+      await expect(
+        searchCatalogSuggestionsWithMeili("помдрр", 5, {
+          index: () => ({
+            search: async () => ({ hits: [{ ...hit, _rankingScoreDetails }] }),
+          }),
+        }),
+      ).resolves.toEqual([]);
+    }
   });
 
   it("dedupes source-backed Meili hits that represent the same catalog concept", async () => {

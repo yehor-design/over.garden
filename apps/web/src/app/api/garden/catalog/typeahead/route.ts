@@ -1,3 +1,4 @@
+import { parseCatalogTypeaheadResponse } from "@/lib/garden/catalog-typeahead-contract";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import { searchCatalogSuggestionsForTypeahead } from "@/server/catalog-repository";
 
@@ -10,5 +11,7 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q") ?? "";
   const suggestions = await searchCatalogSuggestionsForTypeahead(query);
 
-  return Response.json({ suggestions });
+  return Response.json({
+    suggestions: parseCatalogTypeaheadResponse({ suggestions }),
+  });
 }
