@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
   assertCatalogCuratorAccess: vi.fn(),
+  enqueueCatalogAliasSuggestionsRefresh: vi.fn(),
+  approveCatalogAliasSuggestion: vi.fn(),
+  rejectCatalogAliasSuggestion: vi.fn(),
   confirmCatalogCurationCandidate: vi.fn(),
   enqueueCatalogMatchSuggestionsRefresh: vi.fn(),
   approveCatalogMatchSuggestion: vi.fn(),
@@ -26,6 +29,13 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("@/server/catalog-curator-auth", () => ({
   assertCatalogCuratorAccess: mocks.assertCatalogCuratorAccess,
+}));
+
+vi.mock("@/server/catalog-alias-curation-repository", () => ({
+  approveCatalogAliasSuggestion: mocks.approveCatalogAliasSuggestion,
+  enqueueCatalogAliasSuggestionsRefresh:
+    mocks.enqueueCatalogAliasSuggestionsRefresh,
+  rejectCatalogAliasSuggestion: mocks.rejectCatalogAliasSuggestion,
 }));
 
 vi.mock("@/server/catalog-curation-repository", () => ({
@@ -72,6 +82,17 @@ describe("catalog curation actions", () => {
     });
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
       publicEntryPaths: [],
+    });
+    mocks.enqueueCatalogAliasSuggestionsRefresh.mockResolvedValue({
+      catalogItemId: "00000000-0000-4000-8000-000000000101",
+    });
+    mocks.approveCatalogAliasSuggestion.mockResolvedValue({
+      outcome: "approved",
+      catalogItemNameId: "00000000-0000-4000-8000-000000000401",
+    });
+    mocks.rejectCatalogAliasSuggestion.mockResolvedValue({
+      outcome: "rejected",
+      catalogItemNameId: null,
     });
     mocks.approveCatalogMatchSuggestion.mockResolvedValue({
       outcome: "approved",
@@ -170,6 +191,140 @@ describe("catalog curation actions", () => {
       "/garden/catalog/curation",
     );
     expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+  });
+
+  it("queues bounded alias generation behind the operator gate", async () => {
+    const actions = (await import("./actions")) as Record<string, unknown>;
+    const action = actions.generateCatalogAliasSuggestionsAction;
+    expect(typeof action).toBe("function");
+
+    const formData = new FormData();
+    formData.set("catalogItemId", "00000000-0000-4000-8000-000000000101");
+    const result = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+
+    expect(mocks.assertCatalogCuratorAccess).toHaveBeenCalledOnce();
+    expect(mocks.enqueueCatalogAliasSuggestionsRefresh).toHaveBeenCalledWith({
+      catalogItemId: "00000000-0000-4000-8000-000000000101",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(result).toEqual({
+      outcome: "queued",
+      message: "Alias generation queued for this catalog identity.",
+    });
+  });
+
+  it("approves one safe generated alias and reports collision outcomes", async () => {
+    const actions = (await import("./actions")) as Record<string, unknown>;
+    const action = actions.approveCatalogAliasSuggestionAction;
+    expect(typeof action).toBe("function");
+
+    const formData = new FormData();
+    formData.set("aliasProjectionId", "00000000-0000-4000-8000-000000000301");
+    const approved = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+
+    expect(mocks.approveCatalogAliasSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: expect.any(String) }),
+      {
+        aliasProjectionId: "00000000-0000-4000-8000-000000000301",
+      },
+    );
+    expect(approved).toEqual({
+      outcome: "approved",
+      message: "Alias approved. Typeahead reindex was queued.",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+
+    mocks.approveCatalogAliasSuggestion.mockResolvedValueOnce({
+      outcome: "collision",
+      catalogItemNameId: null,
+    });
+    const collision = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+    expect(collision.outcome).toBe("collision");
+    expect(collision.message).toContain("another catalog identity");
+  });
+
+  it("rejects one generated alias with a bounded reason", async () => {
+    const actions = (await import("./actions")) as Record<string, unknown>;
+    const action = actions.rejectCatalogAliasSuggestionAction;
+    expect(typeof action).toBe("function");
+
+    const formData = new FormData();
+    formData.set("aliasProjectionId", "00000000-0000-4000-8000-000000000301");
+    formData.set("reasonCode", "incorrect_variant");
+    const result = await (
+      action as (
+        data: FormData,
+      ) => Promise<{ outcome: string; message: string }>
+    )(formData);
+
+    expect(mocks.rejectCatalogAliasSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: expect.any(String) }),
+      {
+        aliasProjectionId: "00000000-0000-4000-8000-000000000301",
+        reasonCode: "incorrect_variant",
+      },
+    );
+    expect(result).toEqual({
+      outcome: "rejected",
+      message: "Alias rejected. It was not added to typeahead.",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
+  });
+
+  it("blocks every alias operation before repository writes for a non-curator", async () => {
+    mocks.assertCatalogCuratorAccess.mockImplementation(() => {
+      throw new Error("Catalog curation access denied.");
+    });
+
+    const {
+      approveCatalogAliasSuggestionAction,
+      generateCatalogAliasSuggestionsAction,
+      rejectCatalogAliasSuggestionAction,
+    } = await import("./actions");
+    const generateFormData = new FormData();
+    generateFormData.set(
+      "catalogItemId",
+      "00000000-0000-4000-8000-000000000101",
+    );
+    const decisionFormData = new FormData();
+    decisionFormData.set(
+      "aliasProjectionId",
+      "00000000-0000-4000-8000-000000000301",
+    );
+    decisionFormData.set("reasonCode", "incorrect_variant");
+
+    await expect(
+      generateCatalogAliasSuggestionsAction(generateFormData),
+    ).rejects.toThrow("Catalog curation access denied.");
+    await expect(
+      approveCatalogAliasSuggestionAction(decisionFormData),
+    ).rejects.toThrow("Catalog curation access denied.");
+    await expect(
+      rejectCatalogAliasSuggestionAction(decisionFormData),
+    ).rejects.toThrow("Catalog curation access denied.");
+    expect(mocks.enqueueCatalogAliasSuggestionsRefresh).not.toHaveBeenCalled();
+    expect(mocks.approveCatalogAliasSuggestion).not.toHaveBeenCalled();
+    expect(mocks.rejectCatalogAliasSuggestion).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("approves a deterministic suggestion only behind the curator gate", async () => {

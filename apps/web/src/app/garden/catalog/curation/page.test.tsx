@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   assertCatalogCuratorAccess: vi.fn(),
+  listCatalogAliasSuggestionTargets: vi.fn(),
+  listCatalogAliasSuggestionsForCuration: vi.fn(),
   listPendingCatalogCurationCandidates: vi.fn(),
   listCatalogSourceCandidatesForReview: vi.fn(),
   readCatalogSourceCandidateReviewSummary: vi.fn(),
@@ -34,6 +36,12 @@ vi.mock("@/server/catalog-curation-repository", () => ({
     mocks.listPendingCatalogCurationCandidates,
 }));
 
+vi.mock("@/server/catalog-alias-curation-repository", () => ({
+  listCatalogAliasSuggestionTargets: mocks.listCatalogAliasSuggestionTargets,
+  listCatalogAliasSuggestionsForCuration:
+    mocks.listCatalogAliasSuggestionsForCuration,
+}));
+
 vi.mock("@/server/catalog-source/candidate-review-repository", () => ({
   listCatalogSourceCandidatesForReview:
     mocks.listCatalogSourceCandidatesForReview,
@@ -56,16 +64,24 @@ vi.mock("@/server/variety-seed-proof-repository", () => ({
 }));
 
 vi.mock("./actions", () => ({
+  approveCatalogAliasSuggestionAction: vi.fn(),
   approveCatalogMatchSuggestionAction: vi.fn(),
   confirmCatalogCandidateAction: vi.fn(),
+  generateCatalogAliasSuggestionsAction: vi.fn(),
   holdCatalogSourceCandidateAction: vi.fn(),
   mergeCatalogCandidateAction: vi.fn(),
   promoteCatalogSourceCandidateAction: vi.fn(),
+  rejectCatalogAliasSuggestionAction: vi.fn(),
   rejectCatalogCandidateAction: vi.fn(),
   rejectCatalogMatchSuggestionAction: vi.fn(),
   rejectCatalogSourceCandidateAction: vi.fn(),
   rescanCatalogMatchSuggestionsAction: vi.fn(),
   upsertVarietySeedProofAction: vi.fn(),
+}));
+
+vi.mock("./catalog-alias-suggestion-review", () => ({
+  CatalogAliasSuggestionReview: ({ searchQuery }: { searchQuery: string }) =>
+    `alias-suggestion-review:${searchQuery}`,
 }));
 
 vi.mock("./catalog-curation-candidate-list", () => ({
@@ -102,6 +118,8 @@ describe("/garden/catalog/curation", () => {
         "erasure:execute",
       ],
     });
+    mocks.listCatalogAliasSuggestionTargets.mockResolvedValue([]);
+    mocks.listCatalogAliasSuggestionsForCuration.mockResolvedValue([]);
     mocks.listPendingCatalogCurationCandidates.mockResolvedValue([]);
     mocks.listCatalogSourceCandidatesForReview.mockResolvedValue([]);
     mocks.readCatalogSourceCandidateReviewSummary.mockResolvedValue({
@@ -137,6 +155,8 @@ describe("/garden/catalog/curation", () => {
 
     expect(html).toContain("Access denied.");
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
+    expect(mocks.listCatalogAliasSuggestionTargets).not.toHaveBeenCalled();
+    expect(mocks.listCatalogAliasSuggestionsForCuration).not.toHaveBeenCalled();
     expect(mocks.listCatalogSourceCandidatesForReview).not.toHaveBeenCalled();
     expect(
       mocks.readCatalogSourceCandidateReviewSummary,
@@ -148,12 +168,21 @@ describe("/garden/catalog/curation", () => {
 
   it("renders curation data for the sealed owner", async () => {
     const { default: CatalogCurationPage } = await import("./page");
-    const html = renderToStaticMarkup(await CatalogCurationPage());
+    const html = renderToStaticMarkup(
+      await CatalogCurationPage({
+        searchParams: Promise.resolve({ aliasQuery: "rosa" }),
+      }),
+    );
 
-    expect(html).toContain("Gate: sealed_owner_credential_only");
+    expect(html).toContain("Gate: sealed owner");
     expect(html).toContain("Role: owner");
     expect(html).toContain("source-candidate-review");
     expect(html).toContain("entity-resolution-report");
+    expect(html).toContain("alias-suggestion-review:rosa");
+    expect(mocks.listCatalogAliasSuggestionTargets).toHaveBeenCalledWith({
+      query: "rosa",
+    });
+    expect(mocks.listCatalogAliasSuggestionsForCuration).toHaveBeenCalledOnce();
     expect(mocks.listPendingCatalogCurationCandidates).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceCandidatesForReview).toHaveBeenCalledOnce();
     expect(

@@ -13,6 +13,8 @@ Python: RapidFuzz, Splink, PyICU, CyrTranslit, and Meilisearch tooling.
   journal index/unindex jobs, and the Cyrillic typo-tolerance proofs.
 - `app/catalog_matching.py` — deterministic PyICU/CyrTranslit/RapidFuzz
   suggestions for provisional catalog names; it never applies a merge.
+- `app/catalog_aliases.py` — deterministic Ukrainian, Bulgarian, and Russian
+  alias variants for global catalog identities; every candidate remains review-gated.
 
 ## Develop
 
@@ -60,8 +62,8 @@ autocommit mode and uses explicit transactions for claim/done/failed state
 changes, so per-job read queries cannot trap status updates in an uncommitted
 outer transaction. It also reclaims stale `processing` rows after
 `WORKER_VT_SECONDS`; catalog matching uses the longer bounded
-`CATALOG_MATCH_WORKER_VT_SECONDS` lease because it scores a larger deterministic
-candidate set. Job handlers must remain idempotent.
+`CATALOG_MATCH_WORKER_VT_SECONDS` lease because they scan larger deterministic
+candidate sets. Job handlers must remain idempotent.
 
 Production runtime is intentionally separate from the local Apple Container
 smoke. On the current DigitalOcean Linux worker droplet, Docker Compose remains
@@ -109,6 +111,17 @@ clears the previous review fields so the new evidence requires a fresh human
 decision. Python still never applies the catalog merge: approval remains a
 locked TypeScript/Postgres curator transaction that preserves journal rows.
 
+OVE-160 also consumes `{ "kind": "catalog_alias_suggestions_refresh",
+"catalogItemId": "..." }` with an exact database-checked payload. It reads only
+ownerless seeded/confirmed identities and their primary or already accepted
+non-generated names, creates bounded CyrTranslit/orthographic candidates for
+supported locales, and holds cross-concept normalized collisions for review.
+Generated rows never enter `catalog_item_names` or typeahead. A separate locked
+TypeScript curator transaction rechecks the semantic fingerprint and collision,
+then either projects one approved alias and queues reindex atomically or records
+a bounded rejection without search mutation. See
+`docs/CATALOG_ALIAS_SUGGESTION_REVIEW.md`.
+
 An idempotent rescan does not reset an actively processing row. It marks
 `rerun_requested`, preserves the current lock, and lets the claim-token-scoped
 completion return the job to `pending`. This prevents a concurrent refresh from
@@ -144,7 +157,7 @@ with `last_error`; they must not be marked done silently.
 `tests/test_worker_recovery.py` is the durability proof for the pilot journal
 search path (OVE-39). It runs with `uv run --frozen pytest` and needs no live
 services. It proves that a `processing` row is reclaimed only after the
-visibility timeout, that catalog matching receives its longer bounded lease,
+visibility timeout, that catalog matching and alias generation receive their longer bounded lease,
 that an in-flight catalog rescan is not swallowed, that
 `journal_entry_index`/`journal_entry_unindex` reach
 `done` after a simulated worker restart, that the public-safe document contract
@@ -159,6 +172,9 @@ transliteration, fuzzy, no-safe-match, stale-evidence, idempotent-upsert, and
 privacy-safe evidence behavior without changing canonical catalog or garden
 records. Thresholds are provisional pilot guardrails documented in
 `docs/CATALOG_MATCH_SUGGESTION_QUEUE.md`, not validated automation thresholds.
+`tests/test_catalog_aliases.py` proves supported-locale generation,
+mixed/unsupported fail-closed behavior, collision holding, existing-alias
+suppression, privacy-bounded queries, and durable accepted/rejected replay.
 
 ## Local Apple Container smoke
 
@@ -168,10 +184,11 @@ the matching-tier regression smoke is:
 ```bash
 cd services/matching
 container build -t overgarden/matching:local .
-uv run python -m py_compile app/catalog_matching.py app/main.py app/search.py app/worker.py
+uv run python -m py_compile app/catalog_aliases.py app/catalog_matching.py app/main.py app/search.py app/worker.py
 uv run --frozen pytest
 uv run --env-file ../../apps/web/.env.local \
   python -m scripts.smoke_catalog_match_rejection_replay
+cd ../../apps/web && pnpm smoke:catalog-alias-approval
 MEILISEARCH_HOST='http://localhost:7700' \
   MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' \
   uv run python -m app.search

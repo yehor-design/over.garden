@@ -52,8 +52,8 @@ function CatalogSourceProvenanceCard({
   row: CatalogSourceProvenanceCurationRow;
 }) {
   return (
-    <article className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <article className="grid min-w-0 gap-4 rounded-lg border border-border p-4 [&>*]:min-w-0">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Database className="size-4 shrink-0 text-muted-foreground" />

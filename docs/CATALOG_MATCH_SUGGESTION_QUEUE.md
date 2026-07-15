@@ -27,8 +27,9 @@ This slice applies the Product Thinking Gate using:
 The trust risk is a false canonical match. OVE-158 limits that risk by exposing
 score, method, reason codes, locale/script hints, and the current aggregate
 affected-object count while preserving an explicit no-safe-match state. OVE-159
-adds the explicit human decision boundary for canonical matches. OVE-160 owns
-the separate synonym/locale-variant decision and must not broaden this merge
+adds the explicit human decision boundary for canonical matches. OVE-160
+implements the separate synonym/locale-variant decision under
+`docs/CATALOG_ALIAS_SUGGESTION_REVIEW.md` without broadening this merge
 contract.
 
 ## Data Flow

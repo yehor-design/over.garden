@@ -16,15 +16,15 @@ export function CatalogEntityResolutionReport({
   report,
 }: CatalogEntityResolutionReportProps) {
   return (
-    <section className="grid gap-4 border-b border-border pb-6">
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center gap-2">
+    <section className="grid min-w-0 gap-4 border-b border-border pb-6 [&>*]:min-w-0">
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <GitMerge className="size-5 text-muted-foreground" />
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+          <h2 className="text-xl font-semibold break-words text-foreground">
             Entity-resolution QA
           </h2>
         </div>
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        <div className="flex min-w-0 flex-wrap gap-2 text-xs text-muted-foreground">
           <Badge>Clusters: {report.summary.clusterCount}</Badge>
           <Badge>
             Catalog rows: {report.summary.sourceBackedCatalogRowsReviewed}
@@ -37,14 +37,14 @@ export function CatalogEntityResolutionReport({
           </Badge>
           <Badge>Leak check: {report.leakCheck}</Badge>
         </div>
-        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
           {report.summary.groups.map((group) => (
             <div
               key={group.kind}
-              className="rounded-md border border-border px-3 py-2 text-sm"
+              className="min-w-0 rounded-md border border-border px-3 py-2 text-sm"
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-foreground">
+              <div className="flex min-w-0 items-center justify-between gap-3">
+                <span className="min-w-0 font-medium break-words text-foreground">
                   {group.label}
                 </span>
                 <Badge>{group.count}</Badge>
@@ -58,9 +58,9 @@ export function CatalogEntityResolutionReport({
       </div>
 
       {report.clusters.length > 0 ? (
-        <ol className="grid gap-3">
+        <ol className="grid min-w-0 gap-3">
           {report.clusters.map((cluster) => (
-            <li key={cluster.id}>
+            <li key={cluster.id} className="min-w-0">
               <EntityResolutionClusterCard cluster={cluster} />
             </li>
           ))}
@@ -80,12 +80,12 @@ function EntityResolutionClusterCard({
   cluster: CatalogEntityResolutionCluster;
 }) {
   return (
-    <article className="grid gap-3 rounded-lg border border-border p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <article className="grid min-w-0 gap-3 rounded-lg border border-border p-4 [&>*]:min-w-0">
+      <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2">
             <AlertTriangle className="size-4 shrink-0 text-muted-foreground" />
-            <h3 className="text-base font-semibold text-foreground">
+            <h3 className="min-w-0 text-base font-semibold break-words text-foreground">
               {cluster.title}
             </h3>
           </div>
@@ -110,14 +110,14 @@ function EntityResolutionClusterCard({
         </Link>
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid min-w-0 gap-2">
         {cluster.members.map((member) => (
           <div
             key={`${cluster.id}:${member.label}:${member.source ?? ""}`}
-            className="rounded-md border border-border px-3 py-2 text-sm"
+            className="min-w-0 rounded-md border border-border px-3 py-2 text-sm"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-medium text-foreground">
+              <span className="font-medium break-words text-foreground">
                 {member.label}
               </span>
               {member.catalogKind ? <Badge>{member.catalogKind}</Badge> : null}
@@ -145,7 +145,7 @@ function EntityResolutionClusterCard({
 
 function Badge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-md border border-border px-2 py-1">
+    <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
       {children}
     </span>
   );

@@ -5,6 +5,10 @@ import { db } from "@/db";
 import type { AdminAccess } from "@/server/admin-access";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
+import {
+  listCatalogAliasSuggestionsForCuration,
+  listCatalogAliasSuggestionTargets,
+} from "@/server/catalog-alias-curation-repository";
 import { listPendingCatalogCurationCandidates } from "@/server/catalog-curation-repository";
 import {
   listCatalogSourceCandidatesForReview,
@@ -17,17 +21,21 @@ import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
+  approveCatalogAliasSuggestionAction,
   approveCatalogMatchSuggestionAction,
   confirmCatalogCandidateAction,
+  generateCatalogAliasSuggestionsAction,
   holdCatalogSourceCandidateAction,
   mergeCatalogCandidateAction,
   promoteCatalogSourceCandidateAction,
+  rejectCatalogAliasSuggestionAction,
   rejectCatalogCandidateAction,
   rejectCatalogMatchSuggestionAction,
   rejectCatalogSourceCandidateAction,
   rescanCatalogMatchSuggestionsAction,
   upsertVarietySeedProofAction,
 } from "./actions";
+import { CatalogAliasSuggestionReview } from "./catalog-alias-suggestion-review";
 import { CatalogCurationCandidateList } from "./catalog-curation-candidate-list";
 import { CatalogEntityResolutionReport } from "./catalog-entity-resolution-report";
 import { CatalogSourceCandidateReviewList } from "./catalog-source-candidate-review-list";
@@ -51,6 +59,7 @@ export default async function CatalogCurationPage({
   const sourceStatus = normalizeSourceStatusParam(
     resolvedSearchParams?.sourceStatus,
   );
+  const aliasQuery = normalizeAliasQueryParam(resolvedSearchParams?.aliasQuery);
 
   if (!userId) {
     return (
@@ -98,6 +107,8 @@ export default async function CatalogCurationPage({
   }
 
   const [
+    aliasTargets,
+    aliasSuggestions,
     candidates,
     seedProofs,
     sourceCandidates,
@@ -105,6 +116,8 @@ export default async function CatalogCurationPage({
     entityResolutionReport,
     provenanceRows,
   ] = await Promise.all([
+    listCatalogAliasSuggestionTargets({ query: aliasQuery }),
+    listCatalogAliasSuggestionsForCuration(),
     listPendingCatalogCurationCandidates(),
     listVarietySeedProofsForCuration(),
     listCatalogSourceCandidatesForReview({ status: sourceStatus }),
@@ -141,13 +154,16 @@ export default async function CatalogCurationPage({
               Seed proofs: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
+              Alias review: {aliasSuggestions.length}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
               Source candidates: {sourceCandidates.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               Source rows: {provenanceRows.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: {access.mode}
+              Gate: sealed owner
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               Role: {access.role}
@@ -155,6 +171,15 @@ export default async function CatalogCurationPage({
           </div>
         </div>
       </header>
+
+      <CatalogAliasSuggestionReview
+        searchQuery={aliasQuery}
+        targets={aliasTargets}
+        suggestions={aliasSuggestions}
+        generateAction={generateCatalogAliasSuggestionsAction}
+        approveAction={approveCatalogAliasSuggestionAction}
+        rejectAction={rejectCatalogAliasSuggestionAction}
+      />
 
       <VarietySeedProofEditor
         seedProofs={seedProofs}
@@ -185,6 +210,13 @@ export default async function CatalogCurationPage({
       />
     </main>
   );
+}
+
+function normalizeAliasQueryParam(
+  value: string | string[] | undefined,
+): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return (candidate ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
 }
 
 function normalizeSourceStatusParam(

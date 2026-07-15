@@ -1829,12 +1829,13 @@ create table if not exists catalog_alias_projections (
   id uuid primary key default gen_random_uuid(),
   catalog_item_id uuid not null references catalog_items(id) on delete cascade,
   catalog_item_name_id uuid references catalog_item_names(id) on delete cascade,
+  generated_from_catalog_item_name_id uuid,
   display_name text not null check (char_length(display_name) between 1 and 120),
   normalized_name text not null check (char_length(normalized_name) between 1 and 120),
   locale text not null default 'und',
   script text not null default 'und' check (char_length(script) between 1 and 40),
   alias_kind text not null check (alias_kind in ('accepted_scientific_name', 'synonym', 'vernacular_alias', 'generated_variant', 'user_provisional')),
-  status text not null check (status in ('accepted', 'review_needed', 'rejected', 'generated', 'user_provisional')),
+  status text not null check (status in ('accepted', 'review_needed', 'rejected', 'generated', 'stale', 'user_provisional')),
   source_slug text not null check (source_slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   source_method text not null check (source_method in ('source_backed', 'generated', 'manual_seed', 'ontology_seed', 'user_provisional', 'curator')),
   source_record_id uuid references catalog_source_records(id) on delete set null,
@@ -1843,9 +1844,44 @@ create table if not exists catalog_alias_projections (
   license text not null check (char_length(license) between 1 and 240),
   attribution_required boolean not null default true,
   projection_notes text check (projection_notes is null or char_length(projection_notes) between 1 and 500),
+  reason_codes text[] not null default array[]::text[],
+  source_name_fingerprint text,
+  generator_version text,
+  generated_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by_user_id uuid,
+  decision_reason_code text,
+  decision_result text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table catalog_alias_projections
+  add column if not exists generated_from_catalog_item_name_id uuid,
+  add column if not exists reason_codes text[] not null default array[]::text[],
+  add column if not exists source_name_fingerprint text,
+  add column if not exists generator_version text,
+  add column if not exists generated_at timestamptz not null default now(),
+  add column if not exists reviewed_at timestamptz,
+  add column if not exists reviewed_by_user_id uuid,
+  add column if not exists decision_reason_code text,
+  add column if not exists decision_result text;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_alias_projections_generated_from_name_fkey'
+      and conrelid = 'catalog_alias_projections'::regclass
+  ) then
+    alter table catalog_alias_projections
+      add constraint catalog_alias_projections_generated_from_name_fkey
+      foreign key (generated_from_catalog_item_name_id)
+      references catalog_item_names(id)
+      on delete restrict;
+  end if;
+end $$;
 
 do $$
 begin
@@ -1864,6 +1900,88 @@ begin
     check (source_method in ('source_backed', 'generated', 'manual_seed', 'ontology_seed', 'user_provisional', 'curator'));
 end $$;
 
+alter table catalog_alias_projections
+  drop constraint if exists catalog_alias_projections_status_check,
+  drop constraint if exists catalog_alias_projections_generated_reason_codes_check,
+  drop constraint if exists catalog_alias_projections_generated_fingerprint_check,
+  drop constraint if exists catalog_alias_projections_generated_review_check;
+
+alter table catalog_alias_projections
+  add constraint catalog_alias_projections_status_check
+  check (
+    status in (
+      'accepted',
+      'review_needed',
+      'rejected',
+      'generated',
+      'stale',
+      'user_provisional'
+    )
+  ),
+  add constraint catalog_alias_projections_generated_reason_codes_check
+  check (
+    reason_codes <@ array[
+      'cyrtranslit_forward',
+      'cyrtranslit_reverse',
+      'ru_yo_fold',
+      'uk_ghe_fold',
+      'normalized_collision'
+    ]::text[]
+  ),
+  add constraint catalog_alias_projections_generated_fingerprint_check
+  check (
+    source_name_fingerprint is null
+    or source_name_fingerprint ~ '^[0-9a-f]{64}$'
+  ),
+  add constraint catalog_alias_projections_generated_review_check
+  check (
+    source_slug <> 'overgarden-alias-generator'
+    or (
+      source_slug = 'overgarden-alias-generator'
+      and source_method = 'generated'
+      and source_record_id is null
+      and source_record_key is null
+      and attribution_required = false
+      and generated_from_catalog_item_name_id is not null
+      and source_name_fingerprint is not null
+      and generator_version is not null
+      and char_length(generator_version) between 1 and 40
+      and cardinality(reason_codes) between 1 and 5
+      and (
+        (
+          status in ('generated', 'review_needed', 'stale')
+          and catalog_item_name_id is null
+          and reviewed_at is null
+          and reviewed_by_user_id is null
+          and decision_reason_code is null
+          and decision_result is null
+        )
+        or (
+          status = 'accepted'
+          and catalog_item_name_id is not null
+          and reviewed_at is not null
+          and reviewed_by_user_id is not null
+          and decision_reason_code = 'approved_generated_alias'
+          and decision_result in ('alias_projected', 'alias_already_projected')
+        )
+        or (
+          status = 'rejected'
+          and catalog_item_name_id is null
+          and reviewed_at is not null
+          and reviewed_by_user_id is not null
+          and decision_reason_code in (
+            'incorrect_variant',
+            'locale_or_script_mismatch',
+            'ambiguous_catalog_identity',
+            'unsafe_generated_form',
+            'other_review_reason'
+          )
+          and decision_result = 'alias_rejected'
+        )
+      )
+    )
+  );
+
 create unique index if not exists catalog_alias_projections_item_alias_source_uidx
   on catalog_alias_projections (
     catalog_item_id,
@@ -1879,6 +1997,11 @@ create index if not exists catalog_alias_projections_item_status_idx
 create index if not exists catalog_alias_projections_name_idx
   on catalog_alias_projections (catalog_item_name_id)
   where catalog_item_name_id is not null;
+
+create index if not exists catalog_alias_projections_generated_review_idx
+  on catalog_alias_projections (status, generated_at desc, catalog_item_id)
+  where source_slug = 'overgarden-alias-generator'
+    and source_method = 'generated';
 
 create table if not exists variety_seed_proofs (
   id uuid primary key default gen_random_uuid(),
@@ -3792,6 +3915,26 @@ alter table job_queue
       and jsonb_typeof(payload->'sourceCatalogItemId') = 'string'
       and payload->>'kind' = 'catalog_match_suggestions_refresh'
       and payload->>'sourceCatalogItemId' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    )
+  );
+
+alter table job_queue
+  drop constraint if exists job_queue_catalog_alias_payload_check;
+
+alter table job_queue
+  add constraint job_queue_catalog_alias_payload_check check (
+    not (
+      jsonb_typeof(payload) = 'object'
+      and payload->>'kind' = 'catalog_alias_suggestions_refresh'
+    )
+    or (
+      jsonb_typeof(payload) = 'object'
+      and payload ?& array['kind', 'catalogItemId']::text[]
+      and payload - array['kind', 'catalogItemId']::text[] = '{}'::jsonb
+      and jsonb_typeof(payload->'kind') = 'string'
+      and jsonb_typeof(payload->'catalogItemId') = 'string'
+      and payload->>'kind' = 'catalog_alias_suggestions_refresh'
+      and payload->>'catalogItemId' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
     )
   );
 

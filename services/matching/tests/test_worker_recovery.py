@@ -293,7 +293,10 @@ class FakeQueueConnection:
                 - timedelta(
                     seconds=int(catalog_vt_seconds)
                     if row["payload"].get("kind")
-                    == worker.CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND
+                    in {
+                        worker.CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
+                        worker.CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
+                    }
                     else int(default_vt_seconds)
                 )
             ):
@@ -319,6 +322,7 @@ def test_claim_sql_predicate_matches_recovery_model():
     # Stale processing rows are reclaimed after the visibility timeout interval.
     assert "status = 'processing'" in normalized
     assert "catalog_match_suggestions_refresh" in normalized
+    assert "catalog_alias_suggestions_refresh" in normalized
     assert "else %s" in normalized
     # Concurrent workers never claim the same row.
     assert "for update skip locked" in normalized
@@ -355,6 +359,27 @@ def test_catalog_match_job_uses_the_longer_bounded_visibility_lease(clock):
         {
             "kind": "catalog_match_suggestions_refresh",
             "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
+        }
+    )
+
+    assert worker._claim(conn) is not None
+    clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
+    assert worker._claim(conn) is None
+
+    clock["now"] += timedelta(
+        seconds=worker.CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS
+        - worker.VISIBILITY_TIMEOUT_SECONDS
+    )
+    reclaimed = worker._claim(conn)
+    assert reclaimed is not None and reclaimed["id"] == job_id
+
+
+def test_catalog_alias_job_uses_the_longer_bounded_visibility_lease(clock):
+    conn = FakeQueueConnection(clock)
+    job_id = conn.enqueue(
+        {
+            "kind": "catalog_alias_suggestions_refresh",
+            "catalogItemId": "00000000-0000-4000-8000-000000000301",
         }
     )
 

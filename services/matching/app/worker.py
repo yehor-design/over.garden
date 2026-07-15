@@ -17,6 +17,10 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.rows import dict_row
 
+from app.catalog_aliases import (
+    CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
+    refresh_catalog_alias_suggestions,
+)
 from app.catalog_matching import (
     CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
     refresh_catalog_match_suggestions,
@@ -51,7 +55,10 @@ where queue_name = %s
       status = 'processing'
       and locked_at <= now() - (
         case
-          when payload->>'kind' = '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}' then %s
+          when payload->>'kind' in (
+            '{CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND}',
+            '{CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND}'
+          ) then %s
           else %s
         end || ' seconds'
       )::interval
@@ -127,6 +134,22 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
                 payload,
                 "sourceCatalogItemId",
                 CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
+            ),
+        )
+        return
+
+    if kind == CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND:
+        _require_exact_payload_shape(
+            payload,
+            CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
+            {"kind", "catalogItemId"},
+        )
+        refresh_catalog_alias_suggestions(
+            conn,
+            _payload_uuid_text(
+                payload,
+                "catalogItemId",
+                CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
             ),
         )
         return

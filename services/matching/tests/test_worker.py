@@ -35,6 +35,50 @@ def test_worker_handles_catalog_match_suggestion_refresh(monkeypatch):
     ]
 
 
+def test_worker_handles_catalog_alias_suggestion_refresh(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        worker,
+        "refresh_catalog_alias_suggestions",
+        lambda conn, catalog_item_id: calls.append((conn, catalog_item_id)),
+        raising=False,
+    )
+
+    worker._handle(
+        "conn",
+        {
+            "kind": "catalog_alias_suggestions_refresh",
+            "catalogItemId": "00000000-0000-4000-8000-000000000101",
+        },
+    )
+
+    assert calls == [
+        ("conn", "00000000-0000-4000-8000-000000000101"),
+    ]
+
+
+def test_worker_rejects_private_fields_in_catalog_alias_payload(monkeypatch):
+    monkeypatch.setattr(
+        worker,
+        "refresh_catalog_alias_suggestions",
+        lambda *_args: None,
+        raising=False,
+    )
+
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {
+                "kind": "catalog_alias_suggestions_refresh",
+                "catalogItemId": "00000000-0000-4000-8000-000000000101",
+                "journalBody": "do-not-leak",
+            },
+        )
+
+    assert "do-not-leak" not in str(error.value)
+
+
 def test_worker_rejects_extra_catalog_match_payload_keys_without_echoing_them():
     with pytest.raises(ValueError, match="unsupported payload shape") as error:
         worker._handle(

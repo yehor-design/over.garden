@@ -5,6 +5,11 @@ import { revalidatePath } from "next/cache";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import {
+  approveCatalogAliasSuggestion,
+  enqueueCatalogAliasSuggestionsRefresh,
+  rejectCatalogAliasSuggestion,
+} from "@/server/catalog-alias-curation-repository";
+import {
   approveCatalogMatchSuggestion,
   confirmCatalogCurationCandidate,
   enqueueCatalogMatchSuggestionsRefresh,
@@ -27,6 +32,85 @@ const CURATION_PATH = "/garden/catalog/curation";
 export interface CatalogMatchSuggestionActionResult {
   outcome: "approved" | "rejected" | "stale";
   message: string;
+}
+
+export interface CatalogAliasSuggestionActionResult {
+  outcome: "queued" | "approved" | "rejected" | "stale" | "collision";
+  message: string;
+}
+
+export async function generateCatalogAliasSuggestionsAction(
+  formData: FormData,
+): Promise<CatalogAliasSuggestionActionResult> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  await enqueueCatalogAliasSuggestionsRefresh({
+    catalogItemId: String(formData.get("catalogItemId") ?? ""),
+  });
+  revalidatePath(CURATION_PATH);
+
+  return {
+    outcome: "queued",
+    message: "Alias generation queued for this catalog identity.",
+  };
+}
+
+export async function approveCatalogAliasSuggestionAction(
+  formData: FormData,
+): Promise<CatalogAliasSuggestionActionResult> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  const result = await approveCatalogAliasSuggestion(scope, {
+    aliasProjectionId: String(formData.get("aliasProjectionId") ?? ""),
+  });
+  revalidatePath(CURATION_PATH);
+
+  if (result.outcome === "collision") {
+    return {
+      outcome: "collision",
+      message:
+        "This normalized alias belongs to another catalog identity. Nothing was published.",
+    };
+  }
+  if (result.outcome === "stale") {
+    return {
+      outcome: "stale",
+      message:
+        "The source identity changed. Regenerate before reviewing again.",
+    };
+  }
+
+  return {
+    outcome: "approved",
+    message: "Alias approved. Typeahead reindex was queued.",
+  };
+}
+
+export async function rejectCatalogAliasSuggestionAction(
+  formData: FormData,
+): Promise<CatalogAliasSuggestionActionResult> {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  const result = await rejectCatalogAliasSuggestion(scope, {
+    aliasProjectionId: String(formData.get("aliasProjectionId") ?? ""),
+    reasonCode: String(formData.get("reasonCode") ?? ""),
+  });
+  revalidatePath(CURATION_PATH);
+
+  if (result.outcome === "stale") {
+    return {
+      outcome: "stale",
+      message: "The source identity changed. Nothing was rejected.",
+    };
+  }
+
+  return {
+    outcome: "rejected",
+    message: "Alias rejected. It was not added to typeahead.",
+  };
 }
 
 export async function confirmCatalogCandidateAction(formData: FormData) {

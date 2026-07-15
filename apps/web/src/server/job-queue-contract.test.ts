@@ -17,6 +17,14 @@ const consumedJobContracts = new Map<
   { consumer: string; consumerToken: string; testedBy: string }
 >([
   [
+    "matching:catalog_alias_suggestions_refresh",
+    {
+      consumer: "services/matching/app/worker.py",
+      consumerToken: "CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND",
+      testedBy: "services/matching/tests/test_worker.py",
+    },
+  ],
+  [
     "matching:catalog_match_suggestions_refresh",
     {
       consumer: "services/matching/app/worker.py",
@@ -79,6 +87,11 @@ describe("job queue producer/consumer contract", () => {
         source: "app/skeleton/actions.ts",
         queueName: "matching",
         kind: "journal_entry_index",
+      },
+      {
+        source: "server/catalog-alias-curation-repository.ts",
+        queueName: "matching",
+        kind: "catalog_alias_suggestions_refresh",
       },
       {
         source: "server/catalog-repository.ts",
