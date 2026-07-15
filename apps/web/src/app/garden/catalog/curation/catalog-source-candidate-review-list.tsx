@@ -55,7 +55,7 @@ export function CatalogSourceCandidateReviewList({
   }));
 
   return (
-    <section className="grid gap-4 border-b border-border pb-6">
+    <section className="grid min-w-0 gap-4 border-b border-border pb-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Source candidate review
@@ -90,16 +90,16 @@ export function CatalogSourceCandidateReviewList({
       </div>
 
       {candidates.length > 0 ? (
-        <div className="grid gap-5">
+        <div className="grid min-w-0 gap-5">
           {grouped.map((group) =>
             group.candidates.length > 0 ? (
-              <div key={group.status} className="grid gap-3">
+              <div key={group.status} className="grid min-w-0 gap-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase">
                   {group.label}
                 </h3>
-                <ol className="grid gap-4">
+                <ol className="grid min-w-0 gap-4">
                   {group.candidates.map((candidate) => (
-                    <li key={candidate.sourceRecordId}>
+                    <li key={candidate.sourceRecordId} className="min-w-0">
                       <CatalogSourceCandidateCard
                         candidate={candidate}
                         promoteAction={promoteAction}
@@ -179,7 +179,7 @@ function CatalogSourceCandidateCard({
   });
 
   return (
-    <article className="grid gap-4 rounded-lg border border-border p-4">
+    <article className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ function CatalogSourceCandidateCard({
         </div>
       </div>
 
-      <dl className="grid gap-3 text-sm md:grid-cols-2">
+      <dl className="grid min-w-0 gap-3 text-sm md:grid-cols-2 [&>div]:min-w-0">
         {candidate.review.speciesName ? (
           <div>
             <dt className="text-xs text-muted-foreground">Species</dt>
@@ -284,7 +284,7 @@ function CatalogSourceCandidateCard({
               href={candidate.sourceUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+              className="inline-flex max-w-full min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
             >
               <span className="truncate">{candidate.sourceName}</span>
               <ExternalLink className="size-3 shrink-0" />
@@ -293,13 +293,13 @@ function CatalogSourceCandidateCard({
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">License</dt>
-          <dd className="mt-1 font-medium text-foreground">
+          <dd className="mt-1 font-medium break-words text-foreground">
             {candidate.licenseUrl ? (
               <a
                 href={candidate.licenseUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 items-center gap-1 underline-offset-4 hover:underline"
+                className="inline-flex max-w-full min-w-0 items-center gap-1 underline-offset-4 hover:underline"
               >
                 <span className="truncate">{candidate.license}</span>
                 <ExternalLink className="size-3 shrink-0" />
@@ -325,7 +325,7 @@ function CatalogSourceCandidateCard({
         {candidate.review.sourceRowReference ? (
           <div className="md:col-span-2">
             <dt className="text-xs text-muted-foreground">Review note</dt>
-            <dd className="mt-1 font-medium text-foreground">
+            <dd className="mt-1 font-medium break-words text-foreground">
               {candidate.review.sourceRowReference}
             </dd>
           </div>
@@ -398,7 +398,7 @@ function CatalogSourceCandidateCard({
 
 function Badge({ children }: { children: ReactNode }) {
   return (
-    <span className="rounded-md border border-border px-2 py-1">
+    <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
       {children}
     </span>
   );

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
   assertCatalogCuratorAccess: vi.fn(),
   confirmCatalogCurationCandidate: vi.fn(),
+  enqueueCatalogMatchSuggestionsRefresh: vi.fn(),
   mergeCatalogCurationCandidate: vi.fn(),
   rejectCatalogCurationCandidate: vi.fn(),
   promoteCatalogSourceCandidate: vi.fn(),
@@ -27,6 +28,8 @@ vi.mock("@/server/catalog-curator-auth", () => ({
 
 vi.mock("@/server/catalog-curation-repository", () => ({
   confirmCatalogCurationCandidate: mocks.confirmCatalogCurationCandidate,
+  enqueueCatalogMatchSuggestionsRefresh:
+    mocks.enqueueCatalogMatchSuggestionsRefresh,
   mergeCatalogCurationCandidate: mocks.mergeCatalogCurationCandidate,
   rejectCatalogCurationCandidate: mocks.rejectCatalogCurationCandidate,
 }));
@@ -65,6 +68,9 @@ describe("catalog curation actions", () => {
     });
     mocks.confirmCatalogCurationCandidate.mockResolvedValue({
       publicEntryPaths: [],
+    });
+    mocks.enqueueCatalogMatchSuggestionsRefresh.mockResolvedValue({
+      candidateId: "00000000-0000-4000-8000-000000000201",
     });
     mocks.promoteCatalogSourceCandidate.mockResolvedValue({
       sourceRecordId: "00000000-0000-4000-8000-000000066001",
@@ -129,6 +135,23 @@ describe("catalog curation actions", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith(
       "/journal/babusyn-perets-entry",
     );
+  });
+
+  it("queues a bounded deterministic rescan behind the operator gate", async () => {
+    const { rescanCatalogMatchSuggestionsAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("candidateId", "00000000-0000-4000-8000-000000000201");
+
+    await rescanCatalogMatchSuggestionsAction(formData);
+
+    expect(mocks.assertCatalogCuratorAccess).toHaveBeenCalledOnce();
+    expect(mocks.enqueueCatalogMatchSuggestionsRefresh).toHaveBeenCalledWith({
+      candidateId: "00000000-0000-4000-8000-000000000201",
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledWith(
+      "/garden/catalog/curation",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalledWith("/garden");
   });
 
   it("rejects source candidate promotion before repository writes for a non-operator", async () => {

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import {
   DummyDriver,
   Kysely,
@@ -25,6 +27,8 @@ import {
   buildInsertAnalyticsEventQuery,
   normalizeAnalyticsEventProperties,
 } from "@/server/analytics-events";
+import { buildEnqueueCatalogMatchSuggestionsRefreshJobQuery } from "@/server/catalog-repository";
+import { buildPendingCatalogMatchSuggestionsQuery } from "@/server/catalog-curation-repository";
 import { buildListOperatorErasureRequestsQuery } from "@/server/erasure-request-repository";
 import { buildCountJournalEntriesQuery } from "@/server/erasure-dry-run-repository";
 import { buildListFounderInterviewLearningsQuery } from "@/server/founder-interview-repository";
@@ -77,6 +81,10 @@ class TestPostgresDialect implements Dialect {
 }
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
+const schemaSql = readFileSync(
+  new URL("../../sql/0001_walking_skeleton.sql", import.meta.url),
+  "utf8",
+);
 
 describe("OVE-40 privacy invariant sweep — search index", () => {
   it("does not index the journey entry while it is still private", () => {
@@ -167,6 +175,78 @@ describe("OVE-40 privacy invariant sweep — catalog typeahead", () => {
     });
     expect(suggestion).not.toBeNull();
     expectPublicPayloadIsClean("catalog suggestion", suggestion);
+  });
+});
+
+describe("OVE-158 privacy invariant sweep — deterministic catalog matching", () => {
+  it("queues only the provisional catalog id, never user or content data", () => {
+    const compiled = buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+      testDb,
+      "00000000-0000-4000-8000-000000000201",
+    ).compile();
+    const payload = compiled.parameters[1];
+
+    expect(payload).toEqual({
+      kind: "catalog_match_suggestions_refresh",
+      sourceCatalogItemId: "00000000-0000-4000-8000-000000000201",
+    });
+    expectNoForbiddenValues("catalog match queue payload", payload);
+    expectNoPoisonSentinels("catalog match queue payload", payload);
+  });
+
+  it("keeps operator suggestions on safe catalog identity fields", () => {
+    const { sql } = buildPendingCatalogMatchSuggestionsQuery(testDb, [
+      "00000000-0000-4000-8000-000000000201",
+    ]).compile();
+
+    expect(sql).toContain('from "catalog_match_suggestions"');
+    for (const forbidden of [
+      "safe_evidence",
+      "journal_entries",
+      "owner_user_id",
+      "created_by_user_id as",
+      "email",
+      "media_assets",
+      "raw_payload",
+      "source_record_id",
+      "ip_address",
+      "user_agent",
+      "latitude",
+      "longitude",
+    ]) {
+      expect(sql).not.toContain(forbidden);
+    }
+  });
+
+  it("enforces exact queue and evidence shapes at the Postgres boundary", () => {
+    const suggestionSchema = schemaSql.slice(
+      schemaSql.indexOf("create table if not exists catalog_match_suggestions"),
+      schemaSql.indexOf("create table if not exists wishlist_items"),
+    );
+    const normalizedSuggestionSchema = suggestionSchema.replace(/\s+/g, " ");
+    const queueSchema = schemaSql.slice(
+      schemaSql.indexOf("create table if not exists job_queue"),
+      schemaSql.indexOf("create table if not exists pilot_invite_grants"),
+    );
+
+    expect(suggestionSchema).not.toContain("sourceDisplayName");
+    expect(suggestionSchema).toContain("ove158.catalogMatchEvidence.v2");
+    expect(normalizedSuggestionSchema).toContain(
+      `safe_evidence->'schemaVersion' = '"ove158.catalogMatchEvidence.v2"'::jsonb`,
+    );
+    expect(normalizedSuggestionSchema).toContain(
+      "safe_evidence->'reasonCodes' = to_jsonb(reason_codes)",
+    );
+    expect(normalizedSuggestionSchema).toContain(
+      'safe_evidence->\'thresholds\' = \'{"high": 95, "medium": 85, "low": 70}\'::jsonb',
+    );
+    expect(queueSchema).toContain("job_queue_catalog_match_payload_check");
+    expect(queueSchema).toContain("payload - array[");
+    expect(queueSchema).toContain("'kind',");
+    expect(queueSchema).toContain("'sourceCatalogItemId'");
+    expect(queueSchema).toContain(
+      "rerun_requested boolean not null default false",
+    );
   });
 });
 

@@ -1,7 +1,15 @@
 "use client";
 
-import { CheckCircle2, GitMerge, Search, X, XCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  GitMerge,
+  RefreshCw,
+  Search,
+  X,
+  XCircle,
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
 import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
@@ -10,6 +18,7 @@ interface CatalogCurationCandidate {
   id: string;
   displayName: string;
   normalizedName: string | null;
+  catalogKind: "plant_variety" | "species" | "breed";
   locale: string;
   status: "provisional";
   source: string;
@@ -17,6 +26,31 @@ interface CatalogCurationCandidate {
   affectedObjectCount: number;
   pilotOrigin: boolean;
   invitedPilotUserCount: number;
+  matchSuggestions: CatalogMatchSuggestion[];
+}
+
+interface CatalogMatchSuggestion {
+  id: string;
+  targetCatalogItemId: string | null;
+  targetDisplayName: string | null;
+  targetCanonicalName: string | null;
+  catalogKind: string;
+  score: number;
+  confidenceBucket: "high" | "medium" | "low" | "none";
+  matchType:
+    | "normalized_exact"
+    | "transliteration_exact"
+    | "fuzzy_name"
+    | "no_safe_match";
+  reasonCodes: string[];
+  normalizedInput: string;
+  matchedName: string | null;
+  sourceLocale: string;
+  targetLocale: string | null;
+  sourceScript: string;
+  targetScript: string | null;
+  status: "pending";
+  generatedAt: Date | string;
 }
 
 interface CatalogCurationCandidateListProps {
@@ -24,6 +58,7 @@ interface CatalogCurationCandidateListProps {
   confirmAction: (formData: FormData) => void | Promise<void>;
   mergeAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
+  rescanAction: (formData: FormData) => void | Promise<void>;
 }
 
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
@@ -42,6 +77,7 @@ export function CatalogCurationCandidateList({
   confirmAction,
   mergeAction,
   rejectAction,
+  rescanAction,
 }: CatalogCurationCandidateListProps) {
   if (candidates.length === 0) {
     return (
@@ -60,6 +96,7 @@ export function CatalogCurationCandidateList({
             confirmAction={confirmAction}
             mergeAction={mergeAction}
             rejectAction={rejectAction}
+            rescanAction={rescanAction}
           />
         </li>
       ))}
@@ -72,6 +109,7 @@ interface CatalogCurationCandidateCardProps {
   confirmAction: (formData: FormData) => void | Promise<void>;
   mergeAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
+  rescanAction: (formData: FormData) => void | Promise<void>;
 }
 
 function CatalogCurationCandidateCard({
@@ -79,15 +117,17 @@ function CatalogCurationCandidateCard({
   confirmAction,
   mergeAction,
   rejectAction,
+  rescanAction,
 }: CatalogCurationCandidateCardProps) {
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
   const [status, setStatus] = useState<CatalogStatus>("idle");
+  const [refreshQueued, setRefreshQueued] = useState(false);
   const candidateTrust = catalogSuggestionTrustMetadata({
     status: candidate.status,
     source: candidate.source,
-    catalogKind: "plant_variety",
+    catalogKind: candidate.catalogKind,
     locale: candidate.locale,
   });
 
@@ -169,7 +209,7 @@ function CatalogCurationCandidateCard({
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <h2 className="truncate text-lg font-semibold text-foreground">
+          <h2 className="text-lg font-semibold break-words text-foreground">
             {candidate.displayName}
           </h2>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -180,6 +220,9 @@ function CatalogCurationCandidateCard({
             ) : null}
             <span className="rounded-md border border-border px-2 py-1">
               {candidate.locale}
+            </span>
+            <span className="rounded-md border border-border px-2 py-1">
+              {catalogKindLabel(candidate.catalogKind)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {candidateTrust.trustLabel}
@@ -204,14 +247,22 @@ function CatalogCurationCandidateCard({
           </p>
         </div>
 
-        <form action={confirmAction}>
-          <input type="hidden" name="candidateId" value={candidate.id} />
-          <button type="submit" className={buttonVariants()}>
-            <CheckCircle2 className="size-4" />
-            Confirm
-          </button>
-        </form>
+        <div className="flex flex-wrap gap-2">
+          <form action={rescanAction} onSubmit={() => setRefreshQueued(true)}>
+            <input type="hidden" name="candidateId" value={candidate.id} />
+            <CatalogRescanButton queued={refreshQueued} />
+          </form>
+          <form action={confirmAction}>
+            <input type="hidden" name="candidateId" value={candidate.id} />
+            <button type="submit" className={buttonVariants()}>
+              <CheckCircle2 className="size-4" />
+              Confirm
+            </button>
+          </form>
+        </div>
       </div>
+
+      <CatalogMatchSuggestions suggestions={candidate.matchSuggestions} />
 
       <div className="grid gap-3 border-t border-border pt-4">
         <form action={mergeAction} className="grid gap-3">
@@ -334,6 +385,170 @@ function CatalogCurationCandidateCard({
       </div>
     </article>
   );
+}
+
+function CatalogMatchSuggestions({
+  suggestions,
+}: {
+  suggestions: CatalogMatchSuggestion[];
+}) {
+  return (
+    <section className="grid gap-3 border-t border-border pt-4">
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-semibold text-foreground">
+          Deterministic match suggestions
+        </h3>
+        <p className="text-xs leading-5 text-muted-foreground">
+          Pending evidence only. No catalog or garden records were changed.
+        </p>
+      </div>
+
+      {suggestions.length === 0 ? (
+        <p className="border-y border-border py-3 text-sm text-muted-foreground">
+          Not evaluated yet or refresh pending.
+        </p>
+      ) : (
+        <ol className="divide-y divide-border border-y border-border">
+          {suggestions.map((suggestion) => {
+            const noSafeMatch = suggestion.matchType === "no_safe_match";
+            const lowConfidence = suggestion.confidenceBucket === "low";
+
+            return (
+              <li key={suggestion.id} className="grid gap-2 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="font-medium break-words text-foreground">
+                      {noSafeMatch
+                        ? "No safe catalog match"
+                        : lowConfidence
+                          ? `Held: ${suggestion.targetDisplayName}`
+                          : `Suggested target: ${suggestion.targetDisplayName}`}
+                    </p>
+                    {!noSafeMatch &&
+                    suggestion.targetCanonicalName &&
+                    suggestion.targetCanonicalName !==
+                      suggestion.targetDisplayName ? (
+                      <p className="text-xs break-words text-muted-foreground">
+                        Canonical: {suggestion.targetCanonicalName}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2 text-xs">
+                    <span className="rounded-md border border-border px-2 py-1 font-medium text-foreground">
+                      {suggestion.score}/100
+                    </span>
+                    <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
+                      {confidenceLabel(suggestion.confidenceBucket)}
+                    </span>
+                    <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
+                      {matchTypeLabel(suggestion.matchType)}
+                    </span>
+                    <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
+                      {catalogKindLabel(suggestion.catalogKind)}
+                    </span>
+                  </div>
+                </div>
+
+                <dl className="grid gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                  <div className="flex min-w-0 gap-1">
+                    <dt className="shrink-0 font-medium text-foreground">
+                      Normalized:
+                    </dt>
+                    <dd className="min-w-0 break-words">
+                      {suggestion.normalizedInput}
+                    </dd>
+                  </div>
+                  <div className="flex min-w-0 gap-1">
+                    <dt className="shrink-0 font-medium text-foreground">
+                      Locale/script:
+                    </dt>
+                    <dd className="min-w-0 break-words">
+                      {suggestion.sourceLocale}/{suggestion.sourceScript}
+                      {suggestion.targetLocale && suggestion.targetScript
+                        ? ` -> ${suggestion.targetLocale}/${suggestion.targetScript}`
+                        : ""}
+                    </dd>
+                  </div>
+                  <div className="flex min-w-0 gap-1 sm:col-span-2">
+                    <dt className="shrink-0 font-medium text-foreground">
+                      Reasons:
+                    </dt>
+                    <dd className="min-w-0 break-words">
+                      {suggestion.reasonCodes.map(reasonLabel).join(", ")}
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </section>
+  );
+}
+
+function CatalogRescanButton({ queued }: { queued: boolean }) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending || queued}
+      className={buttonVariants({ variant: "outline" })}
+    >
+      <RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />
+      {pending ? "Queueing..." : queued ? "Refresh queued" : "Refresh matches"}
+    </button>
+  );
+}
+
+function confidenceLabel(value: CatalogMatchSuggestion["confidenceBucket"]) {
+  switch (value) {
+    case "high":
+      return "High confidence";
+    case "medium":
+      return "Medium confidence";
+    case "low":
+      return "Low confidence";
+    case "none":
+      return "No safe suggestion";
+  }
+}
+
+function matchTypeLabel(value: CatalogMatchSuggestion["matchType"]) {
+  switch (value) {
+    case "normalized_exact":
+      return "Exact name";
+    case "transliteration_exact":
+      return "Transliteration match";
+    case "fuzzy_name":
+      return "Fuzzy name";
+    case "no_safe_match":
+      return "Held";
+  }
+}
+
+function reasonLabel(value: string) {
+  const labels: Record<string, string> = {
+    normalized_exact: "normalized names are identical",
+    cyrtranslit_exact: "CyrTranslit keys are identical",
+    rapidfuzz_name_similarity: "RapidFuzz name similarity",
+    cross_script_similarity: "cross-script similarity",
+    same_catalog_kind: "same catalog kind",
+    below_safe_threshold: "below safe threshold",
+    no_selectable_candidates: "no selectable candidates",
+    unmatchable_input: "input cannot be matched safely",
+  };
+  return labels[value] ?? value.replaceAll("_", " ");
+}
+
+function catalogKindLabel(value: string) {
+  const labels: Record<string, string> = {
+    plant_variety: "Plant variety",
+    species: "Species",
+    breed: "Breed",
+  };
+  return labels[value] ?? value.replaceAll("_", " ");
 }
 
 function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {

@@ -126,6 +126,35 @@ export interface CatalogItems {
   updated_at: Generated<Timestamp>;
 }
 
+export interface CatalogMatchSuggestions {
+  affected_object_count: Generated<number>;
+  candidate_key: string;
+  catalog_kind: string;
+  confidence_bucket: string;
+  created_at: Generated<Timestamp>;
+  generated_at: Generated<Timestamp>;
+  id: Generated<string>;
+  match_type: string;
+  matched_name: string | null;
+  matcher_version: string;
+  normalized_input: string;
+  reason_codes: Generated<string[]>;
+  reviewed_at: Timestamp | null;
+  reviewed_by_user_id: string | null;
+  safe_evidence: Json;
+  score: number;
+  source_catalog_item_id: string;
+  source_locale: Generated<string>;
+  source_script: string;
+  status: Generated<string>;
+  suggestion_kind: Generated<string>;
+  target_canonical_name: string | null;
+  target_catalog_item_id: string | null;
+  target_locale: string | null;
+  target_script: string | null;
+  updated_at: Generated<Timestamp>;
+}
+
 export interface CatalogSourceLinks {
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
@@ -369,6 +398,7 @@ export interface JobQueue {
   locked_by: string | null;
   payload: Json;
   queue_name: string;
+  rerun_requested: Generated<boolean>;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
 }
@@ -693,6 +723,7 @@ export interface DB {
   catalog_alias_projections: CatalogAliasProjections;
   catalog_item_names: CatalogItemNames;
   catalog_items: CatalogItems;
+  catalog_match_suggestions: CatalogMatchSuggestions;
   catalog_source_links: CatalogSourceLinks;
   catalog_source_records: CatalogSourceRecords;
   catalog_source_refresh_events: CatalogSourceRefreshEvents;

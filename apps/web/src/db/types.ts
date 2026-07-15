@@ -8,6 +8,7 @@ import type {
   CatalogAliasProjections as CatalogAliasProjectionsTable,
   CatalogItemNames as CatalogItemNamesTable,
   CatalogItems as CatalogItemsTable,
+  CatalogMatchSuggestions as CatalogMatchSuggestionsTable,
   CatalogSourceLinks as CatalogSourceLinksTable,
   CatalogSourceRecords as CatalogSourceRecordsTable,
   CatalogSourceRefreshEvents as CatalogSourceRefreshEventsTable,
@@ -67,6 +68,17 @@ export type CatalogItemStatus =
   | "provisional"
   | "merged"
   | "rejected";
+export type CatalogMatchSuggestionStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "stale";
+export type CatalogMatchConfidenceBucket = "high" | "medium" | "low" | "none";
+export type CatalogMatchType =
+  | "normalized_exact"
+  | "transliteration_exact"
+  | "fuzzy_name"
+  | "no_safe_match";
 export type MediaAssetStatus = "quarantined" | "processed" | "failed";
 export type JobStatus = "pending" | "processing" | "done" | "failed";
 export type VarietySeedProofStatus = "draft" | "published";
@@ -221,6 +233,9 @@ export type AnalyticsEvent = Selectable<AnalyticsEventsTable>;
 export type CatalogAliasProjection = Selectable<CatalogAliasProjectionsTable>;
 export type CatalogItem = Selectable<CatalogItemsTable>;
 export type CatalogItemName = Selectable<CatalogItemNamesTable>;
+export type CatalogMatchSuggestion = Selectable<CatalogMatchSuggestionsTable>;
+export type NewCatalogMatchSuggestion =
+  Insertable<CatalogMatchSuggestionsTable>;
 export type CatalogSourceLink = Selectable<CatalogSourceLinksTable>;
 export type CatalogSourceRecord = Selectable<CatalogSourceRecordsTable>;
 export type CatalogSourceRefreshEvent =

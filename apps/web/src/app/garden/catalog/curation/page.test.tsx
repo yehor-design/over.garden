@@ -62,6 +62,7 @@ vi.mock("./actions", () => ({
   promoteCatalogSourceCandidateAction: vi.fn(),
   rejectCatalogCandidateAction: vi.fn(),
   rejectCatalogSourceCandidateAction: vi.fn(),
+  rescanCatalogMatchSuggestionsAction: vi.fn(),
   upsertVarietySeedProofAction: vi.fn(),
 }));
 

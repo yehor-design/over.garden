@@ -11,6 +11,8 @@ Python: RapidFuzz, Splink, PyICU, CyrTranslit, and Meilisearch tooling.
   and runs matching/dedup/reindex work off the request path.
 - `app/search.py` — Meilisearch helpers, catalog typeahead reindexing, public
   journal index/unindex jobs, and the Cyrillic typo-tolerance proofs.
+- `app/catalog_matching.py` — deterministic PyICU/CyrTranslit/RapidFuzz
+  suggestions for provisional catalog names; it never applies a merge.
 
 ## Develop
 
@@ -57,7 +59,9 @@ source of truth. The worker keeps the long-lived Postgres connection in
 autocommit mode and uses explicit transactions for claim/done/failed state
 changes, so per-job read queries cannot trap status updates in an uncommitted
 outer transaction. It also reclaims stale `processing` rows after
-`WORKER_VT_SECONDS`; job handlers must remain idempotent.
+`WORKER_VT_SECONDS`; catalog matching uses the longer bounded
+`CATALOG_MATCH_WORKER_VT_SECONDS` lease because it scores a larger deterministic
+candidate set. Job handlers must remain idempotent.
 
 Production runtime is intentionally separate from the local Apple Container
 smoke. On the current DigitalOcean Linux worker droplet, Docker Compose remains
@@ -74,11 +78,28 @@ The catalog typeahead rebuild job uses payload `{ "kind":
 `created_by_user_id`, so provisional user-added names stay out of global search
 until a later curation slice promotes them.
 
-Provisional user-added catalog names are not worker jobs. The internal curation
-surface reads `catalog_items` rows where `status = provisional`, `source =
-user_added`, and `created_by_user_id is not null` directly. If non-local
-environments contain historical `catalog_curation` rows, inspect them
-non-destructively first:
+Saving a provisional user-added catalog name also enqueues `{ "kind":
+"catalog_match_suggestions_refresh", "sourceCatalogItemId": "..." }`. The
+worker compares only that still-provisional row with ownerless
+`seeded`/`confirmed` names of the same catalog kind, then writes pending scored
+evidence or an explicit no-safe-match row to `catalog_match_suggestions`. The
+candidate query is deterministically ordered and fails closed above 100,000
+rows; it never persists a partial ranking. The payload has a database-enforced
+exact shape and contains no user id, journal text, media data, or location.
+Evidence schema `ove158.catalogMatchEvidence.v2` omits the raw gardener source
+name and is checked against the relational score, reason, locale/script, target,
+kind, count, and threshold columns. The curation surface still reads provisional
+`catalog_items` directly, so worker downtime does not block a gardener save or
+hide the candidate. Operators can enqueue a bounded per-candidate refresh from
+`/garden/catalog/curation`.
+
+An idempotent rescan does not reset an actively processing row. It marks
+`rerun_requested`, preserves the current lock, and lets the claim-token-scoped
+completion return the job to `pending`. This prevents a concurrent refresh from
+being overwritten by an older worker completion.
+
+If non-local environments contain historical `catalog_curation` rows, inspect
+them non-destructively first:
 
 ```sql
 select queue_name, status, count(*)
@@ -91,6 +112,8 @@ Do not bulk-delete orphan queue rows without maintainer approval. The safe
 cleanup plan is: record counts by status, confirm no worker claims
 `catalog_curation`, confirm provisional rows are visible through
 `/garden/catalog/curation`, then run an approved one-off maintenance cleanup.
+That historical job kind is unrelated to the consumed
+`catalog_match_suggestions_refresh` contract.
 
 Public journal publishing uses `{ "kind": "journal_entry_index",
 "journalEntryId": "...", "userId": "..." }` and archiving uses `{ "kind":
@@ -105,13 +128,21 @@ with `last_error`; they must not be marked done silently.
 `tests/test_worker_recovery.py` is the durability proof for the pilot journal
 search path (OVE-39). It runs with `uv run --frozen pytest` and needs no live
 services. It proves that a `processing` row is reclaimed only after the
-visibility timeout, that `journal_entry_index`/`journal_entry_unindex` reach
+visibility timeout, that catalog matching receives its longer bounded lease,
+that an in-flight catalog rescan is not swallowed, that
+`journal_entry_index`/`journal_entry_unindex` reach
 `done` after a simulated worker restart, that the public-safe document contract
 holds, that at-least-once re-delivery is idempotent, and that a transient
 Meilisearch outage fails-then-recovers. Run the worker droplet containers with a
 Docker Compose restart policy so the process returns automatically after a crash
 or reboot. This production instruction is not a local Docker Desktop
 prerequisite.
+
+`tests/test_catalog_matching.py` separately proves deterministic exact,
+transliteration, fuzzy, no-safe-match, stale-evidence, idempotent-upsert, and
+privacy-safe evidence behavior without changing canonical catalog or garden
+records. Thresholds are provisional pilot guardrails documented in
+`docs/CATALOG_MATCH_SUGGESTION_QUEUE.md`, not validated automation thresholds.
 
 ## Local Apple Container smoke
 
@@ -121,7 +152,7 @@ the matching-tier regression smoke is:
 ```bash
 cd services/matching
 container build -t overgarden/matching:local .
-uv run python -m py_compile app/main.py app/search.py app/worker.py
+uv run python -m py_compile app/catalog_matching.py app/main.py app/search.py app/worker.py
 uv run --frozen pytest
 MEILISEARCH_HOST='http://localhost:7700' \
   MEILISEARCH_API_KEY='local_dev_meili_master_key_change_me_1234567890' \

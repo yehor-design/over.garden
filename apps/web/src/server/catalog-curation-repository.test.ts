@@ -17,9 +17,11 @@ import { scopedToUser } from "@/server/request-scope";
 import {
   buildConfirmCatalogCurationCandidateQuery,
   buildMergeCatalogCurationCandidateQuery,
+  buildPendingCatalogMatchSuggestionsQuery,
   buildPendingCatalogCurationCandidatesQuery,
   buildPublicEntrySlugsForCatalogCandidateQuery,
   buildRejectCatalogCurationCandidateQuery,
+  buildStaleCatalogMatchSuggestionsQuery,
   buildUpdateObjectsForConfirmedCatalogCandidateQuery,
   buildUpdateObjectsForMergedCatalogCandidateQuery,
 } from "./catalog-curation-repository";
@@ -88,6 +90,62 @@ describe("catalog curation repository query contracts", () => {
     expect(compiled.sql).toContain("order by bool_or");
     expect(compiled.sql).toContain('"catalog_items"."created_at" asc');
     expect(JSON.stringify(compiled.parameters)).not.toContain("00000000");
+  });
+
+  it("reads only pending deterministic match evidence for provisional user names", () => {
+    const compiled = buildPendingCatalogMatchSuggestionsQuery(testDb, [
+      "00000000-0000-4000-8000-000000000201",
+    ]).compile();
+
+    expect(compiled.sql).toContain('from "catalog_match_suggestions"');
+    expect(compiled.sql).toContain(
+      'inner join "catalog_items" as "source_items"',
+    );
+    expect(compiled.sql).toContain(
+      'left join "catalog_items" as "target_items"',
+    );
+    expect(compiled.sql).toContain('"catalog_match_suggestions"."status" = $2');
+    expect(compiled.sql).toContain('"source_items"."status" = $3');
+    expect(compiled.sql).toContain('"source_items"."source" = $4');
+    expect(compiled.sql).toContain(
+      '"source_items"."created_by_user_id" is not null',
+    );
+    expect(compiled.sql).toContain(
+      '"target_items"."created_by_user_id" is null',
+    );
+    expect(compiled.sql).not.toContain("safe_evidence");
+    for (const forbidden of [
+      "journal_entries",
+      "owner_user_id",
+      "email",
+      "raw_payload",
+      "source_record_id",
+      "media_assets",
+      "latitude",
+      "longitude",
+    ]) {
+      expect(compiled.sql).not.toContain(forbidden);
+    }
+  });
+
+  it("marks only unresolved suggestions stale after a manual catalog decision", () => {
+    const now = new Date("2026-07-14T12:00:00.000Z");
+    const compiled = buildStaleCatalogMatchSuggestionsQuery(
+      testDb,
+      "00000000-0000-4000-8000-000000000201",
+      now,
+    ).compile();
+
+    expect(compiled.sql).toContain('update "catalog_match_suggestions"');
+    expect(compiled.sql).toContain('"status" = $1');
+    expect(compiled.sql).toContain('"source_catalog_item_id" = $3');
+    expect(compiled.sql).toContain('"status" = $4');
+    expect(compiled.parameters).toEqual([
+      "stale",
+      now,
+      "00000000-0000-4000-8000-000000000201",
+      "pending",
+    ]);
   });
 
   it("confirms a provisional candidate into global catalog eligibility", () => {

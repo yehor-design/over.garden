@@ -34,6 +34,10 @@ const DEFAULT_USER_ADDED_LOCALE = "und";
 const MATCHING_QUEUE = "matching";
 const CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex";
 const CATALOG_TYPEAHEAD_REINDEX_IDEMPOTENCY_KEY = "catalog-typeahead-reindex";
+export const CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND =
+  "catalog_match_suggestions_refresh";
+const CATALOG_MATCH_SUGGESTIONS_IDEMPOTENCY_PREFIX =
+  "catalog-match-suggestions:";
 
 export const SELECTABLE_CATALOG_STATUSES = ["seeded", "confirmed"] as const;
 
@@ -283,9 +287,10 @@ export async function createUserAddedCatalogCandidate(
     normalizedName,
     locale,
   }).execute();
-
-  // Curation reads provisional `catalog_items` directly; no worker consumes a
-  // provisional catalog job, so this path must not enqueue background work.
+  await buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+    executor,
+    item.id,
+  ).executeTakeFirst();
 
   return {
     id: item.id,
@@ -519,6 +524,49 @@ export function buildEnqueueCatalogTypeaheadReindexJobQuery(
         .where("idempotency_key", "is not", null)
         .doUpdateSet({
           updated_at: new Date(),
+        }),
+    )
+    .returningAll();
+}
+
+export function buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+  executor: QueryExecutor,
+  sourceCatalogItemId: string,
+) {
+  const payload = {
+    kind: CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
+    sourceCatalogItemId,
+  } satisfies JsonValue;
+  const now = new Date();
+
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: MATCHING_QUEUE,
+      payload,
+      idempotency_key: `${CATALOG_MATCH_SUGGESTIONS_IDEMPOTENCY_PREFIX}${sourceCatalogItemId}`,
+    })
+    .onConflict((oc) =>
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doUpdateSet({
+          status: sql<string>`case
+            when job_queue.status = 'processing' then job_queue.status
+            else 'pending'
+          end`,
+          available_at: now,
+          locked_at: sql<Date | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_at
+            else null
+          end`,
+          locked_by: sql<string | null>`case
+            when job_queue.status = 'processing' then job_queue.locked_by
+            else null
+          end`,
+          rerun_requested: sql<boolean>`(job_queue.status = 'processing')`,
+          last_error: null,
+          updated_at: now,
         }),
     )
     .returningAll();

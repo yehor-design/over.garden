@@ -3,11 +3,18 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
-import type { CatalogItem, Database } from "@/db/schema";
+import type {
+  CatalogItem,
+  CatalogKind,
+  CatalogMatchConfidenceBucket,
+  CatalogMatchType,
+  Database,
+} from "@/db/schema";
 import { createCatalogPublicSlug } from "@/lib/garden/public-paths";
 import { CLOSED_PILOT_COHORT } from "@/lib/garden/pilot-invite";
 import {
   buildEnqueueCatalogTypeaheadReindexJobQuery,
+  buildEnqueueCatalogMatchSuggestionsRefreshJobQuery,
   findSelectableCatalogItem,
   normalizeCatalogItemId,
 } from "@/server/catalog-repository";
@@ -23,6 +30,7 @@ export interface CatalogCurationCandidate {
   id: string;
   displayName: string;
   normalizedName: string | null;
+  catalogKind: CatalogKind;
   locale: string;
   status: "provisional";
   source: string;
@@ -30,6 +38,27 @@ export interface CatalogCurationCandidate {
   affectedObjectCount: number;
   pilotOrigin: boolean;
   invitedPilotUserCount: number;
+  matchSuggestions: CatalogMatchSuggestionReadModel[];
+}
+
+export interface CatalogMatchSuggestionReadModel {
+  id: string;
+  targetCatalogItemId: string | null;
+  targetDisplayName: string | null;
+  targetCanonicalName: string | null;
+  catalogKind: CatalogKind;
+  score: number;
+  confidenceBucket: CatalogMatchConfidenceBucket;
+  matchType: CatalogMatchType;
+  reasonCodes: string[];
+  normalizedInput: string;
+  matchedName: string | null;
+  sourceLocale: string;
+  targetLocale: string | null;
+  sourceScript: string;
+  targetScript: string | null;
+  status: "pending";
+  generatedAt: Date | string;
 }
 
 export interface CatalogCurationDecisionInput {
@@ -53,11 +82,49 @@ export async function listPendingCatalogCurationCandidates(
     db,
     limit,
   ).execute();
+  const candidateIds = rows.map((row) => row.id);
+  const suggestionRows =
+    candidateIds.length > 0
+      ? await buildPendingCatalogMatchSuggestionsQuery(
+          db,
+          candidateIds,
+        ).execute()
+      : [];
+  const suggestionsByCandidate = new Map<
+    string,
+    CatalogMatchSuggestionReadModel[]
+  >();
+
+  for (const row of suggestionRows) {
+    const suggestions =
+      suggestionsByCandidate.get(row.sourceCatalogItemId) ?? [];
+    suggestions.push({
+      id: row.id,
+      targetCatalogItemId: row.targetCatalogItemId,
+      targetDisplayName: row.matchedName,
+      targetCanonicalName: row.targetCanonicalName,
+      catalogKind: row.catalogKind as CatalogKind,
+      score: Number(row.score),
+      confidenceBucket: row.confidenceBucket as CatalogMatchConfidenceBucket,
+      matchType: row.matchType as CatalogMatchType,
+      reasonCodes: row.reasonCodes,
+      normalizedInput: row.normalizedInput,
+      matchedName: row.matchedName,
+      sourceLocale: row.sourceLocale,
+      targetLocale: row.targetLocale,
+      sourceScript: row.sourceScript,
+      targetScript: row.targetScript,
+      status: "pending",
+      generatedAt: row.generatedAt,
+    });
+    suggestionsByCandidate.set(row.sourceCatalogItemId, suggestions);
+  }
 
   return rows.map((row) => ({
     id: row.id,
     displayName: row.displayName,
     normalizedName: row.normalizedName,
+    catalogKind: row.catalogKind as CatalogKind,
     locale: row.locale,
     status: "provisional",
     source: row.source,
@@ -65,7 +132,23 @@ export async function listPendingCatalogCurationCandidates(
     affectedObjectCount: Number(row.affectedObjectCount),
     pilotOrigin: Boolean(row.pilotOrigin),
     invitedPilotUserCount: Number(row.invitedPilotUserCount),
+    matchSuggestions: suggestionsByCandidate.get(row.id) ?? [],
   }));
+}
+
+export async function enqueueCatalogMatchSuggestionsRefresh(
+  input: CatalogCurationDecisionInput,
+) {
+  const candidateId = normalizeCurationCandidateId(input.candidateId);
+
+  return db.transaction().execute(async (trx) => {
+    await requirePendingCatalogCurationCandidate(trx, candidateId);
+    await buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+      trx,
+      candidateId,
+    ).executeTakeFirst();
+    return { candidateId };
+  });
 }
 
 export async function confirmCatalogCurationCandidate(
@@ -105,6 +188,11 @@ export async function confirmCatalogCurationCandidate(
         now,
       }).execute();
 
+    await buildStaleCatalogMatchSuggestionsQuery(
+      trx,
+      candidateId,
+      now,
+    ).execute();
     await buildEnqueueCatalogTypeaheadReindexJobQuery(trx).executeTakeFirst();
 
     return {
@@ -163,6 +251,11 @@ export async function mergeCatalogCurationCandidate(
       },
     ).executeTakeFirstOrThrow();
 
+    await buildStaleCatalogMatchSuggestionsQuery(
+      trx,
+      candidateId,
+      now,
+    ).execute();
     await buildEnqueueCatalogTypeaheadReindexJobQuery(trx).executeTakeFirst();
 
     return {
@@ -191,6 +284,11 @@ export async function rejectCatalogCurationCandidate(
       },
     ).executeTakeFirstOrThrow();
 
+    await buildStaleCatalogMatchSuggestionsQuery(
+      trx,
+      candidateId,
+      now,
+    ).execute();
     await buildEnqueueCatalogTypeaheadReindexJobQuery(trx).executeTakeFirst();
 
     return {
@@ -236,6 +334,7 @@ export function buildPendingCatalogCurationCandidatesQuery(
       "catalog_items.id as id",
       "catalog_items.canonical_name as displayName",
       "catalog_items.normalized_name as normalizedName",
+      "catalog_items.catalog_kind as catalogKind",
       "catalog_items.locale as locale",
       "catalog_items.source as source",
       "catalog_items.created_at as createdAt",
@@ -255,6 +354,7 @@ export function buildPendingCatalogCurationCandidatesQuery(
       "catalog_items.id",
       "catalog_items.canonical_name",
       "catalog_items.normalized_name",
+      "catalog_items.catalog_kind",
       "catalog_items.locale",
       "catalog_items.source",
       "catalog_items.created_at",
@@ -275,6 +375,69 @@ export function buildPendingCatalogCurationCandidateByIdQuery(
     .where("status", "=", "provisional")
     .where("source", "=", "user_added")
     .where("created_by_user_id", "is not", null);
+}
+
+export function buildPendingCatalogMatchSuggestionsQuery(
+  executor: QueryExecutor,
+  candidateIds: string[],
+) {
+  return executor
+    .selectFrom("catalog_match_suggestions")
+    .innerJoin(
+      "catalog_items as source_items",
+      "source_items.id",
+      "catalog_match_suggestions.source_catalog_item_id",
+    )
+    .leftJoin(
+      "catalog_items as target_items",
+      "target_items.id",
+      "catalog_match_suggestions.target_catalog_item_id",
+    )
+    .select([
+      "catalog_match_suggestions.id as id",
+      "catalog_match_suggestions.source_catalog_item_id as sourceCatalogItemId",
+      "catalog_match_suggestions.target_catalog_item_id as targetCatalogItemId",
+      "target_items.canonical_name as targetCanonicalName",
+      "catalog_match_suggestions.catalog_kind as catalogKind",
+      "catalog_match_suggestions.score as score",
+      "catalog_match_suggestions.confidence_bucket as confidenceBucket",
+      "catalog_match_suggestions.match_type as matchType",
+      "catalog_match_suggestions.reason_codes as reasonCodes",
+      "catalog_match_suggestions.normalized_input as normalizedInput",
+      "catalog_match_suggestions.matched_name as matchedName",
+      "catalog_match_suggestions.source_locale as sourceLocale",
+      "catalog_match_suggestions.target_locale as targetLocale",
+      "catalog_match_suggestions.source_script as sourceScript",
+      "catalog_match_suggestions.target_script as targetScript",
+      "catalog_match_suggestions.status as status",
+      "catalog_match_suggestions.generated_at as generatedAt",
+    ])
+    .where(
+      "catalog_match_suggestions.source_catalog_item_id",
+      "in",
+      candidateIds,
+    )
+    .where("catalog_match_suggestions.status", "=", "pending")
+    .where("source_items.status", "=", "provisional")
+    .where("source_items.source", "=", "user_added")
+    .where("source_items.created_by_user_id", "is not", null)
+    .where((eb) =>
+      eb.or([
+        eb("catalog_match_suggestions.target_catalog_item_id", "is", null),
+        eb.and([
+          eb("target_items.status", "in", ["seeded", "confirmed"]),
+          eb("target_items.created_by_user_id", "is", null),
+          eb(
+            "target_items.catalog_kind",
+            "=",
+            eb.ref("source_items.catalog_kind"),
+          ),
+        ]),
+      ]),
+    )
+    .orderBy("catalog_match_suggestions.source_catalog_item_id", "asc")
+    .orderBy("catalog_match_suggestions.score", "desc")
+    .orderBy("target_items.canonical_name", "asc");
 }
 
 export function buildConfirmCatalogCurationCandidateQuery(
@@ -352,6 +515,21 @@ export function buildRejectCatalogCurationCandidateQuery(
     .where("source", "=", "user_added")
     .where("created_by_user_id", "is not", null)
     .returningAll();
+}
+
+export function buildStaleCatalogMatchSuggestionsQuery(
+  executor: QueryExecutor,
+  candidateId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      status: "stale",
+      updated_at: now,
+    })
+    .where("source_catalog_item_id", "=", candidateId)
+    .where("status", "=", "pending");
 }
 
 export function buildUpdateObjectsForConfirmedCatalogCandidateQuery(

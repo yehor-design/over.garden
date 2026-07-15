@@ -190,6 +190,7 @@ class FakeQueueConnection:
                 "available_at": self.now,
                 "locked_at": None,
                 "locked_by": None,
+                "rerun_requested": False,
                 "attempts": 0,
                 "last_error": None,
                 "created_at": self.now,
@@ -197,6 +198,19 @@ class FakeQueueConnection:
             }
         )
         return job_id
+
+    def request_rerun(self, job_id: str) -> None:
+        row = self.job(job_id)
+        if row["status"] == "processing":
+            row["rerun_requested"] = True
+        else:
+            row.update(
+                status="pending",
+                locked_at=None,
+                locked_by=None,
+                rerun_requested=False,
+                available_at=self.now,
+            )
 
     def job(self, job_id: str) -> dict[str, Any]:
         for row in self.jobs:
@@ -212,9 +226,7 @@ class FakeQueueConnection:
             return _FakeCursor(self._claim_due(params))
         if sql is search.JOURNAL_ENTRY_SEARCH_ROW_SQL:
             journal_entry_id, owner_user_id = params
-            return _FakeCursor(
-                self.journal_rows.get((journal_entry_id, owner_user_id))
-            )
+            return _FakeCursor(self.journal_rows.get((journal_entry_id, owner_user_id)))
         if sql is search.JOURNAL_ENTRY_OWNER_SQL:
             journal_entry_id, owner_user_id = params
             owns = self.owner_rows.get((journal_entry_id, owner_user_id), False)
@@ -222,34 +234,50 @@ class FakeQueueConnection:
 
         normalized = " ".join(sql.split()).lower()
         if "set status = 'processing'" in normalized:
-            locked_by, job_id = params
+            claim_token, job_id = params
             row = self.job(job_id)
             row.update(
                 status="processing",
                 locked_at=self.now,
-                locked_by=locked_by,
+                locked_by=claim_token,
+                rerun_requested=False,
                 attempts=row["attempts"] + 1,
             )
             return _FakeCursor(None)
-        if "set status = 'done'" in normalized:
-            (job_id,) = params
-            self.job(job_id).update(status="done", locked_at=None, locked_by=None)
+        if "case when rerun_requested then 'pending' else 'done' end" in normalized:
+            job_id, claim_token = params
+            row = self.job(job_id)
+            if row["status"] == "processing" and row["locked_by"] == claim_token:
+                row.update(
+                    status="pending" if row["rerun_requested"] else "done",
+                    available_at=self.now
+                    if row["rerun_requested"]
+                    else row["available_at"],
+                    locked_at=None,
+                    locked_by=None,
+                    rerun_requested=False,
+                )
             return _FakeCursor(None)
-        if "set status = 'failed'" in normalized:
-            error, vt_seconds, job_id = params
-            self.job(job_id).update(
-                status="failed",
-                locked_at=None,
-                locked_by=None,
-                last_error=error,
-                available_at=self.now + timedelta(seconds=int(vt_seconds)),
-            )
+        if "case when rerun_requested then 'pending' else 'failed' end" in normalized:
+            vt_seconds, error, job_id, claim_token = params
+            row = self.job(job_id)
+            if row["status"] == "processing" and row["locked_by"] == claim_token:
+                row.update(
+                    status="pending" if row["rerun_requested"] else "failed",
+                    locked_at=None,
+                    locked_by=None,
+                    rerun_requested=False,
+                    last_error=error,
+                    available_at=self.now
+                    if row["rerun_requested"]
+                    else self.now + timedelta(seconds=int(vt_seconds)),
+                )
             return _FakeCursor(None)
 
         raise AssertionError(f"unexpected SQL in fake connection: {normalized[:80]}")
 
     def _claim_due(self, params: tuple[Any, ...]) -> dict[str, Any] | None:
-        queue_name, vt_seconds = params[0], int(params[1])
+        queue_name, catalog_vt_seconds, default_vt_seconds = params
         now = self.now
 
         def is_due(row: dict[str, Any]) -> bool:
@@ -260,7 +288,14 @@ class FakeQueueConnection:
             if (
                 row["status"] == "processing"
                 and row["locked_at"] is not None
-                and row["locked_at"] <= now - timedelta(seconds=vt_seconds)
+                and row["locked_at"]
+                <= now
+                - timedelta(
+                    seconds=int(catalog_vt_seconds)
+                    if row["payload"].get("kind")
+                    == worker.CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND
+                    else int(default_vt_seconds)
+                )
             ):
                 return True
             return False
@@ -283,7 +318,8 @@ def test_claim_sql_predicate_matches_recovery_model():
     assert "status in ('pending', 'failed') and available_at <= now()" in normalized
     # Stale processing rows are reclaimed after the visibility timeout interval.
     assert "status = 'processing'" in normalized
-    assert "locked_at <= now() - (%s || ' seconds')::interval" in normalized
+    assert "catalog_match_suggestions_refresh" in normalized
+    assert "else %s" in normalized
     # Concurrent workers never claim the same row.
     assert "for update skip locked" in normalized
 
@@ -311,6 +347,56 @@ def test_claim_reclaims_only_stale_processing_jobs(clock):
     reclaimed = worker._claim(conn)
     assert reclaimed is not None and reclaimed["id"] == pending_due
     assert conn.job(pending_due)["attempts"] == 2
+
+
+def test_catalog_match_job_uses_the_longer_bounded_visibility_lease(clock):
+    conn = FakeQueueConnection(clock)
+    job_id = conn.enqueue(
+        {
+            "kind": "catalog_match_suggestions_refresh",
+            "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
+        }
+    )
+
+    assert worker._claim(conn) is not None
+    clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
+    assert worker._claim(conn) is None
+
+    clock["now"] += timedelta(
+        seconds=worker.CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS
+        - worker.VISIBILITY_TIMEOUT_SECONDS
+    )
+    reclaimed = worker._claim(conn)
+    assert reclaimed is not None and reclaimed["id"] == job_id
+
+
+def test_rescan_during_processing_is_requeued_and_old_claim_cannot_finish_new_run(
+    clock,
+):
+    conn = FakeQueueConnection(clock)
+    job_id = conn.enqueue(
+        {
+            "kind": "catalog_match_suggestions_refresh",
+            "sourceCatalogItemId": "00000000-0000-4000-8000-000000000201",
+        }
+    )
+
+    first_claim = worker._claim(conn)
+    assert first_claim is not None
+    conn.request_rerun(job_id)
+
+    worker._mark_done(conn, job_id, first_claim["claimToken"])
+    assert conn.job(job_id)["status"] == "pending"
+
+    second_claim = worker._claim(conn)
+    assert second_claim is not None
+    assert second_claim["claimToken"] != first_claim["claimToken"]
+
+    worker._mark_done(conn, job_id, first_claim["claimToken"])
+    assert conn.job(job_id)["status"] == "processing"
+
+    worker._mark_done(conn, job_id, second_claim["claimToken"])
+    assert conn.job(job_id)["status"] == "done"
 
 
 def test_pending_job_not_claimed_before_available_at(clock):
@@ -356,7 +442,7 @@ def test_journal_index_job_recovers_after_restart_and_stays_public_safe(
     assert conn.job(job_id)["attempts"] == 2
 
     worker._handle(conn, claimed_b["payload"])
-    worker._mark_done(conn, claimed_b["id"])
+    worker._mark_done(conn, claimed_b["id"], claimed_b["claimToken"])
     assert conn.job(job_id)["status"] == "done"
 
     index = fake_meili.index(search.PUBLIC_JOURNAL_ENTRIES_INDEX)
@@ -425,7 +511,7 @@ def test_journal_unindex_job_recovers_after_restart_and_is_idempotent(
     assert reclaimed is not None and reclaimed["id"] == job_id
 
     worker._handle(conn, reclaimed["payload"])
-    worker._mark_done(conn, reclaimed["id"])
+    worker._mark_done(conn, reclaimed["id"], reclaimed["claimToken"])
 
     index = fake_meili.index(search.PUBLIC_JOURNAL_ENTRIES_INDEX)
     assert ENTRY_ID not in index.documents
@@ -436,9 +522,7 @@ def test_journal_unindex_job_recovers_after_restart_and_is_idempotent(
     assert ENTRY_ID not in index.documents
 
 
-def test_index_job_fails_then_recovers_when_search_backend_returns(
-    clock, monkeypatch
-):
+def test_index_job_fails_then_recovers_when_search_backend_returns(clock, monkeypatch):
     failing_meili = FailingMeiliClient()
     monkeypatch.setattr(search, "client", lambda: failing_meili)
 
@@ -461,9 +545,14 @@ def test_index_job_fails_then_recovers_when_search_backend_returns(
     try:
         worker._handle(conn, claimed["payload"])
     except Exception as error:  # mirrors run()'s try/except -> _mark_failed
-        worker._mark_failed(conn, claimed["id"], str(error))
+        worker._mark_failed(
+            conn,
+            claimed["id"],
+            claimed["claimToken"],
+            str(error),
+        )
     else:  # pragma: no cover - the backend is down on the first attempt
-        worker._mark_done(conn, claimed["id"])
+        worker._mark_done(conn, claimed["id"], claimed["claimToken"])
 
     assert conn.job(job_id)["status"] == "failed"
     assert worker._claim(conn) is None  # backoff window respected
@@ -475,7 +564,7 @@ def test_index_job_fails_then_recovers_when_search_backend_returns(
     assert retried is not None and retried["id"] == job_id
 
     worker._handle(conn, retried["payload"])
-    worker._mark_done(conn, retried["id"])
+    worker._mark_done(conn, retried["id"], retried["claimToken"])
 
     index = failing_meili.index(search.PUBLIC_JOURNAL_ENTRIES_INDEX)
     assert set(index.documents.keys()) == {ENTRY_ID}

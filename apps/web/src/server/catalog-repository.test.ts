@@ -17,6 +17,7 @@ import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
+  buildEnqueueCatalogMatchSuggestionsRefreshJobQuery,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildFindUserAddedCatalogItemQuery,
   buildCatalogTypeaheadQuery,
@@ -540,5 +541,50 @@ describe("catalog repository query contracts", () => {
       "catalog-typeahead-reindex",
       expect.any(Date),
     ]);
+  });
+
+  it("enqueues a privacy-safe deterministic match refresh for a provisional id", () => {
+    const compiled = buildEnqueueCatalogMatchSuggestionsRefreshJobQuery(
+      testDb,
+      "00000000-0000-4000-8000-000000000201",
+    ).compile();
+    const normalizedSql = compiled.sql.replace(/\s+/g, " ");
+
+    expect(compiled.sql).toContain('insert into "job_queue"');
+    expect(compiled.sql).toContain(
+      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
+    );
+    expect(normalizedSql).toContain(
+      "case when job_queue.status = 'processing' then job_queue.status else 'pending' end",
+    );
+    expect(normalizedSql).toContain(
+      "\"rerun_requested\" = (job_queue.status = 'processing')",
+    );
+    expect(normalizedSql).toContain(
+      "case when job_queue.status = 'processing' then job_queue.locked_at else null end",
+    );
+    expect(compiled.parameters).toEqual([
+      "matching",
+      {
+        kind: "catalog_match_suggestions_refresh",
+        sourceCatalogItemId: "00000000-0000-4000-8000-000000000201",
+      },
+      "catalog-match-suggestions:00000000-0000-4000-8000-000000000201",
+      expect.any(Date),
+      null,
+      expect.any(Date),
+    ]);
+    const serialized = JSON.stringify(compiled.parameters).toLowerCase();
+    for (const forbidden of [
+      "owner",
+      "journal",
+      "email",
+      "media",
+      "latitude",
+      "longitude",
+      "raw_payload",
+    ]) {
+      expect(serialized).not.toContain(forbidden);
+    }
   });
 });

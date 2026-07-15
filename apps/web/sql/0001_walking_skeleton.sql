@@ -731,6 +731,330 @@ create unique index if not exists catalog_item_names_item_normalized_locale_uidx
 create index if not exists catalog_item_names_normalized_idx
   on catalog_item_names (normalized_name);
 
+-- Deterministic canonical-match suggestions for provisional user names
+-- (OVE-158). The Python worker owns scoring; this table is operator evidence
+-- only and never changes catalog_items, plant_objects, journal entries, public
+-- projections, or search documents by itself. safe_evidence has a closed key
+-- set so private/request/source-ingestion fields cannot drift into the queue.
+create table if not exists catalog_match_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  source_catalog_item_id uuid not null references catalog_items(id) on delete cascade,
+  target_catalog_item_id uuid references catalog_items(id) on delete cascade,
+  candidate_key text not null check (char_length(candidate_key) between 1 and 80),
+  suggestion_kind text not null default 'canonical_match' check (suggestion_kind = 'canonical_match'),
+  match_type text not null check (
+    match_type in ('normalized_exact', 'transliteration_exact', 'fuzzy_name', 'no_safe_match')
+  ),
+  score smallint not null check (score between 0 and 100),
+  confidence_bucket text not null check (confidence_bucket in ('high', 'medium', 'low', 'none')),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected', 'stale')),
+  reason_codes text[] not null default array[]::text[] check (
+    reason_codes <@ array[
+      'normalized_exact',
+      'cyrtranslit_exact',
+      'rapidfuzz_name_similarity',
+      'cross_script_similarity',
+      'same_catalog_kind',
+      'below_safe_threshold',
+      'no_selectable_candidates',
+      'unmatchable_input'
+    ]::text[]
+  ),
+  normalized_input text not null check (char_length(normalized_input) between 1 and 120),
+  matched_name text check (matched_name is null or char_length(matched_name) between 1 and 120),
+  target_canonical_name text check (
+    target_canonical_name is null
+    or char_length(target_canonical_name) between 1 and 120
+  ),
+  source_locale text not null default 'und' check (char_length(source_locale) between 2 and 16),
+  target_locale text check (target_locale is null or char_length(target_locale) between 2 and 16),
+  source_script text not null check (source_script in ('cyrillic', 'latin', 'mixed', 'unknown')),
+  target_script text check (target_script is null or target_script in ('cyrillic', 'latin', 'mixed', 'unknown')),
+  catalog_kind text not null check (catalog_kind in ('plant_variety', 'species', 'breed')),
+  affected_object_count integer not null default 0 check (affected_object_count >= 0),
+  safe_evidence jsonb not null,
+  constraint catalog_match_suggestions_safe_evidence_check check (
+    jsonb_typeof(safe_evidence) = 'object'
+    and safe_evidence ?& array[
+      'schemaVersion',
+      'score',
+      'confidenceBucket',
+      'matchType',
+      'normalizedInput',
+      'candidateDisplayName',
+      'candidateCanonicalName',
+      'sourceLocale',
+      'targetLocale',
+      'sourceScript',
+      'targetScript',
+      'catalogKind',
+      'affectedObjectCount',
+      'reasonCodes',
+      'thresholds'
+    ]::text[]
+    and safe_evidence - array[
+      'schemaVersion',
+      'score',
+      'confidenceBucket',
+      'matchType',
+      'normalizedInput',
+      'candidateDisplayName',
+      'candidateCanonicalName',
+      'sourceLocale',
+      'targetLocale',
+      'sourceScript',
+      'targetScript',
+      'catalogKind',
+      'affectedObjectCount',
+      'reasonCodes',
+      'thresholds'
+    ]::text[] = '{}'::jsonb
+    and safe_evidence->'schemaVersion'
+      = '"ove158.catalogMatchEvidence.v2"'::jsonb
+    and safe_evidence->'score' = to_jsonb(score)
+    and safe_evidence->'confidenceBucket' = to_jsonb(confidence_bucket)
+    and safe_evidence->'matchType' = to_jsonb(match_type)
+    and safe_evidence->'normalizedInput' = to_jsonb(normalized_input)
+    and safe_evidence->'candidateDisplayName'
+      = coalesce(to_jsonb(matched_name), 'null'::jsonb)
+    and safe_evidence->'candidateCanonicalName'
+      = coalesce(to_jsonb(target_canonical_name), 'null'::jsonb)
+    and safe_evidence->'sourceLocale' = to_jsonb(source_locale)
+    and safe_evidence->'targetLocale'
+      = coalesce(to_jsonb(target_locale), 'null'::jsonb)
+    and safe_evidence->'sourceScript' = to_jsonb(source_script)
+    and safe_evidence->'targetScript'
+      = coalesce(to_jsonb(target_script), 'null'::jsonb)
+    and safe_evidence->'catalogKind' = to_jsonb(catalog_kind)
+    and safe_evidence->'affectedObjectCount' = to_jsonb(affected_object_count)
+    and safe_evidence->'reasonCodes' = to_jsonb(reason_codes)
+    and safe_evidence->'thresholds'
+      = '{"high": 95, "medium": 85, "low": 70}'::jsonb
+  ),
+  matcher_version text not null check (char_length(matcher_version) between 1 and 40),
+  generated_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by_user_id uuid,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint catalog_match_suggestions_source_target_check check (
+    (
+      match_type = 'no_safe_match'
+      and target_catalog_item_id is null
+      and candidate_key = 'no-safe-match'
+      and matched_name is null
+      and target_canonical_name is null
+      and target_locale is null
+      and target_script is null
+      and confidence_bucket = 'none'
+    )
+    or (
+      match_type <> 'no_safe_match'
+      and target_catalog_item_id is not null
+      and candidate_key = target_catalog_item_id::text
+      and matched_name is not null
+      and target_canonical_name is not null
+      and target_locale is not null
+      and target_script is not null
+      and confidence_bucket <> 'none'
+    )
+  ),
+  constraint catalog_match_suggestions_source_not_target_check check (
+    target_catalog_item_id is null or source_catalog_item_id <> target_catalog_item_id
+  ),
+  constraint catalog_match_suggestions_review_metadata_check check (
+    (
+      status in ('pending', 'stale')
+      and reviewed_at is null
+      and reviewed_by_user_id is null
+    )
+    or (
+      status in ('approved', 'rejected')
+      and reviewed_at is not null
+      and reviewed_by_user_id is not null
+    )
+  ),
+  constraint catalog_match_suggestions_source_candidate_kind_uidx unique (
+    source_catalog_item_id,
+    candidate_key,
+    suggestion_kind
+  )
+);
+
+alter table catalog_match_suggestions
+  add column if not exists reviewed_at timestamptz,
+  add column if not exists reviewed_by_user_id uuid,
+  add column if not exists target_canonical_name text;
+
+alter table catalog_match_suggestions
+  drop constraint if exists catalog_match_suggestions_safe_evidence_check,
+  drop constraint if exists catalog_match_suggestions_reason_codes_check,
+  drop constraint if exists catalog_match_suggestions_source_target_check,
+  drop constraint if exists catalog_match_suggestions_target_canonical_name_check;
+
+update catalog_match_suggestions as suggestions
+set target_canonical_name = targets.canonical_name
+from catalog_items as targets
+where suggestions.target_catalog_item_id = targets.id
+  and suggestions.target_canonical_name is null;
+
+-- Rewrite legacy v1 rows from the safe relational columns only. This removes
+-- the duplicated raw gardener-entered source name before the strict v2
+-- constraint is installed.
+update catalog_match_suggestions
+set
+  safe_evidence = jsonb_build_object(
+    'schemaVersion', 'ove158.catalogMatchEvidence.v2',
+    'score', score,
+    'confidenceBucket', confidence_bucket,
+    'matchType', match_type,
+    'normalizedInput', normalized_input,
+    'candidateDisplayName', matched_name,
+    'candidateCanonicalName', target_canonical_name,
+    'sourceLocale', source_locale,
+    'targetLocale', target_locale,
+    'sourceScript', source_script,
+    'targetScript', target_script,
+    'catalogKind', catalog_kind,
+    'affectedObjectCount', affected_object_count,
+    'reasonCodes', reason_codes,
+    'thresholds', jsonb_build_object('high', 95, 'medium', 85, 'low', 70)
+  ),
+  matcher_version = 'ove158-v2',
+  updated_at = now()
+where safe_evidence->>'schemaVersion' is distinct from 'ove158.catalogMatchEvidence.v2';
+
+alter table catalog_match_suggestions
+  add constraint catalog_match_suggestions_reason_codes_check check (
+    reason_codes <@ array[
+      'normalized_exact',
+      'cyrtranslit_exact',
+      'rapidfuzz_name_similarity',
+      'cross_script_similarity',
+      'same_catalog_kind',
+      'below_safe_threshold',
+      'no_selectable_candidates',
+      'unmatchable_input'
+    ]::text[]
+  ),
+  add constraint catalog_match_suggestions_target_canonical_name_check check (
+    target_canonical_name is null
+    or char_length(target_canonical_name) between 1 and 120
+  ),
+  add constraint catalog_match_suggestions_source_target_check check (
+    (
+      match_type = 'no_safe_match'
+      and target_catalog_item_id is null
+      and candidate_key = 'no-safe-match'
+      and matched_name is null
+      and target_canonical_name is null
+      and target_locale is null
+      and target_script is null
+      and confidence_bucket = 'none'
+    )
+    or (
+      match_type <> 'no_safe_match'
+      and target_catalog_item_id is not null
+      and candidate_key = target_catalog_item_id::text
+      and matched_name is not null
+      and target_canonical_name is not null
+      and target_locale is not null
+      and target_script is not null
+      and confidence_bucket <> 'none'
+    )
+  ),
+  add constraint catalog_match_suggestions_safe_evidence_check check (
+    jsonb_typeof(safe_evidence) = 'object'
+    and safe_evidence ?& array[
+      'schemaVersion',
+      'score',
+      'confidenceBucket',
+      'matchType',
+      'normalizedInput',
+      'candidateDisplayName',
+      'candidateCanonicalName',
+      'sourceLocale',
+      'targetLocale',
+      'sourceScript',
+      'targetScript',
+      'catalogKind',
+      'affectedObjectCount',
+      'reasonCodes',
+      'thresholds'
+    ]::text[]
+    and safe_evidence - array[
+      'schemaVersion',
+      'score',
+      'confidenceBucket',
+      'matchType',
+      'normalizedInput',
+      'candidateDisplayName',
+      'candidateCanonicalName',
+      'sourceLocale',
+      'targetLocale',
+      'sourceScript',
+      'targetScript',
+      'catalogKind',
+      'affectedObjectCount',
+      'reasonCodes',
+      'thresholds'
+    ]::text[] = '{}'::jsonb
+    and safe_evidence->'schemaVersion'
+      = '"ove158.catalogMatchEvidence.v2"'::jsonb
+    and safe_evidence->'score' = to_jsonb(score)
+    and safe_evidence->'confidenceBucket' = to_jsonb(confidence_bucket)
+    and safe_evidence->'matchType' = to_jsonb(match_type)
+    and safe_evidence->'normalizedInput' = to_jsonb(normalized_input)
+    and safe_evidence->'candidateDisplayName'
+      = coalesce(to_jsonb(matched_name), 'null'::jsonb)
+    and safe_evidence->'candidateCanonicalName'
+      = coalesce(to_jsonb(target_canonical_name), 'null'::jsonb)
+    and safe_evidence->'sourceLocale' = to_jsonb(source_locale)
+    and safe_evidence->'targetLocale'
+      = coalesce(to_jsonb(target_locale), 'null'::jsonb)
+    and safe_evidence->'sourceScript' = to_jsonb(source_script)
+    and safe_evidence->'targetScript'
+      = coalesce(to_jsonb(target_script), 'null'::jsonb)
+    and safe_evidence->'catalogKind' = to_jsonb(catalog_kind)
+    and safe_evidence->'affectedObjectCount' = to_jsonb(affected_object_count)
+    and safe_evidence->'reasonCodes' = to_jsonb(reason_codes)
+    and safe_evidence->'thresholds'
+      = '{"high": 95, "medium": 85, "low": 70}'::jsonb
+  );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'catalog_match_suggestions_review_metadata_check'
+      and conrelid = 'catalog_match_suggestions'::regclass
+  ) then
+    alter table catalog_match_suggestions
+      add constraint catalog_match_suggestions_review_metadata_check
+      check (
+        (
+          status in ('pending', 'stale')
+          and reviewed_at is null
+          and reviewed_by_user_id is null
+        )
+        or (
+          status in ('approved', 'rejected')
+          and reviewed_at is not null
+          and reviewed_by_user_id is not null
+        )
+      );
+  end if;
+
+end $$;
+
+create index if not exists catalog_match_suggestions_source_status_score_idx
+  on catalog_match_suggestions (source_catalog_item_id, status, score desc, generated_at desc);
+
+create index if not exists catalog_match_suggestions_target_status_idx
+  on catalog_match_suggestions (target_catalog_item_id, status)
+  where target_catalog_item_id is not null;
+
 -- Personal planning shelf (OVE-136). Wishlist rows intentionally store only a
 -- signed-in owner, a reusable catalog item, bounded source-surface metadata,
 -- and timestamps. They are not journal entries and never store garden object
@@ -3245,11 +3569,35 @@ create table if not exists job_queue (
   available_at timestamptz not null default now(),
   locked_at timestamptz,
   locked_by text,
+  rerun_requested boolean not null default false,
   attempts integer not null default 0,
   last_error text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table job_queue
+  add column if not exists rerun_requested boolean not null default false;
+
+alter table job_queue
+  drop constraint if exists job_queue_catalog_match_payload_check;
+
+alter table job_queue
+  add constraint job_queue_catalog_match_payload_check check (
+    not (
+      jsonb_typeof(payload) = 'object'
+      and payload->>'kind' = 'catalog_match_suggestions_refresh'
+    )
+    or (
+      jsonb_typeof(payload) = 'object'
+      and payload ?& array['kind', 'sourceCatalogItemId']::text[]
+      and payload - array['kind', 'sourceCatalogItemId']::text[] = '{}'::jsonb
+      and jsonb_typeof(payload->'kind') = 'string'
+      and jsonb_typeof(payload->'sourceCatalogItemId') = 'string'
+      and payload->>'kind' = 'catalog_match_suggestions_refresh'
+      and payload->>'sourceCatalogItemId' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    )
+  );
 
 create unique index if not exists job_queue_idempotency_key_uidx
   on job_queue (idempotency_key)

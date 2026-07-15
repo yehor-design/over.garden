@@ -14,7 +14,7 @@ export function CatalogSourceProvenanceList({
   provenanceRows,
 }: CatalogSourceProvenanceListProps) {
   return (
-    <section className="grid gap-4 border-b border-border pb-6">
+    <section className="grid min-w-0 gap-4 border-b border-border pb-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
           Imported source provenance
@@ -27,9 +27,12 @@ export function CatalogSourceProvenanceList({
       </div>
 
       {provenanceRows.length > 0 ? (
-        <ol className="grid gap-4">
+        <ol className="grid min-w-0 gap-4">
           {provenanceRows.map((row) => (
-            <li key={`${row.catalogItemId}:${row.sourceRecordKey}`}>
+            <li
+              key={`${row.catalogItemId}:${row.sourceRecordKey}`}
+              className="min-w-0"
+            >
               <CatalogSourceProvenanceCard row={row} />
             </li>
           ))}
@@ -49,7 +52,7 @@ function CatalogSourceProvenanceCard({
   row: CatalogSourceProvenanceCurationRow;
 }) {
   return (
-    <article className="grid gap-4 rounded-lg border border-border p-4">
+    <article className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -59,31 +62,31 @@ function CatalogSourceProvenanceCard({
             </h3>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {catalogKindLabel(row.catalogKind)}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {row.catalogStatus}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {row.catalogSource}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {row.sourceSlug}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               Version: {row.sourceVersion}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               Row: {row.sourceRecordKey}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               Audit links: {row.auditLinkCount}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               Verified: {formatDate(row.verifiedAt)}
             </span>
-            <span className="rounded-md border border-border px-2 py-1">
+            <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {row.projectionStatus}
             </span>
           </div>
@@ -103,7 +106,7 @@ function CatalogSourceProvenanceCard({
         ) : null}
       </div>
 
-      <dl className="grid gap-3 text-sm md:grid-cols-2">
+      <dl className="grid min-w-0 gap-3 text-sm md:grid-cols-2 [&>div]:min-w-0">
         {row.projectedAliases.length > 0 ? (
           <div className="md:col-span-2">
             <dt className="text-xs text-muted-foreground">
@@ -126,7 +129,7 @@ function CatalogSourceProvenanceCard({
               href={row.sourceUrl}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
+              className="inline-flex max-w-full min-w-0 items-center gap-1 font-medium text-foreground underline-offset-4 hover:underline"
             >
               <span className="truncate">{row.sourceName}</span>
               <ExternalLink className="size-3 shrink-0" />
@@ -141,7 +144,7 @@ function CatalogSourceProvenanceCard({
                 href={row.licenseUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-w-0 items-center gap-1 underline-offset-4 hover:underline"
+                className="inline-flex max-w-full min-w-0 items-center gap-1 underline-offset-4 hover:underline"
               >
                 <span className="truncate">{row.license}</span>
                 <ExternalLink className="size-3 shrink-0" />
@@ -155,14 +158,14 @@ function CatalogSourceProvenanceCard({
         {row.attributionText ? (
           <div className="md:col-span-2">
             <dt className="text-xs text-muted-foreground">Attribution</dt>
-            <dd className="mt-1 font-medium text-foreground">
+            <dd className="mt-1 font-medium break-words text-foreground">
               {row.attributionText}
             </dd>
           </div>
         ) : null}
         <div>
           <dt className="text-xs text-muted-foreground">Parser</dt>
-          <dd className="mt-1 font-medium text-foreground">
+          <dd className="mt-1 font-medium break-words text-foreground">
             {row.parserVersion}
           </dd>
         </div>

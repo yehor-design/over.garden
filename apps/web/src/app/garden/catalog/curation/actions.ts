@@ -6,6 +6,7 @@ import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import {
   confirmCatalogCurationCandidate,
+  enqueueCatalogMatchSuggestionsRefresh,
   mergeCatalogCurationCandidate,
   rejectCatalogCurationCandidate,
   type CatalogCurationDecisionResult,
@@ -53,6 +54,17 @@ export async function rejectCatalogCandidateAction(formData: FormData) {
   });
 
   revalidateCatalogCurationPaths(result);
+}
+
+export async function rescanCatalogMatchSuggestionsAction(formData: FormData) {
+  const scope = await requireCurrentRequestScope();
+  await assertCatalogCuratorAccess(scope);
+
+  await enqueueCatalogMatchSuggestionsRefresh({
+    candidateId: String(formData.get("candidateId") ?? ""),
+  });
+
+  revalidatePath(CURATION_PATH);
 }
 
 export async function upsertVarietySeedProofAction(formData: FormData) {
