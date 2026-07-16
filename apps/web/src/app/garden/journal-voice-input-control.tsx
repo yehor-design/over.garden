@@ -5,23 +5,30 @@ import { Mic, MicOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
   createJournalVoiceInputSession,
   resolveSpeechRecognitionConstructor,
-  VOICE_INPUT_UNSUPPORTED_MESSAGE,
   type JournalSpeechRecognitionConstructor,
   type JournalVoiceInputSession,
   type JournalVoiceInputState,
 } from "@/lib/garden/voice-to-text";
 
 interface JournalVoiceInputControlProps {
+  locale: InterfaceLocale;
   onTranscript: (transcript: string) => void;
 }
 
 type VoiceInputSupport = "checking" | "supported" | "unsupported";
 
 export function JournalVoiceInputControl({
+  locale,
   onTranscript,
 }: JournalVoiceInputControlProps) {
+  const copy = getGardenWorkspaceCopy(locale);
   const [support, setSupport] = useState<VoiceInputSupport>("checking");
   const [voiceState, setVoiceState] = useState<JournalVoiceInputState>("idle");
   const [message, setMessage] = useState<string | null>(null);
@@ -56,14 +63,14 @@ export function JournalVoiceInputControl({
     const session = createJournalVoiceInputSession({
       recognition,
       lang: typeof navigator === "undefined" ? undefined : navigator.language,
-      onError: () => setMessage("Voice input stopped. Typing still works."),
+      onError: () => setMessage(copy.composer.voice.error),
       onStateChange: (state) => {
         setVoiceState(state);
-        setMessage(messageForVoiceState(state));
+        setMessage(messageForVoiceState(state, copy));
       },
       onTranscript: (transcript) => {
         onTranscript(transcript);
-        setMessage("Text added. Edit before saving.");
+        setMessage(copy.composer.voice.added);
       },
     });
 
@@ -83,7 +90,7 @@ export function JournalVoiceInputControl({
   if (support === "unsupported") {
     return (
       <span className="text-xs leading-5 font-normal text-muted-foreground">
-        {VOICE_INPUT_UNSUPPORTED_MESSAGE}
+        {copy.composer.voice.unsupported}
       </span>
     );
   }
@@ -99,7 +106,7 @@ export function JournalVoiceInputControl({
           onClick={cancelDictation}
         >
           <MicOff className="size-4" />
-          Cancel dictation
+          {copy.composer.voice.cancelAction}
         </Button>
       ) : (
         <Button
@@ -110,7 +117,7 @@ export function JournalVoiceInputControl({
           onClick={startDictation}
         >
           <Mic className="size-4" />
-          Dictate note
+          {copy.composer.voice.dictateAction}
         </Button>
       )}
       {message ? (
@@ -129,14 +136,17 @@ export function JournalVoiceInputControl({
   );
 }
 
-function messageForVoiceState(state: JournalVoiceInputState) {
+function messageForVoiceState(
+  state: JournalVoiceInputState,
+  copy: GardenWorkspaceCopy,
+) {
   switch (state) {
     case "listening":
-      return "Listening...";
+      return copy.composer.voice.listening;
     case "cancelled":
-      return "Dictation cancelled.";
+      return copy.composer.voice.cancelled;
     case "error":
-      return "Voice input stopped. Typing still works.";
+      return copy.composer.voice.error;
     default:
       return null;
   }

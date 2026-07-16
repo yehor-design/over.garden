@@ -3,49 +3,51 @@
 import { Bug, PawPrint, Sprout } from "lucide-react";
 
 import type { PlantObjectKind } from "@/db/schema";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 
 const OBJECT_KIND_OPTIONS = [
   {
     value: "plant",
-    label: "Plant",
-    description: "Trees, flowers, crops",
+    copyKey: "plant",
     icon: Sprout,
   },
   {
     value: "animal",
-    label: "Animal",
-    description: "Pets and livestock",
+    copyKey: "animal",
     icon: PawPrint,
   },
   {
     value: "bee_colony",
-    label: "Bee colony",
-    description: "One living colony",
+    copyKey: "beeColony",
     icon: Bug,
   },
 ] as const satisfies readonly {
   value: PlantObjectKind;
-  label: string;
-  description: string;
+  copyKey: "plant" | "animal" | "beeColony";
   icon: typeof Sprout;
 }[];
 
 export function JournalObjectKindSelector({
+  locale,
   value,
   onChange,
 }: {
+  locale: InterfaceLocale;
   value: PlantObjectKind;
   onChange: (value: PlantObjectKind) => void;
 }) {
+  const copy = getGardenWorkspaceCopy(locale).composer.objectKind;
   return (
     <fieldset className="grid min-w-0 gap-2">
       <legend className="text-sm font-medium text-foreground">
-        Living object type
+        {copy.legend}
       </legend>
       <div className="grid min-w-0 grid-cols-3 gap-2" role="group">
         {OBJECT_KIND_OPTIONS.map((option) => {
           const Icon = option.icon;
           const selected = option.value === value;
+          const optionCopy = copy[option.copyKey];
 
           return (
             <button
@@ -61,16 +63,16 @@ export function JournalObjectKindSelector({
               }`}
             >
               <Icon className="size-4 shrink-0" />
-              <span className="min-w-0">
-                <span className="block text-sm leading-4 font-semibold">
-                  {option.label}
+              <span className="block w-full min-w-0">
+                <span className="block text-xs leading-4 font-semibold break-words sm:text-sm">
+                  {optionCopy.label}
                 </span>
                 <span
                   className={`mt-1 hidden text-xs leading-4 sm:block ${
                     selected ? "text-background/70" : "text-muted-foreground"
                   }`}
                 >
-                  {option.description}
+                  {optionCopy.description}
                 </span>
               </span>
             </button>

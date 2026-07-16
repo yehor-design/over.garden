@@ -2,12 +2,14 @@ import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   buildSaveProgressMomentCopy,
   type SaveProgressMomentKind,
 } from "@/lib/garden/save-progress-moment";
 
 interface SaveProgressMomentProps {
+  locale: InterfaceLocale;
   kind: SaveProgressMomentKind;
   entryCount: number;
   objectName?: string | null;
@@ -19,6 +21,7 @@ interface SaveProgressMomentProps {
 }
 
 export function SaveProgressMoment({
+  locale,
   kind,
   entryCount,
   objectName = null,
@@ -28,12 +31,15 @@ export function SaveProgressMoment({
   secondaryHref,
   secondaryLabel,
 }: SaveProgressMomentProps) {
-  const copy = buildSaveProgressMomentCopy({
-    kind,
-    objectName,
-    spaceName,
-    entryCount,
-  });
+  const copy = buildSaveProgressMomentCopy(
+    {
+      kind,
+      objectName,
+      spaceName,
+      entryCount,
+    },
+    locale,
+  );
 
   return (
     <section

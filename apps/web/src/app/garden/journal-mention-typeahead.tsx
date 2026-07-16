@@ -2,6 +2,12 @@
 
 import { X } from "lucide-react";
 
+import {
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import type {
   JournalMentionSelection,
   JournalMentionSuggestion,
@@ -105,26 +111,31 @@ export function toMentionSelection(
 }
 
 export function JournalMentionTypeaheadPanel({
+  locale,
   status,
   suggestions,
   selections,
   onSelect,
   onRemove,
 }: {
+  locale: InterfaceLocale;
   status: MentionTypeaheadStatus;
   suggestions: JournalMentionSuggestion[];
   selections: JournalMentionSelection[];
   onSelect: (suggestion: JournalMentionSuggestion) => void;
   onRemove: (selection: JournalMentionSelection) => void;
 }) {
+  const copy = getGardenWorkspaceCopy(locale);
   return (
     <div className="grid gap-2">
       {status === "loading" ? (
-        <p className="text-xs text-muted-foreground">Searching mentions...</p>
+        <p className="text-xs text-muted-foreground">
+          {copy.composer.mentions.searching}
+        </p>
       ) : null}
       {status === "failed" ? (
         <p className="text-xs text-destructive">
-          Mention suggestions unavailable.
+          {copy.composer.mentions.unavailable}
         </p>
       ) : null}
       {suggestions.length > 0 ? (
@@ -145,7 +156,7 @@ export function JournalMentionTypeaheadPanel({
                   </span>
                 </span>
                 <span className="shrink-0 rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-                  {mentionKindLabel(suggestion.kind)}
+                  {mentionKindLabel(suggestion.kind, copy)}
                 </span>
               </button>
             </li>
@@ -154,7 +165,9 @@ export function JournalMentionTypeaheadPanel({
       ) : null}
       {selections.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-muted-foreground">Linked mentions</span>
+          <span className="text-muted-foreground">
+            {copy.composer.mentions.linked}
+          </span>
           {selections.map((selection) => (
             <span
               key={mentionSelectionKey(selection)}
@@ -165,7 +178,10 @@ export function JournalMentionTypeaheadPanel({
                 type="button"
                 onClick={() => onRemove(selection)}
                 className="inline-flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={`Remove ${selection.label}`}
+                aria-label={formatGardenWorkspaceTemplate(
+                  copy.composer.mentions.remove,
+                  { label: selection.label },
+                )}
               >
                 <X className="size-3.5" />
               </button>
@@ -177,15 +193,18 @@ export function JournalMentionTypeaheadPanel({
   );
 }
 
-function mentionKindLabel(kind: JournalMentionSuggestion["kind"]) {
+function mentionKindLabel(
+  kind: JournalMentionSuggestion["kind"],
+  copy: GardenWorkspaceCopy,
+) {
   switch (kind) {
     case "own_object":
-      return "Yours";
+      return copy.composer.mentions.kinds.ownObject;
     case "public_object":
-      return "Public";
+      return copy.composer.mentions.kinds.publicObject;
     case "public_handle":
-      return "Handle";
+      return copy.composer.mentions.kinds.publicHandle;
     case "catalog_item":
-      return "Catalog";
+      return copy.composer.mentions.kinds.catalogItem;
   }
 }

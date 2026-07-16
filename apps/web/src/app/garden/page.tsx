@@ -18,6 +18,12 @@ import {
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  formatGardenWorkspaceDate,
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
 import { localizedPath } from "@/lib/public-localization";
 import {
   formatTrustTemplate,
@@ -48,7 +54,7 @@ import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
 import { GardenWorkspaceView } from "./garden-workspace-view";
 import type { GardenWorkspaceLocalStateSnapshot } from "./garden-workspace-local-state";
-import GardenLoading from "./loading";
+import { GardenLoadingView } from "./loading";
 import { SaveProgressMoment } from "./save-progress-moment";
 
 export const dynamic = "force-dynamic";
@@ -73,12 +79,15 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     params.visualWorkspace,
     process.env,
   );
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
   const creationScenario = resolveVisualJournalCreationScenario(
     params.visualCreate,
     "first-entry",
     process.env,
   );
-  if (visualScenario?.state === "loading") return <GardenLoading />;
+  if (visualScenario?.state === "loading") {
+    return <GardenLoadingView locale={locale} />;
+  }
 
   const userId =
     creationScenario?.ownerActorId ??
@@ -188,7 +197,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         locale={locale}
         today={today}
         workspace={workspaceForView}
-        localState={visualLocalState(visualScenario)}
+        localState={visualLocalState(visualScenario, locale)}
       >
         {writeAccess.invited && pendingWishlistItem ? (
           <PendingWishlistIntentPanel
@@ -200,15 +209,14 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         normalizeSaveProgressMomentKind(params.saveProgress) ===
           "space-entry" ? (
           <SaveProgressMoment
+            locale={locale}
             kind="space-entry"
             entryCount={selectedSpaceTimeline?.entries.length ?? 0}
-            spaceName={
-              selectedSpaceTimeline?.space.display_name ?? "your garden"
-            }
+            spaceName={selectedSpaceTimeline?.space.display_name}
             primaryHref="#space-journal"
-            primaryLabel="Return to space journal"
+            primaryLabel={workspaceCopy.page.postSave.returnToSpaceJournal}
             secondaryHref="#first-entry-composer"
-            secondaryLabel="Add another object"
+            secondaryLabel={workspaceCopy.page.postSave.addAnotherObject}
           />
         ) : null}
         <GardenWriteTools
@@ -246,15 +254,28 @@ function applyVisualWorkspaceSummary(
 
 function visualLocalState(
   scenario: VisualFixtureWorkspaceScenarioEvidence | null,
+  locale: InterfaceLocale,
 ): GardenWorkspaceLocalStateSnapshot | undefined {
   if (!scenario) return undefined;
+  const copy = getGardenWorkspaceCopy(locale);
 
   const objectId = scenario.expectedObjectIds[0] ?? "fixture-first-object";
   const objectHref = `/garden/objects/${encodeURIComponent(objectId)}#follow-up-composer`;
   const drafts = Array.from({ length: scenario.draftCount }, (_, index) => ({
     id: `synthetic-workspace-draft-${index + 1}`,
     title: `Synthetic draft ${index + 1}`,
-    subtitle: index === 0 ? "Object update · 12 Jul" : "First object · 11 Jul",
+    subtitle:
+      index === 0
+        ? `${copy.localState.drafts.objectUpdate} · ${formatGardenWorkspaceDate(
+            locale,
+            "2026-07-12",
+            "short",
+          )}`
+        : `${copy.localState.drafts.firstObject} · ${formatGardenWorkspaceDate(
+            locale,
+            "2026-07-11",
+            "short",
+          )}`,
     href: index === 0 ? objectHref : "/garden#first-entry-composer",
   }));
   const queued = Array.from({ length: scenario.queuedCount }, (_, index) => ({
@@ -391,23 +412,24 @@ function GardenWriteTools({
   selectedSpaceTimeline: SpaceJournalTimeline | null;
   visualScenario: VisualFixtureCreationScenarioEvidence | null;
 }) {
+  const copy = getGardenWorkspaceCopy(locale);
   return (
     <div className="flex flex-col gap-10 border-t border-border pt-8">
       <section id="first-entry-composer" className="scroll-mt-20">
         <p className="text-xs font-semibold text-muted-foreground uppercase">
-          Create
+          {copy.page.creation.eyebrow}
         </p>
         <h2 className="mt-1 text-xl font-semibold text-foreground">
-          Add living object
+          {copy.page.creation.title}
         </h2>
         <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Start one recognizable plant, animal, or colony record. A space can be
-          created in the same path, so setup never blocks the first useful note.
+          {copy.page.creation.description}
         </p>
         <div className="mt-5" id="write-access">
           {canWrite ? (
             <FirstEntryComposer
               ownerUserId={ownerUserId}
+              locale={locale}
               key={initialCatalogItem?.id ?? "first-entry"}
               today={today}
               initialClientMutationId={crypto.randomUUID()}
@@ -432,6 +454,7 @@ function GardenWriteTools({
       {selectedSpaceTimeline ? (
         <SpaceJournalTools
           canWrite={canWrite}
+          locale={locale}
           timeline={selectedSpaceTimeline}
           today={today}
         />
@@ -442,17 +465,20 @@ function GardenWriteTools({
 
 function SpaceJournalTools({
   canWrite,
+  locale,
   timeline,
   today,
 }: {
   canWrite: boolean;
+  locale: InterfaceLocale;
   timeline: SpaceJournalTimeline;
   today: string;
 }) {
+  const copy = getGardenWorkspaceCopy(locale);
   return (
     <section id="space-journal" className="scroll-mt-20">
       <p className="text-xs font-semibold text-muted-foreground uppercase">
-        Space journal tools
+        {copy.page.spaceJournal.eyebrow}
       </p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -460,11 +486,13 @@ function SpaceJournalTools({
             {timeline.space.display_name}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            One note can mention several objects in this space.
+            {copy.page.spaceJournal.description}
           </p>
         </div>
         <span className="text-xs text-muted-foreground">
-          Showing {timeline.entries.length} recent space entries
+          {formatGardenWorkspaceTemplate(copy.page.spaceJournal.showing, {
+            count: timeline.entries.length,
+          })}
         </span>
       </div>
 
@@ -481,17 +509,21 @@ function SpaceJournalTools({
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
-              <span className="font-medium text-foreground">Title</span>
+              <span className="font-medium text-foreground">
+                {copy.page.spaceJournal.title}
+              </span>
               <input
                 name="title"
                 required
                 maxLength={140}
-                placeholder="What changed across this space?"
+                placeholder={copy.page.spaceJournal.titlePlaceholder}
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </label>
             <label className="grid gap-1 text-sm">
-              <span className="font-medium text-foreground">Date</span>
+              <span className="font-medium text-foreground">
+                {copy.page.spaceJournal.date}
+              </span>
               <input
                 type="date"
                 name="entryDate"
@@ -501,19 +533,21 @@ function SpaceJournalTools({
             </label>
           </div>
           <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">Story</span>
+            <span className="font-medium text-foreground">
+              {copy.page.spaceJournal.story}
+            </span>
             <textarea
               name="body"
               required
               maxLength={2000}
               rows={4}
-              placeholder="Write the dated episode once, then mention the objects it covers."
+              placeholder={copy.page.spaceJournal.storyPlaceholder}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
             />
           </label>
           <fieldset className="grid gap-2">
             <legend className="text-sm font-medium text-foreground">
-              Mentioned objects
+              {copy.page.spaceJournal.mentionedObjects}
             </legend>
             <div className="grid gap-2 sm:grid-cols-2">
               {timeline.objects.map((object) => (
@@ -532,8 +566,9 @@ function SpaceJournalTools({
                       {object.displayName}
                     </span>
                     <span className="block truncate text-xs text-muted-foreground">
-                      {object.objectKind.replaceAll("_", " ")} ·{" "}
-                      {object.varietyText ?? "Unknown identity"}
+                      {localizedPageObjectKind(object.objectKind, copy)} ·{" "}
+                      {object.varietyText ??
+                        copy.page.spaceJournal.unknownIdentity}
                     </span>
                   </span>
                 </label>
@@ -545,7 +580,7 @@ function SpaceJournalTools({
             className={buttonVariants({ className: "w-fit" })}
           >
             <BookOpenText aria-hidden="true" />
-            Save space entry
+            {copy.page.spaceJournal.save}
           </button>
         </form>
       ) : null}
@@ -562,19 +597,23 @@ function SpaceJournalTools({
                   {entry.title}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {entry.visibility === "public" ? "Public" : "Private"}
-                  {entry.lifecycle_state === "archived" ? " · Archived" : ""}
+                  {entry.visibility === "public"
+                    ? copy.page.spaceJournal.public
+                    : copy.page.spaceJournal.private}
+                  {entry.lifecycle_state === "archived"
+                    ? ` · ${copy.page.spaceJournal.archived}`
+                    : ""}
                 </p>
               </div>
               <time className="shrink-0 text-xs text-muted-foreground">
-                {formatDate(entry.entry_date)}
+                {formatGardenWorkspaceDate(locale, entry.entry_date)}
               </time>
             </li>
           ))}
         </ol>
       ) : (
         <p className="border-b border-dashed border-border py-5 text-sm text-muted-foreground">
-          No space-level entries yet.
+          {copy.page.spaceJournal.empty}
         </p>
       )}
     </section>
@@ -692,11 +731,8 @@ function uuidParam(value: string | string[] | undefined) {
   return UUID_PATTERN.test(candidate) ? candidate : "";
 }
 
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+function localizedPageObjectKind(value: string, copy: GardenWorkspaceCopy) {
+  if (value === "animal") return copy.composer.objectKind.animal.label;
+  if (value === "bee_colony") return copy.composer.objectKind.beeColony.label;
+  return copy.composer.objectKind.plant.label;
 }

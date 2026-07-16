@@ -24,6 +24,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import type { PlantObjectKind } from "@/db/schema";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   clearComposerPhotoIntent,
   COMPOSER_PHOTO_ACCEPT,
@@ -89,6 +90,7 @@ import { JournalVoiceInputControl } from "../../journal-voice-input-control";
 
 interface FollowUpEntryComposerProps {
   ownerUserId: string;
+  locale: InterfaceLocale;
   objectId: string;
   objectDisplayName: string;
   objectKind: PlantObjectKind;
@@ -101,6 +103,7 @@ type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
 
 export function FollowUpEntryComposer({
   ownerUserId,
+  locale,
   objectId,
   objectDisplayName,
   objectKind,
@@ -841,7 +844,10 @@ export function FollowUpEntryComposer({
           >
             What changed?
           </label>
-          <JournalVoiceInputControl onTranscript={appendVoiceTranscript} />
+          <JournalVoiceInputControl
+            locale={locale}
+            onTranscript={appendVoiceTranscript}
+          />
         </div>
         <textarea
           ref={bodyTextareaRef}
@@ -864,6 +870,7 @@ export function FollowUpEntryComposer({
           placeholder="A short observation is enough. You can add details later."
         />
         <JournalMentionTypeaheadPanel
+          locale={locale}
           status={mentionStatus}
           suggestions={mentionSuggestions}
           selections={mentionSelections}

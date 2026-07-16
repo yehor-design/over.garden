@@ -12,6 +12,12 @@ import {
 
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
 import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  formatGardenWorkspaceDate,
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { localizedPath } from "@/lib/public-localization";
 import {
@@ -80,6 +86,7 @@ export function GardenWorkspaceLocalState({
   media,
   initialState,
 }: GardenWorkspaceLocalStateProps) {
+  const copy = getGardenWorkspaceCopy(locale);
   const [localState, setLocalState] = useState(
     initialState ?? EMPTY_LOCAL_STATE,
   );
@@ -95,10 +102,10 @@ export function GardenWorkspaceLocalState({
 
       setLocalState({
         online: navigator.onLine,
-        drafts: drafts.map(summarizeDraft),
+        drafts: drafts.map((draft) => summarizeDraft(draft, locale, copy)),
         mutations: mutations.map((mutation) => ({
           id: mutation.id,
-          title: mutationTitle(mutation.payload),
+          title: mutationTitle(mutation.payload, copy),
           status: mutation.status,
           href: mutationHref(mutation.payload),
         })),
@@ -106,7 +113,7 @@ export function GardenWorkspaceLocalState({
     } catch {
       setLocalState({ ...EMPTY_LOCAL_STATE, online: navigator.onLine });
     }
-  }, [initialState, ownerUserId]);
+  }, [copy, initialState, locale, ownerUserId]);
 
   useEffect(() => {
     if (initialState) return;
@@ -159,41 +166,49 @@ export function GardenWorkspaceLocalState({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold text-muted-foreground uppercase">
-              Drafts and sync
+              {copy.localState.eyebrow}
             </p>
             <h2 className="mt-1 text-base font-semibold text-foreground">
               {hasLocalWork
-                ? "Work waiting on this device"
-                : "Everything on this device is clear"}
+                ? copy.localState.hasWorkTitle
+                : copy.localState.clearTitle}
             </h2>
           </div>
-          <ConnectionState online={localState.online} />
+          <ConnectionState copy={copy} online={localState.online} />
         </div>
 
         {hasLocalWork ? (
           <div className="mt-4 grid gap-5 lg:mt-2 lg:grid-cols-2 lg:gap-3">
             <LocalDraftList
               ownerUserId={ownerUserId}
+              copy={copy}
               drafts={localState.drafts}
               onRefresh={refresh}
             />
-            <LocalMutationList mutations={localState.mutations} />
+            <LocalMutationList copy={copy} mutations={localState.mutations} />
           </div>
         ) : (
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            No local drafts or queued changes. Canonical server readback remains
-            the saved record.
+            {copy.localState.emptyDescription}
           </p>
         )}
 
         {media && (media.processingCount > 0 || media.failedCount > 0) ? (
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground lg:mt-2 lg:pt-2">
             {media.processingCount > 0 ? (
-              <span>{media.processingCount} photo processing</span>
+              <span>
+                {formatGardenWorkspaceTemplate(
+                  copy.localState.media.processing,
+                  { count: media.processingCount },
+                )}
+              </span>
             ) : null}
             {media.failedCount > 0 ? (
               <span className="text-destructive">
-                {media.failedCount} photo needs attention
+                {formatGardenWorkspaceTemplate(
+                  copy.localState.media.attention,
+                  { count: media.failedCount },
+                )}
               </span>
             ) : null}
           </div>
@@ -202,13 +217,13 @@ export function GardenWorkspaceLocalState({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-xs text-muted-foreground lg:mt-2 lg:pt-2 xl:hidden">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="size-4" aria-hidden="true" />
-            Drafts stay on this device until sync succeeds.
+            {copy.localState.safety}
           </span>
           <Link
             href={localizedPath(locale, "/privacy")}
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            Privacy
+            {copy.localState.privacy}
           </Link>
         </div>
       </section>
@@ -218,10 +233,12 @@ export function GardenWorkspaceLocalState({
 
 function LocalDraftList({
   ownerUserId,
+  copy,
   drafts,
   onRefresh,
 }: {
   ownerUserId: string;
+  copy: GardenWorkspaceCopy;
   drafts: GardenWorkspaceDraftView[];
   onRefresh: () => Promise<void>;
 }) {
@@ -229,7 +246,7 @@ function LocalDraftList({
     <div className="min-w-0">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <FileText className="size-4 text-muted-foreground" aria-hidden="true" />
-        Drafts on this device
+        {copy.localState.drafts.title}
       </h3>
       {drafts.length > 0 ? (
         <ul className="mt-2 divide-y divide-border border-y border-border">
@@ -251,7 +268,7 @@ function LocalDraftList({
                   href={draft.href}
                   className={buttonVariants({ size: "sm" })}
                 >
-                  Resume
+                  {copy.localState.drafts.resume}
                 </Link>
                 <Button
                   type="button"
@@ -261,22 +278,26 @@ function LocalDraftList({
                     void discardDraft(ownerUserId, draft.id, onRefresh)
                   }
                 >
-                  Discard
+                  {copy.localState.drafts.discard}
                 </Button>
               </div>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-muted-foreground">No drafts.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {copy.localState.drafts.empty}
+        </p>
       )}
     </div>
   );
 }
 
 function LocalMutationList({
+  copy,
   mutations,
 }: {
+  copy: GardenWorkspaceCopy;
   mutations: GardenWorkspaceMutationView[];
 }) {
   return (
@@ -286,7 +307,7 @@ function LocalMutationList({
           className="size-4 text-muted-foreground"
           aria-hidden="true"
         />
-        Queued locally
+        {copy.localState.queue.title}
       </h3>
       {mutations.length > 0 ? (
         <ul className="mt-2 divide-y divide-border border-y border-border">
@@ -300,27 +321,35 @@ function LocalMutationList({
                   {mutation.title}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {mutationStatusLabel(mutation.status)} · Not saved to the
-                  server yet
+                  {mutationStatusLabel(mutation.status, copy)} ·{" "}
+                  {copy.localState.queue.notSaved}
                 </p>
               </div>
               <Link
                 href={mutation.href}
                 className="shrink-0 text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
-                Review
+                {copy.localState.queue.review}
               </Link>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-muted-foreground">No queued work.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {copy.localState.queue.empty}
+        </p>
       )}
     </div>
   );
 }
 
-function ConnectionState({ online }: { online: boolean }) {
+function ConnectionState({
+  copy,
+  online,
+}: {
+  copy: GardenWorkspaceCopy;
+  online: boolean;
+}) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
       {online ? (
@@ -328,7 +357,9 @@ function ConnectionState({ online }: { online: boolean }) {
       ) : (
         <WifiOff className="size-3.5" aria-hidden="true" />
       )}
-      {online ? "Online" : "Offline"}
+      {online
+        ? copy.localState.connection.online
+        : copy.localState.connection.offline}
     </span>
   );
 }
@@ -342,7 +373,11 @@ async function discardDraft(
   await refresh();
 }
 
-function summarizeDraft(draft: JournalDraftRecord): GardenWorkspaceDraftView {
+function summarizeDraft(
+  draft: JournalDraftRecord,
+  locale: InterfaceLocale,
+  copy: GardenWorkspaceCopy,
+): GardenWorkspaceDraftView {
   if (draft.id === FIRST_ENTRY_DRAFT_ID && draft.kind === "first_entry") {
     const payload = draft.payload as FirstEntryDraftPayload;
     return {
@@ -353,8 +388,11 @@ function summarizeDraft(draft: JournalDraftRecord): GardenWorkspaceDraftView {
           payload.draft.plantName,
           payload.selectedCatalogItem?.displayName,
           payload.userAddedCatalogName,
-        ) ?? "First entry draft",
-      subtitle: ["First object", payload.draft.entryDate]
+        ) ?? copy.localState.drafts.firstEntryDraft,
+      subtitle: [
+        copy.localState.drafts.firstObject,
+        draftDate(payload.draft.entryDate, locale),
+      ]
         .filter(Boolean)
         .join(" · "),
       href: "/garden#first-entry-composer",
@@ -364,17 +402,22 @@ function summarizeDraft(draft: JournalDraftRecord): GardenWorkspaceDraftView {
   const payload = draft.payload as FollowUpEntryDraftPayload;
   return {
     id: draft.id,
-    title: firstNonEmpty(payload.draft.title) ?? "Follow-up draft",
-    subtitle: ["Object update", payload.draft.entryDate]
+    title:
+      firstNonEmpty(payload.draft.title) ??
+      copy.localState.drafts.followUpDraft,
+    subtitle: [
+      copy.localState.drafts.objectUpdate,
+      draftDate(payload.draft.entryDate, locale),
+    ]
       .filter(Boolean)
       .join(" · "),
     href: `/garden/objects/${encodeURIComponent(payload.plantObjectId)}#follow-up-composer`,
   };
 }
 
-function mutationTitle(payload: unknown) {
+function mutationTitle(payload: unknown, copy: GardenWorkspaceCopy) {
   const candidate = payload as Partial<OfflineJournalEntryPayload>;
-  return firstNonEmpty(candidate.title) ?? "Queued journal update";
+  return firstNonEmpty(candidate.title) ?? copy.localState.queue.fallbackTitle;
 }
 
 function mutationHref(payload: unknown) {
@@ -384,16 +427,19 @@ function mutationHref(payload: unknown) {
     : "/garden#first-entry-composer";
 }
 
-function mutationStatusLabel(status: OfflineMutationStatus) {
+function mutationStatusLabel(
+  status: OfflineMutationStatus,
+  copy: GardenWorkspaceCopy,
+) {
   switch (status) {
     case "queued":
-      return "Waiting for sync";
+      return copy.localState.queue.statuses.queued;
     case "syncing":
-      return "Syncing now";
+      return copy.localState.queue.statuses.syncing;
     case "failed":
-      return "Sync needs attention";
+      return copy.localState.queue.statuses.failed;
     case "synced":
-      return "Synced";
+      return copy.localState.queue.statuses.synced;
   }
 }
 
@@ -416,6 +462,7 @@ function buildContextModules({
   media: GardenWorkspaceMediaSummary | null;
   localState: GardenWorkspaceLocalStateSnapshot;
 }) {
+  const copy = getGardenWorkspaceCopy(locale);
   const pendingMutations = localState.mutations.filter(
     (mutation) => mutation.status !== "synced",
   );
@@ -423,49 +470,49 @@ function buildContextModules({
   return [
     {
       key: "garden-next",
-      title: "Next action",
+      title: copy.localState.context.nextAction,
       items: [{ href: nextAction.href, label: nextAction.label }],
     },
     {
       key: "garden-recent",
-      title: "Recent continuity",
+      title: copy.localState.context.recent,
       items: recent.slice(0, 3).map((entry) => ({
         href: entry.objectId
           ? `/garden/objects/${entry.objectId}`
           : `/garden#space-${entry.spaceId}`,
         label: entry.title,
-        meta: shortDate(entry.entryDate),
+        meta: formatGardenWorkspaceDate(locale, entry.entryDate, "short"),
       })),
-      emptyLabel: "No dated updates yet.",
+      emptyLabel: copy.localState.context.noRecent,
     },
     {
       key: "garden-local",
-      title: "On this device",
+      title: copy.localState.context.onDevice,
       items: [
         ...localState.drafts.slice(0, 3).map((draft) => ({
           href: draft.href,
           label: draft.title,
-          meta: "Draft",
+          meta: copy.localState.context.draft,
         })),
         ...(localState.drafts.length === 0
           ? [
               {
                 href: "/garden#drafts",
-                label: "Drafts",
+                label: copy.localState.context.drafts,
                 meta: "0",
               },
             ]
           : []),
         {
           href: "/garden#drafts",
-          label: "Queued or failed",
+          label: copy.localState.context.queuedOrFailed,
           meta: String(pendingMutations.length),
         },
         ...(media?.processingCount
           ? [
               {
                 href: "/garden#drafts",
-                label: "Photos processing",
+                label: copy.localState.context.photosProcessing,
                 meta: String(media.processingCount),
               },
             ]
@@ -474,7 +521,7 @@ function buildContextModules({
           ? [
               {
                 href: "/garden#drafts",
-                label: "Photos need attention",
+                label: copy.localState.context.photosNeedAttention,
                 meta: String(media.failedCount),
               },
             ]
@@ -483,43 +530,47 @@ function buildContextModules({
     },
     {
       key: "garden-inbox",
-      title: "Inbox",
+      title: copy.localState.context.inbox,
       items: [
         {
           href: localizedPath(locale, "/notifications"),
-          label: "Notifications",
+          label: copy.localState.context.notifications,
           meta: inbox ? String(inbox.notificationCount) : "—",
         },
         {
           href: "/garden/lineage/claims",
-          label: "Lineage claims",
+          label: copy.localState.context.lineageClaims,
           meta: inbox ? String(inbox.claimCount) : "—",
         },
       ],
     },
     {
       key: "garden-privacy",
-      title: "Privacy",
+      title: copy.localState.context.privacy,
       items: [
         {
           href: localizedPath(locale, "/privacy"),
-          label: "Privacy controls",
+          label: copy.localState.context.privacyControls,
         },
       ],
     },
   ];
 }
 
-function shortDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", { month: "short", day: "numeric" });
+function draftDate(value: string | null | undefined, locale: InterfaceLocale) {
+  return value ? formatGardenWorkspaceDate(locale, value, "short") : null;
 }
 
-export function GardenWorkspaceLocalStateError() {
+export function GardenWorkspaceLocalStateError({
+  locale,
+}: {
+  locale: InterfaceLocale;
+}) {
+  const copy = getGardenWorkspaceCopy(locale);
   return (
     <span className="flex items-center gap-1.5 text-xs text-destructive">
       <AlertCircle className="size-3.5" aria-hidden="true" />
-      Local state unavailable
+      {copy.localState.error}
     </span>
   );
 }

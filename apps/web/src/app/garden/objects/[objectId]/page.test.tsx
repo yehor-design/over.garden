@@ -167,9 +167,9 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("Your garden record has started");
-    expect(html).toContain("Cherry tomato now has its first dated note");
-    expect(html).toContain("1 / 4 starter notes");
+    expect(html).toContain("Історію вашого саду розпочато");
+    expect(html).toContain("Cherry tomato тепер має першу датовану нотатку");
+    expect(html).toContain("1 / 4 початкових нотаток");
     expect(html).toContain("#follow-up-composer");
     expect(html).toContain("Повна історія об&#x27;єкта");
     expect(html).toContain("First flowers");
@@ -202,9 +202,9 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("This record is getting useful");
-    expect(html).toContain("Cherry tomato now has 2 dated notes");
-    expect(html).toContain("Add dated entry");
+    expect(html).toContain("Цей запис стає кориснішим");
+    expect(html).toContain("Cherry tomato тепер має 2 датовані нотатки");
+    expect(html).toContain("Додати ще один запис");
     expect(html).toContain("Follow-up composer");
     expect(html).toContain("Повна історія об&#x27;єкта");
     expect(html).toContain("Second flowering wave");

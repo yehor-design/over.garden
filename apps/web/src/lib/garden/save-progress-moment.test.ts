@@ -27,16 +27,19 @@ describe("save progress moment helpers", () => {
   });
 
   it("builds local, object-specific copy without social pressure", () => {
-    const copy = buildSaveProgressMomentCopy({
-      kind: "follow-up",
-      objectName: "Balcony tomato",
-      entryCount: 2,
-    });
+    const copy = buildSaveProgressMomentCopy(
+      {
+        kind: "follow-up",
+        objectName: "Balcony tomato",
+        entryCount: 2,
+      },
+      "uk",
+    );
     const serialized = JSON.stringify(copy);
 
-    expect(copy.title).toBe("This record is getting useful");
+    expect(copy.title).toBe("Цей запис стає кориснішим");
     expect(copy.body).toContain("Balcony tomato");
-    expect(copy.body).toContain("2 dated notes");
+    expect(copy.body).toContain("2 датовані нотатки");
     expect(copy.progressPercent).toBe(50);
     expect(serialized).not.toMatch(
       /share|likes|followers|leaderboard|streak|public praise|feed/i,

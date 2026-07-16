@@ -6,6 +6,12 @@ import { FileText, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
+  formatGardenWorkspaceDate,
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
   deleteOfflineDraft,
   FIRST_ENTRY_DRAFT_ID,
   listOfflineDrafts,
@@ -17,9 +23,12 @@ import {
 
 export function GardenDraftResumePanel({
   ownerUserId,
+  locale,
 }: {
   ownerUserId: string;
+  locale: InterfaceLocale;
 }) {
+  const copy = getGardenWorkspaceCopy(locale);
   const [drafts, setDrafts] = useState<JournalDraftRecord[]>([]);
 
   const refreshDrafts = useCallback(async () => {
@@ -56,15 +65,15 @@ export function GardenDraftResumePanel({
     <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
         <h2 className="text-base font-semibold text-foreground">
-          Drafts on this device
+          {copy.localState.drafts.title}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Resume a note that has not reached your garden yet.
+          {copy.draftResume.description}
         </p>
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
         {drafts.map((draft) => {
-          const summary = summarizeDraft(draft);
+          const summary = summarizeDraft(draft, locale, copy);
           return (
             <li
               key={draft.id}
@@ -86,7 +95,7 @@ export function GardenDraftResumePanel({
                   href={summary.href}
                   className="inline-flex h-8 items-center justify-center rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
                 >
-                  Resume
+                  {copy.localState.drafts.resume}
                 </Link>
                 <Button
                   type="button"
@@ -96,7 +105,7 @@ export function GardenDraftResumePanel({
                   }
                 >
                   <Trash2 className="size-4" />
-                  Discard
+                  {copy.localState.drafts.discard}
                 </Button>
               </div>
             </li>
@@ -116,7 +125,11 @@ async function discardDraft(
   await refreshDrafts();
 }
 
-function summarizeDraft(draft: JournalDraftRecord) {
+function summarizeDraft(
+  draft: JournalDraftRecord,
+  locale: InterfaceLocale,
+  copy: GardenWorkspaceCopy,
+) {
   if (draft.id === FIRST_ENTRY_DRAFT_ID && draft.kind === "first_entry") {
     const payload = draft.payload as FirstEntryDraftPayload;
     const title =
@@ -125,11 +138,11 @@ function summarizeDraft(draft: JournalDraftRecord) {
         payload.draft.plantName,
         payload.selectedCatalogItem?.displayName,
         payload.userAddedCatalogName,
-      ) ?? "First entry draft";
+      ) ?? copy.localState.drafts.firstEntryDraft;
     const subtitle = [
-      "First entry",
-      payload.draft.entryDate,
-      payload.photoIntent ? "Photo attached" : null,
+      copy.localState.drafts.firstEntry,
+      draftDate(payload.draft.entryDate, locale),
+      payload.photoIntent ? copy.localState.drafts.photoAttached : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -143,16 +156,29 @@ function summarizeDraft(draft: JournalDraftRecord) {
 
   const payload = draft.payload as FollowUpEntryDraftPayload;
   return {
-    title: firstNonEmpty(payload.draft.title) ?? "Follow-up draft",
-    subtitle: ["Follow-up", payload.draft.entryDate, photoLabel(payload)]
+    title:
+      firstNonEmpty(payload.draft.title) ??
+      copy.localState.drafts.followUpDraft,
+    subtitle: [
+      copy.localState.drafts.followUp,
+      draftDate(payload.draft.entryDate, locale),
+      photoLabel(payload, copy),
+    ]
       .filter(Boolean)
       .join(" · "),
     href: `/garden/objects/${encodeURIComponent(payload.plantObjectId)}#follow-up-composer`,
   };
 }
 
-function photoLabel(payload: FollowUpEntryDraftPayload) {
-  return payload.photoIntent ? "Photo attached" : null;
+function photoLabel(
+  payload: FollowUpEntryDraftPayload,
+  copy: GardenWorkspaceCopy,
+) {
+  return payload.photoIntent ? copy.localState.drafts.photoAttached : null;
+}
+
+function draftDate(value: string | null | undefined, locale: InterfaceLocale) {
+  return value ? formatGardenWorkspaceDate(locale, value, "short") : null;
 }
 
 function firstNonEmpty(...values: Array<string | null | undefined>) {

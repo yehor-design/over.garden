@@ -140,17 +140,17 @@ describe("/garden workspace V2", () => {
       },
     );
     expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).toContain("Update Cherry tomato");
-    expect(html).toContain("Plants");
-    expect(html).toContain("Animals");
-    expect(html).toContain("Bee colonies");
-    expect(html).toContain("Recent continuity");
+    expect(html).toContain("Оновіть Cherry tomato");
+    expect(html).toContain("Рослини");
+    expect(html).toContain("Тварини");
+    expect(html).toContain("Бджолосім");
+    expect(html).toContain("Останні події");
     expect(html).toContain("Flowering changed");
-    expect(html).toContain("Add living object");
+    expect(html).toContain("Додати живий об");
     expect(html).toContain("First entry composer");
     expect(html).toContain('data-initial-space-id="space-1"');
     expect(html).toContain('data-initial-space-name="Balcony"');
-    expect(html).toContain("Space journal tools");
+    expect(html).toContain("Інструменти журналу простору");
     expect(html).toContain("Shared morning round");
     expect(html).not.toContain("Sign-in methods");
     expect(html).not.toContain("Social account link panel");
@@ -202,12 +202,12 @@ describe("/garden workspace V2", () => {
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("Start with one living object");
-    expect(html).toContain("Start first object");
-    expect(html).toContain("No spaces yet");
-    expect(html).toContain("No dated activity yet");
+    expect(html).toContain("Почніть з одного живого об");
+    expect(html).toContain("Почати перший об");
+    expect(html).toContain("Просторів ще немає");
+    expect(html).toContain("Датованих подій ще немає");
     expect(html).toContain("First entry composer");
-    expect(html).not.toContain("Space journal tools");
+    expect(html).not.toContain("Інструменти журналу простору");
   });
 
   it("keeps inventory readable when closed-pilot writing is unavailable", async () => {
@@ -219,8 +219,8 @@ describe("/garden workspace V2", () => {
     );
 
     expect(html).toContain("Cherry tomato");
-    expect(html).toContain("Check write access");
-    expect(html).toContain("Writing is invite-only right now");
+    expect(html).toContain("Перевірити доступ до запису");
+    expect(html).toContain("Наразі писати можна лише за запрошенням");
     expect(html).not.toContain("First entry composer");
   });
 
@@ -261,9 +261,9 @@ describe("/garden workspace V2", () => {
       expect.objectContaining({ faultSections: [] }),
     );
     expect(html).toContain('data-garden-workspace="operational-home"');
-    expect(html).toContain("Offline");
+    expect(html).toContain("Офлайн");
     expect(html).toContain("Synthetic draft 1");
-    expect(html).toContain("Waiting for sync");
+    expect(html).toContain("Очікує синхронізації");
     expect(html).not.toContain("Garden auth panel");
     expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
     expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();

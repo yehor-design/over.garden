@@ -13,6 +13,7 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import {
   buildAuthIntentAnchor,
   normalizeAuthIntentResumeAction,
@@ -95,6 +96,7 @@ export default async function PlantObjectReadbackPage({
     getRequestInterfaceLocale(),
   ]);
   const copy = getInterfaceCopy(locale);
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const visualCreationCandidate = resolveVisualJournalCreationScenario(
@@ -205,11 +207,12 @@ export default async function PlantObjectReadbackPage({
       {saveProgressKind === "first-entry" ||
       saveProgressKind === "follow-up" ? (
         <SaveProgressMoment
+          locale={locale}
           kind={saveProgressKind}
           entryCount={page.entries.length}
           objectName={page.plantObject.display_name}
           primaryHref="#follow-up-composer"
-          primaryLabel="Add another entry"
+          primaryLabel={workspaceCopy.saveProgress.actions.addAnotherEntry}
           secondaryHref="/garden"
           secondaryLabel={copy.object.backToJournal}
         />
@@ -251,6 +254,7 @@ export default async function PlantObjectReadbackPage({
         {writeAccess.invited ? (
           <FollowUpEntryComposer
             ownerUserId={userId}
+            locale={locale}
             objectId={objectId}
             objectDisplayName={page.plantObject.display_name}
             objectKind={page.plantObject.object_kind}

@@ -1,3 +1,10 @@
+import {
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  selectGardenPluralForm,
+} from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+
 export type SaveProgressMomentKind =
   | "first-entry"
   | "follow-up"
@@ -38,24 +45,30 @@ export function buildSaveProgressReadbackUrl(
   return `${url.pathname}${url.search}`;
 }
 
-export function buildSaveProgressMomentCopy(input: {
-  kind: SaveProgressMomentKind;
-  objectName?: string | null;
-  spaceName?: string | null;
-  entryCount: number;
-}): SaveProgressMomentCopy {
+export function buildSaveProgressMomentCopy(
+  input: {
+    kind: SaveProgressMomentKind;
+    objectName?: string | null;
+    spaceName?: string | null;
+    entryCount: number;
+  },
+  locale: InterfaceLocale,
+): SaveProgressMomentCopy {
+  const copy = getGardenWorkspaceCopy(locale).saveProgress;
   const entryCount = Math.max(1, Math.floor(input.entryCount));
-  const objectName = normalizeLabel(input.objectName, "this plant");
-  const spaceName = normalizeLabel(input.spaceName, "this space");
+  const objectName = normalizeLabel(input.objectName, copy.objectFallback);
+  const spaceName = normalizeLabel(input.spaceName, copy.spaceFallback);
   const progressPercent = saveProgressPercent(entryCount);
-  const progressValue = `${Math.min(entryCount, 4)} / 4 starter notes`;
+  const progressValue = formatGardenWorkspaceTemplate(copy.progressValue, {
+    count: Math.min(entryCount, 4),
+  });
 
   if (input.kind === "first-entry") {
     return {
-      eyebrow: "Saved locally",
-      title: "Your garden record has started",
-      body: `${objectName} now has its first dated note. Add the next change when it happens; there is no sharing step to finish.`,
-      progressLabel: "Season trail started",
+      eyebrow: copy.firstEntry.eyebrow,
+      title: copy.firstEntry.title,
+      body: formatGardenWorkspaceTemplate(copy.firstEntry.body, { objectName }),
+      progressLabel: copy.firstEntry.progressLabel,
       progressValue,
       progressPercent,
     };
@@ -63,20 +76,28 @@ export function buildSaveProgressMomentCopy(input: {
 
   if (input.kind === "space-entry") {
     return {
-      eyebrow: "Saved locally",
-      title: "Space note added",
-      body: `${spaceName} now has another dated note across the objects you selected. You can return to the timeline or keep logging while the context is fresh.`,
-      progressLabel: "Garden trail",
+      eyebrow: copy.spaceEntry.eyebrow,
+      title: copy.spaceEntry.title,
+      body: formatGardenWorkspaceTemplate(copy.spaceEntry.body, { spaceName }),
+      progressLabel: copy.spaceEntry.progressLabel,
       progressValue,
       progressPercent,
     };
   }
 
   return {
-    eyebrow: "Progress added",
-    title: "This record is getting useful",
-    body: `${objectName} now has ${entryCount} dated ${entryCount === 1 ? "note" : "notes"} in one place. Keep the trail for yourself first; no outside reaction is required.`,
-    progressLabel: "Season trail",
+    eyebrow: copy.followUp.eyebrow,
+    title: copy.followUp.title,
+    body: formatGardenWorkspaceTemplate(
+      selectGardenPluralForm(locale, entryCount, {
+        one: copy.followUp.bodyOne,
+        few: copy.followUp.bodyFew,
+        many: copy.followUp.bodyMany,
+        other: copy.followUp.bodyOther,
+      }),
+      { objectName, count: entryCount },
+    ),
+    progressLabel: copy.followUp.progressLabel,
     progressValue,
     progressPercent,
   };

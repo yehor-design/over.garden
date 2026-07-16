@@ -1,13 +1,13 @@
 # Localization Coverage Baseline
 
-Status: binding implementation baseline for OVE-167 through OVE-171
+Status: binding implementation baseline for OVE-168 through OVE-171
 Date: 2026-07-16
 
 ## Purpose
 
 This document prevents the remaining localization slices from rebuilding work
 that already exists. It records the current code-backed `uk`/`bg`/`ru`
-baseline after OVE-164 through OVE-166 and the OVE-172 through OVE-185
+baseline after OVE-164 through OVE-167 and the OVE-172 through OVE-185
 product reconstruction.
 
 A localized route or a `locale` prop is not, by itself, proof of complete copy
@@ -35,6 +35,12 @@ locale plumbing exists but visible authored copy still has verified gaps.
   contract for authentication, intent resume, account linking, recovery,
   support, erasure, privacy/consent, and publication disclosure. Raw auth and
   OAuth transport errors no longer render as interface copy.
+- OVE-167 adds `garden-workspace-copy.ts` as the exact-parity `uk`/`bg`/`ru`
+  contract for the owner workspace, inventory, first-object creation, local
+  drafts, offline queue, media recovery, coarse-region labels, and save
+  feedback. The existing OVE-187 v8 corpus proves owner-scoped workspace and
+  creation states without changing repositories, draft payloads, media
+  boundaries, or idempotency behavior.
 
 ## Current Coverage Matrix
 
@@ -51,7 +57,7 @@ locale plumbing exists but visible authored copy still has verified gaps.
 | Guest community directory/detail                                                              | `community-copy.ts` and OVE-184 route tests                                                                                                                                                                                                              | Preserve       | OVE-169 audits residual action/error states only            |
 | Public and owner profile presentation/editor                                                  | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map and tests                                                                                                                                                                        | Preserve       | OVE-169 regression coverage only                            |
 | Auth intent, account linking, recovery, support, erasure, privacy, and publication disclosure | `trust-surface-copy.ts`, localized route metadata, inherited signed-in locale, safe auth/OAuth error classification, exact auth-intent resume, privacy/consent and disclosure route tests                                                                | Preserve       | OVE-171 regression gate only                                |
-| Owner garden workspace and first-object creation                                              | `/garden` layout/top chrome and selected labels use OVE-164 copy; V2 workspace receives `locale`; workspace sections, local-state panel, first-entry composer, drafts, kind/voice/mention controls, and save feedback retain English copy                | Partial        | OVE-167                                                     |
+| Owner garden workspace and first-object creation                                              | `garden-workspace-copy.ts`, localized inventory/continuity, local-state and draft recovery, first-entry composer, kind/voice/mention controls, region labels, safe recovery errors, and save-progress tests across `uk`/`bg`/`ru`                        | Preserve       | OVE-171 regression gate only                                |
 | Owner living-object continuity and follow-up                                                  | Owner route resolves locale and reuses a small shared object copy subset; public passport/journal are localized; owner controls, follow-up composer, catalog/privacy/provenance labels, progress/value states, and lifecycle actions retain English copy | Partial        | OVE-168                                                     |
 | Owner lineage claims, invitation handoff, and questions                                       | Public lineage/passport evidence is localized; owner claim/invitation/question routes have no complete typed locale copy contract                                                                                                                        | Partial        | OVE-169                                                     |
 | Admin, curation, pilot, erasure-operator, and health UI                                       | Shared shell can resolve locale, but the operator pages do not have a complete locale-aware authored-copy contract                                                                                                                                       | Missing        | OVE-170                                                     |
@@ -61,10 +67,6 @@ locale plumbing exists but visible authored copy still has verified gaps.
 
 These examples identify ownership; they are not an exhaustive string list:
 
-- `garden-workspace-view.tsx` receives `locale` but still renders labels such as
-  `Garden summary`, `Spaces`, and `Recent continuity` directly.
-- `first-entry-composer.tsx` has direct English labels, placeholders,
-  validation/recovery copy, and save states.
 - The owner object route localizes only a small shared subset while the
   follow-up composer and catalog/privacy/provenance controls retain direct
   English copy.
@@ -73,22 +75,22 @@ These examples identify ownership; they are not an exhaustive string list:
 
 ## Cross-Project Sequencing
 
-- OVE-161 blocks OVE-167 because approved aliases, locale variants, trust
-  metadata, and no-match behavior change the real first-entry typeahead states
-  that OVE-167 localizes.
+- OVE-161 and OVE-167 are complete. The approved alias, locale-variant, trust,
+  and no-match behavior is now covered by the first-entry localization
+  contract and remains an OVE-171 regression input.
 - OVE-161 blocks OVE-168 because the owner catalog resolve/readback copy must
   target the same final canonical selection and ambiguity contract.
 - OVE-163 blocks OVE-170 because OVE-158 through OVE-162 add the operator
   matching queue, approval, alias, duplicate-review, rollout-proof, and failure
   states that OVE-170 must cover.
-- OVE-166 is complete. OVE-169 remains independent of deterministic matching.
+- OVE-166 and OVE-167 are complete. OVE-169 remains independent of deterministic matching.
   OVE-171 stays blocked directly by OVE-167 through OVE-170 and retains the
   completed OVE-166 contract as a regression input; OVE-161 and OVE-163 are
   inherited transitively to keep the DAG explicit without duplicate blockers.
 
 ## Implementation Rules
 
-1. OVE-166 through OVE-170 are incremental delta slices. They must extend or
+1. OVE-168 through OVE-170 are incremental delta slices. They must extend or
    reuse existing copy contracts and canonical components instead of creating a
    second localization system.
 2. A `Preserve` surface is out of implementation scope unless a focused test or

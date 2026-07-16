@@ -39,22 +39,22 @@ describe("GardenWorkspaceView", () => {
 
     expect(html).toContain('data-garden-workspace="operational-home"');
     expect(html).toContain("Простір саду");
-    expect(html).toContain("Next useful action");
-    expect(html).toContain("Update Object 1");
-    expect(html).toContain("Plants");
-    expect(html).toContain("Animals");
-    expect(html).toContain("Bee colonies");
-    expect(html).toContain("Spaces");
-    expect(html).toContain("View all 5 spaces");
-    expect(html).toContain("Living objects");
-    expect(html).toContain("View all 9 objects");
-    expect(html).toContain("Drafts on this device");
+    expect(html).toContain("Наступна корисна дія");
+    expect(html).toContain("Оновіть Object 1");
+    expect(html).toContain("Рослини");
+    expect(html).toContain("Тварини");
+    expect(html).toContain("Бджолосім");
+    expect(html).toContain("Простори");
+    expect(html).toContain("Переглянути всі 5 просторів");
+    expect(html).toContain("Живі об");
+    expect(html).toContain("Переглянути всі 9 об");
+    expect(html).toContain("Чернетки на цьому пристрої");
     expect(html).toContain("Пересадка монстери");
-    expect(html).toContain("Queued locally");
-    expect(html).toContain("Not saved to the server yet");
-    expect(html).toContain("1 photo processing");
-    expect(html).toContain("1 photo needs attention");
-    expect(html).toContain("Recent continuity");
+    expect(html).toContain("Локальна черга");
+    expect(html).toContain("Ще не збережено на сервері");
+    expect(html).toContain("Фото в обробці: 1");
+    expect(html).toContain("Фото, що потребують уваги: 1");
+    expect(html).toContain("Останні події");
     expect(html).toContain("First flowers");
     expect(html).toContain('href="/privacy"');
     expect(html).not.toMatch(
@@ -76,10 +76,10 @@ describe("GardenWorkspaceView", () => {
       />,
     );
 
-    expect(html).toContain("Living objects");
+    expect(html).toContain("Живі об");
     expect(html).toContain("Object 1");
-    expect(html).toContain("Recent updates are temporarily unavailable");
-    expect(html).toContain("Try this section again");
+    expect(html).toContain("Останні оновлення тимчасово недоступні");
+    expect(html).toContain("Спробувати цей розділ ще раз");
   });
 
   it("renders one recoverable full-error state inside the shared shell content", () => {
@@ -112,9 +112,9 @@ describe("GardenWorkspaceView", () => {
       />,
     );
 
-    expect(html).toContain("Workspace data is temporarily unavailable");
+    expect(html).toContain("Дані простору тимчасово недоступні");
     expect(html).toContain('href="/garden"');
-    expect(html).toContain("Try again");
+    expect(html).toContain("Спробувати ще раз");
     expect(html).toContain("Local recovery draft");
     expect(html).toContain('href="/privacy"');
     expect(html).not.toContain("Object 1");
@@ -134,10 +134,35 @@ describe("GardenWorkspaceView", () => {
       />,
     );
 
-    expect(html).toContain("Restore your living-object inventory");
-    expect(html).toContain("Retry inventory");
-    expect(html).not.toContain("Start with one living object");
+    expect(html).toContain("Відновіть список живих об");
+    expect(html).toContain("Оновити список");
+    expect(html).not.toContain("Почніть з одного живого об");
   });
+
+  it.each([
+    ["bg", "Следващо полезно действие", "Живи обекти", "Пространства"],
+    ["ru", "Следующее полезное действие", "Живые объекты", "Пространства"],
+  ] as const)(
+    "renders authored workspace chrome in %s without translating stored values",
+    (locale, nextAction, inventory, spaces) => {
+      const html = renderToStaticMarkup(
+        <GardenWorkspaceView
+          ownerUserId={OWNER_ID}
+          canWrite
+          locale={locale}
+          today="2026-07-12"
+          workspace={readyWorkspace()}
+        />,
+      );
+
+      expect(html).toContain(nextAction);
+      expect(html).toContain(inventory);
+      expect(html).toContain(spaces);
+      expect(html).toContain("Object 1");
+      expect(html).toContain("Monstera deliciosa");
+      expect(html).toContain("First flowers");
+    },
+  );
 });
 
 function readyWorkspace(): GardenWorkspaceReadModel {
