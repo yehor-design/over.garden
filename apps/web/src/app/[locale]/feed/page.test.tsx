@@ -76,7 +76,9 @@ describe("/{locale}/feed", () => {
         params: Promise.resolve({ locale: "uk" }),
       }),
     ).resolves.toMatchObject({
-      title: "Followed feed | OverGarden",
+      title: "Стрічка підписок | OverGarden",
+      description:
+        "Нові публічні записи від людей, об'єктів і тем, за якими ви стежите.",
       alternates: {
         canonical: "/feed",
       },

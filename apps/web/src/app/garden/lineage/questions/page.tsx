@@ -2,7 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  formatOwnerLineageDate,
+  formatOwnerLineageTemplate,
+  getOwnerLineageCatalogKindLabel,
+  getOwnerLineageCopy,
+  type OwnerLineageCopy,
+} from "@/lib/owner-lineage-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   listLineageFollowReadback,
   listLineageQuestionInbox,
@@ -15,23 +24,30 @@ import { GardenAuthPanel } from "../../garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Lineage updates | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
+  return {
+    title: copy.metadata.updatesTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function LineageUpdatesPage() {
-  const session = await getCurrentSession();
+  const [session, locale] = await Promise.all([
+    getCurrentSession(),
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getOwnerLineageCopy(locale);
   const userId = session?.user?.id;
 
   if (!userId) {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <LineageUpdatesHeader />
-        <GardenAuthPanel />
+      <main
+        lang={locale}
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
+        <LineageUpdatesHeader copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -43,8 +59,12 @@ export default async function LineageUpdatesPage() {
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+    >
       <LineageUpdatesHeader
+        copy={copy}
         questionCount={questions.length}
         followCount={follows.length}
       />
@@ -52,21 +72,26 @@ export default async function LineageUpdatesPage() {
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-foreground">
-            Questions for you
+            {copy.updates.questionsTitle}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Delivered only from confirmed lineage participants.
+            {copy.updates.questionsDescription}
           </p>
         </div>
 
         {questions.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No lineage questions are waiting for you.
+            {copy.updates.questionsEmpty}
           </p>
         ) : (
           <ol className="grid gap-3">
             {questions.map((question) => (
-              <LineageQuestionCard key={question.id} question={question} />
+              <LineageQuestionCard
+                key={question.id}
+                copy={copy}
+                locale={locale}
+                question={question}
+              />
             ))}
           </ol>
         )}
@@ -75,21 +100,26 @@ export default async function LineageUpdatesPage() {
       <section className="grid gap-4">
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-foreground">
-            Followed lineage nodes
+            {copy.updates.followedTitle}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Only nodes that still have an active public entry are shown here.
+            {copy.updates.followedDescription}
           </p>
         </div>
 
         {follows.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No lineage nodes followed yet.
+            {copy.updates.followedEmpty}
           </p>
         ) : (
           <ol className="grid gap-3">
             {follows.map((follow) => (
-              <LineageFollowCard key={follow.id} follow={follow} />
+              <LineageFollowCard
+                key={follow.id}
+                copy={copy}
+                locale={locale}
+                follow={follow}
+              />
             ))}
           </ol>
         )}
@@ -99,9 +129,11 @@ export default async function LineageUpdatesPage() {
 }
 
 function LineageUpdatesHeader({
+  copy,
   questionCount,
   followCount,
 }: {
+  copy: OwnerLineageCopy;
   questionCount?: number;
   followCount?: number;
 }) {
@@ -115,7 +147,7 @@ function LineageUpdatesHeader({
             className: "self-start",
           })}
         >
-          Back to journal
+          {copy.common.backToJournal}
         </Link>
         <Link
           href="/garden/lineage/claims"
@@ -124,21 +156,25 @@ function LineageUpdatesHeader({
             className: "self-start",
           })}
         >
-          Lineage claims
+          {copy.common.claims}
         </Link>
       </div>
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Lineage updates
+          {copy.updates.title}
         </h1>
         {typeof questionCount === "number" &&
         typeof followCount === "number" ? (
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Questions: {questionCount}
+              {formatOwnerLineageTemplate(copy.updates.questionCount, {
+                count: questionCount,
+              })}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Followed: {followCount}
+              {formatOwnerLineageTemplate(copy.updates.followedCount, {
+                count: followCount,
+              })}
             </span>
           </div>
         ) : null}
@@ -148,8 +184,12 @@ function LineageUpdatesHeader({
 }
 
 function LineageQuestionCard({
+  copy,
+  locale,
   question,
 }: {
+  copy: OwnerLineageCopy;
+  locale: InterfaceLocale;
   question: LineageQuestionInboxItem;
 }) {
   return (
@@ -159,18 +199,30 @@ function LineageQuestionCard({
           {question.targetObject.displayName}
         </h3>
         <time className="text-xs text-muted-foreground">
-          {formatDate(question.createdAt)}
+          {formatOwnerLineageDate(locale, question.createdAt)}
         </time>
       </div>
       <p className="text-sm leading-6 text-foreground">
         {question.questionText}
       </p>
-      <LineageObjectMeta object={question.targetObject} />
+      <LineageObjectMeta
+        copy={copy}
+        locale={locale}
+        object={question.targetObject}
+      />
     </li>
   );
 }
 
-function LineageFollowCard({ follow }: { follow: LineageFollowReadbackItem }) {
+function LineageFollowCard({
+  copy,
+  locale,
+  follow,
+}: {
+  copy: OwnerLineageCopy;
+  locale: InterfaceLocale;
+  follow: LineageFollowReadbackItem;
+}) {
   return (
     <li className="grid gap-3 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
@@ -178,22 +230,30 @@ function LineageFollowCard({ follow }: { follow: LineageFollowReadbackItem }) {
           {follow.targetObject.displayName}
         </h3>
         <time className="text-xs text-muted-foreground">
-          {formatDate(follow.createdAt)}
+          {formatOwnerLineageDate(locale, follow.createdAt)}
         </time>
       </div>
-      <LineageObjectMeta object={follow.targetObject} />
+      <LineageObjectMeta
+        copy={copy}
+        locale={locale}
+        object={follow.targetObject}
+      />
     </li>
   );
 }
 
 function LineageObjectMeta({
+  copy,
+  locale,
   object,
 }: {
+  copy: OwnerLineageCopy;
+  locale: InterfaceLocale;
   object: LineageInteractionObjectReadback;
 }) {
   const meta = [
-    object.varietyText ?? "Unknown variety",
-    object.catalogKind ? object.catalogKind.replaceAll("_", " ") : null,
+    object.varietyText ?? copy.common.unknownVariety,
+    getOwnerLineageCatalogKindLabel(locale, object.catalogKind),
   ].filter(Boolean);
 
   return (
@@ -205,13 +265,4 @@ function LineageObjectMeta({
       ))}
     </div>
   );
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }

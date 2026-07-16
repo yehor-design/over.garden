@@ -18,7 +18,7 @@ export async function POST(request: Request) {
 
   if (!token || token.length > 4096 || !verifyLineageInviteToken(token)) {
     return Response.json(
-      { error: "Lineage invitation is unavailable." },
+      { error: "lineage_invitation_unavailable" },
       { status: 400 },
     );
   }

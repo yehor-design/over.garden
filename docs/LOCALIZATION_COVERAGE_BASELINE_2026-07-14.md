@@ -1,13 +1,13 @@
 # Localization Coverage Baseline
 
-Status: binding implementation baseline for OVE-169 through OVE-171
+Status: binding implementation baseline for OVE-170 through OVE-171
 Date: 2026-07-16
 
 ## Purpose
 
 This document prevents the remaining localization slices from rebuilding work
 that already exists. It records the current code-backed `uk`/`bg`/`ru`
-baseline after OVE-164 through OVE-168 and the OVE-172 through OVE-185
+baseline after OVE-164 through OVE-169 and the OVE-172 through OVE-185
 product reconstruction.
 
 A localized route or a `locale` prop is not, by itself, proof of complete copy
@@ -48,6 +48,16 @@ locale plumbing exists but visible authored copy still has verified gaps.
   publication and archive semantics, locale-aware public continuations, UGC,
   catalog identity, official source names, provenance values, and processed
   derivative media.
+- OVE-169 adds `owner-lineage-copy.ts` as the exact-parity `uk`/`bg`/`ru`
+  contract for owner claim inboxes, invitation claim and secure browser
+  handoff, consent outcomes, lineage questions/follows, metadata, dates,
+  loading/retry/unavailable copy, and catalog-kind summaries. It preserves
+  object names, varieties, pending-identity labels, question text, exact
+  intent resume, encrypted HttpOnly invitation handoff, consent/visibility
+  behavior, and owner/private repository boundaries. Its focused audit also
+  moves the four remaining followed-feed, notification, bookmark, and wishlist
+  metadata titles onto the existing `social-surface-copy.ts` contract without
+  rebuilding those surfaces.
 
 ## Current Coverage Matrix
 
@@ -60,13 +70,13 @@ locale plumbing exists but visible authored copy still has verified gaps.
 | Public journal directory                                                                      | `public-journal-directory-copy.ts` and route tests                                                                                                                                                                                         | Preserve       | OVE-171 regression gate only                                |
 | Public knowledge hub                                                                          | `public-knowledge-copy.ts` and route tests                                                                                                                                                                                                 | Preserve       | OVE-171 regression gate only                                |
 | Public passport, journal readback, variety, profile, engagement, and 404/410                  | `public-surface-localization.ts`, `living-object-passport.ts`, `public-journal-entry-copy.ts`, `public-profile-copy.ts`, lifecycle copy/tests                                                                                              | Preserve       | OVE-171; owning delta issue only when the gate proves a gap |
-| Followed feed, notifications, bookmarks, and wishlist                                         | `social-surface-copy.ts` and OVE-183 route tests                                                                                                                                                                                           | Preserve       | OVE-169 audits residual action/error states only            |
-| Guest community directory/detail                                                              | `community-copy.ts` and OVE-184 route tests                                                                                                                                                                                                | Preserve       | OVE-169 audits residual action/error states only            |
-| Public and owner profile presentation/editor                                                  | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map and tests                                                                                                                                                          | Preserve       | OVE-169 regression coverage only                            |
+| Followed feed, notifications, bookmarks, and wishlist                                         | `social-surface-copy.ts`, localized route metadata, and OVE-183/OVE-169 route tests                                                                                                                                                        | Preserve       | OVE-171 regression gate only                                |
+| Guest community directory/detail                                                              | `community-copy.ts` and OVE-184/OVE-169 regression tests                                                                                                                                                                                   | Preserve       | OVE-171 regression gate only                                |
+| Public and owner profile presentation/editor                                                  | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map, and OVE-169 regression tests                                                                                                                                      | Preserve       | OVE-171 regression gate only                                |
 | Auth intent, account linking, recovery, support, erasure, privacy, and publication disclosure | `trust-surface-copy.ts`, localized route metadata, inherited signed-in locale, safe auth/OAuth error classification, exact auth-intent resume, privacy/consent and disclosure route tests                                                  | Preserve       | OVE-171 regression gate only                                |
 | Owner garden workspace and first-object creation                                              | `garden-workspace-copy.ts`, localized inventory/continuity, local-state and draft recovery, first-entry composer, kind/voice/mention controls, region labels, safe recovery errors, and save-progress tests across `uk`/`bg`/`ru`          | Preserve       | OVE-171 regression gate only                                |
 | Owner living-object continuity and follow-up                                                  | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve       | OVE-171 regression gate only                                |
-| Owner lineage claims, invitation handoff, and questions                                       | Public lineage/passport evidence is localized; owner claim/invitation/question routes have no complete typed locale copy contract                                                                                                          | Partial        | OVE-169                                                     |
+| Owner lineage claims, invitation handoff, and questions                                       | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve       | OVE-171 regression gate only                                |
 | Admin, curation, pilot, erasure-operator, and health UI                                       | Shared shell can resolve locale, but the operator pages do not have a complete locale-aware authored-copy contract                                                                                                                         | Missing        | OVE-170                                                     |
 | Whole-product route/state coverage gate                                                       | Existing copy-key and route tests are distributed; no unified route/state inventory or zero-gap CI report exists                                                                                                                           | Missing        | OVE-171                                                     |
 
@@ -88,7 +98,7 @@ These examples identify ownership; they are not an exhaustive string list:
 - OVE-163 blocks OVE-170 because OVE-158 through OVE-162 add the operator
   matching queue, approval, alias, duplicate-review, rollout-proof, and failure
   states that OVE-170 must cover.
-- OVE-166 through OVE-168 are complete. OVE-169 remains independent of
+- OVE-166 through OVE-169 are complete. OVE-169 remains independent of
   deterministic matching. OVE-171 stays blocked directly by OVE-167 through
   OVE-170 and retains the completed OVE-166 and OVE-168 contracts as regression
   inputs; OVE-161 and OVE-163 are inherited transitively to keep the DAG
@@ -96,7 +106,7 @@ These examples identify ownership; they are not an exhaustive string list:
 
 ## Implementation Rules
 
-1. OVE-169 and OVE-170 are incremental delta slices. They must extend or
+1. OVE-170 is the remaining incremental delta slice. It must extend or
    reuse existing copy contracts and canonical components instead of creating a
    second localization system.
 2. A `Preserve` surface is out of implementation scope unless a focused test or

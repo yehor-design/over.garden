@@ -2,7 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  formatOwnerLineageDate,
+  formatOwnerLineageTemplate,
+  getOwnerLineageCopy,
+  type OwnerLineageCopy,
+} from "@/lib/owner-lineage-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   listLineageClaimInbox,
   type LineageClaimInboxItem,
@@ -18,13 +26,13 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Lineage claims | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
+  return {
+    title: copy.metadata.claimsTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function LineageClaimInboxPage({
   searchParams,
@@ -34,14 +42,21 @@ export default async function LineageClaimInboxPage({
   const params = await (searchParams ??
     Promise.resolve<Record<string, string | string[] | undefined>>({}));
   const invitationStatus = normalizeInvitationStatus(params.invitation);
-  const session = await getCurrentSession();
+  const [session, locale] = await Promise.all([
+    getCurrentSession(),
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getOwnerLineageCopy(locale);
   const userId = session?.user?.id;
 
   if (!userId) {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <LineageClaimInboxHeader />
-        <GardenAuthPanel />
+      <main
+        lang={locale}
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
+        <LineageClaimInboxHeader copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -53,8 +68,11 @@ export default async function LineageClaimInboxPage({
   ]);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <LineageClaimInboxHeader claimCount={claims.length} />
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+    >
+      <LineageClaimInboxHeader copy={copy} claimCount={claims.length} />
 
       {invitationStatus ? (
         <p
@@ -62,14 +80,14 @@ export default async function LineageClaimInboxPage({
           className="rounded-md border border-border bg-muted/30 p-3 text-sm text-foreground"
         >
           {invitationStatus === "confirmed"
-            ? "Invitation confirmed. Its provenance can now contribute under the recorded visibility policy."
-            : "Invitation declined. It does not contribute to public lineage."}
+            ? copy.claims.confirmedNotice
+            : copy.claims.declinedNotice}
         </p>
       ) : null}
 
       {claims.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No provenance claims are waiting for you.
+          {copy.claims.empty}
         </p>
       ) : (
         <ol className="grid gap-4">
@@ -77,6 +95,8 @@ export default async function LineageClaimInboxPage({
             <LineageClaimCard
               key={claim.id}
               claim={claim}
+              copy={copy}
+              locale={locale}
               writeEnabled={writeAccess.invited}
             />
           ))}
@@ -95,7 +115,13 @@ function normalizeInvitationStatus(
     : null;
 }
 
-function LineageClaimInboxHeader({ claimCount }: { claimCount?: number }) {
+function LineageClaimInboxHeader({
+  copy,
+  claimCount,
+}: {
+  copy: OwnerLineageCopy;
+  claimCount?: number;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <div className="flex flex-wrap gap-3">
@@ -106,7 +132,7 @@ function LineageClaimInboxHeader({ claimCount }: { claimCount?: number }) {
             className: "self-start",
           })}
         >
-          Back to journal
+          {copy.common.backToJournal}
         </Link>
         <Link
           href="/garden/lineage/questions"
@@ -115,20 +141,22 @@ function LineageClaimInboxHeader({ claimCount }: { claimCount?: number }) {
             className: "self-start",
           })}
         >
-          Lineage updates
+          {copy.common.updates}
         </Link>
       </div>
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Lineage claims
+          {copy.claims.title}
         </h1>
         {typeof claimCount === "number" ? (
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Waiting: {claimCount}
+              {formatOwnerLineageTemplate(copy.claims.waiting, {
+                count: claimCount,
+              })}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Public change: none before confirm
+              {copy.claims.publicChange}
             </span>
           </div>
         ) : null}
@@ -139,42 +167,46 @@ function LineageClaimInboxHeader({ claimCount }: { claimCount?: number }) {
 
 function LineageClaimCard({
   claim,
+  copy,
+  locale,
   writeEnabled,
 }: {
   claim: LineageClaimInboxItem;
+  copy: OwnerLineageCopy;
+  locale: InterfaceLocale;
   writeEnabled: boolean;
 }) {
   return (
     <li className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
         <h2 className="text-base font-semibold text-foreground">
-          {lineageClaimTitle(claim)}
+          {lineageClaimTitle(claim, copy)}
         </h2>
         <time className="text-xs text-muted-foreground">
-          {formatDate(claim.createdAt)}
+          {formatOwnerLineageDate(locale, claim.createdAt)}
         </time>
       </div>
 
       <dl className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase">Claimed object</dt>
+          <dt className="text-xs uppercase">{copy.common.claimedObject}</dt>
           <dd className="text-foreground">
-            {lineageObjectOptionLabel(claim.subjectObject)}
+            {lineageObjectOptionLabel(claim.subjectObject, copy)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">Your source object</dt>
+          <dt className="text-xs uppercase">{copy.claims.yourSourceObject}</dt>
           <dd className="text-foreground">
-            {lineageObjectOptionLabel(claim.sourceObject)}
+            {lineageObjectOptionLabel(claim.sourceObject, copy)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">State</dt>
-          <dd>{lineageClaimStateLabel(claim)}</dd>
+          <dt className="text-xs uppercase">{copy.common.state}</dt>
+          <dd>{lineageClaimStateLabel(claim, copy)}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">Proposed by</dt>
-          <dd>Another gardener</dd>
+          <dt className="text-xs uppercase">{copy.common.proposedBy}</dt>
+          <dd>{copy.common.anotherGardener}</dd>
         </div>
       </dl>
 
@@ -186,7 +218,7 @@ function LineageClaimCard({
               type="submit"
               className={buttonVariants({ className: "self-start" })}
             >
-              Confirm lineage
+              {copy.claims.confirm}
             </button>
           </form>
           <form action={declineLineageClaimAction}>
@@ -198,41 +230,46 @@ function LineageClaimCard({
                 className: "self-start",
               })}
             >
-              Decline
+              {copy.claims.decline}
             </button>
           </form>
         </div>
       ) : (
         <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
-          Open your invitation link to respond to lineage claims.
+          {copy.claims.writeGate}
         </p>
       )}
     </li>
   );
 }
 
-function lineageClaimTitle(claim: LineageClaimInboxItem) {
-  return `${claim.subjectObject.displayName} claims provenance from ${claim.sourceObject.displayName}`;
+function lineageClaimTitle(
+  claim: LineageClaimInboxItem,
+  copy: OwnerLineageCopy,
+) {
+  return formatOwnerLineageTemplate(copy.claims.claimTitle, {
+    subject: claim.subjectObject.displayName,
+    source: claim.sourceObject.displayName,
+  });
 }
 
-function lineageObjectOptionLabel(option: LineagePlantObjectOption) {
-  const variety = option.varietyText ?? "Unknown";
+function lineageObjectOptionLabel(
+  option: LineagePlantObjectOption,
+  copy: OwnerLineageCopy,
+) {
+  const variety = option.varietyText ?? copy.common.unknownVariety;
   return `${option.displayName} · ${variety}`;
 }
 
-function lineageClaimStateLabel(claim: LineageClaimInboxItem) {
+function lineageClaimStateLabel(
+  claim: LineageClaimInboxItem,
+  copy: OwnerLineageCopy,
+) {
   if (claim.consentState === "proposed") {
-    return "Proposed lineage · no public contribution yet";
+    return copy.states.proposed;
   }
 
-  return `${claim.consentState} lineage`;
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return claim.consentState === "confirmed"
+    ? copy.states.confirmed
+    : copy.states.declined;
 }

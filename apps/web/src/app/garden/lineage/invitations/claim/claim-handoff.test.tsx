@@ -20,9 +20,9 @@ describe("lineage claim browser handoff", () => {
   });
 
   it("never server-renders a token or a hidden token input", () => {
-    const html = renderToStaticMarkup(<LineageClaimHandoff />);
+    const html = renderToStaticMarkup(<LineageClaimHandoff locale="bg" />);
 
-    expect(html).toContain("Preparing the private invitation");
+    expect(html).toContain("Подготвяме личната покана");
     expect(html).not.toMatch(/name="token"|v1\.payload\.signature/i);
   });
 

@@ -38,8 +38,10 @@ export async function generateMetadata({
 }: LocalizedFeedRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
+  const copy = getSocialSurfaceCopy(locale);
   return {
-    title: "Followed feed | OverGarden",
+    title: `${copy.feed.title} | OverGarden`,
+    description: copy.feed.description,
     alternates: isPublicLocale(localeParam)
       ? {
           canonical: localizedPath(locale, "/feed"),

@@ -80,7 +80,9 @@ describe("/{locale}/notifications", () => {
         params: Promise.resolve({ locale: "uk" }),
       }),
     ).resolves.toMatchObject({
-      title: "Notifications | OverGarden",
+      title: "Сповіщення | OverGarden",
+      description:
+        "Відповіді, підписки, згадки та дії з походженням в одному місці.",
       alternates: {
         canonical: "/notifications",
       },

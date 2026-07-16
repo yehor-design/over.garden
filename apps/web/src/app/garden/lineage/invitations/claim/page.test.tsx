@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   cookies: vi.fn(),
   cookieGet: vi.fn(),
   getCurrentSession: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
   getLineageInvitationClaimPreview: vi.fn(),
   unsealLineageClaimToken: vi.fn(),
   verifyLineageInviteToken: vi.fn(),
@@ -21,6 +22,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("@/server/lineage-repository", () => ({
@@ -52,6 +57,7 @@ async function renderClaimPage(searchParams?: Record<string, string>) {
 describe("/garden/lineage/invitations/claim page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.cookies.mockResolvedValue({ get: mocks.cookieGet });
     mocks.cookieGet.mockReturnValue({ value: "v1.opaque.sealed.tag" });
     mocks.unsealLineageClaimToken.mockReturnValue(
@@ -64,9 +70,11 @@ describe("/garden/lineage/invitations/claim page", () => {
   });
 
   it("stays out of search indexes", async () => {
-    const { metadata } = await import("./page");
+    const { generateMetadata } = await import("./page");
+    const metadata = await generateMetadata();
 
     expect(metadata.robots).toMatchObject({ index: false, follow: false });
+    expect(metadata.title).toBe("Запрошення щодо походження | OverGarden");
   });
 
   it("accepts a fragment handoff without server-rendering any token", async () => {
@@ -76,7 +84,7 @@ describe("/garden/lineage/invitations/claim page", () => {
 
     const html = await renderClaimPage();
 
-    expect(html).toContain("Preparing the private invitation");
+    expect(html).toContain("Готуємо приватне запрошення");
     expect(html).not.toMatch(/name="token"|private-payload|sealed\.tag/i);
     expect(mocks.getLineageInvitationClaimPreview).not.toHaveBeenCalled();
   });
@@ -119,7 +127,7 @@ describe("/garden/lineage/invitations/claim page", () => {
 
     const html = await renderClaimPage();
 
-    expect(html).toContain("Sign in to review this private invitation");
+    expect(html).toContain("Увійдіть, щоб переглянути приватне запрошення");
     expect(html).toContain('name="action" value="claim"');
     expect(html).toContain(
       'name="returnTo" value="/garden/lineage/invitations/claim"',
@@ -161,9 +169,11 @@ describe("/garden/lineage/invitations/claim page", () => {
     );
     expect(html).toContain("Maria saved seeds");
     expect(html).toContain("Cherokee Purple");
-    expect(html).toContain("Pending · no public contribution yet");
-    expect(html).toContain("Claim and confirm");
-    expect(html).toContain("Decline");
+    expect(html).toContain(
+      "Очікує рішення · ще не впливає на публічне походження",
+    );
+    expect(html).toContain("Прийняти й підтвердити");
+    expect(html).toContain("Відхилити");
     expect(html).toContain(
       'id="lineage-claim" data-auth-intent-control="claim" autofocus=""',
     );
@@ -182,8 +192,47 @@ describe("/garden/lineage/invitations/claim page", () => {
     const html = await renderClaimPage();
 
     expect(html).toContain(
-      "This lineage invitation is unavailable, expired, or already handled.",
+      "Це запрошення недоступне, прострочене або вже опрацьоване.",
     );
-    expect(html).not.toMatch(/Claim and confirm|Maria saved seeds/i);
+    expect(html).not.toMatch(/Прийняти й підтвердити|Maria saved seeds/i);
   });
+
+  it.each([
+    ["bg", "Покана за произход", "Приемане и потвърждаване"],
+    ["ru", "Приглашение подтвердить происхождение", "Принять и подтвердить"],
+  ] as const)(
+    "renders %s claim controls without translating identity values",
+    async (locale, title, action) => {
+      mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
+      mocks.getCurrentSession.mockResolvedValue({
+        user: { id: "00000000-0000-4000-8000-000000000777" },
+        session: { id: "session-1" },
+      });
+      mocks.getLineageInvitationClaimPreview.mockResolvedValue({
+        edgeId: "edge-1",
+        consentState: "proposed",
+        pendingIdentity: {
+          id: "pending-1",
+          displayLabel: "Maria saved seeds",
+          inviteState: "pending",
+        },
+        subjectObject: {
+          id: "object-1",
+          displayName: "Cherokee Purple",
+          objectKind: "plant",
+          catalogKind: "plant_variety",
+          varietyText: "Tomato",
+          varietyState: "selected",
+        },
+        createdAt: new Date("2026-07-03T18:00:00.000Z"),
+      });
+
+      const html = await renderClaimPage();
+
+      expect(html).toContain(title);
+      expect(html).toContain(action);
+      expect(html).toContain("Maria saved seeds");
+      expect(html).toContain("Cherokee Purple");
+    },
+  );
 });

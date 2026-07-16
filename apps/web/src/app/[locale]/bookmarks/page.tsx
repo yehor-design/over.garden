@@ -43,8 +43,10 @@ export async function generateMetadata({
 }: LocalizedBookmarksRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
+  const copy = getSocialSurfaceCopy(locale);
   return {
-    title: "Bookmarks | OverGarden",
+    title: `${copy.bookmarks.title} | OverGarden`,
+    description: copy.bookmarks.description,
     alternates: isPublicLocale(localeParam)
       ? {
           canonical: localizedPath(locale, "/bookmarks"),

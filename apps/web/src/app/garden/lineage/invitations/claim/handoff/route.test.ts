@@ -80,6 +80,7 @@ describe("lineage invitation claim handoff", () => {
 
     expect(response.status).toBe(400);
     expect(response.headers.get("set-cookie")).toBeNull();
+    expect(body).toBe('{"error":"lineage_invitation_unavailable"}');
     expect(body).not.toContain(rawToken);
     expect(mocks.sealLineageClaimToken).not.toHaveBeenCalled();
   });

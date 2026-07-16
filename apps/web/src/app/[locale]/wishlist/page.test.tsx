@@ -73,7 +73,8 @@ describe("/{locale}/wishlist", () => {
         params: Promise.resolve({ locale: "uk" }),
       }),
     ).resolves.toMatchObject({
-      title: "Wishlist | OverGarden",
+      title: "Хочу спробувати | OverGarden",
+      description: "Види, сорти й породи, які ви хочете додати згодом.",
       alternates: {
         canonical: "/wishlist",
       },

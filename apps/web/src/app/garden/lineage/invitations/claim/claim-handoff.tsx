@@ -4,15 +4,18 @@ import { RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   LINEAGE_CLAIM_HANDOFF_PATH,
   LINEAGE_INVITATION_CLAIM_PATH,
   lineageClaimTokenFromHash,
 } from "@/lib/lineage/claim-handoff";
+import { getOwnerLineageCopy } from "@/lib/owner-lineage-copy";
 
 type LineageClaimHandoffState = "preparing" | "retry" | "unavailable";
 
-export function LineageClaimHandoff() {
+export function LineageClaimHandoff({ locale }: { locale: InterfaceLocale }) {
+  const copy = getOwnerLineageCopy(locale).invitation;
   const tokenRef = useRef<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<LineageClaimHandoffState>("preparing");
@@ -73,7 +76,7 @@ export function LineageClaimHandoff() {
   if (state === "unavailable") {
     return (
       <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-        This lineage invitation is unavailable, expired, or already handled.
+        {copy.unavailable}
       </p>
     );
   }
@@ -83,11 +86,10 @@ export function LineageClaimHandoff() {
       <section className="grid gap-3 rounded-lg border border-border p-4">
         <div className="grid gap-1">
           <h2 className="text-sm font-semibold text-foreground">
-            We could not prepare the invitation
+            {copy.handoff.errorTitle}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            The invitation is still available on this device. Try the secure
-            handoff again.
+            {copy.handoff.retryDescription}
           </p>
         </div>
         <Button
@@ -100,7 +102,7 @@ export function LineageClaimHandoff() {
           }}
         >
           <RotateCcw aria-hidden="true" />
-          Try again
+          {copy.handoff.retry}
         </Button>
       </section>
     );
@@ -112,7 +114,7 @@ export function LineageClaimHandoff() {
       aria-live="polite"
       className="rounded-lg border border-border p-4 text-sm text-muted-foreground"
     >
-      Preparing the private invitation...
+      {copy.handoff.preparing}
     </p>
   );
 }

@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   cookieDelete: vi.fn(),
   unsealLineageClaimToken: vi.fn(),
   createAuthIntentToken: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
   requireCurrentRequestScope: vi.fn(async () => ({
     userId: "00000000-0000-4000-8000-000000000777",
     sessionId: "session-1",
@@ -32,6 +33,9 @@ vi.mock("@/server/auth-session", () => ({
 vi.mock("@/server/auth-intent-token", () => ({
   createAuthIntentToken: mocks.createAuthIntentToken,
 }));
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
 vi.mock("@/server/lineage-claim-cookie", () => ({
   unsealLineageClaimToken: mocks.unsealLineageClaimToken,
 }));
@@ -51,6 +55,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
       "v1.private-payload.private-signature",
     );
     mocks.createAuthIntentToken.mockReturnValue("opaque-claim-intent");
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.redirect.mockImplementation((url: string) => {
       throw new Error(`NEXT_REDIRECT:${url}`);
     });
@@ -105,7 +110,7 @@ describe("/garden/lineage/invitations/claim actions", () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
     await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
-      "Lineage invitation is unavailable.",
+      "Запрошення щодо походження недоступне.",
     );
 
     expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();

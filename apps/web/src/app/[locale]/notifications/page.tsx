@@ -49,8 +49,10 @@ export async function generateMetadata({
 }: LocalizedNotificationsRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
+  const copy = getSocialSurfaceCopy(locale);
   return {
-    title: "Notifications | OverGarden",
+    title: `${copy.notifications.title} | OverGarden`,
+    description: copy.notifications.description,
     alternates: isPublicLocale(localeParam)
       ? {
           canonical: localizedPath(locale, "/notifications"),

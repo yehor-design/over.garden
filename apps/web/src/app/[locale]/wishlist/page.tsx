@@ -45,8 +45,10 @@ export async function generateMetadata({
 }: LocalizedWishlistRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
+  const copy = getSocialSurfaceCopy(locale);
   return {
-    title: "Wishlist | OverGarden",
+    title: `${copy.wishlist.title} | OverGarden`,
+    description: copy.wishlist.description,
     alternates: isPublicLocale(localeParam)
       ? {
           canonical: localizedPath(locale, "/wishlist"),

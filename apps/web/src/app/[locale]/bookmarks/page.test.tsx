@@ -53,6 +53,21 @@ describe("/{locale}/bookmarks", () => {
     ]);
   });
 
+  it("keeps bookmark metadata private and localized", async () => {
+    const { generateMetadata } = await import("./page");
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ locale: "bg" }),
+      }),
+    ).resolves.toMatchObject({
+      title: "Отметки | OverGarden",
+      description: "Запазени публични материали, към които да се върнете.",
+      alternates: { canonical: "/bg/bookmarks" },
+      robots: { index: false, follow: false },
+    });
+  });
+
   it("renders signed-in public-safe bookmarks for later reading", async () => {
     const { default: LocalizedBookmarksRoute } = await import("./page");
     const html = renderToStaticMarkup(

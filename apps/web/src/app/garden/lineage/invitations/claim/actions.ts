@@ -8,11 +8,13 @@ import {
   LINEAGE_CLAIM_COOKIE_NAME,
   LINEAGE_INVITATION_CLAIM_PATH,
 } from "@/lib/lineage/claim-handoff";
+import { getOwnerLineageCopy } from "@/lib/owner-lineage-copy";
 import {
   AuthenticationRequiredError,
   requireCurrentRequestScope,
 } from "@/server/auth-session";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
 import { resolveLineageInvitationClaim } from "@/server/lineage-repository";
 
@@ -33,7 +35,8 @@ async function resolveInvitationClaim(decision: "confirmed" | "declined") {
     cookieStore.get(LINEAGE_CLAIM_COOKIE_NAME)?.value,
   );
   if (!token) {
-    throw new Error("Lineage invitation is unavailable.");
+    const copy = getOwnerLineageCopy(await getRequestInterfaceLocale());
+    throw new Error(copy.invitation.actionUnavailable);
   }
 
   const result = await resolveLineageInvitationClaim(scope, {
