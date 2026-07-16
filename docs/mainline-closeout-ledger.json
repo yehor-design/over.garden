@@ -3,7 +3,7 @@
   "updatedAt": "2026-07-16",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
-  "requiredBeforeNextLinearIssues": ["OVE-171"],
+  "requiredBeforeNextLinearIssues": [],
   "entries": [
     {
       "issueId": "OVE-29",
@@ -102,6 +102,40 @@
         "Typed Ukrainian, Bulgarian, and Russian copy now covers the admin, catalog curation, pilot, privacy-erasure, and diagnostics operator surfaces without changing authorization, actions, domain behavior, or literal evidence values.",
         "Local fixture, responsive browser, accessibility, empty and denied-state proof covered 320px and 1440px layouts; authorized and dense operator states remain covered by deterministic route and component tests.",
         "No secrets, private user data, journal text, media keys, raw request metadata, live user identifiers, or precise location were included in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-171",
+      "title": "Incremental localization completion gate: prove shipped baseline plus every remaining route/state delta",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "035f2168872db666e0967e92707dfa8ced0f5036",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-171/incremental-localization-completion-gate-prove-shipped-baseline-plus",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29534312152",
+      "completedAt": "2026-07-16",
+      "verificationCommands": [
+        "cd apps/web && pnpm localization:coverage:check",
+        "cd apps/web && pnpm localization:coverage:report",
+        "cd apps/web && pnpm test src/lib/localization/localization-coverage.test.ts",
+        "cd apps/web && pnpm test test/privacy/privacy-invariant-sweep.test.ts",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && BETTER_AUTH_SECRET=local-production-like-verification-secret pnpm build",
+        "cd apps/web && pnpm visual:fixtures:verify",
+        "cd apps/web && pnpm localization:coverage:browser",
+        "cd apps/web && pnpm drive2:closeout:check",
+        "cd apps/web && pnpm smoke:drive2-production -- --base-url https://over.garden --expected-commit 035f2168872db666e0967e92707dfa8ced0f5036 --deployed-commit 035f2168872db666e0967e92707dfa8ced0f5036 --profile-path <redacted-public-profile-path>",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "The ove171-v1 report classifies all 92 route modules, validates 22 existing copy namespaces across uk, bg, and ru, records 82 preserved-baseline routes plus 10 newly closed route deltas, and reports zero missing dimensions at baseline hash c3207b180d9e202a45b74fd769ff4613339898cadec10475136936477c15e594.",
+        "The deterministic browser matrix passed 171 scenarios, 642 route and viewport checks, 26 explicit owner probes across 320px and 1440px, all 10 rendered owners, and dense, long-text, recoverable-error, offline, unauthorized, 404, and 410 edge classes.",
+        "GitHub CI passed for the exact behavior commit; Vercel deployment dpl_EJWtcF3nyyqN6VWVhTB9EtWKR67C reached READY and canonical production smoke passed against that same SHA.",
+        "Cisco Umbrella reputation mismatch remains tracked by OVE-188 and is explicitly not a Linear blocker on OVE-171; system-default, Cloudflare, Google, and Quad9 DNS matched authoritative DNS during closeout.",
+        "No secrets, private user data, public-profile handle, journal text, media keys, raw request metadata, live user identifiers, or precise location were included in evidence."
       ]
     }
   ]
