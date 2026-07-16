@@ -22,8 +22,9 @@ This guard makes the next-agent starting point explicit:
 | [OVE-29](https://linear.app/overgarden/issue/OVE-29/owner-consistent-media-photo-can-only-attach-to-the-users-own-entry)    | Owner-consistent media attachment is in `main`; the earlier branch-only audit commit `27fc5f56` is superseded.              | `4019df1bce770499c160fff4bca0c8603a2f2ee0` | [CI run 28381089559](https://github.com/yehor-design/over.garden/actions/runs/28381089559) |
 | [OVE-30](https://linear.app/overgarden/issue/OVE-30/production-auth-fail-closed-no-deployed-app-runs-on-development-secret) | Production auth fail-closed behavior is in `main`; the earlier branch-only audit commit `d6d47350` is superseded.           | `e3bd3b4dfd4491d87529462ed1061bfb522b6e6a` | [CI run 28386343926](https://github.com/yehor-design/over.garden/actions/runs/28386343926) |
 | [OVE-163](https://linear.app/overgarden/issue/OVE-163/deterministic-matching-rollout-proof-operator-verifies-suggestions)   | Deterministic matching behavior and its redacted local/production proof are in `main` before OVE-170 localization closeout. | `e94148fa5a4a097422b5cdf7234e1b1ffad542e2` | [CI run 29477408972](https://github.com/yehor-design/over.garden/actions/runs/29477408972) |
+| [OVE-170](https://linear.app/overgarden/issue/OVE-170/operator-localization-delta-add-locale-aware-admin-curation-pilot)    | Locale-aware operator surfaces and their redacted browser, fixture, accessibility, and build proof are in `main`.           | `6c13dd798b2ee13dc2308edb687bb719dbb24aef` | [CI run 29526842637](https://github.com/yehor-design/over.garden/actions/runs/29526842637) |
 
-The active dependent issue is OVE-170. The OVE-51 -> OVE-52 -> OVE-53 sequence is the historical recovery order retained by the baseline entries above.
+The active dependent issue is OVE-171. The OVE-51 -> OVE-52 -> OVE-53 sequence is the historical recovery order retained by the baseline entries above.
 
 ## Closeout Rule For Future Issues
 

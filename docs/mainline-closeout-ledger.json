@@ -3,7 +3,7 @@
   "updatedAt": "2026-07-16",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
-  "requiredBeforeNextLinearIssues": ["OVE-170"],
+  "requiredBeforeNextLinearIssues": ["OVE-171"],
   "entries": [
     {
       "issueId": "OVE-29",
@@ -75,6 +75,33 @@
         "The exact behavior commit passed local behavioral proof, CI, a READY Vercel production deployment, and a read-only production readiness proof.",
         "Production proof reported zero materialized fuzzy QA rows; bounded advisory generation and cleanup were proven by the local fixture rather than by importing production data.",
         "No secrets, private user data, source-only payloads, journal text, media keys, raw request metadata, or precise location were included in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-170",
+      "title": "Operator localization delta: add locale-aware admin, curation, pilot, privacy, and diagnostics copy",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "6c13dd798b2ee13dc2308edb687bb719dbb24aef",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-170/operator-localization-delta-add-locale-aware-admin-curation-pilot",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29526842637",
+      "completedAt": "2026-07-16",
+      "verificationCommands": [
+        "cd apps/web && pnpm test test/privacy/privacy-invariant-sweep.test.ts",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && BETTER_AUTH_SECRET=ove-170-local-build-verification-secret-only pnpm build",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm visual:fixtures:verify",
+        "cd apps/web && pnpm test:a11y",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Typed Ukrainian, Bulgarian, and Russian copy now covers the admin, catalog curation, pilot, privacy-erasure, and diagnostics operator surfaces without changing authorization, actions, domain behavior, or literal evidence values.",
+        "Local fixture, responsive browser, accessibility, empty and denied-state proof covered 320px and 1440px layouts; authorized and dense operator states remain covered by deterministic route and component tests.",
+        "No secrets, private user data, journal text, media keys, raw request metadata, live user identifiers, or precise location were included in evidence."
       ]
     }
   ]
