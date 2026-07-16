@@ -1201,6 +1201,7 @@ export function FirstEntryComposer({
           type="button"
           variant="outline"
           className="self-start"
+          data-photo-picker-control="true"
           onClick={() => photoInputRef.current?.click()}
         >
           <UploadCloud className="size-4" />

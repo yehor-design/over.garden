@@ -606,7 +606,7 @@ async function runLargeTextCheck(
     throw new Error("200% text scaling loses content or controls.");
   }
   const requiredControls = [
-    'input[type="file"]',
+    '[data-photo-picker-control="true"]',
     "details summary",
     '[data-auth-intent-control="save"]',
   ];

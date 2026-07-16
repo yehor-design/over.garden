@@ -77,6 +77,7 @@ describe("first entry composer localization", () => {
       expect(html).toContain(expected.choosePhoto);
       expect(html).toContain('type="file"');
       expect(html).toContain('class="hidden"');
+      expect(html).toContain('data-photo-picker-control="true"');
       expect(html).toContain(scenario.objectName.replaceAll("'", "&#x27;"));
       expect(html).toContain(scenario.spaceName);
       expect(html).toContain(scenario.entryBody);
