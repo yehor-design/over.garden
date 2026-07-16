@@ -3,22 +3,20 @@ export const FACEBOOK_PROVIDER_ID = "facebook";
 
 type QueryValue = string | string[] | undefined;
 
-const OAUTH_ERROR_MESSAGES: Record<string, string> = {
-  account_not_linked:
-    "This social account matches an existing OverGarden account that has not been linked yet. Sign in with email and password once, then link the sign-in method from your garden.",
-  account_already_linked_to_different_user:
-    "This social account is already linked to a different OverGarden account. Use email sign-in for this garden or contact the operator before continuing.",
-  email_doesn_t_match:
-    "The social provider returned a different email than the current OverGarden account. Use the same email or keep signing in with email and password.",
-  email_doesnt_match:
-    "The social provider returned a different email than the current OverGarden account. Use the same email or keep signing in with email and password.",
-  email_not_found:
-    "The social provider did not return a usable email for this account. Use email sign-in for OverGarden.",
-  oauth_provider_not_found:
-    "This social sign-in method is not configured for this environment yet. Use email sign-in for now.",
-  unable_to_link_account:
-    "This social sign-in method could not be linked to this OverGarden account. Use email sign-in and retry from your garden.",
-};
+export const OAUTH_ERROR_CODES = [
+  "account_not_linked",
+  "account_already_linked_to_different_user",
+  "email_doesn_t_match",
+  "email_doesnt_match",
+  "email_not_found",
+  "oauth_provider_not_found",
+  "unable_to_link_account",
+  "oauth_error",
+] as const;
+
+export type OAuthErrorCode = (typeof OAUTH_ERROR_CODES)[number];
+
+const KNOWN_OAUTH_ERROR_CODES = new Set<OAuthErrorCode>(OAUTH_ERROR_CODES);
 
 export function oauthCallbackPath(
   location: Pick<Location, "pathname" | "search">,
@@ -34,24 +32,15 @@ export function oauthCallbackPath(
   return query ? `${pathname}?${query}` : pathname;
 }
 
-export function oauthErrorRecoveryMessage(error: QueryValue) {
+export function oauthErrorCodeForRedirect(
+  error: QueryValue,
+): OAuthErrorCode | null {
   const code = normalizeQueryValue(error);
   if (!code) return null;
 
   const normalized = normalizeOAuthErrorCode(code);
-  return (
-    OAUTH_ERROR_MESSAGES[normalized] ??
-    "Social sign-in did not finish. Try again or use email and password."
-  );
-}
-
-export function oauthErrorCodeForRedirect(error: QueryValue) {
-  const code = normalizeQueryValue(error);
-  if (!code) return null;
-
-  const normalized = normalizeOAuthErrorCode(code);
-  return Object.hasOwn(OAUTH_ERROR_MESSAGES, normalized)
-    ? normalized
+  return KNOWN_OAUTH_ERROR_CODES.has(normalized as OAuthErrorCode)
+    ? (normalized as OAuthErrorCode)
     : "oauth_error";
 }
 

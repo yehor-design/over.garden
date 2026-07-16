@@ -105,4 +105,24 @@ describe("/auth/intent page", () => {
     expect(html).not.toContain("tampered-private-value");
     expect(html).not.toContain("invalid token details");
   });
+
+  it("localizes metadata and OAuth recovery from the request locale", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
+    const { default: AuthIntentPage, generateMetadata } =
+      await import("./page");
+    const html = renderToStaticMarkup(
+      await AuthIntentPage({
+        searchParams: Promise.resolve({
+          intent: "opaque-intent-token",
+          error: "account_not_linked",
+        }),
+      }),
+    );
+    const metadata = await generateMetadata();
+
+    expect(metadata.title).toBe("Продължаване на действието | OverGarden");
+    expect(html).toContain("&quot;locale&quot;:&quot;bg&quot;");
+    expect(html).toContain("още не е свързан");
+    expect(html).not.toContain("account_not_linked");
+  });
 });

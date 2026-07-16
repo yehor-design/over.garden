@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ERASURE_REQUEST_INTAKE_VERSION,
@@ -21,6 +21,14 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+const localeMocks = vi.hoisted(() => ({
+  getRequestInterfaceLocale: vi.fn(),
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: localeMocks.getRequestInterfaceLocale,
+}));
+
 vi.mock("@/server/erasure-request-repository", () => ({
   getLatestErasureRequestForUser: vi.fn(async () => ({
     id: "00000000-0000-4000-8000-00000000abcd",
@@ -39,24 +47,30 @@ vi.mock("./actions", () => ({
 }));
 
 describe("/erasure", () => {
-  it("renders a real latest status path without raw private evidence", async () => {
-    const { default: ErasureRequestPage, metadata } = await import("./page");
-    const html = renderToStaticMarkup(await ErasureRequestPage());
+  beforeEach(() => {
+    localeMocks.getRequestInterfaceLocale.mockResolvedValue("ru");
+  });
 
-    expect(metadata.description).toContain(
-      "OverGarden MVP account erasure",
-    );
-    expect(html).toContain("Needs identity verification");
+  it("renders a real latest status path without raw private evidence", async () => {
+    const { default: ErasureRequestPage, generateMetadata } =
+      await import("./page");
+    const html = renderToStaticMarkup(await ErasureRequestPage());
+    const metadata = await generateMetadata();
+
+    expect(metadata.description).toContain("OverGarden");
+    expect(html).toContain('lang="ru"');
+    expect(html).toContain("Требуется подтверждение личности");
     expect(html).toContain(ERASURE_REQUEST_INTAKE_VERSION);
     expect(html).toContain(
       formatErasureRequestReference("00000000-0000-4000-8000-00000000abcd"),
     );
-    expect(html).toContain("does not automatically delete");
-    expect(html).toContain("deletes or anonymizes current-schema account");
-    expect(html).toContain("removal best-effort only");
+    expect(html).toContain("ничего не удаляет автоматически");
+    expect(html).toContain("удалить или анонимизировать ссылки");
+    expect(html).toContain("только по возможности");
     expect(html).toContain(SUPPORT_EMAIL);
     expect(html).not.toContain("00000000-0000-4000-8000-000000000001");
     expect(html).not.toMatch(/placeholder|public release remains blocked/i);
     expect(html).not.toMatch(/quarantine\/|raw-token|session-token/i);
+    expect(html).not.toMatch(/Needs identity verification|Request status/i);
   });
 });

@@ -6,7 +6,7 @@ Date: 2026-07-14
 
 ## Purpose
 
-OverGarden resolves one interface locale for public and signed-in requests so a visitor does not fall back to English when moving from a localized public page into `/garden` or a deeper product route. This contract owns locale resolution and continuity; OVE-165 through OVE-170 own complete copy coverage for their respective surfaces, and OVE-171 owns the final route-and-state coverage gate.
+OverGarden resolves one interface locale for public and signed-in requests so a visitor does not fall back to English when moving from a localized public page into `/garden` or a deeper product route. This contract owns locale resolution and continuity; OVE-165 through OVE-170 own complete copy coverage for their respective surfaces, and OVE-171 owns the final route-and-state coverage gate. OVE-166 is complete: trust-sensitive authentication, recovery, support, erasure, privacy, consent, and publication-disclosure surfaces now consume one exact-parity `uk`/`bg`/`ru` copy contract.
 
 OVE-166 depends only on the OVE-164 locale foundation. OVE-167 depends on OVE-164 plus OVE-161 because first-entry typeahead copy must target the final approved alias, locale-variant, trust, and no-match states. OVE-168 depends on OVE-164, the completed OVE-165 public-surface contract, and OVE-161 for the same owner catalog-resolve/readback boundary. OVE-169 depends on OVE-164 and OVE-165. OVE-170 depends on OVE-164 plus the OVE-163 matching rollout because it must include the final operator matching queue, approval, alias, duplicate-review, proof, and failure states. OVE-171 depends directly on OVE-166 through OVE-170 and receives OVE-161/163 transitively. OVE-186 and its external OVE-188 protective-DNS blocker do not block localization implementation or local/preview proof.
 
@@ -76,6 +76,7 @@ These values may appear inside a localized interface exactly as stored. A transl
 - Server components import `getRequestInterfaceLocale()` from `apps/web/src/server/interface-localization.ts` and pass the resolved locale or copy to client components explicitly.
 - Public URLs continue to use `localizedPath()` and their existing hreflang/indexability policy.
 - `apps/web/src/lib/public-surface-localization.ts` owns interface copy for public journal readback, object passports, variety aggregations, localized profiles, engagement controls, source-credit chrome, and public failure states. Unprefixed UGC routes resolve their interface locale from the request contract; localized profile routes use their validated route locale.
+- `apps/web/src/lib/trust-surface-copy.ts` owns authored copy for authentication panels and intents, provider linking, sign-in help, password reset, invitation entry, support, erasure intake/status, privacy and analytics controls, first-publication disclosure, and their validation/recovery states. Client components inherit the shared shell locale unless a route passes an explicit validated locale.
 - Public-surface metadata and JSON-LD may localize application-authored collection or page labels, but retain catalog names and journal headlines exactly as stored. Canonical URLs, hreflang, and the server-side indexability decision remain independent of locale copy.
 - Cross-locale language-switcher choices use plain document links; speculative navigation must never change preference state, and client navigation must not preserve a stale root document language.
 - Public links rendered from `/garden` must use the resolved locale rather than `DEFAULT_PUBLIC_LOCALE`.
@@ -100,5 +101,8 @@ The executable contract covers:
 - request header and cookie server resolution;
 - locale-aware workspace metadata, navigation, public-profile links, and object chrome;
 - localized public journal, passport, variety, profile, engagement, source-credit, structured-data, not-found, and gone chrome across `uk`, `bg`, and `ru`;
+- exact recursive key parity for all trust-sensitive `uk`, `bg`, and `ru` copy, with placeholders and stable product/provider names preserved;
+- localized auth-intent ready, invalid, expired, cancellation, OAuth-recovery, and resumed-action states without exposing raw provider or transport errors;
+- localized auth help, password reset, account linking, join, support, erasure, privacy/consent, and first-publication metadata and controls;
 - unchanged user-authored object and journal text;
 - existing public canonical and hreflang tests.

@@ -17,9 +17,13 @@ import {
 } from "@/lib/auth/auth-intent-contract";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { localizedPath } from "@/lib/public-localization";
+import {
+  formatTrustTemplate,
+  getLocalizedOAuthErrorMessage,
+  getTrustSurfaceCopy,
+} from "@/lib/trust-surface-copy";
 import { resolveVisualGardenWorkspaceScenario } from "@/lib/visual-fixtures/garden-workspace-scenarios";
 import { resolveVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-scenarios";
 import type {
@@ -80,7 +84,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     creationScenario?.ownerActorId ??
     visualScenario?.ownerActorId ??
     session?.user?.id;
-  const engagementAuthMessage = engagementAuthPrompt(params.engagement);
+  const engagementAuthMessage = engagementAuthPrompt(locale, params.engagement);
   const engagementPostAuthPath = engagementAuthMessage
     ? normalizeGardenReturnToParam(params.returnTo)
     : null;
@@ -91,7 +95,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const activationSource = normalizeActivationSourceParam(params.source, {
     hasResolvedCatalogSelection: Boolean(initialCatalogItem),
   });
-  const oauthMessage = oauthErrorRecoveryMessage(params.error);
+  const oauthMessage = getLocalizedOAuthErrorMessage(locale, params.error);
 
   if (
     userId &&
@@ -112,7 +116,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           oauthMessage ??
           engagementAuthMessage ??
           (pendingWishlistItem
-            ? `Sign in to save ${pendingWishlistItem.canonicalName} to your wishlist.`
+            ? formatTrustTemplate(
+                getTrustSurfaceCopy(locale).gardenGuest.wishlistPrompt,
+                { catalogName: pendingWishlistItem.canonicalName },
+              )
             : null)
         }
         postAuthPath={engagementPostAuthPath}
@@ -283,6 +290,8 @@ function GuestGardenEntry({
   initialMessage?: string | null;
   postAuthPath?: string | null;
 }) {
+  const copy = getTrustSurfaceCopy(locale).gardenGuest;
+
   return (
     <main
       lang={locale}
@@ -291,15 +300,13 @@ function GuestGardenEntry({
     >
       <header className="border-b border-border pb-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase">
-          Private workspace
+          {copy.eyebrow}
         </p>
         <h1 className="mt-1 text-3xl font-semibold text-foreground">
-          Your private garden starts here
+          {copy.title}
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-          Sign in only to open your own objects, drafts, and journal continuity.
-          Public journals, living objects, and knowledge remain open without an
-          account.
+          {copy.description}
         </p>
       </header>
 
@@ -312,17 +319,18 @@ function GuestGardenEntry({
             facebookSignInEnabled={isFacebookSignInEnabled()}
             googleSignInEnabled={isGoogleSignInEnabled()}
             initialMessage={initialMessage}
+            locale={locale}
             postAuthPath={postAuthPath}
-            title="Open your garden"
-            prompt="Use the same account that owns the garden you want to continue."
+            title={copy.panelTitle}
+            prompt={copy.panelPrompt}
           />
         </div>
         <aside className="border-t border-border pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6">
           <p className="text-xs font-semibold text-muted-foreground uppercase">
-            Keep exploring
+            {copy.exploreEyebrow}
           </p>
           <h2 className="mt-1 text-lg font-semibold text-foreground">
-            Continue reading journals
+            {copy.exploreTitle}
           </h2>
           <div className="mt-4 flex flex-col gap-2">
             <Link
@@ -333,7 +341,7 @@ function GuestGardenEntry({
               })}
             >
               <BookOpenText aria-hidden="true" />
-              Public journals
+              {copy.publicJournals}
             </Link>
             <Link
               href={localizedPath(locale, "/objects")}
@@ -343,7 +351,7 @@ function GuestGardenEntry({
               })}
             >
               <Sprout aria-hidden="true" />
-              Living objects
+              {copy.livingObjects}
             </Link>
             <Link
               href={localizedPath(locale, "/knowledge")}
@@ -353,7 +361,7 @@ function GuestGardenEntry({
               })}
             >
               <Compass aria-hidden="true" />
-              Knowledge
+              {copy.knowledge}
             </Link>
           </div>
         </aside>
@@ -643,12 +651,14 @@ function PendingWishlistIntentPanel({
   );
 }
 
-function engagementAuthPrompt(value: string | string[] | undefined) {
+function engagementAuthPrompt(
+  locale: InterfaceLocale,
+  value: string | string[] | undefined,
+) {
   const intent = firstParam(value);
-  if (intent === "comment-auth")
-    return "Sign in to comment on that public page.";
-  if (intent === "bookmark-auth")
-    return "Sign in to bookmark that public page.";
+  const copy = getTrustSurfaceCopy(locale).gardenGuest;
+  if (intent === "comment-auth") return copy.commentPrompt;
+  if (intent === "bookmark-auth") return copy.bookmarkPrompt;
   return null;
 }
 

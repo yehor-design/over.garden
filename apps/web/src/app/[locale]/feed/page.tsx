@@ -77,7 +77,10 @@ export default async function LocalizedFollowedFeedRoute({
         title={copy.feed.title}
         description={copy.feed.description}
       >
-        <GardenAuthPanel initialMessage={copy.feed.signIn} />
+        <GardenAuthPanel
+          initialMessage={copy.feed.signIn}
+          locale={localeParam}
+        />
       </MySocialLayout>
     );
   }

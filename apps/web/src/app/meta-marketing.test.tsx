@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   MetaMarketingAttribution,
+  MetaMarketingPrivacyControls,
   MetaPixelScripts,
   isMetaMarketingRoute,
 } from "./meta-marketing";
@@ -73,21 +74,25 @@ describe("MetaMarketingAttribution", () => {
     process.env.NEXT_PUBLIC_META_PIXEL_ID = "1234567890";
     mockedPathname = "/blog";
 
-    const html = renderToStaticMarkup(<MetaMarketingAttribution />);
+    const html = renderToStaticMarkup(<MetaMarketingAttribution locale="bg" />);
 
-    expect(html).toContain("Allow marketing measurement");
-    expect(html).toContain("Keep off");
-    expect(html).toContain("never private garden text");
+    expect(html).toContain("Разрешаване на маркетингово измерване");
+    expect(html).toContain("Без разрешение");
+    expect(html).toContain("никога личен текст от градината");
     expect(html).not.toContain("connect.facebook.net/en_US/fbevents.js");
     expect(html).not.toContain("1234567890");
   });
 
   it("renders a consent-granted Pixel without PageView or automatic form metadata collection", () => {
-    const html = renderToStaticMarkup(<MetaPixelScripts pixelId="1234567890" />);
+    const html = renderToStaticMarkup(
+      <MetaPixelScripts pixelId="1234567890" />,
+    );
 
     expect(html).toContain("connect.facebook.net/en_US/fbevents.js");
     expect(html).toContain("fbq(&#x27;consent&#x27;, &#x27;grant&#x27;)");
-    expect(html).toContain("fbq(&#x27;set&#x27;, &#x27;autoConfig&#x27;, false");
+    expect(html).toContain(
+      "fbq(&#x27;set&#x27;, &#x27;autoConfig&#x27;, false",
+    );
     expect(html).toContain("fbq(&#x27;init&#x27;, &quot;1234567890&quot;)");
     expect(html).not.toContain("PageView");
     expect(html).not.toContain("AdvancedMatching");
@@ -102,5 +107,16 @@ describe("MetaMarketingAttribution", () => {
 
     mockedPathname = "/admin";
     expect(renderToStaticMarkup(<MetaMarketingAttribution />)).toBe("");
+  });
+
+  it("renders localized privacy controls without changing consent keys", () => {
+    const html = renderToStaticMarkup(
+      <MetaMarketingPrivacyControls locale="uk" />,
+    );
+
+    expect(html).toContain("Маркетингові вимірювання Meta");
+    expect(html).toContain("overgarden:meta-marketing-consent");
+    expect(html).toContain("Дозволити маркетингові вимірювання");
+    expect(html).not.toMatch(/Meta marketing measurement|Keep off|Turn off/i);
   });
 });

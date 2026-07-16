@@ -8,10 +8,9 @@ import {
 } from "@/app/garden/garden-auth-panel";
 
 import {
-  existingAccountRecoveryMessage,
-  interpretAuthClientErrorMessage,
-  signInRecoveryHint,
-} from "@/lib/auth/pilot-auth-recovery";
+  getLocalizedAuthClientErrorMessage,
+  getTrustSurfaceCopy,
+} from "@/lib/trust-surface-copy";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
@@ -35,29 +34,30 @@ vi.mock("@/lib/auth-client", () => ({
 describe("garden auth duplicate-account avoidance", () => {
   it("maps duplicate sign-up errors to sign-in guidance instead of creating a new garden", () => {
     expect(
-      interpretAuthClientErrorMessage({
+      getLocalizedAuthClientErrorMessage("bg", {
         status: 422,
         message: "User already exists. use another email.",
       }),
-    ).toBe(existingAccountRecoveryMessage());
+    ).toBe(getTrustSurfaceCopy("bg").authPanel.existingAccount);
   });
 
   it("does not treat unknown errors as duplicate-account recovery", () => {
     expect(
-      interpretAuthClientErrorMessage({
+      getLocalizedAuthClientErrorMessage("uk", {
         status: 500,
         message: "Database unavailable",
       }),
-    ).toBe("Database unavailable");
+    ).toBeNull();
   });
 
   it("keeps recovery guidance attached to invalid credential errors", () => {
-    const message = interpretAuthClientErrorMessage({
+    const message = getLocalizedAuthClientErrorMessage("ru", {
       status: 401,
       message: "Invalid email or password",
     });
 
-    expect(message).toContain(signInRecoveryHint());
+    expect(message).toContain("Неверный адрес электронной почты или пароль");
+    expect(message).not.toContain("Invalid email or password");
   });
 
   it("renders social sign-in only when server configuration enables it", () => {
@@ -66,15 +66,16 @@ describe("garden auth duplicate-account avoidance", () => {
       <GardenAuthPanel
         facebookSignInEnabled
         googleSignInEnabled
-        initialMessage="Social sign-in did not finish."
+        initialMessage="Соціальний вхід не завершився."
+        locale="uk"
       />,
     );
 
     expect(disabledHtml).not.toContain("Continue with Google");
     expect(disabledHtml).not.toContain("Continue with Facebook");
-    expect(enabledHtml).toContain("Continue with Google");
-    expect(enabledHtml).toContain("Continue with Facebook");
-    expect(enabledHtml).toContain("Social sign-in did not finish.");
+    expect(enabledHtml).toContain("Продовжити через Google");
+    expect(enabledHtml).toContain("Продовжити через Facebook");
+    expect(enabledHtml).toContain("Соціальний вхід не завершився.");
     expect(enabledHtml).toContain('role="alert"');
     expect(enabledHtml).toContain('aria-live="polite"');
     expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
@@ -83,12 +84,16 @@ describe("garden auth duplicate-account avoidance", () => {
 
   it("offers explicit social linking for the signed-in garden account", () => {
     const html = renderToStaticMarkup(
-      <SocialAccountLinkPanel facebookSignInEnabled googleSignInEnabled />,
+      <SocialAccountLinkPanel
+        facebookSignInEnabled
+        googleSignInEnabled
+        locale="bg"
+      />,
     );
 
-    expect(html).toContain("Link Google sign-in");
-    expect(html).toContain("Link Facebook sign-in");
-    expect(html).toContain("uses it only for sign-in");
+    expect(html).toContain("Свързване на вход с Google");
+    expect(html).toContain("Свързване на вход с Facebook");
+    expect(html).toContain("използва само за вход");
     expect(html).not.toContain("client_secret");
   });
 

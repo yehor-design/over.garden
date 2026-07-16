@@ -130,7 +130,7 @@ export default async function PlantObjectReadbackPage({
             {copy.object.livingObject}
           </h1>
         </header>
-        <GardenAuthPanel />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }

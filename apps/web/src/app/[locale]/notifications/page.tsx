@@ -88,7 +88,10 @@ export default async function LocalizedNotificationsRoute({
         title={copy.notifications.title}
         description={copy.notifications.description}
       >
-        <GardenAuthPanel initialMessage={copy.notifications.signIn} />
+        <GardenAuthPanel
+          initialMessage={copy.notifications.signIn}
+          locale={localeParam}
+        />
       </MySocialLayout>
     );
   }

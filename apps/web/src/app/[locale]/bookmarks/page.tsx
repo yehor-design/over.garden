@@ -81,7 +81,10 @@ export default async function LocalizedBookmarksRoute({
         title={copy.bookmarks.title}
         description={copy.bookmarks.description}
       >
-        <GardenAuthPanel initialMessage={copy.bookmarks.signIn} />
+        <GardenAuthPanel
+          initialMessage={copy.bookmarks.signIn}
+          locale={localeParam}
+        />
       </MySocialLayout>
     );
   }

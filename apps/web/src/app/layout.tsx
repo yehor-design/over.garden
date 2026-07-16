@@ -52,7 +52,7 @@ export default async function RootLayout({
         </SiteShell>
         <ServiceWorkerRegister />
         <GoogleAnalytics locale={locale} />
-        <MetaMarketingAttribution />
+        <MetaMarketingAttribution locale={locale} />
       </body>
     </html>
   );

@@ -69,10 +69,6 @@ vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));
 
-vi.mock("@/lib/auth/social-oauth", () => ({
-  oauthErrorRecoveryMessage: () => null,
-}));
-
 vi.mock("../wishlist/actions", () => ({
   addCatalogPublicSlugToWishlistAction: vi.fn(),
 }));
@@ -236,9 +232,9 @@ describe("/garden workspace V2", () => {
       await GardenPage({ searchParams: Promise.resolve({}) }),
     );
 
-    expect(html).toContain("Your private garden starts here");
+    expect(html).toContain("Ваш приватний сад починається тут");
     expect(html).toContain("Garden auth panel");
-    expect(html).toContain("Continue reading journals");
+    expect(html).toContain("Продовжити читати журнали");
     expect(html).toContain('href="/journals"');
     expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
     expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();

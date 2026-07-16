@@ -83,7 +83,10 @@ export default async function LocalizedWishlistRoute({
         title={copy.wishlist.title}
         description={copy.wishlist.description}
       >
-        <GardenAuthPanel initialMessage={copy.wishlist.signIn} />
+        <GardenAuthPanel
+          initialMessage={copy.wishlist.signIn}
+          locale={localeParam}
+        />
       </MySocialLayout>
     );
   }

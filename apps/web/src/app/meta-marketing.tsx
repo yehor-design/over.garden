@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   META_MARKETING_CONSENT_STORAGE_KEY,
   resolveMetaMarketingPublicConfig,
@@ -16,6 +17,7 @@ import {
   writeStoredMetaMarketingConsent,
 } from "@/lib/meta-marketing/client";
 import type { MetaMarketingConsent } from "@/lib/meta-marketing/events";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 const PUBLIC_LOCALE_PREFIX_PATTERN = /^\/(?:uk|bg|ru)(?=\/|$)/;
 const META_MARKETING_ALLOWED_EXACT_PATHS = new Set([
@@ -32,7 +34,11 @@ const META_MARKETING_ALLOWED_PREFIXES = [
   "/markets/",
 ] as const;
 
-export function MetaMarketingAttribution() {
+export function MetaMarketingAttribution({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
   const pathname = usePathname();
   const config = resolveMetaMarketingPublicConfig();
   const storedConsent = useSyncExternalStore(
@@ -45,7 +51,9 @@ export function MetaMarketingAttribution() {
   const consent = sessionConsent ?? storedConsent;
   const isAllowedRoute = isMetaMarketingRoute(pathname);
 
-  const setConsent = (nextConsent: Exclude<MetaMarketingConsent, "undecided">) => {
+  const setConsent = (
+    nextConsent: Exclude<MetaMarketingConsent, "undecided">,
+  ) => {
     writeStoredMetaMarketingConsent(nextConsent);
     setSessionConsent(nextConsent);
   };
@@ -65,13 +73,19 @@ export function MetaMarketingAttribution() {
 
   return (
     <MetaMarketingConsentBanner
+      locale={locale}
       onAccept={() => setConsent("accepted")}
       onDecline={() => setConsent("declined")}
     />
   );
 }
 
-export function MetaMarketingPrivacyControls() {
+export function MetaMarketingPrivacyControls({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
+  const copy = getTrustSurfaceCopy(locale).privacy.marketing;
   const config = resolveMetaMarketingPublicConfig();
   const storedConsent = useSyncExternalStore(
     subscribeToMetaMarketingConsent,
@@ -83,29 +97,24 @@ export function MetaMarketingPrivacyControls() {
   const consent = sessionConsent ?? storedConsent;
   const statusLabel = config.enabled
     ? consent === "accepted"
-      ? "Allowed"
+      ? copy.statuses.accepted
       : consent === "declined"
-        ? "Off"
-        : "Not chosen"
-    : "Off for this deployment";
+        ? copy.statuses.declined
+        : copy.statuses.undecided
+    : copy.statuses.deploymentOff;
 
-  const setConsent = (nextConsent: Exclude<MetaMarketingConsent, "undecided">) => {
+  const setConsent = (
+    nextConsent: Exclude<MetaMarketingConsent, "undecided">,
+  ) => {
     writeStoredMetaMarketingConsent(nextConsent);
     setSessionConsent(nextConsent);
   };
 
   return (
     <section className="grid gap-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold text-foreground">
-        Meta marketing measurement
-      </h2>
+      <h2 className="text-base font-semibold text-foreground">{copy.title}</h2>
       <p className="text-muted-foreground">
-        Status: <strong>{statusLabel}</strong>. When enabled and explicitly
-        allowed, OverGarden may send Meta Ads only allowlisted event classes
-        such as a public landing-page view or first private entry saved. It does
-        not send journal text, private plant names, catalog selections, precise
-        location, media keys, auth callback data, emails, account identifiers,
-        cookies, IP address, or user-agent evidence.
+        {copy.statusPrefix} <strong>{statusLabel}</strong>. {copy.description}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
@@ -114,7 +123,7 @@ export function MetaMarketingPrivacyControls() {
           onClick={() => setConsent("accepted")}
           disabled={!config.enabled}
         >
-          Allow marketing measurement
+          {copy.allow}
         </Button>
         <Button
           type="button"
@@ -122,13 +131,12 @@ export function MetaMarketingPrivacyControls() {
           variant="outline"
           onClick={() => setConsent("declined")}
         >
-          Turn off
+          {copy.turnOff}
         </Button>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        Preference key: {META_MARKETING_CONSENT_STORAGE_KEY}. Turning this off
-        revokes future browser Pixel events and stops OverGarden from queueing
-        Meta Conversions API events from this browser.
+        {copy.preferenceKey} {META_MARKETING_CONSENT_STORAGE_KEY}.{" "}
+        {copy.preferenceDescription}
       </p>
     </section>
   );
@@ -167,11 +175,7 @@ export function isMetaMarketingRoute(pathname: string | null): boolean {
   );
 }
 
-function MetaMarketingPublicRouteTracker({
-  pathname,
-}: {
-  pathname: string;
-}) {
+function MetaMarketingPublicRouteTracker({ pathname }: { pathname: string }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       void trackMetaMarketingEvent("landing_page_view");
@@ -186,30 +190,31 @@ function MetaMarketingPublicRouteTracker({
 }
 
 function MetaMarketingConsentBanner({
+  locale,
   onAccept,
   onDecline,
 }: {
+  locale: InterfaceLocale;
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const copy = getTrustSurfaceCopy(locale).privacy.marketing;
+
   return (
     <div
-      aria-label="Meta marketing measurement consent"
+      aria-label={copy.consentLabel}
       className="fixed inset-x-3 bottom-24 z-50 mx-auto max-w-3xl rounded-md border bg-background/95 p-4 text-foreground shadow-lg backdrop-blur sm:bottom-28 sm:flex sm:items-center sm:gap-4"
       role="dialog"
     >
       <p className="text-sm leading-6 text-muted-foreground">
-        OverGarden can measure Meta ad visits only if you allow marketing
-        measurement. It runs only on public, legal, and support pages and sends
-        allowlisted event classes, never private garden text, precise location,
-        media, auth, or account identifiers.
+        {copy.consentMessage}
       </p>
       <div className="mt-3 flex shrink-0 gap-2 sm:mt-0">
         <Button onClick={onAccept} size="sm" type="button">
-          Allow marketing measurement
+          {copy.allow}
         </Button>
         <Button onClick={onDecline} size="sm" type="button" variant="outline">
-          Keep off
+          {copy.keepOff}
         </Button>
       </div>
     </div>

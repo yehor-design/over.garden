@@ -1,14 +1,14 @@
 # Localization Coverage Baseline
 
-Status: binding planning input for OVE-166 through OVE-171  
-Date: 2026-07-14
+Status: binding implementation baseline for OVE-167 through OVE-171
+Date: 2026-07-16
 
 ## Purpose
 
 This document prevents the remaining localization slices from rebuilding work
 that already exists. It records the current code-backed `uk`/`bg`/`ru`
-baseline after OVE-164, OVE-165, and the OVE-172 through OVE-185 product
-reconstruction.
+baseline after OVE-164 through OVE-166 and the OVE-172 through OVE-185
+product reconstruction.
 
 A localized route or a `locale` prop is not, by itself, proof of complete copy
 coverage. `Preserve` below means the existing typed copy contract and behavior
@@ -31,6 +31,10 @@ locale plumbing exists but visible authored copy still has verified gaps.
   passport (`6b52ae02e`), journal entry (`dcaafac3e`), gardener profile
   (`dac896e89`), social return loop (`36a25479c`), and communities
   (`14f1831e9`).
+- OVE-166 adds `trust-surface-copy.ts` as the exact-parity `uk`/`bg`/`ru`
+  contract for authentication, intent resume, account linking, recovery,
+  support, erasure, privacy/consent, and publication disclosure. Raw auth and
+  OAuth transport errors no longer render as interface copy.
 
 ## Current Coverage Matrix
 
@@ -46,22 +50,17 @@ locale plumbing exists but visible authored copy still has verified gaps.
 | Followed feed, notifications, bookmarks, and wishlist                                         | `social-surface-copy.ts` and OVE-183 route tests                                                                                                                                                                                                         | Preserve       | OVE-169 audits residual action/error states only            |
 | Guest community directory/detail                                                              | `community-copy.ts` and OVE-184 route tests                                                                                                                                                                                                              | Preserve       | OVE-169 audits residual action/error states only            |
 | Public and owner profile presentation/editor                                                  | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map and tests                                                                                                                                                                        | Preserve       | OVE-169 regression coverage only                            |
-| Auth intent, account linking, recovery, support, erasure, privacy, and publication disclosure | Locale reaches some routes, but auth intent/panel/help/reset/join/support/erasure copy is English; privacy copy is mixed-language; first-publication metadata/body is English                                                                            | Partial        | OVE-166                                                     |
+| Auth intent, account linking, recovery, support, erasure, privacy, and publication disclosure | `trust-surface-copy.ts`, localized route metadata, inherited signed-in locale, safe auth/OAuth error classification, exact auth-intent resume, privacy/consent and disclosure route tests                                                                | Preserve       | OVE-171 regression gate only                                |
 | Owner garden workspace and first-object creation                                              | `/garden` layout/top chrome and selected labels use OVE-164 copy; V2 workspace receives `locale`; workspace sections, local-state panel, first-entry composer, drafts, kind/voice/mention controls, and save feedback retain English copy                | Partial        | OVE-167                                                     |
 | Owner living-object continuity and follow-up                                                  | Owner route resolves locale and reuses a small shared object copy subset; public passport/journal are localized; owner controls, follow-up composer, catalog/privacy/provenance labels, progress/value states, and lifecycle actions retain English copy | Partial        | OVE-168                                                     |
 | Owner lineage claims, invitation handoff, and questions                                       | Public lineage/passport evidence is localized; owner claim/invitation/question routes have no complete typed locale copy contract                                                                                                                        | Partial        | OVE-169                                                     |
 | Admin, curation, pilot, erasure-operator, and health UI                                       | Shared shell can resolve locale, but the operator pages do not have a complete locale-aware authored-copy contract                                                                                                                                       | Missing        | OVE-170                                                     |
 | Whole-product route/state coverage gate                                                       | Existing copy-key and route tests are distributed; no unified route/state inventory or zero-gap CI report exists                                                                                                                                         | Missing        | OVE-171                                                     |
 
-## Verified Gap Examples
+## Remaining Verified Gap Examples
 
 These examples identify ownership; they are not an exhaustive string list:
 
-- `auth/intent/auth-intent-surface.tsx` receives `locale` but renders English
-  intent, recovery, and cancellation copy.
-- `[locale]/privacy/page.tsx` has locale-specific objects but retains substantial
-  English policy and status text; `[locale]/first-publication-disclosure` renders
-  an English body and metadata for every locale.
 - `garden-workspace-view.tsx` receives `locale` but still renders labels such as
   `Garden summary`, `Spaces`, and `Recent continuity` directly.
 - `first-entry-composer.tsx` has direct English labels, placeholders,
@@ -82,8 +81,9 @@ These examples identify ownership; they are not an exhaustive string list:
 - OVE-163 blocks OVE-170 because OVE-158 through OVE-162 add the operator
   matching queue, approval, alias, duplicate-review, rollout-proof, and failure
   states that OVE-170 must cover.
-- OVE-166 and OVE-169 remain independent of deterministic matching. OVE-171 is
-  blocked directly only by OVE-166 through OVE-170; OVE-161 and OVE-163 are
+- OVE-166 is complete. OVE-169 remains independent of deterministic matching.
+  OVE-171 stays blocked directly by OVE-167 through OVE-170 and retains the
+  completed OVE-166 contract as a regression input; OVE-161 and OVE-163 are
   inherited transitively to keep the DAG explicit without duplicate blockers.
 
 ## Implementation Rules

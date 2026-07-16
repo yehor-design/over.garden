@@ -6,13 +6,19 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
-  invalidPasswordResetTokenMessage,
   passwordResetSuccessPath,
   PILOT_AUTH_HELP_PATH,
 } from "@/lib/auth/pilot-auth-recovery";
 import { authClient } from "@/lib/auth-client";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
+  const copy = getTrustSurfaceCopy(locale).resetPassword;
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useMemo(
@@ -29,16 +35,16 @@ export function ResetPasswordForm() {
     return (
       <section className="flex max-w-xl flex-col gap-3 rounded-lg border border-border p-4">
         <h1 className="text-lg font-semibold text-foreground">
-          This sign-in link is not active
+          {copy.invalidTitle}
         </h1>
         <p className="text-sm leading-6 text-muted-foreground">
-          {invalidPasswordResetTokenMessage()}
+          {copy.invalidDescription}
         </p>
         <Link
           href={PILOT_AUTH_HELP_PATH}
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          Sign-in help
+          {copy.helpLink}
         </Link>
       </section>
     );
@@ -46,7 +52,7 @@ export function ResetPasswordForm() {
 
   async function resetPassword() {
     if (password !== confirmPassword) {
-      setMessage("Passwords do not match.");
+      setMessage(copy.mismatch);
       return;
     }
 
@@ -61,7 +67,7 @@ export function ResetPasswordForm() {
     setIsPending(false);
 
     if (error) {
-      setMessage(error.message ?? invalidPasswordResetTokenMessage());
+      setMessage(copy.invalidDescription);
       return;
     }
 
@@ -72,17 +78,12 @@ export function ResetPasswordForm() {
   return (
     <section className="flex max-w-xl flex-col gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
-        <h1 className="text-lg font-semibold text-foreground">
-          Choose a new password
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Set a new password for your OverGarden account, then continue to your
-          existing garden.
-        </p>
+        <h1 className="text-lg font-semibold text-foreground">{copy.title}</h1>
+        <p className="text-sm text-muted-foreground">{copy.description}</p>
       </div>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">New password</span>
+        <span className="font-medium text-foreground">{copy.newPassword}</span>
         <input
           type="password"
           autoComplete="new-password"
@@ -95,7 +96,9 @@ export function ResetPasswordForm() {
       </label>
 
       <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-foreground">Confirm password</span>
+        <span className="font-medium text-foreground">
+          {copy.confirmPassword}
+        </span>
         <input
           type="password"
           autoComplete="new-password"
@@ -108,7 +111,7 @@ export function ResetPasswordForm() {
       </label>
 
       <Button type="button" onClick={resetPassword} disabled={isPending}>
-        Update password
+        {isPending ? copy.pending : copy.submit}
       </Button>
 
       {message ? <p className="text-sm text-destructive">{message}</p> : null}

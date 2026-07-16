@@ -4,17 +4,22 @@ import { ArrowRight, Leaf, Lock, MailWarning, NotebookPen } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
 import { verifyPilotInviteToken } from "@/lib/garden/pilot-invite";
+import { localizedPath } from "@/lib/public-localization";
+import {
+  getTrustSurfaceCopy,
+  type TrustSurfaceCopy,
+} from "@/lib/trust-surface-copy";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { claimPilotInviteAction } from "./actions";
 
-export const metadata: Metadata = {
-  title: "Your OverGarden invite",
-  description:
-    "A private invitation to the small OverGarden gardening pilot. Keep a living record of your plants and decide what stays private.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getTrustSurfaceCopy(await getRequestInterfaceLocale()).join;
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    robots: { index: false, follow: false },
+  };
+}
 
 type JoinSearchParams = Record<string, string | string[] | undefined>;
 const EMPTY_JOIN_SEARCH_PARAMS: JoinSearchParams = {};
@@ -24,28 +29,33 @@ interface JoinPageProps {
 }
 
 export default async function JoinPage({ searchParams }: JoinPageProps) {
-  const params = await (searchParams ?? Promise.resolve(EMPTY_JOIN_SEARCH_PARAMS));
+  const [params, locale] = await Promise.all([
+    searchParams ?? Promise.resolve(EMPTY_JOIN_SEARCH_PARAMS),
+    getRequestInterfaceLocale(),
+  ]);
+  const copy = getTrustSurfaceCopy(locale).join;
   const token = normalizeFirstParam(params.invite);
-  const hasValidInvite = token.length > 0 && verifyPilotInviteToken(token) !== null;
+  const hasValidInvite =
+    token.length > 0 && verifyPilotInviteToken(token) !== null;
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8">
+    <main
+      lang={locale}
+      className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-10 px-5 py-10 sm:px-8"
+    >
       <Link href="/" className="text-sm text-muted-foreground">
         OverGarden
       </Link>
 
       <header className="flex flex-col gap-5 border-b border-border pb-8">
         <p className="text-sm font-medium text-muted-foreground">
-          Private invite
+          {copy.eyebrow}
         </p>
         <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          You’re invited to keep a living record of your plants.
+          {copy.title}
         </h1>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground">
-          OverGarden is a small, invite-only group of gardeners right now.
-          You’ll write a dated note about one real plant, then come back to the
-          same plant when something changes, so the useful details are never
-          lost in chat threads again.
+          {copy.intro}
         </p>
 
         {hasValidInvite ? (
@@ -54,55 +64,55 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
               <input type="hidden" name="invite" value={token} />
               <button type="submit" className={buttonVariants({ size: "lg" })}>
                 <Leaf className="size-4" />
-                Open my garden
+                {copy.openGarden}
                 <ArrowRight className="size-4" />
               </button>
             </form>
             <Link
-              href="/privacy"
+              href={localizedPath(locale, "/privacy")}
               className={buttonVariants({ variant: "outline", size: "lg" })}
             >
-              How your privacy is handled
+              {copy.privacy}
             </Link>
           </div>
         ) : (
-          <InviteNeededCallout />
+          <InviteNeededCallout
+            copy={copy}
+            privacyHref={localizedPath(locale, "/privacy")}
+          />
         )}
       </header>
 
       <section className="grid gap-4">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          What to expect
+          {copy.expectTitle}
         </h2>
         <dl className="grid gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-2 border-t border-border pt-3">
             <dt className="flex items-center gap-2 text-sm font-medium text-foreground">
               <NotebookPen className="size-4" />
-              Start with one plant
+              {copy.expectations[0].title}
             </dt>
             <dd className="text-sm leading-6 text-muted-foreground">
-              Add a plant, write your first dated note, and your garden is
-              started.
+              {copy.expectations[0].description}
             </dd>
           </div>
           <div className="flex flex-col gap-2 border-t border-border pt-3">
             <dt className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Lock className="size-4" />
-              Private by default
+              {copy.expectations[1].title}
             </dt>
             <dd className="text-sm leading-6 text-muted-foreground">
-              Your notes stay private. You only create an account when you
-              decide to save.
+              {copy.expectations[1].description}
             </dd>
           </div>
           <div className="flex flex-col gap-2 border-t border-border pt-3">
             <dt className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Leaf className="size-4" />
-              Come back anytime
+              {copy.expectations[2].title}
             </dt>
             <dd className="text-sm leading-6 text-muted-foreground">
-              Return to the same plant to add what happened next and watch its
-              story grow.
+              {copy.expectations[2].description}
             </dd>
           </div>
         </dl>
@@ -110,12 +120,10 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
 
       <section className="grid gap-3 rounded-lg border border-border p-5">
         <h2 className="text-base font-semibold text-foreground">
-          This is a calm, closed pilot
+          {copy.pilotTitle}
         </h2>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          You’re one of a small invited group helping shape OverGarden. There’s
-          nothing public here yet, no pressure to post, and no audience to
-          perform for. Save your first plant note whenever it suits you.
+          {copy.pilotDescription}
         </p>
         {hasValidInvite ? (
           <form action={claimPilotInviteAction}>
@@ -124,13 +132,12 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
               type="submit"
               className="text-left text-sm font-medium text-primary underline-offset-4 hover:underline"
             >
-              Save my first plant note
+              {copy.saveFirstNote}
             </button>
           </form>
         ) : (
           <p className="text-sm leading-6 text-muted-foreground">
-            Writing opens once you follow a personal invitation. Until then you
-            can still read everything that’s public.
+            {copy.waitingDescription}
           </p>
         )}
       </section>
@@ -138,29 +145,33 @@ export default async function JoinPage({ searchParams }: JoinPageProps) {
   );
 }
 
-function InviteNeededCallout() {
+function InviteNeededCallout({
+  copy,
+  privacyHref,
+}: {
+  copy: TrustSurfaceCopy["join"];
+  privacyHref: string;
+}) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/40 p-4">
       <p className="flex items-center gap-2 text-sm font-medium text-foreground">
         <MailWarning className="size-4" />
-        This invitation link isn’t active.
+        {copy.invalidTitle}
       </p>
       <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-        Your personal invitation may have expired or the link is incomplete. Ask
-        whoever invited you for a fresh link. You can still explore everything
-        that’s public in the meantime.
+        {copy.invalidDescription}
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <Link href="/" className={buttonVariants({ size: "lg" })}>
           <Leaf className="size-4" />
-          Explore what’s public
+          {copy.explorePublic}
           <ArrowRight className="size-4" />
         </Link>
         <Link
-          href="/privacy"
+          href={privacyHref}
           className={buttonVariants({ variant: "outline", size: "lg" })}
         >
-          How your privacy is handled
+          {copy.privacy}
         </Link>
       </div>
     </div>

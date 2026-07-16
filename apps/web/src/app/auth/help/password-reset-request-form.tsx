@@ -9,8 +9,15 @@ import {
   PILOT_AUTH_RESET_PASSWORD_PATH,
 } from "@/lib/auth/pilot-auth-recovery";
 import { authClient } from "@/lib/auth-client";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
-export function PasswordResetRequestForm() {
+export function PasswordResetRequestForm({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
+  const copy = getTrustSurfaceCopy(locale).authHelp.reset;
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -18,7 +25,7 @@ export function PasswordResetRequestForm() {
   async function requestPasswordReset() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
-      setMessage("Enter the email address for your OverGarden account.");
+      setMessage(copy.emailRequired);
       return;
     }
 
@@ -33,32 +40,26 @@ export function PasswordResetRequestForm() {
     setIsPending(false);
 
     if (error) {
-      setMessage(
-        error.message ??
-          "Could not send a reset link right now. Support can still help.",
-      );
+      setMessage(copy.error);
       return;
     }
 
-    setMessage(
-      "If that email has an OverGarden account, a one-time reset link is on its way.",
-    );
+    setMessage(copy.success);
   }
 
   return (
     <section className="grid gap-4 rounded-lg border border-border p-5">
       <div className="grid gap-1">
         <h2 className="text-base font-semibold text-foreground">
-          Email a reset link
+          {copy.title}
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          Use the same email address as your existing garden. The link sets a
-          new password for that account.
+          {copy.description}
         </p>
       </div>
 
       <label className="grid gap-1 text-sm">
-        <span className="font-medium text-foreground">Email</span>
+        <span className="font-medium text-foreground">{copy.email}</span>
         <input
           type="email"
           autoComplete="email"
@@ -76,7 +77,7 @@ export function PasswordResetRequestForm() {
         className="w-fit"
       >
         <Mail className="size-4" />
-        Send reset link
+        {isPending ? copy.pending : copy.submit}
       </Button>
 
       {message ? (

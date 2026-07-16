@@ -5,9 +5,9 @@ import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getLocalizedOAuthErrorMessage } from "@/lib/trust-surface-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
@@ -80,7 +80,7 @@ export default async function GardenPublicProfilePage({
         className="mx-auto grid w-full max-w-4xl gap-6 px-4 py-6 sm:px-6 sm:py-8"
       >
         <ProfileHeader locale={locale} />
-        <GardenAuthPanel />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -114,7 +114,8 @@ export default async function GardenPublicProfilePage({
         <SocialAccountLinkPanel
           facebookSignInEnabled={isFacebookSignInEnabled()}
           googleSignInEnabled={isGoogleSignInEnabled()}
-          initialMessage={oauthErrorRecoveryMessage(params.error)}
+          initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
+          locale={locale}
         />
       </section>
 

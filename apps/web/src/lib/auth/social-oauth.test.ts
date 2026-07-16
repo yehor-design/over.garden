@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  oauthCallbackPath,
-  oauthErrorCodeForRedirect,
-  oauthErrorRecoveryMessage,
-} from "./social-oauth";
+import { oauthCallbackPath, oauthErrorCodeForRedirect } from "./social-oauth";
 
 describe("social OAuth client helpers", () => {
   it("keeps callback URLs path-scoped and strips stale OAuth errors", () => {
@@ -23,21 +19,6 @@ describe("social OAuth client helpers", () => {
     ).toBe("/garden");
   });
 
-  it("explains duplicate email account behavior without creating a second garden", () => {
-    expect(oauthErrorRecoveryMessage("account_not_linked")).toContain(
-      "existing OverGarden account",
-    );
-    expect(oauthErrorRecoveryMessage("account_not_linked")).toContain(
-      "link the sign-in method",
-    );
-    expect(oauthErrorRecoveryMessage(["email_doesn't_match"])).toContain(
-      "different email",
-    );
-    expect(oauthErrorRecoveryMessage("oauth_provider_not_found")).toContain(
-      "not configured",
-    );
-  });
-
   it("reduces callback failures to a bounded recovery code", () => {
     expect(oauthErrorCodeForRedirect("account-not-linked")).toBe(
       "account_not_linked",
@@ -46,5 +27,8 @@ describe("social OAuth client helpers", () => {
       "oauth_error",
     );
     expect(oauthErrorCodeForRedirect(undefined)).toBeNull();
+    expect(oauthErrorCodeForRedirect(["email_doesn't_match"])).toBe(
+      "email_doesnt_match",
+    );
   });
 });

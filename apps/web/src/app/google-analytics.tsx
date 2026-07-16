@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { getPublicSurfaceCopy } from "@/lib/public-surface-localization";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 const GOOGLE_ANALYTICS_MEASUREMENT_ID = "G-71LP7XZ5NE";
 const GOOGLE_TAG_MANAGER_ID = "GTM-W979KSX3";
@@ -187,7 +188,12 @@ export function GoogleTagManagerScripts() {
   );
 }
 
-export function AnalyticsPrivacyControls() {
+export function AnalyticsPrivacyControls({
+  locale = "uk",
+}: {
+  locale?: InterfaceLocale;
+}) {
+  const copy = getTrustSurfaceCopy(locale).privacy.analytics;
   const config = resolveMicrosoftClarityPublicConfig();
   const storedConsent = useSyncExternalStore(
     subscribeToGoogleAnalyticsConsent,
@@ -199,13 +205,13 @@ export function AnalyticsPrivacyControls() {
   const consent = sessionConsent ?? storedConsent;
   const statusLabel =
     consent === "accepted"
-      ? "Allowed"
+      ? copy.statuses.accepted
       : consent === "declined"
-        ? "Off"
-        : "Not chosen";
+        ? copy.statuses.declined
+        : copy.statuses.undecided;
   const clarityStatus = config.enabled
-    ? "Microsoft Clarity is enabled for this deployment after consent."
-    : "Microsoft Clarity is off for this deployment.";
+    ? copy.clarityEnabled
+    : copy.clarityDisabled;
 
   const setConsent = (
     nextConsent: Exclude<GoogleAnalyticsConsent, "undecided">,
@@ -216,20 +222,14 @@ export function AnalyticsPrivacyControls() {
 
   return (
     <section className="grid gap-2 rounded-lg border border-border p-4">
-      <h2 className="text-base font-semibold text-foreground">
-        Public analytics
-      </h2>
+      <h2 className="text-base font-semibold text-foreground">{copy.title}</h2>
       <p className="text-muted-foreground">
-        Status: <strong>{statusLabel}</strong>. When allowed, OverGarden may use
-        Google Tag Manager / Google Analytics and Microsoft Clarity only on
-        authored public, legal, and support pages. These tools do not run on
-        private garden, auth, admin, invite, erasure, journal, lineage, API, or
-        callback routes.
+        {copy.statusPrefix} <strong>{statusLabel}</strong>. {copy.description}
       </p>
       <p className="text-xs leading-5 text-muted-foreground">{clarityStatus}</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={() => setConsent("accepted")}>
-          Allow analytics
+          {copy.allow}
         </Button>
         <Button
           type="button"
@@ -237,14 +237,12 @@ export function AnalyticsPrivacyControls() {
           variant="outline"
           onClick={() => setConsent("declined")}
         >
-          Turn off
+          {copy.turnOff}
         </Button>
       </div>
       <p className="text-xs leading-5 text-muted-foreground">
-        Preference key: {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}. Turning this off
-        stops future Google Tag Manager / Google Analytics loading and revokes
-        Microsoft Clarity analytics storage for the current page when Clarity is
-        already initialized.
+        {copy.preferenceKey} {GOOGLE_ANALYTICS_CONSENT_STORAGE_KEY}.{" "}
+        {copy.preferenceDescription}
       </p>
     </section>
   );

@@ -184,15 +184,17 @@ describe("public analytics consent", () => {
     });
   });
 
-  it("renders a privacy-page control for public analytics consent", () => {
-    const html = renderToStaticMarkup(<AnalyticsPrivacyControls />);
+  it("renders a localized privacy-page control for public analytics consent", () => {
+    const html = renderToStaticMarkup(<AnalyticsPrivacyControls locale="ru" />);
 
-    expect(html).toContain("Public analytics");
+    expect(html).toContain("Публичная аналитика");
     expect(html).toContain("Google Tag Manager / Google Analytics");
     expect(html).toContain("Microsoft Clarity");
-    expect(html).toContain("Microsoft Clarity is off");
-    expect(html).toContain("Preference key: overgarden:analytics-consent");
-    expect(html).toContain("Allow analytics");
-    expect(html).toContain("Turn off");
+    expect(html).toContain("Microsoft Clarity выключен");
+    expect(html).toContain("Ключ настройки:");
+    expect(html).toContain("overgarden:analytics-consent");
+    expect(html).toContain("Разрешить аналитику");
+    expect(html).toContain("Выключить");
+    expect(html).not.toMatch(/Public analytics|Allow analytics|Turn off/i);
   });
 });

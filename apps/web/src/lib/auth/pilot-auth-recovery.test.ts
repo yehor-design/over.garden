@@ -1,12 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  existingAccountRecoveryMessage,
-  interpretAuthClientErrorMessage,
-  passwordResetHelpMessage,
+  classifyAuthClientError,
   passwordResetSuccessPath,
   pilotPasswordResetRedirectUrl,
-  signInRecoveryHint,
 } from "./pilot-auth-recovery";
 import {
   capturePilotPasswordResetLink,
@@ -16,42 +13,35 @@ import {
   PILOT_OPERATOR_PASSWORD_RESET_ENV,
 } from "./pilot-password-reset-delivery";
 
-describe("pilot auth recovery copy", () => {
-  it("steers duplicate sign-up attempts back to the existing account", () => {
-    expect(existingAccountRecoveryMessage()).toMatch(/already exists/i);
-    expect(existingAccountRecoveryMessage()).toMatch(/sign in/i);
-    expect(existingAccountRecoveryMessage()).not.toMatch(/create/i);
-  });
-
-  it("explains email recovery while keeping the closed-pilot operator fallback", () => {
-    expect(signInRecoveryHint()).toMatch(/one-time reset link/i);
-    expect(signInRecoveryHint()).toMatch(/operators/i);
-    expect(passwordResetHelpMessage()).toMatch(/email delivery is unavailable/i);
-  });
-
-  it("maps Better Auth duplicate-account errors to recovery guidance", () => {
+describe("pilot auth recovery contract", () => {
+  it("classifies duplicate-account errors without authoring UI copy", () => {
     expect(
-      interpretAuthClientErrorMessage({
+      classifyAuthClientError({
         status: 422,
         message: "User already exists",
       }),
-    ).toBe(existingAccountRecoveryMessage());
+    ).toBe("existing_account");
   });
 
-  it("appends recovery guidance to invalid credential errors", () => {
-    const message = interpretAuthClientErrorMessage({
-      status: 401,
-      message: "Invalid email or password",
-    });
-
-    expect(message).toContain("Invalid email or password");
-    expect(message).toContain(signInRecoveryHint());
+  it("classifies credential failures and keeps unknown diagnostics bounded", () => {
+    expect(
+      classifyAuthClientError({
+        status: 401,
+        message: "Invalid email or password",
+      }),
+    ).toBe("invalid_credentials");
+    expect(
+      classifyAuthClientError({
+        status: 500,
+        message: "Database unavailable at private-host",
+      }),
+    ).toBe("unknown");
   });
 
   it("builds the reset-password redirect URL from a site base", () => {
-    expect(pilotPasswordResetRedirectUrl("https://over-garden.vercel.app")).toBe(
-      "https://over-garden.vercel.app/auth/reset-password",
-    );
+    expect(
+      pilotPasswordResetRedirectUrl("https://over-garden.vercel.app"),
+    ).toBe("https://over-garden.vercel.app/auth/reset-password");
   });
 
   it("returns recovered gardeners to the existing garden workspace", () => {

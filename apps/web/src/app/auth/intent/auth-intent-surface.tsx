@@ -3,11 +3,9 @@ import { ArrowLeft, LockKeyhole, RotateCcw } from "lucide-react";
 
 import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
 import { buttonVariants } from "@/components/ui/button";
-import type {
-  AuthIntentAction,
-  AuthIntentDraft,
-} from "@/lib/auth/auth-intent-contract";
+import type { AuthIntentDraft } from "@/lib/auth/auth-intent-contract";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 type AuthIntentSurfaceState = "ready" | "invalid" | "expired";
 
@@ -31,6 +29,7 @@ export function AuthIntentSurface({
   initialMessage = null,
 }: AuthIntentSurfaceProps) {
   const cancelHref = intent?.returnTo ?? "/";
+  const copy = getTrustSurfaceCopy(locale).authIntent;
 
   return (
     <main
@@ -57,11 +56,10 @@ export function AuthIntentSurface({
                   id="auth-intent-title"
                   className="text-xl font-semibold text-foreground"
                 >
-                  {intentTitle(intent.action)}
+                  {copy.actions[intent.action]}
                 </h1>
                 <p className="text-sm leading-6 text-muted-foreground">
-                  Public reading stays open. Sign in only to continue this
-                  action, then OverGarden returns you to the same control.
+                  {copy.readyDescription}
                 </p>
               </div>
             </div>
@@ -69,9 +67,10 @@ export function AuthIntentSurface({
             <GardenAuthPanel
               embedded
               autoFocusEmail
+              locale={locale}
               prefillDevelopmentDefaults={false}
-              title="Continue with your OverGarden account"
-              prompt="Use an existing account or create one. No comment, draft, private object data, or location is carried through sign-in."
+              title={copy.panelTitle}
+              prompt={copy.panelPrompt}
               postAuthPath={`/auth/intent/resume?intent=${encodeURIComponent(token)}`}
               initialMessage={initialMessage}
               facebookSignInEnabled={facebookSignInEnabled}
@@ -86,7 +85,7 @@ export function AuthIntentSurface({
               })}
             >
               <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              Cancel and keep reading
+              {copy.cancel}
             </Link>
           </div>
         ) : (
@@ -99,13 +98,10 @@ export function AuthIntentSurface({
                 id="auth-intent-title"
                 className="text-xl font-semibold text-foreground"
               >
-                {state === "expired"
-                  ? "This sign-in request expired"
-                  : "This sign-in request is unavailable"}
+                {state === "expired" ? copy.expiredTitle : copy.invalidTitle}
               </h1>
               <p className="text-sm leading-6 text-muted-foreground">
-                Nothing was changed. Return to the public page and invoke the
-                action again when you are ready.
+                {copy.unavailableDescription}
               </p>
             </div>
             <Link
@@ -113,26 +109,11 @@ export function AuthIntentSurface({
               className={buttonVariants({ className: "w-fit" })}
             >
               <ArrowLeft data-icon="inline-start" aria-hidden="true" />
-              Return to public reading
+              {copy.returnToReading}
             </Link>
           </div>
         )}
       </section>
     </main>
   );
-}
-
-function intentTitle(action: AuthIntentAction) {
-  return {
-    comment: "Sign in to comment",
-    bookmark: "Sign in to bookmark",
-    follow: "Sign in to follow updates",
-    report: "Sign in to report this profile",
-    block: "Sign in to block this profile",
-    claim: "Sign in to review this claim",
-    create_object: "Sign in to add a living object",
-    create_entry: "Sign in to add an update",
-    save: "Sign in to save this update",
-    publish: "Sign in to publish this entry",
-  }[action];
 }

@@ -9,11 +9,8 @@ import {
   localizedPath,
   PREFIXED_PUBLIC_LOCALES,
 } from "@/lib/public-localization";
-import {
-  FIRST_PUBLICATION_DISCLOSURE_LINES,
-  FIRST_PUBLICATION_DISCLOSURE_VERSION,
-  MVP_LEGAL_COPY_STATUS_LABEL,
-} from "@/lib/privacy/disclosures";
+import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 
 interface LocalizedFirstPublicationDisclosureRouteProps {
@@ -28,15 +25,18 @@ export async function generateMetadata({
   params,
 }: LocalizedFirstPublicationDisclosureRouteProps): Promise<Metadata> {
   const { locale: localeParam } = await params;
+  const validLocale = isPublicLocale(localeParam);
   const noindexState = evaluatePublicSurfaceIndexability({
-    kind: isPublicLocale(localeParam) ? "profile" : "missing",
+    kind: validLocale ? "profile" : "missing",
   });
+  const copy = getTrustSurfaceCopy(
+    validLocale ? localeParam : "uk",
+  ).firstPublication;
 
   return {
-    title: "MVP first-publication disclosure | OverGarden",
-    description:
-      "Founder-approved OverGarden MVP disclosure shown before a first public journal publication.",
-    alternates: isPublicLocale(localeParam)
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    alternates: validLocale
       ? {
           canonical: localizedPath(
             localeParam,
@@ -53,11 +53,15 @@ export default async function LocalizedFirstPublicationDisclosurePage({
   params,
 }: LocalizedFirstPublicationDisclosureRouteProps) {
   const { locale: localeParam } = await params;
-
   if (!isPublicLocale(localeParam)) notFound();
 
+  const copy = getTrustSurfaceCopy(localeParam).firstPublication;
+
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8">
+    <main
+      lang={localeParam}
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-5 py-10 sm:px-8"
+    >
       <PublicLocalizedHeader
         locale={localeParam}
         basePath="/first-publication-disclosure"
@@ -65,21 +69,17 @@ export default async function LocalizedFirstPublicationDisclosurePage({
       />
       <header className="border-b border-border pb-5">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          MVP first-publication disclosure
+          {copy.title}
         </h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          Version {FIRST_PUBLICATION_DISCLOSURE_VERSION}.{" "}
-          {MVP_LEGAL_COPY_STATUS_LABEL}.
+          {copy.version} {FIRST_PUBLICATION_DISCLOSURE_VERSION}.{" "}
+          {copy.statusLabel}.
         </p>
       </header>
       <div className="grid gap-4 text-sm leading-6 text-foreground">
-        <p>
-          This is the current MVP wording logged when a gardener accepts the
-          first publication disclosure. Material wording changes must create a
-          new disclosure version before publication logging is considered valid.
-        </p>
+        <p>{copy.body}</p>
         <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-          {FIRST_PUBLICATION_DISCLOSURE_LINES.map((line) => (
+          {copy.lines.map((line) => (
             <li key={line}>{line}</li>
           ))}
         </ul>

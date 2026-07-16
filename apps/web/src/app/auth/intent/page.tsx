@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
-import { oauthErrorRecoveryMessage } from "@/lib/auth/social-oauth";
 import type { AuthIntentDraft } from "@/lib/auth/auth-intent-contract";
+import {
+  getLocalizedOAuthErrorMessage,
+  getTrustSurfaceCopy,
+} from "@/lib/trust-surface-copy";
 import { getCurrentSession } from "@/server/auth-session";
 import {
   AuthIntentTokenError,
@@ -15,10 +18,16 @@ import { AuthIntentSurface } from "./auth-intent-surface";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Continue your action | OverGarden",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getTrustSurfaceCopy(
+    await getRequestInterfaceLocale(),
+  ).authIntent;
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    robots: { index: false, follow: false },
+  };
+}
 
 type AuthIntentSearchParams = Record<string, string | string[] | undefined>;
 
@@ -69,7 +78,7 @@ export default async function AuthIntentPage({
       state={state}
       facebookSignInEnabled={isFacebookSignInEnabled()}
       googleSignInEnabled={isGoogleSignInEnabled()}
-      initialMessage={oauthErrorRecoveryMessage(params.error)}
+      initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
     />
   );
 }
