@@ -73,6 +73,30 @@ describe("owner object passport presentation", () => {
     );
     expect(presentation.provenance.count).toBe(1);
   });
+
+  it.each([
+    ["uk", "Регіон: Україна — місто Київ"],
+    ["bg", "Регион: Украйна — град Киев"],
+    ["ru", "Регион: Украина — город Киев"],
+  ] as const)(
+    "localizes the owner coarse-region label in %s",
+    (locale, label) => {
+      const page = ownerPage({ objectKind: "plant", entries: [] });
+      page.plantObject.location_visibility = "region";
+      page.plantObject.coarse_region_code = "UA-30";
+
+      const presentation = buildOwnerObjectPassportPresentation(
+        page,
+        emptyProvenance(),
+        locale,
+      );
+
+      expect(presentation.ownerContext.locationLabel).toBe(label);
+      expect(presentation.facts).toContainEqual(
+        expect.objectContaining({ value: `Домашнє господарство · ${label}` }),
+      );
+    },
+  );
 });
 
 function ownerPage({

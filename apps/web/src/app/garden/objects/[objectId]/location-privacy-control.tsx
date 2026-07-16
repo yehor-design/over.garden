@@ -4,10 +4,12 @@ import { useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
 import type { LocationVisibility } from "@/db/schema";
-import { locationVisibilityHelpText } from "@/lib/garden/pilot-ux-copy";
-import { COARSE_REGION_OPTIONS } from "@/lib/garden/regions";
+import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 
 interface LocationPrivacyControlProps {
+  locale: InterfaceLocale;
   objectId: string;
   currentLocationVisibility: LocationVisibility | string;
   currentCoarseRegionCode: string | null;
@@ -15,11 +17,14 @@ interface LocationPrivacyControlProps {
 }
 
 export function LocationPrivacyControl({
+  locale,
   objectId,
   currentLocationVisibility,
   currentCoarseRegionCode,
   action,
 }: LocationPrivacyControlProps) {
+  const copy = getOwnerObjectCopy(locale).privacy;
+  const regionOptions = getLocalizedCoarseRegionOptions(locale);
   const [locationVisibility, setLocationVisibility] =
     useState<LocationVisibility>(
       currentLocationVisibility === "region" ? "region" : "hidden",
@@ -35,28 +40,28 @@ export function LocationPrivacyControl({
 
   return (
     <section className="grid min-w-0 gap-3 rounded-lg border border-border p-4">
-      <h2 className="text-lg font-semibold text-foreground">
-        Location privacy
-      </h2>
+      <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
       <form action={action} className="grid min-w-0 gap-3 sm:grid-cols-3">
         <input type="hidden" name="objectId" value={objectId} />
         <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          Location
+          {copy.location}
           <select
             name="locationVisibility"
             value={locationVisibility}
             onChange={(event) => updateLocationVisibility(event.target.value)}
             className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <option value="hidden">Hidden</option>
-            <option value="region">Region</option>
+            <option value="hidden">{copy.hidden}</option>
+            <option value="region">{copy.region}</option>
           </select>
           <span className="text-xs leading-5 font-normal text-muted-foreground">
-            {locationVisibilityHelpText(locationVisibility)}
+            {locationVisibility === "region"
+              ? copy.regionHelp
+              : copy.hiddenHelp}
           </span>
         </label>
         <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          Coarse region
+          {copy.coarseRegion}
           <select
             name="coarseRegionCode"
             required={locationVisibility === "region"}
@@ -65,8 +70,8 @@ export function LocationPrivacyControl({
             onChange={(event) => setCoarseRegionCode(event.target.value)}
             className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:opacity-60"
           >
-            <option value="">Choose region</option>
-            {COARSE_REGION_OPTIONS.map((region) => (
+            <option value="">{copy.chooseRegion}</option>
+            {regionOptions.map((region) => (
               <option key={region.value} value={region.value}>
                 {region.label}
               </option>
@@ -77,7 +82,7 @@ export function LocationPrivacyControl({
           type="submit"
           className={buttonVariants({ className: "self-start sm:mt-6" })}
         >
-          Save
+          {copy.save}
         </button>
       </form>
     </section>

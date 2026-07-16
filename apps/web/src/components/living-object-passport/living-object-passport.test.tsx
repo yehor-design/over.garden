@@ -107,6 +107,23 @@ describe("living-object passport V2 components", () => {
     expect(html).toContain("Owner action");
   });
 
+  it.each([
+    ["uk", "Фото до запису «Запис 7»"],
+    ["bg", "Снимка към записа „Запис 7“"],
+    ["ru", "Фото к записи «Запис 7»"],
+  ] as const)("localizes timeline media alternatives in %s", (locale, alt) => {
+    const passport = publicPresentation();
+    const html = renderToStaticMarkup(
+      <PublicLivingObjectPassportTimeline
+        passport={passport}
+        locale={locale}
+      />,
+    );
+
+    expect(html).toContain(`alt="${alt}"`);
+    expect(html).not.toContain('alt="Запис 7 photo"');
+  });
+
   it("builds route-owned context modules without private payload fields", () => {
     const modules = buildLivingObjectPassportContextModules(
       publicPresentation(),

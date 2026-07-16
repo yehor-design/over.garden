@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -41,14 +40,11 @@ import {
 } from "@/lib/garden/journal-title-prefill";
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
-  journalSaveErrorMessage,
-  journalSaveStateLabel,
-  localDuplicateMessage,
-  localSavedMessage,
-  offlineSaveActionLabel,
-  offlineSaveStatusSentence,
-  photoHelpText,
-} from "@/lib/garden/pilot-ux-copy";
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  localizedJournalSaveErrorMessage,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
 import { normalizeJournalTopicTagLabels } from "@/lib/garden/journal-topics";
 import {
   enqueueOfflineMutation,
@@ -69,6 +65,11 @@ import {
   type FollowUpEntryDraftPayload,
 } from "@/lib/offline/drafts";
 import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
+import {
+  formatOwnerObjectTemplate,
+  getOwnerObjectCopy,
+  type OwnerObjectCopy,
+} from "@/lib/owner-object-copy";
 import {
   JournalEntrySyncError,
   submitOnlineJournalEntryPayload,
@@ -106,19 +107,14 @@ export function FollowUpEntryComposer({
   locale,
   objectId,
   objectDisplayName,
-  objectKind,
   today,
   initialClientMutationId,
   visualScenario = null,
 }: FollowUpEntryComposerProps) {
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const ownerCopy = getOwnerObjectCopy(locale);
   useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
-  const objectNoun =
-    objectKind === "animal"
-      ? "animal"
-      : objectKind === "bee_colony"
-        ? "bee colony"
-        : "plant";
   const draftPersistencePausedRef = useRef(false);
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -163,7 +159,12 @@ export function FollowUpEntryComposer({
     visualScenario?.submitState ?? "idle",
   );
   const [message, setMessage] = useState(
-    visualScenario?.message ?? `Save a dated follow-up on this ${objectNoun}.`,
+    localizedVisualScenarioMessage(
+      workspaceCopy,
+      ownerCopy,
+      visualScenario,
+      objectDisplayName,
+    ),
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -235,7 +236,7 @@ export function FollowUpEntryComposer({
           setMentionSelections(storedDraft.payload.mentionSelections ?? []);
           setTopicTagInput(storedDraft.payload.topicTagInput ?? "");
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
-          setMessage("Draft restored on this device.");
+          setMessage(workspaceCopy.composer.draftRestored);
         }
 
         setDraftHydrated(true);
@@ -247,7 +248,7 @@ export function FollowUpEntryComposer({
     return () => {
       cancelled = true;
     };
-  }, [draftId, objectId, ownerUserId, visualScenario]);
+  }, [draftId, objectId, ownerUserId, visualScenario, workspaceCopy]);
 
   useEffect(() => {
     if (!draftHydrated || visualScenario) return;
@@ -293,13 +294,11 @@ export function FollowUpEntryComposer({
     visualScenario,
   ]);
 
-  const photoHelp = useMemo(() => {
-    return photoHelpText({
-      fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
-      isOnline,
-      photoError,
-    });
-  }, [isOnline, photoError, photoFile, storedPhotoIntent]);
+  const photoHelp = localizedPhotoHelp(workspaceCopy, {
+    fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
+    isOnline,
+    photoError,
+  });
 
   const hasSelectedPhoto = Boolean(photoFile || storedPhotoIntent);
 
@@ -360,9 +359,7 @@ export function FollowUpEntryComposer({
       payload = await buildPayload();
     } catch {
       setSubmitState("failed");
-      setMessage(
-        "We couldn't read that photo on this device. Choose it again.",
-      );
+      setMessage(workspaceCopy.composer.photo.readError);
       return;
     }
 
@@ -371,15 +368,13 @@ export function FollowUpEntryComposer({
         await enqueuePayload(payload);
       } catch {
         setSubmitState("failed");
-        setMessage(
-          "Offline storage is unavailable in this browser. Your text is still in the form; reconnect before saving.",
-        );
+        setMessage(workspaceCopy.composer.messages.offlineStorageUnavailable);
       }
       return;
     }
 
     setSubmitState("syncing");
-    setMessage("Saving private follow-up...");
+    setMessage(workspaceCopy.composer.messages.savingPrivate);
 
     try {
       const result = await submitOnlineJournalEntryPayload(payload, {
@@ -389,7 +384,7 @@ export function FollowUpEntryComposer({
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
-      setMessage("Saved to your garden.");
+      setMessage(workspaceCopy.composer.messages.saved);
       router.push(
         result.followUpValuePulse
           ? buildFollowUpValuePulseReadbackUrl(
@@ -402,7 +397,7 @@ export function FollowUpEntryComposer({
     } catch (error) {
       if (await resumeAuthentication(error, payload)) return;
       setSubmitState("failed");
-      setMessage(journalSaveErrorMessage(error));
+      setMessage(localizedJournalSaveErrorMessage(locale, error));
     }
   }
 
@@ -410,7 +405,7 @@ export function FollowUpEntryComposer({
     scenario: VisualFixtureCreationScenarioEvidence,
   ) {
     setSubmitState("syncing");
-    setMessage("Running deterministic journal evidence...");
+    setMessage(workspaceCopy.composer.messages.visualRunning);
 
     try {
       if (scenario.expectedServerWrite) {
@@ -418,7 +413,7 @@ export function FollowUpEntryComposer({
           scenario.id,
         );
         setSubmitState("synced");
-        setMessage("Scenario saved through the canonical repository.");
+        setMessage(workspaceCopy.composer.messages.visualSaved);
         router.push(readbackPath);
         router.refresh();
         return;
@@ -430,8 +425,8 @@ export function FollowUpEntryComposer({
         setSubmitState("idle");
         setMessage(
           scenario.state === "cancel"
-            ? "Cancel keeps this owner-scoped draft on this device."
-            : "Owner-scoped draft saved on this device.",
+            ? workspaceCopy.composer.messages.visualCancelDraft
+            : workspaceCopy.composer.messages.visualDraftSaved,
         );
         return;
       }
@@ -447,15 +442,15 @@ export function FollowUpEntryComposer({
           lastError: "Recoverable fixture save failure.",
         });
         setSubmitState("failed");
-        setMessage("Save failed. The owner-scoped queue item can be retried.");
+        setMessage(workspaceCopy.composer.messages.visualRecoverableError);
       } else {
         setSubmitState("queued");
-        setMessage("Saved in the owner-scoped offline queue.");
+        setMessage(workspaceCopy.composer.messages.visualQueued);
       }
       await refreshQueue();
     } catch (error) {
       setSubmitState("failed");
-      setMessage(journalSaveErrorMessage(error));
+      setMessage(localizedJournalSaveErrorMessage(locale, error));
     }
   }
 
@@ -505,9 +500,7 @@ export function FollowUpEntryComposer({
     } catch {
       draftPersistencePausedRef.current = false;
       setSubmitState("failed");
-      setMessage(
-        "We couldn't preserve this draft on your device. Stay here and try again.",
-      );
+      setMessage(workspaceCopy.composer.messages.preserveDraftError);
     }
   }
 
@@ -524,15 +517,15 @@ export function FollowUpEntryComposer({
     await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
     setMessage(
       mutation.status === "queued"
-        ? localSavedMessage("follow-up")
-        : localDuplicateMessage("follow-up"),
+        ? localizedLocalSavedMessage(workspaceCopy)
+        : localizedLocalDuplicateMessage(workspaceCopy),
     );
     await refreshQueue();
   }
 
   async function handleSync(mutation: OfflineMutation) {
     setSubmitState("syncing");
-    setMessage("Sending saved follow-up to your garden...");
+    setMessage(workspaceCopy.composer.messages.sending);
 
     try {
       const result = await syncOfflineJournalEntryMutation(mutation, {
@@ -541,7 +534,7 @@ export function FollowUpEntryComposer({
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
-      setMessage("Saved to your garden.");
+      setMessage(workspaceCopy.composer.messages.saved);
       await refreshQueue();
       router.push(
         result.followUpValuePulse
@@ -555,7 +548,7 @@ export function FollowUpEntryComposer({
     } catch (error) {
       if (await resumeAuthentication(error)) return;
       setSubmitState("failed");
-      setMessage(journalSaveErrorMessage(error));
+      setMessage(localizedJournalSaveErrorMessage(locale, error));
       await refreshQueue();
     }
   }
@@ -592,14 +585,14 @@ export function FollowUpEntryComposer({
         } catch {
           setSubmitState("failed");
           setMessage(
-            "We couldn't preserve this draft on your device. Stay here and try again before signing in.",
+            workspaceCopy.composer.messages.preserveDraftBeforeSignInError,
           );
           return true;
         }
       }
 
       setSubmitState("idle");
-      setMessage("Sign in to continue saving. Your local draft stays here.");
+      setMessage(workspaceCopy.composer.messages.signInToContinue);
       router.push(error.authIntentUrl);
       return true;
     }
@@ -743,7 +736,16 @@ export function FollowUpEntryComposer({
     if (selectionError) {
       setPhotoFile(null);
       setStoredPhotoIntent(clearComposerPhotoIntent());
-      setPhotoError(selectionError);
+      setPhotoError(
+        selectionError.startsWith("Choose a photo up to")
+          ? formatGardenWorkspaceTemplate(
+              workspaceCopy.composer.photo.tooLarge,
+              {
+                maxMegabytes: selectionError.match(/\d+/u)?.[0] ?? "12",
+              },
+            )
+          : workspaceCopy.composer.photo.unsupported,
+      );
       resetPhotoInput();
       setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       return;
@@ -763,9 +765,7 @@ export function FollowUpEntryComposer({
 
         setPhotoFile(null);
         setStoredPhotoIntent(clearComposerPhotoIntent());
-        setPhotoError(
-          "We couldn't keep that photo on this device. Choose it again.",
-        );
+        setPhotoError(workspaceCopy.composer.photo.keepError);
         resetPhotoInput();
         setDraft((current) => withSuggestedTitle(current, { hasPhoto: false }));
       });
@@ -821,19 +821,19 @@ export function FollowUpEntryComposer({
           ) : (
             <WifiOff className="size-3.5" />
           )}
-          {isOnline ? "Online" : "Offline"}
+          {isOnline
+            ? workspaceCopy.composer.connection.online
+            : workspaceCopy.composer.connection.offline}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          {journalSaveStateLabel(submitState)}
+          {workspaceCopy.composer.saveStates[submitState]}
         </span>
       </div>
 
       <p className="text-sm leading-6 text-muted-foreground">
-        Updating{" "}
-        <strong className="font-semibold text-foreground">
-          {objectDisplayName}
-        </strong>
-        . The object and space stay attached automatically.
+        {formatOwnerObjectTemplate(ownerCopy.composer.updating, {
+          objectName: objectDisplayName,
+        })}
       </p>
 
       <div className="flex flex-col gap-1">
@@ -842,7 +842,7 @@ export function FollowUpEntryComposer({
             htmlFor="follow-up-entry-body"
             className="text-sm font-medium text-foreground"
           >
-            What changed?
+            {ownerCopy.composer.fields.whatChanged}
           </label>
           <JournalVoiceInputControl
             locale={locale}
@@ -867,7 +867,7 @@ export function FollowUpEntryComposer({
           onClick={refreshActiveMentionToken}
           onKeyUp={refreshActiveMentionToken}
           className="min-h-32 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder="A short observation is enough. You can add details later."
+          placeholder={ownerCopy.composer.fields.bodyPlaceholder}
         />
         <JournalMentionTypeaheadPanel
           locale={locale}
@@ -880,19 +880,28 @@ export function FollowUpEntryComposer({
       </div>
 
       <div className="flex flex-col gap-2 border-y border-border py-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-          Optional photo
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept={COMPOSER_PHOTO_ACCEPT}
-            capture="environment"
-            onChange={(event) =>
-              handlePhotoChange(event.currentTarget.files?.[0])
-            }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-11 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground sm:file:h-9"
-          />
-        </label>
+        <span className="text-sm font-medium text-foreground">
+          {workspaceCopy.composer.fields.optionalPhoto}
+        </span>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept={COMPOSER_PHOTO_ACCEPT}
+          capture="environment"
+          onChange={(event) =>
+            handlePhotoChange(event.currentTarget.files?.[0])
+          }
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          className="self-start"
+          onClick={() => photoInputRef.current?.click()}
+        >
+          <UploadCloud className="size-4" />
+          {workspaceCopy.composer.photo.choose}
+        </Button>
         {hasSelectedPhoto ? (
           <Button
             type="button"
@@ -901,7 +910,7 @@ export function FollowUpEntryComposer({
             onClick={() => clearPhotoSelection()}
           >
             <X className="size-4" />
-            Remove photo
+            {workspaceCopy.composer.fields.removePhoto}
           </Button>
         ) : null}
         <p
@@ -920,15 +929,15 @@ export function FollowUpEntryComposer({
         className="group border-y border-border py-3"
       >
         <summary className="flex min-h-11 cursor-pointer items-center text-sm font-semibold text-foreground marker:text-muted-foreground sm:min-h-0">
-          More details
+          {workspaceCopy.composer.fields.moreDetails}
           <span className="ml-2 font-normal text-muted-foreground">
-            title, date, topics
+            {ownerCopy.composer.fields.detailsHint}
           </span>
         </summary>
         <div className="mt-4 grid gap-4">
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:col-span-2">
-              Entry title
+              {workspaceCopy.composer.fields.entryTitle}
               <input
                 name="title"
                 required
@@ -936,12 +945,12 @@ export function FollowUpEntryComposer({
                 value={draft.title}
                 onChange={(event) => updateTitle(event.target.value)}
                 className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-                placeholder="Second flowering wave"
+                placeholder={ownerCopy.composer.fields.titlePlaceholder}
               />
             </label>
 
             <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              Date
+              {workspaceCopy.composer.fields.date}
               <input
                 type="date"
                 name="entryDate"
@@ -955,14 +964,14 @@ export function FollowUpEntryComposer({
           </div>
 
           <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-            Tags / topics
+            {workspaceCopy.composer.fields.tags}
             <input
               name="topicTags"
               maxLength={160}
               value={topicTagInput}
               onChange={(event) => updateTopicTagInput(event.target.value)}
               className="h-11 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 sm:h-10"
-              placeholder="watering, pests, seedlings"
+              placeholder={workspaceCopy.composer.fields.tagsPlaceholder}
             />
           </label>
         </div>
@@ -986,7 +995,9 @@ export function FollowUpEntryComposer({
           className="min-h-11 min-w-0 flex-1 sm:min-h-8 sm:flex-none"
         >
           <UploadCloud className="size-4" />
-          {isOnline ? "Save follow-up" : "Save on this device"}
+          {isOnline
+            ? ownerCopy.composer.actions.saveOnline
+            : ownerCopy.composer.actions.saveOffline}
         </Button>
         <Button
           type="button"
@@ -994,14 +1005,14 @@ export function FollowUpEntryComposer({
           onClick={() => void handleCancel()}
           className="min-h-11 shrink-0 text-muted-foreground sm:min-h-8"
         >
-          Cancel
+          {workspaceCopy.composer.actions.cancel}
         </Button>
       </div>
 
       {mutations.length > 0 ? (
         <div className="flex flex-col gap-2 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-foreground">
-            Saved follow-ups on this device
+            {ownerCopy.composer.queue.title}
           </h3>
           <ul className="flex flex-col gap-2">
             {mutations.map((mutation) => (
@@ -1012,14 +1023,14 @@ export function FollowUpEntryComposer({
                 <div className="flex min-w-0 flex-col gap-1">
                   <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                     {statusIcon(mutation.status)}
-                    {mutationTitle(mutation)}
+                    {mutationTitle(mutation, ownerCopy)}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {mutationSubtitle(mutation)}
+                    {mutationSubtitle(mutation, workspaceCopy, ownerCopy)}
                   </span>
                   {mutation.lastError ? (
                     <span className="text-xs text-destructive">
-                      {mutation.lastError}
+                      {workspaceCopy.composer.queue.retryError}
                     </span>
                   ) : null}
                 </div>
@@ -1033,7 +1044,7 @@ export function FollowUpEntryComposer({
                       }
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      Open
+                      {workspaceCopy.composer.queue.open}
                     </Link>
                   ) : (
                     <Button
@@ -1048,7 +1059,10 @@ export function FollowUpEntryComposer({
                       onClick={() => void handleSync(mutation)}
                     >
                       <RefreshCw className="size-4" />
-                      {offlineSaveActionLabel(mutation.status)}
+                      {localizedOfflineSaveActionLabel(
+                        mutation.status,
+                        workspaceCopy,
+                      )}
                     </Button>
                   )}
                 </div>
@@ -1085,22 +1099,26 @@ function statusIcon(status: OfflineMutation["status"]) {
   }
 }
 
-function mutationTitle(mutation: OfflineMutation) {
-  if (mutation.status === "synced") return "Saved follow-up";
+function mutationTitle(mutation: OfflineMutation, copy: OwnerObjectCopy) {
+  if (mutation.status === "synced") return copy.composer.queue.saved;
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
-  return payload.title || "Untitled follow-up";
+  return payload.title || copy.composer.queue.untitled;
 }
 
-function mutationSubtitle(mutation: OfflineMutation) {
+function mutationSubtitle(
+  mutation: OfflineMutation,
+  workspaceCopy: GardenWorkspaceCopy,
+  ownerCopy: OwnerObjectCopy,
+) {
   if (mutation.status === "synced") {
-    return "Saved to garden · Local private copy removed";
+    return workspaceCopy.composer.queue.savedAndRemoved;
   }
   const payload = mutation.payload as Partial<OfflineJournalEntryPayload>;
   const parts = [
-    offlineSaveStatusSentence(mutation.status),
-    "Follow-up for this living object",
+    localizedOfflineSaveStatusSentence(mutation.status, workspaceCopy),
+    ownerCopy.composer.queue.context,
     payload.entryDate,
-    payload.photoIntent ? "Photo will upload later" : null,
+    payload.photoIntent ? workspaceCopy.composer.queue.photoLater : null,
   ].filter(Boolean);
 
   return parts.join(" · ");
@@ -1109,4 +1127,84 @@ function mutationSubtitle(mutation: OfflineMutation) {
 function mutationReadbackUrl(mutation: OfflineMutation) {
   const result = mutation.syncResult as { readbackUrl?: unknown } | undefined;
   return typeof result?.readbackUrl === "string" ? result.readbackUrl : null;
+}
+
+function localizedPhotoHelp(
+  copy: GardenWorkspaceCopy,
+  {
+    fileName,
+    isOnline,
+    photoError,
+  }: {
+    fileName: string | null;
+    isOnline: boolean;
+    photoError: string | null;
+  },
+) {
+  if (photoError) return photoError;
+  if (!fileName) return copy.composer.photo.empty;
+
+  return formatGardenWorkspaceTemplate(
+    isOnline ? copy.composer.photo.online : copy.composer.photo.offline,
+    { fileName },
+  );
+}
+
+function localizedVisualScenarioMessage(
+  workspaceCopy: GardenWorkspaceCopy,
+  ownerCopy: OwnerObjectCopy,
+  scenario: VisualFixtureCreationScenarioEvidence | null,
+  objectName: string,
+) {
+  if (!scenario) {
+    return formatOwnerObjectTemplate(ownerCopy.composer.initialMessage, {
+      objectName,
+    });
+  }
+  if (scenario.state === "draft") {
+    return workspaceCopy.composer.draftRestored;
+  }
+  if (scenario.state === "offline") {
+    return workspaceCopy.composer.messages.fixtureOffline;
+  }
+  if (scenario.state === "error") {
+    return workspaceCopy.composer.messages.fixturePhotoError;
+  }
+  if (scenario.state === "cancel") {
+    return workspaceCopy.composer.messages.fixtureCancel;
+  }
+  if (scenario.state === "duplicate") {
+    return workspaceCopy.composer.messages.fixtureDuplicate;
+  }
+  return formatOwnerObjectTemplate(ownerCopy.composer.initialMessage, {
+    objectName,
+  });
+}
+
+function localizedLocalSavedMessage(copy: GardenWorkspaceCopy) {
+  return formatGardenWorkspaceTemplate(copy.composer.offline.savedMessage, {
+    entryKind: copy.composer.offline.followUp,
+  });
+}
+
+function localizedLocalDuplicateMessage(copy: GardenWorkspaceCopy) {
+  return formatGardenWorkspaceTemplate(copy.composer.offline.duplicateMessage, {
+    entryKind: copy.composer.offline.followUp,
+  });
+}
+
+function localizedOfflineSaveActionLabel(
+  status: OfflineMutation["status"],
+  copy: GardenWorkspaceCopy,
+) {
+  return status === "failed"
+    ? copy.composer.offline.actionLabels.retry
+    : copy.composer.offline.actionLabels.send;
+}
+
+function localizedOfflineSaveStatusSentence(
+  status: OfflineMutation["status"],
+  copy: GardenWorkspaceCopy,
+) {
+  return copy.composer.offline.statusSentences[status];
 }

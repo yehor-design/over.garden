@@ -212,38 +212,177 @@ describe("/garden/objects/[objectId]", () => {
     expect(html).not.toMatch(/leaderboard|streak|likes|followers|share modal/i);
   });
 
-  it("renders signed-in journal entries as object logbook readbacks with public links", async () => {
-    mocks.getPlantObjectPage.mockResolvedValue(
-      plantObjectPage([
-        {
-          id: "entry-1",
-          title: "First public flowers",
-          body: "Two new flower clusters with the public-safe story.",
-          entryDate: "2026-07-04",
-          visibility: "public",
-          publicSlug: "first-public-flowers",
-        },
-      ]),
-    );
-    const { default: PlantObjectReadbackPage } = await import("./page");
+  it.each([
+    [
+      "uk",
+      "Публічна сторінка доступна",
+      "/journal/first-public-flowers",
+      "/lineage/objects/object-1",
+    ],
+    [
+      "bg",
+      "Публичната страница е достъпна",
+      "/bg/journal/first-public-flowers",
+      "/bg/lineage/objects/object-1",
+    ],
+    [
+      "ru",
+      "Публичная страница доступна",
+      "/ru/journal/first-public-flowers",
+      "/ru/lineage/objects/object-1",
+    ],
+  ] as const)(
+    "localizes owner actions in %s while preserving journal content and locale-aware public links",
+    async (locale, publicAvailable, journalPath, passportPath) => {
+      mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
+      mocks.getPlantObjectPage.mockResolvedValue(
+        plantObjectPage([
+          {
+            id: "entry-1",
+            title: "First public flowers",
+            body: "Two new flower clusters with the public-safe story.",
+            entryDate: "2026-07-04",
+            visibility: "public",
+            publicSlug: "first-public-flowers",
+          },
+        ]),
+      );
+      const { default: PlantObjectReadbackPage } = await import("./page");
 
-    const html = renderToStaticMarkup(
-      await PlantObjectReadbackPage({
-        params: Promise.resolve({ objectId: "object-1" }),
-        searchParams: Promise.resolve({}),
-      }),
-    );
+      const html = renderToStaticMarkup(
+        await PlantObjectReadbackPage({
+          params: Promise.resolve({ objectId: "object-1" }),
+          searchParams: Promise.resolve({}),
+        }),
+      );
 
-    expect(html).toContain("Запис об&#x27;єкта");
-    expect(html).toContain("Public page available");
-    expect(html).toContain("Open public page");
-    expect(html).toContain("/journal/first-public-flowers");
-    expect(html).toContain("Open public passport");
-    expect(html).toContain("/lineage/objects/object-1");
-    expect(html).not.toMatch(
-      /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
-    );
-  });
+      expect(html).toContain(`lang="${locale}"`);
+      expect(html).toContain(publicAvailable);
+      expect(html).toContain(journalPath);
+      expect(html).toContain(passportPath);
+      expect(html).toContain("First public flowers");
+      expect(html).toContain(
+        "Two new flower clusters with the public-safe story.",
+      );
+      expect(html).not.toMatch(/Public page available|Open public page/i);
+      expect(html).not.toMatch(
+        /owner_user_id|client_mutation_id|quarantine|latitude|longitude/i,
+      );
+    },
+  );
+
+  it.each([
+    [
+      "uk",
+      "Походження",
+      "Походить від Maria&#x27;s saved seeds · Пакет насіння",
+      "Джерело: EU Official Journal / EUR-Lex Common Catalogue. Нормалізовано OverGarden.",
+      "Відкрити джерело",
+    ],
+    [
+      "bg",
+      "Произход",
+      "Произхожда от Maria&#x27;s saved seeds · Пакет семена",
+      "Източник: EU Official Journal / EUR-Lex Common Catalogue. Нормализирано от OverGarden.",
+      "Отваряне на източника",
+    ],
+    [
+      "ru",
+      "Происхождение",
+      "Происходит от Maria&#x27;s saved seeds · Пакет семян",
+      "Источник: EU Official Journal / EUR-Lex Common Catalogue. Нормализовано OverGarden.",
+      "Открыть источник",
+    ],
+  ] as const)(
+    "localizes provenance and source attribution in %s without translating source values",
+    async (locale, title, edgeLabel, sourceSummary, openSource) => {
+      mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
+      mocks.getObjectProvenancePanel.mockResolvedValueOnce({
+        sourceObjectOptions: [],
+        edges: [
+          {
+            id: "edge-1",
+            sourceKind: "source_reference",
+            consentState: "confirmed",
+            visibilityPolicy: "owner_only_until_confirmed",
+            erasureState: "active",
+            sourceObject: null,
+            pendingIdentity: null,
+            sourceReferenceKind: "seed_packet",
+            sourceReferenceLabel: "Maria's saved seeds",
+            createdAt: "2026-07-04T12:00:00.000Z",
+          },
+        ],
+      });
+      mocks.getPlantObjectPage.mockResolvedValue(
+        plantObjectPage([], false, {
+          sourceCredit: {
+            sourceSlug: "eu_oj_eur_lex_common_catalogue",
+            sourceName: "EU Official Journal / EUR-Lex Common Catalogue",
+            sourceUrl: "https://eur-lex.europa.eu/",
+            attributionText:
+              "European Union, Official Journal of the European Union / EUR-Lex, Common Catalogue.",
+          },
+        }),
+      );
+      const { default: PlantObjectReadbackPage } = await import("./page");
+
+      const html = renderToStaticMarkup(
+        await PlantObjectReadbackPage({
+          params: Promise.resolve({ objectId: "object-1" }),
+          searchParams: Promise.resolve({}),
+        }),
+      );
+
+      expect(html).toContain(title);
+      expect(html).toContain(edgeLabel);
+      expect(html).toContain(sourceSummary);
+      expect(html).toContain(openSource);
+      expect(html).toContain("EU Plant Variety Portal");
+      expect(html).toContain("Official Journal of the European Union");
+      expect(html).not.toMatch(
+        />Provenance<|>Record private source<|>Open source</,
+      );
+      expect(html).not.toMatch(/owner_user_id|latitude|longitude|quarantine/i);
+    },
+  );
+
+  it.each([
+    ["uk", "Заархівовано приватно"],
+    ["bg", "Архивирано като частно"],
+    ["ru", "Архивировано как приватное"],
+  ] as const)(
+    "localizes archived owner lifecycle copy in %s without hiding private UGC",
+    async (locale, archivedLabel) => {
+      mocks.getRequestInterfaceLocale.mockResolvedValueOnce(locale);
+      mocks.getPlantObjectPage.mockResolvedValue(
+        plantObjectPage([
+          {
+            id: "entry-archived",
+            title: "Winter archive note",
+            body: "Owner-only archived history.",
+            entryDate: "2026-07-04",
+            visibility: "private",
+            lifecycleState: "archived",
+            publicGoneAt: "2026-07-05T12:00:00.000Z",
+          },
+        ]),
+      );
+      const { default: PlantObjectReadbackPage } = await import("./page");
+
+      const html = renderToStaticMarkup(
+        await PlantObjectReadbackPage({
+          params: Promise.resolve({ objectId: "object-1" }),
+          searchParams: Promise.resolve({}),
+        }),
+      );
+
+      expect(html).toContain(archivedLabel);
+      expect(html).toContain("Winter archive note");
+      expect(html).toContain("Owner-only archived history.");
+      expect(html).not.toContain("Archived privately");
+    },
+  );
 
   it("resumes publishing at only the exact private journal entry control", async () => {
     mocks.getPlantObjectPage.mockResolvedValue(
@@ -381,7 +520,9 @@ describe("/garden/objects/[objectId]", () => {
       }),
     );
 
-    expect(html).toContain("public-sharing choices you have already reviewed");
+    expect(html).toContain(
+      "параметрами публічного поширення, які ви вже переглянули",
+    );
     expect(html).not.toContain('name="publicationDisclosureAccepted"');
   });
 });
@@ -394,8 +535,18 @@ function plantObjectPage(
     entryDate: string;
     visibility?: "private" | "public";
     publicSlug?: string | null;
+    lifecycleState?: "active" | "archived";
+    publicGoneAt?: string | null;
   }>,
   hasPriorPublicationDisclosure = false,
+  options: {
+    sourceCredit?: {
+      sourceSlug: string;
+      sourceName: string;
+      sourceUrl: string;
+      attributionText: string | null;
+    } | null;
+  } = {},
 ) {
   return {
     space: {
@@ -416,7 +567,7 @@ function plantObjectPage(
       variety_state: "selected",
       location_visibility: "hidden",
       coarse_region_code: null,
-      source_credit: null,
+      source_credit: options.sourceCredit ?? null,
     },
     hasPriorPublicationDisclosure,
     entries: entries.map((entry) => ({
@@ -426,9 +577,9 @@ function plantObjectPage(
       entry_date: entry.entryDate,
       entry_scope: "object",
       visibility: entry.visibility ?? "private",
-      lifecycle_state: "active",
+      lifecycle_state: entry.lifecycleState ?? "active",
       public_slug: entry.publicSlug ?? null,
-      public_gone_at: null,
+      public_gone_at: entry.publicGoneAt ?? null,
       timelineRelation: "direct_object",
       mentionedObjects: [],
       media: null,

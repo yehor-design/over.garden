@@ -542,7 +542,7 @@ function renderTimelineEntries(
               {entry.mediaPublicUrl ? (
                 <Image
                   src={entry.mediaPublicUrl}
-                  alt={`${entry.title} photo`}
+                  alt={copy.entryPhotoAlt.replace("{title}", entry.title)}
                   width={240}
                   height={180}
                   sizes="(min-width: 640px) 8rem, 100vw"

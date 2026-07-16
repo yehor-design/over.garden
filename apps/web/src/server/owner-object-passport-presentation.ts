@@ -12,7 +12,7 @@ import {
   publicJournalEntryPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
-import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { getLocalizedCoarseRegionLabel } from "@/lib/garden/regions";
 
 import type { PlantObjectPage } from "./journal-repository";
 import type { ObjectProvenancePanel } from "./lineage-repository";
@@ -198,6 +198,6 @@ function ownerLocationLabel(page: PlantObjectPage, locale: InterfaceLocale) {
     (page.space.location_visibility === "region"
       ? page.space.coarse_region_code
       : null);
-  const label = getCoarseRegionLabel(code);
+  const label = getLocalizedCoarseRegionLabel(locale, code);
   return label ? `${copy.region}: ${label}` : copy.hiddenLocation;
 }

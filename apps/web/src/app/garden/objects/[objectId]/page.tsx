@@ -13,7 +13,10 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
-import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
+import {
+  formatGardenWorkspaceDate,
+  getGardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
 import {
   buildAuthIntentAnchor,
   normalizeAuthIntentResumeAction,
@@ -21,9 +24,11 @@ import {
   type AuthIntentAction,
 } from "@/lib/auth/auth-intent-contract";
 import {
-  catalogSourceAttributionCaveat,
-  catalogSourceAttributionSummary,
-} from "@/lib/catalog/catalog-source-attribution";
+  formatOwnerObjectTemplate,
+  getOwnerObjectCopy,
+  type OwnerObjectCopy,
+} from "@/lib/owner-object-copy";
+import { EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE } from "@/lib/catalog/eu-official-journal-common-catalogue";
 import { isObjectProgressMomentEligible } from "@/lib/garden/object-progress-moment";
 import { normalizeSaveProgressMomentKind } from "@/lib/garden/save-progress-moment";
 import {
@@ -97,6 +102,7 @@ export default async function PlantObjectReadbackPage({
   ]);
   const copy = getInterfaceCopy(locale);
   const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const ownerCopy = getOwnerObjectCopy(locale);
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
   const visualCreationCandidate = resolveVisualJournalCreationScenario(
@@ -162,16 +168,21 @@ export default async function PlantObjectReadbackPage({
     ? "2026-07-12"
     : new Date().toISOString().slice(0, 10);
   const saveProgressKind = normalizeSaveProgressMomentKind(query.saveProgress);
-  const sourceAttributionCaveat = page.plantObject.source_credit
-    ? catalogSourceAttributionCaveat(page.plantObject.source_credit)
-    : null;
-  const lineageReadbackPath = getLineageReadbackPath(
+  const sourceAttributionCaveat =
+    page.plantObject.source_credit?.sourceSlug ===
+    EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE
+      ? ownerCopy.source.euLegalCaveat
+      : null;
+  const lineageReadbackPathValue = getLineageReadbackPath(
     page,
     provenancePanel,
     objectId,
   );
+  const lineageReadbackPath = lineageReadbackPathValue
+    ? localizedPath(locale, lineageReadbackPathValue)
+    : null;
   const objectPassportReadbackPath = hasActivePublicEntry(page)
-    ? publicLineageObjectPath(objectId)
+    ? localizedPath(locale, publicLineageObjectPath(objectId))
     : null;
   const valuePulseJournalEntryId =
     query.valuePulse === "1" && typeof query.entryId === "string"
@@ -220,6 +231,7 @@ export default async function PlantObjectReadbackPage({
 
       {valuePulsePrompt.eligible ? (
         <FollowUpValuePulse
+          locale={locale}
           objectId={objectId}
           journalEntryId={valuePulseJournalEntryId}
         />
@@ -227,7 +239,8 @@ export default async function PlantObjectReadbackPage({
 
       {showProgressMoment ? (
         <ObjectProgressMoment
-          plantName={page.plantObject.display_name}
+          locale={locale}
+          objectName={page.plantObject.display_name}
           entries={page.entries.map((entry) => ({
             id: entry.id,
             title: entry.title,
@@ -244,10 +257,10 @@ export default async function PlantObjectReadbackPage({
       >
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold text-foreground">
-            Add dated entry
+            {ownerCopy.followUpSection.title}
           </h2>
           <p className="text-sm text-muted-foreground">
-            Keep this object history in one place.
+            {ownerCopy.followUpSection.description}
           </p>
         </div>
 
@@ -294,15 +307,16 @@ export default async function PlantObjectReadbackPage({
       >
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase">
-            Owner controls
+            {ownerCopy.management.eyebrow}
           </p>
           <h2 className="mt-1 text-xl font-semibold text-foreground">
-            Passport management
+            {ownerCopy.management.title}
           </h2>
         </div>
 
         <div id="passport-privacy" className="min-w-0">
           <LocationPrivacyControl
+            locale={locale}
             objectId={objectId}
             currentLocationVisibility={page.plantObject.location_visibility}
             currentCoarseRegionCode={page.plantObject.coarse_region_code}
@@ -313,6 +327,7 @@ export default async function PlantObjectReadbackPage({
         {canResolveCatalogState(page.plantObject.variety_state) ? (
           <div id="passport-catalog" className="min-w-0">
             <CatalogResolveControl
+              locale={locale}
               objectId={page.plantObject.id}
               currentVarietyText={page.plantObject.variety_text}
               currentVarietyState={
@@ -326,14 +341,16 @@ export default async function PlantObjectReadbackPage({
         {page.plantObject.source_credit ? (
           <div className="grid gap-1 border-t border-border pt-4 text-xs leading-5 text-muted-foreground">
             <p>
-              {catalogSourceAttributionSummary(page.plantObject.source_credit)}
+              {formatOwnerObjectTemplate(ownerCopy.source.summary, {
+                sourceName: page.plantObject.source_credit.sourceName,
+              })}
             </p>
             {sourceAttributionCaveat ? <p>{sourceAttributionCaveat}</p> : null}
             <Link
               href={page.plantObject.source_credit.sourceUrl}
               className="w-fit font-medium text-primary underline-offset-4 hover:underline"
             >
-              Open source
+              {ownerCopy.source.open}
             </Link>
           </div>
         ) : null}
@@ -367,16 +384,17 @@ function OwnerEntryActions({
   resumeControl: string | null;
   locale: InterfaceLocale;
 }) {
+  const actionCopy = getOwnerObjectCopy(locale).entryActions;
+
   if (entry.lifecycle_state === "archived") {
     return (
       <div data-owner-entry-controls="archived" className="grid gap-1">
         <span className="text-sm font-medium text-muted-foreground">
-          Archived privately
+          {actionCopy.archivedTitle}
         </span>
         {entry.public_gone_at ? (
           <span className="text-xs text-muted-foreground">
-            The old public page no longer shows the journal text and is removed
-            from public discovery surfaces.
+            {actionCopy.archivedGone}
           </span>
         ) : null}
       </div>
@@ -390,21 +408,24 @@ function OwnerEntryActions({
         className="flex flex-wrap items-center gap-3"
       >
         <span className="text-xs text-muted-foreground">
-          Public page available. Not listed for search engines during the pilot.
+          {actionCopy.publicAvailable}
         </span>
         {objectPassportReadbackPath ? (
           <Link
             href={objectPassportReadbackPath}
             className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Open public passport
+            {actionCopy.openPassport}
           </Link>
         ) : null}
         <Link
-          href={publicJournalEntryPath(entry.public_slug)}
+          href={localizedPath(
+            locale,
+            publicJournalEntryPath(entry.public_slug),
+          )}
           className="text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
-          Open public page
+          {actionCopy.openPage}
         </Link>
         <form
           action={archiveJournalEntryAction}
@@ -419,11 +440,7 @@ function OwnerEntryActions({
               required
               className="mt-1 size-4 rounded border-border"
             />
-            <span>
-              Archive this entry privately, remove it from public discovery
-              surfaces, and stop its old public page from showing the journal
-              text.
-            </span>
+            <span>{actionCopy.archiveDisclosure}</span>
           </label>
           <button
             type="submit"
@@ -433,7 +450,7 @@ function OwnerEntryActions({
               className: "self-start",
             })}
           >
-            Archive public entry
+            {actionCopy.archiveButton}
           </button>
         </form>
       </div>
@@ -461,25 +478,20 @@ function OwnerEntryActions({
             className="mt-1 size-4 rounded border-border"
           />
           <span>
-            Publish this entry as a public page. People with the link can read
-            its title, note, date, object identity, and chosen region if one is
-            visible. If a photo is attached, only a server-cleaned public copy
-            can appear; precise location and the original photo stay private.
-            Pilot public pages are not listed for search engines yet; that is
-            not a secrecy guarantee.{" "}
+            {actionCopy.publicationLead} {actionCopy.publicationMedia}{" "}
+            {actionCopy.publicationPilot}{" "}
             <Link
               href={localizedPath(locale, "/first-publication-disclosure")}
               className="text-primary underline-offset-4 hover:underline"
             >
-              Read disclosure
+              {actionCopy.readDisclosure}
             </Link>
             .
           </span>
         </label>
       ) : (
         <p className="text-xs leading-5 text-muted-foreground">
-          Publish this private entry using the public-sharing choices you have
-          already reviewed.
+          {actionCopy.reviewed}
         </p>
       )}
       <button
@@ -494,7 +506,7 @@ function OwnerEntryActions({
         type="submit"
         className={buttonVariants({ size: "sm", className: "self-start" })}
       >
-        Publish entry
+        {actionCopy.publishButton}
       </button>
     </form>
   );
@@ -513,15 +525,19 @@ function ProvenanceSection({
   lineageReadbackPath: string | null;
   locale: InterfaceLocale;
 }) {
+  const provenanceCopy = getOwnerObjectCopy(locale).provenance;
+
   return (
     <section
       id="passport-provenance"
       className="grid min-w-0 gap-4 border-t border-border pt-5"
     >
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">Provenance</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {provenanceCopy.title}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Record where this object came from without making the source public.
+          {provenanceCopy.description}
         </p>
       </div>
 
@@ -540,7 +556,7 @@ function ProvenanceSection({
                 value={crypto.randomUUID()}
               />
               <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-                Source object
+                {provenanceCopy.sourceObject}
                 <select
                   name="sourcePlantObjectId"
                   required
@@ -548,7 +564,7 @@ function ProvenanceSection({
                 >
                   {provenancePanel.sourceObjectOptions.map((option) => (
                     <option key={option.id} value={option.id}>
-                      {lineageObjectOptionLabel(option)}
+                      {lineageObjectOptionLabel(option, provenanceCopy)}
                     </option>
                   ))}
                 </select>
@@ -557,13 +573,12 @@ function ProvenanceSection({
                 type="submit"
                 className={buttonVariants({ className: "justify-self-start" })}
               >
-                Record object source
+                {provenanceCopy.recordObjectSource}
               </button>
             </form>
           ) : (
             <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
-              Add another object before linking this one to your own source
-              object.
+              {provenanceCopy.noSourceObject}
             </p>
           )}
 
@@ -579,39 +594,48 @@ function ProvenanceSection({
               value={crypto.randomUUID()}
             />
             <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              Source type
+              {provenanceCopy.sourceType}
               <select
                 name="sourceReferenceKind"
                 required
                 className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
                 defaultValue="person"
               >
-                <option value="person">Person</option>
-                <option value="seed_packet">Seed packet</option>
-                <option value="nursery">Nursery</option>
-                <option value="catalog_variety">Catalog or variety</option>
-                <option value="other">Other</option>
+                <option value="person">
+                  {provenanceCopy.sourceTypes.person}
+                </option>
+                <option value="seed_packet">
+                  {provenanceCopy.sourceTypes.seedPacket}
+                </option>
+                <option value="nursery">
+                  {provenanceCopy.sourceTypes.nursery}
+                </option>
+                <option value="catalog_variety">
+                  {provenanceCopy.sourceTypes.catalogVariety}
+                </option>
+                <option value="other">
+                  {provenanceCopy.sourceTypes.other}
+                </option>
               </select>
             </label>
             <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              Private source label
+              {provenanceCopy.privateSourceLabel}
               <input
                 name="sourceReferenceLabel"
                 required
                 maxLength={120}
                 className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                placeholder="Seed packet from spring swap"
+                placeholder={provenanceCopy.privateSourcePlaceholder}
               />
             </label>
             <p className="text-xs leading-5 text-muted-foreground">
-              Keep this label contact-free: no email, phone, URL, handle, exact
-              address, or coordinates.
+              {provenanceCopy.contactFree}
             </p>
             <button
               type="submit"
               className={buttonVariants({ className: "justify-self-start" })}
             >
-              Record private source
+              {provenanceCopy.recordPrivateSource}
             </button>
           </form>
 
@@ -626,25 +650,23 @@ function ProvenanceSection({
               value={crypto.randomUUID()}
             />
             <label className="grid min-w-0 gap-1 text-sm font-medium text-foreground">
-              Invited source label
+              {provenanceCopy.invitedSourceLabel}
               <input
                 name="pendingSourceLabel"
                 required
                 maxLength={120}
                 className="min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                placeholder="Maria's saved seeds"
+                placeholder={provenanceCopy.invitedSourcePlaceholder}
               />
             </label>
             <p className="text-xs leading-5 text-muted-foreground">
-              Creates a pending invite source. The link reveals details only
-              after sign-in; keep the label free of contact details, URLs,
-              handles, addresses, or coordinates.
+              {provenanceCopy.invitationHelp}
             </p>
             <button
               type="submit"
               className={buttonVariants({ className: "justify-self-start" })}
             >
-              Create source invite
+              {provenanceCopy.createInvite}
             </button>
           </form>
         </div>
@@ -654,7 +676,7 @@ function ProvenanceSection({
 
       {provenancePanel.edges.length === 0 ? (
         <p className="rounded-md border border-dashed border-border p-3 text-sm text-muted-foreground">
-          No provenance recorded for this object yet.
+          {provenanceCopy.empty}
         </p>
       ) : (
         <ol className="grid gap-3">
@@ -662,29 +684,32 @@ function ProvenanceSection({
             <li key={edge.id} className="rounded-md border border-border p-3">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                 <h3 className="text-sm font-semibold text-foreground">
-                  {lineageEdgeTitle(edge)}
+                  {lineageEdgeTitle(edge, provenanceCopy)}
                 </h3>
                 <time className="text-xs text-muted-foreground">
-                  {formatDate(edge.createdAt)}
+                  {formatGardenWorkspaceDate(locale, edge.createdAt)}
                 </time>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                {lineageConsentLabel(edge)} · {lineageVisibilityLabel(edge)}
+                {lineageConsentLabel(edge, provenanceCopy)} ·{" "}
+                {lineageVisibilityLabel(edge, provenanceCopy)}
               </p>
               {edge.pendingIdentity ? (
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-border pt-3">
                   <span className="text-xs text-muted-foreground">
-                    Invite state:{" "}
-                    {lineagePendingInviteStateLabel(
-                      edge.pendingIdentity.inviteState,
-                    )}
+                    {formatOwnerObjectTemplate(provenanceCopy.inviteState, {
+                      state: lineagePendingInviteStateLabel(
+                        edge.pendingIdentity.inviteState,
+                        provenanceCopy,
+                      ),
+                    })}
                   </span>
                   {edge.pendingIdentity.inviteState === "pending" ? (
                     <Link
                       href={edge.pendingIdentity.invitePath}
                       className="text-sm font-medium text-primary underline-offset-4 hover:underline"
                     >
-                      Open private invite
+                      {provenanceCopy.openPrivateInvite}
                     </Link>
                   ) : null}
                 </div>
@@ -697,13 +722,13 @@ function ProvenanceSection({
       {lineageReadbackPath ? (
         <div className="flex flex-wrap items-center gap-3 border-t border-border pt-3">
           <span className="text-xs text-muted-foreground">
-            Confirmed lineage readback is available for public-safe links.
+            {provenanceCopy.readbackAvailable}
           </span>
           <Link
             href={lineageReadbackPath}
             className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Open lineage readback
+            {provenanceCopy.openReadback}
           </Link>
         </div>
       ) : null}
@@ -754,15 +779,6 @@ async function recordProgressMomentShown(
   });
 }
 
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function canResolveCatalogState(value: string) {
   return value === "unknown" || value === "user_added";
 }
@@ -794,76 +810,94 @@ function hasActivePublicEntry(page: PlantObjectPage) {
   );
 }
 
-function lineageObjectOptionLabel(option: LineagePlantObjectOption) {
-  const variety = option.varietyText ?? "Unknown";
+function lineageObjectOptionLabel(
+  option: LineagePlantObjectOption,
+  copy: OwnerObjectCopy["provenance"],
+) {
+  const variety = option.varietyText ?? copy.edge.unknownIdentity;
   return `${option.displayName} · ${variety}`;
 }
 
-function lineageEdgeTitle(edge: LineageProvenanceEdgeReadback) {
+function lineageEdgeTitle(
+  edge: LineageProvenanceEdgeReadback,
+  copy: OwnerObjectCopy["provenance"],
+) {
   if (edge.sourceObject) {
-    return `Came from ${lineageObjectOptionLabel(edge.sourceObject)}`;
+    return formatOwnerObjectTemplate(copy.edge.fromObject, {
+      source: lineageObjectOptionLabel(edge.sourceObject, copy),
+    });
   }
 
   if (edge.pendingIdentity) {
-    return `Invite pending for ${edge.pendingIdentity.displayLabel}`;
+    return formatOwnerObjectTemplate(copy.edge.invitationPending, {
+      source: edge.pendingIdentity.displayLabel,
+    });
   }
 
-  return `Came from ${edge.sourceReferenceLabel ?? "private source"} · ${lineageSourceReferenceKindLabel(
-    edge.sourceReferenceKind,
-  )}`;
+  return formatOwnerObjectTemplate(copy.edge.fromReference, {
+    source: edge.sourceReferenceLabel ?? copy.edge.privateSource,
+    kind: lineageSourceReferenceKindLabel(edge.sourceReferenceKind, copy),
+  });
 }
 
 function lineageSourceReferenceKindLabel(
   value: LineageProvenanceEdgeReadback["sourceReferenceKind"],
+  copy: OwnerObjectCopy["provenance"],
 ) {
   switch (value) {
     case "person":
-      return "person";
+      return copy.sourceTypes.person;
     case "seed_packet":
-      return "seed packet";
+      return copy.sourceTypes.seedPacket;
     case "nursery":
-      return "nursery";
+      return copy.sourceTypes.nursery;
     case "catalog_variety":
-      return "catalog or variety";
+      return copy.sourceTypes.catalogVariety;
     case "other":
     default:
-      return "source";
+      return copy.sourceTypes.source;
   }
 }
 
-function lineageConsentLabel(edge: LineageProvenanceEdgeReadback) {
+function lineageConsentLabel(
+  edge: LineageProvenanceEdgeReadback,
+  copy: OwnerObjectCopy["provenance"],
+) {
   if (edge.pendingIdentity?.inviteState === "pending") {
-    return "Pending invited source";
+    return copy.consent.pendingInvited;
   }
 
   switch (edge.consentState) {
     case "confirmed":
-      return "Confirmed provenance";
+      return copy.consent.confirmed;
     case "declined":
-      return "Declined provenance";
+      return copy.consent.declined;
     case "anonymized":
-      return "Anonymized provenance";
+      return copy.consent.anonymized;
     case "proposed":
     default:
-      return "Proposed provenance";
+      return copy.consent.proposed;
   }
 }
 
-function lineageVisibilityLabel(edge: LineageProvenanceEdgeReadback) {
+function lineageVisibilityLabel(
+  edge: LineageProvenanceEdgeReadback,
+  copy: OwnerObjectCopy["provenance"],
+) {
   if (edge.pendingIdentity?.inviteState === "pending") {
-    return "No public contribution before claim";
+    return copy.visibility.pendingInvited;
   }
 
   switch (edge.consentState) {
     case "confirmed":
-      return "Eligible for lineage readback";
+      return copy.visibility.confirmed;
     case "declined":
-      return "Not public and does not contribute";
+      return copy.visibility.declined;
     case "anonymized":
-      return "Structural tombstone";
+      return copy.visibility.anonymized;
     case "proposed":
     default:
-      return "Owner-only until confirmed";
+      return copy.visibility.proposed;
   }
 }
 
@@ -871,16 +905,17 @@ function lineagePendingInviteStateLabel(
   value: NonNullable<
     LineageProvenanceEdgeReadback["pendingIdentity"]
   >["inviteState"],
+  copy: OwnerObjectCopy["provenance"],
 ) {
   switch (value) {
     case "claimed":
-      return "claimed";
+      return copy.inviteStates.claimed;
     case "declined":
-      return "declined";
+      return copy.inviteStates.declined;
     case "anonymized":
-      return "anonymized";
+      return copy.inviteStates.anonymized;
     case "pending":
     default:
-      return "pending";
+      return copy.inviteStates.pending;
   }
 }

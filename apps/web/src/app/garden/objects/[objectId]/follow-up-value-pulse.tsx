@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,14 @@ import {
   type FollowUpUsefulness,
   type FollowUpUsefulnessReason,
 } from "@/lib/garden/follow-up-value-pulse";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOwnerObjectCopy,
+  type OwnerObjectCopy,
+} from "@/lib/owner-object-copy";
 
 interface FollowUpValuePulseProps {
+  locale: InterfaceLocale;
   objectId: string;
   journalEntryId: string;
 }
@@ -19,23 +25,18 @@ interface FollowUpValuePulseProps {
 type PulsePhase = "prompt" | "reason" | "done";
 
 export function FollowUpValuePulse({
+  locale,
   objectId,
   journalEntryId,
 }: FollowUpValuePulseProps) {
+  const copy = getOwnerObjectCopy(locale).valuePulse;
   const router = useRouter();
   const [phase, setPhase] = useState<PulsePhase>("prompt");
-  const [usefulness, setUsefulness] = useState<FollowUpUsefulness | null>(
-    null,
-  );
+  const [usefulness, setUsefulness] = useState<FollowUpUsefulness | null>(null);
   const [usefulnessReason, setUsefulnessReason] =
     useState<FollowUpUsefulnessReason | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const reasonOptions = useMemo(
-    () => FOLLOW_UP_USEFULNESS_REASON_OPTIONS,
-    [],
-  );
 
   async function submitResponse(input: {
     outcome: "submitted" | "skipped";
@@ -59,25 +60,14 @@ export function FollowUpValuePulse({
       });
 
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          error?: unknown;
-        } | null;
-        throw new Error(
-          typeof body?.error === "string"
-            ? body.error
-            : "Feedback could not be saved.",
-        );
+        throw new Error(copy.error);
       }
 
       setPhase("done");
       router.replace(`/garden/objects/${objectId}`);
       router.refresh();
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Feedback could not be saved.",
-      );
+    } catch {
+      setError(copy.error);
     } finally {
       setIsSubmitting(false);
     }
@@ -99,12 +89,9 @@ export function FollowUpValuePulse({
       className="grid gap-4 rounded-lg border border-border bg-muted/30 p-4"
     >
       <div className="grid gap-1">
-        <h2 className="text-lg font-semibold text-foreground">
-          Quick private check-in
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          After adding this follow-up, does this plant record feel worth
-          keeping? Your answer stays private and helps us improve the pilot.
+          {copy.description}
         </p>
       </div>
 
@@ -112,23 +99,21 @@ export function FollowUpValuePulse({
         <div className="flex flex-wrap gap-2">
           {FOLLOW_UP_USEFULNESS_OPTIONS.map((option) => (
             <Button
-              key={option.value}
+              key={option}
               type="button"
               variant="outline"
               disabled={isSubmitting}
-              onClick={() => handleUsefulnessSelect(option.value)}
+              onClick={() => handleUsefulnessSelect(option)}
             >
-              {option.label}
+              {usefulnessLabel(option, copy)}
             </Button>
           ))}
         </div>
       ) : (
         <div className="grid gap-3">
-          <p className="text-sm text-foreground">
-            Optional: what mattered most?
-          </p>
+          <p className="text-sm text-foreground">{copy.optionalPrompt}</p>
           <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">Reason (optional)</span>
+            <span className="text-muted-foreground">{copy.reasonLabel}</span>
             <select
               value={usefulnessReason ?? ""}
               disabled={isSubmitting}
@@ -141,10 +126,10 @@ export function FollowUpValuePulse({
               }
               className="rounded-md border border-border bg-background px-3 py-2 text-foreground"
             >
-              <option value="">Skip reason</option>
-              {reasonOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="">{copy.skipReason}</option>
+              {FOLLOW_UP_USEFULNESS_REASON_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {reasonLabel(option, copy)}
                 </option>
               ))}
             </select>
@@ -161,7 +146,7 @@ export function FollowUpValuePulse({
                 })
               }
             >
-              Send feedback
+              {copy.send}
             </Button>
             <Button
               type="button"
@@ -169,7 +154,7 @@ export function FollowUpValuePulse({
               disabled={isSubmitting}
               onClick={() => setPhase("prompt")}
             >
-              Back
+              {copy.back}
             </Button>
           </div>
         </div>
@@ -182,7 +167,7 @@ export function FollowUpValuePulse({
           disabled={isSubmitting}
           onClick={() => submitResponse({ outcome: "skipped" })}
         >
-          Skip for now
+          {copy.skip}
         </Button>
       </div>
 
@@ -193,4 +178,33 @@ export function FollowUpValuePulse({
       ) : null}
     </section>
   );
+}
+
+function usefulnessLabel(
+  value: FollowUpUsefulness,
+  copy: OwnerObjectCopy["valuePulse"],
+) {
+  if (value === "useful") return copy.usefulness.useful;
+  if (value === "not_sure") return copy.usefulness.notSure;
+  return copy.usefulness.notUseful;
+}
+
+function reasonLabel(
+  value: FollowUpUsefulnessReason,
+  copy: OwnerObjectCopy["valuePulse"],
+) {
+  switch (value) {
+    case "history_felt_worth_keeping":
+      return copy.reasons.historyWorthKeeping;
+    case "easy_to_add_update":
+      return copy.reasons.easyToAdd;
+    case "prior_entries_helped":
+      return copy.reasons.priorEntriesHelped;
+    case "felt_redundant":
+      return copy.reasons.feltRedundant;
+    case "hard_to_find_what_i_needed":
+      return copy.reasons.hardToFind;
+    case "not_sure_why":
+      return copy.reasons.notSureWhy;
+  }
 }

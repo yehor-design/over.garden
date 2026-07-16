@@ -1184,19 +1184,28 @@ export function FirstEntryComposer({
       </div>
 
       <div className="flex flex-col gap-2 border-y border-border py-3">
-        <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
+        <span className="text-sm font-medium text-foreground">
           {copy.composer.fields.optionalPhoto}
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept={COMPOSER_PHOTO_ACCEPT}
-            capture="environment"
-            onChange={(event) =>
-              handlePhotoChange(event.currentTarget.files?.[0])
-            }
-            className="block w-full text-sm font-normal text-muted-foreground file:mr-3 file:h-11 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:text-sm file:font-medium file:text-secondary-foreground sm:file:h-9"
-          />
-        </label>
+        </span>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept={COMPOSER_PHOTO_ACCEPT}
+          capture="environment"
+          onChange={(event) =>
+            handlePhotoChange(event.currentTarget.files?.[0])
+          }
+          className="hidden"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          className="self-start"
+          onClick={() => photoInputRef.current?.click()}
+        >
+          <UploadCloud className="size-4" />
+          {copy.composer.photo.choose}
+        </Button>
         {hasSelectedPhoto ? (
           <Button
             type="button"

@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import {
   buildObjectProgressTimeline,
   formatEntryBodyExcerpt,
-  formatProgressSpanLabel,
   isObjectProgressMomentEligible,
   pickProgressPhotoComparison,
   type ObjectProgressTimelineEntry,
 } from "./object-progress-moment";
 
 function entry(
-  overrides: Partial<ObjectProgressTimelineEntry> & Pick<ObjectProgressTimelineEntry, "id">,
+  overrides: Partial<ObjectProgressTimelineEntry> &
+    Pick<ObjectProgressTimelineEntry, "id">,
 ): ObjectProgressTimelineEntry {
   return {
     title: "Entry title",
@@ -51,21 +51,6 @@ describe("formatEntryBodyExcerpt", () => {
     expect(formatEntryBodyExcerpt("a".repeat(140), 120).endsWith("…")).toBe(
       true,
     );
-  });
-});
-
-describe("formatProgressSpanLabel", () => {
-  it("returns null for fewer than two entries", () => {
-    expect(formatProgressSpanLabel([entry({ id: "one" })])).toBeNull();
-  });
-
-  it("summarizes the date span across the timeline", () => {
-    expect(
-      formatProgressSpanLabel([
-        entry({ id: "old", entryDate: "2026-06-01" }),
-        entry({ id: "new", entryDate: "2026-06-15" }),
-      ]),
-    ).toBe("From Jun 1, 2026 to Jun 15, 2026");
   });
 });
 

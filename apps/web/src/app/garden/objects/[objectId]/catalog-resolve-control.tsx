@@ -10,13 +10,17 @@ import {
   parseCatalogTypeaheadResponse,
 } from "@/lib/garden/catalog-typeahead-contract";
 import type { FirstEntryCatalogSelection } from "@/lib/garden/entry-contracts";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
 import {
-  catalogKindLabel,
-  varietyStateLabel,
-} from "@/lib/garden/pilot-ux-copy";
+  buildGardenCatalogTrustMetadata,
+  formatGardenWorkspaceTemplate,
+  getGardenWorkspaceCopy,
+  type GardenWorkspaceCopy,
+} from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getOwnerObjectCopy } from "@/lib/owner-object-copy";
 
 interface CatalogResolveControlProps {
+  locale: InterfaceLocale;
   objectId: string;
   currentVarietyText: string | null;
   currentVarietyState: VarietyState;
@@ -28,17 +32,20 @@ type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
 export function CatalogResolveControl({
+  locale,
   objectId,
   currentVarietyText,
   currentVarietyState,
   action,
 }: CatalogResolveControlProps) {
+  const copy = getOwnerObjectCopy(locale).catalog;
+  const workspaceCopy = getGardenWorkspaceCopy(locale);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
   const [status, setStatus] = useState<CatalogStatus>("idle");
   const selectedTrust = selected
-    ? catalogSuggestionTrustMetadata(selected)
+    ? buildGardenCatalogTrustMetadata(locale, selected)
     : null;
 
   useEffect(() => {
@@ -112,12 +119,15 @@ export function CatalogResolveControl({
   return (
     <section className="grid min-w-0 gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">
-          Match this object to the catalog
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
         <p className="text-sm text-muted-foreground">
-          Current: {currentVarietyText ?? "No catalog name yet"} ·{" "}
-          {varietyStateLabel(currentVarietyState)}
+          {formatGardenWorkspaceTemplate(copy.current, {
+            value: currentVarietyText ?? copy.noName,
+            state: localizedVarietyStateLabel(
+              currentVarietyState,
+              workspaceCopy,
+            ),
+          })}
         </p>
       </div>
 
@@ -130,7 +140,7 @@ export function CatalogResolveControl({
         />
 
         <label className="flex min-w-0 flex-col gap-1 text-sm font-medium text-foreground">
-          Catalog match
+          {copy.matchLabel}
           <span className="relative min-w-0">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -138,7 +148,7 @@ export function CatalogResolveControl({
               value={query}
               onChange={(event) => updateQuery(event.target.value)}
               className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-              placeholder="Search seeded catalog"
+              placeholder={copy.placeholder}
               autoComplete="off"
             />
             {query ? (
@@ -146,7 +156,7 @@ export function CatalogResolveControl({
                 type="button"
                 onClick={clearSelection}
                 className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Clear catalog match"
+                aria-label={copy.clearAria}
               >
                 <X className="size-4" />
               </button>
@@ -158,9 +168,9 @@ export function CatalogResolveControl({
           {selected ? (
             <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
               <span>
-                Matched in catalog: {selected.displayName} ·{" "}
+                {copy.matched} {selected.displayName} ·{" "}
                 {selectedTrust?.trustLabel} ·{" "}
-                {catalogKindLabel(selected.catalogKind)}
+                {localizedCatalogKindLabel(selected.catalogKind, workspaceCopy)}
               </span>
               <span className="text-muted-foreground">
                 {selectedTrust?.disambiguationLabel} ·{" "}
@@ -169,23 +179,21 @@ export function CatalogResolveControl({
             </span>
           ) : (
             <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-              No catalog match chosen yet
+              {copy.noMatch}
             </span>
           )}
           {status === "loading" ? (
-            <span className="text-muted-foreground">Searching...</span>
+            <span className="text-muted-foreground">{copy.searching}</span>
           ) : null}
           {status === "failed" ? (
-            <span className="text-destructive">
-              Suggestions unavailable. The object stays unchanged.
-            </span>
+            <span className="text-destructive">{copy.unavailable}</span>
           ) : null}
         </div>
 
         {suggestions.length > 0 ? (
           <ul className="grid gap-2">
             {suggestions.map((suggestion) => {
-              const trust = catalogSuggestionTrustMetadata(suggestion);
+              const trust = buildGardenCatalogTrustMetadata(locale, suggestion);
 
               return (
                 <li key={suggestion.id}>
@@ -222,9 +230,31 @@ export function CatalogResolveControl({
             className: "self-start",
           })}
         >
-          Save catalog match
+          {copy.save}
         </button>
       </form>
     </section>
   );
+}
+
+function localizedVarietyStateLabel(
+  value: VarietyState,
+  copy: GardenWorkspaceCopy,
+) {
+  if (value === "selected") return copy.composer.varietyStates.selected;
+  if (value === "user_added") return copy.composer.varietyStates.userAdded;
+  if (value === "free_text") return copy.composer.varietyStates.freeText;
+  return copy.composer.varietyStates.unknown;
+}
+
+function localizedCatalogKindLabel(
+  value: string | null | undefined,
+  copy: GardenWorkspaceCopy,
+) {
+  if (value === "breed") return copy.composer.catalogKinds.breed;
+  if (value === "species") return copy.composer.catalogKinds.species;
+  if (value === "plant_variety") {
+    return copy.composer.catalogKinds.plantVariety;
+  }
+  return copy.composer.catalogKinds.match;
 }

@@ -11,88 +11,77 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-import { FirstEntryComposer } from "./first-entry-composer";
+import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 
 const localeExpectations = [
   [
     "uk",
     {
-      name: "Назва",
-      firstUpdate: "Перше оновлення",
+      whatChanged: "Що змінилося?",
       saveOffline: "Зберегти на цьому пристрої",
-      region: "Київ",
+      moreDetails: "Більше деталей",
       choosePhoto: "Обрати фото",
     },
   ],
   [
     "bg",
     {
-      name: "Име",
-      firstUpdate: "Първо обновяване",
+      whatChanged: "Какво се промени?",
       saveOffline: "Запазване на това устройство",
-      region: "Киев",
+      moreDetails: "Повече подробности",
       choosePhoto: "Избор на снимка",
     },
   ],
   [
     "ru",
     {
-      name: "Название",
-      firstUpdate: "Первое обновление",
+      whatChanged: "Что изменилось?",
       saveOffline: "Сохранить на этом устройстве",
-      region: "Киев",
+      moreDetails: "Больше подробностей",
       choosePhoto: "Выбрать фото",
     },
   ],
 ] as const satisfies readonly [
   InterfaceLocale,
   {
-    name: string;
-    firstUpdate: string;
+    whatChanged: string;
     saveOffline: string;
-    region: string;
+    moreDetails: string;
     choosePhoto: string;
   },
 ][];
 
-describe("first entry composer localization", () => {
+describe("follow-up entry composer localization", () => {
   it.each(localeExpectations)(
-    "localizes creation and offline recovery in %s without translating authored data",
+    "localizes follow-up and offline recovery in %s without translating authored data",
     (locale, expected) => {
       const scenario = visualScenario();
+      const objectDisplayName = "Apis mellifera — Кошер № 7";
       const html = renderToStaticMarkup(
-        <FirstEntryComposer
+        <FollowUpEntryComposer
           ownerUserId="00000000-0000-4000-8000-000000000001"
           locale={locale}
+          objectId="18700003-0000-4000-8000-000000000001"
+          objectDisplayName={objectDisplayName}
+          objectKind="bee_colony"
           today="2026-07-16"
           initialClientMutationId="test-mutation"
           visualScenario={scenario}
         />,
       );
 
-      expect(html).toContain(expected.name);
-      expect(html).toContain(expected.firstUpdate);
+      expect(html).toContain(expected.whatChanged);
       expect(html).toContain(expected.saveOffline);
-      expect(html).toContain(expected.region);
+      expect(html).toContain(expected.moreDetails);
       expect(html).toContain(expected.choosePhoto);
       expect(html).toContain('type="file"');
       expect(html).toContain('class="hidden"');
-      expect(html).toContain(scenario.objectName.replaceAll("'", "&#x27;"));
-      expect(html).toContain(scenario.spaceName);
+      expect(html).toContain(objectDisplayName);
+      expect(html).toContain(scenario.entryTitle);
       expect(html).toContain(scenario.entryBody);
-      expect(html).toContain(scenario.userAddedCatalogName);
       expect(html).not.toContain(scenario.message);
-      expect(html).toMatch(
-        /data-composer-details-content="true" class="mt-4 grid min-w-0 gap-4"/,
-      );
-      expect(html).toMatch(
-        /data-composer-details-grid="location" class="grid min-w-0 gap-3 sm:grid-cols-2"/,
-      );
-      expect(html).toMatch(
-        /data-composer-details-grid="entry-metadata" class="grid min-w-0 gap-3 sm:grid-cols-3"/,
-      );
       expect(html).not.toMatch(
-        /Save first entry|More details|Mention suggestions unavailable|Choose File|No file chosen/i,
+        /What changed\?|Save follow-up|Saved follow-ups on this device|More details|Choose File|No file chosen/i,
       );
     },
   );
@@ -100,36 +89,36 @@ describe("first entry composer localization", () => {
 
 function visualScenario(): VisualFixtureCreationScenarioEvidence {
   return {
-    id: "localized-offline",
-    flow: "first-entry",
+    id: "ove182-c019",
+    flow: "follow-up",
     state: "offline",
     label: "Fixture label is operator evidence",
     ownerActorId: "owner",
-    objectId: null,
-    spaceId: null,
-    spaceName: "Балконна оранжерея",
-    objectKind: "plant",
-    objectName: "Lavandula 'Hidcote'",
-    entryTitle: "Перший запис користувача",
-    entryBody: "User-authored note remains exactly as entered.",
+    objectId: "18700003-0000-4000-8000-000000000001",
+    spaceId: "space",
+    spaceName: "Пасіка",
+    objectKind: "bee_colony",
+    objectName: "Apis mellifera — Кошер № 7",
+    entryTitle: "User-authored follow-up title",
+    entryBody: "Оригінальний текст користувача лишається без перекладу.",
     entryDate: "2026-07-16",
-    catalogQuery: "Lavandula",
-    userAddedCatalogName: "Lavandula локальна назва",
-    locationVisibility: "region",
-    coarseRegionCode: "UA-30",
-    topicTagInput: "полив, balcony",
+    catalogQuery: "",
+    userAddedCatalogName: null,
+    locationVisibility: "hidden",
+    coarseRegionCode: null,
+    topicTagInput: "огляд, queen",
     mediaFileName: null,
     online: false,
     submitState: "queued",
     message: "This raw fixture message must never reach the localized UI.",
     detailsOpen: true,
-    path: "/garden",
-    startPath: "/garden",
-    payloadClass: "first_entry",
+    path: "/garden/objects/18700003-0000-4000-8000-000000000001",
+    startPath: "/garden/objects/18700003-0000-4000-8000-000000000001",
+    payloadClass: "follow_up",
     clientMutationId: "visual-mutation",
     preconditionEntryIds: [],
-    expectedSpaceId: "expected-space",
-    expectedObjectId: "expected-object",
+    expectedSpaceId: "space",
+    expectedObjectId: "18700003-0000-4000-8000-000000000001",
     expectedEntryId: "expected-entry",
     expectedMediaAssetIds: [],
     expectedServerWrite: false,

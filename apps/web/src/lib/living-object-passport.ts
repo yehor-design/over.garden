@@ -160,6 +160,7 @@ export interface LivingObjectPassportCopy {
   showAll: string;
   showRecent: string;
   readFullNote: string;
+  entryPhotoAlt: string;
   mediaGallery: string;
   noPhoto: string;
   confirmedProvenance: string;
@@ -215,6 +216,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     showAll: "Показати всі записи",
     showRecent: "Показати завантажену історію",
     readFullNote: "Прочитати нотатку повністю",
+    entryPhotoAlt: "Фото до запису «{title}»",
     mediaGallery: "Фото об'єкта",
     noPhoto: "Фото ще немає",
     confirmedProvenance: "Підтверджене походження",
@@ -270,6 +272,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     showAll: "Покажи всички записи",
     showRecent: "Покажи заредената история",
     readFullNote: "Прочетете цялата бележка",
+    entryPhotoAlt: "Снимка към записа „{title}“",
     mediaGallery: "Снимки на обекта",
     noPhoto: "Все още няма снимка",
     confirmedProvenance: "Потвърден произход",
@@ -325,6 +328,7 @@ const COPY: Record<InterfaceLocale, LivingObjectPassportCopy> = {
     showAll: "Показать все записи",
     showRecent: "Показать загруженную историю",
     readFullNote: "Прочитать заметку полностью",
+    entryPhotoAlt: "Фото к записи «{title}»",
     mediaGallery: "Фотографии объекта",
     noPhoto: "Фотографий пока нет",
     confirmedProvenance: "Подтвержденное происхождение",

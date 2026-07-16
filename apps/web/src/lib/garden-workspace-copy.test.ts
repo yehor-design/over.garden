@@ -36,6 +36,15 @@ describe("garden workspace copy", () => {
     expect(getGardenWorkspaceCopy("bg").saveProgress.firstEntry.title).toBe(
       "Записът за градината ви е започнат",
     );
+    expect(getGardenWorkspaceCopy("uk").composer.photo.choose).toBe(
+      "Обрати фото",
+    );
+    expect(getGardenWorkspaceCopy("bg").composer.photo.choose).toBe(
+      "Избор на снимка",
+    );
+    expect(getGardenWorkspaceCopy("ru").composer.photo.choose).toBe(
+      "Выбрать фото",
+    );
   });
 
   it("preserves user and catalog values while localizing surrounding copy", () => {
