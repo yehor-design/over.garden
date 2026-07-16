@@ -294,11 +294,11 @@ function PublicObjectCatalogCardView({
 
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           <div className="flex gap-1">
-            <dt className="sr-only">Objects</dt>
+            <dt className="sr-only">{copy.objectsCountLabel}</dt>
             <dd>{formatCatalogCount(locale, "object", card.objectCount)}</dd>
           </div>
           <div className="flex gap-1">
-            <dt className="sr-only">Journals</dt>
+            <dt className="sr-only">{copy.journalsCountLabel}</dt>
             <dd>{formatCatalogCount(locale, "journal", card.journalCount)}</dd>
           </div>
         </dl>

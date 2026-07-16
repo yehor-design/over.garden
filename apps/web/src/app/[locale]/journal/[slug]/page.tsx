@@ -44,7 +44,7 @@ export async function generateMetadata({
     undefined,
     localeParam,
   ).catch(() => ({ status: "not_found" as const }));
-  if (lookup.status !== "active") return missingMetadata();
+  if (lookup.status !== "active") return missingMetadata(localeParam);
 
   const copy = getPublicJournalEntryCopy(localeParam);
   const canonicalPath = publicJournalEntryPath(lookup.page.entry.publicSlug);
@@ -136,9 +136,11 @@ export default async function PublicJournalEntryRoute({
   );
 }
 
-function missingMetadata(): Metadata {
+function missingMetadata(locale?: PublicLocale): Metadata {
   return {
-    title: "Journal entry | OverGarden",
+    title: locale
+      ? `${getPublicJournalEntryCopy(locale).metadataTitleSuffix} | OverGarden`
+      : "OverGarden",
     robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
   };
 }

@@ -540,6 +540,13 @@ const UK_COPY = {
       archived: "В архіві",
       empty: "Записів на рівні простору ще немає.",
     },
+    pendingWishlist: {
+      title: "Зберегти на потім",
+      description:
+        "Додайте {name} до списку бажань, не створюючи живий об'єкт.",
+      save: "Зберегти до списку бажань",
+      startFirstEntry: "Почати перший запис",
+    },
     postSave: {
       returnToSpaceJournal: "Повернутися до журналу простору",
       addAnotherObject: "Додати ще один об'єкт",
@@ -1075,6 +1082,12 @@ const BG_COPY = {
       archived: "Архивиран",
       empty: "Все още няма записи на ниво пространство.",
     },
+    pendingWishlist: {
+      title: "Запазване за по-късно",
+      description: "Добавете {name} към желанията, без да създавате жив обект.",
+      save: "Запазване в желанията",
+      startFirstEntry: "Започване на първия запис",
+    },
     postSave: {
       returnToSpaceJournal: "Връщане към дневника на пространството",
       addAnotherObject: "Добавяне на още един обект",
@@ -1605,6 +1618,13 @@ const RU_COPY = {
       private: "Приватный",
       archived: "В архиве",
       empty: "Записей на уровне пространства пока нет.",
+    },
+    pendingWishlist: {
+      title: "Сохранить на потом",
+      description:
+        "Добавьте {name} в список желаний, не создавая живой объект.",
+      save: "Сохранить в список желаний",
+      startFirstEntry: "Начать первую запись",
     },
     postSave: {
       returnToSpaceJournal: "Вернуться к журналу пространства",

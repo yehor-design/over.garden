@@ -52,6 +52,8 @@
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "drive2:closeout:check": "tsx scripts/report-drive2-parity-closeout.ts --summary",
     "drive2:closeout:report": "tsx scripts/report-drive2-parity-closeout.ts",
+    "localization:coverage:check": "NODE_OPTIONS=--conditions=react-server tsx scripts/report-localization-coverage.ts --summary",
+    "localization:coverage:report": "NODE_OPTIONS=--conditions=react-server tsx scripts/report-localization-coverage.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",
@@ -60,6 +62,7 @@
     "visual:fixtures:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-verify.ts",
     "visual:fixtures:journal-create": "NODE_OPTIONS=--conditions=react-server tsx scripts/visual-fixtures-journal-creation.ts",
     "test:a11y": "tsx scripts/verify-responsive-accessibility.ts",
+    "localization:coverage:browser": "tsx scripts/verify-responsive-accessibility.ts",
     "admin:bootstrap-owner": "tsx scripts/bootstrap-admin-owner.ts",
     "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
     "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"

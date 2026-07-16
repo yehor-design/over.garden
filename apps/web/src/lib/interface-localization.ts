@@ -15,6 +15,8 @@ type LocaleCandidate = string | null | undefined;
 
 export interface InterfaceCopy {
   metadata: {
+    siteTitle: string;
+    siteDescription: string;
     workspaceTitle: string;
     workspaceDescription: string;
   };
@@ -75,6 +77,9 @@ export interface InterfaceCopy {
 const INTERFACE_COPY = {
   uk: {
     metadata: {
+      siteTitle: "OverGarden",
+      siteDescription:
+        "Журнал рослин, тварин і бджолосімей із каталогом, публічними історіями та спільнотами.",
       workspaceTitle: "Простір саду | OverGarden",
       workspaceDescription:
         "Приватний простір для живих об'єктів, датованих записів і наступних дій у саду.",
@@ -138,6 +143,9 @@ const INTERFACE_COPY = {
   },
   bg: {
     metadata: {
+      siteTitle: "OverGarden",
+      siteDescription:
+        "Дневник за растения, животни и пчелни семейства с каталог, публични истории и общности.",
       workspaceTitle: "Градинско пространство | OverGarden",
       workspaceDescription:
         "Лично пространство за живи обекти, датирани записи и следващи действия в градината.",
@@ -201,6 +209,9 @@ const INTERFACE_COPY = {
   },
   ru: {
     metadata: {
+      siteTitle: "OverGarden",
+      siteDescription:
+        "Журнал растений, животных и пчелиных семей с каталогом, публичными историями и сообществами.",
       workspaceTitle: "Пространство сада | OverGarden",
       workspaceDescription:
         "Личное пространство для живых объектов, датированных записей и следующих действий в саду.",

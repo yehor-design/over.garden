@@ -655,11 +655,14 @@ function PendingWishlistIntentPanel({
   locale: InterfaceLocale;
 }) {
   if (!item?.publicSlug) return null;
+  const copy = getGardenWorkspaceCopy(locale).page.pendingWishlist;
   return (
     <section className="border-y border-border py-5">
-      <h2 className="text-lg font-semibold text-foreground">Save for later</h2>
+      <h2 className="text-lg font-semibold text-foreground">{copy.title}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        Add {item.canonicalName} to your wishlist without creating an object.
+        {formatGardenWorkspaceTemplate(copy.description, {
+          name: item.canonicalName,
+        })}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <form action={addCatalogPublicSlugToWishlistAction}>
@@ -675,7 +678,7 @@ function PendingWishlistIntentPanel({
             value={localizedPath(locale, "/wishlist")}
           />
           <button type="submit" className={buttonVariants()}>
-            Save to wishlist
+            {copy.save}
           </button>
         </form>
         <Link
@@ -683,7 +686,7 @@ function PendingWishlistIntentPanel({
           className={buttonVariants({ variant: "outline" })}
         >
           <CirclePlus aria-hidden="true" />
-          Start first entry
+          {copy.startFirstEntry}
         </Link>
       </div>
     </section>

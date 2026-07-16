@@ -2,7 +2,7 @@ import { readFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 
-import { chromium, type Browser, type Page } from "playwright";
+import { chromium, type Browser, type Page, type Response } from "playwright";
 
 import {
   browserSafeFixturePath,
@@ -12,6 +12,16 @@ import {
   type CoreJourneyScenario,
   type CoreJourneyViewportId,
 } from "../src/lib/accessibility/core-journey-matrix";
+import {
+  LOCALIZATION_OWNER_BROWSER_PROBES,
+  type LocalizationOwnerBrowserProbe,
+  type LocalizationRenderedOwnerId,
+  type LocalizationRequiredBrowserState,
+} from "../src/lib/localization/localization-browser-matrix";
+import {
+  localizedPath,
+  type PublicLocale,
+} from "../src/lib/public-localization";
 
 const require = createRequire(import.meta.url);
 const AXE_SOURCE_PATH = require.resolve("axe-core/axe.min.js");
@@ -77,6 +87,13 @@ interface AuditSummary {
   pageChecks: number;
   axeChecks: number;
   screenshots: string[];
+  localization: {
+    routeContracts: number;
+    continuityLocales: PublicLocale[];
+    ownerProbeChecks: number;
+    ownerProofs: LocalizationRenderedOwnerId[];
+    edgeStates: LocalizationRequiredBrowserState[];
+  };
   interactions: {
     authIntent: boolean;
     keyboardAndDrawer: boolean;
@@ -86,9 +103,37 @@ interface AuditSummary {
   };
 }
 
+function expectedInterfaceLocale(route: string): PublicLocale {
+  const firstSegment = new URL(route, "http://fixture.local").pathname
+    .split("/")
+    .filter(Boolean)[0];
+  return firstSegment === "bg" || firstSegment === "ru" ? firstSegment : "uk";
+}
+
+async function assertLocaleResponseContract(
+  page: Page,
+  response: Response | null,
+  expectedLocale: PublicLocale,
+): Promise<string[]> {
+  const failures: string[] = [];
+  const documentLocale = await page.locator("html").getAttribute("lang");
+  const contentLanguage = response?.headers()["content-language"] ?? null;
+
+  if (documentLocale !== expectedLocale) {
+    failures.push(`html-lang:${documentLocale ?? "missing"}:${expectedLocale}`);
+  }
+  if (contentLanguage !== expectedLocale) {
+    failures.push(
+      `content-language:${contentLanguage ?? "missing"}:${expectedLocale}`,
+    );
+  }
+
+  return failures;
+}
+
 function resolveBaseUrl(): URL {
   const baseUrl = new URL(
-    process.env.ACCESSIBILITY_BASE_URL ?? "http://127.0.0.1:3000",
+    process.env.ACCESSIBILITY_BASE_URL ?? "http://localhost:3000",
   );
   const previewAllowed = process.env.ACCESSIBILITY_ALLOW_PREVIEW === "true";
 
@@ -366,6 +411,23 @@ async function runMatrix(
             viewportId: viewport.id,
             check: "http-status",
             detail: `${status} expected ${expectedStatus}`,
+          });
+        }
+
+        stage = "localization-contract";
+        const expectedLocale = expectedInterfaceLocale(route);
+        const localeFailures = await assertLocaleResponseContract(
+          page,
+          response,
+          expectedLocale,
+        );
+        summary.localization.routeContracts += 1;
+        for (const detail of localeFailures) {
+          failures.push({
+            scenarioId: scenario.id,
+            viewportId: viewport.id,
+            check: "localization-contract",
+            detail,
           });
         }
 
@@ -748,6 +810,308 @@ async function runSafetyControlCheck(
   await context.close();
 }
 
+function resolveLocalizationOwnerProbe(probe: LocalizationOwnerBrowserProbe): {
+  route: string;
+  scenario: CoreJourneyScenario | null;
+} {
+  const scenario = probe.scenarioId
+    ? (CORE_JOURNEY_SCENARIOS.find(({ id }) => id === probe.scenarioId) ?? null)
+    : null;
+  if (probe.scenarioId && !scenario) {
+    throw new Error(
+      `Localization owner probe ${probe.id} references a missing scenario.`,
+    );
+  }
+
+  let route = probe.explicitPath
+    ? browserSafeFixturePath(probe.explicitPath)
+    : browserSafeFixturePath(scenario!.path);
+  if (probe.pathTransform === "community-moderation") {
+    const parsed = new URL(route, "http://fixture.local");
+    if (!parsed.pathname.startsWith("/communities/")) {
+      throw new Error(
+        `Localization owner probe ${probe.id} cannot derive an operator route.`,
+      );
+    }
+    parsed.pathname = `/admin${parsed.pathname}`;
+    route = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  }
+
+  return { route, scenario };
+}
+
+function addLocalizationProbeStructureFailures(
+  failures: Failure[],
+  probe: LocalizationOwnerBrowserProbe,
+  viewportId: string,
+  structure: PageStructure,
+): void {
+  const scenarioId = `localization:${probe.id}`;
+  if (structure.horizontalOverflow > 1) {
+    failures.push({
+      scenarioId,
+      viewportId,
+      check: "horizontal-overflow",
+      detail: `${structure.horizontalOverflow}px`,
+    });
+  }
+  if (structure.offscreenControlCount > 0) {
+    failures.push({
+      scenarioId,
+      viewportId,
+      check: "offscreen-controls",
+      detail: String(structure.offscreenControlCount),
+    });
+  }
+  if (structure.mainCount !== 1) {
+    failures.push({
+      scenarioId,
+      viewportId,
+      check: "main-landmark",
+      detail: String(structure.mainCount),
+    });
+  }
+  if (structure.h1Count !== 1) {
+    failures.push({
+      scenarioId,
+      viewportId,
+      check: "page-heading",
+      detail: String(structure.h1Count),
+    });
+  }
+  if (structure.duplicateIds.length > 0) {
+    failures.push({
+      scenarioId,
+      viewportId,
+      check: "duplicate-id",
+      detail: structure.duplicateIds.join(","),
+    });
+  }
+}
+
+async function runLocalizationOwnerProbeMatrix(
+  browser: Browser,
+  baseUrl: URL,
+  axeSource: string,
+  failures: Failure[],
+  summary: AuditSummary,
+): Promise<void> {
+  const viewports = CORE_JOURNEY_VIEWPORTS.filter(({ id }) =>
+    AXE_VIEWPORTS.has(id),
+  );
+
+  for (const viewport of viewports) {
+    const context = await browser.newContext({
+      colorScheme: "light",
+      reducedMotion: "no-preference",
+      viewport: { width: viewport.width, height: viewport.height },
+    });
+
+    try {
+      for (const probe of LOCALIZATION_OWNER_BROWSER_PROBES) {
+        await context.clearCookies();
+        const page = await context.newPage();
+        let uncaughtErrors = 0;
+        page.on("pageerror", () => {
+          uncaughtErrors += 1;
+        });
+
+        try {
+          const { route, scenario } = resolveLocalizationOwnerProbe(probe);
+          const response = await page.goto(new URL(route, baseUrl).toString(), {
+            waitUntil: "domcontentloaded",
+            timeout: 45_000,
+          });
+          if (
+            scenario &&
+            probe.pathTransform === "identity" &&
+            !probe.explicitPath
+          ) {
+            await waitForScenarioStable(page, scenario);
+          } else {
+            await waitForStablePage(page);
+          }
+
+          summary.localization.ownerProbeChecks += 1;
+          summary.localization.routeContracts += 1;
+          const expectedStatus =
+            probe.expectedStatus ??
+            (scenario ? expectedBrowserStatus(scenario) : 200);
+          const status = response?.status() ?? 0;
+          if (status !== expectedStatus) {
+            failures.push({
+              scenarioId: `localization:${probe.id}`,
+              viewportId: viewport.id,
+              check: "http-status",
+              detail: `${status} expected ${expectedStatus}`,
+            });
+          }
+
+          const localeFailures = await assertLocaleResponseContract(
+            page,
+            response,
+            expectedInterfaceLocale(route),
+          );
+          for (const detail of localeFailures) {
+            failures.push({
+              scenarioId: `localization:${probe.id}`,
+              viewportId: viewport.id,
+              check: "localization-contract",
+              detail,
+            });
+          }
+
+          addLocalizationProbeStructureFailures(
+            failures,
+            probe,
+            viewport.id,
+            await readPageStructure(page),
+          );
+          if (uncaughtErrors > 0) {
+            failures.push({
+              scenarioId: `localization:${probe.id}`,
+              viewportId: viewport.id,
+              check: "page-error",
+              detail: String(uncaughtErrors),
+            });
+          }
+
+          if (probe.runAxe) {
+            const violations = await runAxe(page, axeSource);
+            summary.axeChecks += 1;
+            if (violations.length > 0) {
+              failures.push({
+                scenarioId: `localization:${probe.id}`,
+                viewportId: viewport.id,
+                check: "axe-critical-serious",
+                detail: violations
+                  .map(
+                    ({ id, impact, nodes }) =>
+                      `${id}:${impact}:${nodes.length}`,
+                  )
+                  .join(","),
+              });
+            }
+          }
+
+          if (!summary.localization.ownerProofs.includes(probe.owner)) {
+            summary.localization.ownerProofs.push(probe.owner);
+          }
+          for (const state of probe.stateClasses) {
+            if (!summary.localization.edgeStates.includes(state)) {
+              summary.localization.edgeStates.push(state);
+            }
+          }
+        } catch (error) {
+          failures.push({
+            scenarioId: `localization:${probe.id}`,
+            viewportId: viewport.id,
+            check: "runner-error",
+            detail: error instanceof Error ? error.message : String(error),
+          });
+        } finally {
+          await page.close();
+        }
+      }
+    } finally {
+      await context.close();
+    }
+  }
+}
+
+async function runLocaleContinuityCheck(
+  browser: Browser,
+  baseUrl: URL,
+): Promise<PublicLocale[]> {
+  const verifiedLocales: PublicLocale[] = [];
+
+  for (const locale of ["uk", "bg", "ru"] as const) {
+    const context = await browser.newContext({
+      viewport: { width: 320, height: 844 },
+    });
+    const page = await context.newPage();
+
+    try {
+      const publicPath = localizedPath(locale, "/blog");
+      const publicResponse = await page.goto(
+        new URL(publicPath, baseUrl).toString(),
+        { waitUntil: "domcontentloaded", timeout: 45_000 },
+      );
+      await waitForStablePage(page);
+      const publicFailures = await assertLocaleResponseContract(
+        page,
+        publicResponse,
+        locale,
+      );
+      if (publicFailures.length > 0) {
+        throw new Error(
+          `Public locale contract failed for ${locale}: ${publicFailures.join(",")}`,
+        );
+      }
+
+      const canonicalHref = await page
+        .locator('link[rel="canonical"]')
+        .getAttribute("href");
+      if (
+        !canonicalHref ||
+        new URL(canonicalHref, baseUrl).pathname !== publicPath
+      ) {
+        throw new Error(`Canonical locale path failed for ${locale}.`);
+      }
+      const alternateLocales = new Set(
+        await page
+          .locator('link[rel="alternate"][hreflang]')
+          .evaluateAll((links) =>
+            links.map((link) => link.getAttribute("hreflang")),
+          ),
+      );
+      for (const requiredLocale of ["uk", "bg", "ru", "x-default"]) {
+        if (!alternateLocales.has(requiredLocale)) {
+          throw new Error(
+            `Language alternate ${requiredLocale} is missing for ${locale}.`,
+          );
+        }
+      }
+
+      const intentResponse = await page.goto(
+        new URL("/__visual-fixtures/intent/ove174-i001", baseUrl).toString(),
+        { waitUntil: "domcontentloaded", timeout: 45_000 },
+      );
+      await page
+        .locator('[data-auth-intent-surface="ready"]')
+        .waitFor({ state: "visible", timeout: 15_000 });
+      await waitForStablePage(page);
+      if (new URL(page.url()).pathname !== "/auth/intent") {
+        throw new Error(`Auth intent route continuity failed for ${locale}.`);
+      }
+      const intentFailures = await assertLocaleResponseContract(
+        page,
+        intentResponse,
+        locale,
+      );
+      if (intentFailures.length > 0) {
+        throw new Error(
+          `Auth intent locale continuity failed for ${locale}: ${intentFailures.join(",")}`,
+        );
+      }
+      const localeCookie = (await context.cookies()).find(
+        ({ name }) => name === "overgarden_interface_locale",
+      );
+      if (localeCookie?.value !== locale) {
+        throw new Error(
+          `Locale preference cookie continuity failed for ${locale}.`,
+        );
+      }
+
+      verifiedLocales.push(locale);
+    } finally {
+      await context.close();
+    }
+  }
+
+  return verifiedLocales;
+}
+
 async function runInteractions(
   browser: Browser,
   baseUrl: URL,
@@ -763,6 +1127,10 @@ async function runInteractions(
   summary.interactions.authIntent = true;
   await runSafetyControlCheck(browser, baseUrl);
   summary.interactions.safetyControls = true;
+  summary.localization.continuityLocales = await runLocaleContinuityCheck(
+    browser,
+    baseUrl,
+  );
 }
 
 function failureMessage(failures: Failure[]): string {
@@ -797,6 +1165,13 @@ async function main(): Promise<void> {
     pageChecks: 0,
     axeChecks: 0,
     screenshots: [],
+    localization: {
+      routeContracts: 0,
+      continuityLocales: [],
+      ownerProbeChecks: 0,
+      ownerProofs: [],
+      edgeStates: [],
+    },
     interactions: {
       authIntent: false,
       keyboardAndDrawer: false,
@@ -809,6 +1184,15 @@ async function main(): Promise<void> {
 
   try {
     await runMatrix(browser, baseUrl, axeSource, failures, summary);
+    if (failures.length === 0) {
+      await runLocalizationOwnerProbeMatrix(
+        browser,
+        baseUrl,
+        axeSource,
+        failures,
+        summary,
+      );
+    }
     if (failures.length === 0) {
       await runInteractions(browser, baseUrl, summary);
     }

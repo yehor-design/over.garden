@@ -40,7 +40,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Field note | OverGarden",
+      title: "OverGarden",
       robots: missingState.robots,
     };
   }
@@ -53,7 +53,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Field note | OverGarden",
+      title: `${getLocalizedRouteChrome(localeParam).fieldNotesBack} | OverGarden`,
       robots: missingState.robots,
     };
   }

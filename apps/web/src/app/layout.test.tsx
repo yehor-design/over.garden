@@ -44,6 +44,17 @@ vi.mock("./meta-marketing", () => ({ MetaMarketingAttribution: () => null }));
 vi.mock("./sw-register", () => ({ ServiceWorkerRegister: () => null }));
 
 describe("root document locale", () => {
+  it("localizes fallback metadata in the selected interface locale", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
+    const { generateMetadata } = await import("./layout");
+
+    await expect(generateMetadata()).resolves.toMatchObject({
+      title: "OverGarden",
+      description:
+        "Дневник за растения, животни и пчелни семейства с каталог, публични истории и общности.",
+    });
+  });
+
   it("sets html lang from the resolved interface locale", async () => {
     mocks.getRequestInterfaceLocale.mockResolvedValue("ru");
     mocks.getSiteShellSessionState.mockResolvedValue({

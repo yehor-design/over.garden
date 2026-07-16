@@ -35,7 +35,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Field notes | OverGarden",
+      title: "OverGarden",
       robots: missingState.robots,
     };
   }

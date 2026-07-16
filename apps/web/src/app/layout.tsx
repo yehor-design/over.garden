@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { SiteShell } from "@/components/site-shell/site-shell";
+import { getInterfaceCopy } from "@/lib/interface-localization";
 import { hasReadyCommunityNavigation } from "@/server/community-repository";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
@@ -20,11 +21,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "OverGarden",
-  description:
-    "Gardening journal + catalog-as-social-graph for Ukraine & Bulgaria.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getInterfaceCopy(await getRequestInterfaceLocale()).metadata;
+
+  return {
+    title: copy.siteTitle,
+    description: copy.siteDescription,
+  };
+}
 
 export default async function RootLayout({
   children,

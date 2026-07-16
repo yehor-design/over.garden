@@ -18,10 +18,14 @@ import { OwnerProfileEditor } from "./owner-profile-editor";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Public profile | OverGarden",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestInterfaceLocale();
+
+  return {
+    title: `${COPY[locale].title} | OverGarden`,
+    robots: { index: false, follow: false },
+  };
+}
 
 interface GardenPublicProfilePageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;

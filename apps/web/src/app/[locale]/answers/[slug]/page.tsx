@@ -44,7 +44,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Answer | OverGarden",
+      title: "OverGarden",
       robots: missingState.robots,
     };
   }
@@ -62,7 +62,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Answer | OverGarden",
+      title: `${getLocalizedRouteChrome(localeParam).answerEyebrow} | OverGarden`,
       robots: missingState.robots,
     };
   }

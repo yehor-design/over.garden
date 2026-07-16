@@ -141,6 +141,9 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Verify localization route and state coverage
+        run: pnpm localization:coverage:check
+
       - name: Verify Drive2-parity closeout coverage
         run: pnpm drive2:closeout:check
 

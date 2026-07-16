@@ -1,14 +1,14 @@
 # Localization Coverage Baseline
 
-Status: binding implementation baseline for OVE-170 through OVE-171
+Status: completed binding baseline and regression gate through OVE-171
 Date: 2026-07-16
 
 ## Purpose
 
-This document prevents the remaining localization slices from rebuilding work
-that already exists. It records the current code-backed `uk`/`bg`/`ru`
-baseline after OVE-164 through OVE-169 and the OVE-172 through OVE-185
-product reconstruction.
+This document prevents later product slices from rebuilding localization work
+that already exists. It records the code-backed `uk`/`bg`/`ru` baseline after
+OVE-164 through OVE-171 and the OVE-172 through OVE-185 product
+reconstruction.
 
 A localized route or a `locale` prop is not, by itself, proof of complete copy
 coverage. `Preserve` below means the existing typed copy contract and behavior
@@ -66,6 +66,18 @@ locale plumbing exists but visible authored copy still has verified gaps.
   the OVE-164 selected request locale while existing authorization,
   repositories, actions, audits, source provenance, erasure semantics, and
   diagnostic contracts remain unchanged.
+- OVE-171 adds the `ove171-v1` deterministic completion gate. Baseline hash
+  `c3207b180d9e202a45b74fd769ff4613339898cadec10475136936477c15e594`
+  registers all 92 current route modules, 66 rendered routes, 22 existing copy
+  namespaces, three locales, 171 OVE-187 v8 scenarios, and 13 owner/edge
+  browser probes. The report distinguishes 82 preserved-baseline route modules
+  from 10 route modules closed by OVE-171 and records six grouped deltas. CI now fails on a
+  new unclassified route, stale registration, locale/key/value drift, direct
+  unowned authored UI or metadata copy, missing state/owner proof, or an
+  invalid literal exclusion. Browser proof covers 642 route/viewport checks,
+  26 explicit 320/1440 owner checks, 104 axe checks, 668
+  `lang`/`Content-Language` contracts, canonical/hreflang, and mutation-intent
+  locale continuity for `uk`, `bg`, and `ru`.
 
 ## Current Coverage Matrix
 
@@ -86,11 +98,11 @@ locale plumbing exists but visible authored copy still has verified gaps.
 | Owner living-object continuity and follow-up                                                  | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve       | OVE-171 regression gate only                                |
 | Owner lineage claims, invitation handoff, and questions                                       | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve       | OVE-171 regression gate only                                |
 | Admin, curation, pilot, erasure-operator, and health UI                                       | Exact-parity operator copy namespaces, selected-locale route/component tests, localized dates/status explanations/actions, and unchanged authorization/source/evidence boundaries across every current operator route                      | Preserve       | OVE-171 regression gate only                                |
-| Whole-product route/state coverage gate                                                       | Existing copy-key and route tests are distributed; no unified route/state inventory or zero-gap CI report exists                                                                                                                           | Missing        | OVE-171                                                     |
+| Whole-product route/state coverage gate                                                       | `localization-coverage.ts`, exact route/copy registries, AST authored-copy scan, mutation tests, redacted report, CI check, and shared OVE-185/186 browser proof                                                                           | Complete       | Automated OVE-171 regression gate                           |
 
 ## Operator Route And Literal-Value Registry
 
-OVE-171 must retain route/state coverage for `/admin`, `/admin/users`,
+The OVE-171 gate retains route/state coverage for `/admin`, `/admin/users`,
 `/admin/communities`, `/admin/communities/:slug`,
 `/garden/catalog/curation`, `/garden/pilot-health`,
 `/garden/pilot-learning/interviews`, `/garden/pilot-learning/decision`,
@@ -121,25 +133,27 @@ values exact and visibly distinguish them from authored explanations.
 - OVE-163 and OVE-170 are complete. OVE-170 localizes the final matching queue,
   approval, alias, duplicate-review, rollout-proof, and failure states from
   OVE-158 through OVE-163.
-- OVE-166 through OVE-170 are complete. OVE-169 remains independent of
-  deterministic matching. OVE-171 stays blocked directly by OVE-167 through
-  OVE-170 and retains the completed OVE-166 and OVE-168 contracts as regression
-  inputs; OVE-161 and OVE-163 are inherited transitively to keep the DAG
-  explicit without duplicate blockers.
+- OVE-166 through OVE-171 are complete. OVE-171 consumed OVE-166 through
+  OVE-170 directly and retains the completed OVE-161 and OVE-163 behavior
+  transitively through their localized gardener and operator consumers.
 
 ## Implementation Rules
 
-1. OVE-170 is a completed regression input. OVE-171 must extend or reuse its
-   copy contracts and canonical components instead of creating a second
-   localization system.
+1. OVE-164 through OVE-170 are completed regression inputs. New work must
+   extend their copy contracts and canonical components instead of creating a
+   second localization system.
 2. A `Preserve` surface is out of implementation scope unless a focused test or
-   OVE-171 reports a concrete missing key/state. It remains in regression scope.
+   the OVE-171 gate reports a concrete missing key/state. It remains in
+   regression scope.
 3. Do not rebuild repositories, authorization, routing, mutation, offline,
    lifecycle, media, indexing, or privacy behavior merely to localize UI copy.
 4. Move remaining authored copy into typed locale bundles with exact key parity.
    Keep UGC, catalog/scientific names, official sources, literal evidence, and
    stable machine values unchanged.
-5. OVE-171 must ingest the existing contracts and tests. It must not require
-   already localized surfaces to be translated again.
+5. The OVE-171 gate ingests the existing contracts and tests. It must not
+   require already localized surfaces to be translated again.
 6. Estimates and acceptance criteria refer only to the remaining delta plus
    regression proof, not to rebuilding the shipped baseline.
+
+The binding extension procedure is
+`docs/LOCALIZATION_COVERAGE_WORKFLOW.md`.

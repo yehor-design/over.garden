@@ -284,7 +284,7 @@ describe("/lineage/objects/[objectId]", () => {
     );
 
     expect(html).toContain(
-      "Following this lineage requires current writing access.",
+      "За да следите този произход, е необходим активен достъп за записване.",
     );
     expect(html).toContain(
       `id="lineage-follow-${followControl}" role="status" tabindex="-1" data-auth-intent-control="follow" data-auth-intent-control-ref="${followControl}"`,

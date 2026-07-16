@@ -430,7 +430,7 @@ function LineageInteractionPanel({
           data-auth-intent-control-ref={followControl}
           className="text-sm text-muted-foreground"
         >
-          Following this lineage requires current writing access.
+          {copy.passport.followRequiresWriteAccess}
         </p>
       ) : (
         <AuthIntentTrigger

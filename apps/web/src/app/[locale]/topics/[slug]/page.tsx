@@ -36,11 +36,11 @@ export async function generateMetadata({
     localeParam,
     (await searchParams) ?? {},
   );
-  if (visual.mode === "unavailable") return missingTopicMetadata();
+  if (visual.mode === "unavailable") return missingTopicMetadata(localeParam);
   const topic = await getPublicTopicAggregationPage(slug, {
     restrictToEntryIds: visual.publicEntryIds,
   }).catch(() => null);
-  if (!topic) return missingTopicMetadata();
+  if (!topic) return missingTopicMetadata(localeParam);
 
   const indexState = visual.mode
     ? evaluatePublicSurfaceIndexability({ kind: "missing" })
@@ -139,9 +139,11 @@ function firstParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-function missingTopicMetadata(): Metadata {
+function missingTopicMetadata(locale?: "uk" | "bg" | "ru"): Metadata {
   return {
-    title: "Topic | OverGarden",
+    title: locale
+      ? `${getPublicKnowledgeCopy(locale).publicTopicLabel} | OverGarden`
+      : "OverGarden",
     robots: evaluatePublicSurfaceIndexability({ kind: "missing" }).robots,
   };
 }

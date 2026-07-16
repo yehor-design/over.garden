@@ -36,16 +36,21 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
   );
 }
 
+type SheetContentProps = SheetPrimitive.Popup.Props & {
+  side?: "top" | "right" | "bottom" | "left";
+} & (
+    | { showCloseButton?: true; closeLabel: string }
+    | { showCloseButton: false; closeLabel?: never }
+  );
+
 function SheetContent({
   className,
   children,
   side = "right",
   showCloseButton = true,
+  closeLabel,
   ...props
-}: SheetPrimitive.Popup.Props & {
-  side?: "top" | "right" | "bottom" | "left";
-  showCloseButton?: boolean;
-}) {
+}: SheetContentProps) {
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -71,7 +76,7 @@ function SheetContent({
             }
           >
             <XIcon />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{closeLabel}</span>
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Popup>

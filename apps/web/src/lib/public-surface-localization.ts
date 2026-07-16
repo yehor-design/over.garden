@@ -118,6 +118,7 @@ interface PublicSurfaceCopy {
     lineageUpdatesFrom: string;
     lineageQuestionSafety: string;
     followUpdates: string;
+    followRequiresWriteAccess: string;
     askWithinLineage: string;
     lineageQuestionPlaceholder: string;
     sendQuestion: string;
@@ -278,6 +279,8 @@ const COPY = {
       lineageQuestionSafety:
         "Запитання залишаються в межах цього підтвердженого ланцюга та не містять контактних даних.",
       followUpdates: "Стежити за оновленнями",
+      followRequiresWriteAccess:
+        "Щоб стежити за цим походженням, потрібен чинний доступ до записів.",
       askWithinLineage: "Запитати в межах походження",
       lineageQuestionPlaceholder: "Що варто знати про цю лінію?",
       sendQuestion: "Надіслати запитання",
@@ -439,6 +442,8 @@ const COPY = {
       lineageQuestionSafety:
         "Въпросите остават в тази потвърдена верига и не съдържат данни за контакт.",
       followUpdates: "Следете обновяванията",
+      followRequiresWriteAccess:
+        "За да следите този произход, е необходим активен достъп за записване.",
       askWithinLineage: "Попитайте в рамките на произхода",
       lineageQuestionPlaceholder: "Какво трябва да знам за тази линия?",
       sendQuestion: "Изпратете въпроса",
@@ -599,6 +604,8 @@ const COPY = {
       lineageQuestionSafety:
         "Вопросы остаются в пределах этой подтвержденной цепочки и не содержат контактных данных.",
       followUpdates: "Следить за обновлениями",
+      followRequiresWriteAccess:
+        "Чтобы следить за этим происхождением, нужен действующий доступ к записям.",
       askWithinLineage: "Спросить в рамках происхождения",
       lineageQuestionPlaceholder: "Что мне стоит знать об этой линии?",
       sendQuestion: "Отправить вопрос",

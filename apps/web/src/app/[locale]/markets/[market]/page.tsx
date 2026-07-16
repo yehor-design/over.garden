@@ -42,7 +42,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Market | OverGarden",
+      title: "OverGarden",
       robots: missingState.robots,
     };
   }
@@ -55,7 +55,7 @@ export async function generateMetadata({
     });
 
     return {
-      title: "Market | OverGarden",
+      title: `${getLocalizedRouteChrome(localeParam).marketEyebrow} | OverGarden`,
       robots: missingState.robots,
     };
   }

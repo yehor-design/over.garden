@@ -42,6 +42,8 @@ export interface PublicObjectCatalogCopy {
   openJournal: string;
   latestJournal: string;
   noImage: string;
+  objectsCountLabel: string;
+  journalsCountLabel: string;
   identityBadges: Record<PublicObjectCatalogIdentityState, string>;
   contextKindsTitle: string;
   contextEvidenceTitle: string;
@@ -98,6 +100,8 @@ const COPY = {
     openJournal: "Відкрити журнал",
     latestJournal: "Останній публічний запис",
     noImage: "Без публічного фото",
+    objectsCountLabel: "Об'єкти",
+    journalsCountLabel: "Журнали",
     identityBadges: {
       catalog: "Каталог",
       provisional: "Робоча назва",
@@ -157,6 +161,8 @@ const COPY = {
     openJournal: "Отвори дневника",
     latestJournal: "Последен публичен запис",
     noImage: "Без публична снимка",
+    objectsCountLabel: "Обекти",
+    journalsCountLabel: "Дневници",
     identityBadges: {
       catalog: "Каталог",
       provisional: "Работно име",
@@ -216,6 +222,8 @@ const COPY = {
     openJournal: "Открыть журнал",
     latestJournal: "Последняя публичная запись",
     noImage: "Без публичного фото",
+    objectsCountLabel: "Объекты",
+    journalsCountLabel: "Журналы",
     identityBadges: {
       catalog: "Каталог",
       provisional: "Рабочее название",
