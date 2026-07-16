@@ -5,12 +5,16 @@ import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { getOperatorCurationCopy } from "@/lib/operator-curation-copy";
 
 interface FuzzyDuplicateRefreshFormProps {
+  locale: InterfaceLocale;
   refreshAction: () => Promise<void>;
 }
 
 export function FuzzyDuplicateRefreshForm({
+  locale,
   refreshAction,
 }: FuzzyDuplicateRefreshFormProps) {
   const [queued, setQueued] = useState(false);
@@ -22,13 +26,20 @@ export function FuzzyDuplicateRefreshForm({
 
   return (
     <form action={queueRefresh}>
-      <FuzzyDuplicateRefreshButton queued={queued} />
+      <FuzzyDuplicateRefreshButton locale={locale} queued={queued} />
     </form>
   );
 }
 
-function FuzzyDuplicateRefreshButton({ queued }: { queued: boolean }) {
+function FuzzyDuplicateRefreshButton({
+  locale,
+  queued,
+}: {
+  locale: InterfaceLocale;
+  queued: boolean;
+}) {
   const { pending } = useFormStatus();
+  const copy = getOperatorCurationCopy(locale);
 
   return (
     <button
@@ -37,7 +48,11 @@ function FuzzyDuplicateRefreshButton({ queued }: { queued: boolean }) {
       className={buttonVariants({ variant: "outline" })}
     >
       <RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />
-      {pending ? "Queueing..." : queued ? "Refresh queued" : "Refresh fuzzy QA"}
+      {pending
+        ? copy.common.queueing
+        : queued
+          ? copy.common.refreshQueued
+          : copy.entity.refresh}
     </button>
   );
 }

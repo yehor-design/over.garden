@@ -20,6 +20,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/pilot-health-access", () => ({
   resolvePilotHealthOperatorAccess: mocks.resolvePilotHealthOperatorAccess,
 }));
@@ -55,7 +59,7 @@ describe("/garden/pilot-learning/decision", () => {
     const { default: PilotCohortDecisionPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotCohortDecisionPage());
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.getPilotCohortDecisionReadoutSafely).not.toHaveBeenCalled();
   });
 
@@ -63,9 +67,9 @@ describe("/garden/pilot-learning/decision", () => {
     const { default: PilotCohortDecisionPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotCohortDecisionPage());
 
-    expect(html).toContain("Gate: sealed_owner_credential_only");
-    expect(html).toContain("Role: owner");
-    expect(html).toContain("Pilot cohort decision");
+    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
+    expect(html).toContain("Роль: Власник");
+    expect(html).toContain("Рішення щодо пілотної когорти");
     expect(mocks.getPilotCohortDecisionReadoutSafely).toHaveBeenCalledOnce();
   });
 
@@ -148,10 +152,10 @@ describe("/garden/pilot-learning/decision", () => {
     const { default: PilotCohortDecisionPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotCohortDecisionPage());
 
-    expect(html).toContain("Segment H1 slices");
-    expect(html).toContain("Casual - practical beginner with land");
-    expect(html).toContain("Segment signal: concentrated");
-    expect(html).toContain("Founder rehearsal");
-    expect(html).toContain("low sample");
+    expect(html).toContain("Зрізи H1 за сегментами");
+    expect(html).toContain("Любитель — практичний початківець із землею");
+    expect(html).toContain("Сигнал сегмента: сконцентрований");
+    expect(html).toContain("Репетиція засновника");
+    expect(html).toContain("мала вибірка");
   });
 });

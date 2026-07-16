@@ -58,6 +58,14 @@ locale plumbing exists but visible authored copy still has verified gaps.
   moves the four remaining followed-feed, notification, bookmark, and wishlist
   metadata titles onto the existing `social-surface-copy.ts` contract without
   rebuilding those surfaces.
+- OVE-170 adds `operator-copy.ts`, `operator-pilot-copy.ts`,
+  `operator-smoke-copy.ts`, `operator-erasure-copy.ts`, and
+  `operator-curation-copy.ts` as exact-parity `uk`/`bg`/`ru` contracts for
+  admin, community moderation, catalog curation, pilot health/learning/smoke,
+  erasure operations, and diagnostics. Every unprefixed operator route consumes
+  the OVE-164 selected request locale while existing authorization,
+  repositories, actions, audits, source provenance, erasure semantics, and
+  diagnostic contracts remain unchanged.
 
 ## Current Coverage Matrix
 
@@ -77,15 +85,30 @@ locale plumbing exists but visible authored copy still has verified gaps.
 | Owner garden workspace and first-object creation                                              | `garden-workspace-copy.ts`, localized inventory/continuity, local-state and draft recovery, first-entry composer, kind/voice/mention controls, region labels, safe recovery errors, and save-progress tests across `uk`/`bg`/`ru`          | Preserve       | OVE-171 regression gate only                                |
 | Owner living-object continuity and follow-up                                                  | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve       | OVE-171 regression gate only                                |
 | Owner lineage claims, invitation handoff, and questions                                       | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve       | OVE-171 regression gate only                                |
-| Admin, curation, pilot, erasure-operator, and health UI                                       | Shared shell can resolve locale, but the operator pages do not have a complete locale-aware authored-copy contract                                                                                                                         | Missing        | OVE-170                                                     |
+| Admin, curation, pilot, erasure-operator, and health UI                                       | Exact-parity operator copy namespaces, selected-locale route/component tests, localized dates/status explanations/actions, and unchanged authorization/source/evidence boundaries across every current operator route                      | Preserve       | OVE-171 regression gate only                                |
 | Whole-product route/state coverage gate                                                       | Existing copy-key and route tests are distributed; no unified route/state inventory or zero-gap CI report exists                                                                                                                           | Missing        | OVE-171                                                     |
 
-## Remaining Verified Gap Examples
+## Operator Route And Literal-Value Registry
 
-These examples identify ownership; they are not an exhaustive string list:
+OVE-171 must retain route/state coverage for `/admin`, `/admin/users`,
+`/admin/communities`, `/admin/communities/:slug`,
+`/garden/catalog/curation`, `/garden/pilot-health`,
+`/garden/pilot-learning/interviews`, `/garden/pilot-learning/decision`,
+`/garden/pilot-smoke`, `/garden/privacy/erasure-requests`, and `/health`.
 
-- Operator routes still expose authored English labels such as `Access denied`
-  and unlocalized form/status copy.
+The following values are deliberate literal exclusions, not untranslated UI:
+
+- user-, catalog-, scientific-, and source-authored names and notes;
+- official legal, source, license, and attribution values;
+- enum and wire values in hidden form payloads or explicit technical evidence;
+- IDs, slugs, URLs, emails, source record keys, parser/source versions, and
+  build or commit values;
+- redacted smoke/health evidence, logs, diagnostic codes, SQL/system
+  identifiers, and provider/product proper names.
+
+Their surrounding headings, explanations, states, actions, accessibility
+names, and destructive consequences are localized. Tests must keep literal
+values exact and visibly distinguish them from authored explanations.
 
 ## Cross-Project Sequencing
 
@@ -95,10 +118,10 @@ These examples identify ownership; they are not an exhaustive string list:
 - OVE-161 and OVE-168 are complete. The owner catalog resolve/readback copy now
   targets the final canonical selection and ambiguity contract and remains an
   OVE-171 regression input.
-- OVE-163 blocks OVE-170 because OVE-158 through OVE-162 add the operator
-  matching queue, approval, alias, duplicate-review, rollout-proof, and failure
-  states that OVE-170 must cover.
-- OVE-166 through OVE-169 are complete. OVE-169 remains independent of
+- OVE-163 and OVE-170 are complete. OVE-170 localizes the final matching queue,
+  approval, alias, duplicate-review, rollout-proof, and failure states from
+  OVE-158 through OVE-163.
+- OVE-166 through OVE-170 are complete. OVE-169 remains independent of
   deterministic matching. OVE-171 stays blocked directly by OVE-167 through
   OVE-170 and retains the completed OVE-166 and OVE-168 contracts as regression
   inputs; OVE-161 and OVE-163 are inherited transitively to keep the DAG
@@ -106,9 +129,9 @@ These examples identify ownership; they are not an exhaustive string list:
 
 ## Implementation Rules
 
-1. OVE-170 is the remaining incremental delta slice. It must extend or
-   reuse existing copy contracts and canonical components instead of creating a
-   second localization system.
+1. OVE-170 is a completed regression input. OVE-171 must extend or reuse its
+   copy contracts and canonical components instead of creating a second
+   localization system.
 2. A `Preserve` surface is out of implementation scope unless a focused test or
    OVE-171 reports a concrete missing key/state. It remains in regression scope.
 3. Do not rebuild repositories, authorization, routing, mutation, offline,

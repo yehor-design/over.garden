@@ -20,6 +20,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/admin-access", () => ({
   hasAdminCapability: vi.fn(
     (access: { capabilities: string[] }, capability: string) =>
@@ -97,7 +101,7 @@ describe("/garden/pilot-learning/interviews", () => {
       }),
     );
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.listFounderInterviewLearnings).not.toHaveBeenCalled();
   });
 
@@ -109,12 +113,11 @@ describe("/garden/pilot-learning/interviews", () => {
       }),
     );
 
-    expect(html).toContain("Gate: sealed_owner_credential_only");
-    expect(html).toContain("Role: owner");
+    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
+    expect(html).toContain("Роль: Власник");
     expect(mocks.listFounderInterviewLearnings).toHaveBeenCalledOnce();
-    expect(html).toContain("Activated — first entry plus follow-up");
+    expect(html).toContain("Активовано — перший і повторний запис");
     expect(html).toContain("Follow-up felt natural.");
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
   });
-
 });

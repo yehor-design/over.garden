@@ -8,6 +8,19 @@ import {
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { OperatorSmokeCopy } from "@/lib/operator-smoke-copy";
+import {
+  getOperatorSmokeCopy,
+  operatorSmokeCheckLabel,
+} from "@/lib/operator-smoke-copy";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorDate,
+  formatOperatorTemplate,
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
 import type {
   PilotSmokeCheck,
   PilotSmokeSeverity,
@@ -16,20 +29,26 @@ import { getPilotSmokeReadinessSafely } from "@/server/pilot-smoke-readiness";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolvePilotHealthOperatorAccess } from "@/server/pilot-health-access";
 import { scopedToUser } from "@/server/request-scope";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Pilot smoke | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorSmokeCopy(await getRequestInterfaceLocale());
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PilotSmokePage() {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorSmokeCopy(locale);
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
     : null;
@@ -38,8 +57,8 @@ export default async function PilotSmokePage() {
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotSmokeHeader />
-        <GardenAuthPanel />
+        <PilotSmokeHeader operatorCopy={operatorCopy} copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -47,9 +66,9 @@ export default async function PilotSmokePage() {
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotSmokeHeader />
+        <PilotSmokeHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {operatorCopy.common.accessDenied}
         </p>
       </main>
     );
@@ -62,31 +81,33 @@ export default async function PilotSmokePage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <PilotSmokeHeader />
+      <PilotSmokeHeader operatorCopy={operatorCopy} copy={copy} />
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-foreground">
-              Readiness status: {readout.overall}
+              {copy.readinessStatus}: {copy.overall[readout.overall]}
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              Generated {formatDateTime(readout.generatedAt)}. Manual checks are
-              expected: this page is the smoke contract, not a replacement for a
-              real browser run against the deployed URL.
+              {formatOperatorTemplate(copy.generatedDescription, {
+                date: formatOperatorDate(locale, readout.generatedAt),
+              })}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: {access.mode}
+              {operatorCopy.common.gate}:{" "}
+              {operatorAccessModeLabel(locale, access.mode)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Role: {access.role}
+              {operatorCopy.common.role}:{" "}
+              {operatorRoleLabel(locale, access.role)}
             </span>
-            <StatusPill severity="pass" count={totals.pass} />
-            <StatusPill severity="warn" count={totals.warn} />
-            <StatusPill severity="fail" count={totals.fail} />
-            <StatusPill severity="manual" count={totals.manual} />
+            <StatusPill severity="pass" count={totals.pass} copy={copy} />
+            <StatusPill severity="warn" count={totals.warn} copy={copy} />
+            <StatusPill severity="fail" count={totals.fail} copy={copy} />
+            <StatusPill severity="manual" count={totals.manual} copy={copy} />
           </div>
         </div>
       </section>
@@ -98,7 +119,8 @@ export default async function PilotSmokePage() {
             className="grid content-start gap-3 rounded-lg border border-border p-4"
           >
             <h2 className="text-lg font-semibold text-foreground">
-              {section.title}
+              {copy.sections[section.id as keyof typeof copy.sections] ??
+                section.id}
             </h2>
             <ul className="grid gap-3">
               {section.checks.map((check) => (
@@ -111,18 +133,21 @@ export default async function PilotSmokePage() {
                     <div className="grid gap-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="text-sm font-semibold text-foreground">
-                          {check.label}
+                          {operatorSmokeCheckLabel(locale, check.id)}
                         </h3>
                         <span className={statusClassName(check.severity)}>
-                          {check.severity}
+                          {copy.severities[check.severity]}
                         </span>
                       </div>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        {check.summary}
+                        {copy.severitySummaries[check.severity]}
                       </p>
                     </div>
                   </div>
                   <p className="border-t border-border pt-2 text-xs leading-5 text-muted-foreground">
+                    <span className="font-medium text-foreground">
+                      {copy.literalEvidence}:{" "}
+                    </span>
                     {check.evidence}
                   </p>
                 </li>
@@ -134,10 +159,10 @@ export default async function PilotSmokePage() {
 
       <section className="grid gap-3 rounded-lg border border-border p-4">
         <h2 className="text-lg font-semibold text-foreground">
-          Smoke run sequence
+          {copy.smokeSequence}
         </h2>
         <ol className="grid gap-2 text-sm leading-6 text-muted-foreground">
-          {readout.smokeSteps.map((step) => (
+          {copy.smokeSteps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
@@ -145,24 +170,28 @@ export default async function PilotSmokePage() {
 
       <section className="grid gap-3 rounded-lg border border-border p-4">
         <h2 className="text-lg font-semibold text-foreground">
-          Evidence redaction rules
+          {copy.redactionRulesTitle}
         </h2>
         <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
-          {readout.redactionRules.map((rule) => (
+          {copy.redactionRules.map((rule) => (
             <li key={rule}>{rule}</li>
           ))}
         </ul>
       </section>
 
       <section className="grid gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-lg font-semibold text-foreground">References</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {copy.referencesTitle}
+        </h2>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           {readout.references.map((reference) => (
             <span
               key={reference.path}
               className="rounded-md border border-border px-2 py-1"
             >
-              {reference.label}
+              {copy.references[
+                reference.path as keyof typeof copy.references
+              ] ?? reference.path}
             </span>
           ))}
         </div>
@@ -171,7 +200,13 @@ export default async function PilotSmokePage() {
   );
 }
 
-function PilotSmokeHeader() {
+function PilotSmokeHeader({
+  operatorCopy,
+  copy,
+}: {
+  operatorCopy: OperatorCopy;
+  copy: OperatorSmokeCopy;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <div className="flex flex-wrap gap-3">
@@ -181,7 +216,7 @@ function PilotSmokeHeader() {
             variant: "outline",
           })}
         >
-          Back to journal
+          {operatorCopy.common.backToJournal}
         </Link>
         <Link
           href="/garden/pilot-health"
@@ -189,18 +224,15 @@ function PilotSmokeHeader() {
             variant: "outline",
           })}
         >
-          Pilot health
+          {operatorCopy.common.pilotHealth}
         </Link>
       </div>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Production pilot smoke
+          {copy.title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Operator readiness and smoke contract for the deployed first-user
-          path: auth, journal capture, photo derivative processing, public SSR,
-          archive-to-410, public-variety activation, aggregate pilot health, and
-          search/worker status.
+          {copy.description}
         </p>
       </div>
     </header>
@@ -210,13 +242,15 @@ function PilotSmokeHeader() {
 function StatusPill({
   severity,
   count,
+  copy,
 }: {
   severity: PilotSmokeSeverity;
   count: number;
+  copy: OperatorSmokeCopy;
 }) {
   return (
     <span className={statusClassName(severity)}>
-      {severity}: {count}
+      {copy.severities[severity]}: {count}
     </span>
   );
 }
@@ -260,11 +294,4 @@ function statusClassName(severity: PilotSmokeSeverity) {
     return `${base} border-red-200 bg-red-50 text-red-800`;
   }
   return `${base} border-sky-200 bg-sky-50 text-sky-800`;
-}
-
-function formatDateTime(value: Date) {
-  return value.toLocaleString("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }

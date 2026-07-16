@@ -20,6 +20,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/pilot-health-access", () => ({
   resolvePilotHealthOperatorAccess: mocks.resolvePilotHealthOperatorAccess,
 }));
@@ -61,7 +65,7 @@ describe("/garden/pilot-smoke", () => {
     const { default: PilotSmokePage } = await import("./page");
     const html = renderToStaticMarkup(await PilotSmokePage());
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.getPilotSmokeReadinessSafely).not.toHaveBeenCalled();
   });
 
@@ -69,9 +73,9 @@ describe("/garden/pilot-smoke", () => {
     const { default: PilotSmokePage } = await import("./page");
     const html = renderToStaticMarkup(await PilotSmokePage());
 
-    expect(html).toContain("Readiness status: ready");
-    expect(html).toContain("Gate: sealed_owner_credential_only");
-    expect(html).toContain("Role: owner");
+    expect(html).toContain("Стан готовності: готово");
+    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
+    expect(html).toContain("Роль: Власник");
     expect(mocks.getPilotSmokeReadinessSafely).toHaveBeenCalledOnce();
   });
 });

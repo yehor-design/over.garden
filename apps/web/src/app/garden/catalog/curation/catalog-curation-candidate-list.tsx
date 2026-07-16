@@ -13,7 +13,16 @@ import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
+import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
+import {
+  formatOperatorDate,
+  formatOperatorTemplate,
+} from "@/lib/operator-copy";
 
 interface CatalogCurationCandidate {
   id: string;
@@ -59,6 +68,7 @@ interface CatalogMatchSuggestion {
 }
 
 interface CatalogCurationCandidateListProps {
+  locale: InterfaceLocale;
   candidates: CatalogCurationCandidate[];
   confirmAction: (formData: FormData) => void | Promise<void>;
   mergeAction: (formData: FormData) => void | Promise<void>;
@@ -89,6 +99,7 @@ interface CatalogSuggestion {
 }
 
 export function CatalogCurationCandidateList({
+  locale,
   candidates,
   confirmAction,
   mergeAction,
@@ -97,10 +108,12 @@ export function CatalogCurationCandidateList({
   approveSuggestionAction,
   rejectSuggestionAction,
 }: CatalogCurationCandidateListProps) {
+  const copy = getOperatorCurationCopy(locale);
+
   if (candidates.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-        No pending catalog candidates.
+        {copy.candidate.noPending}
       </p>
     );
   }
@@ -110,6 +123,7 @@ export function CatalogCurationCandidateList({
       {candidates.map((candidate) => (
         <li key={candidate.id}>
           <CatalogCurationCandidateCard
+            locale={locale}
             candidate={candidate}
             confirmAction={confirmAction}
             mergeAction={mergeAction}
@@ -125,6 +139,7 @@ export function CatalogCurationCandidateList({
 }
 
 interface CatalogCurationCandidateCardProps {
+  locale: InterfaceLocale;
   candidate: CatalogCurationCandidate;
   confirmAction: (formData: FormData) => void | Promise<void>;
   mergeAction: (formData: FormData) => void | Promise<void>;
@@ -135,6 +150,7 @@ interface CatalogCurationCandidateCardProps {
 }
 
 function CatalogCurationCandidateCard({
+  locale,
   candidate,
   confirmAction,
   mergeAction,
@@ -143,12 +159,13 @@ function CatalogCurationCandidateCard({
   approveSuggestionAction,
   rejectSuggestionAction,
 }: CatalogCurationCandidateCardProps) {
+  const copy = getOperatorCurationCopy(locale);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
   const [status, setStatus] = useState<CatalogStatus>("idle");
   const [refreshQueued, setRefreshQueued] = useState(false);
-  const candidateTrust = catalogSuggestionTrustMetadata({
+  const candidateTrust = buildGardenCatalogTrustMetadata(locale, {
     status: candidate.status,
     source: candidate.source,
     catalogKind: candidate.catalogKind,
@@ -239,14 +256,18 @@ function CatalogCurationCandidateCard({
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             {candidate.pilotOrigin ? (
               <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-1 text-primary">
-                Pilot signal
+                {copy.candidate.pilotSignal}
               </span>
             ) : null}
             <span className="rounded-md border border-border px-2 py-1">
               {candidate.locale}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {catalogKindLabel(candidate.catalogKind)}
+              {operatorCurationMapLabel(
+                copy.common.catalogKinds,
+                candidate.catalogKind,
+                copy.common.catalogKinds.identity,
+              )}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {candidateTrust.trustLabel}
@@ -255,15 +276,17 @@ function CatalogCurationCandidateCard({
               {candidateTrust.sourceLabel}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Objects: {candidate.affectedObjectCount}
+              {copy.candidate.objects}: {candidate.affectedObjectCount}
             </span>
             {candidate.invitedPilotUserCount > 0 ? (
               <span className="rounded-md border border-border px-2 py-1">
-                Invited gardeners: {candidate.invitedPilotUserCount}
+                {copy.candidate.invitedGardeners}:{" "}
+                {candidate.invitedPilotUserCount}
               </span>
             ) : null}
             <span className="rounded-md border border-border px-2 py-1">
-              Created: {formatDate(candidate.createdAt)}
+              {copy.candidate.created}:{" "}
+              {formatOperatorDate(locale, candidate.createdAt)}
             </span>
           </div>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -274,19 +297,20 @@ function CatalogCurationCandidateCard({
         <div className="flex flex-wrap gap-2">
           <form action={rescanAction} onSubmit={() => setRefreshQueued(true)}>
             <input type="hidden" name="candidateId" value={candidate.id} />
-            <CatalogRescanButton queued={refreshQueued} />
+            <CatalogRescanButton locale={locale} queued={refreshQueued} />
           </form>
           <form action={confirmAction}>
             <input type="hidden" name="candidateId" value={candidate.id} />
             <button type="submit" className={buttonVariants()}>
               <CheckCircle2 className="size-4" />
-              Confirm
+              {copy.candidate.confirm}
             </button>
           </form>
         </div>
       </div>
 
       <CatalogMatchSuggestions
+        locale={locale}
         suggestions={candidate.matchSuggestions}
         approveAction={approveSuggestionAction}
         rejectAction={rejectSuggestionAction}
@@ -302,7 +326,7 @@ function CatalogCurationCandidateCard({
           />
 
           <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-            Merge target
+            {copy.candidate.mergeTarget}
             <span className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -310,7 +334,7 @@ function CatalogCurationCandidateCard({
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
                 className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                placeholder="Search existing catalog item"
+                placeholder={copy.candidate.searchExisting}
                 autoComplete="off"
               />
               {query ? (
@@ -318,7 +342,7 @@ function CatalogCurationCandidateCard({
                   type="button"
                   onClick={clearSelection}
                   className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Clear merge target"
+                  aria-label={copy.candidate.clearMergeTarget}
                 >
                   <X className="size-4" />
                 </button>
@@ -330,30 +354,40 @@ function CatalogCurationCandidateCard({
             {selected ? (
               <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
                 <span>
-                  Target: {selected.displayName} ·{" "}
-                  {catalogSuggestionTrustMetadata(selected).trustLabel}
+                  {copy.candidate.target}: {selected.displayName} ·{" "}
+                  {buildGardenCatalogTrustMetadata(locale, selected).trustLabel}
                 </span>
                 <span className="text-muted-foreground">
-                  {catalogSuggestionTrustMetadata(selected).disambiguationLabel}
+                  {
+                    buildGardenCatalogTrustMetadata(locale, selected)
+                      .disambiguationLabel
+                  }
                 </span>
               </span>
             ) : (
               <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-                No merge target selected
+                {copy.candidate.noMergeTarget}
               </span>
             )}
             {status === "loading" ? (
-              <span className="text-muted-foreground">Searching...</span>
+              <span className="text-muted-foreground">
+                {copy.common.searching}
+              </span>
             ) : null}
             {status === "failed" ? (
-              <span className="text-destructive">Suggestions unavailable.</span>
+              <span className="text-destructive">
+                {copy.common.suggestionsUnavailable}
+              </span>
             ) : null}
           </div>
 
           {suggestions.length > 0 ? (
             <ul className="grid gap-2">
               {suggestions.map((suggestion) => {
-                const trust = catalogSuggestionTrustMetadata(suggestion);
+                const trust = buildGardenCatalogTrustMetadata(
+                  locale,
+                  suggestion,
+                );
 
                 return (
                   <li key={suggestion.id}>
@@ -393,7 +427,7 @@ function CatalogCurationCandidateCard({
             })}
           >
             <GitMerge className="size-4" />
-            Merge
+            {copy.candidate.merge}
           </button>
         </form>
 
@@ -407,7 +441,7 @@ function CatalogCurationCandidateCard({
             })}
           >
             <XCircle className="size-4" />
-            Reject
+            {copy.candidate.reject}
           </button>
         </form>
       </div>
@@ -416,29 +450,32 @@ function CatalogCurationCandidateCard({
 }
 
 function CatalogMatchSuggestions({
+  locale,
   suggestions,
   approveAction,
   rejectAction,
 }: {
+  locale: InterfaceLocale;
   suggestions: CatalogMatchSuggestion[];
   approveAction: CatalogMatchSuggestionAction;
   rejectAction: CatalogMatchSuggestionAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <section className="grid gap-3 border-t border-border pt-4">
       <div className="flex flex-col gap-1">
         <h3 className="text-sm font-semibold text-foreground">
-          Deterministic match suggestions
+          {copy.candidate.suggestionsTitle}
         </h3>
         <p className="text-xs leading-5 text-muted-foreground">
-          Review deterministic evidence before changing catalog identity.
-          Rejected evidence stays recorded without changing garden records.
+          {copy.candidate.suggestionsDescription}
         </p>
       </div>
 
       {suggestions.length === 0 ? (
         <p className="border-y border-border py-3 text-sm text-muted-foreground">
-          Not evaluated yet or refresh pending.
+          {copy.candidate.notEvaluated}
         </p>
       ) : (
         <ol className="divide-y divide-border border-y border-border">
@@ -453,39 +490,60 @@ function CatalogMatchSuggestions({
                   <div className="min-w-0">
                     <p className="font-medium break-words text-foreground">
                       {noSafeMatch
-                        ? "No safe catalog match"
+                        ? copy.candidate.noSafeMatch
                         : rejected
-                          ? `Rejected match: ${suggestion.targetDisplayName}`
+                          ? formatOperatorTemplate(
+                              copy.candidate.rejectedMatch,
+                              { name: suggestion.targetDisplayName ?? "" },
+                            )
                           : lowConfidence
-                            ? `Held: ${suggestion.targetDisplayName}`
-                            : `Suggested target: ${suggestion.targetDisplayName}`}
+                            ? formatOperatorTemplate(copy.candidate.heldMatch, {
+                                name: suggestion.targetDisplayName ?? "",
+                              })
+                            : formatOperatorTemplate(
+                                copy.candidate.suggestedTarget,
+                                { name: suggestion.targetDisplayName ?? "" },
+                              )}
                     </p>
                     {!noSafeMatch &&
                     suggestion.targetCanonicalName &&
                     suggestion.targetCanonicalName !==
                       suggestion.targetDisplayName ? (
                       <p className="text-xs break-words text-muted-foreground">
-                        Canonical: {suggestion.targetCanonicalName}
+                        {copy.candidate.canonical}:{" "}
+                        {suggestion.targetCanonicalName}
                       </p>
                     ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2 text-xs">
                     {rejected ? (
                       <span className="rounded-md border border-destructive/40 px-2 py-1 font-medium text-destructive">
-                        Rejected
+                        {copy.candidate.rejected}
                       </span>
                     ) : null}
                     <span className="rounded-md border border-border px-2 py-1 font-medium text-foreground">
                       {suggestion.score}/100
                     </span>
                     <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-                      {confidenceLabel(suggestion.confidenceBucket)}
+                      {operatorCurationMapLabel(
+                        copy.candidate.confidenceBuckets,
+                        suggestion.confidenceBucket,
+                        copy.common.unknown,
+                      )}
                     </span>
                     <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-                      {matchTypeLabel(suggestion.matchType)}
+                      {operatorCurationMapLabel(
+                        copy.candidate.matchTypes,
+                        suggestion.matchType,
+                        copy.common.unknown,
+                      )}
                     </span>
                     <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-                      {catalogKindLabel(suggestion.catalogKind)}
+                      {operatorCurationMapLabel(
+                        copy.common.catalogKinds,
+                        suggestion.catalogKind,
+                        copy.common.catalogKinds.identity,
+                      )}
                     </span>
                   </div>
                 </div>
@@ -493,7 +551,7 @@ function CatalogMatchSuggestions({
                 <dl className="grid gap-x-4 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
                   <div className="flex min-w-0 gap-1">
                     <dt className="shrink-0 font-medium text-foreground">
-                      Normalized:
+                      {copy.candidate.normalized}:
                     </dt>
                     <dd className="min-w-0 break-words">
                       {suggestion.normalizedInput}
@@ -501,7 +559,7 @@ function CatalogMatchSuggestions({
                   </div>
                   <div className="flex min-w-0 gap-1">
                     <dt className="shrink-0 font-medium text-foreground">
-                      Locale/script:
+                      {copy.candidate.localeScript}:
                     </dt>
                     <dd className="min-w-0 break-words">
                       {suggestion.sourceLocale}/{suggestion.sourceScript}
@@ -512,10 +570,18 @@ function CatalogMatchSuggestions({
                   </div>
                   <div className="flex min-w-0 gap-1 sm:col-span-2">
                     <dt className="shrink-0 font-medium text-foreground">
-                      Reasons:
+                      {copy.candidate.reasons}:
                     </dt>
                     <dd className="min-w-0 break-words">
-                      {suggestion.reasonCodes.map(reasonLabel).join(", ")}
+                      {suggestion.reasonCodes
+                        .map((reason) =>
+                          operatorCurationMapLabel(
+                            copy.entity.reasonCodes,
+                            reason,
+                            copy.common.unknown,
+                          ),
+                        )
+                        .join(", ")}
                     </dd>
                   </div>
                 </dl>
@@ -524,19 +590,31 @@ function CatalogMatchSuggestions({
                   <div className="grid gap-1 border-t border-border pt-2 text-xs text-muted-foreground">
                     <p>
                       <span className="font-medium text-foreground">
-                        Review reason:
+                        {copy.candidate.reviewReason}:
                       </span>{" "}
-                      {decisionReasonLabel(suggestion.decisionReasonCode)}
+                      {operatorCurationMapLabel(
+                        copy.candidate.decisions,
+                        suggestion.decisionReasonCode,
+                        copy.common.unknown,
+                      )}
                     </p>
                     {suggestion.reviewedAt ? (
                       <p>
-                        Reviewed {formatDate(suggestion.reviewedAt)}. Catalog
-                        identity and journal history were unchanged.
+                        {formatOperatorTemplate(
+                          copy.candidate.reviewedUnchanged,
+                          {
+                            date: formatOperatorDate(
+                              locale,
+                              suggestion.reviewedAt,
+                            ),
+                          },
+                        )}
                       </p>
                     ) : null}
                   </div>
                 ) : !noSafeMatch && suggestion.targetCatalogItemId ? (
                   <CatalogMatchSuggestionDecisionControls
+                    locale={locale}
                     suggestionId={suggestion.id}
                     approveAction={approveAction}
                     rejectAction={rejectAction}
@@ -551,8 +629,15 @@ function CatalogMatchSuggestions({
   );
 }
 
-function CatalogRescanButton({ queued }: { queued: boolean }) {
+function CatalogRescanButton({
+  locale,
+  queued,
+}: {
+  locale: InterfaceLocale;
+  queued: boolean;
+}) {
   const { pending } = useFormStatus();
+  const copy = getOperatorCurationCopy(locale);
 
   return (
     <button
@@ -561,20 +646,27 @@ function CatalogRescanButton({ queued }: { queued: boolean }) {
       className={buttonVariants({ variant: "outline" })}
     >
       <RefreshCw className={`size-4 ${pending ? "animate-spin" : ""}`} />
-      {pending ? "Queueing..." : queued ? "Refresh queued" : "Refresh matches"}
+      {pending
+        ? copy.common.queueing
+        : queued
+          ? copy.common.refreshQueued
+          : copy.candidate.refreshMatches}
     </button>
   );
 }
 
 function CatalogMatchSuggestionDecisionControls({
+  locale,
   suggestionId,
   approveAction,
   rejectAction,
 }: {
+  locale: InterfaceLocale;
   suggestionId: string;
   approveAction: CatalogMatchSuggestionAction;
   rejectAction: CatalogMatchSuggestionAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   const router = useRouter();
   const [feedback, setFeedback] = useState<
     | CatalogMatchSuggestionActionResult
@@ -594,13 +686,15 @@ function CatalogMatchSuggestionDecisionControls({
     startDecision(async () => {
       try {
         const result = await action(formData);
-        setFeedback(result);
+        setFeedback({
+          ...result,
+          message: matchActionFeedback(copy, result.outcome),
+        });
         if (result.outcome !== "stale") router.refresh();
       } catch {
         setFeedback({
           outcome: "error",
-          message:
-            "The decision could not be applied. Refresh the evidence and try again.",
+          message: copy.candidate.decisionError,
         });
       }
     });
@@ -617,7 +711,9 @@ function CatalogMatchSuggestionDecisionControls({
             className={buttonVariants()}
           >
             <CheckCircle2 className="size-4" />
-            {pendingDecision ? "Applying..." : "Approve match"}
+            {pendingDecision
+              ? copy.common.applying
+              : copy.candidate.approveMatch}
           </button>
         </form>
 
@@ -627,22 +723,28 @@ function CatalogMatchSuggestionDecisionControls({
         >
           <input type="hidden" name="suggestionId" value={suggestionId} />
           <label className="grid min-w-0 flex-1 gap-1 text-xs font-medium text-foreground">
-            Rejection reason
+            {copy.common.rejectionReason}
             <select
               name="reasonCode"
               defaultValue="not_same_entity"
               disabled={pendingDecision || feedback?.outcome === "stale"}
               className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
             >
-              <option value="not_same_entity">Incorrect identity</option>
-              <option value="wrong_catalog_kind">Wrong catalog kind</option>
+              <option value="not_same_entity">
+                {copy.candidate.decisions.not_same_entity}
+              </option>
+              <option value="wrong_catalog_kind">
+                {copy.candidate.decisions.wrong_catalog_kind}
+              </option>
               <option value="locale_or_script_mismatch">
-                Locale or script mismatch
+                {copy.candidate.decisions.locale_or_script_mismatch}
               </option>
               <option value="insufficient_evidence">
-                Insufficient evidence
+                {copy.candidate.decisions.insufficient_evidence}
               </option>
-              <option value="other_review_reason">Other review reason</option>
+              <option value="other_review_reason">
+                {copy.candidate.decisions.other_review_reason}
+              </option>
             </select>
           </label>
           <button
@@ -651,7 +753,9 @@ function CatalogMatchSuggestionDecisionControls({
             className={buttonVariants({ variant: "outline" })}
           >
             <XCircle className="size-4" />
-            {pendingDecision ? "Applying..." : "Reject suggestion"}
+            {pendingDecision
+              ? copy.common.applying
+              : copy.candidate.rejectSuggestion}
           </button>
         </form>
       </div>
@@ -672,66 +776,18 @@ function CatalogMatchSuggestionDecisionControls({
   );
 }
 
-function confidenceLabel(value: CatalogMatchSuggestion["confidenceBucket"]) {
-  switch (value) {
-    case "high":
-      return "High confidence";
-    case "medium":
-      return "Medium confidence";
-    case "low":
-      return "Low confidence";
-    case "none":
-      return "No safe suggestion";
+function matchActionFeedback(
+  copy: ReturnType<typeof getOperatorCurationCopy>,
+  outcome: CatalogMatchSuggestionActionResult["outcome"],
+) {
+  switch (outcome) {
+    case "approved":
+      return copy.candidate.approvedFeedback;
+    case "rejected":
+      return copy.candidate.rejectedFeedback;
+    case "stale":
+      return copy.candidate.staleFeedback;
   }
-}
-
-function matchTypeLabel(value: CatalogMatchSuggestion["matchType"]) {
-  switch (value) {
-    case "normalized_exact":
-      return "Exact name";
-    case "transliteration_exact":
-      return "Transliteration match";
-    case "fuzzy_name":
-      return "Fuzzy name";
-    case "no_safe_match":
-      return "Held";
-  }
-}
-
-function reasonLabel(value: string) {
-  const labels: Record<string, string> = {
-    normalized_exact: "normalized names are identical",
-    cyrtranslit_exact: "CyrTranslit keys are identical",
-    rapidfuzz_name_similarity: "RapidFuzz name similarity",
-    cross_script_similarity: "cross-script similarity",
-    same_catalog_kind: "same catalog kind",
-    below_safe_threshold: "below safe threshold",
-    no_selectable_candidates: "no selectable candidates",
-    unmatchable_input: "input cannot be matched safely",
-  };
-  return labels[value] ?? value.replaceAll("_", " ");
-}
-
-function decisionReasonLabel(value: string | null | undefined) {
-  const labels: Record<string, string> = {
-    approved_canonical_match: "Approved canonical match",
-    not_same_entity: "Incorrect identity",
-    wrong_catalog_kind: "Wrong catalog kind",
-    locale_or_script_mismatch: "Locale or script mismatch",
-    insufficient_evidence: "Insufficient evidence",
-    other_review_reason: "Other review reason",
-    legacy_review: "Legacy review decision",
-  };
-  return value ? (labels[value] ?? value.replaceAll("_", " ")) : "Unknown";
-}
-
-function catalogKindLabel(value: string) {
-  const labels: Record<string, string> = {
-    plant_variety: "Plant variety",
-    species: "Species",
-    breed: "Breed",
-  };
-  return labels[value] ?? value.replaceAll("_", " ");
 }
 
 function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
@@ -765,14 +821,5 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         source: candidate.source,
       },
     ];
-  });
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
   });
 }

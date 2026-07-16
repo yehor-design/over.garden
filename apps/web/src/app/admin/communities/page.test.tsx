@@ -1,0 +1,70 @@
+import { renderToStaticMarkup } from "react-dom/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  getCurrentSession: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
+  listCommunityModerationQueue: vi.fn(),
+}));
+
+vi.mock("@/server/auth-session", () => ({
+  getCurrentSession: mocks.getCurrentSession,
+  getSessionId: vi.fn(() => "moderator-session"),
+}));
+
+vi.mock("@/server/request-scope", () => ({
+  scopedToUser: vi.fn((userId: string, sessionId: string) => ({
+    userId,
+    sessionId,
+  })),
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
+vi.mock("@/server/community-repository", () => ({
+  listCommunityModerationQueue: mocks.listCommunityModerationQueue,
+}));
+
+vi.mock("@/app/garden/garden-auth-panel", () => ({
+  GardenAuthPanel: () => "community-auth-panel",
+}));
+
+describe("/admin/communities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "00000000-0000-4000-8000-000000000901" },
+    });
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.listCommunityModerationQueue.mockResolvedValue({ items: [] });
+  });
+
+  it("keeps the signed-out boundary localized without reading moderation", async () => {
+    mocks.getCurrentSession.mockResolvedValue(null);
+    const { default: CommunityModerationDirectory } = await import("./page");
+    const html = renderToStaticMarkup(await CommunityModerationDirectory());
+
+    expect(html).toContain("Модерація спільнот");
+    expect(html).toContain("community-auth-panel");
+    expect(mocks.listCommunityModerationQueue).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["uk", "Модерація спільнот", "відкритих скарг: 0"],
+    ["bg", "Модерация на общности", "отворени сигнали: 0"],
+    ["ru", "Модерация сообществ", "открытых жалоб: 0"],
+  ] as const)(
+    "renders selected %s moderation copy",
+    async (locale, title, countLabel) => {
+      mocks.getRequestInterfaceLocale.mockResolvedValue(locale);
+      const { default: CommunityModerationDirectory } = await import("./page");
+      const html = renderToStaticMarkup(await CommunityModerationDirectory());
+
+      expect(html).toContain(title);
+      expect(html).toContain(countLabel);
+      expect(html).toContain("observation-and-care");
+    },
+  );
+});

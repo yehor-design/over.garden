@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   readCatalogEntityResolutionQaReport: vi.fn(),
   listCatalogSourceProvenanceForCuration: vi.fn(),
   listVarietySeedProofsForCuration: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -25,6 +26,10 @@ vi.mock("@/server/request-scope", () => ({
     userId,
     sessionId,
   })),
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("@/server/catalog-curator-auth", () => ({
@@ -146,6 +151,7 @@ describe("/garden/catalog/curation", () => {
     });
     mocks.listCatalogSourceProvenanceForCuration.mockResolvedValue([]);
     mocks.listVarietySeedProofsForCuration.mockResolvedValue([]);
+    mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
   });
 
   it("does not read curation data for a signed-in non-operator", async () => {
@@ -156,7 +162,7 @@ describe("/garden/catalog/curation", () => {
     const { default: CatalogCurationPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogCurationPage());
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.listPendingCatalogCurationCandidates).not.toHaveBeenCalled();
     expect(mocks.listCatalogAliasSuggestionTargets).not.toHaveBeenCalled();
     expect(mocks.listCatalogAliasSuggestionsForCuration).not.toHaveBeenCalled();
@@ -177,8 +183,8 @@ describe("/garden/catalog/curation", () => {
       }),
     );
 
-    expect(html).toContain("Gate: sealed owner");
-    expect(html).toContain("Role: owner");
+    expect(html).toContain("Режим доступу: захищений власник");
+    expect(html).toContain("Роль: Власник");
     expect(html).toContain("source-candidate-review");
     expect(html).toContain("entity-resolution-report");
     expect(html).toContain("alias-suggestion-review:rosa");
@@ -194,5 +200,19 @@ describe("/garden/catalog/curation", () => {
     expect(mocks.readCatalogEntityResolutionQaReport).toHaveBeenCalledOnce();
     expect(mocks.listCatalogSourceProvenanceForCuration).toHaveBeenCalledOnce();
     expect(mocks.listVarietySeedProofsForCuration).toHaveBeenCalledOnce();
+  });
+
+  it("renders the operator header in every supported interface locale", async () => {
+    const { default: CatalogCurationPage } = await import("./page");
+
+    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("bg");
+    const bgHtml = renderToStaticMarkup(await CatalogCurationPage());
+    expect(bgHtml).toContain("Куриране на каталога");
+    expect(bgHtml).toContain("Режим на достъп: защитен собственик");
+
+    mocks.getRequestInterfaceLocale.mockResolvedValueOnce("ru");
+    const ruHtml = renderToStaticMarkup(await CatalogCurationPage());
+    expect(ruHtml).toContain("Курация каталога");
+    expect(ruHtml).toContain("Режим доступа: защищённый владелец");
   });
 });

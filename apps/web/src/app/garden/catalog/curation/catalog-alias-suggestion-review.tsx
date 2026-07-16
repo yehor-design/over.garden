@@ -11,7 +11,12 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
+import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
 import type {
   CatalogAliasSuggestionReadModel,
   CatalogAliasSuggestionTarget,
@@ -23,6 +28,7 @@ type AliasAction = (
 ) => Promise<CatalogAliasSuggestionActionResult>;
 
 interface CatalogAliasSuggestionReviewProps {
+  locale: InterfaceLocale;
   searchQuery: string;
   targets: CatalogAliasSuggestionTarget[];
   suggestions: CatalogAliasSuggestionReadModel[];
@@ -32,6 +38,7 @@ interface CatalogAliasSuggestionReviewProps {
 }
 
 export function CatalogAliasSuggestionReview({
+  locale,
   searchQuery,
   targets,
   suggestions,
@@ -39,16 +46,16 @@ export function CatalogAliasSuggestionReview({
   approveAction,
   rejectAction,
 }: CatalogAliasSuggestionReviewProps) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <section className="grid min-w-0 gap-5 border-b border-border pb-6">
       <div className="flex min-w-0 flex-col gap-2">
         <h2 className="text-xl font-semibold text-foreground">
-          Alias and locale suggestions
+          {copy.alias.title}
         </h2>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Generate deterministic spelling and transliteration variants from an
-          approved catalog identity. A generated row reaches typeahead only
-          after explicit approval.
+          {copy.alias.description}
         </p>
       </div>
 
@@ -58,7 +65,7 @@ export function CatalogAliasSuggestionReview({
         className="flex min-w-0 flex-col gap-2 sm:flex-row"
       >
         <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search catalog identity</span>
+          <span className="sr-only">{copy.alias.searchLabel}</span>
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             name="aliasQuery"
@@ -66,7 +73,7 @@ export function CatalogAliasSuggestionReview({
             minLength={2}
             maxLength={120}
             className="h-10 w-full rounded-md border border-input bg-background pr-3 pl-9 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-            placeholder="Search canonical or accepted name"
+            placeholder={copy.alias.searchPlaceholder}
             autoComplete="off"
           />
         </label>
@@ -75,11 +82,12 @@ export function CatalogAliasSuggestionReview({
           className={buttonVariants({ variant: "outline" })}
         >
           <Search className="size-4" />
-          Search
+          {copy.alias.search}
         </button>
       </form>
 
       <AliasTargetResults
+        locale={locale}
         searchQuery={searchQuery}
         targets={targets}
         generateAction={generateAction}
@@ -88,10 +96,10 @@ export function CatalogAliasSuggestionReview({
       <div className="grid min-w-0 gap-3 border-t border-border pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-base font-semibold text-foreground">
-            Review queue
+            {copy.alias.reviewQueue}
           </h3>
           <span className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-            Rows: {suggestions.length}
+            {copy.common.rows}: {suggestions.length}
           </span>
         </div>
 
@@ -100,6 +108,7 @@ export function CatalogAliasSuggestionReview({
             {suggestions.map((suggestion) => (
               <li key={suggestion.id} className="min-w-0">
                 <AliasSuggestionRow
+                  locale={locale}
                   suggestion={suggestion}
                   approveAction={approveAction}
                   rejectAction={rejectAction}
@@ -109,7 +118,7 @@ export function CatalogAliasSuggestionReview({
           </ol>
         ) : (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No generated alias suggestions yet.
+            {copy.alias.noGenerated}
           </p>
         )}
       </div>
@@ -118,18 +127,22 @@ export function CatalogAliasSuggestionReview({
 }
 
 function AliasTargetResults({
+  locale,
   searchQuery,
   targets,
   generateAction,
 }: {
+  locale: InterfaceLocale;
   searchQuery: string;
   targets: CatalogAliasSuggestionTarget[];
   generateAction: AliasAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
+
   if (!searchQuery) {
     return (
       <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-        Search a catalog identity to generate variants.
+        {copy.alias.searchPrompt}
       </p>
     );
   }
@@ -137,7 +150,7 @@ function AliasTargetResults({
   if (targets.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-        No global catalog identities match this search.
+        {copy.alias.noMatches}
       </p>
     );
   }
@@ -153,17 +166,25 @@ function AliasTargetResults({
               </h3>
               <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                 <span className="rounded-md border border-border px-2 py-1">
-                  {target.catalogKind}
+                  {operatorCurationMapLabel(
+                    copy.common.catalogKinds,
+                    target.catalogKind,
+                    copy.common.catalogKinds.identity,
+                  )}
                 </span>
                 <span className="rounded-md border border-border px-2 py-1 uppercase">
                   {target.locale}
                 </span>
                 <span className="rounded-md border border-border px-2 py-1">
-                  {target.status}
+                  {operatorCurationMapLabel(
+                    copy.common.statuses,
+                    target.status,
+                    copy.common.unknown,
+                  )}
                 </span>
                 <span className="rounded-md border border-border px-2 py-1">
                   {
-                    catalogSuggestionTrustMetadata({
+                    buildGardenCatalogTrustMetadata(locale, {
                       status: target.status,
                       source: target.source,
                       catalogKind: target.catalogKind,
@@ -171,11 +192,12 @@ function AliasTargetResults({
                   }
                 </span>
                 <span className="rounded-md border border-border px-2 py-1">
-                  Accepted names: {target.acceptedNameCount}
+                  {copy.alias.acceptedNames}: {target.acceptedNameCount}
                 </span>
               </div>
             </div>
             <AliasGenerateControl
+              locale={locale}
               catalogItemId={target.id}
               generateAction={generateAction}
             />
@@ -187,17 +209,20 @@ function AliasTargetResults({
 }
 
 function AliasSuggestionRow({
+  locale,
   suggestion,
   approveAction,
   rejectAction,
 }: {
+  locale: InterfaceLocale;
   suggestion: CatalogAliasSuggestionReadModel;
   approveAction: AliasAction;
   rejectAction: AliasAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   const reviewable =
     suggestion.status === "generated" || suggestion.status === "review_needed";
-  const sourceLabel = catalogSuggestionTrustMetadata({
+  const sourceLabel = buildGardenCatalogTrustMetadata(locale, {
     source: suggestion.catalogSource,
     catalogKind: suggestion.catalogKind,
   }).sourceLabel;
@@ -213,12 +238,16 @@ function AliasSuggestionRow({
             {suggestion.locale}
           </span>
           <span className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground">
-            {aliasStatusLabel(suggestion.status)}
+            {operatorCurationMapLabel(
+              copy.alias.statuses,
+              suggestion.status,
+              copy.common.unknown,
+            )}
           </span>
         </div>
 
         <p className="mt-2 text-sm break-words text-muted-foreground">
-          {suggestion.catalogCanonicalName} · generated from{" "}
+          {suggestion.catalogCanonicalName} · {copy.alias.generatedFrom}{" "}
           <span className="font-medium text-foreground">
             {suggestion.generatedFromDisplayName}
           </span>
@@ -228,20 +257,29 @@ function AliasSuggestionRow({
             {suggestion.script}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            {suggestion.catalogKind}
+            {operatorCurationMapLabel(
+              copy.common.catalogKinds,
+              suggestion.catalogKind,
+              copy.common.catalogKinds.identity,
+            )}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
             {sourceLabel}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Confidence {formatConfidence(suggestion.confidence)}
+            {copy.common.confidence}{" "}
+            {formatConfidence(suggestion.confidence, copy.common.unknown)}
           </span>
           {suggestion.reasonCodes.map((reasonCode) => (
             <span
               key={reasonCode}
               className="rounded-md border border-border px-2 py-1"
             >
-              {aliasReasonLabel(reasonCode)}
+              {operatorCurationMapLabel(
+                copy.alias.reasons,
+                reasonCode,
+                copy.common.unknown,
+              )}
             </span>
           ))}
         </div>
@@ -249,19 +287,24 @@ function AliasSuggestionRow({
         {suggestion.status === "review_needed" ? (
           <p className="mt-3 flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300">
             <AlertTriangle className="mt-0.5 size-4 shrink-0" />
-            Approval is blocked because this normalized name resolves to another
-            catalog identity. Resolve the collision, then regenerate.
+            {copy.alias.collision}
           </p>
         ) : null}
         {suggestion.status === "rejected" ? (
           <p className="mt-3 text-sm text-muted-foreground">
-            Decision: {aliasDecisionLabel(suggestion.decisionReasonCode)}
+            {copy.alias.decision}:{" "}
+            {operatorCurationMapLabel(
+              copy.alias.decisions,
+              suggestion.decisionReasonCode,
+              copy.alias.decisions.rejected,
+            )}
           </p>
         ) : null}
       </div>
 
       {reviewable ? (
         <AliasDecisionControls
+          locale={locale}
           suggestion={suggestion}
           approveAction={approveAction}
           rejectAction={rejectAction}
@@ -269,12 +312,12 @@ function AliasSuggestionRow({
       ) : suggestion.status === "accepted" ? (
         <span className="inline-flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="size-4" />
-          Searchable
+          {copy.alias.searchable}
         </span>
       ) : (
         <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
           <XCircle className="size-4" />
-          Not searchable
+          {copy.alias.notSearchable}
         </span>
       )}
     </article>
@@ -282,12 +325,15 @@ function AliasSuggestionRow({
 }
 
 function AliasGenerateControl({
+  locale,
   catalogItemId,
   generateAction,
 }: {
+  locale: InterfaceLocale;
   catalogItemId: string;
   generateAction: AliasAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -300,10 +346,10 @@ function AliasGenerateControl({
     startTransition(async () => {
       try {
         const result = await generateAction(formData);
-        setFeedback(result.message);
+        setFeedback(aliasActionFeedback(copy, result.outcome));
         router.refresh();
       } catch {
-        setFeedback("Alias generation could not be queued. Try again.");
+        setFeedback(copy.alias.generateError);
       }
     });
   }
@@ -314,7 +360,7 @@ function AliasGenerateControl({
         <input type="hidden" name="catalogItemId" value={catalogItemId} />
         <button type="submit" disabled={pending} className={buttonVariants()}>
           <WandSparkles className="size-4" />
-          {pending ? "Queueing..." : "Generate aliases"}
+          {pending ? copy.common.queueing : copy.alias.generate}
         </button>
       </form>
       {feedback ? (
@@ -327,14 +373,17 @@ function AliasGenerateControl({
 }
 
 function AliasDecisionControls({
+  locale,
   suggestion,
   approveAction,
   rejectAction,
 }: {
+  locale: InterfaceLocale;
   suggestion: CatalogAliasSuggestionReadModel;
   approveAction: AliasAction;
   rejectAction: AliasAction;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   const router = useRouter();
   const [feedback, setFeedback] = useState<
     | CatalogAliasSuggestionActionResult
@@ -351,13 +400,15 @@ function AliasDecisionControls({
     startTransition(async () => {
       try {
         const result = await action(formData);
-        setFeedback(result);
+        setFeedback({
+          ...result,
+          message: aliasActionFeedback(copy, result.outcome),
+        });
         router.refresh();
       } catch {
         setFeedback({
           outcome: "error",
-          message:
-            "The alias decision could not be applied. Refresh and try again.",
+          message: copy.alias.decisionError,
         });
       }
     });
@@ -370,7 +421,7 @@ function AliasDecisionControls({
           <input type="hidden" name="aliasProjectionId" value={suggestion.id} />
           <button type="submit" disabled={pending} className={buttonVariants()}>
             <CheckCircle2 className="size-4" />
-            {pending ? "Applying..." : "Approve alias"}
+            {pending ? copy.common.applying : copy.alias.approve}
           </button>
         </form>
       ) : null}
@@ -381,7 +432,7 @@ function AliasDecisionControls({
       >
         <input type="hidden" name="aliasProjectionId" value={suggestion.id} />
         <label className="grid gap-1 text-xs font-medium text-muted-foreground">
-          Rejection reason
+          {copy.common.rejectionReason}
           <select
             name="reasonCode"
             disabled={pending}
@@ -392,15 +443,21 @@ function AliasDecisionControls({
             }
             className="h-10 min-w-0 rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <option value="incorrect_variant">Incorrect variant</option>
+            <option value="incorrect_variant">
+              {copy.alias.decisions.incorrect_variant}
+            </option>
             <option value="locale_or_script_mismatch">
-              Locale or script mismatch
+              {copy.alias.decisions.locale_or_script_mismatch}
             </option>
             <option value="ambiguous_catalog_identity">
-              Ambiguous catalog identity
+              {copy.alias.decisions.ambiguous_catalog_identity}
             </option>
-            <option value="unsafe_generated_form">Unsafe generated form</option>
-            <option value="other_review_reason">Other review reason</option>
+            <option value="unsafe_generated_form">
+              {copy.alias.decisions.unsafe_generated_form}
+            </option>
+            <option value="other_review_reason">
+              {copy.alias.decisions.other_review_reason}
+            </option>
           </select>
         </label>
         <button
@@ -409,7 +466,7 @@ function AliasDecisionControls({
           className={buttonVariants({ variant: "outline" })}
         >
           <XCircle className="size-4" />
-          {pending ? "Applying..." : "Reject alias"}
+          {pending ? copy.common.applying : copy.alias.reject}
         </button>
       </form>
 
@@ -429,42 +486,25 @@ function AliasDecisionControls({
   );
 }
 
-function aliasStatusLabel(status: CatalogAliasSuggestionReadModel["status"]) {
-  switch (status) {
-    case "generated":
-      return "Generated candidate";
-    case "review_needed":
-      return "Collision review required";
-    case "rejected":
-      return "Rejected alias";
-    case "accepted":
-      return "Accepted · typeahead";
-  }
-}
-
-function aliasReasonLabel(reasonCode: string) {
-  switch (reasonCode) {
-    case "cyrtranslit_forward":
-      return "CyrTranslit forward";
-    case "cyrtranslit_reverse":
-      return "CyrTranslit reverse";
-    case "ru_yo_fold":
-      return "Russian ё/е variant";
-    case "uk_ghe_fold":
-      return "Ukrainian ґ/г variant";
-    case "normalized_collision":
-      return "Normalized-name collision";
-    default:
-      return reasonCode.replaceAll("_", " ");
-  }
-}
-
-function aliasDecisionLabel(reasonCode: string | null) {
-  if (!reasonCode) return "Rejected";
-  return reasonCode.replaceAll("_", " ");
-}
-
-function formatConfidence(value: number) {
-  if (!Number.isFinite(value)) return "unknown";
+function formatConfidence(value: number, fallback: string) {
+  if (!Number.isFinite(value)) return fallback;
   return String(Math.round(value * 100)) + "%";
+}
+
+function aliasActionFeedback(
+  copy: ReturnType<typeof getOperatorCurationCopy>,
+  outcome: CatalogAliasSuggestionActionResult["outcome"],
+) {
+  switch (outcome) {
+    case "queued":
+      return copy.alias.queuedFeedback;
+    case "approved":
+      return copy.alias.approvedFeedback;
+    case "rejected":
+      return copy.alias.rejectedFeedback;
+    case "stale":
+      return copy.alias.staleFeedback;
+    case "collision":
+      return copy.alias.collisionFeedback;
+  }
 }

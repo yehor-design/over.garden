@@ -5,75 +5,81 @@ import {
   hasUsableBetterAuthSecret,
   isProductionLikeRuntime,
 } from "@/lib/auth-secret";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Infrastructure health | OverGarden",
-  description:
-    "Public noindex diagnostic route for OverGarden uptime and manual smoke checks.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorCopy(await getRequestInterfaceLocale()).health;
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    robots: { index: false, follow: false },
+  };
+}
 
-async function getAuthStatus(): Promise<string> {
+async function getAuthStatus(locale: InterfaceLocale): Promise<string> {
+  const copy = getOperatorCopy(locale).health;
   if (hasUsableBetterAuthSecret()) {
-    return "Better Auth route mounted — secret configured";
+    return copy.authConfigured;
   }
 
   if (isProductionLikeRuntime()) {
-    return "Better Auth route mounted — secret missing or placeholder-like, auth fails closed";
+    return copy.authClosed;
   }
 
-  return "Better Auth route mounted — local-only fallback active";
+  return copy.authLocalFallback;
 }
 
-async function getDbStatus(): Promise<string> {
+async function getDbStatus(locale: InterfaceLocale): Promise<string> {
+  const copy = getOperatorCopy(locale).health;
   try {
     const [isReachable, rows] = await Promise.all([
       pingDatabase(),
       readRecentHealth(3),
     ]);
-    return `Kysely read OK — ping=${String(isReachable)} · ${rows.length} health row(s)`;
+    return formatOperatorTemplate(copy.dbOk, {
+      ping: String(isReachable),
+      count: rows.length,
+    });
   } catch {
-    return "Database check unavailable in this environment";
+    return copy.dbUnavailable;
   }
 }
 
 export default async function HealthPage() {
+  const locale = await getRequestInterfaceLocale();
+  const copy = getOperatorCopy(locale).health;
   const renderedAt = new Date().toISOString();
   const cyrillic =
     "UTF-8 check — Помідори чері (uk) · Чушки печени (bg) · Огурцы (ru)";
   const [authStatus, dbStatus] = await Promise.all([
-    getAuthStatus(),
-    getDbStatus(),
+    getAuthStatus(locale),
+    getDbStatus(locale),
   ]);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-8">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Infrastructure health
+          {copy.title}
         </h1>
-        <p className="text-muted-foreground">
-          Public noindex diagnostic for uptime and manual smoke checks. This is
-          not product UI.
-        </p>
+        <p className="text-muted-foreground">{copy.description}</p>
       </header>
 
       <dl className="grid grid-cols-1 gap-3">
-        <Row label="Rendered on server at" value={renderedAt} />
-        <Row label="UTF-8 / Cyrillic" value={cyrillic} />
-        <Row label="Auth (Better Auth)" value={authStatus} />
-        <Row label="Database (Kysely / Postgres)" value={dbStatus} />
+        <Row label={copy.renderedAt} value={renderedAt} />
+        <Row label={copy.utf8} value={cyrillic} />
+        <Row label={copy.auth} value={authStatus} />
+        <Row label={copy.database} value={dbStatus} />
       </dl>
 
       <div className="flex items-center gap-3">
-        <Button>shadcn Button (SSR)</Button>
-        <Button variant="outline">Outline</Button>
+        <Button>{copy.primaryButton}</Button>
+        <Button variant="outline">{copy.outlineButton}</Button>
       </div>
     </main>
   );

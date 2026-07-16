@@ -20,6 +20,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/pilot-health-access", () => ({
   resolvePilotHealthOperatorAccess: mocks.resolvePilotHealthOperatorAccess,
 }));
@@ -54,7 +58,7 @@ describe("/garden/pilot-health", () => {
     const { default: PilotHealthPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotHealthPage());
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.getPilotHealthReadoutSafely).not.toHaveBeenCalled();
   });
 
@@ -62,8 +66,8 @@ describe("/garden/pilot-health", () => {
     const { default: PilotHealthPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotHealthPage());
 
-    expect(html).toContain("Gate: sealed_owner_credential_only");
-    expect(html).toContain("Role: owner");
+    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
+    expect(html).toContain("Роль: Власник");
     expect(mocks.getPilotHealthReadoutSafely).toHaveBeenCalledOnce();
   });
 
@@ -92,8 +96,8 @@ describe("/garden/pilot-health", () => {
     const { default: PilotHealthPage } = await import("./page");
     const html = renderToStaticMarkup(await PilotHealthPage());
 
-    expect(html).toContain("Closed-pilot writers");
-    expect(html).toContain("Founder rehearsal");
-    expect(html).toContain("excluded from OVE-53");
+    expect(html).toContain("Автори закритого пілоту");
+    expect(html).toContain("Репетиція засновника");
+    expect(html).toContain("виключені з метрик рішення H1/OVE-53");
   });
 });

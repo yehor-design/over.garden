@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 import { db } from "@/db";
+import { getOperatorCurationCopy } from "@/lib/operator-curation-copy";
+import { operatorRoleLabel } from "@/lib/operator-copy";
 import type { AdminAccess } from "@/server/admin-access";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
@@ -17,6 +20,7 @@ import {
 } from "@/server/catalog-source/candidate-review-repository";
 import { readCatalogEntityResolutionQaReport } from "@/server/catalog-source/entity-resolution-qa-repository";
 import { listCatalogSourceProvenanceForCuration } from "@/server/catalog-source/provenance-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
 import { listVarietySeedProofsForCuration } from "@/server/variety-seed-proof-repository";
 import { GardenAuthPanel } from "../../garden-auth-panel";
@@ -45,6 +49,15 @@ import { VarietySeedProofEditor } from "./variety-seed-proof-editor";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorCurationCopy(await getRequestInterfaceLocale()).page;
+  return {
+    title: copy.metadataTitle,
+    description: copy.metadataDescription,
+    robots: { index: false, follow: false },
+  };
+}
+
 type CatalogCurationPageProps = {
   searchParams?:
     | Promise<Record<string, string | string[] | undefined>>
@@ -54,7 +67,11 @@ type CatalogCurationPageProps = {
 export default async function CatalogCurationPage({
   searchParams,
 }: CatalogCurationPageProps = {}) {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const copy = getOperatorCurationCopy(locale);
   const userId = session?.user?.id;
   const resolvedSearchParams = await searchParams;
   const sourceStatus = normalizeSourceStatusParam(
@@ -67,13 +84,13 @@ export default async function CatalogCurationPage({
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
         <header className="flex flex-col gap-3 border-b border-border pb-5">
           <Link href="/garden" className="text-sm text-muted-foreground">
-            Garden journal
+            {copy.page.gardenJournal}
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Catalog curation
+            {copy.page.title}
           </h1>
         </header>
-        <GardenAuthPanel />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -94,14 +111,14 @@ export default async function CatalogCurationPage({
               className: "self-start",
             })}
           >
-            Back to journal
+            {copy.page.backToJournal}
           </Link>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Catalog curation
+            {copy.page.title}
           </h1>
         </header>
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {copy.page.accessDenied}
         </p>
       </main>
     );
@@ -137,43 +154,44 @@ export default async function CatalogCurationPage({
             className: "self-start",
           })}
         >
-          Back to journal
+          {copy.page.backToJournal}
         </Link>
         <div className="flex flex-col gap-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Catalog curation
+            {copy.page.title}
           </h1>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Pending: {candidates.length}
+              {copy.page.pending}: {candidates.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Pilot signals:{" "}
+              {copy.page.pilotSignals}:{" "}
               {candidates.filter((candidate) => candidate.pilotOrigin).length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Seed proofs: {seedProofs.length}
+              {copy.page.seedProofs}: {seedProofs.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Alias review: {aliasSuggestions.length}
+              {copy.page.aliasReview}: {aliasSuggestions.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Source candidates: {sourceCandidates.length}
+              {copy.page.sourceCandidates}: {sourceCandidates.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Source rows: {provenanceRows.length}
+              {copy.page.sourceRows}: {provenanceRows.length}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: sealed owner
+              {copy.page.gate}: {copy.page.sealedOwner}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Role: {access.role}
+              {copy.page.role}: {operatorRoleLabel(locale, access.role)}
             </span>
           </div>
         </div>
       </header>
 
       <CatalogAliasSuggestionReview
+        locale={locale}
         searchQuery={aliasQuery}
         targets={aliasTargets}
         suggestions={aliasSuggestions}
@@ -183,11 +201,13 @@ export default async function CatalogCurationPage({
       />
 
       <VarietySeedProofEditor
+        locale={locale}
         seedProofs={seedProofs}
         upsertAction={upsertVarietySeedProofAction}
       />
 
       <CatalogSourceCandidateReviewList
+        locale={locale}
         candidates={sourceCandidates}
         summary={sourceCandidateSummary}
         activeStatus={sourceStatus}
@@ -197,13 +217,18 @@ export default async function CatalogCurationPage({
       />
 
       <CatalogEntityResolutionReport
+        locale={locale}
         report={entityResolutionReport}
         refreshAction={refreshCatalogFuzzyDuplicateQaAction}
       />
 
-      <CatalogSourceProvenanceList provenanceRows={provenanceRows} />
+      <CatalogSourceProvenanceList
+        locale={locale}
+        provenanceRows={provenanceRows}
+      />
 
       <CatalogCurationCandidateList
+        locale={locale}
         candidates={candidates}
         confirmAction={confirmCatalogCandidateAction}
         mergeAction={mergeCatalogCandidateAction}

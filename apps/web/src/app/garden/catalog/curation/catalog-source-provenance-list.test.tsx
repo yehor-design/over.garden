@@ -7,6 +7,7 @@ describe("CatalogSourceProvenanceList", () => {
   it("shows source, license, snapshot, and row provenance without raw payload", () => {
     const html = renderToStaticMarkup(
       <CatalogSourceProvenanceList
+        locale="uk"
         provenanceRows={[
           {
             catalogItemId: "00000000-0000-4000-8000-000000057003",
@@ -73,21 +74,21 @@ describe("CatalogSourceProvenanceList", () => {
 
     expect(html).toContain("Ботсадівський");
     expect(html).toContain("RegisterVarietis:83070006");
-    expect(html).toContain("Audit links: 2");
+    expect(html).toContain("Посилання аудиту: 2");
     expect(html).toContain("2025-07-15");
     expect(html).toContain("https://data.gov.ua/example.csv");
     expect(html).toContain("Creative Commons Attribution 4.0 International");
     expect(html).toContain("https://creativecommons.org/licenses/by/4.0/");
     expect(html).toContain("Ukraine State Register of Plant Varieties");
-    expect(html).toContain("attribution required");
-    expect(html).toContain("Alias review states");
+    expect(html).toContain("потрібна атрибуція");
+    expect(html).toContain("Стани перевірки назв");
     expect(html).toContain("Ботсадівський");
     expect(html).toContain("Botsadivs`kyi");
-    expect(html).toContain("accepted");
-    expect(html).toContain("generated");
-    expect(html).toContain("typeahead");
-    expect(html).toContain("confidence 1.00");
-    expect(html).toContain("confidence 0.52");
+    expect(html).toContain("Прийнято");
+    expect(html).toContain("Згенеровано");
+    expect(html).toContain("пошук під час введення");
+    expect(html).toContain("Впевненість 1.00");
+    expect(html).toContain("Впевненість 0.52");
     expect(html).not.toContain("raw_payload");
     expect(html).not.toContain("source_only_fields");
     expect(html).not.toContain("varietyDescription");

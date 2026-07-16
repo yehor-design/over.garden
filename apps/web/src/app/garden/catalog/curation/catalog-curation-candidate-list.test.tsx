@@ -14,6 +14,7 @@ describe("CatalogCurationCandidateList", () => {
     ) => React.ReactNode;
     const html = renderToStaticMarkup(
       <CandidateList
+        locale="uk"
         candidates={[
           {
             id: "00000000-0000-4000-8000-000000000201",
@@ -59,23 +60,23 @@ describe("CatalogCurationCandidateList", () => {
       />,
     );
 
-    expect(html).toContain("Pilot signal");
-    expect(html).toContain("Your name");
-    expect(html).toContain("Saved only for your garden");
-    expect(html).toContain("Invited gardeners: 1");
-    expect(html).toContain("Objects: 2");
+    expect(html).toContain("Сигнал пілоту");
+    expect(html).toContain("Ваша назва");
+    expect(html).toContain("Збережено лише для вашого саду");
+    expect(html).toContain("Запрошені садівники: 1");
+    expect(html).toContain("Об&#x27;єкти: 2");
     expect(html).toContain("Бабусин перець");
-    expect(html).toContain("Deterministic match suggestions");
+    expect(html).toContain("Детерміновані підказки зіставлення");
     expect(html).toContain("Помідор чері");
     expect(html).toContain("96/100");
-    expect(html).toContain("High confidence");
-    expect(html).toContain("Fuzzy name");
-    expect(html).toContain("Plant variety");
-    expect(html).toContain("Refresh matches");
-    expect(html).toContain("Approve match");
-    expect(html).toContain("Reject suggestion");
-    expect(html).toContain("Incorrect identity");
-    expect(html).not.toContain("Refresh queued");
+    expect(html).toContain("Висока впевненість");
+    expect(html).toContain("Fuzzy-збіг назви");
+    expect(html).toContain("Сорт рослини");
+    expect(html).toContain("Оновити зіставлення");
+    expect(html).toContain("Схвалити збіг");
+    expect(html).toContain("Відхилити підказку");
+    expect(html).toContain("Неправильна ідентичність");
+    expect(html).not.toContain("Оновлення додано в чергу");
     expect(html).not.toContain("00000000-0000-0000-0000-000000000001");
   });
 
@@ -85,6 +86,7 @@ describe("CatalogCurationCandidateList", () => {
     ) => React.ReactNode;
     const html = renderToStaticMarkup(
       <CandidateList
+        locale="uk"
         candidates={[
           {
             id: "00000000-0000-4000-8000-000000000204",
@@ -134,15 +136,16 @@ describe("CatalogCurationCandidateList", () => {
       />,
     );
 
-    expect(html).toContain("Rejected match");
-    expect(html).toContain("Incorrect identity");
-    expect(html).not.toContain("Approve match");
-    expect(html).not.toContain("Reject suggestion");
+    expect(html).toContain("Відхилений збіг");
+    expect(html).toContain("Неправильна ідентичність");
+    expect(html).not.toContain("Схвалити збіг");
+    expect(html).not.toContain("Відхилити підказку");
   });
 
   it("renders an explicit no-safe-match state without inventing a target", () => {
     const html = renderToStaticMarkup(
       <CatalogCurationCandidateList
+        locale="uk"
         candidates={[
           {
             id: "00000000-0000-4000-8000-000000000202",
@@ -188,14 +191,15 @@ describe("CatalogCurationCandidateList", () => {
       />,
     );
 
-    expect(html).toContain("No safe catalog match");
+    expect(html).toContain("Безпечного збігу в каталозі немає");
     expect(html).toContain("24/100");
-    expect(html).not.toContain("Suggested target:");
+    expect(html).not.toContain("Запропонована ціль:");
   });
 
   it("labels medium confidence explicitly and keeps full evidence available", () => {
     const html = renderToStaticMarkup(
       <CatalogCurationCandidateList
+        locale="uk"
         candidates={[
           {
             id: "00000000-0000-4000-8000-000000000203",
@@ -245,10 +249,10 @@ describe("CatalogCurationCandidateList", () => {
       />,
     );
 
-    expect(html).toContain("Medium confidence");
-    expect(html).toContain("RapidFuzz name similarity");
-    expect(html).toContain("cross-script similarity");
-    expect(html).toContain("same catalog kind");
+    expect(html).toContain("Середня впевненість");
+    expect(html).toContain("схожість назв RapidFuzz");
+    expect(html).toContain("схожість між системами письма");
+    expect(html).toContain("однаковий тип каталогу");
     expect(html).not.toContain('<dd class="truncate"');
   });
 });

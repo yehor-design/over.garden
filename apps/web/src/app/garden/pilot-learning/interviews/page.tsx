@@ -11,14 +11,23 @@ import {
   PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS,
   PILOT_INTERVIEW_RETURN_REASON_OPTIONS,
   PILOT_INTERVIEW_SEGMENT_OPTIONS,
-  getPilotInterviewActivationResultLabel,
-  getPilotInterviewSegmentLabel,
   MAX_REDACTED_NOTE_LENGTH,
 } from "@/lib/pilot/interview-learning";
-import type {
-  PilotInterviewActivationResult,
-  PilotInterviewSegment,
-} from "@/db/schema";
+import type { OperatorPilotCopy } from "@/lib/operator-pilot-copy";
+import {
+  getOperatorPilotCopy,
+  operatorPilotLabel,
+  operatorPilotOptions,
+} from "@/lib/operator-pilot-copy";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorCount,
+  formatOperatorDate,
+  formatOperatorTemplate,
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { hasAdminCapability } from "@/server/admin-access";
 import { resolveFounderInterviewOperatorAccess } from "@/server/founder-interview-access";
@@ -27,18 +36,21 @@ import {
   listFounderInterviewLearnings,
 } from "@/server/founder-interview-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import { createFounderInterviewLearningAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Founder interview capture | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorPilotCopy(
+    await getRequestInterfaceLocale(),
+  ).interviews;
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function FounderInterviewCapturePage({
   searchParams,
@@ -48,7 +60,12 @@ export default async function FounderInterviewCapturePage({
     activationResult?: string;
   }>;
 }) {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorPilotCopy(locale);
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const access = await resolveFounderInterviewOperatorAccess(scope);
@@ -57,8 +74,8 @@ export default async function FounderInterviewCapturePage({
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <FounderInterviewHeader />
-        <GardenAuthPanel />
+        <FounderInterviewHeader operatorCopy={operatorCopy} copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -66,9 +83,9 @@ export default async function FounderInterviewCapturePage({
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <FounderInterviewHeader />
+        <FounderInterviewHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {operatorCopy.common.accessDenied}
         </p>
       </main>
     );
@@ -80,20 +97,31 @@ export default async function FounderInterviewCapturePage({
   });
   const groupedRecords = groupFounderInterviewLearningsBySegment(records);
   const canCaptureLearning = hasAdminCapability(access, "operator:mutate");
+  const segmentOptions = operatorPilotOptions(
+    locale,
+    "segments",
+    PILOT_INTERVIEW_SEGMENT_OPTIONS.map((option) => option.value),
+  );
+  const activationOptions = operatorPilotOptions(
+    locale,
+    "activationResults",
+    PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS.map((option) => option.value),
+  );
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <FounderInterviewHeader />
+      <FounderInterviewHeader operatorCopy={operatorCopy} copy={copy} />
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="rounded-md border border-border px-2 py-1">
-          Gate: {access.mode}
+          {operatorCopy.common.gate}:{" "}
+          {operatorAccessModeLabel(locale, access.mode)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Role: {access.role}
+          {operatorCopy.common.role}: {operatorRoleLabel(locale, access.role)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Records: {records.length}
+          {operatorCopy.common.records}: {records.length}
         </span>
       </div>
 
@@ -101,12 +129,10 @@ export default async function FounderInterviewCapturePage({
         <section className="grid gap-4 rounded-lg border border-border p-4">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-foreground">
-              Capture structured learning
+              {copy.interviews.captureTitle}
             </h2>
             <p className="text-sm leading-6 text-muted-foreground">
-              Record bounded pilot interview signals only. Do not paste journal
-              text, media keys, contact details, signed URLs, or raw
-              transcripts.
+              {copy.interviews.captureDescription}
             </p>
           </div>
 
@@ -116,45 +142,69 @@ export default async function FounderInterviewCapturePage({
           >
             <div className="grid gap-3 sm:grid-cols-2">
               <SelectField
-                label="Segment"
+                label={copy.interviews.segment}
                 name="segment"
                 required
-                options={PILOT_INTERVIEW_SEGMENT_OPTIONS}
+                options={segmentOptions}
               />
               <SelectField
-                label="Activation result"
+                label={copy.interviews.activationResult}
                 name="activationResult"
                 required
-                options={PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS}
+                options={activationOptions}
               />
               <SelectField
-                label="Return reason"
+                label={copy.interviews.returnReason}
                 name="returnReason"
                 required
-                options={PILOT_INTERVIEW_RETURN_REASON_OPTIONS}
+                options={operatorPilotOptions(
+                  locale,
+                  "returnReasons",
+                  PILOT_INTERVIEW_RETURN_REASON_OPTIONS.map(
+                    (option) => option.value,
+                  ),
+                )}
               />
               <SelectField
-                label="Main objection"
+                label={copy.interviews.mainObjection}
                 name="mainObjection"
                 required
-                options={PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS}
+                options={operatorPilotOptions(
+                  locale,
+                  "objections",
+                  PILOT_INTERVIEW_MAIN_OBJECTION_OPTIONS.map(
+                    (option) => option.value,
+                  ),
+                )}
               />
               <SelectField
-                label="Observed value"
+                label={copy.interviews.observedValue}
                 name="observedValue"
                 required
-                options={PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS}
+                options={operatorPilotOptions(
+                  locale,
+                  "observedValues",
+                  PILOT_INTERVIEW_OBSERVED_VALUE_OPTIONS.map(
+                    (option) => option.value,
+                  ),
+                )}
               />
               <SelectField
-                label="Next action"
+                label={copy.interviews.nextAction}
                 name="nextAction"
                 required
-                options={PILOT_INTERVIEW_NEXT_ACTION_OPTIONS}
+                options={operatorPilotOptions(
+                  locale,
+                  "nextActions",
+                  PILOT_INTERVIEW_NEXT_ACTION_OPTIONS.map(
+                    (option) => option.value,
+                  ),
+                )}
               />
             </div>
 
             <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-              Optional subject user id (operator only)
+              {copy.interviews.subjectUserId}
               <input
                 name="subjectUserId"
                 type="text"
@@ -164,19 +214,25 @@ export default async function FounderInterviewCapturePage({
             </label>
 
             <SelectField
-              label="Pilot cohort"
+              label={copy.interviews.pilotCohort}
               name="pilotCohort"
               value={DEFAULT_PILOT_INTERVIEW_COHORT}
-              options={PILOT_INTERVIEW_COHORT_OPTIONS}
+              options={operatorPilotOptions(
+                locale,
+                "cohorts",
+                PILOT_INTERVIEW_COHORT_OPTIONS.map((option) => option.value),
+              )}
             />
 
             <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-              Optional redacted note ({MAX_REDACTED_NOTE_LENGTH} chars max)
+              {formatOperatorTemplate(copy.interviews.redactedNote, {
+                count: MAX_REDACTED_NOTE_LENGTH,
+              })}
               <textarea
                 name="redactedNote"
                 rows={3}
                 maxLength={MAX_REDACTED_NOTE_LENGTH}
-                placeholder="Short operator note without names, addresses, or quoted journal text."
+                placeholder={copy.interviews.redactedPlaceholder}
                 className="rounded-md border border-input bg-background px-3 py-2 text-sm font-normal text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
               />
             </label>
@@ -185,24 +241,23 @@ export default async function FounderInterviewCapturePage({
               type="submit"
               className={buttonVariants({ className: "self-start" })}
             >
-              Save interview record
+              {copy.interviews.save}
             </button>
           </form>
         </section>
       ) : (
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Interview capture requires sealed owner access.
+          {copy.interviews.captureRequiresOwner}
         </p>
       )}
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold text-foreground">
-            Readback grouped by segment
+            {copy.interviews.readbackTitle}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Filter by segment or activation result. Lists enum fields only plus
-            optional short notes and internal user ids.
+            {copy.interviews.readbackDescription}
           </p>
         </div>
 
@@ -211,21 +266,21 @@ export default async function FounderInterviewCapturePage({
           className="grid gap-3 border-t border-border pt-4 sm:grid-cols-3"
         >
           <SelectField
-            label="Filter segment"
+            label={copy.interviews.filterSegment}
             name="segment"
             value={filters.segment ?? ""}
             options={[
-              { value: "", label: "All segments" },
-              ...PILOT_INTERVIEW_SEGMENT_OPTIONS,
+              { value: "", label: copy.interviews.allSegments },
+              ...segmentOptions,
             ]}
           />
           <SelectField
-            label="Filter activation result"
+            label={copy.interviews.filterActivation}
             name="activationResult"
             value={filters.activationResult ?? ""}
             options={[
-              { value: "", label: "All activation results" },
-              ...PILOT_INTERVIEW_ACTIVATION_RESULT_OPTIONS,
+              { value: "", label: copy.interviews.allActivationResults },
+              ...activationOptions,
             ]}
           />
           <button
@@ -235,13 +290,13 @@ export default async function FounderInterviewCapturePage({
               className: "self-end",
             })}
           >
-            Apply filters
+            {copy.interviews.applyFilters}
           </button>
         </form>
 
         {groupedRecords.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No interview records match the current filters.
+            {copy.interviews.empty}
           </p>
         ) : (
           <div className="grid gap-4">
@@ -252,13 +307,14 @@ export default async function FounderInterviewCapturePage({
               >
                 <header className="grid gap-1">
                   <h3 className="text-base font-semibold text-foreground">
-                    {getPilotInterviewSegmentLabel(
-                      group.segment as PilotInterviewSegment,
-                    )}
+                    {operatorPilotLabel(locale, "segments", group.segment)}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    {group.records.length} record
-                    {group.records.length === 1 ? "" : "s"}
+                    {formatOperatorCount(
+                      locale,
+                      group.records.length,
+                      copy.interviews.recordForms,
+                    )}
                   </p>
                 </header>
 
@@ -270,33 +326,54 @@ export default async function FounderInterviewCapturePage({
                     >
                       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                         <p className="font-semibold text-foreground">
-                          {getPilotInterviewActivationResultLabel(
-                            record.activationResult as PilotInterviewActivationResult,
+                          {operatorPilotLabel(
+                            locale,
+                            "activationResults",
+                            record.activationResult,
                           )}
                         </p>
                         <time className="text-xs text-muted-foreground">
-                          {formatDate(record.recordedAt)}
+                          {formatOperatorDate(locale, record.recordedAt)}
                         </time>
                       </div>
 
                       <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
                         <Field
-                          label="Return reason"
-                          value={record.returnReason}
+                          label={copy.interviews.returnReason}
+                          value={operatorPilotLabel(
+                            locale,
+                            "returnReasons",
+                            record.returnReason,
+                          )}
                         />
                         <Field
-                          label="Main objection"
-                          value={record.mainObjection}
+                          label={copy.interviews.mainObjection}
+                          value={operatorPilotLabel(
+                            locale,
+                            "objections",
+                            record.mainObjection,
+                          )}
                         />
                         <Field
-                          label="Observed value"
-                          value={record.observedValue}
+                          label={copy.interviews.observedValue}
+                          value={operatorPilotLabel(
+                            locale,
+                            "observedValues",
+                            record.observedValue,
+                          )}
                         />
-                        <Field label="Next action" value={record.nextAction} />
+                        <Field
+                          label={copy.interviews.nextAction}
+                          value={operatorPilotLabel(
+                            locale,
+                            "nextActions",
+                            record.nextAction,
+                          )}
+                        />
                         {record.subjectUserId ? (
                           <div>
                             <dt className="text-xs uppercase">
-                              Subject user id (operator only)
+                              {copy.interviews.subjectUserId}
                             </dt>
                             <dd className="font-mono text-xs">
                               {record.subjectUserId}
@@ -305,8 +382,12 @@ export default async function FounderInterviewCapturePage({
                         ) : null}
                         {record.pilotCohort ? (
                           <Field
-                            label="Pilot cohort"
-                            value={record.pilotCohort}
+                            label={copy.interviews.pilotCohort}
+                            value={operatorPilotLabel(
+                              locale,
+                              "cohorts",
+                              record.pilotCohort,
+                            )}
                           />
                         ) : null}
                       </dl>
@@ -328,7 +409,13 @@ export default async function FounderInterviewCapturePage({
   );
 }
 
-function FounderInterviewHeader() {
+function FounderInterviewHeader({
+  operatorCopy,
+  copy,
+}: {
+  operatorCopy: OperatorCopy;
+  copy: OperatorPilotCopy;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -338,7 +425,7 @@ function FounderInterviewHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {operatorCopy.common.backToJournal}
       </Link>
       <Link
         href="/garden/pilot-health"
@@ -347,7 +434,7 @@ function FounderInterviewHeader() {
           className: "self-start",
         })}
       >
-        Pilot health
+        {operatorCopy.common.pilotHealth}
       </Link>
       <Link
         href="/garden/pilot-learning/decision"
@@ -356,16 +443,14 @@ function FounderInterviewHeader() {
           className: "self-start",
         })}
       >
-        Cohort decision
+        {operatorCopy.common.cohortDecision}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Founder interview capture
+          {copy.interviews.title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Operator-only research ops for closed-pilot interviews. Structured
-          fields tie learnings to segment and activation outcome without copying
-          private journal text, media keys, contact details, or raw transcripts.
+          {copy.interviews.description}
         </p>
       </div>
     </header>
@@ -411,15 +496,4 @@ function Field({ label, value }: { label: string; value: string }) {
       <dd>{value}</dd>
     </div>
   );
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

@@ -84,6 +84,7 @@ describe("CatalogSourceCandidateReviewList", () => {
   it("renders safe source/legal/status context and projection actions", () => {
     const html = renderToStaticMarkup(
       <CatalogSourceCandidateReviewList
+        locale="uk"
         candidates={[
           sourceCandidate(),
           sourceCandidate({
@@ -133,20 +134,20 @@ describe("CatalogSourceCandidateReviewList", () => {
       />,
     );
 
-    expect(html).toContain("Source candidate review");
-    expect(html).toContain("Quarantined: 1");
-    expect(html).toContain("Held: 1");
-    expect(html).toContain("Promoted: 1");
+    expect(html).toContain("Перевірка кандидатів із джерел");
+    expect(html).toContain("У карантині: 1");
+    expect(html).toContain("Утримано: 1");
+    expect(html).toContain("Опубліковано: 1");
     expect(html).toContain("Red Cherry");
     expect(html).toContain("GRIN/NPGS candidate");
-    expect(html).toContain("Hidden from typeahead and public catalog");
-    expect(html).toContain("Not selectable until review confirms");
-    expect(html).toContain("Promoted into the safe catalog projection");
+    expect(html).toContain("Приховано з підказок і публічного каталогу");
+    expect(html).toContain("Вибір недоступний, доки перевірка не підтвердить");
+    expect(html).toContain("Додано до безпечної проєкції каталогу");
     expect(html).toContain("Solanum lycopersicum L.");
-    expect(html).toContain("Promote");
-    expect(html).toContain("Hold");
-    expect(html).toContain("Reject");
-    expect(html).toContain("typeahead names 3");
+    expect(html).toContain("Опублікувати");
+    expect(html).toContain("Утримати");
+    expect(html).toContain("Відхилити");
+    expect(html).toContain("Назви для пошуку 3");
 
     for (const marker of forbiddenRenderedMarkers) {
       expect(html).not.toContain(marker);

@@ -23,6 +23,10 @@ vi.mock("@/server/request-scope", () => ({
   })),
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: vi.fn(async () => "uk"),
+}));
+
 vi.mock("@/server/admin-access", () => ({
   hasAdminCapability: vi.fn(
     (access: { capabilities: string[] }, capability: string) =>
@@ -112,7 +116,7 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
-    expect(html).toContain("Access denied.");
+    expect(html).toContain("Доступ заборонено.");
     expect(mocks.listOperatorErasureRequests).not.toHaveBeenCalled();
     expect(mocks.getErasureDryRunPreviewForRequest).not.toHaveBeenCalled();
   });
@@ -121,21 +125,20 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
-    expect(html).toContain("Gate: sealed_owner_credential_only");
-    expect(html).toContain("Role: owner");
+    expect(html).toContain("Режим доступу: лише захищений власник з паролем");
+    expect(html).toContain("Роль: Власник");
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();
     expect(mocks.getErasureDryRunPreviewForRequest).toHaveBeenCalledOnce();
-    expect(html).toContain("Non-destructive dry-run preview");
-    expect(html).toContain("Journal entries");
-    expect(html).toContain("Record dry-run review again");
-    expect(html).toContain("Maintainer-approved irreversible erasure");
-    expect(html).toContain("Execute approved erasure");
+    expect(html).toContain("Недеструктивний dry-run-перегляд");
+    expect(html).toContain("Записи журналу");
+    expect(html).toContain("Зафіксувати dry-run повторно");
+    expect(html).toContain("Незворотне видалення, схвалене супроводжувачем");
+    expect(html).toContain("Виконати схвалене видалення");
     expect(html).toContain("APPROVE request-0000abcd IRREVERSIBLE ERASURE");
     expect(html).toContain("request-0000abcd");
-    expect(html).toContain("Mark handled");
-    expect(html).toContain("Needs identity verification");
+    expect(html).toContain("Позначити опрацьованим");
+    expect(html).toContain("Потрібне підтвердження особи");
     expect(html).not.toContain('<option value="completed">');
     expect(html).not.toMatch(/quarantine|derivative|https?:\/\//i);
   });
-
 });

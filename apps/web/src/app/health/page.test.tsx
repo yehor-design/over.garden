@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   hasUsableBetterAuthSecret: vi.fn(),
   isProductionLikeRuntime: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
   pingDatabase: vi.fn(),
   readRecentHealth: vi.fn(),
 }));
@@ -18,9 +19,14 @@ vi.mock("@/server/health-repository", () => ({
   readRecentHealth: mocks.readRecentHealth,
 }));
 
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
+}));
+
 describe("/health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
     mocks.hasUsableBetterAuthSecret.mockReturnValue(true);
     mocks.isProductionLikeRuntime.mockReturnValue(false);
     mocks.pingDatabase.mockResolvedValue(true);
@@ -30,12 +36,15 @@ describe("/health", () => {
   });
 
   it("stays public for smoke checks but noindex for crawlers", async () => {
-    const { default: HealthPage, metadata } = await import("./page");
+    const { default: HealthPage, generateMetadata } = await import("./page");
     const html = renderToStaticMarkup(await HealthPage());
 
-    expect(metadata.robots).toMatchObject({ index: false, follow: false });
-    expect(html).toContain("Public noindex diagnostic");
-    expect(html).toContain("manual smoke checks");
+    expect((await generateMetadata()).robots).toMatchObject({
+      index: false,
+      follow: false,
+    });
+    expect(html).toContain("Публична noindex диагностика");
+    expect(html).toContain("ръчни smoke проверки");
     expect(html).not.toMatch(
       /\b(journal text|media key|invite link|email|ip_address|user[_ -]?agent)\b/i,
     );
@@ -49,7 +58,9 @@ describe("/health", () => {
     const { default: HealthPage } = await import("./page");
     const html = renderToStaticMarkup(await HealthPage());
 
-    expect(html).toContain("Database check unavailable in this environment");
+    expect(html).toContain(
+      "Проверката на базата данни не е налична в тази среда",
+    );
     expect(html).not.toContain("secret-user");
     expect(html).not.toContain("secret-pass");
     expect(html).not.toContain("example.internal");

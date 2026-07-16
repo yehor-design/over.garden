@@ -3,8 +3,15 @@ import { notFound } from "next/navigation";
 
 import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
 import { buttonVariants } from "@/components/ui/button";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorDate,
+  getOperatorCopy,
+  operatorCommunityStateLabel,
+} from "@/lib/operator-copy";
 import { resolveVisualCommunityScenario } from "@/lib/visual-fixtures/community-scenarios";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { listCommunityModerationQueue } from "@/server/community-repository";
 import { scopedToUser } from "@/server/request-scope";
 import {
@@ -28,10 +35,12 @@ export default async function CommunityModerationPage({
   params,
   searchParams,
 }: CommunityModerationPageProps) {
-  const [{ slug }, query] = await Promise.all([
+  const [{ slug }, query, locale] = await Promise.all([
     params,
     searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+    getRequestInterfaceLocale(),
   ]);
+  const copy = getOperatorCopy(locale);
   if (!/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) return notFound();
   const visualScenario = resolveVisualCommunityScenario(query.visualCommunity);
   const visualModerator =
@@ -45,8 +54,11 @@ export default async function CommunityModerationPage({
   if (!visualModeratorActorId && !session?.user?.id) {
     return (
       <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-        <ModerationHeader slug={slug} />
-        <GardenAuthPanel postAuthPath={`/admin/communities/${slug}`} />
+        <ModerationHeader slug={slug} copy={copy} />
+        <GardenAuthPanel
+          locale={locale}
+          postAuthPath={`/admin/communities/${slug}`}
+        />
       </main>
     );
   }
@@ -60,9 +72,9 @@ export default async function CommunityModerationPage({
   if (!moderation) {
     return (
       <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-        <ModerationHeader slug={slug} />
+        <ModerationHeader slug={slug} copy={copy} />
         <p className="rounded-md border border-border p-4 text-sm" role="alert">
-          Community moderator access is not available.
+          {copy.community.unavailable}
         </p>
       </main>
     );
@@ -73,21 +85,32 @@ export default async function CommunityModerationPage({
 
   return (
     <main className="mx-auto grid w-full max-w-6xl gap-5 px-5 py-8">
-      <ModerationHeader slug={slug} visualScenarioId={visualModerator?.id} />
+      <ModerationHeader
+        slug={slug}
+        visualScenarioId={visualModerator?.id}
+        copy={copy}
+      />
       {actionStatus ? (
         <p
           className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm"
           role="status"
         >
-          Moderation result: {actionStatus}
+          {copy.community.moderationResult}:{" "}
+          {operatorCommunityStateLabel(locale, actionStatus)}
         </p>
       ) : null}
 
       <section className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="grid gap-1">
-          <h2 className="text-lg font-semibold">Participation gate</h2>
+          <h2 className="text-lg font-semibold">
+            {copy.community.participationGate}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Current state: {moderation.community.participationState}
+            {copy.community.currentState}:{" "}
+            {operatorCommunityStateLabel(
+              locale,
+              moderation.community.participationState,
+            )}
           </p>
         </div>
         <form action={setCommunityParticipationAction}>
@@ -106,21 +129,25 @@ export default async function CommunityModerationPage({
               variant: participationOpen ? "outline" : "default",
             })}
           >
-            {participationOpen ? "Close participation" : "Open participation"}
+            {participationOpen
+              ? copy.community.closeParticipation
+              : copy.community.openParticipation}
           </button>
         </form>
       </section>
 
       <section id="moderation-queue" className="grid gap-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-xl font-semibold">Open reports</h2>
+          <h2 className="text-xl font-semibold">
+            {copy.community.openReports}
+          </h2>
           <span className="text-sm text-muted-foreground tabular-nums">
             {moderation.items.length}
           </span>
         </div>
         {moderation.items.length === 0 ? (
           <p className="border-y border-border py-8 text-sm text-muted-foreground">
-            No submitted reports.
+            {copy.community.noReports}
           </p>
         ) : (
           <ul className="divide-y divide-border border-y border-border">
@@ -128,21 +155,31 @@ export default async function CommunityModerationPage({
               <li key={item.reportId} className="grid gap-4 py-5">
                 <div className="grid gap-1">
                   <span className="text-xs font-semibold text-primary uppercase">
-                    {item.reportReason} · {item.reportState}
+                    {item.reportReason} ·{" "}
+                    {operatorCommunityStateLabel(locale, item.reportState)}
                   </span>
                   <h3 className="text-lg font-semibold">
-                    {item.journalTitle ?? "Journal is no longer public"}
+                    {item.journalTitle ?? copy.community.journalUnavailable}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Reported {formatDate(item.reportedAt)} · contribution{" "}
-                    {item.contributionState} · discussion {item.discussionState}
+                    {copy.community.reported}{" "}
+                    {formatOperatorDate(locale, item.reportedAt, {
+                      dateStyle: "medium",
+                    })}{" "}
+                    · {copy.community.contribution}{" "}
+                    {operatorCommunityStateLabel(
+                      locale,
+                      item.contributionState,
+                    )}{" "}
+                    · {copy.community.discussion}{" "}
+                    {operatorCommunityStateLabel(locale, item.discussionState)}
                   </p>
                   {item.publicSlug ? (
                     <Link
                       href={`/journal/${item.publicSlug}`}
                       className="w-fit text-sm font-medium text-primary hover:underline"
                     >
-                      Open canonical journal
+                      {copy.community.openJournal}
                     </Link>
                   ) : null}
                 </div>
@@ -158,8 +195,8 @@ export default async function CommunityModerationPage({
                     }
                     label={
                       item.contributionState === "active"
-                        ? "Remove from community"
-                        : "Restore contribution"
+                        ? copy.community.removeContribution
+                        : copy.community.restoreContribution
                     }
                   />
                   <ModerationForm
@@ -173,8 +210,8 @@ export default async function CommunityModerationPage({
                     }
                     label={
                       item.discussionState === "open"
-                        ? "Close discussion"
-                        : "Open discussion"
+                        ? copy.community.closeDiscussion
+                        : copy.community.openDiscussion
                     }
                   />
                   <ModerationForm
@@ -184,7 +221,7 @@ export default async function CommunityModerationPage({
                     visualScenarioId={visualModerator?.id}
                     stateName="membershipState"
                     stateValue="banned"
-                    label="Ban participant"
+                    label={copy.community.banParticipant}
                   />
                   <ModerationForm
                     action={resolveCommunityReportAction}
@@ -193,7 +230,7 @@ export default async function CommunityModerationPage({
                     visualScenarioId={visualModerator?.id}
                     stateName="reportState"
                     stateValue="actioned"
-                    label="Resolve as actioned"
+                    label={copy.community.resolveActioned}
                   />
                   <ModerationForm
                     action={resolveCommunityReportAction}
@@ -202,7 +239,7 @@ export default async function CommunityModerationPage({
                     visualScenarioId={visualModerator?.id}
                     stateName="reportState"
                     stateValue="dismissed"
-                    label="Dismiss report"
+                    label={copy.community.dismissReport}
                   />
                 </div>
               </li>
@@ -217,9 +254,11 @@ export default async function CommunityModerationPage({
 function ModerationHeader({
   slug,
   visualScenarioId,
+  copy,
 }: {
   slug: string;
   visualScenarioId?: string;
+  copy: OperatorCopy;
 }) {
   const backPath = visualScenarioId
     ? `/communities/${slug}?visualCommunity=${encodeURIComponent(visualScenarioId)}`
@@ -234,10 +273,12 @@ function ModerationHeader({
           className: "w-fit",
         })}
       >
-        Back to {visualScenarioId ? "community" : "communities"}
+        {visualScenarioId
+          ? copy.community.backToCommunity
+          : copy.community.backToCommunities}
       </Link>
       <div className="grid gap-2">
-        <h1 className="text-3xl font-semibold">Community moderation</h1>
+        <h1 className="text-3xl font-semibold">{copy.community.title}</h1>
         <p className="text-sm text-muted-foreground">{slug}</p>
       </div>
     </header>
@@ -306,9 +347,4 @@ function ModeratorFields({
 
 function firstValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date);
 }

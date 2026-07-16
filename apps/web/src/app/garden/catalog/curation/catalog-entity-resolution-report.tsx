@@ -3,6 +3,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
+import { formatOperatorTemplate } from "@/lib/operator-copy";
 import type {
   CatalogEntityResolutionCluster,
   CatalogEntityResolutionQaReport,
@@ -10,14 +16,18 @@ import type {
 import { FuzzyDuplicateRefreshForm } from "./fuzzy-duplicate-refresh-form";
 
 interface CatalogEntityResolutionReportProps {
+  locale: InterfaceLocale;
   report: CatalogEntityResolutionQaReport;
   refreshAction: () => Promise<void>;
 }
 
 export function CatalogEntityResolutionReport({
+  locale,
   report,
   refreshAction,
 }: CatalogEntityResolutionReportProps) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <section className="grid min-w-0 gap-4 border-b border-border pb-6 [&>*]:min-w-0">
       <div className="flex min-w-0 flex-col gap-3">
@@ -25,27 +35,44 @@ export function CatalogEntityResolutionReport({
           <div className="flex min-w-0 items-center gap-2">
             <GitMerge className="size-5 text-muted-foreground" />
             <h2 className="text-xl font-semibold break-words text-foreground">
-              Entity-resolution QA
+              {copy.entity.title}
             </h2>
           </div>
-          <FuzzyDuplicateRefreshForm refreshAction={refreshAction} />
+          <FuzzyDuplicateRefreshForm
+            locale={locale}
+            refreshAction={refreshAction}
+          />
         </div>
         <div className="flex min-w-0 flex-wrap gap-2 text-xs text-muted-foreground">
-          <Badge>Clusters: {report.summary.clusterCount}</Badge>
           <Badge>
-            Catalog rows: {report.summary.sourceBackedCatalogRowsReviewed}
+            {copy.entity.clusters}: {report.summary.clusterCount}
           </Badge>
           <Badge>
-            Alias checks: {report.summary.aliasCollisionRowsReviewed}
+            {copy.entity.catalogRows}:{" "}
+            {report.summary.sourceBackedCatalogRowsReviewed}
           </Badge>
           <Badge>
-            Source groups: {report.summary.sourceCandidateGroupsReviewed}
+            {copy.entity.aliasChecks}:{" "}
+            {report.summary.aliasCollisionRowsReviewed}
           </Badge>
           <Badge>
-            Fuzzy reviewed: {report.summary.fuzzyDuplicateRowsReviewed} of{" "}
-            {report.summary.fuzzyDuplicatePairCount}
+            {copy.entity.sourceGroups}:{" "}
+            {report.summary.sourceCandidateGroupsReviewed}
           </Badge>
-          <Badge>Leak check: {report.leakCheck}</Badge>
+          <Badge>
+            {formatOperatorTemplate(copy.entity.fuzzyReviewed, {
+              reviewed: report.summary.fuzzyDuplicateRowsReviewed,
+              total: report.summary.fuzzyDuplicatePairCount,
+            })}
+          </Badge>
+          <Badge>
+            {copy.entity.leakCheck}:{" "}
+            {operatorCurationMapLabel(
+              copy.common.statuses,
+              report.leakCheck,
+              copy.common.unknown,
+            )}
+          </Badge>
         </div>
         <div className="grid min-w-0 gap-2 md:grid-cols-2 xl:grid-cols-3">
           {report.summary.groups.map((group) => (
@@ -55,12 +82,12 @@ export function CatalogEntityResolutionReport({
             >
               <div className="flex min-w-0 items-center justify-between gap-3">
                 <span className="min-w-0 font-medium break-words text-foreground">
-                  {group.label}
+                  {copy.entity.groups[group.kind].label}
                 </span>
                 <Badge>{group.count}</Badge>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                {group.nextAction}
+                {copy.entity.groups[group.kind].nextAction}
               </p>
             </div>
           ))}
@@ -71,13 +98,13 @@ export function CatalogEntityResolutionReport({
         <ol className="grid min-w-0 gap-3">
           {report.clusters.map((cluster) => (
             <li key={cluster.id} className="min-w-0">
-              <EntityResolutionClusterCard cluster={cluster} />
+              <EntityResolutionClusterCard locale={locale} cluster={cluster} />
             </li>
           ))}
         </ol>
       ) : (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No entity-resolution clusters need review in the current safe report.
+          {copy.entity.noClusters}
         </p>
       )}
     </section>
@@ -85,10 +112,15 @@ export function CatalogEntityResolutionReport({
 }
 
 function EntityResolutionClusterCard({
+  locale,
   cluster,
 }: {
+  locale: InterfaceLocale;
   cluster: CatalogEntityResolutionCluster;
 }) {
+  const copy = getOperatorCurationCopy(locale);
+  const kind = copy.entity.groups[cluster.kind].label;
+
   return (
     <article className="grid min-w-0 gap-3 rounded-lg border border-border p-4 [&>*]:min-w-0">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -96,32 +128,78 @@ function EntityResolutionClusterCard({
           <div className="flex min-w-0 items-center gap-2">
             <AlertTriangle className="size-4 shrink-0 text-muted-foreground" />
             <h3 className="min-w-0 text-base font-semibold break-words text-foreground">
-              {cluster.title}
+              {formatOperatorTemplate(copy.entity.clusterTitle, {
+                kind,
+                count: cluster.members.length,
+              })}
             </h3>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-            <Badge>{cluster.kind}</Badge>
-            <Badge>{cluster.riskLevel}</Badge>
-            <Badge>{cluster.recommendedAction}</Badge>
+            <Badge>{kind}</Badge>
+            <Badge>
+              {operatorCurationMapLabel(
+                copy.entity.riskLevels,
+                cluster.riskLevel,
+                copy.common.unknown,
+              )}
+            </Badge>
+            <Badge>
+              {operatorCurationMapLabel(
+                copy.entity.actions,
+                cluster.recommendedAction,
+                copy.common.unknown,
+              )}
+            </Badge>
             {cluster.fuzzyScore !== undefined ? (
-              <Badge>Score: {cluster.fuzzyScore}%</Badge>
+              <Badge>
+                {copy.entity.score}: {cluster.fuzzyScore}%
+              </Badge>
             ) : null}
             {cluster.fuzzyScoreBucket ? (
-              <Badge>{cluster.fuzzyScoreBucket}</Badge>
+              <Badge>
+                {operatorCurationMapLabel(
+                  copy.entity.scoreBuckets,
+                  cluster.fuzzyScoreBucket,
+                  copy.common.unknown,
+                )}
+              </Badge>
             ) : null}
             {cluster.localeRelation ? (
-              <Badge>{cluster.localeRelation}</Badge>
+              <Badge>
+                {operatorCurationMapLabel(
+                  copy.entity.localeRelations,
+                  cluster.localeRelation,
+                  copy.common.unknown,
+                )}
+              </Badge>
             ) : null}
             {cluster.evidenceStatus ? (
-              <Badge>{cluster.evidenceStatus}</Badge>
+              <Badge>
+                {operatorCurationMapLabel(
+                  copy.entity.evidenceStatuses,
+                  cluster.evidenceStatus,
+                  copy.common.unknown,
+                )}
+              </Badge>
             ) : null}
           </div>
           {cluster.reasonCodes?.length ? (
             <p className="mt-2 text-xs break-words text-muted-foreground">
-              Reasons: {cluster.reasonCodes.join(", ")}
+              {copy.entity.reasons}:{" "}
+              {cluster.reasonCodes
+                .map((reason) =>
+                  operatorCurationMapLabel(
+                    copy.entity.reasonCodes,
+                    reason,
+                    copy.common.unknown,
+                  ),
+                )
+                .join(", ")}
             </p>
           ) : null}
-          <p className="mt-2 text-sm text-muted-foreground">{cluster.reason}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {copy.entity.clusterReason}
+          </p>
         </div>
         <Link
           href={cluster.actionHref}
@@ -131,7 +209,7 @@ function EntityResolutionClusterCard({
           })}
         >
           <Route className="size-4" />
-          Review path
+          {copy.entity.reviewPath}
         </Link>
       </div>
 
@@ -145,26 +223,56 @@ function EntityResolutionClusterCard({
               <span className="font-medium break-words text-foreground">
                 {member.label}
               </span>
-              {member.catalogKind ? <Badge>{member.catalogKind}</Badge> : null}
+              {member.catalogKind ? (
+                <Badge>
+                  {operatorCurationMapLabel(
+                    copy.common.catalogKinds,
+                    member.catalogKind,
+                    copy.common.catalogKinds.identity,
+                  )}
+                </Badge>
+              ) : null}
               {member.source ? <Badge>{member.source}</Badge> : null}
-              {member.status ? <Badge>{member.status}</Badge> : null}
-              {member.locale ? <Badge>Locale: {member.locale}</Badge> : null}
+              {member.status ? (
+                <Badge>
+                  {operatorCurationMapLabel(
+                    copy.common.statuses,
+                    member.status,
+                    copy.common.unknown,
+                  )}
+                </Badge>
+              ) : null}
+              {member.locale ? (
+                <Badge>
+                  {copy.entity.locale}: {member.locale}
+                </Badge>
+              ) : null}
             </div>
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
               {member.typeaheadNameCount !== undefined ? (
-                <span>Typeahead names: {member.typeaheadNameCount}</span>
+                <span>
+                  {copy.common.typeaheadNames}: {member.typeaheadNameCount}
+                </span>
               ) : null}
               {member.sourceLinkCount !== undefined ? (
-                <span>Source links: {member.sourceLinkCount}</span>
+                <span>
+                  {copy.entity.sourceLinks}: {member.sourceLinkCount}
+                </span>
               ) : null}
               {member.rowCount !== undefined ? (
-                <span>Rows: {member.rowCount}</span>
+                <span>
+                  {copy.common.rows}: {member.rowCount}
+                </span>
               ) : null}
               {member.publicSlug ? (
-                <span>Slug: {member.publicSlug}</span>
+                <span>
+                  {copy.entity.slug}: {member.publicSlug}
+                </span>
               ) : null}
               {member.normalizedLabel ? (
-                <span>Normalized: {member.normalizedLabel}</span>
+                <span>
+                  {copy.entity.normalized}: {member.normalizedLabel}
+                </span>
               ) : null}
             </div>
           </div>

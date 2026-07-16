@@ -9,8 +9,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
-import { catalogKindLabel } from "@/lib/garden/pilot-ux-copy";
+import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
+import { formatOperatorDate } from "@/lib/operator-copy";
 import type {
   CatalogSourceCandidateReviewItem,
   CatalogSourceCandidateReviewSummary,
@@ -18,6 +23,7 @@ import type {
 } from "@/server/catalog-source/candidate-review-repository";
 
 interface CatalogSourceCandidateReviewListProps {
+  locale: InterfaceLocale;
   candidates: CatalogSourceCandidateReviewItem[];
   summary?: CatalogSourceCandidateReviewSummary;
   activeStatus?: CatalogSourceCandidateReviewStatus | null;
@@ -26,19 +32,17 @@ interface CatalogSourceCandidateReviewListProps {
   rejectAction: (formData: FormData) => void | Promise<void>;
 }
 
-const STATUS_GROUPS: Array<{
-  status: CatalogSourceCandidateReviewStatus;
-  label: string;
-}> = [
-  { status: "quarantined", label: "Quarantined" },
-  { status: "held", label: "Held" },
-  { status: "review_needed", label: "Review needed" },
-  { status: "blocked", label: "Blocked" },
-  { status: "rejected", label: "Rejected" },
-  { status: "promoted", label: "Promoted" },
+const STATUS_GROUPS: CatalogSourceCandidateReviewStatus[] = [
+  "quarantined",
+  "held",
+  "review_needed",
+  "blocked",
+  "rejected",
+  "promoted",
 ];
 
 export function CatalogSourceCandidateReviewList({
+  locale,
   candidates,
   summary,
   activeStatus,
@@ -46,44 +50,52 @@ export function CatalogSourceCandidateReviewList({
   holdAction,
   rejectAction,
 }: CatalogSourceCandidateReviewListProps) {
+  const copy = getOperatorCurationCopy(locale);
   const statusSummary = summary ?? buildLocalSummary(candidates);
-  const grouped = STATUS_GROUPS.map((group) => ({
-    ...group,
-    candidates: candidates.filter(
-      (candidate) => candidate.status === group.status,
-    ),
+  const grouped = STATUS_GROUPS.map((status) => ({
+    status,
+    candidates: candidates.filter((candidate) => candidate.status === status),
   }));
 
   return (
     <section className="grid min-w-0 gap-4 border-b border-border pb-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          Source candidate review
+          {copy.sourceReview.title}
         </h2>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Rows: {statusSummary.total}
+            {copy.common.rows}: {statusSummary.total}
           </span>
           {statusSummary.statuses.map((group) => (
             <span
               key={group.status}
               className="rounded-md border border-border px-2 py-1"
             >
-              {group.label}: {group.count}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                group.status,
+                copy.common.unknown,
+              )}
+              : {group.count}
             </span>
           ))}
         </div>
         <div className="flex flex-wrap gap-2 text-xs">
           <FilterLink active={!activeStatus} href="/garden/catalog/curation">
-            All
+            {copy.common.all}
           </FilterLink>
-          {STATUS_GROUPS.map((group) => (
+          {STATUS_GROUPS.map((status) => (
             <FilterLink
-              key={group.status}
-              active={activeStatus === group.status}
-              href={`/garden/catalog/curation?sourceStatus=${group.status}`}
+              key={status}
+              active={activeStatus === status}
+              href={`/garden/catalog/curation?sourceStatus=${status}`}
             >
-              {group.label}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                status,
+                copy.common.unknown,
+              )}
             </FilterLink>
           ))}
         </div>
@@ -95,12 +107,17 @@ export function CatalogSourceCandidateReviewList({
             group.candidates.length > 0 ? (
               <div key={group.status} className="grid min-w-0 gap-3">
                 <h3 className="text-sm font-semibold text-muted-foreground uppercase">
-                  {group.label}
+                  {operatorCurationMapLabel(
+                    copy.common.statuses,
+                    group.status,
+                    copy.common.unknown,
+                  )}
                 </h3>
                 <ol className="grid min-w-0 gap-4">
                   {group.candidates.map((candidate) => (
                     <li key={candidate.sourceRecordId} className="min-w-0">
                       <CatalogSourceCandidateCard
+                        locale={locale}
                         candidate={candidate}
                         promoteAction={promoteAction}
                         holdAction={holdAction}
@@ -115,7 +132,7 @@ export function CatalogSourceCandidateReviewList({
         </div>
       ) : (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No source candidates are waiting for review.
+          {copy.sourceReview.noCandidates}
         </p>
       )}
     </section>
@@ -127,9 +144,10 @@ function buildLocalSummary(
 ): CatalogSourceCandidateReviewSummary {
   return {
     total: candidates.length,
-    statuses: STATUS_GROUPS.map((group) => ({
-      ...group,
-      count: candidates.filter((candidate) => candidate.status === group.status)
+    statuses: STATUS_GROUPS.map((status) => ({
+      status,
+      label: status,
+      count: candidates.filter((candidate) => candidate.status === status)
         .length,
     })),
   };
@@ -159,17 +177,20 @@ function FilterLink({
 }
 
 function CatalogSourceCandidateCard({
+  locale,
   candidate,
   promoteAction,
   holdAction,
   rejectAction,
 }: {
+  locale: InterfaceLocale;
   candidate: CatalogSourceCandidateReviewItem;
   promoteAction: (formData: FormData) => void | Promise<void>;
   holdAction: (formData: FormData) => void | Promise<void>;
   rejectAction: (formData: FormData) => void | Promise<void>;
 }) {
-  const trust = catalogSuggestionTrustMetadata({
+  const copy = getOperatorCurationCopy(locale);
+  const trust = buildGardenCatalogTrustMetadata(locale, {
     status: candidate.status,
     source: candidate.promotionPreview?.source ?? candidate.sourceSlug,
     catalogKind:
@@ -191,7 +212,9 @@ function CatalogSourceCandidateCard({
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <Badge>{trust.trustLabel}</Badge>
             <Badge>{trust.sourceLabel}</Badge>
-            <Badge>Version: {candidate.sourceVersion}</Badge>
+            <Badge>
+              {copy.common.version}: {candidate.sourceVersion}
+            </Badge>
             {candidate.review.reviewStatus ? (
               <Badge>{candidate.review.reviewStatus}</Badge>
             ) : null}
@@ -217,7 +240,7 @@ function CatalogSourceCandidateCard({
               />
               <button type="submit" className={buttonVariants()}>
                 <CheckCircle2 className="size-4" />
-                Promote
+                {copy.sourceReview.promote}
               </button>
             </form>
           ) : null}
@@ -235,7 +258,7 @@ function CatalogSourceCandidateCard({
                 })}
               >
                 <CirclePause className="size-4" />
-                Hold
+                {copy.sourceReview.hold}
               </button>
             </form>
           ) : null}
@@ -253,7 +276,7 @@ function CatalogSourceCandidateCard({
                 })}
               >
                 <XCircle className="size-4" />
-                Reject
+                {copy.sourceReview.reject}
               </button>
             </form>
           ) : null}
@@ -263,7 +286,9 @@ function CatalogSourceCandidateCard({
       <dl className="grid min-w-0 gap-3 text-sm md:grid-cols-2 [&>div]:min-w-0">
         {candidate.review.speciesName ? (
           <div>
-            <dt className="text-xs text-muted-foreground">Species</dt>
+            <dt className="text-xs text-muted-foreground">
+              {copy.common.species}
+            </dt>
             <dd className="mt-1 font-medium text-foreground">
               {candidate.review.speciesName}
             </dd>
@@ -271,14 +296,22 @@ function CatalogSourceCandidateCard({
         ) : null}
         {candidate.review.candidateKind ? (
           <div>
-            <dt className="text-xs text-muted-foreground">Candidate kind</dt>
+            <dt className="text-xs text-muted-foreground">
+              {copy.common.candidateKind}
+            </dt>
             <dd className="mt-1 font-medium text-foreground">
-              {candidate.review.candidateKind}
+              {operatorCurationMapLabel(
+                copy.common.catalogKinds,
+                candidate.review.candidateKind,
+                copy.common.unknown,
+              )}
             </dd>
           </div>
         ) : null}
         <div>
-          <dt className="text-xs text-muted-foreground">Source</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.source}
+          </dt>
           <dd className="mt-1">
             <a
               href={candidate.sourceUrl}
@@ -292,7 +325,9 @@ function CatalogSourceCandidateCard({
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">License</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.license}
+          </dt>
           <dd className="mt-1 font-medium break-words text-foreground">
             {candidate.licenseUrl ? (
               <a
@@ -307,24 +342,32 @@ function CatalogSourceCandidateCard({
             ) : (
               candidate.license
             )}
-            {candidate.attributionRequired ? " · attribution required" : ""}
+            {candidate.attributionRequired
+              ? ` · ${copy.common.attributionRequired}`
+              : ""}
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Parser</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.parser}
+          </dt>
           <dd className="mt-1 font-medium text-foreground">
             {candidate.parserVersion}
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Verified</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.verified}
+          </dt>
           <dd className="mt-1 font-medium text-foreground">
-            {formatDate(candidate.verifiedAt)}
+            {formatOperatorDate(locale, candidate.verifiedAt)}
           </dd>
         </div>
         {candidate.review.sourceRowReference ? (
           <div className="md:col-span-2">
-            <dt className="text-xs text-muted-foreground">Review note</dt>
+            <dt className="text-xs text-muted-foreground">
+              {copy.common.reviewNote}
+            </dt>
             <dd className="mt-1 font-medium break-words text-foreground">
               {candidate.review.sourceRowReference}
             </dd>
@@ -339,18 +382,24 @@ function CatalogSourceCandidateCard({
               {candidate.promotionPreview.canonicalName}
             </span>
             <Badge>
-              {catalogKindLabel(candidate.promotionPreview.catalogKind)}
+              {operatorCurationMapLabel(
+                copy.common.catalogKinds,
+                candidate.promotionPreview.catalogKind,
+                copy.common.catalogKinds.identity,
+              )}
             </Badge>
             <Badge>
               {
-                catalogSuggestionTrustMetadata({
+                buildGardenCatalogTrustMetadata(locale, {
                   status: "seeded",
                   source: candidate.promotionPreview.source,
                   catalogKind: candidate.promotionPreview.catalogKind,
                 }).sourceLabel
               }
             </Badge>
-            <Badge>aliases {candidate.promotionPreview.aliases.length}</Badge>
+            <Badge>
+              {copy.common.aliases} {candidate.promotionPreview.aliases.length}
+            </Badge>
           </div>
           {candidate.promotionPreview.aliases.length > 0 ? (
             <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
@@ -360,7 +409,7 @@ function CatalogSourceCandidateCard({
                   className="rounded border border-border px-1.5 py-0.5"
                 >
                   {alias.displayName} · {alias.locale}
-                  {alias.isPrimary ? " · primary" : ""}
+                  {alias.isPrimary ? ` · ${copy.common.primary}` : ""}
                 </span>
               ))}
             </div>
@@ -368,7 +417,7 @@ function CatalogSourceCandidateCard({
         </div>
       ) : candidate.actions.blockedReason ? (
         <p className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
-          {candidate.actions.blockedReason}
+          {copy.sourceReview.promotionBlocked}
         </p>
       ) : null}
 
@@ -380,14 +429,15 @@ function CatalogSourceCandidateCard({
             </span>
             <Badge>
               {
-                catalogSuggestionTrustMetadata({
+                buildGardenCatalogTrustMetadata(locale, {
                   status: candidate.projectedCatalog.status,
                   catalogKind: candidate.projectedCatalog.catalogKind,
                 }).trustLabel
               }
             </Badge>
             <Badge>
-              typeahead names {candidate.projectedCatalog.typeaheadNameCount}
+              {copy.common.typeaheadNames}{" "}
+              {candidate.projectedCatalog.typeaheadNameCount}
             </Badge>
           </div>
         </div>
@@ -402,12 +452,4 @@ function Badge({ children }: { children: ReactNode }) {
       {children}
     </span>
   );
-}
-
-function formatDate(value: Date | string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-  }).format(date);
 }

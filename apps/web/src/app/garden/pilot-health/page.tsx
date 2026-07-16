@@ -2,6 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { OperatorPilotCopy } from "@/lib/operator-pilot-copy";
+import { getOperatorPilotCopy } from "@/lib/operator-pilot-copy";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorDate,
+  formatOperatorTemplate,
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolvePilotHealthOperatorAccess } from "@/server/pilot-health-access";
 import {
@@ -9,20 +20,26 @@ import {
   type PilotHealthMetrics,
 } from "@/server/pilot-health-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Pilot health | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorPilotCopy(await getRequestInterfaceLocale()).health;
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PilotHealthPage() {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorPilotCopy(locale);
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const access = await resolvePilotHealthOperatorAccess(scope);
@@ -30,8 +47,8 @@ export default async function PilotHealthPage() {
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotHealthHeader />
-        <GardenAuthPanel />
+        <PilotHealthHeader operatorCopy={operatorCopy} copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -39,9 +56,9 @@ export default async function PilotHealthPage() {
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotHealthHeader />
+        <PilotHealthHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {operatorCopy.common.accessDenied}
         </p>
       </main>
     );
@@ -51,29 +68,30 @@ export default async function PilotHealthPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <PilotHealthHeader />
+      <PilotHealthHeader operatorCopy={operatorCopy} copy={copy} />
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="rounded-md border border-border px-2 py-1">
-          Gate: {access.mode}
+          {operatorCopy.common.gate}:{" "}
+          {operatorAccessModeLabel(locale, access.mode)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Role: {access.role}
+          {operatorCopy.common.role}: {operatorRoleLabel(locale, access.role)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Status: provisional pilot signals
+          {operatorCopy.common.status}: {copy.health.provisionalStatus}
         </span>
         {readout ? (
           <span className="rounded-md border border-border px-2 py-1">
-            Generated: {formatDateTime(readout.generatedAt)}
+            {operatorCopy.common.generated}:{" "}
+            {formatOperatorDate(locale, readout.generatedAt)}
           </span>
         ) : null}
       </div>
 
       {!readout ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          Pilot health readout is temporarily unavailable. User-facing journal
-          save flows do not depend on this operator read.
+          {copy.health.unavailable}
         </p>
       ) : (
         <>
@@ -81,9 +99,11 @@ export default async function PilotHealthPage() {
             {readout.windows.map((window) => (
               <WindowPanel
                 key={window.key}
-                title={window.label}
+                title={copy.health.windows[window.key]}
                 since={window.since}
                 metrics={window.metrics}
+                locale={locale}
+                copy={copy}
               />
             ))}
           </section>
@@ -91,82 +111,76 @@ export default async function PilotHealthPage() {
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Closed-pilot write access
+                {copy.health.writeAccessTitle}
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Distinguishes real closed-pilot writers from founder rehearsal
-                runs and non-invited visitors who may still read public pages.
-                Counts durable grant rows only; no invite links, tokens, or
-                recipient identity.
+                {copy.health.writeAccessDescription}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <MetricTile
-                label="Closed-pilot writers"
+                label={copy.metrics.closedPilotWriters}
                 value={readout.writeAccess.writeEligibleGardeners}
               />
               <MetricTile
-                label="Founder rehearsal"
+                label={copy.metrics.founderRehearsal}
                 value={readout.writeAccess.founderRehearsalGardeners}
               />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Founder rehearsal grants can exercise the full product path
-              internally, but they are excluded from OVE-53 closed-pilot H1
-              decision metrics.
+              {copy.health.rehearsalNote}
             </p>
           </section>
 
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Public variety indexability
+                {copy.health.publicVarietyTitle}
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                H6 trajectory only. This separates promoted/thin public variety
-                pages from actual organic acquisition and signup conversion.
+                {copy.health.publicVarietyDescription}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
               <MetricTile
-                label="Promoted/indexable"
+                label={copy.metrics.promotedIndexable}
                 value={readout.publicVarietyIndexability.promotedIndexableCount}
               />
               <MetricTile
-                label="Thin/noindex"
+                label={copy.metrics.thinNoindex}
                 value={readout.publicVarietyIndexability.thinNoindexCount}
               />
               <MetricTile
-                label="De-promoted by archive/410"
+                label={copy.metrics.demoted410}
                 value={
                   readout.publicVarietyIndexability.demotedByArchiveOrGoneCount
                 }
               />
               <MetricTile
-                label="Current public varieties"
+                label={copy.metrics.currentPublicVarieties}
                 value={
                   readout.publicVarietyIndexability.currentPublicVarietyCount
                 }
               />
             </div>
             <p className="text-xs leading-5 text-muted-foreground">
-              Current provisional threshold:{" "}
-              {readout.publicVarietyIndexability.threshold.minPublicEntryCount}{" "}
-              active public entries and{" "}
-              {
-                readout.publicVarietyIndexability.threshold
-                  .minAggregateBodyLength
-              }{" "}
-              aggregate body characters.
+              {formatOperatorTemplate(copy.health.threshold, {
+                entries:
+                  readout.publicVarietyIndexability.threshold
+                    .minPublicEntryCount,
+                characters:
+                  readout.publicVarietyIndexability.threshold
+                    .minAggregateBodyLength,
+              })}
             </p>
           </section>
 
           <section className="grid gap-3 rounded-lg border border-border p-4">
             <h2 className="text-lg font-semibold text-foreground">
-              Interpretation guardrails
+              {copy.health.guardrailsTitle}
             </h2>
             <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
-              {readout.notes.map((note) => (
+              {copy.health.notes.map((note) => (
                 <li key={note}>{note}</li>
               ))}
             </ul>
@@ -176,7 +190,9 @@ export default async function PilotHealthPage() {
                   key={reference.path}
                   className="rounded-md border border-border px-2 py-1"
                 >
-                  {reference.label}
+                  {copy.health.references[
+                    reference.path as keyof typeof copy.health.references
+                  ] ?? reference.path}
                 </span>
               ))}
             </div>
@@ -187,7 +203,13 @@ export default async function PilotHealthPage() {
   );
 }
 
-function PilotHealthHeader() {
+function PilotHealthHeader({
+  operatorCopy,
+  copy,
+}: {
+  operatorCopy: OperatorCopy;
+  copy: OperatorPilotCopy;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -197,7 +219,7 @@ function PilotHealthHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {operatorCopy.common.backToJournal}
       </Link>
       <Link
         href="/garden/pilot-smoke"
@@ -206,7 +228,7 @@ function PilotHealthHeader() {
           className: "self-start",
         })}
       >
-        Pilot smoke
+        {operatorCopy.common.pilotSmoke}
       </Link>
       <Link
         href="/garden/pilot-learning/interviews"
@@ -215,7 +237,7 @@ function PilotHealthHeader() {
           className: "self-start",
         })}
       >
-        Founder interviews
+        {operatorCopy.common.founderInterviews}
       </Link>
       <Link
         href="/garden/pilot-learning/decision"
@@ -224,17 +246,14 @@ function PilotHealthHeader() {
           className: "self-start",
         })}
       >
-        Cohort decision
+        {operatorCopy.common.cohortDecision}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Pilot health
+          {copy.health.title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Operator readout for H1 journal activation, H4 publication behavior,
-          and H6 public-variety thinness trajectory. It uses aggregate counts
-          and rates only, without journal text, precise location, media keys,
-          request metadata, raw URLs, referrers, IP addresses, or user agents.
+          {copy.health.description}
         </p>
       </div>
     </header>
@@ -245,140 +264,161 @@ function WindowPanel({
   title,
   since,
   metrics,
+  locale,
+  copy,
 }: {
   title: string;
   since: Date;
   metrics: PilotHealthMetrics;
+  locale: InterfaceLocale;
+  copy: OperatorPilotCopy;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="grid gap-1">
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-xs text-muted-foreground">
-          Since {formatDate(since)}
+          {formatOperatorTemplate(copy.health.since, {
+            date: formatOperatorDate(locale, since, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+          })}
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricTile
-          label="First-entry activations"
+          label={copy.metrics.firstEntryActivations}
           value={metrics.firstEntryActivations}
         />
-        <MetricTile label="Total entries" value={metrics.totalEntries} />
-        <MetricTile label="Active gardeners" value={metrics.activeGardeners} />
         <MetricTile
-          label="Same-object follow-ups"
+          label={copy.metrics.totalEntries}
+          value={metrics.totalEntries}
+        />
+        <MetricTile
+          label={copy.metrics.activeGardeners}
+          value={metrics.activeGardeners}
+        />
+        <MetricTile
+          label={copy.metrics.sameObjectFollowUps}
           value={metrics.sameObjectFollowUpEntries}
         />
         <MetricTile
-          label="Revisit -> follow-up"
+          label={copy.metrics.revisitFollowUp}
           value={metrics.sameSessionRevisitFollowUps}
         />
         <MetricTile
-          label="Photo usage"
+          label={copy.metrics.photoUsage}
           value={formatPercent(metrics.photoUsageRate)}
         />
-        <MetricTile label="Offline queued" value={metrics.offlineQueued} />
-        <MetricTile label="Offline synced" value={metrics.offlineSynced} />
-        <MetricTile label="Offline failed" value="not server-observable" />
         <MetricTile
-          label="Published entries"
+          label={copy.metrics.offlineQueued}
+          value={metrics.offlineQueued}
+        />
+        <MetricTile
+          label={copy.metrics.offlineSynced}
+          value={metrics.offlineSynced}
+        />
+        <MetricTile
+          label={copy.metrics.offlineFailed}
+          value={getOperatorCopy(locale).common.notServerObservable}
+        />
+        <MetricTile
+          label={copy.metrics.publishedEntries}
           value={metrics.publishedEntries}
         />
         <MetricTile
-          label="Publish rate"
+          label={copy.metrics.publishRate}
           value={formatPercent(metrics.publishRate)}
         />
         <MetricTile
-          label="Archive/410 count"
+          label={copy.metrics.archive410}
           value={metrics.publicGoneEntries}
         />
       </div>
 
       <div className="grid gap-3 border-t border-border pt-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Acquisition intent
+          {copy.health.acquisitionTitle}
         </h3>
         <div className="grid gap-3 sm:grid-cols-3">
           <MetricTile
-            label="Homepage starts -> saves"
+            label={copy.metrics.homepageStartsSaves}
             value={`${metrics.activationStarts.homepage} -> ${metrics.entrySavesByActivationSource.homepage}`}
           />
           <MetricTile
-            label="Public-variety starts -> saves"
+            label={copy.metrics.publicVarietyStartsSaves}
             value={`${metrics.activationStarts.publicVariety} -> ${metrics.entrySavesByActivationSource.publicVariety}`}
           />
           <MetricTile
-            label="Direct garden starts -> saves"
+            label={copy.metrics.directGardenStartsSaves}
             value={`${metrics.activationStarts.directGarden} -> ${metrics.entrySavesByActivationSource.directGarden}`}
           />
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
-          Public-variety save rate:{" "}
-          {formatPercent(metrics.publicVarietySaveRate)}. Starts are server-side
-          `/garden` intent events, not raw URLs or referrers.
+          {formatOperatorTemplate(copy.health.publicVarietyRate, {
+            rate: formatPercent(metrics.publicVarietySaveRate),
+          })}
         </p>
       </div>
 
       <div className="grid gap-3 border-t border-border pt-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Invited cohort loop
+          {copy.health.invitedLoopTitle}
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <MetricTile
-            label="Invite starts -> first saves"
+            label={copy.metrics.inviteStartsSaves}
             value={`${metrics.invitedCohort.starts} -> ${metrics.invitedCohort.firstEntrySaves}`}
           />
           <MetricTile
-            label="First-save rate"
+            label={copy.metrics.firstSaveRate}
             value={formatPercent(metrics.invitedCohort.firstEntrySaveRate)}
           />
           <MetricTile
-            label="Same-object follow-ups"
+            label={copy.metrics.sameObjectFollowUps}
             value={metrics.invitedCohort.sameObjectFollowUpEntries}
           />
           <MetricTile
-            label="Returning gardeners"
+            label={copy.metrics.returningGardeners}
             value={metrics.invitedCohort.returningGardeners}
           />
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
-          Closed-pilot H1 loop: an invited gardener saves a first entry and
-          returns for a same-object follow-up. Membership requires a
-          `closed_pilot` grant plus the enum-only `invited_cohort` source, never
-          invite links, names, or emails.
+          {copy.health.invitedLoopDescription}
         </p>
       </div>
 
       <div className="grid gap-3 border-t border-border pt-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Follow-up value pulse
+          {copy.health.valuePulseTitle}
         </h3>
         <div className="grid gap-3 sm:grid-cols-2">
           <MetricTile
-            label="Responses (submitted + skipped)"
+            label={copy.metrics.responses}
             value={metrics.followUpValuePulse.responses}
           />
           <MetricTile
-            label="Submitted -> skipped"
+            label={copy.metrics.submittedSkipped}
             value={`${metrics.followUpValuePulse.submitted} -> ${metrics.followUpValuePulse.skipped}`}
           />
           <MetricTile
-            label="Useful / not sure / not useful"
+            label={copy.metrics.usefulness}
             value={`${metrics.followUpValuePulse.useful} / ${metrics.followUpValuePulse.notSure} / ${metrics.followUpValuePulse.notUseful}`}
           />
           <MetricTile
-            label="Useful rate (of submitted)"
+            label={copy.metrics.usefulRate}
             value={formatPercent(metrics.followUpValuePulse.usefulRate)}
           />
           <MetricTile
-            label="With optional reason"
+            label={copy.metrics.withReason}
             value={metrics.followUpValuePulse.withReason}
           />
         </div>
         <p className="text-xs leading-5 text-muted-foreground">
-          Private bounded feedback after a same-object follow-up save. Counts
-          are enum-only aggregates; no journal text or identity fields.
+          {copy.health.valuePulseDescription}
         </p>
       </div>
     </section>
@@ -404,24 +444,4 @@ function MetricTile({
 
 function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

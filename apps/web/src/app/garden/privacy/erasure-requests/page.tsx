@@ -5,8 +5,21 @@ import { buttonVariants } from "@/components/ui/button";
 import {
   ERASURE_REQUEST_HANDLED_STATUS_OPTIONS,
   formatErasureRequestReference,
-  getErasureRequestStatusCopy,
 } from "@/lib/privacy/disclosures";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { OperatorErasureCopy } from "@/lib/operator-erasure-copy";
+import {
+  getOperatorErasureCopy,
+  operatorErasureCountLabel,
+} from "@/lib/operator-erasure-copy";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  formatOperatorDate,
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
+import { getLocalizedErasureStatusCopy } from "@/lib/trust-surface-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getErasureDryRunPreviewForRequest } from "@/server/erasure-dry-run-repository";
 import { expectedErasureMaintainerApprovalText } from "@/server/erasure-execution";
@@ -17,6 +30,7 @@ import {
   type ErasureRequestReadModel,
 } from "@/server/erasure-request-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 import {
   executeApprovedErasureRequestAction,
@@ -27,16 +41,21 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Erasure requests | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorErasureCopy(await getRequestInterfaceLocale());
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function ErasureRequestsOperatorPage() {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorErasureCopy(locale);
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const access = await resolveErasureRequestOperatorAccess(scope);
@@ -44,8 +63,8 @@ export default async function ErasureRequestsOperatorPage() {
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <OperatorHeader />
-        <GardenAuthPanel />
+        <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -53,9 +72,9 @@ export default async function ErasureRequestsOperatorPage() {
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <OperatorHeader />
+        <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {operatorCopy.common.accessDenied}
         </p>
       </main>
     );
@@ -79,24 +98,25 @@ export default async function ErasureRequestsOperatorPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <OperatorHeader />
+      <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
 
       <section className="grid gap-3">
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Requests: {requests.length}
+            {operatorCopy.common.requests}: {requests.length}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Gate: {access.mode}
+            {operatorCopy.common.gate}:{" "}
+            {operatorAccessModeLabel(locale, access.mode)}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Role: {access.role}
+            {operatorCopy.common.role}: {operatorRoleLabel(locale, access.role)}
           </span>
         </div>
 
         {requests.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-            No erasure requests have been submitted.
+            {copy.empty}
           </p>
         ) : (
           <ol className="grid gap-3">
@@ -107,6 +127,8 @@ export default async function ErasureRequestsOperatorPage() {
                 dryRunPreview={dryRunByRequestId.get(request.id) ?? null}
                 canMutate={canMutate}
                 canExecuteErasure={canExecuteErasure}
+                locale={locale}
+                copy={copy}
               />
             ))}
           </ol>
@@ -121,6 +143,8 @@ function ErasureRequestCard({
   dryRunPreview,
   canMutate,
   canExecuteErasure,
+  locale,
+  copy,
 }: {
   request: ErasureRequestReadModel;
   dryRunPreview: Awaited<
@@ -128,52 +152,52 @@ function ErasureRequestCard({
   > | null;
   canMutate: boolean;
   canExecuteErasure: boolean;
+  locale: InterfaceLocale;
+  copy: OperatorErasureCopy;
 }) {
+  const statusCopy = getLocalizedErasureStatusCopy(
+    locale,
+    request.status,
+    request.handledStatus,
+  );
   return (
     <li className="grid gap-4 rounded-lg border border-border p-4 text-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
-        <h2 className="font-semibold text-foreground">{request.status}</h2>
+        <h2 className="font-semibold text-foreground">{statusCopy.label}</h2>
         <time className="text-xs text-muted-foreground">
-          {formatDate(request.submittedAt)}
+          {formatOperatorDate(locale, request.submittedAt)}
         </time>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {
-          getErasureRequestStatusCopy(request.status, request.handledStatus)
-            .description
-        }
-      </p>
+      <p className="text-sm text-muted-foreground">{statusCopy.description}</p>
       <dl className="grid gap-2 text-muted-foreground sm:grid-cols-2">
         <div>
-          <dt className="text-xs uppercase">Request reference</dt>
+          <dt className="text-xs uppercase">{copy.requestReference}</dt>
           <dd className="font-mono text-xs">
             {formatErasureRequestReference(request.id)}
           </dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">
-            Requester user id (operator only)
-          </dt>
+          <dt className="text-xs uppercase">{copy.requesterUserId}</dt>
           <dd className="font-mono text-xs">{request.requesterUserId}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">Scope</dt>
+          <dt className="text-xs uppercase">{copy.scope}</dt>
           <dd>{request.requestScope}</dd>
         </div>
         <div>
-          <dt className="text-xs uppercase">Intake version</dt>
+          <dt className="text-xs uppercase">{copy.intakeVersion}</dt>
           <dd>{request.intakeDisclosureVersion}</dd>
         </div>
         {request.dryRunReviewedAt ? (
           <div>
-            <dt className="text-xs uppercase">Dry-run reviewed</dt>
-            <dd>{formatDate(request.dryRunReviewedAt)}</dd>
+            <dt className="text-xs uppercase">{copy.dryRunReviewed}</dt>
+            <dd>{formatOperatorDate(locale, request.dryRunReviewedAt)}</dd>
           </div>
         ) : null}
         {request.handledStatus ? (
           <div>
-            <dt className="text-xs uppercase">Handled status</dt>
-            <dd>{request.handledStatus}</dd>
+            <dt className="text-xs uppercase">{copy.handledStatus}</dt>
+            <dd>{statusCopy.handled?.label ?? request.handledStatus}</dd>
           </div>
         ) : null}
       </dl>
@@ -183,6 +207,8 @@ function ErasureRequestCard({
           preview={dryRunPreview}
           request={request}
           canMutate={canMutate}
+          locale={locale}
+          copy={copy}
         />
       ) : null}
 
@@ -196,7 +222,7 @@ function ErasureRequestCard({
               className: "self-start",
             })}
           >
-            Start review
+            {copy.startReview}
           </button>
         </form>
       ) : null}
@@ -204,13 +230,17 @@ function ErasureRequestCard({
       (request.status === "submitted" || request.status === "reviewing") ? (
         <>
           {canExecuteErasure ? (
-            <ApprovedErasureExecutionPanel request={request} />
+            <ApprovedErasureExecutionPanel request={request} copy={copy} />
           ) : (
             <p className="rounded-md border border-border p-3 text-xs text-muted-foreground">
-              Irreversible erasure execution requires owner or admin access.
+              {copy.executionRequiresOwner}
             </p>
           )}
-          <NonDestructiveOutcomeForm request={request} />
+          <NonDestructiveOutcomeForm
+            request={request}
+            locale={locale}
+            copy={copy}
+          />
         </>
       ) : null}
     </li>
@@ -219,8 +249,10 @@ function ErasureRequestCard({
 
 function ApprovedErasureExecutionPanel({
   request,
+  copy,
 }: {
   request: ErasureRequestReadModel;
+  copy: OperatorErasureCopy;
 }) {
   const approvalText = expectedErasureMaintainerApprovalText(request.id);
   const dryRunReviewed = Boolean(request.dryRunReviewedAt);
@@ -229,14 +261,10 @@ function ApprovedErasureExecutionPanel({
     <section className="grid gap-3 border-t border-border pt-3">
       <div className="grid gap-1">
         <h3 className="text-base font-semibold text-foreground">
-          Maintainer-approved irreversible erasure
+          {copy.executionTitle}
         </h3>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Execution deletes or anonymizes current-schema account, journal,
-          media, analytics, catalog-provisional, search-job, and pilot operator
-          references for this requester. It removes OverGarden-controlled R2
-          media objects when their keys are still known, but crawler, search
-          engine, or AI copies outside OverGarden are best-effort only.
+          {copy.executionDescription}
         </p>
       </div>
       <form
@@ -245,7 +273,7 @@ function ApprovedErasureExecutionPanel({
       >
         <input type="hidden" name="requestId" value={request.id} />
         <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-          Maintainer approval phrase
+          {copy.approvalPhrase}
           <input
             name="maintainerApprovalText"
             required
@@ -266,11 +294,11 @@ function ApprovedErasureExecutionPanel({
               "self-start disabled:pointer-events-none disabled:opacity-60",
           })}
         >
-          Execute approved erasure
+          {copy.execute}
         </button>
         {!dryRunReviewed ? (
           <p className="text-xs text-muted-foreground">
-            Record the dry-run review before irreversible execution.
+            {copy.reviewBeforeExecution}
           </p>
         ) : null}
       </form>
@@ -280,8 +308,12 @@ function ApprovedErasureExecutionPanel({
 
 function NonDestructiveOutcomeForm({
   request,
+  locale,
+  copy,
 }: {
   request: ErasureRequestReadModel;
+  locale: InterfaceLocale;
+  copy: OperatorErasureCopy;
 }) {
   const nonDestructiveOutcomes = ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.filter(
     (option) => option.value !== "completed",
@@ -294,7 +326,7 @@ function NonDestructiveOutcomeForm({
     >
       <input type="hidden" name="requestId" value={request.id} />
       <label className="grid gap-1 text-xs font-medium text-muted-foreground uppercase">
-        Operator outcome
+        {copy.operatorOutcome}
         <select
           name="handledStatus"
           required
@@ -302,7 +334,8 @@ function NonDestructiveOutcomeForm({
         >
           {nonDestructiveOutcomes.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {getLocalizedErasureStatusCopy(locale, "handled", option.value)
+                .handled?.label ?? option.value}
             </option>
           ))}
         </select>
@@ -311,7 +344,7 @@ function NonDestructiveOutcomeForm({
         type="submit"
         className={buttonVariants({ className: "self-start" })}
       >
-        Mark handled
+        {copy.markHandled}
       </button>
     </form>
   );
@@ -321,24 +354,27 @@ function DryRunPreviewPanel({
   preview,
   request,
   canMutate,
+  locale,
+  copy,
 }: {
   preview: Awaited<ReturnType<typeof getErasureDryRunPreviewForRequest>>;
   request: ErasureRequestReadModel;
   canMutate: boolean;
+  locale: InterfaceLocale;
+  copy: OperatorErasureCopy;
 }) {
   return (
     <section className="grid gap-4 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
       <div className="grid gap-1">
         <h3 className="text-base font-semibold text-foreground">
-          Non-destructive dry-run preview
+          {copy.previewTitle}
         </h3>
         <p className="text-sm leading-6 text-muted-foreground">
-          Affected data classes and counts only. This preview does not delete,
-          anonymize, or expose raw journal text, media keys, emails, tokens, IP
-          addresses, user agents, referrers, or precise location.
+          {copy.previewDescription}
         </p>
         <p className="text-xs text-muted-foreground">
-          Generated {formatDate(preview.generatedAt)}
+          {getOperatorCopy(locale).common.generated}{" "}
+          {formatOperatorDate(locale, preview.generatedAt)}
         </p>
       </div>
 
@@ -350,10 +386,10 @@ function DryRunPreviewPanel({
           >
             <div className="grid gap-1">
               <h4 className="text-sm font-semibold text-foreground">
-                {dataClass.label}
+                {copy.dataClasses[dataClass.key].label}
               </h4>
               <p className="text-xs leading-5 text-muted-foreground">
-                {dataClass.description}
+                {copy.dataClasses[dataClass.key].description}
               </p>
             </div>
             <dl className="grid gap-2 sm:grid-cols-2">
@@ -363,7 +399,7 @@ function DryRunPreviewPanel({
                   className="flex items-center justify-between rounded-md border border-border px-3 py-2"
                 >
                   <dt className="text-xs text-muted-foreground uppercase">
-                    {key.replaceAll("_", " ")}
+                    {operatorErasureCountLabel(locale, key)}
                   </dt>
                   <dd className="font-semibold text-foreground tabular-nums">
                     {count}
@@ -376,7 +412,7 @@ function DryRunPreviewPanel({
       </div>
 
       <ul className="grid gap-2 text-xs leading-5 text-muted-foreground">
-        {preview.caveats.map((caveat) => (
+        {copy.caveats.map((caveat) => (
           <li key={caveat}>{caveat}</li>
         ))}
       </ul>
@@ -393,8 +429,8 @@ function DryRunPreviewPanel({
             })}
           >
             {request.dryRunReviewedAt
-              ? "Record dry-run review again"
-              : "Mark dry-run reviewed"}
+              ? copy.recordReviewAgain
+              : copy.markReviewed}
           </button>
         </form>
       ) : null}
@@ -402,7 +438,13 @@ function DryRunPreviewPanel({
   );
 }
 
-function OperatorHeader() {
+function OperatorHeader({
+  operatorCopy,
+  copy,
+}: {
+  operatorCopy: OperatorCopy;
+  copy: OperatorErasureCopy;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -412,31 +454,16 @@ function OperatorHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {operatorCopy.common.backToJournal}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Erasure requests
+          {copy.title}
         </h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Operator readback for non-destructive pilot erasure intake. Each
-          request includes a repeatable dry-run preview of affected data classes
-          before any maintainer-approved destructive workflow. This list
-          intentionally excludes journal text, media keys, precise location,
-          request headers, referrers, IP addresses, and user agents.
+          {copy.description}
         </p>
       </div>
     </header>
   );
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

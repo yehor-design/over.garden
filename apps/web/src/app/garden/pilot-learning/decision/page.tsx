@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { OperatorPilotCopy } from "@/lib/operator-pilot-copy";
 import {
-  getPilotInterviewActivationResultLabel,
-  getPilotInterviewNextActionLabel,
-  getPilotInterviewObservedValueLabel,
-  getPilotInterviewSegmentLabel,
-} from "@/lib/pilot/interview-learning";
+  getOperatorPilotCopy,
+  operatorDecisionSignalLabel,
+  operatorPilotLabel,
+} from "@/lib/operator-pilot-copy";
+import type { OperatorCopy } from "@/lib/operator-copy";
 import {
-  getPilotSegmentCoreBucketLabel,
-  getPilotSegmentDiagnosticBucketLabel,
-} from "@/lib/pilot/segments";
+  formatOperatorDate,
+  formatOperatorTemplate,
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolvePilotHealthOperatorAccess } from "@/server/pilot-health-access";
 import {
@@ -19,20 +24,26 @@ import {
   type PilotCohortDecisionReadout,
 } from "@/server/pilot-cohort-decision-repository";
 import { scopedToUser } from "@/server/request-scope";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../../garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Pilot cohort decision | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorPilotCopy(await getRequestInterfaceLocale()).decision;
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PilotCohortDecisionPage() {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const operatorCopy = getOperatorCopy(locale);
+  const copy = getOperatorPilotCopy(locale);
   const userId = session?.user?.id;
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const access = await resolvePilotHealthOperatorAccess(scope);
@@ -40,8 +51,8 @@ export default async function PilotCohortDecisionPage() {
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotCohortDecisionHeader />
-        <GardenAuthPanel />
+        <PilotCohortDecisionHeader operatorCopy={operatorCopy} copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -49,9 +60,9 @@ export default async function PilotCohortDecisionPage() {
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <PilotCohortDecisionHeader />
+        <PilotCohortDecisionHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {operatorCopy.common.accessDenied}
         </p>
       </main>
     );
@@ -61,42 +72,43 @@ export default async function PilotCohortDecisionPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <PilotCohortDecisionHeader />
+      <PilotCohortDecisionHeader operatorCopy={operatorCopy} copy={copy} />
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         <span className="rounded-md border border-border px-2 py-1">
-          Gate: {access.mode}
+          {operatorCopy.common.gate}:{" "}
+          {operatorAccessModeLabel(locale, access.mode)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Role: {access.role}
+          {operatorCopy.common.role}: {operatorRoleLabel(locale, access.role)}
         </span>
         <span className="rounded-md border border-border px-2 py-1">
-          Status: provisional decision support
+          {operatorCopy.common.status}: {copy.decision.provisionalStatus}
         </span>
         {readout ? (
           <span className="rounded-md border border-border px-2 py-1">
-            Generated: {formatDateTime(readout.generatedAt)}
+            {operatorCopy.common.generated}:{" "}
+            {formatOperatorDate(locale, readout.generatedAt)}
           </span>
         ) : null}
       </div>
 
       {!readout ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          Pilot cohort decision readout is temporarily unavailable. User-facing
-          journal save flows do not depend on this operator read.
+          {copy.decision.unavailable}
         </p>
       ) : (
         <>
-          <DecisionPanel readout={readout} />
+          <DecisionPanel readout={readout} locale={locale} copy={copy} />
 
           {readout.decision.dataGaps.length > 0 ? (
             <section className="grid gap-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
               <h2 className="text-lg font-semibold text-foreground">
-                Data gaps
+                {copy.decision.dataGaps}
               </h2>
               <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
                 {readout.decision.dataGaps.map((gap) => (
-                  <li key={gap}>{gap}</li>
+                  <li key={gap}>{copy.decision.dataGapItem}</li>
                 ))}
               </ul>
             </section>
@@ -105,84 +117,87 @@ export default async function PilotCohortDecisionPage() {
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Closed cohort behavior
+                {copy.decision.behaviorTitle}
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Evaluation window: {readout.evaluationWindow.label} (since{" "}
-                {formatDate(readout.evaluationWindow.since)}). Denominator is
-                closed-pilot gardeners with a durable `closed_pilot` grant who
-                started through the enum-only `invited_cohort` source.
+                {formatOperatorTemplate(copy.decision.evaluationWindow, {
+                  window: copy.health.windows[readout.evaluationWindow.key],
+                  date: formatOperatorDate(
+                    locale,
+                    readout.evaluationWindow.since,
+                    { year: "numeric", month: "short", day: "numeric" },
+                  ),
+                })}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <MetricTile
-                label="Closed-pilot writers"
+                label={copy.metrics.closedPilotWriters}
                 value={readout.cohort.writeEligibleGardeners}
               />
               <MetricTile
-                label="Founder rehearsal"
+                label={copy.metrics.founderRehearsal}
                 value={readout.cohort.founderRehearsalGardeners}
               />
               <MetricTile
-                label="Invite starts -> first saves"
+                label={copy.metrics.inviteStartsSaves}
                 value={`${readout.cohort.inviteStarts} -> ${readout.cohort.firstEntrySaves}`}
               />
               <MetricTile
-                label="First-save rate"
+                label={copy.metrics.firstSaveRate}
                 value={formatPercent(readout.cohort.firstEntrySaveRate)}
               />
               <MetricTile
-                label="Same-object follow-ups"
+                label={copy.metrics.sameObjectFollowUps}
                 value={readout.cohort.sameObjectFollowUps}
               />
               <MetricTile
-                label="Returning gardeners"
+                label={copy.metrics.returningGardeners}
                 value={readout.cohort.returningGardeners}
               />
               <MetricTile
-                label="Return rate / first savers"
+                label={copy.metrics.returnRate}
                 value={formatPercent(
                   readout.cohort.followUpRateAmongFirstSavers,
                 )}
               />
             </div>
-            <SegmentCohortPanel readout={readout} />
+            <SegmentCohortPanel readout={readout} locale={locale} copy={copy} />
           </section>
 
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Product usage signals
+                {copy.decision.productSignalsTitle}
               </h2>
               <p className="text-sm leading-6 text-muted-foreground">
-                Supporting context for iteration decisions. Publish intent and
-                offline reliability are secondary to the H1 return loop.
+                {copy.decision.productSignalsDescription}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <MetricTile
-                label="Photo usage"
+                label={copy.metrics.photoUsage}
                 value={formatPercent(readout.productSignals.photoUsageRate)}
               />
               <MetricTile
-                label="Published entries"
+                label={copy.metrics.publishedEntries}
                 value={readout.productSignals.publishedEntries}
               />
               <MetricTile
-                label="Publish rate"
+                label={copy.metrics.publishRate}
                 value={formatPercent(readout.productSignals.publishRate)}
               />
               <MetricTile
-                label="Offline queued"
+                label={copy.metrics.offlineQueued}
                 value={readout.productSignals.offlineQueued}
               />
               <MetricTile
-                label="Offline synced"
+                label={copy.metrics.offlineSynced}
                 value={readout.productSignals.offlineSynced}
               />
               <MetricTile
-                label="Offline failed"
-                value="not server-observable"
+                label={copy.metrics.offlineFailed}
+                value={operatorCopy.common.notServerObservable}
               />
             </div>
           </section>
@@ -190,52 +205,44 @@ export default async function PilotCohortDecisionPage() {
           <section className="grid gap-4 rounded-lg border border-border p-4">
             <div className="grid gap-1">
               <h2 className="text-lg font-semibold text-foreground">
-                Follow-up value pulse
+                {copy.decision.valuePulseTitle}
               </h2>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <MetricTile
-                label="Responses (submitted + skipped)"
+                label={copy.metrics.responses}
                 value={readout.valuePulse.responses}
               />
               <MetricTile
-                label="Submitted -> skipped"
+                label={copy.metrics.submittedSkipped}
                 value={`${readout.valuePulse.submitted} -> ${readout.valuePulse.skipped}`}
               />
               <MetricTile
-                label="Useful / not sure / not useful"
+                label={copy.metrics.usefulness}
                 value={`${readout.valuePulse.useful} / ${readout.valuePulse.notSure} / ${readout.valuePulse.notUseful}`}
               />
               <MetricTile
-                label="Useful rate (of submitted)"
+                label={copy.metrics.usefulRate}
                 value={formatPercent(readout.valuePulse.usefulRate)}
               />
             </div>
           </section>
 
-          <InterviewCategoryPanel readout={readout} />
+          <InterviewCategoryPanel
+            readout={readout}
+            locale={locale}
+            copy={copy}
+          />
 
           <section className="grid gap-3 rounded-lg border border-border p-4">
             <h2 className="text-lg font-semibold text-foreground">
-              How to interpret continue / iterate / stop
+              {copy.decision.interpretationTitle}
             </h2>
             <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
-              <li>
-                Continue: invited first-save rate stays at or above roughly
-                two-thirds and returning gardeners reach roughly 30% of first
-                savers — the closed-pilot H1 loop looks real enough to widen
-                invites.
-              </li>
-              <li>
-                Iterate: first entries happen, but same-object return stays low.
-                Improve the return prompt and follow-up path before inviting
-                more people.
-              </li>
-              <li>
-                Stop / re-segment: invited gardeners rarely save a first entry.
-                Pause recruiting and revisit ICP/JTBD rather than scaling.
-              </li>
-              {readout.caveats.map((note) => (
+              {copy.decision.interpretation.map((note) => (
+                <li key={note}>{note}</li>
+              ))}
+              {copy.decision.caveats.map((note) => (
                 <li key={note}>{note}</li>
               ))}
             </ul>
@@ -245,7 +252,9 @@ export default async function PilotCohortDecisionPage() {
                   key={reference.path}
                   className="rounded-md border border-border px-2 py-1"
                 >
-                  {reference.label}
+                  {copy.health.references[
+                    reference.path as keyof typeof copy.health.references
+                  ] ?? reference.path}
                 </span>
               ))}
             </div>
@@ -256,7 +265,15 @@ export default async function PilotCohortDecisionPage() {
   );
 }
 
-function DecisionPanel({ readout }: { readout: PilotCohortDecisionReadout }) {
+function DecisionPanel({
+  readout,
+  locale,
+  copy,
+}: {
+  readout: PilotCohortDecisionReadout;
+  locale: InterfaceLocale;
+  copy: OperatorPilotCopy;
+}) {
   const { decision } = readout;
 
   return (
@@ -264,37 +281,40 @@ function DecisionPanel({ readout }: { readout: PilotCohortDecisionReadout }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="grid gap-2">
           <h2 className="text-lg font-semibold text-foreground">
-            Provisional recommendation
+            {copy.decision.recommendationTitle}
           </h2>
           <p className="text-sm leading-6 text-muted-foreground">
-            Combines invited-cohort behavior, value pulse, and structured
-            interview categories. This does not auto-decide product strategy.
+            {copy.decision.recommendationDescription}
           </p>
         </div>
-        <RecommendationBadge recommendation={decision.recommendation} />
+        <RecommendationBadge
+          recommendation={decision.recommendation}
+          copy={copy}
+        />
       </div>
 
       <div className="grid gap-2 rounded-lg border border-border p-4">
         <p className="text-xl font-semibold text-foreground">
-          {decision.headline}
+          {copy.decision.headlines[decision.recommendation]}
         </p>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Behavioral signal: {decision.behavioralSignal}
+            {copy.decision.behavioralSignal}:{" "}
+            {operatorDecisionSignalLabel(locale, decision.behavioralSignal)}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Interview signal: {decision.qualitativeSignal}
+            {copy.decision.interviewSignal}:{" "}
+            {operatorDecisionSignalLabel(locale, decision.qualitativeSignal)}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Segment signal: {decision.segmentSignal}
+            {copy.decision.segmentSignal}:{" "}
+            {operatorDecisionSignalLabel(locale, decision.segmentSignal)}
           </span>
         </div>
       </div>
 
       <ul className="grid gap-2 text-sm leading-6 text-muted-foreground">
-        {decision.rationale.map((line) => (
-          <li key={line}>{line}</li>
-        ))}
+        <li>{copy.decision.rationale[decision.recommendation]}</li>
       </ul>
     </section>
   );
@@ -302,8 +322,12 @@ function DecisionPanel({ readout }: { readout: PilotCohortDecisionReadout }) {
 
 function InterviewCategoryPanel({
   readout,
+  locale,
+  copy,
 }: {
   readout: PilotCohortDecisionReadout;
+  locale: InterfaceLocale;
+  copy: OperatorPilotCopy;
 }) {
   const { interviews } = readout;
 
@@ -311,41 +335,51 @@ function InterviewCategoryPanel({
     <section className="grid gap-4 rounded-lg border border-border p-4">
       <div className="grid gap-1">
         <h2 className="text-lg font-semibold text-foreground">
-          Structured interview categories
+          {copy.decision.structuredTitle}
         </h2>
         <p className="text-sm leading-6 text-muted-foreground">
-          Aggregate enum counts only. Redacted notes, subject identifiers, and
-          journal text never appear here.
+          {copy.decision.structuredDescription}
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <MetricTile label="Interview records" value={interviews.totalRecords} />
         <MetricTile
-          label="Continue / iterate / stop signals"
+          label={copy.metrics.interviewRecords}
+          value={interviews.totalRecords}
+        />
+        <MetricTile
+          label={copy.metrics.decisionSignals}
           value={`${interviews.continueSignals} / ${interviews.iterateSignals} / ${interviews.stopSignals}`}
         />
       </div>
 
       <CategoryGrid
-        title="Segments"
+        title={copy.decision.segments}
         counts={interviews.bySegment}
-        labelFor={(value) => getPilotInterviewSegmentLabel(value)}
+        labelFor={(value) => operatorPilotLabel(locale, "segments", value)}
+        emptyLabel={copy.decision.noRecords}
       />
       <CategoryGrid
-        title="Activation results"
+        title={copy.decision.activationResults}
         counts={interviews.byActivationResult}
-        labelFor={(value) => getPilotInterviewActivationResultLabel(value)}
+        labelFor={(value) =>
+          operatorPilotLabel(locale, "activationResults", value)
+        }
+        emptyLabel={copy.decision.noRecords}
       />
       <CategoryGrid
-        title="Observed value"
+        title={copy.decision.observedValue}
         counts={interviews.byObservedValue}
-        labelFor={(value) => getPilotInterviewObservedValueLabel(value)}
+        labelFor={(value) =>
+          operatorPilotLabel(locale, "observedValues", value)
+        }
+        emptyLabel={copy.decision.noRecords}
       />
       <CategoryGrid
-        title="Next action"
+        title={copy.decision.nextAction}
         counts={interviews.byNextAction}
-        labelFor={(value) => getPilotInterviewNextActionLabel(value)}
+        labelFor={(value) => operatorPilotLabel(locale, "nextActions", value)}
+        emptyLabel={copy.decision.noRecords}
       />
     </section>
   );
@@ -353,8 +387,12 @@ function InterviewCategoryPanel({
 
 function SegmentCohortPanel({
   readout,
+  locale,
+  copy,
 }: {
   readout: PilotCohortDecisionReadout;
+  locale: InterfaceLocale;
+  copy: OperatorPilotCopy;
 }) {
   const segments = [...readout.cohort.segments].sort((left, right) =>
     left.segment.localeCompare(right.segment),
@@ -364,18 +402,16 @@ function SegmentCohortPanel({
     <div className="grid gap-3 border-t border-border pt-4">
       <div className="grid gap-1">
         <h3 className="text-sm font-semibold text-foreground">
-          Segment H1 slices
+          {copy.decision.segmentSlicesTitle}
         </h3>
         <p className="text-sm leading-6 text-muted-foreground">
-          Reads the real closed-pilot loop by bounded segment. Founder rehearsal
-          runs are excluded; unknown and low-sample buckets are decision gaps,
-          not neutral rows.
+          {copy.decision.segmentSlicesDescription}
         </p>
       </div>
 
       {segments.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No segment-scoped grants yet.
+          {copy.decision.noSegmentGrants}
         </p>
       ) : (
         <div className="grid gap-2">
@@ -386,37 +422,47 @@ function SegmentCohortPanel({
             >
               <div className="grid gap-1">
                 <span className="font-medium text-foreground">
-                  {segment.label}
+                  {operatorPilotLabel(locale, "segments", segment.segment)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {getPilotSegmentCoreBucketLabel(segment.coreBucket)} /{" "}
-                  {getPilotSegmentDiagnosticBucketLabel(
+                  {operatorPilotLabel(
+                    locale,
+                    "coreBuckets",
+                    segment.coreBucket,
+                  )}{" "}
+                  /{" "}
+                  {operatorPilotLabel(
+                    locale,
+                    "diagnosticBuckets",
                     segment.diagnosticBucket,
                   )}
                 </span>
                 {segment.isUnknownSegment || segment.isLowSample ? (
                   <span className="text-xs font-medium text-amber-700">
                     {segment.isUnknownSegment
-                      ? "unknown segment gap"
-                      : "low sample"}
+                      ? copy.decision.unknownSegment
+                      : copy.decision.lowSample}
                   </span>
                 ) : null}
               </div>
-              <InlineMetric label="Starts" value={segment.starts} />
               <InlineMetric
-                label="First saves"
+                label={copy.metrics.starts}
+                value={segment.starts}
+              />
+              <InlineMetric
+                label={copy.metrics.firstSaves}
                 value={segment.firstEntrySaves}
               />
               <InlineMetric
-                label="Follow-ups"
+                label={copy.metrics.followUps}
                 value={segment.sameObjectFollowUpEntries}
               />
               <InlineMetric
-                label="Returning"
+                label={copy.metrics.returning}
                 value={segment.returningGardeners}
               />
               <InlineMetric
-                label="Follow-up rate"
+                label={copy.metrics.followUpRate}
                 value={formatPercent(segment.followUpRateAmongFirstSavers)}
               />
             </div>
@@ -431,10 +477,12 @@ function CategoryGrid({
   title,
   counts,
   labelFor,
+  emptyLabel,
 }: {
   title: string;
   counts: Record<string, number>;
   labelFor: (value: string) => string;
+  emptyLabel: string;
 }) {
   const entries = Object.entries(counts).sort((left, right) =>
     left[0].localeCompare(right[0]),
@@ -444,7 +492,7 @@ function CategoryGrid({
     <div className="grid gap-3 border-t border-border pt-4">
       <h3 className="text-sm font-semibold text-foreground">{title}</h3>
       {entries.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No records yet.</p>
+        <p className="text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
         <div className="grid gap-2 sm:grid-cols-2">
           {entries.map(([value, count]) => (
@@ -466,26 +514,25 @@ function CategoryGrid({
 
 function RecommendationBadge({
   recommendation,
+  copy,
 }: {
   recommendation: PilotCohortDecisionReadout["decision"]["recommendation"];
+  copy: OperatorPilotCopy;
 }) {
-  const label =
-    recommendation === "continue"
-      ? "Continue"
-      : recommendation === "iterate"
-        ? "Iterate"
-        : recommendation === "stop"
-          ? "Stop / re-segment"
-          : "Insufficient data";
-
   return (
     <span className="rounded-full border border-border px-3 py-1 text-sm font-medium text-foreground">
-      {label}
+      {copy.decision.recommendations[recommendation]}
     </span>
   );
 }
 
-function PilotCohortDecisionHeader() {
+function PilotCohortDecisionHeader({
+  operatorCopy,
+  copy,
+}: {
+  operatorCopy: OperatorCopy;
+  copy: OperatorPilotCopy;
+}) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -495,7 +542,7 @@ function PilotCohortDecisionHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {operatorCopy.common.backToJournal}
       </Link>
       <Link
         href="/garden/pilot-health"
@@ -504,7 +551,7 @@ function PilotCohortDecisionHeader() {
           className: "self-start",
         })}
       >
-        Pilot health
+        {operatorCopy.common.pilotHealth}
       </Link>
       <Link
         href="/garden/pilot-learning/interviews"
@@ -513,19 +560,14 @@ function PilotCohortDecisionHeader() {
           className: "self-start",
         })}
       >
-        Founder interviews
+        {operatorCopy.common.founderInterviews}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Pilot cohort decision
+          {copy.decision.title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Operator decision readout for the closed pilot: aggregate
-          invited-cohort behavior, follow-up value pulse, and structured
-          interview categories in one continue / iterate / stop frame. Founder
-          rehearsal records are excluded from the decision signal. No raw
-          journal text, transcripts, emails, media keys, precise location, IP,
-          user agent, referrer, or query strings.
+          {copy.decision.description}
         </p>
       </div>
     </header>
@@ -566,24 +608,4 @@ function InlineMetric({
 
 function formatPercent(value: number) {
   return `${Math.round(value * 100)}%`;
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function formatDateTime(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }

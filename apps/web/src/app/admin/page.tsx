@@ -12,80 +12,28 @@ import {
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import type { AdminCapability, AdminRole } from "@/lib/admin/roles";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import {
+  getOperatorCopy,
+  operatorAccessModeLabel,
+  operatorCapabilityLabel,
+  operatorRoleLabel,
+} from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { resolveAdminAccess } from "@/server/admin-access";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../garden/garden-auth-panel";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Admin | OverGarden",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
-
-const ADMIN_LINKS = [
-  {
-    href: "/admin/communities",
-    label: "Community moderation",
-    detail: "Reports, participation, removals, and member safety",
-    required: "Assigned moderator only",
-    icon: ShieldAlert,
-  },
-  {
-    href: "/admin/users",
-    label: "Sealed owner",
-    detail: "Single-owner status and audit trail",
-    required: "Read-only: configured owner only",
-    icon: UsersRound,
-  },
-  {
-    href: "/garden/pilot-smoke",
-    label: "Pilot smoke",
-    detail: "Production readiness contract",
-    required: "Owner only",
-    icon: Activity,
-  },
-  {
-    href: "/garden/pilot-health",
-    label: "Pilot health",
-    detail: "Aggregate activation signals",
-    required: "Owner only",
-    icon: ClipboardCheck,
-  },
-  {
-    href: "/garden/pilot-learning/decision",
-    label: "Cohort decision",
-    detail: "Segment-level decision guard",
-    required: "Owner only",
-    icon: FileSearch,
-  },
-  {
-    href: "/garden/pilot-learning/interviews",
-    label: "Founder interviews",
-    detail: "Bounded pilot learning rows",
-    required: "Owner only",
-    icon: ShieldCheck,
-  },
-  {
-    href: "/garden/catalog/curation",
-    label: "Catalog curation",
-    detail: "Source and identity review",
-    required: "Owner only",
-    icon: DatabaseZap,
-  },
-  {
-    href: "/garden/privacy/erasure-requests",
-    label: "Erasure requests",
-    detail: "Privacy request review",
-    required: "Owner only",
-    icon: Sprout,
-  },
-] as const;
+export async function generateMetadata(): Promise<Metadata> {
+  const copy = getOperatorCopy(await getRequestInterfaceLocale()).admin;
+  return {
+    title: copy.metadataTitle,
+    robots: { index: false, follow: false },
+  };
+}
 
 type AdminSearchParams = Record<string, string | string[] | undefined>;
 
@@ -94,8 +42,12 @@ interface AdminPageProps {
 }
 
 export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
-  await (searchParams ?? Promise.resolve({}));
-  const session = await getCurrentSession();
+  const [, locale, session] = await Promise.all([
+    searchParams ?? Promise.resolve({}),
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const copy = getOperatorCopy(locale);
   const scope = session?.user?.id
     ? scopedToUser(session.user.id, getSessionId(session))
     : null;
@@ -104,8 +56,8 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   if (access.status === "sign_in_required") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <AdminHeader />
-        <GardenAuthPanel />
+        <AdminHeader copy={copy} />
+        <GardenAuthPanel locale={locale} />
       </main>
     );
   }
@@ -113,9 +65,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   if (access.status === "denied") {
     return (
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-        <AdminHeader />
+        <AdminHeader copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
-          Access denied.
+          {copy.common.accessDenied}
         </p>
       </main>
     );
@@ -123,32 +75,31 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
-      <AdminHeader />
+      <AdminHeader copy={copy} />
 
       <section className="grid gap-4 rounded-lg border border-border p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="grid gap-1">
             <h2 className="text-lg font-semibold text-foreground">
-              Control plane
+              {copy.admin.controlPlane}
             </h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              Sealed owner-only entry for internal operations. This dashboard
-              renders links and status only, without private gardener data.
+              {copy.admin.controlPlaneDescription}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              Role: {roleLabel(access.role)}
+              {copy.common.role}: {operatorRoleLabel(locale, access.role)}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Gate: {access.mode}
+              {copy.common.gate}: {operatorAccessModeLabel(locale, access.mode)}
             </span>
           </div>
         </div>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {ADMIN_LINKS.map((item) => (
+        {adminLinks(copy).map((item) => (
           <Link
             key={item.href}
             href={item.href}
@@ -171,17 +122,25 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
       </section>
 
       <section className="grid gap-3 rounded-lg border border-border p-4">
-        <h2 className="text-lg font-semibold text-foreground">Role boundary</h2>
+        <h2 className="text-lg font-semibold text-foreground">
+          {copy.admin.boundaryTitle}
+        </h2>
         <div className="grid gap-3 text-sm leading-6 text-muted-foreground sm:grid-cols-2">
-          <BoundaryItem label="Stored" value="Role grant metadata" />
           <BoundaryItem
-            label="Excluded"
-            value="Sensitive auth/request fields"
+            label={copy.admin.boundary.storedLabel}
+            value={copy.admin.boundary.storedValue}
           />
-          <BoundaryItem label="Private data" value="Not rendered here" />
           <BoundaryItem
-            label="Capabilities"
-            value={capabilityLabel(access.capabilities)}
+            label={copy.admin.boundary.excludedLabel}
+            value={copy.admin.boundary.excludedValue}
+          />
+          <BoundaryItem
+            label={copy.admin.boundary.privateLabel}
+            value={copy.admin.boundary.privateValue}
+          />
+          <BoundaryItem
+            label={copy.admin.boundary.capabilitiesLabel}
+            value={operatorCapabilityLabel(locale, access.capabilities)}
           />
         </div>
       </section>
@@ -189,7 +148,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   );
 }
 
-function AdminHeader() {
+function AdminHeader({ copy }: { copy: OperatorCopy }) {
   return (
     <header className="flex flex-col gap-4 border-b border-border pb-5">
       <Link
@@ -199,14 +158,14 @@ function AdminHeader() {
           className: "self-start",
         })}
       >
-        Back to journal
+        {copy.common.backToJournal}
       </Link>
       <div className="grid gap-2">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-          Admin
+          {copy.admin.title}
         </h1>
         <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-          Internal control plane for the OverGarden pilot.
+          {copy.admin.description}
         </p>
       </div>
     </header>
@@ -224,18 +183,39 @@ function BoundaryItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function roleLabel(role: AdminRole) {
-  return role[0]?.toUpperCase() + role.slice(1);
-}
-
-function capabilityLabel(capabilities: AdminCapability[]) {
-  const labels: Record<AdminCapability, string> = {
-    "admin:read": "admin read",
-    "admin:manage_roles": "sealed owner readback",
-    "operator:read": "operator read",
-    "operator:mutate": "operator mutation",
-    "erasure:execute": "approved erasure execution",
-  };
-
-  return capabilities.map((capability) => labels[capability]).join(", ");
+function adminLinks(copy: OperatorCopy) {
+  return [
+    {
+      href: "/admin/communities",
+      ...copy.admin.links.communities,
+      icon: ShieldAlert,
+    },
+    { href: "/admin/users", ...copy.admin.links.users, icon: UsersRound },
+    { href: "/garden/pilot-smoke", ...copy.admin.links.smoke, icon: Activity },
+    {
+      href: "/garden/pilot-health",
+      ...copy.admin.links.health,
+      icon: ClipboardCheck,
+    },
+    {
+      href: "/garden/pilot-learning/decision",
+      ...copy.admin.links.decision,
+      icon: FileSearch,
+    },
+    {
+      href: "/garden/pilot-learning/interviews",
+      ...copy.admin.links.interviews,
+      icon: ShieldCheck,
+    },
+    {
+      href: "/garden/catalog/curation",
+      ...copy.admin.links.curation,
+      icon: DatabaseZap,
+    },
+    {
+      href: "/garden/privacy/erasure-requests",
+      ...copy.admin.links.erasure,
+      icon: Sprout,
+    },
+  ] as const;
 }

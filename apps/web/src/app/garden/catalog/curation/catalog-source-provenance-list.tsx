@@ -2,26 +2,35 @@ import Link from "next/link";
 import { Database, ExternalLink } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { catalogKindLabel } from "@/lib/garden/pilot-ux-copy";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
+import { formatOperatorDate } from "@/lib/operator-copy";
 import type { CatalogSourceProvenanceCurationRow } from "@/server/catalog-source/provenance-repository";
 
 interface CatalogSourceProvenanceListProps {
+  locale: InterfaceLocale;
   provenanceRows: CatalogSourceProvenanceCurationRow[];
 }
 
 export function CatalogSourceProvenanceList({
+  locale,
   provenanceRows,
 }: CatalogSourceProvenanceListProps) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <section className="grid min-w-0 gap-4 border-b border-border pb-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          Imported source provenance
+          {copy.provenance.title}
         </h2>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Rows: {provenanceRows.length}
+            {copy.common.rows}: {provenanceRows.length}
           </span>
         </div>
       </div>
@@ -33,13 +42,13 @@ export function CatalogSourceProvenanceList({
               key={`${row.catalogItemId}:${row.sourceRecordKey}`}
               className="min-w-0"
             >
-              <CatalogSourceProvenanceCard row={row} />
+              <CatalogSourceProvenanceCard locale={locale} row={row} />
             </li>
           ))}
         </ol>
       ) : (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-          No imported source provenance.
+          {copy.provenance.noRows}
         </p>
       )}
     </section>
@@ -47,10 +56,14 @@ export function CatalogSourceProvenanceList({
 }
 
 function CatalogSourceProvenanceCard({
+  locale,
   row,
 }: {
+  locale: InterfaceLocale;
   row: CatalogSourceProvenanceCurationRow;
 }) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <article className="grid min-w-0 gap-4 rounded-lg border border-border p-4 [&>*]:min-w-0">
       <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -63,10 +76,18 @@ function CatalogSourceProvenanceCard({
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              {catalogKindLabel(row.catalogKind)}
+              {operatorCurationMapLabel(
+                copy.common.catalogKinds,
+                row.catalogKind,
+                copy.common.catalogKinds.identity,
+              )}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              {row.catalogStatus}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                row.catalogStatus,
+                copy.common.unknown,
+              )}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
               {row.catalogSource}
@@ -75,19 +96,24 @@ function CatalogSourceProvenanceCard({
               {row.sourceSlug}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              Version: {row.sourceVersion}
+              {copy.common.version}: {row.sourceVersion}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              Row: {row.sourceRecordKey}
+              {copy.provenance.row}: {row.sourceRecordKey}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              Audit links: {row.auditLinkCount}
+              {copy.provenance.auditLinks}: {row.auditLinkCount}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              Verified: {formatDate(row.verifiedAt)}
+              {copy.common.verified}:{" "}
+              {formatOperatorDate(locale, row.verifiedAt)}
             </span>
             <span className="max-w-full rounded-md border border-border px-2 py-1 break-words">
-              {row.projectionStatus}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                row.projectionStatus,
+                copy.common.unknown,
+              )}
             </span>
           </div>
         </div>
@@ -101,7 +127,7 @@ function CatalogSourceProvenanceCard({
             })}
           >
             <ExternalLink className="size-4" />
-            Public page
+            {copy.common.publicPage}
           </Link>
         ) : null}
       </div>
@@ -110,20 +136,23 @@ function CatalogSourceProvenanceCard({
         {row.projectedAliases.length > 0 ? (
           <div className="md:col-span-2">
             <dt className="text-xs text-muted-foreground">
-              Alias review states
+              {copy.provenance.aliasReviewStates}
             </dt>
             <dd className="mt-2 grid gap-2 md:grid-cols-2">
               {row.projectedAliases.map((alias) => (
                 <AliasReviewState
                   key={`${alias.sourceSlug}:${alias.locale}:${alias.displayName}:${alias.status}`}
                   alias={alias}
+                  locale={locale}
                 />
               ))}
             </dd>
           </div>
         ) : null}
         <div>
-          <dt className="text-xs text-muted-foreground">Source</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.source}
+          </dt>
           <dd className="mt-1">
             <a
               href={row.sourceUrl}
@@ -137,7 +166,9 @@ function CatalogSourceProvenanceCard({
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">License</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.license}
+          </dt>
           <dd className="mt-1 font-medium text-foreground">
             {row.licenseUrl ? (
               <a
@@ -152,27 +183,35 @@ function CatalogSourceProvenanceCard({
             ) : (
               row.license
             )}
-            {row.attributionRequired ? " · attribution required" : ""}
+            {row.attributionRequired
+              ? ` · ${copy.common.attributionRequired}`
+              : ""}
           </dd>
         </div>
         {row.attributionText ? (
           <div className="md:col-span-2">
-            <dt className="text-xs text-muted-foreground">Attribution</dt>
+            <dt className="text-xs text-muted-foreground">
+              {copy.common.attribution}
+            </dt>
             <dd className="mt-1 font-medium break-words text-foreground">
               {row.attributionText}
             </dd>
           </div>
         ) : null}
         <div>
-          <dt className="text-xs text-muted-foreground">Parser</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.parser}
+          </dt>
           <dd className="mt-1 font-medium break-words text-foreground">
             {row.parserVersion}
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-muted-foreground">Fetched</dt>
+          <dt className="text-xs text-muted-foreground">
+            {copy.common.fetched}
+          </dt>
           <dd className="mt-1 font-medium text-foreground">
-            {formatDate(row.fetchedAt)}
+            {formatOperatorDate(locale, row.fetchedAt)}
           </dd>
         </div>
       </dl>
@@ -181,10 +220,14 @@ function CatalogSourceProvenanceCard({
 }
 
 function AliasReviewState({
+  locale,
   alias,
 }: {
+  locale: InterfaceLocale;
   alias: CatalogSourceProvenanceCurationRow["projectedAliases"][number];
 }) {
+  const copy = getOperatorCurationCopy(locale);
+
   return (
     <div className="rounded-md border border-border px-3 py-2">
       <div className="flex flex-wrap items-center gap-2">
@@ -193,16 +236,20 @@ function AliasReviewState({
           {alias.locale}
         </span>
         <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-          {alias.status}
+          {operatorCurationMapLabel(
+            copy.common.statuses,
+            alias.status,
+            copy.common.unknown,
+          )}
         </span>
         {alias.projectedToTypeahead ? (
           <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-            typeahead
+            {copy.common.typeahead}
           </span>
         ) : null}
         {alias.isPrimary ? (
           <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">
-            primary
+            {copy.common.primary}
           </span>
         ) : null}
       </div>
@@ -210,10 +257,15 @@ function AliasReviewState({
         <span>{alias.aliasKind}</span>
         <span>{alias.sourceSlug}</span>
         <span>{alias.sourceMethod}</span>
-        <span>confidence {formatConfidence(alias.confidence)}</span>
+        <span>
+          {copy.common.confidence}{" "}
+          {formatConfidence(alias.confidence, copy.common.unknown)}
+        </span>
         <span>
           {alias.license}
-          {alias.attributionRequired ? " · attribution required" : ""}
+          {alias.attributionRequired
+            ? ` · ${copy.common.attributionRequired}`
+            : ""}
         </span>
         {alias.sourceRecordKey ? <span>{alias.sourceRecordKey}</span> : null}
       </div>
@@ -226,15 +278,7 @@ function AliasReviewState({
   );
 }
 
-function formatDate(value: Date | string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-  }).format(date);
-}
-
-function formatConfidence(value: number) {
-  if (!Number.isFinite(value)) return "unknown";
+function formatConfidence(value: number, fallback: string) {
+  if (!Number.isFinite(value)) return fallback;
   return value.toFixed(2);
 }

@@ -5,8 +5,14 @@ import { ExternalLink, FileText, Save, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { catalogSuggestionTrustMetadata } from "@/lib/garden/catalog-trust";
+import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
+import type { InterfaceLocale } from "@/lib/interface-localization";
+import {
+  getOperatorCurationCopy,
+  operatorCurationMapLabel,
+} from "@/lib/operator-curation-copy";
+import { formatOperatorDate } from "@/lib/operator-copy";
 
 interface VarietySeedProofCurationRow {
   id: string;
@@ -25,6 +31,7 @@ interface VarietySeedProofCurationRow {
 }
 
 interface VarietySeedProofEditorProps {
+  locale: InterfaceLocale;
   seedProofs: VarietySeedProofCurationRow[];
   upsertAction: (formData: FormData) => void | Promise<void>;
 }
@@ -41,9 +48,11 @@ interface CatalogSuggestion {
 }
 
 export function VarietySeedProofEditor({
+  locale,
   seedProofs,
   upsertAction,
 }: VarietySeedProofEditorProps) {
+  const copy = getOperatorCurationCopy(locale);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CatalogSuggestion[]>([]);
   const [selected, setSelected] = useState<CatalogSuggestion | null>(null);
@@ -121,14 +130,14 @@ export function VarietySeedProofEditor({
     <section className="grid gap-4 border-b border-border pb-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold tracking-tight text-foreground">
-          Variety proof blocks
+          {copy.seedProof.title}
         </h2>
         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
           <span className="rounded-md border border-border px-2 py-1">
-            Existing: {seedProofs.length}
+            {copy.seedProof.existing}: {seedProofs.length}
           </span>
           <span className="rounded-md border border-border px-2 py-1">
-            Plain text
+            {copy.seedProof.plainText}
           </span>
         </div>
       </div>
@@ -136,7 +145,7 @@ export function VarietySeedProofEditor({
       <article className="grid gap-4 rounded-lg border border-border p-4">
         <div className="flex items-center gap-2 text-sm font-medium text-foreground">
           <FileText className="size-4 text-muted-foreground" />
-          New proof block
+          {copy.seedProof.newProof}
         </div>
 
         <form action={upsertAction} className="grid gap-3">
@@ -147,7 +156,7 @@ export function VarietySeedProofEditor({
           />
 
           <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-            Catalog item
+            {copy.seedProof.catalogItem}
             <span className="relative">
               <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -155,7 +164,7 @@ export function VarietySeedProofEditor({
                 value={query}
                 onChange={(event) => updateQuery(event.target.value)}
                 className="h-10 w-full rounded-md border border-input bg-background px-9 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                placeholder="Search catalog item"
+                placeholder={copy.seedProof.searchPlaceholder}
                 autoComplete="off"
               />
               {query ? (
@@ -163,7 +172,7 @@ export function VarietySeedProofEditor({
                   type="button"
                   onClick={clearSelection}
                   className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-                  aria-label="Clear catalog item"
+                  aria-label={copy.seedProof.clearCatalogItem}
                 >
                   <X className="size-4" />
                 </button>
@@ -172,13 +181,14 @@ export function VarietySeedProofEditor({
           </label>
 
           <CatalogSearchState
+            locale={locale}
             selected={selected}
             status={status}
             suggestions={suggestions}
             selectSuggestion={selectSuggestion}
           />
 
-          <SeedProofFields />
+          <SeedProofFields locale={locale} />
 
           <button
             type="submit"
@@ -186,7 +196,7 @@ export function VarietySeedProofEditor({
             className={buttonVariants({ className: "self-start" })}
           >
             <Save className="size-4" />
-            Save proof
+            {copy.seedProof.save}
           </button>
         </form>
       </article>
@@ -196,6 +206,7 @@ export function VarietySeedProofEditor({
           {seedProofs.map((seedProof) => (
             <li key={seedProof.id}>
               <ExistingSeedProofForm
+                locale={locale}
                 seedProof={seedProof}
                 upsertAction={upsertAction}
               />
@@ -208,12 +219,15 @@ export function VarietySeedProofEditor({
 }
 
 function ExistingSeedProofForm({
+  locale,
   seedProof,
   upsertAction,
 }: {
+  locale: InterfaceLocale;
   seedProof: VarietySeedProofCurationRow;
   upsertAction: (formData: FormData) => void | Promise<void>;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   return (
     <article className="grid gap-4 rounded-lg border border-border p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -223,16 +237,25 @@ function ExistingSeedProofForm({
           </h3>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-md border border-border px-2 py-1">
-              {seedProof.status}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                seedProof.status,
+                copy.common.unknown,
+              )}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              {seedProof.catalogStatus}
+              {operatorCurationMapLabel(
+                copy.common.statuses,
+                seedProof.catalogStatus,
+                copy.common.unknown,
+              )}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
               {seedProof.catalogLocale}
             </span>
             <span className="rounded-md border border-border px-2 py-1">
-              Updated: {formatDate(seedProof.updatedAt)}
+              {copy.common.updated}:{" "}
+              {formatOperatorDate(locale, seedProof.updatedAt)}
             </span>
           </div>
         </div>
@@ -244,7 +267,7 @@ function ExistingSeedProofForm({
           })}
         >
           <ExternalLink className="size-4" />
-          Public page
+          {copy.common.publicPage}
         </Link>
       </div>
 
@@ -254,13 +277,13 @@ function ExistingSeedProofForm({
           name="catalogItemId"
           value={seedProof.catalogItemId}
         />
-        <SeedProofFields seedProof={seedProof} />
+        <SeedProofFields locale={locale} seedProof={seedProof} />
         <button
           type="submit"
           className={buttonVariants({ className: "self-start" })}
         >
           <Save className="size-4" />
-          Update proof
+          {copy.seedProof.update}
         </button>
       </form>
     </article>
@@ -268,17 +291,20 @@ function ExistingSeedProofForm({
 }
 
 function SeedProofFields({
+  locale,
   seedProof,
 }: {
+  locale: InterfaceLocale;
   seedProof?: Pick<
     VarietySeedProofCurationRow,
     "title" | "summary" | "body" | "sourceLabel" | "status"
   >;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   return (
     <div className="grid gap-3">
       <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Title
+        {copy.seedProof.titleField}
         <input
           name="title"
           required
@@ -289,7 +315,7 @@ function SeedProofFields({
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Summary
+        {copy.seedProof.summary}
         <textarea
           name="summary"
           required
@@ -300,7 +326,7 @@ function SeedProofFields({
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Body
+        {copy.seedProof.body}
         <textarea
           name="body"
           required
@@ -312,7 +338,7 @@ function SeedProofFields({
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-        Source label
+        {copy.seedProof.sourceLabel}
         <input
           name="sourceLabel"
           maxLength={160}
@@ -322,14 +348,14 @@ function SeedProofFields({
       </label>
 
       <label className="flex flex-col gap-1 text-sm font-medium text-foreground sm:max-w-xs">
-        Status
+        {copy.common.status}
         <select
           name="status"
           defaultValue={seedProof?.status ?? "draft"}
           className="h-10 rounded-md border border-input bg-background px-3 text-sm font-normal outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <option value="draft">Draft</option>
-          <option value="published">Published</option>
+          <option value="draft">{copy.common.statuses.draft}</option>
+          <option value="published">{copy.common.statuses.published}</option>
         </select>
       </label>
     </div>
@@ -337,46 +363,54 @@ function SeedProofFields({
 }
 
 function CatalogSearchState({
+  locale,
   selected,
   status,
   suggestions,
   selectSuggestion,
 }: {
+  locale: InterfaceLocale;
   selected: CatalogSuggestion | null;
   status: CatalogStatus;
   suggestions: CatalogSuggestion[];
   selectSuggestion: (suggestion: CatalogSuggestion) => void;
 }) {
+  const copy = getOperatorCurationCopy(locale);
   return (
     <div className="grid gap-2 text-xs">
       <div className="flex flex-wrap items-center gap-2">
         {selected ? (
           <span className="inline-flex max-w-full flex-col gap-0.5 rounded-md border border-border px-2 py-1 text-foreground">
             <span>
-              Selected: {selected.displayName} ·{" "}
-              {catalogSuggestionTrustMetadata(selected).trustLabel}
+              {copy.common.selected}: {selected.displayName} ·{" "}
+              {buildGardenCatalogTrustMetadata(locale, selected).trustLabel}
             </span>
             <span className="text-muted-foreground">
-              {catalogSuggestionTrustMetadata(selected).disambiguationLabel}
+              {
+                buildGardenCatalogTrustMetadata(locale, selected)
+                  .disambiguationLabel
+              }
             </span>
           </span>
         ) : (
           <span className="rounded-md border border-border px-2 py-1 text-muted-foreground">
-            No catalog item selected
+            {copy.seedProof.noSelection}
           </span>
         )}
         {status === "loading" ? (
-          <span className="text-muted-foreground">Searching...</span>
+          <span className="text-muted-foreground">{copy.common.searching}</span>
         ) : null}
         {status === "failed" ? (
-          <span className="text-destructive">Suggestions unavailable.</span>
+          <span className="text-destructive">
+            {copy.common.suggestionsUnavailable}
+          </span>
         ) : null}
       </div>
 
       {suggestions.length > 0 ? (
         <ul className="grid gap-2">
           {suggestions.map((suggestion) => {
-            const trust = catalogSuggestionTrustMetadata(suggestion);
+            const trust = buildGardenCatalogTrustMetadata(locale, suggestion);
 
             return (
               <li key={suggestion.id}>
@@ -440,14 +474,5 @@ function parseCatalogSuggestions(value: unknown): CatalogSuggestion[] {
         source: candidate.source,
       },
     ];
-  });
-}
-
-function formatDate(value: Date | string) {
-  const date = value instanceof Date ? value : new Date(value);
-  return date.toLocaleDateString("en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
   });
 }

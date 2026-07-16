@@ -3,8 +3,11 @@ import { ShieldCheck } from "lucide-react";
 
 import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
 import { buttonVariants } from "@/components/ui/button";
+import type { OperatorCopy } from "@/lib/operator-copy";
+import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { listCommunityModerationQueue } from "@/server/community-repository";
+import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +15,16 @@ export const dynamic = "force-dynamic";
 const FIRST_COMMUNITY_SLUG = "observation-and-care";
 
 export default async function CommunityModerationDirectory() {
-  const session = await getCurrentSession();
+  const [locale, session] = await Promise.all([
+    getRequestInterfaceLocale(),
+    getCurrentSession(),
+  ]);
+  const copy = getOperatorCopy(locale);
   if (!session?.user?.id) {
     return (
       <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
-        <AdminCommunityHeader />
-        <GardenAuthPanel postAuthPath="/admin/communities" />
+        <AdminCommunityHeader copy={copy} />
+        <GardenAuthPanel locale={locale} postAuthPath="/admin/communities" />
       </main>
     );
   }
@@ -30,7 +37,7 @@ export default async function CommunityModerationDirectory() {
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-5 px-5 py-8">
-      <AdminCommunityHeader />
+      <AdminCommunityHeader copy={copy} />
       {moderation ? (
         <Link
           href={`/admin/communities/${FIRST_COMMUNITY_SLUG}`}
@@ -38,14 +45,17 @@ export default async function CommunityModerationDirectory() {
         >
           <span className="grid gap-2">
             <ShieldCheck className="size-5 text-primary" aria-hidden="true" />
-            <span className="text-lg font-semibold">Observation and care</span>
+            <span className="text-lg font-semibold">
+              {copy.community.observationAndCare}
+            </span>
             <span className="text-sm leading-6 text-muted-foreground">
-              Moderator queue, participation gate, removals, member controls,
-              and audited report decisions.
+              {copy.community.cardDescription}
             </span>
           </span>
           <span className="text-xs text-muted-foreground tabular-nums">
-            {moderation.items.length} open reports
+            {formatOperatorTemplate(copy.community.openReportsCount, {
+              count: moderation.items.length,
+            })}
           </span>
         </Link>
       ) : (
@@ -53,14 +63,14 @@ export default async function CommunityModerationDirectory() {
           className="rounded-md border border-border p-4 text-sm text-muted-foreground"
           role="alert"
         >
-          Community moderator access is not available.
+          {copy.community.unavailable}
         </p>
       )}
     </main>
   );
 }
 
-function AdminCommunityHeader() {
+function AdminCommunityHeader({ copy }: { copy: OperatorCopy }) {
   return (
     <header className="grid gap-4 border-b border-border pb-5">
       <Link
@@ -71,13 +81,12 @@ function AdminCommunityHeader() {
           className: "w-fit",
         })}
       >
-        Back to admin
+        {copy.community.backToAdmin}
       </Link>
       <div className="grid gap-2">
-        <h1 className="text-3xl font-semibold">Community moderation</h1>
+        <h1 className="text-3xl font-semibold">{copy.community.title}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          Fail-closed control plane for the curated community. Public member
-          lists and private journal fields are intentionally absent.
+          {copy.community.description}
         </p>
       </div>
     </header>

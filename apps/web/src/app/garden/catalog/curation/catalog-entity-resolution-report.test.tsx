@@ -116,25 +116,24 @@ describe("CatalogEntityResolutionReport", () => {
   it("renders cluster summaries and routing without raw source fields", () => {
     const html = renderToStaticMarkup(
       <CatalogEntityResolutionReport
+        locale="uk"
         report={report}
         refreshAction={async () => undefined}
       />,
     );
 
-    expect(html).toContain("Entity-resolution QA");
-    expect(html).toContain("Clusters: 3");
-    expect(html).toContain("Refresh fuzzy QA");
-    expect(html).toContain("Fuzzy reviewed: 1 of 1");
-    expect(html).toContain("Red Cherry and Red Chery are a 95% near match");
-    expect(html).toContain("Score: 95%");
-    expect(html).toContain("same_locale");
-    expect(html).toContain("rapidfuzz_name_similarity");
-    expect(html).toContain("Locale: uk");
-    expect(html).toContain(
-      "Bergeron 1 appears as 2 source-backed catalog rows",
-    );
+    expect(html).toContain("QA розв&#x27;язання ідентичностей");
+    expect(html).toContain("Кластери: 3");
+    expect(html).toContain("Оновити fuzzy QA");
+    expect(html).toContain("Fuzzy-перевірка: 1 із 1");
+    expect(html).toContain("Fuzzy-дублікат: 2 пов&#x27;язаних рядків");
+    expect(html).toContain("Оцінка: 95%");
+    expect(html).toContain("Одна локаль");
+    expect(html).toContain("схожість назв RapidFuzz");
+    expect(html).toContain("Локаль: uk");
+    expect(html).toContain("Ймовірний дублікат: 1 пов&#x27;язаних рядків");
     expect(html).toContain("Kyiv Long cucumber proof row");
-    expect(html).toContain("Review path");
+    expect(html).toContain("Перейти до перевірки");
     expect(html).not.toContain("raw_payload");
     expect(html).not.toContain("source_only_fields");
     expect(html).not.toContain("sourceRecordKey");

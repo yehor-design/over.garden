@@ -11,6 +11,7 @@ describe("CatalogAliasSuggestionReview", () => {
       await import("./catalog-alias-suggestion-review");
     const html = renderToStaticMarkup(
       <CatalogAliasSuggestionReview
+        locale="uk"
         searchQuery="rosa"
         targets={[
           {
@@ -129,17 +130,17 @@ describe("CatalogAliasSuggestionReview", () => {
       />,
     );
 
-    expect(html).toContain("Alias and locale suggestions");
+    expect(html).toContain("Підказки назв і локалей");
     expect(html).toContain('name="aliasQuery"');
     expect(html).toContain("Rosa gallica");
-    expect(html).toContain("Generate aliases");
-    expect(html).toContain("Generated candidate");
-    expect(html).toContain("Collision review required");
-    expect(html).toContain("Rejected alias");
-    expect(html).toContain("Accepted · typeahead");
-    expect(html).toContain("CyrTranslit forward");
+    expect(html).toContain("Створити назви");
+    expect(html).toContain("Згенерований кандидат");
+    expect(html).toContain("Потрібна перевірка конфлікту");
+    expect(html).toContain("Назву відхилено");
+    expect(html).toContain("Прийнято · пошук під час введення");
+    expect(html).toContain("Пряма транслітерація CyrTranslit");
     expect(html).toContain("Species backbone");
-    expect(html.match(/Approve alias/g)).toHaveLength(1);
+    expect(html.match(/Схвалити назву/g)).toHaveLength(1);
     expect(html).not.toContain("00000000-0000-4000-8000-000000000999");
   });
 
@@ -148,6 +149,7 @@ describe("CatalogAliasSuggestionReview", () => {
       await import("./catalog-alias-suggestion-review");
     const html = renderToStaticMarkup(
       <CatalogAliasSuggestionReview
+        locale="uk"
         searchQuery=""
         targets={[]}
         suggestions={[]}
@@ -157,7 +159,9 @@ describe("CatalogAliasSuggestionReview", () => {
       />,
     );
 
-    expect(html).toContain("Search a catalog identity to generate variants.");
-    expect(html).toContain("No generated alias suggestions yet.");
+    expect(html).toContain(
+      "Знайдіть ідентичність каталогу, щоб створити варіанти.",
+    );
+    expect(html).toContain("Згенерованих підказок назв ще немає.");
   });
 });
