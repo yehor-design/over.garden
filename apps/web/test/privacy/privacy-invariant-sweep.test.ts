@@ -19,6 +19,7 @@ import {
   renderNotFoundPublicJournalEntryHtml,
 } from "@/lib/public-journal-entry-lifecycle";
 import { getPublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
+import { assertNoForbiddenDeterministicMatchingEvidence } from "@/lib/catalog/deterministic-matching-rollout-proof";
 import { PublicJournalEntryView } from "@/components/public/public-journal-entry";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -247,6 +248,33 @@ describe("OVE-158 privacy invariant sweep — deterministic catalog matching", (
     expect(queueSchema).toContain(
       "rerun_requested boolean not null default false",
     );
+  });
+});
+
+describe("OVE-163 privacy invariant sweep — matching rollout evidence", () => {
+  it("accepts only aggregate-safe rollout evidence", () => {
+    expect(() =>
+      assertNoForbiddenDeterministicMatchingEvidence({
+        schemaVersion: "ove163.deterministicMatchingRolloutProof.v1",
+        environment: "local",
+        jobKinds: [
+          "catalog_match_suggestions_refresh",
+          "catalog_alias_suggestions_refresh",
+          "catalog_fuzzy_duplicate_qa_refresh",
+          "catalog_typeahead_reindex",
+        ],
+        fullPersistedPairCount: 24,
+        leakCheck: "passed",
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects poisoned private evidence recursively", () => {
+    expect(() =>
+      assertNoForbiddenDeterministicMatchingEvidence({
+        summary: { email: POISON.email },
+      }),
+    ).toThrow(/forbidden field/);
   });
 });
 

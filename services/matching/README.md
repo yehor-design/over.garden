@@ -217,3 +217,31 @@ Catalog typeahead document ids are Meilisearch-safe ASCII keys derived from the
 catalog item id plus a hash of the alias locale and normalized alias; the
 searchable Cyrillic alias stays in `displayName`, `canonicalName`, and
 `normalizedName`.
+
+## Combined deterministic matching closeout
+
+OVE-163 binds the OVE-158 through OVE-162 smokes into one fail-closed local
+behavioral proof:
+
+```bash
+cd apps/web
+pnpm smoke:catalog-matching-rollout -- \
+  --environment local \
+  --confirm-environment local \
+  --base-url http://127.0.0.1:3000
+```
+
+The harness starts the local Next.js runtime when needed, runs real
+canonical-match and alias decisions, executes gardener HTTP typeahead/save
+readback against Meilisearch plus Postgres fallback, proves bounded fuzzy QA,
+and runs the complete Python suite. Recovery coverage now includes the longer
+bounded lease and `rerun_requested` claim-token behavior for canonical match,
+alias, and fuzzy refresh jobs. The matching implementations remain idempotent;
+only explicit TypeScript curator transactions can apply canonical or alias
+decisions.
+
+The same harness has a read-only non-local mode for schema, runtime, QA-report,
+and safe-index readiness. It has no non-local mutation flag and cannot replace
+the local behavioral proof. See
+`docs/DETERMINISTIC_MATCHING_ROLLOUT_PROOF.md` for the binding procedure and
+evidence contract.
