@@ -70,15 +70,13 @@ The selected non-local closeout target is canonical production
 `https://over.garden`, using the production values registered in
 `docs/INFRASTRUCTURE_REGISTRY.md`.
 
-Load the trusted production environment through the platform secret store into
-a temporary mode-`0600` file, run the same package command, then delete the
-temporary file. Do not paste or print the file contents.
+Inject the trusted production environment directly from the platform secret
+store into the proof process. Do not write an env file, paste values, or print
+the process environment.
 
 ```bash
-cd apps/web
-node --env-file=/private/tmp/ove163-production.env \
-  ./node_modules/tsx/dist/cli.mjs \
-  scripts/prove-deterministic-matching-rollout.ts \
+vercel env run --environment production -- \
+  pnpm --dir apps/web run smoke:catalog-matching-rollout -- \
   --environment production \
   --confirm-environment production \
   --base-url https://over.garden
@@ -133,6 +131,16 @@ enforced by the shared catalog document parser.
 ## Closeout Record
 
 Local behavioral proof passed on 2026-07-16 against loopback Postgres,
-Meilisearch, and the real Next.js HTTP/auth path. Exact clean-main and non-local
-production evidence is recorded in the OVE-163 Linear closeout after the final
-commit, CI run, and deployment are verified.
+Meilisearch, and the real Next.js HTTP/auth path on exact clean-main commit
+`e94148fa5a4a097422b5cdf7234e1b1ffad542e2`. The same commit passed
+[GitHub CI run 29477408972](https://github.com/yehor-design/over.garden/actions/runs/29477408972),
+including the responsive/accessibility matrix, and reached Vercel production as
+READY deployment `dpl_FR7gxmnHv9j3wEMLvrDbk5KjYPf2`.
+
+The redacted production proof generated at `2026-07-16T06:50:29.851Z` passed
+runtime, schema, safe typeahead search, entity-resolution QA, and recursive leak
+checks with `productionDataTouched=false`. Production had zero materialized
+fuzzy QA rows (`fullPersisted=0`, `boundedReviewed=0`, `rendered=0`); this is an
+honest readiness result, not evidence of fuzzy behavior. The bounded advisory
+generation, worker recovery, and cleanup claims come from the exact-commit
+local fixture proof as required by this contract.

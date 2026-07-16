@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-06-29",
+  "updatedAt": "2026-07-16",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
-  "requiredBeforeNextLinearIssues": ["OVE-51", "OVE-52", "OVE-53"],
+  "requiredBeforeNextLinearIssues": ["OVE-170"],
   "entries": [
     {
       "issueId": "OVE-29",
@@ -49,6 +49,32 @@
       "notes": [
         "Supersedes the branch-only audit proof by requiring the fail-closed auth fix to be contained in current main.",
         "Local production-like builds intentionally need a real non-placeholder BETTER_AUTH_SECRET."
+      ]
+    },
+    {
+      "issueId": "OVE-163",
+      "title": "Deterministic matching rollout proof: operator verifies suggestions, approvals, typeahead, and privacy gates end to end",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "e94148fa5a4a097422b5cdf7234e1b1ffad542e2",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-163/deterministic-matching-rollout-proof-operator-verifies-suggestions",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29477408972",
+      "completedAt": "2026-07-16",
+      "verificationCommands": [
+        "cd apps/web && pnpm smoke:catalog-matching-rollout -- --environment local --confirm-environment local --base-url http://127.0.0.1:3000",
+        "cd services/matching && uv run --frozen pytest",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "vercel env run --environment production -- pnpm --dir apps/web run smoke:catalog-matching-rollout -- --environment production --confirm-environment production --base-url https://over.garden"
+      ],
+      "notes": [
+        "The exact behavior commit passed local behavioral proof, CI, a READY Vercel production deployment, and a read-only production readiness proof.",
+        "Production proof reported zero materialized fuzzy QA rows; bounded advisory generation and cleanup were proven by the local fixture rather than by importing production data.",
+        "No secrets, private user data, source-only payloads, journal text, media keys, raw request metadata, or precise location were included in evidence."
       ]
     }
   ]

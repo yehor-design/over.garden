@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke
-Last updated: 2026-07-05
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness
+Last updated: 2026-07-16
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -29,6 +29,26 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
+
+## OVE-163 Deterministic Matching Rollout Readiness
+
+Goal: prove that the exact deterministic-matching behavior commit is deployed
+and that production has the required runtime, schema, closed queue payloads,
+safe typeahead projection, and redacted entity-resolution QA surface without
+creating fixture or real catalog data.
+
+Result on 2026-07-16: pass for deployment readiness and privacy; behavioral
+approve/reject, fuzzy-advisory, recovery, and cleanup claims remain bound to the
+exact-commit local proof.
+
+- Behavior commit: `e94148fa5a4a097422b5cdf7234e1b1ffad542e2` on `main`, with a clean working tree during proof.
+- CI: [run 29477408972](https://github.com/yehor-design/over.garden/actions/runs/29477408972) passed Python matching, web tests, build, and the responsive/accessibility matrix.
+- Production deployment: `dpl_FR7gxmnHv9j3wEMLvrDbk5KjYPf2`, target `production`, state `READY`, exact verified GitHub commit above, canonical alias `https://over.garden`.
+- Read-only proof schema: `ove163.deterministicMatchingNonLocalProof.v1`, generated at `2026-07-16T06:50:29.851Z`.
+- Runtime, matching schema/queue constraints, safe typeahead search, entity-resolution QA, and recursive leak checks passed.
+- Production fuzzy QA counts were `fullPersisted=0`, `boundedReviewed=0`, and `rendered=0`. This proves the report is safely readable while empty; it does not replace the bounded local fixture proof of advisory generation.
+- `productionDataTouched=false`. No broad source import, fixture creation, approval/rejection action, search mutation, or schema mutation was performed.
+- No database URL, CA body, secret, token, cookie, private user field, source-only payload/key, journal text, media key, request metadata, email, IP, user agent, or precise location was printed or recorded.
 
 ## OVE-143 Canonical Launch Smoke
 
