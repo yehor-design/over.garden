@@ -257,7 +257,7 @@ function WorkspaceSummary({
     <div
       role="list"
       aria-label={copy.workspace.summary.ariaLabel}
-      className="grid grid-cols-2 border-b border-border bg-foreground text-background sm:grid-cols-4"
+      className="grid grid-cols-2 border-b border-border bg-foreground text-background md:grid-cols-4"
     >
       <SummaryFact
         label={copy.workspace.summary.objects}

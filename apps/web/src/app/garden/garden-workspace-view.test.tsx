@@ -38,6 +38,9 @@ describe("GardenWorkspaceView", () => {
     );
 
     expect(html).toContain('data-garden-workspace="operational-home"');
+    expect(html).toContain(
+      'class="grid grid-cols-2 border-b border-border bg-foreground text-background md:grid-cols-4"',
+    );
     expect(html).toContain("Простір саду");
     expect(html).toContain("Наступна корисна дія");
     expect(html).toContain("Оновіть Object 1");
