@@ -4,6 +4,7 @@ import {
   assertAuthenticatedGardenShell,
   assertCanonicalLegacyRedirect,
   assertOperatorAccessState,
+  assertProcessedDerivativeReadback,
   assertPublicRoutePolicyContract,
   assertSitemapPolicyContract,
 } from "./smoke-canonical-launch";
@@ -27,6 +28,29 @@ describe("canonical launch smoke workspace contract", () => {
         /signed-in garden shell/,
       );
     }
+  });
+});
+
+describe("canonical launch processed derivative readback contract", () => {
+  const publicUrl =
+    "https://media.over.garden/derivatives/launch-smoke.webp";
+
+  it("accepts the exact processed derivative independently of localized alt copy", () => {
+    expect(() =>
+      assertProcessedDerivativeReadback(
+        `<img src="${publicUrl}" alt="Фото OVE-143 canonical launch smoke" />`,
+        publicUrl,
+      ),
+    ).not.toThrow();
+  });
+
+  it("rejects a different image even when legacy English alt copy is present", () => {
+    expect(() =>
+      assertProcessedDerivativeReadback(
+        '<img src="https://media.over.garden/derivatives/other.webp" alt="OVE-143 canonical launch smoke photo" />',
+        publicUrl,
+      ),
+    ).toThrow(/entry readback derivative media/);
   });
 });
 

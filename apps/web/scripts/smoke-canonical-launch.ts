@@ -235,11 +235,7 @@ async function main() {
     'data-passport-audience="owner"',
     "entry owner passport readback",
   );
-  assertIncludes(
-    firstReadback,
-    `alt="${SMOKE_TITLE} photo"`,
-    "entry readback derivative media",
-  );
+  assertProcessedDerivativeReadback(firstReadback, processed.publicUrl);
   assertNoPrivateMarkers(firstReadback, ["quarantine/"]);
 
   const followUp = await jsonRequest<EntryResponse>(
@@ -1016,6 +1012,13 @@ export function assertOperatorAccessState(input: {
   assertEqual(surfaces[0], input.surface, `${input.label} surface`);
   assertEqual(states.length, 1, `${input.label} access marker count`);
   assertEqual(states[0], input.state, `${input.label} access state`);
+}
+
+export function assertProcessedDerivativeReadback(
+  html: string,
+  publicUrl: string,
+) {
+  assertIncludes(html, publicUrl, "entry readback derivative media");
 }
 
 function assertNoForbiddenOutput(output: unknown) {
