@@ -1,6 +1,6 @@
 # Walking Skeleton
 
-Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. OVE-77 closes the local cleanup proof: supported Apple Silicon/macOS 26 development no longer requires Docker Desktop for local infra, bootstrap, type checks, tests, or matching pytest. OVE-95 aligns local and CI Postgres with the production major version, currently Postgres 18. CI repeats the fresh-checkout bootstrap contract by starting Postgres 18 plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`. OVE-75 documents that CI keeps Docker only because GitHub-hosted Ubuntu does not run Apple Container service containers; that CI exception does not restore Docker Desktop as a local requirement.
+Status: implemented and locally verified on 2026-06-26. The original walking-skeleton proof used Docker Compose; OVE-73 re-proved the supported-Mac fresh-checkout web bootstrap on 2026-06-30 against Apple Container Postgres, Meilisearch, and MinIO with Docker Desktop stopped. OVE-77 closes the local cleanup proof: supported Apple Silicon/macOS 26 development no longer requires Docker Desktop for local infra, bootstrap, type checks, tests, or matching pytest. OVE-95 aligns local and CI Postgres with the production major version, currently Postgres 18. OVE-189 adds the canonical local-media recovery and restart proof: a corrupt MinIO source is mounted read-only, copied into an explicit new target, retained for later bounded retirement, and accepted only after actual upload/process/readback plus Postgres/Meilisearch/MinIO persistence. CI repeats the fresh-checkout bootstrap contract by starting Postgres 18 plus MinIO, running `pnpm local:bootstrap`, and failing if generated Kysely types drift from the committed `src/db/generated.ts`. OVE-75 documents that CI keeps Docker only because GitHub-hosted Ubuntu does not run Apple Container service containers; that CI exception does not restore Docker Desktop as a local requirement.
 
 This is not product UI. It is the first end-to-end proof that the selected stack works together before agents start building product slices.
 
@@ -35,6 +35,14 @@ pnpm test
 BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
 pnpm dev
 ```
+
+When `.env.local` contains any remote database or R2 value, use the loopback wrapper instead of the unwrapped bootstrap command:
+
+```bash
+../../infra/run-with-local-infra-env pnpm local:bootstrap
+```
+
+The OVE-189 media/restart procedure is documented in `docs/LOCAL_MEDIA_RUNTIME_RECOVERY.md`.
 
 Python worker and Meili proof:
 

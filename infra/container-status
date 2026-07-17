@@ -39,10 +39,25 @@ else
 fi
 
 if minio_ready; then
-  info "MinIO: ready on http://127.0.0.1:9000/minio/health/ready"
+  info "MinIO: ready on http://127.0.0.1:9000/minio/health/ready (volume: $MINIO_VOLUME)"
 else
-  info "MinIO: not ready"
+  minio_class="$(minio_failure_class)"
+  info "MinIO: $minio_class (volume: $MINIO_VOLUME)"
+  if [[ "$minio_class" == "corrupt-volume" ]]; then
+    info "Recovery plan: $SCRIPT_DIR/container-recover-minio --plan --source $MINIO_VOLUME --target <new-exact-volume>"
+  fi
   failed=1
+fi
+
+if [[ -f "$MINIO_PRESERVED_SOURCE_FILE" ]]; then
+  preserved_source="$(sed -n '1p' "$MINIO_PRESERVED_SOURCE_FILE")"
+  require_valid_container_identifier "Preserved MinIO recovery source" "$preserved_source"
+  if volume_exists "$preserved_source"; then
+    info "MinIO preserved recovery source: present (volume: $preserved_source; retirement: not authorized)"
+  else
+    info "MinIO preserved recovery source: missing (volume: $preserved_source)"
+    failed=1
+  fi
 fi
 
 exit "$failed"

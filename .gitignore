@@ -56,3 +56,8 @@ pnpm-debug.log*
 .vscode/
 .cursor/
 .vercel
+
+# Local non-secret runtime activation/proof state. Recovery scripts store only
+# exact local volume identifiers and synthetic smoke handles here.
+infra/.runtime/
+apps/web/.runtime/

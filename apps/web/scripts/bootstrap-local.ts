@@ -13,7 +13,11 @@ import { config as loadEnv } from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
+import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+
 loadEnv({ path: ".env.local" });
+
+assertLoopbackLocalRuntimeEnvironment(process.env);
 
 const databaseUrl = requiredEnv("DATABASE_URL");
 const pool = new Pool({ connectionString: databaseUrl });

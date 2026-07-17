@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-06-29
+Last verified: 2026-07-17 for the OVE-189 local Apple Container media runtime; production-provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -20,6 +20,22 @@ This document records non-secret infrastructure settings, stable identifiers, UR
 2. This registry.
 3. Current stack docs: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`.
 4. Older ADRs and chat history.
+
+## Local Apple Container Runtime (OVE-189)
+
+This is host-local, non-secret operational state. It does not describe production R2 and must not be copied into Vercel or Cloudflare configuration.
+
+- Runtime: Apple Container 1.0.0 on a supported Apple Silicon/macOS 26 host.
+- Canonical service volumes: Postgres `overgarden-postgres-18-data`, Meilisearch `overgarden-meili-data`, and the exact MinIO volume selected by `infra/.runtime/minio-volume`.
+- OVE-189 active MinIO target on the proof host: `overgarden-minio-recovered-20260717-ove189`.
+- Preserved corrupt source: `overgarden-minio-data`; retirement is not authorized. Recovery and normal stop/start commands must not delete or overwrite it.
+- Source plan inventory on 2026-07-17: two user-bucket namespaces, 164 regular files, 82 `xl.meta` object-metadata files, zero user-bucket traversal errors, and four errors confined to rebuildable `.minio.sys` state. Object names, object bytes, credentials, and raw container inspection were excluded from evidence.
+- Recovery result: the source was mounted read-only; the new target matched the full readable user-bucket tree; isolated target MinIO reached readiness; the old source remained present after canonical container recreation.
+- Runtime proof: an actual metadata-bearing JPEG followed upload -> private quarantine -> server-side WebP re-encode -> durable processed row -> original deletion -> authenticated/public derivative readback. After a full deletion/recreation of all three container objects without `--volumes`, prior Postgres, Meilisearch, processed-media, quarantine-absence, and visual-fixture canaries were read successfully before any reseed or upload. All 16 visual-fixture media objects then passed the full verifier.
+- Binding runbook: `docs/LOCAL_MEDIA_RUNTIME_RECOVERY.md`.
+- Loopback safety: run local bootstrap, fixtures, and media smoke through `infra/run-with-local-infra-env`. `apps/web/scripts/bootstrap-local.ts` independently rejects non-loopback endpoints and Vercel Production.
+
+Never commit `infra/.runtime/` or `apps/web/.runtime/`. Those directories contain local activation identifiers or short-lived synthetic proof handles and are git-ignored.
 
 ## Cloudflare
 

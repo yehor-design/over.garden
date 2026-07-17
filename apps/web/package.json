@@ -49,6 +49,7 @@
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
     "smoke:protective-dns": "tsx scripts/check-protective-dns.ts",
+    "smoke:local-media-runtime": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-local-media-runtime.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",
     "drive2:closeout:check": "tsx scripts/report-drive2-parity-closeout.ts --summary",
     "drive2:closeout:report": "tsx scripts/report-drive2-parity-closeout.ts",

@@ -13,7 +13,18 @@ MINIO_CONTAINER="overgarden-minio"
 POSTGRES_MAJOR="${OVERGARDEN_POSTGRES_MAJOR:-18}"
 POSTGRES_VOLUME="${OVERGARDEN_POSTGRES_VOLUME:-overgarden-postgres-${POSTGRES_MAJOR}-data}"
 MEILI_VOLUME="overgarden-meili-data"
-MINIO_VOLUME="overgarden-minio-data"
+MINIO_DEFAULT_VOLUME="overgarden-minio-data"
+INFRA_RUNTIME_STATE_DIR="${OVERGARDEN_INFRA_STATE_DIR:-$SCRIPT_DIR/.runtime}"
+MINIO_VOLUME_STATE_FILE="$INFRA_RUNTIME_STATE_DIR/minio-volume"
+MINIO_PRESERVED_SOURCE_FILE="$INFRA_RUNTIME_STATE_DIR/minio-preserved-source"
+
+if [[ -n "${OVERGARDEN_MINIO_VOLUME:-}" ]]; then
+  MINIO_VOLUME="$OVERGARDEN_MINIO_VOLUME"
+elif [[ -f "$MINIO_VOLUME_STATE_FILE" ]]; then
+  MINIO_VOLUME="$(sed -n '1p' "$MINIO_VOLUME_STATE_FILE")"
+else
+  MINIO_VOLUME="$MINIO_DEFAULT_VOLUME"
+fi
 
 POSTGRES_IMAGE="${OVERGARDEN_POSTGRES_IMAGE:-docker.io/library/postgres:${POSTGRES_MAJOR}-alpine}"
 MEILI_IMAGE="${OVERGARDEN_MEILI_IMAGE:-docker.io/getmeili/meilisearch:v1.48.1}"
@@ -26,6 +37,30 @@ fail() {
 
 info() {
   printf '%s\n' "$*"
+}
+
+valid_container_identifier() {
+  [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$ ]]
+}
+
+require_valid_container_identifier() {
+  local label="$1"
+  local value="$2"
+
+  valid_container_identifier "$value" ||
+    fail "$label must be one exact container identifier using only letters, numbers, dot, underscore, or hyphen."
+}
+
+require_valid_container_identifier "Active MinIO volume" "$MINIO_VOLUME"
+
+refuse_preserved_minio_source_activation() {
+  [[ -f "$MINIO_PRESERVED_SOURCE_FILE" ]] || return 0
+
+  local preserved_source
+  preserved_source="$(sed -n '1p' "$MINIO_PRESERVED_SOURCE_FILE")"
+  require_valid_container_identifier "Preserved MinIO recovery source" "$preserved_source"
+  [[ "$MINIO_VOLUME" != "$preserved_source" ]] ||
+    fail "Refusing to activate preserved MinIO recovery source $preserved_source. Recovery sources are read-only forensic inputs; use the recorded recovered target or obtain a separate exact-target retirement decision. No containers or volumes were changed."
 }
 
 require_container_cli() {
@@ -102,6 +137,36 @@ container_has_volume() {
   container_inspect_normalized "$name" | grep -F "\"name\" : \"$volume\"" >/dev/null
 }
 
+container_reference_count_for_volume() {
+  local volume="$1"
+  local count=0
+  local name
+
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    if container_has_volume "$name" "$volume"; then
+      count=$((count + 1))
+    fi
+  done < <(container list --all --quiet 2>/dev/null || true)
+
+  printf '%s\n' "$count"
+}
+
+running_container_reference_count_for_volume() {
+  local volume="$1"
+  local count=0
+  local name
+
+  while IFS= read -r name; do
+    [[ -n "$name" ]] || continue
+    if container_running "$name" && container_has_volume "$name" "$volume"; then
+      count=$((count + 1))
+    fi
+  done < <(container list --all --quiet 2>/dev/null || true)
+
+  printf '%s\n' "$count"
+}
+
 volume_exists() {
   container volume inspect "$1" >/dev/null 2>&1
 }
@@ -140,7 +205,60 @@ meili_ready() {
 
 minio_ready() {
   container_running "$MINIO_CONTAINER" &&
+    container_has_volume "$MINIO_CONTAINER" "$MINIO_VOLUME" &&
     curl -fsS http://127.0.0.1:9000/minio/health/ready >/dev/null
+}
+
+minio_failure_class() {
+  if minio_ready; then
+    printf 'ready\n'
+    return 0
+  fi
+
+  if ! container_exists "$MINIO_CONTAINER"; then
+    printf 'absent\n'
+    return 0
+  fi
+
+  if container_running "$MINIO_CONTAINER" &&
+    ! container_has_volume "$MINIO_CONTAINER" "$MINIO_VOLUME"; then
+    printf 'contract-mismatch\n'
+    return 0
+  fi
+
+  if container logs -n 200 "$MINIO_CONTAINER" 2>/dev/null | grep -Eqi \
+    'structure needs cleaning|drive may be faulty|drive not found|input/output error'; then
+    printf 'corrupt-volume\n'
+    return 0
+  fi
+
+  if container_running "$MINIO_CONTAINER"; then
+    printf 'not-ready\n'
+  else
+    printf 'stopped-unknown\n'
+  fi
+}
+
+wait_for_minio() {
+  local timeout_seconds="$1"
+  local deadline=$((SECONDS + timeout_seconds))
+  local failure_class
+
+  until minio_ready; do
+    failure_class="$(minio_failure_class)"
+    if [[ "$failure_class" == "corrupt-volume" ]]; then
+      fail "MinIO corrupt-volume class detected for exact volume $MINIO_VOLUME. Run $SCRIPT_DIR/container-recover-minio --plan --source $MINIO_VOLUME with an explicit new target."
+    fi
+    if [[ "$failure_class" == "stopped-unknown" ]]; then
+      fail "MinIO stopped before readiness for exact volume $MINIO_VOLUME. Run $SCRIPT_DIR/container-status for the bounded failure class."
+    fi
+    if (( SECONDS >= deadline )); then
+      fail "MinIO did not become ready within ${timeout_seconds}s for exact volume $MINIO_VOLUME."
+    fi
+    sleep 2
+  done
+
+  info "MinIO is ready."
 }
 
 wait_for() {

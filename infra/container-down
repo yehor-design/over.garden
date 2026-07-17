@@ -23,6 +23,14 @@ fi
 
 require_container_cli
 
+if (( DELETE_VOLUMES == 1 )) && [[ -f "$MINIO_PRESERVED_SOURCE_FILE" ]]; then
+  preserved_source="$(sed -n '1p' "$MINIO_PRESERVED_SOURCE_FILE")"
+  require_valid_container_identifier "Preserved MinIO recovery source" "$preserved_source"
+  if [[ "$MINIO_VOLUME" == "$preserved_source" ]]; then
+    fail "Refusing to delete preserved MinIO recovery source $preserved_source. Retirement requires a separate exact-target maintainer sign-off. No containers or volumes were changed."
+  fi
+fi
+
 for name in "$POSTGRES_CONTAINER" "$MEILI_CONTAINER" "$MINIO_CONTAINER"; do
   if container_running "$name"; then
     info "Stopping container: $name"

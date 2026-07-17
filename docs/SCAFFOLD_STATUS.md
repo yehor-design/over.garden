@@ -305,7 +305,7 @@ OVE-38 hardens and field-proofs offline journal capture with a photo on the iOS 
 - Repository contract tests prove owner-scoped publication, first-publication disclosure lookup, public slug readback, and derivative-only public media selection.
 - Repository contract tests prove owner-scoped archive, public-gone tombstone lookup, active-only public readback, and active-only derivative media selection.
 - R2 quarantine upload and public derivative processing work against the configured Cloudflare R2 buckets and `media.over.garden`.
-- Media processor tests prove the quarantine original is deleted before the public derivative is written.
+- Media processor tests and the OVE-189 local runtime smoke prove the durable order: write the stripped public derivative, mark the processed database state, delete the quarantine original, then record the deletion marker. Public/owner readback never receives the quarantine path.
 - `sharp` derivative tests prove WebP output without EXIF metadata.
 - Dexie offline queue is test-covered with IndexedDB shim.
 - Search document privacy tests prove private/unpublished entries are not indexed and public documents exclude owner-private fields, quarantine keys, precise location, and rows without public slugs.

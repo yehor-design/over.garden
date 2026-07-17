@@ -28,6 +28,7 @@ fi
 require_container_cli
 require_curl
 load_env
+refuse_preserved_minio_source_activation
 ensure_container_system
 
 if ps -axo comm,args | grep -E '[D]ocker Desktop|[D]ocker\.app|[c]om\.docker\.(backend|virtualization|hyperkit|vpnkit|driver)' >/dev/null 2>&1; then
@@ -62,6 +63,30 @@ ensure_postgres_contract() {
   fail "Existing $POSTGRES_CONTAINER does not match the requested Postgres runtime. Expected image $POSTGRES_IMAGE with volume $POSTGRES_VOLUME, found image ${actual_image:-unknown}. Run infra/container-up --recreate to replace the container without deleting existing named volumes."
 }
 
+ensure_minio_contract() {
+  if ! container_exists "$MINIO_CONTAINER"; then
+    return 0
+  fi
+
+  local actual_image
+  actual_image="$(container_image_reference "$MINIO_CONTAINER")"
+
+  if container_image_matches "$MINIO_CONTAINER" "$MINIO_IMAGE" &&
+    container_has_volume "$MINIO_CONTAINER" "$MINIO_VOLUME"; then
+    return 0
+  fi
+
+  if (( RECREATE == 1 )); then
+    info "MinIO container contract changed; recreating the container while preserving every named volume."
+    info "Expected image: $MINIO_IMAGE"
+    info "Actual image: ${actual_image:-unknown}"
+    info "Expected volume: $MINIO_VOLUME"
+    return 0
+  fi
+
+  fail "Existing $MINIO_CONTAINER does not match the requested MinIO runtime. Expected image $MINIO_IMAGE with exact volume $MINIO_VOLUME, found image ${actual_image:-unknown}. Run infra/container-up --recreate to replace only the container while preserving every named volume."
+}
+
 recreate_if_requested() {
   local name="$1"
 
@@ -89,6 +114,7 @@ start_or_create() {
 }
 
 ensure_postgres_contract
+ensure_minio_contract
 
 start_or_create "$POSTGRES_CONTAINER" \
   container run --detach \
@@ -122,6 +148,6 @@ start_or_create "$MINIO_CONTAINER" \
 
 wait_for "Postgres" 90 postgres_ready
 wait_for "Meilisearch" 90 meili_ready
-wait_for "MinIO" 90 minio_ready
+wait_for_minio 90
 
 info "OverGarden Apple Container local infra is ready."

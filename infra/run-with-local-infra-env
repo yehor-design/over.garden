@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/container-common"
+
+if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
+  cat <<'USAGE'
+Usage: infra/run-with-local-infra-env <command> [args...]
+
+Runs one command with loopback-only Apple Container Postgres, MinIO, and
+Meilisearch environment values. It overrides any remote R2 values in
+apps/web/.env.local without printing credentials.
+USAGE
+  exit 0
+fi
+
+(( $# > 0 )) || fail "A command is required."
+
+require_valid_container_identifier "Active MinIO volume" "$MINIO_VOLUME"
+load_env
+
+urlencode() {
+  local raw="$1"
+  local encoded=""
+  local index
+  local character
+  local hex
+
+  for (( index = 0; index < ${#raw}; index += 1 )); do
+    character="${raw:index:1}"
+    case "$character" in
+      [a-zA-Z0-9.~_-]) encoded+="$character" ;;
+      *)
+        printf -v hex '%%%02X' "'$character"
+        encoded+="$hex"
+        ;;
+    esac
+  done
+
+  printf '%s' "$encoded"
+}
+
+postgres_user_encoded="$(urlencode "$POSTGRES_USER")"
+postgres_password_encoded="$(urlencode "$POSTGRES_PASSWORD")"
+postgres_database_encoded="$(urlencode "$POSTGRES_DB")"
+
+export DATABASE_URL="postgresql://$postgres_user_encoded:$postgres_password_encoded@127.0.0.1:5432/$postgres_database_encoded"
+export DIRECT_URL="$DATABASE_URL"
+export DATABASE_SSL="false"
+export PUBLIC_SITE_URL="http://127.0.0.1:3000"
+export BETTER_AUTH_URL="http://127.0.0.1:3000"
+export BETTER_AUTH_SECRET="${BETTER_AUTH_SECRET:-overgarden-local-auth-secret-for-apple-container-only}"
+export PILOT_INVITE_SIGNING_SECRET="${PILOT_INVITE_SIGNING_SECRET:-overgarden-local-pilot-invite-secret-only}"
+export R2_ENDPOINT="http://127.0.0.1:9000"
+export R2_ACCESS_KEY_ID="$MINIO_ROOT_USER"
+export R2_SECRET_ACCESS_KEY="$MINIO_ROOT_PASSWORD"
+export R2_FORCE_PATH_STYLE="true"
+export R2_QUARANTINE_BUCKET="overgarden-quarantine"
+export R2_PUBLIC_BUCKET="overgarden-public"
+export R2_PUBLIC_BASE_URL="http://127.0.0.1:9000/overgarden-public"
+export MEILISEARCH_HOST="http://127.0.0.1:7700"
+export MEILISEARCH_API_KEY="$MEILI_MASTER_KEY"
+export VISUAL_FIXTURES_ENABLED="true"
+export VISUAL_FIXTURES_TARGET="local"
+export VISUAL_FIXTURES_DATABASE="$POSTGRES_DB"
+export VISUAL_FIXTURES_ALLOW_PREVIEW="false"
+
+exec "$@"
