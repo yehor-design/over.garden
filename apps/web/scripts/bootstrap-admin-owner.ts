@@ -20,6 +20,10 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import { Pool } from "pg";
 
 import {
+  buildVerifiedOwnerAccountEvidence,
+  redactOwnerBootstrapFailure,
+} from "../src/lib/admin/owner-account-contract";
+import {
   resolveDatabaseConnection,
   resolveDatabaseSslConfig,
   resolvePgConnectionString,
@@ -34,7 +38,6 @@ interface CliOptions {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const CREDENTIAL_PROVIDER_ID = "credential";
 const SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
 
 async function main() {
@@ -63,17 +66,30 @@ async function main() {
   });
 
   try {
-    const user = await db
-      .selectFrom("user")
-      .select("id")
-      .where("id", "=", userId)
-      .executeTakeFirst();
+    const [user, accounts] = await Promise.all([
+      db
+        .selectFrom("user")
+        .select("emailVerified")
+        .where("id", "=", userId)
+        .executeTakeFirst(),
+      db
+        .selectFrom("account")
+        .select(["providerId", "password"])
+        .where("userId", "=", userId)
+        .execute(),
+    ]);
 
     if (!user) {
       throw new Error("Admin bootstrap user was not found.");
     }
 
-    await assertCredentialOnlyAccount(db, userId);
+    const ownerAccountEvidence = buildVerifiedOwnerAccountEvidence(
+      {
+        emailVerified: user.emailVerified,
+        accounts,
+      },
+      "Admin bootstrap user must have one verified email/password credential.",
+    );
 
     await db.transaction().execute(async (trx) => {
       await trx
@@ -104,8 +120,7 @@ async function main() {
           ok: true,
           issue: "OVE-113",
           role: "owner",
-          userVerified: true,
-          credentialOnlyVerified: true,
+          ...ownerAccountEvidence,
           staleAdminRowsRemoved: true,
           sealedOwnerUpserted: true,
           evidenceSafety: "redacted_no_user_ids_emails_tokens_or_env",
@@ -116,28 +131,6 @@ async function main() {
     );
   } finally {
     await db.destroy();
-  }
-}
-
-async function assertCredentialOnlyAccount(
-  db: Kysely<Database>,
-  userId: string,
-) {
-  const accounts = await db
-    .selectFrom("account")
-    .select("providerId")
-    .where("userId", "=", userId)
-    .execute();
-
-  const hasCredentialAccount = accounts.some(
-    (account) => account.providerId === CREDENTIAL_PROVIDER_ID,
-  );
-  const hasLinkedSocialAccount = accounts.some(
-    (account) => account.providerId !== CREDENTIAL_PROVIDER_ID,
-  );
-
-  if (!hasCredentialAccount || hasLinkedSocialAccount) {
-    throw new Error("Admin bootstrap user must use email and password only.");
   }
 }
 
@@ -201,7 +194,7 @@ function requiredArg(argv: string[], index: number, name: string) {
   return value;
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+main().catch(() => {
+  console.error(redactOwnerBootstrapFailure());
   process.exitCode = 1;
 });

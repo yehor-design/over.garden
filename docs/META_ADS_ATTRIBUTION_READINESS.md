@@ -51,10 +51,15 @@ Currently wired events:
 
 - `landing_page_view`: public routes only, after marketing consent; Pixel + CAPI can dedupe through the same event id.
 - `signup_started`: when a visitor starts email sign-up; CAPI only, no email or form values.
-- `account_created`: after email sign-up starts successfully; CAPI only, no account id, email, provider id, or token.
 - `first_entry_saved`: after the first private garden entry is saved; CAPI only, no journal text, plant name, catalog selection, media, location, account id, or route.
 
-`return_visit` and `invite_requested` remain allowlisted for later vertical slices but are not wired in OVE-144.
+`account_created` remains allowlisted but is intentionally unwired. With
+enumeration-resistant email sign-up, the client cannot distinguish a newly
+created unverified account from a generic response for an existing email, so a
+successful client response must never emit this event. Wire it only from a
+future server-authoritative, consent-preserving proof of actual creation.
+`return_visit` and `invite_requested` also remain allowlisted for later vertical
+slices but are not wired in OVE-144.
 
 ## Forbidden Meta Payload Data
 

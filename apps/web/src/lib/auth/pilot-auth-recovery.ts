@@ -30,7 +30,6 @@ export function classifyAuthClientError(
   const normalized = error.message.toLowerCase();
 
   if (
-    error.status === 422 ||
     normalized.includes("already exists") ||
     normalized.includes("already registered") ||
     normalized.includes("user already")

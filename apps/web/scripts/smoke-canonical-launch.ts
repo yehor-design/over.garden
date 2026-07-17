@@ -10,6 +10,7 @@ import { Meilisearch } from "meilisearch";
 import sharp from "sharp";
 
 import type { Database, JsonValue, JournalEntry } from "../src/db/schema";
+import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
 import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
@@ -740,32 +741,39 @@ async function verifyAdminAndErasureGates(
     };
   }
   assert(sealedOwnerId, "sealed owner env must be configured");
-  const ownerRole = await db
-    .selectFrom("admin_user_roles")
-    .select("role")
-    .where("user_id", "=", sealedOwnerId)
-    .executeTakeFirst();
+  const [ownerRole, owner, ownerAccounts] = await Promise.all([
+    db
+      .selectFrom("admin_user_roles")
+      .select("role")
+      .where("user_id", "=", sealedOwnerId)
+      .executeTakeFirst(),
+    db
+      .selectFrom("user")
+      .select("emailVerified")
+      .where("id", "=", sealedOwnerId)
+      .executeTakeFirst(),
+    db
+      .selectFrom("account")
+      .select(["providerId", "password"])
+      .where("userId", "=", sealedOwnerId)
+      .execute(),
+  ]);
   assertEqual(ownerRole?.role, "owner", "sealed owner role");
 
-  const ownerProviders = await db
-    .selectFrom("account")
-    .select("providerId")
-    .where("userId", "=", sealedOwnerId)
-    .execute();
-  assert(
-    ownerProviders.some((provider) => provider.providerId === "credential"),
-    "sealed owner must have credential account",
-  );
-  assert(
-    ownerProviders.every((provider) => provider.providerId === "credential"),
-    "sealed owner must not rely on social account",
+  const ownerEvidence = buildVerifiedOwnerAccountEvidence(
+    {
+      emailVerified: owner?.emailVerified ?? false,
+      accounts: ownerAccounts,
+    },
+    "Sealed owner must have one verified email/password credential.",
   );
 
   return {
     signedOutAdminBoundary: true,
     normalAccountAdminBlocked: true,
     sealedAdminRoleConfigured: true,
-    sealedAdminCredentialOnly: true,
+    sealedAdminEmailVerified: ownerEvidence.emailVerified,
+    sealedAdminCredentialOnly: ownerEvidence.credentialOnlyVerified,
     erasureRouteBlockedForNormalAccount: true,
     irreversibleErasureNotExecuted: true,
   };

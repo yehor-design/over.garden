@@ -45,11 +45,15 @@ function fakeAdminDb(role: string | null): Kysely<Database> {
     const builder = {
       select: vi.fn(() => builder),
       where: vi.fn(() => builder),
-      executeTakeFirst: vi.fn(async () =>
-        table === "admin_user_roles" && role ? { role } : undefined,
-      ),
+      executeTakeFirst: vi.fn(async () => {
+        if (table === "admin_user_roles" && role) return { role };
+        if (table === "user") return { emailVerified: true };
+        return undefined;
+      }),
       execute: vi.fn(async () =>
-        table === "account" ? [{ providerId: "credential" }] : [],
+        table === "account"
+          ? [{ providerId: "credential", password: "password-hash" }]
+          : [],
       ),
     };
     return builder;

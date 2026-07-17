@@ -34,14 +34,12 @@ const UK_COPY = {
     signInHelp: "Допомога зі входом",
     createAccountError:
       "Не вдалося створити обліковий запис. Спробуйте ще раз.",
-    verificationSent:
-      "Перевірте пошту й підтвердьте обліковий запис, а потім відкрийте свій сад.",
+    signUpRequestAccepted:
+      "Запит на реєстрацію прийнято. Якщо адреса нова, виконайте кроки з листа підтвердження, коли він надійде. Якщо обліковий запис уже існує, увійдіть або скористайтеся допомогою зі входом.",
     signInError:
       "Не вдалося ввійти. Перевірте адресу електронної пошти й пароль.",
     socialSignInError:
       "Не вдалося розпочати вхід через {provider}. Наразі скористайтеся електронною поштою та паролем.",
-    existingAccount:
-      "Обліковий запис із цією адресою вже існує. Увійдіть, щоб повернутися до свого саду, або зверніться по допомогу зі входом до того, хто вас запросив.",
     invalidCredentials:
       "Неправильна адреса електронної пошти або пароль. Скористайтеся допомогою зі входом, щоб отримати одноразове посилання для відновлення.",
     prompts: {
@@ -435,13 +433,11 @@ const BG_COPY = {
       "Забравили сте паролата си? Използвайте помощта за вход, за да получите еднократна връзка за възстановяване. Ако доставката на имейли не работи, оператор на затворения пилот все пак може безопасно да ви предаде лична връзка.",
     signInHelp: "Помощ за вход",
     createAccountError: "Профилът не може да бъде създаден. Опитайте отново.",
-    verificationSent:
-      "Проверете имейла си и потвърдете профила, след което отворете градината си.",
+    signUpRequestAccepted:
+      "Заявката за регистрация е приета. Ако имейлът е нов, изпълнете стъпките от писмото за потвърждение, когато то пристигне. Ако профилът вече съществува, влезте или използвайте помощта за вход.",
     signInError: "Входът е неуспешен. Проверете имейла и паролата си.",
     socialSignInError:
       "Входът с {provider} не може да започне. Засега използвайте имейл и парола.",
-    existingAccount:
-      "Профил с този имейл вече съществува. Влезте, за да се върнете в градината си, или поискайте помощ за вход от човека, който ви е поканил.",
     invalidCredentials:
       "Невалиден имейл или парола. Използвайте помощта за вход, за да получите еднократна връзка за възстановяване.",
     prompts: {
@@ -827,14 +823,12 @@ const RU_COPY = {
       "Забыли пароль? Воспользуйтесь помощью со входом, чтобы получить одноразовую ссылку для восстановления. Если доставка писем недоступна, оператор закрытого пилота всё равно может безопасно передать личную ссылку.",
     signInHelp: "Помощь со входом",
     createAccountError: "Не удалось создать аккаунт. Попробуйте ещё раз.",
-    verificationSent:
-      "Проверьте почту и подтвердите аккаунт, затем откройте свой сад.",
+    signUpRequestAccepted:
+      "Запрос на регистрацию принят. Если адрес новый, выполните шаги из письма для подтверждения, когда оно придёт. Если аккаунт уже существует, войдите или воспользуйтесь помощью со входом.",
     signInError:
       "Не удалось войти. Проверьте адрес электронной почты и пароль.",
     socialSignInError:
       "Не удалось начать вход через {provider}. Пока используйте электронную почту и пароль.",
-    existingAccount:
-      "Аккаунт с этим адресом уже существует. Войдите, чтобы вернуться в свой сад, или попросите помощи со входом у того, кто вас пригласил.",
     invalidCredentials:
       "Неверный адрес электронной почты или пароль. Воспользуйтесь помощью со входом, чтобы получить одноразовую ссылку для восстановления.",
     prompts: {
@@ -1248,9 +1242,33 @@ export function getLocalizedAuthClientErrorMessage(
   const copy = getTrustSurfaceCopy(locale).authPanel;
   const kind = classifyAuthClientError(error);
 
-  if (kind === "existing_account") return copy.existingAccount;
   if (kind === "invalid_credentials") return copy.invalidCredentials;
   return null;
+}
+
+export type LocalizedEmailSignUpResult =
+  | { kind: "accepted"; message: string }
+  | { kind: "error"; message: string };
+
+export function getLocalizedEmailSignUpResult(
+  locale: InterfaceLocale,
+  error: { message?: string; status?: number } | null | undefined,
+): LocalizedEmailSignUpResult {
+  const copy = getTrustSurfaceCopy(locale).authPanel;
+  const kind = classifyAuthClientError(error);
+
+  // Better Auth deliberately makes a new unverified account and an existing
+  // email indistinguishable. Preserve that enumeration-resistant boundary.
+  if (!error || kind === "existing_account") {
+    return { kind: "accepted", message: copy.signUpRequestAccepted };
+  }
+
+  return {
+    kind: "error",
+    message:
+      getLocalizedAuthClientErrorMessage(locale, error) ??
+      copy.createAccountError,
+  };
 }
 
 export function getLocalizedOAuthErrorMessage(

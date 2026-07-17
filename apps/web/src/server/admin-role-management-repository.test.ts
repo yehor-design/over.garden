@@ -290,7 +290,7 @@ function createSelectBuilder(state: FakeState, table: string) {
       if (table === "user") {
         return [...state.users]
           .filter((id) => matches(filters, "id", id))
-          .map((id) => ({ id }));
+          .map((id) => ({ id, emailVerified: true }));
       }
 
       if (table === "admin_user_roles") {
@@ -305,7 +305,10 @@ function createSelectBuilder(state: FakeState, table: string) {
         return [...state.accounts.entries()]
           .filter(([userId]) => matches(filters, "userId", userId))
           .flatMap(([, providers]) =>
-            providers.map((providerId) => ({ providerId })),
+            providers.map((providerId) => ({
+              providerId,
+              password: providerId === "credential" ? "password-hash" : null,
+            })),
           );
       }
 

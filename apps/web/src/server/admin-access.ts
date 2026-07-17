@@ -10,12 +10,15 @@ import {
   type AdminCapability,
   type AdminRole,
 } from "@/lib/admin/roles";
+import {
+  isVerifiedCredentialOnlyOwnerAccount,
+  OWNER_CREDENTIAL_PROVIDER_ID,
+} from "@/lib/admin/owner-account-contract";
 import type { RequestScope } from "@/server/request-scope";
 
 export const ADMIN_ACCESS_DENIED_MESSAGE = "Admin access denied.";
-export const ADMIN_CREDENTIAL_PROVIDER_ID = "credential";
-export const ADMIN_SEALED_OWNER_USER_ID_ENV =
-  "OVERGARDEN_ADMIN_OWNER_USER_ID";
+export const ADMIN_CREDENTIAL_PROVIDER_ID = OWNER_CREDENTIAL_PROVIDER_ID;
+export const ADMIN_SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -128,20 +131,26 @@ export async function assertCredentialOnlyAdminAccount(
   database: Kysely<Database>,
   userId: string,
 ) {
-  const rows = await database
-    .selectFrom("account")
-    .select("providerId")
-    .where("userId", "=", userId)
-    .execute();
+  const [user, accounts] = await Promise.all([
+    database
+      .selectFrom("user")
+      .select("emailVerified")
+      .where("id", "=", userId)
+      .executeTakeFirst(),
+    database
+      .selectFrom("account")
+      .select(["providerId", "password"])
+      .where("userId", "=", userId)
+      .execute(),
+  ]);
 
-  const hasCredentialAccount = rows.some(
-    (row) => row.providerId === ADMIN_CREDENTIAL_PROVIDER_ID,
-  );
-  const hasLinkedSocialAccount = rows.some(
-    (row) => row.providerId !== ADMIN_CREDENTIAL_PROVIDER_ID,
-  );
-
-  if (!hasCredentialAccount || hasLinkedSocialAccount) {
+  if (
+    !user ||
+    !isVerifiedCredentialOnlyOwnerAccount({
+      emailVerified: user.emailVerified,
+      accounts,
+    })
+  ) {
     throw new Error(ADMIN_ACCESS_DENIED_MESSAGE);
   }
 }

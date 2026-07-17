@@ -4,6 +4,7 @@ import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   formatTrustAuthPrompt,
   getLocalizedAuthClientErrorMessage,
+  getLocalizedEmailSignUpResult,
   getLocalizedOAuthErrorMessage,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
@@ -53,11 +54,14 @@ describe("trust-sensitive interface copy", () => {
 
   it("maps auth and OAuth failures to locale-owned safe recovery copy", () => {
     expect(
-      getLocalizedAuthClientErrorMessage("bg", {
+      getLocalizedEmailSignUpResult("bg", {
         status: 422,
         message: "User already exists",
       }),
-    ).toContain("вече съществува");
+    ).toEqual({
+      kind: "accepted",
+      message: getTrustSurfaceCopy("bg").authPanel.signUpRequestAccepted,
+    });
     expect(
       getLocalizedAuthClientErrorMessage("ru", {
         status: 401,

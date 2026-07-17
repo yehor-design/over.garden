@@ -32,6 +32,12 @@ describe("pilot auth recovery contract", () => {
     ).toBe("invalid_credentials");
     expect(
       classifyAuthClientError({
+        status: 422,
+        message: "Failed to create user",
+      }),
+    ).toBe("unknown");
+    expect(
+      classifyAuthClientError({
         status: 500,
         message: "Database unavailable at private-host",
       }),

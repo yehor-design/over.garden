@@ -602,7 +602,7 @@ Forbidden evidence:
 1. Pick one smoke URL:
    - Production public URL once deployment protection is disabled for the pilot audience.
    - Protected preview only when the goal is internal deployment inspection, not public H6 validation.
-2. Set `OVERGARDEN_ADMIN_OWNER_USER_ID` for the target environment, then bootstrap the owner role only through `pnpm admin:bootstrap-owner` after creating the dedicated email/password admin account; do not copy the user id into evidence. Do not bootstrap a Google/Facebook-created or linked account.
+2. Complete email verification for the dedicated owner account, then set `OVERGARDEN_ADMIN_OWNER_USER_ID` for the target environment and bootstrap the owner role only through `pnpm admin:bootstrap-owner`; do not copy the user id into evidence. The script must fail before role mutation unless the account has `emailVerified = true`, exactly one credential row with a password hash, and no Google/Facebook or other linked account.
 3. Open `/garden/pilot-smoke` as the dedicated owner account. No other role is accepted for operator access.
 4. Treat any `fail` check as a blocker for live pilot.
 5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.

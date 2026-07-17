@@ -26,11 +26,16 @@ import {
   formatTrustAuthPrompt,
   formatTrustTemplate,
   getLocalizedAuthClientErrorMessage,
+  getLocalizedEmailSignUpResult,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
 import { cn } from "@/lib/utils";
 
 type SocialProviderId = typeof GOOGLE_PROVIDER_ID | typeof FACEBOOK_PROVIDER_ID;
+type AuthPanelMessage = {
+  kind: "error" | "status";
+  text: string;
+};
 
 const SOCIAL_PROVIDER_OPTIONS = [
   {
@@ -91,7 +96,9 @@ export function GardenAuthPanel({
   const [name, setName] = useState(
     useDevDefaults ? LOCAL_DEV_DEFAULT_NAME : "",
   );
-  const [message, setMessage] = useState<string>(initialMessage ?? "");
+  const [message, setMessage] = useState<AuthPanelMessage | null>(
+    initialMessage ? { kind: "error", text: initialMessage } : null,
+  );
   const [isPending, setIsPending] = useState(false);
   const socialSignInOptions = availableSocialProviderOptions({
     facebookSignInEnabled,
@@ -100,12 +107,12 @@ export function GardenAuthPanel({
 
   async function signUp() {
     setIsPending(true);
-    setMessage("");
+    setMessage(null);
     void trackMetaMarketingEvent("signup_started", {
       browserPixel: false,
     });
 
-    const { error } = await authClient.signUp.email({
+    const { data, error } = await authClient.signUp.email({
       email: email.trim(),
       password,
       name: name.trim() || email.trim().split("@")[0] || copy.defaultName,
@@ -114,24 +121,24 @@ export function GardenAuthPanel({
 
     setIsPending(false);
 
+    const result = getLocalizedEmailSignUpResult(locale, error);
+    setMessage({
+      kind: result.kind === "accepted" ? "status" : "error",
+      text: result.message,
+    });
+
     if (error) {
-      setMessage(
-        getLocalizedAuthClientErrorMessage(locale, error) ??
-          copy.createAccountError,
-      );
       return;
     }
 
-    void trackMetaMarketingEvent("account_created", {
-      browserPixel: false,
-    });
-    setMessage(copy.verificationSent);
-    router.refresh();
+    // A non-null token proves that this client now has a session (for example,
+    // in local development). It does not change the neutral sign-up message.
+    if (data?.token) router.refresh();
   }
 
   async function signIn() {
     setIsPending(true);
-    setMessage("");
+    setMessage(null);
 
     const { error } = await authClient.signIn.email({
       email: email.trim(),
@@ -141,9 +148,11 @@ export function GardenAuthPanel({
     setIsPending(false);
 
     if (error) {
-      setMessage(
-        getLocalizedAuthClientErrorMessage(locale, error) ?? copy.signInError,
-      );
+      setMessage({
+        kind: "error",
+        text:
+          getLocalizedAuthClientErrorMessage(locale, error) ?? copy.signInError,
+      });
       return;
     }
 
@@ -157,7 +166,7 @@ export function GardenAuthPanel({
 
   async function signInWithSocial(provider: SocialProviderId, label: string) {
     setIsPending(true);
-    setMessage("");
+    setMessage(null);
 
     const callbackURL = resolveAuthCallbackPath(postAuthPath);
     const { error } = await authClient.signIn.social({
@@ -170,10 +179,12 @@ export function GardenAuthPanel({
     setIsPending(false);
 
     if (error) {
-      setMessage(
-        getLocalizedAuthClientErrorMessage(locale, error) ??
+      setMessage({
+        kind: "error",
+        text:
+          getLocalizedAuthClientErrorMessage(locale, error) ??
           formatTrustTemplate(copy.socialSignInError, { provider: label }),
-      );
+      });
     }
   }
 
@@ -289,12 +300,17 @@ export function GardenAuthPanel({
 
       {message ? (
         <p
-          role="alert"
-          aria-live="polite"
-          className="text-sm text-destructive"
+          role={message.kind === "error" ? "alert" : "status"}
+          aria-live={message.kind === "error" ? "assertive" : "polite"}
+          className={cn(
+            "text-sm",
+            message.kind === "error"
+              ? "text-destructive"
+              : "text-muted-foreground",
+          )}
           data-testid="garden-auth-message"
         >
-          {message}
+          {message.text}
         </p>
       ) : null}
     </section>

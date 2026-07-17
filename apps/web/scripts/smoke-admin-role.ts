@@ -10,6 +10,7 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
+import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -89,7 +90,7 @@ async function main() {
   const socialLinkedEmail = `ove113-social-${Date.now()}-${randomUUID()}@example.test`;
 
   try {
-    await assertSealedOwnerDatabaseState(db);
+    const sealedOwnerEvidence = await assertSealedOwnerDatabaseState(db);
 
     const normalJar = new CookieJar();
     const socialLinkedJar = new CookieJar();
@@ -205,7 +206,7 @@ async function main() {
           issue: "OVE-113",
           sealedOwnerEnvPresent: true,
           sealedOwnerRoleOnly: true,
-          sealedOwnerCredentialOnly: true,
+          ...sealedOwnerEvidence,
           secondOwnerDatabaseGuardRejected: true,
           signedOutDeniedToDashboard: true,
           normalUserDenied: true,
@@ -254,10 +255,19 @@ async function assertSealedOwnerDatabaseState(db: Kysely<Database>) {
     throw new Error("Missing or invalid sealed owner env for admin smoke.");
   }
 
-  const roleRows = await db
-    .selectFrom("admin_user_roles")
-    .select(["user_id", "role"])
-    .execute();
+  const [roleRows, owner, accountRows] = await Promise.all([
+    db.selectFrom("admin_user_roles").select(["user_id", "role"]).execute(),
+    db
+      .selectFrom("user")
+      .select("emailVerified")
+      .where("id", "=", sealedOwnerUserId)
+      .executeTakeFirst(),
+    db
+      .selectFrom("account")
+      .select(["providerId", "password"])
+      .where("userId", "=", sealedOwnerUserId)
+      .execute(),
+  ]);
 
   if (
     roleRows.length !== 1 ||
@@ -267,21 +277,18 @@ async function assertSealedOwnerDatabaseState(db: Kysely<Database>) {
     throw new Error("Admin smoke requires exactly one sealed owner role row.");
   }
 
-  const accountRows = await db
-    .selectFrom("account")
-    .select("providerId")
-    .where("userId", "=", sealedOwnerUserId)
-    .execute();
-  const hasCredentialAccount = accountRows.some(
-    (account) => account.providerId === "credential",
-  );
-  const hasLinkedSocialAccount = accountRows.some(
-    (account) => account.providerId !== "credential",
+  const evidence = buildVerifiedOwnerAccountEvidence(
+    {
+      emailVerified: owner?.emailVerified ?? false,
+      accounts: accountRows,
+    },
+    "Sealed owner must have one verified email/password credential.",
   );
 
-  if (!hasCredentialAccount || hasLinkedSocialAccount) {
-    throw new Error("Sealed owner must be credential-only.");
-  }
+  return {
+    sealedOwnerEmailVerified: evidence.emailVerified,
+    sealedOwnerCredentialOnly: evidence.credentialOnlyVerified,
+  };
 }
 
 async function assertSecondOwnerInsertRejected(

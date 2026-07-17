@@ -81,21 +81,58 @@ describe("admin access gate", () => {
       scopedToUser(OWNER_ID),
       fakeAdminDb({
         role: "owner",
-        accountProviders: ["credential", "google"],
+        accounts: [
+          { providerId: "credential", password: "password-hash" },
+          { providerId: "google", password: null },
+        ],
       }),
     );
     const socialOnlyAccess = await resolveAdminAccess(
       scopedToUser(OWNER_ID),
-      fakeAdminDb({ role: "admin", accountProviders: ["facebook"] }),
+      fakeAdminDb({
+        role: "admin",
+        accounts: [{ providerId: "facebook", password: null }],
+      }),
     );
 
     expect(socialLinkedAccess).toEqual({ status: "denied" });
     expect(socialOnlyAccess).toEqual({ status: "denied" });
   });
 
+  it.each([
+    {
+      label: "an unverified owner email",
+      input: { role: "owner", emailVerified: false },
+    },
+    {
+      label: "a credential without a password hash",
+      input: {
+        role: "owner",
+        accounts: [{ providerId: "credential", password: null }],
+      },
+    },
+    {
+      label: "duplicate credential rows",
+      input: {
+        role: "owner",
+        accounts: [
+          { providerId: "credential", password: "password-hash" },
+          { providerId: "credential", password: "second-password-hash" },
+        ],
+      },
+    },
+  ])("denies $label", async ({ input }) => {
+    await expect(
+      resolveAdminAccess(scopedToUser(OWNER_ID), fakeAdminDb(input)),
+    ).resolves.toEqual({ status: "denied" });
+  });
+
   it("denies any non-owner role even when the user id matches the sealed owner", async () => {
     await expect(
-      assertAdminAccess(scopedToUser(OWNER_ID), fakeAdminDb({ role: "viewer" })),
+      assertAdminAccess(
+        scopedToUser(OWNER_ID),
+        fakeAdminDb({ role: "viewer" }),
+      ),
     ).rejects.toThrow(ADMIN_ACCESS_DENIED_MESSAGE);
 
     await expect(
@@ -129,22 +166,27 @@ describe("admin access gate", () => {
 
 function fakeAdminDb(input: {
   role: string | null;
-  accountProviders?: string[];
+  emailVerified?: boolean;
+  accounts?: Array<{ providerId: string; password: string | null }>;
 }): Kysely<Database> {
   const selectFrom = vi.fn((table: string) => {
     const builder = {
       select: vi.fn(() => builder),
       where: vi.fn(() => builder),
-      executeTakeFirst: vi.fn(async () =>
-        table === "admin_user_roles" && input.role
-          ? { role: input.role }
-          : undefined,
-      ),
+      executeTakeFirst: vi.fn(async () => {
+        if (table === "admin_user_roles" && input.role) {
+          return { role: input.role };
+        }
+        if (table === "user") {
+          return { emailVerified: input.emailVerified ?? true };
+        }
+        return undefined;
+      }),
       execute: vi.fn(async () =>
         table === "account"
-          ? (input.accountProviders ?? ["credential"]).map((providerId) => ({
-              providerId,
-            }))
+          ? (input.accounts ?? [
+              { providerId: "credential", password: "password-hash" },
+            ])
           : [],
       ),
     };

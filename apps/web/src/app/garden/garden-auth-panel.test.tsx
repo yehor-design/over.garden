@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -9,6 +12,7 @@ import {
 
 import {
   getLocalizedAuthClientErrorMessage,
+  getLocalizedEmailSignUpResult,
   getTrustSurfaceCopy,
 } from "@/lib/trust-surface-copy";
 
@@ -32,13 +36,34 @@ vi.mock("@/lib/auth-client", () => ({
 }));
 
 describe("garden auth duplicate-account avoidance", () => {
-  it("maps duplicate sign-up errors to sign-in guidance instead of creating a new garden", () => {
-    expect(
-      getLocalizedAuthClientErrorMessage("bg", {
+  it.each(["uk", "bg", "ru"] as const)(
+    "uses the same neutral %s result for generic success and an explicit duplicate",
+    (locale) => {
+      const success = getLocalizedEmailSignUpResult(locale, null);
+      const duplicate = getLocalizedEmailSignUpResult(locale, {
         status: 422,
         message: "User already exists. use another email.",
-      }),
-    ).toBe(getTrustSurfaceCopy("bg").authPanel.existingAccount);
+      });
+
+      expect(success).toEqual({
+        kind: "accepted",
+        message: getTrustSurfaceCopy(locale).authPanel.signUpRequestAccepted,
+      });
+      expect(duplicate).toEqual(success);
+      expect(success.message.toLowerCase()).not.toMatch(
+        /створено|създаден|создан|надіслано|изпратено|отправлено/,
+      );
+    },
+  );
+
+  it("does not emit account-created analytics from an indistinguishable email sign-up response", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/app/garden/garden-auth-panel.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain('trackMetaMarketingEvent("signup_started"');
+    expect(source).not.toContain('trackMetaMarketingEvent("account_created"');
   });
 
   it("does not treat unknown errors as duplicate-account recovery", () => {
@@ -48,6 +73,24 @@ describe("garden auth duplicate-account avoidance", () => {
         message: "Database unavailable",
       }),
     ).toBeNull();
+    expect(
+      getLocalizedEmailSignUpResult("uk", {
+        status: 500,
+        message: "Database unavailable",
+      }),
+    ).toEqual({
+      kind: "error",
+      message: getTrustSurfaceCopy("uk").authPanel.createAccountError,
+    });
+    expect(
+      getLocalizedEmailSignUpResult("uk", {
+        status: 422,
+        message: "Failed to create user",
+      }),
+    ).toEqual({
+      kind: "error",
+      message: getTrustSurfaceCopy("uk").authPanel.createAccountError,
+    });
   });
 
   it("keeps recovery guidance attached to invalid credential errors", () => {
@@ -77,7 +120,7 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(enabledHtml).toContain("Продовжити через Facebook");
     expect(enabledHtml).toContain("Соціальний вхід не завершився.");
     expect(enabledHtml).toContain('role="alert"');
-    expect(enabledHtml).toContain('aria-live="polite"');
+    expect(enabledHtml).toContain('aria-live="assertive"');
     expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
     expect(enabledHtml).not.toContain("FACEBOOK_CLIENT_SECRET");
   });
