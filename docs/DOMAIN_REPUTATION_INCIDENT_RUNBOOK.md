@@ -2,7 +2,7 @@
 
 Status: active operational runbook
 Owner: founder/operator
-Last verified: 2026-07-14
+Last verified: 2026-07-17
 
 Use this runbook when a protective DNS provider, browser reputation service, or ISP security product replaces the authoritative `over.garden` address or displays a malware/phishing block page.
 
@@ -10,19 +10,22 @@ Use this runbook when a protective DNS provider, browser reputation service, or 
 
 - Treat the block as a possible compromise until code, deployment, DNS, TLS, and public reputation checks say otherwise.
 - Never paste visitor IPs, cookies, tokens, query strings, provider account data, or block-page passthrough URLs into git, Linear, email, or screenshots.
+- Keep provider case identifiers private. Repository and Linear evidence may record only that a case ID is present, plus the submission date, status, and redacted outcome class.
 - Do not weaken HTTPS, disable browser security, change the canonical domain, or proxy app HTML through an unreviewed service to evade a block.
 - A custom DNS resolver, VPN, local hosts entry, or temporary allow action is a user workaround, not incident closure.
 - Do not change authoritative DNS records unless authoritative state is wrong. Protective DNS intentionally returning a sinkhole address cannot be repaired by repeatedly rewriting a correct authoritative record.
 
 ## Current OVE-188 Incident
 
-Initially observed on 2026-07-13 and rechecked on 2026-07-14:
+Initially observed on 2026-07-13 and most recently rechecked on 2026-07-17:
 
 - Cloudflare authoritative DNS returns `76.76.21.21` for `over.garden` and `www.over.garden`.
 - Cloudflare, Cloudflare Security, Google Public DNS, and Quad9 return the authoritative address.
-- Whalebone confirmed removal of the domain from its global threat database and closed false-positive ticket `39030` on 2026-07-14.
+- Whalebone confirmed removal of the domain from its global threat database and closed the false-positive case on 2026-07-14. A private provider case ID is present.
 - The current default A1-connected system resolver now returns the authoritative address for both hostnames. Normal system-DNS HTTPS requests to apex and `www` reach Vercel and complete the Bulgarian route response without a DNS workaround.
 - Cisco Umbrella still returns `146.112.61.108` for both hostnames instead of the authoritative address. Cisco reputation remediation remains open.
+- Two authenticated Cisco Web Reputation cases remain `PENDING`, with suggested reputation `Trusted`, current reputation `Untrusted`, and no provider resolution as of 2026-07-17. Their identifiers remain private.
+- The 2026-07-17 deterministic recheck produced `10 pass / 4 Cisco endpoint mismatches / 0 error`; focused tests, the production dependency audit, exact-main CI/deployment containment, canonical HTTPS routes, and bounded production error/5xx log checks passed.
 - Google Safe Browsing reports no unsafe content. VirusTotal's observed scan reported zero detections, including a clean ESET result.
 - The canonical Vercel deployment, TLS certificates, HTTP redirects, public routes, production logs, repository state, and loaded application asset origins showed no evidence of a compromised deployment during the bounded audit.
 
@@ -40,7 +43,7 @@ The script:
 
 1. discovers the zone's authoritative nameservers through a neutral baseline resolver;
 2. obtains the expected IPv4 set directly from authoritative DNS;
-3. compares the system resolver plus Cloudflare, Cloudflare Security, Google, Quad9, and Cisco Umbrella;
+3. compares the system resolver plus Cloudflare, Cloudflare Security, Google, Quad9, and both public Cisco Umbrella resolver endpoints;
 4. prints public domain/address evidence only and never prints the system resolver or visitor address.
 
 Exit codes:

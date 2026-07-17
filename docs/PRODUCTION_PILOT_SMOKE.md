@@ -207,6 +207,8 @@ pnpm smoke:protective-dns
 
 The command compares the system resolver and major protective/public resolvers with authoritative Cloudflare DNS without printing the system resolver or visitor address. Exit `0` means automated resolver parity, exit `1` means the check could not complete, and exit `2` means at least one resolver replaced or disagreed with the authoritative answer.
 
+Current redacted incident status on 2026-07-17: authoritative DNS, the default A1-connected system resolver, Cloudflare, Cloudflare Security, Google, and Quad9 agree for apex and `www`; both public Cisco Umbrella resolver endpoints still return the same security sinkhole. The deterministic result is `10 pass / 4 Cisco endpoint mismatches / 0 error`. Whalebone/A1 remediation is confirmed, while two authenticated Cisco Web Reputation cases remain pending with private case IDs present. Exact-main CI/deployment, canonical HTTPS routes, focused tests, production dependency audit, and bounded production error/5xx log checks pass. OVE-188 remains open until Cisco parity and the final fresh A1 browser gate both pass.
+
 An automated pass is necessary but not sufficient. Before pilot traffic is considered reachable on A1, a normal browser on the default A1 connection must load `https://over.garden` and `https://www.over.garden` without custom DNS, VPN, hosts override, provider bypass, or a temporary allow action. Follow `docs/DOMAIN_REPUTATION_INCIDENT_RUNBOOK.md`; do not treat a user workaround as production closure.
 
 ## OVE-91 HTML Cache Guardrail
@@ -623,12 +625,14 @@ Forbidden evidence:
    - private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the consent banner, GTM container, or Google Analytics tag;
    - do not record Google cookies, client ids, session ids, referrers, IP/user-agent values, private URLs, auth params, or user-level Analytics report rows.
 10. Confirm Meta Ads consent-first attribution scope when `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED=true`; otherwise record it as intentionally disabled:
-   - authored public, legal, and support pages render the Meta marketing consent banner before any Pixel script;
-   - before marketing acceptance, `connect.facebook.net/en_US/fbevents.js` must not load;
-   - after marketing acceptance on public pages, Meta Pixel may load and send only allowlisted class events;
-   - private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the Meta consent banner or Meta Pixel script;
-   - `first_entry_saved` may be sent through CAPI only after marketing consent and only as an event class, with no journal text, plant/catalog names, location, media, account identifiers, auth data, cookies, IP/user-agent values, raw URLs, or referrers;
-   - if using Meta Test Events, record only class-level success/failure and never the test code, access token, cookies, user-level report rows, or event payloads.
+
+- authored public, legal, and support pages render the Meta marketing consent banner before any Pixel script;
+- before marketing acceptance, `connect.facebook.net/en_US/fbevents.js` must not load;
+- after marketing acceptance on public pages, Meta Pixel may load and send only allowlisted class events;
+- private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes must not render the Meta consent banner or Meta Pixel script;
+- `first_entry_saved` may be sent through CAPI only after marketing consent and only as an event class, with no journal text, plant/catalog names, location, media, account identifiers, auth data, cookies, IP/user-agent values, raw URLs, or referrers;
+- if using Meta Test Events, record only class-level success/failure and never the test code, access token, cookies, user-level report rows, or event payloads.
+
 11. Open `/admin` signed out and confirm it shows the auth boundary rather than admin links.
 12. Open `/admin` as a normal signed-in user and confirm it shows `Access denied.` before dashboard links.
 13. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.

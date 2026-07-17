@@ -8,7 +8,10 @@ import {
   type ResolutionCheck,
 } from "./protective-dns-contract";
 
-const DOMAINS = ["over.garden", "www.over.garden"] as const;
+export const PROTECTIVE_DNS_DOMAINS = [
+  "over.garden",
+  "www.over.garden",
+] as const;
 const BASELINE_DNS = "1.1.1.1";
 const QUERY_TIMEOUT_MS = 8_000;
 
@@ -17,14 +20,27 @@ interface ResolverConfig {
   server?: string;
 }
 
-const RESOLVERS: readonly ResolverConfig[] = [
+const PROTECTIVE_DNS_RESOLVERS: readonly ResolverConfig[] = [
   { label: "system-default" },
   { label: "cloudflare", server: "1.1.1.1" },
   { label: "cloudflare-security", server: "1.1.1.2" },
   { label: "google", server: "8.8.8.8" },
   { label: "quad9", server: "9.9.9.9" },
   { label: "cisco-umbrella", server: "208.67.222.222" },
+  { label: "cisco-umbrella-secondary", server: "208.67.220.220" },
 ] as const;
+
+export function getProtectiveDnsResolutionPlan(): Array<{
+  resolver: string;
+  domain: (typeof PROTECTIVE_DNS_DOMAINS)[number];
+}> {
+  return PROTECTIVE_DNS_RESOLVERS.flatMap((resolver) =>
+    PROTECTIVE_DNS_DOMAINS.map((domain) => ({
+      resolver: resolver.label,
+      domain,
+    })),
+  );
+}
 
 function createResolver(servers: string[]): Resolver {
   const resolver = new Resolver({ timeout: 3_000, tries: 2 });
@@ -53,7 +69,7 @@ async function withTimeout<T>(operation: Promise<T>): Promise<T> {
 }
 
 async function resolveAuthoritativeAddresses(): Promise<
-  Map<(typeof DOMAINS)[number], string[]>
+  Map<(typeof PROTECTIVE_DNS_DOMAINS)[number], string[]>
 > {
   const baselineResolver = createResolver([BASELINE_DNS]);
   const nameservers = await withTimeout(
@@ -73,7 +89,7 @@ async function resolveAuthoritativeAddresses(): Promise<
 
   const authoritativeResolver = createResolver(nameserverAddresses);
   const records = await Promise.all(
-    DOMAINS.map(
+    PROTECTIVE_DNS_DOMAINS.map(
       async (domain) =>
         [
           domain,
@@ -87,7 +103,7 @@ async function resolveAuthoritativeAddresses(): Promise<
 
 async function queryResolver(
   resolver: ResolverConfig,
-  domain: (typeof DOMAINS)[number],
+  domain: (typeof PROTECTIVE_DNS_DOMAINS)[number],
   expected: string[],
 ): Promise<ResolutionCheck> {
   try {
@@ -112,13 +128,13 @@ async function queryResolver(
 }
 
 function printHumanReadable(
-  expectedByDomain: Map<(typeof DOMAINS)[number], string[]>,
+  expectedByDomain: Map<(typeof PROTECTIVE_DNS_DOMAINS)[number], string[]>,
   checks: ResolutionCheck[],
 ): void {
   console.log("Protective DNS reputation check");
   console.log(`Checked: ${new Date().toISOString()}`);
 
-  for (const domain of DOMAINS) {
+  for (const domain of PROTECTIVE_DNS_DOMAINS) {
     console.log(
       `Authoritative ${domain}: ${(expectedByDomain.get(domain) ?? []).join(", ")}`,
     );
@@ -137,8 +153,8 @@ export async function main(): Promise<number> {
   try {
     const expectedByDomain = await resolveAuthoritativeAddresses();
     const checks = await Promise.all(
-      RESOLVERS.flatMap((resolver) =>
-        DOMAINS.map((domain) =>
+      PROTECTIVE_DNS_RESOLVERS.flatMap((resolver) =>
+        PROTECTIVE_DNS_DOMAINS.map((domain) =>
           queryResolver(resolver, domain, expectedByDomain.get(domain) ?? []),
         ),
       ),

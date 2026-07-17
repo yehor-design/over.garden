@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { getProtectiveDnsResolutionPlan } from "./check-protective-dns";
 import {
   assessResolution,
   summarizeResolutionChecks,
@@ -7,6 +8,28 @@ import {
 } from "./protective-dns-contract";
 
 describe("protective DNS resolution contract", () => {
+  it("keeps the complete two-domain by seven-resolver-endpoint matrix", () => {
+    expect(getProtectiveDnsResolutionPlan()).toEqual([
+      { resolver: "system-default", domain: "over.garden" },
+      { resolver: "system-default", domain: "www.over.garden" },
+      { resolver: "cloudflare", domain: "over.garden" },
+      { resolver: "cloudflare", domain: "www.over.garden" },
+      { resolver: "cloudflare-security", domain: "over.garden" },
+      { resolver: "cloudflare-security", domain: "www.over.garden" },
+      { resolver: "google", domain: "over.garden" },
+      { resolver: "google", domain: "www.over.garden" },
+      { resolver: "quad9", domain: "over.garden" },
+      { resolver: "quad9", domain: "www.over.garden" },
+      { resolver: "cisco-umbrella", domain: "over.garden" },
+      { resolver: "cisco-umbrella", domain: "www.over.garden" },
+      { resolver: "cisco-umbrella-secondary", domain: "over.garden" },
+      {
+        resolver: "cisco-umbrella-secondary",
+        domain: "www.over.garden",
+      },
+    ]);
+  });
+
   it("passes when a resolver returns the authoritative address set", () => {
     expect(
       assessResolution({
@@ -52,6 +75,24 @@ describe("protective DNS resolution contract", () => {
       domain: "www.over.garden",
       expected: ["76.76.21.21"],
       observed: [],
+      status: "error",
+      error: "DNS query failed",
+    });
+  });
+
+  it("fails closed when authoritative DNS returns no expected address", () => {
+    expect(
+      assessResolution({
+        resolver: "google",
+        domain: "over.garden",
+        expected: [],
+        observed: ["76.76.21.21"],
+      }),
+    ).toEqual({
+      resolver: "google",
+      domain: "over.garden",
+      expected: [],
+      observed: ["76.76.21.21"],
       status: "error",
       error: "DNS query failed",
     });
@@ -109,6 +150,14 @@ describe("protective DNS resolution contract", () => {
       status: "error",
       exitCode: 1,
       counts: { pass: 0, mismatch: 1, error: 1 },
+    });
+  });
+
+  it("treats an empty resolver matrix as an incomplete check", () => {
+    expect(summarizeResolutionChecks([])).toEqual({
+      status: "error",
+      exitCode: 1,
+      counts: { pass: 0, mismatch: 0, error: 0 },
     });
   });
 });
