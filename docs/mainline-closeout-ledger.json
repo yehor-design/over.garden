@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-16",
+  "updatedAt": "2026-07-17",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "requiredBeforeNextLinearIssues": [],
@@ -136,6 +136,46 @@
         "GitHub CI passed for the exact behavior commit; Vercel deployment dpl_EJWtcF3nyyqN6VWVhTB9EtWKR67C reached READY and canonical production smoke passed against that same SHA.",
         "Cisco Umbrella reputation mismatch remains tracked by OVE-188 and is explicitly not a Linear blocker on OVE-171; system-default, Cloudflare, Google, and Quad9 DNS matched authoritative DNS during closeout.",
         "No secrets, private user data, public-profile handle, journal text, media keys, raw request metadata, live user identifiers, or precise location were included in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-189",
+      "title": "Canonical local media runtime: an agent can restart MinIO and complete one-photo readback without corrupt-volume failure",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "8efb396b81274a9eb0bed4bbca80619728c8d8e8",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-189/canonical-local-media-runtime-an-agent-can-restart-minio-and-complete",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29606929190",
+      "completedAt": "2026-07-17",
+      "verificationCommands": [
+        "container system status",
+        "infra/container-recover-minio --plan --source overgarden-minio-data --target overgarden-minio-recovered-20260717-ove189",
+        "infra/container-up --recreate",
+        "infra/container-status",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm local:bootstrap",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm visual:fixtures:verify",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm smoke:local-media-runtime -- --phase seed",
+        "infra/container-down",
+        "infra/container-up",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm smoke:local-media-runtime -- --phase verify",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm visual:fixtures:verify",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm smoke:local-media-runtime -- --phase cleanup",
+        "cd apps/web && pnpm exec vitest run scripts/container-recovery-contract.test.ts src/lib/local-runtime-safety.test.ts src/server/media/derivatives.test.ts src/server/media/processor.test.ts",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "The preserved source inventory contained two user-bucket namespaces, 164 regular files, 82 xl.meta files, zero user-bucket traversal errors, and four excluded .minio.sys traversal errors; the source remains present and retirement is not authorized.",
+        "The behavior commit f4a868741987f03e624471f3c0c4de5286f914c0 plus the CI environment-scope correction are both contained in the final exact-main baseline.",
+        "The explicit recovered target passed byte/content comparison, MinIO readiness, actual quarantine upload, stripped WebP processing, EXIF/ICC absence, original deletion, authenticated/public readback, and restart persistence for Postgres, Meilisearch, MinIO, and all 16 visual-fixture media objects.",
+        "Apple Container remains the canonical supported-host runtime; activation and destructive-volume guards fail closed when the preserved source is selected.",
+        "No secrets, private user data, synthetic account handles, journal text, media keys, object bytes, signed URLs, raw inspect/log output, live user identifiers, or precise location were included in evidence."
       ]
     }
   ]
