@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   assertAuthenticatedGardenShell,
   assertCanonicalLegacyRedirect,
+  assertOperatorAccessState,
   assertPublicRoutePolicyContract,
   assertSitemapPolicyContract,
 } from "./smoke-canonical-launch";
@@ -26,6 +27,48 @@ describe("canonical launch smoke workspace contract", () => {
         /signed-in garden shell/,
       );
     }
+  });
+});
+
+describe("canonical launch operator access contract", () => {
+  it.each([
+    ["admin", "sign-in-required"],
+    ["admin", "denied"],
+    ["erasure-requests", "denied"],
+  ] as const)("accepts the %s %s structural boundary", (surface, state) => {
+    expect(() =>
+      assertOperatorAccessState({
+        html: `<main data-operator-surface="${surface}" data-operator-access-state="${state}">Localized copy</main>`,
+        surface,
+        state,
+        label: `${surface} ${state}`,
+      }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    [
+      "the wrong surface",
+      '<main data-operator-surface="erasure-requests" data-operator-access-state="denied"></main>',
+    ],
+    [
+      "an allowed state",
+      '<main data-operator-surface="admin" data-operator-access-state="allowed"></main>',
+    ],
+    [
+      "duplicate access markers",
+      '<main data-operator-surface="admin" data-operator-access-state="denied"><div data-operator-access-state="allowed"></div></main>',
+    ],
+    ["localized text without a marker", "<main>Доступ заборонено.</main>"],
+  ])("rejects %s", (_label, html) => {
+    expect(() =>
+      assertOperatorAccessState({
+        html,
+        surface: "admin",
+        state: "denied",
+        label: "normal admin block",
+      }),
+    ).toThrow(/normal admin block/);
   });
 });
 

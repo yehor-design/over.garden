@@ -59,6 +59,8 @@ describe("/admin", () => {
     const { default: AdminPage } = await import("./page");
     const html = renderToStaticMarkup(await AdminPage());
 
+    expect(html).toContain('data-operator-surface="admin"');
+    expect(html).toContain('data-operator-access-state="sign-in-required"');
     expect(html).toContain("Адміністрування");
     expect(html).toContain("admin-auth-panel");
     expect(html).not.toContain("Continue with Google");
@@ -72,6 +74,8 @@ describe("/admin", () => {
     const { default: AdminPage } = await import("./page");
     const html = renderToStaticMarkup(await AdminPage());
 
+    expect(html).toContain('data-operator-surface="admin"');
+    expect(html).toContain('data-operator-access-state="denied"');
     expect(html).toContain("Доступ заборонено.");
     expect(html).not.toContain("Перевірка пілоту");
     expect(html).not.toContain("Курація каталогу");
@@ -81,6 +85,8 @@ describe("/admin", () => {
     const { default: AdminPage, generateMetadata } = await import("./page");
     const html = renderToStaticMarkup(await AdminPage());
 
+    expect(html).toContain('data-operator-surface="admin"');
+    expect(html).toContain('data-operator-access-state="allowed"');
     expect((await generateMetadata()).title).toBe(
       "Адміністрування | OverGarden",
     );

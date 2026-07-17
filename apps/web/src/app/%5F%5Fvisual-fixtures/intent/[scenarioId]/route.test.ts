@@ -37,7 +37,7 @@ describe("visual fixture auth intent route", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://localhost:3000/auth/intent?intent=v1.iv.opaque.valid-tag",
+      "/auth/intent?intent=v1.iv.opaque.valid-tag",
     );
     expect(mocks.createAuthIntentToken).toHaveBeenCalledWith(
       expect.objectContaining({ action: "comment" }),
@@ -75,7 +75,7 @@ describe("visual fixture auth intent route", () => {
 
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe(
-      "http://localhost:3000/garden/lineage/invitations/claim#token=v1.opaque-lineage.valid-signature",
+      "/garden/lineage/invitations/claim#token=v1.opaque-lineage.valid-signature",
     );
     expect(mocks.signLineageInviteToken).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -95,7 +95,7 @@ describe("visual fixture auth intent route", () => {
     );
 
     expect(response.headers.get("location")).toMatch(
-      /^http:\/\/localhost:3000\/auth\/intent\?intent=/,
+      /^\/auth\/intent\?intent=/,
     );
     expect(response.headers.get("location")).not.toContain(
       "intent=v1.iv.opaque.valid-tag",

@@ -52,6 +52,10 @@ vi.mock("@/server/erasure-execution", () => ({
     "APPROVE request-0000abcd IRREVERSIBLE ERASURE",
 }));
 
+vi.mock("../../garden-auth-panel", () => ({
+  GardenAuthPanel: () => "erasure-auth-panel",
+}));
+
 vi.mock("./actions", () => ({
   executeApprovedErasureRequestAction: vi.fn(),
   markErasureRequestHandledAction: vi.fn(),
@@ -108,6 +112,19 @@ describe("/garden/privacy/erasure-requests", () => {
     });
   });
 
+  it("renders the structural sign-in boundary without reading requests", async () => {
+    mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
+      status: "sign_in_required",
+    });
+
+    const { default: ErasureRequestsOperatorPage } = await import("./page");
+    const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
+
+    expect(html).toContain('data-operator-surface="erasure-requests"');
+    expect(html).toContain('data-operator-access-state="sign-in-required"');
+    expect(mocks.listOperatorErasureRequests).not.toHaveBeenCalled();
+  });
+
   it("does not read erasure requests for a signed-in non-operator", async () => {
     mocks.resolveErasureRequestOperatorAccess.mockReturnValue({
       status: "denied",
@@ -116,6 +133,8 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
+    expect(html).toContain('data-operator-surface="erasure-requests"');
+    expect(html).toContain('data-operator-access-state="denied"');
     expect(html).toContain("Доступ заборонено.");
     expect(mocks.listOperatorErasureRequests).not.toHaveBeenCalled();
     expect(mocks.getErasureDryRunPreviewForRequest).not.toHaveBeenCalled();
@@ -125,6 +144,8 @@ describe("/garden/privacy/erasure-requests", () => {
     const { default: ErasureRequestsOperatorPage } = await import("./page");
     const html = renderToStaticMarkup(await ErasureRequestsOperatorPage());
 
+    expect(html).toContain('data-operator-surface="erasure-requests"');
+    expect(html).toContain('data-operator-access-state="allowed"');
     expect(html).toContain("Режим доступу: лише захищений власник з паролем");
     expect(html).toContain("Роль: Власник");
     expect(mocks.listOperatorErasureRequests).toHaveBeenCalledOnce();

@@ -1,5 +1,3 @@
-import { NextResponse } from "next/server";
-
 import { lineageInvitationClaimPath } from "@/lib/garden/public-paths";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 import { VISUAL_FIXTURE_MANIFEST } from "@/lib/visual-fixtures/manifest";
@@ -13,7 +11,7 @@ interface VisualFixtureIntentRouteContext {
 }
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: VisualFixtureIntentRouteContext,
 ) {
   if (!tryResolveVisualFixtureEnvironment(process.env)) {
@@ -34,10 +32,7 @@ export async function GET(
       createdAt: new Date(),
       ttlSeconds: 15 * 60,
     });
-    return NextResponse.redirect(
-      new URL(lineageInvitationClaimPath(inviteToken), request.url),
-      303,
-    );
+    return sameOriginRedirect(lineageInvitationClaimPath(inviteToken));
   }
 
   const tokenNow =
@@ -56,10 +51,16 @@ export async function GET(
     scenario.tokenMode === "invalid"
       ? invalidateToken(issuedToken)
       : issuedToken;
-  const destination = new URL("/auth/intent", request.url);
-  destination.searchParams.set("intent", token);
+  const searchParams = new URLSearchParams({ intent: token });
 
-  return NextResponse.redirect(destination, 303);
+  return sameOriginRedirect(`/auth/intent?${searchParams}`);
+}
+
+function sameOriginRedirect(location: string) {
+  return new Response(null, {
+    status: 303,
+    headers: { location },
+  });
 }
 
 function invalidateToken(token: string) {

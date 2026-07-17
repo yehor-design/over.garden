@@ -704,15 +704,21 @@ async function verifyAdminAndErasureGates(
 ) {
   const signedOutAdmin = await htmlResponse(base, signOutJar, "/admin");
   assertEqual(signedOutAdmin.status, 200, "signed-out admin route status");
-  assertIncludes(signedOutAdmin.text, "Sign in", "signed-out admin boundary");
+  assertOperatorAccessState({
+    html: signedOutAdmin.text,
+    surface: "admin",
+    state: "sign-in-required",
+    label: "signed-out admin boundary",
+  });
 
   const normalAdmin = await htmlResponse(base, jar, "/admin");
   assertEqual(normalAdmin.status, 200, "normal account admin status");
-  assertProtectedRouteBlocked(
-    normalAdmin.text,
-    "Control plane",
-    "normal admin block",
-  );
+  assertOperatorAccessState({
+    html: normalAdmin.text,
+    surface: "admin",
+    state: "denied",
+    label: "normal admin block",
+  });
 
   const normalErasure = await htmlResponse(
     base,
@@ -720,11 +726,12 @@ async function verifyAdminAndErasureGates(
     "/garden/privacy/erasure-requests",
   );
   assertEqual(normalErasure.status, 200, "normal account erasure route status");
-  assertProtectedRouteBlocked(
-    normalErasure.text,
-    "No erasure requests have been submitted.",
-    "normal erasure block",
-  );
+  assertOperatorAccessState({
+    html: normalErasure.text,
+    surface: "erasure-requests",
+    state: "denied",
+    label: "normal erasure block",
+  });
 
   const sealedOwnerId = process.env.OVERGARDEN_ADMIN_OWNER_USER_ID?.trim();
   if (!sealedOwnerId && process.env.OVE143_OWNER_ENV_LIST_VERIFIED === "1") {
@@ -990,17 +997,25 @@ function assertNoPrivateMarkers(value: string, markers: string[]) {
   }
 }
 
-function assertProtectedRouteBlocked(
-  html: string,
-  allowedContentMarker: string,
-  label: string,
-) {
-  const blocked = html.includes("Access denied") || html.includes("Sign in");
-  assert(blocked, `${label}: expected denied or sign-in boundary`);
-  assert(
-    !html.includes(allowedContentMarker),
-    `${label}: protected content rendered`,
+export function assertOperatorAccessState(input: {
+  html: string;
+  surface: "admin" | "erasure-requests";
+  state: "sign-in-required" | "denied";
+  label: string;
+}) {
+  const surfaces = Array.from(
+    input.html.matchAll(/data-operator-surface="([^"]+)"/g),
+    (match) => match[1],
   );
+  const states = Array.from(
+    input.html.matchAll(/data-operator-access-state="([^"]+)"/g),
+    (match) => match[1],
+  );
+
+  assertEqual(surfaces.length, 1, `${input.label} surface marker count`);
+  assertEqual(surfaces[0], input.surface, `${input.label} surface`);
+  assertEqual(states.length, 1, `${input.label} access marker count`);
+  assertEqual(states[0], input.state, `${input.label} access state`);
 }
 
 function assertNoForbiddenOutput(output: unknown) {

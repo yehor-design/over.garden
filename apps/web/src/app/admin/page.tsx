@@ -55,7 +55,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
 
   if (access.status === "sign_in_required") {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-surface="admin"
+        data-operator-access-state="sign-in-required"
+        className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <AdminHeader copy={copy} />
         <GardenAuthPanel locale={locale} />
       </main>
@@ -64,7 +68,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
 
   if (access.status === "denied") {
     return (
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-surface="admin"
+        data-operator-access-state="denied"
+        className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <AdminHeader copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
           {copy.common.accessDenied}
@@ -74,7 +82,11 @@ export default async function AdminPage({ searchParams }: AdminPageProps = {}) {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
+    <main
+      data-operator-surface="admin"
+      data-operator-access-state="allowed"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8"
+    >
       <AdminHeader copy={copy} />
 
       <section className="grid gap-4 rounded-lg border border-border p-4">

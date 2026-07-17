@@ -62,7 +62,11 @@ export default async function ErasureRequestsOperatorPage() {
 
   if (access.status === "sign_in_required") {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-surface="erasure-requests"
+        data-operator-access-state="sign-in-required"
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
         <GardenAuthPanel locale={locale} />
       </main>
@@ -71,7 +75,11 @@ export default async function ErasureRequestsOperatorPage() {
 
   if (access.status === "denied") {
     return (
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
+      <main
+        data-operator-surface="erasure-requests"
+        data-operator-access-state="denied"
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+      >
         <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
         <p className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
           {operatorCopy.common.accessDenied}
@@ -97,7 +105,11 @@ export default async function ErasureRequestsOperatorPage() {
   const canExecuteErasure = hasAdminCapability(access, "erasure:execute");
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8">
+    <main
+      data-operator-surface="erasure-requests"
+      data-operator-access-state="allowed"
+      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-5 py-8 sm:px-8"
+    >
       <OperatorHeader operatorCopy={operatorCopy} copy={copy} />
 
       <section className="grid gap-3">
