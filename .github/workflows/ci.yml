@@ -47,7 +47,6 @@ jobs:
       run:
         working-directory: apps/web
     env:
-      PUBLIC_SITE_URL: http://localhost:3000
       BETTER_AUTH_URL: http://localhost:3000
       BETTER_AUTH_SECRET: ci-overgarden-better-auth-secret-for-test-runtime
       DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
@@ -131,6 +130,8 @@ jobs:
           exit 1
 
       - name: Bootstrap schema and object storage
+        env:
+          PUBLIC_SITE_URL: http://localhost:3000
         run: pnpm local:bootstrap
 
       - name: Check generated DB types
