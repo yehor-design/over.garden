@@ -123,6 +123,17 @@ Do not close OVE-203 on local proof alone. Current-main CI, canonical Vercel
 `READY`, exact deployed SHA equality, successful production migration verify,
 and the redacted runtime smoke above are all required.
 
+Result on 2026-07-18: pass.
+
+- Behavior commit: `1edffc351c1c3132f97608083b4b6ea6a63e9a12` on `main`.
+- CI: [run 29652693020](https://github.com/yehor-design/over.garden/actions/runs/29652693020) passed the Python tier, fresh bootstrap and identity recovery contract, DB type check, lint, typecheck, localization coverage, `1,912` web tests, production build, and responsive/accessibility matrix for the exact behavior commit.
+- Production deployment: `dpl_5bTNKAWqQJVctuBkESjg7bqVKgsL`, target `production`, state `READY`, ref `main`, exact verified commit above, canonical alias `https://over.garden`.
+- Database expand and migration: the exact-SHA additive bootstrap ran before code cutover. Dry-run reported `64` users, `6` existing profiles/current claims, `58` missing profiles/current claims, and two legacy review sets of `6`; rollback proof left aggregate state unchanged. First apply provisioned `58` identities and cleared both review sets. Second apply had zero mutations. Verify returned `64` users, `64` profiles, `64` current claims, zero retired claims, and zero missing, duplicate, mismatch, unresolved-review, or legacy-mention gaps.
+- Canonical runtime: `/` and `/health` returned `200`; health reported configured auth and a successful database ping. Guest `/garden/profile` returned `200`, rendered credential fields without a name/nickname input, kept the owner editor absent, and remained `noindex`. A current public profile returned `200`, profile-v2 markup, and no private markers.
+- Synthetic flow: one generated, non-PII test identity proved credential signup `2xx`, exactly one generated profile/current claim, duplicate signup `2xx` without mutation, verified sign-in, authenticated My Account, immediate custom rename, persisted cooldown, current route `200`, retired route `410` with `noindex` and no redirect, current mention readback, and retired mention exclusion. The synthetic account and its current/retired claims were deleted immediately; final verification returned the unchanged `64`/`64`/`64` zero-gap state.
+- Provider parity: the provider-independent SQL creation trigger and Better Auth database hook are proven locally/CI for credential, Google, and Facebook creation. Production Google/Facebook start continuity remains bound to the existing OVE-111/OVE-112 gates; OVE-203 neither copied provider names into public identity nor changed provider configuration.
+- Evidence safety: only aggregate counts, booleans, status/header classes, policy version, CI/deployment state, and exact code/deployment identifiers were retained. No email, UUID, handle, rejected moderation value, session cookie, token, provider payload, private content, or precise location was printed or recorded.
+
 ## OVE-163 Deterministic Matching Rollout Readiness
 
 Goal: prove that the exact deterministic-matching behavior commit is deployed
@@ -607,7 +618,7 @@ Non-destructive only: this slice does not perform any restore-over-production, b
 ### Backup and PITR status (managed Postgres)
 
 - Cluster: `overgarden-postgres-prod-fra1` (DigitalOcean Managed PostgreSQL, `FRA1`).
-- Status: `pass` as of 2026-06-29. `doctl databases list` verified the production cluster online in `fra1`; `doctl databases backups <cluster-id>` returned managed backup rows, with the latest observed backup on 2026-06-28 17:33 UTC and a small backup size class (<0.1 GiB). The PITR/retention window is recorded as 7d per DigitalOcean Managed PostgreSQL docs/provider default; the provider output did not show a different window.
+- Status: `pass`, backup listing refreshed on 2026-07-18. The provider API reported managed backups enabled, returned `8` backup rows, and identified the latest backup as 2026-07-17 17:33 UTC. The PITR/retention window remains recorded as 7d per DigitalOcean Managed PostgreSQL documentation/provider default; the refreshed provider output showed no override. Worker and search recovery evidence below remains the 2026-06-29 live exercise.
 - Closed-pilot interpretation: backup/PITR posture is no longer a launch blocker for the closed pilot. A destructive restore-over-production drill remains out of scope and still requires explicit maintainer sign-off.
 - Operator verification (redacted):
   1. Dashboard: DigitalOcean Cloud -> Databases -> `overgarden-postgres-prod-fra1` -> Backups/Settings. Confirm automatic daily backups are enabled; note the PITR/retention window and the latest backup timestamp.
@@ -690,6 +701,12 @@ notes: <redacted; no DB URLs, CA body, credentials, tokens, journal text, Meili 
 ```
 
 ### OVE-39 live evidence (redacted)
+
+The full worker/search recovery block below is historical evidence from
+2026-06-29. OVE-203 refreshed only the non-destructive managed-backup listing
+on 2026-07-18 (`backup_enabled: pass`, `backup_count: 8`,
+`latest_backup_date: 2026-07-17 17:33 UTC`); it did not claim or perform a new
+restore drill.
 
 ```
 date: 2026-06-29

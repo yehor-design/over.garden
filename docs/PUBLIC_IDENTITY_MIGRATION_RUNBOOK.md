@@ -81,12 +81,18 @@ Production starts with an explicit additive schema-install step. The identity
 migration commands cannot be used as evidence before the live database has the
 registry, functions, triggers, and constraints from the exact code SHA.
 
-1. Confirm the target commit is current `main`, its CI is green, the same SHA is
-   `READY` and canonical in Vercel, and the managed backup/PITR state has been
-   checked for the maintenance window. Stop if any identity differs.
-2. Use a clean deployment-linked working directory. Place the production
-   database environment and CA in separately permission-restricted temporary
-   files; do not create or load `.env.local` in that directory.
+1. Create one immutable release-candidate commit and prove that exact SHA with
+   green CI on a non-production ref or pull request. Confirm the current
+   production deployment is healthy and check managed backup/PITR state for the
+   maintenance window. Do not push the schema-dependent commit to `main` yet:
+   Vercel may cut production over before the additive database expansion is
+   complete. A Preview deployment is useful when its environment is configured,
+   but it is not a substitute for exact-SHA CI and is not required to hold
+   production database credentials.
+2. Use a clean working directory detached at that exact CI-proven SHA. Place
+   the production database environment and CA in separately
+   permission-restricted temporary files; do not create or load `.env.local`
+   in that directory.
 3. Install the exact-SHA app SQL and Better Auth schema through the repository's
    idempotent bootstrap, with bounded lock/statement timeouts so contention
    fails closed instead of waiting indefinitely:
@@ -114,22 +120,26 @@ registry, functions, triggers, and constraints from the exact code SHA.
 7. Run it a second time and require all mutation counters to be zero.
 8. Run `identity:verify`; do not close OVE-203 unless it exits successfully with
    `ready: true` and every gap/review counter at zero.
-9. Repeat the exact-SHA authenticated and public-profile production smoke,
-   including current-handle readback, retired-route `410`/`noindex`, duplicate
-   signup invariants, and private/removed/blocked exclusions.
+9. Push the same CI-proven commit to `main`, wait for current-main CI, and
+   require the matching Vercel production deployment to reach `READY`, own the
+   canonical aliases, and report the exact commit SHA. Stop on any mismatch.
+10. Run `identity:verify` once more against the deployed SHA, then repeat the
+    exact-SHA authenticated and public-profile production smoke,
+    including current-handle readback, retired-route `410`/`noindex`, duplicate
+    signup invariants, and private/removed/blocked exclusions.
 
 Use the same explicit files for every migration command, for example:
 
 ```sh
-pnpm identity:dry-run -- \
+pnpm identity:dry-run \
   --env-file "$OVE203_ENV_FILE" --ca-file "$OVE203_CA_FILE"
-pnpm identity:rollback-proof -- \
+pnpm identity:rollback-proof \
   --env-file "$OVE203_ENV_FILE" --ca-file "$OVE203_CA_FILE"
-pnpm identity:apply -- --confirm-apply \
+pnpm identity:apply --confirm-apply \
   --env-file "$OVE203_ENV_FILE" --ca-file "$OVE203_CA_FILE"
-pnpm identity:apply -- --confirm-apply \
+pnpm identity:apply --confirm-apply \
   --env-file "$OVE203_ENV_FILE" --ca-file "$OVE203_CA_FILE"
-pnpm identity:verify -- \
+pnpm identity:verify \
   --env-file "$OVE203_ENV_FILE" --ca-file "$OVE203_CA_FILE"
 ```
 

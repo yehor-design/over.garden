@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-18 for the production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
+Last verified: 2026-07-18 for the OVE-203 production public-identity rollout, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -207,7 +207,10 @@ Invariants:
 
 Status: production Managed PostgreSQL plus worker/Meilisearch Droplet are provisioned for the pilot smoke.
 
-Last verified: 2026-07-12 for the OVE-180 additive profile schema proof. Broader direct TLS database ping, schema count, worker health, redacted journal index/unindex smoke, DigitalOcean backup listing, and live worker restart/recovery smoke were last verified on 2026-06-29.
+Last verified: 2026-07-18 for the OVE-203 additive identity schema,
+aggregate-only migration, final integrity verification, and managed-backup
+listing. Broader worker health, redacted journal index/unindex smoke, and live
+worker restart/recovery smoke were last verified on 2026-06-29.
 
 Project:
 
@@ -239,11 +242,12 @@ Operational state:
 - On 2026-07-12 (OVE-180), production schema bootstrap was rerun non-destructively before the gardener-profile V2 live smoke. A redacted app-TLS probe confirmed all three profile relationship tables, the processed-avatar foreign key, all nine bounded profile columns, and zero forbidden location-column names across the new profile tables. No schema drop, bulk delete, row export, database URL, CA body, profile row, relationship row, user identifier, or precise location was read into evidence or recorded.
 - On 2026-07-15 (OVE-162), production schema bootstrap was rerun non-destructively after the exact-SHA Vercel deployment. A booleans-only app-TLS probe confirmed `catalog_fuzzy_duplicate_suggestions` and the closed-payload `job_queue_catalog_fuzzy_duplicate_payload_check` constraint are present. No schema drop, bulk delete, row export, database URL, CA body, catalog row, suggestion row, job payload, user identifier, or private/source-only field was read into evidence or recorded.
 - On 2026-07-16 (OVE-163), exact-main deployment `dpl_FR7gxmnHv9j3wEMLvrDbk5KjYPf2` reached Vercel `READY` for commit `e94148fa5a4a097422b5cdf7234e1b1ffad542e2`. A platform-env-injected, read-only production proof passed canonical runtime, matching schema and closed queue-payload constraints, safe typeahead search, entity-resolution QA, and recursive evidence leak checks with `productionDataTouched=false`. The production fuzzy report was safely empty (`0` full, `0` reviewed, `0` rendered); bounded advisory generation was proven locally without importing production data. No external infrastructure value changed, and no env file, schema mutation, database URL, CA body, secret, private/source-only row, user identifier, or precise location was printed or recorded.
+- On 2026-07-18 (OVE-203), commit `1edffc351c1c3132f97608083b4b6ea6a63e9a12` was first proven by exact-SHA CI, then used from a clean detached worktree to install the additive identity schema before the same commit reached production. The aggregate-only dry-run found `64` auth users, `6` existing profiles/current claims, `58` missing profiles/current claims, and `6` legacy claims plus `6` legacy profile handles requiring policy review. Transactional rollback proof left aggregate state unchanged. The first apply provisioned `58` identities and reviewed both legacy sets; the second apply reported zero mutations. Final verification reported `64` users, `64` profiles, `64` current claims, zero retired claims, and zero missing, duplicate, mismatched, unresolved-review, or legacy-mention gaps. A bounded synthetic canonical runtime smoke then proved no-name signup, generated identity, duplicate preservation, verified sign-in, immediate rename, cooldown, current route `200`, retired route `410`/`noindex` without redirect, and current/retired mention resolution. The synthetic account was deleted immediately and a second final integrity check returned the same `64`/`64`/`64` zero-gap state. Evidence contained only counts, booleans, status classes, commit/deployment identifiers, and policy version; no email, UUID, handle, rejected term, cookie, token, content, or secret was printed or retained.
 
-Backup and PITR posture (OVE-39):
+Backup and PITR posture (OVE-39, refreshed for OVE-203):
 
-- Status: `pass` as of 2026-06-29. `doctl databases list` verified `overgarden-postgres-prod-fra1` as online in `fra1` (`pg`, version 18, `db-s-1vcpu-1gb`, one node), and `doctl databases backups <cluster-id>` returned managed backup rows.
-- Latest observed backup: 2026-06-28 17:33 UTC, small backup size class (<0.1 GiB). PITR/retention window is recorded as 7d per DigitalOcean Managed PostgreSQL docs/provider default; provider output showed no override.
+- Status: `pass` as of 2026-07-18. The provider API reported managed backups enabled and returned `8` backup rows for the production cluster.
+- Latest observed backup: 2026-07-17 17:33 UTC. PITR/retention remains recorded as 7d per DigitalOcean Managed PostgreSQL documentation/provider default; the refreshed provider output showed no override.
 - Operator verification (dashboard): DigitalOcean Cloud -> Databases -> `overgarden-postgres-prod-fra1` -> Backups/Settings. Confirm automatic daily backups are enabled and note the PITR/retention window and the latest backup timestamp.
 - Operator verification (CLI/API, secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded here.
 - Recoverability validation must be non-destructive: create a fork / restore into a NEW cluster (`doctl databases fork ...`). Never restore over production. A restore-over-production drill requires explicit maintainer sign-off and is out of scope for the closed pilot.
@@ -421,7 +425,7 @@ redaction: pass; no secrets, env contents, payloads, row/user ids, content, prec
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
-Last verified: 2026-06-28 through the connected Vercel app (OVE-37 current-main closure; earlier OVE-27/OVE-36 checks were 2026-06-27 to 2026-06-28).
+Last verified: 2026-07-18 for OVE-203 exact-main production deployment and canonical runtime proof.
 
 Team:
 
@@ -439,17 +443,17 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_AkMJozhSmood7NdvSkqvfUQDySKm`
-- Deployment URL: `https://over-garden-d49wqs9kc-yehors-projects-01221e2b.vercel.app`
+- Deployment ID: `dpl_5bTNKAWqQJVctuBkESjg7bqVKgsL`
+- Canonical URL: `https://over.garden`
 - Ready state: `READY`
 - Target: `production`
-- Source: redeploy of GitHub-integrated production deployment after OVE-51 env correction
+- Source: GitHub-integrated production deployment after the OVE-203 additive database expansion and migration
 - GitHub ref: `main`
-- GitHub commit: `f46850dcba7ed529ad286390bafe3c18f6eab7aa`
-- GitHub commit message: `chore(pilot): canonicalize production pilot domain`
+- GitHub commit: `1edffc351c1c3132f97608083b4b6ea6a63e9a12`
+- GitHub commit message: `feat(identity): provision moderated pseudonymous handles`
 - GitHub commit verification: `verified`
-- Branch alias: `over-garden-git-main-yehors-projects-01221e2b.vercel.app`
-- OVE-51 (2026-06-29): this deployment served the canonical-domain browser smoke after `PUBLIC_SITE_URL`, `BETTER_AUTH_URL`, `PILOT_INVITE_SIGNING_SECRET`, and the missing `pilot_invite_grants` schema were corrected.
+- Canonical alias equality: passed for `https://over.garden`
+- OVE-203 (2026-07-18): canonical `/`, `/health`, guest `/garden/profile`, one current public-profile route, and the bounded synthetic auth/rename/retirement flow passed against this exact deployment. Runtime evidence was redacted and the synthetic identity was deleted after proof.
 
 Production aliases and domain bindings:
 

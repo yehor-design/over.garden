@@ -208,6 +208,39 @@
         "Production-derived hardening added persistent low-swappiness swap, combined and available memory floors, release and Docker-root disk floors, bounded low-priority archive operations, capacity-independent explicit rollback, and pointer-aware cleanup of only obsolete reconstructible release copies.",
         "No secret, env content, job payload, row or user id, journal or catalog content, media key, precise location, host, IP, user agent, or raw error was included in evidence; no Docker volume or production data was removed."
       ]
+    },
+    {
+      "issueId": "OVE-203",
+      "title": "Automatic pseudonymous @handle: gardener signs up without a name and safely chooses a moderated nickname",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "1edffc351c1c3132f97608083b4b6ea6a63e9a12",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-203/automatic-pseudonymous-handle-gardener-signs-up-without-a-name-and",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29652693020",
+      "completedAt": "2026-07-18",
+      "verificationCommands": [
+        "cd apps/web && pnpm local:bootstrap",
+        "cd apps/web && pnpm db:types",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm smoke:public-identity",
+        "cd apps/web && pnpm localization:coverage:check",
+        "cd apps/web && pnpm visual:fixtures:verify",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=ephemeral-build-secret-at-least-32-characters pnpm build",
+        "cd apps/web && pnpm test:a11y",
+        "cd apps/web && pnpm identity:verify --env-file <restricted-production-env> --ca-file <restricted-production-ca>",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "The exact behavior commit passed local tests, fresh-bootstrap recovery, full CI, additive production schema expansion, rollback proof, apply-twice idempotency, aggregate-only migration verification, exact-SHA deployment, and canonical runtime proof.",
+        "The provider-independent creation boundary covers credential, Google, and Facebook account creation without deriving public identity from email or provider profile data; production OAuth start continuity remains covered by OVE-111 and OVE-112.",
+        "The bounded synthetic runtime identity was deleted after proof, and final production integrity returned 64 users, 64 profiles, 64 current claims, and zero gaps or unresolved reviews.",
+        "No email, UUID, handle, moderation match, secret, session cookie, token, provider payload, private content, raw request metadata, or precise location was included in evidence."
+      ]
     }
   ]
 }
