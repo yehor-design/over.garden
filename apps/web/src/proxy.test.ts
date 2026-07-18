@@ -20,6 +20,11 @@ const mocks = vi.hoisted(() => ({
   getPublicCommunityLifecycleLookup: vi.fn().mockResolvedValue({
     status: "found",
   }),
+  getSession: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  auth: { api: { getSession: mocks.getSession } },
 }));
 
 vi.mock("@/server/public-object-passport-repository", () => ({
@@ -95,11 +100,9 @@ describe("app route cache guardrail", () => {
     vi.stubEnv("WALKING_SKELETON_ENABLED", "false");
     const disabledPage = await responseFor("/skeleton");
     const disabledNested = await responseFor("/skeleton/internal");
-    const disabledApi = await responseFor(
-      "/api/skeleton/journal",
-      undefined,
-      { method: "POST" },
-    );
+    const disabledApi = await responseFor("/api/skeleton/journal", undefined, {
+      method: "POST",
+    });
 
     stubLocalWalkingSkeletonEnvironment();
     const enabledLocal = await proxy(
@@ -139,9 +142,7 @@ describe("app route cache guardrail", () => {
     expect(disabledPage.headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,
     );
-    expect(disabledPage.headers.get("X-Robots-Tag")).toBe(
-      "noindex, nofollow",
-    );
+    expect(disabledPage.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
     expect(enabledLocal.status).toBe(200);
     expect(rejectedRawHost.status).toBe(404);
     expect(rejectedUrlHost.status).toBe(404);
@@ -282,7 +283,16 @@ describe("app route cache guardrail", () => {
     );
   });
 
-  it("hard-classifies unavailable public profiles without exposing their state", async () => {
+  it("returns a generic localized 410 for retired profile handles without redirecting to the current identity", async () => {
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "gone",
+    });
+    const gone = await responseFor("/@former_garden", {
+      accept: "text/html",
+      "accept-language": "bg-BG,bg;q=0.9",
+      "sec-fetch-dest": "document",
+    });
+
     mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
     });
@@ -303,6 +313,15 @@ describe("app route cache guardrail", () => {
       rsc: "1",
     });
 
+    expect(gone.status).toBe(410);
+    expect(gone.headers.get("Location")).toBeNull();
+    expect(gone.headers.get("Content-Language")).toBe("bg");
+    expect(gone.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(gone.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
+    const goneHtml = await gone.text();
+    expect(goneHtml).toContain("Профилът вече не е достъпен");
+    expect(goneHtml).not.toContain("former_garden");
+    expect(goneHtml).not.toContain("current_garden");
     expect(unavailable.status).toBe(404);
     expect(unavailable.headers.get("Content-Language")).toBe("bg");
     expect(unavailable.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -310,7 +329,33 @@ describe("app route cache guardrail", () => {
     expect(active.status).toBe(200);
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "former_garden",
+      null,
+    );
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
       "private_garden",
+      null,
+    );
+  });
+
+  it("passes only a signed-in viewer id into blocked profile lifecycle classification", async () => {
+    const viewerUserId = "00000000-0000-4000-8000-000000000203";
+    mocks.getSession.mockResolvedValueOnce({ user: { id: viewerUserId } });
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "not_found",
+    });
+
+    const response = await responseFor("/@blocked_garden", {
+      accept: "text/html",
+      cookie: "__Secure-overgarden.session_token=opaque-test-token",
+      "sec-fetch-dest": "document",
+    });
+
+    expect(response.status).toBe(404);
+    expect(mocks.getSession).toHaveBeenCalledOnce();
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "blocked_garden",
+      viewerUserId,
     );
   });
 
@@ -570,6 +615,11 @@ describe("app route cache guardrail", () => {
     const encodedBulgarianProfile = await responseFor("/%40green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
     });
+    const ukrainianProfileHead = await responseFor(
+      "/@green_thumb",
+      { cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk` },
+      { method: "HEAD" },
+    );
     const internalUkrainianRewrite = await responseFor("/uk/@green_thumb", {
       "x-overgarden-internal-profile-rewrite": "1",
     });
@@ -590,6 +640,10 @@ describe("app route cache guardrail", () => {
     expect(encodedBulgarianProfile.status).toBe(307);
     expect(encodedBulgarianProfile.headers.get("Location")).toBe(
       "https://over.garden/bg/@green_thumb",
+    );
+    expect(ukrainianProfileHead.status).toBe(200);
+    expect(ukrainianProfileHead.headers.get("x-middleware-rewrite")).toBe(
+      "https://over.garden/uk/@green_thumb",
     );
     expect(internalUkrainianRewrite.status).toBe(200);
     expect(internalUkrainianRewrite.headers.get("Location")).toBeNull();

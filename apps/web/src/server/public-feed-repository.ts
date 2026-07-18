@@ -201,10 +201,30 @@ export function buildPublicFeedEntriesQuery(
           "journal_entries.owner_user_id",
         ),
     )
-    .leftJoin(
-      "user_public_profiles",
-      "user_public_profiles.user_id",
-      "journal_entries.owner_user_id",
+    .leftJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .leftJoin("user_public_profiles", (join) =>
+      join
+        .onRef(
+          "user_public_profiles.user_id",
+          "=",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
+        )
+        .on("user_public_profiles.profile_visibility", "=", "public")
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
     )
     .select([
       "journal_entries.id as entryId",

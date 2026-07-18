@@ -75,6 +75,7 @@ describe("visual fixture repository query contracts", () => {
       "community_audit_events",
       "topic_signals",
       "media",
+      "profile_claims",
       "profiles",
       "profile_follows",
       "profile_blocks",
@@ -95,7 +96,11 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('delete from "lineage_provenance_edge_audit_events"');
     expect(sql).toContain('delete from "community_moderation_audit_log"');
     expect(sql).toContain('insert into "user"');
-    expect(sql).toContain('insert into "user_public_profiles"');
+    expect(sql).toContain("overgarden_provision_user_public_profile");
+    expect(sql).toContain("insert into user_handle_registry");
+    expect(sql).toContain("update user_public_profiles profile");
+    expect(sql).toContain("from retired");
+    expect(sql).toContain("from claimed");
     expect(sql).toContain('insert into "profile_follows"');
     expect(sql).toContain('insert into "profile_blocks"');
     expect(sql).toContain('insert into "profile_reports"');
@@ -127,7 +132,7 @@ describe("visual fixture repository query contracts", () => {
     expect(sql).toContain('"alt_text"');
     expect(sql).toContain('"caption"');
     expect(sql).toContain('on conflict ("id") do update');
-    expect(sql).toContain('on conflict ("user_id") do update');
+    expect(sql).toContain('on conflict ("owner_user_id") do update');
     expect(sql).not.toMatch(
       /analytics_events|job_queue|meilisearch|search_documents|email_delivery|push_payload/i,
     );
@@ -191,6 +196,7 @@ describe("visual fixture repository query contracts", () => {
       "lineage_edges",
       "lineage_pending_identities",
       "objects",
+      "catalog_alias_projections",
       "catalog_names",
       "catalog_items",
       "spaces",
@@ -237,6 +243,7 @@ describe("visual fixture repository query contracts", () => {
         ({ id }) => id,
       ),
       VISUAL_FIXTURE_MANIFEST.objects.map(({ id }) => id),
+      VISUAL_FIXTURE_MANIFEST.catalogNames.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.catalogNames.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.catalogItems.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.spaces.map(({ id }) => id),

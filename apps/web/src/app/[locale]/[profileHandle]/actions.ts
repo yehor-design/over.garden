@@ -11,6 +11,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { requireCurrentRequestScope } from "@/server/auth-session";
+import { parsePublicHandleSyntax } from "@/server/identity-policy";
 import {
   blockProfile,
   followProfile,
@@ -18,7 +19,6 @@ import {
   unfollowProfile,
   type ProfileInteractionResult,
 } from "@/server/profile-interaction-repository";
-import { normalizePublicHandleInput } from "@/server/public-profile-repository";
 
 export async function followProfileAction(formData: FormData): Promise<void> {
   const scope = await requireCurrentRequestScope();
@@ -96,10 +96,8 @@ function requestedLocale(formData: FormData): PublicLocale {
 }
 
 function normalizedHandle(formData: FormData) {
-  const validation = normalizePublicHandleInput(
-    String(formData.get("handle") ?? ""),
-  );
-  return validation.ok ? validation.handle : null;
+  const parsed = parsePublicHandleSyntax(String(formData.get("handle") ?? ""));
+  return parsed.ok ? parsed.handle : null;
 }
 
 function revalidateProfilePaths(handle: string) {

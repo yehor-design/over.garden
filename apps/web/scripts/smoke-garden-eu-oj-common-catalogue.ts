@@ -11,6 +11,7 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE,
@@ -122,7 +123,7 @@ async function main() {
     await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
       email,
       password: TEST_PASSWORD,
-      name: "OVE-104 smoke user",
+      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
     });
     await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
       email,

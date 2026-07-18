@@ -6,11 +6,16 @@ const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   getProfileViewerState: vi.fn(),
+  getPublicProfileLifecycleLookup: vi.fn(),
+  notFound: vi.fn(() => {
+    throw new Error("NEXT_NOT_FOUND");
+  }),
 }));
 
 vi.mock("@/server/public-profile-repository", () => ({
   getPublicProfileEvidencePageByHandle:
     mocks.getPublicProfileEvidencePageByHandle,
+  getPublicProfileLifecycleLookup: mocks.getPublicProfileLifecycleLookup,
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -20,6 +25,10 @@ vi.mock("@/server/auth-session", () => ({
 
 vi.mock("@/server/profile-interaction-repository", () => ({
   getProfileViewerState: mocks.getProfileViewerState,
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: mocks.notFound,
 }));
 
 vi.mock("@/app/[locale]/[profileHandle]/actions", () => ({
@@ -88,6 +97,9 @@ describe("/{locale}/@:handle public profile route", () => {
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.getProfileViewerState.mockResolvedValue({ kind: "not_following" });
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValue({
+      status: "active",
+    });
     mocks.getPublicProfileEvidencePageByHandle.mockResolvedValue(PROFILE);
   });
 
@@ -129,6 +141,10 @@ describe("/{locale}/@:handle public profile route", () => {
       "@green_thumb",
       "uk",
     );
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "@green_thumb",
+      null,
+    );
     expect(html).toContain('data-public-profile="v2"');
     expect(html.indexOf("Живі об’єкти")).toBeLessThan(
       html.indexOf("Журнал догляду"),
@@ -160,7 +176,7 @@ describe("/{locale}/@:handle public profile route", () => {
 
     expect(mocks.getProfileViewerState).toHaveBeenCalledWith(
       { userId: "viewer-user", sessionId: "session-1" },
-      "green_thumb",
+      "@green_thumb",
     );
     expect(html).toContain("Спри следването");
     expect(html).toContain("Вече следвате този профил.");
@@ -190,6 +206,76 @@ describe("/{locale}/@:handle public profile route", () => {
     expect(html).toContain('data-auth-intent-control="report"');
   });
 
+  it("does not load blocked identity evidence when viewer-aware lifecycle is unavailable", async () => {
+    mocks.getCurrentSession.mockResolvedValue({
+      user: { id: "blocked-viewer" },
+      session: { id: "session-1" },
+    });
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValue({
+      status: "not_found",
+    });
+    const { default: LocalizedPublicProfileRoute, generateMetadata } =
+      await import("./page");
+    const params = {
+      locale: "uk",
+      profileHandle: "@green_thumb",
+    };
+
+    const metadata = await generateMetadata({
+      params: Promise.resolve(params),
+    });
+    await expect(
+      LocalizedPublicProfileRoute({ params: Promise.resolve(params) }),
+    ).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(metadata).toMatchObject({
+      title: "Профіль садівника | OverGarden",
+      robots: { index: false, follow: false },
+    });
+    expect(JSON.stringify(metadata)).not.toMatch(
+      /green_thumb|Green Thumb|public-safe profile biography|canonical|openGraph/i,
+    );
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "@green_thumb",
+      "blocked-viewer",
+    );
+    expect(mocks.getPublicProfileEvidencePageByHandle).not.toHaveBeenCalled();
+    expect(mocks.getProfileViewerState).not.toHaveBeenCalled();
+  });
+
+  it.each(["blocked", "unavailable"] as const)(
+    "fails metadata and RSC closed when the final viewer state is %s",
+    async (viewerKind) => {
+      mocks.getCurrentSession.mockResolvedValue({
+        user: { id: "viewer-user" },
+        session: { id: "session-1" },
+      });
+      mocks.getProfileViewerState.mockResolvedValue({ kind: viewerKind });
+      const { default: LocalizedPublicProfileRoute, generateMetadata } =
+        await import("./page");
+      const params = {
+        locale: "bg",
+        profileHandle: "@green_thumb",
+      };
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve(params),
+      });
+      await expect(
+        LocalizedPublicProfileRoute({ params: Promise.resolve(params) }),
+      ).rejects.toThrow("NEXT_NOT_FOUND");
+
+      expect(metadata).toMatchObject({
+        title: "Профил на градинар | OverGarden",
+        robots: { index: false, follow: false },
+      });
+      expect(JSON.stringify(metadata)).not.toMatch(
+        /green_thumb|Green Thumb|public-safe profile biography|canonical|openGraph/i,
+      );
+      expect(mocks.notFound).toHaveBeenCalled();
+    },
+  );
+
   it("uses localized missing metadata without querying malformed routes", async () => {
     const { generateMetadata } = await import("./page");
 
@@ -201,5 +287,7 @@ describe("/{locale}/@:handle public profile route", () => {
       title: "Профил на градинар | OverGarden",
       robots: { index: false, follow: false },
     });
+    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicProfileEvidencePageByHandle).not.toHaveBeenCalled();
   });
 });

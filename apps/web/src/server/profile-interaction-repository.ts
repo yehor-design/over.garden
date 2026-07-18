@@ -4,10 +4,12 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
-import { normalizePublicHandleInput } from "@/server/public-profile-repository";
+import { parsePublicHandleSyntax } from "@/server/identity-policy";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export const PROFILE_REPORT_REASONS = [
   "spam",
@@ -43,20 +45,20 @@ export async function getProfileViewerState(
   rawHandle: string,
   executor: QueryExecutor = db,
 ): Promise<ProfileViewerState> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return { kind: "unavailable" };
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return { kind: "unavailable" };
 
   const own = await buildOwnProfileHandleQuery(
     executor,
     scope,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
   ).executeTakeFirst();
   if (own) return { kind: "owner" };
 
   const target = await buildProfileInteractionTargetQuery(
     executor,
     scope,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
   ).executeTakeFirst();
   if (!target) return { kind: "unavailable" };
 
@@ -137,6 +139,22 @@ export async function unblockProfile(
   if (!target) return "unavailable";
   await buildRemoveProfileBlockQuery(executor, scope, target.userId).execute();
   return "unblocked";
+}
+
+export async function unblockProfileByBlockId(
+  scope: RequestScope,
+  rawBlockId: string,
+  executor: QueryExecutor = db,
+): Promise<ProfileInteractionResult> {
+  const blockId = rawBlockId.trim();
+  if (!UUID_PATTERN.test(blockId)) return "unavailable";
+
+  const updated = await buildRemoveProfileBlockByIdQuery(
+    executor,
+    scope,
+    blockId,
+  ).executeTakeFirst();
+  return updated ? "unblocked" : "unavailable";
 }
 
 export async function reportProfile(
@@ -368,6 +386,20 @@ export function buildRemoveProfileBlockQuery(
     .returning("id");
 }
 
+export function buildRemoveProfileBlockByIdQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  blockId: string,
+) {
+  return executor
+    .updateTable("profile_blocks")
+    .set({ block_state: "removed", updated_at: new Date() })
+    .where("id", "=", blockId)
+    .where("blocker_user_id", "=", scope.userId)
+    .where("block_state", "=", "active")
+    .returning("id");
+}
+
 export function buildUpsertProfileReportQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -400,13 +432,13 @@ async function resolveInteractionTarget(
   rawHandle: string,
   executor: QueryExecutor,
 ): Promise<ProfileInteractionTarget | null> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return null;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
   return (
     (await buildProfileInteractionTargetQuery(
       executor,
       scope,
-      validation.normalizedHandle,
+      parsed.normalizedHandle,
     ).executeTakeFirst()) ?? null
   );
 }
@@ -416,13 +448,13 @@ async function resolveUnblockTarget(
   rawHandle: string,
   executor: QueryExecutor,
 ): Promise<ProfileInteractionTarget | null> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return null;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
   return (
     (await executor
       .selectFrom("user_public_profiles")
       .select(["user_id as userId", "handle"])
-      .where("normalized_handle", "=", validation.normalizedHandle)
+      .where("normalized_handle", "=", parsed.normalizedHandle)
       .where("user_id", "!=", scope.userId)
       .executeTakeFirst()) ?? null
   );

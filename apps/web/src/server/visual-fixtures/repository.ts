@@ -1,10 +1,15 @@
-import { sql, type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import type { Database } from "@/db/schema";
 import {
   VISUAL_FIXTURE_MANIFEST,
   type VisualFixtureManifest,
 } from "@/lib/visual-fixtures/manifest";
+import {
+  evaluatePublicIdentity,
+  IDENTITY_POLICY_VERSION,
+  parsePublicHandleSyntax,
+} from "@/server/identity-policy";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -52,6 +57,7 @@ export function buildVisualFixtureSeedQueries(
   executor: QueryExecutor,
   manifest: VisualFixtureManifest,
 ) {
+  assertVisualFixtureIdentities(manifest);
   const actorIds = manifest.actors.map(({ id }) => id);
   const communityIds = manifest.communityEvidence.communities.map(
     ({ id }) => id,
@@ -126,46 +132,143 @@ export function buildVisualFixtureSeedQueries(
       }),
     );
 
-  const profiles = executor
-    .insertInto("user_public_profiles")
-    .values(
-      manifest.profiles.map((profile) => ({
-        user_id: profile.userId,
-        handle: profile.handle,
-        normalized_handle: profile.handle.toLowerCase(),
-        display_name: profile.displayName,
-        avatar_url: null,
-        avatar_media_asset_id: profile.avatarMediaAssetId,
-        bio: profile.bio,
-        languages: [...profile.languages],
-        location_visibility: profile.locationVisibility,
-        coarse_region_code: profile.coarseRegionCode,
-        profile_visibility: profile.profileVisibility,
-        profile_lifecycle_state: profile.profileLifecycleState,
-        relationship_visibility: profile.relationshipVisibility,
-        removed_at: profile.removedAt,
-        created_at: profile.createdAt,
-        updated_at: profile.createdAt,
-      })),
+  const profileIdentityValues = sql.join(
+    manifest.profiles.map(
+      (profile) => sql`(${profile.userId}::uuid, ${profile.handle}::text)`,
+    ),
+  );
+  const profileClaims = bindRawQuery(
+    executor,
+    sql`
+    with requested(user_id, normalized_handle) as (
+      values ${profileIdentityValues}
+    ),
+    provisioned as materialized (
+      select
+        requested.*,
+        overgarden_provision_user_public_profile(requested.user_id)
+          as provisioned_handle
+      from requested
+    ),
+    retired as (
+      update user_handle_registry registry
+      set lifecycle_state = 'retired', retired_at = now()
+      from provisioned
+      where registry.user_id = provisioned.user_id
+        and registry.lifecycle_state = 'current'
+        and registry.normalized_handle <> provisioned.normalized_handle
+      returning registry.user_id
+    ),
+    claimed as (
+      insert into user_handle_registry (
+        normalized_handle,
+        user_id,
+        lifecycle_state,
+        claim_source,
+        policy_version,
+        claimed_at,
+        next_rename_at,
+        retired_at
+      )
+      select
+        provisioned.normalized_handle,
+        provisioned.user_id,
+        'current',
+        'custom',
+        ${IDENTITY_POLICY_VERSION},
+        now(),
+        now() + interval '30 days',
+        null
+      from provisioned
+      cross join (select count(*) from retired) retired_barrier
+      on conflict (normalized_handle) do nothing
+      returning user_id
+    ),
+    reviewed_existing_fixture_claims as (
+      update user_handle_registry registry
+      set policy_version = ${IDENTITY_POLICY_VERSION}
+      from provisioned
+      cross join (select count(*) from claimed) claimed_barrier
+      where registry.normalized_handle = provisioned.normalized_handle
+        and registry.user_id = provisioned.user_id
+        and registry.lifecycle_state = 'current'
+        and registry.policy_version <> ${IDENTITY_POLICY_VERSION}
+      returning registry.user_id
     )
-    .onConflict((oc) =>
-      oc.column("user_id").doUpdateSet({
-        handle: sql`excluded.handle`,
-        normalized_handle: sql`excluded.normalized_handle`,
-        display_name: sql`excluded.display_name`,
-        avatar_url: sql`excluded.avatar_url`,
-        avatar_media_asset_id: sql`excluded.avatar_media_asset_id`,
-        bio: sql`excluded.bio`,
-        languages: sql`excluded.languages`,
-        location_visibility: sql`excluded.location_visibility`,
-        coarse_region_code: sql`excluded.coarse_region_code`,
-        profile_visibility: sql`excluded.profile_visibility`,
-        profile_lifecycle_state: sql`excluded.profile_lifecycle_state`,
-        relationship_visibility: sql`excluded.relationship_visibility`,
-        removed_at: sql`excluded.removed_at`,
-        updated_at: sql`excluded.updated_at`,
-      }),
-    );
+    update user_public_profiles profile
+    set
+      handle = provisioned.normalized_handle,
+      normalized_handle = provisioned.normalized_handle,
+      handle_changed_at = case
+        when profile.normalized_handle <> provisioned.normalized_handle then now()
+        else profile.handle_changed_at
+      end,
+      identity_policy_version = ${IDENTITY_POLICY_VERSION},
+      updated_at = now()
+    from provisioned
+    where profile.user_id = provisioned.user_id
+  `,
+  );
+
+  const profilePresentationValues = sql.join(
+    manifest.profiles.map(
+      (profile) => sql`(
+        ${profile.userId}::uuid,
+        ${profile.displayName}::text,
+        ${profile.avatarMediaAssetId}::uuid,
+        ${profile.bio}::text,
+        ${[...profile.languages]}::text[],
+        ${profile.locationVisibility}::text,
+        ${profile.coarseRegionCode}::text,
+        ${profile.profileVisibility}::text,
+        ${profile.profileLifecycleState}::text,
+        ${profile.relationshipVisibility}::text,
+        ${profile.removedAt}::timestamptz,
+        ${profile.createdAt}::timestamptz
+      )`,
+    ),
+  );
+  const profiles = bindRawQuery(
+    executor,
+    sql`
+    update user_public_profiles profile
+    set
+      display_name = fixture.display_name,
+      display_name_policy_version = case
+        when fixture.display_name is null then null
+        else ${IDENTITY_POLICY_VERSION}
+      end,
+      avatar_url = null,
+      avatar_media_asset_id = fixture.avatar_media_asset_id,
+      bio = fixture.bio,
+      languages = fixture.languages,
+      location_visibility = fixture.location_visibility,
+      coarse_region_code = fixture.coarse_region_code,
+      profile_visibility = fixture.profile_visibility,
+      profile_lifecycle_state = fixture.profile_lifecycle_state,
+      relationship_visibility = fixture.relationship_visibility,
+      removed_at = fixture.removed_at,
+      created_at = fixture.created_at,
+      updated_at = fixture.created_at
+    from (
+      values ${profilePresentationValues}
+    ) as fixture(
+      user_id,
+      display_name,
+      avatar_media_asset_id,
+      bio,
+      languages,
+      location_visibility,
+      coarse_region_code,
+      profile_visibility,
+      profile_lifecycle_state,
+      relationship_visibility,
+      removed_at,
+      created_at
+    )
+    where profile.user_id = fixture.user_id
+  `,
+  );
 
   const profileFollows = executor
     .insertInto("profile_follows")
@@ -928,6 +1031,7 @@ export function buildVisualFixtureSeedQueries(
     { label: "community_audit_events", query: communityAuditEvents },
     { label: "topic_signals", query: topicSignals },
     { label: "media", query: media },
+    { label: "profile_claims", query: profileClaims },
     { label: "profiles", query: profiles },
     { label: "profile_follows", query: profileFollows },
     { label: "profile_blocks", query: profileBlocks },
@@ -1154,6 +1258,14 @@ export function buildVisualFixtureResetQueries(
         "id",
         "in",
         manifest.objects.map(({ id }) => id),
+      ),
+    },
+    {
+      label: "catalog_alias_projections",
+      query: executor.deleteFrom("catalog_alias_projections").where(
+        "generated_from_catalog_item_name_id",
+        "in",
+        manifest.catalogNames.map(({ id }) => id),
       ),
     },
     {
@@ -1563,6 +1675,51 @@ export async function resetVisualFixtures(
   });
 
   return getVisualFixtureStatus(database, manifest);
+}
+
+function assertVisualFixtureIdentities(manifest: VisualFixtureManifest) {
+  let rejectedCount = 0;
+
+  for (const profile of manifest.profiles) {
+    const parsedHandle = parsePublicHandleSyntax(profile.handle);
+    const moderationCandidate = profile.handle
+      .replace(/^demo_/, "test_")
+      .replace(/^visual_/, "sample_");
+    if (
+      !parsedHandle.ok ||
+      !evaluatePublicIdentity({
+        surface: "handle",
+        value: moderationCandidate,
+      }).ok
+    ) {
+      rejectedCount += 1;
+    }
+    if (profile.displayName) {
+      const displayNameEvaluation = evaluatePublicIdentity({
+        surface: "display_name",
+        value: profile.displayName,
+      });
+      if (
+        !displayNameEvaluation.ok ||
+        displayNameEvaluation.value !== profile.displayName
+      ) {
+        rejectedCount += 1;
+      }
+    }
+  }
+
+  if (rejectedCount > 0) {
+    throw new Error(
+      `Visual fixture identity policy rejected ${rejectedCount} bounded fixture values.`,
+    );
+  }
+}
+
+function bindRawQuery(executor: QueryExecutor, query: RawBuilder<unknown>) {
+  return {
+    compile: () => query.compile(executor),
+    execute: () => query.execute(executor),
+  };
 }
 
 export async function getVisualFixtureStatus(

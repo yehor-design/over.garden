@@ -22,6 +22,7 @@ import {
   buildCountAuthSessionsQuery,
   buildCountAuthUserPresentQuery,
   buildCountCatalogProvisionalItemsQuery,
+  buildCountHandleClaimsQuery,
   buildCountJournalEntriesQuery,
   buildCountLineagePendingSourceIdentitiesQuery,
   buildCountLineageNodeFollowsQuery,
@@ -32,6 +33,8 @@ import {
   buildCountOwnedRowsQuery,
   buildCountPendingJournalSearchJobsQuery,
   buildCountPilotInterviewRecordsQuery,
+  buildCountPublicIdentityProfilesQuery,
+  buildCountUnreviewedIdentityRowsQuery,
 } from "./erasure-dry-run-repository";
 
 class TestPostgresDialect implements Dialect {
@@ -66,6 +69,10 @@ describe("erasure dry-run preview assembly", () => {
         authSessions: 2,
         authAccounts: 1,
         pilotInviteGrantPresent: 1,
+        publicIdentityProfiles: 1,
+        currentHandleClaims: 1,
+        retiredHandleClaims: 2,
+        unreviewedIdentityRows: 0,
         spaces: 1,
         plantObjects: 2,
         lineageProvenanceEdges: 2,
@@ -96,7 +103,17 @@ describe("erasure dry-run preview assembly", () => {
       },
     });
 
-    expect(preview.dataClasses).toHaveLength(10);
+    expect(preview.dataClasses).toHaveLength(11);
+    expect(
+      preview.dataClasses.find(
+        (dataClass) => dataClass.key === "public_identity",
+      )?.counts,
+    ).toEqual({
+      profiles: 1,
+      current_handle_claims: 1,
+      retired_handle_claims: 2,
+      unreviewed_policy_rows: 0,
+    });
     expect(
       preview.dataClasses.find(
         (dataClass) => dataClass.key === "lineage_provenance",
@@ -144,6 +161,34 @@ describe("erasure dry-run repository privacy contracts", () => {
       expect(sql).toMatch(/count\(\*\)/i);
       expect(sql).not.toMatch(
         /email|password|token|ipaddress|useragent|title|body|quarantine|derivative|referrer|coordinate|latitude|longitude/i,
+      );
+    }
+  });
+
+  it("counts current and retired pseudonymous identity rows without selecting values", () => {
+    const profileSql = buildCountPublicIdentityProfilesQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+    const currentSql = buildCountHandleClaimsQuery(
+      testDb,
+      requesterUserId,
+      "current",
+    ).compile().sql;
+    const retiredSql = buildCountHandleClaimsQuery(
+      testDb,
+      requesterUserId,
+      "retired",
+    ).compile().sql;
+    const policySql = buildCountUnreviewedIdentityRowsQuery(
+      testDb,
+      requesterUserId,
+    ).compile().sql;
+
+    for (const compiledSql of [profileSql, currentSql, retiredSql, policySql]) {
+      expect(compiledSql).toMatch(/count\(\*\)/i);
+      expect(compiledSql).not.toMatch(
+        /\bhandle\b|display_name\s+as|email|provider|token|session|ip_address|user_agent|latitude|longitude/i,
       );
     }
   });

@@ -283,8 +283,22 @@ export function buildFollowedFeedCandidatesQuery(
         .onRef("spaces.id", "=", "entries.space_id")
         .onRef("spaces.owner_user_id", "=", "entries.owner_user_id"),
     )
+    .innerJoin("user_handle_registry as owner_handles", (join) =>
+      join
+        .onRef("owner_handles.user_id", "=", "entries.owner_user_id")
+        .on("owner_handles.lifecycle_state", "=", "current"),
+    )
     .innerJoin("user_public_profiles as profiles", (join) =>
-      join.onRef("profiles.user_id", "=", "entries.owner_user_id"),
+      join
+        .onRef("profiles.user_id", "=", "owner_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "owner_handles.normalized_handle",
+        )
+        .on("profiles.profile_visibility", "=", "public")
+        .on("profiles.profile_lifecycle_state", "=", "active")
+        .on("profiles.removed_at", "is", null),
     )
     .leftJoin("catalog_items as catalog", (join) =>
       join
@@ -315,9 +329,6 @@ export function buildFollowedFeedCandidatesQuery(
     .where("entries.public_gone_at", "is", null)
     .where("entries.public_slug", "is not", null)
     .where("entries.published_at", "is not", null)
-    .where("profiles.profile_visibility", "=", "public")
-    .where("profiles.profile_lifecycle_state", "=", "active")
-    .where("profiles.removed_at", "is", null)
     .where(noActiveBlockPredicate(scope.userId, "entries.owner_user_id"))
     .where(
       followedSourcePredicate(source, {
@@ -596,9 +607,19 @@ export function buildNotificationCommentEventsQuery(
         .onRef("entries.public_slug", "=", "comments.target_ref")
         .on("comments.target_kind", "=", "journal_entry"),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "comments.author_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "comments.author_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
@@ -641,15 +662,39 @@ export function buildNotificationProfileFollowEventsQuery(
 ) {
   return executor
     .selectFrom("profile_follows as follows")
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "follows.follower_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "follows.follower_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
     )
+    .innerJoin("user_handle_registry as target_handles", (join) =>
+      join
+        .onRef("target_handles.user_id", "=", "follows.target_user_id")
+        .on("target_handles.lifecycle_state", "=", "current"),
+    )
     .innerJoin("user_public_profiles as target_profiles", (join) =>
-      join.onRef("target_profiles.user_id", "=", "follows.target_user_id"),
+      join
+        .onRef("target_profiles.user_id", "=", "target_handles.user_id")
+        .onRef(
+          "target_profiles.normalized_handle",
+          "=",
+          "target_handles.normalized_handle",
+        )
+        .on("target_profiles.profile_visibility", "=", "public")
+        .on("target_profiles.profile_lifecycle_state", "=", "active")
+        .on("target_profiles.removed_at", "is", null),
     )
     .select([
       "follows.id as sourceId",
@@ -659,9 +704,6 @@ export function buildNotificationProfileFollowEventsQuery(
     ])
     .where("follows.target_user_id", "=", scope.userId)
     .where("follows.follow_state", "=", "active")
-    .where("target_profiles.profile_visibility", "=", "public")
-    .where("target_profiles.profile_lifecycle_state", "=", "active")
-    .where("target_profiles.removed_at", "is", null)
     .where(noActiveBlockPredicate(scope.userId, "follows.follower_user_id"))
     .orderBy("follows.updated_at", "desc")
     .orderBy("follows.id", "asc")
@@ -689,9 +731,19 @@ export function buildNotificationObjectFollowEventsQuery(
         .on("entries.public_gone_at", "is", null)
         .on("entries.public_slug", "is not", null),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "follows.follower_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "follows.follower_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
@@ -735,9 +787,19 @@ export function buildNotificationMentionEventsQuery(
           "edges.source_owner_user_id",
         ),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "edges.owner_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "edges.owner_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
@@ -776,9 +838,19 @@ export function buildNotificationClaimDecisionEventsQuery(
         .onRef("subject_objects.id", "=", "edges.subject_plant_object_id")
         .onRef("subject_objects.owner_user_id", "=", "edges.owner_user_id"),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "edges.source_owner_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "edges.source_owner_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
@@ -813,9 +885,19 @@ export function buildNotificationQuestionEventsQuery(
         .onRef("objects.id", "=", "questions.target_plant_object_id")
         .onRef("objects.owner_user_id", "=", "questions.recipient_user_id"),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "questions.asker_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "questions.asker_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),
@@ -856,9 +938,19 @@ export function buildNotificationLineageFollowEventsQuery(
         .on("entries.public_gone_at", "is", null)
         .on("entries.public_slug", "is not", null),
     )
+    .leftJoin("user_handle_registry as actor_handles", (join) =>
+      join
+        .onRef("actor_handles.user_id", "=", "follows.follower_user_id")
+        .on("actor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as profiles", (join) =>
       join
-        .onRef("profiles.user_id", "=", "follows.follower_user_id")
+        .onRef("profiles.user_id", "=", "actor_handles.user_id")
+        .onRef(
+          "profiles.normalized_handle",
+          "=",
+          "actor_handles.normalized_handle",
+        )
         .on("profiles.profile_visibility", "=", "public")
         .on("profiles.profile_lifecycle_state", "=", "active")
         .on("profiles.removed_at", "is", null),

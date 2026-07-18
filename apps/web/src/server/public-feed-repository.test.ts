@@ -99,8 +99,29 @@ describe("public feed repository", () => {
     }).compile();
 
     expect(compiled.sql).toContain('from "journal_entries"');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $1');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $2');
+    expect(compiled.sql).toContain(
+      'left join "user_handle_registry" on "user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."lifecycle_state" = $1',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."user_id" = "user_handle_registry"."user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_visibility" = $2',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_lifecycle_state" = $3',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."removed_at" is null',
+    );
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -114,7 +135,15 @@ describe("public feed repository", () => {
       'order by "journal_entries"."published_at" desc, "journal_entries"."id" asc',
     );
     expect(compiled.sql).toMatch(/limit \$\d+/);
-    expect(compiled.parameters).toEqual(["public", "active", "object", 9]);
+    expect(compiled.parameters).toEqual([
+      "current",
+      "public",
+      "active",
+      "public",
+      "active",
+      "object",
+      9,
+    ]);
     expect(compiled.sql).not.toMatch(
       /email|quarantine_key|client_mutation_id|first_publication|moderation|latitude|longitude|coordinates/i,
     );

@@ -55,7 +55,24 @@ describe("OVE-184 community repository contracts", () => {
     expect(compiled.sql).toContain("from community_moderators");
     expect(compiled.sql).toContain("from community_contributions");
     expect(compiled.sql).toContain("join journal_entries");
+    expect(compiled.sql).toContain("join user_handle_registry");
+    expect(compiled.sql).toContain(
+      "user_handle_registry.lifecycle_state = 'current'",
+    );
     expect(compiled.sql).toContain("join user_public_profiles");
+    expect(compiled.sql).toContain(
+      "user_public_profiles.user_id = user_handle_registry.user_id",
+    );
+    expect(compiled.sql).toContain(
+      "user_public_profiles.normalized_handle = user_handle_registry.normalized_handle",
+    );
+    expect(compiled.sql).toContain(
+      "user_public_profiles.profile_visibility = 'public'",
+    );
+    expect(compiled.sql).toContain(
+      "user_public_profiles.profile_lifecycle_state = 'active'",
+    );
+    expect(compiled.sql).toContain("user_public_profiles.removed_at is null");
     expect(compiled.sql).toContain("community_moderators.revoked_at is null");
     expect(compiled.sql).toContain("journal_entries.visibility = 'public'");
     expect(compiled.sql).toContain(
@@ -114,13 +131,33 @@ describe("OVE-184 community repository contracts", () => {
     expect(compiled.sql).toContain('from "community_contributions"');
     expect(compiled.sql).toContain('inner join "journal_entries"');
     expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain('inner join "user_handle_registry"');
     expect(compiled.sql).toContain('inner join "user_public_profiles"');
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."lifecycle_state" =',
+    );
     expect(compiled.sql).toContain('inner join "communities"');
     expect(compiled.sql).toContain("from profile_blocks");
+    expect(compiled.sql).toContain("profile_blocks.block_state = 'active'");
+    expect(
+      compiled.sql.match(/profile_blocks\.blocker_user_id/g) ?? [],
+    ).toHaveLength(2);
+    expect(
+      compiled.sql.match(/profile_blocks\.blocked_user_id/g) ?? [],
+    ).toHaveLength(2);
     expect(compiled.sql).toContain('"contribution_state" =');
     expect(compiled.sql).toContain('"membership_state" !=');
     expect(compiled.sql).toContain('"profile_visibility" =');
     expect(compiled.sql).toContain('"profile_lifecycle_state" =');
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."removed_at" is null',
+    );
     expect(compiled.sql).toContain('"journal_entries"."visibility" =');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
@@ -176,6 +213,7 @@ describe("OVE-184 community repository contracts", () => {
 
     expect(candidates.sql).toContain('from "journal_entries"');
     expect(candidates.sql).toContain('inner join "user_public_profiles"');
+    expect(candidates.sql).not.toContain('"user_handle_registry"');
     expect(candidates.sql).toContain('"owner_user_id" =');
     expect(candidates.sql).toContain('"visibility" =');
     expect(candidates.sql).toContain('"public_gone_at" is null');
@@ -253,7 +291,7 @@ describe("OVE-184 community repository contracts", () => {
   it("builds public metadata, rules, and aggregate counts without a public member list", async () => {
     const repository = await import("./community-repository");
     const lookup = repository
-      .buildCommunityLookupQuery(testDb, "observation-and-care")
+      .buildCommunityLookupQuery(testDb, "observation-and-care", member)
       .compile();
     const lifecycle = repository
       .buildCommunityLifecycleLookupQuery(testDb, "observation-and-care")
@@ -267,6 +305,18 @@ describe("OVE-184 community repository contracts", () => {
 
     expect(lookup.sql).toContain('from "communities"');
     expect(lookup.sql).toContain('inner join "journal_topics"');
+    expect(lookup.sql).toContain("join user_handle_registry as cover_handles");
+    expect(lookup.sql).toContain(
+      "cover_profiles.normalized_handle = cover_handles.normalized_handle",
+    );
+    expect(lookup.sql).toContain(
+      "cover_profiles.profile_visibility = 'public'",
+    );
+    expect(lookup.sql).toContain(
+      "cover_profiles.profile_lifecycle_state = 'active'",
+    );
+    expect(lookup.sql).toContain("cover_profiles.removed_at is null");
+    expect(lookup.sql).toContain("profile_blocks.block_state = 'active'");
     expect(lifecycle.sql).toContain('select "id" from "communities"');
     expect(lifecycle.sql).not.toMatch(
       /member|contribution|profile|journal|location/i,
@@ -275,6 +325,31 @@ describe("OVE-184 community repository contracts", () => {
     expect(rules.sql).toContain('"rule_state" =');
     expect(stats.sql).toContain('from "community_memberships"');
     expect(stats.sql).toContain("count(*)");
+    expect(stats.sql.match(/join user_handle_registry/g) ?? []).toHaveLength(2);
+    expect(
+      stats.sql.match(
+        /user_public_profiles\.normalized_handle = user_handle_registry\.normalized_handle/g,
+      ) ?? [],
+    ).toHaveLength(2);
+    expect(
+      stats.sql.match(/user_public_profiles\.profile_visibility = 'public'/g) ??
+        [],
+    ).toHaveLength(2);
+    expect(
+      stats.sql.match(
+        /user_public_profiles\.profile_lifecycle_state = 'active'/g,
+      ) ?? [],
+    ).toHaveLength(2);
+    expect(
+      stats.sql.match(/user_public_profiles\.removed_at is null/g) ?? [],
+    ).toHaveLength(2);
+    expect(stats.sql).toContain("profile_blocks.block_state = 'active'");
+    expect(
+      stats.sql.match(/profile_blocks\.blocker_user_id/g) ?? [],
+    ).toHaveLength(6);
+    expect(
+      stats.sql.match(/profile_blocks\.blocked_user_id/g) ?? [],
+    ).toHaveLength(6);
     expect(stats.sql).not.toContain('"community_memberships"."user_id" as');
     expect(stats.sql).not.toMatch(forbiddenPrivatePattern);
   });
@@ -298,6 +373,7 @@ describe("OVE-184 community repository contracts", () => {
     expect(target.sql).toContain('inner join "communities"');
     expect(target.sql).toContain('inner join "community_memberships"');
     expect(target.sql).toContain('inner join "user_public_profiles"');
+    expect(target.sql).not.toContain('"user_handle_registry"');
     expect(target.sql).toContain('"contribution_state" =');
     expect(target.sql).toContain('"community_contributions"."community_id" =');
     expect(target.sql).toContain('"owner_user_id" !=');
@@ -305,8 +381,26 @@ describe("OVE-184 community repository contracts", () => {
     expect(queue.sql).toContain('from "community_contribution_reports"');
     expect(queue.sql).toContain('inner join "community_memberships"');
     expect(queue.sql).toContain('left join "journal_entries"');
+    expect(queue.sql).toContain(
+      'left join "user_handle_registry" as "contributor_handles"',
+    );
+    expect(queue.sql).toContain('"contributor_handles"."lifecycle_state" =');
+    expect(queue.sql).toContain(
+      '"user_public_profiles"."user_id" = "contributor_handles"."user_id"',
+    );
+    expect(queue.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "contributor_handles"."normalized_handle"',
+    );
+    expect(queue.sql).toContain(
+      '"user_public_profiles"."profile_visibility" =',
+    );
+    expect(queue.sql).toContain(
+      '"user_public_profiles"."profile_lifecycle_state" =',
+    );
+    expect(queue.sql).toContain('"user_public_profiles"."removed_at" is null');
     expect(queue.sql).toContain('"journal_entries"."visibility" =');
     expect(queue.sql).toContain('"report_state" in');
+    expect(queue.sql).not.toContain("from profile_blocks");
     expect(queue.sql).not.toContain('"journal_entries"."body"');
     expect(queue.sql).not.toMatch(forbiddenPrivatePattern);
   });

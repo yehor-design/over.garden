@@ -310,6 +310,7 @@ describe("/garden/objects/[objectId]", () => {
             pendingIdentity: null,
             sourceReferenceKind: "seed_packet",
             sourceReferenceLabel: "Maria's saved seeds",
+            sourcePersonMention: null,
             createdAt: "2026-07-04T12:00:00.000Z",
           },
         ],
@@ -346,6 +347,71 @@ describe("/garden/objects/[objectId]", () => {
       expect(html).not.toMatch(/owner_user_id|latitude|longitude|quarantine/i);
     },
   );
+
+  it("renders the current structured person mention without rewriting a stored label", async () => {
+    mocks.getObjectProvenancePanel.mockResolvedValueOnce({
+      sourceObjectOptions: [],
+      edges: [
+        {
+          id: "edge-person-1",
+          sourceKind: "source_reference",
+          consentState: "confirmed",
+          visibilityPolicy: "owner_only_until_confirmed",
+          erasureState: "active",
+          sourceObject: null,
+          pendingIdentity: null,
+          sourceReferenceKind: "person",
+          sourceReferenceLabel: null,
+          sourcePersonMention: "@renamed_gardener",
+          createdAt: "2026-07-04T12:00:00.000Z",
+        },
+      ],
+    });
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("@renamed_gardener");
+    expect(html).not.toContain("handle previous_gardener");
+    expect(html).not.toMatch(/source_owner_user_id|owner_user_id|email/i);
+  });
+
+  it("fails a person reference closed to the generic private source when no safe current identity resolves", async () => {
+    mocks.getObjectProvenancePanel.mockResolvedValueOnce({
+      sourceObjectOptions: [],
+      edges: [
+        {
+          id: "edge-person-private",
+          sourceKind: "source_reference",
+          consentState: "confirmed",
+          visibilityPolicy: "owner_only_until_confirmed",
+          erasureState: "active",
+          sourceObject: null,
+          pendingIdentity: null,
+          sourceReferenceKind: "person",
+          sourceReferenceLabel: null,
+          sourcePersonMention: null,
+          createdAt: "2026-07-04T12:00:00.000Z",
+        },
+      ],
+    });
+    const { default: PlantObjectReadbackPage } = await import("./page");
+
+    const html = renderToStaticMarkup(
+      await PlantObjectReadbackPage({
+        params: Promise.resolve({ objectId: "object-1" }),
+        searchParams: Promise.resolve({}),
+      }),
+    );
+
+    expect(html).toContain("приватне джерело");
+    expect(html).not.toMatch(/@renamed_gardener|source_owner_user_id|email/i);
+  });
 
   it.each([
     ["uk", "Заархівовано приватно"],

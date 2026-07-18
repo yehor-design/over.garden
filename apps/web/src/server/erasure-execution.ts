@@ -445,7 +445,19 @@ export function buildAnonymizeLineageProvenanceEdgesForErasureQuery(
     .set({
       consent_state: "anonymized",
       erasure_state: "anonymized",
+      source_owner_user_id: sql<string | null>`case
+        when source_kind = 'source_reference'
+          and source_reference_kind = 'person'
+          and source_owner_user_id = ${input.requesterUserId}
+        then null
+        else source_owner_user_id
+      end`,
       source_reference_label: sql<string | null>`case
+        when source_kind = 'source_reference'
+          and source_reference_kind = 'person'
+          and source_owner_user_id is not null
+          and source_owner_user_id <> ${input.requesterUserId}
+        then null
         when source_kind = 'source_reference' then 'Erased source'
         else source_reference_label
       end`,

@@ -1,14 +1,11 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
-
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
   CatalogKind,
   Database,
-  NewUserPublicProfile,
   PlantObjectKind,
   UserPublicProfile,
 } from "@/db/schema";
@@ -26,15 +23,14 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import {
+  evaluatePublicIdentity,
+  parsePublicHandleSyntax,
+} from "@/server/identity-policy";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const HANDLE_MIN_LENGTH = 3;
-const HANDLE_MAX_LENGTH = 30;
-const HANDLE_PATTERN = /^[a-z0-9][a-z0-9_]{2,29}$/;
-const DEFAULT_HANDLE_HASH_LENGTH = 10;
-const DEFAULT_HANDLE_PREFIX = "gardener";
 const MAX_PROFILE_LINKS = 5;
 export const PUBLIC_PROFILE_OBJECT_PREVIEW_SIZE = 6;
 export const PUBLIC_PROFILE_OBJECT_LIMIT = 12;
@@ -49,59 +45,12 @@ const PUBLIC_PROFILE_LANGUAGES = new Set<PublicProfileLanguage>([
   "en",
 ]);
 
-const RESERVED_PUBLIC_HANDLES = new Set([
-  "about",
-  "account",
-  "admin",
-  "api",
-  "auth",
-  "blog",
-  "catalog",
-  "erasure",
-  "garden",
-  "guide",
-  "guides",
-  "health",
-  "help",
-  "home",
-  "join",
-  "lineage",
-  "login",
-  "logout",
-  "market",
-  "markets",
-  "me",
-  "moderator",
-  "overgarden",
-  "privacy",
-  "profile",
-  "profiles",
-  "robots",
-  "root",
-  "settings",
-  "signup",
-  "sitemap",
-  "support",
-  "user",
-  "users",
-  "variety",
-  "uk",
-  "bg",
-  "ru",
-]);
-
-const BLOCKED_HANDLE_FRAGMENTS = ["hitler", "nazi", "rape", "terror"] as const;
-
-export type PublicHandleValidationError =
-  | "empty"
-  | "format"
-  | "reserved"
-  | "blocked";
+export type PublicHandleValidationError = "format" | "unavailable";
 
 export type PublicHandleUpdateStatus =
   | "updated"
   | "unchanged"
-  | "taken"
+  | "cooldown"
   | PublicHandleValidationError;
 
 export type PublicHandleValidationResult =
@@ -207,6 +156,8 @@ export interface PublicHandleMentionTarget {
 export interface UpdateUserPublicHandleResult {
   status: PublicHandleUpdateStatus;
   profile: Pick<UserPublicProfile, "handle" | "display_name" | "avatar_url">;
+  previousHandle: string;
+  nextEligibleAt: Date | string | null;
 }
 
 interface PublicProfileInternalRow {
@@ -282,44 +233,46 @@ interface PublicProfileJournalMediaRow {
   altText: string | null;
 }
 
+interface PublicProfileLifecycleRow {
+  handleLifecycleState: string;
+  profileVisibility: string | null;
+  profileLifecycleState: string | null;
+  removedAt: Date | string | null;
+}
+
+interface PublicHandleClaimRow {
+  status: string;
+  previousHandle: string | null;
+  currentHandle: string | null;
+  nextEligibleAt: Date | string | null;
+}
+
+export type PublicProfileLifecycleLookup =
+  | { status: "active" }
+  | { status: "gone" }
+  | { status: "not_found" };
+
 export async function ensureUserPublicProfile(
   scope: RequestScope,
   executor: QueryExecutor = db,
 ): Promise<UserPublicProfile> {
-  const existing = await buildUserPublicProfileByUserIdQuery(
+  try {
+    await sql`select overgarden_provision_user_public_profile(${scope.userId}::uuid)`.execute(
+      executor,
+    );
+  } catch {
+    throw new Error("Public identity provisioning failed.");
+  }
+
+  const profile = await buildUserPublicProfileByUserIdQuery(
     executor,
     scope.userId,
   ).executeTakeFirst();
-
-  if (existing) return existing;
-
-  const baseHandle = defaultPublicHandleForUserId(scope.userId);
-
-  for (let attempt = 0; attempt < 10; attempt += 1) {
-    const handle = attempt === 0 ? baseHandle : `${baseHandle}_${attempt}`;
-
-    try {
-      const inserted = await buildInsertUserPublicProfileQuery(executor, {
-        user_id: scope.userId,
-        handle,
-        normalized_handle: handle,
-      }).executeTakeFirst();
-
-      if (inserted) return inserted;
-
-      const afterConflict = await buildUserPublicProfileByUserIdQuery(
-        executor,
-        scope.userId,
-      ).executeTakeFirst();
-
-      if (afterConflict) return afterConflict;
-    } catch (error) {
-      if (isPostgresUniqueViolation(error)) continue;
-      throw error;
-    }
+  if (!profile) {
+    throw new Error("Public identity provisioning failed.");
   }
 
-  throw new Error("Could not allocate a unique public handle.");
+  return profile;
 }
 
 export async function updateUserPublicHandle(
@@ -331,51 +284,84 @@ export async function updateUserPublicHandle(
   const currentProfile = await ensureUserPublicProfile(scope, executor);
 
   if (!validation.ok) {
+    const currentClaim = await buildCurrentPublicHandleClaimQuery(
+      executor,
+      scope.userId,
+    ).executeTakeFirst();
     return {
       status: validation.error,
       profile: currentProfile,
+      previousHandle: currentProfile.handle,
+      nextEligibleAt: currentClaim?.nextEligibleAt ?? null,
     };
   }
 
-  if (currentProfile.normalized_handle === validation.normalizedHandle) {
-    return {
-      status: "unchanged",
-      profile: currentProfile,
-    };
-  }
-
+  let claim: PublicHandleClaimRow | undefined;
   try {
-    const updated = await buildUpdateUserPublicHandleQuery(executor, scope, {
-      handle: validation.handle,
-      normalizedHandle: validation.normalizedHandle,
-    }).executeTakeFirst();
-
-    return {
-      status: updated ? "updated" : "taken",
-      profile: updated ?? currentProfile,
-    };
-  } catch (error) {
-    if (isPostgresUniqueViolation(error)) {
-      return {
-        status: "taken",
-        profile: currentProfile,
-      };
-    }
-
-    throw error;
+    const result = await sql<PublicHandleClaimRow>`
+      select
+        status,
+        previous_handle as "previousHandle",
+        current_handle as "currentHandle",
+        next_eligible_at as "nextEligibleAt"
+      from overgarden_claim_user_public_handle(
+        ${scope.userId}::uuid,
+        ${validation.normalizedHandle}
+      )
+    `.execute(executor);
+    claim = result.rows[0];
+  } catch {
+    throw new Error("Public handle update failed.");
   }
+
+  if (!claim || !isPublicHandleUpdateStatus(claim.status)) {
+    throw new Error("Public handle update failed.");
+  }
+
+  const profile =
+    (await buildUserPublicProfileByUserIdQuery(
+      executor,
+      scope.userId,
+    ).executeTakeFirst()) ?? currentProfile;
+  const authoritativeClaim =
+    claim.nextEligibleAt === null
+      ? await buildCurrentPublicHandleClaimQuery(
+          executor,
+          scope.userId,
+        ).executeTakeFirst()
+      : null;
+
+  return {
+    status: claim.status,
+    profile,
+    previousHandle: claim.previousHandle ?? currentProfile.handle,
+    nextEligibleAt:
+      claim.nextEligibleAt ?? authoritativeClaim?.nextEligibleAt ?? null,
+  };
+}
+
+export function buildCurrentPublicHandleClaimQuery(
+  executor: QueryExecutor,
+  userId: string,
+) {
+  return executor
+    .selectFrom("user_handle_registry")
+    .select("next_rename_at as nextEligibleAt")
+    .where("user_id", "=", userId)
+    .where("lifecycle_state", "=", "current")
+    .limit(1);
 }
 
 export async function getPublicProfilePageByHandle(
   rawHandle: string,
   executor: QueryExecutor = db,
 ): Promise<PublicProfilePage | null> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return null;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
 
   const profile = await buildPublicProfileByNormalizedHandleQuery(
     executor,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
   ).executeTakeFirst();
 
   if (!profile) return null;
@@ -405,12 +391,12 @@ export async function getPublicProfileEvidencePageByHandle(
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
   executor: QueryExecutor = db,
 ): Promise<PublicProfileEvidencePage | null> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return null;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
 
   const profile = await buildPublicProfileByNormalizedHandleQuery(
     executor,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
   ).executeTakeFirst();
 
   if (!profile) return null;
@@ -434,25 +420,37 @@ export async function getPublicProfileEvidencePreviewByUserId(
 
 export async function getPublicProfileLifecycleLookup(
   rawHandle: string,
+  viewerUserId: string | null = null,
   executor: QueryExecutor = db,
-): Promise<{ status: "active" } | { status: "not_found" }> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return { status: "not_found" };
+): Promise<PublicProfileLifecycleLookup> {
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return { status: "not_found" };
 
   const row = await buildPublicProfileLifecycleQuery(
     executor,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
+    viewerUserId,
   ).executeTakeFirst();
+
+  return classifyPublicProfileLifecycle(row);
+}
+
+export function classifyPublicProfileLifecycle(
+  row: PublicProfileLifecycleRow | null | undefined,
+): PublicProfileLifecycleLookup {
   if (
-    !row ||
+    (row?.handleLifecycleState !== "current" &&
+      row?.handleLifecycleState !== "retired") ||
     row.profileVisibility !== "public" ||
     row.profileLifecycleState !== "active" ||
-    row.removedAt
+    row.removedAt !== null
   ) {
     return { status: "not_found" };
   }
 
-  return { status: "active" };
+  return row.handleLifecycleState === "retired"
+    ? { status: "gone" }
+    : { status: "active" };
 }
 
 async function loadPublicProfileEvidencePage(
@@ -535,12 +533,12 @@ export async function resolvePublicHandleMentionTarget(
   locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
   executor: QueryExecutor = db,
 ): Promise<PublicHandleMentionTarget | null> {
-  const validation = normalizePublicHandleInput(rawHandle);
-  if (!validation.ok) return null;
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) return null;
 
   const profile = await buildPublicProfileByNormalizedHandleQuery(
     executor,
-    validation.normalizedHandle,
+    parsed.normalizedHandle,
   ).executeTakeFirst();
 
   if (!profile) return null;
@@ -555,42 +553,25 @@ export async function resolvePublicHandleMentionTarget(
 export function normalizePublicHandleInput(
   rawHandle: string,
 ): PublicHandleValidationResult {
-  const trimmed = rawHandle.trim();
-  if (!trimmed) return { ok: false, error: "empty" };
-
-  const withoutLeadingAt = trimmed.startsWith("@") ? trimmed.slice(1) : trimmed;
-  const normalized = withoutLeadingAt.normalize("NFKC").toLocaleLowerCase("en");
-
-  if (
-    normalized.length < HANDLE_MIN_LENGTH ||
-    normalized.length > HANDLE_MAX_LENGTH ||
-    normalized.includes("@") ||
-    !HANDLE_PATTERN.test(normalized)
-  ) {
+  const parsed = parsePublicHandleSyntax(rawHandle);
+  if (!parsed.ok) {
     return { ok: false, error: "format" };
   }
 
-  if (RESERVED_PUBLIC_HANDLES.has(normalized)) {
-    return { ok: false, error: "reserved" };
-  }
-
-  if (
-    BLOCKED_HANDLE_FRAGMENTS.some((fragment) => normalized.includes(fragment))
-  ) {
-    return { ok: false, error: "blocked" };
+  const moderation = evaluatePublicIdentity({
+    surface: "handle",
+    value: parsed.normalizedHandle,
+  });
+  if (!moderation.ok) {
+    return { ok: false, error: "unavailable" };
   }
 
   return {
     ok: true,
-    handle: normalized,
-    normalizedHandle: normalized,
-    mention: `@${normalized}`,
+    handle: moderation.value,
+    normalizedHandle: moderation.value,
+    mention: `@${moderation.value}`,
   };
-}
-
-export function defaultPublicHandleForUserId(userId: string) {
-  const digest = createHash("sha256").update(userId).digest("hex");
-  return `${DEFAULT_HANDLE_PREFIX}_${digest.slice(0, DEFAULT_HANDLE_HASH_LENGTH)}`;
 }
 
 export function serializePublicProfilePage(input: {
@@ -768,36 +749,6 @@ export function buildUserPublicProfileByUserIdQuery(
     .where("user_id", "=", userId);
 }
 
-export function buildInsertUserPublicProfileQuery(
-  executor: QueryExecutor,
-  profile: NewUserPublicProfile,
-) {
-  return executor
-    .insertInto("user_public_profiles")
-    .values(profile)
-    .onConflict((oc) => oc.column("user_id").doNothing())
-    .returningAll();
-}
-
-export function buildUpdateUserPublicHandleQuery(
-  executor: QueryExecutor,
-  scope: RequestScope,
-  input: {
-    handle: string;
-    normalizedHandle: string;
-  },
-) {
-  return executor
-    .updateTable("user_public_profiles")
-    .set({
-      handle: input.handle,
-      normalized_handle: input.normalizedHandle,
-      updated_at: new Date(),
-    })
-    .where("user_id", "=", scope.userId)
-    .returningAll();
-}
-
 export function buildPublicProfileByNormalizedHandleQuery(
   executor: QueryExecutor,
   normalizedHandle: string,
@@ -848,15 +799,48 @@ export function buildPublicProfilePreviewByUserIdQuery(
 export function buildPublicProfileLifecycleQuery(
   executor: QueryExecutor,
   normalizedHandle: string,
+  viewerUserId: string | null = null,
 ) {
-  return executor
-    .selectFrom("user_public_profiles")
+  let query = executor
+    .selectFrom("user_handle_registry")
+    .leftJoin("user_public_profiles", (join) =>
+      join.onRef(
+        "user_public_profiles.user_id",
+        "=",
+        "user_handle_registry.user_id",
+      ),
+    )
     .select([
-      "profile_visibility as profileVisibility",
-      "profile_lifecycle_state as profileLifecycleState",
-      "removed_at as removedAt",
+      "user_handle_registry.lifecycle_state as handleLifecycleState",
+      "user_public_profiles.profile_visibility as profileVisibility",
+      "user_public_profiles.profile_lifecycle_state as profileLifecycleState",
+      "user_public_profiles.removed_at as removedAt",
     ])
-    .where("normalized_handle", "=", normalizedHandle);
+    .where("user_handle_registry.normalized_handle", "=", normalizedHandle);
+
+  if (viewerUserId) {
+    query = query.where(
+      sql<boolean>`
+        not exists (
+          select 1
+          from profile_blocks block
+          where block.block_state = 'active'
+            and (
+              (
+                block.blocker_user_id = ${viewerUserId}::uuid
+                and block.blocked_user_id = user_handle_registry.user_id
+              )
+              or (
+                block.blocker_user_id = user_handle_registry.user_id
+                and block.blocked_user_id = ${viewerUserId}::uuid
+              )
+            )
+        )
+      `,
+    );
+  }
+
+  return query;
 }
 
 export function buildPublicProfileAvatarEvidenceQuery(
@@ -1328,11 +1312,14 @@ function boundedBodyPreview(body: string, limit = 220) {
     : `${normalized.slice(0, limit - 1).trimEnd()}...`;
 }
 
-function isPostgresUniqueViolation(error: unknown) {
+function isPublicHandleUpdateStatus(
+  value: string,
+): value is PublicHandleUpdateStatus {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "23505"
+    value === "updated" ||
+    value === "unchanged" ||
+    value === "format" ||
+    value === "unavailable" ||
+    value === "cooldown"
   );
 }

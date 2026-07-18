@@ -149,7 +149,7 @@ export default async function GardenPublicProfilePage({
           <ul className="divide-y divide-border border-y border-border">
             {workspace.blockedProfiles.map((profile) => (
               <li
-                key={profile.handle}
+                key={profile.blockId}
                 className="flex min-w-0 flex-wrap items-center justify-between gap-3 py-3"
               >
                 <div className="min-w-0">
@@ -161,7 +161,7 @@ export default async function GardenPublicProfilePage({
                   </p>
                 </div>
                 <form action={unblockProfileAction}>
-                  <input type="hidden" name="handle" value={profile.handle} />
+                  <input type="hidden" name="blockId" value={profile.blockId} />
                   <button
                     type="submit"
                     className={buttonVariants({

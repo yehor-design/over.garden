@@ -27,6 +27,26 @@ const PROFILE_NOT_FOUND_COPY: Record<
   },
 };
 
+const PROFILE_GONE_COPY: typeof PROFILE_NOT_FOUND_COPY = {
+  uk: {
+    title: "Профіль більше недоступний",
+    description:
+      "Цю публічну сторінку видалено. Поверніться до публічної стрічки.",
+    home: "До публічної стрічки",
+  },
+  bg: {
+    title: "Профилът вече не е достъпен",
+    description:
+      "Тази публична страница е премахната. Върнете се към публичния поток.",
+    home: "Към публичния поток",
+  },
+  ru: {
+    title: "Профиль больше недоступен",
+    description: "Эта публичная страница удалена. Вернитесь к публичной ленте.",
+    home: "К публичной ленте",
+  },
+};
+
 export function matchPublicProfilePath(pathname: string) {
   const basePath = stripLocalePrefix(pathname).path;
   let decodedPath: string;
@@ -39,7 +59,20 @@ export function matchPublicProfilePath(pathname: string) {
 }
 
 export function renderNotFoundPublicProfileHtml(locale: InterfaceLocale) {
-  const copy = PROFILE_NOT_FOUND_COPY[locale];
+  return renderPublicProfileLifecycleHtml(
+    locale,
+    PROFILE_NOT_FOUND_COPY[locale],
+  );
+}
+
+export function renderGonePublicProfileHtml(locale: InterfaceLocale) {
+  return renderPublicProfileLifecycleHtml(locale, PROFILE_GONE_COPY[locale]);
+}
+
+function renderPublicProfileLifecycleHtml(
+  locale: InterfaceLocale,
+  copy: { title: string; description: string; home: string },
+) {
   const homePath = localizedPath(locale, "/");
 
   return `<!doctype html>

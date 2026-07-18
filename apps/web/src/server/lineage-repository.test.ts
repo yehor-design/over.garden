@@ -71,10 +71,7 @@ describe("lineage provenance repository query contracts", () => {
     expect(compiled.sql).not.toMatch(
       /journal_entries|media_assets|analytics_events|coarse_region|location_visibility|email|token/i,
     );
-    expect(compiled.parameters).toEqual([
-      scope.userId,
-      subjectPlantObjectId,
-    ]);
+    expect(compiled.parameters).toEqual([scope.userId, subjectPlantObjectId]);
   });
 
   it("inserts proposed provenance edges idempotently by owner and client mutation", () => {
@@ -186,21 +183,45 @@ describe("lineage provenance repository query contracts", () => {
     expect(compiled.parameters).toEqual([scope.userId, "lineage-1"]);
   });
 
-  it("reads proposed edges for one owned subject without selecting private payload fields", () => {
+  it("resolves a stored stable person target through its current public handle without mutable-label dependence", () => {
     const compiled = buildObjectProvenanceEdgesQuery(
       testDb,
       scope,
       subjectPlantObjectId,
     ).compile();
 
+    expect(compiled.sql).toContain('from "lineage_provenance_edges"');
     expect(compiled.sql).toContain(
-      'from "lineage_provenance_edges"',
+      '"source_person_handles"."user_id" = "lineage_provenance_edges"."source_owner_user_id"',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."owner_user_id" = $1',
+      '"source_person_handles"."lifecycle_state" = $1',
     );
     expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."subject_plant_object_id" = $2',
+      '"source_person_profiles"."normalized_handle" = "source_person_handles"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"source_person_profiles"."profile_visibility" = $5',
+    );
+    expect(compiled.sql).toContain(
+      '"source_person_profiles"."profile_lifecycle_state" = $6',
+    );
+    expect(compiled.sql).toContain(
+      '"source_person_profiles"."removed_at" is null',
+    );
+    expect(compiled.sql).toContain(
+      '"source_person_profiles"."handle" as "sourcePersonHandle"',
+    );
+    expect(compiled.sql).toContain("from profile_blocks");
+    expect(compiled.sql).toContain("profile_blocks.block_state = 'active'");
+    expect(compiled.sql).toContain(
+      'profile_blocks.blocked_user_id = "lineage_provenance_edges"."source_owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."owner_user_id" = $7',
+    );
+    expect(compiled.sql).toContain(
+      '"lineage_provenance_edges"."subject_plant_object_id" = $8',
     );
     expect(compiled.sql).toContain(
       '"source_objects"."owner_user_id" = "lineage_provenance_edges"."source_owner_user_id"',
@@ -209,6 +230,12 @@ describe("lineage provenance repository query contracts", () => {
       /journal_entries|media_assets|analytics_events|body|quarantine|derivative|ip|user_agent|email|phone|token|referrer|coarse_region|location_visibility/i,
     );
     expect(compiled.parameters).toEqual([
+      "current",
+      "source_reference",
+      "person",
+      "current",
+      "public",
+      "active",
       scope.userId,
       subjectPlantObjectId,
     ]);
@@ -222,9 +249,7 @@ describe("lineage provenance repository query contracts", () => {
     }).compile();
 
     expect(compiled.sql).toContain('from "lineage_provenance_edges"');
-    expect(compiled.sql).toContain(
-      '"lineage_provenance_edges"."id" = $1',
-    );
+    expect(compiled.sql).toContain('"lineage_provenance_edges"."id" = $1');
     expect(compiled.sql).toContain(
       '"lineage_provenance_edges"."source_pending_identity_id" = $2',
     );
@@ -232,9 +257,7 @@ describe("lineage provenance repository query contracts", () => {
       '"lineage_provenance_edges"."source_kind" = $3',
     );
     expect(compiled.sql).toContain('"pending_identities"."id" = $6');
-    expect(compiled.sql).toContain(
-      '"pending_identities"."invite_state" = $7',
-    );
+    expect(compiled.sql).toContain('"pending_identities"."invite_state" = $7');
     expect(compiled.sql).not.toMatch(
       /token|raw_url|referrer|ip|user_agent|email|phone|coarse_region|location_visibility|journal_entries|media_assets|body|quarantine|derivative/i,
     );

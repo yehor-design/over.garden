@@ -168,6 +168,27 @@ describe("public journal directory query", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
+    expect(compiled.sql).toContain(
+      'left join "user_handle_registry" on "user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."lifecycle_state" =',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."user_id" = "user_handle_registry"."user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_visibility" =',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_lifecycle_state" =',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."removed_at" is null',
+    );
     expect(compiled.sql).toContain('"plant_objects"."location_visibility" =');
     expect(compiled.sql).toContain("extract(month");
     expect(compiled.sql).toContain("array_position");
@@ -175,6 +196,7 @@ describe("public journal directory query", () => {
     expect(compiled.sql).toContain("ilike");
     expect(compiled.parameters).toContain("public");
     expect(compiled.parameters).toContain("active");
+    expect(compiled.parameters).toContain("current");
     expect(compiled.parameters).toContain("object");
     expect(compiled.parameters).toContain("plant");
     expect(compiled.parameters).toContain("visual-pomidor-cheri");

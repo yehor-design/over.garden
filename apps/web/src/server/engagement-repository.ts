@@ -583,12 +583,26 @@ export function buildListEngagementCommentsQuery(
 ) {
   let query = executor
     .selectFrom("engagement_comments")
+    .leftJoin("user_handle_registry as comment_author_handles", (join) =>
+      join
+        .onRef(
+          "comment_author_handles.user_id",
+          "=",
+          "engagement_comments.author_user_id",
+        )
+        .on("comment_author_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles", (join) =>
       join
         .onRef(
           "user_public_profiles.user_id",
           "=",
-          "engagement_comments.author_user_id",
+          "comment_author_handles.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "comment_author_handles.normalized_handle",
         )
         .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
@@ -647,12 +661,26 @@ export function buildListEngagementCommentRepliesQuery(
 ) {
   return executor
     .selectFrom("engagement_comments")
+    .leftJoin("user_handle_registry as comment_author_handles", (join) =>
+      join
+        .onRef(
+          "comment_author_handles.user_id",
+          "=",
+          "engagement_comments.author_user_id",
+        )
+        .on("comment_author_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles", (join) =>
       join
         .onRef(
           "user_public_profiles.user_id",
           "=",
-          "engagement_comments.author_user_id",
+          "comment_author_handles.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "comment_author_handles.normalized_handle",
         )
         .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")

@@ -51,6 +51,7 @@ describe("owner object passport presentation", () => {
             pendingIdentity: null,
             sourceReferenceKind: "other",
             sourceReferenceLabel: "Private source",
+            sourcePersonMention: null,
             createdAt: "2026-01-01",
           },
         ],

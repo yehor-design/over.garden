@@ -68,6 +68,9 @@ describe("public lineage repository query contracts", () => {
     expect(compiled.sql).not.toMatch(
       /journal_entries"\."title|journal_entries"\."body|media_assets|quarantine|derivative|ip_address|user_agent|email|phone|coordinates|latitude|longitude|source_reference_label|client_mutation_id|pending_identity/i,
     );
+    expect(compiled.sql).not.toMatch(
+      /user_public_profiles|user_handle_registry|profile_blocks/i,
+    );
     expect(compiled.parameters).toEqual([
       "public",
       "active",
@@ -117,6 +120,9 @@ describe("public lineage repository query contracts", () => {
     );
     expect(compiled.sql).not.toMatch(
       /journal_entries"\."title|journal_entries"\."body|media_assets|quarantine|derivative|ip_address|user_agent|email|phone|coordinates|latitude|longitude|source_reference_label|source_pending_identity_id|pending_identities|client_mutation_id/i,
+    );
+    expect(compiled.sql).not.toMatch(
+      /user_public_profiles|user_handle_registry|profile_blocks/i,
     );
     expect(compiled.parameters).toEqual([
       "public",

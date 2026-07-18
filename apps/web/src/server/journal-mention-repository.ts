@@ -24,6 +24,10 @@ import {
   buildInsertProvenanceEdgeQuery,
   normalizeLineageSourceReferenceLabel,
 } from "@/server/lineage-repository";
+import {
+  sealPublicHandleMentionTarget,
+  unsealPublicHandleMentionTarget,
+} from "@/server/public-handle-mention-token";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -61,7 +65,7 @@ interface ResolvedPublicObjectMention {
 }
 
 interface ResolvedHandleMention {
-  handle: string;
+  userId: string;
 }
 
 interface ResolvedCatalogMention {
@@ -131,15 +135,7 @@ export async function searchJournalMentionSuggestions(
         row.catalogCanonicalName ?? row.varietyText ?? "Public journal object",
       catalogKind: row.catalogKind as CatalogKind | null,
     })),
-    ...handles.map((row) => ({
-      kind: "public_handle" as const,
-      id: row.handle,
-      label: `@${row.handle}`,
-      insertText: `@${row.handle}` as const,
-      detail: "Public gardener handle",
-      disambiguationLabel: row.displayName ?? "Pseudonymous profile",
-      catalogKind: null,
-    })),
+    ...handles.map((row) => toPublicHandleMentionSuggestion(row, scope.userId)),
     ...catalogItems.map((row) => ({
       kind: "catalog_item" as const,
       id: row.id,
@@ -214,34 +210,35 @@ export async function persistJournalEntryMentions(
     }
   }
 
-  const handleIds = idsForKind(selections, "public_handle");
-  if (handleIds.length > 0) {
+  const handleTokens = idsForKind(selections, "public_handle");
+  if (handleTokens.length > 0) {
+    const handleUserIds = resolvePublicHandleMentionSelectionTokens(
+      handleTokens,
+      scope.userId,
+    );
+    if (!handleUserIds) {
+      throw new Error("Public handle mention target was not found.");
+    }
     const handles = await resolvePublicHandleMentions(
       executor,
       scope,
-      handleIds,
+      handleUserIds,
     );
 
-    if (handles.length !== handleIds.length) {
+    if (handles.length !== handleUserIds.length) {
       throw new Error("Public handle mention target was not found.");
     }
 
     for (const handle of handles) {
-      await insertProposedMentionEdge(executor, scope, {
-        subjectPlantObjectId: input.subjectPlantObjectId,
-        sourceKind: "source_reference",
-        sourcePlantObjectId: null,
-        sourceOwnerUserId: null,
-        sourceReferenceKind: "person",
-        sourceReferenceLabel: normalizeLineageSourceReferenceLabel(
-          `handle ${handle.handle}`,
-        ),
-        clientMutationId: mentionEdgeClientMutationId(
-          input.clientMutationId,
-          "public_handle",
-          handle.handle,
-        ),
-      });
+      await insertProposedMentionEdge(
+        executor,
+        scope,
+        createPublicHandleMentionEdgeInput({
+          subjectPlantObjectId: input.subjectPlantObjectId,
+          targetUserId: handle.userId,
+          entryClientMutationId: input.clientMutationId,
+        }),
+      );
     }
   }
 
@@ -380,6 +377,12 @@ export function buildPublicObjectMentionSuggestionsQuery(
       ),
     ])
     .where("plant_objects.owner_user_id", "!=", scope.userId)
+    .where(
+      noJournalMentionBlockPredicate(
+        scope.userId,
+        "plant_objects.owner_user_id",
+      ),
+    )
     .where((eb) =>
       eb.or([
         sql<boolean>`lower(${sql.ref("plant_objects.display_name")}) like ${query.pattern}`,
@@ -417,27 +420,52 @@ export function buildPublicHandleMentionSuggestionsQuery(
 ) {
   return executor
     .selectFrom("user_public_profiles")
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "user_public_profiles.user_id",
+        )
+        .onRef(
+          "user_handle_registry.normalized_handle",
+          "=",
+          "user_public_profiles.normalized_handle",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
     .select([
-      "handle",
-      "display_name as displayName",
-      "updated_at as updatedAt",
+      "user_public_profiles.user_id as userId",
+      "user_public_profiles.handle as handle",
+      "user_public_profiles.display_name as displayName",
+      "user_public_profiles.updated_at as updatedAt",
     ])
-    .where("user_id", "!=", scope.userId)
+    .where("user_public_profiles.user_id", "!=", scope.userId)
+    .where("user_public_profiles.profile_visibility", "=", "public")
+    .where("user_public_profiles.profile_lifecycle_state", "=", "active")
+    .where("user_public_profiles.removed_at", "is", null)
+    .where("user_public_profiles.handle_registry_state", "=", "current")
+    .where(
+      noJournalMentionBlockPredicate(
+        scope.userId,
+        "user_public_profiles.user_id",
+      ),
+    )
     .where((eb) =>
       eb.or([
-        eb("normalized_handle", "like", query.pattern),
-        sql<boolean>`lower(coalesce(${sql.ref("display_name")}, '')) like ${query.pattern}`,
+        eb("user_public_profiles.normalized_handle", "like", query.pattern),
+        sql<boolean>`lower(coalesce(${sql.ref("user_public_profiles.display_name")}, '')) like ${query.pattern}`,
       ]),
     )
     .orderBy(
       sql<number>`case
-        when ${sql.ref("normalized_handle")} like ${query.prefixPattern} then 0
+        when ${sql.ref("user_public_profiles.normalized_handle")} like ${query.prefixPattern} then 0
         else 1
       end`,
       "asc",
     )
-    .orderBy("updated_at", "desc")
-    .orderBy("handle", "asc")
+    .orderBy("user_public_profiles.updated_at", "desc")
+    .orderBy("user_public_profiles.handle", "asc")
     .limit(normalizeMentionLimit(limit));
 }
 
@@ -503,6 +531,12 @@ export function buildResolvePublicObjectMentionTargetsQuery(
       "plant_objects.owner_user_id as ownerUserId",
     ])
     .where("plant_objects.owner_user_id", "!=", scope.userId)
+    .where(
+      noJournalMentionBlockPredicate(
+        scope.userId,
+        "plant_objects.owner_user_id",
+      ),
+    )
     .where("plant_objects.id", "in", [...plantObjectIds])
     .groupBy(["plant_objects.id", "plant_objects.owner_user_id"])
     .orderBy("plant_objects.id", "asc");
@@ -511,14 +545,100 @@ export function buildResolvePublicObjectMentionTargetsQuery(
 export function buildResolvePublicHandleMentionTargetsQuery(
   executor: QueryExecutor,
   scope: RequestScope,
-  handles: readonly string[],
+  userIds: readonly string[],
 ) {
   return executor
     .selectFrom("user_public_profiles")
-    .select(["handle"])
-    .where("user_id", "!=", scope.userId)
-    .where("normalized_handle", "in", [...handles])
-    .orderBy("handle", "asc");
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "user_public_profiles.user_id",
+        )
+        .onRef(
+          "user_handle_registry.normalized_handle",
+          "=",
+          "user_public_profiles.normalized_handle",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .select(["user_public_profiles.user_id as userId"])
+    .where("user_public_profiles.user_id", "!=", scope.userId)
+    .where("user_public_profiles.profile_visibility", "=", "public")
+    .where("user_public_profiles.profile_lifecycle_state", "=", "active")
+    .where("user_public_profiles.removed_at", "is", null)
+    .where("user_public_profiles.handle_registry_state", "=", "current")
+    .where(
+      noJournalMentionBlockPredicate(
+        scope.userId,
+        "user_public_profiles.user_id",
+      ),
+    )
+    .where("user_public_profiles.user_id", "in", [...userIds])
+    .orderBy("user_public_profiles.user_id", "asc");
+}
+
+export function toPublicHandleMentionSuggestion(
+  row: {
+    userId: string;
+    handle: string;
+    displayName: string | null;
+  },
+  audienceUserId: string,
+  options: { secret?: string } = {},
+): JournalMentionSuggestion {
+  return {
+    kind: "public_handle",
+    id: sealPublicHandleMentionTarget(row.userId, {
+      audienceUserId,
+      secret: options.secret,
+    }),
+    label: `@${row.handle}`,
+    insertText: `@${row.handle}`,
+    detail: "Public gardener handle",
+    disambiguationLabel: row.displayName ?? "Pseudonymous profile",
+    catalogKind: null,
+  };
+}
+
+export function resolvePublicHandleMentionSelectionTokens(
+  tokens: readonly string[],
+  audienceUserId: string,
+  options: { secret?: string } = {},
+): string[] | null {
+  const targetUserIds = new Set<string>();
+
+  for (const token of tokens) {
+    const targetUserId = unsealPublicHandleMentionTarget(token, {
+      audienceUserId,
+      secret: options.secret,
+    });
+    if (!targetUserId) return null;
+    targetUserIds.add(targetUserId);
+  }
+
+  return [...targetUserIds];
+}
+
+export function createPublicHandleMentionEdgeInput(input: {
+  subjectPlantObjectId: string;
+  targetUserId: string;
+  entryClientMutationId: string;
+}) {
+  return {
+    subjectPlantObjectId: input.subjectPlantObjectId,
+    sourceKind: "source_reference" as const,
+    sourcePlantObjectId: null,
+    sourceOwnerUserId: input.targetUserId,
+    sourceReferenceKind: "person" as const,
+    sourceReferenceLabel: null,
+    clientMutationId: mentionEdgeClientMutationId(
+      input.entryClientMutationId,
+      "public_handle",
+      input.targetUserId,
+    ),
+  };
 }
 
 export function buildInsertJournalEntryCatalogMentionsQuery(
@@ -601,14 +721,14 @@ async function resolvePublicObjectMentions(
 async function resolvePublicHandleMentions(
   executor: QueryExecutor,
   scope: RequestScope,
-  handles: readonly string[],
+  userIds: readonly string[],
 ): Promise<ResolvedHandleMention[]> {
-  if (handles.length === 0) return [];
+  if (userIds.length === 0) return [];
 
   return buildResolvePublicHandleMentionTargetsQuery(
     executor,
     scope,
-    handles.map((handle) => normalizeHandleMentionId(handle)),
+    userIds,
   ).execute();
 }
 
@@ -693,17 +813,9 @@ function idsForKind(
     new Set(
       selections
         .filter((selection) => selection.kind === kind)
-        .map((selection) =>
-          kind === "public_handle"
-            ? normalizeHandleMentionId(selection.id)
-            : selection.id,
-        ),
+        .map((selection) => selection.id),
     ),
   );
-}
-
-function normalizeHandleMentionId(value: string) {
-  return value.trim().replace(/^@/, "").toLocaleLowerCase("en");
 }
 
 function mentionEdgeClientMutationId(
@@ -755,6 +867,27 @@ function dedupeMentionSuggestions(
     seen.add(key);
     return true;
   });
+}
+
+function noJournalMentionBlockPredicate(
+  viewerUserId: string,
+  actorRef: string,
+) {
+  return sql<boolean>`not exists (
+    select 1
+    from profile_blocks
+    where profile_blocks.block_state = 'active'
+      and (
+        (
+          profile_blocks.blocker_user_id = ${viewerUserId}
+          and profile_blocks.blocked_user_id = ${sql.ref(actorRef)}
+        )
+        or (
+          profile_blocks.blocker_user_id = ${sql.ref(actorRef)}
+          and profile_blocks.blocked_user_id = ${viewerUserId}
+        )
+      )
+  )`;
 }
 
 function escapeLike(value: string) {

@@ -47,6 +47,13 @@ const scope = scopedToUser("00000000-0000-4000-8000-000000000001");
 const forbiddenPrivateReadbackPattern =
   /journal_entries"\."title|journal_entries"\."body|media_assets|quarantine|derivative_key|email|phone|ip_address|user_agent|invite|token|source_reference_label|source_pending_identity_id|client_mutation_id|coarse_region|location_visibility/i;
 
+function expectMutualBlockExclusion(sql: string, actorRef: string) {
+  expect(sql).toContain("from profile_blocks");
+  expect(sql).toContain("profile_blocks.block_state = 'active'");
+  expect(sql).toContain(`profile_blocks.blocked_user_id = ${actorRef}`);
+  expect(sql).toContain(`profile_blocks.blocker_user_id = ${actorRef}`);
+}
+
 describe("social readback repository contracts", () => {
   it("builds followed feed from active follows and active public journal entries only", () => {
     const compiled = buildFollowedFeedStoriesQuery(testDb, scope).compile();
@@ -71,6 +78,31 @@ describe("social readback repository contracts", () => {
     expect(compiled.sql).toContain(
       '"target_public_entries"."public_slug" is not null',
     );
+    expect(compiled.sql).toContain(
+      'left join "user_handle_registry" as "target_owner_handles"',
+    );
+    expect(compiled.sql).toContain(
+      '"target_owner_handles"."lifecycle_state" =',
+    );
+    expect(compiled.sql).toContain(
+      '"target_owner_profiles"."normalized_handle" = "target_owner_handles"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"target_owner_profiles"."profile_visibility" =',
+    );
+    expect(compiled.sql).toContain(
+      '"target_owner_profiles"."profile_lifecycle_state" =',
+    );
+    expect(compiled.sql).toContain(
+      '"target_owner_profiles"."removed_at" is null',
+    );
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining(["current", "public", "active"]),
+    );
+    expectMutualBlockExclusion(
+      compiled.sql,
+      '"lineage_node_follows"."target_owner_user_id"',
+    );
     expect(compiled.sql).not.toMatch(forbiddenPrivateReadbackPattern);
   });
 
@@ -85,6 +117,10 @@ describe("social readback repository contracts", () => {
     expect(compiled.sql).toContain('"consent_state" =');
     expect(compiled.sql).toContain('"visibility_policy" =');
     expect(compiled.sql).toContain('"erasure_state" =');
+    expectMutualBlockExclusion(
+      compiled.sql,
+      '"lineage_provenance_edges"."owner_user_id"',
+    );
     expect(compiled.sql).not.toMatch(forbiddenPrivateReadbackPattern);
   });
 
@@ -99,6 +135,7 @@ describe("social readback repository contracts", () => {
     );
     expect(compiled.sql).toContain('"edges"."owner_user_id" =');
     expect(compiled.sql).toContain('"audit_events"."new_consent_state" in');
+    expectMutualBlockExclusion(compiled.sql, '"edges"."source_owner_user_id"');
     expect(compiled.sql).not.toMatch(forbiddenPrivateReadbackPattern);
     expect(compiled.sql).not.toMatch(
       /actor_user_id as|target_user_id as|owner_user_id as|source_owner_user_id as/i,
@@ -115,6 +152,10 @@ describe("social readback repository contracts", () => {
     expect(compiled.sql).toContain('"lineage_questions"."recipient_user_id" =');
     expect(compiled.sql).toContain('"lineage_questions"."question_state" =');
     expect(compiled.sql).toContain('"lineage_questions"."question_text"');
+    expectMutualBlockExclusion(
+      compiled.sql,
+      '"lineage_questions"."asker_user_id"',
+    );
     expect(compiled.sql).not.toMatch(forbiddenPrivateReadbackPattern);
     expect(compiled.sql).not.toMatch(/asker_user_id as|recipient_user_id as/i);
   });
@@ -134,6 +175,27 @@ describe("social readback repository contracts", () => {
     );
     expect(compiled.sql).toContain('"target_public_entries"."visibility" =');
     expect(compiled.sql).toContain('"followed_edges"."consent_state" =');
+    expect(compiled.sql).toContain(
+      'left join "user_handle_registry" as "follower_handles"',
+    );
+    expect(compiled.sql).toContain('"follower_handles"."lifecycle_state" =');
+    expect(compiled.sql).toContain(
+      '"follower_profiles"."normalized_handle" = "follower_handles"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"follower_profiles"."profile_visibility" =',
+    );
+    expect(compiled.sql).toContain(
+      '"follower_profiles"."profile_lifecycle_state" =',
+    );
+    expect(compiled.sql).toContain('"follower_profiles"."removed_at" is null');
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining(["current", "public", "active"]),
+    );
+    expectMutualBlockExclusion(
+      compiled.sql,
+      '"lineage_node_follows"."follower_user_id"',
+    );
     expect(compiled.sql).not.toMatch(forbiddenPrivateReadbackPattern);
     expect(compiled.sql).not.toMatch(
       /follower_user_id as|target_owner_user_id as|owner_user_id as/i,

@@ -11,6 +11,7 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import {
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_PRODUCT_SOURCE,
   EU_OFFICIAL_JOURNAL_COMMON_CATALOGUE_SOURCE,
@@ -128,7 +129,7 @@ async function main() {
     await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
       email,
       password: TEST_PASSWORD,
-      name: "OVE-85 smoke user",
+      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
     });
     await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
       email,
@@ -228,7 +229,11 @@ async function main() {
       "Object readback page missing EU OJ legal-value caveat.",
     );
 
-    const sadovoSuggestions = await fetchSuggestions(baseUrl, jar, SADOVO_QUERY);
+    const sadovoSuggestions = await fetchSuggestions(
+      baseUrl,
+      jar,
+      SADOVO_QUERY,
+    );
     assertNoDuplicateConcepts(SADOVO_QUERY, sadovoSuggestions);
     const sadovo = sadovoSuggestions.find(
       (suggestion) =>
@@ -353,7 +358,8 @@ async function findBgOjSmokeTarget(
     );
   }
   if (
-    normalizeSmokeName(target.canonicalName) === normalizeSmokeName(SADOVO_QUERY)
+    normalizeSmokeName(target.canonicalName) ===
+    normalizeSmokeName(SADOVO_QUERY)
   ) {
     throw new Error("OVE-85 BG OJ target did not go beyond Sadovo 1.");
   }

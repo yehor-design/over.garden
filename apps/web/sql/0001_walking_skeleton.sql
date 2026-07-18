@@ -230,6 +230,10 @@ create table if not exists user_public_profiles (
   profile_lifecycle_state text not null default 'active',
   relationship_visibility text not null default 'counts',
   removed_at timestamptz,
+  handle_registry_state text not null default 'current',
+  handle_changed_at timestamptz,
+  identity_policy_version text not null default 'legacy-unreviewed',
+  display_name_policy_version text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint user_public_profiles_handle_check
@@ -271,8 +275,27 @@ create table if not exists user_public_profiles (
       or (profile_lifecycle_state = 'removed' and removed_at is not null)
     ),
   constraint user_public_profiles_relationship_visibility_check
-    check (relationship_visibility in ('counts', 'hidden'))
+    check (relationship_visibility in ('counts', 'hidden')),
+  constraint user_public_profiles_handle_registry_state_check
+    check (handle_registry_state = 'current'),
+  constraint user_public_profiles_display_name_policy_check
+    check (
+      (display_name is null and display_name_policy_version is null)
+      or (
+        display_name is not null
+        and display_name_policy_version in (
+          'legacy-unreviewed',
+          'ove203-identity-v1'
+        )
+      )
+    )
 );
+
+-- Remove the short-lived draft consistency trigger if an interrupted local
+-- OVE-203 bootstrap installed it. The authoritative invariant below is the
+-- deferrable relational FK, not a global table scan trigger.
+drop trigger if exists overgarden_profile_handle_consistency
+  on user_public_profiles;
 
 alter table user_public_profiles
   add column if not exists handle text,
@@ -288,11 +311,20 @@ alter table user_public_profiles
   add column if not exists profile_lifecycle_state text not null default 'active',
   add column if not exists relationship_visibility text not null default 'counts',
   add column if not exists removed_at timestamptz,
+  add column if not exists handle_registry_state text not null default 'current',
+  add column if not exists handle_changed_at timestamptz,
+  add column if not exists identity_policy_version text not null default 'legacy-unreviewed',
+  add column if not exists display_name_policy_version text,
   add column if not exists created_at timestamptz default now(),
   add column if not exists updated_at timestamptz default now();
 
 do $$
 begin
+  update user_public_profiles
+  set display_name_policy_version = 'legacy-unreviewed'
+  where display_name is not null
+    and display_name_policy_version is null;
+
   if not exists (
     select 1
     from pg_constraint
@@ -302,6 +334,37 @@ begin
     alter table user_public_profiles
       add constraint user_public_profiles_handle_check
       check (handle ~ '^[a-z0-9][a-z0-9_]{2,29}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_handle_registry_state_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_handle_registry_state_check
+      check (handle_registry_state = 'current');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_display_name_policy_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      add constraint user_public_profiles_display_name_policy_check
+      check (
+        (display_name is null and display_name_policy_version is null)
+        or (
+          display_name is not null
+          and display_name_policy_version in (
+            'legacy-unreviewed',
+            'ove203-identity-v1'
+          )
+        )
+      );
   end if;
 
   if not exists (
@@ -328,6 +391,22 @@ begin
         and languages <@ array['uk', 'bg', 'ru', 'en']::text[]
       );
   end if;
+
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_identity_policy_version_check'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      drop constraint user_public_profiles_identity_policy_version_check;
+  end if;
+
+  alter table user_public_profiles
+    add constraint user_public_profiles_identity_policy_version_check
+    check (
+      identity_policy_version in ('legacy-unreviewed', 'ove203-identity-v1')
+    );
 
   if not exists (
     select 1
@@ -454,6 +533,637 @@ create unique index if not exists user_public_profiles_normalized_handle_uidx
 
 create index if not exists user_public_profiles_updated_idx
   on user_public_profiles (updated_at desc);
+
+-- Authoritative current/retired public-handle ownership (OVE-203). A former
+-- handle remains reserved, but the registry stores no email, provider name,
+-- profile content, request metadata, session data, or location data.
+create table if not exists user_handle_registry (
+  normalized_handle text primary key,
+  user_id uuid not null,
+  lifecycle_state text not null default 'current',
+  claim_source text not null,
+  policy_version text not null default 'legacy-unreviewed',
+  claimed_at timestamptz not null default now(),
+  next_rename_at timestamptz not null default '-infinity',
+  retired_at timestamptz,
+  constraint user_handle_registry_handle_check
+    check (normalized_handle ~ '^[a-z0-9][a-z0-9_]{2,29}$'),
+  constraint user_handle_registry_lifecycle_check
+    check (
+      (lifecycle_state = 'current' and retired_at is null)
+      or (lifecycle_state = 'retired' and retired_at is not null)
+    ),
+  constraint user_handle_registry_claim_source_check
+    check (
+      claim_source in (
+        'generated',
+        'legacy_generated',
+        'custom',
+        'legacy_custom'
+      )
+    ),
+  constraint user_handle_registry_policy_version_check
+    check (policy_version in ('legacy-unreviewed', 'ove203-identity-v1')),
+  constraint user_handle_registry_user_handle_lifecycle_uidx
+    unique (user_id, normalized_handle, lifecycle_state)
+);
+
+drop trigger if exists overgarden_registry_handle_consistency
+  on user_handle_registry;
+drop function if exists overgarden_assert_user_handle_consistency();
+
+alter table user_handle_registry
+  add column if not exists lifecycle_state text not null default 'current',
+  add column if not exists claim_source text,
+  add column if not exists policy_version text not null default 'legacy-unreviewed',
+  add column if not exists claimed_at timestamptz not null default now(),
+  add column if not exists next_rename_at timestamptz not null default '-infinity',
+  add column if not exists retired_at timestamptz;
+
+do $$
+begin
+  update user_handle_registry registry
+  set claim_source = case
+    when registry.normalized_handle ~ (
+      '^gardener_' || substring(
+        encode(digest(registry.user_id::text, 'sha256'), 'hex')
+        from 1 for 10
+      ) || '(_[1-9])?$'
+    ) then 'legacy_generated'
+    else 'legacy_custom'
+  end
+  where registry.claim_source is null;
+
+  alter table user_handle_registry
+    alter column claim_source set not null;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_handle_check'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      add constraint user_handle_registry_handle_check
+      check (normalized_handle ~ '^[a-z0-9][a-z0-9_]{2,29}$');
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_claim_source_check'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      add constraint user_handle_registry_claim_source_check
+      check (
+        claim_source in (
+          'generated',
+          'legacy_generated',
+          'custom',
+          'legacy_custom'
+        )
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_user_handle_lifecycle_uidx'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      add constraint user_handle_registry_user_handle_lifecycle_uidx
+      unique (user_id, normalized_handle, lifecycle_state);
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_lifecycle_check'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      add constraint user_handle_registry_lifecycle_check
+      check (
+        (lifecycle_state = 'current' and retired_at is null)
+        or (lifecycle_state = 'retired' and retired_at is not null)
+      );
+  end if;
+
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_policy_version_check'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      drop constraint user_handle_registry_policy_version_check;
+  end if;
+
+  alter table user_handle_registry
+    add constraint user_handle_registry_policy_version_check
+    check (policy_version in ('legacy-unreviewed', 'ove203-identity-v1'));
+
+  if to_regclass('"user"') is not null and not exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_handle_registry_user_id_fkey'
+      and conrelid = 'user_handle_registry'::regclass
+  ) then
+    alter table user_handle_registry
+      add constraint user_handle_registry_user_id_fkey
+      foreign key (user_id) references "user"(id) on delete cascade;
+  end if;
+end $$;
+
+create unique index if not exists user_handle_registry_one_current_per_user_uidx
+  on user_handle_registry (user_id)
+  where lifecycle_state = 'current';
+
+create index if not exists user_handle_registry_user_history_idx
+  on user_handle_registry (user_id, claimed_at desc);
+
+-- Preserve every existing valid handle as the current reserved identity before
+-- provisioning any missing profiles. Conflicts fail closed instead of silently
+-- reassigning a handle.
+insert into user_handle_registry (
+  normalized_handle,
+  user_id,
+  lifecycle_state,
+  claim_source,
+  policy_version,
+  claimed_at,
+  next_rename_at,
+  retired_at
+)
+select
+  normalized_handle,
+  user_id,
+  'current',
+  case
+    when normalized_handle ~ (
+      '^gardener_' || substring(
+        encode(digest(user_id::text, 'sha256'), 'hex')
+        from 1 for 10
+      ) || '(_[1-9])?$'
+    ) then 'legacy_generated'
+    else 'legacy_custom'
+  end,
+  identity_policy_version,
+  created_at,
+  '-infinity'::timestamptz,
+  null
+from user_public_profiles
+on conflict (normalized_handle) do nothing;
+
+do $$
+begin
+  if exists (
+    select 1
+    from user_public_profiles profile
+    left join user_handle_registry registry
+      on registry.normalized_handle = profile.normalized_handle
+      and registry.user_id = profile.user_id
+      and registry.lifecycle_state = 'current'
+    where registry.normalized_handle is null
+  ) then
+    raise exception 'Existing public profile handle ownership is inconsistent.';
+  end if;
+end $$;
+
+-- The profile row and the registry's current row are one logical identity.
+-- The deferred FK permits the canonical rename transaction to retire, claim,
+-- and update atomically while rejecting direct profile-only mutations. Do not
+-- cascade lifecycle updates into the profile: a current -> retired registry
+-- update would otherwise violate the profile's current-only CHECK before the
+-- transaction can install its replacement claim.
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'user_public_profiles_current_handle_registry_fkey'
+      and conrelid = 'user_public_profiles'::regclass
+  ) then
+    alter table user_public_profiles
+      drop constraint user_public_profiles_current_handle_registry_fkey;
+  end if;
+
+  alter table user_public_profiles
+    add constraint user_public_profiles_current_handle_registry_fkey
+    foreign key (user_id, normalized_handle, handle_registry_state)
+    references user_handle_registry (
+      user_id,
+      normalized_handle,
+      lifecycle_state
+    )
+    on update no action
+    on delete no action
+    deferrable initially deferred;
+end $$;
+
+-- Enforce the reverse half of the relationship as well. For every committed
+-- Better Auth user there must be exactly one profile, exactly one current
+-- registry claim, and both rows must identify the same handle. The constraint
+-- is deferred so canonical provisioning, rename, repair, and user-cascade
+-- deletion can complete atomically before evaluation.
+create or replace function overgarden_assert_user_public_identity_consistency()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  affected_user_id uuid;
+  affected_user_ids uuid[];
+  profile_count integer;
+  current_claim_count integer;
+  matching_pair_count integer;
+begin
+  affected_user_ids := case tg_op
+    when 'INSERT' then array[new.user_id]
+    when 'DELETE' then array[old.user_id]
+    else array[old.user_id, new.user_id]
+  end;
+
+  foreach affected_user_id in array affected_user_ids loop
+    if affected_user_id is null or not exists (
+      select 1
+      from "user" auth_user
+      where auth_user.id = affected_user_id
+    ) then
+      continue;
+    end if;
+
+    select count(*)::integer
+    into profile_count
+    from user_public_profiles profile
+    where profile.user_id = affected_user_id;
+
+    select count(*)::integer
+    into current_claim_count
+    from user_handle_registry registry
+    where registry.user_id = affected_user_id
+      and registry.lifecycle_state = 'current';
+
+    select count(*)::integer
+    into matching_pair_count
+    from user_public_profiles profile
+    join user_handle_registry registry
+      on registry.user_id = profile.user_id
+      and registry.normalized_handle = profile.normalized_handle
+      and registry.lifecycle_state = profile.handle_registry_state
+    where profile.user_id = affected_user_id;
+
+    if profile_count <> 1
+      or current_claim_count <> 1
+      or matching_pair_count <> 1
+    then
+      raise exception 'Public identity consistency invariant failed.';
+    end if;
+  end loop;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists overgarden_public_profile_identity_consistency
+  on user_public_profiles;
+create constraint trigger overgarden_public_profile_identity_consistency
+  after insert or update or delete on user_public_profiles
+  deferrable initially deferred
+  for each row
+  execute function overgarden_assert_user_public_identity_consistency();
+
+drop trigger if exists overgarden_handle_registry_identity_consistency
+  on user_handle_registry;
+create constraint trigger overgarden_handle_registry_identity_consistency
+  after insert or update or delete on user_handle_registry
+  deferrable initially deferred
+  for each row
+  execute function overgarden_assert_user_public_identity_consistency();
+
+-- One canonical, provider-independent generator. It derives only from the
+-- internal UUID, uses an irreversible SHA-256 digest, and handles the bounded
+-- collision case without reading email or OAuth profile data.
+create or replace function overgarden_provision_user_public_profile(
+  provision_user_id uuid
+)
+returns text
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  existing_handle text;
+  base_handle text;
+  candidate_handle text;
+  attempt integer;
+begin
+  if provision_user_id is null then
+    raise exception 'Public profile provisioning requires a user id.';
+  end if;
+
+  perform 1
+  from "user" auth_user
+  where auth_user.id = provision_user_id
+  for update;
+
+  if not found then
+    raise exception 'Public profile provisioning requires an existing user.';
+  end if;
+
+  select profile.handle
+  into existing_handle
+  from user_public_profiles profile
+  where profile.user_id = provision_user_id;
+
+  if found then
+    insert into user_handle_registry (
+      normalized_handle,
+      user_id,
+      lifecycle_state,
+      claim_source,
+      policy_version,
+      claimed_at,
+      next_rename_at,
+      retired_at
+    )
+    select
+      profile.normalized_handle,
+      profile.user_id,
+      'current',
+      case
+        when profile.normalized_handle ~ (
+          '^gardener_' || substring(
+            encode(digest(profile.user_id::text, 'sha256'), 'hex')
+            from 1 for 10
+          ) || '(_[1-9])?$'
+        ) then 'legacy_generated'
+        else 'legacy_custom'
+      end,
+      profile.identity_policy_version,
+      profile.created_at,
+      '-infinity'::timestamptz,
+      null
+    from user_public_profiles profile
+    where profile.user_id = provision_user_id
+    on conflict (normalized_handle) do nothing;
+
+    if not exists (
+      select 1
+      from user_handle_registry registry
+      where registry.normalized_handle = existing_handle
+        and registry.user_id = provision_user_id
+        and registry.lifecycle_state = 'current'
+    ) then
+      raise exception 'Public profile handle ownership is inconsistent.';
+    end if;
+
+    return existing_handle;
+  end if;
+
+  select registry.normalized_handle
+  into existing_handle
+  from user_handle_registry registry
+  where registry.user_id = provision_user_id
+    and registry.lifecycle_state = 'current'
+  for update;
+
+  if found then
+    insert into user_public_profiles (
+      user_id,
+      handle,
+      normalized_handle,
+      display_name,
+      identity_policy_version
+    )
+    select
+      registry.user_id,
+      registry.normalized_handle,
+      registry.normalized_handle,
+      null,
+      registry.policy_version
+    from user_handle_registry registry
+    where registry.user_id = provision_user_id
+      and registry.lifecycle_state = 'current';
+
+    return existing_handle;
+  end if;
+
+  base_handle := 'gardener_' || substring(
+    encode(digest(provision_user_id::text, 'sha256'), 'hex')
+    from 1 for 16
+  );
+
+  for attempt in 0..99 loop
+    candidate_handle := case
+      when attempt = 0 then base_handle
+      else base_handle || '_' || attempt::text
+    end;
+
+    begin
+      insert into user_handle_registry (
+        normalized_handle,
+        user_id,
+        lifecycle_state,
+        claim_source,
+        policy_version,
+        claimed_at,
+        next_rename_at,
+        retired_at
+      ) values (
+        candidate_handle,
+        provision_user_id,
+        'current',
+        'generated',
+        'ove203-identity-v1',
+        now(),
+        now(),
+        null
+      );
+
+      insert into user_public_profiles (
+        user_id,
+        handle,
+        normalized_handle,
+        display_name,
+        identity_policy_version
+      ) values (
+        provision_user_id,
+        candidate_handle,
+        candidate_handle,
+        null,
+        'ove203-identity-v1'
+      );
+
+      return candidate_handle;
+    exception
+      when unique_violation then
+        select profile.handle
+        into existing_handle
+        from user_public_profiles profile
+        where profile.user_id = provision_user_id;
+
+        if found then
+          return existing_handle;
+        end if;
+    end;
+  end loop;
+
+  raise exception using
+    errcode = '23505',
+    message = 'Could not allocate a unique public handle.';
+end;
+$$;
+
+-- Canonical atomic rename. Moderation is intentionally performed by the
+-- versioned server policy before this function is called; this boundary owns
+-- only lifecycle reservation, cooldown, concurrency and consistency.
+create or replace function overgarden_claim_user_public_handle(
+  claim_user_id uuid,
+  candidate_handle text
+)
+returns table (
+  status text,
+  previous_handle text,
+  current_handle text,
+  next_eligible_at timestamptz
+)
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+declare
+  profile_record user_public_profiles%rowtype;
+  eligible_at timestamptz;
+begin
+  if claim_user_id is null
+    or candidate_handle is null
+    or candidate_handle !~ '^[a-z0-9][a-z0-9_]{2,29}$'
+  then
+    return query select
+      'format'::text,
+      null::text,
+      null::text,
+      null::timestamptz;
+    return;
+  end if;
+
+  perform overgarden_provision_user_public_profile(claim_user_id);
+
+  select profile.*
+  into profile_record
+  from user_public_profiles profile
+  where profile.user_id = claim_user_id
+  for update;
+
+  select registry.next_rename_at
+  into eligible_at
+  from user_handle_registry registry
+  where registry.user_id = claim_user_id
+    and registry.lifecycle_state = 'current';
+
+  if profile_record.normalized_handle = candidate_handle then
+    return query select
+      'unchanged'::text,
+      profile_record.handle,
+      profile_record.handle,
+      eligible_at;
+    return;
+  end if;
+
+  if eligible_at > now() then
+    return query select
+      'cooldown'::text,
+      profile_record.handle,
+      profile_record.handle,
+      eligible_at;
+    return;
+  end if;
+
+  begin
+    update user_handle_registry registry
+    set
+      lifecycle_state = 'retired',
+      retired_at = now()
+    where registry.user_id = claim_user_id
+      and registry.lifecycle_state = 'current';
+
+    insert into user_handle_registry (
+      normalized_handle,
+      user_id,
+      lifecycle_state,
+      claim_source,
+      policy_version,
+      claimed_at,
+      next_rename_at,
+      retired_at
+    ) values (
+      candidate_handle,
+      claim_user_id,
+      'current',
+      'custom',
+      'ove203-identity-v1',
+      now(),
+      now() + interval '30 days',
+      null
+    );
+
+    update user_public_profiles profile
+    set
+      handle = candidate_handle,
+      normalized_handle = candidate_handle,
+      handle_changed_at = now(),
+      identity_policy_version = 'ove203-identity-v1',
+      updated_at = now()
+    where profile.user_id = claim_user_id;
+
+    return query select
+      'updated'::text,
+      profile_record.handle,
+      candidate_handle,
+      now() + interval '30 days';
+    return;
+  exception
+    when unique_violation then
+      return query select
+        'unavailable'::text,
+        profile_record.handle,
+        profile_record.handle,
+        null::timestamptz;
+      return;
+  end;
+end;
+$$;
+
+create or replace function overgarden_provision_user_public_profile_trigger()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public, pg_temp
+as $$
+begin
+  perform overgarden_provision_user_public_profile(new.id);
+  return new;
+end;
+$$;
+
+do $$
+begin
+  if to_regclass('"user"') is not null then
+    execute 'drop trigger if exists overgarden_user_public_profile_after_insert on "user"';
+    execute 'create trigger overgarden_user_public_profile_after_insert
+      after insert on "user"
+      for each row
+      execute function overgarden_provision_user_public_profile_trigger()';
+
+  end if;
+end $$;
 
 -- Profile-level social controls for OVE-180. These tables store only internal
 -- actor/target ids, bounded state/reason enums, and timestamps. OVE-183 extends
@@ -3381,9 +4091,18 @@ create table if not exists lineage_provenance_edges (
     or (
       source_kind = 'source_reference'
       and source_plant_object_id is null
-      and source_owner_user_id is null
       and source_reference_kind is not null
-      and source_reference_label is not null
+      and (
+        (
+          source_reference_kind = 'person'
+          and source_owner_user_id is not null
+          and source_reference_label is null
+        )
+        or (
+          source_owner_user_id is null
+          and source_reference_label is not null
+        )
+      )
     )
   )
 );
@@ -3417,6 +4136,29 @@ begin
       drop constraint lineage_provenance_edges_source_shape_check;
   end if;
 
+  -- OVE-203 converts confirmed handle mentions from mutable public text to the
+  -- stable internal user id. Only exact legacy rows produced by the former
+  -- `handle <current-handle>` writer are migrated; unmatched external person
+  -- references remain bounded labels and are never guessed.
+  update lineage_provenance_edges edge
+  set
+    source_owner_user_id = profile.user_id,
+    source_reference_label = null,
+    updated_at = now()
+  from user_public_profiles profile
+  where edge.source_kind = 'source_reference'
+    and edge.source_reference_kind = 'person'
+    and edge.source_owner_user_id is null
+    and lower(edge.source_reference_label) = 'handle ' || profile.normalized_handle
+    and edge.client_mutation_id ~ ':mention:public_handle:[a-f0-9]{16}$'
+    and right(edge.client_mutation_id, 16) = substring(
+      encode(
+        digest('public_handle:' || profile.normalized_handle, 'sha256'),
+        'hex'
+      )
+      from 1 for 16
+    );
+
   alter table lineage_provenance_edges
     add constraint lineage_provenance_edges_source_shape_check check (
       (
@@ -3431,10 +4173,19 @@ begin
       or (
         source_kind = 'source_reference'
         and source_plant_object_id is null
-        and source_owner_user_id is null
         and source_pending_identity_id is null
         and source_reference_kind is not null
-        and source_reference_label is not null
+        and (
+          (
+            source_reference_kind = 'person'
+            and source_owner_user_id is not null
+            and source_reference_label is null
+          )
+          or (
+            source_owner_user_id is null
+            and source_reference_label is not null
+          )
+        )
       )
       or (
         source_kind = 'pending_identity'

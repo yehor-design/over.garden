@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
-import { Eye, ImageOff, Save } from "lucide-react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { AtSign, Eye, ImageOff, Save } from "lucide-react";
 
 import { PublicProfileView } from "@/components/public/public-profile";
 import { buttonVariants } from "@/components/ui/button";
@@ -18,7 +18,11 @@ import type {
   OwnerPublicProfileEditor,
 } from "@/server/owner-profile-repository";
 import type { PublicProfileLanguage } from "@/server/public-profile-repository";
-import { updatePublicProfileAction } from "./actions";
+import {
+  updatePublicHandleAction,
+  updatePublicProfileAction,
+  type PublicHandleActionState,
+} from "./actions";
 
 const COPY = {
   uk: {
@@ -27,6 +31,18 @@ const COPY = {
     avatar: "Аватар",
     noAvatar: "Без аватара",
     handle: "Публічний нік",
+    handleTitle: "Змінити публічний нік",
+    currentHandle: "Поточний нік",
+    handleHelp:
+      "3–30 малих латинських літер, цифр або _. Першу зміну можна зробити одразу; наступну — через 30 днів. Старі ніки назавжди залишаються недоступними.",
+    handleFormat:
+      "Нік має містити від 3 до 30 малих латинських літер, цифр або символів _. Він має починатися з літери чи цифри.",
+    handleUnavailable: "Цей нік недоступний. Спробуйте інший.",
+    handleCooldown: "Нік можна буде змінити після {date}.",
+    handleUpdated: "Нік змінено.",
+    handleUnchanged: "Це вже ваш поточний нік.",
+    renameHandle: "Змінити нік",
+    renamingHandle: "Змінюємо…",
     displayName: "Ім’я для показу",
     bio: "Про себе",
     languages: "Мови спілкування",
@@ -41,7 +57,7 @@ const COPY = {
     save: "Зберегти профіль",
     saved: "Профіль збережено.",
     unchanged: "Змін немає.",
-    taken: "Цей нік уже зайнятий.",
+    displayUnavailable: "Ім’я для показу недоступне. Спробуйте інше.",
     invalid: "Перевірте виділені значення.",
     avatarInvalid: "Оберіть доступне оброблене фото.",
   },
@@ -51,6 +67,18 @@ const COPY = {
     avatar: "Аватар",
     noAvatar: "Без аватар",
     handle: "Публично име",
+    handleTitle: "Промяна на публичното име",
+    currentHandle: "Текущо потребителско име",
+    handleHelp:
+      "3–30 малки латински букви, цифри или _. Първата промяна е незабавна; следващата е след 30 дни. Старите имена остават недостъпни завинаги.",
+    handleFormat:
+      "Потребителското име трябва да съдържа от 3 до 30 малки латински букви, цифри или символи _. То трябва да започва с буква или цифра.",
+    handleUnavailable: "Това потребителско име не е достъпно. Опитайте друго.",
+    handleCooldown: "Ще можете да промените потребителското име след {date}.",
+    handleUpdated: "Потребителското име е променено.",
+    handleUnchanged: "Това вече е текущото ви потребителско име.",
+    renameHandle: "Промени името",
+    renamingHandle: "Променя се…",
     displayName: "Име за показване",
     bio: "За мен",
     languages: "Езици за общуване",
@@ -65,7 +93,7 @@ const COPY = {
     save: "Запази профила",
     saved: "Профилът е запазен.",
     unchanged: "Няма промени.",
-    taken: "Това име вече е заето.",
+    displayUnavailable: "Името за показване не е достъпно. Опитайте друго.",
     invalid: "Проверете въведените стойности.",
     avatarInvalid: "Изберете достъпна обработена снимка.",
   },
@@ -75,6 +103,18 @@ const COPY = {
     avatar: "Аватар",
     noAvatar: "Без аватара",
     handle: "Публичный ник",
+    handleTitle: "Изменить публичный ник",
+    currentHandle: "Текущий ник",
+    handleHelp:
+      "3–30 строчных латинских букв, цифр или _. Первую смену можно сделать сразу; следующую — через 30 дней. Старые ники навсегда остаются недоступными.",
+    handleFormat:
+      "Ник должен содержать от 3 до 30 строчных латинских букв, цифр или символов _. Он должен начинаться с буквы или цифры.",
+    handleUnavailable: "Этот ник недоступен. Попробуйте другой.",
+    handleCooldown: "Ник можно будет изменить после {date}.",
+    handleUpdated: "Ник изменён.",
+    handleUnchanged: "Это уже ваш текущий ник.",
+    renameHandle: "Изменить ник",
+    renamingHandle: "Изменяем…",
     displayName: "Отображаемое имя",
     bio: "О себе",
     languages: "Языки общения",
@@ -89,13 +129,14 @@ const COPY = {
     save: "Сохранить профиль",
     saved: "Профиль сохранён.",
     unchanged: "Изменений нет.",
-    taken: "Этот ник уже занят.",
+    displayUnavailable: "Отображаемое имя недоступно. Попробуйте другое.",
     invalid: "Проверьте введённые значения.",
     avatarInvalid: "Выберите доступное обработанное фото.",
   },
 } as const;
 
 const PROFILE_LANGUAGES = ["uk", "bg", "ru", "en"] as const;
+const MAX_BROWSER_TIMER_DELAY_MS = 2_147_000_000;
 
 export function OwnerProfileEditor({
   workspace,
@@ -110,23 +151,90 @@ export function OwnerProfileEditor({
   const [editor, setEditor] = useState<OwnerPublicProfileEditor>(
     workspace.editor,
   );
+  const initialHandleState: PublicHandleActionState = {
+    status: workspace.handleRename.canRename ? null : "cooldown",
+    currentHandle: workspace.handleRename.currentHandle,
+    nextEligibleAt: workspace.handleRename.nextEligibleAt
+      ? new Date(workspace.handleRename.nextEligibleAt).toISOString()
+      : null,
+  };
+  const [handleState, handleFormAction, handlePending] = useActionState(
+    updatePublicHandleAction,
+    initialHandleState,
+  );
+  const [handleCandidate, setHandleCandidate] = useState(
+    workspace.handleRename.currentHandle,
+  );
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
+  const [expiredEligibility, setExpiredEligibility] = useState<string | null>(
+    null,
+  );
+  const handleInputRef = useRef<HTMLInputElement>(null);
+  const committedHandle = handleState.currentHandle;
+  const handleError =
+    handleState.status === "format" || handleState.status === "unavailable";
+  const canRename =
+    handleState.nextEligibleAt === null ||
+    (handleState.status === null && workspace.handleRename.canRename) ||
+    expiredEligibility === handleState.nextEligibleAt;
+  const visibleHandleState: PublicHandleActionState =
+    handleState.status === "cooldown" && canRename
+      ? { ...handleState, status: null }
+      : handleState;
+
+  useEffect(() => {
+    const eligibility = handleState.nextEligibleAt;
+    if (!eligibility) return;
+
+    const eligibleAt = new Date(eligibility).getTime();
+    if (!Number.isFinite(eligibleAt)) return;
+
+    let timeoutId: number | undefined;
+    const scheduleEligibilityRefresh = () => {
+      const remaining = eligibleAt - Date.now();
+      if (remaining <= 0) {
+        setExpiredEligibility(eligibility);
+        return;
+      }
+
+      timeoutId = window.setTimeout(
+        scheduleEligibilityRefresh,
+        Math.min(remaining, MAX_BROWSER_TIMER_DELAY_MS),
+      );
+    };
+
+    scheduleEligibilityRefresh();
+    return () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, [handleState.nextEligibleAt]);
+
+  useEffect(() => {
+    if (handleError) {
+      handleInputRef.current?.focus();
+    }
+  }, [handleError, handleState]);
+
+  const displayNameError =
+    status === "display_name" || status === "display_name_unavailable";
+  useEffect(() => {
+    if (displayNameError) displayNameInputRef.current?.focus();
+  }, [displayNameError]);
+
   const selectedAvatar = workspace.avatarOptions.find(
     (option) => option.mediaAssetId === editor.avatarMediaAssetId,
   );
-  const normalizedHandle =
-    editor.handle.trim().replace(/^@/u, "").toLowerCase() ||
-    workspace.preview.handle;
   const preview = useMemo(
     () => ({
       ...workspace.preview,
-      handle: normalizedHandle,
-      mention: `@${normalizedHandle}` as `@${string}`,
-      displayName: editor.displayName?.trim() || `@${normalizedHandle}`,
+      handle: committedHandle,
+      mention: `@${committedHandle}` as `@${string}`,
+      displayName: editor.displayName?.trim() || `@${committedHandle}`,
       avatarUrl: selectedAvatar?.publicUrl ?? null,
       avatarAlt:
         selectedAvatar?.alt ??
         editor.displayName?.trim() ??
-        `@${normalizedHandle}`,
+        `@${committedHandle}`,
       bio: editor.bio?.trim() || null,
       languages: editor.languages,
       coarseRegionCode:
@@ -141,7 +249,7 @@ export function OwnerProfileEditor({
     }),
     [
       editor,
-      normalizedHandle,
+      committedHandle,
       selectedAvatar,
       workspace.preview,
       workspace.relationshipCounts,
@@ -150,7 +258,77 @@ export function OwnerProfileEditor({
   const statusMessage = profileEditorStatus(status, copy);
 
   return (
-    <div data-owner-profile-editor="v2" className="grid gap-10">
+    <div data-owner-profile-editor="v3" className="grid gap-10">
+      <section
+        id="public-handle-editor"
+        className="grid gap-5 border-b border-border pb-8"
+      >
+        <div className="flex items-center gap-2">
+          <AtSign className="size-5 text-muted-foreground" aria-hidden="true" />
+          <h2 className="text-xl font-semibold text-foreground">
+            {copy.handleTitle}
+          </h2>
+        </div>
+        <p className="min-w-0 text-sm text-muted-foreground">
+          {copy.currentHandle}:{" "}
+          <strong className="break-all">@{committedHandle}</strong>
+        </p>
+        <form
+          action={handleFormAction}
+          className="grid max-w-xl gap-3"
+          noValidate
+        >
+          <label
+            htmlFor="public-handle-candidate"
+            className="text-sm font-medium text-foreground"
+          >
+            {copy.handle}
+          </label>
+          <span className="flex overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+            <span className="border-r border-border px-3 py-2 text-muted-foreground">
+              @
+            </span>
+            <input
+              ref={handleInputRef}
+              id="public-handle-candidate"
+              name="handle"
+              value={handleCandidate}
+              onChange={(event) => setHandleCandidate(event.target.value)}
+              readOnly={handlePending}
+              required
+              minLength={3}
+              maxLength={30}
+              pattern="[a-z0-9][a-z0-9_]{2,29}"
+              autoCapitalize="none"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              aria-busy={handlePending || undefined}
+              aria-invalid={handleError}
+              aria-describedby="public-handle-help public-handle-status"
+              className="min-w-0 flex-1 bg-background px-3 py-2 font-normal outline-none"
+            />
+          </span>
+          <p id="public-handle-help" className="text-xs text-muted-foreground">
+            {copy.handleHelp}
+          </p>
+          <HandleStatus
+            state={visibleHandleState}
+            locale={locale}
+            copy={copy}
+            showEligibility={!canRename}
+          />
+          <button
+            type="submit"
+            disabled={handlePending || !canRename}
+            className={buttonVariants({ className: "w-fit" })}
+          >
+            <AtSign aria-hidden="true" />
+            {handlePending ? copy.renamingHandle : copy.renameHandle}
+          </button>
+        </form>
+      </section>
+
       <section
         id="public-profile-editor"
         className="grid gap-5 border-b border-border pb-8"
@@ -220,48 +398,26 @@ export function OwnerProfileEditor({
             </div>
           </fieldset>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="grid gap-1.5 text-sm font-medium text-foreground">
-              {copy.handle}
-              <span className="flex overflow-hidden rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
-                <span className="border-r border-border px-3 py-2 text-muted-foreground">
-                  @
-                </span>
-                <input
-                  name="handle"
-                  value={editor.handle}
-                  onChange={(event) =>
-                    setEditor((current) => ({
-                      ...current,
-                      handle: event.target.value,
-                    }))
-                  }
-                  required
-                  minLength={3}
-                  maxLength={30}
-                  pattern="[A-Za-z0-9_]+"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  className="min-w-0 flex-1 bg-background px-3 py-2 font-normal outline-none"
-                />
-              </span>
-            </label>
-            <label className="grid gap-1.5 text-sm font-medium text-foreground">
-              {copy.displayName}
-              <input
-                name="displayName"
-                value={editor.displayName ?? ""}
-                onChange={(event) =>
-                  setEditor((current) => ({
-                    ...current,
-                    displayName: event.target.value,
-                  }))
-                }
-                maxLength={80}
-                className="h-10 rounded-md border border-input bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-ring"
-              />
-            </label>
-          </div>
+          <label className="grid max-w-xl gap-1.5 text-sm font-medium text-foreground">
+            {copy.displayName}
+            <input
+              ref={displayNameInputRef}
+              name="displayName"
+              value={editor.displayName ?? ""}
+              onChange={(event) =>
+                setEditor((current) => ({
+                  ...current,
+                  displayName: event.target.value,
+                }))
+              }
+              maxLength={80}
+              aria-invalid={displayNameError}
+              aria-describedby={
+                displayNameError ? "public-profile-status" : undefined
+              }
+              className="h-10 rounded-md border border-input bg-background px-3 font-normal outline-none focus:ring-2 focus:ring-ring"
+            />
+          </label>
 
           <label className="grid gap-1.5 text-sm font-medium text-foreground">
             {copy.bio}
@@ -396,7 +552,9 @@ export function OwnerProfileEditor({
 
           {statusMessage ? (
             <p
-              role="status"
+              id="public-profile-status"
+              role={displayNameError ? "alert" : "status"}
+              aria-live={displayNameError ? "assertive" : "polite"}
               className="rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
             >
               {statusMessage}
@@ -430,6 +588,7 @@ export function OwnerProfileEditor({
           locale={locale}
           viewer={{ kind: "guest" }}
           previewVisibility={editor.profileVisibility}
+          headingLevel="h3"
         />
       </section>
     </div>
@@ -492,21 +651,75 @@ function toggleLanguage(
     : [...current, language].slice(0, 4);
 }
 
+function HandleStatus({
+  state,
+  locale,
+  copy,
+  showEligibility,
+}: {
+  state: PublicHandleActionState;
+  locale: InterfaceLocale;
+  copy: (typeof COPY)[InterfaceLocale];
+  showEligibility: boolean;
+}) {
+  const isError = state.status === "format" || state.status === "unavailable";
+  let message: string | null = null;
+
+  if (state.status === "updated") message = copy.handleUpdated;
+  if (state.status === "unchanged") message = copy.handleUnchanged;
+  if (state.status === "format") message = copy.handleFormat;
+  if (state.status === "unavailable") message = copy.handleUnavailable;
+  if (state.status === "cooldown") {
+    const date = state.nextEligibleAt
+      ? new Intl.DateTimeFormat(localeTag(locale), {
+          dateStyle: "long",
+          timeStyle: "short",
+        }).format(new Date(state.nextEligibleAt))
+      : "";
+    message = copy.handleCooldown.replace("{date}", date);
+  }
+  if (showEligibility && state.status !== "cooldown" && state.nextEligibleAt) {
+    const date = new Intl.DateTimeFormat(localeTag(locale), {
+      dateStyle: "long",
+      timeStyle: "short",
+    }).format(new Date(state.nextEligibleAt));
+    const eligibilityMessage = copy.handleCooldown.replace("{date}", date);
+    message = message ? `${message} ${eligibilityMessage}` : eligibilityMessage;
+  }
+
+  return (
+    <p
+      id="public-handle-status"
+      role={isError ? "alert" : "status"}
+      aria-live={isError ? "assertive" : "polite"}
+      className={cn(
+        message
+          ? "rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-foreground"
+          : "sr-only",
+      )}
+    >
+      {message ?? ""}
+    </p>
+  );
+}
+
+function localeTag(locale: InterfaceLocale) {
+  if (locale === "bg") return "bg-BG";
+  if (locale === "ru") return "ru-RU";
+  return "uk-UA";
+}
+
 function profileEditorStatus(
   status: string | null,
   copy: (typeof COPY)[InterfaceLocale],
 ) {
   if (status === "updated") return copy.saved;
   if (status === "unchanged") return copy.unchanged;
-  if (status === "taken") return copy.taken;
+  if (status === "display_name_unavailable") return copy.displayUnavailable;
   if (status === "avatar") return copy.avatarInvalid;
   if (
     status &&
     [
-      "empty",
-      "format",
-      "reserved",
-      "blocked",
       "display_name",
       "bio",
       "languages",

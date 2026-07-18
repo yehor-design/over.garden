@@ -47,6 +47,7 @@ import type {
   PilotInterviewLearnings as PilotInterviewLearningsTable,
   PlantObjects as PlantObjectsTable,
   Spaces as SpacesTable,
+  UserHandleRegistry as UserHandleRegistryTable,
   UserPublicProfiles as UserPublicProfilesTable,
   VarietySeedProofs as VarietySeedProofsTable,
   WishlistItems as WishlistItemsTable,
@@ -317,6 +318,8 @@ export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
 export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type UserPublicProfile = Selectable<UserPublicProfilesTable>;
 export type NewUserPublicProfile = Insertable<UserPublicProfilesTable>;
+export type UserHandleRegistryEntry = Selectable<UserHandleRegistryTable>;
+export type NewUserHandleRegistryEntry = Insertable<UserHandleRegistryTable>;
 export type WishlistItem = Selectable<WishlistItemsTable>;
 export type NewWishlistItem = Insertable<WishlistItemsTable>;
 export type EngagementBookmark = Selectable<EngagementBookmarksTable>;

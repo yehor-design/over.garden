@@ -18,6 +18,7 @@ export interface PublicJournalEntryCopy {
   nextEntry: string;
   relatedHistory: string;
   mentionedObjects: string;
+  mentionedGardeners: string;
   manageEntry: string;
   openObject: string;
   contextObject: string;
@@ -47,6 +48,7 @@ const COPY = {
     nextEntry: "Наступний запис",
     relatedHistory: "Ще з цього журналу",
     mentionedObjects: "Об'єкти в записі",
+    mentionedGardeners: "Згадані садівники",
     manageEntry: "Керувати записом",
     openObject: "Відкрити паспорт",
     contextObject: "Живий об'єкт",
@@ -74,6 +76,7 @@ const COPY = {
     nextEntry: "Следващ запис",
     relatedHistory: "Още от този дневник",
     mentionedObjects: "Обекти в записа",
+    mentionedGardeners: "Споменати градинари",
     manageEntry: "Управление на записа",
     openObject: "Отваряне на паспорта",
     contextObject: "Жив обект",
@@ -101,6 +104,7 @@ const COPY = {
     nextEntry: "Следующая запись",
     relatedHistory: "Ещё из этого журнала",
     mentionedObjects: "Объекты в записи",
+    mentionedGardeners: "Упомянутые садоводы",
     manageEntry: "Управлять записью",
     openObject: "Открыть паспорт",
     contextObject: "Живой объект",

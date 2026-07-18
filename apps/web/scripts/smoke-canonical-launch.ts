@@ -11,6 +11,7 @@ import sharp from "sharp";
 
 import type { Database, JsonValue, JournalEntry } from "../src/db/schema";
 import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
@@ -88,7 +89,11 @@ interface RuntimeModules {
   archiveJournalEntry: (
     scope: { userId: string; sessionId?: string },
     input: { entryId: string },
-  ) => Promise<{ entry: JournalEntry; publicUrl: string | null; publicGone: boolean }>;
+  ) => Promise<{
+    entry: JournalEntry;
+    publicUrl: string | null;
+    publicGone: boolean;
+  }>;
   enqueueJob: (
     queueName: string,
     payload: JsonValue,
@@ -169,11 +174,21 @@ async function main() {
 
   const marker = `ove-143-${Date.now()}-${randomUUID()}`;
   const mail = `${marker}@over.garden`;
-  const account = await createAndPrepareSmokeAccount(base, jar, modules.db, mail);
+  const account = await createAndPrepareSmokeAccount(
+    base,
+    jar,
+    modules.db,
+    mail,
+  );
 
   const authChecks = await verifyAuthSurfaces(base, jar, signOutJar);
   const routeChecks = await verifyPublicRoutes(base);
-  const gateChecks = await verifyAdminAndErasureGates(base, jar, signOutJar, modules.db);
+  const gateChecks = await verifyAdminAndErasureGates(
+    base,
+    jar,
+    signOutJar,
+    modules.db,
+  );
 
   const image = await createSmokeImage();
   const upload = await jsonRequest<UploadResponse>(
@@ -282,7 +297,11 @@ async function main() {
   const publicPath = published.publicUrl;
   const publicHtml = await waitForPublicPage(base, publicPath, 200);
   assertIncludes(publicHtml, "noindex, nofollow", "public journal robots");
-  assertIncludes(publicHtml, "media.over.garden", "public journal derivative media host");
+  assertIncludes(
+    publicHtml,
+    "media.over.garden",
+    "public journal derivative media host",
+  );
   assertNoPrivateMarkers(publicHtml, FORBIDDEN_PRIVATE_CONTENT_MARKERS);
 
   const indexedJob = await waitForJob(modules.db, indexKey);
@@ -311,7 +330,10 @@ async function main() {
     "archive tombstone shell",
   );
   assertIncludes(goneHtml, "noindex, nofollow", "archive tombstone robots");
-  assert(!goneHtml.includes(SMOKE_TITLE), "archive tombstone hides entry title");
+  assert(
+    !goneHtml.includes(SMOKE_TITLE),
+    "archive tombstone hides entry title",
+  );
   assert(!goneHtml.includes(SMOKE_BODY), "archive tombstone hides entry body");
   assertNoPrivateMarkers(goneHtml, FORBIDDEN_PRIVATE_CONTENT_MARKERS);
 
@@ -320,7 +342,10 @@ async function main() {
   await waitForMeiliDocument(published.entry.id, false);
 
   const sitemap = await textRequest(base, signOutJar, "/sitemap.xml");
-  assert(!sitemap.includes(publicPath), "archived journal path absent from sitemap");
+  assert(
+    !sitemap.includes(publicPath),
+    "archived journal path absent from sitemap",
+  );
 
   const evidence = {
     canonical: {
@@ -448,12 +473,15 @@ async function createAndPrepareSmokeAccount(
     body: {
       email: mail,
       password: TEST_PASSWORD,
-      name: "OVE-143 launch smoke",
+      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
       callbackURL: "/garden",
     },
   });
 
-  const verificationToken = await createEmailVerificationToken(authSecret, mail);
+  const verificationToken = await createEmailVerificationToken(
+    authSecret,
+    mail,
+  );
   const verification = await fetch(
     `${base}/api/auth/verify-email?token=${encodeURIComponent(
       verificationToken,
@@ -570,7 +598,9 @@ async function verifyPublicRoutes(base: string) {
 
   for (const [path, expected] of routes) {
     const response = await fetch(`${base}${path}`, {
-      headers: { Accept: path.endsWith(".xml") ? "application/xml" : "text/html" },
+      headers: {
+        Accept: path.endsWith(".xml") ? "application/xml" : "text/html",
+      },
     });
     assertPublicRoutePolicyContract({
       base,
@@ -639,7 +669,11 @@ export function assertPublicRoutePolicyContract(input: {
     new URL(input.base).origin,
     `route ${input.path} final origin`,
   );
-  assertIncludes(input.text, input.expectedMarker, `route ${input.path} policy marker`);
+  assertIncludes(
+    input.text,
+    input.expectedMarker,
+    `route ${input.path} policy marker`,
+  );
 }
 
 export function assertCanonicalLegacyRedirect(input: {
@@ -662,7 +696,11 @@ export function assertSitemapPolicyContract(input: {
   xml: string;
 }) {
   assertEqual(input.status, 200, "sitemap status");
-  assertIncludes(input.contentType ?? "", "application/xml", "sitemap content type");
+  assertIncludes(
+    input.contentType ?? "",
+    "application/xml",
+    "sitemap content type",
+  );
   assertIncludes(
     input.xml,
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
@@ -844,7 +882,11 @@ async function textRequest(base: string, jar: CookieJar, path: string) {
   return response.text;
 }
 
-async function uploadBinary(uploadEndpoint: string, body: Buffer, contentType: string) {
+async function uploadBinary(
+  uploadEndpoint: string,
+  body: Buffer,
+  contentType: string,
+) {
   const response = await fetch(uploadEndpoint, {
     method: "PUT",
     headers: { "Content-Type": contentType },
@@ -856,50 +898,65 @@ async function uploadBinary(uploadEndpoint: string, body: Buffer, contentType: s
 }
 
 async function waitForPublicPage(base: string, path: string, status: number) {
-  return waitFor(async () => {
-    const response = await fetch(`${base}${path}`, {
-      headers: { Accept: "text/html" },
-    });
-    if (new URL(response.url).origin !== new URL(base).origin) {
-      throw new Error("public page redirected outside the canonical origin");
-    }
-    if (response.status !== status) {
-      throw new RetryableError(`public page pending ${status}: ${response.status}`);
-    }
-    return response.text();
-  }, HTTP_WAIT_TIMEOUT_MS, HTTP_WAIT_INTERVAL_MS);
+  return waitFor(
+    async () => {
+      const response = await fetch(`${base}${path}`, {
+        headers: { Accept: "text/html" },
+      });
+      if (new URL(response.url).origin !== new URL(base).origin) {
+        throw new Error("public page redirected outside the canonical origin");
+      }
+      if (response.status !== status) {
+        throw new RetryableError(
+          `public page pending ${status}: ${response.status}`,
+        );
+      }
+      return response.text();
+    },
+    HTTP_WAIT_TIMEOUT_MS,
+    HTTP_WAIT_INTERVAL_MS,
+  );
 }
 
 async function waitForJob(db: DB, idempotencyKey: string): Promise<JobRow> {
-  return waitFor(async () => {
-    const row = await db
-      .selectFrom("job_queue")
-      .select(["status", "attempts", "last_error as lastError"])
-      .where("idempotency_key", "=", idempotencyKey)
-      .executeTakeFirst();
+  return waitFor(
+    async () => {
+      const row = await db
+        .selectFrom("job_queue")
+        .select(["status", "attempts", "last_error as lastError"])
+        .where("idempotency_key", "=", idempotencyKey)
+        .executeTakeFirst();
 
-    if (!row) throw new RetryableError("job row missing");
-    if (row.status === "done") return row;
-    if (row.status === "failed") {
-      throw new Error(`job failed after ${row.attempts} attempts`);
-    }
-    throw new RetryableError(`job not complete: ${row.status}`);
-  }, JOB_WAIT_TIMEOUT_MS, JOB_WAIT_INTERVAL_MS);
+      if (!row) throw new RetryableError("job row missing");
+      if (row.status === "done") return row;
+      if (row.status === "failed") {
+        throw new Error(`job failed after ${row.attempts} attempts`);
+      }
+      throw new RetryableError(`job not complete: ${row.status}`);
+    },
+    JOB_WAIT_TIMEOUT_MS,
+    JOB_WAIT_INTERVAL_MS,
+  );
 }
 
 async function waitForMeiliDocument(id: string, shouldExist: boolean) {
   const client = createMeiliClient();
-  return waitFor(async () => {
-    try {
-      const doc = await client.index(PUBLIC_JOURNAL_INDEX).getDocument(id);
-      if (!shouldExist) throw new RetryableError("search document still present");
-      return doc as Record<string, unknown>;
-    } catch (error) {
-      if (shouldExist) throw new RetryableError("search document missing");
-      if (isMeiliDocumentMissing(error)) return null;
-      throw error;
-    }
-  }, JOB_WAIT_TIMEOUT_MS, JOB_WAIT_INTERVAL_MS);
+  return waitFor(
+    async () => {
+      try {
+        const doc = await client.index(PUBLIC_JOURNAL_INDEX).getDocument(id);
+        if (!shouldExist)
+          throw new RetryableError("search document still present");
+        return doc as Record<string, unknown>;
+      } catch (error) {
+        if (shouldExist) throw new RetryableError("search document missing");
+        if (isMeiliDocumentMissing(error)) return null;
+        throw error;
+      }
+    },
+    JOB_WAIT_TIMEOUT_MS,
+    JOB_WAIT_INTERVAL_MS,
+  );
 }
 
 function createMeiliClient() {
@@ -984,7 +1041,10 @@ function isMeiliDocumentMissing(error: unknown) {
   ) {
     return true;
   }
-  return error instanceof Error && /document_not_found|not found/i.test(error.message);
+  return (
+    error instanceof Error &&
+    /document_not_found|not found/i.test(error.message)
+  );
 }
 
 function jobClass(row: JobRow) {
@@ -1047,7 +1107,9 @@ function assertIncludes(value: string, expected: string, label: string) {
 
 function assertEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
-    throw new Error(`${label}: expected ${String(expected)}, got ${String(actual)}`);
+    throw new Error(
+      `${label}: expected ${String(expected)}, got ${String(actual)}`,
+    );
   }
 }
 

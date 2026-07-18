@@ -22,6 +22,8 @@ export interface JournalMentionSuggestion extends JournalMentionSelection {
 const MAX_MENTION_SELECTIONS = 12;
 const MAX_MENTION_ID_LENGTH = 120;
 const MAX_MENTION_LABEL_LENGTH = 120;
+const PUBLIC_HANDLE_MENTION_SELECTION_ID_PATTERN =
+  /^v1\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 export function normalizeJournalMentionSelections(
   value: unknown,
@@ -44,6 +46,12 @@ export function normalizeJournalMentionSelections(
       MAX_MENTION_LABEL_LENGTH,
     );
     if (!id || !label) continue;
+    if (
+      candidate.kind === "public_handle" &&
+      !isOpaquePublicHandleMentionSelectionId(id)
+    ) {
+      continue;
+    }
 
     const key = `${candidate.kind}:${id}`;
     if (seen.has(key)) continue;
@@ -57,6 +65,14 @@ export function normalizeJournalMentionSelections(
   }
 
   return selections;
+}
+
+export function isOpaquePublicHandleMentionSelectionId(value: unknown) {
+  return (
+    typeof value === "string" &&
+    value.length <= MAX_MENTION_ID_LENGTH &&
+    PUBLIC_HANDLE_MENTION_SELECTION_ID_PATTERN.test(value)
+  );
 }
 
 export function isJournalMentionTargetKind(

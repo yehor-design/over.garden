@@ -11,6 +11,7 @@ import {
 } from "../src/db/connection";
 import type { Database } from "../src/db/types";
 import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 
 loadEnv({ path: ".env.local", override: false });
 
@@ -95,19 +96,9 @@ async function main() {
     const normalJar = new CookieJar();
     const socialLinkedJar = new CookieJar();
 
-    await signUpAndSignIn(
-      baseUrl,
-      normalJar,
-      normalEmail,
-      "OVE-113 Normal Smoke",
-    );
+    await signUpAndSignIn(baseUrl, normalJar, normalEmail);
     await waitForAuthRateLimitWindow();
-    await signUpAndSignIn(
-      baseUrl,
-      socialLinkedJar,
-      socialLinkedEmail,
-      "OVE-113 Social Linked Smoke",
-    );
+    await signUpAndSignIn(baseUrl, socialLinkedJar, socialLinkedEmail);
 
     const socialLinkedUserId = await readUserIdByEmail(db, socialLinkedEmail);
     await linkFakeSocialAccount(db, socialLinkedUserId);
@@ -315,16 +306,11 @@ async function assertSecondOwnerInsertRejected(
   throw new Error("Admin role table accepted a second owner row.");
 }
 
-async function signUpAndSignIn(
-  baseUrl: string,
-  jar: CookieJar,
-  email: string,
-  name: string,
-) {
+async function signUpAndSignIn(baseUrl: string, jar: CookieJar, email: string) {
   await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
     email,
     password: TEST_PASSWORD,
-    name,
+    name: PRIVATE_AUTH_COMPATIBILITY_NAME,
   });
   await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
     email,

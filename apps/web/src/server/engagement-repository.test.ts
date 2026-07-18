@@ -70,6 +70,35 @@ const privateLeakPattern =
 const promotionCouplingPattern =
   /meilisearch|search_index|sitemap|ranking|rank|notification|analytics_events|public_surface/i;
 
+function expectCurrentEligibleCommentIdentity(
+  compiled: ReturnType<
+    ReturnType<typeof buildListEngagementCommentsQuery>["compile"]
+  >,
+) {
+  expect(compiled.sql).toContain(
+    'left join "user_handle_registry" as "comment_author_handles"',
+  );
+  expect(compiled.sql).toContain(
+    '"comment_author_handles"."lifecycle_state" =',
+  );
+  expect(compiled.sql).toContain(
+    '"user_public_profiles"."user_id" = "comment_author_handles"."user_id"',
+  );
+  expect(compiled.sql).toContain(
+    '"user_public_profiles"."normalized_handle" = "comment_author_handles"."normalized_handle"',
+  );
+  expect(compiled.sql).toContain(
+    '"user_public_profiles"."profile_visibility" =',
+  );
+  expect(compiled.sql).toContain(
+    '"user_public_profiles"."profile_lifecycle_state" =',
+  );
+  expect(compiled.sql).toContain('"user_public_profiles"."removed_at" is null');
+  expect(compiled.parameters).toEqual(
+    expect.arrayContaining(["current", "public", "active"]),
+  );
+}
+
 describe("engagement repository contracts", () => {
   it("inserts signed-in comments against a public target handle only", () => {
     const compiled = buildInsertEngagementCommentQuery(testDb, scope, {
@@ -107,6 +136,7 @@ describe("engagement repository contracts", () => {
     expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).toContain('"user_public_profiles"."display_name"');
     expect(compiled.sql).toContain('"engagement_comments"."comment_state" in');
+    expectCurrentEligibleCommentIdentity(compiled);
     expect(compiled.sql).not.toMatch(privateLeakPattern);
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
     expect(compiled.parameters).toContain("active");
@@ -133,6 +163,8 @@ describe("engagement repository contracts", () => {
     expect(replies.sql).toContain('"parent_comment_id" in');
     expect(replies.sql).toContain('from "profile_blocks"');
     expect(replies.sql).not.toContain('"parent_comment_id" is null');
+    expectCurrentEligibleCommentIdentity(roots);
+    expectCurrentEligibleCommentIdentity(replies);
     expect(roots.parameters).toContain(viewer.userId);
   });
 

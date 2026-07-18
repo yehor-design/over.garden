@@ -42,7 +42,7 @@ const objectPage: PublicJournalEntryPage = {
   entry: {
     id: "entry-1",
     title: "Перший урожай після спеки",
-    body: "Перший абзац про стан рослини.\n\nДругий абзац про полив і врожай.",
+    body: "Перший абзац про стан рослини.\n\nДругий абзац про полив і врожай. Історична згадка: @previous_gardener.",
     entryDate: "2026-07-10",
     createdAt: "2026-07-10T09:00:00.000Z",
     entryScope: "object",
@@ -79,6 +79,14 @@ const objectPage: PublicJournalEntryPage = {
     avatarUrl: null,
     profilePath: "/@olena",
   },
+  mentionedProfiles: [
+    {
+      handle: "renamed_gardener",
+      mention: "@renamed_gardener",
+      displayName: "Садівник",
+      profilePath: "/@renamed_gardener",
+    },
+  ],
   topics: [{ slug: "harvest", label: "Врожай", publicPath: "/topics/harvest" }],
   relatedEntries: [
     {
@@ -140,6 +148,11 @@ describe("public journal entry V2", () => {
     expect(html).toContain("Помідор чері");
     expect(html).toContain("Перший абзац про стан рослини.");
     expect(html).toContain("Другий абзац про полив і врожай.");
+    expect(html).toContain("@previous_gardener");
+    expect(html).toContain('data-dynamic-person-mentions="stable-user-id"');
+    expect(html).toContain('href="/@renamed_gardener"');
+    expect(html).toContain("@renamed_gardener");
+    expect(html).toContain("Згадані садівники");
     expect(html).toContain('data-journal-media-count="2"');
     expect(html).toContain('alt="Стиглі томати на кущі"');
     expect(html).toContain("Перша китиця");

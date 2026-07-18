@@ -15,7 +15,10 @@ import {
 import { getPublicProfileCopy } from "@/lib/public-profile-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getProfileViewerState } from "@/server/profile-interaction-repository";
-import { getPublicProfileEvidencePageByHandle } from "@/server/public-profile-repository";
+import {
+  getPublicProfileEvidencePageByHandle,
+  getPublicProfileLifecycleLookup,
+} from "@/server/public-profile-repository";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { scopedToUser } from "@/server/request-scope";
 
@@ -27,10 +30,42 @@ interface LocalizedPublicProfileRouteProps {
 }
 
 const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
+const GUEST_PROFILE_VIEWER = { kind: "guest" } as const;
+const UNAVAILABLE_PROFILE_ROUTE_STATE = { kind: "unavailable" } as const;
 
-const getCachedPublicProfilePage = cache(
-  (handle: string, locale: "uk" | "bg" | "ru") =>
-    getPublicProfileEvidencePageByHandle(handle, locale),
+const getCachedPublicProfileRouteState = cache(
+  async (handle: string, locale: "uk" | "bg" | "ru") => {
+    const session = await getCurrentSession();
+    const viewerUserId = session?.user?.id ?? null;
+    const lifecycle = await getPublicProfileLifecycleLookup(
+      handle,
+      viewerUserId,
+    );
+    if (lifecycle.status !== "active") {
+      return UNAVAILABLE_PROFILE_ROUTE_STATE;
+    }
+
+    const viewerPromise = viewerUserId
+      ? getProfileViewerState(
+          scopedToUser(viewerUserId, getSessionId(session)),
+          handle,
+        )
+      : Promise.resolve(GUEST_PROFILE_VIEWER);
+    const [profile, viewer] = await Promise.all([
+      getPublicProfileEvidencePageByHandle(handle, locale),
+      viewerPromise,
+    ]);
+
+    if (
+      !profile ||
+      viewer.kind === "blocked" ||
+      viewer.kind === "unavailable"
+    ) {
+      return UNAVAILABLE_PROFILE_ROUTE_STATE;
+    }
+
+    return { kind: "available", profile, viewer } as const;
+  },
 );
 
 export async function generateMetadata({
@@ -40,10 +75,11 @@ export async function generateMetadata({
   const locale = isPublicLocale(localeParam) ? localeParam : "uk";
   const copy = getPublicProfileCopy(locale);
   const routeHandle = routeHandleFromSegment(profileHandle);
-  const page =
+  const routeState =
     isPublicLocale(localeParam) && routeHandle
-      ? await getCachedPublicProfilePage(routeHandle, localeParam)
-      : null;
+      ? await getCachedPublicProfileRouteState(routeHandle, localeParam)
+      : UNAVAILABLE_PROFILE_ROUTE_STATE;
+  const page = routeState.kind === "available" ? routeState.profile : null;
   const indexState = evaluatePublicSurfaceIndexability({
     kind: page ? "profile" : "missing",
   });
@@ -81,27 +117,21 @@ export default async function LocalizedPublicProfileRoute({
   params,
   searchParams,
 }: LocalizedPublicProfileRouteProps) {
-  const [{ locale: localeParam, profileHandle }, query, session] =
-    await Promise.all([
-      params,
-      searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
-      getCurrentSession(),
-    ]);
+  const [{ locale: localeParam, profileHandle }, query] = await Promise.all([
+    params,
+    searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
+  ]);
 
   if (!isPublicLocale(localeParam)) notFound();
   const routeHandle = routeHandleFromSegment(profileHandle);
   if (!routeHandle) notFound();
 
-  const profile = await getCachedPublicProfilePage(routeHandle, localeParam);
-  if (!profile) notFound();
-
-  const viewer = session?.user?.id
-    ? await getProfileViewerState(
-        scopedToUser(session.user.id, getSessionId(session)),
-        profile.handle,
-      )
-    : ({ kind: "guest" } as const);
-  if (viewer.kind === "blocked" || viewer.kind === "unavailable") notFound();
+  const routeState = await getCachedPublicProfileRouteState(
+    routeHandle,
+    localeParam,
+  );
+  if (routeState.kind === "unavailable") notFound();
+  const { profile, viewer } = routeState;
   const resumeAction = profileResumeAction(query.authIntent);
 
   return (

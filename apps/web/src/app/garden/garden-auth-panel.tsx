@@ -2,14 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import type { ActivationSource } from "@/lib/garden/entry-contracts";
-import {
-  PILOT_AUTH_HELP_PATH,
-} from "@/lib/auth/pilot-auth-recovery";
+import { PILOT_AUTH_HELP_PATH } from "@/lib/auth/pilot-auth-recovery";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import {
   FACEBOOK_PROVIDER_ID,
   GOOGLE_PROVIDER_ID,
@@ -79,9 +78,9 @@ export function GardenAuthPanel({
   const inheritedLocale = useSiteShellLocale();
   const locale = localeOverride ?? inheritedLocale;
   const copy = getTrustSurfaceCopy(locale).authPanel;
+  const authFormRef = useRef<HTMLFormElement>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [message, setMessage] = useState<AuthPanelMessage | null>(
     initialMessage ? { kind: "error", text: initialMessage } : null,
   );
@@ -101,7 +100,7 @@ export function GardenAuthPanel({
     const { data, error } = await authClient.signUp.email({
       email: email.trim(),
       password,
-      name: name.trim() || email.trim().split("@")[0] || copy.defaultName,
+      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
       callbackURL: postAuthPath ?? "/garden",
     });
 
@@ -119,7 +118,7 @@ export function GardenAuthPanel({
 
     // A non-null token proves that this client now has a session (for example,
     // in local development). It does not change the neutral sign-up message.
-    if (data?.token) router.refresh();
+    if (hasAuthToken(data)) router.refresh();
   }
 
   async function signIn() {
@@ -194,6 +193,7 @@ export function GardenAuthPanel({
       </div>
 
       <form
+        ref={authFormRef}
         className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
@@ -226,25 +226,16 @@ export function GardenAuthPanel({
               required
             />
           </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              {copy.newAccountName}
-            </span>
-            <input
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
-            />
-          </label>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
             type="button"
-            onClick={() => void signUp()}
+            onClick={() =>
+              runNativeValidatedAuthAction(authFormRef.current, () => {
+                void signUp();
+              })
+            }
             disabled={isPending}
           >
             {copy.createAccount}
@@ -300,6 +291,24 @@ export function GardenAuthPanel({
         </p>
       ) : null}
     </section>
+  );
+}
+
+export function runNativeValidatedAuthAction(
+  form: Pick<HTMLFormElement, "reportValidity"> | null,
+  action: () => void,
+): boolean {
+  if (!form?.reportValidity()) return false;
+
+  action();
+  return true;
+}
+
+function hasAuthToken(data: unknown) {
+  return (
+    Boolean(data) &&
+    typeof data === "object" &&
+    typeof (data as { token?: unknown }).token === "string"
   );
 }
 

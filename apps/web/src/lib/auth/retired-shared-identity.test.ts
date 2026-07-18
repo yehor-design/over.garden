@@ -5,6 +5,7 @@ import {
   createRetiredSharedIdentityPolicy,
   isRetiredSharedIdentityEmail,
 } from "@/lib/auth/retired-shared-identity";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 
 const syntheticRetiredEmail = "retired-fixture@identity.invalid";
 const syntheticPolicy = createRetiredSharedIdentityPolicy(
@@ -57,8 +58,16 @@ describe("retired shared identity policy", () => {
     const hooks = syntheticPolicy.createDatabaseHooks(findUserEmail);
 
     await expect(
-      hooks.user.create.before({ email: "member@example.test" }),
-    ).resolves.toBeUndefined();
+      hooks.user.create.before({
+        email: "member@example.test",
+        name: "Provider controlled name",
+      }),
+    ).resolves.toEqual({
+      data: {
+        email: "member@example.test",
+        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+      },
+    });
     await expect(hooks.user.update.before({})).resolves.toBeUndefined();
     await expect(
       hooks.session.create.before({ userId: "user-1" }),

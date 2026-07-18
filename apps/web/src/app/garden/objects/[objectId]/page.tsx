@@ -835,7 +835,10 @@ function lineageEdgeTitle(
   }
 
   return formatOwnerObjectTemplate(copy.edge.fromReference, {
-    source: edge.sourceReferenceLabel ?? copy.edge.privateSource,
+    source:
+      edge.sourcePersonMention ??
+      edge.sourceReferenceLabel ??
+      copy.edge.privateSource,
     kind: lineageSourceReferenceKindLabel(edge.sourceReferenceKind, copy),
   });
 }

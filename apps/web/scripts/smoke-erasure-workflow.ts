@@ -30,26 +30,29 @@ const INTERVIEW_ID = "10000000-0000-4000-8000-000000008097";
 const SESSION_ID = "10000000-0000-4000-8000-000000011097";
 const ACCOUNT_ID = "10000000-0000-4000-8000-000000012097";
 const VERIFICATION_ID = "10000000-0000-4000-8000-000000013097";
+const CROSS_USER_MENTION_EDGE_ID = "10000000-0000-4000-8000-000000014097";
 const PUBLIC_SLUG = "ove-97-erasure-smoke";
 
 async function main() {
   loadEnv({ path: ".env.local", override: false });
 
   ({ db } = await import("../src/db"));
-  ({ collectErasureDryRunCounts } = await import(
-    "../src/server/erasure-dry-run-repository"
-  ));
+  ({ collectErasureDryRunCounts } =
+    await import("../src/server/erasure-dry-run-repository"));
   ({ executeApprovedErasureRequest, expectedErasureMaintainerApprovalText } =
     await import("../src/server/erasure-execution"));
-  ({ markErasureRequestDryRunReviewed } = await import(
-    "../src/server/erasure-request-repository"
-  ));
+  ({ markErasureRequestDryRunReviewed } =
+    await import("../src/server/erasure-request-repository"));
 
   await cleanupSmokeRows();
   await seedSmokeRows();
 
   const before = await collectErasureDryRunCounts(db, REQUESTER_USER_ID);
   assertEqual(before.authUserPresent, 1, "dry-run auth user");
+  assertEqual(before.publicIdentityProfiles, 1, "dry-run public identity");
+  assertEqual(before.currentHandleClaims, 1, "dry-run current handle claim");
+  assertEqual(before.retiredHandleClaims, 1, "dry-run retired handle claim");
+  assertEqual(before.unreviewedIdentityRows, 0, "dry-run reviewed identity");
   assertEqual(before.journalEntriesTotal, 2, "dry-run journal entries");
   assertEqual(before.mediaAssetsTotal, 1, "dry-run media assets");
   assertEqual(before.publicSlugs, 1, "dry-run public slug");
@@ -88,13 +91,63 @@ async function main() {
 
   const afterOldUser = await collectErasureDryRunCounts(db, REQUESTER_USER_ID);
   assertEqual(afterOldUser.authUserPresent, 0, "old auth user removed");
-  assertEqual(afterOldUser.journalEntriesTotal, 0, "old journal ownership gone");
+  assertEqual(
+    afterOldUser.publicIdentityProfiles,
+    0,
+    "old public profile removed",
+  );
+  assertEqual(
+    afterOldUser.currentHandleClaims,
+    0,
+    "old current handle removed",
+  );
+  assertEqual(
+    afterOldUser.retiredHandleClaims,
+    0,
+    "old retired handles removed",
+  );
+  assertEqual(
+    afterOldUser.journalEntriesTotal,
+    0,
+    "old journal ownership gone",
+  );
   assertEqual(afterOldUser.mediaAssetsTotal, 0, "old media rows removed");
   assertEqual(afterOldUser.analyticsEvents, 0, "old analytics removed");
   assertEqual(
     afterOldUser.erasureRequestsTotal,
     0,
     "old erasure request subject rekeyed",
+  );
+
+  const crossUserMention = await db
+    .selectFrom("lineage_provenance_edges")
+    .select([
+      "source_owner_user_id as sourceOwnerUserId",
+      "source_reference_label as sourceReferenceLabel",
+      "consent_state as consentState",
+      "erasure_state as erasureState",
+    ])
+    .where("id", "=", CROSS_USER_MENTION_EDGE_ID)
+    .executeTakeFirstOrThrow();
+  assertEqual(
+    crossUserMention.sourceOwnerUserId,
+    OPERATOR_USER_ID,
+    "cross-user mention source preserved",
+  );
+  assertEqual(
+    crossUserMention.sourceReferenceLabel,
+    null,
+    "cross-user mention label shape preserved",
+  );
+  assertEqual(
+    crossUserMention.consentState,
+    "anonymized",
+    "cross-user mention consent anonymized",
+  );
+  assertEqual(
+    crossUserMention.erasureState,
+    "anonymized",
+    "cross-user mention erasure state",
   );
 
   const tombstone = await db
@@ -156,6 +209,7 @@ async function main() {
         request: "OVE-97",
         dryRunClassesChecked: [
           "auth",
+          "public_identity",
           "journal",
           "media",
           "public_tombstone",
@@ -188,6 +242,15 @@ async function seedSmokeRows() {
       updatedAt: now,
     })
     .execute();
+
+  const rename = await sql<{ status: string }>`
+    select status
+    from overgarden_claim_user_public_handle(
+      ${REQUESTER_USER_ID}::uuid,
+      ${"ove203_erasure_smoke"}
+    )
+  `.execute(db);
+  assertEqual(rename.rows[0]?.status, "updated", "identity rename fixture");
 
   await db
     .insertInto("session")
@@ -345,6 +408,28 @@ async function seedSmokeRows() {
     .execute();
 
   await db
+    .insertInto("lineage_provenance_edges")
+    .values({
+      id: CROSS_USER_MENTION_EDGE_ID,
+      owner_user_id: REQUESTER_USER_ID,
+      subject_plant_object_id: OBJECT_ID,
+      source_kind: "source_reference",
+      source_plant_object_id: null,
+      source_owner_user_id: OPERATOR_USER_ID,
+      source_pending_identity_id: null,
+      source_reference_kind: "person",
+      source_reference_label: null,
+      edge_type: "provenance",
+      consent_state: "proposed",
+      visibility_policy: "owner_only_until_confirmed",
+      erasure_state: "active",
+      client_mutation_id: "ove-203-cross-user-erasure-smoke",
+      created_at: now,
+      updated_at: now,
+    })
+    .execute();
+
+  await db
     .insertInto("pilot_invite_grants")
     .values({
       user_id: REQUESTER_USER_ID,
@@ -433,6 +518,10 @@ async function cleanupSmokeRows() {
     .where("owner_user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
     .execute();
   await db
+    .deleteFrom("lineage_provenance_edges")
+    .where("id", "=", CROSS_USER_MENTION_EDGE_ID)
+    .execute();
+  await db
     .deleteFrom("plant_objects")
     .where("owner_user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
     .execute();
@@ -464,7 +553,10 @@ async function cleanupSmokeRows() {
     })
     .where("subject_user_id", "in", [REQUESTER_USER_ID, ERASED_SUBJECT_USER_ID])
     .execute();
-  await db.deleteFrom("pilot_interview_learnings").where("id", "=", INTERVIEW_ID).execute();
+  await db
+    .deleteFrom("pilot_interview_learnings")
+    .where("id", "=", INTERVIEW_ID)
+    .execute();
   await db
     .deleteFrom("erasure_requests")
     .where((eb) =>
@@ -481,8 +573,14 @@ async function cleanupSmokeRows() {
     .deleteFrom("verification")
     .where("identifier", "=", "ove-97-smoke@example.invalid")
     .execute();
-  await db.deleteFrom("session").where("userId", "=", REQUESTER_USER_ID).execute();
-  await db.deleteFrom("account").where("userId", "=", REQUESTER_USER_ID).execute();
+  await db
+    .deleteFrom("session")
+    .where("userId", "=", REQUESTER_USER_ID)
+    .execute();
+  await db
+    .deleteFrom("account")
+    .where("userId", "=", REQUESTER_USER_ID)
+    .execute();
   await db.deleteFrom("user").where("id", "=", REQUESTER_USER_ID).execute();
 }
 
@@ -492,7 +590,9 @@ function unindexIdempotencyKey() {
 
 function assertEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
-    throw new Error(`${label}: expected ${String(expected)}, got ${String(actual)}`);
+    throw new Error(
+      `${label}: expected ${String(expected)}, got ${String(actual)}`,
+    );
   }
 }
 
@@ -500,7 +600,13 @@ main()
   .finally(async () => {
     await db?.destroy();
   })
-  .catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
+  .catch(() => {
+    console.error(
+      JSON.stringify({
+        ok: false,
+        request: "OVE-97",
+        error: "erasure_smoke_failed",
+      }),
+    );
     process.exitCode = 1;
   });

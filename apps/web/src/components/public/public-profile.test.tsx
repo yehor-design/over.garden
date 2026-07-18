@@ -74,6 +74,7 @@ describe("PublicProfileView", () => {
     );
 
     expect(html).toContain('data-public-profile="v2"');
+    expect(html).toMatch(/<h1[^>]*>Олена · міський сад<\/h1>/);
     expect(html).toContain(
       'data-profile-content-order="objects-journals-about"',
     );

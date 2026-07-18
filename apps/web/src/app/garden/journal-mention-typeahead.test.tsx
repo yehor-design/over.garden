@@ -7,7 +7,11 @@ import type {
   JournalMentionSuggestion,
 } from "@/lib/garden/journal-mentions";
 
-import { JournalMentionTypeaheadPanel } from "./journal-mention-typeahead";
+import {
+  JournalMentionTypeaheadPanel,
+  parseJournalMentionSuggestions,
+  toMentionSelection,
+} from "./journal-mention-typeahead";
 
 const suggestion: JournalMentionSuggestion = {
   kind: "catalog_item",
@@ -61,4 +65,61 @@ describe("journal mention typeahead localization", () => {
       expect(html).not.toMatch(/Linked mentions|Remove mention/i);
     },
   );
+
+  it("keeps the stable user id server-only while rendering an opaque handle selection", () => {
+    const targetUserId = "00000000-0000-4000-8000-000000000010";
+    const opaqueSelectionId =
+      "v1.AAAAAAAAAAAAAAAA.BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB.CCCCCCCCCCCCCCCCCCCCCC";
+    const [parsed] = parseJournalMentionSuggestions({
+      suggestions: [
+        {
+          kind: "public_handle",
+          id: opaqueSelectionId,
+          label: "@green_garden",
+          insertText: "@green_garden",
+          detail: "Public gardener handle",
+          disambiguationLabel: "Green Garden",
+          catalogKind: null,
+        },
+      ],
+    });
+
+    expect(parsed).toBeDefined();
+    expect(toMentionSelection(parsed!)).toEqual({
+      kind: "public_handle",
+      id: opaqueSelectionId,
+      label: "@green_garden",
+    });
+
+    const html = renderToStaticMarkup(
+      <JournalMentionTypeaheadPanel
+        locale="uk"
+        status="ready"
+        suggestions={[parsed!]}
+        selections={[toMentionSelection(parsed!)]}
+        onSelect={vi.fn()}
+        onRemove={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain("@green_garden");
+    expect(html).toContain("Green Garden");
+    expect(html).not.toContain(targetUserId);
+
+    expect(
+      parseJournalMentionSuggestions({
+        suggestions: [
+          {
+            kind: "public_handle",
+            id: targetUserId,
+            label: "@green_garden",
+            insertText: "@green_garden",
+            detail: "Public gardener handle",
+            disambiguationLabel: "Green Garden",
+            catalogKind: null,
+          },
+        ],
+      }),
+    ).toEqual([]);
+  });
 });

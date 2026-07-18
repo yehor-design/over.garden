@@ -58,6 +58,7 @@ const MAX_OBJECT_GALLERY_MEDIA = 6;
 const MAX_PUBLIC_JOURNAL_MEDIA = 6;
 const MAX_PUBLIC_JOURNAL_TOPICS = 8;
 const MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS = 6;
+const MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES = 8;
 
 const DEFAULT_LOCATION_VISIBILITY: LocationVisibility = "hidden";
 const DEFAULT_ENTRY_VISIBILITY: EntryVisibility = "private";
@@ -284,6 +285,14 @@ export interface PublicJournalEntryPage {
     older: PublicJournalEntryRelatedEntry | null;
   };
   media: PublicJournalEntryMedia[];
+  mentionedProfiles: PublicJournalEntryMentionedProfile[];
+}
+
+export interface PublicJournalEntryMentionedProfile {
+  handle: string;
+  mention: `@${string}`;
+  displayName: string;
+  profilePath: string;
 }
 
 export interface PublicJournalEntrySpaceContext {
@@ -407,6 +416,11 @@ interface PublicJournalEntryMentionedObjectRow {
   varietyState: string;
   catalogCanonicalName: string | null;
   catalogPublicSlug: string | null;
+}
+
+interface PublicJournalEntryMentionedProfileRow {
+  handle: string;
+  displayName: string | null;
 }
 
 interface PublicJournalEntryRelatedRow {
@@ -1797,32 +1811,40 @@ export async function getPublicJournalEntryLookup(
       currentEntryDate: row.entryDate,
       currentCreatedAt: row.entryCreatedAt,
     };
-  const [mediaRows, topicRows, relatedRows, newerRow, olderRow, mentionedRows] =
-    await Promise.all([
-      buildPublicProcessedMediaForEntryQuery(executor, row.entryId).execute(),
-      buildPublicJournalEntryTopicsQuery(executor, row.entryId).execute(),
-      row.entryScope === "object" && row.plantObjectId
-        ? buildRelatedPublicJournalEntriesQuery(
-            executor,
-            row.plantObjectId,
-            row.entryId,
-          ).execute()
-        : Promise.resolve([]),
-      buildAdjacentPublicJournalEntryQuery(executor, {
-        ...adjacentInput,
-        direction: "newer",
-      }).executeTakeFirst(),
-      buildAdjacentPublicJournalEntryQuery(executor, {
-        ...adjacentInput,
-        direction: "older",
-      }).executeTakeFirst(),
-      row.entryScope === "space"
-        ? buildPublicMentionedObjectsForEntryQuery(
-            executor,
-            row.entryId,
-          ).execute()
-        : Promise.resolve([]),
-    ]);
+  const [
+    mediaRows,
+    topicRows,
+    relatedRows,
+    newerRow,
+    olderRow,
+    mentionedRows,
+    mentionedProfileRows,
+  ] = await Promise.all([
+    buildPublicProcessedMediaForEntryQuery(executor, row.entryId).execute(),
+    buildPublicJournalEntryTopicsQuery(executor, row.entryId).execute(),
+    row.entryScope === "object" && row.plantObjectId
+      ? buildRelatedPublicJournalEntriesQuery(
+          executor,
+          row.plantObjectId,
+          row.entryId,
+        ).execute()
+      : Promise.resolve([]),
+    buildAdjacentPublicJournalEntryQuery(executor, {
+      ...adjacentInput,
+      direction: "newer",
+    }).executeTakeFirst(),
+    buildAdjacentPublicJournalEntryQuery(executor, {
+      ...adjacentInput,
+      direction: "older",
+    }).executeTakeFirst(),
+    row.entryScope === "space"
+      ? buildPublicMentionedObjectsForEntryQuery(
+          executor,
+          row.entryId,
+        ).execute()
+      : Promise.resolve([]),
+    buildPublicJournalEntryPersonMentionsQuery(executor, row.entryId).execute(),
+  ]);
 
   return {
     status: "active",
@@ -1834,6 +1856,8 @@ export async function getPublicJournalEntryLookup(
       newerRow: (newerRow as PublicJournalEntryRelatedRow | undefined) ?? null,
       olderRow: (olderRow as PublicJournalEntryRelatedRow | undefined) ?? null,
       mentionedRows: mentionedRows as PublicJournalEntryMentionedObjectRow[],
+      mentionedProfileRows:
+        mentionedProfileRows as PublicJournalEntryMentionedProfileRow[],
       locale,
     }),
   };
@@ -1847,6 +1871,7 @@ export function serializePublicJournalEntryPage(input: {
   newerRow: PublicJournalEntryRelatedRow | null;
   olderRow: PublicJournalEntryRelatedRow | null;
   mentionedRows: PublicJournalEntryMentionedObjectRow[];
+  mentionedProfileRows?: PublicJournalEntryMentionedProfileRow[];
   locale?: PublicLocale;
 }): PublicJournalEntryPage {
   const locale = input.locale ?? DEFAULT_PUBLIC_LOCALE;
@@ -1939,6 +1964,12 @@ export function serializePublicJournalEntryPage(input: {
       publicUrl: getPublicDerivativeUrl(row.derivativeKey),
       altText: row.altText,
       caption: row.caption,
+    })),
+    mentionedProfiles: (input.mentionedProfileRows ?? []).map((profile) => ({
+      handle: profile.handle,
+      mention: `@${profile.handle}`,
+      displayName: profile.displayName ?? `@${profile.handle}`,
+      profilePath: publicProfilePath(locale, profile.handle),
     })),
   };
 }
@@ -2631,10 +2662,30 @@ export function buildPublicJournalEntryLookupQuery(
         .on("catalog_items.created_by_user_id", "is", null)
         .on("catalog_items.public_slug", "is not", null),
     )
-    .leftJoin(
-      "user_public_profiles",
-      "user_public_profiles.user_id",
-      "journal_entries.owner_user_id",
+    .leftJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .leftJoin("user_public_profiles", (join) =>
+      join
+        .onRef(
+          "user_public_profiles.user_id",
+          "=",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
+        )
+        .on("user_public_profiles.profile_visibility", "=", "public")
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
     )
     .select([
       "journal_entries.id as entryId",
@@ -2891,6 +2942,124 @@ export function buildPublicMentionedObjectsForEntryQuery(
     .limit(normalizePublicJournalMentionedObjectLimit(limit));
 }
 
+/**
+ * Resolves confirmed person mentions from their stable internal user target.
+ * The journal body remains immutable historical UGC; public identity is a
+ * separate projection so a rename changes this readback without rewriting the
+ * stored entry text or retaining the former handle as identity data.
+ */
+export function buildPublicJournalEntryPersonMentionsQuery(
+  executor: QueryExecutor,
+  entryId: string,
+  limit = MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .innerJoin("lineage_provenance_edges as person_mentions", (join) =>
+      join
+        .onRef(
+          "person_mentions.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .onRef(
+          "person_mentions.subject_plant_object_id",
+          "=",
+          "journal_entries.plant_object_id",
+        )
+        .on(
+          sql<boolean>`
+            ${sql.ref("person_mentions.client_mutation_id")}
+              ~ ':mention:public_handle:[a-f0-9]{16}$'
+            and ${sql.ref("person_mentions.client_mutation_id")} = left(
+              ${sql.ref("journal_entries.client_mutation_id")}
+                || ':mention:public_handle:'
+                || right(${sql.ref("person_mentions.client_mutation_id")}, 16),
+              160
+            )
+          `,
+        ),
+    )
+    .innerJoin("user_handle_registry as mentioned_handles", (join) =>
+      join
+        .onRef(
+          "mentioned_handles.user_id",
+          "=",
+          "person_mentions.source_owner_user_id",
+        )
+        .on("mentioned_handles.lifecycle_state", "=", "current"),
+    )
+    .innerJoin("user_public_profiles as mentioned_profiles", (join) =>
+      join
+        .onRef("mentioned_profiles.user_id", "=", "mentioned_handles.user_id")
+        .onRef(
+          "mentioned_profiles.normalized_handle",
+          "=",
+          "mentioned_handles.normalized_handle",
+        )
+        .on("mentioned_profiles.handle_registry_state", "=", "current")
+        .on("mentioned_profiles.profile_visibility", "=", "public")
+        .on("mentioned_profiles.profile_lifecycle_state", "=", "active")
+        .on("mentioned_profiles.removed_at", "is", null),
+    )
+    .select([
+      "mentioned_profiles.handle as handle",
+      "mentioned_profiles.display_name as displayName",
+    ])
+    .where("journal_entries.id", "=", entryId)
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("person_mentions.source_kind", "=", "source_reference")
+    .where("person_mentions.source_reference_kind", "=", "person")
+    .where("person_mentions.source_plant_object_id", "is", null)
+    .where("person_mentions.source_owner_user_id", "is not", null)
+    .whereRef(
+      "person_mentions.owner_user_id",
+      "!=",
+      "person_mentions.source_owner_user_id",
+    )
+    .where("person_mentions.consent_state", "=", "confirmed")
+    .where(
+      "person_mentions.visibility_policy",
+      "=",
+      "owner_only_until_confirmed",
+    )
+    .where("person_mentions.erasure_state", "=", "active")
+    .where(noActivePublicPersonMentionBlockPredicate())
+    .orderBy("person_mentions.created_at", "asc")
+    .orderBy("person_mentions.id", "asc")
+    .limit(normalizePublicJournalMentionedProfileLimit(limit));
+}
+
+function noActivePublicPersonMentionBlockPredicate() {
+  return sql<boolean>`not exists (
+    select 1
+    from profile_blocks
+    where profile_blocks.block_state = 'active'
+      and (
+        (
+          profile_blocks.blocker_user_id = ${sql.ref(
+            "person_mentions.owner_user_id",
+          )}
+          and profile_blocks.blocked_user_id = ${sql.ref(
+            "person_mentions.source_owner_user_id",
+          )}
+        )
+        or (
+          profile_blocks.blocker_user_id = ${sql.ref(
+            "person_mentions.source_owner_user_id",
+          )}
+          and profile_blocks.blocked_user_id = ${sql.ref(
+            "person_mentions.owner_user_id",
+          )}
+        )
+      )
+  )`;
+}
+
 function normalizePublicJournalTopicLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_PUBLIC_JOURNAL_TOPICS;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_PUBLIC_JOURNAL_TOPICS);
@@ -2901,6 +3070,14 @@ function normalizePublicJournalMentionedObjectLimit(limit: number) {
   return Math.min(
     Math.max(Math.trunc(limit), 1),
     MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS,
+  );
+}
+
+function normalizePublicJournalMentionedProfileLimit(limit: number) {
+  if (!Number.isFinite(limit)) return MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES;
+  return Math.min(
+    Math.max(Math.trunc(limit), 1),
+    MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES,
   );
 }
 

@@ -20,6 +20,7 @@ import { Meilisearch } from "meilisearch";
 import sharp from "sharp";
 
 import type { Database } from "../src/db/schema";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
 import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
@@ -491,7 +492,7 @@ async function createLocalProofAccount(
     body: {
       email,
       password,
-      name: "OVE-189 local runtime proof",
+      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
       callbackURL: "/garden",
     },
   });

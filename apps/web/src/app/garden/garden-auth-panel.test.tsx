@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   GardenAuthPanel,
   resolveAuthCallbackPath,
+  runNativeValidatedAuthAction,
   SocialAccountLinkPanel,
 } from "@/app/garden/garden-auth-panel";
 
@@ -163,13 +164,55 @@ describe("garden auth duplicate-account avoidance", () => {
   });
 
   it("uses native form semantics with sign-in as the default submit action", () => {
-    const html = renderToStaticMarkup(
-      <GardenAuthPanel />,
-    );
+    const html = renderToStaticMarkup(<GardenAuthPanel />);
 
     expect(html).toContain("<form");
     expect(html).toContain('type="password"');
     expect(html).toContain('type="submit"');
     expect(html).toContain('type="button"');
+  });
+
+  it("does not invoke email sign-up until native credential validity passes", () => {
+    const action = vi.fn();
+    const reportValidity = vi
+      .fn<() => boolean>()
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const form = { reportValidity };
+
+    expect(runNativeValidatedAuthAction(form, action)).toBe(false);
+    expect(reportValidity).toHaveBeenCalledTimes(1);
+    expect(action).not.toHaveBeenCalled();
+
+    expect(runNativeValidatedAuthAction(form, action)).toBe(true);
+    expect(reportValidity).toHaveBeenCalledTimes(2);
+    expect(action).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["uk", "Ім'я для нового облікового запису"],
+    ["bg", "Име за новия профил"],
+    ["ru", "Имя для нового аккаунта"],
+  ] as const)(
+    "never asks for a name or nickname during %s authentication",
+    (locale, removedNameLabel) => {
+      const html = renderToStaticMarkup(<GardenAuthPanel locale={locale} />);
+
+      expect(html).toContain('type="email"');
+      expect(html).toContain('type="password"');
+      expect(html).not.toContain('type="text"');
+      expect(html).not.toContain('autoComplete="name"');
+      expect(html).not.toContain(removedNameLabel);
+    },
+  );
+
+  it("does not derive an auth compatibility name from the email address in the client", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/app/garden/garden-auth-panel.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("authClient.signUp.email");
+    expect(source).not.toMatch(/newAccountName|defaultName|split\(["']@["']\)/);
   });
 });

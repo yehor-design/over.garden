@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity
 Last updated: 2026-07-18
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -90,6 +90,38 @@ zero active retired sessions, current-main containment, and the aggregate
 preservation/exposure proof above. Retired data disposition remains an exact-plan
 and explicit-sign-off operation under OVE-195/OVE-199/OVE-200. Never record the
 retired values, any user identifier, content, object key, URL, or provider secret.
+
+## OVE-203 Automatic Public Identity
+
+Goal: prove that every supported Better Auth creation path receives exactly one
+pseudonymous public profile/current handle claim without asking for a nickname,
+and that later renames cannot break privacy, stable references, or lifecycle.
+
+Binding exact-SHA production proof:
+
+- install the additive identity schema and run the aggregate-only
+  dry-run/rollback/apply-twice/verify sequence from
+  `docs/PUBLIC_IDENTITY_MIGRATION_RUNBOOK.md` against the current deployed SHA;
+- require zero missing profiles/current claims, duplicate or mismatched claims,
+  unresolved legacy references, and pending policy reviews;
+- prove new credential/Google/Facebook accounts converge on the same generated
+  grammar locally/CI, while production provider-start continuity remains bound
+  to the existing OVE-111/OVE-112 provider gates;
+- prove no-name credential signup and duplicate-signup preservation through the
+  canonical auth endpoint without recording email, user id, handle, cookie, or
+  provider payload;
+- prove one immediate custom rename, persisted 30-day cooldown, current route
+  `200`, retired route `410` with `noindex`, and current-handle stable-reference
+  readback;
+- prove private, removed, inconsistent, and mutually blocked profiles disappear
+  from profile metadata/RSC, typeahead, feed, journal, social, community, and
+  lineage identity projections;
+- retain only booleans, aggregate counts, policy version, exact code/deployment
+  SHA, CI/deployment status, and HTTP status/header classes as evidence.
+
+Do not close OVE-203 on local proof alone. Current-main CI, canonical Vercel
+`READY`, exact deployed SHA equality, successful production migration verify,
+and the redacted runtime smoke above are all required.
 
 ## OVE-163 Deterministic Matching Rollout Readiness
 
@@ -582,6 +614,16 @@ Non-destructive only: this slice does not perform any restore-over-production, b
   2. CLI/API (secrets omitted): `doctl databases list` to resolve the cluster id, then `doctl databases backups <cluster-id>`; or `GET https://api.digitalocean.com/v2/databases/{cluster_uuid}/backups` with a bearer token that is never recorded.
   3. To validate recoverability, fork/restore into a NEW cluster (`doctl databases fork ...`). Never restore over production.
 - Allowed evidence: backup-enabled boolean, retention/PITR window, latest backup date, check date. Forbidden: database URLs, the CA body, credentials, doctl/API tokens.
+
+OVE-203 adds an identity-specific deterministic recovery contract without
+claiming that this historical OVE-39 backup listing is a managed restore.
+Immediately after a fresh Postgres bootstrap, CI runs
+`pnpm smoke:public-identity` and requires the provisioning function/user
+trigger, profile-registry consistency triggers, current/retired uniqueness,
+claim provenance, `ove203-identity-v1` policy metadata, persisted rename
+cooldown, retired-handle reservation, and clean cascade erasure. The later
+OVE-201 managed-recovery drill must repeat equivalent counts-only checks on a
+new disposable restored cluster; it must never target or overwrite production.
 
 ### Worker and Meilisearch process management
 

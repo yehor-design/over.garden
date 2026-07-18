@@ -708,6 +708,17 @@ export interface User {
   updatedAt: Generated<Timestamp>;
 }
 
+export interface UserHandleRegistry {
+  claim_source: string;
+  claimed_at: Generated<Timestamp>;
+  lifecycle_state: Generated<string>;
+  next_rename_at: Generated<Timestamp>;
+  normalized_handle: string;
+  policy_version: Generated<string>;
+  retired_at: Timestamp | null;
+  user_id: string;
+}
+
 export interface UserPublicProfiles {
   avatar_media_asset_id: string | null;
   avatar_url: string | null;
@@ -715,7 +726,11 @@ export interface UserPublicProfiles {
   coarse_region_code: string | null;
   created_at: Generated<Timestamp>;
   display_name: string | null;
+  display_name_policy_version: string | null;
   handle: string;
+  handle_changed_at: Timestamp | null;
+  handle_registry_state: Generated<string>;
+  identity_policy_version: Generated<string>;
   languages: Generated<string[]>;
   location_visibility: Generated<string>;
   normalized_handle: string;
@@ -812,6 +827,7 @@ export interface DB {
   session: Session;
   spaces: Spaces;
   user: User;
+  user_handle_registry: UserHandleRegistry;
   user_public_profiles: UserPublicProfiles;
   variety_seed_proofs: VarietySeedProofs;
   verification: Verification;

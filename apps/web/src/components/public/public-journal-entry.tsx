@@ -48,6 +48,7 @@ export function PublicJournalEntryView({
 }) {
   const contextModules = buildContextModules(page, copy);
   const location = getSafeLocation(page, copy);
+  const mentionedProfiles = page.mentionedProfiles ?? [];
 
   return (
     <main
@@ -148,6 +149,40 @@ export function PublicJournalEntryView({
             </p>
           ))}
         </div>
+
+        {mentionedProfiles.length > 0 ? (
+          <section
+            aria-labelledby="journal-entry-mentioned-gardeners"
+            data-dynamic-person-mentions="stable-user-id"
+            className="border-t border-border py-4"
+          >
+            <h2
+              id="journal-entry-mentioned-gardeners"
+              className="mb-2 text-xs font-semibold text-muted-foreground uppercase"
+            >
+              {copy.mentionedGardeners}
+            </h2>
+            <ul className="flex flex-wrap gap-2">
+              {mentionedProfiles.map((profile) => (
+                <li key={profile.handle}>
+                  <Link
+                    href={profile.profilePath}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
+                  >
+                    <UserRound aria-hidden="true" />
+                    <span>{profile.displayName}</span>
+                    <span className="text-muted-foreground">
+                      {profile.mention}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {page.topics.length > 0 ? (
           <section

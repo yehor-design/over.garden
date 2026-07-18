@@ -39,6 +39,7 @@ import {
   buildPublicJournalEntryLifecycleQuery,
   buildPublicJournalEntryLookupQuery,
   buildPublicJournalEntryPageQuery,
+  buildPublicJournalEntryPersonMentionsQuery,
   buildPublicJournalEntryTopicsQuery,
   buildPublicMentionedObjectsForEntryQuery,
   buildPublicProcessedMediaForEntryQuery,
@@ -708,9 +709,27 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"catalog_items"."created_by_user_id" is null',
     );
+    expect(compiled.sql).toContain(
+      'left join "user_handle_registry" on "user_handle_registry"."user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."lifecycle_state" = $3',
+    );
     expect(compiled.sql).toContain('left join "user_public_profiles"');
     expect(compiled.sql).toContain(
-      '"user_public_profiles"."user_id" = "journal_entries"."owner_user_id"',
+      '"user_public_profiles"."user_id" = "user_handle_registry"."user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_visibility" = $4',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_lifecycle_state" = $5',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."removed_at" is null',
     );
     expect(compiled.sql).toContain('"plant_objects"."catalog_item_id"');
     expect(compiled.sql).toContain('"journal_entries"."entry_scope"');
@@ -719,9 +738,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"user_public_profiles"."handle"');
     expect(compiled.sql).toContain('"plant_objects"."coarse_region_code"');
     expect(compiled.sql).toContain('"spaces"."coarse_region_code"');
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $6');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $7');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $8');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -735,6 +754,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "seeded",
       "confirmed",
+      "current",
+      "public",
+      "active",
       "first-flowers-abc123",
       "public",
       "active",
@@ -747,10 +769,26 @@ describe("journal repository query contracts", () => {
       "first-flowers-abc123",
     ).compile();
 
-    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $3');
+    expect(compiled.sql).toContain('"journal_entries"."public_slug" = $6');
     expect(compiled.sql).toContain('left join "catalog_items"');
     expect(compiled.sql).toContain('"catalog_items"."public_slug"');
+    expect(compiled.sql).toContain('left join "user_handle_registry"');
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."lifecycle_state" = $3',
+    );
     expect(compiled.sql).toContain('left join "user_public_profiles"');
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."normalized_handle" = "user_handle_registry"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_visibility" = $4',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."profile_lifecycle_state" = $5',
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."removed_at" is null',
+    );
     expect(compiled.sql).toContain(
       '"journal_entries"."lifecycle_state" as "lifecycleState"',
     );
@@ -767,6 +805,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.parameters).toEqual([
       "seeded",
       "confirmed",
+      "current",
+      "public",
+      "active",
       "first-flowers-abc123",
     ]);
   });
@@ -904,13 +945,65 @@ describe("journal repository query contracts", () => {
     );
   });
 
+  it("resolves confirmed public person mentions by stable user id to the current profile handle", () => {
+    const entryId = "00000000-0000-4000-8000-000000000020";
+    const compiled = buildPublicJournalEntryPersonMentionsQuery(
+      testDb,
+      entryId,
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      'inner join "lineage_provenance_edges" as "person_mentions"',
+    );
+    expect(compiled.sql).toContain(
+      '"person_mentions"."owner_user_id" = "journal_entries"."owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"person_mentions"."subject_plant_object_id" = "journal_entries"."plant_object_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"person_mentions"."client_mutation_id"\n              ~',
+    );
+    expect(compiled.sql).toContain(":mention:public_handle:[a-f0-9]{16}$");
+    expect(compiled.sql).toContain(
+      '"mentioned_handles"."user_id" = "person_mentions"."source_owner_user_id"',
+    );
+    expect(compiled.sql).toContain(
+      '"mentioned_handles"."lifecycle_state" = $1',
+    );
+    expect(compiled.sql).toContain(
+      '"mentioned_profiles"."normalized_handle" = "mentioned_handles"."normalized_handle"',
+    );
+    expect(compiled.sql).toContain(
+      '"mentioned_profiles"."profile_visibility" = $3',
+    );
+    expect(compiled.sql).toContain(
+      '"mentioned_profiles"."profile_lifecycle_state" = $4',
+    );
+    expect(compiled.sql).toContain('"mentioned_profiles"."removed_at" is null');
+    expect(compiled.sql).toContain('"mentioned_profiles"."handle" as "handle"');
+    expect(compiled.sql).toContain("from profile_blocks");
+    expect(compiled.sql).toContain("profile_blocks.block_state = 'active'");
+    expect(compiled.sql).toContain(
+      'profile_blocks.blocked_user_id = "person_mentions"."source_owner_user_id"',
+    );
+    expect(compiled.sql).toContain('"person_mentions"."consent_state" =');
+    expect(compiled.sql).toContain('"person_mentions"."erasure_state" =');
+    expect(compiled.sql).not.toMatch(
+      /source_reference_label|email|journal_entries"\."body|quarantine|coordinates|latitude|longitude/i,
+    );
+    expect(compiled.parameters).toContain(entryId);
+    expect(compiled.parameters).toContain("confirmed");
+    expect(compiled.parameters.at(-1)).toBe(8);
+  });
+
   it("serializes a localized object-first journal chapter without private fields", () => {
     vi.stubEnv("R2_PUBLIC_BASE_URL", "https://media.over.garden");
     const page = serializePublicJournalEntryPage({
       root: {
         entryId: "00000000-0000-4000-8000-000000000020",
         title: "Перший урожай",
-        body: "Перший абзац.\n\nДругий абзац.",
+        body: "Перший абзац.\n\nІсторична згадка @previous_gardener.",
         entryDate: "2026-07-10",
         entryCreatedAt: "2026-07-10T09:00:00.000Z",
         entryScope: "object",
@@ -965,6 +1058,12 @@ describe("journal repository query contracts", () => {
         publicSlug: "tyzhden-ranishe",
       },
       mentionedRows: [],
+      mentionedProfileRows: [
+        {
+          handle: "renamed_gardener",
+          displayName: "Садівник",
+        },
+      ],
       locale: "bg",
     });
 
@@ -978,6 +1077,15 @@ describe("journal repository query contracts", () => {
       },
     });
     expect(page.author?.profilePath).toBe("/bg/@olena");
+    expect(page.entry.body).toContain("@previous_gardener");
+    expect(page.mentionedProfiles).toEqual([
+      {
+        handle: "renamed_gardener",
+        mention: "@renamed_gardener",
+        displayName: "Садівник",
+        profilePath: "/bg/@renamed_gardener",
+      },
+    ]);
     expect(page.topics).toEqual([
       { slug: "harvest", label: "Врожай", publicPath: "/bg/topics/harvest" },
     ]);

@@ -172,6 +172,7 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       },
     },
     author: null,
+    mentionedProfiles: [],
     topics: [],
     relatedEntries: [],
     adjacentEntries: { newer: null, older: null },

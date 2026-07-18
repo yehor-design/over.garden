@@ -17,6 +17,7 @@ import { scopedToUser } from "@/server/request-scope";
 import {
   buildBlockedProfileSummariesQuery,
   buildOwnerAvatarOptionsQuery,
+  buildOwnerCurrentHandleClaimQuery,
   buildOwnerPublicProfileByUserIdQuery,
   buildUpdateOwnerPublicProfileQuery,
   normalizeOwnerPublicProfileInput,
@@ -49,7 +50,6 @@ describe("owner profile repository", () => {
   it("normalizes bounded public settings without accepting exact place fields", () => {
     expect(
       normalizeOwnerPublicProfileInput({
-        handle: " @Green_Thumb ",
         avatarMediaAssetId: "00000000-0000-4000-8000-000000000111",
         displayName: "  Olena  ",
         bio: "  Dated observations from a mixed garden.  ",
@@ -62,8 +62,6 @@ describe("owner profile repository", () => {
     ).toEqual({
       ok: true,
       value: {
-        handle: "green_thumb",
-        normalizedHandle: "green_thumb",
         avatarMediaAssetId: "00000000-0000-4000-8000-000000000111",
         displayName: "Olena",
         bio: "Dated observations from a mixed garden.",
@@ -76,7 +74,6 @@ describe("owner profile repository", () => {
     });
     expect(
       normalizeOwnerPublicProfileInput({
-        handle: "green_thumb",
         avatarMediaAssetId: null,
         displayName: "Olena",
         bio: "x".repeat(601),
@@ -89,7 +86,6 @@ describe("owner profile repository", () => {
     ).toEqual({ ok: false, error: "bio" });
     expect(
       normalizeOwnerPublicProfileInput({
-        handle: "green_thumb",
         avatarMediaAssetId: null,
         displayName: "Olena",
         bio: null,
@@ -102,7 +98,6 @@ describe("owner profile repository", () => {
     ).toEqual({ ok: false, error: "languages" });
     expect(
       normalizeOwnerPublicProfileInput({
-        handle: "green_thumb",
         avatarMediaAssetId: null,
         displayName: "Olena",
         bio: null,
@@ -115,7 +110,6 @@ describe("owner profile repository", () => {
     ).toEqual({ ok: false, error: "region" });
     expect(
       normalizeOwnerPublicProfileInput({
-        handle: "green_thumb",
         avatarMediaAssetId: "not-an-owned-media-id",
         displayName: "Olena",
         bio: null,
@@ -144,8 +138,6 @@ describe("owner profile repository", () => {
 
   it("updates every public setting inside the signed-in owner scope", () => {
     const compiled = buildUpdateOwnerPublicProfileQuery(testDb, scope, {
-      handle: "green_thumb",
-      normalizedHandle: "green_thumb",
       avatarMediaAssetId: "00000000-0000-4000-8000-000000000111",
       displayName: "Olena",
       bio: "Dated observations.",
@@ -162,11 +154,24 @@ describe("owner profile repository", () => {
     expect(compiled.sql).toContain('"relationship_visibility" =');
     expect(compiled.sql).toContain('"coarse_region_code" =');
     expect(compiled.sql).toContain('"avatar_media_asset_id" =');
+    expect(compiled.sql).toContain('"display_name_policy_version" =');
+    expect(compiled.sql).not.toContain('"handle" =');
+    expect(compiled.sql).not.toContain('"normalized_handle" =');
     expect(compiled.sql).toContain('from "media_assets"');
     expect(compiled.sql).toContain('"owner_user_id" =');
     expect(compiled.sql).toContain('"status" =');
     expect(compiled.parameters).toContain(ownerUserId);
     expect(compiled.parameters).not.toContain("session-1");
+  });
+
+  it("reads the authoritative current handle cooldown in owner scope", () => {
+    const compiled = buildOwnerCurrentHandleClaimQuery(testDb, scope).compile();
+
+    expect(compiled.sql).toContain('from "user_handle_registry"');
+    expect(compiled.sql).toContain('"user_id" =');
+    expect(compiled.sql).toContain('"lifecycle_state" =');
+    expect(compiled.sql).toContain('"next_rename_at" as "nextEligibleAt"');
+    expect(compiled.parameters).toContain(ownerUserId);
   });
 
   it("offers only processed owner derivatives as avatar candidates", () => {

@@ -104,6 +104,8 @@ export type {
   NewVarietySeedProof,
   UserPublicProfile,
   NewUserPublicProfile,
+  UserHandleRegistryEntry,
+  NewUserHandleRegistryEntry,
   WishlistItem,
   WishlistSourceSurface,
   NewWishlistItem,

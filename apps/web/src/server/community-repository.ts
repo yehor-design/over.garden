@@ -754,8 +754,15 @@ export function buildCommunityReadinessQuery(
         from community_contributions
         join journal_entries
           on journal_entries.id = community_contributions.journal_entry_id
+        join user_handle_registry
+          on user_handle_registry.user_id = journal_entries.owner_user_id
+         and user_handle_registry.lifecycle_state = 'current'
         join user_public_profiles
-          on user_public_profiles.user_id = journal_entries.owner_user_id
+          on user_public_profiles.user_id = user_handle_registry.user_id
+         and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
+         and user_public_profiles.profile_visibility = 'public'
+         and user_public_profiles.profile_lifecycle_state = 'active'
+         and user_public_profiles.removed_at is null
         join community_memberships
           on community_memberships.community_id = community_contributions.community_id
          and community_memberships.user_id = community_contributions.contributor_user_id
@@ -769,9 +776,6 @@ export function buildCommunityReadinessQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
-          and user_public_profiles.profile_visibility = 'public'
-          and user_public_profiles.profile_lifecycle_state = 'active'
-          and user_public_profiles.removed_at is null
       )`.as("activeContributionCount"),
     ])
     .where("communities.slug", "=", normalizedSlug)
@@ -952,8 +956,15 @@ export function buildCommunityStatsQuery(
         from community_contributions
         join journal_entries
           on journal_entries.id = community_contributions.journal_entry_id
+        join user_handle_registry
+          on user_handle_registry.user_id = journal_entries.owner_user_id
+         and user_handle_registry.lifecycle_state = 'current'
         join user_public_profiles
-          on user_public_profiles.user_id = journal_entries.owner_user_id
+          on user_public_profiles.user_id = user_handle_registry.user_id
+         and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
+         and user_public_profiles.profile_visibility = 'public'
+         and user_public_profiles.profile_lifecycle_state = 'active'
+         and user_public_profiles.removed_at is null
         join community_memberships as contribution_memberships
           on contribution_memberships.community_id = community_contributions.community_id
          and contribution_memberships.user_id = community_contributions.contributor_user_id
@@ -967,9 +978,6 @@ export function buildCommunityStatsQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
-          and user_public_profiles.profile_visibility = 'public'
-          and user_public_profiles.profile_lifecycle_state = 'active'
-          and user_public_profiles.removed_at is null
           ${contributionViewerPredicate}
       )`.as("activeContributionCount"),
       sql<number>`(
@@ -980,8 +988,15 @@ export function buildCommunityStatsQuery(
         join plant_objects
           on plant_objects.id = journal_entries.plant_object_id
          and plant_objects.owner_user_id = journal_entries.owner_user_id
+        join user_handle_registry
+          on user_handle_registry.user_id = journal_entries.owner_user_id
+         and user_handle_registry.lifecycle_state = 'current'
         join user_public_profiles
-          on user_public_profiles.user_id = journal_entries.owner_user_id
+          on user_public_profiles.user_id = user_handle_registry.user_id
+         and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
+         and user_public_profiles.profile_visibility = 'public'
+         and user_public_profiles.profile_lifecycle_state = 'active'
+         and user_public_profiles.removed_at is null
         join community_memberships as object_memberships
           on object_memberships.community_id = community_contributions.community_id
          and object_memberships.user_id = community_contributions.contributor_user_id
@@ -995,9 +1010,6 @@ export function buildCommunityStatsQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
-          and user_public_profiles.profile_visibility = 'public'
-          and user_public_profiles.profile_lifecycle_state = 'active'
-          and user_public_profiles.removed_at is null
           ${contributionViewerPredicate}
       )`.as("activeObjectCount"),
     ])
@@ -1073,12 +1085,26 @@ export function buildPublicCommunityContributionsQuery(
           "community_contributions.contributor_user_id",
         ),
     )
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
     .innerJoin("user_public_profiles", (join) =>
       join
         .onRef(
           "user_public_profiles.user_id",
           "=",
-          "journal_entries.owner_user_id",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
         )
         .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
@@ -1508,12 +1534,26 @@ export function buildCommunityModerationQueueQuery(
         .on("journal_entries.public_slug", "is not", null)
         .on("journal_entries.published_at", "is not", null),
     )
+    .leftJoin("user_handle_registry as contributor_handles", (join) =>
+      join
+        .onRef(
+          "contributor_handles.user_id",
+          "=",
+          "community_contributions.contributor_user_id",
+        )
+        .on("contributor_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles", (join) =>
       join
         .onRef(
           "user_public_profiles.user_id",
           "=",
-          "community_contributions.contributor_user_id",
+          "contributor_handles.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "contributor_handles.normalized_handle",
         )
         .on("user_public_profiles.profile_visibility", "=", "public")
         .on("user_public_profiles.profile_lifecycle_state", "=", "active")
@@ -1734,8 +1774,15 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
      and cover_memberships.user_id = cover_contributions.contributor_user_id
     join journal_entries as cover_entries
       on cover_entries.id = cover_contributions.journal_entry_id
+    join user_handle_registry as cover_handles
+      on cover_handles.user_id = cover_entries.owner_user_id
+     and cover_handles.lifecycle_state = 'current'
     join user_public_profiles as cover_profiles
-      on cover_profiles.user_id = cover_entries.owner_user_id
+      on cover_profiles.user_id = cover_handles.user_id
+     and cover_profiles.normalized_handle = cover_handles.normalized_handle
+     and cover_profiles.profile_visibility = 'public'
+     and cover_profiles.profile_lifecycle_state = 'active'
+     and cover_profiles.removed_at is null
     join media_assets as cover_media
       on cover_media.journal_entry_id = cover_entries.id
     where cover_contributions.community_id = communities.id
@@ -1748,9 +1795,6 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
       and cover_entries.public_gone_at is null
       and cover_entries.public_slug is not null
       and cover_entries.published_at is not null
-      and cover_profiles.profile_visibility = 'public'
-      and cover_profiles.profile_lifecycle_state = 'active'
-      and cover_profiles.removed_at is null
       and cover_media.status = 'processed'
       and cover_media.derivative_key is not null
       and cover_media.original_deleted_at is not null

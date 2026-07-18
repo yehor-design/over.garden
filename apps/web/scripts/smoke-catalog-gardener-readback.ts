@@ -6,6 +6,7 @@ import { config as loadEnv } from "dotenv";
 import type { Kysely } from "kysely";
 
 import type { Database } from "../src/db/schema";
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
 import type { FirstPlantEntryResponse } from "../src/lib/garden/entry-contracts";
 import type {
   searchCatalogSuggestions as searchCatalogFn,
@@ -140,7 +141,7 @@ async function main() {
   await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
     email,
     password,
-    name: "OVE-161 gardener proof",
+    name: PRIVATE_AUTH_COMPATIBILITY_NAME,
   });
   await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
     email,

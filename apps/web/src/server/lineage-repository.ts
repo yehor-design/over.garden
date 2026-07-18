@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Insertable, Kysely, Transaction } from "kysely";
+import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -72,6 +72,7 @@ export interface LineageProvenanceEdgeReadback {
   pendingIdentity: LineagePendingSourceIdentityReadback | null;
   sourceReferenceKind: LineageSourceReferenceKind | null;
   sourceReferenceLabel: string | null;
+  sourcePersonMention: `@${string}` | null;
   createdAt: Date | string;
 }
 
@@ -259,6 +260,12 @@ export async function getObjectProvenancePanel(
       sourceReferenceKind:
         edge.source_reference_kind as LineageSourceReferenceKind | null,
       sourceReferenceLabel: edge.source_reference_label,
+      sourcePersonMention:
+        edge.source_kind === "source_reference" &&
+        edge.source_reference_kind === "person" &&
+        edge.sourcePersonHandle
+          ? `@${edge.sourcePersonHandle}`
+          : null,
       createdAt: edge.created_at,
     })),
   };
@@ -379,12 +386,14 @@ export async function createLineageInvitation(
       throw new Error("Lineage invitation subject object was not found.");
     }
 
-    const pendingIdentity =
-      await buildInsertLineagePendingSourceIdentityQuery(trx, {
+    const pendingIdentity = await buildInsertLineagePendingSourceIdentityQuery(
+      trx,
+      {
         created_by_user_id: scope.userId,
         display_label: normalized.pendingSourceLabel,
         invite_state: "pending",
-      }).executeTakeFirstOrThrow();
+      },
+    ).executeTakeFirstOrThrow();
 
     const edge = await buildInsertProvenanceEdgeQuery(trx, {
       owner_user_id: scope.userId,
@@ -419,7 +428,9 @@ export async function createLineageInvitation(
       ).executeTakeFirst();
 
     if (!existingAfterConflict) {
-      throw new Error("Lineage invitation idempotency conflict could not be resolved.");
+      throw new Error(
+        "Lineage invitation idempotency conflict could not be resolved.",
+      );
     }
 
     await trx
@@ -427,10 +438,7 @@ export async function createLineageInvitation(
       .where("id", "=", pendingIdentity.id)
       .execute();
 
-    assertExistingInvitationEdgeMatchesInput(
-      existingAfterConflict,
-      normalized,
-    );
+    assertExistingInvitationEdgeMatchesInput(existingAfterConflict, normalized);
     return readCreateLineageInvitationResult(
       trx,
       scope,
@@ -632,12 +640,43 @@ export function buildObjectProvenanceEdgesQuery(
         .onRef("source_catalog_items.id", "=", "source_objects.catalog_item_id")
         .on("source_catalog_items.created_by_user_id", "is", null),
     )
-    .leftJoin("lineage_pending_source_identities as pending_identities", (join) =>
-      join.onRef(
-        "pending_identities.id",
-        "=",
-        "lineage_provenance_edges.source_pending_identity_id",
-      ),
+    .leftJoin(
+      "lineage_pending_source_identities as pending_identities",
+      (join) =>
+        join.onRef(
+          "pending_identities.id",
+          "=",
+          "lineage_provenance_edges.source_pending_identity_id",
+        ),
+    )
+    .leftJoin("user_handle_registry as source_person_handles", (join) =>
+      join
+        .onRef(
+          "source_person_handles.user_id",
+          "=",
+          "lineage_provenance_edges.source_owner_user_id",
+        )
+        .on("source_person_handles.lifecycle_state", "=", "current")
+        .on("lineage_provenance_edges.source_kind", "=", "source_reference")
+        .on("lineage_provenance_edges.source_reference_kind", "=", "person"),
+    )
+    .leftJoin("user_public_profiles as source_person_profiles", (join) =>
+      join
+        .onRef(
+          "source_person_profiles.user_id",
+          "=",
+          "source_person_handles.user_id",
+        )
+        .onRef(
+          "source_person_profiles.normalized_handle",
+          "=",
+          "source_person_handles.normalized_handle",
+        )
+        .on("source_person_profiles.handle_registry_state", "=", "current")
+        .on("source_person_profiles.profile_visibility", "=", "public")
+        .on("source_person_profiles.profile_lifecycle_state", "=", "active")
+        .on("source_person_profiles.removed_at", "is", null)
+        .on(noActiveLineageProfileBlockPredicate()),
     )
     .select([
       "lineage_provenance_edges.id",
@@ -658,6 +697,7 @@ export function buildObjectProvenanceEdgesQuery(
       "pending_identities.display_label as pendingIdentityDisplayLabel",
       "pending_identities.invite_state as pendingIdentityInviteState",
       "pending_identities.created_at as pendingIdentityCreatedAt",
+      "source_person_profiles.handle as sourcePersonHandle",
     ])
     .where("lineage_provenance_edges.owner_user_id", "=", scope.userId)
     .where(
@@ -667,6 +707,32 @@ export function buildObjectProvenanceEdgesQuery(
     )
     .orderBy("lineage_provenance_edges.created_at", "desc")
     .orderBy("lineage_provenance_edges.id", "asc");
+}
+
+function noActiveLineageProfileBlockPredicate() {
+  return sql<boolean>`not exists (
+    select 1
+    from profile_blocks
+    where profile_blocks.block_state = 'active'
+      and (
+        (
+          profile_blocks.blocker_user_id = ${sql.ref(
+            "lineage_provenance_edges.owner_user_id",
+          )}
+          and profile_blocks.blocked_user_id = ${sql.ref(
+            "lineage_provenance_edges.source_owner_user_id",
+          )}
+        )
+        or (
+          profile_blocks.blocker_user_id = ${sql.ref(
+            "lineage_provenance_edges.source_owner_user_id",
+          )}
+          and profile_blocks.blocked_user_id = ${sql.ref(
+            "lineage_provenance_edges.owner_user_id",
+          )}
+        )
+      )
+  )`;
 }
 
 export function buildLineageClaimInboxQuery(
@@ -808,12 +874,14 @@ export function buildLineageInvitationClaimPreviewQuery(
 ) {
   return executor
     .selectFrom("lineage_provenance_edges")
-    .innerJoin("lineage_pending_source_identities as pending_identities", (join) =>
-      join.onRef(
-        "pending_identities.id",
-        "=",
-        "lineage_provenance_edges.source_pending_identity_id",
-      ),
+    .innerJoin(
+      "lineage_pending_source_identities as pending_identities",
+      (join) =>
+        join.onRef(
+          "pending_identities.id",
+          "=",
+          "lineage_provenance_edges.source_pending_identity_id",
+        ),
     )
     .innerJoin("plant_objects as subject_objects", (join) =>
       join

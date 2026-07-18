@@ -41,6 +41,10 @@ export async function collectErasureDryRunCounts(
     authSessions,
     authAccounts,
     pilotInviteGrantPresent,
+    publicIdentityProfiles,
+    currentHandleClaims,
+    retiredHandleClaims,
+    unreviewedIdentityRows,
     spaces,
     plantObjects,
     lineageProvenanceEdges,
@@ -73,6 +77,10 @@ export async function collectErasureDryRunCounts(
     countAuthSessions(executor, requesterUserId),
     countAuthAccounts(executor, requesterUserId),
     countPilotInviteGrantPresent(executor, requesterUserId),
+    countPublicIdentityProfiles(executor, requesterUserId),
+    countHandleClaims(executor, requesterUserId, "current"),
+    countHandleClaims(executor, requesterUserId, "retired"),
+    countUnreviewedIdentityRows(executor, requesterUserId),
     countOwnedRows(executor, "spaces", requesterUserId),
     countOwnedRows(executor, "plant_objects", requesterUserId),
     countLineageProvenanceEdges(executor, requesterUserId),
@@ -126,6 +134,10 @@ export async function collectErasureDryRunCounts(
     authSessions,
     authAccounts,
     pilotInviteGrantPresent,
+    publicIdentityProfiles,
+    currentHandleClaims,
+    retiredHandleClaims,
+    unreviewedIdentityRows,
     spaces,
     plantObjects,
     lineageProvenanceEdges,
@@ -193,6 +205,52 @@ export function buildCountPilotInviteGrantPresentQuery(
   return executor
     .selectFrom("pilot_invite_grants")
     .select(sql<number>`count(*)`.as("count"))
+    .where("user_id", "=", requesterUserId);
+}
+
+export function buildCountPublicIdentityProfilesQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("user_public_profiles")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("user_id", "=", requesterUserId);
+}
+
+export function buildCountHandleClaimsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  lifecycleState: "current" | "retired",
+) {
+  return executor
+    .selectFrom("user_handle_registry")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("user_id", "=", requesterUserId)
+    .where("lifecycle_state", "=", lifecycleState);
+}
+
+export function buildCountUnreviewedIdentityRowsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("user_public_profiles")
+    .select(
+      sql<number>`(
+        case
+          when identity_policy_version = 'legacy-unreviewed'
+            or display_name_policy_version = 'legacy-unreviewed'
+          then 1 else 0
+        end
+        + (
+          select count(*)::int
+          from user_handle_registry registry
+          where registry.user_id = ${requesterUserId}
+            and registry.policy_version = 'legacy-unreviewed'
+        )
+      )`.as("count"),
+    )
     .where("user_id", "=", requesterUserId);
 }
 
@@ -443,6 +501,41 @@ async function countPilotInviteGrantPresent(
   requesterUserId: string,
 ) {
   const row = await buildCountPilotInviteGrantPresentQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countPublicIdentityProfiles(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountPublicIdentityProfilesQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countHandleClaims(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  lifecycleState: "current" | "retired",
+) {
+  const row = await buildCountHandleClaimsQuery(
+    executor,
+    requesterUserId,
+    lifecycleState,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countUnreviewedIdentityRows(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountUnreviewedIdentityRowsQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

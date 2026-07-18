@@ -33,6 +33,7 @@
     "smoke:garden-eu-oj-common-catalogue": "tsx scripts/smoke-garden-eu-oj-common-catalogue.ts",
     "smoke:garden-bg-official-varieties": "tsx scripts/smoke-garden-bg-official-varieties.ts",
     "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
+    "smoke:public-identity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-identity.ts",
     "smoke:catalog-match-approval": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-match-approval.ts",
     "smoke:catalog-match-approval:seed-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-match-approval.ts --seed-ui",
     "smoke:catalog-match-approval:reset-ui": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-match-approval.ts --reset-ui",
@@ -68,6 +69,10 @@
     "test:a11y": "tsx scripts/verify-responsive-accessibility.ts",
     "localization:coverage:browser": "tsx scripts/verify-responsive-accessibility.ts",
     "admin:bootstrap-owner": "tsx scripts/bootstrap-admin-owner.ts",
+    "identity:dry-run": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode dry-run",
+    "identity:apply": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode apply",
+    "identity:verify": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode verify",
+    "identity:rollback-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/migrate-public-identities.ts --mode rollback-proof",
     "pilot:invite": "tsx scripts/generate-pilot-invite.ts",
     "pilot:reset-password": "tsx scripts/generate-pilot-password-reset.ts"
   },

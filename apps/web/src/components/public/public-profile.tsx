@@ -58,6 +58,7 @@ export function PublicProfileView({
   viewer,
   actionStatus,
   previewVisibility,
+  headingLevel = "h1",
   resumeAction = null,
   resumeControl = null,
 }: {
@@ -66,6 +67,7 @@ export function PublicProfileView({
   viewer: PublicProfileViewer;
   actionStatus?: string | null;
   previewVisibility?: "public" | "private";
+  headingLevel?: "h1" | "h2" | "h3";
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
 }) {
@@ -79,6 +81,7 @@ export function PublicProfileView({
   const actionMessage = profileActionMessage(actionStatus, locale);
   const ownerEmptyState =
     viewer.kind === "owner" || previewVisibility !== undefined;
+  const ProfileHeading = headingLevel;
 
   return (
     <article
@@ -106,9 +109,9 @@ export function PublicProfileView({
                   </span>
                 ) : null}
               </div>
-              <h1 className="mt-1 text-2xl leading-tight font-semibold break-words text-foreground sm:text-3xl">
+              <ProfileHeading className="mt-1 text-2xl leading-tight font-semibold break-words text-foreground sm:text-3xl">
                 {profile.displayName}
-              </h1>
+              </ProfileHeading>
               <p className="mt-1 text-sm font-medium break-words text-muted-foreground">
                 {profile.mention}
               </p>

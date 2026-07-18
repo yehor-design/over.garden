@@ -10,6 +10,10 @@ import {
 } from "./queue";
 import { appendVoiceTranscriptToBody } from "@/lib/garden/voice-to-text";
 import {
+  sealPublicHandleMentionTarget,
+  unsealPublicHandleMentionTarget,
+} from "@/server/public-handle-mention-token";
+import {
   deleteOfflineDraft as deleteOwnedOfflineDraft,
   FIRST_ENTRY_DRAFT_ID,
   followUpEntryDraftId,
@@ -25,6 +29,9 @@ import {
 
 const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
 const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
+const MENTION_TARGET_USER_ID = "00000000-0000-4000-8000-0000000000c3";
+const MENTION_TOKEN_SECRET =
+  "ove-203-offline-mention-token-test-secret-with-adequate-length";
 
 function enqueueOfflineMutation(
   input: Omit<Parameters<typeof enqueueOwnedOfflineMutation>[0], "ownerUserId">,
@@ -203,6 +210,57 @@ describe("offline journal drafts", () => {
     expect(serialized).not.toMatch(/audio|recording|speechBlob/i);
   });
 
+  it("keeps an opaque handle target through offline reload and a later handle rename", async () => {
+    const targetToken = sealPublicHandleMentionTarget(MENTION_TARGET_USER_ID, {
+      audienceUserId: OWNER_A,
+      secret: MENTION_TOKEN_SECRET,
+    });
+    const payload: FirstEntryDraftPayload = {
+      ...minimalFirstEntryDraft("A draft that mentions another gardener."),
+      mentionSelections: [
+        {
+          kind: "public_handle",
+          id: targetToken,
+          label: "@former_handle",
+        },
+      ],
+    };
+
+    await upsertOfflineDraft({
+      id: FIRST_ENTRY_DRAFT_ID,
+      kind: "first_entry",
+      payload,
+    });
+
+    const restored =
+      await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+    const restoredSelection = restored?.payload.mentionSelections?.[0];
+    if (!restoredSelection) throw new Error("Expected a restored mention.");
+
+    expect(restoredSelection).toEqual({
+      kind: "public_handle",
+      id: targetToken,
+      label: "@former_handle",
+    });
+    expect(restoredSelection.id).not.toContain(MENTION_TARGET_USER_ID);
+    expect(
+      unsealPublicHandleMentionTarget(restoredSelection.id, {
+        audienceUserId: OWNER_A,
+        secret: MENTION_TOKEN_SECRET,
+      }),
+    ).toBe(MENTION_TARGET_USER_ID);
+
+    await enqueueOfflineMutation({
+      kind: "journal_entry",
+      idempotencyKey: restored.payload.clientMutationId,
+      payload: firstEntryPayloadFromDraft(restored.payload),
+    });
+    const queued = await listQueuedMutations();
+    expect(
+      (queued[0]?.payload as OfflineJournalEntryPayload).mentionSelections,
+    ).toEqual([restoredSelection]);
+  });
+
   it("deletes the draft after local save hands the same intent to the offline queue", async () => {
     const payload: FirstEntryDraftPayload = {
       clientMutationId: "draft-entry-id",
@@ -378,6 +436,7 @@ function firstEntryPayloadFromDraft(
     topicTags: payload.topicTagInput
       ? payload.topicTagInput.split(",").map((tag) => tag.trim())
       : [],
+    mentionSelections: payload.mentionSelections ?? [],
     photoIntent: payload.photoIntent,
   };
 }

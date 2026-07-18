@@ -49,11 +49,20 @@ const WORKSPACE = {
     profileVisibility: "public",
     relationshipVisibility: "counts",
   },
+  handleRename: {
+    currentHandle: "green_thumb",
+    nextEligibleAt: "2026-07-18T00:00:00.000Z",
+    canRename: true,
+  },
   preview: { mention: "@green_thumb" },
   avatarOptions: [],
   relationshipCounts: { followers: 0, following: 0 },
   blockedProfiles: [
-    { handle: "blocked_keeper", displayName: "Blocked Keeper" },
+    {
+      blockId: "00000000-0000-4000-8000-000000000222",
+      handle: "blocked_keeper",
+      displayName: "Blocked Keeper",
+    },
   ],
 };
 

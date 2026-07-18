@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
-import { type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -212,12 +212,30 @@ export function buildFollowedFeedStoriesQuery(
         .onRef("target_catalog_items.id", "=", "target_objects.catalog_item_id")
         .on("target_catalog_items.created_by_user_id", "is", null),
     )
+    .leftJoin("user_handle_registry as target_owner_handles", (join) =>
+      join
+        .onRef(
+          "target_owner_handles.user_id",
+          "=",
+          "lineage_node_follows.target_owner_user_id",
+        )
+        .on("target_owner_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as target_owner_profiles", (join) =>
-      join.onRef(
-        "target_owner_profiles.user_id",
-        "=",
-        "lineage_node_follows.target_owner_user_id",
-      ),
+      join
+        .onRef(
+          "target_owner_profiles.user_id",
+          "=",
+          "target_owner_handles.user_id",
+        )
+        .onRef(
+          "target_owner_profiles.normalized_handle",
+          "=",
+          "target_owner_handles.normalized_handle",
+        )
+        .on("target_owner_profiles.profile_visibility", "=", "public")
+        .on("target_owner_profiles.profile_lifecycle_state", "=", "active")
+        .on("target_owner_profiles.removed_at", "is", null),
     )
     .select([
       "lineage_node_follows.id as followId",
@@ -247,6 +265,12 @@ export function buildFollowedFeedStoriesQuery(
       "followed_edges.owner_user_id",
       "!=",
       "followed_edges.source_owner_user_id",
+    )
+    .where(
+      noSocialReadbackBlockPredicate(
+        scope.userId,
+        "lineage_node_follows.target_owner_user_id",
+      ),
     )
     .orderBy("target_public_entries.published_at", "desc")
     .orderBy("target_public_entries.entry_date", "desc")
@@ -325,6 +349,12 @@ export function buildNotificationClaimRequestEventsQuery(
       "owner_only_until_confirmed",
     )
     .where("lineage_provenance_edges.erasure_state", "=", "active")
+    .where(
+      noSocialReadbackBlockPredicate(
+        scope.userId,
+        "lineage_provenance_edges.owner_user_id",
+      ),
+    )
     .orderBy("lineage_provenance_edges.created_at", "desc")
     .orderBy("lineage_provenance_edges.id", "asc")
     .limit(normalizeQueryLimit(limit, NOTIFICATION_EVENT_LIMIT));
@@ -389,6 +419,12 @@ export function buildNotificationClaimDecisionEventsQuery(
     .where("edges.source_kind", "=", "own_object")
     .where("edges.visibility_policy", "=", "owner_only_until_confirmed")
     .where("audit_events.new_consent_state", "in", ["confirmed", "declined"])
+    .where(
+      noSocialReadbackBlockPredicate(
+        scope.userId,
+        "edges.source_owner_user_id",
+      ),
+    )
     .orderBy("audit_events.created_at", "desc")
     .orderBy("audit_events.id", "asc")
     .limit(normalizeQueryLimit(limit, NOTIFICATION_EVENT_LIMIT));
@@ -431,6 +467,12 @@ export function buildNotificationQuestionEventsQuery(
     ])
     .where("lineage_questions.recipient_user_id", "=", scope.userId)
     .where("lineage_questions.question_state", "=", "delivered")
+    .where(
+      noSocialReadbackBlockPredicate(
+        scope.userId,
+        "lineage_questions.asker_user_id",
+      ),
+    )
     .orderBy("lineage_questions.created_at", "desc")
     .orderBy("lineage_questions.id", "asc")
     .limit(normalizeQueryLimit(limit, NOTIFICATION_EVENT_LIMIT));
@@ -485,12 +527,26 @@ export function buildNotificationFollowEventsQuery(
         .onRef("target_catalog_items.id", "=", "target_objects.catalog_item_id")
         .on("target_catalog_items.created_by_user_id", "is", null),
     )
+    .leftJoin("user_handle_registry as follower_handles", (join) =>
+      join
+        .onRef(
+          "follower_handles.user_id",
+          "=",
+          "lineage_node_follows.follower_user_id",
+        )
+        .on("follower_handles.lifecycle_state", "=", "current"),
+    )
     .leftJoin("user_public_profiles as follower_profiles", (join) =>
-      join.onRef(
-        "follower_profiles.user_id",
-        "=",
-        "lineage_node_follows.follower_user_id",
-      ),
+      join
+        .onRef("follower_profiles.user_id", "=", "follower_handles.user_id")
+        .onRef(
+          "follower_profiles.normalized_handle",
+          "=",
+          "follower_handles.normalized_handle",
+        )
+        .on("follower_profiles.profile_visibility", "=", "public")
+        .on("follower_profiles.profile_lifecycle_state", "=", "active")
+        .on("follower_profiles.removed_at", "is", null),
     )
     .select([
       "lineage_node_follows.id as followId",
@@ -518,6 +574,12 @@ export function buildNotificationFollowEventsQuery(
       "followed_edges.owner_user_id",
       "!=",
       "followed_edges.source_owner_user_id",
+    )
+    .where(
+      noSocialReadbackBlockPredicate(
+        scope.userId,
+        "lineage_node_follows.follower_user_id",
+      ),
     )
     .groupBy([
       "lineage_node_follows.id",
@@ -741,4 +803,25 @@ function createdAtTimestamp(value: Date | string) {
 function normalizeQueryLimit(limit: number, fallback: number) {
   if (!Number.isFinite(limit)) return fallback;
   return Math.min(MAX_QUERY_LIMIT, Math.max(1, Math.floor(limit)));
+}
+
+function noSocialReadbackBlockPredicate(
+  viewerUserId: string,
+  actorRef: string,
+): RawBuilder<boolean> {
+  return sql<boolean>`not exists (
+    select 1
+    from profile_blocks
+    where profile_blocks.block_state = 'active'
+      and (
+        (
+          profile_blocks.blocker_user_id = ${viewerUserId}
+          and profile_blocks.blocked_user_id = ${sql.ref(actorRef)}
+        )
+        or (
+          profile_blocks.blocker_user_id = ${sql.ref(actorRef)}
+          and profile_blocks.blocked_user_id = ${viewerUserId}
+        )
+      )
+  )`;
 }

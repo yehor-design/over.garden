@@ -1,5 +1,6 @@
 export type ErasureDryRunDataClassKey =
   | "account_auth"
+  | "public_identity"
   | "garden_workspace"
   | "lineage_provenance"
   | "journal_entries"
@@ -51,6 +52,10 @@ export interface ErasureDryRunCounts {
   authSessions: number;
   authAccounts: number;
   pilotInviteGrantPresent: number;
+  publicIdentityProfiles: number;
+  currentHandleClaims: number;
+  retiredHandleClaims: number;
+  unreviewedIdentityRows: number;
   spaces: number;
   plantObjects: number;
   lineageProvenanceEdges: number;
@@ -94,6 +99,18 @@ function buildErasureDryRunDataClasses(
         sessions: counts.authSessions,
         accounts: counts.authAccounts,
         pilot_invite_grant: counts.pilotInviteGrantPresent,
+      },
+    },
+    {
+      key: "public_identity",
+      label: "Pseudonymous public identity",
+      description:
+        "Current profile and current or retired handle claims associated with the account. Handles, display names, policy terms, and internal identifiers never appear in this preview.",
+      counts: {
+        profiles: counts.publicIdentityProfiles,
+        current_handle_claims: counts.currentHandleClaims,
+        retired_handle_claims: counts.retiredHandleClaims,
+        unreviewed_policy_rows: counts.unreviewedIdentityRows,
       },
     },
     {

@@ -165,17 +165,20 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain(
       '\'erased:\' || "lineage_provenance_edges"."id"::text',
     );
-    expect(compiled.sql).toContain('"owner_user_id" = $4');
-    expect(compiled.sql).toContain('"source_owner_user_id" = $5');
+    expect(compiled.sql).toMatch(/"owner_user_id" = \$\d+/);
+    expect(compiled.sql).toMatch(/"source_owner_user_id" = \$\d+/);
+    expect(compiled.sql).toMatch(/source_owner_user_id <> \$\d+/);
     expect(compiled.sql).toContain('"lineage_pending_source_identities"');
-    expect(compiled.sql).toContain('"created_by_user_id" = $6');
-    expect(compiled.sql).toContain('"claimed_by_user_id" = $7');
+    expect(compiled.sql).toMatch(/"created_by_user_id" = \$\d+/);
+    expect(compiled.sql).toMatch(/"claimed_by_user_id" = \$\d+/);
     expect(compiled.sql).not.toMatch(
       /journal_entries|media_assets|body|quarantine|derivative|email|phone|coarse_region|location_visibility|ip|user_agent/i,
     );
     expect(compiled.parameters).toEqual([
       "anonymized",
       "anonymized",
+      requesterUserId,
+      requesterUserId,
       now,
       requesterUserId,
       requesterUserId,

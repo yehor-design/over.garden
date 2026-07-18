@@ -12,7 +12,10 @@ import type {
   JournalMentionSelection,
   JournalMentionSuggestion,
 } from "@/lib/garden/journal-mentions";
-import { isJournalMentionTargetKind } from "@/lib/garden/journal-mentions";
+import {
+  isJournalMentionTargetKind,
+  isOpaquePublicHandleMentionSelectionId,
+} from "@/lib/garden/journal-mentions";
 
 export type MentionTypeaheadStatus = "idle" | "loading" | "ready" | "failed";
 
@@ -77,7 +80,9 @@ export function parseJournalMentionSuggestions(
       typeof candidate.insertText !== "string" ||
       !candidate.insertText.startsWith("@") ||
       typeof candidate.detail !== "string" ||
-      typeof candidate.disambiguationLabel !== "string"
+      typeof candidate.disambiguationLabel !== "string" ||
+      (candidate.kind === "public_handle" &&
+        !isOpaquePublicHandleMentionSelectionId(candidate.id))
     ) {
       return [];
     }

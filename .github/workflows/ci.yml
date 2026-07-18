@@ -134,6 +134,9 @@ jobs:
           PUBLIC_SITE_URL: http://localhost:3000
         run: pnpm local:bootstrap
 
+      - name: Verify fresh-bootstrap public identity recovery contract
+        run: pnpm smoke:public-identity
+
       - name: Check generated DB types
         run: pnpm db:types:check
 

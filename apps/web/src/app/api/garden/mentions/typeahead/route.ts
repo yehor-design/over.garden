@@ -9,5 +9,22 @@ export async function GET(request: Request) {
   const query = url.searchParams.get("q") ?? "";
   const suggestions = await searchJournalMentionSuggestions(scope, query);
 
-  return Response.json({ suggestions });
+  return Response.json(
+    {
+      suggestions: suggestions.map((suggestion) => ({
+        kind: suggestion.kind,
+        id: suggestion.id,
+        label: suggestion.label,
+        insertText: suggestion.insertText,
+        detail: suggestion.detail,
+        disambiguationLabel: suggestion.disambiguationLabel,
+        catalogKind: suggestion.catalogKind ?? null,
+      })),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    },
+  );
 }

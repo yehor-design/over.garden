@@ -28,6 +28,7 @@ import {
 } from "@/lib/public-journal-entry-lifecycle";
 import {
   matchPublicProfilePath,
+  renderGonePublicProfileHtml,
   renderNotFoundPublicProfileHtml,
 } from "@/lib/public-profile-lifecycle";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
@@ -174,7 +175,7 @@ function getLocaleRoutingResponse(
       return NextResponse.redirect(url, { status: 307 });
     }
 
-    if (request.method !== "GET") return null;
+    if (request.method !== "GET" && request.method !== "HEAD") return null;
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
@@ -212,9 +213,11 @@ function getLocaleRoutingResponse(
   return null;
 }
 
-// Next 16 renamed Middleware to Proxy. Better Auth handles its own cookies in
-// the route handler via nextCookies(); this proxy stays deliberately light and
-// must not become the authorization layer.
+// Next 16 renamed Middleware to Proxy. Better Auth handles cookie mutation in
+// route handlers via nextCookies(). This proxy performs only bounded document
+// lifecycle/privacy classification; a signed-in profile request resolves the
+// viewer solely to fail closed on mutual blocks and is not a mutation authz
+// boundary.
 export async function proxy(request: NextRequest) {
   const locale = resolveRequestLocale(request);
   const pathname = normalizePathname(request.nextUrl.pathname);
@@ -278,9 +281,39 @@ export async function proxy(request: NextRequest) {
     ? matchPublicProfilePath(request.nextUrl.pathname)
     : null;
   if (publicProfileHandle) {
+    const viewer = await resolvePublicProfileViewer(request);
+    if (!viewer.ok) {
+      return withAppRouteContract(
+        new NextResponse(renderNotFoundPublicProfileHtml(locale), {
+          status: 404,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
     const { getPublicProfileLifecycleLookup } =
       await import("@/server/public-profile-repository");
-    const lookup = await getPublicProfileLifecycleLookup(publicProfileHandle);
+    const lookup = await getPublicProfileLifecycleLookup(
+      publicProfileHandle,
+      viewer.userId,
+    );
+    if (lookup.status === "gone") {
+      return withAppRouteContract(
+        new NextResponse(renderGonePublicProfileHtml(locale), {
+          status: 410,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow",
+          },
+        }),
+        request,
+        locale,
+      );
+    }
     if (lookup.status === "not_found") {
       return withAppRouteContract(
         new NextResponse(renderNotFoundPublicProfileHtml(locale), {
@@ -384,6 +417,27 @@ export async function proxy(request: NextRequest) {
   // App HTML/RSC/API responses are pilot evidence and may be personalized.
   // Keep them out of intermediary caches even if DNS is proxied later.
   return withAppRouteContract(response, request, locale);
+}
+
+async function resolvePublicProfileViewer(
+  request: NextRequest,
+): Promise<{ ok: true; userId: string | null } | { ok: false }> {
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  if (!cookieHeader.includes("overgarden.session_token=")) {
+    return { ok: true, userId: null };
+  }
+
+  try {
+    const { auth } = await import("@/lib/auth");
+    const session = await auth.api.getSession({ headers: request.headers });
+    const userId = session?.user?.id;
+    return {
+      ok: true,
+      userId: typeof userId === "string" && userId.length > 0 ? userId : null,
+    };
+  } catch {
+    return { ok: false };
+  }
 }
 
 function isVisualFixturePath(pathname: string) {

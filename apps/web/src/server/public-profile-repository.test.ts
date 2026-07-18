@@ -17,9 +17,8 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
-import { scopedToUser } from "@/server/request-scope";
 import {
-  buildInsertUserPublicProfileQuery,
+  buildCurrentPublicHandleClaimQuery,
   buildPublicProfileByNormalizedHandleQuery,
   buildPublicProfileEntrySummaryQuery,
   buildPublicProfileFollowerCountQuery,
@@ -31,8 +30,7 @@ import {
   buildPublicProfileLifecycleQuery,
   buildPublicProfileObjectEvidenceQuery,
   buildPublicProfileObjectMediaEvidenceQuery,
-  buildUpdateUserPublicHandleQuery,
-  defaultPublicHandleForUserId,
+  classifyPublicProfileLifecycle,
   normalizePublicHandleInput,
   serializePublicProfileEvidencePage,
   serializePublicProfilePage,
@@ -58,7 +56,6 @@ class TestPostgresDialect implements Dialect {
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 const userId = "00000000-0000-4000-8000-000000000001";
-const scope = scopedToUser(userId, "session-1");
 const forbiddenPublicProfilePattern =
   /email|provider|account|session|ip_address|user_agent|referrer|phone|invite|token|journal_entries"\."title|journal_entries"\."body|media_assets|quarantine|derivative|source_reference_label|source_pending_identity_id|pending_identity/i;
 
@@ -67,6 +64,19 @@ afterEach(() => {
 });
 
 describe("public profile handle contracts", () => {
+  it("reads cooldown eligibility from the authoritative current registry claim", () => {
+    const compiled = buildCurrentPublicHandleClaimQuery(
+      testDb,
+      userId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "user_handle_registry"');
+    expect(compiled.sql).toContain('"next_rename_at" as "nextEligibleAt"');
+    expect(compiled.sql).toContain('"lifecycle_state" =');
+    expect(compiled.parameters).toEqual([userId, "current", 1]);
+    expect(compiled.sql).not.toMatch(/email|provider|session|token/i);
+  });
+
   it("normalizes handles without allowing reserved or blocked names", () => {
     expect(normalizePublicHandleInput(" @Green_Thumb42 ")).toMatchObject({
       ok: true,
@@ -75,11 +85,11 @@ describe("public profile handle contracts", () => {
     });
     expect(normalizePublicHandleInput("api")).toEqual({
       ok: false,
-      error: "reserved",
+      error: "unavailable",
     });
     expect(normalizePublicHandleInput("nazi_garden")).toEqual({
       ok: false,
-      error: "blocked",
+      error: "unavailable",
     });
     expect(normalizePublicHandleInput("@@broken")).toEqual({
       ok: false,
@@ -87,39 +97,69 @@ describe("public profile handle contracts", () => {
     });
   });
 
-  it("creates deterministic non-PII default handles from user ids", () => {
-    const handle = defaultPublicHandleForUserId(userId);
-
-    expect(handle).toMatch(/^gardener_[a-f0-9]{10}$/);
-    expect(handle).toBe(defaultPublicHandleForUserId(userId));
-    expect(handle).not.toContain(userId.replaceAll("-", ""));
-  });
-
-  it("inserts one public profile per user and relies on DB uniqueness", () => {
-    const compiled = buildInsertUserPublicProfileQuery(testDb, {
-      user_id: userId,
-      handle: "green_thumb",
-      normalized_handle: "green_thumb",
-    }).compile();
-
-    expect(compiled.sql).toContain('insert into "user_public_profiles"');
-    expect(compiled.sql).toContain(
-      'on conflict ("user_id") do nothing returning *',
+  it("keeps generation and atomic rename ownership inside SQL", () => {
+    const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const schemaSql = readFileSync(
+      join(webRoot, "sql/0001_walking_skeleton.sql"),
+      "utf8",
     );
-    expect(compiled.parameters).toEqual([userId, "green_thumb", "green_thumb"]);
+
+    expect(schemaSql).toContain(
+      "create or replace function overgarden_provision_user_public_profile",
+    );
+    expect(schemaSql).toContain(
+      "create or replace function overgarden_claim_user_public_handle",
+    );
+    expect(schemaSql).toContain("from 1 for 16");
+    expect(schemaSql).toContain("for attempt in 0..99 loop");
+    expect(schemaSql).toContain('after insert on "user"');
+    expect(schemaSql).toContain(
+      "user_handle_registry_one_current_per_user_uidx",
+    );
+    expect(schemaSql).toContain(
+      "user_public_profiles_current_handle_registry_fkey",
+    );
+    expect(schemaSql).toContain("on update no action");
+    expect(schemaSql).toContain("on delete no action");
+    expect(schemaSql).toContain("deferrable initially deferred");
+    expect(schemaSql).toContain(
+      "overgarden_assert_user_public_identity_consistency",
+    );
+    expect(schemaSql).toContain(
+      "overgarden_public_profile_identity_consistency",
+    );
+    expect(schemaSql).toContain(
+      "overgarden_handle_registry_identity_consistency",
+    );
+    expect(schemaSql).toContain("now() + interval '30 days'");
+    expect(schemaSql).toContain("lifecycle_state = 'retired'");
+    expect(schemaSql).toContain(":mention:public_handle:[a-f0-9]{16}$");
+    expect(schemaSql).toContain(
+      "digest('public_handle:' || profile.normalized_handle, 'sha256')",
+    );
+    expect(schemaSql).not.toMatch(/provision_user_email|oauth_provider/i);
   });
 
-  it("updates handles only inside the signed-in user scope", () => {
-    const compiled = buildUpdateUserPublicHandleQuery(testDb, scope, {
-      handle: "new_handle",
-      normalizedHandle: "new_handle",
-    }).compile();
+  it("models a PII-free current and retired handle registry", () => {
+    const webRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+    const schemaSql = readFileSync(
+      join(webRoot, "sql/0001_walking_skeleton.sql"),
+      "utf8",
+    );
+    const tableMatch = schemaSql.match(
+      /create table if not exists user_handle_registry \(([\s\S]*?)\);/,
+    );
 
-    expect(compiled.sql).toContain('update "user_public_profiles"');
-    expect(compiled.sql).toContain('"user_id" =');
-    expect(compiled.sql).toContain("returning *");
-    expect(compiled.parameters).toContain(userId);
-    expect(compiled.parameters).toContain("new_handle");
+    expect(tableMatch).not.toBeNull();
+    const tableBody = (tableMatch?.[1] ?? "").toLowerCase();
+    expect(tableBody).toContain("normalized_handle text primary key");
+    expect(tableBody).toContain("user_id uuid not null");
+    expect(tableBody).toContain("lifecycle_state text not null");
+    expect(tableBody).toContain("next_rename_at timestamptz not null");
+    expect(tableBody).toContain("policy_version text not null");
+    expect(tableBody).not.toMatch(
+      /email|provider|account|session|ip_address|user_agent|referrer|phone|invite|token|journal|bio|location|quarantine|derivative/,
+    );
   });
 
   it("resolves public profiles by normalized handle without auth or private fields", () => {
@@ -280,18 +320,112 @@ describe("public profile handle contracts", () => {
     );
   });
 
-  it("classifies lifecycle from public profile fields without account joins", () => {
+  it("classifies lifecycle from the handle registry and public-safe profile eligibility fields", () => {
     const compiled = buildPublicProfileLifecycleQuery(
       testDb,
       "green_thumb",
     ).compile();
 
-    expect(compiled.sql).toContain('from "user_public_profiles"');
-    expect(compiled.sql).toContain('"normalized_handle" =');
+    expect(compiled.sql).toContain('from "user_handle_registry"');
+    expect(compiled.sql).toContain('left join "user_public_profiles"');
+    expect(compiled.sql).toContain(
+      '"user_handle_registry"."normalized_handle" =',
+    );
+    expect(compiled.sql).toContain('"lifecycle_state"');
     expect(compiled.sql).toContain('"profile_visibility"');
     expect(compiled.sql).toContain('"profile_lifecycle_state"');
     expect(compiled.sql).toContain('"removed_at"');
     expect(compiled.sql).not.toMatch(/email|provider|session|token|journal/i);
+    expect(compiled.sql.split(" from ")[0]).not.toMatch(
+      /user_id|normalized_handle|display_name|handle as/i,
+    );
+    expect(compiled.sql).toContain(
+      '"user_public_profiles"."user_id" = "user_handle_registry"."user_id"',
+    );
+    expect(compiled.sql).not.toContain(
+      '"user_public_profiles"."normalized_handle" =',
+    );
+  });
+
+  it("fails retired and current lifecycle lookup closed across mutual blocks", () => {
+    const compiled = buildPublicProfileLifecycleQuery(
+      testDb,
+      "green_thumb",
+      userId,
+    ).compile();
+
+    expect(compiled.sql).toContain("not exists");
+    expect(compiled.sql).toContain("from profile_blocks block");
+    expect(compiled.sql).toContain("block.block_state = 'active'");
+    expect(compiled.sql).toContain("block.blocker_user_id");
+    expect(compiled.sql).toContain("block.blocked_user_id");
+    expect(compiled.parameters).toEqual(["green_thumb", userId, userId]);
+  });
+
+  it("returns gone for a retired handle without disclosing or following the current profile", () => {
+    expect(
+      classifyPublicProfileLifecycle({
+        handleLifecycleState: "retired",
+        profileVisibility: "public",
+        profileLifecycleState: "active",
+        removedAt: null,
+      }),
+    ).toEqual({ status: "gone" });
+  });
+
+  it("returns active only for a current public eligible profile and otherwise fails closed", () => {
+    expect(
+      classifyPublicProfileLifecycle({
+        handleLifecycleState: "current",
+        profileVisibility: "public",
+        profileLifecycleState: "active",
+        removedAt: null,
+      }),
+    ).toEqual({ status: "active" });
+
+    for (const ineligible of [
+      null,
+      {
+        handleLifecycleState: "retired",
+        profileVisibility: "private",
+        profileLifecycleState: "active",
+        removedAt: null,
+      },
+      {
+        handleLifecycleState: "retired",
+        profileVisibility: "public",
+        profileLifecycleState: "removed",
+        removedAt: "2026-07-18T12:00:00.000Z",
+      },
+      {
+        handleLifecycleState: "current",
+        profileVisibility: null,
+        profileLifecycleState: null,
+        removedAt: null,
+      },
+      {
+        handleLifecycleState: "current",
+        profileVisibility: "private",
+        profileLifecycleState: "active",
+        removedAt: null,
+      },
+      {
+        handleLifecycleState: "current",
+        profileVisibility: "public",
+        profileLifecycleState: "removed",
+        removedAt: "2026-07-18T12:00:00.000Z",
+      },
+      {
+        handleLifecycleState: "unknown",
+        profileVisibility: "public",
+        profileLifecycleState: "active",
+        removedAt: null,
+      },
+    ]) {
+      expect(classifyPublicProfileLifecycle(ineligible)).toEqual({
+        status: "not_found",
+      });
+    }
   });
 
   it("serializes the evidence page without user ids or media keys", () => {

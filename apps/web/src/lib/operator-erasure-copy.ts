@@ -36,6 +36,11 @@ const UK_COPY = {
       description:
         "Рядок користувача Better Auth, пов'язані сесії, credential/provider accounts і дозвіл запрошення до закритого пілоту.",
     },
+    public_identity: {
+      label: "Псевдонімна публічна ідентичність",
+      description:
+        "Поточний профіль і чинні або колишні ніки, пов’язані з обліковим записом. Значення ніків, імена для показу, терміни політики та внутрішні ID не показуються.",
+    },
     garden_workspace: {
       label: "Робочий простір саду",
       description:
@@ -87,6 +92,10 @@ const UK_COPY = {
     sessions: "сесії",
     accounts: "облікові записи",
     pilot_invite_grant: "дозвіл запрошення",
+    profiles: "публічні профілі",
+    current_handle_claims: "чинні ніки",
+    retired_handle_claims: "колишні ніки",
+    unreviewed_policy_rows: "неперевірені політикою рядки",
     spaces: "простори",
     plant_objects: "живі об'єкти",
     provenance_edges: "зв'язки провенансу",
@@ -159,6 +168,11 @@ const BG_COPY: OperatorErasureCopy = {
       description:
         "Better Auth потребител, сесии, credential/provider accounts и разрешение за затворения пилот.",
     },
+    public_identity: {
+      label: "Псевдонимна публична идентичност",
+      description:
+        "Текущият профил и настоящите или предишните потребителски имена, свързани с профила. Стойности, имена за показване, термини на политиката и вътрешни ID не се показват.",
+    },
     garden_workspace: {
       label: "Работно пространство на градината",
       description:
@@ -210,6 +224,10 @@ const BG_COPY: OperatorErasureCopy = {
     sessions: "сесии",
     accounts: "профили",
     pilot_invite_grant: "разрешение за покана",
+    profiles: "публични профили",
+    current_handle_claims: "текущи потребителски имена",
+    retired_handle_claims: "предишни потребителски имена",
+    unreviewed_policy_rows: "редове без преглед на политиката",
     spaces: "пространства",
     plant_objects: "живи обекти",
     provenance_edges: "връзки на провенанса",
@@ -280,6 +298,11 @@ const RU_COPY: OperatorErasureCopy = {
       description:
         "Пользователь Better Auth, сессии, credential/provider accounts и разрешение закрытого пилота.",
     },
+    public_identity: {
+      label: "Псевдонимная публичная идентичность",
+      description:
+        "Текущий профиль и действующие или прежние ники, связанные с аккаунтом. Значения ников, отображаемые имена, термины политики и внутренние ID не показываются.",
+    },
     garden_workspace: {
       label: "Рабочее пространство сада",
       description:
@@ -331,6 +354,10 @@ const RU_COPY: OperatorErasureCopy = {
     sessions: "сессии",
     accounts: "профили",
     pilot_invite_grant: "разрешение приглашения",
+    profiles: "публичные профили",
+    current_handle_claims: "действующие ники",
+    retired_handle_claims: "прежние ники",
+    unreviewed_policy_rows: "строки без проверки политики",
     spaces: "пространства",
     plant_objects: "живые объекты",
     provenance_edges: "связи провенанса",

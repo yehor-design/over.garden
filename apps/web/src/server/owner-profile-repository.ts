@@ -10,12 +10,14 @@ import {
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
 import {
+  evaluatePublicIdentity,
+  IDENTITY_POLICY_VERSION,
+} from "@/server/identity-policy";
+import {
   ensureUserPublicProfile,
   buildPublicProfileFollowerCountQuery,
   buildPublicProfileFollowingCountQuery,
   getPublicProfileEvidencePreviewByUserId,
-  normalizePublicHandleInput,
-  type PublicHandleValidationError,
   type PublicProfileEvidencePage,
   type PublicProfileLanguage,
 } from "@/server/public-profile-repository";
@@ -24,7 +26,6 @@ import { getPublicDerivativeUrl } from "@/lib/storage";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
-const DISPLAY_NAME_MAX_LENGTH = 80;
 const BIO_MAX_LENGTH = 600;
 const PROFILE_LANGUAGE_LIMIT = 4;
 const PROFILE_LANGUAGES = new Set<PublicProfileLanguage>([
@@ -38,10 +39,9 @@ const UUID_PATTERN =
 const OWNER_AVATAR_OPTION_LIMIT = 24;
 
 export type OwnerProfileValidationError =
-  | PublicHandleValidationError
-  | "taken"
   | "avatar"
   | "display_name"
+  | "display_name_unavailable"
   | "bio"
   | "languages"
   | "region"
@@ -49,7 +49,6 @@ export type OwnerProfileValidationError =
   | "relationship_visibility";
 
 export interface OwnerPublicProfileInput {
-  handle: string;
   avatarMediaAssetId: string | null;
   displayName: string | null;
   bio: string | null;
@@ -61,8 +60,6 @@ export interface OwnerPublicProfileInput {
 }
 
 export interface NormalizedOwnerPublicProfileInput {
-  handle: string;
-  normalizedHandle: string;
   avatarMediaAssetId: string | null;
   displayName: string | null;
   bio: string | null;
@@ -86,6 +83,7 @@ export interface OwnerPublicProfileEditor {
 }
 
 export interface BlockedProfileSummary {
+  blockId: string;
   handle: string;
   displayName: string | null;
 }
@@ -98,6 +96,11 @@ export interface OwnerProfileAvatarOption {
 
 export interface OwnerProfileWorkspace {
   editor: OwnerPublicProfileEditor;
+  handleRename: {
+    currentHandle: string;
+    nextEligibleAt: Date | string | null;
+    canRename: boolean;
+  };
   preview: PublicProfileEvidencePage;
   avatarOptions: OwnerProfileAvatarOption[];
   relationshipCounts: { followers: number; following: number };
@@ -119,17 +122,30 @@ export function normalizeOwnerPublicProfileInput(
 ):
   | { ok: true; value: NormalizedOwnerPublicProfileInput }
   | { ok: false; error: OwnerProfileValidationError } {
-  const handle = normalizePublicHandleInput(input.handle);
-  if (!handle.ok) return { ok: false, error: handle.error };
+  return normalizeOwnerPublicProfileFields(input, true);
+}
 
+function normalizeOwnerPublicProfileFields(
+  input: OwnerPublicProfileInput,
+  moderateDisplayName: boolean,
+):
+  | { ok: true; value: NormalizedOwnerPublicProfileInput }
+  | { ok: false; error: OwnerProfileValidationError } {
   const avatarMediaAssetId = input.avatarMediaAssetId?.trim() || null;
   if (avatarMediaAssetId && !UUID_PATTERN.test(avatarMediaAssetId)) {
     return { ok: false, error: "avatar" };
   }
 
-  const displayName = input.displayName?.trim() || null;
-  if (displayName && displayName.length > DISPLAY_NAME_MAX_LENGTH) {
-    return { ok: false, error: "display_name" };
+  let displayName = input.displayName?.trim() || null;
+  if (displayName && moderateDisplayName) {
+    const moderation = evaluatePublicIdentity({
+      surface: "display_name",
+      value: displayName,
+    });
+    if (!moderation.ok) {
+      return { ok: false, error: "display_name_unavailable" };
+    }
+    displayName = moderation.value;
   }
 
   const bio = input.bio?.trim() || null;
@@ -177,8 +193,6 @@ export function normalizeOwnerPublicProfileInput(
   return {
     ok: true,
     value: {
-      handle: handle.handle,
-      normalizedHandle: handle.normalizedHandle,
       avatarMediaAssetId,
       displayName,
       bio,
@@ -197,24 +211,33 @@ export async function getOwnerProfileWorkspace(
   executor: QueryExecutor = db,
 ): Promise<OwnerProfileWorkspace> {
   const profile = await ensureUserPublicProfile(scope, executor);
-  const [preview, blockedProfiles, avatarRows, followerRow, followingRow] =
-    await Promise.all([
-      getPublicProfileEvidencePreviewByUserId(scope.userId, locale, executor),
-      buildBlockedProfileSummariesQuery(executor, scope).execute(),
-      buildOwnerAvatarOptionsQuery(executor, scope).execute(),
-      buildPublicProfileFollowerCountQuery(
-        executor,
-        scope.userId,
-      ).executeTakeFirst(),
-      buildPublicProfileFollowingCountQuery(
-        executor,
-        scope.userId,
-      ).executeTakeFirst(),
-    ]);
+  const [
+    preview,
+    blockedProfiles,
+    avatarRows,
+    followerRow,
+    followingRow,
+    handleClaim,
+  ] = await Promise.all([
+    getPublicProfileEvidencePreviewByUserId(scope.userId, locale, executor),
+    buildBlockedProfileSummariesQuery(executor, scope).execute(),
+    buildOwnerAvatarOptionsQuery(executor, scope).execute(),
+    buildPublicProfileFollowerCountQuery(
+      executor,
+      scope.userId,
+    ).executeTakeFirst(),
+    buildPublicProfileFollowingCountQuery(
+      executor,
+      scope.userId,
+    ).executeTakeFirst(),
+    buildOwnerCurrentHandleClaimQuery(executor, scope).executeTakeFirst(),
+  ]);
 
-  if (!preview) {
+  if (!preview || !handleClaim) {
     throw new Error("Owner public profile preview is unavailable.");
   }
+
+  const nextEligibleAt = finiteDateOrNull(handleClaim.nextEligibleAt);
 
   return {
     editor: serializeOwnerPublicProfileEditor({
@@ -228,6 +251,12 @@ export async function getOwnerProfileWorkspace(
       profileVisibility: profile.profile_visibility,
       relationshipVisibility: profile.relationship_visibility,
     }),
+    handleRename: {
+      currentHandle: profile.handle,
+      nextEligibleAt,
+      canRename:
+        nextEligibleAt === null || nextEligibleAt.getTime() <= Date.now(),
+    },
     preview,
     avatarOptions: avatarRows.map((row) => ({
       mediaAssetId: row.mediaAssetId,
@@ -240,6 +269,11 @@ export async function getOwnerProfileWorkspace(
     },
     blockedProfiles,
   };
+}
+
+function finiteDateOrNull(value: Date | string): Date | null {
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isFinite(parsed.getTime()) ? parsed : null;
 }
 
 export async function updateOwnerPublicProfile(
@@ -258,24 +292,17 @@ export async function updateOwnerPublicProfile(
     return { status: "unchanged", profile: current };
   }
 
-  try {
-    const updated = await buildUpdateOwnerPublicProfileQuery(
-      executor,
-      scope,
-      value,
-    ).executeTakeFirst();
-    return updated
-      ? { status: "updated", profile: updated }
-      : {
-          status: value.avatarMediaAssetId ? "avatar" : "unchanged",
-          profile: current,
-        };
-  } catch (error) {
-    if (isPostgresUniqueViolation(error)) {
-      return { status: "taken", profile: current };
-    }
-    throw error;
-  }
+  const updated = await buildUpdateOwnerPublicProfileQuery(
+    executor,
+    scope,
+    value,
+  ).executeTakeFirst();
+  return updated
+    ? { status: "updated", profile: updated }
+    : {
+        status: value.avatarMediaAssetId ? "avatar" : "unchanged",
+        profile: current,
+      };
 }
 
 export function buildOwnerPublicProfileByUserIdQuery(
@@ -300,6 +327,18 @@ export function buildOwnerPublicProfileByUserIdQuery(
     .where("removed_at", "is", null);
 }
 
+export function buildOwnerCurrentHandleClaimQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+) {
+  return executor
+    .selectFrom("user_handle_registry")
+    .select(["normalized_handle as handle", "next_rename_at as nextEligibleAt"])
+    .where("user_id", "=", scope.userId)
+    .where("lifecycle_state", "=", "current")
+    .limit(1);
+}
+
 export function buildUpdateOwnerPublicProfileQuery(
   executor: QueryExecutor,
   scope: RequestScope,
@@ -308,10 +347,11 @@ export function buildUpdateOwnerPublicProfileQuery(
   return executor
     .updateTable("user_public_profiles")
     .set({
-      handle: input.handle,
-      normalized_handle: input.normalizedHandle,
       avatar_media_asset_id: input.avatarMediaAssetId,
       display_name: input.displayName,
+      display_name_policy_version: input.displayName
+        ? IDENTITY_POLICY_VERSION
+        : null,
       bio: input.bio,
       languages: input.languages,
       location_visibility: input.locationVisibility,
@@ -373,6 +413,7 @@ export function buildBlockedProfileSummariesQuery(
       ),
     )
     .select([
+      "profile_blocks.id as blockId",
       "user_public_profiles.handle",
       "user_public_profiles.display_name as displayName",
     ])
@@ -393,24 +434,26 @@ export function serializeOwnerPublicProfileEditor(input: {
   profileVisibility: string;
   relationshipVisibility: string;
 }): OwnerPublicProfileEditor {
-  const normalized = normalizeOwnerPublicProfileInput({
-    handle: input.handle,
-    avatarMediaAssetId: input.avatarMediaAssetId,
-    displayName: input.displayName,
-    bio: input.bio,
-    languages: input.languages,
-    locationVisibility: input.locationVisibility,
-    coarseRegionCode: input.coarseRegionCode,
-    profileVisibility: input.profileVisibility,
-    relationshipVisibility: input.relationshipVisibility,
-  });
+  const normalized = normalizeOwnerPublicProfileFields(
+    {
+      avatarMediaAssetId: input.avatarMediaAssetId,
+      displayName: input.displayName,
+      bio: input.bio,
+      languages: input.languages,
+      locationVisibility: input.locationVisibility,
+      coarseRegionCode: input.coarseRegionCode,
+      profileVisibility: input.profileVisibility,
+      relationshipVisibility: input.relationshipVisibility,
+    },
+    false,
+  );
   if (!normalized.ok) {
     throw new Error("Stored owner public profile is invalid.");
   }
 
   const value = normalized.value;
   return {
-    handle: value.handle,
+    handle: input.handle,
     avatarMediaAssetId: value.avatarMediaAssetId,
     displayName: value.displayName,
     bio: value.bio,
@@ -427,7 +470,6 @@ function ownerProfileMatches(
   input: NormalizedOwnerPublicProfileInput,
 ) {
   return (
-    profile.normalized_handle === input.normalizedHandle &&
     profile.avatar_media_asset_id === input.avatarMediaAssetId &&
     profile.display_name === input.displayName &&
     profile.bio === input.bio &&
@@ -436,15 +478,6 @@ function ownerProfileMatches(
     profile.coarse_region_code === input.coarseRegionCode &&
     profile.profile_visibility === input.profileVisibility &&
     profile.relationship_visibility === input.relationshipVisibility
-  );
-}
-
-function isPostgresUniqueViolation(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "23505"
   );
 }
 

@@ -42,6 +42,37 @@ const scope = scopedToUser("00000000-0000-4000-8000-000000000001");
 const forbiddenPrivatePattern =
   /quarantine|derivative_key|email|phone|ip_address|user_agent|coordinates|latitude|longitude|source_reference_label|question_text|comment_body|engagement_comments"\."body|client_mutation_id/i;
 
+function expectCurrentEligibleIdentity(
+  compiled: { sql: string; parameters: readonly unknown[] },
+  handlesAlias: string,
+  profilesAlias: string,
+) {
+  expect(compiled.sql).toContain(
+    `join "user_handle_registry" as "${handlesAlias}"`,
+  );
+  expect(compiled.sql).toContain(`"${handlesAlias}"."lifecycle_state" =`);
+  expect(compiled.sql).toContain(
+    `"${profilesAlias}"."user_id" = "${handlesAlias}"."user_id"`,
+  );
+  expect(compiled.sql).toContain(
+    `"${profilesAlias}"."normalized_handle" = "${handlesAlias}"."normalized_handle"`,
+  );
+  expect(compiled.sql).toContain(`"${profilesAlias}"."profile_visibility" =`);
+  expect(compiled.sql).toContain(
+    `"${profilesAlias}"."profile_lifecycle_state" =`,
+  );
+  expect(compiled.sql).toContain(`"${profilesAlias}"."removed_at" is null`);
+  expect(compiled.parameters).toEqual(
+    expect.arrayContaining(["current", "public", "active"]),
+  );
+}
+
+function expectMutualBlockExclusion(sql: string, actorRef: string) {
+  expect(sql).toContain('from "profile_blocks"');
+  expect(sql).toContain(`profile_blocks.blocked_user_id = ${actorRef}`);
+  expect(sql).toContain(`profile_blocks.blocker_user_id = ${actorRef}`);
+}
+
 describe("OVE-183 social return read models", () => {
   it("projects one chronological public-only feed across profile, object, topic, and lineage follows", async () => {
     const repository = await loadRepository();
@@ -64,7 +95,8 @@ describe("OVE-183 social return read models", () => {
     expect(compiled.sql).toContain('from "engagement_follows"');
     expect(compiled.sql).toContain('join "journal_entry_topic_signals"');
     expect(compiled.sql).toContain('from "lineage_node_follows"');
-    expect(compiled.sql).toContain('from "profile_blocks"');
+    expectCurrentEligibleIdentity(compiled, "owner_handles", "profiles");
+    expectMutualBlockExclusion(compiled.sql, '"entries"."owner_user_id"');
     expect(compiled.parameters).toContain(scope.userId);
     expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
   });
@@ -84,7 +116,8 @@ describe("OVE-183 social return read models", () => {
       'left join "engagement_comments" as "parent_comments"',
     );
     expect(compiled.sql).toContain('inner join "journal_entries" as "entries"');
-    expect(compiled.sql).toContain('from "profile_blocks"');
+    expectCurrentEligibleIdentity(compiled, "actor_handles", "profiles");
+    expectMutualBlockExclusion(compiled.sql, '"comments"."author_user_id"');
     expect(compiled.sql).toContain('"comments"."comment_state" =');
     expect(compiled.parameters).toContain(scope.userId);
     expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
@@ -118,20 +151,42 @@ describe("OVE-183 social return read models", () => {
     expect(profile.sql).toContain(
       'left join "user_public_profiles" as "profiles"',
     );
-    expect(profile.sql).toContain('"profiles"."profile_visibility" =');
-    expect(profile.sql).toContain('from "profile_blocks"');
+    expectCurrentEligibleIdentity(profile, "actor_handles", "profiles");
+    expectCurrentEligibleIdentity(profile, "target_handles", "target_profiles");
+    expectMutualBlockExclusion(profile.sql, '"follows"."follower_user_id"');
     expect(object.sql).toContain('from "engagement_follows" as "follows"');
     expect(object.sql).toContain('"follows"."target_kind" =');
     expect(object.sql).toContain('inner join "plant_objects" as "objects"');
     expect(object.sql).toContain('inner join "journal_entries" as "entries"');
-    expect(object.sql).toContain('"profiles"."profile_visibility" =');
-    expect(object.sql).toContain('from "profile_blocks"');
+    expectCurrentEligibleIdentity(object, "actor_handles", "profiles");
+    expectMutualBlockExclusion(object.sql, '"follows"."follower_user_id"');
     expect(lineage.sql).toContain('from "lineage_node_follows" as "follows"');
-    expect(lineage.sql).toContain('"profiles"."profile_visibility" =');
-    expect(lineage.sql).toContain('from "profile_blocks"');
+    expectCurrentEligibleIdentity(lineage, "actor_handles", "profiles");
+    expectMutualBlockExclusion(lineage.sql, '"follows"."follower_user_id"');
     expect(profile.sql).not.toMatch(forbiddenPrivatePattern);
     expect(object.sql).not.toMatch(forbiddenPrivatePattern);
     expect(lineage.sql).not.toMatch(forbiddenPrivatePattern);
+  });
+
+  it("derives lineage interaction events through current eligible actor identities and mutual blocks", async () => {
+    const repository = await loadRepository();
+    const mention = repository
+      .buildNotificationMentionEventsQuery(testDb, scope, 40)
+      .compile();
+    const claim = repository
+      .buildNotificationClaimDecisionEventsQuery(testDb, scope, 40)
+      .compile();
+    const question = repository
+      .buildNotificationQuestionEventsQuery(testDb, scope, 40)
+      .compile();
+
+    for (const compiled of [mention, claim, question]) {
+      expectCurrentEligibleIdentity(compiled, "actor_handles", "profiles");
+      expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
+    }
+    expectMutualBlockExclusion(mention.sql, '"edges"."owner_user_id"');
+    expectMutualBlockExclusion(claim.sql, '"edges"."source_owner_user_id"');
+    expectMutualBlockExclusion(question.sql, '"questions"."asker_user_id"');
   });
 
   it("persists idempotent actor-scoped receipts and explicit preferences only", async () => {

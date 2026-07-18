@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   matchPublicProfilePath,
+  renderGonePublicProfileHtml,
   renderNotFoundPublicProfileHtml,
 } from "./public-profile-lifecycle";
 
@@ -27,4 +28,23 @@ describe("public profile HTTP lifecycle", () => {
       /private|removed|blocked|owner|email|userId|location|region|follow|report/i,
     );
   });
+
+  it.each([
+    ["uk", "Профіль більше недоступний", 'href="/"'],
+    ["bg", "Профилът вече не е достъпен", 'href="/bg"'],
+    ["ru", "Профиль больше недоступен", 'href="/ru"'],
+  ] as const)(
+    "renders a generic localized 410 for a retired %s handle",
+    (locale, title, homeLink) => {
+      const html = renderGonePublicProfileHtml(locale);
+
+      expect(html).toContain(title);
+      expect(html).toContain('name="robots" content="noindex, nofollow"');
+      expect(html).toContain(homeLink);
+      expect(html).not.toContain("former_garden");
+      expect(html).not.toContain("current_garden");
+      expect(html).not.toContain('http-equiv="refresh"');
+      expect(html).not.toMatch(/email|userId|owner|redirect|location/i);
+    },
+  );
 });

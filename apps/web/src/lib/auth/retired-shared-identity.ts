@@ -2,6 +2,8 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 
+import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
+
 const RETIRED_SHARED_IDENTITY_EMAIL_HASHES = new Set([
   "aa1e7a4cca79271246d0b8497635518b75a95560d4d68744ca5a795176e4440a",
   "88874454b978fa046bc0f7e2ea012a4971b98614ad8faa58dce5b637d57e8c22",
@@ -19,8 +21,15 @@ export function createRetiredSharedIdentityPolicy(
     ) => ({
       user: {
         create: {
-          before: async (user: { email: string }) =>
-            isRetiredEmail(user.email) ? false : undefined,
+          before: async <T extends { email: string }>(user: T) =>
+            isRetiredEmail(user.email)
+              ? false
+              : {
+                  data: {
+                    ...user,
+                    name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+                  },
+                },
         },
         update: {
           before: async (user: { email?: unknown }) =>
