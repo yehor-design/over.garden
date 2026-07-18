@@ -6,7 +6,15 @@ Python: RapidFuzz, Splink, PyICU, CyrTranslit, and Meilisearch tooling.
 
 ## Layout
 
-- `app/main.py` — optional internal FastAPI health service; not a typeahead API.
+- `app/main.py` — FastAPI liveness, immutable release-capability, and
+  dependency-readiness surface; not a typeahead API.
+- `app/runtime.py` — fail-closed release identity, schema/queue preflight,
+  bounded readiness classes, and worker-heartbeat contract.
+- `app/job_handlers.py` — the single six-handler capability manifest shared by
+  worker dispatch, readiness, CI sealing, deployment, and smoke proof.
+- `app/canary.py` — explicitly approved, idempotent production proof for all
+  six handlers; it mutates only derived/advisory state and restores journal
+  search state after the index/unindex proof.
 - `app/worker.py` — Postgres-backed worker. It claims rows from `job_queue`
   and runs matching/dedup/reindex work off the request path.
 - `app/search.py` — Meilisearch helpers, catalog typeahead reindexing, public
@@ -75,6 +83,124 @@ and journal index/unindex recovery there. Do not replace the droplet runtime
 with Apple Container. A non-Docker production replacement must be a separate
 Linux process-manager migration with equivalent live restart/recovery proof and
 redacted evidence.
+
+### Immutable release identity and readiness
+
+OVE-190 separates process liveness from release/capability truth:
+
+- `GET /health` is liveness only. A `200` response means the API process can
+  answer; it does not prove Postgres, queue schema, Meilisearch, worker parity,
+  or an exact deployed revision.
+- `GET /capabilities` returns schema `ove190.matchingRuntime.v1`, service
+  `overgarden-matching`, the exact 40-character commit SHA, immutable
+  `sha256:` image digest, UTC build timestamp, schema compatibility class
+  `ove190.matching-schema.v1`, queue `matching`, and the exact supported-handler
+  list. Invalid or missing release metadata fails closed with HTTP `503` and a
+  bounded `unavailable` manifest.
+- `GET /ready` returns HTTP `200` only when the API, Postgres, required queue
+  and heartbeat schema, Meilisearch, and a fresh worker heartbeat all match the
+  same exact SHA, digest, schema class, queue, and handler list. It returns HTTP
+  `503` with `status=degraded` otherwise.
+
+Readiness exposes only bounded safe classes. Dependency states are
+`available`/`unavailable`, with `schema_mismatch` for an incompatible queue
+schema and `missing`/`stale`/`release_mismatch`/`capability_mismatch` for worker
+parity. Queue depth is `empty`/`low`/`medium`/`high`; due-work lag is
+`none`/`fresh`/`delayed`/`stale`. These endpoints must never expose hosts,
+connection strings, exception text, raw counts, job payloads or identifiers,
+user data, or location.
+
+The additive `matching_worker_heartbeats` table stores one row for queue
+`matching`: release SHA, image digest, schema class, the sorted handler list,
+and timestamps. It stores no hostname, process id, error, payload, user data,
+or connection data. The worker refreshes it at a bounded interval. Readiness
+accepts only a fresh heartbeat from the same immutable API/worker release.
+
+The canonical handler manifest is exactly:
+
+1. `catalog_alias_suggestions_refresh`
+2. `catalog_fuzzy_duplicate_qa_refresh`
+3. `catalog_match_suggestions_refresh`
+4. `catalog_typeahead_reindex`
+5. `journal_entry_index`
+6. `journal_entry_unindex`
+
+Use the CLI forms inside a candidate or active image when HTTP is not the right
+boundary:
+
+```bash
+python -m app.runtime capabilities
+python -m app.runtime preflight
+python -m app.runtime ready
+```
+
+`preflight` checks release metadata plus Postgres, the exact queue/heartbeat
+schema, and Meilisearch before service activation. `ready` additionally
+requires the matching worker heartbeat.
+
+### Production release, rollback, and handler proof
+
+The committed production Linux runbook is
+`infra/production-worker/README.md`. `.github/workflows/matching-image.yml`
+accepts only an exact full SHA already contained in `main`; before publishing,
+it compiles every Python module, runs frozen Ruff, and runs the full frozen
+test suite. It publishes no `latest` tag. Each build receives a unique
+`sha-<full-sha>-run-<run-id>-<attempt>` tag and immutable registry digest, then
+seals that exact image as a checksummed Actions artifact with its safe release
+and capability manifests.
+
+The production host installs two distinct, same-SHA release artifacts so a
+real immediately-prior-digest rollback does not reintroduce the old
+capability-blind runtime. The supported sequence is:
+
+```bash
+sudo /opt/overgarden/matching-release install /path/to/release-a
+sudo /opt/overgarden/matching-release install /path/to/release-b
+sudo /opt/overgarden/matching-release migrate <release-a-key>
+sudo /opt/overgarden/matching-release deploy <release-a-key>
+sudo /opt/overgarden/matching-release deploy <release-b-key>
+sudo /opt/overgarden/matching-release rollback
+sudo /opt/overgarden/matching-release forward
+sudo /opt/overgarden/matching-release status
+```
+
+Installation verifies the archive checksum, image id, OCI labels, exact SHA,
+registry digest, schema class, unique run tag, and sealed six-handler manifest.
+Deployment runs the additive heartbeat migration and dependency preflight,
+activates API and worker from the same image, and records release pointers only
+after readiness passes. `rollback` can target only the immediately prior
+digest; `forward` can target only the release saved by that rollback. A failed
+activation restores the previous active release.
+
+After activation, run the public safe capability/readiness proof from
+`apps/web` with the expected release identity:
+
+```bash
+pnpm smoke:matching-runtime-capabilities -- \
+  --base-url https://matching.over.garden \
+  --expected-commit <40-character-main-sha> \
+  --expected-digest sha256:<64-hex-digest>
+```
+
+The six-handler queue canary is a production mutation and therefore requires
+the operator's explicit approval immediately before execution. Without the
+exact approval environment value it refuses to run:
+
+```bash
+docker compose \
+  --project-name overgarden \
+  --env-file /opt/overgarden/release-state/active.env \
+  --file /opt/overgarden/docker-compose.release.yml \
+  exec -T \
+  -e OVERGARDEN_MATCHING_CANARY_APPROVED=true \
+  matching-worker python -m app.canary
+```
+
+The canary reuses eligible records, records only handler terminal classes and
+privacy-safe boundaries, and changes no canonical catalog decision or user
+content. It proves journal index, unindex, and restoration; catalog handlers
+touch only derived/advisory outputs. Never record its row ids, payloads,
+journal/catalog content, URLs, connection data, or raw errors.
 
 The catalog typeahead rebuild job uses payload `{ "kind":
 "catalog_typeahead_reindex" }` on the `matching` queue. The worker rebuilds the
@@ -201,7 +327,8 @@ the matching-tier regression smoke is:
 ```bash
 cd services/matching
 container build -t overgarden/matching:local .
-uv run python -m py_compile app/catalog_aliases.py app/catalog_fuzzy_duplicates.py app/catalog_matching.py app/main.py app/search.py app/worker.py
+find app tests -type f -name '*.py' -print0 | sort -z | xargs -0 uv run --frozen python -m py_compile
+uv run --frozen ruff check .
 uv run --frozen pytest
 uv run --env-file ../../apps/web/.env.local \
   python -m scripts.smoke_catalog_match_rejection_replay

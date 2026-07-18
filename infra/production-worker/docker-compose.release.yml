@@ -1,0 +1,67 @@
+name: overgarden
+
+# production-linux-required: the DigitalOcean host is Linux and the existing
+# OVE-39/OVE-76 process manager is Docker Compose. This file intentionally does
+# not change the supported-Mac Apple Container-first local runtime.
+
+x-matching-release: &matching-release
+  image: ${MATCHING_IMAGE_REF:?MATCHING_IMAGE_REF must be a sealed local release reference}
+  pull_policy: never
+  env_file:
+    - ${OVERGARDEN_PRODUCTION_ROOT:-/opt/overgarden}/worker.env
+  environment: &matching-release-environment
+    OVERGARDEN_MATCHING_ENVIRONMENT: production
+    OVERGARDEN_MATCHING_COMMIT_SHA: ${OVERGARDEN_MATCHING_COMMIT_SHA:?exact commit SHA is required}
+    OVERGARDEN_MATCHING_BUILD_TIMESTAMP: ${OVERGARDEN_MATCHING_BUILD_TIMESTAMP:?build timestamp is required}
+    OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY: ${OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY:?schema compatibility is required}
+    OVERGARDEN_MATCHING_IMAGE_DIGEST: ${OVERGARDEN_MATCHING_IMAGE_DIGEST:?registry digest is required}
+    QUEUE_NAME: ${QUEUE_NAME:-matching}
+  init: true
+  restart: unless-stopped
+  stop_grace_period: 30s
+  networks:
+    default: {}
+  labels:
+    garden.over.matching.commit-sha: ${OVERGARDEN_MATCHING_COMMIT_SHA}
+    garden.over.matching.image-digest: ${OVERGARDEN_MATCHING_IMAGE_DIGEST}
+    garden.over.matching.schema-compatibility: ${OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY}
+
+services:
+  matching-api:
+    <<: *matching-release
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -m
+        - app.runtime
+        - ready
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 10s
+    networks:
+      default:
+        aliases:
+          - matching-api
+
+  matching-worker:
+    <<: *matching-release
+    command: ["python", "-m", "app.worker"]
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -m
+        - app.runtime
+        - ready
+      interval: 10s
+      timeout: 8s
+      retries: 12
+      start_period: 10s
+
+networks:
+  default:
+    name: overgarden_default
+    external: true

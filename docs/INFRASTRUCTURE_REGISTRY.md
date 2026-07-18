@@ -266,6 +266,8 @@ Runtime classification: this production worker/search surface is `production-lin
 - Current size: Basic 1 vCPU, 1 GB RAM
 - Runtime: Docker Compose under `/opt/overgarden`
 - Public matching health URL: `https://matching.over.garden/health`
+- Public matching capability URL: `https://matching.over.garden/capabilities`
+- Public matching readiness URL: `https://matching.over.garden/ready`
 - Public Meilisearch URL: `https://meili.over.garden`
 - Reverse proxy/TLS: Caddy on the Droplet
 - Containers: `meilisearch`, `matching-api`, `matching-worker`, `caddy`
@@ -277,10 +279,23 @@ Worker and search invariants:
 - Meilisearch is a derived public index only; Postgres remains the source of truth.
 - `MEILI_MASTER_KEY`, `MEILISEARCH_API_KEY`, and `MATCHING_SERVICE_TOKEN` must stay only in platform/env secret stores.
 - Do not expose Meilisearch keys, worker env files, database URLs, canary row identifiers, or indexed journal text in docs, Linear, or chat.
-- `matching-worker` must process `journal_entry_index` and `journal_entry_unindex` idempotently and reclaim stale `processing` rows after the visibility timeout.
+- `matching-worker` must process the exact six-handler manifest
+  `catalog_alias_suggestions_refresh`,
+  `catalog_fuzzy_duplicate_qa_refresh`,
+  `catalog_match_suggestions_refresh`, `catalog_typeahead_reindex`,
+  `journal_entry_index`, and `journal_entry_unindex` idempotently and reclaim
+  stale `processing` rows after the visibility timeout. The canonical manifest
+  is `services/matching/app/job_handlers.py`; dispatch, heartbeat, CI sealing,
+  deployment, and runtime smoke must all use it rather than duplicating a
+  smaller capability claim.
 - Runtime writer: `services/matching/app/search.py:journal_entry_search_document_from_row`.
 - Machine-readable contract: `contracts/search/public-journal-entry-search-document.json`.
-- `journal_entries` index documents may contain only the public-safe field contract proven in OVE-36/OVE-39: required keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`, plus optional `coarseRegionCode` only when `locationVisibility = region`.
+- `journal_entries` index documents may contain only the current public-safe
+  machine contract: required keys `body`, `createdAt`, `entryDate`,
+  `entryScope`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`,
+  `publicSlug`, and `title`, plus optional `coarseRegionCode` only when
+  `locationVisibility = region`. Earlier OVE-36/OVE-39 evidence predates the
+  additive `entryScope` field and remains a historical exact-shape record.
 - No owner/user IDs, space IDs, plant object IDs, precise location, raw coarse-location columns, media keys, quarantine/original keys, signed URLs, request metadata, IPs, user agents, referrers, invite data, or private journal state may enter Meilisearch documents.
 
 Process management and recovery (OVE-39):
@@ -292,6 +307,90 @@ Process management and recovery (OVE-39):
 - Local recovery proof: `services/matching/tests/test_worker_recovery.py` deterministically proves reclaim-after-timeout, `journal_entry_index`/`journal_entry_unindex` reaching `done` after a simulated restart, the public-safe document contract, idempotent re-delivery, and fail-then-recover when Meilisearch is briefly unavailable. It runs with `uv run --frozen pytest` and needs no live services.
 - Live restart smoke (2026-06-29, redacted): restarted only `matching-worker`, confirmed it returned `Up`, then published a canary through the production app path and confirmed `journal_entry_index` reached `done` in one attempt. The Meilisearch `journal_entries` document had exactly the public-safe keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, and `title`, with `noindex = true`, `locationVisibility = hidden`, and no forbidden owner/user IDs, media keys, precise location, IPs, user agents, or referrers. Archiving the same canary confirmed `journal_entry_unindex` reached `done` in one attempt, the Meilisearch document returned `404`, and the old public URL returned `410`. Record only job-state classes, document presence/absence, document key names, and privacy booleans.
 - Future non-Docker replacement gate (OVE-76): keep Docker Compose here unless a separate production migration live-proves equivalent process restart/reboot recovery, matching and Meilisearch health, journal publish index completion, journal archive unindex completion, and the same public-safe document contract. Redacted evidence only; never record DB URLs, worker env files, Meili keys, journal text, IPs, user agents, or user-tied row identifiers.
+
+Immutable matching release contract (OVE-190):
+
+- Repository status: implementation and runbook are prepared for exact-main
+  release proof. The production SHA, digests, workflow run ids, and observed
+  endpoint states must be filled from the live release; placeholders below are
+  not deployment evidence and must not be read as a completed rollout.
+- Publisher: `.github/workflows/matching-image.yml`. It accepts only an exact
+  lowercase 40-character SHA contained in `origin/main`, installs
+  `uv==0.11.24`, compiles all Python modules, runs frozen Ruff, and runs the full
+  frozen matching test suite before a registry write.
+- Artifact identity: private GHCR repository class, unique
+  `sha-<full-sha>-run-<run-id>-<attempt>` tag, immutable `sha256:` registry
+  digest, and a 90-day checksummed Actions artifact containing `release.json`,
+  `matching-capabilities.json`, and the compressed exact-image archive. No
+  `latest` tag is produced. The registry digest is canonical even though the
+  authenticated operator transfers the sealed archive to the droplet so no
+  persistent GHCR credential is installed there.
+- Production files: `/opt/overgarden/matching-release`,
+  `/opt/overgarden/docker-compose.release.yml`, and
+  `/opt/overgarden/0002_matching_worker_heartbeats.sql`, sourced from
+  `infra/production-worker/`. The pre-existing secret-bearing `worker.env`,
+  Caddy, Meilisearch, and `overgarden_default` network remain in place.
+- Runtime class remains `production-linux-required`. Docker Compose is the
+  committed DigitalOcean Linux process manager for API and worker; this is the
+  OVE-76 production exception, not permission to replace the Apple
+  Container-first supported-Mac local path.
+- Release contract: schema `ove190.matchingRelease.v1`, runtime contract
+  `ove190-v1`, runtime API schema `ove190.matchingRuntime.v1`, schema
+  compatibility `ove190.matching-schema.v1`, queue `matching`, one exact SHA,
+  and one exact digest shared by API and worker.
+- `GET /health` is API liveness only. `GET /capabilities` proves immutable
+  release identity and the exact six-handler list. `GET /ready` adds Postgres,
+  queue schema, Meilisearch, and same-release worker-heartbeat parity; it returns
+  HTTP `503` when any dependency or parity gate is degraded.
+- Public readiness output is deliberately bounded: dependency
+  `available`/`unavailable`; queue `schema_mismatch`; worker
+  `missing`/`stale`/`release_mismatch`/`capability_mismatch`; queue depth
+  `empty`/`low`/`medium`/`high`; due-work lag
+  `none`/`fresh`/`delayed`/`stale`. Raw counts, hosts, DSNs, exception text,
+  payloads, row/user identifiers, content, and location are forbidden.
+- `matching_worker_heartbeats` is an additive, idempotent production schema
+  boundary. Its one `matching` row contains only release SHA, image digest,
+  schema class, sorted supported handlers, and heartbeat timestamps. It must
+  never grow hostname, process, error, payload, user, connection, or location
+  fields. A heartbeat older than 30 seconds is not ready.
+- Deployment order is install release A, install release B, migrate A, deploy
+  A, deploy B, rollback to immediately prior digest A, then forward to B. A and
+  B are distinct immutable workflow-run digests built from the same exact
+  tested main SHA. Each activation performs schema/queue/Postgres/Meilisearch
+  preflight before replacement, then verifies API/worker image-id equality,
+  capability equality, and dependency-aware readiness. Failed activation
+  restores the prior release.
+- Binding host commands and redaction rules are in
+  `infra/production-worker/README.md`. External proof command:
+  `cd apps/web && pnpm smoke:matching-runtime-capabilities -- --base-url https://matching.over.garden --expected-commit <full-main-sha> --expected-digest sha256:<digest>`.
+- All-handler production proof uses `python -m app.canary` inside the active
+  `matching-worker` and refuses to execute unless
+  `OVERGARDEN_MATCHING_CANARY_APPROVED=true` is supplied for that command. It
+  reuses eligible records, changes only derived/advisory state, restores the
+  journal search document after index/unindex proof, and never changes a
+  canonical catalog decision or user content.
+
+OVE-190 live release evidence template (fill only after proof):
+
+```text
+verified_at_utc: <YYYY-MM-DDTHH:MM:SSZ>
+main_commit_sha: <40-char-sha>
+release_a_digest: sha256:<64-hex>
+release_b_digest: sha256:<64-hex>
+matching_image_workflow_runs: <public-run-id-a>, <public-run-id-b>
+capability_smoke: pass | fail | not-run
+runtime_schema: ove190.matchingRuntime.v1
+schema_compatibility: ove190.matching-schema.v1
+handlers: exact-six-pass | fail | not-run
+dependencies: api=<class>, postgres=<class>, jobQueue=<class>, meilisearch=<class>, worker=<class>
+queue_buckets: depth=<class>, lag=<class>
+handler_canary: six-done-and-journal-restored | fail | not-run
+rollback: release-b-to-immediately-prior-release-a-pass | fail | not-run
+forward: release-a-to-release-b-pass | fail | not-run
+active_digest_after_forward: sha256:<64-hex>
+result: pass | blocker | not-run
+redaction: no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
+```
 
 ## Vercel
 

@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness
-Last updated: 2026-07-16
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof
+Last updated: 2026-07-18
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -49,6 +49,171 @@ exact-commit local proof.
 - Production fuzzy QA counts were `fullPersisted=0`, `boundedReviewed=0`, and `rendered=0`. This proves the report is safely readable while empty; it does not replace the bounded local fixture proof of advisory generation.
 - `productionDataTouched=false`. No broad source import, fixture creation, approval/rejection action, search mutation, or schema mutation was performed.
 - No database URL, CA body, secret, token, cookie, private user field, source-only payload/key, journal text, media key, request metadata, email, IP, user agent, or precise location was printed or recorded.
+
+## OVE-190 Immutable Matching Release Parity And Rollback
+
+Goal: prove that production API and worker run one exact tested `main` revision
+from one immutable image digest, expose the complete six-handler capability
+contract, fail closed on schema/dependency/release drift, execute every handler
+to a safe terminal state, and survive an immediately-prior-digest rollback plus
+forward activation without relying on a mutable `latest` image.
+
+Current record status: repository contract prepared; live SHA/digest/run/canary
+and rollback evidence is pending. Do not treat the placeholders below as a
+successful deployment.
+
+### Required release contract
+
+- `.github/workflows/matching-image.yml` accepts an exact lowercase full SHA
+  contained in `origin/main`. It installs `uv==0.11.24`, compiles every Python
+  module, runs `uv run --frozen ruff check .`, and runs the full
+  `uv run --frozen pytest -q` suite before publishing.
+- Each run publishes one private immutable image under a unique
+  `sha-<full-sha>-run-<run-id>-<attempt>` tag and records its `sha256:` registry
+  digest. `latest` is forbidden.
+- The sealed 90-day Actions artifact contains the exact compressed Docker
+  archive, its SHA-256 checksum, `release.json`, and
+  `matching-capabilities.json`. The release script rechecks checksum, image id,
+  OCI revision/build/schema/runtime labels, full SHA, registry digest, unique
+  run tag, and exact handlers before installation.
+- API and worker run the same installed image id. Runtime schema is
+  `ove190.matchingRuntime.v1`, release schema is
+  `ove190.matchingRelease.v1`, runtime contract is `ove190-v1`, schema
+  compatibility is `ove190.matching-schema.v1`, and queue is `matching`.
+- The complete supported-handler list is exactly:
+  `catalog_alias_suggestions_refresh`,
+  `catalog_fuzzy_duplicate_qa_refresh`,
+  `catalog_match_suggestions_refresh`, `catalog_typeahead_reindex`,
+  `journal_entry_index`, and `journal_entry_unindex`.
+
+### Liveness, capabilities, readiness, and heartbeat
+
+- `GET https://matching.over.garden/health` is liveness only. Its HTTP `200`
+  cannot close OVE-190 by itself.
+- `GET https://matching.over.garden/capabilities` returns immutable SHA,
+  digest, build time, schema class, queue, and the exact six handlers. Invalid
+  or missing release metadata returns bounded `unavailable` with HTTP `503`.
+- `GET https://matching.over.garden/ready` returns HTTP `200` only when API,
+  Postgres, required queue/heartbeat schema, Meilisearch, and a fresh
+  same-SHA/same-digest/same-capability worker heartbeat all pass. Any mismatch
+  returns HTTP `503` with `status=degraded`.
+- `matching_worker_heartbeats` is an additive, idempotent table with one
+  `matching` row containing only release SHA, image digest, schema class,
+  sorted handler names, and timestamps. A heartbeat older than 30 seconds is
+  stale. Host/process/error/payload/user/connection/location fields are
+  forbidden.
+- Allowed runtime states are bounded: dependency
+  `available`/`unavailable`; queue `schema_mismatch`; worker
+  `missing`/`stale`/`release_mismatch`/`capability_mismatch`; depth
+  `empty`/`low`/`medium`/`high`; lag
+  `none`/`fresh`/`delayed`/`stale`. Raw counts and exception text are not smoke
+  evidence.
+
+### Production Linux activation sequence
+
+This surface remains `production-linux-required`: Docker Compose on the
+DigitalOcean Linux droplet is the OVE-76 production exception. It does not
+change the Apple Container-first supported-Mac local policy. The binding
+install/deploy/redaction runbook is `infra/production-worker/README.md`.
+
+Build two workflow-run artifacts from the same exact final `main` SHA. Their
+unique run labels produce two distinct immutable digests, allowing a real
+rollback while keeping the full OVE-190 readiness contract on both sides.
+
+```bash
+sudo /opt/overgarden/matching-release install /path/to/release-a
+sudo /opt/overgarden/matching-release install /path/to/release-b
+sudo /opt/overgarden/matching-release migrate <release-a-key>
+sudo /opt/overgarden/matching-release deploy <release-a-key>
+sudo /opt/overgarden/matching-release deploy <release-b-key>
+sudo /opt/overgarden/matching-release rollback
+sudo /opt/overgarden/matching-release forward
+sudo /opt/overgarden/matching-release status
+```
+
+`migrate` applies only the committed additive heartbeat migration; never replay
+the full bootstrap SQL against production. Every activation runs candidate
+Postgres/schema/queue/Meilisearch preflight before replacement and verifies
+both services plus live capabilities/readiness afterward. `rollback` accepts no
+target except the immediately prior digest; `forward` accepts no target except
+the release saved by that rollback. Failed activation must restore the prior
+active release.
+
+### External release proof and approved canary
+
+Run the exact-identity public smoke after each activation that is recorded as
+proof:
+
+```bash
+cd apps/web
+pnpm smoke:matching-runtime-capabilities -- \
+  --base-url https://matching.over.garden \
+  --expected-commit <40-character-main-sha> \
+  --expected-digest sha256:<64-hex-digest>
+```
+
+The all-handler canary performs bounded production mutations on existing
+eligible rows, so it must be explicitly approved for that one execution. It
+refuses to run without `OVERGARDEN_MATCHING_CANARY_APPROVED=true`:
+
+```bash
+docker compose \
+  --project-name overgarden \
+  --env-file /opt/overgarden/release-state/active.env \
+  --file /opt/overgarden/docker-compose.release.yml \
+  exec -T \
+  -e OVERGARDEN_MATCHING_CANARY_APPROVED=true \
+  matching-worker python -m app.canary
+```
+
+The canary must report all six handlers `done`, prove the public-safe journal
+document after index, prove its absence after unindex, restore that same derived
+search state, and keep catalog effects derived/advisory only. It may not create
+or change user content or apply a canonical catalog decision. If no eligible
+privacy-safe source exists, the canary fails closed; do not weaken its query or
+seed production solely to make the smoke pass.
+
+### OVE-190 live evidence template (redacted)
+
+```text
+verified_at_utc: <YYYY-MM-DDTHH:MM:SSZ>
+main_commit_sha: <40-char-sha>
+main_ci_run: <public-run-id-or-url>
+release_a_workflow_run: <public-run-id-or-url>
+release_a_digest: sha256:<64-hex>
+release_b_workflow_run: <public-run-id-or-url>
+release_b_digest: sha256:<64-hex>
+release_contract: exact-sha + distinct-digests + no-latest-pass | fail | not-run
+migration_preflight: pass | fail | not-run
+deploy_a: ready | fail | not-run
+deploy_b: ready | fail | not-run
+capabilities: exact-six-pass | fail | not-run
+dependencies: api=<class>, postgres=<class>, jobQueue=<class>, meilisearch=<class>, worker=<class>
+queue_buckets: depth=<class>, lag=<class>
+handler_canary: six-done + public-safe-index + unindex + restore | fail | not-run
+rollback_b_to_a: ready + exact-release-a-identity | fail | not-run
+forward_a_to_b: ready + exact-release-b-identity | fail | not-run
+active_digest_after_forward: sha256:<64-hex>
+result: pass | blocker | not-run
+redaction: pass | fail
+```
+
+Allowed evidence is limited to public commit SHA, immutable image digests,
+public workflow/CI ids, safe schema/runtime classes, six public handler names,
+bounded dependency/queue states, and pass/fail outcomes. Never record env-file
+contents, DSNs, provider credentials, API keys, job payloads, row or user ids,
+journal/catalog text, raw errors, precise location, IPs, user agents, or
+private host data.
+
+### OVE-190 Done gate
+
+Do not close OVE-190 if the production image is local-build-only or mutable; if
+API and worker SHA/digest equality is unproven; if `/health` is the only runtime
+proof; if any of the six handlers is missing or unproven; if schema/dependency
+readiness does not fail closed; if release A/B are not distinct immutable
+digests from the exact final main SHA; if rollback/forward was not exercised;
+if the final forward release is not ready and identity-verified; if exact-main
+CI is not green; or if evidence crosses the redaction boundary.
 
 ## OVE-143 Canonical Launch Smoke
 
@@ -348,7 +513,14 @@ Do not remove or rewrite these production Docker Compose instructions for Apple 
 
 - a `processing` row is reclaimed only after the visibility timeout (and a freshly locked row is not), so a restarted worker recovers in-flight jobs;
 - after a simulated restart/crash, `journal_entry_index` and `journal_entry_unindex` still reach `done`;
-- the indexed document keeps the public-safe contract enforced by `contracts/search/public-journal-entry-search-document.json` and written by `services/matching/app/search.py`: required keys `body`, `createdAt`, `entryDate`, `id`, `kind`, `locationVisibility`, `noindex`, `publicPath`, `publicSlug`, `title`, with optional `coarseRegionCode` only for region-visible entries, and no owner/user IDs, media keys, precise location, raw coarse-location columns, request metadata, IPs, user agents, referrers, invite data, or private journal state;
+- the indexed document keeps the current public-safe contract enforced by
+  `contracts/search/public-journal-entry-search-document.json` and written by
+  `services/matching/app/search.py`: required keys `body`, `createdAt`,
+  `entryDate`, `entryScope`, `id`, `kind`, `locationVisibility`, `noindex`,
+  `publicPath`, `publicSlug`, `title`, with optional `coarseRegionCode` only for
+  region-visible entries, and no owner/user IDs, media keys, precise location,
+  raw coarse-location columns, request metadata, IPs, user agents, referrers,
+  invite data, or private journal state;
 - at-least-once re-delivery is idempotent (no duplicate document, identical safe shape);
 - a transient Meilisearch outage marks the job `failed` with a future retry and a later run recovers it to `done`.
 
@@ -771,6 +943,7 @@ Python worker compile gate plus the worker recovery proof:
 
 ```bash
 cd services/matching
-uv run python -m py_compile app/__init__.py app/main.py app/search.py app/worker.py
+find app tests -type f -name '*.py' -print0 | sort -z | xargs -0 uv run --frozen python -m py_compile
+uv run --frozen ruff check .
 uv run --frozen pytest
 ```

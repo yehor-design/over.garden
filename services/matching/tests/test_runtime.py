@@ -1,0 +1,330 @@
+from __future__ import annotations
+
+import json
+from typing import Any
+
+import pytest
+
+from app import main as api
+from app import runtime
+from app.job_handlers import SUPPORTED_JOB_KINDS
+
+COMMIT_SHA = "a" * 40
+IMAGE_DIGEST = f"sha256:{'b' * 64}"
+BUILD_TIMESTAMP = "2026-07-18T12:34:56Z"
+
+
+def release() -> runtime.RuntimeRelease:
+    return runtime.RuntimeRelease(
+        commit_sha=COMMIT_SHA,
+        image_digest=IMAGE_DIGEST,
+        build_timestamp=BUILD_TIMESTAMP,
+        schema_compatibility_class=runtime.SCHEMA_COMPATIBILITY_CLASS,
+        queue_name=runtime.DEFAULT_QUEUE_NAME,
+    )
+
+
+def set_release_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("OVERGARDEN_MATCHING_COMMIT_SHA", COMMIT_SHA)
+    monkeypatch.setenv("OVERGARDEN_MATCHING_IMAGE_DIGEST", IMAGE_DIGEST)
+    monkeypatch.setenv(
+        "OVERGARDEN_MATCHING_BUILD_TIMESTAMP", BUILD_TIMESTAMP
+    )
+    monkeypatch.setenv(
+        "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY",
+        runtime.SCHEMA_COMPATIBILITY_CLASS,
+    )
+    monkeypatch.setenv("QUEUE_NAME", runtime.DEFAULT_QUEUE_NAME)
+
+
+def ready_postgres_state(**overrides: Any) -> dict[str, object]:
+    state: dict[str, object] = {
+        "postgresStatus": "available",
+        "jobQueueStatus": "available",
+        "depthClass": "low",
+        "lagClass": "fresh",
+        "heartbeat": {
+            "release_commit_sha": COMMIT_SHA,
+            "image_digest": IMAGE_DIGEST,
+            "schema_compatibility_class": runtime.SCHEMA_COMPATIBILITY_CLASS,
+            "supported_handlers": list(SUPPORTED_JOB_KINDS),
+            "is_fresh": True,
+        },
+    }
+    state.update(overrides)
+    return state
+
+
+def response_json(response: Any) -> dict[str, object]:
+    return json.loads(response.body.decode("utf-8"))
+
+
+def walk_keys(value: object) -> set[str]:
+    if isinstance(value, dict):
+        return {
+            str(key)
+            for key in value
+        } | set().union(*(walk_keys(child) for child in value.values()))
+    if isinstance(value, list):
+        return set().union(*(walk_keys(child) for child in value))
+    return set()
+
+
+def test_release_environment_is_fail_closed_and_never_echoes_rejected_value(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    set_release_environment(monkeypatch)
+    monkeypatch.setenv("OVERGARDEN_MATCHING_COMMIT_SHA", "private-value")
+
+    with pytest.raises(runtime.RuntimeConfigurationError) as error:
+        runtime.RuntimeRelease.from_environment()
+
+    assert "private-value" not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("OVERGARDEN_MATCHING_COMMIT_SHA", "A" * 40),
+        ("OVERGARDEN_MATCHING_IMAGE_DIGEST", f"sha256:{'B' * 64}"),
+        ("OVERGARDEN_MATCHING_BUILD_TIMESTAMP", "not-a-timestamp"),
+        ("OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY", "unknown-schema"),
+        ("QUEUE_NAME", "another-queue"),
+    ],
+)
+def test_release_environment_rejects_noncanonical_identity(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: str
+) -> None:
+    set_release_environment(monkeypatch)
+    monkeypatch.setenv(name, value)
+
+    with pytest.raises(runtime.RuntimeConfigurationError):
+        runtime.RuntimeRelease.from_environment()
+
+
+def test_capabilities_are_exact_sorted_and_redacted() -> None:
+    manifest = runtime.capabilities_manifest(release())
+
+    assert manifest == {
+        "schemaVersion": "ove190.matchingRuntime.v1",
+        "service": "overgarden-matching",
+        "status": "available",
+        "release": {
+            "commitSha": COMMIT_SHA,
+            "imageDigest": IMAGE_DIGEST,
+            "buildTimestamp": BUILD_TIMESTAMP,
+            "schemaCompatibilityClass": "ove190.matching-schema.v1",
+        },
+        "queue": {
+            "name": "matching",
+            "supportedHandlers": [
+                "catalog_alias_suggestions_refresh",
+                "catalog_fuzzy_duplicate_qa_refresh",
+                "catalog_match_suggestions_refresh",
+                "catalog_typeahead_reindex",
+                "journal_entry_index",
+                "journal_entry_unindex",
+            ],
+        },
+    }
+    assert walk_keys(manifest).isdisjoint(
+        {
+            "databaseUrl",
+            "directUrl",
+            "email",
+            "error",
+            "exception",
+            "host",
+            "payload",
+            "rowId",
+            "secret",
+            "token",
+            "userId",
+        }
+    )
+
+
+def test_readiness_distinguishes_each_dependency_without_raw_details(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        runtime, "_read_postgres_state", lambda _release: ready_postgres_state()
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, is_ready = runtime.readiness_manifest(release())
+
+    assert is_ready is True
+    assert manifest["status"] == "ready"
+    assert manifest["dependencies"] == {
+        "api": {"status": "available"},
+        "postgres": {"status": "available"},
+        "jobQueue": {
+            "status": "available",
+            "depthClass": "low",
+            "lagClass": "fresh",
+        },
+        "meilisearch": {"status": "available"},
+        "worker": {"status": "available"},
+    }
+
+
+@pytest.mark.parametrize(
+    ("state_override", "expected_worker_status"),
+    [
+        ({"heartbeat": None}, "missing"),
+        (
+            {
+                "heartbeat": {
+                    **ready_postgres_state()["heartbeat"],
+                    "is_fresh": False,
+                }
+            },
+            "stale",
+        ),
+        (
+            {
+                "heartbeat": {
+                    **ready_postgres_state()["heartbeat"],
+                    "image_digest": f"sha256:{'c' * 64}",
+                }
+            },
+            "release_mismatch",
+        ),
+        (
+            {
+                "heartbeat": {
+                    **ready_postgres_state()["heartbeat"],
+                    "supported_handlers": ["journal_entry_index"],
+                }
+            },
+            "capability_mismatch",
+        ),
+    ],
+)
+def test_readiness_fails_closed_for_worker_lease_classes(
+    monkeypatch: pytest.MonkeyPatch,
+    state_override: dict[str, object],
+    expected_worker_status: str,
+) -> None:
+    monkeypatch.setattr(
+        runtime,
+        "_read_postgres_state",
+        lambda _release: ready_postgres_state(**state_override),
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, is_ready = runtime.readiness_manifest(release())
+
+    assert is_ready is False
+    assert manifest["status"] == "degraded"
+    assert manifest["dependencies"]["worker"] == {
+        "status": expected_worker_status
+    }
+
+
+def test_preflight_requires_schema_but_not_an_existing_worker_heartbeat(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        runtime,
+        "_read_postgres_state",
+        lambda _release: ready_postgres_state(heartbeat=None),
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    manifest, is_ready = runtime.preflight_manifest(release())
+
+    assert is_ready is True
+    assert "worker" not in manifest["dependencies"]
+
+
+@pytest.mark.parametrize(
+    ("depth", "expected"),
+    [(-1, "empty"), (0, "empty"), (1, "low"), (10, "low"), (11, "medium"), (101, "high")],
+)
+def test_queue_depth_is_bounded(depth: int, expected: str) -> None:
+    assert runtime._queue_depth_class(depth) == expected
+
+
+@pytest.mark.parametrize(
+    ("lag", "expected"),
+    [
+        (None, "none"),
+        (0, "fresh"),
+        (60, "fresh"),
+        (61, "delayed"),
+        (300, "delayed"),
+        (301, "stale"),
+    ],
+)
+def test_queue_lag_is_bounded(lag: float | None, expected: str) -> None:
+    assert runtime._queue_lag_class(lag) == expected
+
+
+def test_worker_heartbeat_writes_only_release_capabilities() -> None:
+    calls: list[tuple[str, tuple[object, ...]]] = []
+
+    class FakeConnection:
+        def execute(self, sql: str, params: tuple[object, ...]) -> None:
+            calls.append((sql, params))
+
+    runtime.record_worker_heartbeat(FakeConnection(), release())  # type: ignore[arg-type]
+
+    assert len(calls) == 1
+    sql, params = calls[0]
+    assert "matching_worker_heartbeats" in sql
+    assert params == (
+        "matching",
+        COMMIT_SHA,
+        IMAGE_DIGEST,
+        "ove190.matching-schema.v1",
+        list(SUPPORTED_JOB_KINDS),
+    )
+    assert "hostname" not in sql.lower()
+    assert "payload" not in sql.lower()
+
+
+def test_http_keeps_liveness_separate_from_fail_closed_readiness(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    set_release_environment(monkeypatch)
+    monkeypatch.setattr(
+        runtime,
+        "_read_postgres_state",
+        lambda _release: ready_postgres_state(heartbeat=None),
+    )
+    monkeypatch.setattr(runtime, "_read_meilisearch_status", lambda: "available")
+
+    assert api.health()["status"] == "available"
+    capability_response = api.capabilities()
+    readiness_response = api.ready()
+
+    assert capability_response.status_code == 200
+    assert response_json(capability_response)["release"]["commitSha"] == COMMIT_SHA
+    assert readiness_response.status_code == 503
+    assert response_json(readiness_response)["dependencies"]["worker"] == {
+        "status": "missing"
+    }
+
+
+def test_http_and_cli_fail_closed_without_release_identity(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    for name in (
+        "OVERGARDEN_MATCHING_COMMIT_SHA",
+        "OVERGARDEN_MATCHING_IMAGE_DIGEST",
+        "OVERGARDEN_MATCHING_BUILD_TIMESTAMP",
+        "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    capability_response = api.capabilities()
+    readiness_response = api.ready()
+    exit_code = runtime.main(["capabilities"])
+
+    assert capability_response.status_code == 503
+    assert readiness_response.status_code == 503
+    assert response_json(capability_response) == runtime.unavailable_manifest()
+    assert exit_code == 1
+    assert json.loads(capsys.readouterr().out) == runtime.unavailable_manifest()

@@ -37,6 +37,7 @@ from app.search import (
     reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
+from app.runtime import RuntimeRelease, record_worker_heartbeat
 
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get(
@@ -48,6 +49,7 @@ VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
     os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
 )
+WORKER_HEARTBEAT_INTERVAL_SECONDS = 10.0
 
 CLAIM_JOB_SQL = f"""
 select id, payload
@@ -255,8 +257,18 @@ def _mark_failed(
 
 def run() -> None:
     dsn = os.environ["DIRECT_URL"]
+    release = RuntimeRelease.from_environment()
     with psycopg.connect(dsn, autocommit=True, row_factory=dict_row) as conn:
+        last_heartbeat_at = 0.0
         while True:
+            monotonic_now = time.monotonic()
+            if (
+                last_heartbeat_at == 0.0
+                or monotonic_now - last_heartbeat_at
+                >= WORKER_HEARTBEAT_INTERVAL_SECONDS
+            ):
+                record_worker_heartbeat(conn, release)
+                last_heartbeat_at = monotonic_now
             job = _claim(conn)
             if job is None:
                 time.sleep(POLL_INTERVAL_SECONDS)

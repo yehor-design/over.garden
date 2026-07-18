@@ -562,6 +562,16 @@ export interface LineageQuestions {
   updated_at: Generated<Timestamp>;
 }
 
+export interface MatchingWorkerHeartbeats {
+  image_digest: string;
+  queue_name: string;
+  release_commit_sha: string;
+  schema_compatibility_class: string;
+  seen_at: Generated<Timestamp>;
+  supported_handlers: string[];
+  updated_at: Generated<Timestamp>;
+}
+
 export interface MediaAssets {
   alt_text: string | null;
   caption: string | null;
@@ -789,6 +799,7 @@ export interface DB {
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;
   lineage_provenance_edges: LineageProvenanceEdges;
   lineage_questions: LineageQuestions;
+  matching_worker_heartbeats: MatchingWorkerHeartbeats;
   media_assets: MediaAssets;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;

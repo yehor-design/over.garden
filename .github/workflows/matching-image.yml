@@ -1,0 +1,270 @@
+name: Matching image release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: "Exact 40-character commit on main to release"
+        required: true
+        type: string
+
+concurrency:
+  group: matching-image-${{ inputs.source_sha || github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    name: Test, publish, and seal matching image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source with main history
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.source_sha || github.sha }}
+
+      - name: Validate exact source revision and release contract
+        id: release
+        env:
+          REQUESTED_SHA: ${{ inputs.source_sha || github.sha }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          RELEASE_RUN: ${{ github.run_id }}.${{ github.run_attempt }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "source_sha must be an exact lowercase 40-character commit." >&2
+            exit 1
+          fi
+
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$REQUESTED_SHA" ]]; then
+            echo "Checked-out revision does not match source_sha." >&2
+            exit 1
+          fi
+
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$REQUESTED_SHA" origin/main; then
+            echo "source_sha must be contained in origin/main." >&2
+            exit 1
+          fi
+
+          image_owner="${REPOSITORY_OWNER,,}"
+          build_timestamp="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          image_repository="ghcr.io/${image_owner}/overgarden-matching"
+
+          {
+            echo "source_sha=$REQUESTED_SHA"
+            echo "build_timestamp=$build_timestamp"
+            echo "image_repository=$image_repository"
+            echo "image_tag=sha-$REQUESTED_SHA-run-${RELEASE_RUN//./-}"
+            echo "release_run=$RELEASE_RUN"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install frozen build dependencies
+        working-directory: services/matching
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential jq pkg-config libicu-dev python3-dev shellcheck zstd
+          python -m pip install uv==0.11.24
+          uv sync --frozen
+
+      - name: Compile every Python module
+        working-directory: services/matching
+        run: find app tests -type f -name '*.py' -print0 | sort -z | xargs -0 uv run --frozen python -m py_compile
+
+      - name: Lint frozen matching source
+        working-directory: services/matching
+        run: uv run --frozen ruff check .
+
+      - name: Test frozen matching source
+        working-directory: services/matching
+        run: uv run --frozen pytest -q
+
+      - name: Validate production release controls
+        env:
+          MATCHING_IMAGE_REF: overgarden-matching-release:1111111111111111111111111111111111111111-0000000000000000
+          OVERGARDEN_MATCHING_COMMIT_SHA: 1111111111111111111111111111111111111111
+          OVERGARDEN_MATCHING_BUILD_TIMESTAMP: 2026-07-18T12:00:00Z
+          OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY: ove190.matching-schema.v1
+          OVERGARDEN_MATCHING_IMAGE_DIGEST: sha256:0000000000000000000000000000000000000000000000000000000000000000
+          QUEUE_NAME: matching
+        run: |
+          set -euo pipefail
+          shellcheck infra/production-worker/matching-release
+          bash -n infra/production-worker/matching-release
+          test -x infra/production-worker/matching-release
+
+          if grep -R --line-number --fixed-strings ':latest' \
+            infra/production-worker \
+            services/matching/Dockerfile \
+            || grep -E '^[[:space:]]+tags:.*:latest' .github/workflows/matching-image.yml; then
+            echo "Mutable latest image references are forbidden in the matching release path." >&2
+            exit 1
+          fi
+
+          validation_root="$(mktemp -d)"
+          trap 'rm -rf -- "$validation_root"' EXIT
+          touch "$validation_root/worker.env"
+          OVERGARDEN_PRODUCTION_ROOT="$validation_root" \
+            docker compose \
+              --file infra/production-worker/docker-compose.release.yml \
+              config --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Authenticate to private GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish exact immutable image
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: services/matching
+          file: services/matching/Dockerfile
+          push: true
+          tags: ${{ steps.release.outputs.image_repository }}:${{ steps.release.outputs.image_tag }}
+          build-args: |
+            OVERGARDEN_MATCHING_COMMIT_SHA=${{ steps.release.outputs.source_sha }}
+            OVERGARDEN_MATCHING_BUILD_TIMESTAMP=${{ steps.release.outputs.build_timestamp }}
+            OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY=ove190.matching-schema.v1
+          labels: |
+            org.opencontainers.image.revision=${{ steps.release.outputs.source_sha }}
+            org.opencontainers.image.created=${{ steps.release.outputs.build_timestamp }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            garden.over.matching.schema-compatibility=ove190.matching-schema.v1
+            garden.over.matching.runtime-contract=ove190-v1
+            garden.over.matching.release-run=${{ steps.release.outputs.release_run }}
+          cache-from: type=gha,scope=matching-image
+          cache-to: type=gha,mode=max,scope=matching-image
+
+      - name: Verify digest, labels, and strict capability manifest
+        id: seal
+        env:
+          IMAGE_REPOSITORY: ${{ steps.release.outputs.image_repository }}
+          IMAGE_TAG: ${{ steps.release.outputs.image_tag }}
+          SOURCE_SHA: ${{ steps.release.outputs.source_sha }}
+          BUILD_TIMESTAMP: ${{ steps.release.outputs.build_timestamp }}
+          RELEASE_RUN: ${{ steps.release.outputs.release_run }}
+          REGISTRY_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$REGISTRY_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "Build did not return an immutable sha256 registry digest." >&2
+            exit 1
+          fi
+
+          digest_ref="${IMAGE_REPOSITORY}@${REGISTRY_DIGEST}"
+          tagged_ref="${IMAGE_REPOSITORY}:${IMAGE_TAG}"
+          docker pull "$digest_ref"
+          docker tag "$digest_ref" "$tagged_ref"
+
+          actual_revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$digest_ref")"
+          actual_created="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.created" }}' "$digest_ref")"
+          actual_schema="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.schema-compatibility" }}' "$digest_ref")"
+          actual_contract="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.runtime-contract" }}' "$digest_ref")"
+          actual_release_run="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.release-run" }}' "$digest_ref")"
+          local_image_id="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
+
+          [[ "$actual_revision" == "$SOURCE_SHA" ]]
+          [[ "$actual_created" == "$BUILD_TIMESTAMP" ]]
+          [[ "$actual_schema" == "ove190.matching-schema.v1" ]]
+          [[ "$actual_contract" == "ove190-v1" ]]
+          [[ "$actual_release_run" == "$RELEASE_RUN" ]]
+          [[ "$local_image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          mkdir -p matching-release
+          capability_file="matching-capabilities.json"
+
+          docker run --rm \
+            -e OVERGARDEN_MATCHING_ENVIRONMENT=production \
+            -e OVERGARDEN_MATCHING_IMAGE_DIGEST="$REGISTRY_DIGEST" \
+            -e QUEUE_NAME=matching \
+            "$digest_ref" \
+            python -m app.runtime capabilities > "matching-release/$capability_file"
+
+          jq -e \
+            --arg sha "$SOURCE_SHA" \
+            --arg digest "$REGISTRY_DIGEST" \
+            --arg schema "ove190.matching-schema.v1" \
+            '.release.commitSha == $sha
+              and .release.imageDigest == $digest
+              and .release.schemaCompatibilityClass == $schema
+              and .queue.name == "matching"
+              and .queue.supportedHandlers == [
+                "catalog_alias_suggestions_refresh",
+                "catalog_fuzzy_duplicate_qa_refresh",
+                "catalog_match_suggestions_refresh",
+                "catalog_typeahead_reindex",
+                "journal_entry_index",
+                "journal_entry_unindex"
+              ]' \
+            "matching-release/$capability_file" >/dev/null
+
+          archive_file="overgarden-matching-${SOURCE_SHA}-${REGISTRY_DIGEST#sha256:}.docker.tar.zst"
+          docker save "$tagged_ref" | zstd -T0 -19 -o "matching-release/$archive_file"
+          zstd --test "matching-release/$archive_file"
+          archive_sha256="$(sha256sum "matching-release/$archive_file" | awk '{print $1}')"
+
+          jq -n \
+            --arg schema "ove190.matchingRelease.v1" \
+            --arg sourceCommit "$SOURCE_SHA" \
+            --arg buildTimestamp "$BUILD_TIMESTAMP" \
+            --arg schemaCompatibility "ove190.matching-schema.v1" \
+            --arg runtimeContract "ove190-v1" \
+            --arg releaseRun "$RELEASE_RUN" \
+            --arg imageRepository "$IMAGE_REPOSITORY" \
+            --arg imageTag "$IMAGE_TAG" \
+            --arg registryDigest "$REGISTRY_DIGEST" \
+            --arg localImageId "$local_image_id" \
+            --arg archiveFile "$archive_file" \
+            --arg archiveSha256 "$archive_sha256" \
+            --arg capabilitiesFile "$capability_file" \
+            '{
+              schema: $schema,
+              sourceCommit: $sourceCommit,
+              buildTimestamp: $buildTimestamp,
+              schemaCompatibility: $schemaCompatibility,
+              runtimeContract: $runtimeContract,
+              releaseRun: $releaseRun,
+              image: {
+                repository: $imageRepository,
+                tag: $imageTag,
+                registryDigest: $registryDigest,
+                localImageId: $localImageId
+              },
+              archive: {
+                file: $archiveFile,
+                sha256: $archiveSha256
+              },
+              capabilitiesFile: $capabilitiesFile
+            }' > matching-release/release.json
+
+          echo "artifact_name=matching-release-$SOURCE_SHA-run-${RELEASE_RUN//./-}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload sealed exact-digest release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.seal.outputs.artifact_name }}
+          path: matching-release/
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 0

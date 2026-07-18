@@ -4027,6 +4027,105 @@ create unique index if not exists job_queue_idempotency_key_uidx
 create index if not exists job_queue_claim_idx
   on job_queue (queue_name, status, available_at, created_at);
 
+-- Safe OVE-190 worker liveness/capability lease. This table deliberately stores
+-- no hostname, process id, user identifier, queue payload, connection detail,
+-- or raw operational error. The single queue-scoped row lets API readiness
+-- prove that the active worker runs the exact immutable release and all six
+-- supported handlers.
+create table if not exists matching_worker_heartbeats (
+  queue_name text primary key,
+  release_commit_sha text not null,
+  image_digest text not null,
+  schema_compatibility_class text not null,
+  supported_handlers text[] not null,
+  seen_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint matching_worker_heartbeats_commit_sha_check
+    check (release_commit_sha ~ '^[0-9a-f]{40}$'),
+  constraint matching_worker_heartbeats_image_digest_check
+    check (image_digest ~ '^sha256:[0-9a-f]{64}$'),
+  constraint matching_worker_heartbeats_schema_compatibility_check
+    check (schema_compatibility_class = 'ove190.matching-schema.v1'),
+  constraint matching_worker_heartbeats_queue_name_check
+    check (queue_name = 'matching'),
+  constraint matching_worker_heartbeats_supported_handlers_check
+    check (
+      supported_handlers = array[
+        'catalog_alias_suggestions_refresh',
+        'catalog_fuzzy_duplicate_qa_refresh',
+        'catalog_match_suggestions_refresh',
+        'catalog_typeahead_reindex',
+        'journal_entry_index',
+        'journal_entry_unindex'
+      ]::text[]
+    )
+);
+
+-- Existing idempotently bootstrapped databases may have first seen an earlier
+-- unnamed version of the checks. Add the stable names without dropping any
+-- protection so runtime preflight can prove the exact schema contract.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'matching_worker_heartbeats_commit_sha_check'
+      and conrelid = 'matching_worker_heartbeats'::regclass
+  ) then
+    alter table matching_worker_heartbeats
+      add constraint matching_worker_heartbeats_commit_sha_check
+      check (release_commit_sha ~ '^[0-9a-f]{40}$');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'matching_worker_heartbeats_image_digest_check'
+      and conrelid = 'matching_worker_heartbeats'::regclass
+  ) then
+    alter table matching_worker_heartbeats
+      add constraint matching_worker_heartbeats_image_digest_check
+      check (image_digest ~ '^sha256:[0-9a-f]{64}$');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'matching_worker_heartbeats_schema_compatibility_check'
+      and conrelid = 'matching_worker_heartbeats'::regclass
+  ) then
+    alter table matching_worker_heartbeats
+      add constraint matching_worker_heartbeats_schema_compatibility_check
+      check (schema_compatibility_class = 'ove190.matching-schema.v1');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'matching_worker_heartbeats_queue_name_check'
+      and conrelid = 'matching_worker_heartbeats'::regclass
+  ) then
+    alter table matching_worker_heartbeats
+      add constraint matching_worker_heartbeats_queue_name_check
+      check (queue_name = 'matching');
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'matching_worker_heartbeats_supported_handlers_check'
+      and conrelid = 'matching_worker_heartbeats'::regclass
+  ) then
+    alter table matching_worker_heartbeats
+      add constraint matching_worker_heartbeats_supported_handlers_check
+      check (
+        supported_handlers = array[
+          'catalog_alias_suggestions_refresh',
+          'catalog_fuzzy_duplicate_qa_refresh',
+          'catalog_match_suggestions_refresh',
+          'catalog_typeahead_reindex',
+          'journal_entry_index',
+          'journal_entry_unindex'
+        ]::text[]
+      );
+  end if;
+end $$;
+
 -- Closed-pilot write eligibility (OVE-42, OVE-52, OVE-54). One persistent grant per
 -- user that proves invited write access. It stores ONLY the user id, enum
 -- cohort, enum pilot segment, and timestamps: never the invite link, token,

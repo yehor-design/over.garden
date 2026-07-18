@@ -1,0 +1,686 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+readonly EXPECTED_RELEASE_SCHEMA="ove190.matchingRelease.v1"
+readonly EXPECTED_SCHEMA_COMPATIBILITY="ove190.matching-schema.v1"
+readonly EXPECTED_RUNTIME_CONTRACT="ove190-v1"
+readonly EXPECTED_QUEUE_NAME="matching"
+readonly PRODUCTION_ROOT="${OVERGARDEN_PRODUCTION_ROOT:-/opt/overgarden}"
+readonly RELEASES_ROOT="$PRODUCTION_ROOT/releases"
+readonly STATE_ROOT="$PRODUCTION_ROOT/release-state"
+readonly ACTIVE_ENV="$STATE_ROOT/active.env"
+readonly CURRENT_POINTER="$STATE_ROOT/current.json"
+readonly PREVIOUS_POINTER="$STATE_ROOT/previous.json"
+readonly FORWARD_POINTER="$STATE_ROOT/forward.json"
+readonly LOCK_FILE="$STATE_ROOT/matching-release.lock"
+readonly COMPOSE_FILE="${OVERGARDEN_RELEASE_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.release.yml}"
+readonly MIGRATION_FILE="${OVERGARDEN_RELEASE_MIGRATION_FILE:-$PRODUCTION_ROOT/0002_matching_worker_heartbeats.sql}"
+readonly LEGACY_COMPOSE_FILE="${OVERGARDEN_LEGACY_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.yml}"
+
+fail() {
+  printf 'matching release refused: %s\n' "$1" >&2
+  exit 1
+}
+
+info() {
+  printf 'matching release: %s\n' "$1"
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail "required command is unavailable: $1"
+}
+
+require_runtime() {
+  require_command docker
+  require_command cmp
+  require_command flock
+  require_command jq
+  require_command sha256sum
+  require_command zstd
+
+  docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is unavailable"
+  [[ -f "$COMPOSE_FILE" ]] || fail "committed production release Compose file is not installed"
+  [[ -f "$MIGRATION_FILE" ]] || fail "committed additive heartbeat migration is not installed"
+  [[ -f "$PRODUCTION_ROOT/worker.env" ]] || fail "production worker.env is missing"
+  docker network inspect overgarden_default >/dev/null 2>&1 \
+    || fail "existing overgarden_default production network is missing"
+}
+
+require_sha() {
+  [[ "$1" =~ ^[0-9a-f]{40}$ ]] || fail "release sourceCommit is not an exact lowercase SHA"
+}
+
+require_digest() {
+  [[ "$1" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "release registryDigest is not sha256"
+}
+
+require_timestamp() {
+  [[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] \
+    || fail "release buildTimestamp is not canonical UTC"
+}
+
+manifest_value() {
+  local manifest="$1"
+  local expression="$2"
+  jq -er "$expression | select(type == \"string\" and length > 0)" "$manifest" \
+    || fail "release manifest is missing a required string"
+}
+
+release_key_from_manifest() {
+  local manifest="$1"
+  local source_sha
+  local digest
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+  printf '%s-%s\n' "$source_sha" "${digest#sha256:}" | cut -c1-57
+}
+
+validate_manifest_shape() {
+  local manifest="$1"
+  [[ -f "$manifest" ]] || fail "release.json is missing"
+
+  jq -e \
+    --arg schema "$EXPECTED_RELEASE_SCHEMA" \
+    --arg compatibility "$EXPECTED_SCHEMA_COMPATIBILITY" \
+    --arg contract "$EXPECTED_RUNTIME_CONTRACT" \
+    '.schema == $schema
+      and .schemaCompatibility == $compatibility
+      and .runtimeContract == $contract
+      and (.releaseRun | type == "string" and length > 0)
+      and (.image.repository | type == "string" and startswith("ghcr.io/"))
+      and (.image.tag | type == "string" and length > 0)
+      and (.image.localImageId | type == "string" and length > 0)
+      and (.archive.file | type == "string" and length > 0)
+      and (.archive.sha256 | type == "string" and length > 0)
+      and (.capabilitiesFile | type == "string" and length > 0)' \
+    "$manifest" >/dev/null || fail "release manifest contract does not match OVE-190"
+
+  local source_sha
+  local build_timestamp
+  local digest
+  local local_image_id
+  local image_tag
+  local image_repository
+  local release_run
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  build_timestamp="$(manifest_value "$manifest" '.buildTimestamp')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+  local_image_id="$(manifest_value "$manifest" '.image.localImageId')"
+  image_tag="$(manifest_value "$manifest" '.image.tag')"
+  image_repository="$(manifest_value "$manifest" '.image.repository')"
+  release_run="$(manifest_value "$manifest" '.releaseRun')"
+
+  require_sha "$source_sha"
+  require_timestamp "$build_timestamp"
+  require_digest "$digest"
+  require_digest "$local_image_id"
+  [[ "$release_run" =~ ^[0-9]+\.[0-9]+$ ]] || fail "releaseRun is invalid"
+  [[ "$image_repository" =~ ^ghcr\.io/[a-z0-9._-]+/[a-z0-9._/-]+$ ]] \
+    || fail "release image repository is invalid"
+  [[ "$image_tag" == "sha-$source_sha-run-${release_run//./-}" ]] \
+    || fail "release image tag is not a unique full-SHA run tag"
+}
+
+validate_capabilities_artifact() {
+  local release_dir="$1"
+  local manifest="$release_dir/release.json"
+  local capability_file
+  local source_sha
+  local digest
+  capability_file="$(manifest_value "$manifest" '.capabilitiesFile')"
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+
+  [[ "$capability_file" == "matching-capabilities.json" ]] \
+    || fail "unexpected capabilities artifact name"
+  [[ -f "$release_dir/$capability_file" ]] || fail "capabilities artifact is missing"
+
+  jq -e \
+    --arg sha "$source_sha" \
+    --arg digest "$digest" \
+    --arg compatibility "$EXPECTED_SCHEMA_COMPATIBILITY" \
+    '.release.commitSha == $sha
+      and .release.imageDigest == $digest
+      and .release.schemaCompatibilityClass == $compatibility
+      and .queue.name == "matching"
+      and .queue.supportedHandlers == [
+        "catalog_alias_suggestions_refresh",
+        "catalog_fuzzy_duplicate_qa_refresh",
+        "catalog_match_suggestions_refresh",
+        "catalog_typeahead_reindex",
+        "journal_entry_index",
+        "journal_entry_unindex"
+      ]' "$release_dir/$capability_file" >/dev/null \
+    || fail "sealed capabilities do not contain the exact six-handler contract"
+}
+
+verify_loaded_image() {
+  local manifest="$1"
+  local source_ref="$2"
+  local source_sha
+  local build_timestamp
+  local digest
+  local expected_id
+  local actual_id
+  local actual_revision
+  local actual_created
+  local actual_compatibility
+  local actual_contract
+  local actual_release_run
+  local actual_source
+
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  build_timestamp="$(manifest_value "$manifest" '.buildTimestamp')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+  expected_id="$(manifest_value "$manifest" '.image.localImageId')"
+
+  actual_id="$(docker image inspect --format '{{.Id}}' "$source_ref" 2>/dev/null)" \
+    || fail "loaded archive does not contain its sealed image tag"
+  actual_revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$source_ref")"
+  actual_created="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.created" }}' "$source_ref")"
+  actual_compatibility="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.schema-compatibility" }}' "$source_ref")"
+  actual_contract="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.runtime-contract" }}' "$source_ref")"
+  actual_release_run="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.release-run" }}' "$source_ref")"
+  actual_source="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$source_ref")"
+
+  [[ "$actual_id" == "$expected_id" ]] || fail "loaded image ID differs from the sealed release"
+  [[ "$actual_revision" == "$source_sha" ]] || fail "loaded image revision label differs from sourceCommit"
+  [[ "$actual_created" == "$build_timestamp" ]] || fail "loaded image created label differs from buildTimestamp"
+  [[ "$actual_compatibility" == "$EXPECTED_SCHEMA_COMPATIBILITY" ]] \
+    || fail "loaded image schema compatibility label differs"
+  [[ "$actual_contract" == "$EXPECTED_RUNTIME_CONTRACT" ]] \
+    || fail "loaded image runtime contract label differs"
+  [[ "$actual_release_run" == "$(manifest_value "$manifest" '.releaseRun')" ]] \
+    || fail "loaded image release-run label differs"
+  [[ "$actual_source" == "https://github.com/yehor-design/over.garden" ]] \
+    || fail "loaded image source label differs"
+  require_digest "$digest"
+}
+
+install_release() {
+  local incoming_dir="$1"
+  local incoming_manifest="$incoming_dir/release.json"
+  validate_manifest_shape "$incoming_manifest"
+
+  local archive_file
+  local archive_sha256
+  local capabilities_file
+  archive_file="$(manifest_value "$incoming_manifest" '.archive.file')"
+  archive_sha256="$(manifest_value "$incoming_manifest" '.archive.sha256')"
+  capabilities_file="$(manifest_value "$incoming_manifest" '.capabilitiesFile')"
+
+  [[ "$archive_file" != */* && "$capabilities_file" != */* ]] \
+    || fail "release artifact filenames must be basenames"
+  [[ "$archive_sha256" =~ ^[0-9a-f]{64}$ ]] || fail "archive checksum is invalid"
+  [[ -f "$incoming_dir/$archive_file" ]] || fail "sealed image archive is missing"
+  [[ -f "$incoming_dir/$capabilities_file" ]] || fail "sealed capabilities artifact is missing"
+
+  local source_sha
+  local digest
+  source_sha="$(manifest_value "$incoming_manifest" '.sourceCommit')"
+  digest="$(manifest_value "$incoming_manifest" '.image.registryDigest')"
+  [[ "$archive_file" == "overgarden-matching-${source_sha}-${digest#sha256:}.docker.tar.zst" ]] \
+    || fail "image archive name does not match sourceCommit and registryDigest"
+
+  local actual_archive_sha256
+  actual_archive_sha256="$(sha256sum "$incoming_dir/$archive_file" | awk '{print $1}')"
+  [[ "$actual_archive_sha256" == "$archive_sha256" ]] \
+    || fail "image archive checksum differs from release.json"
+  zstd --test "$incoming_dir/$archive_file" >/dev/null \
+    || fail "image archive failed zstd integrity verification"
+
+  local release_key
+  local release_dir
+  release_key="$(release_key_from_manifest "$incoming_manifest")"
+  release_dir="$RELEASES_ROOT/$release_key"
+  [[ ! -e "$release_dir" ]] || fail "release is already installed; immutable release directories are never overwritten"
+
+  mkdir -p "$RELEASES_ROOT" "$STATE_ROOT"
+  local staging_dir
+  staging_dir="$(mktemp -d "$RELEASES_ROOT/.install-${release_key}.XXXXXX")"
+  trap 'rm -rf -- "$staging_dir"' EXIT
+
+  cp "$incoming_manifest" "$staging_dir/release.json"
+  cp "$incoming_dir/$capabilities_file" "$staging_dir/$capabilities_file"
+  cp "$incoming_dir/$archive_file" "$staging_dir/$archive_file"
+  chmod 0444 "$staging_dir/release.json" "$staging_dir/$capabilities_file" "$staging_dir/$archive_file"
+
+  zstd -dc "$staging_dir/$archive_file" | docker load >/dev/null
+
+  local image_repository
+  local image_tag
+  local source_ref
+  local digest_hex
+  local local_ref
+  local expected_id
+  image_repository="$(manifest_value "$incoming_manifest" '.image.repository')"
+  image_tag="$(manifest_value "$incoming_manifest" '.image.tag')"
+  source_ref="$image_repository:$image_tag"
+  source_sha="$(manifest_value "$incoming_manifest" '.sourceCommit')"
+  digest="$(manifest_value "$incoming_manifest" '.image.registryDigest')"
+  digest_hex="${digest#sha256:}"
+  local_ref="overgarden-matching-release:${source_sha}-${digest_hex:0:16}"
+  expected_id="$(manifest_value "$incoming_manifest" '.image.localImageId')"
+
+  verify_loaded_image "$incoming_manifest" "$source_ref"
+
+  if docker image inspect "$local_ref" >/dev/null 2>&1; then
+    local existing_id
+    existing_id="$(docker image inspect --format '{{.Id}}' "$local_ref")"
+    [[ "$existing_id" == "$expected_id" ]] \
+      || fail "sealed local image reference already points to another image"
+  else
+    docker tag "$source_ref" "$local_ref"
+  fi
+
+  jq --arg localRef "$local_ref" '. + {localImageRef: $localRef}' \
+    "$staging_dir/release.json" > "$staging_dir/release.with-local-ref.json"
+  mv "$staging_dir/release.with-local-ref.json" "$staging_dir/release.json"
+  chmod 0444 "$staging_dir/release.json"
+  validate_capabilities_artifact "$staging_dir"
+
+  mv "$staging_dir" "$release_dir"
+  trap - EXIT
+  info "installed sealed release $release_key"
+}
+
+write_candidate_env() {
+  local manifest="$1"
+  local output="$2"
+  local local_ref
+  local source_sha
+  local build_timestamp
+  local digest
+  local_ref="$(manifest_value "$manifest" '.localImageRef')"
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  build_timestamp="$(manifest_value "$manifest" '.buildTimestamp')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+
+  [[ "$local_ref" == overgarden-matching-release:"$source_sha"-* ]] \
+    || fail "installed local image reference does not match sourceCommit"
+
+  {
+    printf 'MATCHING_IMAGE_REF=%s\n' "$local_ref"
+    printf 'OVERGARDEN_MATCHING_COMMIT_SHA=%s\n' "$source_sha"
+    printf 'OVERGARDEN_MATCHING_BUILD_TIMESTAMP=%s\n' "$build_timestamp"
+    printf 'OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY=%s\n' "$EXPECTED_SCHEMA_COMPATIBILITY"
+    printf 'OVERGARDEN_MATCHING_IMAGE_DIGEST=%s\n' "$digest"
+    printf 'QUEUE_NAME=%s\n' "$EXPECTED_QUEUE_NAME"
+    printf 'OVERGARDEN_PRODUCTION_ROOT=%s\n' "$PRODUCTION_ROOT"
+  } > "$output"
+  chmod 0600 "$output"
+}
+
+compose() {
+  docker compose \
+    --project-name overgarden \
+    --env-file "$ACTIVE_ENV" \
+    --file "$COMPOSE_FILE" \
+    "$@"
+}
+
+preflight_candidate() {
+  local candidate_env="$1"
+  docker compose \
+    --project-name overgarden \
+    --env-file "$candidate_env" \
+    --file "$COMPOSE_FILE" \
+    run --rm --no-deps matching-api python -m app.runtime preflight >/dev/null 2>&1 \
+    || fail "candidate schema or dependency preflight failed"
+}
+
+apply_schema_migration() {
+  local target_manifest="$1"
+  local candidate_env
+  candidate_env="$(mktemp "$STATE_ROOT/.migration.XXXXXX")"
+  write_candidate_env "$target_manifest" "$candidate_env"
+
+  if ! docker compose \
+    --project-name overgarden \
+    --env-file "$candidate_env" \
+    --file "$COMPOSE_FILE" \
+    run --rm --no-deps -T matching-api \
+      python -c 'import os, sys, psycopg; connection = psycopg.connect(os.environ["DIRECT_URL"], autocommit=True); connection.execute(sys.stdin.read()); connection.close()' \
+      < "$MIGRATION_FILE" >/dev/null 2>&1; then
+    rm -f -- "$candidate_env"
+    fail "additive heartbeat migration failed"
+  fi
+
+  preflight_candidate "$candidate_env"
+  rm -f -- "$candidate_env"
+}
+
+verify_active_release() {
+  local manifest="$1"
+  local expected_id
+  expected_id="$(manifest_value "$manifest" '.image.localImageId')"
+
+  compose exec -T matching-api python -m app.runtime ready >/dev/null 2>&1 \
+    || return 1
+  compose exec -T matching-worker python -m app.runtime ready >/dev/null 2>&1 \
+    || return 1
+
+  local service
+  for service in matching-api matching-worker; do
+    local container_id
+    local actual_id
+    container_id="$(compose ps -q "$service")"
+    [[ -n "$container_id" ]] || return 1
+    actual_id="$(docker container inspect --format '{{.Image}}' "$container_id")"
+    [[ "$actual_id" == "$expected_id" ]] || return 1
+  done
+
+  local observed_capabilities
+  observed_capabilities="$(mktemp "$STATE_ROOT/.capabilities.XXXXXX")"
+  if ! compose exec -T matching-api python -m app.runtime capabilities \
+    > "$observed_capabilities" 2>/dev/null; then
+    rm -f -- "$observed_capabilities"
+    return 1
+  fi
+
+  local source_sha
+  local digest
+  source_sha="$(manifest_value "$manifest" '.sourceCommit')"
+  digest="$(manifest_value "$manifest" '.image.registryDigest')"
+  if ! jq -e \
+    --arg sha "$source_sha" \
+    --arg digest "$digest" \
+    --arg compatibility "$EXPECTED_SCHEMA_COMPATIBILITY" \
+    '.release.commitSha == $sha
+      and .release.imageDigest == $digest
+      and .release.schemaCompatibilityClass == $compatibility
+      and .queue.name == "matching"
+      and .queue.supportedHandlers == [
+        "catalog_alias_suggestions_refresh",
+        "catalog_fuzzy_duplicate_qa_refresh",
+        "catalog_match_suggestions_refresh",
+        "catalog_typeahead_reindex",
+        "journal_entry_index",
+        "journal_entry_unindex"
+      ]' "$observed_capabilities" >/dev/null; then
+    rm -f -- "$observed_capabilities"
+    return 1
+  fi
+  rm -f -- "$observed_capabilities"
+}
+
+wait_for_active_release() {
+  local manifest="$1"
+  local attempt
+  for ((attempt = 1; attempt <= 30; attempt += 1)); do
+    if verify_active_release "$manifest"; then
+      return 0
+    fi
+    sleep 4
+  done
+  return 1
+}
+
+legacy_compose() {
+  docker compose \
+    --project-name overgarden \
+    --file "$LEGACY_COMPOSE_FILE" \
+    "$@"
+}
+
+verify_legacy_runtime() {
+  local api_container_id
+  local worker_container_id
+  api_container_id="$(legacy_compose ps -q matching-api 2>/dev/null)"
+  worker_container_id="$(legacy_compose ps -q matching-worker 2>/dev/null)"
+  [[ -n "$api_container_id" && -n "$worker_container_id" ]] || return 1
+  [[ "$(docker container inspect --format '{{.State.Running}}' "$api_container_id" 2>/dev/null)" == "true" ]] \
+    || return 1
+  [[ "$(docker container inspect --format '{{.State.Running}}' "$worker_container_id" 2>/dev/null)" == "true" ]] \
+    || return 1
+  legacy_compose exec -T matching-api \
+    python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=5).read()' \
+    >/dev/null 2>&1
+}
+
+restore_legacy_runtime() {
+  [[ -f "$LEGACY_COMPOSE_FILE" ]] || return 1
+  legacy_compose up --detach --no-deps --force-recreate matching-api matching-worker \
+    >/dev/null 2>&1 || return 1
+  local attempt
+  for ((attempt = 1; attempt <= 30; attempt += 1)); do
+    if verify_legacy_runtime; then
+      return 0
+    fi
+    sleep 4
+  done
+  return 1
+}
+
+activate_manifest() {
+  local target_manifest="$1"
+  if [[ -f "$ACTIVE_ENV" && ! -f "$CURRENT_POINTER" ]]; then
+    fail "release state is inconsistent: active environment has no sealed current pointer"
+  fi
+  if [[ -f "$CURRENT_POINTER" && ! -f "$ACTIVE_ENV" ]]; then
+    fail "release state is inconsistent: sealed current pointer has no active environment"
+  fi
+  local candidate_env
+  candidate_env="$(mktemp "$STATE_ROOT/.candidate.XXXXXX")"
+  write_candidate_env "$target_manifest" "$candidate_env"
+  preflight_candidate "$candidate_env"
+
+  local prior_env=""
+  if [[ -f "$ACTIVE_ENV" ]]; then
+    prior_env="$(mktemp "$STATE_ROOT/.prior.XXXXXX")"
+    cp "$ACTIVE_ENV" "$prior_env"
+  elif [[ ! -f "$LEGACY_COMPOSE_FILE" ]]; then
+    fail "first sealed activation requires the existing production Compose file as an emergency restore target"
+  fi
+
+  mv "$candidate_env" "$ACTIVE_ENV"
+  chmod 0600 "$ACTIVE_ENV"
+
+  if compose up --detach --no-deps --force-recreate matching-api matching-worker >/dev/null 2>&1 \
+    && wait_for_active_release "$target_manifest"; then
+    [[ -z "$prior_env" ]] || rm -f -- "$prior_env"
+    return 0
+  fi
+
+  info "candidate activation failed; attempting prior sealed release restore"
+  if [[ -n "$prior_env" && -f "$prior_env" ]]; then
+    mv "$prior_env" "$ACTIVE_ENV"
+    if compose up --detach --no-deps --force-recreate matching-api matching-worker >/dev/null 2>&1 \
+      && [[ -f "$CURRENT_POINTER" ]] \
+      && wait_for_active_release "$CURRENT_POINTER"; then
+      info "prior sealed release restore passed readiness"
+      return 1
+    fi
+    fail "candidate activation failed and prior sealed release restore also failed readiness"
+  fi
+  if restore_legacy_runtime; then
+    rm -f -- "$ACTIVE_ENV"
+    info "pre-OVE-190 production runtime emergency restore passed bounded liveness"
+    fail "first sealed candidate activation failed; the pre-OVE-190 runtime was restored"
+  fi
+  fail "first sealed candidate activation and pre-OVE-190 emergency restore both failed"
+}
+
+installed_manifest() {
+  local release_key="$1"
+  [[ "$release_key" =~ ^[0-9a-f]{40}-[0-9a-f]{16}$ ]] \
+    || fail "release key must be <40-char-sha>-<16-char-digest-prefix>"
+  local manifest="$RELEASES_ROOT/$release_key/release.json"
+  [[ -f "$manifest" ]] || fail "requested release is not installed"
+  validate_manifest_shape "$manifest"
+  validate_capabilities_artifact "$RELEASES_ROOT/$release_key"
+  printf '%s\n' "$manifest"
+}
+
+validate_pointer() {
+  local pointer="$1"
+  [[ -f "$pointer" ]] || fail "release pointer is missing"
+  validate_manifest_shape "$pointer"
+  local release_key
+  local canonical_manifest
+  release_key="$(release_key_from_manifest "$pointer")"
+  canonical_manifest="$(installed_manifest "$release_key")"
+  cmp -s "$pointer" "$canonical_manifest" \
+    || fail "release pointer differs from its immutable installed manifest"
+}
+
+copy_pointer() {
+  local source="$1"
+  local target="$2"
+  local temp
+  temp="$(mktemp "$STATE_ROOT/.pointer.XXXXXX")"
+  cp "$source" "$temp"
+  chmod 0444 "$temp"
+  mv "$temp" "$target"
+}
+
+deploy_release() {
+  local release_key="$1"
+  local target_manifest
+  target_manifest="$(installed_manifest "$release_key")"
+
+  if [[ -f "$CURRENT_POINTER" ]]; then
+    validate_pointer "$CURRENT_POINTER"
+    local current_digest
+    local target_digest
+    current_digest="$(manifest_value "$CURRENT_POINTER" '.image.registryDigest')"
+    target_digest="$(manifest_value "$target_manifest" '.image.registryDigest')"
+    [[ "$current_digest" != "$target_digest" ]] \
+      || fail "target registry digest is already active"
+  fi
+
+  apply_schema_migration "$target_manifest"
+  activate_manifest "$target_manifest" || fail "candidate failed readiness; prior runtime was restored"
+
+  if [[ -f "$CURRENT_POINTER" ]]; then
+    copy_pointer "$CURRENT_POINTER" "$PREVIOUS_POINTER"
+  fi
+  copy_pointer "$target_manifest" "$CURRENT_POINTER"
+  rm -f -- "$FORWARD_POINTER"
+  info "deployed sealed release $release_key"
+}
+
+migrate_release() {
+  local release_key="$1"
+  local target_manifest
+  target_manifest="$(installed_manifest "$release_key")"
+  apply_schema_migration "$target_manifest"
+  info "additive heartbeat schema is compatible with release $release_key"
+}
+
+rollback_release() {
+  validate_pointer "$CURRENT_POINTER"
+  validate_pointer "$PREVIOUS_POINTER"
+
+  local current_digest
+  local previous_digest
+  current_digest="$(manifest_value "$CURRENT_POINTER" '.image.registryDigest')"
+  previous_digest="$(manifest_value "$PREVIOUS_POINTER" '.image.registryDigest')"
+  [[ "$current_digest" != "$previous_digest" ]] \
+    || fail "rollback target must have a different registry digest"
+
+  activate_manifest "$PREVIOUS_POINTER" || fail "rollback target failed readiness; current runtime was restored"
+  copy_pointer "$CURRENT_POINTER" "$FORWARD_POINTER"
+  copy_pointer "$PREVIOUS_POINTER" "$CURRENT_POINTER"
+  rm -f -- "$PREVIOUS_POINTER"
+  info "rollback completed to the immediately prior digest"
+}
+
+forward_release() {
+  validate_pointer "$CURRENT_POINTER"
+  validate_pointer "$FORWARD_POINTER"
+
+  local current_digest
+  local forward_digest
+  current_digest="$(manifest_value "$CURRENT_POINTER" '.image.registryDigest')"
+  forward_digest="$(manifest_value "$FORWARD_POINTER" '.image.registryDigest')"
+  [[ "$current_digest" != "$forward_digest" ]] \
+    || fail "forward target must have a different registry digest"
+
+  activate_manifest "$FORWARD_POINTER" || fail "forward target failed readiness; rollback runtime was restored"
+  copy_pointer "$CURRENT_POINTER" "$PREVIOUS_POINTER"
+  copy_pointer "$FORWARD_POINTER" "$CURRENT_POINTER"
+  rm -f -- "$FORWARD_POINTER"
+  info "forward activation completed"
+}
+
+status_release() {
+  if [[ ! -f "$CURRENT_POINTER" ]]; then
+    info "no sealed release is active"
+    return 0
+  fi
+  validate_pointer "$CURRENT_POINTER"
+
+  local source_sha
+  local digest
+  source_sha="$(manifest_value "$CURRENT_POINTER" '.sourceCommit')"
+  digest="$(manifest_value "$CURRENT_POINTER" '.image.registryDigest')"
+  if verify_active_release "$CURRENT_POINTER"; then
+    printf 'matching release: ready source=%s digest=%s\n' "$source_sha" "$digest"
+  else
+    printf 'matching release: degraded source=%s digest=%s\n' "$source_sha" "$digest" >&2
+    return 1
+  fi
+}
+
+usage() {
+  cat <<'USAGE'
+Usage:
+  matching-release install <downloaded-artifact-directory>
+  matching-release migrate <40-char-sha>-<16-char-digest-prefix>
+  matching-release deploy <40-char-sha>-<16-char-digest-prefix>
+  matching-release rollback
+  matching-release forward
+  matching-release status
+
+The install command accepts only a GitHub Actions artifact produced by
+matching-image.yml. Deploy activates a separately installed release only after
+the additive migration plus schema/dependency preflight. Migrate runs that same
+idempotent additive step without service activation. Rollback uses the immediately prior registry
+digest; forward restores the release that was active before rollback.
+USAGE
+}
+
+main() {
+  [[ $# -ge 1 ]] || { usage; exit 2; }
+  require_runtime
+  mkdir -p "$RELEASES_ROOT" "$STATE_ROOT"
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || fail "another matching release operation is active"
+
+  local command="$1"
+  shift
+  case "$command" in
+    install)
+      [[ $# -eq 1 ]] || fail "install requires one artifact directory"
+      install_release "$1"
+      ;;
+    deploy)
+      [[ $# -eq 1 ]] || fail "deploy requires one installed release key"
+      deploy_release "$1"
+      ;;
+    migrate)
+      [[ $# -eq 1 ]] || fail "migrate requires one installed release key"
+      migrate_release "$1"
+      ;;
+    rollback)
+      [[ $# -eq 0 ]] || fail "rollback accepts no arguments"
+      rollback_release
+      ;;
+    forward)
+      [[ $# -eq 0 ]] || fail "forward accepts no arguments"
+      forward_release
+      ;;
+    status)
+      [[ $# -eq 0 ]] || fail "status accepts no arguments"
+      status_release
+      ;;
+    *)
+      usage
+      exit 2
+      ;;
+  esac
+}
+
+main "$@"

@@ -266,7 +266,19 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
         return FakeConnection()
 
     monkeypatch.setenv("DIRECT_URL", "postgresql://example.invalid/app")
+    monkeypatch.setenv("OVERGARDEN_MATCHING_COMMIT_SHA", "a" * 40)
+    monkeypatch.setenv(
+        "OVERGARDEN_MATCHING_IMAGE_DIGEST", f"sha256:{'b' * 64}"
+    )
+    monkeypatch.setenv(
+        "OVERGARDEN_MATCHING_BUILD_TIMESTAMP", "2026-07-18T12:34:56Z"
+    )
+    monkeypatch.setenv(
+        "OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY",
+        "ove190.matching-schema.v1",
+    )
     monkeypatch.setattr(worker.psycopg, "connect", fake_connect)
+    monkeypatch.setattr(worker, "record_worker_heartbeat", lambda *_args: None)
     monkeypatch.setattr(worker, "_claim", lambda conn: None)
     monkeypatch.setattr(
         worker.time, "sleep", lambda seconds: (_ for _ in ()).throw(KeyboardInterrupt)
