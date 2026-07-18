@@ -153,6 +153,7 @@ describe("OVE-190 immutable matching release contract", () => {
     );
     expect(releaseScript).toContain("MIN_RELEASE_AVAILABLE_DISK_KB=5242880");
     expect(releaseScript).toContain("run_bounded_low_priority");
+    expect(releaseScript).toContain("run_bounded_low_priority sha256sum --");
     expect(releaseScript).toContain("--signal=TERM");
     expect(releaseScript).toContain("--kill-after=");
     expect(releaseScript).toContain("ionice -c 2 -n 7");

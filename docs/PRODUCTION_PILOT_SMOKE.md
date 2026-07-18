@@ -206,8 +206,8 @@ redaction: pass
 The first live archive import exposed a production capacity failure mode: the
 small worker host had no active swap and became temporarily unresponsive under
 Docker/Meilisearch pressure even though no kernel OOM event was recorded. The
-release was not activated by that failed attempt, and the sealed prior runtime
-was recovered through the provider restart boundary. A persistent 2 GiB swap
+release was not activated by that failed attempt, and the already-active
+runtime was recovered through the provider restart boundary. A persistent 2 GiB swap
 file with low swappiness was then enabled, transferred staging was cleaned, and
 both releases installed without further liveness loss. The committed controller
 now fails closed on combined-memory, available-memory, release-filesystem, and

@@ -56,12 +56,12 @@ The production host must expose at least 2.5 GiB of combined RAM and active
 swap, 1 GiB of currently available RAM plus free swap, and 5 GiB plus the
 compressed archive size on both the release and Docker-root filesystems before
 an image can be installed or normally activated. Explicit rollback bypasses
-this normal capacity gate so low-space recovery cannot be blocked. The current
-1 GiB matching droplet therefore requires a persistent 2 GiB `/swapfile` with
-a low swappiness value; the live value and `/etc/fstab` entry must be verified
-without logging host or environment details. This safety net prevents short
-Docker/Meilisearch memory-pressure bursts from making SSH and HTTPS
-unresponsive. It is not a substitute for a later capacity-driven droplet
+this normal capacity gate so recovery is not rejected solely by that gate. The
+current 1 GiB matching droplet therefore requires a persistent 2 GiB
+`/swapfile` with a low swappiness value; the live value and `/etc/fstab` entry
+must be verified without logging host or environment details. This safety net
+prevents short Docker/Meilisearch memory-pressure bursts from making SSH and
+HTTPS unresponsive. It is not a substitute for a later capacity-driven droplet
 resize. Archive verification, staging copy, decompression, and the Docker import
 client run at reduced CPU/I/O priority and fail closed after a 30-minute bound;
 the Docker daemon itself is not priority-throttled, so the capacity gate remains

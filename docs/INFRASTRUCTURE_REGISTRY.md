@@ -365,8 +365,9 @@ Immutable matching release contract (OVE-190):
   combined RAM+active swap, below 1 GiB available RAM+free swap, or below 5 GiB
   plus archive size on either the release or Docker-root filesystem. Expensive
   archive/client operations use reduced CPU/I/O priority and a 30-minute bound.
-  Explicit rollback remains capacity-gate independent so emergency recovery is
-  never blocked. A paid host resize requires a separate capacity decision.
+  Explicit rollback remains capacity-gate independent so recovery is not
+  rejected solely by the normal capacity gate. A paid host resize requires a
+  separate capacity decision.
 - Deployment order is install release A, install release B, migrate A, deploy
   A, deploy B, rollback to immediately prior digest A, then forward to B. A and
   B are distinct immutable workflow-run digests built from the same exact

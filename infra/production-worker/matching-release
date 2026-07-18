@@ -357,7 +357,12 @@ install_release() {
   require_release_host_capacity "$incoming_dir/$archive_file"
 
   local actual_archive_sha256
-  actual_archive_sha256="$(sha256sum "$incoming_dir/$archive_file" | awk '{print $1}')"
+  if ! actual_archive_sha256="$(
+    run_bounded_low_priority sha256sum -- "$incoming_dir/$archive_file" 2>/dev/null \
+      | awk '{print $1}'
+  )"; then
+    fail "image archive checksum cannot be verified within the bounded timeout"
+  fi
   [[ "$actual_archive_sha256" == "$archive_sha256" ]] \
     || fail "image archive checksum differs from release.json"
   run_bounded_low_priority zstd --test -- "$incoming_dir/$archive_file" >/dev/null 2>&1 \
