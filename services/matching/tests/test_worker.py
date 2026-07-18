@@ -232,6 +232,18 @@ def test_claim_sql_reclaims_stale_processing_jobs():
     assert "for update skip locked" in worker.CLAIM_JOB_SQL.lower()
     assert "catalog_match_suggestions_refresh" in worker.CLAIM_JOB_SQL
     assert "catalog_fuzzy_duplicate_qa_refresh" in worker.CLAIM_JOB_SQL
+    normalized_renewal = " ".join(worker.RENEW_CLAIM_LEASE_SQL.split()).lower()
+    assert "set locked_at = now()" in normalized_renewal
+    assert "status = 'processing'" in normalized_renewal
+    assert "locked_by = %s" in normalized_renewal
+    assert (
+        worker.WORKER_HEARTBEAT_INTERVAL_SECONDS * 3
+        <= worker.VISIBILITY_TIMEOUT_SECONDS
+    )
+    assert (
+        worker.WORKER_HEARTBEAT_INTERVAL_SECONDS * 3
+        <= worker.WORKER_HEARTBEAT_MAX_AGE_SECONDS
+    )
 
 
 def test_completion_updates_are_claim_scoped_and_preserve_requested_reruns():
@@ -254,13 +266,25 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
             return False
 
     calls = []
+    threads = []
 
-    def fake_connect(dsn, *, autocommit, row_factory):
+    class FakeThread:
+        def __init__(self, **kwargs):
+            threads.append(kwargs)
+
+        def start(self):
+            return None
+
+        def join(self, *, timeout):
+            assert timeout == worker.WORKER_HEARTBEAT_INTERVAL_SECONDS + 1
+
+    def fake_connect(dsn, *, autocommit, row_factory, connect_timeout):
         calls.append(
             {
                 "dsn": dsn,
                 "autocommit": autocommit,
                 "row_factory": row_factory,
+                "connect_timeout": connect_timeout,
             },
         )
         return FakeConnection()
@@ -278,7 +302,7 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
         "ove190.matching-schema.v1",
     )
     monkeypatch.setattr(worker.psycopg, "connect", fake_connect)
-    monkeypatch.setattr(worker, "record_worker_heartbeat", lambda *_args: None)
+    monkeypatch.setattr(worker.threading, "Thread", FakeThread)
     monkeypatch.setattr(worker, "_claim", lambda conn: None)
     monkeypatch.setattr(
         worker.time, "sleep", lambda seconds: (_ for _ in ()).throw(KeyboardInterrupt)
@@ -288,3 +312,172 @@ def test_run_uses_autocommit_for_long_lived_connection(monkeypatch):
         worker.run()
 
     assert calls[0]["autocommit"] is True
+    assert calls[0]["connect_timeout"] == 5
+    assert threads[0]["target"] is worker._heartbeat_loop
+    assert threads[0]["daemon"] is True
+
+
+def test_heartbeat_loop_renews_release_and_active_claim_lease(monkeypatch):
+    calls = []
+    heartbeats = []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def execute(self, sql, params):
+            calls.append({"sql": sql, "params": params})
+
+    class FakeStop:
+        def is_set(self):
+            return False
+
+        def wait(self, timeout):
+            calls.append({"wait": timeout})
+            return True
+
+    def fake_connect(dsn, *, autocommit, row_factory, connect_timeout):
+        calls.append(
+            {
+                "dsn": dsn,
+                "autocommit": autocommit,
+                "row_factory": row_factory,
+                "connect_timeout": connect_timeout,
+            }
+        )
+        return FakeConnection()
+
+    monkeypatch.setattr(worker.psycopg, "connect", fake_connect)
+    monkeypatch.setattr(
+        worker,
+        "record_worker_heartbeat",
+        lambda conn, release: heartbeats.append((conn, release)),
+    )
+    runtime_release = worker.RuntimeRelease(
+        commit_sha="a" * 40,
+        image_digest=f"sha256:{'b' * 64}",
+        build_timestamp="2026-07-18T12:34:56Z",
+        schema_compatibility_class="ove190.matching-schema.v1",
+        queue_name="matching",
+    )
+    active_claim = worker._ActiveClaimLease()
+    active_claim.set("internal-job-id", "internal-claim-token")
+
+    worker._heartbeat_loop(
+        "postgresql://example.invalid/app",
+        runtime_release,
+        FakeStop(),  # type: ignore[arg-type]
+        active_claim,
+    )
+
+    assert calls[0]["autocommit"] is True
+    assert calls[0]["connect_timeout"] == 5
+    assert calls[1] == {
+        "sql": worker.RENEW_CLAIM_LEASE_SQL,
+        "params": ("internal-job-id", "internal-claim-token"),
+    }
+    assert calls[2] == {"wait": worker.WORKER_HEARTBEAT_INTERVAL_SECONDS}
+    assert len(heartbeats) == 1
+    assert heartbeats[0][1] is runtime_release
+
+
+def test_active_claim_lease_can_be_cleared() -> None:
+    active_claim = worker._ActiveClaimLease()
+
+    active_claim.set("internal-job-id", "internal-claim-token")
+    assert active_claim.snapshot() == (
+        "internal-job-id",
+        "internal-claim-token",
+    )
+
+    active_claim.clear()
+    assert active_claim.snapshot() is None
+
+
+def test_stale_claim_token_cannot_renew_a_reclaimed_job() -> None:
+    class FakeConnection:
+        def __init__(self) -> None:
+            self.locked_by = "new-claim-token"
+            self.renewals = 0
+
+        def execute(self, sql, params):
+            assert sql == worker.RENEW_CLAIM_LEASE_SQL
+            job_id, claim_token = params
+            if job_id == "internal-job-id" and claim_token == self.locked_by:
+                self.renewals += 1
+
+    connection = FakeConnection()
+    active_claim = worker._ActiveClaimLease()
+
+    active_claim.set("internal-job-id", "old-claim-token")
+    worker._renew_active_claim(connection, active_claim)  # type: ignore[arg-type]
+    assert connection.renewals == 0
+
+    active_claim.set("internal-job-id", "new-claim-token")
+    worker._renew_active_claim(connection, active_claim)  # type: ignore[arg-type]
+    assert connection.renewals == 1
+
+
+def test_process_claimed_job_clears_lease_after_success(monkeypatch) -> None:
+    active_claim = worker._ActiveClaimLease()
+    events = []
+    job = {
+        "id": "internal-job-id",
+        "claimToken": "internal-claim-token",
+        "payload": {"kind": "catalog_typeahead_reindex"},
+    }
+
+    monkeypatch.setattr(
+        worker,
+        "_handle",
+        lambda _conn, _payload: events.append(active_claim.snapshot()),
+    )
+    monkeypatch.setattr(
+        worker,
+        "_mark_done",
+        lambda _conn, job_id, claim_token: events.append((job_id, claim_token)),
+    )
+
+    worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
+
+    assert events == [
+        ("internal-job-id", "internal-claim-token"),
+        ("internal-job-id", "internal-claim-token"),
+    ]
+    assert active_claim.snapshot() is None
+
+
+def test_process_claimed_job_clears_lease_after_failure(monkeypatch) -> None:
+    active_claim = worker._ActiveClaimLease()
+    failures = []
+    job = {
+        "id": "internal-job-id",
+        "claimToken": "internal-claim-token",
+        "payload": {"kind": "catalog_typeahead_reindex"},
+    }
+
+    def fail_handler(_conn, _payload):
+        assert active_claim.snapshot() == (
+            "internal-job-id",
+            "internal-claim-token",
+        )
+        raise RuntimeError("private backend detail")
+
+    monkeypatch.setattr(worker, "_handle", fail_handler)
+    monkeypatch.setattr(
+        worker,
+        "_mark_failed",
+        lambda _conn, job_id, claim_token, error: failures.append(
+            (job_id, claim_token, "RuntimeError" in error)
+        ),
+    )
+
+    worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
+
+    assert failures == [
+        ("internal-job-id", "internal-claim-token", True),
+    ]
+    assert active_claim.snapshot() is None

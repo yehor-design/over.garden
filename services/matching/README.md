@@ -114,7 +114,12 @@ The additive `matching_worker_heartbeats` table stores one row for queue
 `matching`: release SHA, image digest, schema class, the sorted handler list,
 and timestamps. It stores no hostname, process id, error, payload, user data,
 or connection data. The worker refreshes it at a bounded interval. Readiness
-accepts only a fresh heartbeat from the same immutable API/worker release.
+accepts only a fresh heartbeat from the same immutable API/worker release. A
+dedicated connection refreshes that heartbeat while a handler waits on bounded
+I/O and renews only the active job's `id` + claim-token lease. The 10-second
+refresh interval keeps a three-times margin below both the 30-second default
+visibility timeout and the readiness freshness limit; a stale claim token
+cannot renew work reclaimed by another worker.
 
 The canonical handler manifest is exactly:
 
@@ -164,8 +169,10 @@ sudo /opt/overgarden/matching-release forward
 sudo /opt/overgarden/matching-release status
 ```
 
-Installation verifies the archive checksum, image id, OCI labels, exact SHA,
-registry digest, schema class, unique run tag, and sealed six-handler manifest.
+Installation verifies the archive checksum, portable archive-config digest,
+OCI labels, exact SHA, registry digest, schema class, unique run tag, and sealed
+six-handler manifest. It then records the receiving Docker daemon's loaded image
+ID and requires both active containers to use that same host-local ID.
 Deployment runs the additive heartbeat migration and dependency preflight,
 activates API and worker from the same image, and records release pointers only
 after readiness passes. `rollback` can target only the immediately prior
@@ -199,8 +206,15 @@ docker compose \
 The canary reuses eligible records, records only handler terminal classes and
 privacy-safe boundaries, and changes no canonical catalog decision or user
 content. It proves journal index, unindex, and restoration; catalog handlers
-touch only derived/advisory outputs. Never record its row ids, payloads,
+touch only derived/advisory outputs. Queue `failed` is retryable in this worker,
+so the canary waits through `failed` -> `pending` -> `processing` until `done`
+or its overall bounded timeout. Never record its row ids, payloads,
 journal/catalog content, URLs, connection data, or raw errors.
+
+Meilisearch HTTP calls use a 10-second transport timeout. Task polling uses a
+120-second overall bound with a 250 ms interval and accepts only the explicit
+`succeeded` task class; a returned failed/canceled task never becomes a
+`job_queue.done` result.
 
 The catalog typeahead rebuild job uses payload `{ "kind":
 "catalog_typeahead_reindex" }` on the `matching` queue. The worker rebuilds the
@@ -298,7 +312,8 @@ with `last_error`; they must not be marked done silently.
 search path (OVE-39). It runs with `uv run --frozen pytest` and needs no live
 services. It proves that a `processing` row is reclaimed only after the
 visibility timeout, that catalog matching and alias generation receive their longer bounded lease,
-that an in-flight catalog rescan is not swallowed, that
+that the active claim lease is refreshed during bounded external I/O without a
+stale token touching reclaimed work, that an in-flight catalog rescan is not swallowed, that
 `journal_entry_index`/`journal_entry_unindex` reach
 `done` after a simulated worker restart, that the public-safe document contract
 holds, that at-least-once re-delivery is idempotent, and that a transient

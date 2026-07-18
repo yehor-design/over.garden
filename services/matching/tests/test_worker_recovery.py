@@ -68,6 +68,7 @@ def journal_row(**overrides: Any) -> dict[str, Any]:
 class FakeMeiliTask:
     def __init__(self, uid: str) -> None:
         self.task_uid = uid
+        self.status = "succeeded"
 
 
 class FakeMeiliIndex:
@@ -110,8 +111,16 @@ class FakeMeiliClient:
     def index(self, name: str) -> FakeMeiliIndex:
         return self.indexes.setdefault(name, FakeMeiliIndex(name))
 
-    def wait_for_task(self, task_uid: str) -> None:
-        return None
+    def wait_for_task(
+        self,
+        task_uid: str,
+        *,
+        timeout_in_ms: int,
+        interval_in_ms: int,
+    ) -> FakeMeiliTask:
+        assert timeout_in_ms == search.MEILISEARCH_TASK_TIMEOUT_MS
+        assert interval_in_ms == search.MEILISEARCH_TASK_POLL_INTERVAL_MS
+        return FakeMeiliTask(task_uid)
 
 
 class _FakeTransaction:

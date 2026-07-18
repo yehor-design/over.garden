@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import socket
+import threading
 import time
 import traceback
 from typing import Any
@@ -37,7 +38,11 @@ from app.search import (
     reindex_catalog_typeahead,
     unindex_journal_entry_for_owner,
 )
-from app.runtime import RuntimeRelease, record_worker_heartbeat
+from app.runtime import (
+    WORKER_HEARTBEAT_MAX_AGE_SECONDS,
+    RuntimeRelease,
+    record_worker_heartbeat,
+)
 
 QUEUE_NAME = os.environ.get("QUEUE_NAME", "matching")
 WORKER_ID = os.environ.get(
@@ -50,6 +55,31 @@ CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
     os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
 )
 WORKER_HEARTBEAT_INTERVAL_SECONDS = 10.0
+if WORKER_HEARTBEAT_INTERVAL_SECONDS * 3 > min(
+    VISIBILITY_TIMEOUT_SECONDS,
+    WORKER_HEARTBEAT_MAX_AGE_SECONDS,
+):
+    raise RuntimeError("worker heartbeat interval needs a three-times lease margin")
+
+
+class _ActiveClaimLease:
+    """Thread-safe identity of the one job currently owned by this worker."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._claim: tuple[str, str] | None = None
+
+    def set(self, job_id: str, claim_token: str) -> None:
+        with self._lock:
+            self._claim = (job_id, claim_token)
+
+    def clear(self) -> None:
+        with self._lock:
+            self._claim = None
+
+    def snapshot(self) -> tuple[str, str] | None:
+        with self._lock:
+            return self._claim
 
 CLAIM_JOB_SQL = f"""
 select id, payload
@@ -85,6 +115,14 @@ set status = 'processing',
     attempts = attempts + 1,
     updated_at = now()
 where id = %s
+"""
+
+RENEW_CLAIM_LEASE_SQL = """
+update job_queue
+set locked_at = now()
+where id = %s
+  and status = 'processing'
+  and locked_by = %s
 """
 
 MARK_DONE_SQL = """
@@ -258,33 +296,87 @@ def _mark_failed(
 def run() -> None:
     dsn = os.environ["DIRECT_URL"]
     release = RuntimeRelease.from_environment()
-    with psycopg.connect(dsn, autocommit=True, row_factory=dict_row) as conn:
-        last_heartbeat_at = 0.0
-        while True:
-            monotonic_now = time.monotonic()
-            if (
-                last_heartbeat_at == 0.0
-                or monotonic_now - last_heartbeat_at
-                >= WORKER_HEARTBEAT_INTERVAL_SECONDS
-            ):
-                record_worker_heartbeat(conn, release)
-                last_heartbeat_at = monotonic_now
-            job = _claim(conn)
-            if job is None:
-                time.sleep(POLL_INTERVAL_SECONDS)
-                continue
+    heartbeat_stop = threading.Event()
+    active_claim = _ActiveClaimLease()
+    heartbeat_thread = threading.Thread(
+        target=_heartbeat_loop,
+        args=(dsn, release, heartbeat_stop, active_claim),
+        name="matching-worker-heartbeat",
+        daemon=True,
+    )
+    with psycopg.connect(
+        dsn,
+        autocommit=True,
+        row_factory=dict_row,
+        connect_timeout=5,
+    ) as conn:
+        heartbeat_thread.start()
+        try:
+            while True:
+                job = _claim(conn)
+                if job is None:
+                    time.sleep(POLL_INTERVAL_SECONDS)
+                    continue
+                _process_claimed_job(conn, job, active_claim)
+        finally:
+            heartbeat_stop.set()
+            heartbeat_thread.join(timeout=WORKER_HEARTBEAT_INTERVAL_SECONDS + 1)
 
-            try:
-                _handle(conn, job["payload"])
-            except Exception:
-                _mark_failed(
-                    conn,
-                    job["id"],
-                    job["claimToken"],
-                    traceback.format_exc(),
-                )
-            else:
-                _mark_done(conn, job["id"], job["claimToken"])
+
+def _process_claimed_job(
+    conn: psycopg.Connection,
+    job: dict[str, Any],
+    active_claim: _ActiveClaimLease,
+) -> None:
+    active_claim.set(job["id"], job["claimToken"])
+    try:
+        try:
+            _handle(conn, job["payload"])
+        except Exception:
+            _mark_failed(
+                conn,
+                job["id"],
+                job["claimToken"],
+                traceback.format_exc(),
+            )
+        else:
+            _mark_done(conn, job["id"], job["claimToken"])
+    finally:
+        active_claim.clear()
+
+
+def _heartbeat_loop(
+    dsn: str,
+    release: RuntimeRelease,
+    stop: threading.Event,
+    active_claim: _ActiveClaimLease,
+) -> None:
+    """Keep readiness fresh while a handler is blocked on bounded I/O."""
+    while not stop.is_set():
+        try:
+            with psycopg.connect(
+                dsn,
+                autocommit=True,
+                row_factory=dict_row,
+                connect_timeout=5,
+            ) as conn:
+                while not stop.is_set():
+                    record_worker_heartbeat(conn, release)
+                    _renew_active_claim(conn, active_claim)
+                    if stop.wait(WORKER_HEARTBEAT_INTERVAL_SECONDS):
+                        return
+        except Exception:
+            if stop.wait(POLL_INTERVAL_SECONDS):
+                return
+
+
+def _renew_active_claim(
+    conn: psycopg.Connection,
+    active_claim: _ActiveClaimLease,
+) -> None:
+    claim = active_claim.snapshot()
+    if claim is not None:
+        conn.execute(RENEW_CLAIM_LEASE_SQL, claim)
 
 
 if __name__ == "__main__":

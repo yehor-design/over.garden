@@ -21,7 +21,10 @@ from psycopg.types.json import Jsonb
 
 from app.job_handlers import SUPPORTED_JOB_KINDS
 from app.runtime import RuntimeRelease, readiness_manifest
-from app.search import PUBLIC_JOURNAL_ENTRIES_INDEX
+from app.search import (
+    MEILISEARCH_HTTP_TIMEOUT_SECONDS,
+    PUBLIC_JOURNAL_ENTRIES_INDEX,
+)
 
 CANARY_SCHEMA_VERSION = "ove190.matchingHandlerCanary.v1"
 CANARY_APPROVAL_ENV = "OVERGARDEN_MATCHING_CANARY_APPROVED"
@@ -187,6 +190,7 @@ def run_handler_canaries(
     client = meili_client or meilisearch.Client(
         os.environ["MEILISEARCH_HOST"],
         os.environ.get("MEILISEARCH_API_KEY"),
+        timeout=MEILISEARCH_HTTP_TIMEOUT_SECONDS,
     )
     journal_entry_id = str(journal_source["journal_entry_id"])
     owner_user_id = str(journal_source["owner_user_id"])
@@ -296,8 +300,8 @@ def _wait_for_done(
         status = row.get("status") if isinstance(row, Mapping) else None
         if status == "done":
             return
-        if status == "failed":
-            raise RuntimeError("handler canary reached a failed terminal class")
+        if status not in {"pending", "processing", "failed"}:
+            raise RuntimeError("handler canary reached an invalid state class")
         time.sleep(POLL_INTERVAL_SECONDS)
     raise RuntimeError("handler canary timed out")
 

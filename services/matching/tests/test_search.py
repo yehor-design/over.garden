@@ -2,6 +2,9 @@ import json
 import re
 from datetime import date, datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 from app import search
 
@@ -13,6 +16,59 @@ PUBLIC_JOURNAL_CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
 PUBLIC_JOURNAL_REQUIRED_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["requiredFields"])
 PUBLIC_JOURNAL_ALLOWED_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["allowedFields"])
 PUBLIC_JOURNAL_FORBIDDEN_FIELDS = set(PUBLIC_JOURNAL_CONTRACT["forbiddenFields"])
+
+
+def test_meilisearch_task_wait_is_production_bounded() -> None:
+    calls = []
+
+    class FakeClient:
+        def wait_for_task(self, task_uid, *, timeout_in_ms, interval_in_ms):
+            calls.append((task_uid, timeout_in_ms, interval_in_ms))
+            return SimpleNamespace(status="succeeded")
+
+    result = search._wait_for_task(FakeClient(), 123)  # type: ignore[arg-type]
+
+    assert result.status == "succeeded"
+    assert calls == [
+        (
+            123,
+            search.MEILISEARCH_TASK_TIMEOUT_MS,
+            search.MEILISEARCH_TASK_POLL_INTERVAL_MS,
+        )
+    ]
+
+
+def test_meilisearch_task_wait_rejects_failed_task_without_error_details() -> None:
+    class FakeClient:
+        def wait_for_task(self, *_args, **_kwargs):
+            return {"status": "failed", "error": "private backend detail"}
+
+    with pytest.raises(RuntimeError, match="succeeded class") as error:
+        search._wait_for_task(FakeClient(), 123)  # type: ignore[arg-type]
+
+    assert "private backend detail" not in str(error.value)
+
+
+def test_meilisearch_client_has_a_bounded_http_timeout(monkeypatch) -> None:
+    calls = []
+
+    def fake_client(host, api_key, *, timeout):
+        calls.append((host, api_key, timeout))
+        return object()
+
+    monkeypatch.setenv("MEILISEARCH_HOST", "http://example.invalid")
+    monkeypatch.setenv("MEILISEARCH_API_KEY", "private-key")
+    monkeypatch.setattr(search.meilisearch, "Client", fake_client)
+
+    search.client()
+
+    assert calls == [
+        (
+            "http://example.invalid",
+            "private-key",
+            search.MEILISEARCH_HTTP_TIMEOUT_SECONDS,
+        )
+    ]
 
 
 def journal_row(**overrides):

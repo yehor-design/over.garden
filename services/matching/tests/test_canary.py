@@ -59,6 +59,53 @@ def test_canary_sql_is_bounded_and_preserves_processing_claims() -> None:
     assert "location_visibility" in canary._PUBLIC_JOURNAL_SOURCE_SQL.lower()
 
 
+def test_wait_for_done_treats_failed_as_retryable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    statuses = iter(["failed", "pending", "processing", "done"])
+
+    class FakeResult:
+        def fetchone(self) -> dict[str, str]:
+            return {"status": next(statuses)}
+
+    class FakeConnection:
+        def execute(self, _sql: str, _params: tuple[str]) -> FakeResult:
+            return FakeResult()
+
+    clock = iter([0.0, 0.1, 0.2, 0.3, 0.4])
+    monkeypatch.setattr(canary.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(canary.time, "sleep", lambda _seconds: None)
+
+    canary._wait_for_done(
+        FakeConnection(),  # type: ignore[arg-type]
+        "internal-job-id",
+        timeout_seconds=1,
+    )
+
+
+def test_wait_for_done_times_out_when_failed_never_recovers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class FakeResult:
+        def fetchone(self) -> dict[str, str]:
+            return {"status": "failed"}
+
+    class FakeConnection:
+        def execute(self, _sql: str, _params: tuple[str]) -> FakeResult:
+            return FakeResult()
+
+    clock = iter([0.0, 0.1, 1.1])
+    monkeypatch.setattr(canary.time, "monotonic", lambda: next(clock))
+    monkeypatch.setattr(canary.time, "sleep", lambda _seconds: None)
+
+    with pytest.raises(RuntimeError, match="timed out"):
+        canary._wait_for_done(
+            FakeConnection(),  # type: ignore[arg-type]
+            "internal-job-id",
+            timeout_seconds=1,
+        )
+
+
 def test_enqueue_uses_release_scoped_key_without_returning_payload() -> None:
     calls: list[tuple[str, tuple[object, ...]]] = []
 

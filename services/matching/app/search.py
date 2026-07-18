@@ -28,6 +28,9 @@ PUBLIC_JOURNAL_ENTRIES_INDEX = "journal_entries"
 CATALOG_TYPEAHEAD_REINDEX_KIND = "catalog_typeahead_reindex"
 JOURNAL_ENTRY_INDEX_KIND = "journal_entry_index"
 JOURNAL_ENTRY_UNINDEX_KIND = "journal_entry_unindex"
+MEILISEARCH_TASK_TIMEOUT_MS = 120_000
+MEILISEARCH_TASK_POLL_INTERVAL_MS = 250
+MEILISEARCH_HTTP_TIMEOUT_SECONDS = 10
 SELECTABLE_CATALOG_STATUSES = {"seeded", "confirmed"}
 CATALOG_SEARCHABLE_ATTRIBUTES = ["displayName", "canonicalName", "normalizedName"]
 CATALOG_FILTERABLE_ATTRIBUTES = ["status", "source", "locale", "itemLocale"]
@@ -178,7 +181,11 @@ limit 1
 def client() -> meilisearch.Client:
     host = os.environ.get("MEILISEARCH_HOST", "http://localhost:7700")
     api_key = os.environ.get("MEILISEARCH_API_KEY")
-    return meilisearch.Client(host, api_key)
+    return meilisearch.Client(
+        host,
+        api_key,
+        timeout=MEILISEARCH_HTTP_TIMEOUT_SECONDS,
+    )
 
 
 def catalog_typeahead_document_from_row(
@@ -335,13 +342,13 @@ def reindex_catalog_typeahead(
     _ensure_catalog_typeahead_settings(c, index)
 
     delete_task = index.delete_all_documents()
-    c.wait_for_task(delete_task.task_uid)
+    _wait_for_task(c, delete_task.task_uid)
 
     if not documents:
         return {"indexed": 0, "task_uid": None}
 
     add_task = index.add_documents(documents, primary_key="id")
-    c.wait_for_task(add_task.task_uid)
+    _wait_for_task(c, add_task.task_uid)
     return {"indexed": len(documents), "task_uid": add_task.task_uid}
 
 
@@ -365,7 +372,7 @@ def index_journal_entry(
         return unindex_journal_entry(journal_entry_id, c)
 
     task = index.add_documents([document], primary_key="id")
-    c.wait_for_task(task.task_uid)
+    _wait_for_task(c, task.task_uid)
     return {"indexed": 1, "task_uid": task.task_uid}
 
 
@@ -388,7 +395,7 @@ def unindex_journal_entry(
     c = meili_client or client()
     index = c.index(PUBLIC_JOURNAL_ENTRIES_INDEX)
     task = index.delete_document(journal_entry_id)
-    c.wait_for_task(task.task_uid)
+    _wait_for_task(c, task.task_uid)
     return {"deleted": 1, "task_uid": task.task_uid}
 
 
@@ -411,7 +418,7 @@ def prove_cyrillic_typo_tolerance() -> dict[str, object]:
         ],
         primary_key="id",
     )
-    c.wait_for_task(task.task_uid)
+    _wait_for_task(c, task.task_uid)
 
     # Deliberate typo: 'помдори' (missing і) instead of 'помідори'.
     result = index.search("помдори")
@@ -458,7 +465,7 @@ def prove_catalog_cyrillic_typeahead() -> dict[str, object]:
     )
 
     task = index.add_documents(documents, primary_key="id")
-    c.wait_for_task(task.task_uid)
+    _wait_for_task(c, task.task_uid)
 
     result = index.search("помдор", {"limit": 3})
     hits = result["hits"]
@@ -478,7 +485,7 @@ def _ensure_catalog_typeahead_settings(
         index.update_filterable_attributes(CATALOG_FILTERABLE_ATTRIBUTES),
         index.update_sortable_attributes(CATALOG_SORTABLE_ATTRIBUTES),
     ]:
-        c.wait_for_task(task.task_uid)
+        _wait_for_task(c, task.task_uid)
 
 
 def _ensure_public_journal_entries_settings(
@@ -490,7 +497,24 @@ def _ensure_public_journal_entries_settings(
         index.update_filterable_attributes(JOURNAL_FILTERABLE_ATTRIBUTES),
         index.update_sortable_attributes(JOURNAL_SORTABLE_ATTRIBUTES),
     ]:
-        c.wait_for_task(task.task_uid)
+        _wait_for_task(c, task.task_uid)
+
+
+def _wait_for_task(c: meilisearch.Client, task_uid: int) -> Any:
+    """Wait through normal production indexing latency, but remain bounded."""
+    task = c.wait_for_task(
+        task_uid,
+        timeout_in_ms=MEILISEARCH_TASK_TIMEOUT_MS,
+        interval_in_ms=MEILISEARCH_TASK_POLL_INTERVAL_MS,
+    )
+    status = (
+        task.get("status")
+        if isinstance(task, Mapping)
+        else getattr(task, "status", None)
+    )
+    if status != "succeeded":
+        raise RuntimeError("Meilisearch task did not reach the succeeded class")
+    return task
 
 
 def _text(

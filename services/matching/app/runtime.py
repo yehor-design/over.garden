@@ -22,6 +22,7 @@ import psycopg
 from psycopg.rows import dict_row
 
 from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.search import MEILISEARCH_HTTP_TIMEOUT_SECONDS
 
 RUNTIME_SCHEMA_VERSION = "ove190.matchingRuntime.v1"
 SCHEMA_COMPATIBILITY_CLASS = "ove190.matching-schema.v1"
@@ -375,6 +376,7 @@ def _read_meilisearch_status() -> str:
         response = meilisearch.Client(
             host,
             os.environ.get("MEILISEARCH_API_KEY"),
+            timeout=MEILISEARCH_HTTP_TIMEOUT_SECONDS,
         ).health()
         if isinstance(response, Mapping) and response.get("status") == "available":
             return "available"

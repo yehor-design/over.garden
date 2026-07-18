@@ -262,6 +262,33 @@ def test_queue_lag_is_bounded(lag: float | None, expected: str) -> None:
     assert runtime._queue_lag_class(lag) == expected
 
 
+def test_meilisearch_health_probe_has_a_bounded_http_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = []
+
+    class FakeClient:
+        def health(self) -> dict[str, str]:
+            return {"status": "available"}
+
+    def fake_client(host, api_key, *, timeout):
+        calls.append((host, api_key, timeout))
+        return FakeClient()
+
+    monkeypatch.setenv("MEILISEARCH_HOST", "http://example.invalid")
+    monkeypatch.setenv("MEILISEARCH_API_KEY", "private-key")
+    monkeypatch.setattr(runtime.meilisearch, "Client", fake_client)
+
+    assert runtime._read_meilisearch_status() == "available"
+    assert calls == [
+        (
+            "http://example.invalid",
+            "private-key",
+            runtime.MEILISEARCH_HTTP_TIMEOUT_SECONDS,
+        )
+    ]
+
+
 def test_worker_heartbeat_writes_only_release_capabilities() -> None:
     calls: list[tuple[str, tuple[object, ...]]] = []
 
