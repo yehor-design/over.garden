@@ -27,9 +27,12 @@ exact 40-character commit already contained in `main`, it:
 No `latest` tag is produced. The droplet does not need a persistent GHCR token:
 an authenticated operator downloads the private Actions artifact and transfers
 only that sealed artifact to the host. `matching-release install` verifies the
-archive checksum, image ID, exact source SHA, OCI labels, schema class, digest,
-and six-handler capability file before creating a digest-qualified local image
-reference. A registry digest remains the canonical identity; the local
+archive checksum, portable archive-config digest, exact source SHA, OCI labels,
+schema class, registry digest, and six-handler capability file before creating
+a digest-qualified local image reference. Docker daemon image IDs are not
+portable across classic and containerd-backed image stores, so the installer
+records the receiving daemon's loaded image ID only after the archive identity
+passes. The registry digest remains the canonical identity; the local
 full-SHA/digest-prefix reference exists only because `docker save` does not
 preserve a private registry authentication session.
 
@@ -88,8 +91,8 @@ contains no full-bootstrap replay. Every activation then runs
 `python -m app.runtime preflight` from the candidate image
 against the existing production DB/schema/queue and Meilisearch before it can
 replace either service. API and worker are then recreated from the same exact
-local image ID. Both must pass `python -m app.runtime ready`, both container
-image IDs must equal the sealed artifact image ID, and the live capability
+host-loaded image ID. Both must pass `python -m app.runtime ready`, both
+container image IDs must equal that verified host-loaded image ID, and the live capability
 manifest must report the exact SHA, digest, schema class, queue, and six
 handlers. A failed activation restores the prior `active.env` and recreates the
 prior services. Release pointer files are changed only after readiness passes.

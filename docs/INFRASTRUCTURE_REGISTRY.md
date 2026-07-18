@@ -357,7 +357,8 @@ Immutable matching release contract (OVE-190):
   A, deploy B, rollback to immediately prior digest A, then forward to B. A and
   B are distinct immutable workflow-run digests built from the same exact
   tested main SHA. Each activation performs schema/queue/Postgres/Meilisearch
-  preflight before replacement, then verifies API/worker image-id equality,
+  preflight before replacement, then verifies API/worker equality to the
+  receiving daemon's checksum-and-config-verified loaded image ID,
   capability equality, and dependency-aware readiness. Failed activation
   restores the prior release.
 - Binding host commands and redaction rules are in

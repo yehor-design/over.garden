@@ -55,7 +55,7 @@ describe("OVE-190 immutable matching release contract", () => {
       "image_tag=sha-$REQUESTED_SHA-run-${RELEASE_RUN//./-}",
     );
     expect(workflow).toContain("REGISTRY_DIGEST");
-    expect(workflow).toContain("docker pull \"$digest_ref\"");
+    expect(workflow).toContain('docker pull "$digest_ref"');
     expect(workflow).not.toMatch(/(?:^|\s)(?:tag|tags:)[^\n]*latest/im);
   });
 
@@ -65,16 +65,15 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(workflow).toContain("python -m app.runtime capabilities");
     expect(workflow).toContain(".release.commitSha == $sha");
     expect(workflow).toContain(".release.imageDigest == $digest");
-    expect(workflow).toContain(
-      ".release.schemaCompatibilityClass == $schema",
-    );
-    expect(workflow).toContain(".queue.name == \"matching\"");
+    expect(workflow).toContain(".release.schemaCompatibilityClass == $schema");
+    expect(workflow).toContain('.queue.name == "matching"');
     for (const handler of REQUIRED_HANDLERS) {
       expect(workflow).toContain(`\"${handler}\"`);
     }
     expect(workflow).toContain("release.json");
     expect(workflow).toContain("matching-capabilities.json");
     expect(workflow).toContain("archive_sha256");
+    expect(workflow).toContain("archiveConfigDigest");
     expect(workflow).toContain("actions/upload-artifact");
   });
 
@@ -87,9 +86,9 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(compose).toContain("OVERGARDEN_MATCHING_COMMIT_SHA");
     expect(compose).toContain("OVERGARDEN_MATCHING_IMAGE_DIGEST");
     expect(compose).toContain("OVERGARDEN_MATCHING_SCHEMA_COMPATIBILITY");
-    expect(compose.match(/python\n\s+- -m\n\s+- app\.runtime\n\s+- ready/g)).toHaveLength(
-      2,
-    );
+    expect(
+      compose.match(/python\n\s+- -m\n\s+- app\.runtime\n\s+- ready/g),
+    ).toHaveLength(2);
     expect(compose).not.toMatch(/^\s*build:/m);
     expect(compose).not.toMatch(/latest/i);
   });
@@ -126,18 +125,31 @@ describe("OVE-190 immutable matching release contract", () => {
 
   it("fails closed around install, preflight, activation, rollback, and forward", async () => {
     const releaseScript = await readFile(RELEASE_SCRIPT_PATH, "utf8");
-    const preflight = releaseScript.indexOf("preflight_candidate \"$candidate_env\"");
-    const activate = releaseScript.indexOf("mv \"$candidate_env\" \"$ACTIVE_ENV\"");
+    const preflight = releaseScript.indexOf(
+      'preflight_candidate "$candidate_env"',
+    );
+    const activate = releaseScript.indexOf('mv "$candidate_env" "$ACTIVE_ENV"');
     const pointerUpdate = releaseScript.indexOf(
-      "copy_pointer \"$target_manifest\" \"$CURRENT_POINTER\"",
+      'copy_pointer "$target_manifest" "$CURRENT_POINTER"',
+    );
+    const archiveIdentityCheck = releaseScript.indexOf(
+      'verify_archive_config_digest "$incoming_dir"',
+    );
+    const imageLoad = releaseScript.indexOf(
+      'zstd -dc "$staging_dir/$archive_file" | docker load',
     );
 
     expect(preflight).toBeGreaterThan(0);
     expect(activate).toBeGreaterThan(preflight);
     expect(pointerUpdate).toBeGreaterThan(activate);
+    expect(archiveIdentityCheck).toBeGreaterThan(0);
+    expect(imageLoad).toBeGreaterThan(archiveIdentityCheck);
     expect(releaseScript).toContain("flock -n 9");
     expect(releaseScript).toContain("sha256sum");
     expect(releaseScript).toContain("zstd --test");
+    expect(releaseScript).toContain("verify_archive_config_digest");
+    expect(releaseScript).toContain("loadedImageId");
+    expect(releaseScript).not.toContain(".image.localImageId");
     expect(releaseScript).toContain("verify_loaded_image");
     expect(releaseScript).toContain("python -m app.runtime preflight");
     expect(releaseScript).toContain("python -m app.runtime ready");

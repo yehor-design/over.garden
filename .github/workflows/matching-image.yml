@@ -182,14 +182,14 @@ jobs:
           actual_schema="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.schema-compatibility" }}' "$digest_ref")"
           actual_contract="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.runtime-contract" }}' "$digest_ref")"
           actual_release_run="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.release-run" }}' "$digest_ref")"
-          local_image_id="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
+          archive_config_digest="$(docker image inspect --format '{{.Id}}' "$digest_ref")"
 
           [[ "$actual_revision" == "$SOURCE_SHA" ]]
           [[ "$actual_created" == "$BUILD_TIMESTAMP" ]]
           [[ "$actual_schema" == "ove190.matching-schema.v1" ]]
           [[ "$actual_contract" == "ove190-v1" ]]
           [[ "$actual_release_run" == "$RELEASE_RUN" ]]
-          [[ "$local_image_id" =~ ^sha256:[0-9a-f]{64}$ ]]
+          [[ "$archive_config_digest" =~ ^sha256:[0-9a-f]{64}$ ]]
 
           mkdir -p matching-release
           capability_file="matching-capabilities.json"
@@ -234,7 +234,7 @@ jobs:
             --arg imageRepository "$IMAGE_REPOSITORY" \
             --arg imageTag "$IMAGE_TAG" \
             --arg registryDigest "$REGISTRY_DIGEST" \
-            --arg localImageId "$local_image_id" \
+            --arg archiveConfigDigest "$archive_config_digest" \
             --arg archiveFile "$archive_file" \
             --arg archiveSha256 "$archive_sha256" \
             --arg capabilitiesFile "$capability_file" \
@@ -249,7 +249,7 @@ jobs:
                 repository: $imageRepository,
                 tag: $imageTag,
                 registryDigest: $registryDigest,
-                localImageId: $localImageId
+                archiveConfigDigest: $archiveConfigDigest
               },
               archive: {
                 file: $archiveFile,

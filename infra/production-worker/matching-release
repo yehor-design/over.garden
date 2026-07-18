@@ -37,6 +37,7 @@ require_runtime() {
   require_command flock
   require_command jq
   require_command sha256sum
+  require_command tar
   require_command zstd
 
   docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is unavailable"
@@ -90,7 +91,7 @@ validate_manifest_shape() {
       and (.releaseRun | type == "string" and length > 0)
       and (.image.repository | type == "string" and startswith("ghcr.io/"))
       and (.image.tag | type == "string" and length > 0)
-      and (.image.localImageId | type == "string" and length > 0)
+      and (.image.archiveConfigDigest | type == "string" and length > 0)
       and (.archive.file | type == "string" and length > 0)
       and (.archive.sha256 | type == "string" and length > 0)
       and (.capabilitiesFile | type == "string" and length > 0)' \
@@ -99,14 +100,14 @@ validate_manifest_shape() {
   local source_sha
   local build_timestamp
   local digest
-  local local_image_id
+  local archive_config_digest
   local image_tag
   local image_repository
   local release_run
   source_sha="$(manifest_value "$manifest" '.sourceCommit')"
   build_timestamp="$(manifest_value "$manifest" '.buildTimestamp')"
   digest="$(manifest_value "$manifest" '.image.registryDigest')"
-  local_image_id="$(manifest_value "$manifest" '.image.localImageId')"
+  archive_config_digest="$(manifest_value "$manifest" '.image.archiveConfigDigest')"
   image_tag="$(manifest_value "$manifest" '.image.tag')"
   image_repository="$(manifest_value "$manifest" '.image.repository')"
   release_run="$(manifest_value "$manifest" '.releaseRun')"
@@ -114,12 +115,62 @@ validate_manifest_shape() {
   require_sha "$source_sha"
   require_timestamp "$build_timestamp"
   require_digest "$digest"
-  require_digest "$local_image_id"
+  require_digest "$archive_config_digest"
   [[ "$release_run" =~ ^[0-9]+\.[0-9]+$ ]] || fail "releaseRun is invalid"
   [[ "$image_repository" =~ ^ghcr\.io/[a-z0-9._-]+/[a-z0-9._/-]+$ ]] \
     || fail "release image repository is invalid"
   [[ "$image_tag" == "sha-$source_sha-run-${release_run//./-}" ]] \
     || fail "release image tag is not a unique full-SHA run tag"
+}
+
+verify_archive_config_digest() {
+  local release_dir="$1"
+  local manifest="$release_dir/release.json"
+  local archive_file
+  local image_repository
+  local image_tag
+  local expected_config_digest
+  archive_file="$(manifest_value "$manifest" '.archive.file')"
+  image_repository="$(manifest_value "$manifest" '.image.repository')"
+  image_tag="$(manifest_value "$manifest" '.image.tag')"
+  expected_config_digest="$(manifest_value "$manifest" '.image.archiveConfigDigest')"
+
+  local archive_manifest
+  archive_manifest="$(mktemp "$release_dir/.archive-manifest.XXXXXX")"
+  if ! zstd -dc "$release_dir/$archive_file" 2>/dev/null \
+    | tar -xOf - manifest.json 2>/dev/null > "$archive_manifest"; then
+    rm -f -- "$archive_manifest"
+    fail "sealed image archive manifest is unreadable"
+  fi
+
+  local config_path
+  config_path="$(jq -er \
+    --arg imageRef "$image_repository:$image_tag" \
+    'select(type == "array" and length == 1)
+      | .[0]
+      | select(.RepoTags == [$imageRef])
+      | .Config
+      | select(type == "string")' \
+    "$archive_manifest")" || {
+      rm -f -- "$archive_manifest"
+      fail "sealed image archive identity is invalid"
+    }
+  rm -f -- "$archive_manifest"
+
+  [[ "$config_path" =~ ^blobs/sha256/[0-9a-f]{64}$ ]] \
+    || fail "sealed image archive config path is invalid"
+  [[ "sha256:${config_path##*/}" == "$expected_config_digest" ]] \
+    || fail "sealed image archive config path differs from release.json"
+
+  local actual_config_digest
+  actual_config_digest="sha256:$(
+    zstd -dc "$release_dir/$archive_file" 2>/dev/null \
+      | tar -xOf - "$config_path" 2>/dev/null \
+      | sha256sum \
+      | awk '{print $1}'
+  )"
+  [[ "$actual_config_digest" == "$expected_config_digest" ]] \
+    || fail "sealed image archive config digest differs from release.json"
 }
 
 validate_capabilities_artifact() {
@@ -161,7 +212,6 @@ verify_loaded_image() {
   local source_sha
   local build_timestamp
   local digest
-  local expected_id
   local actual_id
   local actual_revision
   local actual_created
@@ -173,8 +223,6 @@ verify_loaded_image() {
   source_sha="$(manifest_value "$manifest" '.sourceCommit')"
   build_timestamp="$(manifest_value "$manifest" '.buildTimestamp')"
   digest="$(manifest_value "$manifest" '.image.registryDigest')"
-  expected_id="$(manifest_value "$manifest" '.image.localImageId')"
-
   actual_id="$(docker image inspect --format '{{.Id}}' "$source_ref" 2>/dev/null)" \
     || fail "loaded archive does not contain its sealed image tag"
   actual_revision="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$source_ref")"
@@ -184,7 +232,7 @@ verify_loaded_image() {
   actual_release_run="$(docker image inspect --format '{{ index .Config.Labels "garden.over.matching.release-run" }}' "$source_ref")"
   actual_source="$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.source" }}' "$source_ref")"
 
-  [[ "$actual_id" == "$expected_id" ]] || fail "loaded image ID differs from the sealed release"
+  require_digest "$actual_id"
   [[ "$actual_revision" == "$source_sha" ]] || fail "loaded image revision label differs from sourceCommit"
   [[ "$actual_created" == "$build_timestamp" ]] || fail "loaded image created label differs from buildTimestamp"
   [[ "$actual_compatibility" == "$EXPECTED_SCHEMA_COMPATIBILITY" ]] \
@@ -196,6 +244,7 @@ verify_loaded_image() {
   [[ "$actual_source" == "https://github.com/yehor-design/over.garden" ]] \
     || fail "loaded image source label differs"
   require_digest "$digest"
+  printf '%s\n' "$actual_id"
 }
 
 install_release() {
@@ -229,6 +278,7 @@ install_release() {
     || fail "image archive checksum differs from release.json"
   zstd --test "$incoming_dir/$archive_file" >/dev/null \
     || fail "image archive failed zstd integrity verification"
+  verify_archive_config_digest "$incoming_dir"
 
   local release_key
   local release_dir
@@ -253,7 +303,7 @@ install_release() {
   local source_ref
   local digest_hex
   local local_ref
-  local expected_id
+  local loaded_image_id
   image_repository="$(manifest_value "$incoming_manifest" '.image.repository')"
   image_tag="$(manifest_value "$incoming_manifest" '.image.tag')"
   source_ref="$image_repository:$image_tag"
@@ -261,20 +311,21 @@ install_release() {
   digest="$(manifest_value "$incoming_manifest" '.image.registryDigest')"
   digest_hex="${digest#sha256:}"
   local_ref="overgarden-matching-release:${source_sha}-${digest_hex:0:16}"
-  expected_id="$(manifest_value "$incoming_manifest" '.image.localImageId')"
-
-  verify_loaded_image "$incoming_manifest" "$source_ref"
+  loaded_image_id="$(verify_loaded_image "$incoming_manifest" "$source_ref")"
 
   if docker image inspect "$local_ref" >/dev/null 2>&1; then
     local existing_id
     existing_id="$(docker image inspect --format '{{.Id}}' "$local_ref")"
-    [[ "$existing_id" == "$expected_id" ]] \
+    [[ "$existing_id" == "$loaded_image_id" ]] \
       || fail "sealed local image reference already points to another image"
   else
     docker tag "$source_ref" "$local_ref"
   fi
 
-  jq --arg localRef "$local_ref" '. + {localImageRef: $localRef}' \
+  jq \
+    --arg localRef "$local_ref" \
+    --arg loadedImageId "$loaded_image_id" \
+    '. + {localImageRef: $localRef, loadedImageId: $loadedImageId}' \
     "$staging_dir/release.json" > "$staging_dir/release.with-local-ref.json"
   mv "$staging_dir/release.with-local-ref.json" "$staging_dir/release.json"
   chmod 0444 "$staging_dir/release.json"
@@ -354,7 +405,7 @@ apply_schema_migration() {
 verify_active_release() {
   local manifest="$1"
   local expected_id
-  expected_id="$(manifest_value "$manifest" '.image.localImageId')"
+  expected_id="$(manifest_value "$manifest" '.loadedImageId')"
 
   compose exec -T matching-api python -m app.runtime ready >/dev/null 2>&1 \
     || return 1
