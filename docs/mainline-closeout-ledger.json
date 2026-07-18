@@ -241,6 +241,39 @@
         "The bounded synthetic runtime identity was deleted after proof, and final production integrity returned 64 users, 64 profiles, 64 current claims, and zero gaps or unresolved reviews.",
         "No email, UUID, handle, moderation match, secret, session cookie, token, provider payload, private content, raw request metadata, or precise location was included in evidence."
       ]
+    },
+    {
+      "issueId": "OVE-204",
+      "title": "Reliable account sign-out: gardener safely ends the current session from My Account and every authenticated surface",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "31954a11f8405a9b125e3ea67963bb0ce963b5f3",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-204/reliable-account-sign-out-gardener-safely-ends-the-current-session",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29661780233",
+      "completedAt": "2026-07-18",
+      "verificationCommands": [
+        "cd apps/web && pnpm local:bootstrap",
+        "cd apps/web && pnpm db:types",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm localization:coverage:check",
+        "cd apps/web && pnpm visual:fixtures:verify",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=ephemeral-build-secret-at-least-32-characters pnpm build",
+        "cd apps/web && pnpm test:a11y",
+        "cd apps/web && pnpm smoke:account-sign-out -- --base-url https://over.garden --expected-commit 31954a11f8405a9b125e3ea67963bb0ce963b5f3 --deployed-commit 31954a11f8405a9b125e3ea67963bb0ce963b5f3",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "The exact behavior commit passed local behavioral and privacy proof, full exact-SHA CI, a READY canonical Vercel production deployment, and bounded production browser and two-session smoke proof.",
+        "The canonical same-origin POST revoked exactly the current Better Auth session; stale binding, GET, hostile-origin, and old-session garden/profile/admin/mutation access were denied while the independent session and reauthentication remained valid.",
+        "The shared owner-scoped coordinator covers the no-draft fast path, exactly three unsynced-work choices, sync fences, atomic owner-only purge, failure recovery, cross-tab/BFCache convergence, and structured journal/reorder/cover extension boundaries without broad browser-storage deletion.",
+        "Credential, Google, and Facebook account-link classes were preserved. Real Google and Facebook production authorization starts reached their consent boundaries and returned the deliberate existing-account collision fallback, so the credential-only owner was not silently linked or made social-admin-capable.",
+        "No email, handle, UUID, cookie, token, OAuth parameter, draft text, Blob, media key, private content, raw request metadata, or precise location was included in repository or closeout evidence; synthetic production residue was zero."
+      ]
     }
   ]
 }

@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-18 for the OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
+Last verified: 2026-07-18 for the OVE-204 exact-main current-session sign-out rollout, OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -425,8 +425,8 @@ redaction: pass; no secrets, env contents, payloads, row/user ids, content, prec
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
-Last verified: 2026-07-18 for OVE-203 exact-main production deployment,
-canonical runtime proof, and branch-scoped release Preview build repair.
+Last verified: 2026-07-18 for OVE-204 exact-main production deployment and
+canonical sign-out proof, plus branch-scoped release Preview build repair.
 
 Team:
 
@@ -444,17 +444,17 @@ Project:
 
 Current production deployment at verification time:
 
-- Deployment ID: `dpl_5bTNKAWqQJVctuBkESjg7bqVKgsL`
+- Deployment ID: `dpl_3Qu9hvUGn6KdCqbxgEZbZf7nDqaJ`
 - Canonical URL: `https://over.garden`
 - Ready state: `READY`
 - Target: `production`
-- Source: GitHub-integrated production deployment after the OVE-203 additive database expansion and migration
+- Source: GitHub-integrated production deployment for OVE-204 current-session sign-out
 - GitHub ref: `main`
-- GitHub commit: `1edffc351c1c3132f97608083b4b6ea6a63e9a12`
-- GitHub commit message: `feat(identity): provision moderated pseudonymous handles`
+- GitHub commit: `31954a11f8405a9b125e3ea67963bb0ce963b5f3`
+- GitHub commit message: `feat(auth): add safe current-session sign-out`
 - GitHub commit verification: `verified`
 - Canonical alias equality: passed for `https://over.garden`
-- OVE-203 (2026-07-18): canonical `/`, `/health`, guest `/garden/profile`, one current public-profile route, and the bounded synthetic auth/rename/retirement flow passed against this exact deployment. Runtime evidence was redacted and the synthetic identity was deleted after proof.
+- OVE-204 (2026-07-18): exact-SHA bounded smoke proved two independent sessions, exactly-current-session revocation, denial of old garden/profile/admin/mutation access, other-session and server-record continuity, successful reauthentication, and zero synthetic residue. A real credential owner browser session proved profile/operator controls, localized hard redirect, cross-tab convergence, and protected-route guest state. Google and Facebook authorization starts reached their real provider consent boundaries and returned the intentional existing-account collision fallback without linking the credential-only owner. Evidence contained only bounded counts, booleans, status classes, commit/deployment identifiers, and public route classes.
 
 Production aliases and domain bindings:
 
@@ -480,6 +480,7 @@ Public access observation:
 - On 2026-07-02 (OVE-111), production deployment `dpl_BKKuu8jDgChRQLLN6mCKbqbCruop` for main commit `183962c13a026f2a215951c171b5095b455feae3` was `READY` and aliased to `https://over.garden`. Redacted OAuth smoke confirmed `/garden` rendered the Google option, `/api/auth/sign-in/social` returned a Google authorization URL, the generated redirect URI was exactly `https://over.garden/api/auth/callback/google`, and Google did not return `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch` on authorization start. Evidence excluded client id, client secret, state, cookies, OAuth tokens, and callback query parameters.
 - On 2026-07-02 (OVE-112), production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` for main commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e` was `READY` and aliased to `https://over.garden`. Redacted OAuth smoke confirmed production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, `/api/auth/sign-in/social` returned a Facebook authorization URL, the generated redirect URI was exactly `https://over.garden/api/auth/callback/facebook`, and Meta did not return `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch` on authorization start. Evidence excluded app id, app secret, state, cookies, OAuth tokens, app/user access tokens, and callback query parameters.
 - On 2026-07-12 (OVE-180), production deployment `dpl_EGsxUqACCpKpxJ83t7784u333VkY` for main commit `dac896e896d315b621b6903b597f74a634d43b1b` was `READY`, verified, and aliased to `https://over.garden`. Redacted canonical-host smoke proved the active profile route class returns `200`, Bulgarian content language, `private, no-store`, profile V2 markup, and `noindex`; a valid missing profile returns the generic Bulgarian hard `404` with `noindex, nofollow`; and guest follow returns a `303` opaque intent, sign-in dialog, and exact localized return path without mutation. Google Public DNS and Cloudflare DNS-over-HTTPS both returned Vercel's public `76.76.21.21`, where canonical SNI/Host smoke passed. This workstation's LAN resolver returned a different unreachable address, so a direct local-browser canonical request timed out; exact READY-deployment browser smoke and canonical smoke through the public authoritative answer both passed. Evidence excluded live handles, profile content, relationship rows, emails, cookies, tokens, media keys, raw request metadata, and precise location.
+- On 2026-07-18 (OVE-204), production deployment `dpl_3Qu9hvUGn6KdCqbxgEZbZf7nDqaJ` for exact main commit `31954a11f8405a9b125e3ea67963bb0ce963b5f3` was `READY`, verified by filtered deployment metadata, and aliased to `https://over.garden` and `https://www.over.garden`. Canonical traffic returned `200` and resolved to the Bulgarian market root. Bounded two-session and real-browser proof covered current-session-only revocation, cross-tab/private-tree convergence, protected-route denial, continuity, provider-link preservation, and zero synthetic residue without recording identities, credentials, cookies, tokens, OAuth parameters, or private content.
 
 Deployment env observation:
 
