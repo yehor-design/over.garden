@@ -311,7 +311,7 @@ Process management and recovery (OVE-39):
 Immutable matching release contract (OVE-190):
 
 - Live status: pass on 2026-07-18. Production API and worker run exact tested-main
-  source `effcb6e3d040f486755482142865651d790bf543` from immutable release B;
+  source `710ac0c74559cea698946be31eeea856f0644fb4` from immutable release B;
   the exact-six canary, A/B activation, rollback, forward, final worker restart,
   and redacted external readiness proof passed.
 - Publisher: `.github/workflows/matching-image.yml`. It accepts only an exact
@@ -368,6 +368,12 @@ Immutable matching release contract (OVE-190):
   Explicit rollback remains capacity-gate independent so recovery is not
   rejected solely by the normal capacity gate. A paid host resize requires a
   separate capacity decision.
+- The final release B install live-proved the disk floor by refusing while
+  obsolete, unreferenced release generations consumed required headroom. The
+  threshold was not weakened: pointer-aware cleanup removed only reconstructible
+  release/image copies outside current, previous, forward, running, and new-A
+  state. The retry passed, final A/B remain the only sealed rollback pair, and
+  no volume or production data was removed.
 - Deployment order is install release A, install release B, migrate A, deploy
   A, deploy B, rollback to immediately prior digest A, then forward to B. A and
   B are distinct immutable workflow-run digests built from the same exact
@@ -389,12 +395,12 @@ Immutable matching release contract (OVE-190):
 OVE-190 live release evidence:
 
 ```text
-verified_at_utc: 2026-07-18T09:18:51Z
-main_commit_sha: effcb6e3d040f486755482142865651d790bf543
-main_ci_run: 29637183649
-release_a_digest: sha256:fe52a60c04480146e4b2ef0d70e0bef757db7a37a8f2a35fb8e9b234d6cc9b21
-release_b_digest: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
-matching_image_workflow_runs: 29637183650, 29637198194
+verified_at_utc: 2026-07-18T09:55:27Z
+main_commit_sha: 710ac0c74559cea698946be31eeea856f0644fb4
+main_ci_run: 29639178461
+release_a_digest: sha256:c11d80b9815e21dc3d02996666a4b90005093a819d2c9bdd614109fe6862c8e9
+release_b_digest: sha256:188bc9359b27315c54ef417d5437719ba7fe96dcf09e73406112d96f82879600
+matching_image_workflow_runs: 29639178486, 29639190206
 capability_smoke: pass
 runtime_schema: ove190.matchingRuntime.v1
 schema_compatibility: ove190.matching-schema.v1
@@ -406,7 +412,7 @@ rollback: release-b-to-immediately-prior-release-a-pass
 forward: release-a-to-release-b-pass
 worker_restart_recovery: fresh-heartbeat-and-exact-release-b-pass
 host_resource_safety: persistent-swap-and-capacity-controller-pass
-active_digest_after_forward: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
+active_digest_after_forward: sha256:188bc9359b27315c54ef417d5437719ba7fe96dcf09e73406112d96f82879600
 result: pass
 redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```

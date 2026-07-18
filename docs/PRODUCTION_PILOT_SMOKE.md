@@ -59,7 +59,7 @@ to a safe terminal state, and survive an immediately-prior-digest rollback plus
 forward activation without relying on a mutable `latest` image.
 
 Result on 2026-07-18: pass. Production API and worker run release B from exact
-tested-main source `effcb6e3d040f486755482142865651d790bf543`, the all-handler
+tested-main source `710ac0c74559cea698946be31eeea856f0644fb4`, the all-handler
 canary passed, rollback to release A and forward to B passed, and a final worker
 restart recovered the same B identity and fresh heartbeat. The redacted binding
 record is below.
@@ -179,13 +179,13 @@ seed production solely to make the smoke pass.
 ### OVE-190 live evidence (redacted)
 
 ```text
-verified_at_utc: 2026-07-18T09:18:51Z
-main_commit_sha: effcb6e3d040f486755482142865651d790bf543
-main_ci_run: 29637183649
-release_a_workflow_run: 29637183650
-release_a_digest: sha256:fe52a60c04480146e4b2ef0d70e0bef757db7a37a8f2a35fb8e9b234d6cc9b21
-release_b_workflow_run: 29637198194
-release_b_digest: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
+verified_at_utc: 2026-07-18T09:55:27Z
+main_commit_sha: 710ac0c74559cea698946be31eeea856f0644fb4
+main_ci_run: 29639178461
+release_a_workflow_run: 29639178486
+release_a_digest: sha256:c11d80b9815e21dc3d02996666a4b90005093a819d2c9bdd614109fe6862c8e9
+release_b_workflow_run: 29639190206
+release_b_digest: sha256:188bc9359b27315c54ef417d5437719ba7fe96dcf09e73406112d96f82879600
 release_contract: exact-sha + distinct-digests + no-latest-pass
 migration_preflight: pass
 deploy_a: ready
@@ -198,7 +198,7 @@ rollback_b_to_a: ready + exact-release-a-identity
 forward_a_to_b: ready + exact-release-b-identity
 restart_recovery: worker-restart + fresh-heartbeat + exact-release-b-identity
 host_resource_safety: persistent-swap + capacity-gates + bounded-low-priority-import-pass
-active_digest_after_forward: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
+active_digest_after_forward: sha256:188bc9359b27315c54ef417d5437719ba7fe96dcf09e73406112d96f82879600
 result: pass
 redaction: pass
 ```
@@ -207,12 +207,18 @@ The first live archive import exposed a production capacity failure mode: the
 small worker host had no active swap and became temporarily unresponsive under
 Docker/Meilisearch pressure even though no kernel OOM event was recorded. The
 release was not activated by that failed attempt, and the already-active
-runtime was recovered through the provider restart boundary. A persistent 2 GiB swap
-file with low swappiness was then enabled, transferred staging was cleaned, and
-both releases installed without further liveness loss. The committed controller
-now fails closed on combined-memory, available-memory, release-filesystem, and
-Docker-root capacity; bounds expensive archive operations; lowers client-side
-CPU/I/O priority; and preserves capacity-independent emergency rollback. The
+runtime was recovered through the provider restart boundary. A persistent 2 GiB
+swap file with low swappiness was then enabled, transferred staging was cleaned,
+and both releases installed without further liveness loss. The committed
+controller now fails closed on combined-memory, available-memory,
+release-filesystem, and Docker-root capacity; bounds expensive archive
+operations; lowers client-side CPU/I/O priority; and keeps explicit rollback
+outside the normal capacity gate. The
+final release B install later refused while obsolete, unreferenced release
+generations consumed the required disk headroom. The floor was not weakened:
+pointer-aware cleanup removed only reconstructible generations that were not
+current, previous, forward, running, or the new release A, after which the same
+install passed. No Docker volume or production data was removed. The
 subsequent A activation, B activation, six-handler canary, rollback, forward,
 delayed readiness probes, and worker restart all passed without reproducing the
 freeze. A paid droplet resize remains a capacity-planning decision, not an
