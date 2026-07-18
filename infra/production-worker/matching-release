@@ -17,6 +17,11 @@ readonly LOCK_FILE="$STATE_ROOT/matching-release.lock"
 readonly COMPOSE_FILE="${OVERGARDEN_RELEASE_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.release.yml}"
 readonly MIGRATION_FILE="${OVERGARDEN_RELEASE_MIGRATION_FILE:-$PRODUCTION_ROOT/0002_matching_worker_heartbeats.sql}"
 readonly LEGACY_COMPOSE_FILE="${OVERGARDEN_LEGACY_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.yml}"
+readonly ARCHIVE_OPERATION_TIMEOUT_SECONDS=1800
+readonly ARCHIVE_OPERATION_KILL_GRACE_SECONDS=30
+readonly MIN_RELEASE_VIRTUAL_MEMORY_KB=2621440
+readonly MIN_RELEASE_AVAILABLE_VIRTUAL_MEMORY_KB=1048576
+readonly MIN_RELEASE_AVAILABLE_DISK_KB=5242880
 
 fail() {
   printf 'matching release refused: %s\n' "$1" >&2
@@ -36,9 +41,6 @@ require_runtime() {
   require_command cmp
   require_command flock
   require_command jq
-  require_command sha256sum
-  require_command tar
-  require_command zstd
 
   docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is unavailable"
   [[ -f "$COMPOSE_FILE" ]] || fail "committed production release Compose file is not installed"
@@ -46,6 +48,83 @@ require_runtime() {
   [[ -f "$PRODUCTION_ROOT/worker.env" ]] || fail "production worker.env is missing"
   docker network inspect overgarden_default >/dev/null 2>&1 \
     || fail "existing overgarden_default production network is missing"
+}
+
+require_install_runtime() {
+  require_command awk
+  require_command cp
+  require_command df
+  require_command ionice
+  require_command nice
+  require_command sha256sum
+  require_command stat
+  require_command tar
+  require_command timeout
+  require_command zstd
+}
+
+run_bounded_low_priority() {
+  timeout \
+    --signal=TERM \
+    --kill-after="${ARCHIVE_OPERATION_KILL_GRACE_SECONDS}s" \
+    "${ARCHIVE_OPERATION_TIMEOUT_SECONDS}s" \
+    ionice -c 2 -n 7 \
+    nice -n 10 \
+    "$@"
+}
+
+require_release_host_capacity() {
+  local archive_path="${1:-}"
+  require_command awk
+  require_command df
+  [[ -r /proc/meminfo ]] \
+    || fail "production host memory capacity cannot be verified"
+
+  local memory_total_kb
+  local swap_total_kb
+  local memory_available_kb
+  local swap_free_kb
+  local docker_root
+  local archive_size_kb=0
+  memory_total_kb="$(awk '$1 == "MemTotal:" { print $2; exit }' /proc/meminfo)"
+  swap_total_kb="$(awk '$1 == "SwapTotal:" { print $2; exit }' /proc/meminfo)"
+  memory_available_kb="$(awk '$1 == "MemAvailable:" { print $2; exit }' /proc/meminfo)"
+  swap_free_kb="$(awk '$1 == "SwapFree:" { print $2; exit }' /proc/meminfo)"
+  docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)"
+
+  [[ "$memory_total_kb" =~ ^[0-9]+$
+    && "$swap_total_kb" =~ ^[0-9]+$
+    && "$memory_available_kb" =~ ^[0-9]+$
+    && "$swap_free_kb" =~ ^[0-9]+$
+    && "$docker_root" == /*
+    && -d "$docker_root" ]] \
+    || fail "production host capacity cannot be verified"
+  ((memory_total_kb + swap_total_kb >= MIN_RELEASE_VIRTUAL_MEMORY_KB)) \
+    || fail "production host RAM plus active swap is below the release safety floor"
+  ((memory_available_kb + swap_free_kb >= MIN_RELEASE_AVAILABLE_VIRTUAL_MEMORY_KB)) \
+    || fail "production host available memory plus free swap is below the release safety floor"
+
+  if [[ -n "$archive_path" ]]; then
+    require_command stat
+    [[ -f "$archive_path" && ! -L "$archive_path" ]] \
+      || fail "sealed image archive is not a regular file"
+    local archive_size_bytes
+    archive_size_bytes="$(stat --format='%s' -- "$archive_path")"
+    [[ "$archive_size_bytes" =~ ^[0-9]+$ ]] \
+      || fail "sealed image archive size cannot be verified"
+    archive_size_kb="$(((archive_size_bytes + 1023) / 1024))"
+  fi
+
+  local required_disk_kb=$((MIN_RELEASE_AVAILABLE_DISK_KB + archive_size_kb))
+  local capacity_path
+  for capacity_path in "$PRODUCTION_ROOT" "$docker_root"; do
+    local available_disk_kb
+    available_disk_kb="$(LC_ALL=C df -Pk -- "$capacity_path" | awk 'END { print $4 }')"
+    [[ "$available_disk_kb" =~ ^[0-9]+$ ]] \
+      || fail "production host disk capacity cannot be verified"
+    ((available_disk_kb >= required_disk_kb)) \
+      || fail "production host free disk is below the release safety floor"
+  done
 }
 
 require_sha() {
@@ -137,7 +216,7 @@ verify_archive_config_digest() {
 
   local archive_manifest
   archive_manifest="$(mktemp "$release_dir/.archive-manifest.XXXXXX")"
-  if ! zstd -dc "$release_dir/$archive_file" 2>/dev/null \
+  if ! run_bounded_low_priority zstd -dc "$release_dir/$archive_file" 2>/dev/null \
     | tar -xOf - manifest.json 2>/dev/null > "$archive_manifest"; then
     rm -f -- "$archive_manifest"
     fail "sealed image archive manifest is unreadable"
@@ -163,12 +242,16 @@ verify_archive_config_digest() {
     || fail "sealed image archive config path differs from release.json"
 
   local actual_config_digest
-  actual_config_digest="sha256:$(
-    zstd -dc "$release_dir/$archive_file" 2>/dev/null \
+  local actual_config_hash
+  if ! actual_config_hash="$(
+    run_bounded_low_priority zstd -dc "$release_dir/$archive_file" 2>/dev/null \
       | tar -xOf - "$config_path" 2>/dev/null \
       | sha256sum \
       | awk '{print $1}'
-  )"
+  )"; then
+    fail "sealed image archive config digest cannot be verified"
+  fi
+  actual_config_digest="sha256:$actual_config_hash"
   [[ "$actual_config_digest" == "$expected_config_digest" ]] \
     || fail "sealed image archive config digest differs from release.json"
 }
@@ -271,12 +354,13 @@ install_release() {
   digest="$(manifest_value "$incoming_manifest" '.image.registryDigest')"
   [[ "$archive_file" == "overgarden-matching-${source_sha}-${digest#sha256:}.docker.tar.zst" ]] \
     || fail "image archive name does not match sourceCommit and registryDigest"
+  require_release_host_capacity "$incoming_dir/$archive_file"
 
   local actual_archive_sha256
   actual_archive_sha256="$(sha256sum "$incoming_dir/$archive_file" | awk '{print $1}')"
   [[ "$actual_archive_sha256" == "$archive_sha256" ]] \
     || fail "image archive checksum differs from release.json"
-  zstd --test "$incoming_dir/$archive_file" >/dev/null \
+  run_bounded_low_priority zstd --test -- "$incoming_dir/$archive_file" >/dev/null 2>&1 \
     || fail "image archive failed zstd integrity verification"
   verify_archive_config_digest "$incoming_dir"
 
@@ -293,10 +377,15 @@ install_release() {
 
   cp "$incoming_manifest" "$staging_dir/release.json"
   cp "$incoming_dir/$capabilities_file" "$staging_dir/$capabilities_file"
-  cp "$incoming_dir/$archive_file" "$staging_dir/$archive_file"
+  run_bounded_low_priority cp -- "$incoming_dir/$archive_file" "$staging_dir/$archive_file" \
+    || fail "sealed image archive staging copy failed"
   chmod 0444 "$staging_dir/release.json" "$staging_dir/$capabilities_file" "$staging_dir/$archive_file"
 
-  zstd -dc "$staging_dir/$archive_file" | docker load >/dev/null
+  if ! run_bounded_low_priority \
+    bash -o pipefail -c "zstd -dc -- \"\$1\" | docker load >/dev/null" \
+    _ "$staging_dir/$archive_file" >/dev/null 2>&1; then
+    fail "sealed image archive import failed or exceeded its bounded timeout"
+  fi
 
   local image_repository
   local image_tag
@@ -506,6 +595,17 @@ restore_legacy_runtime() {
 
 activate_manifest() {
   local target_manifest="$1"
+  local capacity_mode="$2"
+  case "$capacity_mode" in
+    normal)
+      require_release_host_capacity
+      ;;
+    recovery)
+      ;;
+    *)
+      fail "internal activation capacity mode is invalid"
+      ;;
+  esac
   if [[ -f "$ACTIVE_ENV" && ! -f "$CURRENT_POINTER" ]]; then
     fail "release state is inconsistent: active environment has no sealed current pointer"
   fi
@@ -602,7 +702,8 @@ deploy_release() {
   fi
 
   apply_schema_migration "$target_manifest"
-  activate_manifest "$target_manifest" || fail "candidate failed readiness; prior runtime was restored"
+  activate_manifest "$target_manifest" normal \
+    || fail "candidate failed readiness; prior runtime was restored"
 
   if [[ -f "$CURRENT_POINTER" ]]; then
     copy_pointer "$CURRENT_POINTER" "$PREVIOUS_POINTER"
@@ -631,7 +732,8 @@ rollback_release() {
   [[ "$current_digest" != "$previous_digest" ]] \
     || fail "rollback target must have a different registry digest"
 
-  activate_manifest "$PREVIOUS_POINTER" || fail "rollback target failed readiness; current runtime was restored"
+  activate_manifest "$PREVIOUS_POINTER" recovery \
+    || fail "rollback target failed readiness; current runtime was restored"
   copy_pointer "$CURRENT_POINTER" "$FORWARD_POINTER"
   copy_pointer "$PREVIOUS_POINTER" "$CURRENT_POINTER"
   rm -f -- "$PREVIOUS_POINTER"
@@ -649,7 +751,8 @@ forward_release() {
   [[ "$current_digest" != "$forward_digest" ]] \
     || fail "forward target must have a different registry digest"
 
-  activate_manifest "$FORWARD_POINTER" || fail "forward target failed readiness; rollback runtime was restored"
+  activate_manifest "$FORWARD_POINTER" normal \
+    || fail "forward target failed readiness; rollback runtime was restored"
   copy_pointer "$CURRENT_POINTER" "$PREVIOUS_POINTER"
   copy_pointer "$FORWARD_POINTER" "$CURRENT_POINTER"
   rm -f -- "$FORWARD_POINTER"
@@ -705,6 +808,7 @@ main() {
   case "$command" in
     install)
       [[ $# -eq 1 ]] || fail "install requires one artifact directory"
+      require_install_runtime
       install_release "$1"
       ;;
     deploy)

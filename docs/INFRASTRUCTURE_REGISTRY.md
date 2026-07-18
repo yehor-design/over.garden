@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-18 for the production sealed-owner env recovery; other provider verification dates remain recorded per section
+Last verified: 2026-07-18 for the production matching release and sealed-owner env recovery; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -310,10 +310,10 @@ Process management and recovery (OVE-39):
 
 Immutable matching release contract (OVE-190):
 
-- Repository status: implementation and runbook are prepared for exact-main
-  release proof. The production SHA, digests, workflow run ids, and observed
-  endpoint states must be filled from the live release; placeholders below are
-  not deployment evidence and must not be read as a completed rollout.
+- Live status: pass on 2026-07-18. Production API and worker run exact tested-main
+  source `effcb6e3d040f486755482142865651d790bf543` from immutable release B;
+  the exact-six canary, A/B activation, rollback, forward, final worker restart,
+  and redacted external readiness proof passed.
 - Publisher: `.github/workflows/matching-image.yml`. It accepts only an exact
   lowercase 40-character SHA contained in `origin/main`, installs
   `uv==0.11.24`, compiles all Python modules, runs frozen Ruff, and runs the full
@@ -352,7 +352,21 @@ Immutable matching release contract (OVE-190):
   boundary. Its one `matching` row contains only release SHA, image digest,
   schema class, sorted supported handlers, and heartbeat timestamps. It must
   never grow hostname, process, error, payload, user, connection, or location
-  fields. A heartbeat older than 30 seconds is not ready.
+  fields. A heartbeat older than 30 seconds is not ready. The worker maintains
+  the heartbeat through an independent bounded database connection while an
+  active claim renews its lease every 10 seconds using the exact claim token;
+  stale tokens cannot renew reclaimed or completed work.
+- Meilisearch transport calls are bounded at 10 seconds and async task polling
+  at 120 seconds with 250 ms intervals. Only an explicit `succeeded` task may
+  complete a queue job; retryable queue failure states remain eligible for the
+  bounded canary retry path.
+- The current small worker host has a persistent 2 GiB `/swapfile` with
+  `vm.swappiness=10`. Normal install/activation fails closed below 2.5 GiB
+  combined RAM+active swap, below 1 GiB available RAM+free swap, or below 5 GiB
+  plus archive size on either the release or Docker-root filesystem. Expensive
+  archive/client operations use reduced CPU/I/O priority and a 30-minute bound.
+  Explicit rollback remains capacity-gate independent so emergency recovery is
+  never blocked. A paid host resize requires a separate capacity decision.
 - Deployment order is install release A, install release B, migrate A, deploy
   A, deploy B, rollback to immediately prior digest A, then forward to B. A and
   B are distinct immutable workflow-run digests built from the same exact
@@ -371,26 +385,29 @@ Immutable matching release contract (OVE-190):
   journal search document after index/unindex proof, and never changes a
   canonical catalog decision or user content.
 
-OVE-190 live release evidence template (fill only after proof):
+OVE-190 live release evidence:
 
 ```text
-verified_at_utc: <YYYY-MM-DDTHH:MM:SSZ>
-main_commit_sha: <40-char-sha>
-release_a_digest: sha256:<64-hex>
-release_b_digest: sha256:<64-hex>
-matching_image_workflow_runs: <public-run-id-a>, <public-run-id-b>
-capability_smoke: pass | fail | not-run
+verified_at_utc: 2026-07-18T09:18:51Z
+main_commit_sha: effcb6e3d040f486755482142865651d790bf543
+main_ci_run: 29637183649
+release_a_digest: sha256:fe52a60c04480146e4b2ef0d70e0bef757db7a37a8f2a35fb8e9b234d6cc9b21
+release_b_digest: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
+matching_image_workflow_runs: 29637183650, 29637198194
+capability_smoke: pass
 runtime_schema: ove190.matchingRuntime.v1
 schema_compatibility: ove190.matching-schema.v1
-handlers: exact-six-pass | fail | not-run
-dependencies: api=<class>, postgres=<class>, jobQueue=<class>, meilisearch=<class>, worker=<class>
-queue_buckets: depth=<class>, lag=<class>
-handler_canary: six-done-and-journal-restored | fail | not-run
-rollback: release-b-to-immediately-prior-release-a-pass | fail | not-run
-forward: release-a-to-release-b-pass | fail | not-run
-active_digest_after_forward: sha256:<64-hex>
-result: pass | blocker | not-run
-redaction: no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
+handlers: exact-six-pass
+dependencies: api=available, postgres=available, jobQueue=available, meilisearch=available, worker=available
+queue_buckets: depth=empty, lag=none
+handler_canary: six-done-and-journal-restored
+rollback: release-b-to-immediately-prior-release-a-pass
+forward: release-a-to-release-b-pass
+worker_restart_recovery: fresh-heartbeat-and-exact-release-b-pass
+host_resource_safety: persistent-swap-and-capacity-controller-pass
+active_digest_after_forward: sha256:9074a6468c2ade7aeb2c184e54f91318ba95fdb382c1bea589bfff6754837d52
+result: pass
+redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```
 
 ## Vercel

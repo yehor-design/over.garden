@@ -135,9 +135,7 @@ describe("OVE-190 immutable matching release contract", () => {
     const archiveIdentityCheck = releaseScript.indexOf(
       'verify_archive_config_digest "$incoming_dir"',
     );
-    const imageLoad = releaseScript.indexOf(
-      'zstd -dc "$staging_dir/$archive_file" | docker load',
-    );
+    const imageLoad = releaseScript.indexOf("docker load >/dev/null");
 
     expect(preflight).toBeGreaterThan(0);
     expect(activate).toBeGreaterThan(preflight);
@@ -148,6 +146,32 @@ describe("OVE-190 immutable matching release contract", () => {
     expect(releaseScript).toContain("sha256sum");
     expect(releaseScript).toContain("zstd --test");
     expect(releaseScript).toContain("verify_archive_config_digest");
+    expect(releaseScript).toContain("require_release_host_capacity");
+    expect(releaseScript).toContain("MIN_RELEASE_VIRTUAL_MEMORY_KB=2621440");
+    expect(releaseScript).toContain(
+      "MIN_RELEASE_AVAILABLE_VIRTUAL_MEMORY_KB=1048576",
+    );
+    expect(releaseScript).toContain("MIN_RELEASE_AVAILABLE_DISK_KB=5242880");
+    expect(releaseScript).toContain("run_bounded_low_priority");
+    expect(releaseScript).toContain("--signal=TERM");
+    expect(releaseScript).toContain("--kill-after=");
+    expect(releaseScript).toContain("ionice -c 2 -n 7");
+    expect(releaseScript).toContain("nice -n 10");
+    expect(releaseScript).toContain("MemAvailable:");
+    expect(releaseScript).toContain("SwapFree:");
+    expect(releaseScript).toContain("{{.DockerRootDir}}");
+    expect(releaseScript).toContain(
+      'activate_manifest "$PREVIOUS_POINTER" recovery',
+    );
+    expect(releaseScript).toContain(
+      'activate_manifest "$target_manifest" normal',
+    );
+    const statusBody = releaseScript.slice(
+      releaseScript.indexOf("status_release()"),
+      releaseScript.indexOf("usage()"),
+    );
+    expect(statusBody).not.toContain("require_release_host_capacity");
+    expect(statusBody).not.toContain("require_install_runtime");
     expect(releaseScript).toContain("loadedImageId");
     expect(releaseScript).not.toContain(".image.localImageId");
     expect(releaseScript).toContain("verify_loaded_image");
