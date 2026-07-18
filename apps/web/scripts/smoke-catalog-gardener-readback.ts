@@ -26,7 +26,8 @@ const SYNONYM_PROJECTION_ID = "16100000-0000-4000-8000-000000000202";
 const LOCALE_PROJECTION_ID = "16100000-0000-4000-8000-000000000203";
 const CANONICAL_NAME = "OVE161 Золотий томат";
 const UI_EMAIL = "ove161-ui@example.test";
-const TEST_PASSWORD = "overgarden-ove161-local-proof";
+const EPHEMERAL_TEST_PASSWORD = `ove-161-${randomUUID()}-${Date.now()}`;
+const UI_PASSWORD_ENV = "OVE161_SMOKE_UI_PASSWORD";
 const EMAIL_PREFIX = "ove161-";
 const ALLOWED_SUGGESTION_KEYS = new Set([
   "id",
@@ -130,16 +131,20 @@ async function main() {
     mode === "--seed-ui"
       ? UI_EMAIL
       : `${EMAIL_PREFIX}smoke-${Date.now()}-${randomUUID()}@example.test`;
+  const password =
+    mode === "--seed-ui"
+      ? requireUiPassword(process.env[UI_PASSWORD_ENV])
+      : EPHEMERAL_TEST_PASSWORD;
   await cleanupFixtureState(db);
   const jar = new CookieJar();
   await authRequest(baseUrl, jar, "/api/auth/sign-up/email", {
     email,
-    password: TEST_PASSWORD,
+    password,
     name: "OVE-161 gardener proof",
   });
   await authRequest(baseUrl, jar, "/api/auth/sign-in/email", {
     email,
-    password: TEST_PASSWORD,
+    password,
   });
 
   const user = await db
@@ -673,6 +678,16 @@ function getSetCookieHeaders(headers: Headers): string[] {
   if (values && values.length > 0) return values;
   const combined = headers.get("set-cookie");
   return combined ? combined.split(/,(?=\s*[^;,]+=)/) : [];
+}
+
+function requireUiPassword(value: string | undefined) {
+  const password = value?.trim() ?? "";
+  if (password.length < 16 || password.length > 200) {
+    throw new Error(
+      `${UI_PASSWORD_ENV} must be a private 16-200 character local value for --seed-ui.`,
+    );
+  }
+  return password;
 }
 
 function requireLoopbackPostgresUrl(value: string | undefined) {

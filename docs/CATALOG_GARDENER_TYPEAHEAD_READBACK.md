@@ -80,8 +80,10 @@ OVE-161 fixture users and identities and rebuilds the local index.
 
 The smoke refuses non-loopback app, PostgreSQL, or Meilisearch endpoints.
 Evidence contains no account credentials, cookies, owner IDs, journal body,
-precise location, media fields, or ranking details. `--seed-ui` leaves one
-bounded local visual account and realistic objects for browser QA;
+precise location, media fields, or ranking details. Each normal proof uses a
+new in-memory password. `--seed-ui` requires the private local-only
+`OVE161_SMOKE_UI_PASSWORD` environment value and leaves one bounded local visual
+account and realistic objects for browser QA;
 `--reset-ui` removes them. Neither mode is production proof.
 
 ## Verification
@@ -106,9 +108,11 @@ For local browser evidence:
 
 ```bash
 cd apps/web
+export OVE161_SMOKE_UI_PASSWORD="<private local password>"
 pnpm smoke:catalog-gardener-readback:seed-ui
 # sign in at /garden with the local OVE-161 fixture account
 pnpm smoke:catalog-gardener-readback:reset-ui
+unset OVE161_SMOKE_UI_PASSWORD
 ```
 
 OVE-163 owns the later non-local matching rollout gate. OVE-167 and OVE-168 may

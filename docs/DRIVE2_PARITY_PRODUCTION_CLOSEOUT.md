@@ -99,6 +99,15 @@ The profile argument must name an already public profile and is used only for a
 read check. The output does not record the handle, discovered journal slug,
 object ID, content, or auth-intent token.
 
+The root report remains the OVE-186 canonical-production evidence contract.
+Its nested `productionSkeletonBoundary` section separately carries the OVE-191
+proof: signed-out `GET /skeleton`, `GET /api/skeleton/journal`, and
+`POST /api/skeleton/journal` must each return exact `404`. The smoke does not
+read or record those response bodies, does not send credentials or cookies,
+and does not create or authenticate an account. The existing canonical
+`POST /api/garden/entries` probe remains the signed-out JSON `401` auth-intent
+proof for the real product journal path.
+
 The smoke fails unless:
 
 - feed, objects, journals, knowledge, communities, privacy, and garden routes
@@ -107,6 +116,9 @@ The smoke fails unless:
   canonical V2 contracts;
 - guest comment, follow, bookmark, and create attempts enter the shared auth
   intent boundary without mutating data;
+- the production walking-skeleton page plus both read and write methods of its
+  journal API return exact `404`, with only fixed status fields and the
+  response-body redaction boolean recorded;
 - fixture routes return `404`, and fixture/private markers are absent from
   public HTML and the sitemap;
 - HTML remains private/no-store and Bulgarian route/document locale foundations

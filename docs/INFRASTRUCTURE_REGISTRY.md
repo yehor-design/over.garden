@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-18 for the production matching release and sealed-owner env recovery; other provider verification dates remain recorded per section
+Last verified: 2026-07-18 for the production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -505,6 +505,12 @@ Deployment env observation:
 
 Vercel invariants:
 
+- OVE-191 walking-skeleton surfaces are never enabled in Vercel. Production and
+  Preview must return a null-body `404` for the page and API before auth/data
+  access. `WALKING_SKELETON_ENABLED` is a local-only two-key diagnostic gate;
+  do not install it as true in any deployed environment. Exact-production proof
+  belongs to the credential-free `smoke:drive2-production` result, which records
+  only status classes and redaction booleans.
 - Do not commit Vercel tokens, protected preview URLs with nonce/share tokens, build logs containing secrets, or environment variable values.
 - Do not document or paste auth secret values. Evidence may say `BETTER_AUTH_SECRET` is present, missing, placeholder-like, or local-fallback only.
 - Do not document or paste Google OAuth client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may say only whether `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are present and whether the exact redirect URI is authorized.

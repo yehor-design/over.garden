@@ -4,10 +4,6 @@ export const PILOT_AUTH_HELP_PATH = "/auth/help";
 export const PILOT_AUTH_RESET_PASSWORD_PATH = "/auth/reset-password";
 export const PASSWORD_RESET_SUCCESS_PATH = "/garden";
 
-export const LOCAL_DEV_DEFAULT_EMAIL = "gardener@over.garden";
-export const LOCAL_DEV_DEFAULT_PASSWORD = "overgarden-local-gardener";
-export const LOCAL_DEV_DEFAULT_NAME = "Local Gardener";
-
 export function pilotPasswordResetRedirectUrl(baseUrl: string): string {
   const normalizedBase = baseUrl.replace(/\/$/, "");
   return `${normalizedBase}${PILOT_AUTH_RESET_PASSWORD_PATH}`;
@@ -45,8 +41,4 @@ export function classifyAuthClientError(
   }
 
   return "unknown";
-}
-
-export function shouldUseLocalDevAuthDefaults(): boolean {
-  return process.env.NODE_ENV !== "production";
 }

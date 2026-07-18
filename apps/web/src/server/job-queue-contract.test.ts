@@ -92,11 +92,6 @@ describe("job queue producer/consumer contract", () => {
         kind: "journal_entry_unindex",
       },
       {
-        source: "app/skeleton/actions.ts",
-        queueName: "matching",
-        kind: "journal_entry_index",
-      },
-      {
         source: "server/catalog-alias-curation-repository.ts",
         queueName: "matching",
         kind: "catalog_alias_suggestions_refresh",

@@ -68,7 +68,6 @@ export function AuthIntentSurface({
               embedded
               autoFocusEmail
               locale={locale}
-              prefillDevelopmentDefaults={false}
               title={copy.panelTitle}
               prompt={copy.panelPrompt}
               postAuthPath={`/auth/intent/resume?intent=${encodeURIComponent(token)}`}

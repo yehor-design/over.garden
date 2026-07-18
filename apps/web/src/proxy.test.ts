@@ -91,6 +91,64 @@ describe("app route cache guardrail", () => {
     expect(production.status).toBe(404);
   });
 
+  it("hard-404s walking-skeleton routes outside an explicit loopback-only runtime", async () => {
+    vi.stubEnv("WALKING_SKELETON_ENABLED", "false");
+    const disabledPage = await responseFor("/skeleton");
+    const disabledNested = await responseFor("/skeleton/internal");
+    const disabledApi = await responseFor(
+      "/api/skeleton/journal",
+      undefined,
+      { method: "POST" },
+    );
+
+    stubLocalWalkingSkeletonEnvironment();
+    const enabledLocal = await proxy(
+      new NextRequest("http://localhost:3000/skeleton", {
+        headers: { host: "localhost:3000" },
+      }),
+    );
+    const rejectedRawHost = await proxy(
+      new NextRequest("http://localhost:3000/skeleton", {
+        headers: { host: "developer-tunnel.example.test" },
+      }),
+    );
+    const rejectedUrlHost = await proxy(
+      new NextRequest("https://developer-tunnel.example.test/skeleton", {
+        headers: { host: "localhost:3000" },
+      }),
+    );
+
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("VERCEL_ENV", "preview");
+    const preview = await proxy(
+      new NextRequest("http://localhost:3000/api/skeleton/journal", {
+        method: "POST",
+      }),
+    );
+
+    vi.stubEnv("VERCEL_ENV", "production");
+    const production = await proxy(
+      new NextRequest("http://localhost:3000/skeleton"),
+    );
+    vi.unstubAllEnvs();
+
+    expect(disabledPage.status).toBe(404);
+    expect(disabledNested.status).toBe(404);
+    expect(disabledApi.status).toBe(404);
+    expect(await disabledApi.text()).toBe("");
+    expect(disabledPage.headers.get("Cache-Control")).toBe(
+      APP_ROUTE_CACHE_CONTROL,
+    );
+    expect(disabledPage.headers.get("X-Robots-Tag")).toBe(
+      "noindex, nofollow",
+    );
+    expect(enabledLocal.status).toBe(200);
+    expect(rejectedRawHost.status).toBe(404);
+    expect(rejectedUrlHost.status).toBe(404);
+    expect(preview.status).toBe(404);
+    expect(production.status).toBe(404);
+  });
+
   it.each([
     "/",
     "/garden",
@@ -537,3 +595,20 @@ describe("app route cache guardrail", () => {
     expect(internalUkrainianRewrite.headers.get("Location")).toBeNull();
   });
 });
+
+function stubLocalWalkingSkeletonEnvironment() {
+  vi.stubEnv("WALKING_SKELETON_ENABLED", "true");
+  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+  vi.stubEnv(
+    "DATABASE_URL",
+    "postgresql://overgarden:test@localhost:5432/overgarden",
+  );
+  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+  vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
+  vi.stubEnv("VERCEL", "");
+  vi.stubEnv("VERCEL_ENV", "development");
+}

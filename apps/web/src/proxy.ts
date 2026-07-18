@@ -31,6 +31,10 @@ import {
   renderNotFoundPublicProfileHtml,
 } from "@/lib/public-profile-lifecycle";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
+import {
+  isWalkingSkeletonRequestHostAllowed,
+  tryResolveWalkingSkeletonEnvironment,
+} from "@/lib/walking-skeleton/environment";
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
@@ -213,8 +217,27 @@ function getLocaleRoutingResponse(
 // must not become the authorization layer.
 export async function proxy(request: NextRequest) {
   const locale = resolveRequestLocale(request);
+  const pathname = normalizePathname(request.nextUrl.pathname);
   if (
-    isVisualFixturePath(normalizePathname(request.nextUrl.pathname)) &&
+    isWalkingSkeletonPath(pathname) &&
+    (!tryResolveWalkingSkeletonEnvironment(process.env) ||
+      !isWalkingSkeletonRequestHostAllowed(request.nextUrl.hostname) ||
+      !isWalkingSkeletonRequestHostAllowed(request.headers.get("host")))
+  ) {
+    return withAppRouteContract(
+      new NextResponse(null, {
+        status: 404,
+        headers: {
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      }),
+      request,
+      locale,
+    );
+  }
+
+  if (
+    isVisualFixturePath(pathname) &&
     !tryResolveVisualFixtureEnvironment(process.env)
   ) {
     return withAppRouteContract(
@@ -369,6 +392,15 @@ function isVisualFixturePath(pathname: string) {
     pathname.startsWith("/__visual-fixtures/") ||
     pathname === "/api/__visual-fixtures" ||
     pathname.startsWith("/api/__visual-fixtures/")
+  );
+}
+
+function isWalkingSkeletonPath(pathname: string) {
+  return (
+    pathname === "/skeleton" ||
+    pathname.startsWith("/skeleton/") ||
+    pathname === "/api/skeleton" ||
+    pathname.startsWith("/api/skeleton/")
   );
 }
 

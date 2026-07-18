@@ -1,13 +1,29 @@
-import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import {
+  isWalkingSkeletonRequestHostAllowed,
+  tryResolveWalkingSkeletonEnvironment,
+} from "@/lib/walking-skeleton/environment";
 import { getCurrentSession } from "@/server/auth-session";
 import { listMyRecentJournalEntries } from "@/server/journal-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { createSkeletonJournalEntry } from "./actions";
-import { SkeletonAuthPanel } from "./skeleton-auth-panel";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function SkeletonPage() {
+  if (!tryResolveWalkingSkeletonEnvironment(process.env)) notFound();
+
+  const requestHeaders = await headers();
+  if (!isWalkingSkeletonRequestHostAllowed(requestHeaders.get("host"))) {
+    notFound();
+  }
+
   const session = await getCurrentSession();
   const userId = session?.user?.id;
   const entries = userId
@@ -21,46 +37,30 @@ export default async function SkeletonPage() {
           Walking skeleton
         </h1>
         <p className="text-muted-foreground">
-          One vertical path through auth, scoped Kysely repositories, Postgres,
-          queueing, and SSR readback.
+          Local-only proof through canonical auth, scoped Kysely repositories,
+          Postgres, queueing, and SSR readback.
         </p>
       </header>
 
-      {!userId ? <SkeletonAuthPanel /> : null}
-
-      {userId ? (
-        <section className="flex flex-col gap-4 rounded-lg border border-border p-4">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold text-foreground">
-              Journal write path
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Signed in as {session.user.email}
-            </p>
-          </div>
-
-          <form action={createSkeletonJournalEntry} className="flex flex-col gap-3">
-            <label className="flex flex-col gap-1 text-sm font-medium text-foreground">
-              Entry
-              <textarea
-                name="body"
-                required
-                minLength={1}
-                maxLength={2000}
-                className="min-h-28 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                placeholder="Помідори чері — first skeleton note"
-              />
-            </label>
-            <label className="flex items-center gap-2 text-sm text-foreground">
-              <input type="checkbox" name="visibility" value="public" />
-              Public test entry
-            </label>
-            <Button type="submit" className="self-start">
-              Save entry
-            </Button>
-          </form>
-        </section>
-      ) : null}
+      <section className="flex flex-col gap-3 rounded-lg border border-border p-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          Canonical session boundary
+        </h2>
+        {userId ? (
+          <p className="text-sm text-muted-foreground">
+            Authenticated local session. Diagnostic reads remain scoped to the
+            current user.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No authenticated session. Use the canonical{" "}
+            <Link className="font-medium text-foreground underline" href="/garden">
+              garden sign-in flow
+            </Link>
+            , then return to this local diagnostic.
+          </p>
+        )}
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-foreground">SSR readback</h2>

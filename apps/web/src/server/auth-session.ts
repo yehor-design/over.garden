@@ -3,6 +3,7 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { auth } from "@/lib/auth";
+import { isRetiredSharedIdentityEmail } from "@/lib/auth/retired-shared-identity";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
 export class AuthenticationRequiredError extends Error {
@@ -13,7 +14,14 @@ export class AuthenticationRequiredError extends Error {
 }
 
 export async function getCurrentSession() {
-  return auth.api.getSession({ headers: await headers() });
+  const session = await auth.api.getSession({ headers: await headers() });
+  const email = session?.user.email;
+
+  if (typeof email === "string" && isRetiredSharedIdentityEmail(email)) {
+    return null;
+  }
+
+  return session;
 }
 
 export async function requireCurrentRequestScope(): Promise<RequestScope> {

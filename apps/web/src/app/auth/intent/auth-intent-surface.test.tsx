@@ -35,7 +35,7 @@ describe("AuthIntentSurface", () => {
     expect(html).toContain("Скасувати й продовжити читання");
     expect(html).toContain("/auth/intent/resume?intent=opaque-intent-token");
     expect(html).toContain('aria-labelledby="auth-intent-title"');
-    expect(html).toContain("&quot;prefillDevelopmentDefaults&quot;:false");
+    expect(html).not.toContain("prefillDevelopmentDefaults");
     expect(html).toContain("&quot;locale&quot;:&quot;uk&quot;");
     expect(html).not.toMatch(
       /person@example|private journal|latitude|longitude|media key/i,

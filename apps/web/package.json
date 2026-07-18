@@ -4,8 +4,9 @@
   "private": true,
   "packageManager": "pnpm@9.14.1",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
+    "postbuild": "tsx scripts/check-walking-skeleton-boundary.ts --require-build-output",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
@@ -49,6 +50,7 @@
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
+    "walking-skeleton:boundary:check": "tsx scripts/check-walking-skeleton-boundary.ts",
     "smoke:protective-dns": "tsx scripts/check-protective-dns.ts",
     "smoke:local-media-runtime": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-local-media-runtime.ts",
     "mainline:closeout:check": "tsx scripts/check-mainline-closeout.ts",

@@ -155,19 +155,16 @@ describe("garden auth duplicate-account avoidance", () => {
     ).toBe("/garden?source=homepage");
   });
 
-  it("can suppress local development defaults on redacted auth evidence surfaces", () => {
-    const html = renderToStaticMarkup(
-      <GardenAuthPanel prefillDevelopmentDefaults={false} />,
-    );
+  it("never embeds shared development identity defaults", () => {
+    const html = renderToStaticMarkup(<GardenAuthPanel />);
 
-    expect(html).not.toContain("gardener@over.garden");
-    expect(html).not.toContain("overgarden-local-gardener");
-    expect(html).not.toContain("Local Gardener");
+    expect(html).not.toMatch(/value="[^"]+@/);
+    expect(html).not.toMatch(/type="password"[^>]+value="[^"]+"/);
   });
 
   it("uses native form semantics with sign-in as the default submit action", () => {
     const html = renderToStaticMarkup(
-      <GardenAuthPanel prefillDevelopmentDefaults={false} />,
+      <GardenAuthPanel />,
     );
 
     expect(html).toContain("<form");

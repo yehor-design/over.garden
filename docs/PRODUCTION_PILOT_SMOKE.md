@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation
 Last updated: 2026-07-18
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -29,6 +29,67 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
+
+## OVE-191 Production Scaffold Isolation
+
+Goal: keep the historical walking-skeleton integration proof available to a
+developer without shipping a shared identity or an alternate production journal
+entrance.
+
+Binding contract:
+
+- `/skeleton`, `/skeleton/**`, `/api/skeleton`, and `/api/skeleton/**` return a
+  null-body `404` in production, Vercel Preview, disabled environments, and for
+  non-loopback request hosts. Proxy and API handlers require both the framework
+  URL host and raw HTTP `Host` header to be loopback, while canonical `pnpm dev`
+  binds the listener to `127.0.0.1`. Page and API handlers enforce the boundary
+  before authentication, payload parsing, repository, or queue access.
+- Source and postbuild scans reject legacy shared identity markers, the removed
+  auth panel/server action, and any reintroduced local shared auth defaults. Old
+  immutable Git history is historical exposure, not valid current proof, and its
+  values are permanently compromised. Any still-accessible old Vercel deployment
+  that serves the scaffold is a live exposure and must be removed or protected
+  after the exact replacement deployment is ready.
+- The local API returns only fixed opaque error classes: `401` signed out, `403`
+  authenticated but ineligible, `400` invalid payload, and `500` unexpected
+  internal failure. It never serializes the caught error message.
+- Local developers authenticate only through the canonical `/garden` flow. The
+  scaffold page is readback-only; the explicitly gated JSON endpoint is the
+  single remaining diagnostic write path.
+- `pnpm smoke:drive2-production` retains its OVE-186 report identity and adds a
+  separate OVE-191 section. It performs credential-free `GET /skeleton`,
+  `GET /api/skeleton/journal`, and `POST /api/skeleton/journal` probes and
+  requires exact `404` for all three without reading or recording their bodies.
+  The canonical `/api/garden/entries` signed-out `401` proof remains unchanged.
+
+The 2026-07-18 production incident response established this redacted state:
+
+- the original skeleton identity has no user, account, session, grant, role, or
+  owned-data rows;
+- one former local-development identity remains as a deliberately preserved
+  retired record because it owns lifecycle-bearing data. Its historical shared
+  password was rotated to an unavailable random value, all 15 session rows are
+  expired, active sessions are zero, and current auth code reserves the address,
+  rejects sign-in generically, refuses user creation/update, refuses session
+  creation, and treats any returned old session as signed out;
+- the access-only remediation preserved 15 spaces, 15 living objects, 23
+  journals, 9 media rows, and 180 analytics events exactly. Two public-active
+  journals are the only matching Meilisearch documents; 11 journals are
+  private-active and 10 archived with their existing Gone lifecycle;
+- eight stripped derivatives still exist in the public bucket, but none belongs
+  to a current public-active journal. Four belong to private-active journals,
+  three to archived journals, and one has no journal association. One
+  `quarantined` database row has no remaining private original object. This is a
+  lifecycle/data-disposition finding for OVE-195/OVE-199/OVE-200, not permission
+  to delete user/content/media rows during OVE-191.
+
+Done requires exact-main CI, a canonical exact-SHA Vercel `READY` deployment,
+the redacted production smoke above, zero still-accessible old deployments that
+serve the scaffold, a rejected historical credential with no session cookie,
+zero active retired sessions, current-main containment, and the aggregate
+preservation/exposure proof above. Retired data disposition remains an exact-plan
+and explicit-sign-off operation under OVE-195/OVE-199/OVE-200. Never record the
+retired values, any user identifier, content, object key, URL, or provider secret.
 
 ## OVE-163 Deterministic Matching Rollout Readiness
 
@@ -664,7 +725,7 @@ Goal: only invited gardeners can write pilot journal data. Non-invited visitors 
 - Signed HMAC invite tokens (`pilot-invite.ts`) carry only an enum cohort, bounded segment, and issued/expiry seconds. No email, phone, name, IP, referrer, URL, or query string is encoded.
 - `/join?invite=<token>` validates the token server-side, sets an HTTP-only eligibility cookie, and redirects to `/garden?source=invited-cohort` with enum-only attribution.
 - `pilot_invite_grants` stores one durable row per user (`user_id`, enum `cohort`, enum `segment`, timestamps). No invite link, token, or recipient identity is persisted.
-- Write paths (`/api/garden/entries`, follow-up actions, skeleton write routes) require `requireWriteEligibleRequestScope()`: authenticated plus invited grant or valid eligibility cookie that materializes the grant on first write.
+- Canonical write paths (`/api/garden/entries` and follow-up actions) require `requireWriteEligibleRequestScope()`: authenticated plus invited grant or valid eligibility cookie that materializes the grant on first write. The historical skeleton write API is separately loopback-only under OVE-191 and is absent from production.
 - Non-invited signed-in gardeners see a calm closed-pilot callout on `/garden` and object follow-up surfaces instead of broken composers.
 - `/garden/pilot-health` shows write-eligible gardener count from grant rows, separate from direct/homepage/public-variety starts that may be non-invited.
 

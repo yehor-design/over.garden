@@ -25,7 +25,7 @@ import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove85-smoke-password";
+const TEST_PASSWORD = `ove-85-${randomUUID()}-${Date.now()}`;
 const LEGACY_BG_PRODUCT_SOURCE = "eu_common_catalogue_bg";
 const SADOVO_QUERY = "Садово 1";
 const IASAS_BLOCKED_QUERIES = ["Куртовска капия", "Kurtovska kapia"] as const;

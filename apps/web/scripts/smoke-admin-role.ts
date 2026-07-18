@@ -15,7 +15,7 @@ import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-accoun
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove113-smoke-password";
+const TEST_PASSWORD = `ove-113-${randomUUID()}-${Date.now()}`;
 const SEALED_OWNER_USER_ID_ENV = "OVERGARDEN_ADMIN_OWNER_USER_ID";
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

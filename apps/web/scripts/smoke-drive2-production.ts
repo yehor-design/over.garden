@@ -17,6 +17,26 @@ const FIXTURE_ROUTES = [
   "/__visual-fixtures/intent/ove174-i001",
   "/api/__visual-fixtures/journal-creation",
 ] as const;
+const PRODUCTION_SKELETON_REQUESTS = [
+  {
+    evidenceKey: "pageGet",
+    route: "/skeleton",
+    method: "GET",
+    accept: "text/html",
+  },
+  {
+    evidenceKey: "apiGet",
+    route: "/api/skeleton/journal",
+    method: "GET",
+    accept: "application/json",
+  },
+  {
+    evidenceKey: "apiPost",
+    route: "/api/skeleton/journal",
+    method: "POST",
+    accept: "application/json",
+  },
+] as const;
 const FORBIDDEN_PUBLIC_MARKERS = [
   "visual-fixtures/",
   "__visual-fixtures",
@@ -58,6 +78,13 @@ export interface Drive2ProductionSmokeReport {
     sitemapClean: true;
     publicHtmlClean: true;
   };
+  productionSkeletonBoundary: {
+    issue: "OVE-191";
+    pageGet: 404;
+    apiGet: 404;
+    apiPost: 404;
+    responseBodiesRecorded: false;
+  };
   indexingAndPrivacy: {
     privateNoStoreHtml: true;
     selectedLocaleFoundation: true;
@@ -75,6 +102,8 @@ export async function runDrive2ProductionSmoke(
     throw new Error("OVE-186 deployed commit does not match tested main.");
   }
   const fetchImpl = options.fetchImpl ?? fetch;
+
+  await assertProductionSkeletonBoundary(fetchImpl, baseUrl);
 
   for (const route of FIXTURE_ROUTES) {
     const response = await fetchImpl(`${baseUrl}${route}`, {
@@ -188,12 +217,47 @@ export async function runDrive2ProductionSmoke(
       sitemapClean: true,
       publicHtmlClean: true,
     },
+    productionSkeletonBoundary: {
+      issue: "OVE-191",
+      pageGet: 404,
+      apiGet: 404,
+      apiPost: 404,
+      responseBodiesRecorded: false,
+    },
     indexingAndPrivacy: {
       privateNoStoreHtml: true,
       selectedLocaleFoundation: true,
       privateMarkersAbsent: true,
     },
   };
+}
+
+async function assertProductionSkeletonBoundary(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+) {
+  for (const request of PRODUCTION_SKELETON_REQUESTS) {
+    const response = await fetchImpl(`${baseUrl}${request.route}`, {
+      method: request.method,
+      redirect: "manual",
+      headers: {
+        Accept: request.accept,
+        ...(request.method === "POST"
+          ? {
+              "Content-Type": "application/json",
+              Origin: baseUrl,
+            }
+          : {}),
+      },
+      ...(request.method === "POST" ? { body: "{}" } : {}),
+    });
+
+    if (response.status !== 404) {
+      throw new Error(
+        `OVE-191 production skeleton ${request.evidenceKey} must return exact 404.`,
+      );
+    }
+  }
 }
 
 async function fetchPublicHtml(

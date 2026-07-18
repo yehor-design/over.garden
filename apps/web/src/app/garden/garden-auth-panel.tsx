@@ -8,11 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import type { ActivationSource } from "@/lib/garden/entry-contracts";
 import {
-  LOCAL_DEV_DEFAULT_EMAIL,
-  LOCAL_DEV_DEFAULT_NAME,
-  LOCAL_DEV_DEFAULT_PASSWORD,
   PILOT_AUTH_HELP_PATH,
-  shouldUseLocalDevAuthDefaults,
 } from "@/lib/auth/pilot-auth-recovery";
 import {
   FACEBOOK_PROVIDER_ID,
@@ -62,7 +58,6 @@ interface GardenAuthPanelProps {
   initialMessage?: string | null;
   locale?: InterfaceLocale;
   postAuthPath?: string | null;
-  prefillDevelopmentDefaults?: boolean;
   prompt?: string | null;
   title?: string | null;
 }
@@ -77,7 +72,6 @@ export function GardenAuthPanel({
   initialMessage = null,
   locale: localeOverride,
   postAuthPath = null,
-  prefillDevelopmentDefaults = true,
   prompt = null,
   title = null,
 }: GardenAuthPanelProps) {
@@ -85,17 +79,9 @@ export function GardenAuthPanel({
   const inheritedLocale = useSiteShellLocale();
   const locale = localeOverride ?? inheritedLocale;
   const copy = getTrustSurfaceCopy(locale).authPanel;
-  const useDevDefaults =
-    prefillDevelopmentDefaults && shouldUseLocalDevAuthDefaults();
-  const [email, setEmail] = useState(
-    useDevDefaults ? LOCAL_DEV_DEFAULT_EMAIL : "",
-  );
-  const [password, setPassword] = useState(
-    useDevDefaults ? LOCAL_DEV_DEFAULT_PASSWORD : "",
-  );
-  const [name, setName] = useState(
-    useDevDefaults ? LOCAL_DEV_DEFAULT_NAME : "",
-  );
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
   const [message, setMessage] = useState<AuthPanelMessage | null>(
     initialMessage ? { kind: "error", text: initialMessage } : null,
   );

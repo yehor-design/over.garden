@@ -18,7 +18,7 @@ import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 loadEnv({ path: ".env.local", override: false });
 
 const DEFAULT_BASE_URL = "http://localhost:3000";
-const TEST_PASSWORD = "overgarden-ove67-smoke-password";
+const TEST_PASSWORD = `ove-67-${randomUUID()}-${Date.now()}`;
 const FORBIDDEN_EVIDENCE_MARKERS = [
   "rawPayload",
   "raw_payload",
