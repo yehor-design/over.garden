@@ -1,4 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
+import { readFile } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -7,6 +8,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
+}));
+vi.mock("@/components/auth/session-convergence-boundary", () => ({
+  SessionConvergenceBoundary: ({ children }: { children: React.ReactNode }) =>
+    children,
 }));
 
 describe("production site shell", () => {
@@ -49,6 +54,7 @@ describe("production site shell", () => {
     expect(html).toContain('aria-current="page"');
     expect(html).not.toContain(">Моє<");
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
+    expect(html).not.toContain("data-sign-out-control");
   });
 
   it("adds the complete Bulgarian My rail without serializing account data", async () => {
@@ -91,9 +97,26 @@ describe("production site shell", () => {
     );
 
     expect(html).toContain('data-site-shell="excluded"');
+    expect(html).toContain('data-authenticated-utility-region="true"');
+    expect(html).toContain('data-sign-out-control="utility"');
+    expect(html).toContain("Вийти з облікового запису");
     expect(html).toContain("Admin control plane");
     expect(html).not.toContain('data-site-shell-region="sidebar"');
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+  });
+
+  it("keeps guest operator boundaries free of authenticated controls", async () => {
+    mocks.pathname = "/admin/denied";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" isAuthenticated={false}>
+        <main>Denied boundary</main>
+      </SiteShell>,
+    );
+
+    expect(html).toContain('data-site-shell="excluded"');
+    expect(html).not.toContain('data-authenticated-utility-region="true"');
+    expect(html).not.toContain("data-sign-out-control");
   });
 
   it("keeps the deterministic visual environment outside the product shell", async () => {
@@ -109,6 +132,8 @@ describe("production site shell", () => {
     expect(html).toContain("Visual fixture scenarios");
     expect(html).not.toContain('data-site-shell-region="header"');
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).not.toContain("data-sign-out-control");
+    expect(html).not.toContain("overgarden:session-convergence");
   });
 
   it("keeps privacy reachable from the mobile menu utilities", async () => {
@@ -118,11 +143,49 @@ describe("production site shell", () => {
       <SiteShellMobileUtilities
         privacyHref="/bg/privacy"
         privacyLabel="Поверителност"
-      />,
+      >
+        <button type="button">Изход</button>
+      </SiteShellMobileUtilities>,
     );
 
     expect(html).toContain('data-site-shell-mobile-utilities="true"');
     expect(html).toContain('href="/bg/privacy"');
     expect(html).toContain("Поверителност");
+    expect(html).toContain("Изход");
+  });
+
+  it("closes both parent sheets before opening the shared sign-out flow", async () => {
+    const source = await readFile(
+      new URL("./site-shell.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("open={mobileMenuOpen}");
+    expect(source).toContain("open={accountMenuOpen}");
+    expect(source).toContain(
+      "onBeforeRequest={() => setMobileMenuOpen(false)}",
+    );
+    expect(source).toMatch(
+      /onBeforeRequest=\{\(\)\s*=>\s*setAccountMenuOpen\(false\)\s*\}/,
+    );
+  });
+
+  it("mounts the auth lifecycle only for authenticated shells and gates the entire sign-out provider", async () => {
+    const source = await readFile(
+      new URL("./site-shell.tsx", import.meta.url),
+      "utf8",
+    );
+    expect(source).toContain("if (!isAuthenticated) return shell;");
+    expect(source.indexOf("if (!isAuthenticated) return shell;")).toBeLessThan(
+      source.lastIndexOf("<SessionConvergenceBoundary"),
+    );
+    expect(
+      source.match(
+        /<SessionConvergenceBoundary locale=\{locale\}>[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+      ),
+    ).toHaveLength(2);
+    expect(source).not.toMatch(
+      /<SignOutProvider locale=\{locale\}>\s*<SessionConvergenceBoundary/,
+    );
   });
 });

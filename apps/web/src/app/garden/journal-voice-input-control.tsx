@@ -20,6 +20,7 @@ import {
 interface JournalVoiceInputControlProps {
   locale: InterfaceLocale;
   onTranscript: (transcript: string) => void;
+  disabled?: boolean;
 }
 
 type VoiceInputSupport = "checking" | "supported" | "unsupported";
@@ -27,6 +28,7 @@ type VoiceInputSupport = "checking" | "supported" | "unsupported";
 export function JournalVoiceInputControl({
   locale,
   onTranscript,
+  disabled = false,
 }: JournalVoiceInputControlProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const [support, setSupport] = useState<VoiceInputSupport>("checking");
@@ -35,6 +37,7 @@ export function JournalVoiceInputControl({
   const recognitionConstructorRef =
     useRef<JournalSpeechRecognitionConstructor | null>(null);
   const sessionRef = useRef<JournalVoiceInputSession | null>(null);
+  const disabledRef = useRef(disabled);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -50,7 +53,22 @@ export function JournalVoiceInputControl({
     };
   }, []);
 
+  useEffect(() => {
+    disabledRef.current = disabled;
+    if (!disabled) return;
+    // dispose() removes result/error/end callbacks before aborting, so a
+    // browser-delivered late result cannot mutate a frozen composer.
+    sessionRef.current?.dispose();
+    sessionRef.current = null;
+    const resetTimer = window.setTimeout(() => {
+      setVoiceState("idle");
+      setMessage(null);
+    }, 0);
+    return () => window.clearTimeout(resetTimer);
+  }, [disabled]);
+
   function startDictation() {
+    if (disabledRef.current) return;
     const Constructor = recognitionConstructorRef.current;
     if (!Constructor) {
       setSupport("unsupported");
@@ -60,15 +78,21 @@ export function JournalVoiceInputControl({
     }
 
     const recognition = new Constructor();
-    const session = createJournalVoiceInputSession({
+    let session: JournalVoiceInputSession | null = null;
+    session = createJournalVoiceInputSession({
       recognition,
       lang: typeof navigator === "undefined" ? undefined : navigator.language,
-      onError: () => setMessage(copy.composer.voice.error),
+      onError: () => {
+        if (disabledRef.current || sessionRef.current !== session) return;
+        setMessage(copy.composer.voice.error);
+      },
       onStateChange: (state) => {
+        if (disabledRef.current || sessionRef.current !== session) return;
         setVoiceState(state);
         setMessage(messageForVoiceState(state, copy));
       },
       onTranscript: (transcript) => {
+        if (disabledRef.current || sessionRef.current !== session) return;
         onTranscript(transcript);
         setMessage(copy.composer.voice.added);
       },
@@ -103,6 +127,7 @@ export function JournalVoiceInputControl({
           variant="outline"
           size="sm"
           className="min-h-11 sm:min-h-7"
+          disabled={disabled}
           onClick={cancelDictation}
         >
           <MicOff className="size-4" />
@@ -114,6 +139,7 @@ export function JournalVoiceInputControl({
           variant="outline"
           size="sm"
           className="min-h-11 sm:min-h-7"
+          disabled={disabled}
           onClick={startDictation}
         >
           <Mic className="size-4" />

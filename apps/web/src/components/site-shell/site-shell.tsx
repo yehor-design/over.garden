@@ -14,6 +14,13 @@ import {
 import { useState } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
+import {
+  AuthenticatedUtilityRegion,
+  isAuthenticatedUtilityPath,
+} from "@/components/auth/authenticated-utility-region";
+import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
+import { SignOutControl } from "@/components/auth/sign-out-control";
+import { SignOutProvider } from "@/components/auth/sign-out-provider";
 import { LanguageSwitcher } from "@/components/public/language-switcher";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -45,6 +52,7 @@ import {
   getSiteShellRouteContext,
   type SiteShellNavigationItem,
 } from "@/lib/site-shell-navigation";
+import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 import { cn } from "@/lib/utils";
 import {
   SiteShellMobileNavigation,
@@ -85,11 +93,30 @@ export function SiteShell({
   const [routeContextModules, setRouteContextModules] = useState<
     SiteShellContextRailModule[] | null
   >(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   if (isSiteShellExcludedPath(pathname)) {
+    const showAuthenticatedUtility =
+      isAuthenticated && isAuthenticatedUtilityPath(pathname);
+    if (!showAuthenticatedUtility) {
+      return (
+        <SiteShellLocaleProvider locale={locale}>
+          <div data-site-shell="excluded">{children}</div>
+        </SiteShellLocaleProvider>
+      );
+    }
+
     return (
       <SiteShellLocaleProvider locale={locale}>
-        <div data-site-shell="excluded">{children}</div>
+        <SessionConvergenceBoundary locale={locale}>
+          <SignOutProvider locale={locale}>
+            <div data-site-shell="excluded">
+              <AuthenticatedUtilityRegion locale={locale} />
+              {children}
+            </div>
+          </SignOutProvider>
+        </SessionConvergenceBoundary>
       </SiteShellLocaleProvider>
     );
   }
@@ -100,13 +127,14 @@ export function SiteShell({
     communitiesReady,
   );
   const copy = getInterfaceCopy(locale);
+  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
   const context = getSiteShellRouteContext(pathname, locale);
   const languageBasePath = stripLocalePrefix(pathname).path;
   const languageSwitcherLocales = isLanguageSwitchablePath(languageBasePath)
     ? getLanguageSwitcherLocales(locale)
     : [];
 
-  return (
+  const shell = (
     <SiteShellLocaleProvider locale={locale}>
       <SiteShellContextRailProvider setModules={setRouteContextModules}>
         <TooltipProvider>
@@ -126,7 +154,7 @@ export function SiteShell({
             >
               <div className="site-shell-header-inner mx-auto flex w-full max-w-7xl items-stretch">
                 <div className="flex items-center lg:hidden">
-                  <Sheet>
+                  <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                     <SheetTrigger
                       render={
                         <Button
@@ -194,7 +222,14 @@ export function SiteShell({
                         <SiteShellMobileUtilities
                           privacyHref={context.secondaryHref}
                           privacyLabel={context.secondaryLabel}
-                        />
+                        >
+                          {isAuthenticated ? (
+                            <SignOutControl
+                              presentation="menu"
+                              onBeforeRequest={() => setMobileMenuOpen(false)}
+                            />
+                          ) : null}
+                        </SiteShellMobileUtilities>
                         {languageSwitcherLocales.length > 1 ? (
                           <LanguageSwitcher
                             locale={locale}
@@ -296,27 +331,62 @@ export function SiteShell({
                         </Link>
                       </span>
                       <span className="hidden md:inline-flex">
-                        <Tooltip>
-                          <TooltipTrigger
+                        <Sheet
+                          open={accountMenuOpen}
+                          onOpenChange={setAccountMenuOpen}
+                        >
+                          <SheetTrigger
                             render={
-                              <Link
-                                href="/garden/profile"
-                                aria-label={navigation.labels.account}
-                                className={buttonVariants({
-                                  variant: "ghost",
-                                  size: "icon",
-                                  className:
-                                    "site-shell-header-icon text-background hover:bg-background/10 hover:text-background",
-                                })}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={signOutCopy.openAccountMenu}
+                                className="site-shell-header-icon text-background hover:bg-background/10 hover:text-background"
                               />
                             }
                           >
                             <UserRound aria-hidden="true" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {navigation.labels.account}
-                          </TooltipContent>
-                        </Tooltip>
+                          </SheetTrigger>
+                          <SheetContent
+                            side="right"
+                            closeLabel={signOutCopy.closeAccountMenu}
+                            className="w-11/12 max-w-sm"
+                          >
+                            <SheetHeader className="border-b border-border">
+                              <SheetTitle>
+                                {signOutCopy.accountMenuTitle}
+                              </SheetTitle>
+                              <SheetDescription>
+                                {signOutCopy.accountMenuDescription}
+                              </SheetDescription>
+                            </SheetHeader>
+                            <div className="grid gap-2 p-4">
+                              <SheetClose
+                                render={
+                                  <Link
+                                    href="/garden/profile"
+                                    className={buttonVariants({
+                                      variant: "outline",
+                                      className: "justify-start",
+                                    })}
+                                  />
+                                }
+                              >
+                                <UserRound
+                                  data-icon="inline-start"
+                                  aria-hidden="true"
+                                />
+                                {signOutCopy.openProfile}
+                              </SheetClose>
+                              <SignOutControl
+                                presentation="menu"
+                                onBeforeRequest={() =>
+                                  setAccountMenuOpen(false)
+                                }
+                              />
+                            </div>
+                          </SheetContent>
+                        </Sheet>
                       </span>
                     </>
                   ) : (
@@ -475,6 +545,14 @@ export function SiteShell({
         </TooltipProvider>
       </SiteShellContextRailProvider>
     </SiteShellLocaleProvider>
+  );
+
+  if (!isAuthenticated) return shell;
+
+  return (
+    <SessionConvergenceBoundary locale={locale}>
+      <SignOutProvider locale={locale}>{shell}</SignOutProvider>
+    </SessionConvergenceBoundary>
   );
 }
 

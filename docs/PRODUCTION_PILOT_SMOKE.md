@@ -134,6 +134,87 @@ Result on 2026-07-18: pass.
 - Provider parity: the provider-independent SQL creation trigger and Better Auth database hook are proven locally/CI for credential, Google, and Facebook creation. Production Google/Facebook start continuity remains bound to the existing OVE-111/OVE-112 gates; OVE-203 neither copied provider names into public identity nor changed provider configuration.
 - Evidence safety: only aggregate counts, booleans, status/header classes, policy version, CI/deployment state, and exact code/deployment identifiers were retained. No email, UUID, handle, rejected moderation value, session cookie, token, provider payload, private content, or precise location was printed or recorded.
 
+## OVE-204 Reliable Current-Session Sign-out
+
+Goal: prove that a gardener can safely end only the current browser session
+from every authenticated product class without losing or crossing local work,
+claiming success on failure, or changing server identity, role, provider, garden,
+locale, consent, or other-device state.
+
+Binding implementation and local browser proof:
+
+- exercise the same shared control from `/garden/profile`, the desktop account
+  menu, the mobile drawer at 320 px, a permitted owner operator route, and the
+  signed-in non-owner `/admin` denial boundary;
+- prove guest, health, skeleton, and visual-fixture surfaces do not render or
+  mount an authenticated sign-out utility;
+- with no unsynced rows, require one canonical Better Auth `POST
+  /api/auth/sign-out`, a fresh database-backed null-session confirmation, and a
+  hard replace to `/`, `/bg`, or `/ru` for the selected interface locale;
+- with unsynced text and nested photo Blob data, require exactly stay,
+  sync-first, or explicit discard-and-sign-out; pause new owner-local writes
+  before inventory, abort/drain current sync, and delete only that owner's
+  unsynced drafts/mutations/Blobs in one Dexie transaction before sign-out;
+- prove Stay changes neither session nor IndexedDB, Sync first reaches the real
+  `/garden#drafts` recovery surface, and purge/sign-out failure never redirects
+  or renders raw adapter/network/storage details;
+- prove account A cannot enumerate or purge account B rows, synced receipts are
+  preserved, CacheStorage/service-worker/consent/locale state is untouched, and
+  successful completion leaves no stale persistent pause that blocks an
+  immediate repeat sign-in;
+- prove a no-identity BroadcastChannel plus localStorage signal converges other
+  tabs using an exact preparation round, while a persisted BFCache restoration
+  hard-reloads before stale private UI can be reused;
+- bind every local write to the authoritative opaque session generation, place
+  a durable `commit_pending` fence before the canonical POST, and never thaw
+  the old generation while the POST outcome or fresh session state is unknown;
+- exercise keyboard focus, dialog semantics, live states, 320 px and 1440 px,
+  and exact-parity Ukrainian, Bulgarian, and Russian copy.
+
+The healthy-database smoke must use a bounded synthetic account and two cookie
+jars. It establishes exactly two current sessions, ends jar A through the
+canonical POST, proves only A's row disappeared while jar B remained active,
+proves A cannot call a protected mutation, signs A in again, and compares exact
+in-memory snapshots of the synthetic user/profile/current claim, structural
+provider links, global owner-role records, and a private space/object/entry.
+It then deletes only the exact locked synthetic identity and proves that no
+synthetic residue remains. This is deliberately not described as restoration
+of every global database baseline. A status code or client cookie deletion
+alone is not proof.
+
+Standing command shape from the repository root:
+
+```bash
+vercel env run --environment=production -- env NODE_OPTIONS=--conditions=react-server \
+  apps/web/node_modules/.bin/tsx --tsconfig apps/web/tsconfig.json \
+  apps/web/scripts/smoke-account-sign-out.ts \
+  --base-url https://over.garden \
+  --env-file /private/tmp/ove204-empty.env \
+  --expected-commit <full-main-sha> \
+  --deployed-commit <full-deployed-sha>
+```
+
+Do not run through `apps/web/.env.local` for production evidence. Retained
+evidence is limited to booleans, aggregate count/status classes, exact public
+commit/deployment identifiers, and CI/deployment state. Never retain the
+synthetic email, user/session/account UUID, handle, cookie, token, password,
+private text, Blob/filename, provider payload, media key, exact location, IP,
+user agent, DSN, or env value.
+
+The two SHA arguments are an operator assertion checked for exact equality by
+the smoke; they are not independently discovered from the runtime. Resolve the
+contained production revision first from the canonical Vercel deployment
+metadata and retain that separate redacted proof. The smoke must report
+`caller_asserted_exact_sha_match` and
+`independentlyResolvedFromRuntime: false`; never cite that field by itself as
+deployment proof.
+
+Do not close OVE-204 on local proof alone. The exact behavior commit must pass
+current-main CI and reach a canonical Vercel `READY` deployment; the redacted
+production smoke and real rendered-button browser flow must pass against that
+same contained revision. A direct auth endpoint probe does not replace the UI
+proof.
+
 ## OVE-163 Deterministic Matching Rollout Readiness
 
 Goal: prove that the exact deterministic-matching behavior commit is deployed

@@ -9,10 +9,15 @@ import {
   listQueuedMutations as listOwnedQueuedMutations,
   OFFLINE_QUEUE_CHANGED_EVENT,
   offlineDb,
+  settleClaimedOfflineMutationFailure,
   updateOfflineMutationPayload as updateOwnedOfflineMutationPayload,
   updateOfflineMutationStatus as updateOwnedOfflineMutationStatus,
   type OfflineJournalEntryPayload,
 } from "./queue";
+import {
+  hydrateOwnerOfflineActivitySession,
+  pauseOwnerOfflineActivity,
+} from "./owner-session-lifecycle";
 
 const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
 const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
@@ -62,6 +67,15 @@ describe("offline queue", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.ownerActivity.clear();
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_A,
+      "test-session-generation-owner-a-1234",
+    );
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_B,
+      "test-session-generation-owner-b-5678",
+    );
   });
 
   it("stores queued mutations with idempotency keys", async () => {
@@ -310,5 +324,78 @@ describe("offline queue", () => {
 
     expect(recovered?.status).toBe("syncing");
     expect(recovered?.syncLeaseExpiresAt).toBeGreaterThan(Date.now());
+  });
+
+  it("settles only an already-claimed sync while the owner is preparing sign-out", async () => {
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Claimed before sign-out" },
+      idempotencyKey: "settle-under-pause-key",
+    });
+    const claimed = await claimOfflineMutationForSync(OWNER_A, mutation.id);
+    if (!claimed) throw new Error("Expected a claimed mutation.");
+    const pauseHandle = await pauseOwnerOfflineActivity(OWNER_A, {
+      operationId: "op-settle-sync-preparing-1234",
+      sessionGeneration: "test-session-generation-owner-a-1234",
+    });
+
+    await expect(
+      updateOwnedOfflineMutationStatus(OWNER_A, mutation.id, "failed"),
+    ).rejects.toThrow("paused for sign-out");
+    const settled = await settleClaimedOfflineMutationFailure(
+      OWNER_A,
+      mutation.id,
+      claimed,
+      {
+        lastError: `Sync\u0000 aborted ${"x".repeat(300)}`,
+      },
+    );
+
+    expect(settled?.status).toBe("failed");
+    expect(settled?.syncLeaseExpiresAt).toBeNull();
+    expect(settled?.lastError).not.toContain("\u0000");
+    expect(settled?.lastError).toHaveLength(160);
+    await pauseHandle.resume();
+  });
+
+  it("does not let a stale sync claim settle a newer lease or cross commit_pending", async () => {
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: { body: "Lease race" },
+      idempotencyKey: "stale-settlement-key",
+    });
+    const staleClaim = await claimOfflineMutationForSync(OWNER_A, mutation.id);
+    if (!staleClaim) throw new Error("Expected the first claim.");
+    await offlineDb?.mutations.update(mutation.id, {
+      syncLeaseExpiresAt: Date.now() - 1,
+      updatedAt: staleClaim.updatedAt + 1,
+    });
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(2_000_000_000_000);
+    const currentClaim = await claimOfflineMutationForSync(
+      OWNER_A,
+      mutation.id,
+    );
+    nowSpy.mockRestore();
+    if (!currentClaim) throw new Error("Expected the recovered claim.");
+
+    await expect(
+      settleClaimedOfflineMutationFailure(OWNER_A, mutation.id, staleClaim, {
+        lastError: "Stale abort",
+      }),
+    ).resolves.toBeUndefined();
+    expect((await getOfflineMutation(mutation.id))?.status).toBe("syncing");
+
+    const pauseHandle = await pauseOwnerOfflineActivity(OWNER_A, {
+      operationId: "op-settle-sync-commit-1234",
+      sessionGeneration: "test-session-generation-owner-a-1234",
+    });
+    await pauseHandle.promoteToCommitFence();
+    await expect(
+      settleClaimedOfflineMutationFailure(OWNER_A, mutation.id, currentClaim, {
+        lastError: "Must stay fenced",
+      }),
+    ).rejects.toThrow("paused for sign-out");
+    expect((await getOfflineMutation(mutation.id))?.status).toBe("syncing");
+    await pauseHandle.resume();
   });
 });

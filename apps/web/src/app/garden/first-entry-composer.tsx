@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -84,6 +85,11 @@ import {
   type FirstEntryDraftPayload,
 } from "@/lib/offline/drafts";
 import {
+  createOwnerComposerPersistenceController,
+  type OwnerComposerPersistenceController,
+  type OwnerComposerPersistenceWriteContext,
+} from "@/lib/offline/owner-composer-participants";
+import {
   JournalEntrySyncError,
   submitOnlineJournalEntryPayload,
   syncOfflineJournalEntryMutation,
@@ -120,6 +126,14 @@ type CatalogStatus = "idle" | "loading" | "ready" | "failed";
 
 type CatalogSuggestion = FirstEntryCatalogSelection;
 
+interface FirstEntryComposerPersistenceSnapshot {
+  ownerUserId: string;
+  payload: FirstEntryDraftPayload;
+  photoFile: File | null;
+  defaultEntryDate: string;
+  hydrated: boolean;
+}
+
 export function FirstEntryComposer({
   ownerUserId,
   locale,
@@ -134,6 +148,11 @@ export function FirstEntryComposer({
   useScrollToHashOnMount("first-entry-composer");
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
+  const persistenceFrozenRef = useRef(false);
+  const persistenceControllerRef =
+    useRef<OwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot> | null>(
+      null,
+    );
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -205,6 +224,36 @@ export function FirstEntryComposer({
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [persistenceFrozen, setPersistenceFrozen] = useState(false);
+
+  useEffect(() => {
+    if (visualScenario) return;
+
+    const controller =
+      createOwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot>(
+        {
+          ownerUserId,
+          persist: async (snapshot, context) => {
+            await persistFirstEntryComposerSnapshot(snapshot, context);
+          },
+          shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
+        },
+      );
+    persistenceControllerRef.current = controller;
+    const unsubscribeFrozen = controller.subscribeFrozen((frozen) => {
+      persistenceFrozenRef.current = frozen;
+      setPersistenceFrozen(frozen);
+    });
+
+    return () => {
+      unsubscribeFrozen();
+      if (persistenceControllerRef.current === controller) {
+        persistenceControllerRef.current = null;
+      }
+      persistenceFrozenRef.current = false;
+      controller.dispose();
+    };
+  }, [ownerUserId, visualScenario]);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -300,8 +349,8 @@ export function FirstEntryComposer({
     };
   }, [copy, initialSpace, ownerUserId, visualScenario]);
 
-  useEffect(() => {
-    if (!draftHydrated || visualScenario) return;
+  useLayoutEffect(() => {
+    if (visualScenario) return;
 
     const payload: FirstEntryDraftPayload = {
       clientMutationId,
@@ -315,21 +364,22 @@ export function FirstEntryComposer({
       photoIntent: storedPhotoIntent,
     };
 
+    const controller = persistenceControllerRef.current;
+    if (!controller) return;
+    controller.updateSnapshot({
+      ownerUserId,
+      payload,
+      photoFile,
+      defaultEntryDate: today,
+      hydrated: draftHydrated,
+    });
+
+    if (!draftHydrated) return;
+
     const timer = window.setTimeout(() => {
       if (draftPersistencePausedRef.current) return;
 
-      if (hasPersistableFirstEntryDraft(payload, today)) {
-        void upsertOfflineDraft({
-          ownerUserId,
-          id: FIRST_ENTRY_DRAFT_ID,
-          kind: "first_entry",
-          payload,
-        }).catch(() => undefined);
-      } else {
-        void deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
-          () => undefined,
-        );
-      }
+      void controller.persistLatest().catch(() => undefined);
     }, 250);
 
     return () => {
@@ -344,6 +394,7 @@ export function FirstEntryComposer({
     selectedCatalogItem,
     mentionSelections,
     ownerUserId,
+    photoFile,
     storedPhotoIntent,
     today,
     topicTagInput,
@@ -433,13 +484,11 @@ export function FirstEntryComposer({
     };
   }, [activeMentionToken]);
 
-  const photoHelp = useMemo(() => {
-    return localizedPhotoHelp(copy, {
-      fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
-      isOnline,
-      photoError,
-    });
-  }, [copy, isOnline, photoError, photoFile, storedPhotoIntent]);
+  const photoHelp = localizedPhotoHelp(copy, {
+    fileName: photoFile?.name ?? storedPhotoIntent?.fileName ?? null,
+    isOnline,
+    photoError,
+  });
   const catalogAliasCollisionKeys = useMemo(
     () => catalogSuggestionAliasCollisionKeys(catalogSuggestions),
     [catalogSuggestions],
@@ -458,6 +507,7 @@ export function FirstEntryComposer({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isComposerPersistenceFrozen()) return;
 
     if (visualScenario) {
       await handleVisualScenarioSubmit(visualScenario);
@@ -478,6 +528,7 @@ export function FirstEntryComposer({
       setMessage(copy.composer.photo.readError);
       return;
     }
+    if (isComposerPersistenceFrozen()) return;
 
     if (!isOnline) {
       try {
@@ -497,6 +548,7 @@ export function FirstEntryComposer({
         ownerUserId,
         idempotencyKey: clientMutationId,
       });
+      if (isComposerPersistenceFrozen()) return;
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
         () => undefined,
@@ -604,8 +656,10 @@ export function FirstEntryComposer({
   }
 
   async function handleCancel() {
+    if (isComposerPersistenceFrozen()) return;
     try {
       const payload = await buildPayload();
+      if (isComposerPersistenceFrozen()) return;
       const persistedPayload = persistedDraftPayload(payload);
       draftPersistencePausedRef.current = true;
 
@@ -618,6 +672,7 @@ export function FirstEntryComposer({
         await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID);
       }
 
+      if (isComposerPersistenceFrozen()) return;
       router.push("/garden");
     } catch {
       draftPersistencePausedRef.current = false;
@@ -634,6 +689,7 @@ export function FirstEntryComposer({
       idempotencyKey: clientMutationId,
     });
 
+    if (isComposerPersistenceFrozen()) return;
     setSubmitState("queued");
     draftPersistencePausedRef.current = true;
     await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
@@ -655,6 +711,7 @@ export function FirstEntryComposer({
       const result = await syncOfflineJournalEntryMutation(mutation, {
         expectedOwnerUserId: ownerUserId,
       });
+      if (isComposerPersistenceFrozen()) return;
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
         () => undefined,
@@ -761,6 +818,7 @@ export function FirstEntryComposer({
     field: K,
     value: FirstEntryDraftFields[K],
   ) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) => {
       const next = { ...current, [field]: value };
@@ -771,6 +829,7 @@ export function FirstEntryComposer({
   }
 
   function updateSpaceChoice(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) =>
       value === initialSpace?.id
@@ -784,6 +843,7 @@ export function FirstEntryComposer({
   }
 
   function updateObjectKind(value: PlantObjectKind) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) => ({ ...current, objectKind: value }));
 
@@ -798,17 +858,20 @@ export function FirstEntryComposer({
   }
 
   function updateTitle(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     titleEditedByUserRef.current = true;
     setDraft((current) => ({ ...current, title: value }));
   }
 
   function updateBody(value: string, cursorPosition = value.length) {
+    if (isComposerPersistenceFrozen()) return;
     updateDraft("body", value);
     updateActiveMentionToken(resolveActiveMentionToken(value, cursorPosition));
   }
 
   function appendVoiceTranscript(transcript: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) =>
       withSuggestedTitle({
@@ -837,6 +900,7 @@ export function FirstEntryComposer({
   }
 
   function selectMentionSuggestion(suggestion: JournalMentionSuggestion) {
+    if (isComposerPersistenceFrozen()) return;
     if (!activeMentionToken) return;
 
     draftPersistencePausedRef.current = false;
@@ -874,6 +938,7 @@ export function FirstEntryComposer({
   }
 
   function removeMentionSelection(selection: JournalMentionSelection) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setMentionSelections((current) =>
       current.filter(
@@ -883,11 +948,13 @@ export function FirstEntryComposer({
   }
 
   function updateTopicTagInput(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setTopicTagInput(value);
   }
 
   function updateLocationVisibility(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) => ({
       ...current,
@@ -897,6 +964,7 @@ export function FirstEntryComposer({
   }
 
   function updateCatalogQuery(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setCatalogQuery(value);
 
@@ -915,6 +983,7 @@ export function FirstEntryComposer({
   }
 
   function selectCatalogSuggestion(suggestion: CatalogSuggestion) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(suggestion);
     setUserAddedCatalogName(null);
@@ -937,6 +1006,7 @@ export function FirstEntryComposer({
   }
 
   function addMissingCatalogName() {
+    if (isComposerPersistenceFrozen()) return;
     const displayName = catalogQuery.trim().replace(/\s+/g, " ");
     if (displayName.length < 1) return;
 
@@ -952,6 +1022,7 @@ export function FirstEntryComposer({
   }
 
   function chooseUnknownCatalog() {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setSelectedCatalogItem(null);
     setUserAddedCatalogName(null);
@@ -962,6 +1033,7 @@ export function FirstEntryComposer({
   }
 
   function handlePhotoChange(file: File | undefined) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setPhotoError(null);
     const requestId = photoIntentRequestRef.current + 1;
@@ -993,12 +1065,20 @@ export function FirstEntryComposer({
     setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
     void createComposerPhotoIntent(file)
       .then((intent) => {
-        if (photoIntentRequestRef.current === requestId) {
+        if (
+          !isComposerPersistenceFrozen() &&
+          photoIntentRequestRef.current === requestId
+        ) {
           setStoredPhotoIntent(intent);
         }
       })
       .catch(() => {
-        if (photoIntentRequestRef.current !== requestId) return;
+        if (
+          isComposerPersistenceFrozen() ||
+          photoIntentRequestRef.current !== requestId
+        ) {
+          return;
+        }
 
         setPhotoFile(null);
         setStoredPhotoIntent(clearComposerPhotoIntent());
@@ -1009,6 +1089,7 @@ export function FirstEntryComposer({
   }
 
   function clearPhotoSelection(resetInput = true) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     photoIntentRequestRef.current += 1;
     setPhotoFile(null);
@@ -1022,6 +1103,13 @@ export function FirstEntryComposer({
     if (photoInputRef.current) {
       photoInputRef.current.value = "";
     }
+  }
+
+  function isComposerPersistenceFrozen() {
+    return (
+      persistenceControllerRef.current?.isFrozen() ??
+      persistenceFrozenRef.current
+    );
   }
 
   function withSuggestedTitle(
@@ -1057,8 +1145,16 @@ export function FirstEntryComposer({
     <form
       onSubmit={handleSubmit}
       data-visual-creation-scenario={visualScenario?.id}
-      className="grid min-w-0 gap-4"
+      inert={persistenceFrozen}
+      data-composer-sign-out-frozen={persistenceFrozen || undefined}
+      aria-busy={persistenceFrozen || undefined}
+      className={`grid min-w-0 gap-4 transition-opacity ${persistenceFrozen ? "pointer-events-none opacity-60" : ""}`}
     >
+      {persistenceFrozen ? (
+        <p className="sr-only" role="status" aria-live="polite">
+          {copy.composer.saveStates.syncing}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
           {isOnline ? (
@@ -1150,6 +1246,7 @@ export function FirstEntryComposer({
           </label>
           <JournalVoiceInputControl
             locale={locale}
+            disabled={persistenceFrozen}
             onTranscript={appendVoiceTranscript}
           />
         </div>
@@ -1562,6 +1659,38 @@ export function FirstEntryComposer({
       ) : null}
     </form>
   );
+}
+
+async function persistFirstEntryComposerSnapshot(
+  snapshot: FirstEntryComposerPersistenceSnapshot,
+  context: OwnerComposerPersistenceWriteContext,
+) {
+  if (!snapshot.hydrated) {
+    throw new Error("The first-entry draft is not hydrated yet.");
+  }
+
+  const payload =
+    snapshot.photoFile && !snapshot.payload.photoIntent
+      ? {
+          ...snapshot.payload,
+          photoIntent: await createComposerPhotoIntent(snapshot.photoFile),
+        }
+      : snapshot.payload;
+
+  if (hasPersistableFirstEntryDraft(payload, snapshot.defaultEntryDate)) {
+    await upsertOfflineDraft(
+      {
+        ownerUserId: snapshot.ownerUserId,
+        id: FIRST_ENTRY_DRAFT_ID,
+        kind: "first_entry",
+        payload,
+      },
+      context,
+    );
+    return;
+  }
+
+  await deleteOfflineDraft(snapshot.ownerUserId, FIRST_ENTRY_DRAFT_ID, context);
 }
 
 function statusIcon(status: OfflineMutation["status"]) {

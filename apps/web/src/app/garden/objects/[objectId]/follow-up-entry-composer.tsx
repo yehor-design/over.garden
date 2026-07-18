@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type FormEvent,
@@ -64,6 +65,11 @@ import {
   type FollowUpEntryDraftFields,
   type FollowUpEntryDraftPayload,
 } from "@/lib/offline/drafts";
+import {
+  createOwnerComposerPersistenceController,
+  type OwnerComposerPersistenceController,
+  type OwnerComposerPersistenceWriteContext,
+} from "@/lib/offline/owner-composer-participants";
 import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
   formatOwnerObjectTemplate,
@@ -102,6 +108,15 @@ interface FollowUpEntryComposerProps {
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
 
+interface FollowUpComposerPersistenceSnapshot {
+  ownerUserId: string;
+  draftId: string;
+  payload: FollowUpEntryDraftPayload;
+  photoFile: File | null;
+  defaultEntryDate: string;
+  hydrated: boolean;
+}
+
 export function FollowUpEntryComposer({
   ownerUserId,
   locale,
@@ -116,6 +131,11 @@ export function FollowUpEntryComposer({
   useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
+  const persistenceFrozenRef = useRef(false);
+  const persistenceControllerRef =
+    useRef<OwnerComposerPersistenceController<FollowUpComposerPersistenceSnapshot> | null>(
+      null,
+    );
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
@@ -168,6 +188,36 @@ export function FollowUpEntryComposer({
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [persistenceFrozen, setPersistenceFrozen] = useState(false);
+
+  useEffect(() => {
+    if (visualScenario) return;
+
+    const controller =
+      createOwnerComposerPersistenceController<FollowUpComposerPersistenceSnapshot>(
+        {
+          ownerUserId,
+          persist: async (snapshot, context) => {
+            await persistFollowUpComposerSnapshot(snapshot, context);
+          },
+          shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
+        },
+      );
+    persistenceControllerRef.current = controller;
+    const unsubscribeFrozen = controller.subscribeFrozen((frozen) => {
+      persistenceFrozenRef.current = frozen;
+      setPersistenceFrozen(frozen);
+    });
+
+    return () => {
+      unsubscribeFrozen();
+      if (persistenceControllerRef.current === controller) {
+        persistenceControllerRef.current = null;
+      }
+      persistenceFrozenRef.current = false;
+      controller.dispose();
+    };
+  }, [ownerUserId, visualScenario]);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -250,8 +300,8 @@ export function FollowUpEntryComposer({
     };
   }, [draftId, objectId, ownerUserId, visualScenario, workspaceCopy]);
 
-  useEffect(() => {
-    if (!draftHydrated || visualScenario) return;
+  useLayoutEffect(() => {
+    if (visualScenario) return;
 
     const payload: FollowUpEntryDraftPayload = {
       clientMutationId,
@@ -262,19 +312,23 @@ export function FollowUpEntryComposer({
       photoIntent: storedPhotoIntent,
     };
 
+    const controller = persistenceControllerRef.current;
+    if (!controller) return;
+    controller.updateSnapshot({
+      ownerUserId,
+      draftId,
+      payload,
+      photoFile,
+      defaultEntryDate: today,
+      hydrated: draftHydrated,
+    });
+
+    if (!draftHydrated) return;
+
     const timer = window.setTimeout(() => {
       if (draftPersistencePausedRef.current) return;
 
-      if (hasPersistableFollowUpDraft(payload, today)) {
-        void upsertOfflineDraft({
-          ownerUserId,
-          id: draftId,
-          kind: "follow_up_entry",
-          payload,
-        }).catch(() => undefined);
-      } else {
-        void deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
-      }
+      void controller.persistLatest().catch(() => undefined);
     }, 250);
 
     return () => {
@@ -288,6 +342,7 @@ export function FollowUpEntryComposer({
     mentionSelections,
     objectId,
     ownerUserId,
+    photoFile,
     storedPhotoIntent,
     today,
     topicTagInput,
@@ -342,11 +397,13 @@ export function FollowUpEntryComposer({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isComposerPersistenceFrozen()) return;
 
     if (visualScenario) {
       await handleVisualScenarioSubmit(visualScenario);
       return;
     }
+    if (isComposerPersistenceFrozen()) return;
 
     if (photoError) {
       setSubmitState("failed");
@@ -381,6 +438,7 @@ export function FollowUpEntryComposer({
         ownerUserId,
         idempotencyKey: clientMutationId,
       });
+      if (isComposerPersistenceFrozen()) return;
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
@@ -482,8 +540,10 @@ export function FollowUpEntryComposer({
   }
 
   async function handleCancel() {
+    if (isComposerPersistenceFrozen()) return;
     try {
       const payload = await buildPayload();
+      if (isComposerPersistenceFrozen()) return;
       const persistedPayload = persistedDraftPayload(payload);
       draftPersistencePausedRef.current = true;
 
@@ -496,6 +556,7 @@ export function FollowUpEntryComposer({
         await deleteOfflineDraft(ownerUserId, draftId);
       }
 
+      if (isComposerPersistenceFrozen()) return;
       router.push(`/garden/objects/${objectId}`);
     } catch {
       draftPersistencePausedRef.current = false;
@@ -512,6 +573,7 @@ export function FollowUpEntryComposer({
       idempotencyKey: clientMutationId,
     });
 
+    if (isComposerPersistenceFrozen()) return;
     setSubmitState("queued");
     draftPersistencePausedRef.current = true;
     await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
@@ -531,6 +593,7 @@ export function FollowUpEntryComposer({
       const result = await syncOfflineJournalEntryMutation(mutation, {
         expectedOwnerUserId: ownerUserId,
       });
+      if (isComposerPersistenceFrozen()) return;
       draftPersistencePausedRef.current = true;
       await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
       setSubmitState("synced");
@@ -622,6 +685,7 @@ export function FollowUpEntryComposer({
     field: K,
     value: FollowUpEntryDraftFields[K],
   ) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) => {
       const next = { ...current, [field]: value };
@@ -632,17 +696,20 @@ export function FollowUpEntryComposer({
   }
 
   function updateTitle(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     titleEditedByUserRef.current = true;
     setDraft((current) => ({ ...current, title: value }));
   }
 
   function updateBody(value: string, cursorPosition = value.length) {
+    if (isComposerPersistenceFrozen()) return;
     updateDraft("body", value);
     updateActiveMentionToken(resolveActiveMentionToken(value, cursorPosition));
   }
 
   function appendVoiceTranscript(transcript: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setDraft((current) =>
       withSuggestedTitle({
@@ -671,6 +738,7 @@ export function FollowUpEntryComposer({
   }
 
   function selectMentionSuggestion(suggestion: JournalMentionSuggestion) {
+    if (isComposerPersistenceFrozen()) return;
     if (!activeMentionToken) return;
 
     draftPersistencePausedRef.current = false;
@@ -708,6 +776,7 @@ export function FollowUpEntryComposer({
   }
 
   function removeMentionSelection(selection: JournalMentionSelection) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setMentionSelections((current) =>
       current.filter(
@@ -717,11 +786,13 @@ export function FollowUpEntryComposer({
   }
 
   function updateTopicTagInput(value: string) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setTopicTagInput(value);
   }
 
   function handlePhotoChange(file: File | undefined) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     setPhotoError(null);
     const requestId = photoIntentRequestRef.current + 1;
@@ -756,12 +827,20 @@ export function FollowUpEntryComposer({
     setDraft((current) => withSuggestedTitle(current, { hasPhoto: true }));
     void createComposerPhotoIntent(file)
       .then((intent) => {
-        if (photoIntentRequestRef.current === requestId) {
+        if (
+          !isComposerPersistenceFrozen() &&
+          photoIntentRequestRef.current === requestId
+        ) {
           setStoredPhotoIntent(intent);
         }
       })
       .catch(() => {
-        if (photoIntentRequestRef.current !== requestId) return;
+        if (
+          isComposerPersistenceFrozen() ||
+          photoIntentRequestRef.current !== requestId
+        ) {
+          return;
+        }
 
         setPhotoFile(null);
         setStoredPhotoIntent(clearComposerPhotoIntent());
@@ -772,6 +851,7 @@ export function FollowUpEntryComposer({
   }
 
   function clearPhotoSelection(resetInput = true) {
+    if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
     photoIntentRequestRef.current += 1;
     setPhotoFile(null);
@@ -785,6 +865,13 @@ export function FollowUpEntryComposer({
     if (photoInputRef.current) {
       photoInputRef.current.value = "";
     }
+  }
+
+  function isComposerPersistenceFrozen() {
+    return (
+      persistenceControllerRef.current?.isFrozen() ??
+      persistenceFrozenRef.current
+    );
   }
 
   function withSuggestedTitle(
@@ -812,8 +899,16 @@ export function FollowUpEntryComposer({
     <form
       onSubmit={handleSubmit}
       data-visual-creation-scenario={visualScenario?.id}
-      className="grid gap-4"
+      inert={persistenceFrozen}
+      data-composer-sign-out-frozen={persistenceFrozen || undefined}
+      aria-busy={persistenceFrozen || undefined}
+      className={`grid gap-4 transition-opacity ${persistenceFrozen ? "pointer-events-none opacity-60" : ""}`}
     >
+      {persistenceFrozen ? (
+        <p className="sr-only" role="status" aria-live="polite">
+          {workspaceCopy.composer.saveStates.syncing}
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1">
           {isOnline ? (
@@ -846,6 +941,7 @@ export function FollowUpEntryComposer({
           </label>
           <JournalVoiceInputControl
             locale={locale}
+            disabled={persistenceFrozen}
             onTranscript={appendVoiceTranscript}
           />
         </div>
@@ -1085,6 +1181,38 @@ function isObjectEntryMutationForObject(
     payload.target === "plant_object_entry" &&
     payload.plantObjectId === objectId
   );
+}
+
+async function persistFollowUpComposerSnapshot(
+  snapshot: FollowUpComposerPersistenceSnapshot,
+  context: OwnerComposerPersistenceWriteContext,
+) {
+  if (!snapshot.hydrated) {
+    throw new Error("The follow-up draft is not hydrated yet.");
+  }
+
+  const payload =
+    snapshot.photoFile && !snapshot.payload.photoIntent
+      ? {
+          ...snapshot.payload,
+          photoIntent: await createComposerPhotoIntent(snapshot.photoFile),
+        }
+      : snapshot.payload;
+
+  if (hasPersistableFollowUpDraft(payload, snapshot.defaultEntryDate)) {
+    await upsertOfflineDraft(
+      {
+        ownerUserId: snapshot.ownerUserId,
+        id: snapshot.draftId,
+        kind: "follow_up_entry",
+        payload,
+      },
+      context,
+    );
+    return;
+  }
+
+  await deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
 }
 
 function statusIcon(status: OfflineMutation["status"]) {

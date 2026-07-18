@@ -11,8 +11,15 @@ import {
   type FirstEntryDraftPayload,
   type FollowUpEntryDraftPayload,
 } from "@/lib/offline/drafts";
+import { hydrateOwnerOfflineActivitySession } from "@/lib/offline/owner-session-lifecycle";
 
 type VisualIntentDraftKind = "first_entry" | "follow_up_entry";
+
+// This client is rendered only by the server-gated visual-fixture route. Its
+// synthetic owner never has a Better Auth session, so install an equally
+// synthetic, bounded generation before exercising the real guarded draft path.
+const VISUAL_FIXTURE_SESSION_GENERATION =
+  "visual-fixture-owner-session-generation-v1";
 
 export function VisualIntentDraftTrigger({
   kind,
@@ -79,6 +86,14 @@ export async function seedVisualIntentDraft({
   ownerUserId: string;
   objectId?: string;
 }) {
+  const hydration = await hydrateOwnerOfflineActivitySession(
+    ownerUserId,
+    VISUAL_FIXTURE_SESSION_GENERATION,
+  );
+  if (hydration !== "ready") {
+    throw new Error("Visual fixture owner session is unavailable.");
+  }
+
   if (kind === "follow_up_entry") {
     if (!objectId) throw new Error("Fixture object id is required.");
     const payload: FollowUpEntryDraftPayload = {

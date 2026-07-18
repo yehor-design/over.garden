@@ -16,6 +16,11 @@ import {
   submitJournalEntryPayload,
   syncOfflineJournalEntryMutation as syncOwnedOfflineJournalEntryMutation,
 } from "./journal-entry-sync";
+import {
+  hydrateOwnerOfflineActivitySession,
+  OwnerOfflineActivityPausedError,
+  pauseOwnerOfflineActivity,
+} from "./owner-session-lifecycle";
 
 const AUTH_RETURN_HEADER = "x-overgarden-auth-return";
 const OBJECT_ID = "00000000-0000-4000-8000-000000000201";
@@ -63,6 +68,15 @@ describe("offline journal entry sync", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.ownerActivity.clear();
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_A,
+      "test-session-generation-owner-a-1234",
+    );
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_B,
+      "test-session-generation-owner-b-5678",
+    );
     vi.unstubAllGlobals();
   });
 
@@ -261,8 +275,79 @@ describe("offline journal entry sync", () => {
     expect(result).toBe(directResult);
     expect(submitDirect).toHaveBeenCalledWith(payload, {
       idempotencyKey: "direct-idempotency-key",
+      signal: expect.any(AbortSignal),
     });
     expect(syncMutation).not.toHaveBeenCalled();
+  });
+
+  it("never falls through to a direct POST while owner activity is paused", async () => {
+    const submitDirect = vi.fn();
+    const handle = await pauseOwnerOfflineActivity(OWNER_A);
+
+    try {
+      await expect(
+        submitOnlineJournalEntryPayload(
+          payload,
+          { ownerUserId: OWNER_A, idempotencyKey: "paused-direct-key" },
+          { submitDirect },
+        ),
+      ).rejects.toBeInstanceOf(OwnerOfflineActivityPausedError);
+      expect(submitDirect).not.toHaveBeenCalled();
+    } finally {
+      await handle.resume();
+    }
+  });
+
+  it("propagates one AbortSignal through upload, quarantine, process, and entry create", async () => {
+    const photo = new Blob(["photo"], { type: "image/jpeg" });
+    const responses = [
+      Response.json({
+        mediaAssetId: "media-1",
+        uploadUrl: "https://uploads.example/private",
+      }),
+      new Response(null, { status: 200 }),
+      Response.json({
+        mediaAsset: {
+          id: "media-1",
+          status: "processed",
+          derivative_key: "derivatives/private-safe.webp",
+        },
+        publicUrl: "https://media.example/derivatives/private-safe.webp",
+      }),
+      Response.json({
+        space: { id: "space-1", displayName: "Balcony" },
+        plantObject: { id: "object-1", displayName: "Tomato" },
+        entry: { id: "entry-1", title: "Update", body: "Body" },
+        readbackUrl: "/garden/objects/object-1",
+      }),
+    ];
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        void input;
+        void init;
+        return responses.shift()!;
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const controller = new AbortController();
+
+    await submitJournalEntryPayload(
+      {
+        ...payload,
+        photoIntent: {
+          fileName: "private.jpg",
+          contentType: "image/jpeg",
+          size: photo.size,
+          blob: photo,
+        },
+      },
+      { signal: controller.signal },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    for (const call of fetchMock.mock.calls) {
+      expect(call[1]?.signal).toBe(controller.signal);
+    }
   });
 
   it("syncs a queued entry through the canonical create endpoint", async () => {
@@ -707,6 +792,53 @@ describe("offline journal entry sync", () => {
       }),
     ).rejects.toThrow("does not belong to the active account");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("settles an aborted in-flight claim before sign-out preparation drain completes", async () => {
+    const fetchMock = vi.fn(
+      async (_input: RequestInfo | URL, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init?.signal;
+          const rejectAbort = () =>
+            reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) {
+            rejectAbort();
+            return;
+          }
+          signal?.addEventListener("abort", rejectAbort, { once: true });
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const mutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload,
+      idempotencyKey: "abort-settlement-key",
+    });
+
+    const syncResult = syncOfflineJournalEntryMutation(mutation).then(
+      () => null,
+      (error: unknown) => error,
+    );
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    expect((await getOfflineMutation(mutation.id))?.status).toBe("syncing");
+
+    const pauseHandle = await pauseOwnerOfflineActivity(OWNER_A, {
+      operationId: "op-abort-sync-drain-1234",
+      sessionGeneration: "test-session-generation-owner-a-1234",
+    });
+    await pauseHandle.waitForSyncDrain();
+
+    const syncError = await syncResult;
+    expect(syncError).toBeInstanceOf(DOMException);
+    expect((syncError as DOMException).name).toBe("AbortError");
+    const settled = await getOfflineMutation(mutation.id);
+    expect(settled?.status).toBe("failed");
+    expect(settled?.lastError).toBe("Sync paused.");
+    expect(settled?.syncLeaseExpiresAt).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    await pauseHandle.resume();
   });
 
   it("removes private body and photo bytes after canonical sync succeeds", async () => {

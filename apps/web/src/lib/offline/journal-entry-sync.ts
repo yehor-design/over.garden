@@ -11,12 +11,14 @@ import {
   completeOfflineMutation,
   enqueueOfflineMutation,
   getOfflineMutation,
+  settleClaimedOfflineMutationFailure,
   updateOfflineMutationPayload,
-  updateOfflineMutationStatus,
+  OwnerOfflineActivityPausedError,
   type OfflineJournalEntryPayload,
   type OfflineMutation,
   type OfflinePhotoIntent,
 } from "./queue";
+import { runOwnerSyncAttempt } from "./owner-session-lifecycle";
 
 interface UploadResponse {
   mediaAssetId: string;
@@ -51,13 +53,18 @@ export async function submitJournalEntryPayload(
   options: {
     idempotencyKey?: string;
     onProcessedMediaAsset?: (mediaAssetId: string) => Promise<void>;
+    signal?: AbortSignal;
   } = {},
 ): Promise<FirstPlantEntryResponse> {
   const idempotencyKey = options.idempotencyKey ?? payload.clientMutationId;
   const authReturnTo = journalEntryAuthReturnTo(payload);
   const mediaAssetId =
     payload.processedMediaAssetId ??
-    (await processPhotoIntent(payload.photoIntent ?? null, authReturnTo));
+    (await processPhotoIntent(
+      payload.photoIntent ?? null,
+      authReturnTo,
+      options.signal,
+    ));
 
   if (mediaAssetId && mediaAssetId !== payload.processedMediaAssetId) {
     await options.onProcessedMediaAsset?.(mediaAssetId);
@@ -76,6 +83,7 @@ export async function submitJournalEntryPayload(
       [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
     },
     body: JSON.stringify(requestBody),
+    signal: options.signal,
   });
 
   if (!response.ok) {
@@ -125,9 +133,15 @@ export async function submitOnlineJournalEntryPayload(
       payload,
       idempotencyKey: options.idempotencyKey,
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof OwnerOfflineActivityPausedError) throw error;
     const submitDirect = dependencies.submitDirect ?? submitJournalEntryPayload;
-    return submitDirect(payload, { idempotencyKey: options.idempotencyKey });
+    return runOwnerSyncAttempt(options.ownerUserId, (signal) =>
+      submitDirect(payload, {
+        idempotencyKey: options.idempotencyKey,
+        signal,
+      }),
+    );
   }
 
   const syncMutation =
@@ -148,56 +162,61 @@ export async function syncOfflineJournalEntryMutation(
     throw new Error("Offline mutation does not belong to the active account.");
   }
 
-  const claimed = await claimOfflineMutationForSync(
-    options.expectedOwnerUserId,
-    mutation.id,
-  );
-  if (!claimed) {
-    throw new Error("Offline mutation is already syncing or has synced.");
-  }
-
-  const payload = claimed.payload as OfflineJournalEntryPayload;
-
-  try {
-    const result = await submitJournalEntryPayload(payload, {
-      idempotencyKey: claimed.idempotencyKey,
-      onProcessedMediaAsset: async (mediaAssetId) => {
-        const latest = await getOfflineMutation(
-          options.expectedOwnerUserId,
-          claimed.id,
-        );
-        const latestPayload =
-          (latest?.payload as OfflineJournalEntryPayload | undefined) ??
-          payload;
-
-        await updateOfflineMutationPayload(
-          options.expectedOwnerUserId,
-          claimed.id,
-          {
-            ...latestPayload,
-            processedMediaAssetId: mediaAssetId,
-          },
-        );
-      },
-    });
-
-    await completeOfflineMutation(options.expectedOwnerUserId, claimed.id, {
-      payload: syncedPayloadReceipt(payload),
-      syncResult: syncedResultReceipt(result),
-    });
-
-    return result;
-  } catch (error) {
-    await updateOfflineMutationStatus(
+  return runOwnerSyncAttempt(options.expectedOwnerUserId, async (signal) => {
+    const claimed = await claimOfflineMutationForSync(
       options.expectedOwnerUserId,
-      claimed.id,
-      "failed",
-      {
-        lastError: normalizeError(error),
-      },
+      mutation.id,
     );
-    throw error;
-  }
+    if (!claimed) {
+      throw new Error("Offline mutation is already syncing or has synced.");
+    }
+
+    const payload = claimed.payload as OfflineJournalEntryPayload;
+
+    try {
+      const result = await submitJournalEntryPayload(payload, {
+        idempotencyKey: claimed.idempotencyKey,
+        signal,
+        onProcessedMediaAsset: async (mediaAssetId) => {
+          const latest = await getOfflineMutation(
+            options.expectedOwnerUserId,
+            claimed.id,
+          );
+          const latestPayload =
+            (latest?.payload as OfflineJournalEntryPayload | undefined) ??
+            payload;
+
+          await updateOfflineMutationPayload(
+            options.expectedOwnerUserId,
+            claimed.id,
+            {
+              ...latestPayload,
+              processedMediaAssetId: mediaAssetId,
+            },
+          );
+        },
+      });
+
+      await completeOfflineMutation(options.expectedOwnerUserId, claimed.id, {
+        payload: syncedPayloadReceipt(payload),
+        syncResult: syncedResultReceipt(result),
+      });
+
+      return result;
+    } catch (error) {
+      // Sign-out aborts active attempts only after installing a durable
+      // `preparing` fence. Settle this exact lease under that fence so the
+      // inventory and Stay/Sync-first path never wait 60 seconds for expiry.
+      // A settlement failure must not replace the original network/auth error.
+      await settleClaimedOfflineMutationFailure(
+        options.expectedOwnerUserId,
+        claimed.id,
+        claimed,
+        { lastError: normalizeError(error) },
+      ).catch(() => undefined);
+      throw error;
+    }
+  });
 }
 
 function syncedPayloadReceipt(payload: OfflineJournalEntryPayload) {
@@ -269,6 +288,7 @@ export function buildJournalEntryRequestBodyForSync(
 async function processPhotoIntent(
   intent: OfflinePhotoIntent | null,
   authReturnTo: string,
+  signal?: AbortSignal,
 ) {
   if (!intent) return null;
 
@@ -298,6 +318,7 @@ async function processPhotoIntent(
       contentType: intent.contentType,
       sizeBytes: intent.size,
     }),
+    signal,
   });
 
   if (!uploadResponse.ok) {
@@ -317,6 +338,7 @@ async function processPhotoIntent(
     method: "PUT",
     headers: { "Content-Type": intent.contentType },
     body: intent.blob,
+    signal,
   });
 
   if (!quarantineResponse.ok) {
@@ -330,6 +352,7 @@ async function processPhotoIntent(
       [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
     },
     body: JSON.stringify({ mediaAssetId: upload.mediaAssetId }),
+    signal,
   });
 
   if (!processResponse.ok) {
@@ -375,5 +398,16 @@ async function readSafeSyncError(response: Response, fallback: string) {
 }
 
 function normalizeError(error: unknown) {
-  return error instanceof Error ? error.message : "Sync failed.";
+  if (
+    error instanceof OwnerOfflineActivityPausedError ||
+    (error instanceof Error && error.name === "AbortError")
+  ) {
+    return "Sync paused.";
+  }
+  const message = error instanceof Error ? error.message : "Sync failed.";
+  return message
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
 }

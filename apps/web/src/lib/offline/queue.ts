@@ -14,6 +14,31 @@ export type OfflineMutationKind = "journal_entry" | "photo_upload";
 export const OFFLINE_QUEUE_CHANGED_EVENT = "overgarden:offline-queue-changed";
 export const OFFLINE_SYNC_LEASE_MS = 60_000;
 
+export interface OfflineOwnerActivityOperation {
+  operationId: string;
+  phase: "preparing" | "commit_pending";
+  expiresAt: number;
+}
+
+export interface OfflineOwnerActivity {
+  ownerUserId: string;
+  sessionGeneration: string;
+  lifecycle: "active" | "signed_out_fence";
+  operations: OfflineOwnerActivityOperation[];
+  updatedAt: number;
+  expiresAt: number;
+}
+
+export class OwnerOfflineActivityPausedError extends Error {
+  constructor() {
+    super("Offline activity is paused for sign-out.");
+    this.name = "OwnerOfflineActivityPausedError";
+  }
+}
+
+const localOwnerActivityPauseTokens = new Map<string, Set<string>>();
+const localOwnerActivitySessionGenerations = new Map<string, string>();
+
 export interface OfflinePhotoIntent {
   fileName: string;
   contentType: string;
@@ -88,6 +113,7 @@ export interface OfflineDraftRecord<TPayload = unknown> {
 class OverGardenOfflineDb extends Dexie {
   mutations!: Table<OfflineMutation, string>;
   drafts!: Table<OfflineDraftRecord, [string, string]>;
+  ownerActivity!: Table<OfflineOwnerActivity, string>;
 
   constructor() {
     super("overgarden-offline");
@@ -113,6 +139,13 @@ class OverGardenOfflineDb extends Dexie {
           transaction.table("drafts").clear(),
         ]);
       });
+    this.version(4).stores({
+      mutations:
+        "id, ownerUserId, &[ownerUserId+idempotencyKey], [ownerUserId+status], createdAt, updatedAt",
+      drafts:
+        "[ownerUserId+id], ownerUserId, [ownerUserId+kind], createdAt, updatedAt",
+      ownerActivity: "ownerUserId, expiresAt",
+    });
   }
 }
 
@@ -133,7 +166,9 @@ export async function enqueueOfflineMutation(
   const result = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.ownerActivity,
     async () => {
+      await assertOwnerOfflineActivityAllowed(ownerUserId);
       const now = Date.now();
       const existing = await offlineDb.mutations
         .where("[ownerUserId+idempotencyKey]")
@@ -174,7 +209,7 @@ export async function enqueueOfflineMutation(
     },
   );
 
-  if (result.changed) notifyOfflineQueueChanged();
+  if (result.changed) publishOfflineQueueChanged();
   return result.mutation;
 }
 
@@ -229,7 +264,9 @@ export async function updateOfflineMutationStatus(
   const updated = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.ownerActivity,
     async () => {
+      await assertOwnerOfflineActivityAllowed(owner);
       const mutation = await offlineDb.mutations.get(id);
       if (!mutation || mutation.ownerUserId !== owner) return undefined;
       const next: OfflineMutation = {
@@ -246,7 +283,7 @@ export async function updateOfflineMutationStatus(
     },
   );
   if (!updated) return undefined;
-  notifyOfflineQueueChanged();
+  publishOfflineQueueChanged();
   return updated;
 }
 
@@ -260,7 +297,9 @@ export async function updateOfflineMutationPayload(
   const updated = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.ownerActivity,
     async () => {
+      await assertOwnerOfflineActivityAllowed(owner);
       const mutation = await offlineDb.mutations.get(id);
       if (!mutation || mutation.ownerUserId !== owner) return undefined;
       const next = { ...mutation, payload, updatedAt: Date.now() };
@@ -269,7 +308,7 @@ export async function updateOfflineMutationPayload(
     },
   );
   if (!updated) return undefined;
-  notifyOfflineQueueChanged();
+  publishOfflineQueueChanged();
   return updated;
 }
 
@@ -283,7 +322,9 @@ export async function claimOfflineMutationForSync(
   const claimed = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.ownerActivity,
     async () => {
+      await assertOwnerOfflineActivityAllowed(owner);
       const mutation = await offlineDb.mutations.get(id);
       if (!mutation || mutation.ownerUserId !== owner) return undefined;
       if (mutation.status === "synced") return undefined;
@@ -305,8 +346,73 @@ export async function claimOfflineMutationForSync(
       return next;
     },
   );
-  if (claimed) notifyOfflineQueueChanged();
+  if (claimed) publishOfflineQueueChanged();
   return claimed;
+}
+
+/**
+ * Settle only the exact sync claim that this document already started. This is
+ * the one mutation transition allowed while an owner sign-out operation is in
+ * `preparing`: aborting the network attempt must release `syncing` immediately
+ * so the sign-out inventory and a later Stay/Sync-first retry see `failed`
+ * instead of waiting for the lease to expire.
+ *
+ * This cannot claim, retry, enqueue, change payload, cross a commit fence, or
+ * recreate a deleted mutation. A newer lease always wins over a stale caller.
+ */
+export async function settleClaimedOfflineMutationFailure(
+  ownerUserId: string,
+  id: string,
+  claim: Pick<OfflineMutation, "updatedAt" | "syncLeaseExpiresAt">,
+  options: { lastError: string },
+): Promise<OfflineMutation | undefined> {
+  if (!offlineDb || claim.syncLeaseExpiresAt === null) return undefined;
+  const owner = requireOwnerUserId(ownerUserId);
+  const updated = await offlineDb.transaction(
+    "rw",
+    offlineDb.mutations,
+    offlineDb.ownerActivity,
+    async () => {
+      const activity = normalizeOwnerActivity(
+        await offlineDb.ownerActivity.get(owner),
+      );
+      const localGeneration = localOwnerActivitySessionGenerations.get(owner);
+      const canSettleDuringPreparation =
+        Boolean(localGeneration) &&
+        activity?.lifecycle === "active" &&
+        activity.sessionGeneration === localGeneration &&
+        activity.operations.some(
+          (operation) =>
+            operation.phase === "preparing" && operation.expiresAt > Date.now(),
+        );
+      if (!canSettleDuringPreparation) {
+        await assertOwnerOfflineActivityAllowed(owner);
+      }
+
+      const mutation = await offlineDb.mutations.get(id);
+      if (
+        !mutation ||
+        mutation.ownerUserId !== owner ||
+        mutation.status !== "syncing" ||
+        mutation.updatedAt !== claim.updatedAt ||
+        mutation.syncLeaseExpiresAt !== claim.syncLeaseExpiresAt
+      ) {
+        return undefined;
+      }
+
+      const next: OfflineMutation = {
+        ...mutation,
+        status: "failed",
+        updatedAt: Date.now(),
+        lastError: boundedOfflineSyncError(options.lastError),
+        syncLeaseExpiresAt: null,
+      };
+      await offlineDb.mutations.put(next);
+      return next;
+    },
+  );
+  if (updated) publishOfflineQueueChanged();
+  return updated;
 }
 
 export async function completeOfflineMutation(
@@ -322,7 +428,9 @@ export async function completeOfflineMutation(
   const completed = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.ownerActivity,
     async () => {
+      await assertOwnerOfflineActivityAllowed(owner);
       const mutation = await offlineDb.mutations.get(id);
       if (!mutation || mutation.ownerUserId !== owner) return undefined;
       const next: OfflineMutation = {
@@ -338,8 +446,96 @@ export async function completeOfflineMutation(
       return next;
     },
   );
-  if (completed) notifyOfflineQueueChanged();
+  if (completed) publishOfflineQueueChanged();
   return completed;
+}
+
+export async function assertOwnerOfflineActivityAllowed(
+  ownerUserId: string,
+): Promise<void> {
+  const owner = requireOwnerUserId(ownerUserId);
+  if ((localOwnerActivityPauseTokens.get(owner)?.size ?? 0) > 0) {
+    throw new OwnerOfflineActivityPausedError();
+  }
+  if (!offlineDb) return;
+  const storedActivity = (await offlineDb.ownerActivity.get(owner)) as
+    | OfflineOwnerActivity
+    | LegacyOfflineOwnerActivity
+    | undefined;
+  const activity = normalizeOwnerActivity(storedActivity);
+  const localGeneration = localOwnerActivitySessionGenerations.get(owner);
+
+  if (!localGeneration) {
+    throw new OwnerOfflineActivityPausedError();
+  }
+
+  if (!activity) {
+    await offlineDb.ownerActivity.put(
+      activeOwnerActivity(owner, localGeneration),
+    );
+    return;
+  }
+
+  if (
+    activity.sessionGeneration !== localGeneration ||
+    activity.lifecycle === "signed_out_fence"
+  ) {
+    throw new OwnerOfflineActivityPausedError();
+  }
+
+  const activeOperations = activity.operations.filter(
+    (operation) =>
+      operation.phase === "commit_pending" || operation.expiresAt > Date.now(),
+  );
+  if (activeOperations.length > 0) {
+    throw new OwnerOfflineActivityPausedError();
+  }
+
+  if (activity.operations.length > 0) {
+    await offlineDb.ownerActivity.put({
+      ...activity,
+      operations: [],
+      updatedAt: Date.now(),
+      expiresAt: Number.MAX_SAFE_INTEGER,
+    });
+  }
+}
+
+export function pauseOwnerOfflineActivityLocally(
+  ownerUserId: string,
+  pauseToken: string,
+): void {
+  const owner = requireOwnerUserId(ownerUserId);
+  const pauseTokens = localOwnerActivityPauseTokens.get(owner) ?? new Set();
+  pauseTokens.add(pauseToken);
+  localOwnerActivityPauseTokens.set(owner, pauseTokens);
+}
+
+export function resumeOwnerOfflineActivityLocally(
+  ownerUserId: string,
+  pauseToken: string,
+): void {
+  const owner = requireOwnerUserId(ownerUserId);
+  const pauseTokens = localOwnerActivityPauseTokens.get(owner);
+  if (!pauseTokens) return;
+  pauseTokens.delete(pauseToken);
+  if (pauseTokens.size === 0) localOwnerActivityPauseTokens.delete(owner);
+}
+
+export function readLocalOwnerActivitySessionGeneration(ownerUserId: string) {
+  return localOwnerActivitySessionGenerations.get(
+    requireOwnerUserId(ownerUserId),
+  );
+}
+
+export function setLocalOwnerActivitySessionGeneration(
+  ownerUserId: string,
+  sessionGeneration: string,
+) {
+  localOwnerActivitySessionGenerations.set(
+    requireOwnerUserId(ownerUserId),
+    requireOwnerActivitySessionGeneration(sessionGeneration),
+  );
 }
 
 function requireOwnerUserId(ownerUserId: string) {
@@ -348,9 +544,124 @@ function requireOwnerUserId(ownerUserId: string) {
   return normalized;
 }
 
-function notifyOfflineQueueChanged() {
+function boundedOfflineSyncError(value: string) {
+  const normalized = value
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return (normalized || "Sync failed.").slice(0, 160);
+}
+
+export function publishOfflineQueueChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(OFFLINE_QUEUE_CHANGED_EVENT));
+}
+
+interface LegacyOfflineOwnerActivity {
+  ownerUserId: string;
+  pauseToken: string;
+  pausedAt: number;
+  expiresAt: number;
+}
+
+function normalizeOwnerActivity(
+  value: OfflineOwnerActivity | LegacyOfflineOwnerActivity | undefined,
+): OfflineOwnerActivity | null {
+  if (!value) return null;
+  if (
+    "sessionGeneration" in value &&
+    "lifecycle" in value &&
+    "operations" in value &&
+    isOwnerActivitySessionGeneration(value.sessionGeneration) &&
+    (value.lifecycle === "active" || value.lifecycle === "signed_out_fence") &&
+    Array.isArray(value.operations)
+  ) {
+    return {
+      ownerUserId: requireOwnerUserId(value.ownerUserId),
+      sessionGeneration: value.sessionGeneration,
+      lifecycle: value.lifecycle,
+      operations: value.operations.filter(isOwnerActivityOperation),
+      updatedAt:
+        typeof value.updatedAt === "number" && Number.isFinite(value.updatedAt)
+          ? value.updatedAt
+          : Date.now(),
+      expiresAt:
+        typeof value.expiresAt === "number" && Number.isFinite(value.expiresAt)
+          ? value.expiresAt
+          : Number.MAX_SAFE_INTEGER,
+    };
+  }
+
+  if (
+    "pauseToken" in value &&
+    typeof value.pauseToken === "string" &&
+    typeof value.expiresAt === "number" &&
+    Number.isFinite(value.expiresAt)
+  ) {
+    if (value.expiresAt <= Date.now()) return null;
+    return {
+      ownerUserId: requireOwnerUserId(value.ownerUserId),
+      sessionGeneration: `legacy-${value.pauseToken}`.slice(0, 128),
+      lifecycle: "active",
+      operations: [
+        {
+          operationId: `legacy-${value.pauseToken}`.slice(0, 128),
+          phase: "preparing",
+          expiresAt: value.expiresAt,
+        },
+      ],
+      updatedAt: value.pausedAt,
+      expiresAt: value.expiresAt,
+    };
+  }
+
+  return null;
+}
+
+function isOwnerActivityOperation(
+  value: unknown,
+): value is OfflineOwnerActivityOperation {
+  if (typeof value !== "object" || value === null) return false;
+  const operation = value as Partial<OfflineOwnerActivityOperation>;
+  return (
+    typeof operation.operationId === "string" &&
+    operation.operationId.length > 0 &&
+    operation.operationId.length <= 128 &&
+    (operation.phase === "preparing" || operation.phase === "commit_pending") &&
+    typeof operation.expiresAt === "number" &&
+    Number.isFinite(operation.expiresAt)
+  );
+}
+
+function activeOwnerActivity(
+  ownerUserId: string,
+  sessionGeneration: string,
+): OfflineOwnerActivity {
+  const now = Date.now();
+  return {
+    ownerUserId,
+    sessionGeneration,
+    lifecycle: "active",
+    operations: [],
+    updatedAt: now,
+    expiresAt: Number.MAX_SAFE_INTEGER,
+  };
+}
+
+function requireOwnerActivitySessionGeneration(sessionGeneration: string) {
+  if (!isOwnerActivitySessionGeneration(sessionGeneration)) {
+    throw new Error("Owner activity requires an opaque session generation.");
+  }
+  return sessionGeneration;
+}
+
+function isOwnerActivitySessionGeneration(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length >= 12 &&
+    value.length <= 128 &&
+    /^[A-Za-z0-9_-]+$/.test(value)
+  );
 }
 
 // A File from <input type="file"> is backed by the on-disk file. iOS Safari and

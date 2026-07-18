@@ -40,6 +40,21 @@ describe("trust-sensitive interface copy", () => {
     expect(getTrustSurfaceCopy("ru").firstPublication.title).toBe(
       "Уведомление перед первой публикацией",
     );
+    expect(getTrustSurfaceCopy("uk").signOut.action).toBe(
+      "Вийти з облікового запису",
+    );
+    expect(getTrustSurfaceCopy("bg").signOut.syncFirst).toBe(
+      "Първо синхронизиране",
+    );
+    expect(getTrustSurfaceCopy("ru").signOut.discardAndSignOut).toBe(
+      "Удалить локальные изменения и выйти",
+    );
+    expect(getTrustSurfaceCopy("uk").signOut.signOutUnconfirmedError).toContain(
+      "стан сеансу",
+    );
+    expect(
+      getTrustSurfaceCopy("uk").signOut.signOutUnconfirmedError,
+    ).not.toContain("залишаєтеся в обліковому записі");
   });
 
   it("keeps catalog and provider literals unchanged inside localized guidance", () => {

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -56,6 +58,23 @@ const localeExpectations = [
 ][];
 
 describe("first entry composer localization", () => {
+  it("makes the whole form inert and guards late voice/photo/submit producers during sign-out", async () => {
+    const source = await readFile(
+      fileURLToPath(new URL("./first-entry-composer.tsx", import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /useLayoutEffect\(\(\) => \{[\s\S]{0,1800}controller\.updateSnapshot/,
+    );
+    expect(source).toMatch(/<form[\s\S]*?inert=\{persistenceFrozen\}/);
+    expect(source).not.toContain("<fieldset");
+    expect(source).toContain("disabled={persistenceFrozen}");
+    expect(
+      source.match(/if \(isComposerPersistenceFrozen\(\)\) return;/g)?.length,
+    ).toBeGreaterThanOrEqual(4);
+  });
+
   it.each(localeExpectations)(
     "localizes creation and offline recovery in %s without translating authored data",
     (locale, expected) => {

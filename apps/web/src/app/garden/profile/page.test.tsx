@@ -22,6 +22,17 @@ vi.mock("../garden-auth-panel", () => ({
   GardenAuthPanel: () => <section>Sign in panel</section>,
   SocialAccountLinkPanel: () => <section>Account sign-in methods</section>,
 }));
+vi.mock("@/components/auth/sign-out-control", () => ({
+  SignOutControl: ({ presentation }: { presentation: string }) => (
+    <button
+      type="button"
+      data-sign-out-control={presentation}
+      className="w-full"
+    >
+      Вийти з облікового запису
+    </button>
+  ),
+}));
 vi.mock("./owner-profile-editor", () => ({
   OwnerProfileEditor: ({
     workspace,
@@ -96,6 +107,10 @@ describe("/garden/profile", () => {
     expect(html).toContain('href="/@green_thumb"');
     expect(html).toContain("Blocked Keeper");
     expect(html).toContain("Account sign-in methods");
+    expect(html).toContain("Обліковий запис і безпека");
+    expect(html).toContain('data-sign-out-control="profile"');
+    expect(html).toContain("Вийти з облікового запису");
+    expect(html).toContain('class="w-full"');
     expect(html).not.toMatch(/email|provider|session-1|quarantine|token/i);
   });
 
@@ -123,6 +138,7 @@ describe("/garden/profile", () => {
 
     expect(html).toContain("Блокирани профили");
     expect(html).toContain("Профилът е разблокиран.");
+    expect(html).toContain("Профил и сигурност");
   });
 
   it("shows auth without creating an owner workspace when signed out", async () => {

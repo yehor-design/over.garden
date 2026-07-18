@@ -122,9 +122,11 @@ export function SiteShellMobileNavigation({
 export function SiteShellMobileUtilities({
   privacyHref,
   privacyLabel,
+  children,
 }: {
   privacyHref: string;
   privacyLabel: string;
+  children?: React.ReactNode;
 }) {
   return (
     <div
@@ -141,6 +143,7 @@ export function SiteShellMobileUtilities({
         <ShieldCheck data-icon="inline-start" aria-hidden="true" />
         {privacyLabel}
       </Link>
+      {children}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   createOfflinePhotoIntent,
@@ -26,6 +26,14 @@ import {
   type FollowUpEntryDraftPayload,
   type JournalDraftPayload,
 } from "./drafts";
+import {
+  createOwnerComposerPersistenceController,
+  prepareOwnerComposerParticipants,
+} from "./owner-composer-participants";
+import {
+  hydrateOwnerOfflineActivitySession,
+  pauseOwnerOfflineActivity,
+} from "./owner-session-lifecycle";
 
 const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
 const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
@@ -64,10 +72,23 @@ function deleteOfflineDraft(id: string) {
 }
 
 describe("offline journal drafts", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   beforeEach(async () => {
     vi.restoreAllMocks();
     await offlineDb?.mutations.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.ownerActivity.clear();
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_A,
+      "test-session-generation-owner-a-1234",
+    );
+    await hydrateOwnerOfflineActivitySession(
+      OWNER_B,
+      "test-session-generation-owner-b-5678",
+    );
   });
 
   it("restores first-entry text, catalog state, photo bytes, and idempotency after a reload", async () => {
@@ -386,6 +407,229 @@ describe("offline journal drafts", () => {
     ).toBe("Owner B private note");
     expect(await listOwnedOfflineDrafts(OWNER_A)).toHaveLength(1);
     expect(await listOwnedOfflineDrafts(OWNER_B)).toHaveLength(1);
+  });
+
+  it("persists the newest text and photo through a cancel/sign-out overlap under the exact preparing fence", async () => {
+    const automaticPersistenceAllowed = false;
+    const controller = createOwnerComposerPersistenceController({
+      ownerUserId: OWNER_A,
+      shouldPersistAutomatically: () => automaticPersistenceAllowed,
+      persist: async (payload: FirstEntryDraftPayload, context) => {
+        await upsertOwnedOfflineDraft(
+          {
+            ownerUserId: OWNER_A,
+            id: FIRST_ENTRY_DRAFT_ID,
+            kind: "first_entry",
+            payload,
+          },
+          context,
+        );
+      },
+    });
+    const firstPayload = minimalFirstEntryDraft("Before the overlap.");
+    controller.updateSnapshot(firstPayload);
+
+    // Submit/cancel handoff suppresses ordinary autosave, but preparation must
+    // still persist rather than reporting a successful no-op.
+    await controller.persistLatest();
+    expect(await getOfflineDraft(FIRST_ENTRY_DRAFT_ID)).toBeUndefined();
+    const preparation = await prepareOwnerComposerParticipants(OWNER_A);
+    expect(
+      (await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID))
+        ?.payload.draft.body,
+    ).toBe("Before the overlap.");
+
+    const pauseHandle = await pauseOwnerOfflineActivity(OWNER_A, {
+      operationId: "op-composer-draft-overlap-1234",
+      sessionGeneration: "test-session-generation-owner-a-1234",
+    });
+    preparation.bindOfflineActivityScope({
+      operationId: pauseHandle.operationId,
+      sessionGeneration: pauseHandle.sessionGeneration,
+    });
+
+    const photoBytes = new Uint8Array([9, 8, 7, 6, 5]);
+    const latestPayload: FirstEntryDraftPayload = {
+      ...firstPayload,
+      draft: {
+        ...firstPayload.draft,
+        body: "Newest character survives: ї",
+      },
+      photoIntent: {
+        fileName: "latest.webp",
+        contentType: "image/webp",
+        size: photoBytes.byteLength,
+        blob: new Blob([photoBytes], { type: "image/webp" }),
+      },
+    };
+    controller.updateSnapshot(latestPayload);
+
+    await expect(
+      upsertOwnedOfflineDraft({
+        ownerUserId: OWNER_A,
+        id: FIRST_ENTRY_DRAFT_ID,
+        kind: "first_entry",
+        payload: latestPayload,
+      }),
+    ).rejects.toThrow("paused for sign-out");
+
+    await preparation.flushLatest();
+    const restored =
+      await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+    expect(restored?.payload.draft.body).toBe("Newest character survives: ї");
+    expect(
+      new Uint8Array(await restored!.payload.photoIntent!.blob!.arrayBuffer()),
+    ).toEqual(photoBytes);
+
+    await pauseHandle.promoteToCommitFence();
+    controller.updateSnapshot({
+      ...latestPayload,
+      draft: { ...latestPayload.draft, body: "must not cross commit fence" },
+    });
+    await expect(preparation.flushLatest()).rejects.toThrow(
+      "paused for sign-out",
+    );
+    expect(
+      (await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID))
+        ?.payload.draft.body,
+    ).toBe("Newest character survives: ї");
+
+    controller.dispose();
+    await pauseHandle.resume();
+    await preparation.resume();
+  });
+
+  it("persists the newest generation through the ordinary guard after Stay resumes the durable fence", async () => {
+    const controller = createOwnerComposerPersistenceController({
+      ownerUserId: OWNER_A,
+      persist: async (payload: FirstEntryDraftPayload, context) => {
+        await upsertOwnedOfflineDraft(
+          {
+            ownerUserId: OWNER_A,
+            id: FIRST_ENTRY_DRAFT_ID,
+            kind: "first_entry",
+            payload,
+          },
+          context,
+        );
+      },
+    });
+    controller.updateSnapshot(minimalFirstEntryDraft("Prepared generation"));
+    const preparation = await prepareOwnerComposerParticipants(OWNER_A);
+    const pauseHandle = await pauseOwnerOfflineActivity(OWNER_A, {
+      operationId: "op-composer-stay-resume-1234",
+      sessionGeneration: "test-session-generation-owner-a-1234",
+    });
+    preparation.bindOfflineActivityScope({
+      operationId: pauseHandle.operationId,
+      sessionGeneration: pauseHandle.sessionGeneration,
+    });
+
+    const photoBytes = new Uint8Array([4, 2, 4, 2]);
+    controller.updateSnapshot({
+      ...minimalFirstEntryDraft("Newest generation before Stay"),
+      photoIntent: {
+        fileName: "stay.webp",
+        contentType: "image/webp",
+        size: photoBytes.byteLength,
+        blob: new Blob([photoBytes], { type: "image/webp" }),
+      },
+    });
+
+    await pauseHandle.resume();
+    await preparation.resume();
+
+    const restored =
+      await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+    expect(restored?.payload.draft.body).toBe("Newest generation before Stay");
+    expect(
+      new Uint8Array(await restored!.payload.photoIntent!.blob!.arrayBuffer()),
+    ).toEqual(photoBytes);
+    expect(controller.isFrozen()).toBe(false);
+    controller.dispose();
+  });
+
+  it("durably flushes the newest IndexedDB text and Blob on hidden and BFCache pagehide", async () => {
+    const documentListeners = new Map<string, EventListener>();
+    const windowListeners = new Map<string, EventListener>();
+    const documentTarget = {
+      visibilityState: "visible",
+      addEventListener: (name: string, listener: EventListener) => {
+        documentListeners.set(name, listener);
+      },
+      removeEventListener: (name: string) => {
+        documentListeners.delete(name);
+      },
+    };
+    const windowTarget = {
+      addEventListener: (name: string, listener: EventListener) => {
+        windowListeners.set(name, listener);
+      },
+      removeEventListener: (name: string) => {
+        windowListeners.delete(name);
+      },
+    };
+    vi.stubGlobal("document", documentTarget);
+    vi.stubGlobal("window", windowTarget);
+
+    const controller = createOwnerComposerPersistenceController({
+      ownerUserId: OWNER_A,
+      persist: async (payload: FirstEntryDraftPayload, context) => {
+        await upsertOwnedOfflineDraft(
+          {
+            ownerUserId: OWNER_A,
+            id: FIRST_ENTRY_DRAFT_ID,
+            kind: "first_entry",
+            payload,
+          },
+          context,
+        );
+      },
+    });
+    const hiddenBytes = new Uint8Array([1, 3, 5, 7]);
+    controller.updateSnapshot({
+      ...minimalFirstEntryDraft("Exact final hidden character: ї"),
+      photoIntent: {
+        fileName: "hidden.webp",
+        contentType: "image/webp",
+        size: hiddenBytes.byteLength,
+        blob: new Blob([hiddenBytes], { type: "image/webp" }),
+      },
+    });
+
+    documentTarget.visibilityState = "hidden";
+    documentListeners.get("visibilitychange")?.(new Event("visibilitychange"));
+    await vi.waitFor(async () => {
+      expect(
+        (await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID))
+          ?.payload.draft.body,
+      ).toBe("Exact final hidden character: ї");
+    });
+
+    const bfcacheBytes = new Uint8Array([2, 4, 6, 8]);
+    controller.updateSnapshot({
+      ...minimalFirstEntryDraft("Exact BFCache generation"),
+      photoIntent: {
+        fileName: "bfcache.jpg",
+        contentType: "image/jpeg",
+        size: bfcacheBytes.byteLength,
+        blob: new Blob([bfcacheBytes], { type: "image/jpeg" }),
+      },
+    });
+    windowListeners.get("pagehide")?.(new Event("pagehide"));
+    await vi.waitFor(async () => {
+      const restored =
+        await getOfflineDraft<FirstEntryDraftPayload>(FIRST_ENTRY_DRAFT_ID);
+      expect(restored?.payload.draft.body).toBe("Exact BFCache generation");
+      expect(
+        new Uint8Array(
+          await restored!.payload.photoIntent!.blob!.arrayBuffer(),
+        ),
+      ).toEqual(bfcacheBytes);
+    });
+
+    controller.dispose();
+    vi.unstubAllGlobals();
   });
 });
 

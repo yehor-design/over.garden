@@ -15,7 +15,17 @@ const OWNER_ID = "18700001-0000-4000-8000-000000000001";
 
 describe("visual auth-intent draft trigger", () => {
   beforeEach(async () => {
-    await offlineDb?.drafts.clear();
+    const database = offlineDb;
+    if (!database) return;
+    await database.transaction(
+      "rw",
+      database.drafts,
+      database.ownerActivity,
+      async () => {
+        await database.drafts.clear();
+        await database.ownerActivity.clear();
+      },
+    );
   });
 
   it("persists a realistic first-entry draft in IndexedDB", async () => {

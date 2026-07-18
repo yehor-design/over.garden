@@ -2,12 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 
+import { SignOutControl } from "@/components/auth/sign-out-control";
 import { buttonVariants } from "@/components/ui/button";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { getLocalizedOAuthErrorMessage } from "@/lib/trust-surface-copy";
+import {
+  getLocalizedOAuthErrorMessage,
+  getTrustSurfaceCopy,
+} from "@/lib/trust-surface-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
@@ -75,6 +79,7 @@ export default async function GardenPublicProfilePage({
     getRequestInterfaceLocale(),
   ]);
   const copy = COPY[locale];
+  const signOutCopy = getTrustSurfaceCopy(locale).signOut;
   const userId = session?.user?.id;
 
   if (!userId) {
@@ -121,6 +126,23 @@ export default async function GardenPublicProfilePage({
           initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
           locale={locale}
         />
+      </section>
+
+      <section
+        id="account-security"
+        className="grid gap-4 border-t border-border pt-7"
+      >
+        <div className="grid gap-1.5">
+          <h2 className="text-xl font-semibold text-foreground">
+            {signOutCopy.accountSectionTitle}
+          </h2>
+          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            {signOutCopy.accountSectionDescription}
+          </p>
+        </div>
+        <div>
+          <SignOutControl presentation="profile" />
+        </div>
       </section>
 
       <section

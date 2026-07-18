@@ -7,11 +7,18 @@ import type {
 } from "@/lib/garden/entry-contracts";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
+  assertOwnerOfflineActivityAllowed,
   offlineDb,
+  readLocalOwnerActivitySessionGeneration,
+  type OfflineOwnerActivity,
   type OfflineDraftKind,
   type OfflineDraftRecord,
   type OfflinePhotoIntent,
 } from "./queue";
+import type {
+  OwnerComposerOfflineActivityScope,
+  OwnerComposerPersistenceWriteContext,
+} from "./owner-composer-participants";
 
 export const FIRST_ENTRY_DRAFT_ID = "first-entry";
 export const OFFLINE_DRAFTS_CHANGED_EVENT = "overgarden-offline-drafts-changed";
@@ -63,6 +70,8 @@ export type JournalDraftPayload =
 
 export type JournalDraftRecord = OfflineDraftRecord<JournalDraftPayload>;
 
+type OwnerComposerDraftWriteOptions = OwnerComposerPersistenceWriteContext;
+
 export function followUpEntryDraftId(objectId: string) {
   return `follow-up-entry:${objectId}`;
 }
@@ -72,23 +81,37 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
     OfflineDraftRecord<TPayload>,
     "ownerUserId" | "id" | "kind" | "payload"
   >,
+  options: OwnerComposerDraftWriteOptions = {},
 ): Promise<OfflineDraftRecord<TPayload> | undefined> {
-  if (!offlineDb) return undefined;
+  const database = offlineDb;
+  if (!database) return undefined;
 
   const now = Date.now();
   const ownerUserId = requireOwnerUserId(input.ownerUserId);
-  const existing = await offlineDb.drafts.get([ownerUserId, input.id]);
-  const record: OfflineDraftRecord<TPayload> = {
-    id: input.id,
-    ownerUserId,
-    kind: input.kind,
-    payload: input.payload,
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
-  };
+  const record = await database.transaction(
+    "rw",
+    database.drafts,
+    database.ownerActivity,
+    async () => {
+      await assertOfflineDraftWriteAllowed(
+        ownerUserId,
+        options.offlineActivityScope,
+      );
+      const existing = await database.drafts.get([ownerUserId, input.id]);
+      const next: OfflineDraftRecord<TPayload> = {
+        id: input.id,
+        ownerUserId,
+        kind: input.kind,
+        payload: input.payload,
+        createdAt: existing?.createdAt ?? now,
+        updatedAt: now,
+      };
 
-  await offlineDb.drafts.put(record);
-  notifyDraftsChanged();
+      await database.drafts.put(next);
+      return next;
+    },
+  );
+  publishOfflineDraftsChanged();
   return record;
 }
 
@@ -124,10 +147,21 @@ export async function listOfflineDrafts(
 export async function deleteOfflineDraft(
   ownerUserId: string,
   id: string,
+  options: OwnerComposerDraftWriteOptions = {},
 ): Promise<void> {
-  if (!offlineDb) return;
-  await offlineDb.drafts.delete([requireOwnerUserId(ownerUserId), id]);
-  notifyDraftsChanged();
+  const database = offlineDb;
+  if (!database) return;
+  const owner = requireOwnerUserId(ownerUserId);
+  await database.transaction(
+    "rw",
+    database.drafts,
+    database.ownerActivity,
+    async () => {
+      await assertOfflineDraftWriteAllowed(owner, options.offlineActivityScope);
+      await database.drafts.delete([owner, id]);
+    },
+  );
+  publishOfflineDraftsChanged();
 }
 
 export function hasPersistableFirstEntryDraft(
@@ -170,7 +204,42 @@ function hasText(...values: Array<string | null | undefined>) {
   return values.some((value) => (value ?? "").trim().length > 0);
 }
 
-function notifyDraftsChanged() {
+/**
+ * A composer that was frozen and flushed before sign-out may receive a newer
+ * complete generation while the coordinator still owns its exact `preparing`
+ * fence (for example, a late photo copy or a composer mounted mid-round).
+ * Permit only that exact operation to refresh the draft. A promoted commit,
+ * expired operation, different session, or signed-out fence falls back to the
+ * ordinary fail-closed write guard and therefore cannot recreate owner data.
+ */
+async function assertOfflineDraftWriteAllowed(
+  ownerUserId: string,
+  scope?: OwnerComposerOfflineActivityScope,
+) {
+  if (scope && offlineDb) {
+    const localGeneration =
+      readLocalOwnerActivitySessionGeneration(ownerUserId);
+    const activity = (await offlineDb.ownerActivity.get(ownerUserId)) as
+      | OfflineOwnerActivity
+      | undefined;
+    const ownsActivePreparation =
+      localGeneration === scope.sessionGeneration &&
+      activity?.ownerUserId === ownerUserId &&
+      activity.sessionGeneration === scope.sessionGeneration &&
+      activity.lifecycle === "active" &&
+      activity.operations.some(
+        (operation) =>
+          operation.operationId === scope.operationId &&
+          operation.phase === "preparing" &&
+          operation.expiresAt > Date.now(),
+      );
+    if (ownsActivePreparation) return;
+  }
+
+  await assertOwnerOfflineActivityAllowed(ownerUserId);
+}
+
+export function publishOfflineDraftsChanged() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(OFFLINE_DRAFTS_CHANGED_EVENT));
 }

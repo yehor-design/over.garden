@@ -7,13 +7,12 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import { resolveBetterAuthSecret } from "@/lib/auth-secret";
 import { resolveFacebookSocialProviderConfig } from "@/lib/auth/facebook-oauth";
-import {
-  resolveGoogleSocialProviderConfig,
-} from "@/lib/auth/google-oauth";
+import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
 import {
   createRetiredSharedIdentityDatabaseHooks,
   isRetiredSharedIdentityEmailSignIn,
 } from "@/lib/auth/retired-shared-identity";
+import { hardenCurrentSessionSignOut } from "@/lib/auth/sign-out-hardening";
 import { socialAccountPolicy } from "@/lib/auth/social-account-policy";
 import { capturePilotPasswordResetLink } from "@/lib/auth/pilot-password-reset-delivery";
 import {
@@ -76,14 +75,14 @@ export const auth = betterAuth({
   hooks: {
     before: createAuthMiddleware(async (context) => {
       const email = (context.body as { email?: unknown } | undefined)?.email;
-      if (!isRetiredSharedIdentityEmailSignIn(context.path, email)) {
-        return;
+      if (isRetiredSharedIdentityEmailSignIn(context.path, email)) {
+        throw APIError.from("UNAUTHORIZED", {
+          code: "INVALID_EMAIL_OR_PASSWORD",
+          message: "Invalid email or password",
+        });
       }
 
-      throw APIError.from("UNAUTHORIZED", {
-        code: "INVALID_EMAIL_OR_PASSWORD",
-        message: "Invalid email or password",
-      });
+      await hardenCurrentSessionSignOut(context);
     }),
   },
   databaseHooks: createRetiredSharedIdentityDatabaseHooks(async (userId) => {
