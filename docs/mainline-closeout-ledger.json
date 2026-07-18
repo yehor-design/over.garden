@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-17",
+  "updatedAt": "2026-07-18",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "requiredBeforeNextLinearIssues": [],
@@ -176,6 +176,37 @@
         "The explicit recovered target passed byte/content comparison, MinIO readiness, actual quarantine upload, stripped WebP processing, EXIF/ICC absence, original deletion, authenticated/public readback, and restart persistence for Postgres, Meilisearch, MinIO, and all 16 visual-fixture media objects.",
         "Apple Container remains the canonical supported-host runtime; activation and destructive-volume guards fail closed when the preserved source is selected.",
         "No secrets, private user data, synthetic account handles, journal text, media keys, object bytes, signed URLs, raw inspect/log output, live user identifiers, or precise location were included in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-190",
+      "title": "Production matching parity: catalog refresh jobs complete on the exact main revision with immutable rollback",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "14f5b9ce671f134847e556103b8d09e45cc76ed1",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-190/production-matching-parity-catalog-refresh-jobs-complete-on-the-exact",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29640027651",
+      "completedAt": "2026-07-18",
+      "verificationCommands": [
+        "cd services/matching && uv run --frozen pytest -q",
+        "bash -n infra/production-worker/matching-release",
+        "shellcheck infra/production-worker/matching-release",
+        "cd apps/web && pnpm exec vitest run scripts/matching-release-contract.test.ts",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm smoke:matching-runtime-capabilities -- --base-url https://matching.over.garden --expected-commit 710ac0c74559cea698946be31eeea856f0644fb4 --expected-digest sha256:188bc9359b27315c54ef417d5437719ba7fe96dcf09e73406112d96f82879600",
+        "/opt/overgarden/matching-release status",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Implementation source 710ac0c74559cea698946be31eeea856f0644fb4 passed exact-main CI and produced distinct immutable release A/B digests in workflow runs 29639178486 and 29639190206; production finished on release B after live rollback and forward proof.",
+        "All six supported handlers reached done; catalog effects stayed derived or advisory, and the public-safe journal document passed index, unindex, and restore with no leak-check failure.",
+        "Production-derived hardening added persistent low-swappiness swap, combined and available memory floors, release and Docker-root disk floors, bounded low-priority archive operations, capacity-independent explicit rollback, and pointer-aware cleanup of only obsolete reconstructible release copies.",
+        "No secret, env content, job payload, row or user id, journal or catalog content, media key, precise location, host, IP, user agent, or raw error was included in evidence; no Docker volume or production data was removed."
       ]
     }
   ]
