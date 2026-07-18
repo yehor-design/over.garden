@@ -89,6 +89,13 @@ registry, functions, triggers, and constraints from the exact code SHA.
    complete. A Preview deployment is useful when its environment is configured,
    but it is not a substitute for exact-SHA CI and is not required to hold
    production database credentials.
+   If the connected Vercel project automatically builds the release ref, give
+   that exact branch a dedicated Sensitive Preview `BETTER_AUTH_SECRET` before
+   redeploying, or intentionally skip the Preview build. Never reuse the
+   production auth secret or copy production database/storage credentials into
+   a release-candidate Preview merely to make the build green. A build-only
+   Preview may prove compilation and public/noindex diagnostics, but it is not
+   authenticated or database runtime evidence.
 2. Use a clean working directory detached at that exact CI-proven SHA. Place
    the production database environment and CA in separately
    permission-restricted temporary files; do not create or load `.env.local`

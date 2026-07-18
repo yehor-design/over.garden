@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-18 for the OVE-203 production public-identity rollout, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
+Last verified: 2026-07-18 for the OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -425,7 +425,8 @@ redaction: pass; no secrets, env contents, payloads, row/user ids, content, prec
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
-Last verified: 2026-07-18 for OVE-203 exact-main production deployment and canonical runtime proof.
+Last verified: 2026-07-18 for OVE-203 exact-main production deployment,
+canonical runtime proof, and branch-scoped release Preview build repair.
 
 Team:
 
@@ -484,6 +485,7 @@ Deployment env observation:
 
 - On 2026-06-27, the Vercel project had `BETTER_AUTH_SECRET` installed for production, development, and the branch preview `codex/ove-27-production-pilot-smoke`.
 - Runtime auth is fail-closed for production-like environments when `BETTER_AUTH_SECRET` is missing, placeholder-like, or equal to the local development fallback. Do not rely on local/test fallback behavior for any deployed production or preview app.
+- On 2026-07-18, the automatic Vercel Preview for release ref `codex/ove-203-release` and commit `1edffc351c1c3132f97608083b4b6ea6a63e9a12` failed during page-data collection because that branch had no Preview `BETTER_AUTH_SECRET`. A newly generated Sensitive secret was added only to that exact Preview branch; no value was printed, stored in git, or copied from production. Redeploy `dpl_9kg2jMn9QNem6NiKEpAuaLxYjNSJ` reached `READY`, compiled all `61` static pages, and replaced the branch alias without an auth-secret, page-collection, or terminal build error. Its public `noindex` health route reports auth configured and database unavailable by design: this release Preview has no production database, R2, email-provider, or other production credentials and is build-only evidence, not authenticated/data runtime proof. Canonical production remained `READY` on `dpl_5xQ7jAduBePLg77Z173ni2jyzKNM` throughout the repair.
 - On 2026-06-27, the Vercel project had the R2 runtime env family installed for production, development, and the branch preview: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_FORCE_PATH_STYLE`, `R2_QUARANTINE_BUCKET`, `R2_PUBLIC_BUCKET`, and `R2_PUBLIC_BASE_URL`.
 - On 2026-06-27, the Vercel project had `DATABASE_SSL=true` installed for production, development, and the branch preview.
 - On 2026-06-27, the Vercel project had `DATABASE_URL`, `DIRECT_URL`, and `DATABASE_SSL_CA` installed for production and the branch preview `codex/ove-27-production-pilot-smoke`.
