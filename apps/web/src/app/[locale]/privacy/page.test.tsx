@@ -5,7 +5,7 @@ import { SUPPORT_EMAIL } from "@/lib/privacy/disclosures";
 import LocalizedPrivacyNoticePage, { generateMetadata } from "./page";
 
 describe("/{locale}/privacy", () => {
-  it("renders a localized noindex static privacy route with language switcher", async () => {
+  it("renders a localized noindex route without a page-local language switcher", async () => {
     const html = renderToStaticMarkup(
       await LocalizedPrivacyNoticePage({
         params: Promise.resolve({ locale: "bg" }),
@@ -36,7 +36,8 @@ describe("/{locale}/privacy", () => {
     expect(html).toContain("Публични анализи");
     expect(html).not.toContain("/uk/privacy");
     expect(html).not.toContain("Українська");
-    expect(html).toContain("/ru/privacy");
+    expect(html).not.toContain("/ru/privacy");
+    expect(html).not.toContain("data-interface-language-control");
     expect(html).not.toContain("/api/");
     expect(html).not.toContain("/admin");
     expect(html).not.toContain("/journal/");

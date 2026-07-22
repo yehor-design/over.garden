@@ -2,55 +2,129 @@ import { describe, expect, it } from "vitest";
 
 import {
   getInterfaceCopy,
+  parseInterfaceLocalizationHint,
+  resolveInterfaceLocalization,
   resolveInterfaceLocale,
+  serializeInterfaceLocalizationHint,
 } from "./interface-localization";
 
 describe("interface locale contract", () => {
-  it("resolves locale sources in explicit, route, persisted, and request order", () => {
+  it("round-trips only closed market-valid document hints", () => {
     expect(
-      resolveInterfaceLocale({
+      serializeInterfaceLocalizationHint({
+        market: "bulgaria",
+        locale: "ru",
+      }),
+    ).toBe("bulgaria:ru");
+    expect(parseInterfaceLocalizationHint("bulgaria:bg")).toEqual({
+      market: "bulgaria",
+      locale: "bg",
+    });
+    expect(parseInterfaceLocalizationHint("ukraine:uk")).toEqual({
+      market: "ukraine",
+      locale: "uk",
+    });
+    expect(parseInterfaceLocalizationHint("bulgaria:uk")).toBeNull();
+    expect(parseInterfaceLocalizationHint("ukraine:ru")).toBeNull();
+    expect(parseInterfaceLocalizationHint("bulgaria:bg:private")).toBeNull();
+    expect(() =>
+      serializeInterfaceLocalizationHint({
+        market: "ukraine",
+        locale: "ru",
+      }),
+    ).toThrow("Interface localization hint must be market-valid.");
+  });
+
+  it("resolves market before accepting an allowed locale source", () => {
+    expect(
+      resolveInterfaceLocalization({
+        explicitMarket: "ukraine",
         explicitLocale: "ru",
         routeLocale: "bg",
         persistedLocale: "uk",
         countryCode: "UA",
-        acceptLanguage: "uk;q=1",
       }),
-    ).toBe("ru");
+    ).toEqual({
+      market: "ukraine",
+      locale: "uk",
+      marketSource: "explicit",
+      localeSource: "persisted",
+    });
 
     expect(
-      resolveInterfaceLocale({
-        explicitLocale: "invalid",
+      resolveInterfaceLocalization({
         routeLocale: "bg",
         persistedLocale: "uk",
         countryCode: "UA",
-        acceptLanguage: "uk;q=1",
       }),
-    ).toBe("bg");
+    ).toEqual({
+      market: "bulgaria",
+      locale: "bg",
+      marketSource: "route",
+      localeSource: "route",
+    });
 
     expect(
-      resolveInterfaceLocale({
+      resolveInterfaceLocalization({
+        persistedMarket: "bulgaria",
         persistedLocale: "ru",
-        countryCode: "BG",
-        acceptLanguage: "bg;q=1",
+        countryCode: "UA",
       }),
-    ).toBe("ru");
+    ).toEqual({
+      market: "ukraine",
+      locale: "uk",
+      marketSource: "country",
+      localeSource: "market-default",
+    });
 
     expect(
-      resolveInterfaceLocale({
-        persistedLocale: "en",
+      resolveInterfaceLocalization({
+        persistedMarket: "bulgaria",
+        persistedLocale: "uk",
         countryCode: "BG",
-        acceptLanguage: "ru;q=1",
       }),
-    ).toBe("bg");
+    ).toEqual({
+      market: "bulgaria",
+      locale: "bg",
+      marketSource: "country",
+      localeSource: "market-default",
+    });
   });
 
-  it("uses Accept-Language and then Ukrainian as deterministic safe fallbacks", () => {
+  it("uses persisted state only for market continuity without a supported country", () => {
+    expect(
+      resolveInterfaceLocalization({
+        persistedMarket: "bulgaria",
+        persistedLocale: "ru",
+      }),
+    ).toEqual({
+      market: "bulgaria",
+      locale: "ru",
+      marketSource: "persisted",
+      localeSource: "persisted",
+    });
+    expect(
+      resolveInterfaceLocalization({
+        persistedMarket: "bulgaria",
+        persistedLocale: "ru",
+        countryCode: "DE",
+      }),
+    ).toMatchObject({ market: "bulgaria", locale: "ru" });
+  });
+
+  it("defaults by market and never uses Accept-Language to establish one", () => {
     expect(
       resolveInterfaceLocale({
         countryCode: "DE",
         acceptLanguage: "ru;q=0.9,bg;q=0.8",
       }),
-    ).toBe("ru");
+    ).toBe("uk");
+    expect(
+      resolveInterfaceLocale({
+        countryCode: "BG",
+        acceptLanguage: "ru;q=1",
+      }),
+    ).toBe("bg");
     expect(
       resolveInterfaceLocale({
         countryCode: null,
@@ -58,12 +132,6 @@ describe("interface locale contract", () => {
       }),
     ).toBe("uk");
     expect(resolveInterfaceLocale({})).toBe("uk");
-    expect(
-      resolveInterfaceLocale({
-        countryCode: null,
-        acceptLanguage: "en;q=1,bg;q=0",
-      }),
-    ).toBe("uk");
   });
 
   it("provides one typed chrome contract without translating user content", () => {
@@ -81,5 +149,14 @@ describe("interface locale contract", () => {
       "Зареждане на OverGarden",
     );
     expect(getInterfaceCopy("ru").shell.retry).toBe("Повторить");
+    expect(getInterfaceCopy("uk").shell.languageControlTrigger).toBe(
+      "Змінити мову",
+    );
+    expect(getInterfaceCopy("bg").shell.languageSwitchingPending).toBe(
+      "Езикът се сменя…",
+    );
+    expect(getInterfaceCopy("ru").shell.languageDiscardConfirmation).toContain(
+      "Несохранённые изменения",
+    );
   });
 });

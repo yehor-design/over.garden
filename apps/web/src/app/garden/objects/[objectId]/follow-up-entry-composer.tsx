@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import type { PlantObjectKind } from "@/db/schema";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -140,6 +141,7 @@ export function FollowUpEntryComposer({
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
+  const localeMutationCountRef = useRef(0);
   const draftId = followUpEntryDraftId(objectId);
   const [clientMutationId, setClientMutationId] = useState(
     visualScenario?.clientMutationId ?? initialClientMutationId,
@@ -189,6 +191,26 @@ export function FollowUpEntryComposer({
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [persistenceFrozen, setPersistenceFrozen] = useState(false);
+  const [localeMutationPending, setLocaleMutationPending] = useState(false);
+
+  useInterfaceLocaleChangeFormState({
+    id: "follow-up-entry-composer-mutation",
+    dirty: false,
+    pending: localeMutationPending,
+  });
+
+  function beginLocaleMutation() {
+    localeMutationCountRef.current += 1;
+    setLocaleMutationPending(true);
+  }
+
+  function endLocaleMutation() {
+    localeMutationCountRef.current = Math.max(
+      0,
+      localeMutationCountRef.current - 1,
+    );
+    if (localeMutationCountRef.current === 0) setLocaleMutationPending(false);
+  }
 
   useEffect(() => {
     if (visualScenario) return;
@@ -399,63 +421,68 @@ export function FollowUpEntryComposer({
     event.preventDefault();
     if (isComposerPersistenceFrozen()) return;
 
-    if (visualScenario) {
-      await handleVisualScenarioSubmit(visualScenario);
-      return;
-    }
-    if (isComposerPersistenceFrozen()) return;
-
-    if (photoError) {
-      setSubmitState("failed");
-      setMessage(photoError);
-      return;
-    }
-
-    let payload: OfflinePlantObjectEntryPayload;
+    beginLocaleMutation();
     try {
-      payload = await buildPayload();
-    } catch {
-      setSubmitState("failed");
-      setMessage(workspaceCopy.composer.photo.readError);
-      return;
-    }
+      if (visualScenario) {
+        await handleVisualScenarioSubmit(visualScenario);
+        return;
+      }
+      if (isComposerPersistenceFrozen()) return;
 
-    if (!isOnline) {
+      if (photoError) {
+        setSubmitState("failed");
+        setMessage(photoError);
+        return;
+      }
+
+      let payload: OfflinePlantObjectEntryPayload;
       try {
-        await enqueuePayload(payload);
+        payload = await buildPayload();
       } catch {
         setSubmitState("failed");
-        setMessage(workspaceCopy.composer.messages.offlineStorageUnavailable);
+        setMessage(workspaceCopy.composer.photo.readError);
+        return;
       }
-      return;
-    }
 
-    setSubmitState("syncing");
-    setMessage(workspaceCopy.composer.messages.savingPrivate);
+      if (!isOnline) {
+        try {
+          await enqueuePayload(payload);
+        } catch {
+          setSubmitState("failed");
+          setMessage(workspaceCopy.composer.messages.offlineStorageUnavailable);
+        }
+        return;
+      }
 
-    try {
-      const result = await submitOnlineJournalEntryPayload(payload, {
-        ownerUserId,
-        idempotencyKey: clientMutationId,
-      });
-      if (isComposerPersistenceFrozen()) return;
-      draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
-      setSubmitState("synced");
-      setMessage(workspaceCopy.composer.messages.saved);
-      router.push(
-        result.followUpValuePulse
-          ? buildFollowUpValuePulseReadbackUrl(
-              result.readbackUrl,
-              result.followUpValuePulse.journalEntryId,
-            )
-          : result.readbackUrl,
-      );
-      router.refresh();
-    } catch (error) {
-      if (await resumeAuthentication(error, payload)) return;
-      setSubmitState("failed");
-      setMessage(localizedJournalSaveErrorMessage(locale, error));
+      setSubmitState("syncing");
+      setMessage(workspaceCopy.composer.messages.savingPrivate);
+
+      try {
+        const result = await submitOnlineJournalEntryPayload(payload, {
+          ownerUserId,
+          idempotencyKey: clientMutationId,
+        });
+        if (isComposerPersistenceFrozen()) return;
+        draftPersistencePausedRef.current = true;
+        await deleteOfflineDraft(ownerUserId, draftId).catch(() => undefined);
+        setSubmitState("synced");
+        setMessage(workspaceCopy.composer.messages.saved);
+        router.push(
+          result.followUpValuePulse
+            ? buildFollowUpValuePulseReadbackUrl(
+                result.readbackUrl,
+                result.followUpValuePulse.journalEntryId,
+              )
+            : result.readbackUrl,
+        );
+        router.refresh();
+      } catch (error) {
+        if (await resumeAuthentication(error, payload)) return;
+        setSubmitState("failed");
+        setMessage(localizedJournalSaveErrorMessage(locale, error));
+      }
+    } finally {
+      endLocaleMutation();
     }
   }
 
@@ -541,6 +568,7 @@ export function FollowUpEntryComposer({
 
   async function handleCancel() {
     if (isComposerPersistenceFrozen()) return;
+    beginLocaleMutation();
     try {
       const payload = await buildPayload();
       if (isComposerPersistenceFrozen()) return;
@@ -562,6 +590,8 @@ export function FollowUpEntryComposer({
       draftPersistencePausedRef.current = false;
       setSubmitState("failed");
       setMessage(workspaceCopy.composer.messages.preserveDraftError);
+    } finally {
+      endLocaleMutation();
     }
   }
 
@@ -586,6 +616,7 @@ export function FollowUpEntryComposer({
   }
 
   async function handleSync(mutation: OfflineMutation) {
+    beginLocaleMutation();
     setSubmitState("syncing");
     setMessage(workspaceCopy.composer.messages.sending);
 
@@ -613,6 +644,8 @@ export function FollowUpEntryComposer({
       setSubmitState("failed");
       setMessage(localizedJournalSaveErrorMessage(locale, error));
       await refreshQueue();
+    } finally {
+      endLocaleMutation();
     }
   }
 

@@ -33,10 +33,15 @@ const mocks = vi.hoisted(() => ({
   replace: vi.fn(),
   reload: vi.fn(),
   flushSync: vi.fn((callback: () => void) => callback()),
+  localeFormState: vi.fn(),
   intervalCallbacks: [] as Array<() => void>,
 }));
 
 vi.mock("react-dom", () => ({ flushSync: mocks.flushSync }));
+
+vi.mock("@/components/site-shell/interface-locale-change-boundary", () => ({
+  useInterfaceLocaleChangeFormState: mocks.localeFormState,
+}));
 
 vi.mock("@/components/ui/button", () => ({
   Button: (props: React.ComponentProps<"button">) => <button {...props} />,
@@ -194,6 +199,96 @@ describe("session convergence boundary", () => {
       fetchOptions: { cache: "no-store" },
     });
     expect(mocks.replace).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("publishes a payload-free locale fence until local session hydration is ready", async () => {
+    mocks.hydrate.mockResolvedValue("blocked");
+    const renderer = await renderBoundary();
+
+    expect(mocks.localeFormState).toHaveBeenCalledWith({
+      id: "session-convergence-lifecycle",
+      dirty: false,
+      pending: true,
+    });
+    expect(mocks.localeFormState).not.toHaveBeenCalledWith({
+      id: "session-convergence-lifecycle",
+      dirty: false,
+      pending: false,
+    });
+    await unmount(renderer);
+  });
+
+  it("renders only the payload-free locale control while authenticated children are gated", async () => {
+    const hydration = deferred<"ready">();
+    mocks.hydrate.mockReturnValueOnce(hydration.promise);
+    const renderer = await renderBoundary(
+      <p data-private-surface="true">Private surface</p>,
+      <button
+        type="button"
+        disabled
+        data-interface-language-control="site-shell-interface-language-control"
+      >
+        Български
+      </button>,
+    );
+
+    expect(
+      renderer.root.findAllByProps({
+        "data-interface-language-control":
+          "site-shell-interface-language-control",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findByProps({
+        "data-interface-language-control":
+          "site-shell-interface-language-control",
+      }).props.disabled,
+    ).toBe(true);
+    expect(
+      renderer.root.findAllByProps({ "data-private-surface": "true" }),
+    ).toHaveLength(0);
+
+    hydration.resolve("ready");
+    await vi.waitFor(() =>
+      expect(
+        renderer.root.findAllByProps({ "data-private-surface": "true" }),
+      ).toHaveLength(1),
+    );
+    expect(
+      renderer.root.findAllByProps({
+        "data-interface-language-control":
+          "site-shell-interface-language-control",
+      }),
+    ).toHaveLength(0);
+    await unmount(renderer);
+  });
+
+  it("keeps the locale fence active for a remote preparation through cancellation recovery", async () => {
+    const renderer = await renderBoundary();
+    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+      id: "session-convergence-lifecycle",
+      dirty: false,
+      pending: false,
+    });
+
+    await emit("sign_out_preparation");
+    await vi.waitFor(() => expect(mocks.publishReady).toHaveBeenCalledOnce());
+    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+      id: "session-convergence-lifecycle",
+      dirty: false,
+      pending: true,
+    });
+
+    await emit("sign_out_preparation_cancelled");
+    await vi.waitFor(() => expect(mocks.resume).toHaveBeenCalledOnce());
+    await vi.waitFor(() =>
+      expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+        id: "session-convergence-lifecycle",
+        dirty: false,
+        pending: false,
+      }),
+    );
     await unmount(renderer);
   });
 
@@ -791,11 +886,15 @@ function deferred<T>() {
 
 async function renderBoundary(
   children: React.ReactNode = <p>Private surface</p>,
+  localeControlFallback?: React.ReactNode,
 ) {
   let renderer: ReactTestRenderer | undefined;
   await act(async () => {
     renderer = create(
-      <SessionConvergenceBoundary locale="bg">
+      <SessionConvergenceBoundary
+        locale="bg"
+        localeControlFallback={localeControlFallback}
+      >
         {children}
       </SessionConvergenceBoundary>,
     );

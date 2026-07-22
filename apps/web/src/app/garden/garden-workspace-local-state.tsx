@@ -10,6 +10,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -90,6 +91,7 @@ export function GardenWorkspaceLocalState({
   const [localState, setLocalState] = useState(
     initialState ?? EMPTY_LOCAL_STATE,
   );
+  const [pendingLocalMutationCount, setPendingLocalMutationCount] = useState(0);
 
   const refresh = useCallback(async () => {
     if (initialState) return;
@@ -114,6 +116,24 @@ export function GardenWorkspaceLocalState({
       setLocalState({ ...EMPTY_LOCAL_STATE, online: navigator.onLine });
     }
   }, [copy, initialState, locale, ownerUserId]);
+
+  const handleDiscardDraft = useCallback(
+    async (id: string) => {
+      setPendingLocalMutationCount((count) => count + 1);
+      try {
+        await discardDraft(ownerUserId, id, refresh);
+      } finally {
+        setPendingLocalMutationCount((count) => Math.max(0, count - 1));
+      }
+    },
+    [ownerUserId, refresh],
+  );
+
+  useInterfaceLocaleChangeFormState({
+    id: "garden-workspace-local-mutation",
+    dirty: false,
+    pending: pendingLocalMutationCount > 0,
+  });
 
   useEffect(() => {
     if (initialState) return;
@@ -180,10 +200,10 @@ export function GardenWorkspaceLocalState({
         {hasLocalWork ? (
           <div className="mt-4 grid gap-5 lg:mt-2 lg:grid-cols-2 lg:gap-3">
             <LocalDraftList
-              ownerUserId={ownerUserId}
               copy={copy}
               drafts={localState.drafts}
-              onRefresh={refresh}
+              pending={pendingLocalMutationCount > 0}
+              onDiscard={handleDiscardDraft}
             />
             <LocalMutationList copy={copy} mutations={localState.mutations} />
           </div>
@@ -232,15 +252,15 @@ export function GardenWorkspaceLocalState({
 }
 
 function LocalDraftList({
-  ownerUserId,
   copy,
   drafts,
-  onRefresh,
+  pending,
+  onDiscard,
 }: {
-  ownerUserId: string;
   copy: GardenWorkspaceCopy;
   drafts: GardenWorkspaceDraftView[];
-  onRefresh: () => Promise<void>;
+  pending: boolean;
+  onDiscard: (id: string) => Promise<void>;
 }) {
   return (
     <div className="min-w-0">
@@ -274,9 +294,8 @@ function LocalDraftList({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() =>
-                    void discardDraft(ownerUserId, draft.id, onRefresh)
-                  }
+                  disabled={pending}
+                  onClick={() => void onDiscard(draft.id)}
                 >
                   {copy.localState.drafts.discard}
                 </Button>

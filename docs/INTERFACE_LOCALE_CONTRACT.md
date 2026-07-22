@@ -1,120 +1,271 @@
 # Interface Locale Contract
 
-Status: active
-Issues: OVE-164 through OVE-171
-Date: 2026-07-16
+Status: active OVE-205 corrective contract
+Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (current authority)
+Date: 2026-07-22
 
 ## Purpose
 
-OverGarden resolves one interface locale for public and signed-in requests so a visitor does not fall back to English when moving from a localized public page into `/garden` or a deeper product route. This contract owns locale resolution and continuity; OVE-165 through OVE-170 own complete copy coverage for their respective surfaces, and the completed OVE-171 gate owns final route-and-state regression coverage. OVE-166 is complete: trust-sensitive authentication, recovery, support, erasure, privacy, consent, and publication-disclosure surfaces now consume one exact-parity `uk`/`bg`/`ru` copy contract. OVE-167 is complete: the owner workspace, inventory, first-object composer, local drafts, offline queue, media recovery, coarse-region choices, and save feedback consume the exact-parity `garden-workspace-copy.ts` contract while preserving authored and catalog values. OVE-168 is complete: owner object follow-up, privacy, catalog resolution, provenance, progress/value moments, source attribution chrome, and lifecycle actions consume the exact-parity `owner-object-copy.ts` contract while preserving canonical mutations, private scope, lifecycle behavior, UGC, catalog identity, official source names, and provenance values. OVE-169 is complete: owner claims, invitation claim and secure handoff, consent outcomes, questions/follows, route metadata, dates, and action/recovery copy consume the exact-parity `owner-lineage-copy.ts` contract; existing social, community, and profile copy remains the canonical regression input. OVE-170 is complete: admin, moderation, catalog curation, pilot health/learning/smoke, erasure operations, and diagnostics consume exact-parity operator copy contracts without changing their repositories, actions, permissions, audit semantics, source provenance, erasure behavior, or diagnostic payloads. OVE-171 is complete: one CI-enforced registry and redacted report prove every current route classification, exact copy-key parity, authored-copy ownership, edge-state coverage, 320/1440 owner evidence, rendered locale headers, metadata alternates, and auth-intent continuity.
+OverGarden resolves the visitor's interface market before it resolves an
+interface locale. OVE-205 supersedes the locale-first routing and universal
+language-choice assumptions in the OVE-164 through OVE-171 baseline. It does
+not replace the typed `uk`/`bg`/`ru` copy namespaces delivered by those issues.
 
-OVE-166 depends only on the OVE-164 locale foundation. OVE-167 depends on OVE-164 plus OVE-161 because first-entry typeahead copy must target the final approved alias, locale-variant, trust, and no-match states. OVE-168 depends on OVE-164, the completed OVE-165 public-surface contract, and OVE-161 for the same owner catalog-resolve/readback boundary. OVE-169 depends on OVE-164 and OVE-165. OVE-170 depends on OVE-164 plus the OVE-163 matching rollout because it includes the final operator matching queue, approval, alias, duplicate-review, proof, and failure states. OVE-171 consumed OVE-166 through OVE-170 directly and received OVE-161/163 transitively. OVE-186 and its external OVE-188 protective-DNS work did not block localization implementation or local proof.
+The current product contract is:
 
-`docs/LOCALIZATION_COVERAGE_BASELINE_2026-07-14.md` is the binding incremental-work boundary. Already shipped locale contracts remain regression inputs and must not be rebuilt wholesale; `docs/LOCALIZATION_COVERAGE_WORKFLOW.md` defines how a new route, state, component, or namespace enters the gate.
+- Ukraine is a Ukrainian-only interface market. Its public canonical URLs are
+  unprefixed and it renders no language control.
+- Bulgaria is a Bulgarian/Russian interface market. Bulgarian is the market
+  default, and exactly one Bulgarian/Russian language control is rendered on
+  every user-facing page and application-owned rendered state.
+- User-authored content, catalog identity, scientific names, official source
+  names, and literal evidence are never silently translated.
 
-## Supported Locales And Canonical URLs
+`docs/LOCALIZATION_COVERAGE_BASELINE_2026-07-14.md` remains the copy-contract
+baseline. `docs/LOCALIZATION_COVERAGE_WORKFLOW.md` defines the OVE-205
+route/state/lifecycle completion gate.
 
-The supported interface locales are exactly `uk`, `bg`, and `ru`. The deterministic fallback is `uk`.
+## Market And Locale Model
 
-- Ukrainian public pages use the unprefixed canonical route, such as `/` and `/privacy`.
-- Bulgarian public pages use `/bg`, such as `/bg/privacy`.
-- Russian public pages use `/ru`, such as `/ru/privacy`.
-- Legacy `/uk` public URLs redirect permanently to the corresponding unprefixed Ukrainian URL.
-- When a persisted `bg` or `ru` preference reaches an unprefixed public route that already has a localized counterpart, Proxy redirects to that prefixed counterpart. This applies only to the allowlisted localized editorial and engagement surfaces; it does not reinterpret UGC, auth, support, legal-intake, market-specific, or private paths.
-- Signed-in and operator routes remain unprefixed, such as `/garden`, `/garden/objects/:id`, and `/admin`.
+The supported interface markets and their allowed locales are closed enums:
 
-The locale of a signed-in route is request state, not URL state. Do not add `locale`, journal data, object identifiers beyond the canonical route parameter, return payloads, or private context to signed-in query strings merely to preserve language.
+| Market   | Allowed locales | Default locale | Public canonical form                      | Language control |
+| -------- | --------------- | -------------- | ------------------------------------------ | ---------------- |
+| Ukraine  | `uk`            | `uk`           | unprefixed, for example `/` and `/privacy` | none             |
+| Bulgaria | `bg`, `ru`      | `bg`           | `/bg/**` or `/ru/**`                       | exactly one      |
 
-## Resolution Order
+The resolver must determine the market first and only then validate a locale
+inside that market. A locale signal cannot silently move a visitor into a
+different market.
 
-`resolveInterfaceLocale()` applies this order and ignores unsupported or malformed values at every step:
+1. An explicit localized public route under `/bg` or `/ru` establishes the
+   Bulgaria market and the corresponding locale for that document.
+2. For an unprefixed request, a trusted supported country signal establishes
+   `BG` -> Bulgaria or `UA` -> Ukraine. It wins over a conflicting persisted
+   market value.
+3. A bounded persisted market decision may establish the market only when the
+   country signal is absent, malformed, or unsupported.
+4. Missing, malformed, unsupported, or contradictory remaining market input
+   fails to the Ukraine market.
+5. Ukraine always resolves to `uk`; any stale `bg` or `ru` preference is
+   ignored/coerced and no language choice is offered.
+6. Bulgaria accepts only `bg` or `ru`. A valid explicit/persisted Bulgarian
+   market choice may select either; otherwise the deterministic default is
+   `bg`. `Accept-Language: ru` alone must not make Russian the Bulgaria-market
+   default.
 
-1. An explicit supported selection supplied by a trusted language-setting boundary.
-2. A localized public route prefix (`/uk`, `/bg`, or `/ru`). A language-switcher navigation is represented by this route locale today.
-3. The persisted supported preference from the `overgarden_interface_locale` cookie. A future profile preference may feed the same persisted-preference input, but OVE-164 does not add a database field.
-4. Request fallback: supported country signal (`UA` -> `uk`, `BG` -> `bg`), then ranked `Accept-Language`.
-5. Deterministic safe default: `uk`.
+Legacy `/uk` public URLs permanently redirect to their corresponding
+unprefixed Ukrainian canonical URL. `/uk` is not a supported canonical prefix,
+must not be generated by navigation, metadata, sitemap, or hreflang, and must
+not create a second Ukraine language choice.
 
-Next.js Proxy is the request boundary that applies this contract. It overwrites the internal `x-overgarden-interface-locale` request header, sets `Content-Language`, and persists the resolved value when it differs from the current cookie. Server components consume the request through `getRequestInterfaceLocale()` and obtain copy through `getInterfaceCopy()`.
+Signed-in, authentication, garden, account, and operator routes remain
+canonical and unprefixed, including `/garden`, `/garden/objects/:id`,
+`/garden/profile`, and `/admin`. The market and locale of those routes are
+request state, never query-string state.
 
-Route prefetch is read-only: requests marked by Next.js or the browser as prefetch may render the target locale, but they must not update the preference cookie. API requests, mutations, RSC reads, and Server Actions also receive locale context without changing preference state or triggering canonical redirects. Language-switcher choices use normal document links rather than Next.js client navigation, so an actual click reaches the persistence boundary and replaces root `<html lang>` plus metadata atomically. Only a GET HTML document navigation or trusted explicit selection may persist a different locale.
+## Language-Control Ownership
 
-## Persistence And Privacy
+The rendered control invariant is market-specific, not route-specific:
 
-The locale cookie contains only one allowlisted enum value: `uk`, `bg`, or `ru`.
+- Ukraine renders zero language controls, zero hidden placeholders, and zero
+  empty navigation landmarks or reserved spacing for such a control.
+- Bulgaria renders exactly one application-owned Bulgarian/Russian language
+  control on every user-facing document and state.
+- One shared control owner must be selected for each rendered tree. Nested
+  layouts, pages, dialogs, and error boundaries must not introduce a second
+  owner.
 
-- `HttpOnly`
-- `SameSite=Lax`
-- `Secure` on HTTPS
-- `Path=/`
-- one-year maximum age
+The Bulgaria invariant applies to public, authentication, garden, account, and
+operator pages; authorized and denied states; loading and error boundaries;
+route and global not-found UI; application-owned `404`/`410` lifecycle HTML;
+and the global error fallback. A sparse or exceptional state is not an
+exemption. Raw protocol/API responses that intentionally contain no product UI
+remain non-UI and must be classified as such in the coverage registry.
 
-Never write journal titles or bodies, object or space names, handles, emails, precise location, region, media keys, invite or reset tokens, internal IDs, referrers, IP addresses, user agents, or analytics data into locale cookies, locale headers, copy dictionaries, translation artifacts, or locale-only tests.
+The control exposes exactly the two allowed choices, `bg` and `ru`, identifies
+the current choice accessibly, supports keyboard and screen-reader operation,
+and does not change domain behavior, authorization, mutation payloads, or
+privacy rules.
+
+## Switching Localized Public Documents
+
+On localized Bulgaria public routes, `/bg/**` <-> `/ru/**` switching is an
+ordinary same-origin document navigation to the equivalent localized route.
+It must atomically replace the root document language and metadata.
+
+The target builder may preserve only route-approved public view state, such as
+an allowlisted filter, sort, cursor/page value, and the client-side fragment
+for an existing public anchor. It must:
+
+- validate and rebuild query parameters rather than copy the raw query string;
+- reject return URLs, credentials, tokens, mutation payloads, private IDs,
+  journal drafts, media keys, and user-authored form values;
+- retain a fragment only in the browser, only for the same public resource,
+  and never send it to the server or persist it in a cookie;
+- drop unknown, duplicate, malformed, or unsafe values.
+
+Speculative navigation and prefetch are read-only. They may render a target for
+inspection, but they cannot persist a market or locale choice.
+
+## Switching Canonical Unprefixed Documents
+
+Canonical unprefixed product/auth/garden/operator routes cannot express a
+Bulgarian-market language choice in their path. Their shared control therefore
+uses one narrow, same-origin POST preference boundary, followed by a hard
+reload of the current canonical URL.
+
+The preference mutation accepts only the bounded Bulgaria market and a locale
+enum of `bg` or `ru`. It must not accept or derive a return URL, redirect target,
+query string, fragment, token, object/user ID, draft, media key, private
+context, or arbitrary JSON. It must reject:
+
+- `GET`, cross-origin, prefetch, RSC, and server-action lookalike requests;
+- an invalid content type, market, locale, origin, or fetch context;
+- a Ukraine-market language mutation;
+- additional unrecognized fields.
+
+The response is `no-store`, contains no open redirect, and does not echo
+private input. After success, the browser reloads the exact current canonical
+URL with a no-referrer navigation. The cookie/state layer stores only bounded
+market/locale enums and retains the existing `HttpOnly`, `SameSite=Lax`,
+HTTPS-only `Secure`, `Path=/`, and bounded-age privacy properties. It must not
+store user content or identity.
+
+## Dirty And In-Flight Locale Change Coordinator
+
+A language change is a document lifecycle transition, not an independent
+product mutation. One shared coordinator owns it across all Bulgaria surfaces:
+
+1. A clean page changes immediately.
+2. A registered safe local flush may finish before navigation.
+3. Dirty user work requires an explicit stay-or-discard/continue decision;
+   cancellation keeps the current document and locale unchanged.
+4. While a locale change, safe flush, upload, sync, or canonical mutation is
+   in flight, duplicate locale changes are disabled and cannot replay the
+   product mutation.
+5. Unknown completion state fails closed on the current document. It never
+   copies a draft, token, upload, journal text, object data, or mutation payload
+   into a URL, cookie, header, analytics event, or locale request.
+
+Existing draft, offline queue, media, auth-intent, and current-session exit
+boundaries must register with this coordinator where their current rendered
+state can be dirty or in flight. The coordinator must remain extensible; a
+future editor/photo/cover slice must extend it rather than fork language-change
+behavior.
+
+### Downstream real-UI proof ownership (founder-approved 2026-07-22)
+
+The founder resolved the completion-order contradiction in OVE-205's
+2026-07-18 structured-journal addendum by assigning final real-product UI proof
+to the vertical slice that implements that UI. This clarification supersedes
+only the earlier allocation of those future browser checks to OVE-205. Every
+market, privacy, continuity, and no-data-loss invariant remains binding.
+
+OVE-205 owns the shared market-aware control, narrow preference endpoint,
+clean/dirty/safe-flush/in-flight/seal/recovery coordinator, integration with
+every currently rendered product state, and the payload-free
+`owner-composer-drafts` adapter. OVE-205 must also keep a fail-closed ownership
+ledger for downstream UI, but it does not claim that nonexistent UI passed.
+
+- OVE-202 owns final Editor.js, Cyrillic IME/serialization, ten-inline-photo,
+  inline-upload, conflict, offline, and failed-flush locale-transition proof.
+- OVE-206 owns final pointer/touch/keyboard reorder, active-gesture blocking,
+  committed-order serialization, focus, announcement, and transition proof.
+- OVE-207 owns final automatic/explicit-inline/separate-cover behavior,
+  dedicated-cover upload, selected-image removal, and combined ten-inline plus
+  one-cover transition proof.
+
+The dependency order remains OVE-205 -> OVE-202 -> OVE-206 -> OVE-207. Each
+downstream slice must replace only its own ownership-ledger entry with real
+product-browser scenarios before that slice can be marked Done. An internal
+fixture or adapter-only contract cannot satisfy a downstream slice. Conversely,
+an explicitly downstream-owned entry has `blocksCurrentIssue: false` and does
+not block OVE-205 after OVE-205's own current-surface and exact-SHA gates pass.
 
 ## Translation Boundary
 
 Translate interface-owned content:
 
 - navigation and application chrome;
-- commands, labels, forms, validation, recovery, loading, empty, offline, and error states;
+- commands, labels, forms, validation, recovery, loading, empty, offline, and
+  error states;
 - application-authored metadata and structured interface copy;
-- application-authored editorial and aggregation copy where the route supports that locale.
+- application-authored editorial and aggregation copy where the route supports
+  that locale.
 
 Do not machine-translate or silently rewrite:
 
 - user-authored journal titles or bodies;
 - user-chosen object and space names;
 - handles or email addresses;
-- catalog scientific names;
-- official source names, legal titles, source quotations, or external evidence labels.
+- catalog and scientific names;
+- official source names, legal titles, source quotations, or external evidence
+  labels.
 
-These values may appear inside a localized interface exactly as stored. A translated explanatory label may surround them, but the source value remains unchanged.
+The OVE-164 through OVE-170 typed copy contracts remain canonical inputs,
+including `trust-surface-copy.ts`, `garden-workspace-copy.ts`,
+`owner-object-copy.ts`, `owner-lineage-copy.ts`, the public/social/profile
+contracts, and the operator copy contracts. OVE-205 changes where and when a
+locale may be chosen; it does not create a parallel dictionary system.
 
-## Consumer Rules
+## Fail-Closed Coverage Contract
 
-- Pure or client-safe code imports locale types, resolver primitives, and copy contracts from `apps/web/src/lib/interface-localization.ts`.
-- Server components import `getRequestInterfaceLocale()` from `apps/web/src/server/interface-localization.ts` and pass the resolved locale or copy to client components explicitly.
-- Public URLs continue to use `localizedPath()` and their existing hreflang/indexability policy.
-- `apps/web/src/lib/public-surface-localization.ts` owns interface copy for public journal readback, object passports, variety aggregations, localized profiles, engagement controls, source-credit chrome, and public failure states. Unprefixed UGC routes resolve their interface locale from the request contract; localized profile routes use their validated route locale.
-- `apps/web/src/lib/trust-surface-copy.ts` owns authored copy for authentication panels and intents, provider linking, sign-in help, password reset, invitation entry, support, erasure intake/status, privacy and analytics controls, first-publication disclosure, and their validation/recovery states. Client components inherit the shared shell locale unless a route passes an explicit validated locale.
-- `apps/web/src/lib/garden-workspace-copy.ts` owns authored copy for the owner workspace, inventory and continuity sections, first-object creation, object-kind and mention controls, local drafts, offline and media recovery, queue states, and save-progress feedback. Client controls receive the resolved locale explicitly; locale branches must not alter draft schemas, IndexedDB payloads, idempotency keys, repositories, media handling, or canonical mutations.
-- `apps/web/src/lib/owner-object-copy.ts` owns owner-only object follow-up, privacy, catalog resolution, provenance, source-attribution chrome, progress/value moments, and publication/archive lifecycle copy. Owner controls receive the resolved locale explicitly; catalog values, source names, provenance labels, object and journal UGC, mutation payloads, authorization, visibility, lifecycle, and derivative-media boundaries remain locale-independent.
-- `apps/web/src/lib/operator-copy.ts`, `operator-pilot-copy.ts`, `operator-smoke-copy.ts`, `operator-erasure-copy.ts`, and `operator-curation-copy.ts` own authored operator copy for `/admin`, `/admin/users`, `/admin/communities`, `/admin/communities/:slug`, `/garden/catalog/curation`, `/garden/pilot-health`, `/garden/pilot-learning/interviews`, `/garden/pilot-learning/decision`, `/garden/pilot-smoke`, `/garden/privacy/erasure-requests`, and `/health`. These unprefixed routes resolve the selected request locale server-side and pass it explicitly to client controls. Locale branches must not alter permissions, action payloads, status enums, audits, catalog/source identity, erasure confirmation phrases, or diagnostic evidence.
-- Coarse-region codes remain stable machine values. `apps/web/src/lib/garden/regions.ts` localizes only their displayed labels and does not add precise location data.
-- Public-surface metadata and JSON-LD may localize application-authored collection or page labels, but retain catalog names and journal headlines exactly as stored. Canonical URLs, hreflang, and the server-side indexability decision remain independent of locale copy.
-- Cross-locale language-switcher choices use plain document links; speculative navigation must never change preference state, and client navigation must not preserve a stale root document language.
-- Public links rendered from `/garden` must use the resolved locale rather than `DEFAULT_PUBLIC_LOCALE`.
-- Links between signed-in routes remain canonical unprefixed paths; the HTTP-only cookie carries locale continuity.
-- Domain logic, repositories, analytics event semantics, privacy rules, and authorization must not branch by locale.
+Every application-owned rendered surface must declare, in the exact coverage
+registry:
 
-## Failure Behavior
+- route and state owner, including layout/loading/error/not-found/global-error
+  and raw application lifecycle renderers;
+- market source, market fallback, allowed locales, and locale default;
+- zero-control or exactly-one-control expectation and the owning component;
+- public-path switch target policy or unprefixed POST preference policy;
+- auth/role/denied/lifecycle variants;
+- dirty/in-flight registration and expected navigation outcome;
+- deterministic browser proof at required mobile and desktop viewports.
 
-Malformed headers or cookies are ignored, never echoed. Missing locale state falls back to request signals and then Ukrainian. Locale resolution must not block authentication, journal saves, offline retries, media processing, redirects, or public readback.
+A new or unclassified route, layout, state boundary, raw lifecycle renderer, or
+control owner fails CI. Coverage cannot be inferred from a page module while
+its layout, fallback, or lifecycle HTML remains unregistered.
 
-## Verification
+## Privacy And Domain Invariants
 
-The executable contract covers:
+Never place journal titles/bodies, object or space names, handles, emails,
+precise location, region, media keys, invitation/reset tokens, internal IDs,
+referrers, IP addresses, user agents, or analytics payloads in locale cookies,
+locale headers, switch URLs, copy dictionaries, or locale-only evidence.
 
-- source precedence and malformed-value fallback;
-- localized-route cookie persistence;
-- prefetch requests cannot mutate the persisted preference;
-- APIs, mutations, RSC reads, and Server Actions cannot persist locale state or trigger document redirects;
-- public-to-`/garden` cookie handoff without locale query parameters;
-- root routing with a persisted preference;
-- persisted-locale redirects for allowlisted localized public routes without redirecting UGC paths;
-- request header and cookie server resolution;
-- locale-aware workspace metadata, navigation, public-profile links, and object chrome;
-- localized public journal, passport, variety, profile, engagement, source-credit, structured-data, not-found, and gone chrome across `uk`, `bg`, and `ru`;
-- exact recursive key parity for all trust-sensitive `uk`, `bg`, and `ru` copy, with placeholders and stable product/provider names preserved;
-- localized auth-intent ready, invalid, expired, cancellation, OAuth-recovery, and resumed-action states without exposing raw provider or transport errors;
-- localized auth help, password reset, account linking, join, support, erasure, privacy/consent, and first-publication metadata and controls;
-- exact recursive key parity for owner workspace, inventory, creation, drafts, offline queue, media recovery, and save feedback across `uk`, `bg`, and `ru`;
-- localized object-kind, mention, date, plural, error-recovery, and coarse-region chrome while preserving UGC, object and space names, catalog and scientific names, source labels, handles, and user-entered text;
-- exact recursive key parity for owner object follow-up, privacy, catalog, provenance, progress/value, source, and lifecycle copy across `uk`, `bg`, and `ru`;
-- localized owner publication/archive consequences and locale-aware public continuations while signed-in object routes remain unprefixed;
-- owner route and control coverage that preserves UGC, catalog/scientific names, official source names, provenance values, private payloads, scoped repositories, idempotency, and processed-derivative-only media;
-- exact recursive key parity for admin/moderation, curation, pilot, smoke, erasure-operator, and diagnostic copy across `uk`, `bg`, and `ru`;
-- localized operator authorization, dense/empty queues, source review, alias and match decisions, destructive erasure confirmations, pilot interpretation, smoke steps, and health labels while preserving literal evidence and stable machine values;
-- deterministic OVE-187 empty, sparse, typical, dense, offline, loading, partial-error, full-error, long-copy, and twenty creation-state contracts through production repositories;
-- unchanged user-authored object and journal text;
-- existing public canonical and hreflang tests.
+Locale branches must not alter repositories, authorization, visibility,
+publication, lifecycle, search-index eligibility, idempotency, offline schemas,
+media processing, analytics semantics, or domain mutations. Public photos
+remain processed derivatives only, and precise user location remains locked.
+
+## Completion Evidence
+
+OVE-205 is complete only when the static and browser gates prove, against the
+same final commit:
+
+- market-before-locale resolution and stale/cross-market coercion;
+- Ukraine `uk`-only canonical behavior with zero controls;
+- Bulgaria `bg` default and `bg`/`ru` behavior with exactly one control on every
+  registered rendered page/state;
+- safe `/bg` <-> `/ru` public switching with allowlisted query and fragment
+  preservation;
+- the narrow unprefixed POST preference boundary and its negative security
+  matrix;
+- clean, dirty, cancelled, flushing, in-flight, cross-tab, BFCache, and failure
+  coordinator outcomes for existing product states;
+- `html[lang]`, `Content-Language`, canonical, hreflang, `404`/`410`, metadata,
+  accessibility, and no-duplicate-control invariants;
+- exact copy-key parity and unchanged UGC/catalog/source values;
+- a schema-v3 downstream ownership ledger that names OVE-202/206/207 without
+  treating their unimplemented real UI as OVE-205 completion blockers;
+- exact-SHA CI, build, deployment, and safe production smoke.
+
+The static report cannot attest that a browser run is fresh, so its sole
+`browser-run-required` reason is discharged only by a successful candidate-SHA
+`localization:coverage:browser`/`test:a11y` artifact. Downstream-owned entries
+remain visible in the report as future obligations, not current failures.
+
+The completed OVE-171 evidence remains a regression input, but its former
+page/route count and owner probes are not sufficient OVE-205 proof by
+themselves.

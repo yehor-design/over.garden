@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -43,9 +44,12 @@ const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export function SessionConvergenceBoundary({
   children,
   locale,
+  localeControlFallback,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
+  /** Payload-free control only; authenticated children stay hidden by the gate. */
+  localeControlFallback?: React.ReactNode;
 }) {
   // Mount Better Auth's session atom so its built-in session signal and the
   // product's explicit offline-safe convergence signal are both active.
@@ -53,6 +57,13 @@ export function SessionConvergenceBoundary({
   const [activityGate, setActivityGate] = useState<
     "checking" | "ready" | "blocked"
   >("checking");
+  const [remotePreparationPending, setRemotePreparationPending] =
+    useState(false);
+  useInterfaceLocaleChangeFormState({
+    id: "session-convergence-lifecycle",
+    dirty: false,
+    pending: activityGate !== "ready" || remotePreparationPending,
+  });
   const retryHydrationRef = useRef<() => void>(() => undefined);
   const pauseHandleRef = useRef<OwnerOfflineActivityPauseHandle | null>(null);
   const composerPreparationRef = useRef<OwnerComposerPreparationHandle | null>(
@@ -83,6 +94,16 @@ export function SessionConvergenceBoundary({
     let authoritativeRecheck: Promise<void> | null = null;
     let staleOperationRecheck: Promise<void> | null = null;
     const committedOperationsInFlight = new Set<string>();
+    const updateRemotePreparationFence = () => {
+      if (disposed) return;
+      setRemotePreparationPending(
+        activeOperationIdsRef.current.size > 0 ||
+          committedOperationsInFlight.size > 0 ||
+          preparationPromiseRef.current !== null ||
+          pauseHandleRef.current !== null ||
+          composerPreparationRef.current !== null,
+      );
+    };
     const fallbackUnregisteredTabId = createSessionTabId();
     let tabLease: ReturnType<
       typeof acquireAuthenticatedSessionTabLease
@@ -247,6 +268,7 @@ export function SessionConvergenceBoundary({
         try {
           await pauseHandle.resume();
         } catch {
+          updateRemotePreparationFence();
           return false;
         }
         if (pauseHandleRef.current === pauseHandle) {
@@ -259,6 +281,7 @@ export function SessionConvergenceBoundary({
         try {
           await composerPreparation.resume();
         } catch {
+          updateRemotePreparationFence();
           return false;
         }
         if (composerPreparationRef.current === composerPreparation) {
@@ -267,6 +290,7 @@ export function SessionConvergenceBoundary({
       }
       composerPreparationRef.current = null;
       await refreshActivityGate();
+      updateRemotePreparationFence();
       return true;
     };
 
@@ -318,6 +342,7 @@ export function SessionConvergenceBoundary({
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
+      updateRemotePreparationFence();
     };
 
     const beginSignedOutTransition = () => {
@@ -327,6 +352,7 @@ export function SessionConvergenceBoundary({
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
+      updateRemotePreparationFence();
       startBestEffort(finalizeSignedOutActivity);
       window.location.replace(localizedPublicRoot(locale));
     };
@@ -350,6 +376,7 @@ export function SessionConvergenceBoundary({
         } catch {
           pauseHandleRef.current = pauseHandle;
           composerPreparationRef.current = composerPreparation;
+          updateRemotePreparationFence();
           return false;
         }
         if (pauseHandleRef.current === pauseHandle) {
@@ -361,12 +388,14 @@ export function SessionConvergenceBoundary({
           await composerPreparation.resume();
         } catch {
           composerPreparationRef.current = composerPreparation;
+          updateRemotePreparationFence();
           return false;
         }
         if (composerPreparationRef.current === composerPreparation) {
           composerPreparationRef.current = null;
         }
       }
+      updateRemotePreparationFence();
       return true;
     };
 
@@ -432,6 +461,7 @@ export function SessionConvergenceBoundary({
         }
         composerPreparationRef.current = composerPreparation;
         pauseHandleRef.current = pauseHandle;
+        updateRemotePreparationFence();
       } catch (error) {
         await releasePartialPreparation(pauseHandle, composerPreparation);
         throw error;
@@ -458,6 +488,7 @@ export function SessionConvergenceBoundary({
               const clearPreparation = () => {
                 if (preparationPromiseRef.current === preparation) {
                   preparationPromiseRef.current = null;
+                  updateRemotePreparationFence();
                 }
               };
               void preparation.then(clearPreparation, clearPreparation);
@@ -515,6 +546,7 @@ export function SessionConvergenceBoundary({
       activeOperationIdsRef.current.delete(operationId);
       operationLastSeenAtRef.current.delete(operationId);
       operationPreparationRoundsRef.current.delete(operationId);
+      updateRemotePreparationFence();
       if (
         activeOperationIdsRef.current.size > 0 ||
         committedOperationsInFlight.size > 0
@@ -531,6 +563,7 @@ export function SessionConvergenceBoundary({
       // an authoritative exact-A confirmation plus recovery may reopen it.
       hideAuthenticatedTree();
       committedOperationsInFlight.add(operationId);
+      updateRemotePreparationFence();
       rememberTerminalOperation(
         terminalOperationIdsRef.current,
         operationId,
@@ -570,6 +603,7 @@ export function SessionConvergenceBoundary({
         // A terminal recheck failure must never release old-session memory.
       } finally {
         committedOperationsInFlight.delete(operationId);
+        updateRemotePreparationFence();
       }
     };
 
@@ -637,6 +671,7 @@ export function SessionConvergenceBoundary({
             activeOperationIdsRef.current.clear();
             operationLastSeenAtRef.current.clear();
             operationPreparationRoundsRef.current.clear();
+            updateRemotePreparationFence();
             await preparationPromiseRef.current?.catch(() => undefined);
             beginSignedOutTransition();
             return;
@@ -664,6 +699,7 @@ export function SessionConvergenceBoundary({
             operationLastSeenAtRef.current.delete(operationId);
             operationPreparationRoundsRef.current.delete(operationId);
           }
+          updateRemotePreparationFence();
           if (
             activeOperationIdsRef.current.size === 0 &&
             committedOperationsInFlight.size === 0
@@ -682,6 +718,7 @@ export function SessionConvergenceBoundary({
       if (payload.signal === SESSION_CONVERGENCE_SIGNALS.preparation) {
         if (terminalOperationIdsRef.current.has(payload.operationId)) return;
         activeOperationIdsRef.current.add(payload.operationId);
+        updateRemotePreparationFence();
         if (!payload.preparationRoundId) return;
         operationPreparationRoundsRef.current.set(
           payload.operationId,
@@ -793,6 +830,14 @@ export function SessionConvergenceBoundary({
         aria-busy={activityGate === "checking"}
         className="mx-auto grid min-h-40 w-full max-w-xl content-center gap-3 px-4 py-8 text-center"
       >
+        {localeControlFallback ? (
+          <div
+            data-session-convergence-locale-control="true"
+            className="justify-self-end"
+          >
+            {localeControlFallback}
+          </div>
+        ) : null}
         {activityGate === "checking" ? (
           <p role="status" className="text-sm text-muted-foreground">
             {copy.checking}

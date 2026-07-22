@@ -1,15 +1,28 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 
+import { resolveBetterAuthSecret } from "@/lib/auth-secret";
 import {
   INTERFACE_LOCALE_COOKIE_MAX_AGE_SECONDS,
   INTERFACE_LOCALE_COOKIE_NAME,
   INTERFACE_LOCALE_REQUEST_HEADER,
-  resolveInterfaceLocale,
-  type InterfaceLocale,
+  resolveInterfaceLocalization,
+  type ResolvedInterfaceLocalization,
 } from "@/lib/interface-localization";
 import {
+  INTERFACE_MARKET_COOKIE_MAX_AGE_SECONDS,
+  INTERFACE_MARKET_COOKIE_NAME,
+  INTERFACE_MARKET_REQUEST_HEADER,
+  readInterfaceCountryCode,
+} from "@/lib/interface-market";
+import {
+  buildLocalizedInterfaceTarget,
+  getInterfaceRoutePolicy,
+  sanitizeInterfaceRouteSearch,
+} from "@/lib/interface-route-policy";
+import {
   DEFAULT_PUBLIC_LOCALE,
-  localizedPath,
   stripLocalePrefix,
 } from "@/lib/public-localization";
 import {
@@ -31,6 +44,10 @@ import {
   renderGonePublicProfileHtml,
   renderNotFoundPublicProfileHtml,
 } from "@/lib/public-profile-lifecycle";
+import {
+  INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER,
+  isInterfaceGlobalErrorVisualFixtureRequest,
+} from "@/lib/localization/localization-visual-fixture";
 import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 import {
   isWalkingSkeletonRequestHostAllowed,
@@ -39,17 +56,14 @@ import {
 
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
-const INTERNAL_PROFILE_REWRITE_HEADER = "x-overgarden-internal-profile-rewrite";
 
-function getCountryCode(request: NextRequest) {
-  return (
-    request.headers.get("x-vercel-ip-country") ??
-    request.headers.get("cf-ipcountry") ??
-    request.headers.get("x-country-code")
-  )
-    ?.trim()
-    .toUpperCase();
-}
+const INTERNAL_PROFILE_REWRITE_HEADER =
+  "x-overgarden-internal-profile-rewrite";
+const INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER =
+  "x-overgarden-internal-profile-rewrite-signature";
+const INTERNAL_PROFILE_REWRITE_VERSION = "v1";
+const INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT =
+  "overgarden:internal-profile-rewrite:v1";
 
 function isPrefetchRequest(request: NextRequest) {
   const purpose = request.headers.get("purpose")?.toLowerCase() ?? "";
@@ -85,78 +99,73 @@ function isDocumentNavigationRequest(request: NextRequest) {
 function withAppRouteContract(
   response: NextResponse,
   request: NextRequest,
-  locale: InterfaceLocale,
+  localization: ResolvedInterfaceLocalization,
 ) {
   response.headers.set("Cache-Control", APP_ROUTE_CACHE_CONTROL);
-  response.headers.set("Content-Language", locale);
+  response.headers.set("Content-Language", localization.locale);
 
-  if (
-    isDocumentNavigationRequest(request) &&
-    request.cookies.get(INTERFACE_LOCALE_COOKIE_NAME)?.value !== locale
-  ) {
-    response.cookies.set({
-      name: INTERFACE_LOCALE_COOKIE_NAME,
-      value: locale,
-      httpOnly: true,
-      sameSite: "lax",
-      secure: request.nextUrl.protocol === "https:",
-      path: "/",
-      maxAge: INTERFACE_LOCALE_COOKIE_MAX_AGE_SECONDS,
-    });
+  if (isDocumentNavigationRequest(request)) {
+    if (
+      request.cookies.get(INTERFACE_MARKET_COOKIE_NAME)?.value !==
+      localization.market
+    ) {
+      response.cookies.set({
+        name: INTERFACE_MARKET_COOKIE_NAME,
+        value: localization.market,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: request.nextUrl.protocol === "https:",
+        path: "/",
+        maxAge: INTERFACE_MARKET_COOKIE_MAX_AGE_SECONDS,
+      });
+    }
+
+    if (
+      request.cookies.get(INTERFACE_LOCALE_COOKIE_NAME)?.value !==
+      localization.locale
+    ) {
+      response.cookies.set({
+        name: INTERFACE_LOCALE_COOKIE_NAME,
+        value: localization.locale,
+        httpOnly: true,
+        sameSite: "lax",
+        secure: request.nextUrl.protocol === "https:",
+        path: "/",
+        maxAge: INTERFACE_LOCALE_COOKIE_MAX_AGE_SECONDS,
+      });
+    }
   }
 
   return response;
 }
 
-function resolveRequestLocale(request: NextRequest) {
+function resolveRequestLocalization(request: NextRequest) {
   const routeLocale = stripLocalePrefix(request.nextUrl.pathname).locale;
 
-  return resolveInterfaceLocale({
+  return resolveInterfaceLocalization({
     routeLocale,
+    persistedMarket: request.cookies.get(INTERFACE_MARKET_COOKIE_NAME)?.value,
     persistedLocale: request.cookies.get(INTERFACE_LOCALE_COOKIE_NAME)?.value,
-    acceptLanguage: request.headers.get("accept-language"),
-    countryCode: getCountryCode(request),
+    countryCode: readInterfaceCountryCode(request.headers),
   });
-}
-
-function hasLocalizedPublicCounterpart(pathname: string) {
-  const exactPaths = new Set([
-    "/privacy",
-    "/first-publication-disclosure",
-    "/feed",
-    "/notifications",
-    "/bookmarks",
-    "/wishlist",
-    "/blog",
-    "/objects",
-  ]);
-  const nestedPrefixes = ["/blog/", "/guides/", "/answers/", "/journal/"];
-
-  return (
-    exactPaths.has(pathname) ||
-    nestedPrefixes.some((prefix) => pathname.startsWith(prefix))
-  );
 }
 
 function getLocaleRoutingResponse(
   request: NextRequest,
-  locale: InterfaceLocale,
+  localization: ResolvedInterfaceLocalization,
 ) {
+  const { locale } = localization;
   const { pathname } = request.nextUrl;
   const isDocumentNavigation = isDocumentNavigationRequest(request);
   const strippedPath = stripLocalePrefix(pathname);
   const rootProfileHandle = strippedPath.locale
     ? null
     : matchPublicProfilePath(pathname);
-  const isInternalDefaultProfileRewrite =
-    request.headers.get(INTERNAL_PROFILE_REWRITE_HEADER) === "1" &&
-    strippedPath.locale === DEFAULT_PUBLIC_LOCALE &&
-    matchPublicProfilePath(pathname) !== null;
 
   if (
     isDocumentNavigation &&
-    !isInternalDefaultProfileRewrite &&
-    (pathname === "/uk" || pathname.startsWith("/uk/"))
+    (pathname === "/uk" || pathname.startsWith("/uk/")) &&
+    !hasValidInternalProfileRewrite(request)
   ) {
     const url = request.nextUrl.clone();
     url.pathname = pathname === "/uk" ? "/" : pathname.slice("/uk".length);
@@ -171,7 +180,15 @@ function getLocaleRoutingResponse(
     if (locale !== DEFAULT_PUBLIC_LOCALE) {
       if (!isDocumentNavigation) return null;
 
-      url.pathname = localizedPath(locale, rootProfilePath);
+      const target = buildLocalizedInterfaceTarget({
+        locale,
+        pathname: rootProfilePath,
+        search: request.nextUrl.searchParams,
+      });
+      if (!target) return null;
+      const targetUrl = new URL(target, request.nextUrl);
+      url.pathname = targetUrl.pathname;
+      url.search = targetUrl.search;
       return NextResponse.redirect(url, { status: 307 });
     }
 
@@ -179,8 +196,20 @@ function getLocaleRoutingResponse(
 
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
-    requestHeaders.set(INTERNAL_PROFILE_REWRITE_HEADER, "1");
+    requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
     url.pathname = `/uk${rootProfilePath}`;
+    url.search = sanitizeInterfaceRouteSearch(
+      rootProfilePath,
+      request.nextUrl.searchParams,
+    );
+    requestHeaders.set(
+      INTERNAL_PROFILE_REWRITE_HEADER,
+      INTERNAL_PROFILE_REWRITE_VERSION,
+    );
+    requestHeaders.set(
+      INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER,
+      signInternalProfileRewrite(request.method, url.pathname),
+    );
     return NextResponse.rewrite(url, {
       request: {
         headers: requestHeaders,
@@ -190,24 +219,79 @@ function getLocaleRoutingResponse(
 
   if (
     isDocumentNavigation &&
+    strippedPath.locale === null &&
     locale !== DEFAULT_PUBLIC_LOCALE &&
-    hasLocalizedPublicCounterpart(pathname)
+    getInterfaceRoutePolicy(strippedPath.path).mode === "localized-link"
   ) {
+    const target = buildLocalizedInterfaceTarget({
+      locale,
+      pathname: strippedPath.path,
+      search: request.nextUrl.searchParams,
+    });
+    if (!target) return null;
     const url = request.nextUrl.clone();
-    url.pathname = localizedPath(locale, pathname);
+    const targetUrl = new URL(target, request.nextUrl);
+    url.pathname = targetUrl.pathname;
+    url.search = targetUrl.search;
 
     return NextResponse.redirect(url, { status: 307 });
   }
 
-  if (
-    isDocumentNavigation &&
-    pathname === "/" &&
-    locale !== DEFAULT_PUBLIC_LOCALE
-  ) {
-    const url = request.nextUrl.clone();
-    url.pathname = localizedPath(locale, "/");
+  return null;
+}
 
-    return NextResponse.redirect(url, { status: 307 });
+async function getPublicProfileLifecycleResponse(
+  request: NextRequest,
+  localization: ResolvedInterfaceLocalization,
+  publicProfileHandle: string,
+) {
+  const lifecycleLocation = {
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.searchParams,
+  };
+  const viewer = await resolvePublicProfileViewer(request);
+  if (!viewer.ok) {
+    return new NextResponse(
+      renderNotFoundPublicProfileHtml(localization.locale, lifecycleLocation),
+      {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      },
+    );
+  }
+
+  const { getPublicProfileLifecycleLookup } =
+    await import("@/server/public-profile-repository");
+  const lookup = await getPublicProfileLifecycleLookup(
+    publicProfileHandle,
+    viewer.userId,
+  );
+  if (lookup.status === "gone") {
+    return new NextResponse(
+      renderGonePublicProfileHtml(localization.locale, lifecycleLocation),
+      {
+        status: 410,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      },
+    );
+  }
+  if (lookup.status === "not_found") {
+    return new NextResponse(
+      renderNotFoundPublicProfileHtml(localization.locale, lifecycleLocation),
+      {
+        status: 404,
+        headers: {
+          "content-type": "text/html; charset=utf-8",
+          "X-Robots-Tag": "noindex, nofollow",
+        },
+      },
+    );
   }
 
   return null;
@@ -219,7 +303,8 @@ function getLocaleRoutingResponse(
 // viewer solely to fail closed on mutual blocks and is not a mutation authz
 // boundary.
 export async function proxy(request: NextRequest) {
-  const locale = resolveRequestLocale(request);
+  const localization = resolveRequestLocalization(request);
+  const { locale } = localization;
   const pathname = normalizePathname(request.nextUrl.pathname);
   if (
     isWalkingSkeletonPath(pathname) &&
@@ -235,7 +320,7 @@ export async function proxy(request: NextRequest) {
         },
       }),
       request,
-      locale,
+      localization,
     );
   }
 
@@ -251,11 +336,48 @@ export async function proxy(request: NextRequest) {
         },
       }),
       request,
-      locale,
+      localization,
     );
   }
 
-  const publicCommunitySlug = isDocumentNavigationRequest(request)
+  const isDocumentNavigation = isDocumentNavigationRequest(request);
+  const initialStrippedPath = stripLocalePrefix(request.nextUrl.pathname);
+  const canonicalDefaultProfileHandle =
+    isDocumentNavigation &&
+    initialStrippedPath.locale === null &&
+    locale === DEFAULT_PUBLIC_LOCALE
+      ? matchPublicProfilePath(request.nextUrl.pathname)
+      : null;
+  if (canonicalDefaultProfileHandle) {
+    // Default-locale profiles are internally rewritten to /uk for App Router
+    // matching. Classify their terminal lifecycle on the canonical unprefixed
+    // request first because a rewrite does not re-enter Proxy.
+    const lifecycleResponse = await getPublicProfileLifecycleResponse(
+      request,
+      localization,
+      canonicalDefaultProfileHandle,
+    );
+    if (lifecycleResponse) {
+      return withAppRouteContract(lifecycleResponse, request, localization);
+    }
+  }
+
+  // Canonical locale routing must happen before lifecycle lookups so an
+  // unprefixed Bulgaria-market URL cannot emit a terminal response under the
+  // wrong canonical path. Already-prefixed routes fall through to the bounded
+  // lifecycle classifiers below.
+  const localeRoutingResponse = getLocaleRoutingResponse(request, localization);
+
+  if (localeRoutingResponse) {
+    return withAppRouteContract(localeRoutingResponse, request, localization);
+  }
+
+  const lifecycleLocation = {
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.searchParams,
+  };
+
+  const publicCommunitySlug = isDocumentNavigation
     ? matchPublicCommunityPath(request.nextUrl.pathname)
     : null;
   if (publicCommunitySlug) {
@@ -264,75 +386,34 @@ export async function proxy(request: NextRequest) {
     const lookup = await getPublicCommunityLifecycleLookup(publicCommunitySlug);
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(renderNotFoundPublicCommunityHtml(locale), {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
+        new NextResponse(
+          renderNotFoundPublicCommunityHtml(locale, lifecycleLocation),
+          {
+            status: 404,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
           },
-        }),
+        ),
         request,
-        locale,
+        localization,
       );
     }
   }
 
-  const publicProfileHandle = isDocumentNavigationRequest(request)
+  const publicProfileHandle = isDocumentNavigation
     ? matchPublicProfilePath(request.nextUrl.pathname)
     : null;
   if (publicProfileHandle) {
-    const viewer = await resolvePublicProfileViewer(request);
-    if (!viewer.ok) {
-      return withAppRouteContract(
-        new NextResponse(renderNotFoundPublicProfileHtml(locale), {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
-          },
-        }),
-        request,
-        locale,
-      );
-    }
-    const { getPublicProfileLifecycleLookup } =
-      await import("@/server/public-profile-repository");
-    const lookup = await getPublicProfileLifecycleLookup(
+    const lifecycleResponse = await getPublicProfileLifecycleResponse(
+      request,
+      localization,
       publicProfileHandle,
-      viewer.userId,
     );
-    if (lookup.status === "gone") {
-      return withAppRouteContract(
-        new NextResponse(renderGonePublicProfileHtml(locale), {
-          status: 410,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
-          },
-        }),
-        request,
-        locale,
-      );
+    if (lifecycleResponse) {
+      return withAppRouteContract(lifecycleResponse, request, localization);
     }
-    if (lookup.status === "not_found") {
-      return withAppRouteContract(
-        new NextResponse(renderNotFoundPublicProfileHtml(locale), {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
-          },
-        }),
-        request,
-        locale,
-      );
-    }
-  }
-
-  const localeRoutingResponse = getLocaleRoutingResponse(request, locale);
-
-  if (localeRoutingResponse) {
-    return withAppRouteContract(localeRoutingResponse, request, locale);
   }
 
   const publicObjectId = isDocumentNavigationRequest(request)
@@ -344,28 +425,34 @@ export async function proxy(request: NextRequest) {
     const lookup = await getPublicObjectPassportLookup(publicObjectId);
     if (lookup.status === "gone") {
       return withAppRouteContract(
-        new NextResponse(renderGonePublicObjectPassportHtml(locale), {
-          status: 410,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
+        new NextResponse(
+          renderGonePublicObjectPassportHtml(locale, lifecycleLocation),
+          {
+            status: 410,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
           },
-        }),
+        ),
         request,
-        locale,
+        localization,
       );
     }
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(renderNotFoundPublicObjectPassportHtml(locale), {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
+        new NextResponse(
+          renderNotFoundPublicObjectPassportHtml(locale, lifecycleLocation),
+          {
+            status: 404,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
           },
-        }),
+        ),
         request,
-        locale,
+        localization,
       );
     }
   }
@@ -380,34 +467,51 @@ export async function proxy(request: NextRequest) {
       await getPublicJournalEntryLifecycleLookup(publicJournalSlug);
     if (lookup.status === "gone") {
       return withAppRouteContract(
-        new NextResponse(renderGonePublicJournalEntryHtml(locale), {
-          status: 410,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
+        new NextResponse(
+          renderGonePublicJournalEntryHtml(locale, lifecycleLocation),
+          {
+            status: 410,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
           },
-        }),
+        ),
         request,
-        locale,
+        localization,
       );
     }
     if (lookup.status === "not_found") {
       return withAppRouteContract(
-        new NextResponse(renderNotFoundPublicJournalEntryHtml(locale), {
-          status: 404,
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "X-Robots-Tag": "noindex, nofollow",
+        new NextResponse(
+          renderNotFoundPublicJournalEntryHtml(locale, lifecycleLocation),
+          {
+            status: 404,
+            headers: {
+              "content-type": "text/html; charset=utf-8",
+              "X-Robots-Tag": "noindex, nofollow",
+            },
           },
-        }),
+        ),
         request,
-        locale,
+        localization,
       );
     }
   }
 
   const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER);
+  requestHeaders.delete(INTERNAL_PROFILE_REWRITE_HEADER);
+  requestHeaders.delete(INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER);
   requestHeaders.set(INTERFACE_LOCALE_REQUEST_HEADER, locale);
+  requestHeaders.set(INTERFACE_MARKET_REQUEST_HEADER, localization.market);
+  if (
+    isDocumentNavigationRequest(request) &&
+    tryResolveVisualFixtureEnvironment(process.env) &&
+    isInterfaceGlobalErrorVisualFixtureRequest(request.nextUrl)
+  ) {
+    requestHeaders.set(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER, "1");
+  }
   const response = NextResponse.next({
     request: {
       headers: requestHeaders,
@@ -416,7 +520,7 @@ export async function proxy(request: NextRequest) {
 
   // App HTML/RSC/API responses are pilot evidence and may be personalized.
   // Keep them out of intermediary caches even if DNS is proxied later.
-  return withAppRouteContract(response, request, locale);
+  return withAppRouteContract(response, request, localization);
 }
 
 async function resolvePublicProfileViewer(
@@ -460,6 +564,45 @@ function isWalkingSkeletonPath(pathname: string) {
 
 function normalizePathname(pathname: string) {
   return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+}
+
+function signInternalProfileRewrite(method: string, pathname: string) {
+  return createHmac("sha256", resolveBetterAuthSecret())
+    .update(INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT)
+    .update("\0")
+    .update(method)
+    .update("\0")
+    .update(pathname)
+    .digest("base64url");
+}
+
+function hasValidInternalProfileRewrite(request: NextRequest) {
+  if (
+    request.headers.get(INTERNAL_PROFILE_REWRITE_HEADER) !==
+    INTERNAL_PROFILE_REWRITE_VERSION
+  ) {
+    return false;
+  }
+
+  const suppliedSignature = request.headers.get(
+    INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER,
+  );
+  if (!suppliedSignature?.match(/^[A-Za-z0-9_-]{43}$/)) return false;
+
+  const expectedSignature = signInternalProfileRewrite(
+    request.method,
+    request.nextUrl.pathname,
+  );
+  const suppliedSignatureBytes = Buffer.from(suppliedSignature, "base64url");
+  const expectedSignatureBytes = Buffer.from(expectedSignature, "base64url");
+  if (
+    suppliedSignatureBytes.length !== 32 ||
+    suppliedSignatureBytes.length !== expectedSignatureBytes.length
+  ) {
+    return false;
+  }
+
+  return timingSafeEqual(suppliedSignatureBytes, expectedSignatureBytes);
 }
 
 export const config = {

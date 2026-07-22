@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { LanguageSwitcher } from "@/components/public/language-switcher";
 import {
   PublicHomeFeed,
   type PublicHomeFeedState,
@@ -51,8 +50,6 @@ import type { PublicKnowledgeEvidence } from "@/server/public-knowledge-evidence
 
 export function PublicLocalizedHeader({
   locale,
-  basePath,
-  availableLocales,
   backHref = "/",
   backLabel = "OverGarden",
 }: {
@@ -70,11 +67,6 @@ export function PublicLocalizedHeader({
       >
         {backLabel}
       </Link>
-      <LanguageSwitcher
-        locale={locale}
-        basePath={basePath}
-        availableLocales={availableLocales}
-      />
     </div>
   );
 }

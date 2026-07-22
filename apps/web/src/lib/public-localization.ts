@@ -106,7 +106,10 @@ export function selectPublicLocaleFromRequestContext(input: {
   if (countryCode === "UA") return "uk";
   if (countryCode === "BG") return "bg";
 
-  return selectPublicLocaleFromAcceptLanguage(input.acceptLanguage);
+  // Accept-Language cannot establish a product market. A missing or unsupported
+  // country signal therefore fails closed to the Ukraine-market canonical
+  // locale. Explicit /bg and /ru route intent is resolved separately.
+  return DEFAULT_PUBLIC_LOCALE;
 }
 
 export function selectPublicLocaleFromRequestHeaders(headers: Headers) {

@@ -10,11 +10,26 @@ import {
 } from "@/lib/accessibility/core-journey-matrix";
 import {
   LOCALIZATION_OWNER_BROWSER_PROBES,
+  LOCALIZATION_DOWNSTREAM_UI_GATES,
+  LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS,
   LOCALIZATION_RENDERED_OWNER_IDS,
   LOCALIZATION_REQUIRED_BROWSER_STATES,
+  type LocalizationDownstreamUiGate,
   type LocalizationOwnerBrowserProbe,
   type LocalizationRenderedOwnerId,
 } from "@/lib/localization/localization-browser-matrix";
+import {
+  DEFAULT_INTERFACE_MARKET,
+  INTERFACE_MARKET_CONFIG,
+  INTERFACE_MARKETS,
+  type InterfaceMarket,
+  type InterfaceMarketResolutionSource,
+} from "@/lib/interface-market";
+import {
+  getInterfaceRoutePolicy,
+  INTERFACE_ROUTE_POLICIES,
+  type InterfaceRouteMode,
+} from "@/lib/interface-route-policy";
 import { getCommunityCopy } from "@/lib/community-copy";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
@@ -58,11 +73,70 @@ export type LocalizationOwnerId =
   | "internal-fixture"
   | "non-ui";
 
+export const LOCALIZATION_SURFACE_KINDS = [
+  "page",
+  "route-handler",
+  "layout",
+  "loading",
+  "error",
+  "not-found",
+  "global-error",
+  "raw-lifecycle",
+] as const;
+
+export type LocalizationSurfaceKind =
+  (typeof LOCALIZATION_SURFACE_KINDS)[number];
+
+export type LocalizationRoutePolicyResolution =
+  | "exact-source-path"
+  | "current-request-path";
+
+export type LocalizationControlOwnerId =
+  | "site-shell-interface-language-control"
+  | "raw-lifecycle-interface-language-control";
+
+export type LocalizationDirtyPolicyId =
+  | "shared-locale-change-coordinator"
+  | "terminal-state-no-dirty-work";
+
+export interface LocalizationRegisteredRenderedProfile {
+  marketProfileId: "market-first-ove205";
+  marketSources: readonly InterfaceMarketResolutionSource[];
+  fallbackMarket: InterfaceMarket;
+  allowedLocalesByMarket: Readonly<
+    Record<InterfaceMarket, readonly PublicLocale[]>
+  >;
+  defaultLocaleByMarket: Readonly<Record<InterfaceMarket, PublicLocale>>;
+  routePolicyResolution: LocalizationRoutePolicyResolution;
+  routePolicyProbePath: string | null;
+  routePolicyId: string | "central-policy-for-current-request-path";
+  switchMode: InterfaceRouteMode | "current-request-path";
+  safeQueryKeys: readonly string[] | "central-policy-for-current-request-path";
+  preserveClientFragment: boolean | "central-policy-for-current-request-path";
+  ukraineControl: {
+    expectedCount: 0;
+    ownerId: null;
+  };
+  bulgariaControl: {
+    expectedCount: 1;
+    ownerId: LocalizationControlOwnerId;
+  };
+  dirtyPolicyId: LocalizationDirtyPolicyId;
+  dirtyParticipantIds: readonly string[];
+  authVariants: readonly string[];
+  roleVariants: readonly string[];
+  failureVariants: readonly string[];
+  rawVariants: readonly string[];
+  browserScenarioIds: readonly string[];
+}
+
 export interface LocalizationRouteRegistration {
   sourceFile: string;
   routePattern: string;
+  surfaceKind: LocalizationSurfaceKind;
   classification: LocalizationRouteClassification;
   owner: LocalizationOwnerId;
+  renderedProfile: LocalizationRegisteredRenderedProfile | null;
 }
 
 interface LocalizationOwnerContract {
@@ -117,7 +191,8 @@ export interface LocalizationAuthoredSource {
 
 export type LocalizationCoverageDisposition =
   | "preserved-baseline"
-  | "ove171-closed-delta";
+  | "ove171-closed-delta"
+  | "ove205-corrective-delta";
 
 export interface LocalizationClosedDelta {
   id: string;
@@ -135,6 +210,41 @@ const REQUIRED_DECLARED_STATES = [
   "menu",
   "tooltip",
   "toast",
+] as const;
+
+const REQUIRED_SURFACE_KINDS: readonly LocalizationSurfaceKind[] = [
+  "page",
+  "route-handler",
+  "layout",
+  "loading",
+  "error",
+  "not-found",
+  "global-error",
+  "raw-lifecycle",
+];
+
+const OVE205_MARKET_SOURCES = [
+  "route",
+  "country",
+  "persisted",
+  "fallback",
+] as const satisfies readonly InterfaceMarketResolutionSource[];
+
+const RAW_LIFECYCLE_RENDERER_MODULES = [
+  "src/lib/public-community-lifecycle.ts",
+  "src/lib/public-profile-lifecycle.ts",
+  "src/lib/public-object-passport-lifecycle.ts",
+  "src/lib/public-journal-entry-lifecycle.ts",
+] as const;
+
+const RAW_LIFECYCLE_SUPPORT_MODULES = [
+  "src/lib/public-lifecycle-document.ts",
+] as const;
+
+const OVE205_EXPECTED_NEW_APP_MODULES = [
+  "src/app/api/interface/context/route.ts",
+  "src/app/api/interface/locale/route.ts",
+  "src/app/global-error.tsx",
 ] as const;
 
 const OVE171_NEWLY_CLOSED_ROUTE_MODULES = new Set([
@@ -204,7 +314,55 @@ const OVE171_CLOSED_DELTAS: readonly LocalizationClosedDelta[] = [
       "src/lib/localization/localization-browser-matrix.ts",
       "scripts/verify-responsive-accessibility.ts",
     ],
-    proof: "13 fail-closed probes at 320px and 1440px",
+    proof: `${LOCALIZATION_OWNER_BROWSER_PROBES.length} fail-closed probes at 320px and 1440px`,
+  },
+];
+
+const OVE205_CORRECTIVE_DELTAS: readonly LocalizationClosedDelta[] = [
+  {
+    id: "market-first-central-policy",
+    owner: "public-shell",
+    sourceFiles: [
+      "src/lib/interface-market.ts",
+      "src/lib/interface-route-policy.ts",
+      "src/app/api/interface/context/route.ts",
+      "src/app/api/interface/locale/route.ts",
+    ],
+    proof:
+      "central market and route-policy IDs plus non-UI preference/context endpoints",
+  },
+  {
+    id: "complete-rendered-state-discovery",
+    owner: "public-shell",
+    sourceFiles: [
+      "src/app/layout.tsx",
+      "src/app/loading.tsx",
+      "src/app/error.tsx",
+      "src/app/not-found.tsx",
+      "src/app/global-error.tsx",
+    ],
+    proof:
+      "schema-v3 exact page/layout/loading/error/not-found/global-error inventory",
+  },
+  {
+    id: "raw-lifecycle-renderer-coverage",
+    owner: "public-shell",
+    sourceFiles: [
+      ...RAW_LIFECYCLE_RENDERER_MODULES,
+      ...RAW_LIFECYCLE_SUPPORT_MODULES,
+    ],
+    proof:
+      "four explicit raw HTML lifecycle registrations and dedicated browser contracts",
+  },
+  {
+    id: "market-control-and-dirty-profiles",
+    owner: "workspace",
+    sourceFiles: [
+      "src/lib/interface-locale-change-coordinator.ts",
+      "src/lib/localization/localization-browser-matrix.ts",
+    ],
+    proof:
+      "UA zero-control, BG exactly-one control, central switch policy, and shared dirty coordinator profiles",
   },
 ];
 
@@ -530,20 +688,183 @@ export const LOCALIZATION_COPY_NAMESPACES: readonly LocalizationCopyNamespace[] 
     },
   ] as const;
 
+const RENDERED_CLASSIFICATIONS = new Set<LocalizationRouteClassification>([
+  "public-localized",
+  "signed-in-selected-locale",
+  "explicit-operator-locale",
+]);
+
+interface LocalizationRegistrationOptions {
+  routePattern?: string;
+  routePolicyResolution?: LocalizationRoutePolicyResolution;
+  routePolicyProbePath?: string;
+  failureVariants?: readonly string[];
+  rawVariants?: readonly string[];
+  dirtyPolicyId?: LocalizationDirtyPolicyId;
+  dirtyParticipantIds?: readonly string[];
+  browserScenarioIds?: readonly string[];
+}
+
+function inferLocalizationSurfaceKind(
+  sourceFile: string,
+): LocalizationSurfaceKind {
+  if (
+    RAW_LIFECYCLE_RENDERER_MODULES.includes(sourceFile as never) ||
+    (sourceFile.startsWith("src/lib/") && sourceFile.endsWith("-lifecycle.ts"))
+  ) {
+    return "raw-lifecycle";
+  }
+  if (sourceFile.endsWith("/page.tsx")) return "page";
+  if (sourceFile.endsWith("/route.ts")) return "route-handler";
+  if (sourceFile.endsWith("/layout.tsx")) return "layout";
+  if (sourceFile.endsWith("/loading.tsx")) return "loading";
+  if (sourceFile.endsWith("/global-error.tsx")) return "global-error";
+  if (sourceFile.endsWith("/error.tsx")) return "error";
+  if (sourceFile.endsWith("/not-found.tsx")) return "not-found";
+  throw new Error(`Unsupported localization surface: ${sourceFile}`);
+}
+
+function routePatternFromSource(sourceFile: string) {
+  if (!sourceFile.startsWith("src/app/")) return "/";
+  return (
+    sourceFile
+      .replace(/^src\/app/, "")
+      .replace(
+        /\/(?:page|route|layout|loading|error|not-found|global-error)\.(?:tsx|ts)$/,
+        "",
+      )
+      .replaceAll("%5F", "_") || "/"
+  );
+}
+
+function routePolicyProbePath(
+  routePattern: string,
+  owner: LocalizationOwnerId,
+) {
+  let probePath = routePattern.replace(/^\/\[locale\](?=\/|$)/, "") || "/";
+  if (owner === "public-profile" && probePath.includes("[profileHandle]")) {
+    probePath = probePath.replace("[profileHandle]", "@coverage_profile");
+  }
+  return probePath.replace(/\[[^/]+\]/g, "coverage");
+}
+
+function failureVariantsFor(
+  surfaceKind: LocalizationSurfaceKind,
+  owner: LocalizationOwnerId,
+) {
+  if (surfaceKind === "loading") return ["loading"];
+  if (surfaceKind === "error") return ["recoverable-error"];
+  if (surfaceKind === "not-found") return ["not-found"];
+  if (surfaceKind === "global-error") return ["global-error"];
+  if (surfaceKind === "raw-lifecycle") return ["not-found", "gone"];
+  return LOCALIZATION_OWNER_CONTRACTS[owner].stateClasses.filter((state) =>
+    /error|unauthorized|not-found|gone|archived|blocked|validation/.test(state),
+  );
+}
+
+function renderedProfileFor(
+  sourceFile: string,
+  routePattern: string,
+  surfaceKind: LocalizationSurfaceKind,
+  classification: LocalizationRouteClassification,
+  owner: LocalizationOwnerId,
+  options: LocalizationRegistrationOptions,
+): LocalizationRegisteredRenderedProfile | null {
+  if (!RENDERED_CLASSIFICATIONS.has(classification)) return null;
+
+  const policyResolution = options.routePolicyResolution ?? "exact-source-path";
+  const probePath =
+    policyResolution === "exact-source-path"
+      ? (options.routePolicyProbePath ??
+        routePolicyProbePath(routePattern, owner))
+      : null;
+  const policy = probePath ? getInterfaceRoutePolicy(probePath) : null;
+  const terminalState = [
+    "loading",
+    "error",
+    "not-found",
+    "global-error",
+    "raw-lifecycle",
+  ].includes(surfaceKind);
+  const dirtyPolicyId =
+    options.dirtyPolicyId ??
+    (terminalState
+      ? "terminal-state-no-dirty-work"
+      : "shared-locale-change-coordinator");
+  const dirtyParticipantIds =
+    options.dirtyParticipantIds ??
+    (dirtyPolicyId === "shared-locale-change-coordinator" &&
+    (owner === "workspace" || owner === "owner-object-lineage")
+      ? ["owner-composer-drafts"]
+      : []);
+
+  return {
+    marketProfileId: "market-first-ove205",
+    marketSources: OVE205_MARKET_SOURCES,
+    fallbackMarket: DEFAULT_INTERFACE_MARKET,
+    allowedLocalesByMarket: {
+      ukraine: INTERFACE_MARKET_CONFIG.ukraine.allowedLocales,
+      bulgaria: INTERFACE_MARKET_CONFIG.bulgaria.allowedLocales,
+    },
+    defaultLocaleByMarket: {
+      ukraine: INTERFACE_MARKET_CONFIG.ukraine.defaultLocale,
+      bulgaria: INTERFACE_MARKET_CONFIG.bulgaria.defaultLocale,
+    },
+    routePolicyResolution: policyResolution,
+    routePolicyProbePath: probePath,
+    routePolicyId: policy?.id ?? "central-policy-for-current-request-path",
+    switchMode: policy?.mode ?? "current-request-path",
+    safeQueryKeys:
+      policy?.safeQueryKeys ?? "central-policy-for-current-request-path",
+    preserveClientFragment:
+      policy?.preserveClientFragment ??
+      "central-policy-for-current-request-path",
+    ukraineControl: { expectedCount: 0, ownerId: null },
+    bulgariaControl: {
+      expectedCount: 1,
+      ownerId:
+        surfaceKind === "raw-lifecycle"
+          ? "raw-lifecycle-interface-language-control"
+          : "site-shell-interface-language-control",
+    },
+    dirtyPolicyId,
+    dirtyParticipantIds,
+    authVariants: LOCALIZATION_OWNER_CONTRACTS[owner].authVariants,
+    roleVariants: LOCALIZATION_OWNER_CONTRACTS[owner].roleVariants,
+    failureVariants:
+      options.failureVariants ?? failureVariantsFor(surfaceKind, owner),
+    rawVariants:
+      options.rawVariants ??
+      (surfaceKind === "raw-lifecycle" ? [sourceFile] : ["react-rendered"]),
+    browserScenarioIds:
+      options.browserScenarioIds ??
+      LOCALIZATION_OWNER_CONTRACTS[owner].scenarioIds,
+  };
+}
+
 function route(
   sourceFile: string,
   classification: LocalizationRouteClassification,
   owner: LocalizationOwnerId,
+  options: LocalizationRegistrationOptions = {},
 ): LocalizationRouteRegistration {
+  const surfaceKind = inferLocalizationSurfaceKind(sourceFile);
+  const routePattern =
+    options.routePattern ?? routePatternFromSource(sourceFile);
   return {
     sourceFile,
-    routePattern:
-      sourceFile
-        .replace(/^src\/app/, "")
-        .replace(/\/(?:page\.tsx|route\.ts)$/, "")
-        .replaceAll("%5F", "_") || "/",
+    routePattern,
+    surfaceKind,
     classification,
     owner,
+    renderedProfile: renderedProfileFor(
+      sourceFile,
+      routePattern,
+      surfaceKind,
+      classification,
+      owner,
+      options,
+    ),
   };
 }
 
@@ -551,9 +872,10 @@ function routes(
   sourceFiles: readonly string[],
   classification: LocalizationRouteClassification,
   owner: LocalizationOwnerId,
+  options: LocalizationRegistrationOptions = {},
 ) {
   return sourceFiles.map((sourceFile) =>
-    route(sourceFile, classification, owner),
+    route(sourceFile, classification, owner, options),
   );
 }
 
@@ -567,6 +889,85 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       ],
       "internal-fixture",
       "internal-fixture",
+    ),
+    ...routes(
+      [
+        "src/app/layout.tsx",
+        "src/app/loading.tsx",
+        "src/app/error.tsx",
+        "src/app/not-found.tsx",
+        "src/app/global-error.tsx",
+      ],
+      "public-localized",
+      "public-shell",
+      { routePolicyResolution: "current-request-path" },
+    ),
+    ...routes(
+      ["src/app/auth/layout.tsx"],
+      "signed-in-selected-locale",
+      "trust-auth",
+    ),
+    ...routes(
+      [
+        "src/app/garden/layout.tsx",
+        "src/app/garden/loading.tsx",
+        "src/app/garden/error.tsx",
+      ],
+      "signed-in-selected-locale",
+      "workspace",
+    ),
+    ...routes(
+      ["src/app/admin/layout.tsx"],
+      "explicit-operator-locale",
+      "operator",
+    ),
+    ...routes(
+      [
+        "src/app/[locale]/feed/loading.tsx",
+        "src/app/[locale]/feed/error.tsx",
+        "src/app/feed/loading.tsx",
+        "src/app/feed/error.tsx",
+      ],
+      "public-localized",
+      "public-shell",
+    ),
+    ...routes(
+      ["src/app/[locale]/objects/loading.tsx", "src/app/objects/loading.tsx"],
+      "public-localized",
+      "public-catalog",
+    ),
+    ...routes(
+      ["src/app/[locale]/journals/loading.tsx", "src/app/journals/loading.tsx"],
+      "public-localized",
+      "public-journal",
+    ),
+    ...routes(
+      [
+        "src/app/[locale]/knowledge/loading.tsx",
+        "src/app/knowledge/loading.tsx",
+      ],
+      "public-localized",
+      "public-knowledge",
+    ),
+    ...routes(
+      [
+        "src/app/[locale]/bookmarks/loading.tsx",
+        "src/app/[locale]/bookmarks/error.tsx",
+        "src/app/[locale]/communities/loading.tsx",
+        "src/app/[locale]/communities/error.tsx",
+        "src/app/[locale]/notifications/loading.tsx",
+        "src/app/[locale]/notifications/error.tsx",
+        "src/app/[locale]/wishlist/loading.tsx",
+        "src/app/[locale]/wishlist/error.tsx",
+        "src/app/bookmarks/loading.tsx",
+        "src/app/bookmarks/error.tsx",
+        "src/app/notifications/loading.tsx",
+        "src/app/notifications/error.tsx",
+        "src/app/wishlist/loading.tsx",
+        "src/app/wishlist/error.tsx",
+      ],
+      "public-localized",
+      "social-community",
     ),
     ...routes(
       [
@@ -704,6 +1105,57 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       "explicit-operator-locale",
       "operator",
     ),
+    route(
+      "src/lib/public-community-lifecycle.ts",
+      "public-localized",
+      "social-community",
+      {
+        routePattern: "/communities/[slug]",
+        routePolicyProbePath: "/communities/coverage",
+        failureVariants: ["not-found"],
+        rawVariants: ["community-not-found-html"],
+        browserScenarioIds: ["community:ove184-community-unavailable"],
+      },
+    ),
+    route(
+      "src/lib/public-profile-lifecycle.ts",
+      "public-localized",
+      "public-profile",
+      {
+        routePattern: "/@[profileHandle]",
+        routePolicyProbePath: "/@coverage_profile",
+        failureVariants: ["not-found", "gone"],
+        rawVariants: ["profile-not-found-html", "profile-gone-html"],
+        browserScenarioIds: [
+          "profile:private-unavailable",
+          "profile:removed-unavailable",
+        ],
+      },
+    ),
+    route(
+      "src/lib/public-object-passport-lifecycle.ts",
+      "public-localized",
+      "public-catalog",
+      {
+        routePattern: "/lineage/objects/[objectId]",
+        routePolicyProbePath: "/lineage/objects/coverage",
+        failureVariants: ["not-found", "gone"],
+        rawVariants: ["object-not-found-html", "object-gone-html"],
+        browserScenarioIds: ["passport:public-unpublished"],
+      },
+    ),
+    route(
+      "src/lib/public-journal-entry-lifecycle.ts",
+      "public-localized",
+      "public-journal",
+      {
+        routePattern: "/journal/[slug]",
+        routePolicyProbePath: "/journal/coverage",
+        failureVariants: ["not-found", "gone"],
+        rawVariants: ["journal-not-found-html", "journal-gone-html"],
+        browserScenarioIds: ["journal-entry:gone-410"],
+      },
+    ),
     ...routes(
       [
         "src/app/api/%5F%5Fvisual-fixtures/journal-creation/route.ts",
@@ -719,6 +1171,8 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/garden/entries/route.ts",
         "src/app/api/garden/mentions/typeahead/route.ts",
         "src/app/api/garden/value-pulse/route.ts",
+        "src/app/api/interface/context/route.ts",
+        "src/app/api/interface/locale/route.ts",
         "src/app/api/media/process/route.ts",
         "src/app/api/media/uploads/route.ts",
         "src/app/api/meta/conversions/route.ts",
@@ -773,6 +1227,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
       "src/app/auth/help/page.tsx",
       "src/app/auth/reset-password/page.tsx",
       "src/app/erasure/page.tsx",
+      "src/app/global-error.tsx",
       "src/app/join/page.tsx",
       "src/app/not-found.tsx",
       "src/app/support/page.tsx",
@@ -884,10 +1339,7 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
           "jsx-text",
           "Authenticated local session. Diagnostic reads remain scoped to the current user.",
         ],
-        [
-          "jsx-text",
-          "No authenticated session. Use the canonical",
-        ],
+        ["jsx-text", "No authenticated session. Use the canonical"],
         ["jsx-text", "garden sign-in flow"],
         ["jsx-text", ", then return to this local diagnostic."],
         ["jsx-text", "SSR readback"],
@@ -897,20 +1349,49 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
   ];
 
 export interface LocalizationCoverageReport {
-  schemaVersion: 1;
-  issue: "OVE-171";
-  evidenceClass: "local-deterministic-localization";
+  schemaVersion: 3;
+  issue: "OVE-205";
+  evidenceClass: "local-deterministic-market-localization";
   baseline: {
-    version: "ove171-v1";
+    version: "ove205-v3";
+    preservedBaseline: "ove171-v1";
     hash: string;
     locales: PublicLocale[];
     fixtureVersion: string;
     fixtureManifestHash: string;
   };
+  marketContract: {
+    resolutionSources: InterfaceMarketResolutionSource[];
+    fallbackMarket: InterfaceMarket;
+    markets: Array<{
+      market: InterfaceMarket;
+      allowedLocales: PublicLocale[];
+      defaultLocale: PublicLocale;
+      expectedLanguageControlCount: 0 | 1;
+    }>;
+  };
+  routePolicies: Array<{
+    id: string;
+    mode: InterfaceRouteMode;
+    safeQueryKeys: string[];
+    preserveClientFragment: boolean;
+  }>;
+  rawLifecycleContract: {
+    rendererModules: string[];
+    supportModules: string[];
+    controlOwnerId: "raw-lifecycle-interface-language-control";
+  };
   summary: {
     routeModuleCount: number;
     classifiedRouteModuleCount: number;
+    appSurfaceModuleCount: number;
+    classifiedAppSurfaceModuleCount: number;
+    registeredSurfaceCount: number;
     renderedRouteModuleCount: number;
+    renderedSurfaceCount: number;
+    renderedStateModuleCount: number;
+    rawLifecycleRendererCount: number;
+    globalErrorModuleCount: number;
     copyNamespaceCount: number;
     localeCount: number;
     authoredSourceCount: number;
@@ -919,8 +1400,10 @@ export interface LocalizationCoverageReport {
     ownerBrowserProbeCount: number;
     preservedRouteModuleCount: number;
     newlyClosedDeltaRouteModuleCount: number;
+    ove205CorrectiveSurfaceCount: number;
+    downstreamOwnedUiGateCount: number;
   };
-  routes: Array<
+  surfaces: Array<
     LocalizationRouteRegistration &
       LocalizationOwnerContract & {
         coverageDisposition: LocalizationCoverageDisposition;
@@ -935,6 +1418,21 @@ export interface LocalizationCoverageReport {
     stateClasses: readonly string[];
     viewportIds: readonly string[];
     runAxe: boolean;
+    sourceFiles: readonly string[];
+    marketCases: readonly string[];
+    expectedControlCountByMarket: Readonly<Record<InterfaceMarket, 0 | 1>>;
+    controlOwnerId: LocalizationOwnerBrowserProbe["controlOwnerId"];
+    evidenceStatus: LocalizationOwnerBrowserProbe["evidenceStatus"];
+  }>;
+  downstreamOwnedUiGates: Array<{
+    id: string;
+    issue: string;
+    requiredStates: string[];
+    adapterContract: string;
+    status: string;
+    browserScenarioId: null;
+    proofOwner: string;
+    blocksCurrentIssue: false;
   }>;
   copyNamespaces: Array<{
     id: string;
@@ -948,10 +1446,13 @@ export interface LocalizationCoverageReport {
     rationale: string;
   }>;
   missing: {
-    unregisteredRouteModules: string[];
-    staleRouteRegistrations: string[];
-    duplicateRouteRegistrations: string[];
-    invalidRouteRegistrations: string[];
+    unregisteredSurfaceModules: string[];
+    staleSurfaceRegistrations: string[];
+    duplicateSurfaceRegistrations: string[];
+    invalidSurfaceRegistrations: string[];
+    missingRequiredSurfaceKinds: string[];
+    invalidRenderedProfiles: string[];
+    invalidDownstreamUiGates: string[];
     copyLocaleValues: string[];
     copyKeyParity: string[];
     authoredLiterals: string[];
@@ -965,6 +1466,7 @@ export interface LocalizationCoverageReport {
 }
 
 interface BuildLocalizationCoverageOptions {
+  discoveredSurfaceModules?: readonly string[];
   discoveredRouteModules?: readonly string[];
   routeRegistry?: readonly LocalizationRouteRegistration[];
   copyNamespaces?: readonly LocalizationCopyNamespace[];
@@ -972,6 +1474,7 @@ interface BuildLocalizationCoverageOptions {
   allowlist?: readonly LocalizationLiteralAllowlistEntry[];
   scenarios?: readonly CoreJourneyScenario[];
   browserProbes?: readonly LocalizationOwnerBrowserProbe[];
+  downstreamUiGates?: readonly LocalizationDownstreamUiGate[];
 }
 
 export function buildLocalizationCoverage(
@@ -979,8 +1482,10 @@ export function buildLocalizationCoverage(
 ): LocalizationCoverageReport {
   const webRoot = resolveWebRoot();
   const routeRegistry = options.routeRegistry ?? LOCALIZATION_ROUTE_REGISTRY;
-  const discoveredRouteModules =
-    options.discoveredRouteModules ?? discoverRouteModules(webRoot);
+  const discoveredSurfaceModules =
+    options.discoveredSurfaceModules ??
+    options.discoveredRouteModules ??
+    discoverLocalizationSurfaceModules(webRoot);
   const copyNamespaces = options.copyNamespaces ?? LOCALIZATION_COPY_NAMESPACES;
   const authoredSources =
     options.authoredSources ?? discoverAuthoredSources(webRoot);
@@ -989,9 +1494,19 @@ export function buildLocalizationCoverage(
   const scenarios = options.scenarios ?? CORE_JOURNEY_SCENARIOS;
   const browserProbes =
     options.browserProbes ?? LOCALIZATION_OWNER_BROWSER_PROBES;
-  const discoveredRoutes = new Set(discoveredRouteModules);
-  const registeredRoutes = new Set(
+  const downstreamUiGates =
+    options.downstreamUiGates ?? LOCALIZATION_DOWNSTREAM_UI_GATES;
+  const discoveredSurfaces = new Set(discoveredSurfaceModules);
+  const registeredSurfaces = new Set(
     routeRegistry.map(({ sourceFile }) => sourceFile),
+  );
+  const discoveredRouteModules = discoveredSurfaceModules.filter((sourceFile) =>
+    ["page", "route-handler"].includes(
+      inferLocalizationSurfaceKind(sourceFile),
+    ),
+  );
+  const discoveredAppSurfaceModules = discoveredSurfaceModules.filter(
+    (sourceFile) => sourceFile.startsWith("src/app/"),
   );
   const scenarioById = new Map(
     scenarios.map((scenario) => [scenario.id, scenario]),
@@ -1012,11 +1527,6 @@ export function buildLocalizationCoverage(
   const routeCounts = countValues(
     routeRegistry.map(({ sourceFile }) => sourceFile),
   );
-  const renderedClassifications = new Set<LocalizationRouteClassification>([
-    "public-localized",
-    "signed-in-selected-locale",
-    "explicit-operator-locale",
-  ]);
   const nonRenderedClassifications = new Set<LocalizationRouteClassification>([
     "redirect-only",
     "api-non-ui",
@@ -1025,11 +1535,15 @@ export function buildLocalizationCoverage(
   const invalidRouteRegistrations = routeRegistry.flatMap((registration) => {
     const contract = LOCALIZATION_OWNER_CONTRACTS[registration.owner];
     const errors: string[] = [];
-    const isPage = registration.sourceFile.endsWith("/page.tsx");
-    const isRouteHandler = registration.sourceFile.endsWith("/route.ts");
+    const inferredKind = inferLocalizationSurfaceKind(registration.sourceFile);
+    const isPage = registration.surfaceKind === "page";
+    const isRouteHandler = registration.surfaceKind === "route-handler";
     if (!contract) return [`${registration.sourceFile}:unknown-owner`];
+    if (registration.surfaceKind !== inferredKind) {
+      errors.push(`${registration.sourceFile}:surface-kind-mismatch`);
+    }
     if (
-      renderedClassifications.has(registration.classification) !==
+      RENDERED_CLASSIFICATIONS.has(registration.classification) !==
       contract.rendered
     ) {
       errors.push(`${registration.sourceFile}:classification-owner-mismatch`);
@@ -1048,14 +1562,15 @@ export function buildLocalizationCoverage(
     }
     if (
       isRouteHandler &&
-      renderedClassifications.has(registration.classification)
+      RENDERED_CLASSIFICATIONS.has(registration.classification)
     ) {
       errors.push(`${registration.sourceFile}:handler-classified-as-rendered`);
     }
     if (
       registration.classification === "api-non-ui" &&
       (registration.owner !== "non-ui" ||
-        !registration.sourceFile.startsWith("src/app/api/"))
+        !registration.sourceFile.startsWith("src/app/api/") ||
+        registration.surfaceKind !== "route-handler")
     ) {
       errors.push(`${registration.sourceFile}:api-owner`);
     }
@@ -1081,6 +1596,12 @@ export function buildLocalizationCoverage(
     ) {
       errors.push(`${registration.sourceFile}:fixture-owner-or-path`);
     }
+    if (
+      registration.surfaceKind === "raw-lifecycle" &&
+      (!contract.rendered || registration.classification !== "public-localized")
+    ) {
+      errors.push(`${registration.sourceFile}:raw-lifecycle-not-rendered`);
+    }
     if (contract?.rendered && contract.copyNamespaces.length === 0) {
       errors.push(`${registration.sourceFile}:missing-copy-namespace`);
     }
@@ -1091,6 +1612,141 @@ export function buildLocalizationCoverage(
         );
       }
     }
+    return errors;
+  });
+  const invalidRenderedProfiles = routeRegistry.flatMap((registration) => {
+    const contract = LOCALIZATION_OWNER_CONTRACTS[registration.owner];
+    const profile = registration.renderedProfile;
+    const errors: string[] = [];
+    const prefix = registration.sourceFile;
+
+    if (!contract.rendered) {
+      return profile ? [`${prefix}:non-rendered-profile`] : [];
+    }
+    if (!profile) return [`${prefix}:missing-rendered-profile`];
+
+    if (profile.marketProfileId !== "market-first-ove205") {
+      errors.push(`${prefix}:market-profile-id`);
+    }
+    if (
+      JSON.stringify(profile.marketSources) !==
+      JSON.stringify(OVE205_MARKET_SOURCES)
+    ) {
+      errors.push(`${prefix}:market-sources`);
+    }
+    if (profile.fallbackMarket !== DEFAULT_INTERFACE_MARKET) {
+      errors.push(`${prefix}:fallback-market`);
+    }
+    for (const market of INTERFACE_MARKETS) {
+      if (
+        JSON.stringify(profile.allowedLocalesByMarket[market]) !==
+        JSON.stringify(INTERFACE_MARKET_CONFIG[market].allowedLocales)
+      ) {
+        errors.push(`${prefix}:${market}:allowed-locales`);
+      }
+      if (
+        profile.defaultLocaleByMarket[market] !==
+        INTERFACE_MARKET_CONFIG[market].defaultLocale
+      ) {
+        errors.push(`${prefix}:${market}:default-locale`);
+      }
+    }
+    if (
+      profile.ukraineControl.expectedCount !== 0 ||
+      profile.ukraineControl.ownerId !== null
+    ) {
+      errors.push(`${prefix}:ukraine-control`);
+    }
+    const expectedControlOwner =
+      registration.surfaceKind === "raw-lifecycle"
+        ? "raw-lifecycle-interface-language-control"
+        : "site-shell-interface-language-control";
+    if (
+      profile.bulgariaControl.expectedCount !== 1 ||
+      profile.bulgariaControl.ownerId !== expectedControlOwner
+    ) {
+      errors.push(`${prefix}:bulgaria-control`);
+    }
+
+    if (profile.routePolicyResolution === "exact-source-path") {
+      if (!profile.routePolicyProbePath) {
+        errors.push(`${prefix}:missing-route-policy-probe-path`);
+      } else {
+        const policy = getInterfaceRoutePolicy(profile.routePolicyProbePath);
+        if (profile.routePolicyId !== policy.id) {
+          errors.push(`${prefix}:route-policy-id`);
+        }
+        if (profile.switchMode !== policy.mode) {
+          errors.push(`${prefix}:switch-mode`);
+        }
+        if (
+          JSON.stringify(profile.safeQueryKeys) !==
+          JSON.stringify(policy.safeQueryKeys)
+        ) {
+          errors.push(`${prefix}:safe-query-policy`);
+        }
+        if (profile.preserveClientFragment !== policy.preserveClientFragment) {
+          errors.push(`${prefix}:fragment-policy`);
+        }
+      }
+    } else if (
+      profile.routePolicyProbePath !== null ||
+      profile.routePolicyId !== "central-policy-for-current-request-path" ||
+      profile.switchMode !== "current-request-path" ||
+      profile.safeQueryKeys !== "central-policy-for-current-request-path" ||
+      profile.preserveClientFragment !==
+        "central-policy-for-current-request-path"
+    ) {
+      errors.push(`${prefix}:current-request-policy-contract`);
+    }
+
+    if (profile.authVariants.length === 0) {
+      errors.push(`${prefix}:auth-variants`);
+    }
+    if (profile.roleVariants.length === 0) {
+      errors.push(`${prefix}:role-variants`);
+    }
+    if (profile.failureVariants.length === 0) {
+      errors.push(`${prefix}:failure-variants`);
+    }
+    if (profile.rawVariants.length === 0) {
+      errors.push(`${prefix}:raw-variants`);
+    }
+    if (
+      registration.surfaceKind === "raw-lifecycle" &&
+      profile.rawVariants.includes("react-rendered")
+    ) {
+      errors.push(`${prefix}:raw-renderer-profile`);
+    }
+    if (
+      registration.surfaceKind !== "raw-lifecycle" &&
+      !profile.rawVariants.includes("react-rendered")
+    ) {
+      errors.push(`${prefix}:react-renderer-profile`);
+    }
+    if (profile.browserScenarioIds.length === 0) {
+      errors.push(`${prefix}:browser-scenarios`);
+    }
+    for (const scenarioId of profile.browserScenarioIds) {
+      if (!scenarioById.has(scenarioId)) {
+        errors.push(`${prefix}:browser-scenario:${scenarioId}`);
+      }
+    }
+    if (
+      profile.dirtyPolicyId === "shared-locale-change-coordinator" &&
+      profile.dirtyParticipantIds.some(
+        (participantId) => participantId !== "owner-composer-drafts",
+      )
+    ) {
+      errors.push(`${prefix}:dirty-participant`);
+    }
+    if (
+      profile.dirtyPolicyId === "terminal-state-no-dirty-work" &&
+      profile.dirtyParticipantIds.length > 0
+    ) {
+      errors.push(`${prefix}:terminal-dirty-participant`);
+    }
+
     return errors;
   });
   const ownerScenarioProof = renderedOwners.flatMap((owner) => {
@@ -1151,8 +1807,54 @@ export function buildLocalizationCoverage(
           errors.push(`${probe.id}:unproven-state:${state}`);
         }
       }
+      if (
+        scenario &&
+        probe.expectedStatus !== undefined &&
+        probe.expectedStatus !== scenario.expectedStatus
+      ) {
+        errors.push(`${probe.id}:expected-status`);
+      }
+      if (
+        JSON.stringify(probe.marketCases) !==
+        JSON.stringify([
+          "ukraine-uk-zero-control",
+          "bulgaria-bg-exactly-one-control",
+          "bulgaria-ru-exactly-one-control",
+        ])
+      ) {
+        errors.push(`${probe.id}:market-cases`);
+      }
+      if (
+        probe.expectedControlCountByMarket.ukraine !== 0 ||
+        probe.expectedControlCountByMarket.bulgaria !== 1
+      ) {
+        errors.push(`${probe.id}:control-counts`);
+      }
+      const rawProbe = probe.sourceFiles.some((sourceFile) =>
+        RAW_LIFECYCLE_RENDERER_MODULES.includes(sourceFile as never),
+      );
+      if (
+        probe.controlOwnerId !==
+        (rawProbe
+          ? "raw-lifecycle-interface-language-control"
+          : "site-shell-interface-language-control")
+      ) {
+        errors.push(`${probe.id}:control-owner`);
+      }
+      if (probe.evidenceStatus !== "browser-run-required") {
+        errors.push(`${probe.id}:evidence-status`);
+      }
+      for (const sourceFile of probe.sourceFiles) {
+        if (!registeredSurfaces.has(sourceFile)) {
+          errors.push(`${probe.id}:unregistered-source:${sourceFile}`);
+        }
+      }
       return errors;
     }),
+    ...RAW_LIFECYCLE_RENDERER_MODULES.filter(
+      (sourceFile) =>
+        !browserProbes.some((probe) => probe.sourceFiles.includes(sourceFile)),
+    ).map((sourceFile) => `${sourceFile}:missing-raw-browser-probe`),
     ...[...probeCounts.entries()]
       .filter(([, count]) => count > 1)
       .map(([id]) => `${id}:duplicate-probe`),
@@ -1160,9 +1862,63 @@ export function buildLocalizationCoverage(
   const browserStateClasses = new Set(
     browserProbes.flatMap(({ stateClasses }) => stateClasses),
   );
-  const deltaCounts = countValues(OVE171_CLOSED_DELTAS.map(({ id }) => id));
+  const expectedDownstreamUiGates: ReadonlyMap<
+    string,
+    (typeof LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS)[number]
+  > = new Map(
+    LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS.map((requirement) => [
+      requirement.id,
+      requirement,
+    ]),
+  );
+  const downstreamGateCounts = countValues(
+    downstreamUiGates.map(({ id }) => id),
+  );
+  const invalidDownstreamUiGates = [
+    ...downstreamUiGates.flatMap((gate) => {
+      const errors: string[] = [];
+      const expected = expectedDownstreamUiGates.get(gate.id);
+      if (!expected || expected.issue !== gate.issue) {
+        errors.push(`${gate.id}:issue-or-id`);
+      }
+      if (gate.status !== "downstream-owned-real-ui") {
+        errors.push(`${gate.id}:status`);
+      }
+      if (gate.adapterContract !== "owner-composer-drafts") {
+        errors.push(`${gate.id}:adapter-contract`);
+      }
+      if (
+        gate.browserScenarioId !== null ||
+        gate.proofOwner !== "owning-downstream-slice" ||
+        gate.blocksCurrentIssue !== false
+      ) {
+        errors.push(`${gate.id}:fabricated-current-proof`);
+      }
+      if (
+        !expected ||
+        gate.requiredStates.length !== expected.requiredStates.length ||
+        gate.requiredStates.some(
+          (state, index) => state !== expected.requiredStates[index],
+        )
+      ) {
+        errors.push(`${gate.id}:required-states`);
+      }
+      return errors;
+    }),
+    ...[...expectedDownstreamUiGates.keys()]
+      .filter((id) => !downstreamGateCounts.has(id))
+      .map((id) => `${id}:missing-downstream-gate`),
+    ...[...downstreamGateCounts.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([id]) => `${id}:duplicate-downstream-gate`),
+  ];
+  const allClosedDeltas = [
+    ...OVE171_CLOSED_DELTAS,
+    ...OVE205_CORRECTIVE_DELTAS,
+  ];
+  const deltaCounts = countValues(allClosedDeltas.map(({ id }) => id));
   const deltaEvidence = [
-    ...OVE171_CLOSED_DELTAS.flatMap(({ id, sourceFiles }) =>
+    ...allClosedDeltas.flatMap(({ id, sourceFiles }) =>
       sourceFiles
         .filter((sourceFile) => !existsSync(path.join(webRoot, sourceFile)))
         .map((sourceFile) => `${id}:missing-source:${sourceFile}`),
@@ -1171,13 +1927,25 @@ export function buildLocalizationCoverage(
       .filter(([, count]) => count > 1)
       .map(([id]) => `${id}:duplicate-delta`),
     ...[...OVE171_NEWLY_CLOSED_ROUTE_MODULES]
-      .filter((sourceFile) => !registeredRoutes.has(sourceFile))
+      .filter((sourceFile) => !registeredSurfaces.has(sourceFile))
       .map((sourceFile) => `unregistered-delta-route:${sourceFile}`),
+    ...OVE205_EXPECTED_NEW_APP_MODULES.filter(
+      (sourceFile) => !registeredSurfaces.has(sourceFile),
+    ).map((sourceFile) => `unregistered-ove205-surface:${sourceFile}`),
+    ...RAW_LIFECYCLE_SUPPORT_MODULES.flatMap((sourceFile) => {
+      const absolutePath = path.join(webRoot, sourceFile);
+      if (!existsSync(absolutePath)) return [];
+      return readFileSync(absolutePath, "utf8").includes(
+        "raw-lifecycle-interface-language-control",
+      )
+        ? []
+        : [`raw-lifecycle-control:missing-owner-marker:${sourceFile}`];
+    }),
   ];
   const unsafeEvidence = [
     ...routeRegistry.flatMap(({ sourceFile, routePattern }) => {
       const serialized = `${sourceFile} ${routePattern}`;
-      return /https?:\/\/|@|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
+      return /https?:\/\/|[\w.+-]+@[\w.-]+\.[a-z]{2,}|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
         serialized,
       )
         ? [sourceFile]
@@ -1185,14 +1953,14 @@ export function buildLocalizationCoverage(
     }),
     ...browserProbes.flatMap(({ id, explicitPath }) =>
       explicitPath &&
-      /https?:\/\/|@|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
+      /https?:\/\/|[\w.+-]+@[\w.-]+\.[a-z]{2,}|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
         explicitPath,
       )
         ? [`browser-probe:${id}`]
         : [],
     ),
-    ...OVE171_CLOSED_DELTAS.flatMap((delta) =>
-      /https?:\/\/|@|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
+    ...allClosedDeltas.flatMap((delta) =>
+      /https?:\/\/|[\w.+-]+@[\w.-]+\.[a-z]{2,}|[?&](?:token|secret|key)=|(?:latitude|longitude|coordinates)=/i.test(
         JSON.stringify(delta),
       )
         ? [`closed-delta:${delta.id}`]
@@ -1204,38 +1972,113 @@ export function buildLocalizationCoverage(
     allowlist,
   );
   const invalidAllowlistEntries = validateLocalizationAllowlist(allowlist);
+  const routePolicyCatalog = [
+    ...INTERFACE_ROUTE_POLICIES,
+    getInterfaceRoutePolicy("/garden"),
+  ].filter(
+    (policy, index, policies) =>
+      policies.findIndex(({ id }) => id === policy.id) === index,
+  );
+  const coverageDisposition = (
+    registration: LocalizationRouteRegistration,
+  ): LocalizationCoverageDisposition => {
+    if (OVE171_NEWLY_CLOSED_ROUTE_MODULES.has(registration.sourceFile)) {
+      return "ove171-closed-delta";
+    }
+    if (
+      registration.surfaceKind !== "page" &&
+      registration.surfaceKind !== "route-handler"
+    ) {
+      return "ove205-corrective-delta";
+    }
+    if (
+      OVE205_EXPECTED_NEW_APP_MODULES.includes(registration.sourceFile as never)
+    ) {
+      return "ove205-corrective-delta";
+    }
+    return "preserved-baseline";
+  };
   const baselineHash = createHash("sha256")
     .update(
       JSON.stringify({
-        routes: routeRegistry,
+        surfaces: routeRegistry,
+        marketContract: INTERFACE_MARKET_CONFIG,
+        routePolicies: routePolicyCatalog,
         copyNamespaces: copyCoverage.map(({ id, keyPaths }) => ({
           id,
           keyPaths,
         })),
         owners: LOCALIZATION_OWNER_CONTRACTS,
         browserProbes,
-        closedDeltas: OVE171_CLOSED_DELTAS,
+        downstreamUiGates,
+        closedDeltas: allClosedDeltas,
         fixture: VISUAL_FIXTURE_MANIFEST_HASH,
       }),
     )
     .digest("hex");
 
   return {
-    schemaVersion: 1,
-    issue: "OVE-171",
-    evidenceClass: "local-deterministic-localization",
+    schemaVersion: 3,
+    issue: "OVE-205",
+    evidenceClass: "local-deterministic-market-localization",
     baseline: {
-      version: "ove171-v1",
+      version: "ove205-v3",
+      preservedBaseline: "ove171-v1",
       hash: baselineHash,
       locales: [...PUBLIC_LOCALES],
       fixtureVersion: VISUAL_FIXTURE_MANIFEST.version,
       fixtureManifestHash: VISUAL_FIXTURE_MANIFEST_HASH,
     },
+    marketContract: {
+      resolutionSources: [...OVE205_MARKET_SOURCES],
+      fallbackMarket: DEFAULT_INTERFACE_MARKET,
+      markets: INTERFACE_MARKETS.map((market) => ({
+        market,
+        allowedLocales: [...INTERFACE_MARKET_CONFIG[market].allowedLocales],
+        defaultLocale: INTERFACE_MARKET_CONFIG[market].defaultLocale,
+        expectedLanguageControlCount: market === "ukraine" ? 0 : 1,
+      })),
+    },
+    routePolicies: routePolicyCatalog.map((policy) => ({
+      id: policy.id,
+      mode: policy.mode,
+      safeQueryKeys: [...policy.safeQueryKeys],
+      preserveClientFragment: policy.preserveClientFragment,
+    })),
+    rawLifecycleContract: {
+      rendererModules: [...RAW_LIFECYCLE_RENDERER_MODULES],
+      supportModules: [...RAW_LIFECYCLE_SUPPORT_MODULES],
+      controlOwnerId: "raw-lifecycle-interface-language-control",
+    },
     summary: {
-      routeModuleCount: discoveredRoutes.size,
-      classifiedRouteModuleCount: routeRegistry.length,
+      routeModuleCount: discoveredRouteModules.length,
+      classifiedRouteModuleCount: routeRegistry.filter(({ surfaceKind }) =>
+        ["page", "route-handler"].includes(surfaceKind),
+      ).length,
+      appSurfaceModuleCount: discoveredAppSurfaceModules.length,
+      classifiedAppSurfaceModuleCount: routeRegistry.filter(({ sourceFile }) =>
+        sourceFile.startsWith("src/app/"),
+      ).length,
+      registeredSurfaceCount: routeRegistry.length,
       renderedRouteModuleCount: routeRegistry.filter(
+        ({ owner, surfaceKind }) =>
+          surfaceKind === "page" &&
+          LOCALIZATION_OWNER_CONTRACTS[owner].rendered,
+      ).length,
+      renderedSurfaceCount: routeRegistry.filter(
         ({ owner }) => LOCALIZATION_OWNER_CONTRACTS[owner].rendered,
+      ).length,
+      renderedStateModuleCount: routeRegistry.filter(({ surfaceKind }) =>
+        ["layout", "loading", "error", "not-found", "global-error"].includes(
+          surfaceKind,
+        ),
+      ).length,
+      rawLifecycleRendererCount: routeRegistry.filter(
+        ({ surfaceKind }) => surfaceKind === "raw-lifecycle",
+      ).length,
+      globalErrorModuleCount: discoveredSurfaceModules.filter(
+        (sourceFile) =>
+          inferLocalizationSurfaceKind(sourceFile) === "global-error",
       ).length,
       copyNamespaceCount: copyNamespaces.length,
       localeCount: PUBLIC_LOCALES.length,
@@ -1244,19 +2087,21 @@ export function buildLocalizationCoverage(
       scenarioCount: scenarios.length,
       ownerBrowserProbeCount: browserProbes.length,
       preservedRouteModuleCount: routeRegistry.filter(
-        ({ sourceFile }) => !OVE171_NEWLY_CLOSED_ROUTE_MODULES.has(sourceFile),
+        (registration) =>
+          coverageDisposition(registration) === "preserved-baseline",
       ).length,
       newlyClosedDeltaRouteModuleCount: routeRegistry.filter(({ sourceFile }) =>
         OVE171_NEWLY_CLOSED_ROUTE_MODULES.has(sourceFile),
       ).length,
+      ove205CorrectiveSurfaceCount: routeRegistry.filter(
+        (registration) =>
+          coverageDisposition(registration) === "ove205-corrective-delta",
+      ).length,
+      downstreamOwnedUiGateCount: downstreamUiGates.length,
     },
-    routes: routeRegistry.map((registration) => ({
+    surfaces: routeRegistry.map((registration) => ({
       ...registration,
-      coverageDisposition: OVE171_NEWLY_CLOSED_ROUTE_MODULES.has(
-        registration.sourceFile,
-      )
-        ? "ove171-closed-delta"
-        : "preserved-baseline",
+      coverageDisposition: coverageDisposition(registration),
       ...LOCALIZATION_OWNER_CONTRACTS[registration.owner],
       authVariants: [
         ...LOCALIZATION_OWNER_CONTRACTS[registration.owner].authVariants,
@@ -1277,7 +2122,7 @@ export function buildLocalizationCoverage(
         ...LOCALIZATION_OWNER_CONTRACTS[registration.owner].focusedTests,
       ],
     })),
-    closedDeltas: OVE171_CLOSED_DELTAS.map((delta) => ({
+    closedDeltas: allClosedDeltas.map((delta) => ({
       ...delta,
       sourceFiles: [...delta.sourceFiles],
     })),
@@ -1290,6 +2135,11 @@ export function buildLocalizationCoverage(
         stateClasses,
         viewportIds,
         runAxe,
+        sourceFiles,
+        marketCases,
+        expectedControlCountByMarket,
+        controlOwnerId,
+        evidenceStatus,
       }) => ({
         id,
         owner,
@@ -1298,8 +2148,17 @@ export function buildLocalizationCoverage(
         stateClasses: [...stateClasses],
         viewportIds: [...viewportIds],
         runAxe: runAxe ?? false,
+        sourceFiles: [...sourceFiles],
+        marketCases: [...marketCases],
+        expectedControlCountByMarket: { ...expectedControlCountByMarket },
+        controlOwnerId,
+        evidenceStatus,
       }),
     ),
+    downstreamOwnedUiGates: downstreamUiGates.map((gate) => ({
+      ...gate,
+      requiredStates: [...gate.requiredStates],
+    })),
     copyNamespaces: copyCoverage.map(({ id, sourceFile, keyPaths }) => ({
       id,
       sourceFile,
@@ -1312,21 +2171,29 @@ export function buildLocalizationCoverage(
       rationale,
     })),
     missing: {
-      unregisteredRouteModules: uniqueSorted(
-        [...discoveredRoutes].filter(
-          (sourceFile) => !registeredRoutes.has(sourceFile),
+      unregisteredSurfaceModules: uniqueSorted(
+        [...discoveredSurfaces].filter(
+          (sourceFile) => !registeredSurfaces.has(sourceFile),
         ),
       ),
-      staleRouteRegistrations: uniqueSorted(
-        [...registeredRoutes].filter(
-          (sourceFile) => !discoveredRoutes.has(sourceFile),
+      staleSurfaceRegistrations: uniqueSorted(
+        [...registeredSurfaces].filter(
+          (sourceFile) => !discoveredSurfaces.has(sourceFile),
         ),
       ),
-      duplicateRouteRegistrations: [...routeCounts.entries()]
+      duplicateSurfaceRegistrations: [...routeCounts.entries()]
         .filter(([, count]) => count > 1)
         .map(([sourceFile]) => sourceFile)
         .sort(),
-      invalidRouteRegistrations: uniqueSorted(invalidRouteRegistrations),
+      invalidSurfaceRegistrations: uniqueSorted(invalidRouteRegistrations),
+      missingRequiredSurfaceKinds: REQUIRED_SURFACE_KINDS.filter(
+        (kind) =>
+          !discoveredSurfaceModules.some(
+            (sourceFile) => inferLocalizationSurfaceKind(sourceFile) === kind,
+          ),
+      ),
+      invalidRenderedProfiles: uniqueSorted(invalidRenderedProfiles),
+      invalidDownstreamUiGates: uniqueSorted(invalidDownstreamUiGates),
       copyLocaleValues: uniqueSorted(
         copyCoverage.flatMap(({ invalidValues }) => invalidValues),
       ),
@@ -1362,7 +2229,7 @@ export function assertLocalizationCoverage(
   );
   if (failures.length > 0) {
     throw new Error(
-      `OVE-171 localization coverage is incomplete: ${failures.join(", ")}`,
+      `OVE-205 localization coverage is incomplete: ${failures.join(", ")}`,
     );
   }
 }
@@ -1495,11 +2362,24 @@ function resolveWebRoot(): string {
   throw new Error("OVE-171 cannot resolve the apps/web root.");
 }
 
-function discoverRouteModules(webRoot: string): string[] {
-  return walkFiles(path.join(webRoot, "src", "app"))
-    .filter((filePath) => /\/(?:page\.tsx|route\.ts)$/.test(filePath))
-    .map((filePath) => toWebRelativePath(webRoot, filePath))
-    .sort();
+function discoverLocalizationSurfaceModules(webRoot: string): string[] {
+  const appSurfaces = walkFiles(path.join(webRoot, "src", "app"))
+    .filter((filePath) =>
+      /\/(?:page\.tsx|route\.ts|layout\.tsx|loading\.tsx|error\.tsx|not-found\.tsx|global-error\.tsx)$/.test(
+        filePath,
+      ),
+    )
+    .map((filePath) => toWebRelativePath(webRoot, filePath));
+  const rawLifecycleRenderers = walkFiles(path.join(webRoot, "src", "lib"))
+    .filter((filePath) => filePath.endsWith("-lifecycle.ts"))
+    .filter((filePath) =>
+      /export function render[A-Za-z]+Html\s*\(/.test(
+        readFileSync(filePath, "utf8"),
+      ),
+    )
+    .map((filePath) => toWebRelativePath(webRoot, filePath));
+
+  return uniqueSorted([...appSurfaces, ...rawLifecycleRenderers]);
 }
 
 function discoverAuthoredSources(

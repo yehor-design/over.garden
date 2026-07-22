@@ -4,6 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getPublicTopicAggregationPage: vi.fn(),
   listPublicKnowledgeEvidence: vi.fn(),
+  getRequestInterfaceLocale: vi.fn(),
+  redirect: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  notFound: vi.fn(),
+  redirect: mocks.redirect,
+}));
+
+vi.mock("@/server/interface-localization", () => ({
+  getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
 
 vi.mock("@/server/public-topic-repository", () => ({
@@ -22,6 +33,10 @@ vi.mock("@/lib/storage", () => ({
 beforeEach(() => {
   mocks.getPublicTopicAggregationPage.mockResolvedValue(topicPage());
   mocks.listPublicKnowledgeEvidence.mockResolvedValue(evidence());
+  mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+  mocks.redirect.mockImplementation((target: string) => {
+    throw new Error(`redirect:${target}`);
+  });
 });
 
 afterEach(() => {
@@ -48,7 +63,15 @@ describe("/topics/[slug]", () => {
         params: Promise.resolve({ locale: "ru", slug: "care-checks" }),
       }),
     ).resolves.toMatchObject({
-      alternates: { canonical: "/topics/care-checks" },
+      alternates: {
+        canonical: "/ru/topics/care-checks",
+        languages: {
+          uk: "/topics/care-checks",
+          bg: "/bg/topics/care-checks",
+          ru: "/ru/topics/care-checks",
+        },
+      },
+      openGraph: { locale: "ru", url: "/ru/topics/care-checks" },
       robots: { index: false, follow: false },
     });
   });
@@ -94,6 +117,34 @@ describe("/topics/[slug]", () => {
       generateMetadata({ params, searchParams }),
     ).resolves.toMatchObject({
       robots: { index: false, follow: false },
+    });
+  });
+
+  it("redirects an unprefixed Bulgaria-market topic before rendering and preserves only approved state", async () => {
+    mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
+    const { default: RootTopicRoute, generateMetadata } =
+      await import("./page");
+
+    await expect(
+      RootTopicRoute({
+        params: Promise.resolve({ slug: "care-checks" }),
+        searchParams: Promise.resolve({
+          authIntent: "follow",
+          authControl: "follow-topic-main",
+          intent: "opaque-token",
+          email: "private@example.com",
+        }),
+      }),
+    ).rejects.toThrow("redirect:/bg/topics/care-checks?authIntent=follow");
+    expect(mocks.getPublicTopicAggregationPage).not.toHaveBeenCalled();
+
+    await expect(
+      generateMetadata({
+        params: Promise.resolve({ slug: "care-checks" }),
+      }),
+    ).resolves.toMatchObject({
+      alternates: { canonical: "/bg/topics/care-checks" },
+      openGraph: { locale: "bg", url: "/bg/topics/care-checks" },
     });
   });
 });

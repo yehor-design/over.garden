@@ -5,6 +5,12 @@ import {
   INTERFACE_LOCALE_COOKIE_NAME,
   INTERFACE_LOCALE_REQUEST_HEADER,
 } from "@/lib/interface-localization";
+import {
+  INTERFACE_MARKET_COOKIE_NAME,
+  INTERFACE_MARKET_REQUEST_HEADER,
+  type InterfaceMarket,
+} from "@/lib/interface-market";
+import { INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER } from "@/lib/localization/localization-visual-fixture";
 import { APP_ROUTE_CACHE_CONTROL, config, proxy } from "./proxy";
 
 const mocks = vi.hoisted(() => ({
@@ -55,6 +61,10 @@ async function responseFor(
       method: init?.method,
     }),
   );
+}
+
+function interfaceCookies(market: InterfaceMarket, locale: "uk" | "bg" | "ru") {
+  return `${INTERFACE_MARKET_COOKIE_NAME}=${market}; ${INTERFACE_LOCALE_COOKIE_NAME}=${locale}`;
 }
 
 describe("app route cache guardrail", () => {
@@ -207,6 +217,35 @@ describe("app route cache guardrail", () => {
     expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(3);
   });
 
+  it("keeps unprefixed Bulgaria passport tombstones in locale-only POST mode without copying route identity", async () => {
+    const objectId = "00000000-0000-4000-8000-000000000199";
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: objectId,
+    });
+
+    const response = await responseFor(
+      `/lineage/objects/${objectId}?engagement=liked&token=opaque-passport-token`,
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+        "x-vercel-ip-country": "BG",
+      },
+    );
+    const html = await response.text();
+
+    expect(response.status).toBe(410);
+    expect(response.headers.get("Content-Language")).toBe("bg");
+    expect(html).toContain('data-interface-language-control="true"');
+    expect(html).toContain("/api/interface/locale");
+    expect(html).toContain("JSON.stringify({locale})");
+    expect(html).not.toContain(objectId);
+    expect(html).not.toContain("opaque-passport-token");
+    expect(html).not.toContain("engagement=liked");
+    expect(html).not.toContain("/bg/lineage/objects/");
+    expect(html).not.toContain("/ru/lineage/objects/");
+  });
+
   it("classifies generic HTTP document clients without intercepting RSC", async () => {
     const objectId = "00000000-0000-4000-8000-000000000102";
     mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
@@ -253,10 +292,13 @@ describe("app route cache guardrail", () => {
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
     });
-    const privateEntry = await responseFor("/bg/journal/private-entry", {
-      accept: "text/html",
-      "sec-fetch-dest": "document",
-    });
+    const privateEntry = await responseFor(
+      "/bg/journal/private-entry?engagement=commented&token=opaque-journal-token",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
 
     mocks.getPublicJournalEntryLifecycleLookup.mockResolvedValueOnce({
       status: "active",
@@ -275,7 +317,15 @@ describe("app route cache guardrail", () => {
     expect(await gone.text()).toContain("Запис видалено");
     expect(privateEntry.status).toBe(404);
     expect(privateEntry.headers.get("Content-Language")).toBe("bg");
-    expect(await privateEntry.text()).toContain("Записът не е намерен");
+    const privateEntryHtml = await privateEntry.text();
+    expect(privateEntryHtml).toContain("Записът не е намерен");
+    expect(privateEntryHtml).toContain(
+      'href="/bg/journal/private-entry?engagement=commented"',
+    );
+    expect(privateEntryHtml).toContain(
+      'href="/ru/journal/private-entry?engagement=commented"',
+    );
+    expect(privateEntryHtml).not.toContain("opaque-journal-token");
     expect(active.status).toBe(200);
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicJournalEntryLifecycleLookup).toHaveBeenCalledWith(
@@ -287,11 +337,25 @@ describe("app route cache guardrail", () => {
     mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
       status: "gone",
     });
-    const gone = await responseFor("/@former_garden", {
-      accept: "text/html",
-      "accept-language": "bg-BG,bg;q=0.9",
-      "sec-fetch-dest": "document",
+    const gone = await responseFor(
+      "/bg/@former_garden?profileAction=reported&token=opaque-profile-token",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+
+    mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
+      status: "gone",
     });
+    const canonicalUkrainianGone = await responseFor(
+      "/@former_ua_garden?profileAction=reported&token=opaque-root-token",
+      {
+        accept: "text/html",
+        cookie: interfaceCookies("ukraine", "uk"),
+        "sec-fetch-dest": "document",
+      },
+    );
 
     mocks.getPublicProfileLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
@@ -320,8 +384,29 @@ describe("app route cache guardrail", () => {
     expect(gone.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
     const goneHtml = await gone.text();
     expect(goneHtml).toContain("Профилът вече не е достъпен");
-    expect(goneHtml).not.toContain("former_garden");
+    expect(goneHtml).toContain(
+      'href="/bg/@former_garden?profileAction=reported"',
+    );
+    expect(goneHtml).toContain(
+      'href="/ru/@former_garden?profileAction=reported"',
+    );
+    expect(goneHtml).not.toContain("opaque-profile-token");
     expect(goneHtml).not.toContain("current_garden");
+    expect(canonicalUkrainianGone.status).toBe(410);
+    expect(canonicalUkrainianGone.headers.get("Location")).toBeNull();
+    expect(
+      canonicalUkrainianGone.headers.get("x-middleware-rewrite"),
+    ).toBeNull();
+    expect(canonicalUkrainianGone.headers.get("Content-Language")).toBe("uk");
+    expect(canonicalUkrainianGone.headers.get("X-Robots-Tag")).toBe(
+      "noindex, nofollow",
+    );
+    const canonicalUkrainianGoneHtml = await canonicalUkrainianGone.text();
+    expect(canonicalUkrainianGoneHtml).toContain("Профіль більше недоступний");
+    expect(canonicalUkrainianGoneHtml).not.toContain("opaque-root-token");
+    expect(canonicalUkrainianGoneHtml).not.toContain(
+      "data-interface-language-control",
+    );
     expect(unavailable.status).toBe(404);
     expect(unavailable.headers.get("Content-Language")).toBe("bg");
     expect(unavailable.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
@@ -330,6 +415,10 @@ describe("app route cache guardrail", () => {
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
       "former_garden",
+      null,
+    );
+    expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
+      "former_ua_garden",
       null,
     );
     expect(mocks.getPublicProfileLifecycleLookup).toHaveBeenCalledWith(
@@ -345,7 +434,7 @@ describe("app route cache guardrail", () => {
       status: "not_found",
     });
 
-    const response = await responseFor("/@blocked_garden", {
+    const response = await responseFor("/bg/@blocked_garden", {
       accept: "text/html",
       cookie: "__Secure-overgarden.session_token=opaque-test-token",
       "sec-fetch-dest": "document",
@@ -363,10 +452,13 @@ describe("app route cache guardrail", () => {
     mocks.getPublicCommunityLifecycleLookup.mockResolvedValueOnce({
       status: "not_found",
     });
-    const unavailable = await responseFor("/bg/communities/missing-community", {
-      accept: "text/html",
-      "sec-fetch-dest": "document",
-    });
+    const unavailable = await responseFor(
+      "/bg/communities/missing-community?communityAction=joined&token=opaque-community-token",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
 
     mocks.getPublicCommunityLifecycleLookup.mockResolvedValueOnce({
       status: "found",
@@ -384,12 +476,61 @@ describe("app route cache guardrail", () => {
     expect(unavailable.status).toBe(404);
     expect(unavailable.headers.get("Content-Language")).toBe("bg");
     expect(unavailable.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
-    expect(await unavailable.text()).toContain("Общността не е намерена");
+    const unavailableHtml = await unavailable.text();
+    expect(unavailableHtml).toContain("Общността не е намерена");
+    expect(unavailableHtml).toContain(
+      'href="/bg/communities/missing-community?communityAction=joined"',
+    );
+    expect(unavailableHtml).toContain(
+      'href="/ru/communities/missing-community?communityAction=joined"',
+    );
+    expect(unavailableHtml).not.toContain("opaque-community-token");
     expect(active.status).toBe(200);
     expect(rsc.status).toBe(200);
     expect(mocks.getPublicCommunityLifecycleLookup).toHaveBeenCalledWith(
       "missing-community",
     );
+  });
+
+  it("canonicalizes unprefixed Bulgaria community, profile, and journal documents before lifecycle lookups", async () => {
+    mocks.getPublicCommunityLifecycleLookup.mockClear();
+    mocks.getPublicProfileLifecycleLookup.mockClear();
+    mocks.getPublicJournalEntryLifecycleLookup.mockClear();
+
+    const community = await responseFor("/communities/missing-community", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+      "x-vercel-ip-country": "BG",
+    });
+    const profile = await responseFor("/@missing_garden", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+      "x-vercel-ip-country": "BG",
+    });
+    const journal = await responseFor(
+      "/journal/missing-entry?engagement=commented&token=opaque-token",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+        "x-vercel-ip-country": "BG",
+      },
+    );
+
+    expect(community.status).toBe(307);
+    expect(community.headers.get("Location")).toBe(
+      "https://over.garden/bg/communities/missing-community",
+    );
+    expect(profile.status).toBe(307);
+    expect(profile.headers.get("Location")).toBe(
+      "https://over.garden/bg/@missing_garden",
+    );
+    expect(journal.status).toBe(307);
+    expect(journal.headers.get("Location")).toBe(
+      "https://over.garden/bg/journal/missing-entry?engagement=commented",
+    );
+    expect(mocks.getPublicCommunityLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
   });
 
   it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", async () => {
@@ -411,6 +552,9 @@ describe("app route cache guardrail", () => {
     const nestedResponse = await responseFor(
       "/uk/blog/first-public-garden-log",
     );
+    const secretBearingLegacyResponse = await responseFor(
+      "/uk/auth/reset-password?token=opaque-reset-token&callbackURL=%2Fgarden",
+    );
 
     expect(rootResponse.status).toBe(308);
     expect(rootResponse.headers.get("Location")).toBe("https://over.garden/");
@@ -418,6 +562,18 @@ describe("app route cache guardrail", () => {
     expect(nestedResponse.headers.get("Location")).toBe(
       "https://over.garden/blog/first-public-garden-log",
     );
+    expect(secretBearingLegacyResponse.status).toBe(308);
+    expect(secretBearingLegacyResponse.headers.get("Location")).toBe(
+      "https://over.garden/auth/reset-password?token=opaque-reset-token&callbackURL=%2Fgarden",
+    );
+    expect(secretBearingLegacyResponse.headers.get("set-cookie")).not.toContain(
+      "opaque-reset-token",
+    );
+    expect(
+      secretBearingLegacyResponse.headers.get(
+        `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
+      ),
+    ).toBeNull();
     expect(rootResponse.headers.get("Cache-Control")).toBe(
       APP_ROUTE_CACHE_CONTROL,
     );
@@ -449,15 +605,15 @@ describe("app route cache guardrail", () => {
 
     expect(publicResponse.status).toBe(200);
     expect(publicResponse.headers.get("Content-Language")).toBe("bg");
+    expect(setCookie).toContain(`${INTERFACE_MARKET_COOKIE_NAME}=bulgaria`);
     expect(setCookie).toContain(`${INTERFACE_LOCALE_COOKIE_NAME}=bg`);
     expect(setCookie).toMatch(/HttpOnly/i);
     expect(setCookie).toMatch(/SameSite=lax/i);
     expect(setCookie).not.toMatch(/journal|invite|email|location|token/i);
 
     const gardenResponse = await responseFor("/garden", {
-      cookie: String(setCookie).split(";", 1)[0],
+      cookie: interfaceCookies("bulgaria", "bg"),
       "accept-language": "uk;q=1",
-      "x-vercel-ip-country": "UA",
     });
 
     expect(gardenResponse.status).toBe(200);
@@ -467,6 +623,20 @@ describe("app route cache guardrail", () => {
         `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
       ),
     ).toBe("bg");
+    expect(
+      gardenResponse.headers.get(
+        `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
+      ),
+    ).toBe("bulgaria");
+
+    const uaGardenResponse = await responseFor("/garden", {
+      cookie: interfaceCookies("bulgaria", "bg"),
+      "x-vercel-ip-country": "UA",
+    });
+    expect(uaGardenResponse.headers.get("Content-Language")).toBe("uk");
+    expect(uaGardenResponse.headers.get("set-cookie")).toContain(
+      `${INTERFACE_MARKET_COOKIE_NAME}=ukraine`,
+    );
   });
 
   it("lets a localized route override a previous preference", async () => {
@@ -502,7 +672,7 @@ describe("app route cache guardrail", () => {
     const mutation = await responseFor(
       "/privacy",
       {
-        cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+        cookie: interfaceCookies("bulgaria", "bg"),
         accept: "text/html",
       },
       { method: "POST" },
@@ -510,8 +680,17 @@ describe("app route cache guardrail", () => {
     const apiRequest = await responseFor("/api/garden/entries", {
       "x-vercel-ip-country": "BG",
     });
+    const localePreferenceApi = await responseFor(
+      "/api/interface/locale",
+      {
+        "content-type": "application/json",
+        origin: "https://over.garden",
+        "x-vercel-ip-country": "BG",
+      },
+      { method: "POST" },
+    );
     const rscRequest = await responseFor("/privacy", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+      cookie: interfaceCookies("bulgaria", "bg"),
       rsc: "1",
       accept: "text/x-component",
     });
@@ -524,16 +703,119 @@ describe("app route cache guardrail", () => {
       { method: "POST" },
     );
 
-    for (const response of [mutation, apiRequest, rscRequest, serverAction]) {
+    for (const response of [
+      mutation,
+      apiRequest,
+      localePreferenceApi,
+      rscRequest,
+      serverAction,
+    ]) {
       expect(response.status).toBe(200);
       expect(response.headers.get("Location")).toBeNull();
       expect(response.headers.get("set-cookie")).toBeNull();
     }
     expect(rscRequest.headers.get("Content-Language")).toBe("bg");
     expect(serverAction.headers.get("Content-Language")).toBe("ru");
+    expect(
+      localePreferenceApi.headers.get(
+        `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
+      ),
+    ).toBe("bulgaria");
   });
 
-  it("honors a valid preference at the root and ignores invalid cookie values", async () => {
+  it("overwrites caller-supplied internal market and locale headers", async () => {
+    const response = await responseFor(
+      "/api/interface/locale",
+      {
+        "content-type": "application/json",
+        origin: "https://over.garden",
+        "x-vercel-ip-country": "BG",
+        [INTERFACE_MARKET_REQUEST_HEADER]: "ukraine",
+        [INTERFACE_LOCALE_REQUEST_HEADER]: "uk",
+      },
+      { method: "POST" },
+    );
+
+    expect(
+      response.headers.get(
+        `x-middleware-request-${INTERFACE_MARKET_REQUEST_HEADER}`,
+      ),
+    ).toBe("bulgaria");
+    expect(
+      response.headers.get(
+        `x-middleware-request-${INTERFACE_LOCALE_REQUEST_HEADER}`,
+      ),
+    ).toBe("bg");
+  });
+
+  it("sets the global-error probe header only for the exact gated visual scenario and overwrites spoofed input", async () => {
+    const internalResponseHeader = `x-middleware-request-${INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER}`;
+    const spoofed = await responseFor("/garden", {
+      [INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER]: "1",
+    });
+
+    stubLocalVisualFixtureEnvironment();
+    const exact = await responseFor("/garden?visualLocaleState=global-error", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const duplicate = await responseFor(
+      "/garden?visualLocaleState=global-error&visualLocaleState=global-error",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+    const extraQuery = await responseFor(
+      "/garden?visualLocaleState=global-error&returnTo=%2Fgarden%2Fprivate",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+    const encodedValue = await responseFor(
+      "/garden?visualLocaleState=%67lobal-error",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+    const fragment = await responseFor(
+      "/garden?visualLocaleState=global-error#main-content",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+    const wrongPath = await responseFor(
+      "/privacy?visualLocaleState=global-error",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+      },
+    );
+    vi.stubEnv("VERCEL_ENV", "production");
+    const production = await responseFor(
+      "/garden?visualLocaleState=global-error",
+      {
+        accept: "text/html",
+        "sec-fetch-dest": "document",
+        [INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER]: "1",
+      },
+    );
+    vi.unstubAllEnvs();
+
+    expect(spoofed.headers.get(internalResponseHeader)).toBeNull();
+    expect(exact.headers.get(internalResponseHeader)).toBe("1");
+    expect(duplicate.headers.get(internalResponseHeader)).toBeNull();
+    expect(extraQuery.headers.get(internalResponseHeader)).toBeNull();
+    expect(encodedValue.headers.get(internalResponseHeader)).toBe("1");
+    expect(fragment.headers.get(internalResponseHeader)).toBeNull();
+    expect(wrongPath.headers.get(internalResponseHeader)).toBeNull();
+    expect(production.headers.get(internalResponseHeader)).toBeNull();
+  });
+
+  it("bounds root preferences to the resolved market and ignores Accept-Language", async () => {
     const persistedRussian = await responseFor("/", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
       "x-vercel-ip-country": "BG",
@@ -546,32 +828,48 @@ describe("app route cache guardrail", () => {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=en`,
       "accept-language": "ru;q=1",
     });
+    const persistedBulgaria = await responseFor("/", {
+      cookie: interfaceCookies("bulgaria", "ru"),
+    });
 
     expect(persistedRussian.status).toBe(307);
     expect(persistedRussian.headers.get("Location")).toBe(
       "https://over.garden/ru",
     );
-    expect(persistedUkrainian.status).toBe(200);
-    expect(persistedUkrainian.headers.get("Content-Language")).toBe("uk");
-    expect(invalidPreference.status).toBe(307);
-    expect(invalidPreference.headers.get("Location")).toBe(
+    expect(persistedUkrainian.status).toBe(307);
+    expect(persistedUkrainian.headers.get("Location")).toBe(
+      "https://over.garden/bg",
+    );
+    expect(persistedUkrainian.headers.get("Content-Language")).toBe("bg");
+    expect(invalidPreference.status).toBe(200);
+    expect(invalidPreference.headers.get("Location")).toBeNull();
+    expect(invalidPreference.headers.get("Content-Language")).toBe("uk");
+    expect(persistedBulgaria.status).toBe(307);
+    expect(persistedBulgaria.headers.get("Location")).toBe(
       "https://over.garden/ru",
     );
   });
 
   it("keeps already-localized unprefixed public routes in the persisted locale", async () => {
     const privacyResponse = await responseFor("/privacy", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+      cookie: interfaceCookies("bulgaria", "bg"),
     });
     const blogResponse = await responseFor("/blog/field-note", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
+      cookie: interfaceCookies("bulgaria", "ru"),
     });
     const ugcResponse = await responseFor("/journal/field-note", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+      cookie: interfaceCookies("bulgaria", "bg"),
     });
-    const catalogResponse = await responseFor("/objects", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=ru`,
-    });
+    const catalogResponse = await responseFor(
+      "/objects?kind=plant&token=opaque",
+      {
+        cookie: interfaceCookies("bulgaria", "ru"),
+      },
+    );
+    const topicResponse = await responseFor(
+      "/topics/care-checks?authIntent=follow&token=opaque",
+      { cookie: interfaceCookies("bulgaria", "bg") },
+    );
 
     expect(privacyResponse.status).toBe(307);
     expect(privacyResponse.headers.get("Location")).toBe(
@@ -587,13 +885,16 @@ describe("app route cache guardrail", () => {
     );
     expect(catalogResponse.status).toBe(307);
     expect(catalogResponse.headers.get("Location")).toBe(
-      "https://over.garden/ru/objects",
+      "https://over.garden/ru/objects?kind=plant",
+    );
+    expect(topicResponse.headers.get("Location")).toBe(
+      "https://over.garden/bg/topics/care-checks?authIntent=follow",
     );
   });
 
   it("canonicalizes a supported but non-canonical cookie value", async () => {
     const response = await responseFor("/garden", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=BG`,
+      cookie: `${INTERFACE_MARKET_COOKIE_NAME}=bulgaria; ${INTERFACE_LOCALE_COOKIE_NAME}=BG`,
     });
 
     expect(response.headers.get("Content-Language")).toBe("bg");
@@ -607,22 +908,55 @@ describe("app route cache guardrail", () => {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
     });
     const bulgarianProfile = await responseFor("/@green_thumb", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+      cookie: interfaceCookies("bulgaria", "bg"),
     });
     const encodedUkrainianProfile = await responseFor("/%40green_thumb", {
       cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk`,
     });
     const encodedBulgarianProfile = await responseFor("/%40green_thumb", {
-      cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=bg`,
+      cookie: interfaceCookies("bulgaria", "bg"),
     });
     const ukrainianProfileHead = await responseFor(
       "/@green_thumb",
       { cookie: `${INTERFACE_LOCALE_COOKIE_NAME}=uk` },
       { method: "HEAD" },
     );
-    const internalUkrainianRewrite = await responseFor("/uk/@green_thumb", {
-      "x-overgarden-internal-profile-rewrite": "1",
+    const spoofedInternalRewriteHeader = await responseFor("/uk/@green_thumb", {
+      "x-overgarden-internal-profile-rewrite": "v1",
+      "x-overgarden-internal-profile-rewrite-signature": "forged",
     });
+    const nonAsciiForgedInternalRewriteHeader = await responseFor(
+      "/uk/@green_thumb",
+      {
+        "x-overgarden-internal-profile-rewrite": "v1",
+        "x-overgarden-internal-profile-rewrite-signature": "é".repeat(43),
+      },
+    );
+    const internalRewriteMarker = ukrainianProfile.headers.get(
+      "x-middleware-request-x-overgarden-internal-profile-rewrite",
+    );
+    const internalRewriteSignature = ukrainianProfile.headers.get(
+      "x-middleware-request-x-overgarden-internal-profile-rewrite-signature",
+    );
+    const trustedInternalRewrite = await responseFor("/uk/@green_thumb", {
+      "x-overgarden-internal-profile-rewrite": internalRewriteMarker!,
+      "x-overgarden-internal-profile-rewrite-signature":
+        internalRewriteSignature!,
+    });
+    const replayedOnDifferentPath = await responseFor("/uk/@other_thumb", {
+      "x-overgarden-internal-profile-rewrite": internalRewriteMarker!,
+      "x-overgarden-internal-profile-rewrite-signature":
+        internalRewriteSignature!,
+    });
+    const replayedWithDifferentMethod = await responseFor(
+      "/uk/@green_thumb",
+      {
+        "x-overgarden-internal-profile-rewrite": internalRewriteMarker!,
+        "x-overgarden-internal-profile-rewrite-signature":
+          internalRewriteSignature!,
+      },
+      { method: "HEAD" },
+    );
 
     expect(ukrainianProfile.status).toBe(200);
     expect(ukrainianProfile.headers.get("x-middleware-rewrite")).toBe(
@@ -645,13 +979,57 @@ describe("app route cache guardrail", () => {
     expect(ukrainianProfileHead.headers.get("x-middleware-rewrite")).toBe(
       "https://over.garden/uk/@green_thumb",
     );
-    expect(internalUkrainianRewrite.status).toBe(200);
-    expect(internalUkrainianRewrite.headers.get("Location")).toBeNull();
+    expect(internalRewriteMarker).toBe("v1");
+    expect(internalRewriteSignature).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(trustedInternalRewrite.status).toBe(200);
+    expect(trustedInternalRewrite.headers.get("Location")).toBeNull();
+    expect(
+      trustedInternalRewrite.headers.get(
+        "x-middleware-request-x-overgarden-internal-profile-rewrite",
+      ),
+    ).toBeNull();
+    expect(
+      trustedInternalRewrite.headers.get(
+        "x-middleware-request-x-overgarden-internal-profile-rewrite-signature",
+      ),
+    ).toBeNull();
+    expect(spoofedInternalRewriteHeader.status).toBe(308);
+    expect(spoofedInternalRewriteHeader.headers.get("Location")).toBe(
+      "https://over.garden/@green_thumb",
+    );
+    expect(nonAsciiForgedInternalRewriteHeader.status).toBe(308);
+    expect(nonAsciiForgedInternalRewriteHeader.headers.get("Location")).toBe(
+      "https://over.garden/@green_thumb",
+    );
+    expect(replayedOnDifferentPath.status).toBe(308);
+    expect(replayedOnDifferentPath.headers.get("Location")).toBe(
+      "https://over.garden/@other_thumb",
+    );
+    expect(replayedWithDifferentMethod.status).toBe(308);
+    expect(replayedWithDifferentMethod.headers.get("Location")).toBe(
+      "https://over.garden/@green_thumb",
+    );
   });
 });
 
 function stubLocalWalkingSkeletonEnvironment() {
   vi.stubEnv("WALKING_SKELETON_ENABLED", "true");
+  vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+  vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+  vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+  vi.stubEnv(
+    "DATABASE_URL",
+    "postgresql://overgarden:test@localhost:5432/overgarden",
+  );
+  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+  vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+  vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
+  vi.stubEnv("VERCEL", "");
+  vi.stubEnv("VERCEL_ENV", "development");
+}
+
+function stubLocalVisualFixtureEnvironment() {
   vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
   vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
   vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");

@@ -196,7 +196,7 @@
 }
 
 .site-shell-header-inner {
-  height: 56px;
+  min-height: 56px;
   padding-inline: 12px;
 }
 

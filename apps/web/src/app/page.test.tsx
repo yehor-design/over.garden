@@ -75,7 +75,7 @@ describe("/", () => {
     vi.unstubAllEnvs();
   });
 
-  it("selects an explicit localized root from Accept-Language", () => {
+  it("keeps Accept-Language advisory and requires a market signal for root routing", () => {
     expect(
       selectPublicLocaleFromAcceptLanguage("bg-BG,bg;q=0.9,uk;q=0.4"),
     ).toBe("bg");
@@ -83,7 +83,7 @@ describe("/", () => {
       "ru",
     );
     expect(selectPublicLocaleFromAcceptLanguage("en-US,en;q=0.9")).toBe("uk");
-    expect(getRootLocaleRedirectPath("bg-BG,bg;q=0.9")).toBe("/bg");
+    expect(getRootLocaleRedirectPath("bg-BG,bg;q=0.9")).toBe("/");
     expect(getRootLocaleRedirectPath("ru;q=0.9,uk;q=0.8", "UA")).toBe("/");
     expect(getRootLocaleRedirectPath("ru;q=0.9,uk;q=0.8", "BG")).toBe("/bg");
     expect(

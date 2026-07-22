@@ -52,6 +52,7 @@ venv/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+.playwright-cli/
 .idea/
 .vscode/
 .cursor/

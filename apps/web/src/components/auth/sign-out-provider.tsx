@@ -20,6 +20,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { authClient } from "@/lib/auth-client";
 import {
   AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
@@ -97,6 +98,11 @@ export function SignOutProvider({
   const copy = getTrustSurfaceCopy(locale).signOut;
   const [state, setState] = useState<SignOutState>({ phase: "idle" });
   const [authoritativeTransition, setAuthoritativeTransition] = useState(false);
+  useInterfaceLocaleChangeFormState({
+    id: "sign-out-lifecycle",
+    dirty: false,
+    pending: state.phase !== "idle" || authoritativeTransition,
+  });
   const operationLockedRef = useRef(false);
   const ownerUserIdRef = useRef<string | null>(null);
   const pauseHandleRef = useRef<OwnerOfflineActivityPauseHandle | null>(null);

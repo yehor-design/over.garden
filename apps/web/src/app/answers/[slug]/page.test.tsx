@@ -47,8 +47,9 @@ describe("/answers/[slug]", () => {
     expect(html).toContain('"@type":"FAQPage"');
     expect(html).toContain('"@type":"WebPage"');
     expect(html).toContain('"inLanguage":"ru"');
-    expect(html).toContain("/bg/answers/why-are-tomato-leaves-yellow");
+    expect(html).not.toContain("/bg/answers/why-are-tomato-leaves-yellow");
     expect(html).not.toContain("/uk/answers/why-are-tomato-leaves-yellow");
+    expect(html).not.toContain("data-interface-language-control");
     expect(html).toContain("/ru/knowledge");
     expect(html).not.toContain("/garden");
     expect(html).not.toContain("<form");

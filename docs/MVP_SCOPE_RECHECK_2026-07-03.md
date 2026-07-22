@@ -1,7 +1,7 @@
 # MVP Scope Recheck 2026-07-03
 
 Status: current scope reconciliation note
-Date: 2026-07-03
+Date: 2026-07-03; localization clarification added 2026-07-22
 Owner: founder/operator
 
 ## Purpose
@@ -29,7 +29,14 @@ User job and trust concern: gardeners need a durable, low-friction growing memor
 - OVE-53 field-run gate is closed from founder-provided redacted evidence: 8 invited, 8 started, 8 created a first entry, and 6 created a same-object follow-up. The decision is to continue with the same segment set.
 - The segment set remains: micro/one-pot growers, Gen Z and young beginners, burned-out IT/knowledge workers/digital exiles, practical beginners with land/new dacha owners, urban balcony/patio/small-space gardeners, plant collectors and rare plant people, food self-reliance beginners, homestead/smallholding aspirants, and experienced gardeners/farmers/animal keepers/DIY practitioners.
 - Lineage/social graph is MVP now, not post-MVP. The scope includes provenance edges, chains, claim inbox, invitations, public-safe handles/profiles, cross-user mention/typeahead, lineage readback, follow, ask-the-lineage, followed feed, and bounded notifications.
-- Localization is MVP: `/uk`, `/bg`, and `/ru` routes, language switching, hreflang, and safe root routing.
+- Localization is MVP under the OVE-205 market-first contract. Ukraine is
+  Ukrainian-only, uses unprefixed canonical public URLs, and has no language
+  control; `/uk` is a legacy redirect only. Bulgaria defaults to Bulgarian,
+  supports Bulgarian/Russian on explicit `/bg` and `/ru` public routes, and
+  has exactly one shared language control on every user-facing page/state.
+  Canonical unprefixed product/auth/garden/operator routes retain their URLs
+  and persist a Bulgaria-market `bg|ru` choice through a narrow POST boundary.
+  UGC is never translated.
 - Self-serve auth is MVP. Email auth uses Resend. Google and Facebook auth are already part of the active auth surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 - Full M:N journaling is MVP: a space-level entry can mention multiple objects and appear in the relevant timelines without duplicated entries.
 - Composer friction work is MVP now: draft persistence, draft-through-auth, photo-start, title prefill, and voice-to-text.
@@ -37,6 +44,31 @@ User job and trust concern: gardeners need a durable, low-friction growing memor
 - Retention policy for MVP: private quarantine originals are deleted after successful processing or after 7 failed-processing days; public derivatives remain while active and are removed from public surfaces after archive/erasure; operator audit logs and erasure evidence are retained for 1 year; analytics events are retained for up to 13 months; operator evidence must not include private journal text, precise location, emails, IP/user-agent, media keys, or raw tokens.
 - Catalog trust UX is MVP: curated/source-backed/candidate/user-added/quarantined/rejected states, clear ambiguous-name handling, alias-collision handling, hidden quarantined rows, and visible source caveats where needed.
 - Monetization is not MVP. The first launch must prove usefulness and public behavior before payment or business-model surfaces are built.
+
+## 2026-07-22 Localization Clarification
+
+This dated clarification supersedes the older shorthand that described three
+equivalent canonical language folders or a universal language switcher. The
+interface market is resolved before locale: a stale locale cannot move a
+visitor between Ukraine and Bulgaria, Ukraine cannot render Russian, and the
+Bulgaria default remains `bg` even when `Accept-Language` prefers Russian.
+
+OVE-205 owns the market resolver, one-control/zero-control invariant, safe
+public target building, unprefixed preference mutation, dirty/in-flight
+locale-change coordination, and fail-closed coverage of routes, rendered
+states, and application lifecycle HTML. The typed `uk`/`bg`/`ru` copy
+contracts shipped by OVE-164 through OVE-171 remain regression inputs.
+
+The founder-approved 2026-07-22 clarification assigns final real-product
+browser proof to the slice that implements each downstream surface while
+preserving the existing dependency order. OVE-202 owns Editor.js, IME,
+serialization, inline-photo, conflict, and offline transition proof; OVE-206
+owns pointer/touch/keyboard reorder proof; OVE-207 owns automatic,
+explicit-inline, and separate-cover proof plus the combined ten-inline-plus-one
+cover state. Each slice must extend the shared coordinator and replace only its
+own schema-v3 ownership-ledger entry with real browser scenarios before Done.
+Those entries remain visible but do not block OVE-205, and OVE-205 must not
+claim that the downstream UI was exercised.
 
 ## Linear Coverage
 

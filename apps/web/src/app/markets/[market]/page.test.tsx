@@ -19,6 +19,7 @@ describe("/markets/[market]", () => {
     expect(html).toContain("Почати приватний запис");
     expect(html).not.toContain("/ru/markets/ukraine");
     expect(html).not.toContain("/bg/markets/ukraine");
+    expect(html).not.toContain("data-interface-language-control");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
     expect(html).not.toContain("<form");
@@ -37,7 +38,8 @@ describe("/markets/[market]", () => {
     expect(html).toContain("OverGarden за градинари в България");
     expect(html).toContain("градини, дворове, оранжерии, тераси");
     expect(html).not.toContain("/uk/markets/bulgaria");
-    expect(html).toContain("/ru/markets/bulgaria");
+    expect(html).not.toContain("/ru/markets/bulgaria");
+    expect(html).not.toContain("data-interface-language-control");
     expect(html).toContain("/garden");
     expect(html).not.toContain("OVE-117");
     expect(html).not.toContain("<form");

@@ -24,6 +24,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import type { PlantObjectKind } from "@/db/schema";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
 import {
@@ -157,6 +158,7 @@ export function FirstEntryComposer({
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
+  const localeMutationCountRef = useRef(0);
   const [clientMutationId, setClientMutationId] = useState(
     visualScenario?.clientMutationId ?? initialClientMutationId,
   );
@@ -225,6 +227,26 @@ export function FirstEntryComposer({
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [persistenceFrozen, setPersistenceFrozen] = useState(false);
+  const [localeMutationPending, setLocaleMutationPending] = useState(false);
+
+  useInterfaceLocaleChangeFormState({
+    id: "first-entry-composer-mutation",
+    dirty: false,
+    pending: localeMutationPending,
+  });
+
+  function beginLocaleMutation() {
+    localeMutationCountRef.current += 1;
+    setLocaleMutationPending(true);
+  }
+
+  function endLocaleMutation() {
+    localeMutationCountRef.current = Math.max(
+      0,
+      localeMutationCountRef.current - 1,
+    );
+    if (localeMutationCountRef.current === 0) setLocaleMutationPending(false);
+  }
 
   useEffect(() => {
     if (visualScenario) return;
@@ -509,60 +531,65 @@ export function FirstEntryComposer({
     event.preventDefault();
     if (isComposerPersistenceFrozen()) return;
 
-    if (visualScenario) {
-      await handleVisualScenarioSubmit(visualScenario);
-      return;
-    }
-
-    if (photoError) {
-      setSubmitState("failed");
-      setMessage(photoError);
-      return;
-    }
-
-    let payload: OfflineFirstPlantEntryPayload;
+    beginLocaleMutation();
     try {
-      payload = await buildPayload();
-    } catch {
-      setSubmitState("failed");
-      setMessage(copy.composer.photo.readError);
-      return;
-    }
-    if (isComposerPersistenceFrozen()) return;
+      if (visualScenario) {
+        await handleVisualScenarioSubmit(visualScenario);
+        return;
+      }
 
-    if (!isOnline) {
+      if (photoError) {
+        setSubmitState("failed");
+        setMessage(photoError);
+        return;
+      }
+
+      let payload: OfflineFirstPlantEntryPayload;
       try {
-        await enqueuePayload(payload);
+        payload = await buildPayload();
       } catch {
         setSubmitState("failed");
-        setMessage(copy.composer.messages.offlineStorageUnavailable);
+        setMessage(copy.composer.photo.readError);
+        return;
       }
-      return;
-    }
-
-    setSubmitState("syncing");
-    setMessage(copy.composer.messages.savingPrivate);
-
-    try {
-      const result = await submitOnlineJournalEntryPayload(payload, {
-        ownerUserId,
-        idempotencyKey: clientMutationId,
-      });
       if (isComposerPersistenceFrozen()) return;
-      draftPersistencePausedRef.current = true;
-      await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
-        () => undefined,
-      );
-      setSubmitState("synced");
-      setMessage(copy.composer.messages.saved);
-      void trackMetaMarketingEvent("first_entry_saved", {
-        browserPixel: false,
-      });
-      router.push(result.readbackUrl);
-    } catch (error) {
-      if (await resumeAuthentication(error, payload)) return;
-      setSubmitState("failed");
-      setMessage(localizedJournalSaveErrorMessage(locale, error));
+
+      if (!isOnline) {
+        try {
+          await enqueuePayload(payload);
+        } catch {
+          setSubmitState("failed");
+          setMessage(copy.composer.messages.offlineStorageUnavailable);
+        }
+        return;
+      }
+
+      setSubmitState("syncing");
+      setMessage(copy.composer.messages.savingPrivate);
+
+      try {
+        const result = await submitOnlineJournalEntryPayload(payload, {
+          ownerUserId,
+          idempotencyKey: clientMutationId,
+        });
+        if (isComposerPersistenceFrozen()) return;
+        draftPersistencePausedRef.current = true;
+        await deleteOfflineDraft(ownerUserId, FIRST_ENTRY_DRAFT_ID).catch(
+          () => undefined,
+        );
+        setSubmitState("synced");
+        setMessage(copy.composer.messages.saved);
+        void trackMetaMarketingEvent("first_entry_saved", {
+          browserPixel: false,
+        });
+        router.push(result.readbackUrl);
+      } catch (error) {
+        if (await resumeAuthentication(error, payload)) return;
+        setSubmitState("failed");
+        setMessage(localizedJournalSaveErrorMessage(locale, error));
+      }
+    } finally {
+      endLocaleMutation();
     }
   }
 
@@ -657,6 +684,7 @@ export function FirstEntryComposer({
 
   async function handleCancel() {
     if (isComposerPersistenceFrozen()) return;
+    beginLocaleMutation();
     try {
       const payload = await buildPayload();
       if (isComposerPersistenceFrozen()) return;
@@ -678,6 +706,8 @@ export function FirstEntryComposer({
       draftPersistencePausedRef.current = false;
       setSubmitState("failed");
       setMessage(copy.composer.messages.preserveDraftError);
+    } finally {
+      endLocaleMutation();
     }
   }
 
@@ -704,6 +734,7 @@ export function FirstEntryComposer({
   }
 
   async function handleSync(mutation: OfflineMutation) {
+    beginLocaleMutation();
     setSubmitState("syncing");
     setMessage(copy.composer.messages.sending);
 
@@ -728,6 +759,8 @@ export function FirstEntryComposer({
       setSubmitState("failed");
       setMessage(localizedJournalSaveErrorMessage(locale, error));
       await refreshQueue();
+    } finally {
+      endLocaleMutation();
     }
   }
 

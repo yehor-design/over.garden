@@ -4,25 +4,35 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   pathname: "/",
+  localeControlFallback: null as React.ReactNode,
 }));
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mocks.pathname,
 }));
 vi.mock("@/components/auth/session-convergence-boundary", () => ({
-  SessionConvergenceBoundary: ({ children }: { children: React.ReactNode }) =>
+  SessionConvergenceBoundary: ({
     children,
+    localeControlFallback,
+  }: {
+    children: React.ReactNode;
+    localeControlFallback?: React.ReactNode;
+  }) => {
+    mocks.localeControlFallback = localeControlFallback ?? null;
+    return children;
+  },
 }));
 
 describe("production site shell", () => {
   beforeEach(() => {
     mocks.pathname = "/";
+    mocks.localeControlFallback = null;
   });
 
   it("renders the guest desktop and mobile information architecture", async () => {
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" isAuthenticated={false}>
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
         <article>Route content</article>
       </SiteShell>,
     );
@@ -34,6 +44,7 @@ describe("production site shell", () => {
     expect(html).toContain("site-shell-brand");
     expect(html).toContain('data-site-shell-region="sidebar"');
     expect(html).toContain('data-site-shell-region="content"');
+    expect(html).toContain('data-interface-locale-fragment-safe="true"');
     expect(html).toContain('data-site-shell-region="context"');
     expect(html).toContain('data-site-shell-region="mobile-navigation"');
     expect(html).toContain('aria-label="Основна мобільна навігація"');
@@ -55,13 +66,14 @@ describe("production site shell", () => {
     expect(html).not.toContain(">Моє<");
     expect(html).not.toMatch(/draftCount|owner_user_id|private-user/i);
     expect(html).not.toContain("data-sign-out-control");
+    expect(html).not.toContain("data-interface-language-control");
   });
 
   it("adds the complete Bulgarian My rail without serializing account data", async () => {
     mocks.pathname = "/garden";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="bg" isAuthenticated={true}>
+      <SiteShell locale="bg" market="bulgaria" isAuthenticated={true}>
         <article>Лично съдържание</article>
       </SiteShell>,
     );
@@ -82,6 +94,14 @@ describe("production site shell", () => {
     expect(html).toContain('aria-label="Нов запис"');
     expect(html).toContain('href="/bg"');
     expect(html).toContain('href="/bg/notifications"');
+    expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
+    const fallbackHtml = renderToStaticMarkup(
+      <>{mocks.localeControlFallback}</>,
+    );
+    expect(
+      fallbackHtml.match(/data-interface-language-control=/g),
+    ).toHaveLength(1);
+    expect(fallbackHtml).toContain('disabled=""');
     expect(html).not.toMatch(
       /private@example|private-user|private-session|owner_user_id/i,
     );
@@ -91,7 +111,7 @@ describe("production site shell", () => {
     mocks.pathname = "/admin";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" isAuthenticated={true}>
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={true}>
         <main>Admin control plane</main>
       </SiteShell>,
     );
@@ -109,7 +129,7 @@ describe("production site shell", () => {
     mocks.pathname = "/admin/denied";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" isAuthenticated={false}>
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
         <main>Denied boundary</main>
       </SiteShell>,
     );
@@ -123,7 +143,7 @@ describe("production site shell", () => {
     mocks.pathname = "/__visual-fixtures";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="uk" isAuthenticated={false}>
+      <SiteShell locale="uk" market="ukraine" isAuthenticated={false}>
         <main>Visual fixture scenarios</main>
       </SiteShell>,
     );
@@ -134,6 +154,23 @@ describe("production site shell", () => {
     expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
     expect(html).not.toContain("data-sign-out-control");
     expect(html).not.toContain("overgarden:session-convergence");
+  });
+
+  it("renders the compact Bulgaria control on guest denied and health boundaries", async () => {
+    const { SiteShell } = await import("./site-shell");
+    for (const pathname of ["/admin/denied", "/health"]) {
+      mocks.pathname = pathname;
+      const html = renderToStaticMarkup(
+        <SiteShell locale="ru" market="bulgaria" isAuthenticated={false}>
+          <main>Boundary</main>
+        </SiteShell>,
+      );
+
+      expect(html).toContain('data-site-shell="excluded"');
+      expect(html.match(/data-interface-language-control=/g)).toHaveLength(1);
+      expect(html).not.toContain("data-sign-out-control");
+      expect(html).not.toContain('data-site-shell-region="header"');
+    }
   });
 
   it("keeps privacy reachable from the mobile menu utilities", async () => {
@@ -181,7 +218,7 @@ describe("production site shell", () => {
     );
     expect(
       source.match(
-        /<SessionConvergenceBoundary locale=\{locale\}>[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s*>[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
       ),
     ).toHaveLength(2);
     expect(source).not.toMatch(

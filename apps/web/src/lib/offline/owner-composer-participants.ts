@@ -1,12 +1,12 @@
 "use client";
 
 /**
- * A prepared composer stays frozen until the sign-out coordinator explicitly
- * resumes it. Successful sign-out and approved discard intentionally keep the
- * handle active until the document is replaced so discarded React state cannot
- * recreate an IndexedDB draft.
+ * A prepared composer stays frozen until its owner-state transition explicitly
+ * resumes it. A committed transition intentionally keeps the handle active
+ * until the document is replaced so stale React state cannot recreate an
+ * IndexedDB draft.
  */
-export interface OwnerComposerPreparationHandle {
+export interface OwnerComposerTransitionPreparationHandle {
   isActive(): boolean;
   /**
    * Bind the durable owner-activity operation created after the initial flush.
@@ -15,6 +15,21 @@ export interface OwnerComposerPreparationHandle {
    */
   bindOfflineActivityScope(scope: OwnerComposerOfflineActivityScope): void;
   flushLatest(): Promise<void>;
+  resume(): Promise<void>;
+}
+
+/**
+ * Backwards-compatible OVE-204 name used by the sign-out convergence flow.
+ */
+export type OwnerComposerPreparationHandle =
+  OwnerComposerTransitionPreparationHandle;
+
+/** Payload-free document-wide preparation used by global shell transitions. */
+export interface AllOwnerComposerTransitionPreparationHandle {
+  isActive(): boolean;
+  flushLatest(): Promise<void>;
+  sealForDocumentReplacement(): Promise<void>;
+  isDocumentReplacementParticipantSetStable(): boolean;
   resume(): Promise<void>;
 }
 
@@ -30,9 +45,9 @@ export interface OwnerComposerPersistenceWriteContext {
 export interface OwnerComposerPersistenceController<TSnapshot> {
   /** Replace the immutable, complete snapshot that the next write must store. */
   updateSnapshot(snapshot: TSnapshot): number;
-  /** Persist the newest generation unless a sign-out preparation froze it. */
+  /** Persist the newest generation unless an owner transition froze it. */
   persistLatest(): Promise<void>;
-  /** True while one or more independent sign-out preparations own a freeze. */
+  /** True while one or more independent owner transitions own a freeze. */
   isFrozen(): boolean;
   /** Observe freeze transitions so every mutation control can be disabled. */
   subscribeFrozen(listener: (frozen: boolean) => void): () => void;
@@ -54,8 +69,9 @@ interface OwnerComposerControllerOptions<TSnapshot> {
   ): Promise<void>;
   /**
    * Autosave/page-suspension writes stop after another durable handoff (submit,
-   * queue, or cancel) takes ownership. Sign-out preparation always overrides
-   * this callback so it can never turn a required flush into a successful no-op.
+   * queue, or cancel) takes ownership. Owner-transition preparation always
+   * overrides this callback so a required flush cannot become a successful
+   * no-op.
    */
   shouldPersistAutomatically?(): boolean;
 }
@@ -70,6 +86,9 @@ const participantsByOwner = new Map<
   Set<RegisteredOwnerComposerParticipant>
 >();
 const activePreparationTokensByOwner = new Map<string, Set<symbol>>();
+const activeAllOwnerPreparationTokens = new Set<symbol>();
+const sealedDocumentReplacementTokens = new Set<symbol>();
+let allOwnerParticipantRevision = 0;
 const offlineActivityScopesByPreparationToken = new Map<
   symbol,
   OwnerComposerOfflineActivityScope
@@ -83,9 +102,9 @@ const offlineActivityScopesByPreparationToken = new Map<
  * A rejection is fail-closed: all freezes acquired by this call are released,
  * and the caller must not continue to inventory, purge, or sign out.
  */
-export async function prepareOwnerComposerParticipants(
+export async function prepareOwnerComposerTransitionParticipants(
   ownerUserId: string,
-): Promise<OwnerComposerPreparationHandle> {
+): Promise<OwnerComposerTransitionPreparationHandle> {
   const owner = requireOwnerUserId(ownerUserId);
   const token = Symbol("owner-composer-preparation");
   const activeTokens = activePreparationTokensByOwner.get(owner) ?? new Set();
@@ -181,6 +200,130 @@ export async function prepareOwnerComposerParticipants(
 }
 
 /**
+ * Prepare owner composers for OVE-204 sign-out/session convergence.
+ *
+ * This delegates to the generic owner-transition primitive so locale changes
+ * and sign-out retain exactly the same freeze, latest-generation, and retry
+ * semantics.
+ */
+export async function prepareOwnerComposerParticipants(
+  ownerUserId: string,
+): Promise<OwnerComposerPreparationHandle> {
+  return prepareOwnerComposerTransitionParticipants(ownerUserId);
+}
+
+/**
+ * Freeze and durably flush every composer currently mounted in this document,
+ * regardless of owner. A single shell registration can therefore protect
+ * account hydration races without receiving an owner id or any draft payload.
+ *
+ * The global token is inherited by composers and owner buckets mounted while a
+ * flush or destination request is in flight. `flushLatest` reaches a fixed
+ * point across those new participants. A failed preparation releases every
+ * freeze it acquired; a failed resume keeps the handle active for retry.
+ */
+export async function prepareAllOwnerComposerTransitionParticipants(): Promise<AllOwnerComposerTransitionPreparationHandle> {
+  const token = Symbol("all-owner-composer-transition-preparation");
+  activeAllOwnerPreparationTokens.add(token);
+  let active = true;
+  let sealedParticipantRevision: number | null = null;
+
+  const currentParticipants = () => [
+    ...new Set(
+      [...participantsByOwner.values()].flatMap((participants) => [
+        ...participants,
+      ]),
+    ),
+  ];
+  for (const participant of currentParticipants()) participant.freeze(token);
+
+  const deactivateToken = () => {
+    activeAllOwnerPreparationTokens.delete(token);
+    sealedDocumentReplacementTokens.delete(token);
+    sealedParticipantRevision = null;
+  };
+
+  const flushEveryCurrentParticipant = async () => {
+    const flushedParticipants = new Set<RegisteredOwnerComposerParticipant>();
+    while (true) {
+      const participants = currentParticipants().filter(
+        (participant) => !flushedParticipants.has(participant),
+      );
+      if (participants.length === 0) return;
+      for (const participant of participants) participant.freeze(token);
+      const results = await Promise.allSettled(
+        participants.map((participant) => participant.flushLatest(token)),
+      );
+      const failure = results.find(
+        (result): result is PromiseRejectedResult =>
+          result.status === "rejected",
+      );
+      if (failure) throw failure.reason;
+      for (const participant of participants) {
+        flushedParticipants.add(participant);
+      }
+    }
+  };
+
+  const resume = async () => {
+    if (!active) return;
+    const resumedParticipants = new Set<RegisteredOwnerComposerParticipant>();
+    while (true) {
+      const participants = currentParticipants().filter(
+        (participant) => !resumedParticipants.has(participant),
+      );
+      if (participants.length === 0) break;
+      await Promise.all(
+        participants.map((participant) => participant.resume(token, true)),
+      );
+      for (const participant of participants) {
+        resumedParticipants.add(participant);
+      }
+    }
+    deactivateToken();
+    active = false;
+  };
+
+  try {
+    await flushEveryCurrentParticipant();
+  } catch (error) {
+    deactivateToken();
+    await Promise.allSettled(
+      currentParticipants().map((participant) =>
+        participant.resume(token, false),
+      ),
+    );
+    active = false;
+    throw error;
+  }
+
+  return {
+    isActive: () => active,
+    flushLatest: async () => {
+      if (!active) return;
+      await flushEveryCurrentParticipant();
+    },
+    sealForDocumentReplacement: async () => {
+      if (!active) return;
+      sealedDocumentReplacementTokens.add(token);
+      try {
+        await flushEveryCurrentParticipant();
+        sealedParticipantRevision = allOwnerParticipantRevision;
+      } catch (error) {
+        sealedDocumentReplacementTokens.delete(token);
+        sealedParticipantRevision = null;
+        throw error;
+      }
+    },
+    isDocumentReplacementParticipantSetStable: () =>
+      active &&
+      sealedParticipantRevision !== null &&
+      sealedParticipantRevision === allOwnerParticipantRevision,
+    resume,
+  };
+}
+
+/**
  * Build and register the persistence participant used by a mounted composer.
  * Every write is serialized. If state advances while an async photo/blob write
  * is in flight, the loop writes the newer generation afterwards, guaranteeing
@@ -196,6 +339,7 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
   let latest: SnapshotGeneration<TSnapshot> | null = null;
   let writeTail: Promise<void> = Promise.resolve();
   const freezeTokens = new Set<symbol>();
+  const inheritedSealedFreezeTokens = new Set<symbol>();
   const frozenListeners = new Set<(frozen: boolean) => void>();
 
   const notifyFrozen = () => {
@@ -234,6 +378,9 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
       if (disposed || freezeTokens.has(token)) return;
       const wasFrozen = freezeTokens.size > 0;
       freezeTokens.add(token);
+      if (sealedDocumentReplacementTokens.has(token)) {
+        inheritedSealedFreezeTokens.add(token);
+      }
       if (!wasFrozen) notifyFrozen();
     },
     async flushLatest(token) {
@@ -244,6 +391,7 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
       if (!freezeTokens.has(token)) return;
       if (freezeTokens.size > 1) {
         freezeTokens.delete(token);
+        inheritedSealedFreezeTokens.delete(token);
         return;
       }
 
@@ -253,6 +401,7 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
         await flushLatest(offlineActivityScopesByPreparationToken.get(token));
       }
       freezeTokens.delete(token);
+      inheritedSealedFreezeTokens.delete(token);
       notifyFrozen();
     },
   };
@@ -261,8 +410,12 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
   for (const token of activePreparationTokensByOwner.get(owner) ?? []) {
     participant.freeze(token);
   }
+  for (const token of activeAllOwnerPreparationTokens) {
+    participant.freeze(token);
+  }
   ownerParticipants.add(participant);
   participantsByOwner.set(owner, ownerParticipants);
+  allOwnerParticipantRevision += 1;
 
   const persistBeforeSuspension = () => {
     if (
@@ -294,6 +447,15 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
     updateSnapshot(snapshot) {
       if (disposed) {
         throw new Error("Cannot update a disposed composer participant.");
+      }
+      if (
+        [...freezeTokens].some(
+          (token) =>
+            sealedDocumentReplacementTokens.has(token) &&
+            !inheritedSealedFreezeTokens.has(token),
+        )
+      ) {
+        return generation;
       }
       generation += 1;
       latest = { generation, snapshot };
@@ -332,8 +494,11 @@ export function createOwnerComposerPersistenceController<TSnapshot>(
         window.removeEventListener("pagehide", persistBeforeSuspension);
       }
       freezeTokens.clear();
+      inheritedSealedFreezeTokens.clear();
       frozenListeners.clear();
-      ownerParticipants.delete(participant);
+      if (ownerParticipants.delete(participant)) {
+        allOwnerParticipantRevision += 1;
+      }
       if (ownerParticipants.size === 0) participantsByOwner.delete(owner);
     },
   };

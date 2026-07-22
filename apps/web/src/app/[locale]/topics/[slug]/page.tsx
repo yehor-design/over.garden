@@ -6,6 +6,7 @@ import { EngagementFollowControl } from "@/app/engagement/public-engagement-pane
 import { normalizeAuthIntentResumeAction } from "@/lib/auth/auth-intent-contract";
 import { getPublicKnowledgeCopy } from "@/lib/public-knowledge-copy";
 import {
+  buildLanguageAlternates,
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
   localizedPath,
@@ -52,12 +53,20 @@ export async function generateMetadata({
         canonicalLocale: localeParam === DEFAULT_PUBLIC_LOCALE,
       });
 
+  const canonicalPath = localizedPath(
+    localeParam,
+    `/topics/${topic.topic.slug}`,
+  );
+
   return {
     title: `${topic.topic.label} | OverGarden`,
     description: getPublicKnowledgeCopy(localeParam).metadataDescription,
-    alternates: { canonical: `/topics/${topic.topic.slug}` },
+    alternates: {
+      canonical: canonicalPath,
+      languages: buildLanguageAlternates(`/topics/${topic.topic.slug}`),
+    },
     robots: indexState.robots,
-    openGraph: { locale: localeParam },
+    openGraph: { locale: localeParam, url: canonicalPath },
   };
 }
 

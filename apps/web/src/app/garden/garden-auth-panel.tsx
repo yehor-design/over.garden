@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { useSiteShellLocale } from "@/components/site-shell/site-shell-locale-context";
 import type { ActivationSource } from "@/lib/garden/entry-contracts";
 import { PILOT_AUTH_HELP_PATH } from "@/lib/auth/pilot-auth-recovery";
@@ -85,6 +86,13 @@ export function GardenAuthPanel({
     initialMessage ? { kind: "error", text: initialMessage } : null,
   );
   const [isPending, setIsPending] = useState(false);
+  const [localeDirtyRevision, setLocaleDirtyRevision] = useState(0);
+  useInterfaceLocaleChangeFormState({
+    id: "garden-auth-mutation",
+    dirty: email.length > 0 || password.length > 0,
+    pending: isPending,
+    revision: localeDirtyRevision,
+  });
   const socialSignInOptions = availableSocialProviderOptions({
     facebookSignInEnabled,
     googleSignInEnabled,
@@ -97,79 +105,84 @@ export function GardenAuthPanel({
       browserPixel: false,
     });
 
-    const { data, error } = await authClient.signUp.email({
-      email: email.trim(),
-      password,
-      name: PRIVATE_AUTH_COMPATIBILITY_NAME,
-      callbackURL: postAuthPath ?? "/garden",
-    });
+    try {
+      const { data, error } = await authClient.signUp.email({
+        email: email.trim(),
+        password,
+        name: PRIVATE_AUTH_COMPATIBILITY_NAME,
+        callbackURL: postAuthPath ?? "/garden",
+      });
 
-    setIsPending(false);
+      const result = getLocalizedEmailSignUpResult(locale, error);
+      setMessage({
+        kind: result.kind === "accepted" ? "status" : "error",
+        text: result.message,
+      });
 
-    const result = getLocalizedEmailSignUpResult(locale, error);
-    setMessage({
-      kind: result.kind === "accepted" ? "status" : "error",
-      text: result.message,
-    });
+      if (error) return;
 
-    if (error) {
-      return;
+      // A non-null token proves that this client now has a session (for example,
+      // in local development). It does not change the neutral sign-up message.
+      if (hasAuthToken(data)) router.refresh();
+    } finally {
+      setIsPending(false);
     }
-
-    // A non-null token proves that this client now has a session (for example,
-    // in local development). It does not change the neutral sign-up message.
-    if (hasAuthToken(data)) router.refresh();
   }
 
   async function signIn() {
     setIsPending(true);
     setMessage(null);
 
-    const { error } = await authClient.signIn.email({
-      email: email.trim(),
-      password,
-    });
-
-    setIsPending(false);
-
-    if (error) {
-      setMessage({
-        kind: "error",
-        text:
-          getLocalizedAuthClientErrorMessage(locale, error) ?? copy.signInError,
+    try {
+      const { error } = await authClient.signIn.email({
+        email: email.trim(),
+        password,
       });
-      return;
-    }
 
-    if (postAuthPath) {
-      router.push(postAuthPath);
-      return;
-    }
+      if (error) {
+        setMessage({
+          kind: "error",
+          text:
+            getLocalizedAuthClientErrorMessage(locale, error) ??
+            copy.signInError,
+        });
+        return;
+      }
 
-    router.refresh();
+      if (postAuthPath) {
+        router.push(postAuthPath);
+        return;
+      }
+
+      router.refresh();
+    } finally {
+      setIsPending(false);
+    }
   }
 
   async function signInWithSocial(provider: SocialProviderId, label: string) {
     setIsPending(true);
     setMessage(null);
 
-    const callbackURL = resolveAuthCallbackPath(postAuthPath);
-    const { error } = await authClient.signIn.social({
-      provider,
-      callbackURL,
-      newUserCallbackURL: callbackURL,
-      errorCallbackURL: callbackURL,
-    });
-
-    setIsPending(false);
-
-    if (error) {
-      setMessage({
-        kind: "error",
-        text:
-          getLocalizedAuthClientErrorMessage(locale, error) ??
-          formatTrustTemplate(copy.socialSignInError, { provider: label }),
+    try {
+      const callbackURL = resolveAuthCallbackPath(postAuthPath);
+      const { error } = await authClient.signIn.social({
+        provider,
+        callbackURL,
+        newUserCallbackURL: callbackURL,
+        errorCallbackURL: callbackURL,
       });
+
+      if (error) {
+        setMessage({
+          kind: "error",
+          text:
+            getLocalizedAuthClientErrorMessage(locale, error) ??
+            formatTrustTemplate(copy.socialSignInError, { provider: label }),
+        });
+      }
+    } finally {
+      setIsPending(false);
     }
   }
 
@@ -194,6 +207,7 @@ export function GardenAuthPanel({
 
       <form
         ref={authFormRef}
+        data-interface-locale-form="explicit"
         className="grid gap-4"
         onSubmit={(event) => {
           event.preventDefault();
@@ -208,7 +222,10 @@ export function GardenAuthPanel({
               autoFocus={autoFocusEmail}
               autoComplete="email"
               value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              onChange={(event) => {
+                setEmail(event.target.value);
+                setLocaleDirtyRevision((revision) => revision + 1);
+              }}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
               required
             />
@@ -220,7 +237,10 @@ export function GardenAuthPanel({
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => {
+                setPassword(event.target.value);
+                setLocaleDirtyRevision((revision) => revision + 1);
+              }}
               className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
               minLength={8}
               required
@@ -330,6 +350,11 @@ export function SocialAccountLinkPanel({
   const copy = getTrustSurfaceCopy(locale).authPanel;
   const [message, setMessage] = useState<string>(initialMessage ?? "");
   const [isPending, setIsPending] = useState(false);
+  useInterfaceLocaleChangeFormState({
+    id: "social-account-link-mutation",
+    dirty: false,
+    pending: isPending,
+  });
   const socialLinkOptions = availableSocialProviderOptions({
     facebookSignInEnabled,
     googleSignInEnabled,
@@ -341,20 +366,22 @@ export function SocialAccountLinkPanel({
     setIsPending(true);
     setMessage("");
 
-    const callbackURL = currentOAuthCallbackPath();
-    const { error } = await authClient.linkSocial({
-      provider,
-      callbackURL,
-      errorCallbackURL: callbackURL,
-    });
+    try {
+      const callbackURL = currentOAuthCallbackPath();
+      const { error } = await authClient.linkSocial({
+        provider,
+        callbackURL,
+        errorCallbackURL: callbackURL,
+      });
 
-    setIsPending(false);
-
-    if (error) {
-      setMessage(
-        getLocalizedAuthClientErrorMessage(locale, error) ??
-          formatTrustTemplate(copy.methods.linkError, { provider: label }),
-      );
+      if (error) {
+        setMessage(
+          getLocalizedAuthClientErrorMessage(locale, error) ??
+            formatTrustTemplate(copy.methods.linkError, { provider: label }),
+        );
+      }
+    } finally {
+      setIsPending(false);
     }
   }
 

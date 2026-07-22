@@ -34,9 +34,14 @@ const mocks = vi.hoisted(() => ({
   locationAssign: vi.fn(),
   locationReload: vi.fn(),
   flushSync: vi.fn((callback: () => void) => callback()),
+  localeFormState: vi.fn(),
 }));
 
 vi.mock("react-dom", () => ({ flushSync: mocks.flushSync }));
+
+vi.mock("@/components/site-shell/interface-locale-change-boundary", () => ({
+  useInterfaceLocaleChangeFormState: mocks.localeFormState,
+}));
 
 vi.mock("@/components/ui/button", () => ({
   Button: (props: Record<string, unknown>) => {
@@ -322,6 +327,31 @@ describe("sign-out provider state machine", () => {
       "Видалити локальні зміни й вийти",
     ]);
     expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
+  });
+
+  it("publishes a payload-free locale fence for every non-idle sign-out phase", async () => {
+    mocks.summarize.mockResolvedValue(UNSYNCED_SUMMARY);
+    const renderer = await renderProvider("uk");
+
+    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+      id: "sign-out-lifecycle",
+      dirty: false,
+      pending: false,
+    });
+    await click(renderer, "trigger");
+    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+      id: "sign-out-lifecycle",
+      dirty: false,
+      pending: true,
+    });
+
+    await click(renderer, "Залишитися в обліковому записі");
+    expect(mocks.localeFormState).toHaveBeenLastCalledWith({
+      id: "sign-out-lifecycle",
+      dirty: false,
+      pending: false,
+    });
+    await act(async () => renderer.unmount());
   });
 
   it("resumes safely for Stay and for Sync first without signing out", async () => {

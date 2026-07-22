@@ -4,24 +4,23 @@ import Link from "next/link";
 import { Sprout } from "lucide-react";
 
 import { SignOutControl } from "@/components/auth/sign-out-control";
+import { InterfaceLanguageControl } from "@/components/public/language-switcher";
 import { buttonVariants } from "@/components/ui/button";
 import type { InterfaceLocale } from "@/lib/interface-localization";
-import { stripLocalePrefix } from "@/lib/public-localization";
+import type { InterfaceMarket } from "@/lib/interface-market";
+import { getInterfaceLanguageControlPlacement } from "@/lib/interface-route-policy";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
-
-const AUTHENTICATED_UTILITY_PREFIXES = [
-  "/admin",
-  "/garden/catalog/curation",
-  "/garden/pilot-health",
-  "/garden/pilot-learning",
-  "/garden/pilot-smoke",
-  "/garden/privacy/erasure-requests",
-] as const;
 
 export function AuthenticatedUtilityRegion({
   locale,
+  market,
+  pathname,
+  isAuthenticated,
 }: {
   locale: InterfaceLocale;
+  market: InterfaceMarket;
+  pathname: string;
+  isAuthenticated: boolean;
 }) {
   const copy = getTrustSurfaceCopy(locale).signOut;
 
@@ -38,15 +37,19 @@ export function AuthenticatedUtilityRegion({
         <Sprout data-icon="inline-start" aria-hidden="true" />
         {copy.backToGarden}
       </Link>
-      <SignOutControl presentation="utility" />
+      <div className="flex items-center gap-2">
+        <InterfaceLanguageControl
+          locale={locale}
+          market={market}
+          pathname={pathname}
+          compact
+        />
+        {isAuthenticated ? <SignOutControl presentation="utility" /> : null}
+      </div>
     </nav>
   );
 }
 
 export function isAuthenticatedUtilityPath(pathname: string) {
-  const normalizedPath = stripLocalePrefix(pathname).path;
-  return AUTHENTICATED_UTILITY_PREFIXES.some(
-    (prefix) =>
-      normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
-  );
+  return getInterfaceLanguageControlPlacement(pathname) === "utility";
 }

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import {
   passwordResetSuccessPath,
   PILOT_AUTH_HELP_PATH,
@@ -30,6 +31,13 @@ export function ResetPasswordForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState<string>("");
   const [isPending, setIsPending] = useState(false);
+  const [localeDirtyRevision, setLocaleDirtyRevision] = useState(0);
+  useInterfaceLocaleChangeFormState({
+    id: "password-reset-mutation",
+    dirty: password.length > 0 || confirmPassword.length > 0,
+    pending: isPending,
+    revision: localeDirtyRevision,
+  });
 
   if (tokenError || !token) {
     return (
@@ -59,20 +67,22 @@ export function ResetPasswordForm({
     setIsPending(true);
     setMessage("");
 
-    const { error } = await authClient.resetPassword({
-      newPassword: password,
-      token,
-    });
+    try {
+      const { error } = await authClient.resetPassword({
+        newPassword: password,
+        token,
+      });
 
-    setIsPending(false);
+      if (error) {
+        setMessage(copy.invalidDescription);
+        return;
+      }
 
-    if (error) {
-      setMessage(copy.invalidDescription);
-      return;
+      router.push(passwordResetSuccessPath());
+      router.refresh();
+    } finally {
+      setIsPending(false);
     }
-
-    router.push(passwordResetSuccessPath());
-    router.refresh();
   }
 
   return (
@@ -88,7 +98,10 @@ export function ResetPasswordForm({
           type="password"
           autoComplete="new-password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setLocaleDirtyRevision((revision) => revision + 1);
+          }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}
           required
@@ -103,7 +116,10 @@ export function ResetPasswordForm({
           type="password"
           autoComplete="new-password"
           value={confirmPassword}
-          onChange={(event) => setConfirmPassword(event.target.value)}
+          onChange={(event) => {
+            setConfirmPassword(event.target.value);
+            setLocaleDirtyRevision((revision) => revision + 1);
+          }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground"
           minLength={8}
           required

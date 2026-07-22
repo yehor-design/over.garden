@@ -19,6 +19,10 @@ import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
+  isInterfaceSafeFlushFailureVisualFixtureValue,
+  isInterfaceServerActionPendingVisualFixtureSearchParams,
+} from "@/lib/localization/localization-visual-fixture";
+import {
   formatGardenWorkspaceDate,
   formatGardenWorkspaceTemplate,
   getGardenWorkspaceCopy,
@@ -32,6 +36,7 @@ import {
 } from "@/lib/trust-surface-copy";
 import { resolveVisualGardenWorkspaceScenario } from "@/lib/visual-fixtures/garden-workspace-scenarios";
 import { resolveVisualJournalCreationScenario } from "@/lib/visual-fixtures/journal-creation-scenarios";
+import { tryResolveVisualFixtureEnvironment } from "@/lib/visual-fixtures/environment";
 import type {
   VisualFixtureCreationScenarioEvidence,
   VisualFixtureWorkspaceScenarioEvidence,
@@ -55,6 +60,9 @@ import { GardenAuthPanel } from "./garden-auth-panel";
 import { GardenWorkspaceView } from "./garden-workspace-view";
 import type { GardenWorkspaceLocalStateSnapshot } from "./garden-workspace-local-state";
 import { GardenLoadingView } from "./loading";
+import { InterfaceSafeFlushFailureFixture } from "./interface-safe-flush-failure-fixture";
+import { holdInterfaceServerActionPendingVisualFixtureAction } from "./interface-server-action-pending-fixture-action";
+import { InterfaceServerActionPendingFixture } from "./interface-server-action-pending-fixture";
 import { SaveProgressMoment } from "./save-progress-moment";
 
 export const dynamic = "force-dynamic";
@@ -78,6 +86,17 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const visualScenario = resolveVisualGardenWorkspaceScenario(
     params.visualWorkspace,
     process.env,
+  );
+  const visualFixtureEnvironment = tryResolveVisualFixtureEnvironment(
+    process.env,
+  );
+  const safeFlushFailureFixture = Boolean(
+    visualFixtureEnvironment &&
+    isInterfaceSafeFlushFailureVisualFixtureValue(params.visualLocaleState),
+  );
+  const serverActionPendingFixture = Boolean(
+    visualFixtureEnvironment?.target === "local" &&
+    isInterfaceServerActionPendingVisualFixtureSearchParams(params),
   );
   const workspaceCopy = getGardenWorkspaceCopy(locale);
   const creationScenario = resolveVisualJournalCreationScenario(
@@ -132,6 +151,8 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             : null)
         }
         postAuthPath={engagementPostAuthPath}
+        safeFlushFailureFixture={safeFlushFailureFixture}
+        serverActionPendingFixture={serverActionPendingFixture}
       />
     );
   }
@@ -304,12 +325,16 @@ function GuestGardenEntry({
   catalogName,
   initialMessage,
   postAuthPath,
+  safeFlushFailureFixture,
+  serverActionPendingFixture,
 }: {
   locale: InterfaceLocale;
   activationSource: Parameters<typeof GardenAuthPanel>[0]["activationSource"];
   catalogName?: string | null;
   initialMessage?: string | null;
   postAuthPath?: string | null;
+  safeFlushFailureFixture: boolean;
+  serverActionPendingFixture: boolean;
 }) {
   const copy = getTrustSurfaceCopy(locale).gardenGuest;
 
@@ -319,6 +344,12 @@ function GuestGardenEntry({
       data-garden-workspace="guest"
       className="mx-auto grid w-full max-w-4xl gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
+      {safeFlushFailureFixture ? <InterfaceSafeFlushFailureFixture /> : null}
+      {serverActionPendingFixture ? (
+        <InterfaceServerActionPendingFixture
+          action={holdInterfaceServerActionPendingVisualFixtureAction}
+        />
+      ) : null}
       <header className="border-b border-border pb-5">
         <p className="text-xs font-semibold text-muted-foreground uppercase">
           {copy.eyebrow}

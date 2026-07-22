@@ -1,15 +1,28 @@
 import {
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
-  selectPublicLocaleFromRequestContext,
   type PublicLocale,
 } from "./public-localization";
+import {
+  getDefaultInterfaceLocale,
+  isInterfaceLocaleAllowed,
+  normalizeInterfaceMarket,
+  resolveInterfaceMarket,
+  type InterfaceMarket,
+  type InterfaceMarketResolutionSource,
+} from "./interface-market";
 
 export type InterfaceLocale = PublicLocale;
 
 export const INTERFACE_LOCALE_COOKIE_NAME = "overgarden_interface_locale";
 export const INTERFACE_LOCALE_REQUEST_HEADER = "x-overgarden-interface-locale";
 export const INTERFACE_LOCALE_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+/**
+ * Bounded, non-private document hint used only when the root React error
+ * boundary cannot inherit layout props. Its value is always one closed market
+ * and one locale allowed for that market; it never carries request or user data.
+ */
+export const INTERFACE_CONTEXT_META_NAME = "overgarden-interface-context";
 
 type LocaleCandidate = string | null | undefined;
 
@@ -61,6 +74,15 @@ export interface InterfaceCopy {
     errorTitle: string;
     errorDescription: string;
     retry: string;
+    languageControlLabel: string;
+    languageControlTrigger: string;
+    languageDiscardTitle: string;
+    languageDiscardConfirmation: string;
+    languageDiscardAction: string;
+    languageDiscardCancel: string;
+    languageFlushFailure: string;
+    languageMutationPending: string;
+    languageSwitchingPending: string;
   };
   workspace: {
     title: string;
@@ -127,6 +149,18 @@ const INTERFACE_COPY = {
       errorDescription:
         "Спробуйте ще раз. Ви можете продовжити навігацію в OverGarden, якщо помилка повториться.",
       retry: "Спробувати ще раз",
+      languageControlLabel: "Вибір мови інтерфейсу",
+      languageControlTrigger: "Змінити мову",
+      languageDiscardTitle: "Відкинути незбережені зміни?",
+      languageDiscardConfirmation:
+        "Незбережені зміни буде втрачено. Продовжити зміну мови?",
+      languageDiscardAction: "Відкинути й змінити мову",
+      languageDiscardCancel: "Скасувати",
+      languageFlushFailure:
+        "Не вдалося зберегти зміни перед зміною мови. Спробуйте ще раз.",
+      languageMutationPending:
+        "Дочекайтеся завершення поточної дії, перш ніж змінювати мову.",
+      languageSwitchingPending: "Змінюємо мову…",
     },
     workspace: {
       title: "Простір саду",
@@ -193,6 +227,18 @@ const INTERFACE_COPY = {
       errorDescription:
         "Опитайте отново. Ако грешката се повтори, можете да продължите да разглеждате OverGarden.",
       retry: "Опитайте отново",
+      languageControlLabel: "Избор на език на интерфейса",
+      languageControlTrigger: "Смяна на езика",
+      languageDiscardTitle: "Отхвърляне на незапазените промени?",
+      languageDiscardConfirmation:
+        "Незапазените промени ще бъдат загубени. Да продължи ли смяната на езика?",
+      languageDiscardAction: "Отхвърли и смени езика",
+      languageDiscardCancel: "Отказ",
+      languageFlushFailure:
+        "Промените не можаха да се запазят преди смяната на езика. Опитайте отново.",
+      languageMutationPending:
+        "Изчакайте текущото действие да завърши, преди да смените езика.",
+      languageSwitchingPending: "Езикът се сменя…",
     },
     workspace: {
       title: "Градинско пространство",
@@ -259,6 +305,18 @@ const INTERFACE_COPY = {
       errorDescription:
         "Попробуйте ещё раз. Если ошибка повторится, вы сможете продолжить навигацию по OverGarden.",
       retry: "Повторить",
+      languageControlLabel: "Выбор языка интерфейса",
+      languageControlTrigger: "Сменить язык",
+      languageDiscardTitle: "Отбросить несохранённые изменения?",
+      languageDiscardConfirmation:
+        "Несохранённые изменения будут потеряны. Продолжить смену языка?",
+      languageDiscardAction: "Отбросить и сменить язык",
+      languageDiscardCancel: "Отмена",
+      languageFlushFailure:
+        "Не удалось сохранить изменения перед сменой языка. Попробуйте ещё раз.",
+      languageMutationPending:
+        "Дождитесь завершения текущего действия, прежде чем менять язык.",
+      languageSwitchingPending: "Меняем язык…",
     },
     workspace: {
       title: "Пространство сада",
@@ -284,26 +342,103 @@ export function normalizeInterfaceLocale(
   return isPublicLocale(normalized) ? normalized : null;
 }
 
-export function resolveInterfaceLocale(input: {
+export type InterfaceLocaleResolutionSource =
+  | "explicit"
+  | "route"
+  | "persisted"
+  | "market-default";
+
+export interface ResolvedInterfaceLocalization {
+  market: InterfaceMarket;
+  locale: InterfaceLocale;
+  marketSource: "explicit" | InterfaceMarketResolutionSource;
+  localeSource: InterfaceLocaleResolutionSource;
+}
+
+export type InterfaceLocalizationHint = Pick<
+  ResolvedInterfaceLocalization,
+  "market" | "locale"
+>;
+
+export function serializeInterfaceLocalizationHint(
+  input: InterfaceLocalizationHint,
+) {
+  if (!isInterfaceLocaleAllowed(input.market, input.locale)) {
+    throw new Error("Interface localization hint must be market-valid.");
+  }
+  return `${input.market}:${input.locale}`;
+}
+
+export function parseInterfaceLocalizationHint(
+  value: string | null | undefined,
+): InterfaceLocalizationHint | null {
+  if (typeof value !== "string") return null;
+  const [marketValue, localeValue, extra] = value.split(":");
+  if (extra !== undefined) return null;
+  const market = normalizeInterfaceMarket(marketValue);
+  const locale = normalizeInterfaceLocale(localeValue);
+  if (!market || !locale || !isInterfaceLocaleAllowed(market, locale)) {
+    return null;
+  }
+  return { market, locale };
+}
+
+export interface ResolveInterfaceLocalizationInput {
+  explicitMarket?: LocaleCandidate;
   explicitLocale?: LocaleCandidate;
   routeLocale?: LocaleCandidate;
+  persistedMarket?: LocaleCandidate;
   persistedLocale?: LocaleCandidate;
   countryCode?: string | null;
   acceptLanguage?: string | null;
-}): InterfaceLocale {
-  const explicitLocale = normalizeInterfaceLocale(input.explicitLocale);
-  if (explicitLocale) return explicitLocale;
+}
 
-  const routeLocale = normalizeInterfaceLocale(input.routeLocale);
-  if (routeLocale) return routeLocale;
+export function resolveInterfaceLocalization(
+  input: ResolveInterfaceLocalizationInput,
+): ResolvedInterfaceLocalization {
+  const explicitMarket = normalizeInterfaceMarket(input.explicitMarket);
+  const marketResolution = explicitMarket
+    ? { market: explicitMarket, source: "explicit" as const }
+    : resolveInterfaceMarket({
+        routeLocale: input.routeLocale,
+        countryCode: input.countryCode,
+        persistedMarket: input.persistedMarket,
+      });
+  const { market } = marketResolution;
 
-  const persistedLocale = normalizeInterfaceLocale(input.persistedLocale);
-  if (persistedLocale) return persistedLocale;
+  const localeCandidates: Array<{
+    source: Exclude<InterfaceLocaleResolutionSource, "market-default">;
+    value: LocaleCandidate;
+  }> = [
+    { source: "explicit", value: input.explicitLocale },
+    { source: "route", value: input.routeLocale },
+    { source: "persisted", value: input.persistedLocale },
+  ];
 
-  return selectPublicLocaleFromRequestContext({
-    countryCode: input.countryCode ?? null,
-    acceptLanguage: input.acceptLanguage ?? null,
-  });
+  for (const candidate of localeCandidates) {
+    const locale = normalizeInterfaceLocale(candidate.value);
+    if (locale && isInterfaceLocaleAllowed(market, locale)) {
+      return {
+        market,
+        locale,
+        marketSource: marketResolution.source,
+        localeSource: candidate.source,
+      };
+    }
+  }
+
+  return {
+    market,
+    locale: getDefaultInterfaceLocale(market),
+    marketSource: marketResolution.source,
+    localeSource: "market-default",
+  };
+}
+
+export function resolveInterfaceLocale(
+  input: ResolveInterfaceLocalizationInput,
+): InterfaceLocale {
+  return resolveInterfaceLocalization(input).locale;
 }
 
 export function getInterfaceCopy(

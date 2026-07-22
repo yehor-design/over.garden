@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { FileText, Trash2 } from "lucide-react";
 
+import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { Button } from "@/components/ui/button";
 import {
   formatGardenWorkspaceDate,
@@ -30,6 +31,7 @@ export function GardenDraftResumePanel({
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   const [drafts, setDrafts] = useState<JournalDraftRecord[]>([]);
+  const [pendingDiscardCount, setPendingDiscardCount] = useState(0);
 
   const refreshDrafts = useCallback(async () => {
     try {
@@ -43,6 +45,24 @@ export function GardenDraftResumePanel({
       setDrafts([]);
     }
   }, [ownerUserId]);
+
+  const handleDiscard = useCallback(
+    async (id: string) => {
+      setPendingDiscardCount((count) => count + 1);
+      try {
+        await discardDraft(ownerUserId, id, refreshDrafts);
+      } finally {
+        setPendingDiscardCount((count) => Math.max(0, count - 1));
+      }
+    },
+    [ownerUserId, refreshDrafts],
+  );
+
+  useInterfaceLocaleChangeFormState({
+    id: "garden-draft-resume-mutation",
+    dirty: false,
+    pending: pendingDiscardCount > 0,
+  });
 
   useEffect(() => {
     const refreshTimer = window.setTimeout(() => {
@@ -100,9 +120,8 @@ export function GardenDraftResumePanel({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() =>
-                    void discardDraft(ownerUserId, draft.id, refreshDrafts)
-                  }
+                  disabled={pendingDiscardCount > 0}
+                  onClick={() => void handleDiscard(draft.id)}
                 >
                   <Trash2 className="size-4" />
                   {copy.localState.drafts.discard}

@@ -14,14 +14,11 @@ import {
 import { useState } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
-import {
-  AuthenticatedUtilityRegion,
-  isAuthenticatedUtilityPath,
-} from "@/components/auth/authenticated-utility-region";
+import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
 import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
-import { LanguageSwitcher } from "@/components/public/language-switcher";
+import { InterfaceLanguageControl } from "@/components/public/language-switcher";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -43,10 +40,8 @@ import {
   getInterfaceCopy,
   type InterfaceLocale,
 } from "@/lib/interface-localization";
-import {
-  getLanguageSwitcherLocales,
-  stripLocalePrefix,
-} from "@/lib/public-localization";
+import type { InterfaceMarket } from "@/lib/interface-market";
+import { getInterfaceLanguageControlPlacement } from "@/lib/interface-route-policy";
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
@@ -66,26 +61,16 @@ import {
 } from "./site-shell-context-rail";
 import { SiteShellLocaleProvider } from "./site-shell-locale-context";
 
-const SHELL_EXCLUDED_PREFIXES = [
-  "/__visual-fixtures",
-  "/admin",
-  "/health",
-  "/skeleton",
-  "/garden/catalog/curation",
-  "/garden/pilot-health",
-  "/garden/pilot-learning",
-  "/garden/pilot-smoke",
-  "/garden/privacy/erasure-requests",
-] as const;
-
 export function SiteShell({
   children,
   locale,
+  market,
   isAuthenticated,
   communitiesReady = false,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
+  market: InterfaceMarket;
   isAuthenticated: boolean;
   communitiesReady?: boolean;
 }) {
@@ -95,29 +80,50 @@ export function SiteShell({
   >(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const languageControlPlacement =
+    getInterfaceLanguageControlPlacement(pathname);
+  const sessionConvergenceLocaleControl =
+    market === "bulgaria" ? (
+      <InterfaceLanguageControl
+        locale={locale}
+        market={market}
+        pathname={pathname}
+        compact={languageControlPlacement === "utility"}
+        externallyDisabled
+      />
+    ) : undefined;
 
-  if (isSiteShellExcludedPath(pathname)) {
-    const showAuthenticatedUtility =
-      isAuthenticated && isAuthenticatedUtilityPath(pathname);
-    if (!showAuthenticatedUtility) {
-      return (
-        <SiteShellLocaleProvider locale={locale}>
-          <div data-site-shell="excluded">{children}</div>
-        </SiteShellLocaleProvider>
-      );
+  if (languageControlPlacement !== "site-shell") {
+    const showUtility =
+      languageControlPlacement === "utility" &&
+      (isAuthenticated || market === "bulgaria");
+    const excludedShell = (
+      <SiteShellLocaleProvider locale={locale}>
+        <div data-site-shell="excluded">
+          {showUtility ? (
+            <AuthenticatedUtilityRegion
+              locale={locale}
+              market={market}
+              pathname={pathname}
+              isAuthenticated={isAuthenticated}
+            />
+          ) : null}
+          {children}
+        </div>
+      </SiteShellLocaleProvider>
+    );
+
+    if (!isAuthenticated || languageControlPlacement !== "utility") {
+      return excludedShell;
     }
 
     return (
-      <SiteShellLocaleProvider locale={locale}>
-        <SessionConvergenceBoundary locale={locale}>
-          <SignOutProvider locale={locale}>
-            <div data-site-shell="excluded">
-              <AuthenticatedUtilityRegion locale={locale} />
-              {children}
-            </div>
-          </SignOutProvider>
-        </SessionConvergenceBoundary>
-      </SiteShellLocaleProvider>
+      <SessionConvergenceBoundary
+        locale={locale}
+        localeControlFallback={sessionConvergenceLocaleControl}
+      >
+        <SignOutProvider locale={locale}>{excludedShell}</SignOutProvider>
+      </SessionConvergenceBoundary>
     );
   }
 
@@ -129,10 +135,6 @@ export function SiteShell({
   const copy = getInterfaceCopy(locale);
   const signOutCopy = getTrustSurfaceCopy(locale).signOut;
   const context = getSiteShellRouteContext(pathname, locale);
-  const languageBasePath = stripLocalePrefix(pathname).path;
-  const languageSwitcherLocales = isLanguageSwitchablePath(languageBasePath)
-    ? getLanguageSwitcherLocales(locale)
-    : [];
 
   const shell = (
     <SiteShellLocaleProvider locale={locale}>
@@ -230,13 +232,6 @@ export function SiteShell({
                             />
                           ) : null}
                         </SiteShellMobileUtilities>
-                        {languageSwitcherLocales.length > 1 ? (
-                          <LanguageSwitcher
-                            locale={locale}
-                            basePath={languageBasePath}
-                            availableLocales={languageSwitcherLocales}
-                          />
-                        ) : null}
                       </div>
                     </SheetContent>
                   </Sheet>
@@ -251,12 +246,12 @@ export function SiteShell({
                 </Link>
 
                 <div className="site-shell-header-actions ml-auto flex items-center">
-                  {languageSwitcherLocales.length > 1 ? (
-                    <div className="hidden rounded-md bg-background p-1 text-foreground md:block">
-                      <LanguageSwitcher
+                  {market === "bulgaria" ? (
+                    <div className="rounded-md bg-background text-foreground">
+                      <InterfaceLanguageControl
                         locale={locale}
-                        basePath={languageBasePath}
-                        availableLocales={languageSwitcherLocales}
+                        market={market}
+                        pathname={pathname}
                       />
                     </div>
                   ) : null}
@@ -488,6 +483,7 @@ export function SiteShell({
 
               <div
                 id="main-content"
+                data-interface-locale-fragment-safe="true"
                 data-site-shell-region="content"
                 tabIndex={-1}
                 className="site-shell-content-safe-bottom min-w-0 outline-none"
@@ -550,7 +546,10 @@ export function SiteShell({
   if (!isAuthenticated) return shell;
 
   return (
-    <SessionConvergenceBoundary locale={locale}>
+    <SessionConvergenceBoundary
+      locale={locale}
+      localeControlFallback={sessionConvergenceLocaleControl}
+    >
       <SignOutProvider locale={locale}>{shell}</SignOutProvider>
     </SessionConvergenceBoundary>
   );
@@ -622,33 +621,4 @@ function NavigationSection({
       />
     </section>
   );
-}
-
-function isSiteShellExcludedPath(pathname: string) {
-  const normalizedPath = stripLocalePrefix(pathname).path;
-  return SHELL_EXCLUDED_PREFIXES.some(
-    (prefix) =>
-      normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
-  );
-}
-
-function isLanguageSwitchablePath(pathname: string) {
-  if (pathname === "/") return true;
-
-  return [
-    "/blog",
-    "/guides",
-    "/answers",
-    "/topics",
-    "/feed",
-    "/notifications",
-    "/bookmarks",
-    "/wishlist",
-    "/privacy",
-    "/objects",
-    "/journals",
-    "/journal",
-    "/communities",
-    "/knowledge",
-  ].some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }

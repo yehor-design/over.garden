@@ -4,7 +4,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { CORE_JOURNEY_SCENARIOS } from "@/lib/accessibility/core-journey-matrix";
-import { LOCALIZATION_OWNER_BROWSER_PROBES } from "@/lib/localization/localization-browser-matrix";
+import {
+  LOCALIZATION_DOWNSTREAM_UI_GATES,
+  LOCALIZATION_OWNER_BROWSER_PROBES,
+} from "@/lib/localization/localization-browser-matrix";
 import {
   assertLocalizationCoverage,
   buildLocalizationCoverage,
@@ -15,66 +18,306 @@ import {
   validateLocalizationAllowlist,
 } from "./localization-coverage";
 
-describe("OVE-171 localization completion coverage", () => {
-  it("produces one zero-gap report for every current route and selected locale", () => {
+const ZERO_GAP_MISSING = {
+  unregisteredSurfaceModules: [],
+  staleSurfaceRegistrations: [],
+  duplicateSurfaceRegistrations: [],
+  invalidSurfaceRegistrations: [],
+  missingRequiredSurfaceKinds: [],
+  invalidRenderedProfiles: [],
+  invalidDownstreamUiGates: [],
+  copyLocaleValues: [],
+  copyKeyParity: [],
+  authoredLiterals: [],
+  invalidAllowlistEntries: [],
+  requiredStates: [],
+  ownerViewportProof: [],
+  ownerScenarioProof: [],
+  deltaEvidence: [],
+  unsafeEvidence: [],
+};
+
+describe("OVE-205 market-first localization coverage", () => {
+  it("produces one schema-v3 zero-regression-gap inventory across app states and raw lifecycle renderers", () => {
     const report = buildLocalizationCoverage();
 
     expect(() => assertLocalizationCoverage(report)).not.toThrow();
-    expect(report.issue).toBe("OVE-171");
-    expect(report.baseline).toMatchObject({
-      version: "ove171-v1",
-      locales: ["uk", "bg", "ru"],
+    expect(report).toMatchObject({
+      schemaVersion: 3,
+      issue: "OVE-205",
+      evidenceClass: "local-deterministic-market-localization",
+      baseline: {
+        version: "ove205-v3",
+        preservedBaseline: "ove171-v1",
+        locales: ["uk", "bg", "ru"],
+      },
+      marketContract: {
+        resolutionSources: ["route", "country", "persisted", "fallback"],
+        fallbackMarket: "ukraine",
+        markets: [
+          {
+            market: "ukraine",
+            allowedLocales: ["uk"],
+            defaultLocale: "uk",
+            expectedLanguageControlCount: 0,
+          },
+          {
+            market: "bulgaria",
+            allowedLocales: ["bg", "ru"],
+            defaultLocale: "bg",
+            expectedLanguageControlCount: 1,
+          },
+        ],
+      },
+      summary: {
+        routeModuleCount: 94,
+        classifiedRouteModuleCount: 94,
+        appSurfaceModuleCount: 128,
+        classifiedAppSurfaceModuleCount: 128,
+        registeredSurfaceCount: 132,
+        renderedRouteModuleCount: 66,
+        renderedSurfaceCount: 104,
+        renderedStateModuleCount: 34,
+        rawLifecycleRendererCount: 4,
+        globalErrorModuleCount: 1,
+        copyNamespaceCount: LOCALIZATION_COPY_NAMESPACES.length,
+        localeCount: 3,
+        ownerBrowserProbeCount: 15,
+        preservedRouteModuleCount: 82,
+        newlyClosedDeltaRouteModuleCount: 10,
+        ove205CorrectiveSurfaceCount: 40,
+        downstreamOwnedUiGateCount: 3,
+      },
     });
     expect(report.baseline.hash).toMatch(/^[a-f0-9]{64}$/);
-    expect(report.summary).toMatchObject({
-      routeModuleCount: 92,
-      classifiedRouteModuleCount: 92,
-      copyNamespaceCount: LOCALIZATION_COPY_NAMESPACES.length,
-      localeCount: 3,
-      preservedRouteModuleCount: 82,
-      newlyClosedDeltaRouteModuleCount: 10,
-    });
-    expect(report.closedDeltas).toHaveLength(6);
-    expect(
-      report.routes.filter(
-        ({ coverageDisposition }) =>
-          coverageDisposition === "ove171-closed-delta",
-      ),
-    ).toHaveLength(10);
-    expect(report.missing).toEqual({
-      unregisteredRouteModules: [],
-      staleRouteRegistrations: [],
-      duplicateRouteRegistrations: [],
-      invalidRouteRegistrations: [],
-      copyLocaleValues: [],
-      copyKeyParity: [],
-      authoredLiterals: [],
-      invalidAllowlistEntries: [],
-      requiredStates: [],
-      ownerViewportProof: [],
-      ownerScenarioProof: [],
-      deltaEvidence: [],
-      unsafeEvidence: [],
-    });
+    expect(report.missing).toEqual(ZERO_GAP_MISSING);
   });
 
-  it("fails closed when a new page is not explicitly classified", () => {
+  it("fails closed for new unregistered page, state, global-error, and raw renderer modules", () => {
+    const discoveredSurfaceModules = LOCALIZATION_ROUTE_REGISTRY.map(
+      ({ sourceFile }) => sourceFile,
+    );
+    const additions = [
+      "src/app/new-surface/page.tsx",
+      "src/app/new-surface/loading.tsx",
+      "src/app/new-surface/error.tsx",
+      "src/app/new-surface/global-error.tsx",
+      "src/lib/new-public-lifecycle.ts",
+    ];
     const report = buildLocalizationCoverage({
-      discoveredRouteModules: [
-        ...LOCALIZATION_ROUTE_REGISTRY.map(({ sourceFile }) => sourceFile),
-        "src/app/new-surface/page.tsx",
-      ],
+      discoveredSurfaceModules: [...discoveredSurfaceModules, ...additions],
     });
 
-    expect(report.missing.unregisteredRouteModules).toEqual([
-      "src/app/new-surface/page.tsx",
-    ]);
+    expect(report.missing.unregisteredSurfaceModules).toEqual(
+      [...additions].sort((left, right) => left.localeCompare(right)),
+    );
     expect(() => assertLocalizationCoverage(report)).toThrow(
-      /unregisteredRouteModules:src\/app\/new-surface\/page\.tsx/,
+      /unregisteredSurfaceModules:src\/app\/new-surface\/global-error\.tsx/,
     );
   });
 
-  it("fails when any shipped namespace loses a locale or a translated key", () => {
+  it("fails closed for stale registrations and a missing required global-error kind", () => {
+    const discoveredSurfaceModules = LOCALIZATION_ROUTE_REGISTRY.map(
+      ({ sourceFile }) => sourceFile,
+    ).filter((sourceFile) => sourceFile !== "src/app/global-error.tsx");
+    const report = buildLocalizationCoverage({ discoveredSurfaceModules });
+
+    expect(report.missing.staleSurfaceRegistrations).toContain(
+      "src/app/global-error.tsx",
+    );
+    expect(report.missing.missingRequiredSurfaceKinds).toContain(
+      "global-error",
+    );
+    expect(() => assertLocalizationCoverage(report)).toThrow(
+      /missingRequiredSurfaceKinds:global-error/,
+    );
+  });
+
+  it("rejects rendered modules disguised as APIs and api endpoints disguised as UI", () => {
+    const routeRegistry = LOCALIZATION_ROUTE_REGISTRY.map((registration) => {
+      if (registration.sourceFile === "src/app/page.tsx") {
+        return {
+          ...registration,
+          classification: "api-non-ui" as const,
+          owner: "non-ui" as const,
+          renderedProfile: null,
+        };
+      }
+      if (registration.sourceFile === "src/app/api/interface/locale/route.ts") {
+        return {
+          ...registration,
+          classification: "public-localized" as const,
+          owner: "public-shell" as const,
+        };
+      }
+      return registration;
+    });
+    const report = buildLocalizationCoverage({ routeRegistry });
+
+    expect(report.missing.invalidSurfaceRegistrations).toEqual(
+      expect.arrayContaining([
+        "src/app/page.tsx:api-owner",
+        "src/app/page.tsx:page-classified-as-api",
+        "src/app/api/interface/locale/route.ts:handler-classified-as-rendered",
+      ]),
+    );
+    expect(report.missing.invalidRenderedProfiles).toContain(
+      "src/app/api/interface/locale/route.ts:missing-rendered-profile",
+    );
+  });
+
+  it("rejects missing, stale-policy, and invalid-control rendered profiles", () => {
+    const routeRegistry = LOCALIZATION_ROUTE_REGISTRY.map((registration) => {
+      if (registration.sourceFile === "src/app/page.tsx") {
+        return { ...registration, renderedProfile: null };
+      }
+      if (registration.sourceFile === "src/app/garden/page.tsx") {
+        return {
+          ...registration,
+          renderedProfile: registration.renderedProfile
+            ? {
+                ...registration.renderedProfile,
+                routePolicyId: "stale-policy-id",
+              }
+            : null,
+        };
+      }
+      if (registration.sourceFile === "src/app/feed/page.tsx") {
+        return {
+          ...registration,
+          renderedProfile: registration.renderedProfile
+            ? {
+                ...registration.renderedProfile,
+                bulgariaControl: {
+                  expectedCount: 2 as never,
+                  ownerId: "site-shell-interface-language-control" as const,
+                },
+              }
+            : null,
+        };
+      }
+      return registration;
+    });
+    const report = buildLocalizationCoverage({ routeRegistry });
+
+    expect(report.missing.invalidRenderedProfiles).toEqual(
+      expect.arrayContaining([
+        "src/app/page.tsx:missing-rendered-profile",
+        "src/app/garden/page.tsx:route-policy-id",
+        "src/app/feed/page.tsx:bulgaria-control",
+      ]),
+    );
+  });
+
+  it("binds every rendered profile to central market and route-policy IDs", () => {
+    const report = buildLocalizationCoverage();
+    const journals = report.surfaces.find(
+      ({ sourceFile }) => sourceFile === "src/app/journals/page.tsx",
+    );
+    const garden = report.surfaces.find(
+      ({ sourceFile }) => sourceFile === "src/app/garden/page.tsx",
+    );
+    const rawJournal = report.surfaces.find(
+      ({ sourceFile }) =>
+        sourceFile === "src/lib/public-journal-entry-lifecycle.ts",
+    );
+
+    expect(journals?.renderedProfile).toMatchObject({
+      routePolicyId: "public-journal-directory",
+      switchMode: "localized-link",
+      allowedLocalesByMarket: { ukraine: ["uk"], bulgaria: ["bg", "ru"] },
+      defaultLocaleByMarket: { ukraine: "uk", bulgaria: "bg" },
+    });
+    expect(garden?.renderedProfile).toMatchObject({
+      routePolicyId: "canonical-unprefixed-product-route",
+      switchMode: "same-path-preference",
+      dirtyPolicyId: "shared-locale-change-coordinator",
+      dirtyParticipantIds: ["owner-composer-drafts"],
+    });
+    expect(rawJournal?.renderedProfile).toMatchObject({
+      routePolicyId: "public-journal-detail",
+      bulgariaControl: {
+        expectedCount: 1,
+        ownerId: "raw-lifecycle-interface-language-control",
+      },
+      rawVariants: ["journal-not-found-html", "journal-gone-html"],
+    });
+  });
+
+  it("registers both interface endpoints as non-UI and all raw renderer modules explicitly", () => {
+    const report = buildLocalizationCoverage();
+    const endpointSources = [
+      "src/app/api/interface/context/route.ts",
+      "src/app/api/interface/locale/route.ts",
+    ];
+
+    for (const sourceFile of endpointSources) {
+      expect(
+        report.surfaces.find((surface) => surface.sourceFile === sourceFile),
+      ).toMatchObject({
+        surfaceKind: "route-handler",
+        classification: "api-non-ui",
+        owner: "non-ui",
+        renderedProfile: null,
+      });
+    }
+    expect(report.rawLifecycleContract).toEqual({
+      rendererModules: [
+        "src/lib/public-community-lifecycle.ts",
+        "src/lib/public-profile-lifecycle.ts",
+        "src/lib/public-object-passport-lifecycle.ts",
+        "src/lib/public-journal-entry-lifecycle.ts",
+      ],
+      supportModules: ["src/lib/public-lifecycle-document.ts"],
+      controlOwnerId: "raw-lifecycle-interface-language-control",
+    });
+  });
+
+  it("records editor/photo/cover proof as downstream-owned without blocking OVE-205", () => {
+    const report = buildLocalizationCoverage();
+
+    expect(report.downstreamOwnedUiGates).toEqual(
+      LOCALIZATION_DOWNSTREAM_UI_GATES.map((gate) => ({
+        ...gate,
+        requiredStates: [...gate.requiredStates],
+      })),
+    );
+    expect(
+      report.downstreamOwnedUiGates.every(
+        ({ browserScenarioId, status, proofOwner, blocksCurrentIssue }) =>
+          browserScenarioId === null &&
+          status === "downstream-owned-real-ui" &&
+          proofOwner === "owning-downstream-slice" &&
+          blocksCurrentIssue === false,
+      ),
+    ).toBe(true);
+
+    const invalidDownstreamUiGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(
+      (gate, index) =>
+        index === 0
+          ? { ...gate, browserScenarioId: "fabricated:future-ui" as never }
+          : gate,
+    );
+    const invalidReport = buildLocalizationCoverage({
+      downstreamUiGates: invalidDownstreamUiGates as never,
+    });
+    expect(invalidReport.missing.invalidDownstreamUiGates).toContain(
+      "structured-editor-and-inline-photos:fabricated-current-proof",
+    );
+
+    const incompleteStateGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(
+      (gate, index) =>
+        index === 0 ? { ...gate, requiredStates: ["placeholder-only"] } : gate,
+    );
+    const incompleteStateReport = buildLocalizationCoverage({
+      downstreamUiGates: incompleteStateGates as never,
+    });
+    expect(incompleteStateReport.missing.invalidDownstreamUiGates).toContain(
+      "structured-editor-and-inline-photos:required-states",
+    );
+  });
+
+  it("fails when a shipped namespace loses a locale or translated key", () => {
     const firstNamespace = LOCALIZATION_COPY_NAMESPACES[0];
     const report = buildLocalizationCoverage({
       copyNamespaces: [
@@ -139,18 +382,14 @@ describe("OVE-171 localization completion coverage", () => {
     ).toEqual([]);
   });
 
-  it("fails when required edge-state or 320/1440 owner proof disappears", () => {
+  it("fails when required state or owner/browser proof disappears", () => {
     const scenariosWithoutOffline = CORE_JOURNEY_SCENARIOS.filter(
       ({ states }) => !states.includes("offline"),
     );
     const report = buildLocalizationCoverage({
       scenarios: scenariosWithoutOffline,
     });
-
     expect(report.missing.requiredStates).toContain("offline");
-    expect(() => assertLocalizationCoverage(report)).toThrow(
-      /requiredStates:offline/,
-    );
 
     const reportWithoutOperatorProof = buildLocalizationCoverage({
       browserProbes: LOCALIZATION_OWNER_BROWSER_PROBES.filter(
@@ -161,40 +400,17 @@ describe("OVE-171 localization completion coverage", () => {
       "operator:missing-browser-probe",
     );
 
-    const reportWithoutUnauthorizedProof = buildLocalizationCoverage({
+    const reportWithoutRawJournalProof = buildLocalizationCoverage({
       browserProbes: LOCALIZATION_OWNER_BROWSER_PROBES.filter(
-        ({ stateClasses }) => !stateClasses.includes("unauthorized"),
+        ({ id }) => id !== "raw-journal-gone",
       ),
     });
-    expect(reportWithoutUnauthorizedProof.missing.requiredStates).toContain(
-      "unauthorized",
+    expect(reportWithoutRawJournalProof.missing.ownerViewportProof).toContain(
+      "src/lib/public-journal-entry-lifecycle.ts:missing-raw-browser-probe",
     );
   });
 
-  it("rejects a rendered page disguised as a non-UI route", () => {
-    const routeRegistry = LOCALIZATION_ROUTE_REGISTRY.map((registration) =>
-      registration.sourceFile === "src/app/page.tsx"
-        ? {
-            ...registration,
-            classification: "api-non-ui" as const,
-            owner: "non-ui" as const,
-          }
-        : registration,
-    );
-    const report = buildLocalizationCoverage({ routeRegistry });
-
-    expect(report.missing.invalidRouteRegistrations).toEqual(
-      expect.arrayContaining([
-        "src/app/page.tsx:api-owner",
-        "src/app/page.tsx:page-classified-as-api",
-      ]),
-    );
-    expect(() => assertLocalizationCoverage(report)).toThrow(
-      /invalidRouteRegistrations:src\/app\/page\.tsx/,
-    );
-  });
-
-  it("binds the deterministic gate to scripts, CI, browser proof, and contributor workflow", () => {
+  it("binds schema-v3 checks to package scripts and CI", () => {
     const webRoot = process.cwd();
     const repoRoot = path.resolve(webRoot, "../..");
     const packageJson = JSON.parse(
@@ -204,12 +420,8 @@ describe("OVE-171 localization completion coverage", () => {
       path.join(repoRoot, ".github/workflows/ci.yml"),
       "utf8",
     );
-    const browserRunner = readFileSync(
-      path.join(webRoot, "scripts/verify-responsive-accessibility.ts"),
-      "utf8",
-    );
-    const workflow = readFileSync(
-      path.join(repoRoot, "docs/LOCALIZATION_COVERAGE_WORKFLOW.md"),
+    const reportScript = readFileSync(
+      path.join(webRoot, "scripts/report-localization-coverage.ts"),
       "utf8",
     );
 
@@ -223,10 +435,7 @@ describe("OVE-171 localization completion coverage", () => {
       packageJson.scripts["test:a11y"],
     );
     expect(ci).toContain("pnpm localization:coverage:check");
-    expect(browserRunner).toContain('headers()["content-language"]');
-    expect(browserRunner).toContain("runLocaleContinuityCheck");
-    expect(browserRunner).toContain("runLocalizationOwnerProbeMatrix");
-    expect(workflow).toContain("pnpm localization:coverage:check");
-    expect(workflow).toContain("new page");
+    expect(reportScript).toContain("buildLocalizationCoverage");
+    expect(reportScript).toContain("assertLocalizationCoverage");
   });
 });

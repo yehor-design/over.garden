@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
 
+import { InterfaceLocaleChangeBoundary } from "@/components/site-shell/interface-locale-change-boundary";
 import { SiteShell } from "@/components/site-shell/site-shell";
-import { getInterfaceCopy } from "@/lib/interface-localization";
+import {
+  getInterfaceCopy,
+  INTERFACE_CONTEXT_META_NAME,
+  serializeInterfaceLocalizationHint,
+} from "@/lib/interface-localization";
+import { INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER } from "@/lib/localization/localization-visual-fixture";
 import { hasReadyCommunityNavigation } from "@/server/community-repository";
-import { getRequestInterfaceLocale } from "@/server/interface-localization";
+import { getRequestInterfaceLocalization } from "@/server/interface-localization";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
 import "./globals.css";
 import { GoogleAnalytics } from "./google-analytics";
@@ -22,11 +29,18 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const copy = getInterfaceCopy(await getRequestInterfaceLocale()).metadata;
+  const { locale, market } = await getRequestInterfaceLocalization();
+  const copy = getInterfaceCopy(locale).metadata;
 
   return {
     title: copy.siteTitle,
     description: copy.siteDescription,
+    other: {
+      [INTERFACE_CONTEXT_META_NAME]: serializeInterfaceLocalizationHint({
+        market,
+        locale,
+      }),
+    },
   };
 }
 
@@ -35,11 +49,28 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [locale, shellSession, communitiesReady] = await Promise.all([
-    getRequestInterfaceLocale(),
+  const requestHeaders = await headers();
+  if (
+    requestHeaders.get(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER) === "1"
+  ) {
+    return (
+      <html
+        lang="uk"
+        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      >
+        <body>
+          <GlobalErrorVisualFixture />
+        </body>
+      </html>
+    );
+  }
+
+  const [localization, shellSession, communitiesReady] = await Promise.all([
+    getRequestInterfaceLocalization(),
     getSiteShellSessionState(),
     hasReadyCommunityNavigation().catch(() => false),
   ]);
+  const { locale, market } = localization;
 
   return (
     <html
@@ -47,17 +78,24 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <SiteShell
-          locale={locale}
-          isAuthenticated={shellSession.isAuthenticated}
-          communitiesReady={communitiesReady}
-        >
-          {children}
-        </SiteShell>
+        <InterfaceLocaleChangeBoundary>
+          <SiteShell
+            locale={locale}
+            market={market}
+            isAuthenticated={shellSession.isAuthenticated}
+            communitiesReady={communitiesReady}
+          >
+            {children}
+          </SiteShell>
+        </InterfaceLocaleChangeBoundary>
         <ServiceWorkerRegister />
         <GoogleAnalytics locale={locale} />
         <MetaMarketingAttribution locale={locale} />
       </body>
     </html>
   );
+}
+
+function GlobalErrorVisualFixture(): React.ReactNode {
+  throw new Error("Deterministic localization global-error fixture.");
 }
