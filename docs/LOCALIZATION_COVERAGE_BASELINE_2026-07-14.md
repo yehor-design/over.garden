@@ -1,6 +1,6 @@
 # Localization Coverage Baseline
 
-Status: preserved baseline through OVE-171; OVE-205 corrective extension active
+Status: preserved baseline through OVE-171; OVE-205 corrective extension shipped and binding
 Date: 2026-07-22
 
 ## Purpose
@@ -84,19 +84,28 @@ locale plumbing exists but visible authored copy still has verified gaps.
   26 explicit 320/1440 owner checks, 104 axe checks, 668
   `lang`/`Content-Language` contracts, canonical/hreflang, and mutation-intent
   locale continuity for `uk`, `bg`, and `ru`.
+- OVE-205 behavior commit
+  `b6145c1a3c176df5ef8634961b5d5642d5b87cbf` ships the schema-v3
+  fail-closed market-first extension. Exact-SHA proof covers 171 scenarios,
+  642 page checks across eight viewports, 136 Axe checks, 732 route contracts,
+  90 owner probes, 90 market cases, 90 control contracts, all 23 coordinator
+  interactions, full CI/build/tests, a READY production deployment, default-A1
+  browser switching, Ukraine route decisions, resolver parity, and a real hard
+  `410` lifecycle response.
 
 ## OVE-205 Corrective Boundary (2026-07-22)
 
-The shipped evidence above remains valid evidence for typed copy ownership,
-literal exclusions, and the routes/states it actually exercised. It is not a
-completion claim for OVE-205.
+The pre-OVE-205 evidence above remains valid for typed copy ownership, literal
+exclusions, and the routes/states it actually exercised, but it was not by
+itself an OVE-205 completion claim. The exact OVE-205 evidence is bound to the
+behavior commit named above.
 
-The schema-v3 report therefore exposes a green static-regression signal
-separately from candidate-SHA browser freshness. The mandatory browser run
-remains an explicit OVE-205 completion reason instead of being collapsed into
-a hard-coded success. Downstream real UI remains visible in a typed ownership
-ledger with `blocksCurrentIssue: false`; it is not evidence and does not block
-OVE-205.
+The schema-v3 report exposes a green static-regression signal separately from
+candidate-SHA browser freshness. The mandatory browser run remained an explicit
+OVE-205 completion reason instead of being collapsed into a hard-coded success;
+the fresh `b6145c1...` artifact discharged it. Downstream real UI remains
+visible in a typed ownership ledger with `blocksCurrentIssue: false`; it is not
+OVE-205 evidence and did not block its closeout.
 
 - Resolve the interface market before locale. Ukraine allows only `uk`, uses
   unprefixed public canonical URLs, and renders no language control. Bulgaria
@@ -108,37 +117,37 @@ OVE-205.
 - Canonical unprefixed product/auth/garden/operator routes use the one narrow
   preference POST boundary; localized public routes use equivalent document
   links with allowlisted query/fragment preservation.
-- OVE-205 extends fail-closed discovery beyond the 92 page/route modules in the
+- OVE-205 extended fail-closed discovery beyond the 92 page/route modules in the
   OVE-171 report to layouts, loading/error/not-found/global-error boundaries,
   and application-owned raw `404`/`410`/lifecycle HTML.
-- OVE-205 adds the shared dirty/in-flight locale-change coordinator and proves
-  current product states. It must not claim final structured-editor,
-  block-reorder, ten-inline-photo, or separate-cover UI proof while OVE-202,
-  OVE-206, and OVE-207 remain unimplemented downstream work.
+- OVE-205 added the shared dirty/in-flight locale-change coordinator and proved
+  current product states. It did not claim final structured-editor,
+  block-reorder, ten-inline-photo, or separate-cover UI proof; OVE-202, OVE-206,
+  and OVE-207 retain that unimplemented downstream work.
 
 The `ove171-v1` totals and 13 owner probes therefore describe a preserved
 historical baseline, not the target size or sufficiency of the OVE-205 gate.
 
 ## Current Coverage Matrix
 
-| Surface                                                                                                                 | Current evidence                                                                                                                                                                                                                           | Classification   | Remaining owner                                                                     |
-| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ----------------------------------------------------------------------------------- |
-| Locale resolution and continuity                                                                                        | OVE-164 resolver, server boundary, Proxy tests, root layout language, and bounded preference persistence remain copy/plumbing inputs; their locale-first precedence is superseded                                                          | Corrective delta | OVE-205 market-first resolver, stale-state coercion, and narrow preference mutation |
-| Shared site shell and navigation                                                                                        | `site-shell.tsx`, `site-shell-navigation.ts`, OVE-172 shell tests; current happy-path ownership remains a baseline only                                                                                                                    | Corrective delta | OVE-205 zero/exactly-one control ownership across every rendered state              |
-| Public home/feed                                                                                                        | localized route/content contract from OVE-173                                                                                                                                                                                              | Preserve         | OVE-171 regression gate only                                                        |
-| Public living-object catalog                                                                                            | `public-object-catalog-copy.ts` and route tests                                                                                                                                                                                            | Preserve         | OVE-171 regression gate only                                                        |
-| Public journal directory                                                                                                | `public-journal-directory-copy.ts` and route tests                                                                                                                                                                                         | Preserve         | OVE-171 regression gate only                                                        |
-| Public knowledge hub                                                                                                    | `public-knowledge-copy.ts` and route tests                                                                                                                                                                                                 | Preserve         | OVE-171 regression gate only                                                        |
-| Public passport, journal readback, variety, profile, engagement, and 404/410                                            | Existing public copy namespaces and lifecycle tests remain exact-copy inputs; raw/application-owned lifecycle renderers were not all in the old module registry                                                                            | Corrective delta | OVE-205 localized switch safety and complete lifecycle-state registration           |
-| Followed feed, notifications, bookmarks, and wishlist                                                                   | `social-surface-copy.ts`, localized route metadata, and OVE-183/OVE-169 route tests                                                                                                                                                        | Preserve         | OVE-171 regression gate only                                                        |
-| Guest community directory/detail                                                                                        | `community-copy.ts` and OVE-184/OVE-169 regression tests                                                                                                                                                                                   | Preserve         | OVE-171 regression gate only                                                        |
-| Public and owner profile presentation/editor                                                                            | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map, and OVE-169 regression tests                                                                                                                                      | Preserve         | OVE-171 regression gate only                                                        |
-| Auth intent, account linking, current-session sign-out, recovery, support, erasure, privacy, and publication disclosure | Existing exact-parity copy, auth safety, intent continuity, and OVE-204 sign-out behavior remain regression inputs                                                                                                                         | Corrective delta | OVE-205 Bulgaria control and dirty/in-flight coordination on auth/account states    |
-| Owner garden workspace and first-object creation                                                                        | Existing exact-parity workspace/draft/offline/media copy and canonical mutations remain regression inputs                                                                                                                                  | Corrective delta | OVE-205 Bulgaria control and coordinator proof for existing owner states            |
-| Owner living-object continuity and follow-up                                                                            | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve         | OVE-171 regression gate only                                                        |
-| Owner lineage claims, invitation handoff, and questions                                                                 | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve         | OVE-171 regression gate only                                                        |
-| Admin, curation, pilot, erasure-operator, and health UI                                                                 | Exact-parity operator copy and unchanged authorization/source/evidence boundaries remain regression inputs                                                                                                                                 | Corrective delta | OVE-205 one-control ownership on authorized and denied/operator lifecycle states    |
-| Whole-product route/state coverage gate                                                                                 | OVE-171 page/route registry, copy scan, report, and browser proof remain a historical regression baseline                                                                                                                                  | Corrective delta | OVE-205 fail-closed route/state/lifecycle/raw-renderer gate                         |
+| Surface                                                                                                                 | Current evidence                                                                                                                                                                                                                           | Classification   | Current status / next owner                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Locale resolution and continuity                                                                                        | OVE-164 resolver, server boundary, Proxy tests, root layout language, and bounded preference persistence remain copy/plumbing inputs; their locale-first precedence is superseded                                                          | Corrective delta | Shipped by OVE-205 at `b6145c1a3c176df5ef8634961b5d5642d5b87cbf`                                                               |
+| Shared site shell and navigation                                                                                        | `site-shell.tsx`, `site-shell-navigation.ts`, OVE-172 shell tests; current happy-path ownership remains a baseline only                                                                                                                    | Corrective delta | OVE-205 shipped zero/exactly-one control ownership across every registered rendered state                                      |
+| Public home/feed                                                                                                        | localized route/content contract from OVE-173                                                                                                                                                                                              | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Public living-object catalog                                                                                            | `public-object-catalog-copy.ts` and route tests                                                                                                                                                                                            | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Public journal directory                                                                                                | `public-journal-directory-copy.ts` and route tests                                                                                                                                                                                         | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Public knowledge hub                                                                                                    | `public-knowledge-copy.ts` and route tests                                                                                                                                                                                                 | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Public passport, journal readback, variety, profile, engagement, and 404/410                                            | Existing public copy namespaces and lifecycle tests remain exact-copy inputs; raw/application-owned lifecycle renderers were not all in the old module registry                                                                            | Corrective delta | OVE-205 shipped localized switch safety and complete lifecycle-state registration                                              |
+| Followed feed, notifications, bookmarks, and wishlist                                                                   | `social-surface-copy.ts`, localized route metadata, and OVE-183/OVE-169 route tests                                                                                                                                                        | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Guest community directory/detail                                                                                        | `community-copy.ts` and OVE-184/OVE-169 regression tests                                                                                                                                                                                   | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Public and owner profile presentation/editor                                                                            | `public-profile-copy.ts`, `PublicProfileView`, owner profile `COPY` map, and OVE-169 regression tests                                                                                                                                      | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Auth intent, account linking, current-session sign-out, recovery, support, erasure, privacy, and publication disclosure | Existing exact-parity copy, auth safety, intent continuity, and OVE-204 sign-out behavior remain regression inputs                                                                                                                         | Corrective delta | OVE-205 shipped Bulgaria control and dirty/in-flight coordination on auth/account states                                       |
+| Owner garden workspace and first-object creation                                                                        | Existing exact-parity workspace/draft/offline/media copy and canonical mutations remain regression inputs                                                                                                                                  | Corrective delta | OVE-205 shipped current-state coordination; OVE-202/206/207 own structured editor, reorder, inline-photo, and cover extensions |
+| Owner living-object continuity and follow-up                                                                            | `owner-object-copy.ts`, localized owner route/actions, follow-up composer, privacy/catalog/provenance controls, progress/value moments, source chrome, lifecycle consequences, and locale-aware public continuations across `uk`/`bg`/`ru` | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Owner lineage claims, invitation handoff, and questions                                                                 | `owner-lineage-copy.ts`, localized route metadata/dates/states/actions, secure handoff copy, and exact intent/security regression tests across `uk`/`bg`/`ru`                                                                              | Preserve         | OVE-171 regression gate only                                                                                                   |
+| Admin, curation, pilot, erasure-operator, and health UI                                                                 | Exact-parity operator copy and unchanged authorization/source/evidence boundaries remain regression inputs                                                                                                                                 | Corrective delta | OVE-205 shipped one-control ownership on authorized and denied/operator lifecycle states                                       |
+| Whole-product route/state coverage gate                                                                                 | OVE-171 page/route registry, copy scan, report, and browser proof remain a historical regression baseline                                                                                                                                  | Corrective delta | OVE-205 shipped the fail-closed route/state/lifecycle/raw-renderer gate                                                        |
 
 ## Operator Route And Literal-Value Registry
 
@@ -176,7 +185,8 @@ values exact and visibly distinguish them from authored explanations.
 - OVE-166 through OVE-171 are complete. OVE-171 consumed OVE-166 through
   OVE-170 directly and retains the completed OVE-161 and OVE-163 behavior
   transitively through their localized gardener and operator consumers.
-- OVE-205 is the active corrective slice. It preserves the completed copy
+- OVE-205 completed the corrective slice on
+  `b6145c1a3c176df5ef8634961b5d5642d5b87cbf`. It preserves the completed copy
   contracts while changing market precedence, control ownership, switch
   security, dirty/in-flight coordination, and coverage discovery.
 - The founder-approved 2026-07-22 clarification assigns final Editor.js and

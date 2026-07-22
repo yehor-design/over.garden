@@ -1,7 +1,7 @@
 # Interface Locale Contract
 
-Status: active OVE-205 corrective contract
-Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (current authority)
+Status: shipped by OVE-205; binding market/locale and downstream-extension contract
+Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-202/206/207 (downstream extension owners)
 Date: 2026-07-22
 
 ## Purpose
@@ -165,7 +165,7 @@ market, privacy, continuity, and no-data-loss invariant remains binding.
 OVE-205 owns the shared market-aware control, narrow preference endpoint,
 clean/dirty/safe-flush/in-flight/seal/recovery coordinator, integration with
 every currently rendered product state, and the payload-free
-`owner-composer-drafts` adapter. OVE-205 must also keep a fail-closed ownership
+`owner-composer-drafts` adapter. OVE-205 also keeps a fail-closed ownership
 ledger for downstream UI, but it does not claim that nonexistent UI passed.
 
 - OVE-202 owns final Editor.js, Cyrillic IME/serialization, ten-inline-photo,
@@ -241,8 +241,8 @@ remain processed derivatives only, and precise user location remains locked.
 
 ## Completion Evidence
 
-OVE-205 is complete only when the static and browser gates prove, against the
-same final commit:
+OVE-205 closeout was accepted only after the static and browser gates proved,
+against the same final behavior commit:
 
 - market-before-locale resolution and stale/cross-market coercion;
 - Ukraine `uk`-only canonical behavior with zero controls;

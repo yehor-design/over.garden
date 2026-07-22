@@ -426,8 +426,8 @@ redaction: pass; no secrets, env contents, payloads, row/user ids, content, prec
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.
 
-Last verified: 2026-07-18 for OVE-204 exact-main production deployment and
-canonical sign-out proof, plus branch-scoped release Preview build repair.
+Last verified: 2026-07-22 for OVE-205 exact-main market-aware localization,
+canonical production proof, and branch-scoped release Preview build repair.
 
 Team:
 
@@ -443,19 +443,20 @@ Project:
 - Vercel project live flag: `false` at verification time
 - Node version reported by project API: `24.x`
 
-Current production deployment at verification time:
+OVE-205 behavior deployment at verification time:
 
-- Deployment ID: `dpl_3Qu9hvUGn6KdCqbxgEZbZf7nDqaJ`
+- Deployment ID: `dpl_719iz4kshXu7zrk5qzYXwQ3CmFUA`
 - Canonical URL: `https://over.garden`
+- Immutable URL: `https://over-garden-qda7r8e4b-yehors-projects-01221e2b.vercel.app`
 - Ready state: `READY`
 - Target: `production`
-- Source: GitHub-integrated production deployment for OVE-204 current-session sign-out
+- Source: GitHub-integrated production deployment for OVE-205 market-aware localization
 - GitHub ref: `main`
-- GitHub commit: `31954a11f8405a9b125e3ea67963bb0ce963b5f3`
-- GitHub commit message: `feat(auth): add safe current-session sign-out`
+- GitHub commit: `b6145c1a3c176df5ef8634961b5d5642d5b87cbf`
+- GitHub commit message: `feat(localization): add safe market-aware locale switching`
 - GitHub commit verification: `verified`
-- Canonical alias equality: passed for `https://over.garden`
-- OVE-204 (2026-07-18): exact-SHA bounded smoke proved two independent sessions, exactly-current-session revocation, denial of old garden/profile/admin/mutation access, other-session and server-record continuity, successful reauthentication, and zero synthetic residue. A real credential owner browser session proved profile/operator controls, localized hard redirect, cross-tab convergence, and protected-route guest state. Google and Facebook authorization starts reached their real provider consent boundaries and returned the intentional existing-account collision fallback without linking the credential-only owner. Evidence contained only bounded counts, booleans, status classes, commit/deployment identifiers, and public route classes.
+- Alias equality: passed for apex, `www`, project, git-main, and immutable deployment URLs.
+- OVE-205 (2026-07-22): exact-SHA CI, immutable matching-image release, schema-v3 static coverage, the fresh 171-scenario/eight-viewport browser matrix, full tests, generated database types, lint, typecheck, visual fixtures, accessibility checks, and production build passed. A fresh browser on the default A1 Bulgaria connection proved apex and `www` route to `/bg`, return Bulgarian document/header language, render exactly one visible shared control, and complete a real `bg` to `ru` switch. Two independent Ukraine egress nodes observed the Ukraine-only root `200` on the immutable deployment while a Bulgaria node observed the expected `/bg` redirect; exact-SHA candidate-browser evidence separately proves the resulting Ukrainian body language and zero-control invariant. Resolver parity passed `14/14`. A redacted real archived journal produced hard `410`, `noindex,nofollow`, `private,no-store`, Bulgarian document language, and exactly one control on canonical and immutable hosts. Evidence excludes the tombstone slug, identities, IP addresses, cities, cookies, user agents, private content, and secrets.
 
 Production aliases and domain bindings:
 
@@ -482,6 +483,7 @@ Public access observation:
 - On 2026-07-02 (OVE-112), production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` for main commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e` was `READY` and aliased to `https://over.garden`. Redacted OAuth smoke confirmed production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, `/api/auth/sign-in/social` returned a Facebook authorization URL, the generated redirect URI was exactly `https://over.garden/api/auth/callback/facebook`, and Meta did not return `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch` on authorization start. Evidence excluded app id, app secret, state, cookies, OAuth tokens, app/user access tokens, and callback query parameters.
 - On 2026-07-12 (OVE-180), production deployment `dpl_EGsxUqACCpKpxJ83t7784u333VkY` for main commit `dac896e896d315b621b6903b597f74a634d43b1b` was `READY`, verified, and aliased to `https://over.garden`. Redacted canonical-host smoke proved the active profile route class returns `200`, Bulgarian content language, `private, no-store`, profile V2 markup, and `noindex`; a valid missing profile returns the generic Bulgarian hard `404` with `noindex, nofollow`; and guest follow returns a `303` opaque intent, sign-in dialog, and exact localized return path without mutation. Google Public DNS and Cloudflare DNS-over-HTTPS both returned Vercel's public `76.76.21.21`, where canonical SNI/Host smoke passed. This workstation's LAN resolver returned a different unreachable address, so a direct local-browser canonical request timed out; exact READY-deployment browser smoke and canonical smoke through the public authoritative answer both passed. Evidence excluded live handles, profile content, relationship rows, emails, cookies, tokens, media keys, raw request metadata, and precise location.
 - On 2026-07-18 (OVE-204), production deployment `dpl_3Qu9hvUGn6KdCqbxgEZbZf7nDqaJ` for exact main commit `31954a11f8405a9b125e3ea67963bb0ce963b5f3` was `READY`, verified by filtered deployment metadata, and aliased to `https://over.garden` and `https://www.over.garden`. Canonical traffic returned `200` and resolved to the Bulgarian market root. Bounded two-session and real-browser proof covered current-session-only revocation, cross-tab/private-tree convergence, protected-route denial, continuity, provider-link preservation, and zero synthetic residue without recording identities, credentials, cookies, tokens, OAuth parameters, or private content.
+- On 2026-07-22 (OVE-205), production deployment `dpl_719iz4kshXu7zrk5qzYXwQ3CmFUA` for exact main commit `b6145c1a3c176df5ef8634961b5d5642d5b87cbf` was `READY`, GitHub-verified, and owned apex, `www`, project, git-main, and immutable aliases. Default-A1 browser proof covered Bulgaria default routing, one-control ownership, and a real Russian switch; two independent Ukraine egress route decisions plus the exact-SHA browser matrix proved the market split without recording request metadata. Resolver parity was `14 pass / 0 mismatch / 0 error`, and a redacted production tombstone proved the real hard-`410` lifecycle contract on canonical and immutable hosts.
 
 Deployment env observation:
 

@@ -6,26 +6,35 @@ OVE-203 makes public identity automatic and provider-independent. Email/password
 
 OVE-204 makes ending access to the current browser session a shared product boundary instead of a profile-only button. The same localized control is available from My Account, desktop and mobile authenticated navigation, and real admin/curation/pilot/erasure operator surfaces, including signed-in admin denial. Before any request it freezes owner-scoped draft/sync creation, aborts and drains active browser sync, and inventories only bounded counts. Every browser-local write is bound to the authoritative opaque session generation; an exact-round cross-tab barrier flushes the newest composer generation, and a durable `commit_pending` fence lands before Better Auth's current-session POST. Unsynced work receives exactly stay, sync-first, or explicit owner-only discard-and-sign-out. Successful completion requires a fresh database-backed null-session confirmation, cross-tab/BFCache convergence, and hard locale-aware navigation. An unknown post-request state never thaws the old generation. Adapter, network, inventory, or purge failures remain fail-closed with bounded retryable copy. The coordinator never clears all IndexedDB, CacheStorage, the service worker, another owner's rows, or server data, and future structured journal/photo/cover slices must extend it rather than create a second logout flow.
 
-OVE-205 is the active corrective localization slice. It resolves interface
-market before locale: Ukraine is `uk`-only on unprefixed canonical public URLs
-with no language control and legacy `/uk` redirect only; Bulgaria defaults to
-`bg`, allows `bg|ru`, keeps explicit `/bg` and `/ru` public routes, and requires
+OVE-205 shipped the corrective localization baseline on behavior commit
+`b6145c1a3c176df5ef8634961b5d5642d5b87cbf`. It resolves interface market
+before locale: Ukraine is `uk`-only on unprefixed canonical public URLs with no
+language control and legacy `/uk` redirect only; Bulgaria defaults to `bg`,
+allows `bg|ru`, keeps explicit `/bg` and `/ru` public routes, and requires
 exactly one shared control on every user-facing page/state. Localized public
 switching rebuilds only allowlisted query/fragment state, while canonical
 unprefixed product/auth/garden/operator routes use one narrow same-origin POST
 preference boundary. One dirty/in-flight coordinator prevents draft or product
-mutation loss/replay during the hard document transition. The corrective gate
-must classify layouts, loading/error/not-found/global-error states, raw
-application lifecycle `404`/`410` HTML, and every control owner rather than
-relying on the older page/route inventory. OVE-171 copy namespaces remain
-regression inputs. The founder-approved 2026-07-22 ownership correction keeps
-the dependency order OVE-205 -> OVE-202 -> OVE-206 -> OVE-207: OVE-205 proves
-the shared coordinator, all currently rendered states, and the payload-free
-owner-composer adapter; OVE-202 owns final Editor.js/inline-photo proof,
-OVE-206 owns final reorder proof, and OVE-207 owns final cover and combined
-ten-inline-plus-one-cover proof. The schema-v3 ownership ledger keeps those
-future obligations visible with `blocksCurrentIssue: false`; no upstream
-completion report may misrepresent a downstream adapter entry as real-UI
+mutation loss/replay during the hard document transition. The schema-v3 gate
+classifies layouts, loading/error/not-found/global-error states, raw application
+lifecycle `404`/`410` HTML, and every control owner instead of relying on the
+older page/route inventory. OVE-171 copy namespaces remain regression inputs.
+Exact-SHA CI, deployment, production, protective-DNS, A1 browser, Ukraine-route,
+and real tombstone evidence passed.
+
+The founder-approved 2026-07-22 ownership correction preserves the dependency
+order OVE-205 -> OVE-202 -> OVE-206 -> OVE-207. OVE-205 proves the shared
+coordinator, all currently rendered states, and the payload-free owner-composer
+adapter. OVE-202 is the next dependent owner and must supply final Editor.js,
+Cyrillic IME, lossless serialization, inline-photo, upload, conflict, offline,
+and failed-flush browser proof. OVE-206 still owns pointer/touch/keyboard
+reorder, active-gesture, committed-order, focus, and announcement proof.
+OVE-207 still owns automatic/explicit/separate cover, dedicated upload,
+failure/retry/removal, and combined ten-inline-plus-one-cover proof. The
+schema-v3 ownership ledger keeps every future obligation visible as
+`downstream-owned-real-ui`, with `browserScenarioId: null`,
+`proofOwner: owning-downstream-slice`, and `blocksCurrentIssue: false`; no
+upstream completion report may misrepresent an adapter entry as real-product
 browser evidence.
 
 OVE-27 adds an operator production-smoke surface and live smoke contract: `/garden/pilot-smoke` checks deployed env readiness without exposing secrets, `docs/PRODUCTION_PILOT_SMOKE.md` defines the browser smoke and evidence rules, and `docs/INFRASTRUCTURE_REGISTRY.md` records the current Vercel project/deployment plus public-access blockers. OVE-28 closed the temporary operator fail-open gate with `CATALOG_CURATOR_USER_IDS`; OVE-109 supersedes that legacy gate with durable `admin_user_roles` capabilities.

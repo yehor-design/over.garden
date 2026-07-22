@@ -1,6 +1,6 @@
 # Localization Coverage Workflow
 
-Status: binding OVE-205 completion and extension contract
+Status: OVE-205 closeout gate passed; binding extension workflow
 Locales: `uk`, `bg`, `ru`
 Markets: Ukraine (`uk` only), Bulgaria (`bg` default; `bg` or `ru`)
 Preserved baseline: `ove171-v1`
@@ -25,20 +25,23 @@ Then run the focused locale, proxy, route, preference-mutation, coordinator,
 accessibility, typecheck, lint, full-test, build, mainline-closeout, and
 production-smoke commands named by the owning Linear issue. A generated report
 is evidence only when its commit, fixture baseline, and browser run all match
-the candidate SHA.
+the candidate SHA. OVE-205 discharged this gate on behavior commit
+`b6145c1a3c176df5ef8634961b5d5642d5b87cbf`; later owning slices must rerun it
+against their own candidate SHA.
 
 The schema-v3 static report separates `regressionGreen` from completion
 readiness. A zero exit code means the fail-closed registry has not regressed;
-it does not mean OVE-205 is complete. The report keeps the mandatory fresh
-browser run as an OVE-205 completion reason because static analysis cannot
-attest runtime freshness. A successful candidate-SHA browser artifact
-discharges that reason during closeout. `downstreamOwnedUiGates` remain visible
-for OVE-202/206/207 with `blocksCurrentIssue: false`; they are binding future
-ownership, not OVE-205 failures. Do not move OVE-205 to Done from the static
-command alone or describe downstream UI as already proven.
+by itself it is not completion proof for the owning slice. For OVE-205, the
+report kept the mandatory fresh browser run as a completion reason because
+static analysis cannot attest runtime freshness; the successful candidate-SHA
+browser artifact discharged that reason during closeout.
+`downstreamOwnedUiGates` remain visible for OVE-202/206/207 with
+`blocksCurrentIssue: false`; they are binding future ownership, not OVE-205
+failures. A future owning slice must not move to Done from the static command
+alone or describe its downstream UI as already proven.
 
 The `ove171-v1` gate and its copy namespaces are preserved regression inputs.
-They are not sufficient OVE-205 evidence: the old inventory classified page
+They were not sufficient OVE-205 evidence: the old inventory classified page
 and route modules but did not fail closed over every layout, loading/error
 boundary, not-found/global-error state, or raw application-owned lifecycle
 renderer.
@@ -191,4 +194,4 @@ Production proof runs separately against the exact deployed candidate SHA and
 uses redacted, public-safe assertions for Ukraine zero-control behavior,
 Bulgaria `bg` default, `/bg`/`/ru` switching, one-control ownership, canonical
 metadata, and the narrow preference boundary. Any exact-SHA, deployment,
-provider, DNS, security, or browser failure keeps OVE-205 open.
+provider, DNS, security, or browser failure keeps the owning slice open.

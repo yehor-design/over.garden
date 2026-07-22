@@ -302,6 +302,39 @@
         "Credential, Google, and Facebook account-link classes were preserved. Real Google and Facebook production authorization starts reached their consent boundaries and returned the deliberate existing-account collision fallback, so the credential-only owner was not silently linked or made social-admin-capable.",
         "No email, handle, UUID, cookie, token, OAuth parameter, draft text, Blob, media key, private content, raw request metadata, or precise location was included in repository or closeout evidence; synthetic production residue was zero."
       ]
+    },
+    {
+      "issueId": "OVE-205",
+      "title": "Market-aware interface-language control: Ukraine stays uk-only while Bulgaria defaults to bg and switches bg/ru everywhere",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "b6145c1a3c176df5ef8634961b5d5642d5b87cbf",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-205/market-aware-interface-language-control-ukraine-stays-uk-only-while",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29931973816",
+      "completedAt": "2026-07-22",
+      "verificationCommands": [
+        "cd apps/web && pnpm localization:coverage:check",
+        "cd apps/web && pnpm localization:coverage:report",
+        "cd apps/web && pnpm localization:coverage:browser",
+        "cd apps/web && pnpm visual:fixtures:verify",
+        "cd apps/web && pnpm test:a11y",
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm smoke:protective-dns",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "The exact behavior commit passed the schema-v3 fail-closed static gate, the fresh 171-scenario responsive and accessibility browser matrix across eight viewports, route and lifecycle coverage, coordinator interaction proof, full tests, lint, typecheck, generated database-type verification, visual fixtures, and production build.",
+        "GitHub CI run 29931973816 and matching-image release run 29931974101 passed for the exact behavior commit. Vercel deployment dpl_719iz4kshXu7zrk5qzYXwQ3CmFUA reached READY, was GitHub-verified, and owned the canonical production aliases.",
+        "Redacted live proof covered default-A1 Bulgaria routing and browser switching, two independent Ukraine egress route decisions, 14-of-14 protective-DNS parity, the narrow interface-context boundary, and a real database-backed hard 410 on both canonical and immutable exact-SHA hosts.",
+        "The schema-v3 downstream ownership ledger intentionally retains OVE-202, OVE-206, and OVE-207 as downstream-owned real UI with browserScenarioId null, proofOwner owning-downstream-slice, and blocksCurrentIssue false. OVE-205 proves the shared coordinator, current product states, and payload-free owner-composer-drafts adapter only.",
+        "No secret, cookie, token, private content, draft payload, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
     }
   ]
 }
