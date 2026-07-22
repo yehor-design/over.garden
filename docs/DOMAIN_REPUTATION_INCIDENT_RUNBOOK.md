@@ -2,7 +2,7 @@
 
 Status: active operational runbook
 Owner: founder/operator
-Last verified: 2026-07-17
+Last verified: 2026-07-22
 
 Use this runbook when a protective DNS provider, browser reputation service, or ISP security product replaces the authoritative `over.garden` address or displays a malware/phishing block page.
 
@@ -15,21 +15,19 @@ Use this runbook when a protective DNS provider, browser reputation service, or 
 - A custom DNS resolver, VPN, local hosts entry, or temporary allow action is a user workaround, not incident closure.
 - Do not change authoritative DNS records unless authoritative state is wrong. Protective DNS intentionally returning a sinkhole address cannot be repaired by repeatedly rewriting a correct authoritative record.
 
-## Current OVE-188 Incident
+## OVE-188 Incident Outcome
 
-Initially observed on 2026-07-13 and most recently rechecked on 2026-07-17:
+The incident was first observed on 2026-07-13 and its customer-path closure was verified on 2026-07-22:
 
 - Cloudflare authoritative DNS returns `76.76.21.21` for `over.garden` and `www.over.garden`.
-- Cloudflare, Cloudflare Security, Google Public DNS, and Quad9 return the authoritative address.
-- Whalebone confirmed removal of the domain from its global threat database and closed the false-positive case on 2026-07-14. A private provider case ID is present.
-- The current default A1-connected system resolver now returns the authoritative address for both hostnames. Normal system-DNS HTTPS requests to apex and `www` reach Vercel and complete the Bulgarian route response without a DNS workaround.
-- Cisco Umbrella still returns `146.112.61.108` for both hostnames instead of the authoritative address. Cisco reputation remediation remains open.
-- Two authenticated Cisco Web Reputation cases remain `PENDING`, with suggested reputation `Trusted`, current reputation `Untrusted`, and no provider resolution as of 2026-07-17. Their identifiers remain private.
-- The 2026-07-17 deterministic recheck produced `10 pass / 4 Cisco endpoint mismatches / 0 error`; focused tests, the production dependency audit, exact-main CI/deployment containment, canonical HTTPS routes, and bounded production error/5xx log checks passed.
-- Google Safe Browsing reports no unsafe content. VirusTotal's observed scan reported zero detections, including a clean ESET result.
-- The canonical Vercel deployment, TLS certificates, HTTP redirects, public routes, production logs, repository state, and loaded application asset origins showed no evidence of a compromised deployment during the bounded audit.
+- The default A1-connected system resolver, Cloudflare, Cloudflare Security, Google Public DNS, Quad9, and both public Cisco Umbrella resolver endpoints return the same authoritative address for both hostnames. The deterministic closure result is `14 pass / 0 mismatch / 0 error`.
+- A fresh normal Chrome session on the default A1 connection loaded apex and `www`, followed their canonical Bulgarian routes, and rendered the OverGarden application without custom DNS, VPN, a hosts override, provider bypass, temporary allow action, or security block page.
+- Exact-main baseline `0b7ac6c294894791b20d9998a6f7e6856130240d` passed GitHub CI run `29662442419`; Vercel production deployment `dpl_4JqRWGXLEQLstKKk9877f39mTRPS` was `READY` for that SHA and owned both canonical aliases.
+- Canonical HTTPS routes and hostname-specific TLS certificates passed. The production dependency graph was refreshed to remove newly disclosed high-severity runtime advisories, and the bounded production audit reports no known vulnerability. Production logs contained zero error entries and zero HTTP `500` responses in the checked 24-hour window.
+- Whalebone confirmed removal from its global threat database and closed its false-positive case on 2026-07-14. One Cisco case later reached a resolved state; the related apex case remained re-opened with an unknown dashboard reputation, so a bounded follow-up was submitted on 2026-07-22. Provider identifiers remain private. The still-asynchronous dashboard correspondence does not override the authoritative resolver and customer-path evidence.
+- Google Safe Browsing reported no unsafe content, and the observed VirusTotal scan reported zero detections including a clean ESET result. The bounded audit found no evidence of a compromised deployment.
 
-The Whalebone/A1 result confirms that branch of the incident was a false positive. OVE-188 remains open because Cisco Umbrella still disagrees with authoritative DNS and a fresh normal-browser closure check is still required. These facts do not prove that future code or deployments are safe; repeat the checks after every relevant production change until the full closure gate passes.
+OVE-188 is closed as `false-positive remediation propagated / customer path recovered` on 2026-07-22. Reopen the incident immediately if A1, Cisco Umbrella, or another protective resolver again substitutes a sinkhole, if a normal browser shows a reputation block, or if a bounded security check finds a credible compromise indicator. A past closure never substitutes for checks against a later release.
 
 ## Deterministic DNS Check
 
@@ -106,6 +104,8 @@ OVE-188 may move to `Done` only when all are true:
 - a normal browser on A1 loads canonical HTTPS without custom DNS, VPN, hosts override, provider bypass, or temporary allow action;
 - TLS, canonical routes, exact-commit CI/deployment proof, and bounded security checks still pass;
 - the final redacted outcome is recorded in `docs/INFRASTRUCTURE_REGISTRY.md` and Linear.
+
+The 2026-07-22 closeout satisfied every condition above. The unresolved administrative state of one provider dashboard case remains monitored separately and does not negate resolver parity or the normal A1 browser proof.
 
 Changing the domain, asking every user to change DNS, or relying on an allowlisted operator account does not satisfy this gate.
 
