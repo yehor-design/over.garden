@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-18",
+  "updatedAt": "2026-07-22",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "requiredBeforeNextLinearIssues": [],
@@ -136,6 +136,34 @@
         "GitHub CI passed for the exact behavior commit; Vercel deployment dpl_EJWtcF3nyyqN6VWVhTB9EtWKR67C reached READY and canonical production smoke passed against that same SHA.",
         "Cisco Umbrella reputation mismatch remains tracked by OVE-188 and is explicitly not a Linear blocker on OVE-171; system-default, Cloudflare, Google, and Quad9 DNS matched authoritative DNS during closeout.",
         "No secrets, private user data, public-profile handle, journal text, media keys, raw request metadata, live user identifiers, or precise location were included in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-188",
+      "title": "Protective DNS reputation recovery: A1 and Cisco resolve canonical production without a block",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "23d0933c0a59cb18103773f3715fee7ebdf18f32",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-188",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29600224703",
+      "completedAt": "2026-07-22",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run scripts/protective-dns-contract.test.ts",
+        "cd apps/web && pnpm smoke:protective-dns",
+        "cd apps/web && pnpm audit --prod --audit-level high",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=ephemeral-closeout-secret-at-least-32-characters pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "The deterministic closure matrix returned 14 pass, 0 mismatch, and 0 error: system-default, Cloudflare, Cloudflare Security, Google, Quad9, and both Cisco Umbrella endpoints matched authoritative DNS for apex and www.",
+        "A fresh normal Chrome session on the default A1 connection loaded both canonical hostnames without custom DNS, VPN, a hosts override, provider bypass, temporary allow action, or a security block page.",
+        "Exact-main baseline 0b7ac6c294894791b20d9998a6f7e6856130240d passed CI 29662442419; Vercel deployment dpl_4JqRWGXLEQLstKKk9877f39mTRPS was READY for that SHA and owned both canonical aliases. TLS, canonical routes, the refreshed production dependency audit, and bounded production error and HTTP-500 checks passed.",
+        "The redacted outcome is false-positive remediation propagated and customer path recovered. No provider case identifier, visitor address, resolver address, email, cookie, token, private content, raw request metadata, or precise location is included in evidence."
       ]
     },
     {

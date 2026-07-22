@@ -160,10 +160,11 @@ Before moving OVE-186 to `Done`, all of the following must be true:
 4. `pnpm mainline:closeout:check` passes on clean `main` aligned with
    `origin/main`.
 5. `pnpm smoke:protective-dns` exits `0`, and a fresh normal A1 browser reaches
-   canonical HTTPS. OVE-188 remains a hard blocker while Cisco Umbrella or A1
-   returns a sinkhole.
+   canonical HTTPS. OVE-188 satisfied this prerequisite on 2026-07-22; any
+   later Cisco Umbrella or A1 sinkhole reopens the blocker and invalidates an
+   older pass.
 6. Linear contains only redacted evidence. OVE-166 through OVE-170 may proceed
-   independently while OVE-188 remains open, and OVE-171 is blocked only by
-   those five localization slices. If any localization commit lands before
+   independently, and OVE-171 is blocked only by those five localization
+   slices. OVE-188 no longer blocks OVE-186, but if any commit lands before
    OVE-186 closes, rerun every exact-SHA, deployment, production-smoke, and
    protective-DNS gate against the new final `main` commit.
