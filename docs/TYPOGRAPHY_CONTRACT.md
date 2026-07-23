@@ -199,8 +199,10 @@ spacing patches are not an accepted substitute for fallback metrics.
 - Font paths and cache selection never vary on identity, account state, locale
   cookie, private content, referrer, media key, or precise location.
 
-`docs/INFRASTRUCTURE_REGISTRY.md` is unchanged because OVE-208 adds no provider
-or external runtime dependency.
+OVE-208 adds no font CDN or other external runtime font dependency. The same
+closeout later recorded a temporary GitHub Actions budget freeze in
+`docs/INFRASTRUCTURE_REGISTRY.md`; that ops note is unrelated to font delivery
+and does not introduce a Google Fonts/Gstatic dependency.
 
 ## Preload, Lazy Loading, And Byte Budgets
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-22",
+  "updatedAt": "2026-07-23",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "requiredBeforeNextLinearIssues": [],
@@ -334,6 +334,30 @@
         "Redacted live proof covered default-A1 Bulgaria routing and browser switching, two independent Ukraine egress route decisions, 14-of-14 protective-DNS parity, the narrow interface-context boundary, and a real database-backed hard 410 on both canonical and immutable exact-SHA hosts.",
         "The schema-v3 downstream ownership ledger intentionally retains OVE-202, OVE-206, and OVE-207 as downstream-owned real UI with browserScenarioId null, proofOwner owning-downstream-slice, and blocksCurrentIssue false. OVE-205 proves the shared coordinator, current product states, and payload-free owner-composer-drafts adapter only.",
         "No secret, cookie, token, private content, draft payload, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-208",
+      "title": "Global Google Sans typography: every visitor reads a consistent, fast, accessible interface across uk/bg/ru",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "917efd9176fc9b21bf25cb1fca1fc137545b28da",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-208/global-google-sans-typography-every-visitor-reads-a-consistent-fast",
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29991370703",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm typography:assets:check",
+        "cd apps/web && pnpm typography:check",
+        "cd apps/web && pnpm exec vitest run src/lib/typography src/lib/public-object-passport-lifecycle.test.ts src/lib/public-community-lifecycle.test.ts src/lib/public-profile-lifecycle.test.ts src/lib/public-journal-entry-lifecycle.test.ts src/proxy.test.ts",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Typography behavior and WebKit fallback/CI artifact hardening merged via PR #11 as 917efd9176fc9b21bf25cb1fca1fc137545b28da. Vercel production deployment dpl_3YqyXfxeNbEppyEhB4ULoX2NQqqo reached READY for that SHA and owned over.garden / www.",
+        "GitHub Actions run 29991370703 is the last automatic exact-SHA CI attempt for the OVE-208 typography merge; it failed the WebKit fallback gate before the later WebKit allowance fix. Subsequent runs then hit the Actions budget freeze, so ci.yml and matching-image.yml are workflow_dispatch only. Temporary merge gate is Vercel READY for the exact SHA plus local typography and lifecycle proof. See docs/INFRASTRUCTURE_REGISTRY.md.",
+        "Audit follow-up on the same issue fixes locale-prefixed object-passport raw lifecycle matching (/bg|/ru/lineage/objects/...) so those paths return the shared Google Sans noindex/no-store documents instead of the Next shell 404. After that follow-up merges, prefer current main over 917efd917 alone for object-passport lifecycle behavior.",
+        "No secret, cookie, token, private content, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
     }
   ]

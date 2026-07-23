@@ -14,6 +14,16 @@ describe("public object passport HTTP lifecycle", () => {
       ),
     ).toBe("00000000-0000-4000-8000-000000000101");
     expect(
+      matchPublicObjectPassportPath(
+        "/bg/lineage/objects/00000000-0000-4000-8000-000000000101",
+      ),
+    ).toBe("00000000-0000-4000-8000-000000000101");
+    expect(
+      matchPublicObjectPassportPath(
+        "/ru/lineage/objects/00000000-0000-4000-8000-000000000101/",
+      ),
+    ).toBe("00000000-0000-4000-8000-000000000101");
+    expect(
       matchPublicObjectPassportPath("/lineage/objects/private-label"),
     ).toBe("private-label");
     expect(

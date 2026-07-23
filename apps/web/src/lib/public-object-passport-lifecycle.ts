@@ -4,12 +4,13 @@ import {
   type PublicLifecycleRequestLocation,
 } from "@/lib/public-lifecycle-document";
 import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
-import { localizedPath } from "@/lib/public-localization";
+import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
 
 const PUBLIC_OBJECT_PASSPORT_PATH = /^\/lineage\/objects\/([^/]+)\/?$/i;
 
 export function matchPublicObjectPassportPath(pathname: string) {
-  return PUBLIC_OBJECT_PASSPORT_PATH.exec(pathname)?.[1] ?? null;
+  const basePath = stripLocalePrefix(pathname).path;
+  return PUBLIC_OBJECT_PASSPORT_PATH.exec(basePath)?.[1] ?? null;
 }
 
 export function renderGonePublicObjectPassportHtml(
