@@ -9,6 +9,10 @@ on:
       - main
       - chore/walking-skeleton
 
+permissions:
+  actions: write
+  contents: read
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -196,6 +200,41 @@ jobs:
           cat /tmp/overgarden-a11y-server.log
           exit 1
 
+      - name: Prune stale ove208 typography artifacts
+        if: github.event_name == 'push'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          ARTIFACT_PREFIX: "ove208-typography-"
+          KEEP_COUNT: "2"
+        run: |
+          set -euo pipefail
+
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "gh CLI is required for stale artifact cleanup." >&2
+            exit 1
+          fi
+
+          stale_artifact_ids="$(gh api "repos/${{ github.repository }}/actions/artifacts?per_page=100" \
+            --paginate \
+            --jq ".artifacts
+              | map(select(.name | startswith(\"${ARTIFACT_PREFIX}\")))
+              | sort_by(.created_at)
+              | reverse
+              | .[${KEEP_COUNT}:]
+              | .[].id")"
+
+          if [[ -z "${stale_artifact_ids// /}" ]]; then
+            echo "No stale ove208 typography artifacts to delete."
+            exit 0
+          fi
+
+          printf '%s\n' "$stale_artifact_ids" |
+            while read -r artifact_id; do
+              [[ -z "$artifact_id" ]] && continue
+              echo "Deleting stale ove208 typography artifact $artifact_id"
+              gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$artifact_id" >/dev/null
+            done
+
       - name: Upload exact-SHA typography browser evidence
         if: always()
         uses: actions/upload-artifact@v7
@@ -205,6 +244,7 @@ jobs:
             ${{ runner.temp }}/ove208-typography-browser.json
             ${{ runner.temp }}/ove208-typography-screenshots
           if-no-files-found: error
+          compression-level: 9
           retention-days: 90
 
   matching:
