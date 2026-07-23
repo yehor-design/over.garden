@@ -619,7 +619,7 @@
       "mainCommit": "85b2d737a88ff58938e99f191b2017eae92ba675",
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-198/meilisearch-upgrade-public-search-survives-an-immutable-version",
-      "ciRunUrl": "https://meili.over.garden/health",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/39prmfUBYY8b6SRTcs4nQBcxLpdu",
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "curl -fsS https://meili.over.garden/health",
@@ -632,7 +632,8 @@
         "git diff --check"
       ],
       "notes": [
-        "Behavior commit 85b2d737a88ff58938e99f191b2017eae92ba675 is on main. Production Meilisearch active pin v1.48.1 digest sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a on volume overgarden-meili-data-v1481; legacy overgarden_meili_data retained (deletion forbidden in OVE-198).",
+        "Behavior commit 85b2d737a88ff58938e99f191b2017eae92ba675 and docs closeout 32a9030f52662f5a04daf58d61baa7ad1d9f36b1 are on main. Vercel production deployment dpl_39prmfUBYY8b6SRTcs4nQBcxLpdu reached READY for the docs closeout SHA and owned over.garden / www.",
+        "Production Meilisearch active pin v1.48.1 digest sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a on volume overgarden-meili-data-v1481; legacy overgarden_meili_data retained (deletion forbidden in OVE-198).",
         "Live dual-volume path: preflight 1.15.2→1.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
         "Matching handler canary passed all six handlers including journal index/unindex/restore with cover-safe key contract; leakCheck=passed. Canary validator hotpatched on running containers to match OVE-196 cover fields; sealed matching digest unchanged.",
         "Does not claim managed-search vendor migration, ranking redesign, legacy volume deletion, or OVE-186 Done. No keys, raw documents, user IDs, journal text, or precise location in evidence."
