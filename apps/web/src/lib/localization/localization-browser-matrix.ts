@@ -138,7 +138,7 @@ export interface LocalizationDownstreamUiGate {
   adapterContract: string;
   status: "downstream-owned-real-ui" | "browser-backed";
   browserScenarioId: string | null;
-  proofOwner: "owning-downstream-slice" | "OVE-202" | "OVE-206";
+  proofOwner: "owning-downstream-slice" | "OVE-202" | "OVE-206" | "OVE-207";
   blocksCurrentIssue: false;
 }
 
@@ -386,32 +386,41 @@ export const LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS = [
 
 export const LOCALIZATION_DOWNSTREAM_UI_GATES: readonly LocalizationDownstreamUiGate[] =
   LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS.map((requirement) => {
+    const base = {
+      id: requirement.id,
+      issue: requirement.issue,
+      requiredStates: requirement.requiredStates,
+      adapterContract: "owner-composer-drafts" as const,
+      blocksCurrentIssue: false as const,
+    };
     if (requirement.issue === "OVE-202") {
       return {
-        ...requirement,
-        adapterContract: "owner-composer-drafts",
-        status: "browser-backed",
+        ...base,
+        status: "browser-backed" as const,
         browserScenarioId: "editor-clean-locale-transition",
-        proofOwner: "OVE-202",
-        blocksCurrentIssue: false,
+        proofOwner: "OVE-202" as const,
       };
     }
     if (requirement.issue === "OVE-206") {
       return {
-        ...requirement,
-        adapterContract: "owner-composer-drafts",
-        status: "browser-backed",
+        ...base,
+        status: "browser-backed" as const,
         browserScenarioId: "pointer-commit-immediate-transition",
-        proofOwner: "OVE-206",
-        blocksCurrentIssue: false,
+        proofOwner: "OVE-206" as const,
+      };
+    }
+    if (requirement.issue === "OVE-207") {
+      return {
+        ...base,
+        status: "browser-backed" as const,
+        browserScenarioId: "locale-transition-with-cover",
+        proofOwner: "OVE-207" as const,
       };
     }
     return {
-      ...requirement,
-      adapterContract: "owner-composer-drafts",
-      status: "downstream-owned-real-ui",
+      ...base,
+      status: "downstream-owned-real-ui" as const,
       browserScenarioId: null,
-      proofOwner: "owning-downstream-slice",
-      blocksCurrentIssue: false,
+      proofOwner: "owning-downstream-slice" as const,
     };
   });

@@ -24,6 +24,11 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  JournalCoverControls,
+  journalCoverSelectionToOfflinePayload,
+  type JournalCoverSelectionState,
+} from "@/components/garden/journal-cover-controls";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
@@ -36,7 +41,12 @@ import {
   localizedJournalSaveErrorMessage,
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
-import { extractJournalDocumentPlainText } from "@/lib/garden/journal-document";
+import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
+import {
+  extractJournalDocumentPlainText,
+  listJournalDocumentImageMediaIds,
+  createEmptyJournalDocument,
+} from "@/lib/garden/journal-document";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type {
@@ -191,6 +201,12 @@ export function FirstEntryComposer({
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
     Record<string, OfflinePhotoIntent>
   >({});
+  const [coverSelection, setCoverSelection] =
+    useState<JournalCoverSelectionState>({ mode: "automatic" });
+  const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
+    mediaAssetId: string;
+  } | null>(null);
+  const coverCopy = getJournalCoverControlsCopy(locale);
   const [catalogQuery, setCatalogQuery] = useState(
     visualScenario?.catalogQuery ?? initialCatalogItem?.displayName ?? "",
   );
@@ -371,6 +387,34 @@ export function FirstEntryComposer({
           setPhotoIntentsByBlockId(
             storedDraft.payload.photoIntentsByBlockId ?? {},
           );
+          if (storedDraft.payload.cover) {
+            const storedCover = storedDraft.payload.cover;
+            if (storedCover.mode === "separate") {
+              setCoverSelection({
+                mode: "separate",
+                mediaAssetId: storedCover.mediaAssetId ?? null,
+                photoIntent: storedCover.photoIntent ?? null,
+                previewUrl: null,
+              });
+            } else if (storedCover.mode === "explicit_inline") {
+              setCoverSelection({
+                mode: "explicit_inline",
+                mediaAssetId: storedCover.mediaAssetId,
+                previewUrl: null,
+              });
+            } else if (
+              storedCover.mode === "automatic" ||
+              storedCover.mode === "none"
+            ) {
+              setCoverSelection({ mode: storedCover.mode });
+            } else if (storedCover.mode === "keep_as_cover") {
+              setCoverSelection({
+                mode: "separate",
+                mediaAssetId: storedCover.mediaAssetId,
+                previewUrl: null,
+              });
+            }
+          }
           setMessage(copy.composer.draftRestored);
         }
 
@@ -399,6 +443,7 @@ export function FirstEntryComposer({
       topicTagInput,
       photoIntent: storedPhotoIntent,
       photoIntentsByBlockId,
+      cover: journalCoverSelectionToOfflinePayload(coverSelection),
     };
 
     const controller = persistenceControllerRef.current;
@@ -426,6 +471,7 @@ export function FirstEntryComposer({
     activationSource,
     catalogQuery,
     clientMutationId,
+    coverSelection,
     draft,
     draftHydrated,
     selectedCatalogItem,
@@ -865,6 +911,7 @@ export function FirstEntryComposer({
         Object.keys(photoIntentsByBlockId).length > 0
           ? photoIntentsByBlockId
           : undefined,
+      cover: journalCoverSelectionToOfflinePayload(coverSelection),
     };
   }
 
@@ -1327,6 +1374,19 @@ export function FirstEntryComposer({
             };
           }}
           onRemoveImageBlock={(blockId) => {
+            const mediaId = (() => {
+              const block = draft.contentDocument?.blocks.find(
+                (item) => item.id === blockId,
+              );
+              return block?.type === "image" ? block.mediaAssetId : null;
+            })();
+            if (
+              mediaId &&
+              coverSelection.mode === "explicit_inline" &&
+              coverSelection.mediaAssetId === mediaId
+            ) {
+              setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
+            }
             setPhotoIntentsByBlockId((current) => {
               const next = { ...current };
               const removed = next[blockId];
@@ -1338,6 +1398,37 @@ export function FirstEntryComposer({
               }
               return next;
             });
+          }}
+        />
+        <JournalCoverControls
+          copy={coverCopy}
+          selection={coverSelection}
+          eligibleInline={listJournalDocumentImageMediaIds(
+            draft.contentDocument ?? createEmptyJournalDocument(),
+          ).map((mediaAssetId, index) => ({
+            mediaAssetId,
+            previewUrl: null,
+            label: `${coverCopy.useAsCover} ${index + 1}`,
+          }))}
+          disabled={persistenceFrozen}
+          pendingInlineRemoval={pendingCoverInlineRemoval}
+          onChange={setCoverSelection}
+          onResolveInlineRemoval={(choice) => {
+            if (!pendingCoverInlineRemoval) return;
+            if (choice === "cancel") {
+              setPendingCoverInlineRemoval(null);
+              return;
+            }
+            if (choice === "keep_as_cover") {
+              setCoverSelection({
+                mode: "separate",
+                mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
+                previewUrl: null,
+              });
+            } else {
+              setCoverSelection({ mode: "automatic" });
+            }
+            setPendingCoverInlineRemoval(null);
           }}
         />
         <JournalMentionTypeaheadPanel

@@ -400,6 +400,7 @@ export function buildPublicObjectPassportGalleryQuery(
     ])
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.usage_role", "=", "inline")
     .where("plant_objects.id", "=", plantObjectId)
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
@@ -407,7 +408,7 @@ export function buildPublicObjectPassportGalleryQuery(
     .where("journal_entries.public_slug", "is not", null)
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
-    .orderBy("media_assets.created_at", "asc")
+    .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")
     .limit(normalizePublicObjectGalleryLimit(limit))
     .$narrowType<{ mediaDerivativeKey: string }>();

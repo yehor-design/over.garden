@@ -1108,9 +1108,27 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
     .where("media_assets.owner_user_id", "=", userId)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where((eb) =>
+      eb.or([
+        eb(
+          "media_assets.id",
+          "=",
+          eb.ref("journal_entries.cover_media_asset_id"),
+        ),
+        eb("media_assets.usage_role", "=", "inline"),
+      ]),
+    )
     .orderBy("journal_entries.published_at", "desc")
     .orderBy("journal_entries.entry_date", "desc")
-    .orderBy("media_assets.created_at", "asc")
+    .orderBy(
+      sql`case
+        when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
+          then 0
+        else 1
+      end`,
+      "asc",
+    )
+    .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")
     .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
 }
@@ -1145,8 +1163,26 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
     .where("journal_entries.id", "in", [...entryIds])
+    .where((eb) =>
+      eb.or([
+        eb(
+          "media_assets.id",
+          "=",
+          eb.ref("journal_entries.cover_media_asset_id"),
+        ),
+        eb("media_assets.usage_role", "=", "inline"),
+      ]),
+    )
     .orderBy("journal_entries.published_at", "desc")
-    .orderBy("media_assets.created_at", "asc")
+    .orderBy(
+      sql`case
+        when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
+          then 0
+        else 1
+      end`,
+      "asc",
+    )
+    .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")
     .limit(PUBLIC_PROFILE_MEDIA_LIMIT);
 }

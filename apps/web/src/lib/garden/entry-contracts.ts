@@ -53,6 +53,13 @@ export interface FirstPlantEntryRequest {
   coarseRegionCode?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  cover?:
+    | { mode: "automatic" }
+    | { mode: "none" }
+    | { mode: "explicit_inline"; mediaAssetId: string }
+    | { mode: "separate"; mediaAssetId: string }
+    | { mode: "keep_as_cover"; mediaAssetId: string }
+    | null;
   syncStatus?: EntrySyncStatus;
   activationSource?: ActivationSource | null;
   mentionSelections?: JournalMentionSelection[];

@@ -22,6 +22,11 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  JournalCoverControls,
+  journalCoverSelectionToOfflinePayload,
+  type JournalCoverSelectionState,
+} from "@/components/garden/journal-cover-controls";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
@@ -34,7 +39,12 @@ import {
   composerPhotoSelectionError,
   createComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
-import { extractJournalDocumentPlainText } from "@/lib/garden/journal-document";
+import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
+import {
+  createEmptyJournalDocument,
+  extractJournalDocumentPlainText,
+  listJournalDocumentImageMediaIds,
+} from "@/lib/garden/journal-document";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 import {
   assertOfflinePhotoQuotaAllows,
@@ -164,6 +174,12 @@ export function FollowUpEntryComposer({
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
     Record<string, OfflinePhotoIntent>
   >({});
+  const [coverSelection, setCoverSelection] =
+    useState<JournalCoverSelectionState>({ mode: "automatic" });
+  const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
+    mediaAssetId: string;
+  } | null>(null);
+  const coverCopy = getJournalCoverControlsCopy(locale);
   const [activeMentionToken, setActiveMentionToken] =
     useState<ActiveMentionToken | null>(null);
   const [mentionSelections, setMentionSelections] = useState<
@@ -349,6 +365,7 @@ export function FollowUpEntryComposer({
       topicTagInput,
       photoIntent: storedPhotoIntent,
       photoIntentsByBlockId,
+      cover: journalCoverSelectionToOfflinePayload(coverSelection),
     };
 
     const controller = persistenceControllerRef.current;
@@ -383,6 +400,7 @@ export function FollowUpEntryComposer({
     ownerUserId,
     photoFile,
     photoIntentsByBlockId,
+    coverSelection,
     storedPhotoIntent,
     today,
     topicTagInput,
@@ -734,6 +752,7 @@ export function FollowUpEntryComposer({
         Object.keys(photoIntentsByBlockId).length > 0
           ? photoIntentsByBlockId
           : undefined,
+      cover: journalCoverSelectionToOfflinePayload(coverSelection),
     };
   }
 
@@ -1020,6 +1039,19 @@ export function FollowUpEntryComposer({
             };
           }}
           onRemoveImageBlock={(blockId) => {
+            const mediaId = (() => {
+              const block = draft.contentDocument?.blocks.find(
+                (item) => item.id === blockId,
+              );
+              return block?.type === "image" ? block.mediaAssetId : null;
+            })();
+            if (
+              mediaId &&
+              coverSelection.mode === "explicit_inline" &&
+              coverSelection.mediaAssetId === mediaId
+            ) {
+              setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
+            }
             setPhotoIntentsByBlockId((current) => {
               const next = { ...current };
               const removed = next[blockId];
@@ -1031,6 +1063,37 @@ export function FollowUpEntryComposer({
               }
               return next;
             });
+          }}
+        />
+        <JournalCoverControls
+          copy={coverCopy}
+          selection={coverSelection}
+          eligibleInline={listJournalDocumentImageMediaIds(
+            draft.contentDocument ?? createEmptyJournalDocument(),
+          ).map((mediaAssetId, index) => ({
+            mediaAssetId,
+            previewUrl: null,
+            label: `${coverCopy.useAsCover} ${index + 1}`,
+          }))}
+          disabled={persistenceFrozen}
+          pendingInlineRemoval={pendingCoverInlineRemoval}
+          onChange={setCoverSelection}
+          onResolveInlineRemoval={(choice) => {
+            if (!pendingCoverInlineRemoval) return;
+            if (choice === "cancel") {
+              setPendingCoverInlineRemoval(null);
+              return;
+            }
+            if (choice === "keep_as_cover") {
+              setCoverSelection({
+                mode: "separate",
+                mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
+                previewUrl: null,
+              });
+            } else {
+              setCoverSelection({ mode: "automatic" });
+            }
+            setPendingCoverInlineRemoval(null);
           }}
         />
         <JournalMentionTypeaheadPanel

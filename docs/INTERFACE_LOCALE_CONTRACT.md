@@ -208,7 +208,10 @@ ledger for downstream UI, but it does not claim that nonexistent UI passed.
   checklist is required before Linear Done.
 - OVE-207 owns final automatic/explicit-inline/separate-cover behavior,
   dedicated-cover upload, selected-image removal, and combined ten-inline plus
-  one-cover transition proof.
+  one-cover transition proof. OVE-207 records `browser-backed` proof with
+  scenario `locale-transition-with-cover`; founder physical iPhone Safari
+  checklist remains residual operator smoke before trusting device gesture
+  feel.
 
 The dependency order remains OVE-205 -> OVE-202 -> OVE-206 -> OVE-207. Each
 downstream slice must replace only its own ownership-ledger entry with real

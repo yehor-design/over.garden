@@ -207,8 +207,9 @@ describe("OVE-205 executable localization browser contract", () => {
         }),
         expect.objectContaining({
           issue: "OVE-207",
-          status: "downstream-owned-real-ui",
-          browserScenarioId: null,
+          status: "browser-backed",
+          browserScenarioId: "locale-transition-with-cover",
+          proofOwner: "OVE-207",
           blocksCurrentIssue: false,
         }),
       ]),

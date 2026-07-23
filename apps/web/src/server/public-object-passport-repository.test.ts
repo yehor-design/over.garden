@@ -182,9 +182,11 @@ describe("public object passport repository query contracts", () => {
       '"media_assets"."derivative_key" is not null',
     );
     expect(compiled.sql).toContain("select distinct on");
-    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain("cover_media_asset_id");
+    expect(compiled.sql).toContain('"media_assets"."document_position" asc');
+    expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -196,6 +198,7 @@ describe("public object passport repository query contracts", () => {
     );
     expect(compiled.parameters).toEqual([
       "processed",
+      "inline",
       plantObjectId,
       "public",
       "active",
@@ -216,15 +219,17 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $3');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
     expect(compiled.sql).toContain(
       '"journal_entries"."public_slug" is not null',
     );
-    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
+    expect(compiled.sql).toContain('"media_assets"."usage_role" =');
+    expect(compiled.sql).toContain('"media_assets"."document_position" asc');
+    expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
     expect(compiled.parameters.at(-1)).toBe(6);
     expect(compiled.sql).not.toMatch(/quarantine_key|owner_user_id as|email/i);
   });

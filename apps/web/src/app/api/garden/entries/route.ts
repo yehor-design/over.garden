@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         entryDate: body.entryDate ?? "",
         clientMutationId: body.clientMutationId ?? "",
         mediaAssetId: body.mediaAssetId ?? "",
+        cover: body.cover ?? null,
         topicTags: body.topicTags ?? [],
       });
 
@@ -136,6 +137,7 @@ export async function POST(request: Request) {
             entryDate: body.entryDate ?? "",
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
+            cover: body.cover ?? null,
             mentionSelections: body.mentionSelections ?? [],
             topicTags: body.topicTags ?? [],
           })
@@ -155,6 +157,7 @@ export async function POST(request: Request) {
             coarseRegionCode: body.coarseRegionCode ?? "",
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
+            cover: body.cover ?? null,
             mentionSelections: body.mentionSelections ?? [],
             topicTags: body.topicTags ?? [],
           });

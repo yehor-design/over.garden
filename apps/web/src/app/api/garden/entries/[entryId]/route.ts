@@ -47,6 +47,13 @@ export async function PATCH(
     entryDate?: string | null;
     clientMutationId?: string;
     expectedRevision?: number;
+    cover?:
+      | { mode: "automatic" }
+      | { mode: "none" }
+      | { mode: "explicit_inline"; mediaAssetId: string }
+      | { mode: "separate"; mediaAssetId: string }
+      | { mode: "keep_as_cover"; mediaAssetId: string }
+      | null;
     mentionSelections?: unknown;
     topicTags?: unknown;
   } | null;
@@ -67,6 +74,7 @@ export async function PATCH(
       entryDate: body.entryDate ?? null,
       clientMutationId: body.clientMutationId ?? "",
       expectedRevision: body.expectedRevision ?? 0,
+      cover: body.cover ?? null,
       mentionSelections: Array.isArray(body.mentionSelections)
         ? (body.mentionSelections as never[])
         : [],

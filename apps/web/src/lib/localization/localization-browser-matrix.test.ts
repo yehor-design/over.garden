@@ -154,7 +154,7 @@ describe("OVE-205 localization browser matrix", () => {
     });
   });
 
-  it("marks OVE-202 and OVE-206 browser-backed while OVE-207 stays downstream-owned", () => {
+  it("marks OVE-202, OVE-206, and OVE-207 as browser-backed cover and composer gates", () => {
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES).toHaveLength(3);
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES.map(({ issue }) => issue)).toEqual([
       "OVE-202",
@@ -187,9 +187,9 @@ describe("OVE-205 localization browser matrix", () => {
       expect.objectContaining({
         id: "separate-cover",
         issue: "OVE-207",
-        status: "downstream-owned-real-ui",
-        browserScenarioId: null,
-        proofOwner: "owning-downstream-slice",
+        status: "browser-backed",
+        browserScenarioId: "locale-transition-with-cover",
+        proofOwner: "OVE-207",
         adapterContract: "owner-composer-drafts",
         blocksCurrentIssue: false,
       }),

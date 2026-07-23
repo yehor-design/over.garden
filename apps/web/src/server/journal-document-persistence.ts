@@ -142,7 +142,7 @@ export async function claimOrderedInlineMediaForEntry(
 
   const existing = await executor
     .selectFrom("media_assets")
-    .select(["id", "document_position", "quarantine_key"])
+    .select(["id", "document_position", "quarantine_key", "usage_role"])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "=", input.journalEntryId)
     .execute();
@@ -150,12 +150,15 @@ export async function claimOrderedInlineMediaForEntry(
   const keep = new Set(ordered);
   for (const row of existing) {
     if (row.quarantine_key.startsWith("visual-fixtures/")) continue;
+    // Cover-only assets are owned by claimJournalEntryCover, not document order.
+    if (row.usage_role === "cover_only") continue;
     if (!keep.has(row.id)) {
       await executor
         .updateTable("media_assets")
         .set({
           journal_entry_id: null,
           document_position: null,
+          usage_role: "inline",
           updated_at: new Date(),
         })
         .where("id", "=", row.id)
@@ -182,6 +185,7 @@ export async function claimOrderedInlineMediaForEntry(
       .updateTable("media_assets")
       .set({
         document_position: index + 1,
+        usage_role: "inline",
         updated_at: new Date(),
       })
       .where("id", "=", mediaAssetId)
@@ -191,6 +195,176 @@ export async function claimOrderedInlineMediaForEntry(
   }
 
   return attached;
+}
+
+export type JournalCoverClaimInput =
+  | { mode: "automatic" }
+  | { mode: "none" }
+  | { mode: "explicit_inline"; mediaAssetId: string }
+  | { mode: "separate"; mediaAssetId: string }
+  | { mode: "keep_as_cover"; mediaAssetId: string };
+
+export async function claimJournalEntryCover(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    journalEntryId: string;
+    cover: JournalCoverClaimInput;
+    orderedInlineMediaAssetIds: readonly string[];
+  },
+): Promise<string | null> {
+  const entryId = input.journalEntryId.trim();
+  const orderedInline = new Set(
+    input.orderedInlineMediaAssetIds
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0),
+  );
+
+  switch (input.cover.mode) {
+    case "automatic":
+    case "none": {
+      await clearCoverOnlyAssetsForEntry(executor, scope, entryId);
+      await executor
+        .updateTable("journal_entries")
+        .set({
+          cover_media_asset_id: null,
+          updated_at: new Date(),
+        })
+        .where("id", "=", entryId)
+        .where("owner_user_id", "=", scope.userId)
+        .execute();
+      return null;
+    }
+    case "explicit_inline": {
+      const mediaAssetId = input.cover.mediaAssetId.trim();
+      if (!orderedInline.has(mediaAssetId)) {
+        throw new Error(
+          "Cover photo must be one of this entry's story photos.",
+        );
+      }
+      await assertProcessedOwnedMediaForCover(executor, scope, {
+        mediaAssetId,
+        journalEntryId: entryId,
+      });
+      await clearCoverOnlyAssetsForEntry(executor, scope, entryId);
+      await executor
+        .updateTable("media_assets")
+        .set({
+          usage_role: "inline",
+          updated_at: new Date(),
+        })
+        .where("id", "=", mediaAssetId)
+        .where("owner_user_id", "=", scope.userId)
+        .execute();
+      await executor
+        .updateTable("journal_entries")
+        .set({
+          cover_media_asset_id: mediaAssetId,
+          updated_at: new Date(),
+        })
+        .where("id", "=", entryId)
+        .where("owner_user_id", "=", scope.userId)
+        .execute();
+      return mediaAssetId;
+    }
+    case "separate":
+    case "keep_as_cover": {
+      const mediaAssetId = input.cover.mediaAssetId.trim();
+      await assertProcessedOwnedMediaForCover(executor, scope, {
+        mediaAssetId,
+        journalEntryId: null,
+      });
+      await clearCoverOnlyAssetsForEntry(executor, scope, entryId, mediaAssetId);
+      const claimed = await executor
+        .updateTable("media_assets")
+        .set({
+          journal_entry_id: entryId,
+          usage_role: "cover_only",
+          document_position: null,
+          updated_at: new Date(),
+        })
+        .where("id", "=", mediaAssetId)
+        .where("owner_user_id", "=", scope.userId)
+        .where("status", "=", "processed")
+        .where("derivative_key", "is not", null)
+        .where((eb) =>
+          eb.or([
+            eb("journal_entry_id", "is", null),
+            eb("journal_entry_id", "=", entryId),
+          ]),
+        )
+        .returning("id")
+        .executeTakeFirst();
+      if (!claimed) {
+        throw new Error("Cover photo is not ready to attach yet.");
+      }
+      await executor
+        .updateTable("journal_entries")
+        .set({
+          cover_media_asset_id: mediaAssetId,
+          updated_at: new Date(),
+        })
+        .where("id", "=", entryId)
+        .where("owner_user_id", "=", scope.userId)
+        .execute();
+      return mediaAssetId;
+    }
+    default: {
+      const _exhaustive: never = input.cover;
+      return _exhaustive;
+    }
+  }
+}
+
+async function clearCoverOnlyAssetsForEntry(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  journalEntryId: string,
+  keepMediaAssetId?: string,
+): Promise<void> {
+  let query = executor
+    .updateTable("media_assets")
+    .set({
+      journal_entry_id: null,
+      usage_role: "inline",
+      document_position: null,
+      updated_at: new Date(),
+    })
+    .where("owner_user_id", "=", scope.userId)
+    .where("journal_entry_id", "=", journalEntryId)
+    .where("usage_role", "=", "cover_only");
+
+  if (keepMediaAssetId) {
+    query = query.where("id", "!=", keepMediaAssetId);
+  }
+
+  await query.execute();
+}
+
+async function assertProcessedOwnedMediaForCover(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    mediaAssetId: string;
+    journalEntryId: string | null;
+  },
+): Promise<void> {
+  let query = executor
+    .selectFrom("media_assets")
+    .select("id")
+    .where("id", "=", input.mediaAssetId)
+    .where("owner_user_id", "=", scope.userId)
+    .where("status", "=", "processed")
+    .where("derivative_key", "is not", null);
+
+  if (input.journalEntryId) {
+    query = query.where("journal_entry_id", "=", input.journalEntryId);
+  }
+
+  const row = await query.executeTakeFirst();
+  if (!row) {
+    throw new Error("Cover photo is not ready to attach yet.");
+  }
 }
 
 export async function writeJournalMutationReceipt(

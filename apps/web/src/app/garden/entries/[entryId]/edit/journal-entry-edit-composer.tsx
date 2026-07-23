@@ -1,13 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  JournalCoverControls,
+  journalCoverSelectionToClaimInput,
+  type JournalCoverSelectionState,
+} from "@/components/garden/journal-cover-controls";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
+import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
-import { extractJournalDocumentPlainText } from "@/lib/garden/journal-document";
+import {
+  extractJournalDocumentPlainText,
+  listJournalDocumentImageMediaIds,
+} from "@/lib/garden/journal-document";
 import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
@@ -21,6 +30,7 @@ export function JournalEntryEditComposer({
   initialDocument,
   documentUnavailable,
   imagePreviewUrls,
+  initialCoverMediaAssetId = null,
 }: {
   locale: PublicLocale;
   entryId: string;
@@ -30,6 +40,7 @@ export function JournalEntryEditComposer({
   initialDocument: JournalDocumentV1 | null;
   documentUnavailable: boolean;
   imagePreviewUrls: Record<string, string>;
+  initialCoverMediaAssetId?: string | null;
 }) {
   const router = useRouter();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
@@ -41,7 +52,41 @@ export function JournalEntryEditComposer({
   const [expectedRevision, setExpectedRevision] = useState(initialRevision);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [cover, setCover] = useState<JournalCoverSelectionState>(() => {
+    if (!initialCoverMediaAssetId) return { mode: "automatic" };
+    const inlineIds = initialDocument
+      ? listJournalDocumentImageMediaIds(initialDocument)
+      : [];
+    if (inlineIds.includes(initialCoverMediaAssetId)) {
+      return {
+        mode: "explicit_inline",
+        mediaAssetId: initialCoverMediaAssetId,
+        previewUrl: imagePreviewUrls[initialCoverMediaAssetId] ?? null,
+      };
+    }
+    return {
+      mode: "separate",
+      mediaAssetId: initialCoverMediaAssetId,
+      previewUrl: imagePreviewUrls[initialCoverMediaAssetId] ?? null,
+    };
+  });
+  const [pendingInlineRemoval, setPendingInlineRemoval] = useState<{
+    mediaAssetId: string;
+  } | null>(null);
   const labels = getStructuredJournalComposerLabels(locale);
+  const coverCopy = getJournalCoverControlsCopy(locale);
+  const previewMap = useMemo(
+    () => new Map(Object.entries(imagePreviewUrls)),
+    [imagePreviewUrls],
+  );
+  const eligibleInline = useMemo(() => {
+    if (!document) return [];
+    return listJournalDocumentImageMediaIds(document).map((mediaAssetId, index) => ({
+      mediaAssetId,
+      previewUrl: previewMap.get(mediaAssetId) ?? null,
+      label: `${coverCopy.useAsCover} ${index + 1}`,
+    }));
+  }, [coverCopy.useAsCover, document, previewMap]);
 
   async function save() {
     setSaving(true);
@@ -63,6 +108,7 @@ export function JournalEntryEditComposer({
           body: extractJournalDocumentPlainText(flushed),
           expectedRevision,
           clientMutationId: crypto.randomUUID(),
+          cover: journalCoverSelectionToClaimInput(cover),
         }),
       });
       const payload = (await response.json().catch(() => null)) as {
@@ -125,12 +171,50 @@ export function JournalEntryEditComposer({
         locale={locale}
         labels={labels}
         initialDocument={document}
-        imagePreviewUrls={new Map(Object.entries(imagePreviewUrls))}
+        imagePreviewUrls={previewMap}
         composerRef={composerRef}
         onDocumentChange={setDocument}
         onSelectImageFile={async (file) => {
           await createComposerPhotoIntent(file);
           return { previewUrl: URL.createObjectURL(file) };
+        }}
+        onRemoveImageBlock={(blockId) => {
+          const block = document?.blocks.find((item) => item.id === blockId);
+          const mediaId =
+            block?.type === "image" ? block.mediaAssetId : null;
+          if (
+            mediaId &&
+            cover.mode === "explicit_inline" &&
+            cover.mediaAssetId === mediaId
+          ) {
+            setPendingInlineRemoval({ mediaAssetId: mediaId });
+          }
+        }}
+      />
+      <JournalCoverControls
+        copy={coverCopy}
+        selection={cover}
+        eligibleInline={eligibleInline}
+        disabled={saving}
+        pendingInlineRemoval={pendingInlineRemoval}
+        onChange={setCover}
+        onResolveInlineRemoval={(choice) => {
+          if (!pendingInlineRemoval) return;
+          if (choice === "cancel") {
+            setPendingInlineRemoval(null);
+            return;
+          }
+          if (choice === "keep_as_cover") {
+            setCover({
+              mode: "separate",
+              mediaAssetId: pendingInlineRemoval.mediaAssetId,
+              previewUrl:
+                previewMap.get(pendingInlineRemoval.mediaAssetId) ?? null,
+            });
+          } else {
+            setCover({ mode: "automatic" });
+          }
+          setPendingInlineRemoval(null);
         }}
       />
       <div className="flex items-center gap-3">

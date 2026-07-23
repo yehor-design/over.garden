@@ -8,10 +8,20 @@ import {
   type FormEvent,
 } from "react";
 
+import {
+  JournalCoverControls,
+  journalCoverSelectionToOfflinePayload,
+  type JournalCoverSelectionState,
+} from "@/components/garden/journal-cover-controls";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
-import { extractJournalDocumentPlainText } from "@/lib/garden/journal-document";
+import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
+import {
+  createEmptyJournalDocument,
+  extractJournalDocumentPlainText,
+  listJournalDocumentImageMediaIds,
+} from "@/lib/garden/journal-document";
 import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 import {
   getGardenWorkspaceCopy,
@@ -95,6 +105,12 @@ export function SpaceEntryComposer({
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
     Record<string, OfflinePhotoIntent>
   >({});
+  const [coverSelection, setCoverSelection] =
+    useState<JournalCoverSelectionState>({ mode: "automatic" });
+  const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
+    mediaAssetId: string;
+  } | null>(null);
+  const coverCopy = getJournalCoverControlsCopy(locale);
   const [storedPhotoIntent, setStoredPhotoIntent] =
     useState<OfflinePhotoIntent | null>(null);
   const [isOnline, setIsOnline] = useState(
@@ -217,6 +233,7 @@ export function SpaceEntryComposer({
         Object.keys(photoIntentsByBlockId).length > 0
           ? photoIntentsByBlockId
           : undefined,
+      cover: journalCoverSelectionToOfflinePayload(coverSelection),
     };
   }
 
@@ -365,6 +382,19 @@ export function SpaceEntryComposer({
             return { mediaAssetId, previewUrl };
           }}
           onRemoveImageBlock={(blockId) => {
+            const mediaId = (() => {
+              const block = draft.contentDocument?.blocks.find(
+                (item) => item.id === blockId,
+              );
+              return block?.type === "image" ? block.mediaAssetId : null;
+            })();
+            if (
+              mediaId &&
+              coverSelection.mode === "explicit_inline" &&
+              coverSelection.mediaAssetId === mediaId
+            ) {
+              setPendingCoverInlineRemoval({ mediaAssetId: mediaId });
+            }
             setPhotoIntentsByBlockId((current) => {
               const next = { ...current };
               const removed = next[blockId];
@@ -376,6 +406,37 @@ export function SpaceEntryComposer({
               }
               return next;
             });
+          }}
+        />
+        <JournalCoverControls
+          copy={coverCopy}
+          selection={coverSelection}
+          eligibleInline={listJournalDocumentImageMediaIds(
+            draft.contentDocument ?? createEmptyJournalDocument(),
+          ).map((mediaAssetId, index) => ({
+            mediaAssetId,
+            previewUrl: null,
+            label: `${coverCopy.useAsCover} ${index + 1}`,
+          }))}
+          disabled={submitState === "saving"}
+          pendingInlineRemoval={pendingCoverInlineRemoval}
+          onChange={setCoverSelection}
+          onResolveInlineRemoval={(choice) => {
+            if (!pendingCoverInlineRemoval) return;
+            if (choice === "cancel") {
+              setPendingCoverInlineRemoval(null);
+              return;
+            }
+            if (choice === "keep_as_cover") {
+              setCoverSelection({
+                mode: "separate",
+                mediaAssetId: pendingCoverInlineRemoval.mediaAssetId,
+                previewUrl: null,
+              });
+            } else {
+              setCoverSelection({ mode: "automatic" });
+            }
+            setPendingCoverInlineRemoval(null);
           }}
         />
       </div>

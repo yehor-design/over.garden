@@ -67,6 +67,7 @@ export default async function GardenEntryEditPage({
         }
         documentUnavailable={documentRead.status === "unavailable"}
         imagePreviewUrls={Object.fromEntries(previewUrls)}
+        initialCoverMediaAssetId={entry.cover_media_asset_id}
       />
     </main>
   );

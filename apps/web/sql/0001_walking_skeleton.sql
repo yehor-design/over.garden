@@ -5210,6 +5210,65 @@ create table if not exists journal_entry_mutation_receipts (
 create index if not exists journal_entry_mutation_receipts_owner_created_idx
   on journal_entry_mutation_receipts (owner_user_id, created_at desc);
 
+-- ---------------------------------------------------------------------------
+-- OVE-207: journal cover selection — aggregate cover reference + cover-only
+-- media role that does not consume an inline story slot.
+-- ---------------------------------------------------------------------------
+
+alter table media_assets
+  add column if not exists usage_role text;
+
+update media_assets
+set usage_role = 'inline'
+where usage_role is null;
+
+alter table media_assets
+  alter column usage_role set default 'inline',
+  alter column usage_role set not null;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'media_assets_usage_role_check'
+      and conrelid = 'media_assets'::regclass
+  ) then
+    alter table media_assets
+      add constraint media_assets_usage_role_check
+      check (usage_role in ('inline', 'cover_only'));
+  end if;
+end $$;
+
+create unique index if not exists media_assets_one_cover_only_per_entry_uidx
+  on media_assets (journal_entry_id)
+  where journal_entry_id is not null
+    and usage_role = 'cover_only'
+    and quarantine_key not like 'visual-fixtures/%';
+
+alter table journal_entries
+  add column if not exists cover_media_asset_id uuid;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'journal_entries_cover_media_asset_id_fkey'
+      and conrelid = 'journal_entries'::regclass
+  ) then
+    alter table journal_entries
+      add constraint journal_entries_cover_media_asset_id_fkey
+      foreign key (cover_media_asset_id)
+      references media_assets(id)
+      on delete set null;
+  end if;
+end $$;
+
+create index if not exists journal_entries_cover_media_asset_id_idx
+  on journal_entries (cover_media_asset_id)
+  where cover_media_asset_id is not null;
+
 create or replace function enforce_journal_entry_inline_media_limit()
 returns trigger
 language plpgsql
@@ -5225,11 +5284,17 @@ begin
     return new;
   end if;
 
+  -- Cover-only assets do not consume one of the ten inline story slots.
+  if coalesce(new.usage_role, 'inline') = 'cover_only' then
+    return new;
+  end if;
+
   select count(*)::integer
   into attached_count
   from media_assets
   where journal_entry_id = new.journal_entry_id
     and quarantine_key not like 'visual-fixtures/%'
+    and coalesce(usage_role, 'inline') = 'inline'
     and id is distinct from new.id;
 
   if attached_count >= 10 then
@@ -5243,7 +5308,7 @@ $$;
 
 drop trigger if exists media_assets_inline_limit_trg on media_assets;
 create trigger media_assets_inline_limit_trg
-  before insert or update of journal_entry_id
+  before insert or update of journal_entry_id, usage_role
   on media_assets
   for each row
   execute function enforce_journal_entry_inline_media_limit();

@@ -1133,7 +1133,17 @@ export function buildPublicCommunityContributionsQuery(
           and media_assets.status = 'processed'
           and media_assets.derivative_key is not null
           and media_assets.original_deleted_at is not null
-        order by media_assets.created_at asc, media_assets.id asc
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
         limit 1
       )`.as("coverDerivativeKey"),
       viewerReportState.as("viewerReportState"),

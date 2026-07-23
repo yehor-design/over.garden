@@ -48,6 +48,7 @@ import {
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import {
+  claimJournalEntryCover,
   claimOrderedInlineMediaForEntry,
   journalRevisionNumber,
   resolveJournalContentForWrite,
@@ -56,6 +57,7 @@ import {
   findJournalMutationReceipt,
   loadOwnedActiveJournalEntryForEdit,
   readJournalDocumentFromEntry,
+  type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
@@ -93,6 +95,7 @@ export interface CreateFirstPlantEntryInput {
   coarseRegionCode?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  cover?: JournalCoverClaimInput | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
   internalDeterministicIds?: {
@@ -116,6 +119,7 @@ export interface CreatePlantObjectJournalEntryInput {
   entryDate?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  cover?: JournalCoverClaimInput | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
   internalDeterministicIds?: {
@@ -132,6 +136,7 @@ export interface CreateSpaceJournalEntryInput {
   entryDate?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
+  cover?: JournalCoverClaimInput | null;
   topicTags?: unknown;
 }
 
@@ -648,6 +653,11 @@ export async function createFirstPlantEntry(
           orderedMediaAssetIds: normalized.orderedMediaAssetIds,
         },
       );
+      await claimJournalEntryCover(trx, scope, {
+        journalEntryId: entry.id,
+        cover: normalized.cover,
+        orderedInlineMediaAssetIds: normalized.orderedMediaAssetIds,
+      });
       await writeJournalMutationReceipt(trx, {
         ownerUserId: scope.userId,
         journalEntryId: entry.id,
@@ -948,10 +958,29 @@ export function buildMyPlantObjectCoverMediaQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where((eb) =>
+      eb.or([
+        eb(
+          "media_assets.id",
+          "=",
+          eb.ref("journal_entries.cover_media_asset_id"),
+        ),
+        eb("media_assets.usage_role", "=", "inline"),
+      ]),
+    )
     .orderBy("journal_entries.plant_object_id", "asc")
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
-    .orderBy("media_assets.created_at", "asc")
+    .orderBy(
+      sql`case
+        when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
+          then 0
+        else 1
+      end`,
+      "asc",
+    )
+    .orderBy("media_assets.document_position", "asc")
+    .orderBy("media_assets.id", "asc")
     .$narrowType<{ plantObjectId: string; derivativeKey: string }>();
 }
 
@@ -1297,6 +1326,16 @@ export async function createPlantObjectJournalEntry(
         entry.id,
         normalized.orderedMediaAssetIds,
       );
+      await claimJournalEntryCover(trx, scope, {
+        journalEntryId: entry.id,
+        cover: normalized.cover,
+        orderedInlineMediaAssetIds:
+          normalized.orderedMediaAssetIds.length > 0
+            ? normalized.orderedMediaAssetIds
+            : normalized.mediaAssetId
+              ? [normalized.mediaAssetId]
+              : [],
+      });
       await writeJournalMutationReceipt(trx, {
         ownerUserId: scope.userId,
         journalEntryId: entry.id,
@@ -1506,6 +1545,16 @@ export async function createSpaceJournalEntry(
         entry.id,
         normalized.orderedMediaAssetIds,
       );
+      await claimJournalEntryCover(trx, scope, {
+        journalEntryId: entry.id,
+        cover: normalized.cover,
+        orderedInlineMediaAssetIds:
+          normalized.orderedMediaAssetIds.length > 0
+            ? normalized.orderedMediaAssetIds
+            : normalized.mediaAssetId
+              ? [normalized.mediaAssetId]
+              : [],
+      });
       await writeJournalMutationReceipt(trx, {
         ownerUserId: scope.userId,
         journalEntryId: entry.id,
@@ -1730,6 +1779,7 @@ export interface UpdateJournalEntryAggregateInput {
   entryDate?: string | null;
   contentDocument?: unknown;
   body?: string | null;
+  cover?: JournalCoverClaimInput | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: unknown;
 }
@@ -1842,6 +1892,11 @@ export async function updateJournalEntryAggregate(
     const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
       journalEntryId: updated.id,
       orderedMediaAssetIds: content.mediaAssetIds,
+    });
+    await claimJournalEntryCover(trx, scope, {
+      journalEntryId: updated.id,
+      cover: input.cover ?? { mode: "automatic" },
+      orderedInlineMediaAssetIds: content.mediaAssetIds,
     });
 
     if (updated.entry_scope === "object" && updated.plant_object_id) {
@@ -3333,7 +3388,8 @@ export function buildProcessedObjectMediaGalleryQuery(
     .where("journal_entry_id", "in", entryIds)
     .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
-    .orderBy("created_at", "asc")
+    .where("usage_role", "=", "inline")
+    .orderBy("document_position", "asc")
     .orderBy("id", "asc")
     .limit(normalizeObjectGalleryLimit(limit))
     .$narrowType<{ derivativeKey: string }>();
@@ -3368,7 +3424,8 @@ export function buildPublicProcessedMediaForEntryQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
-    .orderBy("media_assets.created_at", "asc")
+    .where("media_assets.usage_role", "=", "inline")
+    .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")
     .limit(normalizePublicJournalMediaLimit(limit));
 }
@@ -3600,6 +3657,7 @@ function normalizeCreateFirstPlantEntryInput(
       200,
     ),
     mediaAssetId,
+    cover: normalizeJournalCoverClaimInput(input.cover),
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
@@ -3644,6 +3702,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
       200,
     ),
     mediaAssetId,
+    cover: normalizeJournalCoverClaimInput(input.cover),
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
@@ -3698,8 +3757,34 @@ function normalizeCreateSpaceJournalEntryInput(
       200,
     ),
     mediaAssetId,
+    cover: normalizeJournalCoverClaimInput(input.cover),
     topicTags: input.topicTags ?? [],
   };
+}
+
+function normalizeJournalCoverClaimInput(
+  cover: JournalCoverClaimInput | null | undefined,
+): JournalCoverClaimInput {
+  if (!cover) return { mode: "automatic" };
+  switch (cover.mode) {
+    case "automatic":
+    case "none":
+      return { mode: cover.mode };
+    case "explicit_inline":
+    case "separate":
+    case "keep_as_cover": {
+      const mediaAssetId = normalizeRequiredText(
+        cover.mediaAssetId,
+        "Cover media asset id",
+        200,
+      );
+      return { mode: cover.mode, mediaAssetId };
+    }
+    default: {
+      const _exhaustive: never = cover;
+      return _exhaustive;
+    }
+  }
 }
 
 function normalizeUpdatePlantObjectLocationInput(

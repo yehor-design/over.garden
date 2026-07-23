@@ -152,6 +152,7 @@ function ownerEntry(
     content_document: null,
     content_schema_version: null,
     journal_revision: "1",
+    cover_media_asset_id: null,
     entry_scope: "object",
     entry_date: new Date(`${entryDate}T12:00:00.000Z`),
     visibility,

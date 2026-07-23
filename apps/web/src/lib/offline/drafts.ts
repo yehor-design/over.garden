@@ -14,6 +14,7 @@ import {
   type OfflineOwnerActivity,
   type OfflineDraftKind,
   type OfflineDraftRecord,
+  type OfflineJournalCoverPayload,
   type OfflinePhotoIntent,
 } from "./queue";
 import type {
@@ -50,6 +51,7 @@ export interface FirstEntryDraftPayload {
   topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
   photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
+  cover?: OfflineJournalCoverPayload | null;
 }
 
 export interface FollowUpEntryDraftFields {
@@ -67,6 +69,7 @@ export interface FollowUpEntryDraftPayload {
   topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
   photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
+  cover?: OfflineJournalCoverPayload | null;
 }
 
 export interface SpaceEntryDraftFields {
@@ -84,6 +87,7 @@ export interface SpaceEntryDraftPayload {
   topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
   photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
+  cover?: OfflineJournalCoverPayload | null;
 }
 
 export type JournalDraftPayload =

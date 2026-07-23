@@ -273,7 +273,7 @@ describe("OVE-205 market-first localization coverage", () => {
     });
   });
 
-  it("records OVE-202 and OVE-206 as browser-backed while OVE-207 stays downstream-owned", () => {
+  it("records OVE-202, OVE-206, and OVE-207 as browser-backed composer gates", () => {
     const report = buildLocalizationCoverage();
 
     expect(report.downstreamOwnedUiGates).toEqual(
@@ -303,9 +303,9 @@ describe("OVE-205 market-first localization coverage", () => {
     expect(report.downstreamOwnedUiGates[2]).toEqual(
       expect.objectContaining({
         issue: "OVE-207",
-        browserScenarioId: null,
-        status: "downstream-owned-real-ui",
-        proofOwner: "owning-downstream-slice",
+        browserScenarioId: "locale-transition-with-cover",
+        status: "browser-backed",
+        proofOwner: "OVE-207",
         blocksCurrentIssue: false,
       }),
     );
@@ -313,14 +313,19 @@ describe("OVE-205 market-first localization coverage", () => {
     const invalidDownstreamUiGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(
       (gate, index) =>
         index === 2
-          ? { ...gate, browserScenarioId: "fabricated:future-ui" as never }
+          ? {
+              ...gate,
+              status: "downstream-owned-real-ui" as const,
+              browserScenarioId: null,
+              proofOwner: "owning-downstream-slice" as const,
+            }
           : gate,
     );
     const invalidReport = buildLocalizationCoverage({
       downstreamUiGates: invalidDownstreamUiGates as never,
     });
     expect(invalidReport.missing.invalidDownstreamUiGates).toContain(
-      "separate-cover:fabricated-current-proof",
+      "separate-cover:status",
     );
 
     const incompleteStateGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(

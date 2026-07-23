@@ -472,6 +472,7 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000004",
       "active",
       "processed",
+      "inline",
     ]);
   });
 
@@ -1175,15 +1176,18 @@ describe("journal repository query contracts", () => {
     );
     expect(compiled.sql).toContain('"media_assets"."alt_text" as "altText"');
     expect(compiled.sql).toContain('"media_assets"."caption" as "caption"');
-    expect(compiled.sql).toContain('"media_assets"."created_at" asc');
+    expect(compiled.sql).toContain('"media_assets"."usage_role" =');
+    expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).toContain('"media_assets"."id" asc');
-    expect(compiled.sql).toContain("limit $5");
+    expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
+    expect(compiled.sql).toContain("limit $6");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
       "public",
       "active",
       "processed",
+      "inline",
       10,
     ]);
   });
@@ -1226,7 +1230,9 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"journal_entry_id" in ($2, $3)');
     expect(compiled.sql).toContain('"status" = $4');
     expect(compiled.sql).toContain('"derivative_key" is not null');
-    expect(compiled.sql).toContain('"created_at" asc');
+    expect(compiled.sql).toContain('"document_position" asc');
+    expect(compiled.sql).toContain('"usage_role" =');
+    expect(compiled.sql).not.toContain('"created_at" asc');
     expect(compiled.parameters.at(-1)).toBe(6);
     expect(compiled.sql).not.toContain("quarantine_key");
   });

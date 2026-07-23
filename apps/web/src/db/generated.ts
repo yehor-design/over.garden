@@ -450,6 +450,7 @@ export interface JournalEntries {
   first_publication_disclosure_version: string | null;
   id: Generated<string>;
   journal_revision: Generated<Numeric>;
+  cover_media_asset_id: string | null;
   lifecycle_state: Generated<string>;
   owner_user_id: string;
   plant_object_id: string | null;
@@ -599,6 +600,7 @@ export interface MediaAssets {
   quarantine_key: string;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
+  usage_role: Generated<string>;
 }
 
 export interface NotificationPreferences {

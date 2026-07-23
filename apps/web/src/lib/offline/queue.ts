@@ -60,7 +60,19 @@ interface OfflineJournalEntryPayloadBase {
   photoIntent?: OfflinePhotoIntent | null;
   photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
   processedMediaAssetId?: string | null;
+  cover?: OfflineJournalCoverPayload | null;
 }
+
+export type OfflineJournalCoverPayload =
+  | { mode: "automatic" }
+  | { mode: "none" }
+  | { mode: "explicit_inline"; mediaAssetId: string }
+  | {
+      mode: "separate";
+      mediaAssetId?: string | null;
+      photoIntent?: OfflinePhotoIntent | null;
+    }
+  | { mode: "keep_as_cover"; mediaAssetId: string };
 
 export interface OfflineFirstPlantEntryPayload extends OfflineJournalEntryPayloadBase {
   target?: "first_plant_entry";

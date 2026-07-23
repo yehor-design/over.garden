@@ -23,6 +23,9 @@ describe("journal media schema contract", () => {
     );
     expect(sql).toContain("enforce_journal_entry_inline_media_limit");
     expect(sql).toContain("attached_count >= 10");
+    expect(sql).toContain("usage_role = 'cover_only'");
+    expect(sql).toContain("coalesce(usage_role, 'inline') = 'inline'");
+    expect(sql).toContain("cover_media_asset_id");
     expect(sql).toContain("add column if not exists document_position integer");
     expect(sql).toContain(
       "create index if not exists media_assets_entry_created_idx",

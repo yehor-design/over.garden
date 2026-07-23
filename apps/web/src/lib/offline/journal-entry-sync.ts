@@ -271,6 +271,7 @@ export function buildJournalEntryRequestBodyForSync(
   idempotencyKey: string,
   mediaAssetId?: string | null,
 ): FirstPlantEntryRequest {
+  const cover = resolveCoverClaimForSync(payload);
   if (payload.target === "plant_object_entry") {
     return {
       target: "plant_object_entry",
@@ -281,6 +282,7 @@ export function buildJournalEntryRequestBodyForSync(
       entryDate: payload.entryDate,
       clientMutationId: idempotencyKey,
       mediaAssetId: mediaAssetId ?? "",
+      cover,
       mentionSelections: payload.mentionSelections ?? [],
       topicTags: payload.topicTags ?? [],
       syncStatus:
@@ -299,6 +301,7 @@ export function buildJournalEntryRequestBodyForSync(
       entryDate: payload.entryDate,
       clientMutationId: idempotencyKey,
       mediaAssetId: mediaAssetId ?? "",
+      cover,
       topicTags: payload.topicTags ?? [],
       syncStatus:
         payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
@@ -322,12 +325,39 @@ export function buildJournalEntryRequestBodyForSync(
     coarseRegionCode: payload.coarseRegionCode ?? null,
     clientMutationId: idempotencyKey,
     mediaAssetId: mediaAssetId ?? "",
+    cover,
     mentionSelections: payload.mentionSelections ?? [],
     topicTags: payload.topicTags ?? [],
     syncStatus:
       payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
     activationSource: payload.activationSource ?? null,
   };
+}
+
+function resolveCoverClaimForSync(
+  payload: OfflineJournalEntryPayload,
+): FirstPlantEntryRequest["cover"] {
+  const cover = payload.cover;
+  if (!cover) return { mode: "automatic" };
+  switch (cover.mode) {
+    case "automatic":
+    case "none":
+      return { mode: cover.mode };
+    case "explicit_inline":
+    case "keep_as_cover":
+      return { mode: cover.mode, mediaAssetId: cover.mediaAssetId };
+    case "separate": {
+      if (cover.mediaAssetId) {
+        return { mode: "separate", mediaAssetId: cover.mediaAssetId };
+      }
+      // Upload still pending — automatic until the next sync pass.
+      return { mode: "automatic" };
+    }
+    default: {
+      const _exhaustive: never = cover;
+      return _exhaustive;
+    }
+  }
 }
 
 async function resolveOfflineMediaForJournalPayload(
@@ -363,6 +393,42 @@ async function resolveOfflineMediaForJournalPayload(
     primaryMediaAssetId = [...mediaIdMap.values()][0] ?? null;
   }
 
+  let nextCover = payload.cover ?? null;
+  let coverChanged = false;
+  if (nextCover?.mode === "separate" && !nextCover.mediaAssetId) {
+    const coverMediaAssetId = await processPhotoIntent(
+      nextCover.photoIntent ?? null,
+      authReturnTo,
+      signal,
+    );
+    if (coverMediaAssetId) {
+      nextCover = {
+        mode: "separate",
+        mediaAssetId: coverMediaAssetId,
+        photoIntent: null,
+      };
+      coverChanged = true;
+    }
+  } else if (
+    nextCover?.mode === "explicit_inline" &&
+    mediaIdMap.has(nextCover.mediaAssetId)
+  ) {
+    nextCover = {
+      mode: "explicit_inline",
+      mediaAssetId: mediaIdMap.get(nextCover.mediaAssetId)!,
+    };
+    coverChanged = true;
+  } else if (
+    nextCover?.mode === "keep_as_cover" &&
+    mediaIdMap.has(nextCover.mediaAssetId)
+  ) {
+    nextCover = {
+      mode: "keep_as_cover",
+      mediaAssetId: mediaIdMap.get(nextCover.mediaAssetId)!,
+    };
+    coverChanged = true;
+  }
+
   let nextDocument = payload.contentDocument;
   let documentChanged = false;
   if (
@@ -379,6 +445,7 @@ async function resolveOfflineMediaForJournalPayload(
 
   const payloadChanged =
     documentChanged ||
+    coverChanged ||
     Object.keys(remainingIntents).length !==
       Object.keys(payload.photoIntentsByBlockId ?? {}).length ||
     (primaryMediaAssetId != null &&
@@ -388,6 +455,7 @@ async function resolveOfflineMediaForJournalPayload(
     payload: {
       ...payload,
       contentDocument: nextDocument,
+      cover: nextCover,
       photoIntentsByBlockId:
         Object.keys(remainingIntents).length > 0
           ? remainingIntents

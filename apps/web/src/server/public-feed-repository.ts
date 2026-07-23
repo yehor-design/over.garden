@@ -323,7 +323,18 @@ export function buildPublicFeedMediaQuery(
       "media_assets.derivative_key as derivative_key",
       sql<number>`row_number() over (
         partition by ${sql.ref("media_assets.journal_entry_id")}
-        order by ${sql.ref("media_assets.created_at")} asc, ${sql.ref("media_assets.id")} asc
+        order by
+          case
+            when ${sql.ref("media_assets.id")} = ${sql.ref("journal_entries.cover_media_asset_id")}
+              then 0
+            else 1
+          end asc,
+          case
+            when ${sql.ref("media_assets.usage_role")} = 'inline' then 0
+            else 1
+          end asc,
+          ${sql.ref("media_assets.document_position")} asc nulls last,
+          ${sql.ref("media_assets.id")} asc
       )`.as("media_rank"),
     ])
     .whereRef(
@@ -340,6 +351,16 @@ export function buildPublicFeedMediaQuery(
     .where("journal_entries.published_at", "is not", null)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where((eb) =>
+      eb.or([
+        eb(
+          "media_assets.id",
+          "=",
+          eb.ref("journal_entries.cover_media_asset_id"),
+        ),
+        eb("media_assets.usage_role", "=", "inline"),
+      ]),
+    )
     .$narrowType<{
       entry_id: string;
       derivative_key: string;
