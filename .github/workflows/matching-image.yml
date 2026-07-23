@@ -1,9 +1,10 @@
 name: Matching image release
 
+# Matching image builds are large (Docker + sealed artifact) and were the
+# primary Actions storage/minute burn. While GitHub-hosted Actions budget is
+# exhausted, release only via explicit workflow_dispatch. Re-add `push` to
+# main when budget recovers and KEEP_COUNT=0 retention is confirmed healthy.
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       source_sha:

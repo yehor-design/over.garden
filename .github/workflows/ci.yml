@@ -1,13 +1,13 @@
 name: CI
 
+# GitHub-hosted runners are paused while the account Actions budget is
+# exhausted and cannot be raised. Auto pull_request/push triggers were
+# creating immediate red checks without running jobs. Until included
+# minutes/storage recover, merge gate is: Vercel READY + local proof
+# (`pnpm typography:assets:check`, focused vitest, `pnpm mainline:closeout:check`
+# from main). Re-enable the pull_request/push triggers below when budget returns.
 on:
-  pull_request:
-    branches:
-      - main
-  push:
-    branches:
-      - main
-      - chore/walking-skeleton
+  workflow_dispatch:
 
 permissions:
   actions: write
@@ -201,7 +201,7 @@ jobs:
           exit 1
 
       - name: Prune stale ove208 typography artifacts
-        if: github.event_name == 'push'
+        if: github.event_name == 'workflow_dispatch' || github.event_name == 'push'
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ARTIFACT_PREFIX: "ove208-typography-"
