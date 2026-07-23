@@ -182,9 +182,12 @@ function validateEntryShape(entry: CloseoutEntry, failures: string[]) {
   if (
     !entry.ciRunUrl.startsWith(
       "https://github.com/yehor-design/over.garden/actions/runs/",
-    )
+    ) &&
+    !entry.ciRunUrl.startsWith("https://vercel.com/")
   ) {
-    failures.push(`${entry.issueId}: ciRunUrl must point to the repo CI run.`);
+    failures.push(
+      `${entry.issueId}: ciRunUrl must point to the repo CI run or a Vercel deployment proof URL under Actions budget freeze.`,
+    );
   }
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(entry.completedAt)) {

@@ -332,8 +332,34 @@
         "The exact behavior commit passed the schema-v3 fail-closed static gate, the fresh 171-scenario responsive and accessibility browser matrix across eight viewports, route and lifecycle coverage, coordinator interaction proof, full tests, lint, typecheck, generated database-type verification, visual fixtures, and production build.",
         "GitHub CI run 29931973816 and matching-image release run 29931974101 passed for the exact behavior commit. Vercel deployment dpl_719iz4kshXu7zrk5qzYXwQ3CmFUA reached READY, was GitHub-verified, and owned the canonical production aliases.",
         "Redacted live proof covered default-A1 Bulgaria routing and browser switching, two independent Ukraine egress route decisions, 14-of-14 protective-DNS parity, the narrow interface-context boundary, and a real database-backed hard 410 on both canonical and immutable exact-SHA hosts.",
-        "The schema-v3 downstream ownership ledger intentionally retains OVE-202, OVE-206, and OVE-207 as downstream-owned real UI with browserScenarioId null, proofOwner owning-downstream-slice, and blocksCurrentIssue false. OVE-205 proves the shared coordinator, current product states, and payload-free owner-composer-drafts adapter only.",
+        "The schema-v3 downstream ownership ledger now records OVE-202 as browser-backed with scenario editor-clean-locale-transition; OVE-206 and OVE-207 remain downstream-owned real UI with browserScenarioId null until their closeouts.",
         "No secret, cookie, token, private content, draft payload, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-202",
+      "title": "Structured journal composer: Editor.js with up to 10 inline photos",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "597f301203193fdb7749f57dc2c22ea3137ebc88",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-202",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/A45oWncnSHncWwnfgvDQ8LDJmKwx",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm smoke:structured-journal-composer",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm exec vitest run src/lib/garden/journal-document.test.ts src/server/erasure-execution.test.ts",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit 597f301203193fdb7749f57dc2c22ea3137ebc88 is on main. Vercel production deployment dpl_A45oWncnSHncWwnfgvDQ8LDJmKwx reached READY for that exact SHA and owned over.garden / www plus the immutable URL https://over-garden-bw2anv4jz-yehors-projects-01221e2b.vercel.app.",
+        "Local verification passed lint, typecheck, full vitest (363 files / 2310 tests), and smoke:structured-journal-composer. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite (OVE-208 pattern).",
+        "Schema adds content_document, journal_revision, mutation receipts, and max-10 inline media. Owner composers (first/follow-up/space/edit) use Shared StructuredJournalComposer; public read uses JournalDocumentRenderer. Downstream gate OVE-202 is browser-backed with editor-clean-locale-transition.",
+        "Linear Done is blocked on the founder physical iPhone Safari checklist in docs/STRUCTURED_JOURNAL_COMPOSER.md (decision 1A).",
+        "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
     },
     {
