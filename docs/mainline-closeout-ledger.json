@@ -584,6 +584,32 @@
         "GitHub Actions matching-image remained budget-frozen. Production matching API/worker activated offline-sealed digest sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805 (releaseRun=19600000001.1). smoke:matching-queue-health passed with leakCheck=passed.",
         "Does not claim OVE-186 Done, ranking redesign, Meili version upgrade, or any private IDs/content/slugs/titles/bodies in evidence."
       ]
+    },
+    {
+      "issueId": "OVE-197",
+      "title": "Subject-aware media: focal/intrinsic presentation across core surfaces",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "daa172d43174be895258df5ba03dd09af06a5b08",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-197",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/7A6SDLQwfbzrcunDtTrqcv816gVs",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/lib/media/presentation-contract.test.ts src/server/media/processor.test.ts src/server/media/derivatives.test.ts src/server/media/media-schema-contract.test.ts",
+        "cd apps/web && pnpm smoke:media-focal-presentation -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm smoke:media-focal-presentation -- --environment production --confirm-environment production --base-url https://over.garden --path /journals",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit daa172d43174be895258df5ba03dd09af06a5b08 is on main. Vercel production deployment dpl_7A6SDLQwfbzrcunDtTrqcv816gVs reached READY for that SHA and owned over.garden / www.",
+        "Additive production SQL 0006_ove197_media_focal_presentation.sql applied (focal_x/y + intrinsic_width/height). Local Apple Container Postgres also received 0006.",
+        "Production canary smoke:media-focal-presentation reported classify all true and productionHtml hasMediaPresentationAttr/hasObjectPositionStyle true on /journals (booleans only).",
+        "Does not claim AI subject detection, video, per-surface crop files, OVE-186 Done, Meili focal fields/upgrade, or EXIF/original/quarantine leak into UI/search/analytics/evidence. Cover identity remains OVE-207."
+      ]
     }
   ]
 }
