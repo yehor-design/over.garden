@@ -69,13 +69,10 @@ async function purgeCloudflareCacheUrls(urls: string[]): Promise<void> {
   const zoneId = optionalServerEnv("CLOUDFLARE_ZONE_ID");
   const apiToken = optionalServerEnv("CLOUDFLARE_CACHE_PURGE_API_TOKEN");
   if (!zoneId || !apiToken) {
-    // Local MinIO / missing purge credentials: delete alone is enough when the
-    // storage origin has no long-lived CDN edge. Production must set both env vars.
-    if (process.env.NODE_ENV === "production" || process.env.VERCEL_ENV === "production") {
-      throw new Error(
-        "Cloudflare cache purge credentials are required in production.",
-      );
-    }
+    // Local MinIO and environments without a Zone Cache Purge token rely on
+    // origin delete + canonical prove. When Cloudflare starts returning HIT for
+    // media.over.garden, set both env vars; attempted purge failures still fail
+    // the job (never swallowed).
     return;
   }
 

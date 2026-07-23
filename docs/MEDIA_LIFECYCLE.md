@@ -45,10 +45,14 @@ pnpm retention:report -- --environment production --confirm-environment producti
 Production revoke requires Vercel env:
 
 - `CLOUDFLARE_ZONE_ID=aa4ef4e26d4de961897f29555d20b662`
-- `CLOUDFLARE_CACHE_PURGE_API_TOKEN` — Zone **Cache Purge** scoped token (never commit)
+- `CLOUDFLARE_CACHE_PURGE_API_TOKEN` — Zone **Cache Purge** scoped token (strongly
+  recommended once media.over.garden returns `cf-cache-status: HIT`; never commit)
 - `CRON_SECRET` — bearer for `POST /api/cron/media-lifecycle`
 
-Without the purge token, production revoke jobs fail closed (no swallowed purge failure). Local MinIO omits purge credentials.
+Completion always requires canonical URL non-2xx after origin delete. Purge is
+attempted when credentials are present; purge request failures fail the job
+(never swallowed). Local MinIO omits purge credentials. Vercel Hobby cron is
+daily (`0 3 * * *`); operators can also drain via smokes/CLI.
 
 ## Production proof gates
 
