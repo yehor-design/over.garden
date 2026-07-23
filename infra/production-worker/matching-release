@@ -16,6 +16,7 @@ readonly FORWARD_POINTER="$STATE_ROOT/forward.json"
 readonly LOCK_FILE="$STATE_ROOT/matching-release.lock"
 readonly COMPOSE_FILE="${OVERGARDEN_RELEASE_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.release.yml}"
 readonly MIGRATION_FILE="${OVERGARDEN_RELEASE_MIGRATION_FILE:-$PRODUCTION_ROOT/0002_matching_worker_heartbeats.sql}"
+readonly DEAD_LETTER_MIGRATION_FILE="${OVERGARDEN_DEAD_LETTER_MIGRATION_FILE:-$PRODUCTION_ROOT/0003_job_queue_dead_letter.sql}"
 readonly LEGACY_COMPOSE_FILE="${OVERGARDEN_LEGACY_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.yml}"
 readonly ARCHIVE_OPERATION_TIMEOUT_SECONDS=1800
 readonly ARCHIVE_OPERATION_KILL_GRACE_SECONDS=30
@@ -490,6 +491,19 @@ apply_schema_migration() {
       < "$MIGRATION_FILE" >/dev/null 2>&1; then
     rm -f -- "$candidate_env"
     fail "additive heartbeat migration failed"
+  fi
+
+  if [[ -f "$DEAD_LETTER_MIGRATION_FILE" ]]; then
+    if ! docker compose \
+      --project-name overgarden \
+      --env-file "$candidate_env" \
+      --file "$COMPOSE_FILE" \
+      run --rm --no-deps -T matching-api \
+        python -c 'import os, sys, psycopg; connection = psycopg.connect(os.environ["DIRECT_URL"], autocommit=True); connection.execute(sys.stdin.read()); connection.close()' \
+        < "$DEAD_LETTER_MIGRATION_FILE" >/dev/null 2>&1; then
+      rm -f -- "$candidate_env"
+      fail "additive job_queue dead-letter migration failed"
+    fi
   fi
 
   preflight_candidate "$candidate_env"

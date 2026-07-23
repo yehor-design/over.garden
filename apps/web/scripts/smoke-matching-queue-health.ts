@@ -34,7 +34,14 @@ async function main() {
       runMatchingRuntimeCapabilitySmoke,
       validateMatchingRuntimeCapabilityOptions,
     } = await import("../src/lib/matching-runtime-proof");
-    const parsed = parseMatchingRuntimeCapabilityArgs(argv);
+    const capabilityArgv = argv.filter(
+      (arg, index, all) =>
+        arg !== "--environment" &&
+        arg !== "--confirm-environment" &&
+        all[index - 1] !== "--environment" &&
+        all[index - 1] !== "--confirm-environment",
+    );
+    const parsed = parseMatchingRuntimeCapabilityArgs(capabilityArgv);
     const options = validateMatchingRuntimeCapabilityOptions({
       baseUrl:
         parsed.baseUrl ??

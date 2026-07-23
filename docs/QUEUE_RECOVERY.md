@@ -34,3 +34,18 @@ re-reads current DB state and cannot resurrect an obsolete cover from a payload.
 Do not bulk-delete. After the OVE-194 worker deploy, unsupported or exhausted
 rows terminalize on next claim. Pre/post reports must show
 `unsupportedRetryingClass=none`.
+
+## OVE-194 live evidence (redacted)
+
+- Behavior source: `4e5385d55ac4ecda8c0c78d9493c5271a4d0a576` on `main`.
+- Vercel web: `dpl_5xPJcpyvhkq6L43HzbcLUBA1aooC` READY for that SHA.
+- Matching API/worker digest:
+  `sha256:85134c4e551e544034935c399e9aec8dfe5d0dd387eb308cd5c80ae3bd3cafb2`
+  (budget-freeze offline seal `releaseRun=19400000001.1`; matching-image
+  Actions remain blocked, so the host sealed from exact main source).
+- Additive SQL `0003_job_queue_dead_letter.sql` applied before activation.
+- Production `/ready` reports `ove194.matchingRuntime.v1` with
+  `queueRecovery.unsupportedRetryingClass=none` and empty terminal class.
+- Dead-letter canary outcomes: supportedSuccess, unsupportedTerminalized,
+  unsupportedNotReclaimed, authorizedReplay — all passed; leakCheck passed.
+- No payloads, user IDs, journal text, media keys, or secrets in evidence.

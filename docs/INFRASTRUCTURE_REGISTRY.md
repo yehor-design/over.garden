@@ -433,6 +433,23 @@ result: pass
 redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```
 
+OVE-194 live queue-recovery evidence:
+
+```text
+verified_at_utc: 2026-07-23T13:31:18Z
+main_commit_sha: 4e5385d55ac4ecda8c0c78d9493c5271a4d0a576
+vercel_deployment: dpl_5xPJcpyvhkq6L43HzbcLUBA1aooC READY
+matching_image_workflow: budget-frozen; offline host seal releaseRun=19400000001.1
+active_digest: sha256:85134c4e551e544034935c399e9aec8dfe5d0dd387eb308cd5c80ae3bd3cafb2
+runtime_schema: ove194.matchingRuntime.v1
+schema_compatibility: ove190.matching-schema.v1
+queue_recovery: claimCompatible=available, handlerCompatible=available, unsupportedRetryingClass=none, terminalCountClass=empty, oldestDueAgeClass=none
+dead_letter_canary: supportedSuccess+unsupportedTerminalized+unsupportedNotReclaimed+authorizedReplay pass
+smoke_matching_queue_health: pass
+result: pass
+redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
+```
+
 ## Vercel
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.

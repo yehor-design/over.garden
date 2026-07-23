@@ -445,6 +445,36 @@
       ]
     },
     {
+      "issueId": "OVE-194",
+      "title": "Bounded queue recovery: poison jobs stop retrying and operators see actionable readiness",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "4e5385d55ac4ecda8c0c78d9493c5271a4d0a576",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-194/bounded-queue-recovery-poison-jobs-stop-retrying-and-operators-see",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5xPJcpyvhkq6L43HzbcLUBA1aooC",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm test src/server/job-queue-contract.test.ts",
+        "cd apps/web && pnpm smoke:matching-queue-health -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm smoke:matching-queue-health -- --environment production --confirm-environment production --expected-commit 4e5385d55ac4ecda8c0c78d9493c5271a4d0a576 --expected-digest sha256:85134c4e551e544034935c399e9aec8dfe5d0dd387eb308cd5c80ae3bd3cafb2",
+        "cd services/matching && uv run --frozen pytest tests/test_worker.py tests/test_worker_recovery.py",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit 4e5385d55ac4ecda8c0c78d9493c5271a4d0a576 is on main. Vercel production deployment dpl_5xPJcpyvhkq6L43HzbcLUBA1aooC reached READY for that exact SHA.",
+        "GitHub Actions matching-image remained budget-frozen (run 30009551010). Production matching API/worker activated offline-sealed digest sha256:85134c4e551e544034935c399e9aec8dfe5d0dd387eb308cd5c80ae3bd3cafb2 from exact main source after additive 0003_job_queue_dead_letter.sql.",
+        "Production /ready reports ove194.matchingRuntime.v1 with queueRecovery.unsupportedRetryingClass=none. Dead-letter canary passed supportedSuccess, unsupportedTerminalized, unsupportedNotReclaimed, and authorizedReplay with leakCheck=passed.",
+        "Does not claim OVE-195/196/201 finals. No broad queue row deletion. No payloads, user IDs, journal text, media keys, or secrets in evidence."
+      ]
+    },
+    {
       "issueId": "OVE-208",
       "title": "Global Google Sans typography: every visitor reads a consistent, fast, accessible interface across uk/bg/ru",
       "status": "done_on_main",

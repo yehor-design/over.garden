@@ -100,9 +100,10 @@ sudo /opt/overgarden/matching-release status
 The install output supplies the release key. It is the full commit SHA plus the
 first 16 digest characters; it is not a secret.
 
-`migrate` and `deploy` apply only the committed minimal
-`0002_matching_worker_heartbeats.sql` migration. It is additive, idempotent, and
-contains no full-bootstrap replay. Every activation then runs
+`migrate` and `deploy` apply the committed minimal
+`0002_matching_worker_heartbeats.sql` migration and, when present,
+`0003_job_queue_dead_letter.sql`. Both are additive and idempotent and
+contain no full-bootstrap replay. Every activation then runs
 `python -m app.runtime preflight` from the candidate image
 against the existing production DB/schema/queue and Meilisearch before it can
 replace either service. API and worker are then recreated from the same exact
