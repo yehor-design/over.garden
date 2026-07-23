@@ -16,7 +16,7 @@ export function resolveBetterAuthSecret(
   const configured = configuredBetterAuthSecret(env.BETTER_AUTH_SECRET);
   if (configured) return configured;
 
-  if (isProductionLikeRuntime(env)) {
+  if (isProductionLikeRuntime(env) && !isBuildRuntime(env)) {
     throw new Error(missingAuthSecretMessage);
   }
 
@@ -36,6 +36,10 @@ export function isProductionLikeRuntime(env: EnvLike = process.env): boolean {
     env.VERCEL_ENV === "production" ||
     env.VERCEL_ENV === "preview"
   );
+}
+
+function isBuildRuntime(env: EnvLike = process.env): boolean {
+  return env.NEXT_PHASE === "phase-production-build";
 }
 
 export function isBlockedBetterAuthSecret(value: string | undefined): boolean {

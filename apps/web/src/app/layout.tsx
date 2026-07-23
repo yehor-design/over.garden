@@ -15,13 +15,20 @@ import {
 } from "@/lib/typography/google-sans-preloads";
 import { hasReadyCommunityNavigation } from "@/server/community-repository";
 import { getRequestInterfaceLocalization } from "@/server/interface-localization";
-import { getSiteShellSessionState } from "@/server/site-shell-session";
 import "./geist-mono.css";
 import "./globals.css";
 import "./google-sans.css";
 import { GoogleAnalytics } from "./google-analytics";
 import { MetaMarketingAttribution } from "./meta-marketing";
 import { ServiceWorkerRegister } from "./sw-register";
+
+type SiteShellSessionState = {
+  isAuthenticated: boolean;
+};
+
+const ROOT_LAYOUT_GUEST_SESSION_STATE: SiteShellSessionState = {
+  isAuthenticated: false,
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, market } = await getRequestInterfaceLocalization();
@@ -65,7 +72,7 @@ export default async function RootLayout({
 
   const [localization, shellSession, communitiesReady] = await Promise.all([
     getRequestInterfaceLocalization(),
-    getSiteShellSessionState(),
+    getShellSessionState(),
     hasReadyCommunityNavigation().catch(() => false),
   ]);
   const { locale, market } = localization;
@@ -96,4 +103,20 @@ export default async function RootLayout({
 
 function GlobalErrorVisualFixture(): React.ReactNode {
   throw new Error("Deterministic localization global-error fixture.");
+}
+
+async function getShellSessionState(): Promise<SiteShellSessionState> {
+  if (process.env.NEXT_PHASE === "phase-production-build") {
+    return ROOT_LAYOUT_GUEST_SESSION_STATE;
+  }
+
+  try {
+    const { getSiteShellSessionState } = await import(
+      "@/server/site-shell-session",
+    );
+
+    return await getSiteShellSessionState();
+  } catch {
+    return ROOT_LAYOUT_GUEST_SESSION_STATE;
+  }
 }

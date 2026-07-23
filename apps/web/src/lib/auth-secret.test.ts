@@ -27,6 +27,20 @@ describe("Better Auth secret resolution", () => {
     ).toThrow("Missing required environment variable: BETTER_AUTH_SECRET");
   });
 
+  it("uses local fallback during Next.js production build when BETTER_AUTH_SECRET is missing", () => {
+    const secret = resolveBetterAuthSecret({
+      NODE_ENV: "production",
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      NEXT_PHASE: "phase-production-build",
+      BETTER_AUTH_SECRET: undefined,
+    });
+
+    expect(secret).toMatch(
+      /^local-development-only-overgarden-better-auth-secret-[0-9a-f-]+$/,
+    );
+  });
+
   it("uses a stable local fallback only outside production-like runtimes", () => {
     const env = {
       NODE_ENV: "development",
