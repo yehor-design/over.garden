@@ -202,6 +202,8 @@ class FakeQueueConnection:
                 "rerun_requested": False,
                 "attempts": 0,
                 "last_error": None,
+                "terminal_error_code": None,
+                "terminalized_at": None,
                 "created_at": self.now,
                 "seq": self._seq,
             }
@@ -252,6 +254,21 @@ class FakeQueueConnection:
                 rerun_requested=False,
                 attempts=row["attempts"] + 1,
             )
+            return _FakeCursor({"attempts": row["attempts"]})
+        if "status = 'dead'" in normalized:
+            error, code, job_id, claim_token = params
+            row = self.job(job_id)
+            if row["status"] == "processing" and row["locked_by"] == claim_token:
+                row.update(
+                    status="dead",
+                    locked_at=None,
+                    locked_by=None,
+                    rerun_requested=False,
+                    last_error=error,
+                    terminal_error_code=code,
+                    terminalized_at=self.now,
+                    available_at=self.now,
+                )
             return _FakeCursor(None)
         if "case when rerun_requested then 'pending' else 'done' end" in normalized:
             job_id, claim_token = params
@@ -265,6 +282,9 @@ class FakeQueueConnection:
                     locked_at=None,
                     locked_by=None,
                     rerun_requested=False,
+                    last_error=None,
+                    terminal_error_code=None,
+                    terminalized_at=None,
                 )
             return _FakeCursor(None)
         if "case when rerun_requested then 'pending' else 'failed' end" in normalized:
@@ -277,6 +297,8 @@ class FakeQueueConnection:
                     locked_by=None,
                     rerun_requested=False,
                     last_error=error,
+                    terminal_error_code=None,
+                    terminalized_at=None,
                     available_at=self.now
                     if row["rerun_requested"]
                     else self.now + timedelta(seconds=int(vt_seconds)),
@@ -584,6 +606,19 @@ def test_journal_unindex_job_recovers_after_restart_and_is_idempotent(
     assert ENTRY_ID not in index.documents
 
 
+def test_dead_jobs_are_never_reclaimed(clock):
+    conn = FakeQueueConnection(clock)
+    job_id = conn.enqueue({"kind": "ove194_intentionally_unsupported"})
+    claimed = worker._claim(conn)
+    assert claimed is not None and claimed["id"] == job_id
+    worker._process_claimed_job(conn, claimed, worker._ActiveClaimLease())
+    assert conn.job(job_id)["status"] == "dead"
+    assert conn.job(job_id)["terminal_error_code"] == "unsupported_kind"
+
+    clock["now"] += timedelta(seconds=worker.VISIBILITY_TIMEOUT_SECONDS + 5)
+    assert worker._claim(conn) is None
+
+
 def test_index_job_fails_then_recovers_when_search_backend_returns(clock, monkeypatch):
     failing_meili = FailingMeiliClient()
     monkeypatch.setattr(search, "client", lambda: failing_meili)
@@ -606,12 +641,13 @@ def test_index_job_fails_then_recovers_when_search_backend_returns(clock, monkey
     assert claimed is not None
     try:
         worker._handle(conn, claimed["payload"])
-    except Exception as error:  # mirrors run()'s try/except -> _mark_failed
+    except Exception:  # mirrors run()'s try/except -> _mark_failed
         worker._mark_failed(
             conn,
             claimed["id"],
             claimed["claimToken"],
-            str(error),
+            "transient_handler_error",
+            int(claimed["attempts"]),
         )
     else:  # pragma: no cover - the backend is down on the first attempt
         worker._mark_done(conn, claimed["id"], claimed["claimToken"])

@@ -427,6 +427,7 @@ def test_process_claimed_job_clears_lease_after_success(monkeypatch) -> None:
     job = {
         "id": "internal-job-id",
         "claimToken": "internal-claim-token",
+        "attempts": 1,
         "payload": {"kind": "catalog_typeahead_reindex"},
     }
 
@@ -456,6 +457,7 @@ def test_process_claimed_job_clears_lease_after_failure(monkeypatch) -> None:
     job = {
         "id": "internal-job-id",
         "claimToken": "internal-claim-token",
+        "attempts": 1,
         "payload": {"kind": "catalog_typeahead_reindex"},
     }
 
@@ -470,14 +472,94 @@ def test_process_claimed_job_clears_lease_after_failure(monkeypatch) -> None:
     monkeypatch.setattr(
         worker,
         "_mark_failed",
-        lambda _conn, job_id, claim_token, error: failures.append(
-            (job_id, claim_token, "RuntimeError" in error)
+        lambda _conn, job_id, claim_token, error_code, attempts: failures.append(
+            (job_id, claim_token, error_code, attempts)
         ),
     )
 
     worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
 
     assert failures == [
-        ("internal-job-id", "internal-claim-token", True),
+        ("internal-job-id", "internal-claim-token", "transient_handler_error", 1),
     ]
     assert active_claim.snapshot() is None
+
+
+def test_process_claimed_job_terminals_unsupported_without_handler(
+    monkeypatch,
+) -> None:
+    active_claim = worker._ActiveClaimLease()
+    dead = []
+    job = {
+        "id": "poison-job-id",
+        "claimToken": "poison-claim-token",
+        "attempts": 1,
+        "payload": {"kind": "unknown_catalog_kind"},
+    }
+
+    monkeypatch.setattr(
+        worker,
+        "_handle",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("unsupported jobs must not invoke the handler")
+        ),
+    )
+    monkeypatch.setattr(
+        worker,
+        "_mark_dead",
+        lambda _conn, job_id, claim_token, code: dead.append(
+            (job_id, claim_token, code)
+        ),
+    )
+
+    worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
+
+    assert dead == [("poison-job-id", "poison-claim-token", "unsupported_kind")]
+    assert active_claim.snapshot() is None
+
+
+def test_process_claimed_job_terminals_at_max_attempts(monkeypatch) -> None:
+    active_claim = worker._ActiveClaimLease()
+    dead = []
+    job = {
+        "id": "exhausted-job-id",
+        "claimToken": "exhausted-claim-token",
+        "attempts": 8,
+        "payload": {"kind": "catalog_typeahead_reindex"},
+    }
+
+    monkeypatch.setattr(
+        worker,
+        "_handle",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("still down")),
+    )
+    monkeypatch.setattr(
+        worker,
+        "_mark_dead",
+        lambda _conn, job_id, claim_token, code: dead.append(
+            (job_id, claim_token, code)
+        ),
+    )
+    monkeypatch.setattr(
+        worker,
+        "_mark_failed",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("max attempts must terminalize")
+        ),
+    )
+
+    worker._process_claimed_job("conn", job, active_claim)  # type: ignore[arg-type]
+
+    assert dead == [
+        ("exhausted-job-id", "exhausted-claim-token", "max_attempts_exceeded")
+    ]
+    assert active_claim.snapshot() is None
+
+
+def test_completion_updates_include_dead_letter_contract():
+    normalized_dead = " ".join(worker.MARK_DEAD_SQL.split()).lower()
+    assert "status = 'dead'" in normalized_dead
+    assert "terminal_error_code = %s" in normalized_dead
+    assert "status = 'processing'" in normalized_dead
+    assert "locked_by = %s" in normalized_dead
+    assert "dead" not in worker.CLAIM_JOB_SQL.split("status in")[1].split(")")[0]

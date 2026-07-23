@@ -4,6 +4,11 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import {
+  JOB_QUEUE_MANIFEST,
+  jobQueueManifestKey,
+} from "./job-queue-manifest";
+
 interface JobProducer {
   source: string;
   queueName: string;
@@ -12,6 +17,7 @@ interface JobProducer {
 
 const srcRoot = fileURLToPath(new URL("../", import.meta.url));
 const repoRoot = path.resolve(srcRoot, "../../..");
+
 const consumedJobContracts = new Map<
   string,
   { consumer: string; consumerToken: string; testedBy: string }
@@ -75,6 +81,18 @@ const consumedJobContracts = new Map<
 ]);
 
 describe("job queue producer/consumer contract", () => {
+  it("keeps the shared OVE-194 manifest aligned with tested consumers", () => {
+    for (const entry of JOB_QUEUE_MANIFEST) {
+      expect(consumedJobContracts.has(jobQueueManifestKey(entry))).toBe(true);
+      expect(entry.maxAttempts).toBeGreaterThanOrEqual(1);
+    }
+    expect(
+      [...consumedJobContracts.keys()].sort(),
+    ).toEqual(
+      [...JOB_QUEUE_MANIFEST.map((entry) => jobQueueManifestKey(entry))].sort(),
+    );
+  });
+
   it("keeps every app-enqueued job kind tied to a tested consumer", () => {
     const producers = findAppJobProducers();
     const unsupported = producers.filter(

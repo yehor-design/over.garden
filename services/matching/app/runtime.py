@@ -24,7 +24,7 @@ from psycopg.rows import dict_row
 from app.job_handlers import SUPPORTED_JOB_KINDS
 from app.search import MEILISEARCH_HTTP_TIMEOUT_SECONDS
 
-RUNTIME_SCHEMA_VERSION = "ove190.matchingRuntime.v1"
+RUNTIME_SCHEMA_VERSION = "ove194.matchingRuntime.v1"
 SCHEMA_COMPATIBILITY_CLASS = "ove190.matching-schema.v1"
 SERVICE_NAME = "overgarden-matching"
 DEFAULT_QUEUE_NAME = "matching"
@@ -47,6 +47,8 @@ _REQUIRED_JOB_QUEUE_COLUMNS = frozenset(
         "locked_by",
         "attempts",
         "rerun_requested",
+        "terminal_error_code",
+        "terminalized_at",
         "updated_at",
     }
 )
@@ -55,6 +57,8 @@ _REQUIRED_QUEUE_CONSTRAINTS = frozenset(
         "job_queue_catalog_alias_payload_check",
         "job_queue_catalog_fuzzy_duplicate_payload_check",
         "job_queue_catalog_match_payload_check",
+        "job_queue_status_check",
+        "job_queue_terminal_error_code_check",
     }
 )
 _REQUIRED_HEARTBEAT_COLUMNS = frozenset(
@@ -167,34 +171,6 @@ def unavailable_manifest() -> dict[str, str]:
     }
 
 
-def preflight_manifest(
-    release: RuntimeRelease | None = None,
-) -> tuple[dict[str, object], bool]:
-    resolved_release = release or RuntimeRelease.from_environment()
-    postgres_state = _read_postgres_state(resolved_release)
-    meilisearch_status = _read_meilisearch_status()
-    ready = (
-        postgres_state["postgresStatus"] == "available"
-        and postgres_state["jobQueueStatus"] == "available"
-        and meilisearch_status == "available"
-    )
-    manifest: dict[str, object] = {
-        **capabilities_manifest(resolved_release),
-        "status": "ready" if ready else "degraded",
-        "dependencies": {
-            "api": {"status": "available"},
-            "postgres": {"status": postgres_state["postgresStatus"]},
-            "jobQueue": {
-                "status": postgres_state["jobQueueStatus"],
-                "depthClass": postgres_state["depthClass"],
-                "lagClass": postgres_state["lagClass"],
-            },
-            "meilisearch": {"status": meilisearch_status},
-        },
-    }
-    return manifest, ready
-
-
 def readiness_manifest(
     release: RuntimeRelease | None = None,
 ) -> tuple[dict[str, object], bool]:
@@ -202,11 +178,26 @@ def readiness_manifest(
     postgres_state = _read_postgres_state(resolved_release)
     meilisearch_status = _read_meilisearch_status()
     worker_status = _worker_status(postgres_state, resolved_release)
+    queue_recovery = postgres_state.get("queueRecovery")
+    if not isinstance(queue_recovery, Mapping):
+        queue_recovery = {
+            "claimCompatible": "unavailable",
+            "handlerCompatible": "unavailable",
+            "unsupportedRetryingClass": "unknown",
+            "terminalCountClass": "unknown",
+            "oldestDueAgeClass": postgres_state.get("lagClass", "none"),
+        }
+    recovery_ok = (
+        queue_recovery.get("claimCompatible") == "available"
+        and queue_recovery.get("handlerCompatible") == "available"
+        and queue_recovery.get("unsupportedRetryingClass") == "none"
+    )
     ready = (
         postgres_state["postgresStatus"] == "available"
         and postgres_state["jobQueueStatus"] == "available"
         and meilisearch_status == "available"
         and worker_status == "available"
+        and recovery_ok
     )
     manifest: dict[str, object] = {
         **capabilities_manifest(resolved_release),
@@ -221,6 +212,51 @@ def readiness_manifest(
             },
             "meilisearch": {"status": meilisearch_status},
             "worker": {"status": worker_status},
+            "queueRecovery": dict(queue_recovery),
+        },
+    }
+    return manifest, ready
+
+
+def preflight_manifest(
+    release: RuntimeRelease | None = None,
+) -> tuple[dict[str, object], bool]:
+    resolved_release = release or RuntimeRelease.from_environment()
+    postgres_state = _read_postgres_state(resolved_release)
+    meilisearch_status = _read_meilisearch_status()
+    queue_recovery = postgres_state.get("queueRecovery")
+    if not isinstance(queue_recovery, Mapping):
+        queue_recovery = {
+            "claimCompatible": "unavailable",
+            "handlerCompatible": "unavailable",
+            "unsupportedRetryingClass": "unknown",
+            "terminalCountClass": "unknown",
+            "oldestDueAgeClass": postgres_state.get("lagClass", "none"),
+        }
+    recovery_ok = (
+        queue_recovery.get("claimCompatible") == "available"
+        and queue_recovery.get("handlerCompatible") == "available"
+        and queue_recovery.get("unsupportedRetryingClass") == "none"
+    )
+    ready = (
+        postgres_state["postgresStatus"] == "available"
+        and postgres_state["jobQueueStatus"] == "available"
+        and meilisearch_status == "available"
+        and recovery_ok
+    )
+    manifest: dict[str, object] = {
+        **capabilities_manifest(resolved_release),
+        "status": "ready" if ready else "degraded",
+        "dependencies": {
+            "api": {"status": "available"},
+            "postgres": {"status": postgres_state["postgresStatus"]},
+            "jobQueue": {
+                "status": postgres_state["jobQueueStatus"],
+                "depthClass": postgres_state["depthClass"],
+                "lagClass": postgres_state["lagClass"],
+            },
+            "meilisearch": {"status": meilisearch_status},
+            "queueRecovery": dict(queue_recovery),
         },
     }
     return manifest, ready
@@ -263,12 +299,20 @@ def record_worker_heartbeat(
 
 
 def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
+    unavailable_recovery = {
+        "claimCompatible": "unavailable",
+        "handlerCompatible": "unavailable",
+        "unsupportedRetryingClass": "unknown",
+        "terminalCountClass": "unknown",
+        "oldestDueAgeClass": "none",
+    }
     unavailable = {
         "postgresStatus": "unavailable",
         "jobQueueStatus": "unavailable",
         "depthClass": "empty",
         "lagClass": "none",
         "heartbeat": None,
+        "queueRecovery": unavailable_recovery,
     }
     dsn = os.environ.get("DIRECT_URL")
     if not dsn:
@@ -294,6 +338,10 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                     **unavailable,
                     "postgresStatus": "available",
                     "jobQueueStatus": "schema_mismatch",
+                    "queueRecovery": {
+                        **unavailable_recovery,
+                        "claimCompatible": "schema_mismatch",
+                    },
                 }
 
             columns = _table_columns(conn, "job_queue")
@@ -321,6 +369,10 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                     **unavailable,
                     "postgresStatus": "available",
                     "jobQueueStatus": "schema_mismatch",
+                    "queueRecovery": {
+                        **unavailable_recovery,
+                        "claimCompatible": "schema_mismatch",
+                    },
                 }
 
             queue_row = conn.execute(
@@ -329,6 +381,17 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                   count(*) filter (
                     where status in ('pending', 'processing', 'failed')
                   )::integer as queue_depth,
+                  count(*) filter (
+                    where status = 'dead'
+                  )::integer as terminal_count,
+                  count(*) filter (
+                    where status in ('pending', 'processing', 'failed')
+                      and (
+                        jsonb_typeof(payload) <> 'object'
+                        or coalesce(payload->>'kind', '') = ''
+                        or not (payload->>'kind' = any(%s))
+                      )
+                  )::integer as unsupported_retrying_count,
                   extract(
                     epoch from now() - min(available_at)
                       filter (
@@ -339,7 +402,7 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                 from job_queue
                 where queue_name = %s
                 """,
-                (release.queue_name,),
+                (list(SUPPORTED_JOB_KINDS), release.queue_name),
             ).fetchone()
             heartbeat = conn.execute(
                 """
@@ -355,14 +418,28 @@ def _read_postgres_state(release: RuntimeRelease) -> dict[str, object]:
                 (WORKER_HEARTBEAT_MAX_AGE_SECONDS, release.queue_name),
             ).fetchone()
             depth = int(queue_row["queue_depth"]) if queue_row else 0
+            terminal_count = int(queue_row["terminal_count"]) if queue_row else 0
+            unsupported_retrying = (
+                int(queue_row["unsupported_retrying_count"]) if queue_row else 0
+            )
             lag_value = queue_row["oldest_due_seconds"] if queue_row else None
             lag_seconds = float(lag_value) if lag_value is not None else None
+            handler_compatible = _handler_compatible(heartbeat)
             return {
                 "postgresStatus": "available",
                 "jobQueueStatus": "available",
                 "depthClass": _queue_depth_class(depth),
                 "lagClass": _queue_lag_class(lag_seconds),
                 "heartbeat": heartbeat,
+                "queueRecovery": {
+                    "claimCompatible": "available",
+                    "handlerCompatible": handler_compatible,
+                    "unsupportedRetryingClass": (
+                        "none" if unsupported_retrying == 0 else "present"
+                    ),
+                    "terminalCountClass": _terminal_count_class(terminal_count),
+                    "oldestDueAgeClass": _queue_lag_class(lag_seconds),
+                },
             }
     except Exception:
         return unavailable
@@ -455,6 +532,27 @@ def _queue_lag_class(oldest_due_seconds: float | None) -> str:
     if oldest_due_seconds <= 300:
         return "delayed"
     return "stale"
+
+
+def _terminal_count_class(terminal_count: int) -> str:
+    if terminal_count <= 0:
+        return "empty"
+    if terminal_count <= 10:
+        return "low"
+    if terminal_count <= 100:
+        return "elevated"
+    return "high"
+
+
+def _handler_compatible(heartbeat: Mapping[str, object] | None) -> str:
+    if not isinstance(heartbeat, Mapping):
+        return "unavailable"
+    handlers = heartbeat.get("supported_handlers")
+    if not isinstance(handlers, Sequence) or isinstance(handlers, (str, bytes)):
+        return "drift"
+    if tuple(sorted(str(handler) for handler in handlers)) != SUPPORTED_JOB_KINDS:
+        return "drift"
+    return "available"
 
 
 def _emit(manifest: Mapping[str, object]) -> None:

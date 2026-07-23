@@ -3,6 +3,9 @@
 The TypeScript app enqueues rows into `job_queue`; this worker claims due rows
 with `FOR UPDATE SKIP LOCKED`. It is worker-first and off the request path: no
 product feature should synchronously depend on Splink/RapidFuzz work in v0.
+
+OVE-194: unsupported kinds and exhausted retries enter terminal `dead` and are
+never reclaimable. Transient failures stay `failed` with bounded backoff.
 """
 
 from __future__ import annotations
@@ -11,7 +14,6 @@ import os
 import socket
 import threading
 import time
-import traceback
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -30,6 +32,8 @@ from app.catalog_fuzzy_duplicates import (
     CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
     refresh_catalog_fuzzy_duplicate_suggestions,
 )
+from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.job_queue_manifest import max_attempts_for_kind
 from app.search import (
     CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
@@ -54,12 +58,21 @@ VISIBILITY_TIMEOUT_SECONDS = int(os.environ.get("WORKER_VT_SECONDS", "30"))
 CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
     os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
 )
+MAX_BACKOFF_SECONDS = int(os.environ.get("WORKER_MAX_BACKOFF_SECONDS", "3600"))
 WORKER_HEARTBEAT_INTERVAL_SECONDS = 10.0
 if WORKER_HEARTBEAT_INTERVAL_SECONDS * 3 > min(
     VISIBILITY_TIMEOUT_SECONDS,
     WORKER_HEARTBEAT_MAX_AGE_SECONDS,
 ):
     raise RuntimeError("worker heartbeat interval needs a three-times lease margin")
+
+
+class TerminalJobError(ValueError):
+    """Permanently invalid work that must enter `dead` without retry."""
+
+    def __init__(self, code: str, message: str) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 class _ActiveClaimLease:
@@ -81,8 +94,9 @@ class _ActiveClaimLease:
         with self._lock:
             return self._claim
 
+
 CLAIM_JOB_SQL = f"""
-select id, payload
+select id, payload, attempts
 from job_queue
 where queue_name = %s
   and (
@@ -115,6 +129,7 @@ set status = 'processing',
     attempts = attempts + 1,
     updated_at = now()
 where id = %s
+returning attempts
 """
 
 RENEW_CLAIM_LEASE_SQL = """
@@ -133,6 +148,8 @@ set status = case when rerun_requested then 'pending' else 'done' end,
     locked_by = null,
     rerun_requested = false,
     last_error = null,
+    terminal_error_code = null,
+    terminalized_at = null,
     updated_at = now()
 where id = %s
   and status = 'processing'
@@ -150,6 +167,24 @@ set status = case when rerun_requested then 'pending' else 'failed' end,
     locked_by = null,
     rerun_requested = false,
     last_error = %s,
+    terminal_error_code = null,
+    terminalized_at = null,
+    updated_at = now()
+where id = %s
+  and status = 'processing'
+  and locked_by = %s
+"""
+
+MARK_DEAD_SQL = """
+update job_queue
+set status = 'dead',
+    available_at = now(),
+    locked_at = null,
+    locked_by = null,
+    rerun_requested = false,
+    last_error = %s,
+    terminal_error_code = %s,
+    terminalized_at = now(),
     updated_at = now()
 where id = %s
   and status = 'processing'
@@ -160,9 +195,12 @@ where id = %s
 def _handle(conn: psycopg.Connection, payload: Any) -> None:
     """Process one job without making request paths depend on worker success."""
     if not isinstance(payload, dict):
-        raise ValueError("unsupported job payload")
+        raise TerminalJobError("invalid_payload", "unsupported job payload")
 
     kind = payload.get("kind")
+    if kind not in SUPPORTED_JOB_KINDS:
+        raise TerminalJobError("unsupported_kind", "unsupported job kind")
+
     if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
         reindex_catalog_typeahead(conn)
         return
@@ -224,13 +262,16 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         )
         return
 
-    raise ValueError("unsupported job kind")
+    raise TerminalJobError("unsupported_kind", "unsupported job kind")
 
 
 def _payload_text(payload: dict[str, Any], key: str, job_kind: str) -> str:
     value = payload.get(key)
     if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{key} is required for {job_kind}")
+        raise TerminalJobError(
+            "invalid_payload",
+            f"{key} is required for {job_kind}",
+        )
     return value.strip()
 
 
@@ -239,7 +280,10 @@ def _payload_uuid_text(payload: dict[str, Any], key: str, job_kind: str) -> str:
     try:
         return str(UUID(value))
     except ValueError as error:
-        raise ValueError(f"{key} must be a valid UUID for {job_kind}") from error
+        raise TerminalJobError(
+            "invalid_payload",
+            f"{key} must be a valid UUID for {job_kind}",
+        ) from error
 
 
 def _require_exact_payload_shape(
@@ -248,7 +292,10 @@ def _require_exact_payload_shape(
     expected_keys: set[str],
 ) -> None:
     if set(payload) != expected_keys:
-        raise ValueError(f"unsupported payload shape for {job_kind}")
+        raise TerminalJobError(
+            "invalid_payload",
+            f"unsupported payload shape for {job_kind}",
+        )
 
 
 def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
@@ -266,8 +313,12 @@ def _claim(conn: psycopg.Connection) -> dict[str, Any] | None:
             return None
 
         claim_token = f"{WORKER_ID}:{uuid4()}"
-        conn.execute(CLAIM_JOB_UPDATE_SQL, (claim_token, row["id"]))
-        return {**row, "claimToken": claim_token}
+        updated = conn.execute(
+            CLAIM_JOB_UPDATE_SQL,
+            (claim_token, row["id"]),
+        ).fetchone()
+        attempts = int(updated["attempts"]) if updated else int(row["attempts"]) + 1
+        return {**row, "attempts": attempts, "claimToken": claim_token}
 
 
 def _mark_done(conn: psycopg.Connection, job_id: str, claim_token: str) -> None:
@@ -279,18 +330,43 @@ def _mark_failed(
     conn: psycopg.Connection,
     job_id: str,
     claim_token: str,
-    error: str,
+    error_code: str,
+    attempts: int,
 ) -> None:
+    backoff_seconds = _backoff_seconds(attempts)
     with conn.transaction():
         conn.execute(
             MARK_FAILED_SQL,
             (
-                VISIBILITY_TIMEOUT_SECONDS,
-                error[:4000],
+                backoff_seconds,
+                error_code[:200],
                 job_id,
                 claim_token,
             ),
         )
+
+
+def _mark_dead(
+    conn: psycopg.Connection,
+    job_id: str,
+    claim_token: str,
+    terminal_error_code: str,
+) -> None:
+    with conn.transaction():
+        conn.execute(
+            MARK_DEAD_SQL,
+            (
+                terminal_error_code[:200],
+                terminal_error_code,
+                job_id,
+                claim_token,
+            ),
+        )
+
+
+def _backoff_seconds(attempts: int) -> int:
+    exponent = max(0, min(attempts - 1, 6))
+    return min(VISIBILITY_TIMEOUT_SECONDS * (2**exponent), MAX_BACKOFF_SECONDS)
 
 
 def run() -> None:
@@ -330,15 +406,38 @@ def _process_claimed_job(
 ) -> None:
     active_claim.set(job["id"], job["claimToken"])
     try:
+        payload = job["payload"]
+        kind = payload.get("kind") if isinstance(payload, dict) else None
+        attempts = int(job["attempts"])
+
+        if not isinstance(payload, dict):
+            _mark_dead(conn, job["id"], job["claimToken"], "invalid_payload")
+            return
+        if kind not in SUPPORTED_JOB_KINDS:
+            _mark_dead(conn, job["id"], job["claimToken"], "unsupported_kind")
+            return
+
         try:
-            _handle(conn, job["payload"])
+            _handle(conn, payload)
+        except TerminalJobError as error:
+            _mark_dead(conn, job["id"], job["claimToken"], error.code)
         except Exception:
-            _mark_failed(
-                conn,
-                job["id"],
-                job["claimToken"],
-                traceback.format_exc(),
-            )
+            max_attempts = max_attempts_for_kind(str(kind))
+            if attempts >= max_attempts:
+                _mark_dead(
+                    conn,
+                    job["id"],
+                    job["claimToken"],
+                    "max_attempts_exceeded",
+                )
+            else:
+                _mark_failed(
+                    conn,
+                    job["id"],
+                    job["claimToken"],
+                    "transient_handler_error",
+                    attempts,
+                )
         else:
             _mark_done(conn, job["id"], job["claimToken"])
     finally:

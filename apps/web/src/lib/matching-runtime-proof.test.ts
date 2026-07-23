@@ -20,7 +20,7 @@ const options = {
 
 function runtimeIdentity() {
   return {
-    schemaVersion: "ove190.matchingRuntime.v1",
+    schemaVersion: "ove194.matchingRuntime.v1",
     service: "overgarden-matching",
     status: "available",
     release: {
@@ -50,6 +50,13 @@ function readyResponse() {
       },
       meilisearch: { status: "available" },
       worker: { status: "available" },
+      queueRecovery: {
+        claimCompatible: "available",
+        handlerCompatible: "available",
+        unsupportedRetryingClass: "none",
+        terminalCountClass: "empty",
+        oldestDueAgeClass: "fresh",
+      },
     },
   };
 }
@@ -110,8 +117,8 @@ describe("matching runtime capability evidence", () => {
         readiness: readyResponse(),
       }),
     ).toEqual({
-      schemaVersion: "ove190.matchingRuntimeCapabilitySmoke.v1",
-      issue: "OVE-190",
+      schemaVersion: "ove194.matchingRuntimeCapabilitySmoke.v1",
+      issue: "OVE-194",
       evidenceClass: "matching-runtime-capability-smoke",
       release: runtimeIdentity().release,
       queue: runtimeIdentity().queue,
@@ -123,9 +130,12 @@ describe("matching runtime capability evidence", () => {
           jobQueue: "available",
           meilisearch: "available",
           worker: "available",
+          queueRecovery: "available",
         },
         queueDepthClass: "low",
         queueLagClass: "fresh",
+        unsupportedRetryingClass: "none",
+        terminalCountClass: "empty",
       },
       leakCheck: "passed",
     });

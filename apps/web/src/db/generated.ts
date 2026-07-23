@@ -436,6 +436,8 @@ export interface JobQueue {
   queue_name: string;
   rerun_requested: Generated<boolean>;
   status: Generated<string>;
+  terminal_error_code: string | null;
+  terminalized_at: Timestamp | null;
   updated_at: Generated<Timestamp>;
 }
 

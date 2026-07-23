@@ -49,6 +49,8 @@
     "smoke:catalog-fuzzy-duplicate-qa:reset-ui": "tsx scripts/smoke-catalog-fuzzy-duplicate-qa.ts --reset-ui",
     "smoke:catalog-matching-rollout": "tsx scripts/prove-deterministic-matching-rollout.ts",
     "smoke:matching-runtime-capabilities": "tsx scripts/prove-matching-runtime-capabilities.ts",
+    "smoke:matching-queue-health": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-matching-queue-health.ts",
+    "smoke:matching-worker-canary": "tsx scripts/smoke-matching-worker-canary.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",

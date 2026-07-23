@@ -4778,7 +4778,7 @@ create table if not exists job_queue (
   id uuid primary key default gen_random_uuid(),
   queue_name text not null,
   payload jsonb not null,
-  status text not null default 'pending' check (status in ('pending', 'processing', 'done', 'failed')),
+  status text not null default 'pending' check (status in ('pending', 'processing', 'done', 'failed', 'dead')),
   idempotency_key text,
   available_at timestamptz not null default now(),
   locked_at timestamptz,
@@ -4786,12 +4786,53 @@ create table if not exists job_queue (
   rerun_requested boolean not null default false,
   attempts integer not null default 0,
   last_error text,
+  terminal_error_code text,
+  terminalized_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 alter table job_queue
   add column if not exists rerun_requested boolean not null default false;
+
+alter table job_queue
+  add column if not exists terminal_error_code text;
+
+alter table job_queue
+  add column if not exists terminalized_at timestamptz;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'job_queue_status_check'
+      and conrelid = 'public.job_queue'::regclass
+  ) then
+    alter table job_queue drop constraint job_queue_status_check;
+  end if;
+
+  -- Recreate the named status check so additive DBs pick up `dead`.
+  alter table job_queue
+    add constraint job_queue_status_check
+    check (status in ('pending', 'processing', 'done', 'failed', 'dead'));
+exception
+  when duplicate_object then
+    null;
+end $$;
+
+alter table job_queue
+  drop constraint if exists job_queue_terminal_error_code_check;
+
+alter table job_queue
+  add constraint job_queue_terminal_error_code_check check (
+    terminal_error_code is null
+    or terminal_error_code in (
+      'unsupported_kind',
+      'invalid_payload',
+      'max_attempts_exceeded'
+    )
+  );
 
 alter table job_queue
   drop constraint if exists job_queue_catalog_match_payload_check;
@@ -4858,11 +4899,16 @@ create unique index if not exists job_queue_idempotency_key_uidx
 create index if not exists job_queue_claim_idx
   on job_queue (queue_name, status, available_at, created_at);
 
+create index if not exists job_queue_terminal_idx
+  on job_queue (queue_name, status, terminal_error_code)
+  where status = 'dead';
+
 -- Safe OVE-190 worker liveness/capability lease. This table deliberately stores
 -- no hostname, process id, user identifier, queue payload, connection detail,
 -- or raw operational error. The single queue-scoped row lets API readiness
 -- prove that the active worker runs the exact immutable release and all six
--- supported handlers.
+-- supported handlers. OVE-194 extends job_queue with bounded `dead` terminalization
+-- while keeping the six matching handler capability set unchanged.
 create table if not exists matching_worker_heartbeats (
   queue_name text primary key,
   release_commit_sha text not null,

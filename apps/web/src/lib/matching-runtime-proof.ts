@@ -1,5 +1,5 @@
 export const MATCHING_RUNTIME_SCHEMA_VERSION =
-  "ove190.matchingRuntime.v1" as const;
+  "ove194.matchingRuntime.v1" as const;
 export const MATCHING_RUNTIME_SERVICE = "overgarden-matching" as const;
 export const MATCHING_RUNTIME_SCHEMA_COMPATIBILITY_CLASS =
   "ove190.matching-schema.v1" as const;
@@ -31,6 +31,18 @@ const DEPENDENCY_STATUSES = {
 
 const JOB_QUEUE_DEPTH_CLASSES = ["empty", "low", "medium", "high"] as const;
 const JOB_QUEUE_LAG_CLASSES = ["none", "fresh", "delayed", "stale"] as const;
+const TERMINAL_COUNT_CLASSES = ["empty", "low", "elevated", "high"] as const;
+const UNSUPPORTED_RETRYING_CLASSES = ["none", "present", "unknown"] as const;
+const CLAIM_COMPATIBLE_STATUSES = [
+  "available",
+  "unavailable",
+  "schema_mismatch",
+] as const;
+const HANDLER_COMPATIBLE_STATUSES = [
+  "available",
+  "unavailable",
+  "drift",
+] as const;
 
 const FORBIDDEN_KEY_FRAGMENTS = [
   "address",
@@ -137,12 +149,19 @@ export interface MatchingRuntimeReadiness extends Omit<
     };
     meilisearch: { status: (typeof DEPENDENCY_STATUSES.meilisearch)[number] };
     worker: { status: (typeof DEPENDENCY_STATUSES.worker)[number] };
+    queueRecovery: {
+      claimCompatible: (typeof CLAIM_COMPATIBLE_STATUSES)[number];
+      handlerCompatible: (typeof HANDLER_COMPATIBLE_STATUSES)[number];
+      unsupportedRetryingClass: (typeof UNSUPPORTED_RETRYING_CLASSES)[number];
+      terminalCountClass: (typeof TERMINAL_COUNT_CLASSES)[number];
+      oldestDueAgeClass: JobQueueLagClass;
+    };
   };
 }
 
 export interface MatchingRuntimeCapabilityEvidence {
-  schemaVersion: "ove190.matchingRuntimeCapabilitySmoke.v1";
-  issue: "OVE-190";
+  schemaVersion: "ove194.matchingRuntimeCapabilitySmoke.v1";
+  issue: "OVE-194";
   evidenceClass: "matching-runtime-capability-smoke";
   release: MatchingRuntimeRelease;
   queue: MatchingRuntimeQueueCapability;
@@ -154,9 +173,12 @@ export interface MatchingRuntimeCapabilityEvidence {
       jobQueue: "available";
       meilisearch: "available";
       worker: "available";
+      queueRecovery: "available";
     };
     queueDepthClass: JobQueueDepthClass;
     queueLagClass: JobQueueLagClass;
+    unsupportedRetryingClass: (typeof UNSUPPORTED_RETRYING_CLASSES)[number];
+    terminalCountClass: (typeof TERMINAL_COUNT_CLASSES)[number];
   };
   leakCheck: "passed";
 }
@@ -273,10 +295,17 @@ export function buildMatchingRuntimeCapabilityEvidence(input: {
       throw new Error("A required matching runtime dependency is unavailable.");
     }
   }
+  if (
+    readiness.dependencies.queueRecovery.claimCompatible !== "available" ||
+    readiness.dependencies.queueRecovery.handlerCompatible !== "available" ||
+    readiness.dependencies.queueRecovery.unsupportedRetryingClass !== "none"
+  ) {
+    throw new Error("Matching queue recovery readiness is degraded.");
+  }
 
   const evidence: MatchingRuntimeCapabilityEvidence = {
-    schemaVersion: "ove190.matchingRuntimeCapabilitySmoke.v1",
-    issue: "OVE-190",
+    schemaVersion: "ove194.matchingRuntimeCapabilitySmoke.v1",
+    issue: "OVE-194",
     evidenceClass: "matching-runtime-capability-smoke",
     release: capabilities.release,
     queue: capabilities.queue,
@@ -288,9 +317,13 @@ export function buildMatchingRuntimeCapabilityEvidence(input: {
         jobQueue: "available",
         meilisearch: "available",
         worker: "available",
+        queueRecovery: "available",
       },
       queueDepthClass: readiness.dependencies.jobQueue.depthClass,
       queueLagClass: readiness.dependencies.jobQueue.lagClass,
+      unsupportedRetryingClass:
+        readiness.dependencies.queueRecovery.unsupportedRetryingClass,
+      terminalCountClass: readiness.dependencies.queueRecovery.terminalCountClass,
     },
     leakCheck: "passed",
   };
@@ -448,7 +481,7 @@ function parseReadiness(value: unknown): MatchingRuntimeReadiness {
   );
   assertExactKeys(
     dependencies,
-    ["api", "postgres", "jobQueue", "meilisearch", "worker"],
+    ["api", "postgres", "jobQueue", "meilisearch", "worker", "queueRecovery"],
     "readiness dependencies",
   );
 
@@ -467,7 +500,78 @@ function parseReadiness(value: unknown): MatchingRuntimeReadiness {
         "meilisearch",
       ),
       worker: parseDependencyStatus(dependencies.worker, "worker"),
+      queueRecovery: parseQueueRecovery(dependencies.queueRecovery),
     },
+  };
+}
+
+function parseQueueRecovery(value: unknown): MatchingRuntimeReadiness["dependencies"]["queueRecovery"] {
+  const recovery = requireRecord(value, "queueRecovery");
+  assertExactKeys(
+    recovery,
+    [
+      "claimCompatible",
+      "handlerCompatible",
+      "unsupportedRetryingClass",
+      "terminalCountClass",
+      "oldestDueAgeClass",
+    ],
+    "queueRecovery",
+  );
+  if (
+    !CLAIM_COMPATIBLE_STATUSES.includes(
+      recovery.claimCompatible as (typeof CLAIM_COMPATIBLE_STATUSES)[number],
+    )
+  ) {
+    throw new Error("Matching runtime queueRecovery claimCompatible is invalid.");
+  }
+  if (
+    !HANDLER_COMPATIBLE_STATUSES.includes(
+      recovery.handlerCompatible as (typeof HANDLER_COMPATIBLE_STATUSES)[number],
+    )
+  ) {
+    throw new Error(
+      "Matching runtime queueRecovery handlerCompatible is invalid.",
+    );
+  }
+  if (
+    !UNSUPPORTED_RETRYING_CLASSES.includes(
+      recovery.unsupportedRetryingClass as (typeof UNSUPPORTED_RETRYING_CLASSES)[number],
+    )
+  ) {
+    throw new Error(
+      "Matching runtime queueRecovery unsupportedRetryingClass is invalid.",
+    );
+  }
+  if (
+    !TERMINAL_COUNT_CLASSES.includes(
+      recovery.terminalCountClass as (typeof TERMINAL_COUNT_CLASSES)[number],
+    )
+  ) {
+    throw new Error(
+      "Matching runtime queueRecovery terminalCountClass is invalid.",
+    );
+  }
+  if (
+    !JOB_QUEUE_LAG_CLASSES.includes(
+      recovery.oldestDueAgeClass as JobQueueLagClass,
+    )
+  ) {
+    throw new Error(
+      "Matching runtime queueRecovery oldestDueAgeClass is invalid.",
+    );
+  }
+
+  return {
+    claimCompatible:
+      recovery.claimCompatible as (typeof CLAIM_COMPATIBLE_STATUSES)[number],
+    handlerCompatible:
+      recovery.handlerCompatible as (typeof HANDLER_COMPATIBLE_STATUSES)[number],
+    unsupportedRetryingClass:
+      recovery.unsupportedRetryingClass as (typeof UNSUPPORTED_RETRYING_CLASSES)[number],
+    terminalCountClass:
+      recovery.terminalCountClass as (typeof TERMINAL_COUNT_CLASSES)[number],
+    oldestDueAgeClass: recovery.oldestDueAgeClass as JobQueueLagClass,
   };
 }
 

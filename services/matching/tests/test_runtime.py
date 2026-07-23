@@ -50,6 +50,13 @@ def ready_postgres_state(**overrides: Any) -> dict[str, object]:
             "supported_handlers": list(SUPPORTED_JOB_KINDS),
             "is_fresh": True,
         },
+        "queueRecovery": {
+            "claimCompatible": "available",
+            "handlerCompatible": "available",
+            "unsupportedRetryingClass": "none",
+            "terminalCountClass": "empty",
+            "oldestDueAgeClass": "fresh",
+        },
     }
     state.update(overrides)
     return state
@@ -106,7 +113,7 @@ def test_capabilities_are_exact_sorted_and_redacted() -> None:
     manifest = runtime.capabilities_manifest(release())
 
     assert manifest == {
-        "schemaVersion": "ove190.matchingRuntime.v1",
+        "schemaVersion": "ove194.matchingRuntime.v1",
         "service": "overgarden-matching",
         "status": "available",
         "release": {
@@ -166,6 +173,13 @@ def test_readiness_distinguishes_each_dependency_without_raw_details(
         },
         "meilisearch": {"status": "available"},
         "worker": {"status": "available"},
+        "queueRecovery": {
+            "claimCompatible": "available",
+            "handlerCompatible": "available",
+            "unsupportedRetryingClass": "none",
+            "terminalCountClass": "empty",
+            "oldestDueAgeClass": "fresh",
+        },
     }
 
 

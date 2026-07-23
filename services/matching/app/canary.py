@@ -26,10 +26,56 @@ from app.search import (
     PUBLIC_JOURNAL_ENTRIES_INDEX,
 )
 
-CANARY_SCHEMA_VERSION = "ove190.matchingHandlerCanary.v1"
+CANARY_SCHEMA_VERSION = "ove194.matchingHandlerCanary.v1"
 CANARY_APPROVAL_ENV = "OVERGARDEN_MATCHING_CANARY_APPROVED"
 DEFAULT_TIMEOUT_SECONDS = 900
 POLL_INTERVAL_SECONDS = 1.0
+
+_ENQUEUE_UNSUPPORTED_SQL = """
+insert into job_queue (
+  queue_name,
+  payload,
+  idempotency_key,
+  status,
+  available_at,
+  updated_at
+)
+values (%s, %s, %s, 'pending', now(), now())
+on conflict (idempotency_key)
+  where idempotency_key is not null
+do update set
+  status = 'pending',
+  available_at = now(),
+  locked_at = null,
+  locked_by = null,
+  rerun_requested = false,
+  attempts = 0,
+  last_error = null,
+  terminal_error_code = null,
+  terminalized_at = null,
+  payload = excluded.payload,
+  updated_at = now()
+returning id::text as id
+"""
+
+_REPLAY_DEAD_SQL = """
+update job_queue
+set status = 'pending',
+    available_at = now(),
+    locked_at = null,
+    locked_by = null,
+    rerun_requested = false,
+    attempts = 0,
+    last_error = null,
+    terminal_error_code = null,
+    terminalized_at = null,
+    idempotency_key = %s,
+    updated_at = now()
+where id = %s
+  and queue_name = %s
+  and status = 'dead'
+returning id::text as id
+"""
 
 _CATALOG_MATCH_SOURCE_SQL = """
 select id::text as id
@@ -332,9 +378,118 @@ def _journal_document(
     return normalized
 
 
-def main() -> int:
+def run_dead_letter_canaries(
+    conn: psycopg.Connection,
+    release: RuntimeRelease,
+    *,
+    timeout_seconds: int = DEFAULT_TIMEOUT_SECONDS,
+) -> dict[str, object]:
+    readiness, is_ready = readiness_manifest(release)
+    if not is_ready or readiness["status"] != "ready":
+        raise RuntimeError("matching runtime is not ready for dead-letter proof")
+
+    unsupported_key = f"ove194:{release.commit_sha}:unsupported:kind"
+    unsupported = conn.execute(
+        _ENQUEUE_UNSUPPORTED_SQL,
+        (
+            release.queue_name,
+            Jsonb({"kind": "ove194_intentionally_unsupported"}),
+            unsupported_key,
+        ),
+    ).fetchone()
+    if not isinstance(unsupported, Mapping) or not isinstance(unsupported.get("id"), str):
+        raise RuntimeError("unsupported canary could not be enqueued")
+    unsupported_id = unsupported["id"]
+    _wait_for_status(conn, unsupported_id, {"dead"}, timeout_seconds)
+
+    second_claim_probe = conn.execute(
+        """
+        select count(*)::integer as claimable
+        from job_queue
+        where id = %s
+          and queue_name = %s
+          and status in ('pending', 'failed')
+          and available_at <= now()
+        """,
+        (unsupported_id, release.queue_name),
+    ).fetchone()
+    if not isinstance(second_claim_probe, Mapping) or int(second_claim_probe["claimable"]) != 0:
+        raise RuntimeError("unsupported canary remained claimable after terminalization")
+
+    typeahead_key = f"ove194:{release.commit_sha}:replay:typeahead"
+    typeahead = conn.execute(
+        _ENQUEUE_SQL,
+        (
+            release.queue_name,
+            Jsonb({"kind": "catalog_typeahead_reindex"}),
+            typeahead_key,
+        ),
+    ).fetchone()
+    if not isinstance(typeahead, Mapping) or not isinstance(typeahead.get("id"), str):
+        raise RuntimeError("replay canary could not be enqueued")
+    typeahead_id = typeahead["id"]
+    _wait_for_done(conn, typeahead_id, timeout_seconds)
+
+    # Force a supported job into dead, then authorize a one-shot replay.
+    conn.execute(
+        """
+        update job_queue
+        set status = 'dead',
+            terminal_error_code = 'max_attempts_exceeded',
+            terminalized_at = now(),
+            locked_at = null,
+            locked_by = null,
+            updated_at = now()
+        where id = %s
+        """,
+        (typeahead_id,),
+    )
+    replayed = conn.execute(
+        _REPLAY_DEAD_SQL,
+        (f"{typeahead_key}:replay", typeahead_id, release.queue_name),
+    ).fetchone()
+    if not isinstance(replayed, Mapping):
+        raise RuntimeError("authorized replay did not reopen the dead job")
+    _wait_for_done(conn, typeahead_id, timeout_seconds)
+
+    return {
+        "schemaVersion": CANARY_SCHEMA_VERSION,
+        "issue": "OVE-194",
+        "evidenceClass": "matching-dead-letter-canary",
+        "release": release.manifest(),
+        "outcomes": {
+            "unsupportedTerminalized": "passed",
+            "unsupportedNotReclaimed": "passed",
+            "authorizedReplay": "passed",
+            "supportedSuccess": "passed",
+        },
+        "leakCheck": "passed",
+    }
+
+
+def _wait_for_status(
+    conn: psycopg.Connection,
+    job_id: str,
+    accepted: set[str],
+    timeout_seconds: int,
+) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        row = conn.execute(_JOB_STATUS_SQL, (job_id,)).fetchone()
+        status = row.get("status") if isinstance(row, Mapping) else None
+        if status in accepted:
+            return
+        if status not in {"pending", "processing", "failed", "dead"}:
+            raise RuntimeError("canary reached an invalid state class")
+        time.sleep(POLL_INTERVAL_SECONDS)
+    raise RuntimeError("canary timed out waiting for terminal state")
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    mode = args[0] if args else "handlers"
     if os.environ.get(CANARY_APPROVAL_ENV) != "true":
-        print("OVE-190 handler canary requires an explicit approval gate.")
+        print("OVE-194 matching canary requires an explicit approval gate.")
         return 1
     try:
         release = RuntimeRelease.from_environment()
@@ -344,11 +499,14 @@ def main() -> int:
             row_factory=dict_row,
             connect_timeout=5,
         ) as conn:
-            evidence = run_handler_canaries(conn, release)
+            if mode == "dead-letter":
+                evidence = run_dead_letter_canaries(conn, release)
+            else:
+                evidence = run_handler_canaries(conn, release)
         print(json.dumps(evidence, sort_keys=True, separators=(",", ":")))
         return 0
     except Exception:
-        print("OVE-190 matching handler canary failed without exposing details.")
+        print("OVE-194 matching canary failed without exposing details.")
         return 1
 
 

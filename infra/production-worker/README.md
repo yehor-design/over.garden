@@ -45,7 +45,7 @@ workstation or log:
 sudo install -d -m 0755 /opt/overgarden
 sudo install -m 0755 infra/production-worker/matching-release /opt/overgarden/matching-release
 sudo install -m 0644 infra/production-worker/docker-compose.release.yml /opt/overgarden/docker-compose.release.yml
-sudo install -m 0444 infra/production-worker/0002_matching_worker_heartbeats.sql /opt/overgarden/0002_matching_worker_heartbeats.sql
+sudo install -m 0444 infra/production-worker/0003_job_queue_dead_letter.sql /opt/overgarden/0003_job_queue_dead_letter.sql
 ```
 
 The existing `/opt/overgarden/worker.env`, `overgarden_default` network,
