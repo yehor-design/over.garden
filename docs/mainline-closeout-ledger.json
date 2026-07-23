@@ -415,6 +415,36 @@
       ]
     },
     {
+      "issueId": "OVE-192",
+      "title": "Current-schema erasure: an approved account request finishes without FK failure or identity residue",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "f5527d8f47005259095b975f93671c24eca6d32c",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-192/current-schema-erasure-an-approved-account-request-finishes-without-fk",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/7teP4hQiCe4xjRv8auXGKHyrdgXN",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm erasure:schema-coverage:check",
+        "cd apps/web && pnpm test src/server/erasure-dry-run.test.ts src/server/erasure-execution.test.ts src/server/erasure-request-repository.test.ts src/server/erasure-request-access.test.ts src/server/erasure-schema-coverage.test.ts",
+        "cd apps/web && pnpm smoke:erasure-workflow -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit f5527d8f47005259095b975f93671c24eca6d32c is on main. Vercel production deployment dpl_7teP4hQiCe4xjRv8auXGKHyrdgXN reached READY for that exact SHA and owned over.garden / www plus immutable URL https://over-garden-ixuzncvua-yehors-projects-01221e2b.vercel.app.",
+        "Local verification passed db:types:check, erasure:schema-coverage:check (64 classified paths), focused erasure tests, smoke:erasure-workflow with storage-failure retry recovery, lint, typecheck, full vitest (366 files / 2337 tests), and production build under Node 24. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
+        "Machine-readable coverage in docs/CURRENT_SCHEMA_ERASURE.md and apps/web/src/server/erasure-schema-coverage.ts. Community ON DELETE RESTRICT actor columns rekey to tombstone user 00000000-0000-4000-8000-00000000ead1. DB-first erasure_media_object_delete outbox with handled_status=cleanup_pending before completed. engagement_likes classified not-account-linkable. OVE-203 identity and OVE-207 cover fields are inventory-owned; Dexie purgeErasedOwnerOfflineStore covers cover intents.",
+        "Does not claim OVE-195 media lifecycle schedule proof or any production account erasure. No FK was weakened to pass tests.",
+        "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
+    },
+    {
       "issueId": "OVE-208",
       "title": "Global Google Sans typography: every visitor reads a consistent, fast, accessible interface across uk/bg/ru",
       "status": "done_on_main",
