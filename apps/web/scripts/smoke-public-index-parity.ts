@@ -26,6 +26,12 @@ function readFlag(argv: string[], name: string): string | null {
 
 async function main() {
   const argv = process.argv.slice(2);
+  // Resolve SSL before any db import — production managed Postgres rejects
+  // non-TLS connections (pg_hba "no encryption").
+  const earlyEnvironment = readFlag(argv, "--environment");
+  if (earlyEnvironment === "production" && !process.env.DATABASE_SSL) {
+    process.env.DATABASE_SSL = "true";
+  }
   const environment = requireEnvironment(argv);
   const mode = readFlag(argv, "--mode") ?? "classify";
   if (mode !== "classify" && mode !== "plan" && mode !== "apply") {

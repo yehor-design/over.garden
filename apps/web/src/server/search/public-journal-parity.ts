@@ -298,13 +298,19 @@ async function buildInternalParityState(): Promise<InternalParityState> {
       continue;
     }
 
+    const expected = expectedById.get(id);
     if (hasUnsafeSchema(doc)) {
       unsafeSchema += 1;
-      extraneousIds.push(id);
+      // Eligible IDs with unsafe Meili payloads must be upserted, not only
+      // deleted — otherwise apply would leave missing docs and zeroGap false.
+      if (expected) {
+        staleIds.push(id);
+      } else {
+        extraneousIds.push(id);
+      }
       continue;
     }
 
-    const expected = expectedById.get(id);
     if (!expected) {
       extraneous += 1;
       extraneousIds.push(id);
