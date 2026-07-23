@@ -54,6 +54,10 @@ export interface JournalCoverCandidate {
   derivativeKey: string | null;
   originalDeletedAt: Date | string | null;
   altText?: string | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  intrinsicWidth?: number | null;
+  intrinsicHeight?: number | null;
 }
 
 export interface ResolvedJournalCover {
@@ -62,6 +66,10 @@ export interface ResolvedJournalCover {
   mode: JournalCoverMode;
   derivativeKey: string | null;
   altText: string | null;
+  focalX: number | null;
+  focalY: number | null;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 export function isEligibleProcessedCoverCandidate(
@@ -105,6 +113,10 @@ export function resolveEffectiveJournalCover(input: {
         mode,
         derivativeKey: explicit.derivativeKey,
         altText: explicit.altText ?? null,
+        focalX: explicit.focalX ?? 0.5,
+        focalY: explicit.focalY ?? 0.5,
+        intrinsicWidth: explicit.intrinsicWidth ?? null,
+        intrinsicHeight: explicit.intrinsicHeight ?? null,
       };
     }
   }
@@ -127,6 +139,10 @@ export function resolveEffectiveJournalCover(input: {
       mode: "automatic",
       derivativeKey: candidate.derivativeKey,
       altText: candidate.altText ?? null,
+      focalX: candidate.focalX ?? 0.5,
+      focalY: candidate.focalY ?? 0.5,
+      intrinsicWidth: candidate.intrinsicWidth ?? null,
+      intrinsicHeight: candidate.intrinsicHeight ?? null,
     };
   }
 
@@ -136,6 +152,10 @@ export function resolveEffectiveJournalCover(input: {
     mode: "none",
     derivativeKey: null,
     altText: null,
+    focalX: null,
+    focalY: null,
+    intrinsicWidth: null,
+    intrinsicHeight: null,
   };
 }
 

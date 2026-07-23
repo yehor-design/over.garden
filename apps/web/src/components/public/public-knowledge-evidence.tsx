@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -10,6 +9,7 @@ import {
   ScanSearch,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import { buttonVariants } from "@/components/ui/button";
 import {
   formatPublicKnowledgeEvidenceCount,
@@ -211,12 +211,16 @@ function EvidenceMedia({
   return (
     <div className="relative aspect-4/3 w-full overflow-hidden rounded-md border border-border bg-muted sm:aspect-square">
       {media ? (
-        <Image
+        <SubjectAwareMediaImage
           src={media.publicUrl}
           alt={`${item.card.object.displayName}: ${item.card.title}`}
           fill
           sizes="(max-width: 639px) 100vw, 144px"
-          className="object-cover"
+          presentationMode="cover"
+          focalX={media.focalX}
+          focalY={media.focalY}
+          intrinsicWidth={media.intrinsicWidth}
+          intrinsicHeight={media.intrinsicHeight}
           loading={eager ? "eager" : "lazy"}
           unoptimized
         />

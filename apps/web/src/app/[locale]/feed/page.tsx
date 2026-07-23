@@ -1,9 +1,9 @@
 import { ArrowRight, Leaf, UserRound } from "lucide-react";
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   MySocialLayout,
   SocialEmptyState,
@@ -273,13 +273,13 @@ function FollowedFeedCard({
             aria-label={item.title}
             className="relative aspect-4/3 overflow-hidden bg-muted sm:w-44 sm:shrink-0"
           >
-            <Image
+            <SubjectAwareMediaImage
               src={item.mediaUrl}
               alt=""
               fill
               loading={eagerMedia ? "eager" : "lazy"}
               sizes="(min-width: 640px) 176px, 100vw"
-              className="object-cover"
+              presentationMode="cover"
             />
           </Link>
         ) : null}

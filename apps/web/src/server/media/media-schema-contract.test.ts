@@ -27,6 +27,9 @@ describe("journal media schema contract", () => {
     expect(sql).toContain("coalesce(usage_role, 'inline') = 'inline'");
     expect(sql).toContain("cover_media_asset_id");
     expect(sql).toContain("add column if not exists document_position integer");
+    expect(sql).toContain("add column if not exists intrinsic_width integer");
+    expect(sql).toContain("add column if not exists focal_x double precision");
+    expect(sql).toContain("media_assets_focal_x_range_check");
     expect(sql).toContain(
       "create index if not exists media_assets_entry_created_idx",
     );

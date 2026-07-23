@@ -204,6 +204,10 @@ export interface PlantObjectSummary {
   coverMedia: {
     publicUrl: string;
     altText: string;
+    focalX: number;
+    focalY: number;
+    intrinsicWidth: number | null;
+    intrinsicHeight: number | null;
   } | null;
 }
 
@@ -260,6 +264,10 @@ export interface EntryMediaReadback {
   id: string;
   derivativeKey: string;
   publicUrl: string;
+  focalX: number;
+  focalY: number;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 export interface MentionedPlantObjectReadback {
@@ -370,6 +378,10 @@ export interface PublicJournalEntryMedia {
   publicUrl: string;
   altText: string | null;
   caption: string | null;
+  focalX: number;
+  focalY: number;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 export interface PublicJournalEntryTopic {
@@ -840,6 +852,10 @@ export async function listMyPlantObjects(
         ? {
             publicUrl: getPublicDerivativeUrl(cover.derivativeKey),
             altText: cover.altText ?? `${row.displayName} journal photo`,
+            focalX: Number(cover.focalX ?? 0.5),
+            focalY: Number(cover.focalY ?? 0.5),
+            intrinsicWidth: cover.intrinsicWidth ?? null,
+            intrinsicHeight: cover.intrinsicHeight ?? null,
           }
         : null,
     };
@@ -951,6 +967,10 @@ export function buildMyPlantObjectCoverMediaQuery(
       "journal_entries.plant_object_id as plantObjectId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
+      "media_assets.focal_x as focalX",
+      "media_assets.focal_y as focalY",
+      "media_assets.intrinsic_width as intrinsicWidth",
+      "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .distinctOn("journal_entries.plant_object_id")
     .where("journal_entries.owner_user_id", "=", scope.userId)
@@ -2240,6 +2260,18 @@ export function serializePublicJournalEntryPage(input: {
       publicUrl: getPublicDerivativeUrl(row.derivativeKey),
       altText: row.altText,
       caption: row.caption,
+      focalX: Number(
+        "focalX" in row && row.focalX != null ? row.focalX : 0.5,
+      ),
+      focalY: Number(
+        "focalY" in row && row.focalY != null ? row.focalY : 0.5,
+      ),
+      intrinsicWidth:
+        "intrinsicWidth" in row ? (row.intrinsicWidth as number | null) : null,
+      intrinsicHeight:
+        "intrinsicHeight" in row
+          ? (row.intrinsicHeight as number | null)
+          : null,
     })),
     mentionedProfiles: (input.mentionedProfileRows ?? []).map((profile) => ({
       handle: profile.handle,
@@ -3380,6 +3412,10 @@ export function buildProcessedMediaForEntriesQuery(
       "id",
       "journal_entry_id as journalEntryId",
       "derivative_key as derivativeKey",
+      "focal_x as focalX",
+      "focal_y as focalY",
+      "intrinsic_width as intrinsicWidth",
+      "intrinsic_height as intrinsicHeight",
     ])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "in", entryIds)
@@ -3396,7 +3432,14 @@ export function buildProcessedObjectMediaGalleryQuery(
 ) {
   return executor
     .selectFrom("media_assets")
-    .select(["id", "derivative_key as derivativeKey"])
+    .select([
+      "id",
+      "derivative_key as derivativeKey",
+      "focal_x as focalX",
+      "focal_y as focalY",
+      "intrinsic_width as intrinsicWidth",
+      "intrinsic_height as intrinsicHeight",
+    ])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "in", entryIds)
     .where("status", "=", "processed")
@@ -3426,6 +3469,10 @@ export function buildPublicProcessedMediaForEntryQuery(
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
       "media_assets.caption as caption",
+      "media_assets.focal_x as focalX",
+      "media_assets.focal_y as focalY",
+      "media_assets.intrinsic_width as intrinsicWidth",
+      "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .whereRef(
       "media_assets.owner_user_id",
@@ -4003,6 +4050,10 @@ async function getProcessedMediaByEntryId(
       id: media.id,
       derivativeKey: media.derivativeKey,
       publicUrl: getPublicDerivativeUrl(media.derivativeKey),
+      focalX: Number(media.focalX ?? 0.5),
+      focalY: Number(media.focalY ?? 0.5),
+      intrinsicWidth: media.intrinsicWidth ?? null,
+      intrinsicHeight: media.intrinsicHeight ?? null,
     });
   }
 
@@ -4025,6 +4076,10 @@ async function readProcessedObjectMediaGallery(
     id: row.id,
     derivativeKey: row.derivativeKey,
     publicUrl: getPublicDerivativeUrl(row.derivativeKey),
+    focalX: Number(row.focalX ?? 0.5),
+    focalY: Number(row.focalY ?? 0.5),
+    intrinsicWidth: row.intrinsicWidth ?? null,
+    intrinsicHeight: row.intrinsicHeight ?? null,
   }));
 }
 

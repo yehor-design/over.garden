@@ -13,6 +13,8 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
+
 import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
@@ -233,14 +235,19 @@ export function LivingObjectPassportOverview({
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {passport.gallery.slice(0, 6).map((media) => (
               <li key={media.publicUrl} className="min-w-0">
-                <Image
+                <SubjectAwareMediaImage
                   src={media.publicUrl}
                   alt={media.alt}
                   width={640}
                   height={480}
                   sizes="(min-width: 1024px) 14rem, 45vw"
                   unoptimized
-                  className="aspect-4/3 w-full rounded-md border border-border bg-muted object-contain"
+                  presentationMode="contain"
+                  focalX={media.focalX}
+                  focalY={media.focalY}
+                  intrinsicWidth={media.intrinsicWidth}
+                  intrinsicHeight={media.intrinsicHeight}
+                  className="aspect-4/3 w-full rounded-md border border-border bg-muted"
                 />
               </li>
             ))}
@@ -347,7 +354,7 @@ function PassportCover({
   noPhotoLabel: string;
 }) {
   return passport.cover ? (
-    <Image
+    <SubjectAwareMediaImage
       src={passport.cover.publicUrl}
       alt={passport.cover.alt}
       width={960}
@@ -355,7 +362,12 @@ function PassportCover({
       sizes="(min-width: 768px) 20rem, 100vw"
       loading="eager"
       unoptimized
-      className="aspect-4/3 w-full rounded-md border border-border object-cover"
+      presentationMode="cover"
+      focalX={passport.cover.focalX}
+      focalY={passport.cover.focalY}
+      intrinsicWidth={passport.cover.intrinsicWidth}
+      intrinsicHeight={passport.cover.intrinsicHeight}
+      className="aspect-4/3 w-full rounded-md border border-border"
     />
   ) : (
     <div className="flex aspect-4/3 w-full items-center justify-center rounded-md border border-dashed border-border bg-muted/40 text-muted-foreground">
@@ -540,7 +552,7 @@ function renderTimelineEntries(
                 )}
               </div>
               {entry.mediaPublicUrl ? (
-                <Image
+                <SubjectAwareMediaImage
                   src={entry.mediaPublicUrl}
                   alt={copy.entryPhotoAlt.replace("{title}", entry.title)}
                   width={240}
@@ -548,7 +560,12 @@ function renderTimelineEntries(
                   sizes="(min-width: 640px) 8rem, 100vw"
                   loading={eagerFirstMedia && index === 0 ? "eager" : "lazy"}
                   unoptimized
-                  className="aspect-4/3 w-full rounded-md border border-border object-cover sm:w-32"
+                  presentationMode="cover"
+                  focalX={entry.mediaFocalX}
+                  focalY={entry.mediaFocalY}
+                  intrinsicWidth={entry.mediaIntrinsicWidth}
+                  intrinsicHeight={entry.mediaIntrinsicHeight}
+                  className="aspect-4/3 w-full rounded-md border border-border sm:w-32"
                 />
               ) : null}
             </div>

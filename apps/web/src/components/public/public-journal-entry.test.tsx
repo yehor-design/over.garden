@@ -6,10 +6,34 @@ import type { PublicJournalEntryPage } from "@/server/journal-repository";
 import { PublicJournalEntryView } from "./public-journal-entry";
 
 vi.mock("next/image", () => ({
-  default: ({ alt, src }: { alt: string; src: string }) => (
+  default: ({
+    alt,
+    src,
+    className,
+    ...rest
+  }: {
+    alt: string;
+    src: string;
+    className?: string;
+    [key: string]: unknown;
+  }) => (
     // Production uses next/image; SSR assertions only inspect safe output.
     // eslint-disable-next-line @next/next/no-img-element
-    <img alt={alt} src={src} />
+    <img
+      alt={alt}
+      src={typeof src === "string" ? src : ""}
+      className={className}
+      data-media-presentation={
+        typeof rest["data-media-presentation"] === "string"
+          ? rest["data-media-presentation"]
+          : undefined
+      }
+      data-media-object-position={
+        typeof rest["data-media-object-position"] === "string"
+          ? rest["data-media-object-position"]
+          : undefined
+      }
+    />
   ),
 }));
 
@@ -117,12 +141,20 @@ const objectPage: PublicJournalEntryPage = {
       publicUrl: "https://media.example/landscape.webp",
       altText: "Стиглі томати на кущі",
       caption: "Перша китиця",
+      focalX: 0.5,
+      focalY: 0.5,
+      intrinsicWidth: 1200,
+      intrinsicHeight: 900,
     },
     {
       id: "media-2",
       publicUrl: "https://media.example/portrait.webp",
       altText: null,
       caption: null,
+      focalX: 0.25,
+      focalY: 0.75,
+      intrinsicWidth: 800,
+      intrinsicHeight: 1200,
     },
   ],
 };
@@ -156,6 +188,9 @@ describe("public journal entry V2", () => {
     expect(html).toContain("@renamed_gardener");
     expect(html).toContain("Згадані садівники");
     expect(html).toContain('data-journal-media-count="2"');
+    expect(html).toContain('data-media-presentation="contain"');
+    // Contain mode keeps full-image visibility; object-position fail-closes to center.
+    expect(html).toContain('data-media-object-position="50% 50%"');
     expect(html).toContain('alt="Стиглі томати на кущі"');
     expect(html).toContain("Перша китиця");
     expect(html).toContain('href="/topics/harvest"');

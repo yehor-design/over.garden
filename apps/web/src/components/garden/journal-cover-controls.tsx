@@ -19,6 +19,7 @@ import {
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
 import type { OfflinePhotoIntent } from "@/lib/offline/queue";
 import { cn } from "@/lib/utils";
+import { SubjectAwareHtmlImage } from "@/components/media/subject-aware-media-image";
 
 export interface JournalCoverControlsCopy {
   sectionLabel: string;
@@ -115,6 +116,8 @@ export function JournalCoverControls({
     }
   }
 
+  const coverPreviewMode = "cover" as const;
+
   return (
     <section
       className={cn("grid gap-3 border-y border-border py-3", className)}
@@ -136,11 +139,11 @@ export function JournalCoverControls({
           <figcaption className="text-xs text-muted-foreground">
             {copy.previewLabel}
           </figcaption>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <SubjectAwareHtmlImage
             src={previewUrl}
             alt=""
-            className="max-h-40 w-full object-cover"
+            presentationMode={coverPreviewMode}
+            className="max-h-40 w-full"
             data-journal-cover-preview="true"
           />
         </figure>
@@ -233,11 +236,11 @@ export function JournalCoverControls({
                   }
                 >
                   {item.previewUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <SubjectAwareHtmlImage
                       src={item.previewUrl}
                       alt=""
-                      className="size-10 object-cover"
+                      presentationMode={coverPreviewMode}
+                      className="size-10"
                     />
                   ) : (
                     <span className="size-10 bg-muted" aria-hidden />

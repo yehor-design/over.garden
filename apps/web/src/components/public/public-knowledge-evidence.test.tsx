@@ -94,7 +94,15 @@ function evidence(): PublicKnowledgeEvidence {
             publicPath: "/lineage/objects/00000000-0000-4000-8000-000000000101",
           },
           author: null,
-          media: [{ publicUrl: "/fixture-media/recovery.png" }],
+          media: [
+            {
+              publicUrl: "/fixture-media/recovery.png",
+              focalX: 0.5,
+              focalY: 0.5,
+              intrinsicWidth: 800,
+              intrinsicHeight: 600,
+            },
+          ],
           topics: [
             { slug: "stress-and-recovery", label: "Проблеми та відновлення" },
           ],

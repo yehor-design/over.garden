@@ -14,6 +14,7 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -354,7 +355,7 @@ function JournalMediaGallery({
         {copy.media}
       </h2>
       <figure className="grid gap-2">
-        <Image
+        <SubjectAwareMediaImage
           src={page.media[0]!.publicUrl}
           alt={page.media[0]!.altText ?? `${page.entry.title}, 1`}
           width={1200}
@@ -362,7 +363,12 @@ function JournalMediaGallery({
           sizes="(min-width: 1280px) 48rem, 100vw"
           priority
           unoptimized
-          className="aspect-4/3 w-full rounded-md border border-border bg-muted object-contain"
+          presentationMode="contain"
+          focalX={page.media[0]!.focalX}
+          focalY={page.media[0]!.focalY}
+          intrinsicWidth={page.media[0]!.intrinsicWidth}
+          intrinsicHeight={page.media[0]!.intrinsicHeight}
+          className="aspect-4/3 w-full rounded-md border border-border bg-muted"
         />
         {page.media[0]!.caption ? (
           <figcaption className="text-sm text-muted-foreground">
@@ -375,14 +381,19 @@ function JournalMediaGallery({
           {page.media.slice(1).map((media, index) => (
             <li key={media.id}>
               <figure className="grid gap-1.5">
-                <Image
+                <SubjectAwareMediaImage
                   src={media.publicUrl}
                   alt={media.altText ?? `${page.entry.title}, ${index + 2}`}
                   width={720}
                   height={540}
                   sizes="(min-width: 640px) 15rem, 50vw"
                   unoptimized
-                  className="aspect-4/3 w-full rounded-md border border-border bg-muted object-contain"
+                  presentationMode="contain"
+                  focalX={media.focalX}
+                  focalY={media.focalY}
+                  intrinsicWidth={media.intrinsicWidth}
+                  intrinsicHeight={media.intrinsicHeight}
+                  className="aspect-4/3 w-full rounded-md border border-border bg-muted"
                 />
                 {media.caption ? (
                   <figcaption className="text-xs text-muted-foreground">

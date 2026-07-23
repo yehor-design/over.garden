@@ -56,6 +56,18 @@ export interface PublicObjectPassportPage {
   journalPreview: PublicObjectPassportJournalEntry[];
   journalContinuation: PublicObjectPassportJournalEntry[];
   coverMediaPublicUrl: string | null;
+  coverMediaFocalX: number | null;
+  coverMediaFocalY: number | null;
+  coverMediaIntrinsicWidth: number | null;
+  coverMediaIntrinsicHeight: number | null;
+  galleryMedia: Array<{
+    publicUrl: string;
+    focalX: number;
+    focalY: number;
+    intrinsicWidth: number | null;
+    intrinsicHeight: number | null;
+  }>;
+  /** @deprecated Prefer galleryMedia; kept for fixture/evidence URL lists. */
   galleryMediaPublicUrls: string[];
   timelineHasMore: boolean;
 }
@@ -73,6 +85,10 @@ export interface PublicObjectPassportJournalEntry {
   publicSlug: string;
   publicPath: string;
   mediaPublicUrl: string | null;
+  mediaFocalX: number | null;
+  mediaFocalY: number | null;
+  mediaIntrinsicWidth: number | null;
+  mediaIntrinsicHeight: number | null;
 }
 
 interface PublicObjectPassportRootRow {
@@ -103,11 +119,19 @@ interface PublicObjectPassportTimelineRow {
   entryDate: Date | string;
   entryPublicSlug: string;
   mediaDerivativeKey: string | null;
+  mediaFocalX: number | null;
+  mediaFocalY: number | null;
+  mediaIntrinsicWidth: number | null;
+  mediaIntrinsicHeight: number | null;
 }
 
 interface PublicObjectPassportGalleryRow {
   mediaId: string;
   mediaDerivativeKey: string;
+  mediaFocalX: number | null;
+  mediaFocalY: number | null;
+  mediaIntrinsicWidth: number | null;
+  mediaIntrinsicHeight: number | null;
 }
 
 interface PublicObjectPassportLifecycleRow {
@@ -356,6 +380,10 @@ export function buildPublicObjectPassportTimelineQuery(
       "journal_entries.entry_date as entryDate",
       "journal_entries.public_slug as entryPublicSlug",
       "first_public_media.derivativeKey as mediaDerivativeKey",
+      "first_public_media.focalX as mediaFocalX",
+      "first_public_media.focalY as mediaFocalY",
+      "first_public_media.intrinsicWidth as mediaIntrinsicWidth",
+      "first_public_media.intrinsicHeight as mediaIntrinsicHeight",
     ])
     .where("plant_objects.id", "=", plantObjectId)
     .where("journal_entries.visibility", "=", "public")
@@ -397,6 +425,10 @@ export function buildPublicObjectPassportGalleryQuery(
     .select([
       "media_assets.id as mediaId",
       "media_assets.derivative_key as mediaDerivativeKey",
+      "media_assets.focal_x as mediaFocalX",
+      "media_assets.focal_y as mediaFocalY",
+      "media_assets.intrinsic_width as mediaIntrinsicWidth",
+      "media_assets.intrinsic_height as mediaIntrinsicHeight",
     ])
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
@@ -431,6 +463,18 @@ export function serializePublicObjectPassportPage(
     mediaPublicUrl: entry.mediaDerivativeKey
       ? getPublicDerivativeUrl(entry.mediaDerivativeKey)
       : null,
+    mediaFocalX: entry.mediaDerivativeKey
+      ? Number(entry.mediaFocalX ?? 0.5)
+      : null,
+    mediaFocalY: entry.mediaDerivativeKey
+      ? Number(entry.mediaFocalY ?? 0.5)
+      : null,
+    mediaIntrinsicWidth: entry.mediaDerivativeKey
+      ? (entry.mediaIntrinsicWidth ?? null)
+      : null,
+    mediaIntrinsicHeight: entry.mediaDerivativeKey
+      ? (entry.mediaIntrinsicHeight ?? null)
+      : null,
   }));
   const journalPreview = serializedJournal.slice(
     0,
@@ -452,8 +496,17 @@ export function serializePublicObjectPassportPage(
         profilePath: publicProfilePath(locale, root.authorHandle),
       }
     : null;
-  const galleryMediaPublicUrls = galleryRows.map((media) =>
-    getPublicDerivativeUrl(media.mediaDerivativeKey),
+  const galleryMedia = galleryRows.map((media) => ({
+    publicUrl: getPublicDerivativeUrl(media.mediaDerivativeKey),
+    focalX: Number(media.mediaFocalX ?? 0.5),
+    focalY: Number(media.mediaFocalY ?? 0.5),
+    intrinsicWidth: media.mediaIntrinsicWidth ?? null,
+    intrinsicHeight: media.mediaIntrinsicHeight ?? null,
+  }));
+  const galleryMediaPublicUrls = galleryMedia.map((media) => media.publicUrl);
+  const coverFromGallery = galleryMedia[0] ?? null;
+  const coverFromJournal = serializedJournal.find(
+    (entry) => entry.mediaPublicUrl,
   );
 
   return {
@@ -481,9 +534,20 @@ export function serializePublicObjectPassportPage(
     journalPreview,
     journalContinuation,
     coverMediaPublicUrl:
-      galleryMediaPublicUrls[0] ??
-      serializedJournal.find((entry) => entry.mediaPublicUrl)?.mediaPublicUrl ??
+      coverFromGallery?.publicUrl ?? coverFromJournal?.mediaPublicUrl ?? null,
+    coverMediaFocalX:
+      coverFromGallery?.focalX ?? coverFromJournal?.mediaFocalX ?? null,
+    coverMediaFocalY:
+      coverFromGallery?.focalY ?? coverFromJournal?.mediaFocalY ?? null,
+    coverMediaIntrinsicWidth:
+      coverFromGallery?.intrinsicWidth ??
+      coverFromJournal?.mediaIntrinsicWidth ??
       null,
+    coverMediaIntrinsicHeight:
+      coverFromGallery?.intrinsicHeight ??
+      coverFromJournal?.mediaIntrinsicHeight ??
+      null,
+    galleryMedia,
     galleryMediaPublicUrls,
     timelineHasMore: Number(root.publicEntryCount) > serializedJournal.length,
   };

@@ -88,7 +88,13 @@ export interface PublicJournalDirectoryCard {
     avatarUrl: string | null;
     profilePath: string;
   } | null;
-  media: Array<{ publicUrl: string }>;
+  media: Array<{
+    publicUrl: string;
+    focalX: number;
+    focalY: number;
+    intrinsicWidth: number | null;
+    intrinsicHeight: number | null;
+  }>;
   topics: Array<{ slug: string; label: string }>;
 }
 
@@ -341,6 +347,10 @@ export function serializePublicJournalDirectoryPage(
         : null,
       media: (mediaByEntry[row.entryId] ?? []).slice(0, 3).map((media) => ({
         publicUrl: publicMediaUrl(media.derivativeKey),
+        focalX: Number(media.focalX ?? 0.5),
+        focalY: Number(media.focalY ?? 0.5),
+        intrinsicWidth: media.intrinsicWidth ?? null,
+        intrinsicHeight: media.intrinsicHeight ?? null,
       })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

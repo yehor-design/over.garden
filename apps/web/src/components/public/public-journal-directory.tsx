@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -496,12 +497,17 @@ function ResultMedia({
             media.length === 3 && index === 0 && "row-span-2",
           )}
         >
-          <Image
+          <SubjectAwareMediaImage
             src={item.publicUrl}
             alt={`${card.object.displayName}: ${card.title}`}
             fill
             sizes="(max-width: 767px) 100vw, 192px"
-            className="object-cover"
+            presentationMode="cover"
+            focalX={item.focalX}
+            focalY={item.focalY}
+            intrinsicWidth={item.intrinsicWidth}
+            intrinsicHeight={item.intrinsicHeight}
+            className="absolute inset-0 h-full w-full"
             unoptimized
           />
         </div>

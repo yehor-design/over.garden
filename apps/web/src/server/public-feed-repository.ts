@@ -38,6 +38,10 @@ export interface PublicFeedRequest {
 export interface PublicFeedMedia {
   id: string;
   publicUrl: string;
+  focalX: number;
+  focalY: number;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 export interface PublicFeedTopic {
@@ -99,6 +103,10 @@ export interface PublicFeedMediaRow {
   id: string;
   entryId: string;
   derivativeKey: string;
+  focalX: number | null;
+  focalY: number | null;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 export interface PublicFeedTopicRow {
@@ -321,6 +329,10 @@ export function buildPublicFeedMediaQuery(
       "media_assets.id as media_id",
       "media_assets.journal_entry_id as entry_id",
       "media_assets.derivative_key as derivative_key",
+      "media_assets.focal_x as focal_x",
+      "media_assets.focal_y as focal_y",
+      "media_assets.intrinsic_width as intrinsic_width",
+      "media_assets.intrinsic_height as intrinsic_height",
       sql<number>`row_number() over (
         partition by ${sql.ref("media_assets.journal_entry_id")}
         order by
@@ -374,6 +386,10 @@ export function buildPublicFeedMediaQuery(
       "ranked_media.media_id as id",
       "ranked_media.entry_id as entryId",
       "ranked_media.derivative_key as derivativeKey",
+      "ranked_media.focal_x as focalX",
+      "ranked_media.focal_y as focalY",
+      "ranked_media.intrinsic_width as intrinsicWidth",
+      "ranked_media.intrinsic_height as intrinsicHeight",
     ])
     .where("ranked_media.media_rank", "<=", MAX_PUBLIC_FEED_MEDIA_PER_ENTRY)
     .orderBy("ranked_media.entry_id", "asc")
@@ -524,6 +540,10 @@ export function serializePublicFeedPage(input: {
         .map((media) => ({
           id: media.id,
           publicUrl: publicMediaUrl(media.derivativeKey),
+          focalX: Number(media.focalX ?? 0.5),
+          focalY: Number(media.focalY ?? 0.5),
+          intrinsicWidth: media.intrinsicWidth ?? null,
+          intrinsicHeight: media.intrinsicHeight ?? null,
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,

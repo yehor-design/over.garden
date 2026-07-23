@@ -188,6 +188,10 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
         publicUrl: JOURNEY.derivativePublicUrl,
         altText: "Cherry tomato flowers",
         caption: null,
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 1200,
+        intrinsicHeight: 900,
       }),
     ],
   };

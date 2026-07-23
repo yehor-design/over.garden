@@ -8,10 +8,12 @@ import {
   journalCoverSelectionToClaimInput,
   type JournalCoverSelectionState,
 } from "@/components/garden/journal-cover-controls";
+import { OwnerMediaFocalPanel } from "@/components/media/owner-media-focal-panel";
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
+import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 import {
   extractJournalDocumentPlainText,
@@ -75,10 +77,27 @@ export function JournalEntryEditComposer({
   } | null>(null);
   const labels = getStructuredJournalComposerLabels(locale);
   const coverCopy = getJournalCoverControlsCopy(locale);
+  const focalCopy = getOwnerMediaFocalPanelCopy(locale);
   const previewMap = useMemo(
     () => new Map(Object.entries(imagePreviewUrls)),
     [imagePreviewUrls],
   );
+  const focalTarget = useMemo(() => {
+    if (cover.mode === "explicit_inline" || cover.mode === "separate") {
+      const mediaAssetId = cover.mediaAssetId;
+      if (!mediaAssetId) return null;
+      const previewUrl = cover.previewUrl ?? previewMap.get(mediaAssetId) ?? null;
+      if (!previewUrl) return null;
+      return { mediaAssetId, previewUrl };
+    }
+    const firstInline = document
+      ? listJournalDocumentImageMediaIds(document)[0]
+      : null;
+    if (!firstInline) return null;
+    const previewUrl = previewMap.get(firstInline) ?? null;
+    if (!previewUrl) return null;
+    return { mediaAssetId: firstInline, previewUrl };
+  }, [cover, document, previewMap]);
   const eligibleInline = useMemo(() => {
     if (!document) return [];
     return listJournalDocumentImageMediaIds(document).map((mediaAssetId, index) => ({
@@ -217,6 +236,18 @@ export function JournalEntryEditComposer({
           setPendingInlineRemoval(null);
         }}
       />
+      {focalTarget ? (
+        <OwnerMediaFocalPanel
+          mediaAssetId={focalTarget.mediaAssetId}
+          imageUrl={focalTarget.previewUrl}
+          expectedRevision={expectedRevision}
+          copy={focalCopy}
+          disabled={saving}
+          onSaved={({ journalRevision }) => {
+            if (journalRevision != null) setExpectedRevision(journalRevision);
+          }}
+        />
+      ) : null}
       <div className="flex items-center gap-3">
         <Button type="button" disabled={saving} onClick={() => void save()}>
           {labels.saveLabel}

@@ -490,6 +490,10 @@ describe("OVE-184 community repository contracts", () => {
       authorHandle: `keeper_${index}`,
       authorDisplayName: `Keeper ${index}`,
       coverDerivativeKey: index === 0 ? "visual-fixtures/cover.png" : null,
+      coverFocalX: index === 0 ? 0.5 : null,
+      coverFocalY: index === 0 ? 0.5 : null,
+      coverIntrinsicWidth: index === 0 ? 800 : null,
+      coverIntrinsicHeight: index === 0 ? 600 : null,
       viewerReportState: index === 1 ? "submitted" : null,
     }));
 

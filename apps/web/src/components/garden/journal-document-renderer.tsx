@@ -1,7 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import type {
   JournalDocumentBlock,
   JournalDocumentV1,
@@ -18,6 +18,8 @@ export interface JournalDocumentImageViewModel {
   caption: string | null;
   width?: number;
   height?: number;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 
 export interface JournalDocumentRendererCopy {
@@ -186,12 +188,17 @@ function JournalDocumentBlockView({
           data-image-position={imagePosition}
           className="grid gap-2"
         >
-          <Image
+          <SubjectAwareMediaImage
             src={image.src}
             alt={image.alt}
             width={image.width ?? 1200}
             height={image.height ?? 900}
-            className="h-auto w-full rounded-md object-cover"
+            presentationMode="contain"
+            focalX={image.focalX}
+            focalY={image.focalY}
+            intrinsicWidth={image.width ?? null}
+            intrinsicHeight={image.height ?? null}
+            className="h-auto w-full rounded-md"
           />
           {image.caption ? (
             <figcaption className="text-sm text-muted-foreground">

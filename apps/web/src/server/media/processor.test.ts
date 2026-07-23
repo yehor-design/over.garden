@@ -30,11 +30,14 @@ vi.mock("./derivatives", () => ({
       buffer: Buffer.from("derivative"),
       contentType: "image/webp",
       extension: "webp",
+      width: 800,
+      height: 600,
     };
   }),
 }));
 
-import { processQuarantinedImage } from "./processor";
+import { MediaLaunchQualityError, processQuarantinedImage } from "./processor";
+import { createPublicImageDerivative } from "./derivatives";
 
 describe("processQuarantinedImage", () => {
   it("publishes the derivative while leaving original cleanup to the durable route", async () => {
@@ -54,6 +57,10 @@ describe("processQuarantinedImage", () => {
       usage_role: "inline",
       revoked_at: null,
       public_unreachable_at: null,
+      intrinsic_width: null,
+      intrinsic_height: null,
+      focal_x: 0.5,
+      focal_y: 0.5,
       created_at: new Date("2026-06-26T00:00:00Z"),
       updated_at: new Date("2026-06-26T00:00:00Z"),
     } satisfies MediaAsset);
@@ -71,5 +78,41 @@ describe("processQuarantinedImage", () => {
     expect(result.publicUrl).toBe(
       "https://media.over.garden/derivatives/user/photo.webp",
     );
+    expect(result.intrinsicWidth).toBe(800);
+    expect(result.intrinsicHeight).toBe(600);
+  });
+
+  it("rejects tiny launch-quality failures before publishing", async () => {
+    vi.mocked(createPublicImageDerivative).mockResolvedValueOnce({
+      buffer: Buffer.from("tiny"),
+      contentType: "image/webp",
+      extension: "webp",
+      width: 10,
+      height: 10,
+    });
+
+    await expect(
+      processQuarantinedImage({
+        id: "00000000-0000-0000-0000-000000000001",
+        owner_user_id: "00000000-0000-0000-0000-000000000002",
+        journal_entry_id: null,
+        quarantine_key: "quarantine/user/tiny.png",
+        derivative_key: null,
+        alt_text: null,
+        caption: null,
+        status: "quarantined",
+        document_position: null,
+        original_deleted_at: null,
+        usage_role: "inline",
+        revoked_at: null,
+        public_unreachable_at: null,
+        intrinsic_width: null,
+        intrinsic_height: null,
+        focal_x: 0.5,
+        focal_y: 0.5,
+        created_at: new Date("2026-06-26T00:00:00Z"),
+        updated_at: new Date("2026-06-26T00:00:00Z"),
+      } satisfies MediaAsset),
+    ).rejects.toBeInstanceOf(MediaLaunchQualityError);
   });
 });

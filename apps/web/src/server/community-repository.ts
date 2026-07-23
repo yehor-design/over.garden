@@ -89,6 +89,10 @@ export interface PublicCommunityContributionRow {
   authorHandle: string | null;
   authorDisplayName: string | null;
   coverDerivativeKey: string | null;
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverIntrinsicWidth: number | null;
+  coverIntrinsicHeight: number | null;
   viewerReportState: string | null;
 }
 
@@ -113,6 +117,10 @@ export interface PublicCommunityContribution {
     href: string;
   };
   coverUrl: string | null;
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverIntrinsicWidth: number | null;
+  coverIntrinsicHeight: number | null;
   viewerReportState: Extract<
     CommunityReportState,
     "submitted" | "reviewed"
@@ -136,6 +144,10 @@ export interface PublicCommunityDirectoryItem {
   activeContributionCount: number;
   activeObjectCount: number;
   coverUrl: string | null;
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverIntrinsicWidth: number | null;
+  coverIntrinsicHeight: number | null;
 }
 
 export interface PublicCommunityPageModel extends PublicCommunityDirectoryItem {
@@ -191,6 +203,14 @@ export async function listPublicCommunities(
       "communities.participation_state as participationState",
       "journal_topics.slug as topicSlug",
       communityCoverDerivativeKey(viewerScope).as("coverDerivativeKey"),
+      communityCoverFocalColumn("focal_x", viewerScope).as("coverFocalX"),
+      communityCoverFocalColumn("focal_y", viewerScope).as("coverFocalY"),
+      communityCoverFocalColumn("intrinsic_width", viewerScope).as(
+        "coverIntrinsicWidth",
+      ),
+      communityCoverFocalColumn("intrinsic_height", viewerScope).as(
+        "coverIntrinsicHeight",
+      ),
     ])
     .where("communities.lifecycle_state", "in", ["active", "archived"])
     .where("journal_topics.trust_state", "=", "curated")
@@ -217,6 +237,14 @@ export async function listPublicCommunities(
         coverUrl: row.coverDerivativeKey
           ? getPublicDerivativeUrl(row.coverDerivativeKey)
           : null,
+        coverFocalX: row.coverDerivativeKey
+          ? Number(row.coverFocalX ?? 0.5)
+          : null,
+        coverFocalY: row.coverDerivativeKey
+          ? Number(row.coverFocalY ?? 0.5)
+          : null,
+        coverIntrinsicWidth: row.coverIntrinsicWidth ?? null,
+        coverIntrinsicHeight: row.coverIntrinsicHeight ?? null,
       };
     }),
   );
@@ -312,6 +340,14 @@ export async function getPublicCommunityPage(
           community.coverDerivativeKey,
         )
       : null,
+    coverFocalX: community.coverDerivativeKey
+      ? Number(community.coverFocalX ?? 0.5)
+      : null,
+    coverFocalY: community.coverDerivativeKey
+      ? Number(community.coverFocalY ?? 0.5)
+      : null,
+    coverIntrinsicWidth: community.coverIntrinsicWidth ?? null,
+    coverIntrinsicHeight: community.coverIntrinsicHeight ?? null,
     rules: rules.map((rule) => ({
       id: rule.id,
       key: rule.ruleKey,
@@ -829,6 +865,14 @@ export function serializePublicCommunityContributionPage(
         coverUrl: row.coverDerivativeKey
           ? mediaUrlForKey(row.coverDerivativeKey)
           : null,
+        coverFocalX: row.coverDerivativeKey
+          ? Number(row.coverFocalX ?? 0.5)
+          : null,
+        coverFocalY: row.coverDerivativeKey
+          ? Number(row.coverFocalY ?? 0.5)
+          : null,
+        coverIntrinsicWidth: row.coverIntrinsicWidth ?? null,
+        coverIntrinsicHeight: row.coverIntrinsicHeight ?? null,
         viewerReportState: normalizeProjectedOpenReportState(
           row.viewerReportState,
         ),
@@ -893,6 +937,14 @@ export function buildCommunityLookupQuery(
       "journal_topics.slug as topicSlug",
       "journal_topics.trust_state as topicTrustState",
       communityCoverDerivativeKey(viewerScope).as("coverDerivativeKey"),
+      communityCoverFocalColumn("focal_x", viewerScope).as("coverFocalX"),
+      communityCoverFocalColumn("focal_y", viewerScope).as("coverFocalY"),
+      communityCoverFocalColumn("intrinsic_width", viewerScope).as(
+        "coverIntrinsicWidth",
+      ),
+      communityCoverFocalColumn("intrinsic_height", viewerScope).as(
+        "coverIntrinsicHeight",
+      ),
     ])
     .where("communities.slug", "=", normalizeCommunitySlug(slug))
     .where("communities.lifecycle_state", "in", ["active", "archived"])
@@ -1147,6 +1199,90 @@ export function buildPublicCommunityContributionsQuery(
           media_assets.id asc
         limit 1
       )`.as("coverDerivativeKey"),
+      sql<number | null>`(
+        select media_assets.focal_x
+        from media_assets
+        where media_assets.journal_entry_id = journal_entries.id
+          and media_assets.status = 'processed'
+          and media_assets.derivative_key is not null
+          and media_assets.revoked_at is null
+          and media_assets.original_deleted_at is not null
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
+        limit 1
+      )`.as("coverFocalX"),
+      sql<number | null>`(
+        select media_assets.focal_y
+        from media_assets
+        where media_assets.journal_entry_id = journal_entries.id
+          and media_assets.status = 'processed'
+          and media_assets.derivative_key is not null
+          and media_assets.revoked_at is null
+          and media_assets.original_deleted_at is not null
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
+        limit 1
+      )`.as("coverFocalY"),
+      sql<number | null>`(
+        select media_assets.intrinsic_width
+        from media_assets
+        where media_assets.journal_entry_id = journal_entries.id
+          and media_assets.status = 'processed'
+          and media_assets.derivative_key is not null
+          and media_assets.revoked_at is null
+          and media_assets.original_deleted_at is not null
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
+        limit 1
+      )`.as("coverIntrinsicWidth"),
+      sql<number | null>`(
+        select media_assets.intrinsic_height
+        from media_assets
+        where media_assets.journal_entry_id = journal_entries.id
+          and media_assets.status = 'processed'
+          and media_assets.derivative_key is not null
+          and media_assets.revoked_at is null
+          and media_assets.original_deleted_at is not null
+          and (
+            media_assets.id = journal_entries.cover_media_asset_id
+            or media_assets.usage_role = 'inline'
+          )
+        order by
+          case
+            when media_assets.id = journal_entries.cover_media_asset_id then 0
+            else 1
+          end asc,
+          media_assets.document_position asc nulls last,
+          media_assets.id asc
+        limit 1
+      )`.as("coverIntrinsicHeight"),
       viewerReportState.as("viewerReportState"),
     ])
     .where("community_contributions.community_id", "=", communityId)
@@ -1779,6 +1915,56 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
 
   return sql<string | null>`(
     select cover_media.derivative_key
+    from community_contributions as cover_contributions
+    join community_memberships as cover_memberships
+      on cover_memberships.community_id = cover_contributions.community_id
+     and cover_memberships.user_id = cover_contributions.contributor_user_id
+    join journal_entries as cover_entries
+      on cover_entries.id = cover_contributions.journal_entry_id
+    join user_handle_registry as cover_handles
+      on cover_handles.user_id = cover_entries.owner_user_id
+     and cover_handles.lifecycle_state = 'current'
+    join user_public_profiles as cover_profiles
+      on cover_profiles.user_id = cover_handles.user_id
+     and cover_profiles.normalized_handle = cover_handles.normalized_handle
+     and cover_profiles.profile_visibility = 'public'
+     and cover_profiles.profile_lifecycle_state = 'active'
+     and cover_profiles.removed_at is null
+    join media_assets as cover_media
+      on cover_media.journal_entry_id = cover_entries.id
+    where cover_contributions.community_id = communities.id
+      and cover_contributions.contribution_state = 'active'
+      and cover_contributions.contributor_user_id = cover_entries.owner_user_id
+      and cover_memberships.membership_state != 'banned'
+      and cover_entries.visibility = 'public'
+      and cover_entries.lifecycle_state = 'active'
+      and cover_entries.entry_scope = 'object'
+      and cover_entries.public_gone_at is null
+      and cover_entries.public_slug is not null
+      and cover_entries.published_at is not null
+      and cover_media.status = 'processed'
+      and cover_media.derivative_key is not null
+      and cover_media.revoked_at is null
+      and cover_media.original_deleted_at is not null
+      ${viewerPredicate}
+    order by cover_contributions.added_at asc, cover_media.created_at asc, cover_media.id asc
+    limit 1
+  )`;
+}
+
+function communityCoverFocalColumn(
+  column: "focal_x" | "focal_y" | "intrinsic_width" | "intrinsic_height",
+  viewerScope: RequestScope | null = null,
+) {
+  const viewerPredicate = viewerScope
+    ? sql`and ${noCommunityBlockPredicate(
+        viewerScope.userId,
+        "cover_entries.owner_user_id",
+      )}`
+    : sql``;
+
+  return sql<number | null>`(
+    select cover_media.${sql.raw(column)}
     from community_contributions as cover_contributions
     join community_memberships as cover_memberships
       on cover_memberships.community_id = cover_contributions.community_id

@@ -1,5 +1,4 @@
-import Image from "next/image";
-
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   buildObjectProgressTimeline,
   formatEntryBodyExcerpt,
@@ -95,7 +94,7 @@ export function ObjectProgressMoment({
               </p>
             </div>
             {entry.mediaPublicUrl ? (
-              <Image
+              <SubjectAwareMediaImage
                 src={entry.mediaPublicUrl}
                 alt={formatOwnerObjectTemplate(copy.photoAlt, {
                   title: entry.title,
@@ -105,7 +104,12 @@ export function ObjectProgressMoment({
                 sizes="96px"
                 loading={index === 0 ? "eager" : "lazy"}
                 unoptimized
-                className="size-20 shrink-0 rounded-md border border-border object-cover sm:size-24"
+                presentationMode="cover"
+                focalX={entry.mediaFocalX}
+                focalY={entry.mediaFocalY}
+                intrinsicWidth={entry.mediaIntrinsicWidth}
+                intrinsicHeight={entry.mediaIntrinsicHeight}
+                className="size-20 shrink-0 rounded-md border border-border sm:size-24"
               />
             ) : null}
             {index < timeline.length - 1 ? (
@@ -136,14 +140,19 @@ function ProgressPhotoCard({
       <figcaption className="text-xs font-medium text-muted-foreground">
         {label} · {formatGardenWorkspaceDate(locale, entry.entryDate)}
       </figcaption>
-      <Image
+      <SubjectAwareMediaImage
         src={entry.mediaPublicUrl}
         alt={formatOwnerObjectTemplate(copy.photoAlt, { title: entry.title })}
         width={480}
         height={320}
         sizes="(min-width: 640px) 20rem, 100vw"
         unoptimized
-        className="aspect-video w-full rounded-md border border-border object-cover"
+        presentationMode="cover"
+        focalX={entry.mediaFocalX}
+        focalY={entry.mediaFocalY}
+        intrinsicWidth={entry.mediaIntrinsicWidth}
+        intrinsicHeight={entry.mediaIntrinsicHeight}
+        className="aspect-video w-full rounded-md border border-border"
       />
       <p className="text-sm text-foreground">{entry.title}</p>
     </figure>

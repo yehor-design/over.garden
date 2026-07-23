@@ -473,6 +473,10 @@ describe("public profile handle contracts", () => {
           entryId: "00000000-0000-4000-8000-000000000301",
           derivativeKey: "objects/lemon.png",
           altText: "Lemon leaves",
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: 800,
+          intrinsicHeight: 600,
         },
       ],
       journals: [
@@ -495,6 +499,10 @@ describe("public profile handle contracts", () => {
           entryId: "00000000-0000-4000-8000-000000000301",
           derivativeKey: "objects/lemon.png",
           altText: "Lemon leaves",
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: 800,
+          intrinsicHeight: 600,
         },
       ],
     });

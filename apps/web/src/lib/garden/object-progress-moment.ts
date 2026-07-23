@@ -6,6 +6,10 @@ export interface ObjectProgressTimelineEntry {
   body: string;
   entryDate: Date | string;
   mediaPublicUrl: string | null;
+  mediaFocalX?: number | null;
+  mediaFocalY?: number | null;
+  mediaIntrinsicWidth?: number | null;
+  mediaIntrinsicHeight?: number | null;
 }
 
 export function isObjectProgressMomentEligible(entryCount: number) {

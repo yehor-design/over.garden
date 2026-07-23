@@ -11,6 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -385,12 +386,17 @@ function FeedMediaGrid({ entry }: { entry: PublicFeedEntry }) {
             media.length === 3 && index > 0 && "min-h-0",
           )}
         >
-          <Image
+          <SubjectAwareMediaImage
             src={item.publicUrl}
             alt={`${entry.object.displayName}: ${entry.title}`}
             fill
             sizes="(max-width: 767px) 100vw, 680px"
-            className="object-cover"
+            presentationMode="cover"
+            focalX={item.focalX}
+            focalY={item.focalY}
+            intrinsicWidth={item.intrinsicWidth}
+            intrinsicHeight={item.intrinsicHeight}
+            className="absolute inset-0 h-full w-full"
             unoptimized
           />
         </div>

@@ -33,6 +33,7 @@ import {
 import { getCommunityCopy } from "@/lib/community-copy";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
+import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import { getInterfaceCopy } from "@/lib/interface-localization";
 import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
@@ -641,6 +642,11 @@ export const LOCALIZATION_COPY_NAMESPACES: readonly LocalizationCopyNamespace[] 
       id: "structured-journal-composer",
       sourceFile: "src/lib/structured-journal-composer-copy.ts",
       load: getStructuredJournalComposerLabels,
+    },
+    {
+      id: "owner-media-focal",
+      sourceFile: "src/lib/media/owner-media-focal-copy.ts",
+      load: getOwnerMediaFocalPanelCopy,
     },
     {
       id: "garden-regions",

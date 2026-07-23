@@ -43,6 +43,10 @@ export function buildOwnerObjectPassportPresentation(
           ? publicJournalEntryPath(entry.public_slug)
           : `#passport-entry-${entry.id}`,
       mediaPublicUrl: entry.media?.publicUrl ?? null,
+      mediaFocalX: entry.media?.focalX ?? null,
+      mediaFocalY: entry.media?.focalY ?? null,
+      mediaIntrinsicWidth: entry.media?.intrinsicWidth ?? null,
+      mediaIntrinsicHeight: entry.media?.intrinsicHeight ?? null,
       stateLabel:
         entry.lifecycle_state === "archived"
           ? copy.archivedEntry
@@ -75,6 +79,10 @@ export function buildOwnerObjectPassportPresentation(
       ? page.gallery_media.map((media, index) => ({
           publicUrl: media.publicUrl,
           alt: `${object.display_name}: ${copy.mediaGallery} ${index + 1}`,
+          focalX: media.focalX,
+          focalY: media.focalY,
+          intrinsicWidth: media.intrinsicWidth,
+          intrinsicHeight: media.intrinsicHeight,
         }))
       : timelineEntries.flatMap((entry) =>
           entry.mediaPublicUrl
@@ -82,6 +90,10 @@ export function buildOwnerObjectPassportPresentation(
                 {
                   publicUrl: entry.mediaPublicUrl,
                   alt: `${object.display_name}: ${entry.title}`,
+                  focalX: entry.mediaFocalX,
+                  focalY: entry.mediaFocalY,
+                  intrinsicWidth: entry.mediaIntrinsicWidth,
+                  intrinsicHeight: entry.mediaIntrinsicHeight,
                 },
               ]
             : [],

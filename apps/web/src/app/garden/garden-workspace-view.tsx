@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
@@ -17,6 +16,7 @@ import {
   SquarePen,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import { buttonVariants } from "@/components/ui/button";
 import {
   formatGardenCount,
@@ -581,14 +581,19 @@ function InventoryRow({
   return (
     <li className="grid min-w-0 gap-4 py-4 sm:grid-cols-4 sm:items-center">
       {object.coverMedia ? (
-        <Image
+        <SubjectAwareMediaImage
           src={object.coverMedia.publicUrl}
           alt={object.coverMedia.altText}
           width={192}
           height={144}
           sizes="6rem"
           unoptimized
-          className="aspect-4/3 w-24 rounded-md border border-border object-cover"
+          presentationMode="cover"
+          focalX={object.coverMedia.focalX}
+          focalY={object.coverMedia.focalY}
+          intrinsicWidth={object.coverMedia.intrinsicWidth}
+          intrinsicHeight={object.coverMedia.intrinsicHeight}
+          className="aspect-4/3 w-24 rounded-md border border-border"
         />
       ) : (
         <div className="flex aspect-4/3 w-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/40 text-muted-foreground">

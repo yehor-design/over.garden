@@ -7,8 +7,8 @@ describe("createPublicImageDerivative", () => {
   it("re-encodes to webp without carrying image metadata", async () => {
     const input = await sharp({
       create: {
-        width: 16,
-        height: 16,
+        width: 128,
+        height: 96,
         channels: 3,
         background: { r: 120, g: 80, b: 40 },
       },
@@ -22,6 +22,8 @@ describe("createPublicImageDerivative", () => {
 
     expect(derivative.contentType).toBe("image/webp");
     expect(derivative.extension).toBe("webp");
+    expect(derivative.width).toBe(128);
+    expect(derivative.height).toBe(96);
     expect(metadata.format).toBe("webp");
     expect(metadata.exif).toBeUndefined();
     expect(metadata.width).toBeLessThanOrEqual(1600);

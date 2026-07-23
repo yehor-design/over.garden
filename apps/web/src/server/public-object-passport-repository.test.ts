@@ -303,15 +303,27 @@ describe("public object passport repository query contracts", () => {
         entryPublicSlug: index === 0 ? "first-flowering" : `entry-${index + 1}`,
         mediaDerivativeKey:
           index === 0 ? "derivatives/first-flowering.webp" : null,
+        mediaFocalX: index === 0 ? 0.5 : null,
+        mediaFocalY: index === 0 ? 0.5 : null,
+        mediaIntrinsicWidth: index === 0 ? 1200 : null,
+        mediaIntrinsicHeight: index === 0 ? 900 : null,
       })),
       [
         {
           mediaId: "media-1",
           mediaDerivativeKey: "derivatives/first-flowering.webp",
+          mediaFocalX: 0.5,
+          mediaFocalY: 0.5,
+          mediaIntrinsicWidth: 1200,
+          mediaIntrinsicHeight: 900,
         },
         {
           mediaId: "media-2",
           mediaDerivativeKey: "derivatives/portrait.webp",
+          mediaFocalX: 0.25,
+          mediaFocalY: 0.75,
+          mediaIntrinsicWidth: 800,
+          mediaIntrinsicHeight: 1200,
         },
       ],
     );

@@ -18,6 +18,7 @@ import {
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
@@ -542,14 +543,19 @@ function ProfileObjectCard({
       className="group grid h-full overflow-hidden rounded-md border border-border bg-background transition-colors hover:border-primary/60"
     >
       {object.coverImageUrl ? (
-        <Image
+        <SubjectAwareMediaImage
           src={object.coverImageUrl}
           alt={object.coverImageAlt}
           width={640}
           height={480}
           sizes="(min-width: 640px) 20rem, 100vw"
           unoptimized
-          className="aspect-4/3 w-full border-b border-border bg-muted object-cover"
+          presentationMode="cover"
+          focalX={object.coverFocalX}
+          focalY={object.coverFocalY}
+          intrinsicWidth={object.coverIntrinsicWidth}
+          intrinsicHeight={object.coverIntrinsicHeight}
+          className="aspect-4/3 w-full border-b border-border bg-muted"
         />
       ) : (
         <span className="flex aspect-4/3 w-full items-center justify-center border-b border-border bg-muted text-muted-foreground">
@@ -596,14 +602,19 @@ function ProfileJournalRow({
         className="block shrink-0"
       >
         {journal.coverImageUrl ? (
-          <Image
+          <SubjectAwareMediaImage
             src={journal.coverImageUrl}
             alt={journal.coverImageAlt}
             width={320}
             height={240}
             sizes="120px"
             unoptimized
-            className="aspect-4/3 w-full rounded-md border border-border bg-muted object-cover sm:w-30"
+            presentationMode="cover"
+            focalX={journal.coverFocalX}
+            focalY={journal.coverFocalY}
+            intrinsicWidth={journal.coverIntrinsicWidth}
+            intrinsicHeight={journal.coverIntrinsicHeight}
+            className="aspect-4/3 w-full rounded-md border border-border bg-muted sm:w-30"
           />
         ) : (
           <span className="flex aspect-4/3 w-full items-center justify-center rounded-md border border-border bg-muted text-muted-foreground sm:w-30">

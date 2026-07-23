@@ -26,6 +26,10 @@ const COMMUNITY: PublicCommunityPageModel = {
   activeContributionCount: 14,
   activeObjectCount: 9,
   coverUrl: null,
+  coverFocalX: null,
+  coverFocalY: null,
+  coverIntrinsicWidth: null,
+  coverIntrinsicHeight: null,
   rules: [
     {
       id: "00000000-0000-4000-8000-000000000101",
@@ -62,6 +66,10 @@ const COMMUNITY: PublicCommunityPageModel = {
           href: "/lineage/objects/00000000-0000-4000-8000-000000000301",
         },
         coverUrl: "https://media.example/tomato.webp",
+        coverFocalX: 0.5,
+        coverFocalY: 0.5,
+        coverIntrinsicWidth: 800,
+        coverIntrinsicHeight: 600,
         viewerReportState: null,
       },
     ],

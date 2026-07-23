@@ -197,6 +197,10 @@ function readyWorkspace(): GardenWorkspaceReadModel {
             coverMedia: {
               publicUrl: "http://localhost:9000/fixture/object-1.png",
               altText: "Monstera leaves",
+              focalX: 0.5,
+              focalY: 0.5,
+              intrinsicWidth: 800,
+              intrinsicHeight: 600,
             },
           },
         ],

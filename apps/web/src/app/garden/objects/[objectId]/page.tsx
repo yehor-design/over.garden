@@ -251,6 +251,10 @@ export default async function PlantObjectReadbackPage({
             body: entry.body,
             entryDate: entry.entry_date,
             mediaPublicUrl: entry.media?.publicUrl ?? null,
+            mediaFocalX: entry.media?.focalX ?? null,
+            mediaFocalY: entry.media?.focalY ?? null,
+            mediaIntrinsicWidth: entry.media?.intrinsicWidth ?? null,
+            mediaIntrinsicHeight: entry.media?.intrinsicHeight ?? null,
           }))}
         />
       ) : null}

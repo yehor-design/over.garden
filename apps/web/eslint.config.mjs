@@ -69,6 +69,12 @@ const eslintConfig = defineConfig([
     rules: { "no-restricted-syntax": "off" },
   },
   {
+    // OVE-197 subject-aware media needs continuous focal object-position and
+    // marker coordinates; those cannot be expressed as static design tokens.
+    files: ["src/components/media/**"],
+    rules: { "no-restricted-syntax": "off" },
+  },
+  {
     // The Web App Manifest spec requires literal hex colors.
     files: ["src/app/manifest.ts"],
     rules: { "no-restricted-syntax": "off" },

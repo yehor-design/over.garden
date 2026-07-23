@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -19,6 +18,10 @@ import {
 } from "@/app/[locale]/communities/[slug]/actions";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
+import {
+  SubjectAwareHtmlImage,
+  SubjectAwareMediaImage,
+} from "@/components/media/subject-aware-media-image";
 import { SiteShellContextRailRegistration } from "@/components/site-shell/site-shell-context-rail";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -107,7 +110,14 @@ export function PublicCommunityDirectory({
                   </span>
                   {community.coverUrl ? (
                     <span className="relative aspect-4/3 overflow-hidden rounded-md bg-muted sm:w-32 sm:shrink-0">
-                      <CommunityMedia src={community.coverUrl} sizes="128px" />
+                      <CommunityMedia
+                        src={community.coverUrl}
+                        sizes="128px"
+                        focalX={community.coverFocalX}
+                        focalY={community.coverFocalY}
+                        intrinsicWidth={community.coverIntrinsicWidth}
+                        intrinsicHeight={community.coverIntrinsicHeight}
+                      />
                     </span>
                   ) : null}
                 </span>
@@ -250,6 +260,10 @@ export function PublicCommunityView({
                 src={community.coverUrl}
                 priority
                 sizes="(max-width: 640px) 100vw, 224px"
+                focalX={community.coverFocalX}
+                focalY={community.coverFocalY}
+                intrinsicWidth={community.coverIntrinsicWidth}
+                intrinsicHeight={community.coverIntrinsicHeight}
               />
             </div>
           ) : null}
@@ -681,6 +695,10 @@ function CommunityContributionRow({
           <CommunityMedia
             src={item.coverUrl}
             sizes="(max-width: 640px) 100vw, 192px"
+            focalX={item.coverFocalX}
+            focalY={item.coverFocalY}
+            intrinsicWidth={item.coverIntrinsicWidth}
+            intrinsicHeight={item.coverIntrinsicHeight}
           />
         </Link>
       ) : null}
@@ -896,18 +914,30 @@ function CommunityMedia({
   src,
   sizes,
   priority = false,
+  focalX = null,
+  focalY = null,
+  intrinsicWidth = null,
+  intrinsicHeight = null,
 }: {
   src: string;
   sizes: string;
   priority?: boolean;
+  focalX?: number | null;
+  focalY?: number | null;
+  intrinsicWidth?: number | null;
+  intrinsicHeight?: number | null;
 }) {
   if (isLoopbackMediaUrl(src)) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element -- Next Image rejects isolated fixture ports before rendering.
-      <img
+      <SubjectAwareHtmlImage
         src={src}
         alt=""
-        className="absolute inset-0 h-full w-full object-cover"
+        presentationMode="cover"
+        focalX={focalX}
+        focalY={focalY}
+        intrinsicWidth={intrinsicWidth}
+        intrinsicHeight={intrinsicHeight}
+        className="absolute inset-0 h-full w-full"
         loading={priority ? "eager" : "lazy"}
         fetchPriority={priority ? "high" : undefined}
         decoding="async"
@@ -916,13 +946,17 @@ function CommunityMedia({
   }
 
   return (
-    <Image
+    <SubjectAwareMediaImage
       src={src}
       alt=""
       fill
       priority={priority}
       sizes={sizes}
-      className="object-cover"
+      presentationMode="cover"
+      focalX={focalX}
+      focalY={focalY}
+      intrinsicWidth={intrinsicWidth}
+      intrinsicHeight={intrinsicHeight}
     />
   );
 }

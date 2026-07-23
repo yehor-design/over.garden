@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -11,6 +10,7 @@ import {
   Sprout,
 } from "lucide-react";
 
+import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailModules,
   SiteShellContextRailRegistration,
@@ -256,12 +256,12 @@ function PublicObjectCatalogCardView({
     <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-border bg-background">
       <div className="relative aspect-4/3 w-full overflow-hidden border-b border-border bg-muted">
         {card.mediaPublicUrl ? (
-          <Image
+          <SubjectAwareMediaImage
             src={card.mediaPublicUrl}
             alt={`${card.representativeObject.displayName}: ${title}`}
             fill
             sizes="(max-width: 639px) 100vw, 50vw"
-            className="object-cover"
+            presentationMode="cover"
             unoptimized
           />
         ) : (

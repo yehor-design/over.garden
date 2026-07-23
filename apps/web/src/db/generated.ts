@@ -597,7 +597,11 @@ export interface MediaAssets {
   created_at: Generated<Timestamp>;
   derivative_key: string | null;
   document_position: number | null;
+  focal_x: Generated<number>;
+  focal_y: Generated<number>;
   id: Generated<string>;
+  intrinsic_height: number | null;
+  intrinsic_width: number | null;
   journal_entry_id: string | null;
   original_deleted_at: Timestamp | null;
   owner_user_id: string;

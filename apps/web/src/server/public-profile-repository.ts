@@ -99,6 +99,10 @@ export interface PublicProfileObjectEvidence {
   publicPath: string;
   coverImageUrl: string | null;
   coverImageAlt: string;
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverIntrinsicWidth: number | null;
+  coverIntrinsicHeight: number | null;
 }
 
 export interface PublicProfileJournalEvidence {
@@ -116,6 +120,10 @@ export interface PublicProfileJournalEvidence {
   };
   coverImageUrl: string | null;
   coverImageAlt: string;
+  coverFocalX: number | null;
+  coverFocalY: number | null;
+  coverIntrinsicWidth: number | null;
+  coverIntrinsicHeight: number | null;
 }
 
 export interface PublicProfileEvidencePage {
@@ -225,12 +233,20 @@ interface PublicProfileObjectMediaRow {
   entryId: string;
   derivativeKey: string | null;
   altText: string | null;
+  focalX: number | null;
+  focalY: number | null;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 interface PublicProfileJournalMediaRow {
   entryId: string;
   derivativeKey: string | null;
   altText: string | null;
+  focalX: number | null;
+  focalY: number | null;
+  intrinsicWidth: number | null;
+  intrinsicHeight: number | null;
 }
 
 interface PublicProfileLifecycleRow {
@@ -655,6 +671,14 @@ export function serializePublicProfileEvidencePage(input: {
           publicPath: publicLineageObjectPath(row.objectId),
           coverImageUrl: publicMediaUrl(cover?.derivativeKey),
           coverImageAlt: cover?.altText?.trim() || row.displayName,
+          coverFocalX: cover?.derivativeKey
+            ? Number(cover.focalX ?? 0.5)
+            : null,
+          coverFocalY: cover?.derivativeKey
+            ? Number(cover.focalY ?? 0.5)
+            : null,
+          coverIntrinsicWidth: cover?.intrinsicWidth ?? null,
+          coverIntrinsicHeight: cover?.intrinsicHeight ?? null,
         },
       ];
     });
@@ -695,6 +719,14 @@ export function serializePublicProfileEvidencePage(input: {
           coverImageAlt:
             cover?.altText?.trim() ||
             (isObject ? (row.objectDisplayName as string) : row.title),
+          coverFocalX: cover?.derivativeKey
+            ? Number(cover.focalX ?? 0.5)
+            : null,
+          coverFocalY: cover?.derivativeKey
+            ? Number(cover.focalY ?? 0.5)
+            : null,
+          coverIntrinsicWidth: cover?.intrinsicWidth ?? null,
+          coverIntrinsicHeight: cover?.intrinsicHeight ?? null,
         },
       ];
     });
@@ -1105,6 +1137,10 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
       "journal_entries.id as entryId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
+      "media_assets.focal_x as focalX",
+      "media_assets.focal_y as focalY",
+      "media_assets.intrinsic_width as intrinsicWidth",
+      "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .where("media_assets.owner_user_id", "=", userId)
     .where("media_assets.status", "=", "processed")
@@ -1160,6 +1196,10 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
       "journal_entries.id as entryId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
+      "media_assets.focal_x as focalX",
+      "media_assets.focal_y as focalY",
+      "media_assets.intrinsic_width as intrinsicWidth",
+      "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .where("media_assets.owner_user_id", "=", userId)
     .where("media_assets.status", "=", "processed")

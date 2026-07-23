@@ -88,9 +88,27 @@ const page: PublicJournalDirectoryPage = {
         profilePath: "/@demo_danylo",
       },
       media: [
-        { publicUrl: "https://media.example/one.png" },
-        { publicUrl: "https://media.example/two.png" },
-        { publicUrl: "https://media.example/three.png" },
+        {
+          publicUrl: "https://media.example/one.png",
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: 800,
+          intrinsicHeight: 600,
+        },
+        {
+          publicUrl: "https://media.example/two.png",
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: 800,
+          intrinsicHeight: 600,
+        },
+        {
+          publicUrl: "https://media.example/three.png",
+          focalX: 0.5,
+          focalY: 0.5,
+          intrinsicWidth: 800,
+          intrinsicHeight: 600,
+        },
       ],
       topics: [
         {

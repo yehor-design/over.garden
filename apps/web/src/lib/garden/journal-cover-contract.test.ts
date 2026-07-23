@@ -59,6 +59,8 @@ describe("OVE-207 journal cover contract", () => {
       mediaAssetId: "later",
       source: "automatic_inline",
       mode: "automatic",
+      focalX: 0.5,
+      focalY: 0.5,
     });
   });
 

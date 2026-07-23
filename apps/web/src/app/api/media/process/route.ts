@@ -7,7 +7,10 @@ import {
   markMediaAssetOriginalDeleted,
   markMediaAssetProcessed,
 } from "@/server/media/media-repository";
-import { processQuarantinedImage } from "@/server/media/processor";
+import {
+  MediaLaunchQualityError,
+  processQuarantinedImage,
+} from "@/server/media/processor";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
@@ -49,16 +52,28 @@ export async function POST(request: Request) {
       ? getPublicDerivativeUrl(derivativeKey)
       : null;
     let updated = asset;
+    let intrinsicWidth = asset.intrinsic_width;
+    let intrinsicHeight = asset.intrinsic_height;
+    let focalX = Number(asset.focal_x ?? 0.5);
+    let focalY = Number(asset.focal_y ?? 0.5);
 
     if (!processedStateIsDurable) {
       const derivative = await processQuarantinedImage(asset);
       derivativeKey = derivative.derivativeKey;
       publicUrl = derivative.publicUrl;
+      intrinsicWidth = derivative.intrinsicWidth;
+      intrinsicHeight = derivative.intrinsicHeight;
       updated = await markMediaAssetProcessed(
         scope,
         asset.id,
         derivative.derivativeKey,
+        {
+          intrinsicWidth: derivative.intrinsicWidth,
+          intrinsicHeight: derivative.intrinsicHeight,
+        },
       );
+      focalX = Number(updated.focal_x ?? 0.5);
+      focalY = Number(updated.focal_y ?? 0.5);
       processedStateIsDurable = true;
     }
 
@@ -76,13 +91,20 @@ export async function POST(request: Request) {
         id: updated.id,
         status: updated.status,
         derivative_key: updated.derivative_key,
+        intrinsicWidth,
+        intrinsicHeight,
+        focalX,
+        focalY,
       },
       derivativeKey,
       publicUrl,
     });
-  } catch {
+  } catch (error) {
     if (!processedStateIsDurable) {
       await markMediaAssetFailed(scope, asset.id);
+    }
+    if (error instanceof MediaLaunchQualityError) {
+      return Response.json({ error: error.message, code: error.code }, { status: 422 });
     }
     return Response.json(
       {

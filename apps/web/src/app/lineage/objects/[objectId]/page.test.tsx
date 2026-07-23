@@ -78,6 +78,10 @@ const objectPassportPage = {
       publicPath: "/journal/first-flowering",
       mediaPublicUrl:
         "https://media.over.garden/derivatives/first-flowering.webp",
+      mediaFocalX: 0.5,
+      mediaFocalY: 0.5,
+      mediaIntrinsicWidth: 1200,
+      mediaIntrinsicHeight: 900,
     },
   ],
   journalContinuation: [
@@ -89,10 +93,27 @@ const objectPassportPage = {
       publicSlug: "sixth-public-update",
       publicPath: "/journal/sixth-public-update",
       mediaPublicUrl: null,
+      mediaFocalX: null,
+      mediaFocalY: null,
+      mediaIntrinsicWidth: null,
+      mediaIntrinsicHeight: null,
     },
   ],
   coverMediaPublicUrl:
     "https://media.over.garden/derivatives/first-flowering.webp",
+  coverMediaFocalX: 0.5,
+  coverMediaFocalY: 0.5,
+  coverMediaIntrinsicWidth: 1200,
+  coverMediaIntrinsicHeight: 900,
+  galleryMedia: [
+    {
+      publicUrl: "https://media.over.garden/derivatives/first-flowering.webp",
+      focalX: 0.5,
+      focalY: 0.5,
+      intrinsicWidth: 1200,
+      intrinsicHeight: 900,
+    },
+  ],
   galleryMediaPublicUrls: [
     "https://media.over.garden/derivatives/first-flowering.webp",
   ],

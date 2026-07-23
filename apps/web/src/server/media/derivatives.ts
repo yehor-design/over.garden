@@ -13,6 +13,8 @@ export interface PublicImageDerivative {
   buffer: Buffer;
   contentType: "image/webp";
   extension: "webp";
+  width: number;
+  height: number;
 }
 
 export async function createPublicImageDerivative(
@@ -23,7 +25,7 @@ export async function createPublicImageDerivative(
     quality = 82,
   }: PublicImageDerivativeOptions = {},
 ): Promise<PublicImageDerivative> {
-  const buffer = await sharp(input, {
+  const { data, info } = await sharp(input, {
     failOn: "error",
     limitInputPixels: MAX_IMAGE_INPUT_PIXELS,
   })
@@ -35,11 +37,19 @@ export async function createPublicImageDerivative(
       withoutEnlargement: true,
     })
     .webp({ quality, effort: 4 })
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
+
+  const width = info.width ?? 0;
+  const height = info.height ?? 0;
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width < 1 || height < 1) {
+    throw new Error("Processed derivative is missing intrinsic dimensions.");
+  }
 
   return {
-    buffer,
+    buffer: data,
     contentType: "image/webp",
     extension: "webp",
+    width,
+    height,
   };
 }

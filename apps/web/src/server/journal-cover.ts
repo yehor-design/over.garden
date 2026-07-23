@@ -46,6 +46,10 @@ export function buildFirstProcessedMediaPerEntryQuery(executor: QueryExecutor) {
       "media_assets.owner_user_id as ownerUserId",
       "media_assets.derivative_key as derivativeKey",
       "media_assets.alt_text as altText",
+      "media_assets.focal_x as focalX",
+      "media_assets.focal_y as focalY",
+      "media_assets.intrinsic_width as intrinsicWidth",
+      "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .where("media_assets.journal_entry_id", "is not", null)
     .where("media_assets.status", "=", "processed")
@@ -97,6 +101,10 @@ export function resolveEffectiveJournalCoverFromRows(input: {
     derivativeKey: string | null;
     originalDeletedAt?: Date | string | null;
     altText?: string | null;
+    focalX?: number | null;
+    focalY?: number | null;
+    intrinsicWidth?: number | null;
+    intrinsicHeight?: number | null;
   }>;
 }): ResolvedJournalCover {
   const candidatesById = new Map<string, JournalCoverCandidate>();
@@ -112,6 +120,10 @@ export function resolveEffectiveJournalCoverFromRows(input: {
       derivativeKey: row.derivativeKey,
       originalDeletedAt: row.originalDeletedAt ?? null,
       altText: row.altText ?? null,
+      focalX: row.focalX ?? 0.5,
+      focalY: row.focalY ?? 0.5,
+      intrinsicWidth: row.intrinsicWidth ?? null,
+      intrinsicHeight: row.intrinsicHeight ?? null,
     });
   }
   return resolveEffectiveJournalCover({

@@ -31,6 +31,10 @@ export function buildPublicObjectPassportPresentation(
       entryDate: entry.entryDate,
       href: entry.publicPath,
       mediaPublicUrl: entry.mediaPublicUrl,
+      mediaFocalX: entry.mediaFocalX,
+      mediaFocalY: entry.mediaFocalY,
+      mediaIntrinsicWidth: entry.mediaIntrinsicWidth,
+      mediaIntrinsicHeight: entry.mediaIntrinsicHeight,
       stateLabel: copy.publicEntry,
       relationLabel: copy.directObjectUpdate,
     })),
@@ -58,10 +62,14 @@ export function buildPublicObjectPassportPresentation(
     { href: null, label: page.object.displayName },
   ].filter((item): item is NonNullable<typeof item> => item !== null);
   const gallery = uniquePublicMedia(
-    page.galleryMediaPublicUrls.length > 0
-      ? page.galleryMediaPublicUrls.map((publicUrl, index) => ({
-          publicUrl,
+    page.galleryMedia.length > 0
+      ? page.galleryMedia.map((media, index) => ({
+          publicUrl: media.publicUrl,
           alt: `${page.object.displayName}: ${copy.mediaGallery} ${index + 1}`,
+          focalX: media.focalX,
+          focalY: media.focalY,
+          intrinsicWidth: media.intrinsicWidth,
+          intrinsicHeight: media.intrinsicHeight,
         }))
       : entries.flatMap((entry) =>
           entry.mediaPublicUrl
@@ -69,6 +77,10 @@ export function buildPublicObjectPassportPresentation(
                 {
                   publicUrl: entry.mediaPublicUrl,
                   alt: `${page.object.displayName}: ${entry.title}`,
+                  focalX: entry.mediaFocalX,
+                  focalY: entry.mediaFocalY,
+                  intrinsicWidth: entry.mediaIntrinsicWidth,
+                  intrinsicHeight: entry.mediaIntrinsicHeight,
                 },
               ]
             : [],
@@ -145,6 +157,10 @@ export function buildPublicObjectPassportPresentation(
       ? {
           publicUrl: page.coverMediaPublicUrl,
           alt: `${page.object.displayName} ${domain.kindLabel.toLocaleLowerCase(locale)}`,
+          focalX: page.coverMediaFocalX,
+          focalY: page.coverMediaFocalY,
+          intrinsicWidth: page.coverMediaIntrinsicWidth,
+          intrinsicHeight: page.coverMediaIntrinsicHeight,
         }
       : null,
     gallery,

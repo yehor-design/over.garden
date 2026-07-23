@@ -38,6 +38,10 @@ export interface LivingObjectPassportFact {
 export interface LivingObjectPassportMedia {
   publicUrl: string;
   alt: string;
+  focalX?: number | null;
+  focalY?: number | null;
+  intrinsicWidth?: number | null;
+  intrinsicHeight?: number | null;
 }
 
 export interface LivingObjectPassportTimelineEntryInput {
@@ -47,6 +51,10 @@ export interface LivingObjectPassportTimelineEntryInput {
   entryDate: Date | string;
   href: string;
   mediaPublicUrl: string | null;
+  mediaFocalX?: number | null;
+  mediaFocalY?: number | null;
+  mediaIntrinsicWidth?: number | null;
+  mediaIntrinsicHeight?: number | null;
   stateLabel: string;
   relationLabel: string;
 }

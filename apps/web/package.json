@@ -62,6 +62,7 @@
     "smoke:self-serve-mvp": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-self-serve-mvp.ts",
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:public-index-parity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity.ts",
+    "smoke:media-focal-presentation": "tsx scripts/smoke-media-focal-presentation.ts",
     "smoke:structured-journal-composer": "tsx scripts/smoke-structured-journal-composer.ts",
     "smoke:journal-block-reorder": "tsx scripts/smoke-journal-block-reorder.ts",
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
