@@ -265,7 +265,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ARTIFACT_PREFIX: "matching-release-"
-          KEEP_COUNT: "1"
+          KEEP_COUNT: "0"
         run: |
           set -euo pipefail
 
