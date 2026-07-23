@@ -500,7 +500,7 @@
       ],
       "notes": [
         "Behavior commit c6c57c4bc9ff365d6b0d00c260d1b60feba40d99 is on main. Vercel production deployment dpl_Cv3aFMqmb6oLNUkYwGMhabo26tTJ reached READY for that exact SHA and owned over.garden / www.",
-        "Additive production SQL 0004_media_lifecycle_revocation.sql applied (revoked_at/public_unreachable_at + media_lifecycle_retention_runs). Public overgarden-public managed r2.dev disabled via Cloudflare managed-domain API; synthetic revoke prove showed media.over.garden 2xx→non2xx and r2.dev non2xx.",
+        "Additive production SQL 0004_media_lifecycle_revocation.sql applied (revoked_at/public_unreachable_at + media_lifecycle_retention_runs). Public overgarden-public managed r2.dev disabled via Cloudflare managed-domain API; synthetic revoke prove showed media.over.garden 2xx\u2192non2xx and r2.dev non2xx.",
         "Local suite: db:types:check, focused media/job-queue tests, smoke:media-archive-retention, smoke:retention-workflow, retention:report, localization coverage, lint, typecheck, full vitest (372 files / 2351 tests), and production build. GitHub Actions remain workflow_dispatch under budget freeze.",
         "Does not claim OVE-196/199/200/201 finals. No broad bucket delete or user-content sweep. No object paths, identities, secrets, or private journal text in evidence."
       ]
@@ -552,7 +552,7 @@
       "notes": [
         "Unlock commit 820e8e5228386a8b076e1f0457376f21754637b7 and closeout baseline 7a6306aa026436fb7e7bb1afc267552a71ac36ee are on main. Vercel production deployment dpl_2znjaaXeytgc51fkkwWFN5xoa2S9 reached READY for the closeout SHA and owned over.garden / www plus immutable URL https://over-garden-hmtfkxai3-yehors-projects-01221e2b.vercel.app.",
         "Authenticated writes no longer require pilot_invite_grants; invite cookie/grant remains optional cohort attribution. Bounded actor_class self_serve|closed_pilot|founder_rehearsal|production_smoke|editorial|visual_fixture is emitted on analytics entry paths. Self-serve garden/auth copy no longer claims invite-only access.",
-        "Local smoke:self-serve-mvp proved zero-grant signup → private first entry → follow-up with actor_class=self_serve under run-with-local-infra-env. Production smoke:self-serve-providers proved Google and Facebook authorization starts, Facebook button live on guest garden, and invite-only claim absence on auth help. Composer/reorder/cover contract smokes remained green. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
+        "Local smoke:self-serve-mvp proved zero-grant signup \u2192 private first entry \u2192 follow-up with actor_class=self_serve under run-with-local-infra-env. Production smoke:self-serve-providers proved Google and Facebook authorization starts, Facebook button live on guest garden, and invite-only claim absence on auth help. Composer/reorder/cover contract smokes remained green. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
         "Does not claim OVE-186 Drive2 refresh, full interactive Facebook/Google browser callback round-trips, founder physical iPhone checklist, or any production account erasure/invite grant backfill.",
         "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
@@ -634,9 +634,33 @@
       "notes": [
         "Behavior commit 85b2d737a88ff58938e99f191b2017eae92ba675 and docs closeout 32a9030f52662f5a04daf58d61baa7ad1d9f36b1 are on main. Vercel production deployment dpl_39prmfUBYY8b6SRTcs4nQBcxLpdu reached READY for the docs closeout SHA and owned over.garden / www.",
         "Production Meilisearch active pin v1.48.1 digest sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a on volume overgarden-meili-data-v1481; legacy overgarden_meili_data retained (deletion forbidden in OVE-198).",
-        "Live dual-volume path: preflight 1.15.2→1.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
+        "Live dual-volume path: preflight 1.15.2\u21921.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
         "Matching handler canary passed all six handlers including journal index/unindex/restore with cover-safe key contract; leakCheck=passed. Canary validator hotpatched on running containers to match OVE-196 cover fields; sealed matching digest unchanged.",
         "Does not claim managed-search vendor migration, ranking redesign, legacy volume deletion, or OVE-186 Done. No keys, raw documents, user IDs, journal text, or precise location in evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-209",
+      "title": "Object category canon: record the two-kind {plant, animal} decision as repo docs anchor",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "765a2812e18da8a7dab3c6d534798b37264c4464",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-209/object-category-canon-record-the-two-kind-plant-animal-decision-as",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/4PYcX19zcpCMRaRQPG9UwDddPjd5",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "test -f docs/OBJECT_CATEGORY_MODEL_2026-07-23.md",
+        "rg -n \"exactly two|plant|animal|INV-VAG|vertical-agnostic|bee|defer|rename\" docs/OBJECT_CATEGORY_MODEL_2026-07-23.md",
+        "rg -n \"OBJECT_CATEGORY_MODEL_2026-07-23\" AGENTS.md docs/SDD_VERTICAL_SLICE_ROADMAP.md",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Docs commit 765a2812e18da8a7dab3c6d534798b37264c4464 is on main. Vercel production deployment dpl_4PYcX19zcpCMRaRQPG9UwDddPjd5 reached READY for that SHA and owned over.garden / www.",
+        "Canon: exactly two object kinds {plant, animal}; hive is animal with bee-breed catalog identity; bee_colony hard-removed; plant_objects rename deferred; wine/rakia/DIY are not kinds; MODEL != GTM.",
+        "Pointers wired in AGENTS.md Current MVP Scope, SDD Current Execution State (OVE-186 wording note), and PAGE_ARCH D9. Historical SCAFFOLD/three-kind shipping prose left as provenance until OVE-211.",
+        "Does not claim code/schema/UI collapse (OVE-211), product-research corpus reconciliation (OVE-212), or OVE-186 Done."
       ]
     }
   ]
