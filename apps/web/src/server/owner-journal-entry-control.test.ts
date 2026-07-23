@@ -70,8 +70,7 @@ describe("owner journal entry control", () => {
       }),
     ).toEqual({
       entryId: "00000000-0000-4000-8000-000000000020",
-      managePath:
-        "/garden/objects/00000000-0000-4000-8000-000000000003#passport-entry-00000000-0000-4000-8000-000000000020",
+      managePath: "/garden/entries/00000000-0000-4000-8000-000000000020/edit",
     });
 
     expect(
@@ -81,6 +80,6 @@ describe("owner journal entry control", () => {
         plantObjectId: null,
         spaceId: "00000000-0000-4000-8000-000000000002",
       }).managePath,
-    ).toBe("/garden#space-entry-00000000-0000-4000-8000-000000000021");
+    ).toBe("/garden/entries/00000000-0000-4000-8000-000000000021/edit");
   });
 });

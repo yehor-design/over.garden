@@ -51,12 +51,14 @@ interface OfflineJournalEntryPayloadBase {
   target?: JournalEntryTarget;
   title: string;
   body: string;
+  contentDocument?: unknown;
   entryDate: string;
   clientMutationId: string;
   syncStatus?: EntrySyncStatus;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: string[];
   photoIntent?: OfflinePhotoIntent | null;
+  photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
   processedMediaAssetId?: string | null;
 }
 
@@ -79,9 +81,16 @@ export interface OfflinePlantObjectEntryPayload extends OfflineJournalEntryPaylo
   plantObjectId: string;
 }
 
+export interface OfflineSpaceEntryPayload extends OfflineJournalEntryPayloadBase {
+  target: "space_entry";
+  spaceId: string;
+  mentionedPlantObjectIds: string[];
+}
+
 export type OfflineJournalEntryPayload =
   | OfflineFirstPlantEntryPayload
-  | OfflinePlantObjectEntryPayload;
+  | OfflinePlantObjectEntryPayload
+  | OfflineSpaceEntryPayload;
 
 export type OfflineMutationPayload = OfflineJournalEntryPayload | unknown;
 
@@ -99,7 +108,10 @@ export interface OfflineMutation {
   syncLeaseExpiresAt?: number | null;
 }
 
-export type OfflineDraftKind = "first_entry" | "follow_up_entry";
+export type OfflineDraftKind =
+  | "first_entry"
+  | "follow_up_entry"
+  | "space_entry";
 
 export interface OfflineDraftRecord<TPayload = unknown> {
   id: string;

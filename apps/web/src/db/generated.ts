@@ -441,12 +441,15 @@ export interface JournalEntries {
   archived_at: Timestamp | null;
   body: string;
   client_mutation_id: string;
+  content_document: Json | null;
+  content_schema_version: number | null;
   created_at: Generated<Timestamp>;
   entry_date: Generated<Timestamp>;
   entry_scope: Generated<string>;
   first_publication_disclosed_at: Timestamp | null;
   first_publication_disclosure_version: string | null;
   id: Generated<string>;
+  journal_revision: Generated<Numeric>;
   lifecycle_state: Generated<string>;
   owner_user_id: string;
   plant_object_id: string | null;
@@ -458,6 +461,17 @@ export interface JournalEntries {
   title: string;
   updated_at: Generated<Timestamp>;
   visibility: Generated<string>;
+}
+
+export interface JournalEntryMutationReceipts {
+  base_revision: Numeric;
+  client_mutation_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  journal_entry_id: string;
+  mutation_kind: string;
+  owner_user_id: string;
+  result_revision: Numeric;
 }
 
 export interface JournalEntryCatalogMentions {
@@ -577,6 +591,7 @@ export interface MediaAssets {
   caption: string | null;
   created_at: Generated<Timestamp>;
   derivative_key: string | null;
+  document_position: number | null;
   id: Generated<string>;
   journal_entry_id: string | null;
   original_deleted_at: Timestamp | null;
@@ -806,6 +821,7 @@ export interface DB {
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;
+  journal_entry_mutation_receipts: JournalEntryMutationReceipts;
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_topic_signals: JournalEntryTopicSignals;
   journal_topics: JournalTopics;

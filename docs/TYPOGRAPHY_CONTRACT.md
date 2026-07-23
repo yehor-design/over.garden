@@ -605,7 +605,8 @@ OVE-202 browser evidence must exercise authoring and read-only SSR in all three
 locales, including representative IME input and toolbar/popover/portal states.
 It must assert computed family inheritance and, in Chromium,
 `CSS.getPlatformFontsForNode` evidence for the actual rendered Google Sans face,
-not just the CSS family name.
+not just the CSS family name. Consumption is documented in
+`docs/STRUCTURED_JOURNAL_COMPOSER.md`; the composer holder uses `font-sans` only.
 
 OVE-206 reorder and OVE-207 cover behavior inherit this typography contract
 transitively through OVE-202. They must preserve the same editor and portal

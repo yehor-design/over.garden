@@ -4,6 +4,10 @@ import type {
   FirstPlantEntryRequest,
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
+import {
+  remapJournalDocumentMediaAssetIds,
+  type JournalDocumentV1,
+} from "@/lib/garden/journal-document";
 import { AUTH_INTENT_RETURN_HEADER } from "@/lib/auth/auth-intent-http-contract";
 import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
 import {
@@ -53,27 +57,34 @@ export async function submitJournalEntryPayload(
   options: {
     idempotencyKey?: string;
     onProcessedMediaAsset?: (mediaAssetId: string) => Promise<void>;
+    onResolvedPayload?: (
+      next: OfflineJournalEntryPayload,
+    ) => Promise<void>;
     signal?: AbortSignal;
   } = {},
 ): Promise<FirstPlantEntryResponse> {
   const idempotencyKey = options.idempotencyKey ?? payload.clientMutationId;
   const authReturnTo = journalEntryAuthReturnTo(payload);
-  const mediaAssetId =
-    payload.processedMediaAssetId ??
-    (await processPhotoIntent(
-      payload.photoIntent ?? null,
-      authReturnTo,
-      options.signal,
-    ));
+  const resolved = await resolveOfflineMediaForJournalPayload(
+    payload,
+    authReturnTo,
+    options.signal,
+  );
 
-  if (mediaAssetId && mediaAssetId !== payload.processedMediaAssetId) {
-    await options.onProcessedMediaAsset?.(mediaAssetId);
+  if (
+    resolved.primaryMediaAssetId &&
+    resolved.primaryMediaAssetId !== payload.processedMediaAssetId
+  ) {
+    await options.onProcessedMediaAsset?.(resolved.primaryMediaAssetId);
+  }
+  if (resolved.payloadChanged) {
+    await options.onResolvedPayload?.(resolved.payload);
   }
 
   const requestBody = buildJournalEntryRequestBodyForSync(
-    payload,
+    resolved.payload,
     idempotencyKey,
-    mediaAssetId,
+    resolved.primaryMediaAssetId,
   );
 
   const response = await fetch("/api/garden/entries", {
@@ -195,6 +206,13 @@ export async function syncOfflineJournalEntryMutation(
             },
           );
         },
+        onResolvedPayload: async (next) => {
+          await updateOfflineMutationPayload(
+            options.expectedOwnerUserId,
+            claimed.id,
+            next,
+          );
+        },
       });
 
       await completeOfflineMutation(options.expectedOwnerUserId, claimed.id, {
@@ -220,16 +238,24 @@ export async function syncOfflineJournalEntryMutation(
 }
 
 function syncedPayloadReceipt(payload: OfflineJournalEntryPayload) {
-  return payload.target === "plant_object_entry"
-    ? {
-        target: payload.target,
-        plantObjectId: payload.plantObjectId,
-        clientMutationId: payload.clientMutationId,
-      }
-    : {
-        target: "first_plant_entry" as const,
-        clientMutationId: payload.clientMutationId,
-      };
+  if (payload.target === "plant_object_entry") {
+    return {
+      target: payload.target,
+      plantObjectId: payload.plantObjectId,
+      clientMutationId: payload.clientMutationId,
+    };
+  }
+  if (payload.target === "space_entry") {
+    return {
+      target: payload.target,
+      spaceId: payload.spaceId,
+      clientMutationId: payload.clientMutationId,
+    };
+  }
+  return {
+    target: "first_plant_entry" as const,
+    clientMutationId: payload.clientMutationId,
+  };
 }
 
 function syncedResultReceipt(result: FirstPlantEntryResponse) {
@@ -251,10 +277,28 @@ export function buildJournalEntryRequestBodyForSync(
       plantObjectId: payload.plantObjectId,
       title: payload.title,
       body: payload.body,
+      contentDocument: payload.contentDocument,
       entryDate: payload.entryDate,
       clientMutationId: idempotencyKey,
       mediaAssetId: mediaAssetId ?? "",
       mentionSelections: payload.mentionSelections ?? [],
+      topicTags: payload.topicTags ?? [],
+      syncStatus:
+        payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
+    };
+  }
+
+  if (payload.target === "space_entry") {
+    return {
+      target: "space_entry",
+      spaceId: payload.spaceId,
+      mentionedPlantObjectIds: payload.mentionedPlantObjectIds,
+      title: payload.title,
+      body: payload.body,
+      contentDocument: payload.contentDocument,
+      entryDate: payload.entryDate,
+      clientMutationId: idempotencyKey,
+      mediaAssetId: mediaAssetId ?? "",
       topicTags: payload.topicTags ?? [],
       syncStatus:
         payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
@@ -272,6 +316,7 @@ export function buildJournalEntryRequestBodyForSync(
     varietyText: payload.varietyText ?? "",
     title: payload.title,
     body: payload.body,
+    contentDocument: payload.contentDocument,
     entryDate: payload.entryDate,
     locationVisibility: payload.locationVisibility ?? "hidden",
     coarseRegionCode: payload.coarseRegionCode ?? null,
@@ -282,6 +327,76 @@ export function buildJournalEntryRequestBodyForSync(
     syncStatus:
       payload.syncStatus === "offline_queued" ? "offline_synced" : "online",
     activationSource: payload.activationSource ?? null,
+  };
+}
+
+async function resolveOfflineMediaForJournalPayload(
+  payload: OfflineJournalEntryPayload,
+  authReturnTo: string,
+  signal?: AbortSignal,
+): Promise<{
+  payload: OfflineJournalEntryPayload;
+  primaryMediaAssetId: string | null;
+  payloadChanged: boolean;
+}> {
+  const mediaIdMap = new Map<string, string>();
+  const remainingIntents: Record<string, OfflinePhotoIntent> = {
+    ...(payload.photoIntentsByBlockId ?? {}),
+  };
+
+  for (const [provisionalId, intent] of Object.entries(remainingIntents)) {
+    const realId = await processPhotoIntent(intent, authReturnTo, signal);
+    if (!realId) continue;
+    mediaIdMap.set(provisionalId, realId);
+    delete remainingIntents[provisionalId];
+  }
+
+  let primaryMediaAssetId = payload.processedMediaAssetId ?? null;
+  if (!primaryMediaAssetId && payload.photoIntent) {
+    primaryMediaAssetId = await processPhotoIntent(
+      payload.photoIntent,
+      authReturnTo,
+      signal,
+    );
+  }
+  if (!primaryMediaAssetId && mediaIdMap.size > 0) {
+    primaryMediaAssetId = [...mediaIdMap.values()][0] ?? null;
+  }
+
+  let nextDocument = payload.contentDocument;
+  let documentChanged = false;
+  if (
+    payload.contentDocument &&
+    typeof payload.contentDocument === "object" &&
+    mediaIdMap.size > 0
+  ) {
+    nextDocument = remapJournalDocumentMediaAssetIds(
+      payload.contentDocument as JournalDocumentV1,
+      mediaIdMap,
+    );
+    documentChanged = true;
+  }
+
+  const payloadChanged =
+    documentChanged ||
+    Object.keys(remainingIntents).length !==
+      Object.keys(payload.photoIntentsByBlockId ?? {}).length ||
+    (primaryMediaAssetId != null &&
+      primaryMediaAssetId !== payload.processedMediaAssetId);
+
+  return {
+    payload: {
+      ...payload,
+      contentDocument: nextDocument,
+      photoIntentsByBlockId:
+        Object.keys(remainingIntents).length > 0
+          ? remainingIntents
+          : undefined,
+      photoIntent: primaryMediaAssetId ? null : payload.photoIntent,
+      processedMediaAssetId: primaryMediaAssetId,
+    },
+    primaryMediaAssetId,
+    payloadChanged,
   };
 }
 

@@ -4,6 +4,7 @@ import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
 import { buttonVariants } from "@/components/ui/button";
+import { SpaceEntryComposer } from "@/app/garden/space-entry-composer";
 import {
   activationSurfaceKindForSource,
   normalizeActivationSourceParam,
@@ -53,7 +54,6 @@ import {
 import { resolvePilotWriteAccess } from "@/server/pilot-write-access";
 import { scopedToUser } from "@/server/request-scope";
 import { addCatalogPublicSlugToWishlistAction } from "../wishlist/actions";
-import { createSpaceJournalEntryAction } from "./actions";
 import { ClosedPilotWriteCallout } from "./closed-pilot-write-callout";
 import { FirstEntryComposer } from "./first-entry-composer";
 import { GardenAuthPanel } from "./garden-auth-panel";
@@ -486,6 +486,7 @@ function GardenWriteTools({
         <SpaceJournalTools
           canWrite={canWrite}
           locale={locale}
+          ownerUserId={ownerUserId}
           timeline={selectedSpaceTimeline}
           today={today}
         />
@@ -497,11 +498,13 @@ function GardenWriteTools({
 function SpaceJournalTools({
   canWrite,
   locale,
+  ownerUserId,
   timeline,
   today,
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
+  ownerUserId: string;
   timeline: SpaceJournalTimeline;
   today: string;
 }) {
@@ -528,92 +531,19 @@ function SpaceJournalTools({
       </div>
 
       {canWrite && timeline.objects.length > 0 ? (
-        <form
-          action={createSpaceJournalEntryAction}
-          className="mt-5 grid gap-3 border-y border-border py-5"
-        >
-          <input type="hidden" name="spaceId" value={timeline.space.id} />
-          <input
-            type="hidden"
-            name="clientMutationId"
-            value={crypto.randomUUID()}
-          />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium text-foreground">
-                {copy.page.spaceJournal.title}
-              </span>
-              <input
-                name="title"
-                required
-                maxLength={140}
-                placeholder={copy.page.spaceJournal.titlePlaceholder}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium text-foreground">
-                {copy.page.spaceJournal.date}
-              </span>
-              <input
-                type="date"
-                name="entryDate"
-                defaultValue={today}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </label>
-          </div>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium text-foreground">
-              {copy.page.spaceJournal.story}
-            </span>
-            <textarea
-              name="body"
-              required
-              maxLength={2000}
-              rows={4}
-              placeholder={copy.page.spaceJournal.storyPlaceholder}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm leading-6"
-            />
-          </label>
-          <fieldset className="grid gap-2">
-            <legend className="text-sm font-medium text-foreground">
-              {copy.page.spaceJournal.mentionedObjects}
-            </legend>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {timeline.objects.map((object) => (
-                <label
-                  key={object.id}
-                  className="flex items-start gap-2 border-y border-border px-1 py-2 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    name="mentionedPlantObjectIds"
-                    value={object.id}
-                    className="mt-1 size-4 rounded border-border"
-                  />
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium text-foreground">
-                      {object.displayName}
-                    </span>
-                    <span className="block truncate text-xs text-muted-foreground">
-                      {localizedPageObjectKind(object.objectKind, copy)} ·{" "}
-                      {object.varietyText ??
-                        copy.page.spaceJournal.unknownIdentity}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          <button
-            type="submit"
-            className={buttonVariants({ className: "w-fit" })}
-          >
-            <BookOpenText aria-hidden="true" />
-            {copy.page.spaceJournal.save}
-          </button>
-        </form>
+        <SpaceEntryComposer
+          locale={locale}
+          ownerUserId={ownerUserId}
+          spaceId={timeline.space.id}
+          today={today}
+          objects={timeline.objects.map((object) => ({
+            id: object.id,
+            displayName: object.displayName,
+            objectKindLabel: `${localizedPageObjectKind(object.objectKind, copy)} · ${
+              object.varietyText ?? copy.page.spaceJournal.unknownIdentity
+            }`,
+          }))}
+        />
       ) : null}
 
       {timeline.entries.length > 0 ? (

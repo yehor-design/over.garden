@@ -1004,6 +1004,8 @@ describe("journal repository query contracts", () => {
         entryId: "00000000-0000-4000-8000-000000000020",
         title: "Перший урожай",
         body: "Перший абзац.\n\nІсторична згадка @previous_gardener.",
+        contentDocument: null,
+        contentSchemaVersion: null,
         entryDate: "2026-07-10",
         entryCreatedAt: "2026-07-10T09:00:00.000Z",
         entryScope: "object",
@@ -1130,26 +1132,23 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('from "journal_entries"');
     expect(compiled.sql).toContain('"journal_entries"."id" = $7');
     expect(compiled.sql).toContain('"journal_entries"."owner_user_id" = $8');
-    expect(compiled.sql).toContain("not exists");
+    expect(compiled.sql).toContain('from "media_assets" as "existing_entry_media"');
     expect(compiled.sql).toContain(
-      'from "media_assets" as "existing_entry_media"',
+      '"existing_entry_media"."journal_entry_id" = $',
     );
-    expect(compiled.sql).toContain(
-      '"existing_entry_media"."journal_entry_id" = $9',
+    expect(compiled.sql).toContain('"existing_entry_media"."id" != $');
+    expect(compiled.sql).toContain("count(*)");
+    expect(compiled.sql).toContain("not like");
+    expect(compiled.parameters).toEqual(
+      expect.arrayContaining([
+        "00000000-0000-0000-0000-000000000020",
+        "00000000-0000-0000-0000-000000000010",
+        "00000000-0000-0000-0000-000000000001",
+        "processed",
+        "visual-fixtures/%",
+        10,
+      ]),
     );
-    expect(compiled.sql).toContain('"existing_entry_media"."id" != $10');
-    expect(compiled.parameters).toEqual([
-      "00000000-0000-0000-0000-000000000020",
-      expect.any(Date),
-      "00000000-0000-0000-0000-000000000010",
-      "00000000-0000-0000-0000-000000000001",
-      "processed",
-      "00000000-0000-0000-0000-000000000020",
-      "00000000-0000-0000-0000-000000000020",
-      "00000000-0000-0000-0000-000000000001",
-      "00000000-0000-0000-0000-000000000020",
-      "00000000-0000-0000-0000-000000000010",
-    ]);
   });
 
   it("selects a bounded ordered public gallery with safe readback metadata", () => {
@@ -1185,7 +1184,7 @@ describe("journal repository query contracts", () => {
       "public",
       "active",
       "processed",
-      6,
+      10,
     ]);
   });
 

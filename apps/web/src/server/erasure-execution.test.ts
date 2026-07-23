@@ -88,9 +88,12 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"owner_user_id" = $1');
     expect(compiled.sql).toContain('"title" = $2');
     expect(compiled.sql).toContain('"body" = $3');
-    expect(compiled.sql).toContain('"visibility" = $5');
-    expect(compiled.sql).toContain('"lifecycle_state" = $6');
-    expect(compiled.sql).toContain('"public_noindex" = $7');
+    expect(compiled.sql).toContain('"content_document" = $4');
+    expect(compiled.sql).toContain('"content_schema_version" = $5');
+    expect(compiled.sql).toContain('"journal_revision" = journal_revision + 1');
+    expect(compiled.sql).toContain('"visibility" = $7');
+    expect(compiled.sql).toContain('"lifecycle_state" = $8');
+    expect(compiled.sql).toContain('"public_noindex" = $9');
     expect(compiled.sql).toContain("coalesce(public_gone_at");
     expect(compiled.sql).toContain(
       '\'erased:\' || "journal_entries"."id"::text',

@@ -70,20 +70,20 @@ describe("OVE-205 market-first localization coverage", () => {
         ],
       },
       summary: {
-        routeModuleCount: 94,
-        classifiedRouteModuleCount: 94,
-        appSurfaceModuleCount: 128,
-        classifiedAppSurfaceModuleCount: 128,
-        registeredSurfaceCount: 132,
-        renderedRouteModuleCount: 66,
-        renderedSurfaceCount: 104,
+        routeModuleCount: 96,
+        classifiedRouteModuleCount: 96,
+        appSurfaceModuleCount: 130,
+        classifiedAppSurfaceModuleCount: 130,
+        registeredSurfaceCount: 134,
+        renderedRouteModuleCount: 67,
+        renderedSurfaceCount: 105,
         renderedStateModuleCount: 34,
         rawLifecycleRendererCount: 4,
         globalErrorModuleCount: 1,
         copyNamespaceCount: LOCALIZATION_COPY_NAMESPACES.length,
         localeCount: 3,
         ownerBrowserProbeCount: 15,
-        preservedRouteModuleCount: 82,
+        preservedRouteModuleCount: 84,
         newlyClosedDeltaRouteModuleCount: 10,
         ove205CorrectiveSurfaceCount: 40,
         downstreamOwnedUiGateCount: 3,
@@ -273,7 +273,7 @@ describe("OVE-205 market-first localization coverage", () => {
     });
   });
 
-  it("records editor/photo/cover proof as downstream-owned without blocking OVE-205", () => {
+  it("records OVE-202 as browser-backed while OVE-206/207 stay downstream-owned", () => {
     const report = buildLocalizationCoverage();
 
     expect(report.downstreamOwnedUiGates).toEqual(
@@ -282,8 +282,17 @@ describe("OVE-205 market-first localization coverage", () => {
         requiredStates: [...gate.requiredStates],
       })),
     );
+    expect(report.downstreamOwnedUiGates[0]).toEqual(
+      expect.objectContaining({
+        issue: "OVE-202",
+        status: "browser-backed",
+        browserScenarioId: "editor-clean-locale-transition",
+        proofOwner: "OVE-202",
+        blocksCurrentIssue: false,
+      }),
+    );
     expect(
-      report.downstreamOwnedUiGates.every(
+      report.downstreamOwnedUiGates.slice(1).every(
         ({ browserScenarioId, status, proofOwner, blocksCurrentIssue }) =>
           browserScenarioId === null &&
           status === "downstream-owned-real-ui" &&
@@ -294,7 +303,7 @@ describe("OVE-205 market-first localization coverage", () => {
 
     const invalidDownstreamUiGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(
       (gate, index) =>
-        index === 0
+        index === 1
           ? { ...gate, browserScenarioId: "fabricated:future-ui" as never }
           : gate,
     );
@@ -302,7 +311,7 @@ describe("OVE-205 market-first localization coverage", () => {
       downstreamUiGates: invalidDownstreamUiGates as never,
     });
     expect(invalidReport.missing.invalidDownstreamUiGates).toContain(
-      "structured-editor-and-inline-photos:fabricated-current-proof",
+      "accessible-block-reorder:fabricated-current-proof",
     );
 
     const incompleteStateGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(

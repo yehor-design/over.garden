@@ -13,7 +13,11 @@ export type ActivationSurfaceKind =
   | "variety"
   | "garden"
   | "invite";
-export type JournalEntryTarget = "first_plant_entry" | "plant_object_entry";
+
+export type JournalEntryTarget =
+  | "first_plant_entry"
+  | "plant_object_entry"
+  | "space_entry";
 
 export interface FirstEntryCatalogSelection {
   id: string;
@@ -41,7 +45,9 @@ export interface FirstPlantEntryRequest {
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
   title: string;
-  body: string;
+  body?: string;
+  contentDocument?: unknown;
+  expectedRevision?: number;
   entryDate?: string | null;
   locationVisibility?: string | null;
   coarseRegionCode?: string | null;
@@ -51,6 +57,7 @@ export interface FirstPlantEntryRequest {
   activationSource?: ActivationSource | null;
   mentionSelections?: JournalMentionSelection[];
   topicTags?: string[];
+  mentionedPlantObjectIds?: string[];
 }
 
 export interface FirstPlantEntryResponse {
@@ -76,6 +83,7 @@ export interface FirstPlantEntryResponse {
     body: string;
     entryDate: string;
     clientMutationId: string;
+    journalRevision?: number;
   };
   readbackUrl: string;
   followUpValuePulse?: {

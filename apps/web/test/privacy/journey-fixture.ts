@@ -142,6 +142,8 @@ export function publicJournalEntryPage(): PublicJournalEntryPage {
       id: JOURNEY.entryId,
       title: JOURNEY.safeTitle,
       body: JOURNEY.safeBody,
+      contentDocument: null,
+      contentSchemaVersion: null,
       entryDate: JOURNEY.entryDate,
       createdAt: JOURNEY.publishedAt,
       entryScope: "object",

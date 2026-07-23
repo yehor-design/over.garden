@@ -16,6 +16,7 @@ import type {
   Space,
   VarietyState,
 } from "@/db/schema";
+import type { Json } from "@/db/generated";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
@@ -39,7 +40,6 @@ import {
   createUserAddedCatalogCandidate,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
-import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
 import {
   persistJournalEntryTopicSignals,
@@ -47,15 +47,26 @@ import {
 } from "@/server/journal-topic-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
+import {
+  claimOrderedInlineMediaForEntry,
+  journalRevisionNumber,
+  resolveJournalContentForWrite,
+  writeJournalMutationReceipt,
+  JournalAggregateConflictError,
+  findJournalMutationReceipt,
+  loadOwnedActiveJournalEntryForEdit,
+  readJournalDocumentFromEntry,
+} from "@/server/journal-document-persistence";
 
-const MAX_BODY_LENGTH = 2000;
+export { JournalAggregateConflictError, readJournalDocumentFromEntry };
+
 const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
 const MAX_PUBLIC_SLUG_LENGTH = 96;
 const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
 const MAX_OBJECT_GALLERY_MEDIA = 6;
-const MAX_PUBLIC_JOURNAL_MEDIA = 6;
+const MAX_PUBLIC_JOURNAL_MEDIA = 10;
 const MAX_PUBLIC_JOURNAL_TOPICS = 8;
 const MAX_PUBLIC_JOURNAL_MENTIONED_OBJECTS = 6;
 const MAX_PUBLIC_JOURNAL_MENTIONED_PROFILES = 8;
@@ -75,7 +86,8 @@ export interface CreateFirstPlantEntryInput {
   userAddedCatalogName?: string | null;
   varietyText?: string | null;
   title: string;
-  body: string;
+  body?: string | null;
+  contentDocument?: unknown;
   entryDate?: string | null;
   locationVisibility?: string | null;
   coarseRegionCode?: string | null;
@@ -99,7 +111,8 @@ export interface CreateJournalEntryInput {
 export interface CreatePlantObjectJournalEntryInput {
   plantObjectId: string;
   title: string;
-  body: string;
+  body?: string | null;
+  contentDocument?: unknown;
   entryDate?: string | null;
   clientMutationId: string;
   mediaAssetId?: string | null;
@@ -114,9 +127,11 @@ export interface CreateSpaceJournalEntryInput {
   spaceId: string;
   mentionedPlantObjectIds: string[];
   title: string;
-  body: string;
+  body?: string | null;
+  contentDocument?: unknown;
   entryDate?: string | null;
   clientMutationId: string;
+  mediaAssetId?: string | null;
   topicTags?: unknown;
 }
 
@@ -262,6 +277,8 @@ export interface PublicJournalEntryPage {
     id: string;
     title: string;
     body: string;
+    contentDocument: unknown | null;
+    contentSchemaVersion: number | null;
     entryDate: Date | string;
     createdAt: Date | string;
     entryScope: EntryScope;
@@ -368,6 +385,8 @@ interface PublicJournalEntryRootRow {
   entryId: string;
   title: string;
   body: string;
+  contentDocument: unknown | null;
+  contentSchemaVersion: number | null;
   entryDate: Date | string;
   entryCreatedAt: Date | string;
   entryScope: string;
@@ -611,6 +630,9 @@ export async function createFirstPlantEntry(
       plant_object_id: plantObject.id,
       title: normalized.title,
       body: normalized.body,
+      content_document: journalDocumentAsJson(normalized.contentDocument),
+      content_schema_version: normalized.contentSchemaVersion,
+      journal_revision: 1,
       entry_scope: "object",
       entry_date: normalized.entryDate,
       visibility: DEFAULT_ENTRY_VISIBILITY,
@@ -618,12 +640,22 @@ export async function createFirstPlantEntry(
     });
 
     if (entry) {
-      const mediaAttached = await attachMediaAssetToEntryIfPresent(
+      const mediaAttached = await claimOrderedInlineMediaForEntry(
         trx,
         scope,
-        normalized.mediaAssetId,
-        entry.id,
+        {
+          journalEntryId: entry.id,
+          orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+        },
       );
+      await writeJournalMutationReceipt(trx, {
+        ownerUserId: scope.userId,
+        journalEntryId: entry.id,
+        clientMutationId: normalized.clientMutationId,
+        baseRevision: 0,
+        resultRevision: 1,
+        mutationKind: "create",
+      });
       await persistJournalEntryMentions(trx, scope, {
         journalEntryId: entry.id,
         ownerUserId: scope.userId,
@@ -1248,6 +1280,9 @@ export async function createPlantObjectJournalEntry(
       plant_object_id: target.objectId,
       title: normalized.title,
       body: normalized.body,
+      content_document: journalDocumentAsJson(normalized.contentDocument),
+      content_schema_version: normalized.contentSchemaVersion,
+      journal_revision: 1,
       entry_scope: "object",
       entry_date: normalized.entryDate,
       visibility: DEFAULT_ENTRY_VISIBILITY,
@@ -1260,7 +1295,16 @@ export async function createPlantObjectJournalEntry(
         scope,
         normalized.mediaAssetId,
         entry.id,
+        normalized.orderedMediaAssetIds,
       );
+      await writeJournalMutationReceipt(trx, {
+        ownerUserId: scope.userId,
+        journalEntryId: entry.id,
+        clientMutationId: normalized.clientMutationId,
+        baseRevision: 0,
+        resultRevision: 1,
+        mutationKind: "create",
+      });
       await persistJournalEntryMentions(trx, scope, {
         journalEntryId: entry.id,
         ownerUserId: scope.userId,
@@ -1445,6 +1489,9 @@ export async function createSpaceJournalEntry(
       plant_object_id: null,
       title: normalized.title,
       body: normalized.body,
+      content_document: journalDocumentAsJson(normalized.contentDocument),
+      content_schema_version: normalized.contentSchemaVersion,
+      journal_revision: 1,
       entry_scope: "space",
       entry_date: normalized.entryDate,
       visibility: DEFAULT_ENTRY_VISIBILITY,
@@ -1452,6 +1499,21 @@ export async function createSpaceJournalEntry(
     });
 
     if (entry) {
+      await attachMediaAssetToEntryIfPresent(
+        trx,
+        scope,
+        normalized.mediaAssetId,
+        entry.id,
+        normalized.orderedMediaAssetIds,
+      );
+      await writeJournalMutationReceipt(trx, {
+        ownerUserId: scope.userId,
+        journalEntryId: entry.id,
+        clientMutationId: normalized.clientMutationId,
+        baseRevision: 0,
+        resultRevision: 1,
+        mutationKind: "create",
+      });
       await insertJournalEntryObjectMentions(trx, {
         ownerUserId: scope.userId,
         spaceId: space.id,
@@ -1658,6 +1720,161 @@ export async function listMyRecentJournalEntries(
     .orderBy("created_at", "desc")
     .limit(boundedLimit)
     .execute();
+}
+
+export interface UpdateJournalEntryAggregateInput {
+  entryId: string;
+  clientMutationId: string;
+  expectedRevision: number;
+  title: string;
+  entryDate?: string | null;
+  contentDocument?: unknown;
+  body?: string | null;
+  mentionSelections?: JournalMentionSelection[];
+  topicTags?: unknown;
+}
+
+export interface UpdateJournalEntryAggregateResult {
+  entry: JournalEntry;
+  mediaAttached: boolean;
+  isReplay: boolean;
+  conflict?: never;
+}
+
+export async function updateJournalEntryAggregate(
+  scope: RequestScope,
+  input: UpdateJournalEntryAggregateInput,
+): Promise<UpdateJournalEntryAggregateResult> {
+  const entryId = normalizeRequiredText(input.entryId, "Entry id", 200);
+  const clientMutationId = normalizeRequiredText(
+    input.clientMutationId,
+    "Client mutation id",
+    200,
+  );
+  const expectedRevision = Math.trunc(Number(input.expectedRevision));
+  if (!Number.isFinite(expectedRevision) || expectedRevision < 1) {
+    throw new Error("Expected revision is required.");
+  }
+
+  const existingReceipt = await findJournalMutationReceipt(db, scope, {
+    journalEntryId: entryId,
+    clientMutationId,
+  });
+  if (existingReceipt) {
+    const entry = await findJournalEntryById(scope, entryId);
+    if (!entry) {
+      throw new Error("Journal entry was not found in this garden.");
+    }
+    return {
+      entry,
+      mediaAttached: false,
+      isReplay: true,
+    };
+  }
+
+  const title = normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH);
+  const entryDate = normalizeEntryDate(input.entryDate);
+  const content = resolveJournalContentForWrite({
+    contentDocument: input.contentDocument,
+    body: input.body,
+    requireStructured: false,
+  });
+
+  return db.transaction().execute(async (trx) => {
+    await buildJournalMutationAdvisoryLockQuery(
+      scope,
+      clientMutationId,
+    ).execute(trx);
+
+    const replay = await findJournalMutationReceipt(trx, scope, {
+      journalEntryId: entryId,
+      clientMutationId,
+    });
+    if (replay) {
+      const entry = await findJournalEntryById(scope, entryId, trx);
+      if (!entry) {
+        throw new Error("Journal entry was not found in this garden.");
+      }
+      return { entry, mediaAttached: false, isReplay: true };
+    }
+
+    const existing = await loadOwnedActiveJournalEntryForEdit(
+      trx,
+      scope,
+      entryId,
+    );
+    const currentRevision = journalRevisionNumber(existing.journal_revision);
+    if (currentRevision !== expectedRevision) {
+      throw new JournalAggregateConflictError(currentRevision);
+    }
+
+    const nextRevision = currentRevision + 1;
+    const updated = await trx
+      .updateTable("journal_entries")
+      .set({
+        title,
+        body: content.body,
+        content_document: journalDocumentAsJson(content.document),
+        content_schema_version: content.contentSchemaVersion,
+        journal_revision: nextRevision,
+        entry_date: entryDate,
+        updated_at: new Date(),
+      })
+      .where("id", "=", entryId)
+      .where("owner_user_id", "=", scope.userId)
+      .where("journal_revision", "=", String(expectedRevision))
+      .where("lifecycle_state", "=", "active")
+      .where("public_gone_at", "is", null)
+      .returningAll()
+      .executeTakeFirst();
+
+    if (!updated) {
+      const latest = await loadOwnedActiveJournalEntryForEdit(
+        trx,
+        scope,
+        entryId,
+      );
+      throw new JournalAggregateConflictError(
+        journalRevisionNumber(latest.journal_revision),
+      );
+    }
+
+    const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
+      journalEntryId: updated.id,
+      orderedMediaAssetIds: content.mediaAssetIds,
+    });
+
+    if (updated.entry_scope === "object" && updated.plant_object_id) {
+      await persistJournalEntryMentions(trx, scope, {
+        journalEntryId: updated.id,
+        ownerUserId: scope.userId,
+        spaceId: updated.space_id,
+        subjectPlantObjectId: updated.plant_object_id,
+        clientMutationId,
+        mentionSelections: input.mentionSelections ?? [],
+      });
+    }
+
+    await persistJournalEntryTopicSignals(trx, scope, {
+      journalEntryId: updated.id,
+      explicitTagLabels: input.topicTags ?? [],
+    });
+
+    await writeJournalMutationReceipt(trx, {
+      ownerUserId: scope.userId,
+      journalEntryId: updated.id,
+      clientMutationId,
+      baseRevision: expectedRevision,
+      resultRevision: nextRevision,
+      mutationKind: "edit",
+    });
+
+    return {
+      entry: updated,
+      mediaAttached,
+      isReplay: false,
+    };
+  });
 }
 
 export async function publishJournalEntry(
@@ -1926,6 +2143,8 @@ export function serializePublicJournalEntryPage(input: {
       id: root.entryId,
       title: root.title,
       body: root.body,
+      contentDocument: root.contentDocument ?? null,
+      contentSchemaVersion: root.contentSchemaVersion ?? null,
       entryDate: root.entryDate,
       createdAt: root.entryCreatedAt,
       entryScope: root.entryScope as EntryScope,
@@ -2691,6 +2910,8 @@ export function buildPublicJournalEntryLookupQuery(
       "journal_entries.id as entryId",
       "journal_entries.title as title",
       "journal_entries.body as body",
+      "journal_entries.content_document as contentDocument",
+      "journal_entries.content_schema_version as contentSchemaVersion",
       "journal_entries.entry_date as entryDate",
       "journal_entries.created_at as entryCreatedAt",
       "journal_entries.entry_scope as entryScope",
@@ -3334,6 +3555,18 @@ function normalizeCreateFirstPlantEntryInput(
     throw new Error("Choose an existing space or name a new space.");
   }
 
+  const content = resolveJournalContentForWrite({
+    contentDocument: input.contentDocument,
+    body: input.body,
+    requireStructured: false,
+  });
+  const orderedMediaAssetIds =
+    content.mediaAssetIds.length > 0
+      ? content.mediaAssetIds
+      : mediaAssetId
+        ? [mediaAssetId]
+        : [];
+
   return {
     spaceId,
     spaceName: spaceName ?? "",
@@ -3352,7 +3585,10 @@ function normalizeCreateFirstPlantEntryInput(
         ? "user_added"
         : "unknown") satisfies VarietyState,
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
-    body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
+    body: content.body,
+    contentDocument: content.document,
+    contentSchemaVersion: content.contentSchemaVersion,
+    orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     ...normalizeLocationSelection({
       locationVisibility: input.locationVisibility,
@@ -3373,6 +3609,23 @@ function normalizeCreateFirstPlantEntryInput(
 function normalizeCreatePlantObjectJournalEntryInput(
   input: CreatePlantObjectJournalEntryInput,
 ) {
+  const mediaAssetId = normalizeOptionalText(
+    input.mediaAssetId,
+    "Media asset id",
+    200,
+  );
+  const content = resolveJournalContentForWrite({
+    contentDocument: input.contentDocument,
+    body: input.body,
+    requireStructured: false,
+  });
+  const orderedMediaAssetIds =
+    content.mediaAssetIds.length > 0
+      ? content.mediaAssetIds
+      : mediaAssetId
+        ? [mediaAssetId]
+        : [];
+
   return {
     plantObjectId: normalizeRequiredText(
       input.plantObjectId,
@@ -3380,18 +3633,17 @@ function normalizeCreatePlantObjectJournalEntryInput(
       200,
     ),
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
-    body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
+    body: content.body,
+    contentDocument: content.document,
+    contentSchemaVersion: content.contentSchemaVersion,
+    orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     clientMutationId: normalizeRequiredText(
       input.clientMutationId,
       "Client mutation id",
       200,
     ),
-    mediaAssetId: normalizeOptionalText(
-      input.mediaAssetId,
-      "Media asset id",
-      200,
-    ),
+    mediaAssetId,
     mentionSelections: input.mentionSelections ?? [],
     topicTags: input.topicTags ?? [],
     internalDeterministicIds: input.internalDeterministicIds ?? null,
@@ -3414,17 +3666,38 @@ function normalizeCreateSpaceJournalEntryInput(
     throw new Error("Choose at least one object from this space.");
   }
 
+  const mediaAssetId = normalizeOptionalText(
+    input.mediaAssetId,
+    "Media asset id",
+    200,
+  );
+  const content = resolveJournalContentForWrite({
+    contentDocument: input.contentDocument,
+    body: input.body,
+    requireStructured: false,
+  });
+  const orderedMediaAssetIds =
+    content.mediaAssetIds.length > 0
+      ? content.mediaAssetIds
+      : mediaAssetId
+        ? [mediaAssetId]
+        : [];
+
   return {
     spaceId,
     mentionedPlantObjectIds,
     title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
-    body: normalizeRequiredText(input.body, "Entry body", MAX_BODY_LENGTH),
+    body: content.body,
+    contentDocument: content.document,
+    contentSchemaVersion: content.contentSchemaVersion,
+    orderedMediaAssetIds,
     entryDate: normalizeEntryDate(input.entryDate),
     clientMutationId: normalizeRequiredText(
       input.clientMutationId,
       "Client mutation id",
       200,
     ),
+    mediaAssetId,
     topicTags: input.topicTags ?? [],
   };
 }
@@ -3593,19 +3866,20 @@ async function attachMediaAssetToEntryIfPresent(
   scope: RequestScope,
   mediaAssetId: string | null,
   journalEntryId: string,
+  orderedMediaAssetIds?: readonly string[],
 ) {
-  if (!mediaAssetId) return false;
+  const ordered =
+    orderedMediaAssetIds && orderedMediaAssetIds.length > 0
+      ? orderedMediaAssetIds
+      : mediaAssetId
+        ? [mediaAssetId]
+        : [];
+  if (ordered.length === 0) return false;
 
-  const mediaAsset = await attachProcessedMediaAssetToEntry(executor, scope, {
-    mediaAssetId,
+  return claimOrderedInlineMediaForEntry(executor, scope, {
     journalEntryId,
+    orderedMediaAssetIds: ordered,
   });
-
-  if (!mediaAsset) {
-    throw new Error("Processed media asset is unavailable for this entry.");
-  }
-
-  return true;
 }
 
 async function getProcessedMediaByEntryId(
@@ -3657,4 +3931,8 @@ async function readProcessedObjectMediaGallery(
 function normalizeObjectGalleryLimit(limit: number) {
   if (!Number.isFinite(limit)) return MAX_OBJECT_GALLERY_MEDIA;
   return Math.min(Math.max(Math.trunc(limit), 1), MAX_OBJECT_GALLERY_MEDIA);
+}
+
+function journalDocumentAsJson(document: unknown): Json {
+  return JSON.parse(JSON.stringify(document)) as Json;
 }

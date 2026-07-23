@@ -32,6 +32,7 @@ import type { RequestScope } from "@/server/request-scope";
 import {
   createFirstPlantEntry,
   createPlantObjectJournalEntry,
+  createSpaceJournalEntry,
 } from "@/server/journal-repository";
 
 export const runtime = "nodejs";
@@ -67,12 +68,71 @@ export async function POST(request: Request) {
     const syncStatus = normalizeSyncStatus(body.syncStatus);
     const activationSource = normalizeActivationSource(body.activationSource);
     const target = normalizeTarget(body.target, body.plantObjectId);
+
+    if (target === "space_entry") {
+      const result = await createSpaceJournalEntry(scope, {
+        spaceId: body.spaceId ?? "",
+        mentionedPlantObjectIds: body.mentionedPlantObjectIds ?? [],
+        title: body.title ?? "",
+        body: body.body ?? "",
+        contentDocument: body.contentDocument,
+        entryDate: body.entryDate ?? "",
+        clientMutationId: body.clientMutationId ?? "",
+        mediaAssetId: body.mediaAssetId ?? "",
+        topicTags: body.topicTags ?? [],
+      });
+
+      const anchorObject = result.mentionedObjects[0];
+      if (!anchorObject) {
+        return Response.json(
+          { error: "Space entry requires at least one mentioned object." },
+          { status: 400 },
+        );
+      }
+
+      await recordSpaceEntryEvents(scope, result, syncStatus);
+      revalidatePath("/garden");
+      for (const object of result.mentionedObjects) {
+        revalidatePath(`/garden/objects/${object.id}`);
+      }
+
+      const response: FirstPlantEntryResponse = {
+        space: {
+          id: result.space.id,
+          displayName: result.space.display_name,
+          locationVisibility: result.space.location_visibility,
+          coarseRegionCode: result.space.coarse_region_code,
+        },
+        plantObject: {
+          id: anchorObject.id,
+          displayName: anchorObject.displayName,
+          objectKind: "plant",
+          catalogItemId: null,
+          varietyText: null,
+          varietyState: "unknown",
+          locationVisibility: result.space.location_visibility,
+          coarseRegionCode: result.space.coarse_region_code,
+        },
+        entry: {
+          id: result.entry.id,
+          title: result.entry.title,
+          body: result.entry.body,
+          entryDate: normalizeResponseDate(result.entry.entry_date),
+          clientMutationId: result.entry.client_mutation_id,
+          journalRevision: Number(result.entry.journal_revision ?? 1),
+        },
+        readbackUrl: buildSaveProgressReadbackUrl("/garden", "space-entry"),
+      };
+      return Response.json(response);
+    }
+
     const result =
       target === "plant_object_entry"
         ? await createPlantObjectJournalEntry(scope, {
             plantObjectId: body.plantObjectId ?? "",
             title: body.title ?? "",
             body: body.body ?? "",
+            contentDocument: body.contentDocument,
             entryDate: body.entryDate ?? "",
             clientMutationId: body.clientMutationId ?? "",
             mediaAssetId: body.mediaAssetId ?? "",
@@ -89,6 +149,7 @@ export async function POST(request: Request) {
             varietyText: body.varietyText ?? "",
             title: body.title ?? "",
             body: body.body ?? "",
+            contentDocument: body.contentDocument,
             entryDate: body.entryDate ?? "",
             locationVisibility: body.locationVisibility ?? "",
             coarseRegionCode: body.coarseRegionCode ?? "",
@@ -146,6 +207,7 @@ export async function POST(request: Request) {
         body: result.entry.body,
         entryDate: normalizeResponseDate(result.entry.entry_date),
         clientMutationId: result.entry.client_mutation_id,
+        journalRevision: Number(result.entry.journal_revision ?? 1),
       },
       readbackUrl,
       followUpValuePulse,
@@ -177,9 +239,42 @@ function normalizeActivationSource(value: unknown): ActivationSource | null {
 }
 
 function normalizeTarget(target: unknown, plantObjectId: unknown) {
-  return target === "plant_object_entry" || typeof plantObjectId === "string"
-    ? "plant_object_entry"
-    : "first_plant_entry";
+  if (target === "space_entry") return "space_entry" as const;
+  if (target === "plant_object_entry" || typeof plantObjectId === "string") {
+    return "plant_object_entry" as const;
+  }
+  return "first_plant_entry" as const;
+}
+
+async function recordSpaceEntryEvents(
+  scope: RequestScope,
+  result: Awaited<ReturnType<typeof createSpaceJournalEntry>>,
+  syncStatus: EntrySyncStatus,
+) {
+  if (!result.isNewEntry) return;
+
+  const properties = {
+    entry_scope: result.entry.entry_scope as EntryScope,
+    has_photo: false,
+    is_backdated: isBackdatedEntryDate(result.entry.entry_date),
+    location_visibility_level: result.space
+      .location_visibility as LocationVisibility,
+    sync_status: syncStatus,
+  };
+  const eventTarget = {
+    spaceId: result.space.id,
+    journalEntryId: result.entry.id,
+  };
+
+  await recordEntryLoggedEventSafely(scope, {
+    properties,
+    ...eventTarget,
+  });
+  await recordAnalyticsEventSafely(scope, {
+    eventName: "progress_screen_shown",
+    properties,
+    ...eventTarget,
+  });
 }
 
 async function recordFirstPlantEntryEvents(

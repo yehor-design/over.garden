@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 describe("journal media schema contract", () => {
-  it("supports bounded gallery readback without weakening the one-photo composer", () => {
+  it("enforces the OVE-202 ten-inline media ceiling without the one-photo unique index", () => {
     const sql = readFileSync(
       new URL("../../../sql/0001_walking_skeleton.sql", import.meta.url),
       "utf8",
@@ -12,13 +12,18 @@ describe("journal media schema contract", () => {
     expect(sql).toContain(
       "drop index if exists media_assets_one_per_entry_uidx",
     );
+    expect(sql).toContain(
+      "drop index if exists media_assets_one_non_fixture_per_entry_uidx",
+    );
     expect(sql).not.toContain(
       "create unique index if not exists media_assets_one_per_entry_uidx",
     );
-    expect(sql).toContain(
+    expect(sql).not.toContain(
       "create unique index if not exists media_assets_one_non_fixture_per_entry_uidx",
     );
-    expect(sql).toContain("and quarantine_key not like 'visual-fixtures/%'");
+    expect(sql).toContain("enforce_journal_entry_inline_media_limit");
+    expect(sql).toContain("attached_count >= 10");
+    expect(sql).toContain("add column if not exists document_position integer");
     expect(sql).toContain(
       "create index if not exists media_assets_entry_created_idx",
     );

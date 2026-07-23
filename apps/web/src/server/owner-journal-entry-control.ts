@@ -65,14 +65,8 @@ export function buildOwnerJournalEntryControlQuery(
 export function serializeOwnerJournalEntryControl(
   row: OwnerJournalEntryControlRow,
 ): OwnerJournalEntryControl {
-  const entryId = encodeURIComponent(row.entryId);
-  const managePath =
-    row.entryScope === "object" && row.plantObjectId
-      ? `/garden/objects/${encodeURIComponent(row.plantObjectId)}#passport-entry-${entryId}`
-      : `/garden#space-entry-${entryId}`;
-
   return {
     entryId: row.entryId,
-    managePath,
+    managePath: `/garden/entries/${encodeURIComponent(row.entryId)}/edit`,
   };
 }

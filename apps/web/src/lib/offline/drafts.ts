@@ -5,6 +5,7 @@ import type {
   ActivationSource,
   FirstEntryCatalogSelection,
 } from "@/lib/garden/entry-contracts";
+import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   assertOwnerOfflineActivityAllowed,
@@ -32,6 +33,7 @@ export interface FirstEntryDraftFields {
   objectKind: PlantObjectKind;
   title: string;
   body: string;
+  contentDocument?: JournalDocumentV1 | null;
   entryDate: string;
   locationVisibility: DraftLocationVisibility;
   coarseRegionCode: string;
@@ -47,11 +49,13 @@ export interface FirstEntryDraftPayload {
   mentionSelections?: JournalMentionSelection[];
   topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
+  photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
 }
 
 export interface FollowUpEntryDraftFields {
   title: string;
   body: string;
+  contentDocument?: JournalDocumentV1 | null;
   entryDate: string;
 }
 
@@ -62,11 +66,30 @@ export interface FollowUpEntryDraftPayload {
   mentionSelections?: JournalMentionSelection[];
   topicTagInput?: string;
   photoIntent: OfflinePhotoIntent | null;
+  photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
+}
+
+export interface SpaceEntryDraftFields {
+  title: string;
+  body: string;
+  contentDocument?: JournalDocumentV1 | null;
+  entryDate: string;
+}
+
+export interface SpaceEntryDraftPayload {
+  clientMutationId: string;
+  spaceId: string;
+  mentionedPlantObjectIds: string[];
+  draft: SpaceEntryDraftFields;
+  topicTagInput?: string;
+  photoIntent: OfflinePhotoIntent | null;
+  photoIntentsByBlockId?: Record<string, OfflinePhotoIntent>;
 }
 
 export type JournalDraftPayload =
   | FirstEntryDraftPayload
-  | FollowUpEntryDraftPayload;
+  | FollowUpEntryDraftPayload
+  | SpaceEntryDraftPayload;
 
 export type JournalDraftRecord = OfflineDraftRecord<JournalDraftPayload>;
 
@@ -176,11 +199,13 @@ export function hasPersistableFirstEntryDraft(
       payload.catalogQuery,
       payload.userAddedCatalogName,
     ) ||
+    hasStructuredDocument(payload.draft.contentDocument) ||
     (!payload.draft.spaceId && hasText(payload.draft.spaceName)) ||
     payload.selectedCatalogItem !== null ||
     (payload.mentionSelections?.length ?? 0) > 0 ||
     hasText(payload.topicTagInput) ||
     payload.photoIntent !== null ||
+    hasPhotoIntents(payload.photoIntentsByBlockId) ||
     payload.draft.entryDate !== defaultEntryDate ||
     payload.draft.locationVisibility === "region" ||
     payload.draft.objectKind !== "plant"
@@ -193,15 +218,46 @@ export function hasPersistableFollowUpDraft(
 ) {
   return (
     hasText(payload.draft.title, payload.draft.body) ||
+    hasStructuredDocument(payload.draft.contentDocument) ||
     (payload.mentionSelections?.length ?? 0) > 0 ||
     hasText(payload.topicTagInput) ||
     payload.photoIntent !== null ||
+    hasPhotoIntents(payload.photoIntentsByBlockId) ||
+    payload.draft.entryDate !== defaultEntryDate
+  );
+}
+
+export function spaceEntryDraftId(spaceId: string) {
+  return `space-entry:${spaceId}`;
+}
+
+export function hasPersistableSpaceEntryDraft(
+  payload: SpaceEntryDraftPayload,
+  defaultEntryDate: string,
+) {
+  return (
+    hasText(payload.draft.title, payload.draft.body) ||
+    hasStructuredDocument(payload.draft.contentDocument) ||
+    payload.mentionedPlantObjectIds.length > 0 ||
+    hasText(payload.topicTagInput) ||
+    payload.photoIntent !== null ||
+    hasPhotoIntents(payload.photoIntentsByBlockId) ||
     payload.draft.entryDate !== defaultEntryDate
   );
 }
 
 function hasText(...values: Array<string | null | undefined>) {
   return values.some((value) => (value ?? "").trim().length > 0);
+}
+
+function hasStructuredDocument(document: JournalDocumentV1 | null | undefined) {
+  return (document?.blocks.length ?? 0) > 0;
+}
+
+function hasPhotoIntents(
+  intents: Record<string, OfflinePhotoIntent> | null | undefined,
+) {
+  return intents != null && Object.keys(intents).length > 0;
 }
 
 /**

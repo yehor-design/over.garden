@@ -19,8 +19,13 @@ import {
   SiteShellContextRailRegistration,
   type SiteShellContextRailModule,
 } from "@/components/site-shell/site-shell-context-rail";
+import { JournalDocumentRenderer } from "@/components/garden/journal-document-renderer";
 import { buttonVariants } from "@/components/ui/button";
 import { publicCatalogEvidencePath } from "@/lib/garden/public-paths";
+import {
+  legacyBodyToJournalDocumentV1,
+  normalizeJournalDocument,
+} from "@/lib/garden/journal-document";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import type { PublicJournalEntryCopy } from "@/lib/public-journal-entry-copy";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -140,14 +145,7 @@ export function PublicJournalEntryView({
         ) : null}
 
         <div className="grid gap-5 py-6 text-base leading-8 text-foreground sm:text-lg sm:leading-8">
-          {splitBody(page.entry.body).map((paragraph, index) => (
-            <p
-              key={`${page.entry.id}:paragraph:${index}`}
-              className="whitespace-pre-line"
-            >
-              {paragraph}
-            </p>
-          ))}
+          <PublicJournalEntryBody locale={locale} page={page} copy={copy} />
         </div>
 
         {mentionedProfiles.length > 0 ? (
@@ -550,6 +548,82 @@ function getSafeLocation(
       : null);
   const label = getCoarseRegionLabel(code);
   return label ? `${copy.safeRegion}: ${label}` : copy.locationHidden;
+}
+
+function PublicJournalEntryBody({
+  locale,
+  page,
+  copy,
+}: {
+  locale: PublicLocale;
+  page: PublicJournalEntryPage;
+  copy: PublicJournalEntryCopy;
+}) {
+  const imagesByMediaId = new Map(
+    page.media.map((item, index) => [
+      item.id,
+      {
+        mediaAssetId: item.id,
+        src: item.publicUrl,
+        alt: item.altText?.trim() || `${page.entry.title} ${index + 1}`,
+        caption: item.caption,
+      },
+    ]),
+  );
+
+  if (page.entry.contentDocument != null) {
+    const normalized = normalizeJournalDocument(page.entry.contentDocument);
+    if (!normalized.ok) {
+      return (
+        <JournalDocumentRenderer
+          document={null}
+          unavailable
+          copy={{
+            unavailableTitle: copy.journal,
+            unavailableBody: page.entry.body,
+          }}
+        />
+      );
+    }
+    return (
+      <JournalDocumentRenderer
+        document={normalized.document}
+        imagesByMediaId={imagesByMediaId}
+        copy={{
+          unavailableTitle: copy.journal,
+          unavailableBody: page.entry.body,
+        }}
+      />
+    );
+  }
+
+  const legacy = legacyBodyToJournalDocumentV1(page.entry.body);
+  if (legacy.blocks.length > 0) {
+    return (
+      <JournalDocumentRenderer
+        document={legacy}
+        imagesByMediaId={imagesByMediaId}
+        copy={{
+          unavailableTitle: copy.journal,
+          unavailableBody: page.entry.body,
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      {splitBody(page.entry.body).map((paragraph, index) => (
+        <p
+          key={`${page.entry.id}:paragraph:${index}`}
+          className="whitespace-pre-line"
+          lang={locale}
+        >
+          {paragraph}
+        </p>
+      ))}
+    </>
+  );
 }
 
 function ObjectKindIcon({

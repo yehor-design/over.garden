@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, MediaAsset } from "@/db/schema";
+import { MAX_JOURNAL_INLINE_IMAGES } from "@/lib/garden/journal-document";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -139,14 +140,19 @@ export function buildAttachProcessedMediaAssetToEntryQuery(
       ),
     )
     .where((eb) =>
-      eb.not(
-        eb.exists(
-          eb
-            .selectFrom("media_assets as existing_entry_media")
-            .select("existing_entry_media.id")
-            .where("existing_entry_media.journal_entry_id", "=", journalEntryId)
-            .where("existing_entry_media.id", "!=", mediaAssetId),
-        ),
+      eb(
+        eb
+          .selectFrom("media_assets as existing_entry_media")
+          .select((seb) => seb.fn.countAll<number>().as("attached_count"))
+          .where("existing_entry_media.journal_entry_id", "=", journalEntryId)
+          .where("existing_entry_media.id", "!=", mediaAssetId)
+          .where(
+            "existing_entry_media.quarantine_key",
+            "not like",
+            "visual-fixtures/%",
+          ),
+        "<",
+        MAX_JOURNAL_INLINE_IMAGES,
       ),
     )
     .returningAll();

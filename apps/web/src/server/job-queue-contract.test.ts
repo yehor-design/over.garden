@@ -77,6 +77,11 @@ describe("job queue producer/consumer contract", () => {
     expect(unsupported).toEqual([]);
     expect(producers).toEqual([
       {
+        source: "app/api/garden/entries/[entryId]/route.ts",
+        queueName: "matching",
+        kind: "journal_entry_index",
+      },
+      {
         source: "app/api/skeleton/journal/route.ts",
         queueName: "matching",
         kind: "journal_entry_index",

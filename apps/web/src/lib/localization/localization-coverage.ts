@@ -32,6 +32,7 @@ import {
 } from "@/lib/interface-route-policy";
 import { getCommunityCopy } from "@/lib/community-copy";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
+import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 import { getLocalizedCoarseRegionOptions } from "@/lib/garden/regions";
 import { getInterfaceCopy } from "@/lib/interface-localization";
 import { getLivingObjectPassportCopy } from "@/lib/living-object-passport";
@@ -498,7 +499,12 @@ const LOCALIZATION_OWNER_CONTRACTS: Record<
       "dialog",
       "toast",
     ],
-    copyNamespaces: ["garden-workspace", "garden-regions", "public-profile"],
+    copyNamespaces: [
+      "garden-workspace",
+      "garden-regions",
+      "public-profile",
+      "structured-journal-composer",
+    ],
     scenarioIds: ["workspace:workspace-dense", "workspace:workspace-offline"],
     focusedTests: ["src/app/garden/page.test.tsx"],
   },
@@ -630,6 +636,11 @@ export const LOCALIZATION_COPY_NAMESPACES: readonly LocalizationCopyNamespace[] 
       id: "garden-workspace",
       sourceFile: "src/lib/garden-workspace-copy.ts",
       load: getGardenWorkspaceCopy,
+    },
+    {
+      id: "structured-journal-composer",
+      sourceFile: "src/lib/structured-journal-composer-copy.ts",
+      load: getStructuredJournalComposerLabels,
     },
     {
       id: "garden-regions",
@@ -1073,7 +1084,11 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       "non-ui",
     ),
     ...routes(
-      ["src/app/garden/page.tsx", "src/app/garden/profile/page.tsx"],
+      [
+        "src/app/garden/page.tsx",
+        "src/app/garden/profile/page.tsx",
+        "src/app/garden/entries/[entryId]/edit/page.tsx",
+      ],
       "signed-in-selected-locale",
       "workspace",
     ),
@@ -1169,6 +1184,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/engagement/likes/route.ts",
         "src/app/api/garden/catalog/typeahead/route.ts",
         "src/app/api/garden/entries/route.ts",
+        "src/app/api/garden/entries/[entryId]/route.ts",
         "src/app/api/garden/mentions/typeahead/route.ts",
         "src/app/api/garden/value-pulse/route.ts",
         "src/app/api/interface/context/route.ts",
@@ -1430,7 +1446,7 @@ export interface LocalizationCoverageReport {
     requiredStates: string[];
     adapterContract: string;
     status: string;
-    browserScenarioId: null;
+    browserScenarioId: string | null;
     proofOwner: string;
     blocksCurrentIssue: false;
   }>;
@@ -1881,18 +1897,34 @@ export function buildLocalizationCoverage(
       if (!expected || expected.issue !== gate.issue) {
         errors.push(`${gate.id}:issue-or-id`);
       }
-      if (gate.status !== "downstream-owned-real-ui") {
-        errors.push(`${gate.id}:status`);
-      }
-      if (gate.adapterContract !== "owner-composer-drafts") {
-        errors.push(`${gate.id}:adapter-contract`);
-      }
-      if (
-        gate.browserScenarioId !== null ||
-        gate.proofOwner !== "owning-downstream-slice" ||
-        gate.blocksCurrentIssue !== false
-      ) {
-        errors.push(`${gate.id}:fabricated-current-proof`);
+      if (gate.issue === "OVE-202") {
+        if (gate.status !== "browser-backed") {
+          errors.push(`${gate.id}:status`);
+        }
+        if (gate.adapterContract !== "owner-composer-drafts") {
+          errors.push(`${gate.id}:adapter-contract`);
+        }
+        if (
+          gate.browserScenarioId === null ||
+          gate.proofOwner !== "OVE-202" ||
+          gate.blocksCurrentIssue !== false
+        ) {
+          errors.push(`${gate.id}:missing-browser-proof`);
+        }
+      } else {
+        if (gate.status !== "downstream-owned-real-ui") {
+          errors.push(`${gate.id}:status`);
+        }
+        if (gate.adapterContract !== "owner-composer-drafts") {
+          errors.push(`${gate.id}:adapter-contract`);
+        }
+        if (
+          gate.browserScenarioId !== null ||
+          gate.proofOwner !== "owning-downstream-slice" ||
+          gate.blocksCurrentIssue !== false
+        ) {
+          errors.push(`${gate.id}:fabricated-current-proof`);
+        }
       }
       if (
         !expected ||

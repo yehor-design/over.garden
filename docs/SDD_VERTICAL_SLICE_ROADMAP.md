@@ -44,8 +44,10 @@ substitution. These checks complement and do not replace the full
 unvalidated product hypothesis and preserves the existing information
 architecture, color, copy, action semantics, and visual language. Its only
 component layout delta is a mobile community-report containment fix required by
-the 320 px localized reflow gate. After OVE-208 closeout, OVE-202 is the next
-execution owner.
+the 320 px localized reflow gate. After OVE-208 closeout, OVE-202 shipped the
+structured journal composer (`JournalDocumentV1`, Editor.js owner composers,
+multi-photo offline sync, edit/conflict, SSR renderer). OVE-206 is the next
+execution owner for accessible block reorder.
 
 OVE-205 is now the stable dependency for work that needs this locale lifecycle;
 it is not permission to claim future UI. The founder-approved 2026-07-22
@@ -59,10 +61,11 @@ proof; OVE-206 must then replace only
 its pointer/touch/keyboard reorder, gesture fence, committed order, focus, and
 announcement entries; OVE-207 must close automatic/explicit/separate cover,
 cover upload/recovery/removal, and combined ten-inline-plus-one-cover entries.
-Those schema-v3 rows remain fail-closed downstream obligations with
+Those schema-v3 rows for OVE-206/207 remain fail-closed downstream obligations with
 `status: downstream-owned-real-ui`, `browserScenarioId: null`,
-`proofOwner: owning-downstream-slice`, and `blocksCurrentIssue: false`. They
-cannot be reported as implemented before their owning slice ships.
+`proofOwner: owning-downstream-slice`, and `blocksCurrentIssue: false`. OVE-202
+now records `browser-backed` with scenario `editor-clean-locale-transition`.
+They cannot be reported as implemented before their owning slice ships.
 
 The active UI/UX/IA reconstruction queue is Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilds production routes; there is no separate clickable-prototype phase. `OVE-172` provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. `OVE-173` provides the guest-open root feed through a privacy-minimized public repository, explicit kind/trusted-topic filters, stable cursor pagination, mixed-media journal cards, authenticated-only followed access, route-owned context modules, localized edge states, centralized UGC-feed noindex/sitemap exclusion, and matched desktop/mobile visual proof. `OVE-174` provides the shared mutation-time auth boundary: all eight guest mutation classes use one allowlisted encrypted intent, public reads remain session-free, email and social sign-in share the exact resume callback, cancel/expiry/tampering fail safely, canonical mutations independently reauthorize, and the resumed route focuses the interrupted control without carrying draft or private payloads. `OVE-175` provides the guest-open living-object catalog with real grouped taxonomy, URL-owned kind/identity/search filters, canonical pagination, public-safe object evidence, localized states, and deterministic visual thresholds. `OVE-176` provides the guest-open journal directory with canonical Postgres filtering, optional UUID-only Meilisearch relevance hints, kind/catalog/topic/season/coarse-region filters, stable URL state through journal detail and back, bounded derivative media, and deterministic ordered-query evidence. `OVE-177` provides the guest-open localized knowledge hub, authored guides/answers, curated topics, explicit editorial-versus-UGC trust states, explainable topic/catalog evidence, and public journal/object continuation without an authentication prompt. `OVE-178` provides one shared living-object passport presentation contract backed by separate public-safe and owner-scoped loaders, kind-specific identity/context facts, bounded derivative media, chronological journal disclosure, previous/next navigation, mutation-time authentication, owner controls, and hard public `404/410` lifecycle handling. `OVE-179` rebuilds public journal entry readback around lifecycle-safe object/space context, media, chronology, and mutation-time engagement. `OVE-180` rebuilds public and owner gardener profiles around living-object and journal evidence with scoped relationship controls. `OVE-181` replaces the former settings-like garden page with an owner-scoped operational workspace: one next action, mixed inventory, spaces, recent continuity, browser-local drafts, sync/media recovery, and bounded disclosures inside the shared shell; guest entry remains reversible and read-open until a write intent. `OVE-182` rebuilds first-object and next-update creation as low-friction plant/animal/bee flows with existing-space reuse, progressive optional detail, private-first publication, durable owner-scoped drafts/offline retries, bounded derivative media, and canonical idempotency under concurrent retries.
 

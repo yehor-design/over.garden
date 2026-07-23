@@ -198,6 +198,9 @@ ledger for downstream UI, but it does not claim that nonexistent UI passed.
   inline-upload, conflict, offline, and failed-flush locale-transition proof.
   Its editor must consume the shared proportional token, use the real italic
   face, and persist no `font-family` styling in the structured document.
+  OVE-202 records `browser-backed` proof with scenario
+  `editor-clean-locale-transition`; Linear Done still awaits the founder
+  physical iPhone Safari checklist.
 - OVE-206 owns final pointer/touch/keyboard reorder, active-gesture blocking,
   committed-order serialization, focus, announcement, and transition proof.
 - OVE-207 owns final automatic/explicit-inline/separate-cover behavior,

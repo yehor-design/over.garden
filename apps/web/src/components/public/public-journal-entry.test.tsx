@@ -43,6 +43,8 @@ const objectPage: PublicJournalEntryPage = {
     id: "entry-1",
     title: "Перший урожай після спеки",
     body: "Перший абзац про стан рослини.\n\nДругий абзац про полив і врожай. Історична згадка: @previous_gardener.",
+    contentDocument: null,
+    contentSchemaVersion: null,
     entryDate: "2026-07-10",
     createdAt: "2026-07-10T09:00:00.000Z",
     entryScope: "object",

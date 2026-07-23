@@ -193,7 +193,9 @@ describe("OVE-205 executable localization browser contract", () => {
       expect.arrayContaining([
         expect.objectContaining({
           issue: "OVE-202",
-          proofOwner: "owning-downstream-slice",
+          status: "browser-backed",
+          browserScenarioId: "editor-clean-locale-transition",
+          proofOwner: "OVE-202",
           blocksCurrentIssue: false,
         }),
         expect.objectContaining({ issue: "OVE-206" }),

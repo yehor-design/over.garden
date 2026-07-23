@@ -49,6 +49,7 @@ describe("processQuarantinedImage", () => {
       alt_text: null,
       caption: null,
       status: "quarantined",
+      document_position: null,
       original_deleted_at: null,
       created_at: new Date("2026-06-26T00:00:00Z"),
       updated_at: new Date("2026-06-26T00:00:00Z"),

@@ -154,15 +154,26 @@ describe("OVE-205 localization browser matrix", () => {
     });
   });
 
-  it("keeps OVE-202/206/207 as downstream-owned gates with no fabricated scenario", () => {
+  it("marks OVE-202 browser-backed while OVE-206/207 stay downstream-owned", () => {
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES).toHaveLength(3);
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES.map(({ issue }) => issue)).toEqual([
       "OVE-202",
       "OVE-206",
       "OVE-207",
     ]);
+    expect(LOCALIZATION_DOWNSTREAM_UI_GATES[0]).toEqual(
+      expect.objectContaining({
+        id: "structured-editor-and-inline-photos",
+        issue: "OVE-202",
+        status: "browser-backed",
+        browserScenarioId: "editor-clean-locale-transition",
+        proofOwner: "OVE-202",
+        adapterContract: "owner-composer-drafts",
+        blocksCurrentIssue: false,
+      }),
+    );
     expect(
-      LOCALIZATION_DOWNSTREAM_UI_GATES.every(
+      LOCALIZATION_DOWNSTREAM_UI_GATES.slice(1).every(
         ({
           adapterContract,
           browserScenarioId,

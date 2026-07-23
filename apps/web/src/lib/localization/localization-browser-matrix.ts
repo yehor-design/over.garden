@@ -136,11 +136,24 @@ export interface LocalizationDownstreamUiGate {
   issue: "OVE-202" | "OVE-206" | "OVE-207";
   requiredStates: readonly string[];
   adapterContract: string;
-  status: "downstream-owned-real-ui";
-  browserScenarioId: null;
-  proofOwner: "owning-downstream-slice";
+  status: "downstream-owned-real-ui" | "browser-backed";
+  browserScenarioId: string | null;
+  proofOwner: "owning-downstream-slice" | "OVE-202";
   blocksCurrentIssue: false;
 }
+
+export const OVE_202_BROWSER_SCENARIO_IDS = [
+  "editor-clean-locale-transition",
+  "editor-dirty-ime-transition",
+  "editor-pending-serialization-transition",
+  "inline-upload-in-flight-blocked",
+  "inline-upload-resumable-transition",
+  "inline-processing-failure-transition",
+  "offline-draft-transition",
+  "conflict-idempotency-transition",
+  "ten-inline-capacity-transition",
+  "ukraine-editor-zero-control",
+] as const;
 
 const REQUIRED_VIEWPORTS = ["mobile-320", "desktop-1440"] as const;
 const ALL_MARKET_CASES = [
@@ -367,11 +380,23 @@ export const LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS = [
 >;
 
 export const LOCALIZATION_DOWNSTREAM_UI_GATES: readonly LocalizationDownstreamUiGate[] =
-  LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS.map((requirement) => ({
-    ...requirement,
-    adapterContract: "owner-composer-drafts",
-    status: "downstream-owned-real-ui",
-    browserScenarioId: null,
-    proofOwner: "owning-downstream-slice",
-    blocksCurrentIssue: false,
-  }));
+  LOCALIZATION_DOWNSTREAM_UI_PROOF_REQUIREMENTS.map((requirement) => {
+    if (requirement.issue === "OVE-202") {
+      return {
+        ...requirement,
+        adapterContract: "owner-composer-drafts",
+        status: "browser-backed",
+        browserScenarioId: "editor-clean-locale-transition",
+        proofOwner: "OVE-202",
+        blocksCurrentIssue: false,
+      };
+    }
+    return {
+      ...requirement,
+      adapterContract: "owner-composer-drafts",
+      status: "downstream-owned-real-ui",
+      browserScenarioId: null,
+      proofOwner: "owning-downstream-slice",
+      blocksCurrentIssue: false,
+    };
+  });

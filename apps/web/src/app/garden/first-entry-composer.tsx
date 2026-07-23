@@ -24,6 +24,8 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
+import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import type { PlantObjectKind } from "@/db/schema";
 import { useScrollToHashOnMount } from "@/lib/browser/hash-scroll";
@@ -34,6 +36,8 @@ import {
   localizedJournalSaveErrorMessage,
   type GardenWorkspaceCopy,
 } from "@/lib/garden-workspace-copy";
+import { extractJournalDocumentPlainText } from "@/lib/garden/journal-document";
+import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import type {
   ActivationSource,
@@ -53,6 +57,8 @@ import {
   composerPhotoSelectionError,
   createComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
+import { assertOfflinePhotoQuotaAllows, sumOfflinePhotoIntentBytes } from "@/lib/offline/offline-media-quota";
+import { registerOwnerPreviewObjectUrl } from "@/lib/offline/owner-session-lifecycle";
 import {
   catalogItemIdForSelection,
   parseCatalogTypeaheadResponse,
@@ -103,7 +109,6 @@ import {
   applyMentionSuggestion,
   mentionSelectionKey,
   parseJournalMentionSuggestions,
-  resolveActiveMentionToken,
   toMentionSelection,
   type ActiveMentionToken,
   type MentionTypeaheadStatus,
@@ -156,6 +161,8 @@ export function FirstEntryComposer({
     );
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const structuredComposerRef =
+    useRef<StructuredJournalComposerHandle | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
   const localeMutationCountRef = useRef(0);
@@ -176,10 +183,14 @@ export function FirstEntryComposer({
         : ("plant" as PlantObjectKind),
     title: visualScenario?.entryTitle ?? "",
     body: visualScenario?.entryBody ?? "",
+    contentDocument: null,
     entryDate: visualScenario?.entryDate ?? today,
     locationVisibility: visualScenario?.locationVisibility ?? "hidden",
     coarseRegionCode: visualScenario?.coarseRegionCode ?? "",
   });
+  const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
+    Record<string, OfflinePhotoIntent>
+  >({});
   const [catalogQuery, setCatalogQuery] = useState(
     visualScenario?.catalogQuery ?? initialCatalogItem?.displayName ?? "",
   );
@@ -357,6 +368,9 @@ export function FirstEntryComposer({
           setMentionSelections(storedDraft.payload.mentionSelections ?? []);
           setTopicTagInput(storedDraft.payload.topicTagInput ?? "");
           setStoredPhotoIntent(storedDraft.payload.photoIntent);
+          setPhotoIntentsByBlockId(
+            storedDraft.payload.photoIntentsByBlockId ?? {},
+          );
           setMessage(copy.composer.draftRestored);
         }
 
@@ -384,6 +398,7 @@ export function FirstEntryComposer({
       mentionSelections,
       topicTagInput,
       photoIntent: storedPhotoIntent,
+      photoIntentsByBlockId,
     };
 
     const controller = persistenceControllerRef.current;
@@ -417,6 +432,7 @@ export function FirstEntryComposer({
     mentionSelections,
     ownerUserId,
     photoFile,
+    photoIntentsByBlockId,
     storedPhotoIntent,
     today,
     topicTagInput,
@@ -844,6 +860,11 @@ export function FirstEntryComposer({
       mentionSelections,
       topicTags: normalizeJournalTopicTagLabels(topicTagInput),
       photoIntent,
+      contentDocument: draft.contentDocument ?? undefined,
+      photoIntentsByBlockId:
+        Object.keys(photoIntentsByBlockId).length > 0
+          ? photoIntentsByBlockId
+          : undefined,
     };
   }
 
@@ -897,15 +918,10 @@ export function FirstEntryComposer({
     setDraft((current) => ({ ...current, title: value }));
   }
 
-  function updateBody(value: string, cursorPosition = value.length) {
-    if (isComposerPersistenceFrozen()) return;
-    updateDraft("body", value);
-    updateActiveMentionToken(resolveActiveMentionToken(value, cursorPosition));
-  }
-
   function appendVoiceTranscript(transcript: string) {
     if (isComposerPersistenceFrozen()) return;
     draftPersistencePausedRef.current = false;
+    void structuredComposerRef.current?.insertVoiceTranscript(transcript);
     setDraft((current) =>
       withSuggestedTitle({
         ...current,
@@ -913,15 +929,6 @@ export function FirstEntryComposer({
       }),
     );
     updateActiveMentionToken(null);
-  }
-
-  function refreshActiveMentionToken() {
-    const textarea = bodyTextareaRef.current;
-    if (!textarea) return;
-
-    updateActiveMentionToken(
-      resolveActiveMentionToken(textarea.value, textarea.selectionStart),
-    );
   }
 
   function updateActiveMentionToken(token: ActiveMentionToken | null) {
@@ -1271,37 +1278,67 @@ export function FirstEntryComposer({
 
       <div className="flex flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <label
-            htmlFor="first-entry-body"
-            className="text-sm font-medium text-foreground"
-          >
+          <span className="text-sm font-medium text-foreground">
             {copy.composer.fields.firstUpdate}
-          </label>
+          </span>
           <JournalVoiceInputControl
             locale={locale}
             disabled={persistenceFrozen}
             onTranscript={appendVoiceTranscript}
           />
         </div>
-        <textarea
-          ref={bodyTextareaRef}
-          id="first-entry-body"
-          name="body"
-          data-auth-intent-control="create_entry"
-          required
-          minLength={1}
-          maxLength={2000}
-          value={draft.body}
-          onChange={(event) =>
-            updateBody(
-              event.currentTarget.value,
-              event.currentTarget.selectionStart,
-            )
-          }
-          onClick={refreshActiveMentionToken}
-          onKeyUp={refreshActiveMentionToken}
-          className="min-h-32 min-w-0 rounded-md border border-input bg-background px-3 py-2 text-base font-normal text-foreground shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-          placeholder={copy.composer.fields.bodyPlaceholder}
+        <input type="hidden" name="body" value={draft.body} required />
+        <StructuredJournalComposer
+          locale={locale}
+          labels={getStructuredJournalComposerLabels(locale)}
+          initialDocument={draft.contentDocument ?? undefined}
+          disabled={persistenceFrozen}
+          composerRef={structuredComposerRef}
+          onDocumentChange={(document) => {
+            const plain = extractJournalDocumentPlainText(document);
+            setDraft((current) => ({
+              ...current,
+              body: plain || current.body,
+              contentDocument: document,
+            }));
+          }}
+          onSelectImageFile={async (file, blockId) => {
+            const existingBytes = sumOfflinePhotoIntentBytes(
+              Object.values(photoIntentsByBlockId),
+            );
+            await assertOfflinePhotoQuotaAllows({
+              existingBytes,
+              nextBytes: file.size,
+            });
+            const mediaAssetId = crypto.randomUUID();
+            const intent = await createComposerPhotoIntent(file);
+            setPhotoIntentsByBlockId((current) => ({
+              ...current,
+              [mediaAssetId]: intent,
+              [blockId]: intent,
+            }));
+            setStoredPhotoIntent(intent);
+            setPhotoFile(file);
+            const previewUrl = URL.createObjectURL(file);
+            registerOwnerPreviewObjectUrl(ownerUserId, previewUrl);
+            return {
+              mediaAssetId,
+              previewUrl,
+            };
+          }}
+          onRemoveImageBlock={(blockId) => {
+            setPhotoIntentsByBlockId((current) => {
+              const next = { ...current };
+              const removed = next[blockId];
+              delete next[blockId];
+              if (removed) {
+                for (const [key, value] of Object.entries(next)) {
+                  if (value === removed) delete next[key];
+                }
+              }
+              return next;
+            });
+          }}
         />
         <JournalMentionTypeaheadPanel
           locale={locale}

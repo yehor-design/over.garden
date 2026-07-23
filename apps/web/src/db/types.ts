@@ -31,6 +31,7 @@ import type {
   Health as HealthTable,
   JobQueue as JobQueueTable,
   JournalEntries as JournalEntriesTable,
+  JournalEntryMutationReceipts as JournalEntryMutationReceiptsTable,
   JournalEntryObjectMentions as JournalEntryObjectMentionsTable,
   JournalEntryTopicSignals as JournalEntryTopicSignalsTable,
   JournalTopics as JournalTopicsTable,
@@ -289,6 +290,10 @@ export type PlantObject = Selectable<PlantObjectsTable>;
 export type NewPlantObject = Insertable<PlantObjectsTable>;
 export type JournalEntry = Selectable<JournalEntriesTable>;
 export type NewJournalEntry = Insertable<JournalEntriesTable>;
+export type JournalEntryMutationReceipt =
+  Selectable<JournalEntryMutationReceiptsTable>;
+export type NewJournalEntryMutationReceipt =
+  Insertable<JournalEntryMutationReceiptsTable>;
 export type JournalEntryObjectMention =
   Selectable<JournalEntryObjectMentionsTable>;
 export type NewJournalEntryObjectMention =
