@@ -533,14 +533,25 @@ describe("app route cache guardrail", () => {
     expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
   });
 
-  it("keeps static assets, service worker, manifest, and image files out of the proxy matcher", async () => {
+  it("keeps static assets, canonical fonts, service worker, manifest, and image files out of the proxy matcher", async () => {
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
     expect(matcher.test("/")).toBe(true);
     expect(matcher.test("/privacy")).toBe(true);
+    expect(matcher.test("/fonts-and-typography")).toBe(true);
     expect(matcher.test("/api/garden/entries")).toBe(true);
     expect(matcher.test("/_next/static/chunks/app.js")).toBe(false);
     expect(matcher.test("/_next/image")).toBe(false);
+    expect(
+      matcher.test(
+        "/fonts/google-sans/google-sans-cyrillic-0123456789abcdef.woff2",
+      ),
+    ).toBe(false);
+    expect(
+      matcher.test("/fonts/geist-mono/geist-mono-latin-0123456789abcdef.woff2"),
+    ).toBe(false);
+    expect(matcher.test("/legacy-fonts/google-sans.woff")).toBe(true);
+    expect(matcher.test("/legacy-fonts/google-sans.woff2")).toBe(true);
     expect(matcher.test("/favicon.ico")).toBe(false);
     expect(matcher.test("/sw.js")).toBe(false);
     expect(matcher.test("/manifest.webmanifest")).toBe(false);

@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-sans: var(--font-overgarden-sans);
+  --font-mono: var(--font-overgarden-mono);
+  --font-heading: var(--font-overgarden-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,6 +49,11 @@
 }
 
 :root {
+  --font-overgarden-sans:
+    "Google Sans", "Google Sans Fallback", Arial, sans-serif;
+  --font-overgarden-mono:
+    "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -126,8 +131,23 @@
   }
   html {
     @apply font-sans;
+    font-optical-sizing: auto;
+    font-synthesis: none;
     scroll-padding-top: 4.5rem;
     text-size-adjust: 100%;
+  }
+  button,
+  input,
+  select,
+  textarea,
+  [contenteditable="true"] {
+    font: inherit;
+  }
+  code,
+  kbd,
+  pre,
+  samp {
+    @apply font-mono;
   }
   a,
   button,

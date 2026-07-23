@@ -32,6 +32,8 @@ describe("public object passport HTTP lifecycle", () => {
     const html = renderNotFoundPublicObjectPassportHtml("bg");
     expect(html).toContain("Паспортът не е намерен");
     expect(html).toContain('name="robots" content="noindex, nofollow"');
+    expect(html).toContain('font-family: "Google Sans"');
+    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
     expect(html).not.toMatch(/private|owner|email|location|objectId/i);
   });
 

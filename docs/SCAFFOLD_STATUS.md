@@ -22,13 +22,32 @@ older page/route inventory. OVE-171 copy namespaces remain regression inputs.
 Exact-SHA CI, deployment, production, protective-DNS, A1 browser, Ukraine-route,
 and real tombstone evidence passed.
 
+OVE-208 defines the shared typography boundary across the existing product.
+The semantic proportional and heading tokens resolve to self-hosted Google Sans
+for `uk`, `bg`, and `ru`, including raw lifecycle `404`/`410` documents and the
+global error fallback; Geist Mono remains limited to semantic code and machine
+evidence. Pinned content-hashed font assets are served same-origin with
+immutable public caching, outside personalized proxy handling, and no runtime
+Google Fonts dependency. The focused Chromium/Firefox/WebKit gate proves real
+italic, actual Google Sans rendering, and authoritative `html[lang=bg]`; the
+offline OpenType shaping verifier separately proves language-owned Bulgarian
+`cyrl/BGR locl` substitution. These checks complement the full Chromium
+responsive/accessibility matrix. This is a reversible, unvalidated product
+hypothesis: token rollback to Geist remains possible without component
+rewrites. OVE-208 preserves information architecture, color, copy, action
+semantics, and the existing visual language; its sole component layout delta is
+a mobile community-report containment correction required by localized 320 px
+reflow evidence.
+
 The founder-approved 2026-07-22 ownership correction preserves the dependency
 order OVE-205 -> OVE-202 -> OVE-206 -> OVE-207. OVE-205 proves the shared
 coordinator, all currently rendered states, and the payload-free owner-composer
-adapter. OVE-202 is the next dependent owner and must supply final Editor.js,
-Cyrillic IME, lossless serialization, inline-photo, upload, conflict, offline,
-and failed-flush browser proof. OVE-206 still owns pointer/touch/keyboard
-reorder, active-gesture, committed-order, focus, and announcement proof.
+adapter. After OVE-208, OVE-202 is the next execution owner; its Editor.js must
+consume the shared proportional token, persist no `font-family`, use a real
+italic face, and supply final Cyrillic IME, lossless serialization,
+inline-photo, upload, conflict, offline, and failed-flush browser proof. OVE-206
+still owns pointer/touch/keyboard reorder, active-gesture, committed-order,
+focus, and announcement proof.
 OVE-207 still owns automatic/explicit/separate cover, dedicated upload,
 failure/retry/removal, and combined ten-inline-plus-one-cover proof. The
 schema-v3 ownership ledger keeps every future obligation visible as

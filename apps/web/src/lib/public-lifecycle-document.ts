@@ -13,6 +13,11 @@ import {
   PUBLIC_LOCALE_CONFIG,
   type PublicLocale,
 } from "@/lib/public-localization";
+import {
+  GOOGLE_SANS_FONT_FACE_CSS,
+  GOOGLE_SANS_PRELOAD_ASSETS,
+  GOOGLE_SANS_STACK,
+} from "@/lib/typography/google-sans-runtime";
 
 export interface PublicLifecycleRequestLocation {
   pathname: string;
@@ -38,6 +43,10 @@ export function renderPublicLifecycleDocument(
   const languageControl = renderRawInterfaceLanguageControl(input);
   const languageControlStyles =
     input.locale === "uk" ? "" : renderRawInterfaceLanguageControlStyles();
+  const typographyPreloads = GOOGLE_SANS_PRELOAD_ASSETS.map(
+    (asset) =>
+      `<link rel="preload" as="font" type="${asset.contentType}" href="${asset.publicPath}" crossorigin="anonymous" fetchpriority="high" referrerpolicy="no-referrer" />`,
+  ).join("\n    ");
 
   return `<!doctype html>
 <html lang="${escapeAttribute(input.locale)}">
@@ -46,11 +55,14 @@ export function renderPublicLifecycleDocument(
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
+    ${typographyPreloads}
     <title>${escapeHtml(input.title)} | OverGarden</title>
     <style>
-      :root { --fg: rgb(23 23 23); --bg: rgb(255 255 255); --brand: rgb(47 125 50); --muted: rgb(102 102 102); --line: rgb(212 212 212); color-scheme: light; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); }
+      ${GOOGLE_SANS_FONT_FACE_CSS}
+      :root { --fg: rgb(23 23 23); --bg: rgb(255 255 255); --brand: rgb(47 125 50); --muted: rgb(102 102 102); --line: rgb(212 212 212); --font-overgarden-sans: ${GOOGLE_SANS_STACK}; color-scheme: light; font-family: var(--font-overgarden-sans); font-optical-sizing: auto; font-synthesis: none; color: var(--fg); background: var(--bg); }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; }
+      button, input, select, textarea { font: inherit; }
       header { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 12px 0 20px; color: var(--bg); background: var(--fg); font-weight: 700; }
       header > span { display: inline-flex; min-height: 56px; align-items: center; padding: 0 18px; background: var(--brand); }
       main { width: min(760px, 100%); margin: 0 auto; padding: 40px 20px; }
@@ -259,7 +271,7 @@ function renderRawInterfaceLanguageControlStyles() {
       [data-interface-language-option]:hover { background: rgb(0 0 0 / 7%); }
       [data-interface-language-control] summary:focus-visible, [data-interface-language-option]:focus-visible, [data-interface-language-recovery]:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
       [data-interface-language-option]:focus-visible { background: rgb(0 0 0 / 7%); }
-      [data-interface-language-option][aria-checked="true"]::after { content: "✓"; font-weight: 800; }
+      [data-interface-language-option][aria-checked="true"]::after { content: "✓"; font-weight: 700; }
       [data-interface-language-recovery] { min-height: 40px; cursor: pointer; border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--fg); background: var(--bg); font: inherit; }
       [data-interface-language-status] { flex: 1 0 100%; max-width: 24rem; color: inherit; font-size: 0.8125rem; font-weight: 500; line-height: 1.4; overflow-wrap: anywhere; text-align: right; }
       [data-interface-language-status]:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }`;

@@ -144,6 +144,10 @@ describe("PublicCommunityView", () => {
     expect(html).toContain('action="/bg/communities/observation-and-care"');
     expect(html).toContain('href="/admin/communities/observation-and-care"');
     expect(html).toContain('name="contributionId"');
+    expect(html).toContain(
+      'class="relative flex flex-wrap items-center gap-2"',
+    );
+    expect(html).toContain('class="sm:relative"');
     expect(html).not.toContain('action="/auth/intent/start"');
   });
 

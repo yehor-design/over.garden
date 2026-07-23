@@ -13,4 +13,23 @@ describe("locale routing config", () => {
       ]),
     );
   });
+
+  it("serves pinned same-origin font binaries with immutable WOFF2 headers", async () => {
+    const headers = (await nextConfig.headers?.()) ?? [];
+    const fontHeaders = headers.find(
+      ({ source }) => source === "/fonts/:path*",
+    )?.headers;
+
+    expect(fontHeaders).toEqual(
+      expect.arrayContaining([
+        { key: "Content-Type", value: "font/woff2" },
+        {
+          key: "Cache-Control",
+          value: "public, max-age=31536000, immutable",
+        },
+        { key: "X-Content-Type-Options", value: "nosniff" },
+        { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+      ]),
+    );
+  });
 });

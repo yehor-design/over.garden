@@ -290,6 +290,22 @@ async function readPageStructure(page: Page): Promise<PageStructure> {
         if (element.closest("[hidden], [inert], [aria-hidden='true']")) {
           return false;
         }
+
+        let hiddenByClosedDetails = false;
+        let closedDetails = element.closest<HTMLDetailsElement>(
+          "details:not([open])",
+        );
+        while (closedDetails) {
+          const summary =
+            closedDetails.querySelector<HTMLElement>(":scope > summary");
+          if (!summary?.contains(element)) {
+            hiddenByClosedDetails = true;
+            break;
+          }
+          closedDetails =
+            closedDetails.parentElement?.closest("details:not([open])") ?? null;
+        }
+        if (hiddenByClosedDetails) return false;
         const style = getComputedStyle(element);
         if (style.display === "none" || style.visibility === "hidden") {
           return false;
@@ -591,11 +607,15 @@ async function runMatrix(
           summary.screenshots,
         );
       } catch (error) {
+        const errorDetail =
+          error instanceof Error
+            ? `${error.name}:${error.message.split("\n", 1)[0]}`
+            : "unknown";
         const failure = {
           scenarioId: scenario.id,
           viewportId: viewport.id,
           check: "browser-run",
-          detail: `${stage}:${error instanceof Error ? error.name : "unknown"}`,
+          detail: `${stage}:${errorDetail}`,
         };
         failures.push(failure);
         if (process.env.ACCESSIBILITY_FAIL_FAST === "true") {
@@ -2548,8 +2568,7 @@ async function runRawLifecyclePreferenceRecoveryCheck(
         );
         return details?.open === false && document.activeElement === recovery;
       });
-      recoverySummaryFencePassed =
-        pointerFencePassed && keyboardFencePassed;
+      recoverySummaryFencePassed = pointerFencePassed && keyboardFencePassed;
       await summary.focus();
       await page.keyboard.press("Tab");
       recoveryFocusIndicatorVisible = await recovery.evaluate((element) => {

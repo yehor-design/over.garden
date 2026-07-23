@@ -10,11 +10,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("next/headers", () => ({ headers: mocks.requestHeaders }));
 
-vi.mock("next/font/google", () => ({
-  Geist: () => ({ variable: "font-geist-sans" }),
-  Geist_Mono: () => ({ variable: "font-geist-mono" }),
-}));
-
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocalization: mocks.getRequestInterfaceLocalization,
 }));
@@ -112,6 +107,10 @@ describe("root document locale", () => {
 
     expect(html).toContain('<html lang="ru"');
     expect(html).not.toContain('<html lang="en"');
+    expect(html.match(/rel="preload"/gu)).toHaveLength(1);
+    expect(html).toContain("/fonts/google-sans/v69/");
+    expect(html).not.toContain("fonts.googleapis.com");
+    expect(html).not.toContain("font-geist-sans");
     expect(html).toContain('data-testid="site-shell"');
     expect(html).toContain('data-testid="locale-change-boundary"');
     expect(html).toContain('data-locale="ru"');

@@ -15,6 +15,20 @@ describe("raw public lifecycle document", () => {
 
     expect(html).toContain('<html lang="uk">');
     expect(html).toContain('<meta name="referrer" content="no-referrer" />');
+    const preloadTags = html.match(/<link rel="preload"[^>]+>/gu) ?? [];
+    expect(preloadTags).toHaveLength(1);
+    expect(
+      preloadTags.every((tag) => tag.includes('referrerpolicy="no-referrer"')),
+    ).toBe(true);
+    expect(html).toContain(
+      '<a href="/journals" rel="noreferrer" referrerpolicy="no-referrer">',
+    );
+    expect(html).toContain('font-family: "Google Sans"');
+    expect(html).toContain("font-optical-sizing: auto");
+    expect(html).toContain("font-synthesis: none");
+    expect(html).toContain("/fonts/google-sans/v69/");
+    expect(html).not.toContain("fonts.googleapis.com");
+    expect(html).not.toContain("fonts.gstatic.com");
     expect(html).toContain("Запис не знайдено");
     expect(html).not.toContain("data-interface-language-control");
     expect(html).not.toContain("Български");
@@ -44,6 +58,9 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain('data-interface-locale="bg" lang="bg"');
     expect(html).toContain('data-interface-locale="ru" lang="ru"');
     expect(html).toContain('aria-checked="true"');
+    expect(html).toContain('aria-checked="true"]::after');
+    expect(html).toContain("font-weight: 700");
+    expect(html).not.toContain("font-weight: 800");
     expect(html).toContain(
       'href="/bg/journal/missing-entry?engagement=commented&amp;authIntent=comment"',
     );
@@ -51,7 +68,7 @@ describe("raw public lifecycle document", () => {
       'href="/ru/journal/missing-entry?engagement=commented&amp;authIntent=comment"',
     );
     expect(html.match(/rel="noreferrer"/g)).toHaveLength(3);
-    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(3);
+    expect(html.match(/referrerpolicy="no-referrer"/g)).toHaveLength(4);
     expect(html).toContain(
       '<a href="/bg/journals" rel="noreferrer" referrerpolicy="no-referrer">',
     );
@@ -121,7 +138,9 @@ describe("raw public lifecycle document", () => {
     expect(html).toContain("data-interface-language-recovery hidden");
     expect(html).toContain("for(const x of o)x.disabled=true");
     expect(html).toContain("s.setAttribute('aria-disabled','true')");
-    expect(html).toContain("z.textContent=c.failureMessage;\n      d.open=false;");
+    expect(html).toContain(
+      "z.textContent=c.failureMessage;\n      d.open=false;",
+    );
     expect(html).toContain("s.removeAttribute('aria-disabled')");
     expect(html).toContain("if(!A())return;e.preventDefault();d.open=false");
     expect(html).toContain("if(!A()||(e.key!=='Enter'&&e.key!==' '))return");

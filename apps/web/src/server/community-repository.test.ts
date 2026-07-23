@@ -43,6 +43,27 @@ const forbiddenPrivatePattern =
   /quarantine_key|email|phone|ip_address|user_agent|coordinates|latitude|longitude|session|token|client_mutation_id|spaces\.coarse_region|plant_objects\.coarse_region/i;
 
 describe("OVE-184 community repository contracts", () => {
+  it("keeps archived communities publicly readable while drafts collapse to the missing lifecycle", async () => {
+    const repository = await import("./community-repository");
+    const publicLookup = repository
+      .buildCommunityLookupQuery(testDb, "observation-and-care")
+      .compile();
+    const lifecycleLookup = repository
+      .buildCommunityLifecycleLookupQuery(testDb, "observation-and-care")
+      .compile();
+
+    for (const compiled of [publicLookup, lifecycleLookup]) {
+      expect(compiled.sql).toContain('"lifecycle_state" in');
+      expect(compiled.parameters).toEqual([
+        "observation-and-care",
+        "active",
+        "archived",
+        1,
+      ]);
+      expect(compiled.parameters).not.toContain("draft");
+    }
+  });
+
   it("derives navigation readiness from active moderation, rules, and canonical public journals", async () => {
     const repository = await import("./community-repository");
     const compiled = repository

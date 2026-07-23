@@ -57,8 +57,7 @@ import {
 export const APP_ROUTE_CACHE_CONTROL =
   "private, no-store, max-age=0, s-maxage=0, must-revalidate";
 
-const INTERNAL_PROFILE_REWRITE_HEADER =
-  "x-overgarden-internal-profile-rewrite";
+const INTERNAL_PROFILE_REWRITE_HEADER = "x-overgarden-internal-profile-rewrite";
 const INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER =
   "x-overgarden-internal-profile-rewrite-signature";
 const INTERNAL_PROFILE_REWRITE_VERSION = "v1";
@@ -607,6 +606,6 @@ function hasValidInternalProfileRewrite(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$|sw.js|manifest.webmanifest).*)",
+    "/((?!_next/static|_next/image|fonts/|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$|sw.js|manifest.webmanifest).*)",
   ],
 };

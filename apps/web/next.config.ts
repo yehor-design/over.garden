@@ -48,6 +48,21 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
+        // Typography binaries are pinned, content-hashed, and same-origin.
+        // Keep them outside the personalized app-cache boundary and immutable
+        // for one year; a changed binary must ship under a changed pathname.
+        source: "/fonts/:path*",
+        headers: [
+          { key: "Content-Type", value: "font/woff2" },
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+        ],
+      },
+      {
         // The (empty) service worker must never be cached, so SW updates ship.
         source: "/sw.js",
         headers: [

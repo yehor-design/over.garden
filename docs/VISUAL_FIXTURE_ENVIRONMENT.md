@@ -123,17 +123,29 @@ Run the gate against a seeded local environment and built or development server:
 
 ```bash
 cd apps/web
-pnpm exec playwright install chromium
+pnpm exec playwright install chromium firefox webkit
+TYPOGRAPHY_BASE_URL=http://127.0.0.1:3000 pnpm typography:browser
 ACCESSIBILITY_BASE_URL=http://127.0.0.1:3000 pnpm test:a11y
 ```
 
+OVE-208's focused typography gate uses the same loopback fixture and built
+origin to verify Google Sans computed style, font loading, same-origin requests,
+glyph coverage, and real italics across `uk`, `bg`, `ru`, raw lifecycle owners,
+and the global error fallback in Chromium, Firefox, and WebKit. It extends, and
+does not replace, the full 171-scenario/642-route-viewport Chromium matrix.
+
 The browser install is a one-time local prerequisite; CI installs the same
-pinned Chromium runtime automatically. Set `ACCESSIBILITY_EVIDENCE_DIR` to
-write the four deterministic review images.
+pinned three runtimes for focused typography evidence while the complete
+responsive/accessibility matrix remains Chromium-owned. Set
+`ACCESSIBILITY_EVIDENCE_DIR` to write the four deterministic review images.
 The runner refuses canonical OverGarden Production origins. Any non-loopback
 Preview requires `ACCESSIBILITY_ALLOW_PREVIEW=true` in addition to the existing
 isolated Preview fixture controls. Evidence routes are tested to exclude tokens,
 precise coordinates, quarantine keys, and email-like identities.
+
+Font evidence is limited to bounded same-origin paths, bytes, cache behavior,
+and computed results. It must not include or vary on locale cookies, identity,
+private content, referrers, or precise location.
 
 All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,

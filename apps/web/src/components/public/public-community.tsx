@@ -640,7 +640,7 @@ function CommunityContributionRow({
             {item.excerpt}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex flex-wrap items-center gap-2">
           <Link
             href={item.href}
             className={buttonVariants({ variant: "outline", size: "sm" })}
@@ -752,7 +752,7 @@ function CommunitySafetyActions({
               : undefined
           }
           open={resumeAction === "report" && resumeControl === reportControl}
-          className="relative"
+          className="sm:relative"
         >
           <summary
             data-auth-intent-control="report"

@@ -1,6 +1,6 @@
 # Localization Coverage Workflow
 
-Status: OVE-205 closeout gate passed; binding extension workflow
+Status: OVE-205 closeout gate passed; binding OVE-208 typography extension workflow
 Locales: `uk`, `bg`, `ru`
 Markets: Ukraine (`uk` only), Bulgaria (`bg` default; `bg` or `ru`)
 Preserved baseline: `ove171-v1`
@@ -14,10 +14,12 @@ The static report refuses a dirty checkout and a mismatched `GITHUB_SHA`; its
 `commitSha` is evidence only for the exact clean tree that generated it.
 
 ```bash
+pnpm typography:assets:check
 pnpm localization:coverage:check
 pnpm localization:coverage:report
 pnpm localization:coverage:browser
 pnpm visual:fixtures:verify
+TYPOGRAPHY_BASE_URL=http://127.0.0.1:3000 pnpm typography:browser
 pnpm test:a11y
 ```
 
@@ -80,6 +82,8 @@ Each rendered route/state record declares:
 - auth, role, owner/non-owner, denied, loading, empty, error, `404`, `410`, and
   raw lifecycle variants;
 - dirty/in-flight coordinator registration and expected outcome;
+- shared proportional/monospace typography token ownership for the rendered
+  document, including exceptional raw lifecycle and global-error owners;
 - copy namespaces, literal exclusions, focused tests, and deterministic browser
   scenarios;
 - mobile and desktop evidence requirements.
@@ -113,6 +117,14 @@ The deterministic browser matrix must include at least:
 
 Counting a control in a shared happy-path shell is not enough. The assertion is
 made at the final rendered document for every registered owner/state.
+
+OVE-208 adds a focused typography gate across Chromium, Firefox, and WebKit. It
+proves Google Sans as the computed proportional family, successful font loading
+and same-origin requests, Ukrainian/Bulgarian/Russian glyph coverage,
+`html[lang="bg"]` localized-form ownership, real italic, semantic Geist Mono,
+and the raw lifecycle/global-error owners. This focused gate extends the full
+Chromium localization, responsive, and accessibility matrix; it never replaces
+that matrix or reduces its 171 scenarios and 642 route/viewport checks.
 
 ## Switch Security Matrix
 
@@ -153,7 +165,9 @@ ten-inline-photo proof to OVE-202, reorder proof to OVE-206, and cover plus
 combined ten-inline-plus-one-cover proof to OVE-207. Those slices must consume
 the shared coordinator and replace only their own ledger entry with real
 product-browser scenarios. Adapter-only registration or an internal fixture is
-not proof for the owning downstream issue.
+not proof for the owning downstream issue. OVE-202 must also consume the shared
+proportional token, load a real italic face, and serialize no `font-family`
+styling into Editor.js content.
 
 ## Extending The Product
 
@@ -166,11 +180,13 @@ When adding a page, layout, handler, rendered state, or visible component:
    dialog/menu/tooltip/toast, and raw lifecycle output.
 4. Select the market-specific control rule and one owner. Never add an ad hoc
    second switcher.
-5. Register dirty/in-flight behavior when user work or a product mutation can
+5. Consume the shared proportional or semantic monospace token; never add an ad
+   hoc font family.
+6. Register dirty/in-flight behavior when user work or a product mutation can
    be active.
-6. Add focused tests and deterministic mobile/desktop browser scenarios using
+7. Add focused tests and deterministic mobile/desktop browser scenarios using
    the OVE-187 fixture environment where safe.
-7. Run the complete gate and refresh exact-SHA release proof.
+8. Run the complete gate and refresh exact-SHA release proof.
 
 ## Literal Exclusions And Evidence Privacy
 
@@ -185,6 +201,11 @@ Reports and browser artifacts never include secrets, tokens, private content,
 precise location, quarantine keys, signed URLs, emails, raw diagnostics, or
 identity-bearing cross-tab payloads. Suspicious literal values are hashed
 before they can appear in a report.
+
+Typography evidence records only bounded font paths, bytes, cache behavior,
+and computed results. Font URLs and cache identities remain same-origin and
+must not contain or vary on locale cookies, account state, private data, or
+referrers.
 
 ## Production Proof
 

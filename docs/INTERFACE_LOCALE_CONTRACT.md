@@ -1,7 +1,7 @@
 # Interface Locale Contract
 
-Status: shipped by OVE-205; binding market/locale and downstream-extension contract
-Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-202/206/207 (downstream extension owners)
+Status: OVE-205 shipped; binding market/locale contract extended by OVE-208 typography ownership
+Issues: OVE-164 through OVE-171 (preserved baseline), OVE-205 (shipped authority), OVE-208 (typography extension), OVE-202/206/207 (downstream extension owners)
 Date: 2026-07-22
 
 ## Purpose
@@ -88,6 +88,32 @@ the current choice accessibly, supports keyboard and screen-reader operation,
 and does not change domain behavior, authorization, mutation payloads, or
 privacy rules.
 
+## Typography Ownership
+
+OVE-208 makes the shared proportional typography token the only application
+owner for ordinary interface and authored text. `--font-sans` and
+`--font-heading` resolve through `--font-overgarden-sans` to Google Sans for
+every `uk`, `bg`, and `ru` document, including route states, raw community,
+object, profile, and journal lifecycle `404`/`410` HTML, and the global error
+fallback. Semantic code, identifiers, and machine evidence remain on
+`--font-mono`; a component must not choose a proportional family directly.
+
+The root `html[lang]` remains authoritative, including `lang="bg"` for
+Bulgarian OpenType localized forms. Typography must not transform or rewrite
+user-authored, catalog, scientific, or source text. Font binaries are pinned,
+content-hashed, self-hosted same-origin assets with immutable public caching;
+no runtime request may reach Google Fonts or another font CDN. `/fonts/**`
+stays outside personalized market/locale proxy handling and cannot vary by
+cookie, locale preference, identity, or private content.
+
+This is a reversible and still-unvalidated product hypothesis. Rolling the
+semantic proportional token back to Geist must not require component rewrites.
+OVE-208 does not change information architecture, color, copy, action semantics,
+or the existing visual language. Its only component-level layout delta is the
+mobile community-report positioning-containment correction required to keep
+existing localized controls inside the viewport; this is not a redesign or
+evidence that users prefer Google Sans.
+
 ## Switching Localized Public Documents
 
 On localized Bulgaria public routes, `/bg/**` <-> `/ru/**` switching is an
@@ -170,6 +196,8 @@ ledger for downstream UI, but it does not claim that nonexistent UI passed.
 
 - OVE-202 owns final Editor.js, Cyrillic IME/serialization, ten-inline-photo,
   inline-upload, conflict, offline, and failed-flush locale-transition proof.
+  Its editor must consume the shared proportional token, use the real italic
+  face, and persist no `font-family` styling in the structured document.
 - OVE-206 owns final pointer/touch/keyboard reorder, active-gesture blocking,
   committed-order serialization, focus, announcement, and transition proof.
 - OVE-207 owns final automatic/explicit-inline/separate-cover behavior,
@@ -218,6 +246,8 @@ registry:
   and raw application lifecycle renderers;
 - market source, market fallback, allowed locales, and locale default;
 - zero-control or exactly-one-control expectation and the owning component;
+- shared proportional/monospace token ownership, including exceptional raw
+  documents and global error;
 - public-path switch target policy or unprefixed POST preference policy;
 - auth/role/denied/lifecycle variants;
 - dirty/in-flight registration and expected navigation outcome;
@@ -233,6 +263,11 @@ Never place journal titles/bodies, object or space names, handles, emails,
 precise location, region, media keys, invitation/reset tokens, internal IDs,
 referrers, IP addresses, user agents, or analytics payloads in locale cookies,
 locale headers, switch URLs, copy dictionaries, or locale-only evidence.
+
+Font requests must remain same-origin and identity-neutral. Their paths,
+queries, response selection, response headers, cache keys, and verification
+artifacts must not encode or vary on locale cookies, account state, private
+content, or precise location.
 
 Locale branches must not alter repositories, authorization, visibility,
 publication, lifecycle, search-index eligibility, idempotency, offline schemas,

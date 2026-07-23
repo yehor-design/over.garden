@@ -419,6 +419,9 @@ describe("OVE-205 executable localization browser contract", () => {
     expect(genericNotFoundSource).toContain(
       "structure.offscreenControlCount > 0",
     );
+    expect(source).toContain('"details:not([open])"');
+    expect(source).toContain('":scope > summary"');
+    expect(source).toContain("if (hiddenByClosedDetails) return false");
     expect(source).toContain(
       'page.getByText("Проверенная тема", { exact: true })',
     );

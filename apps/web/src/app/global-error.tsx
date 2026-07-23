@@ -16,6 +16,11 @@ import {
 } from "@/lib/interface-market";
 import { INTERFACE_CONTEXT_ENDPOINT } from "@/lib/interface-route-policy";
 import { localizedPath, stripLocalePrefix } from "@/lib/public-localization";
+import {
+  GOOGLE_SANS_FONT_FACE_CSS,
+  GOOGLE_SANS_STACK,
+} from "@/lib/typography/google-sans-runtime";
+import { GoogleSansPreloads } from "@/lib/typography/google-sans-preloads";
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -31,6 +36,16 @@ const SAFE_GLOBAL_ERROR_CONTEXT: GlobalErrorInterfaceContext = {
   market: "ukraine",
   locale: "uk",
 };
+
+const GLOBAL_ERROR_TYPOGRAPHY_CSS = `${GOOGLE_SANS_FONT_FACE_CSS}
+:root {
+  --font-overgarden-sans: ${GOOGLE_SANS_STACK};
+  font-family: var(--font-overgarden-sans);
+  font-optical-sizing: auto;
+  font-synthesis: none;
+}
+button, input, select, textarea { font: inherit; }
+`;
 
 export default function GlobalError({ reset }: GlobalErrorProps) {
   const documentContextKey = useSyncExternalStore(
@@ -73,6 +88,13 @@ export default function GlobalError({ reset }: GlobalErrorProps) {
 
   return (
     <html lang={interfaceContext.locale} suppressHydrationWarning>
+      <head>
+        <meta name="referrer" content="no-referrer" />
+        <GoogleSansPreloads />
+        <style
+          dangerouslySetInnerHTML={{ __html: GLOBAL_ERROR_TYPOGRAPHY_CSS }}
+        />
+      </head>
       <body className="flex min-h-dvh flex-col bg-background text-foreground">
         <header className="flex min-h-14 items-center justify-between gap-3 border-b border-foreground/15 bg-foreground px-3 text-background sm:px-5">
           <a

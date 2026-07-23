@@ -4,6 +4,25 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 describe("global responsive floor", () => {
+  it("owns proportional and monospace typography through semantic tokens", () => {
+    const source = readFileSync(
+      fileURLToPath(new URL("./globals.css", import.meta.url)),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /--font-overgarden-sans:\s*"Google Sans",\s*"Google Sans Fallback",\s*Arial,/u,
+    );
+    expect(source).toMatch(/--font-overgarden-mono:\s*"Geist Mono"/u);
+    expect(source).toContain("--font-sans: var(--font-overgarden-sans);");
+    expect(source).toContain("--font-heading: var(--font-overgarden-sans);");
+    expect(source).toContain("--font-mono: var(--font-overgarden-mono);");
+    expect(source).toContain("font-optical-sizing: auto;");
+    expect(source).toContain("font-synthesis: none;");
+    expect(source).toContain('[contenteditable="true"]');
+    expect(source).not.toContain("--font-geist-sans");
+  });
+
   it("does not force 320px content beyond a viewport narrowed by classic scrollbars", () => {
     const source = readFileSync(
       fileURLToPath(new URL("./globals.css", import.meta.url)),

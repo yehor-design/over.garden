@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-22 (OVE-188 protective-DNS closeout; OVE-190 matching parity, OVE-191 production-safe scaffold boundary, OVE-203 automatic public identity, OVE-204 reliable current-session sign-out, and OVE-205 corrective market-first localization are complete and exact-SHA proven; OVE-202 is the next dependent localization/editor slice)
+Last operational update: 2026-07-22 (OVE-188 protective-DNS closeout; OVE-190 matching parity, OVE-191 production-safe scaffold boundary, OVE-203 automatic public identity, OVE-204 reliable current-session sign-out, and OVE-205 corrective market-first localization are complete and exact-SHA proven; OVE-208 defines the active typography boundary, after which OVE-202 is the next dependent localization/editor slice)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -28,13 +28,31 @@ boundaries, raw application-owned lifecycle HTML, owner/denied variants, and
 zero/exactly-one control proof. Exact-SHA CI, deployment, production smoke,
 protective-DNS, A1 browser, Ukraine route, and real `410` evidence passed.
 
+OVE-208 binds all existing `uk`, `bg`, and `ru` proportional/heading text to one
+Google Sans semantic token, including route states, raw lifecycle `404`/`410`
+HTML, and global error. Geist Mono remains semantic-only. Pinned,
+content-hashed font assets are same-origin and immutable, stay outside
+personalized proxy handling, and make no runtime Google Fonts request. A
+focused Chromium/Firefox/WebKit gate checks computed family, loading, requests,
+actual Google Sans rendering, authoritative `html[lang=bg]`, glyph coverage,
+and real italic; the offline OpenType shaping verifier separately proves the
+Bulgarian `cyrl/BGR locl` substitution. These checks complement and do not
+replace the full 171-scenario/642-route-viewport Chromium matrix. The change is
+a reversible, unvalidated product hypothesis and preserves the existing
+information architecture, color, copy, action semantics, and visual language.
+Its only component layout delta is a mobile community-report containment fix
+required by the 320 px localized reflow gate. After OVE-208 closeout, OVE-202
+is the next execution owner.
+
 OVE-205 is now the stable dependency for work that needs this locale lifecycle;
 it is not permission to claim future UI. The founder-approved 2026-07-22
 clarification preserves the dependency order OVE-205 -> OVE-202 -> OVE-206 ->
 OVE-207. OVE-205 proved the extensible coordinator, all existing states, and a
-payload-free owner-composer adapter. OVE-202 must replace only its Editor.js,
-Cyrillic IME, serialization, inline-photo, conflict, offline, upload, and failed-
-flush ownership entries with real browser proof; OVE-206 must then replace only
+payload-free owner-composer adapter. OVE-202 must consume the shared
+proportional token, persist no `font-family` in Editor.js content, use a real
+italic face, and replace only its Cyrillic IME, serialization, inline-photo,
+conflict, offline, upload, and failed-flush ownership entries with real browser
+proof; OVE-206 must then replace only
 its pointer/touch/keyboard reorder, gesture fence, committed order, focus, and
 announcement entries; OVE-207 must close automatic/explicit/separate cover,
 cover upload/recovery/removal, and combined ten-inline-plus-one-cover entries.

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 
 import { InterfaceLocaleChangeBoundary } from "@/components/site-shell/interface-locale-change-boundary";
@@ -10,23 +9,19 @@ import {
   serializeInterfaceLocalizationHint,
 } from "@/lib/interface-localization";
 import { INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER } from "@/lib/localization/localization-visual-fixture";
+import {
+  GoogleSansPreloads,
+  preloadGoogleSans,
+} from "@/lib/typography/google-sans-preloads";
 import { hasReadyCommunityNavigation } from "@/server/community-repository";
 import { getRequestInterfaceLocalization } from "@/server/interface-localization";
 import { getSiteShellSessionState } from "@/server/site-shell-session";
+import "./geist-mono.css";
 import "./globals.css";
+import "./google-sans.css";
 import { GoogleAnalytics } from "./google-analytics";
 import { MetaMarketingAttribution } from "./meta-marketing";
 import { ServiceWorkerRegister } from "./sw-register";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export async function generateMetadata(): Promise<Metadata> {
   const { locale, market } = await getRequestInterfaceLocalization();
@@ -49,15 +44,18 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Register critical font hints before the first suspension so React can
+  // promote them into the initial response's Link header.
+  preloadGoogleSans();
   const requestHeaders = await headers();
   if (
     requestHeaders.get(INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER) === "1"
   ) {
     return (
-      <html
-        lang="uk"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      >
+      <html lang="uk" className="h-full antialiased">
+        <head>
+          <GoogleSansPreloads />
+        </head>
         <body>
           <GlobalErrorVisualFixture />
         </body>
@@ -73,10 +71,10 @@ export default async function RootLayout({
   const { locale, market } = localization;
 
   return (
-    <html
-      lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang={locale} className="h-full antialiased">
+      <head>
+        <GoogleSansPreloads />
+      </head>
       <body className="flex min-h-full flex-col">
         <InterfaceLocaleChangeBoundary>
           <SiteShell
