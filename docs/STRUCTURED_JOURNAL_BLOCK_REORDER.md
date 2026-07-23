@@ -1,6 +1,6 @@
 # OVE-206 Accessible Journal Block Reorder
 
-Status: done on main (Vercel READY); founder iPhone Safari checklist required before Linear Done
+Status: done on main (Vercel READY; Linear Done)
 Issue: OVE-206
 
 ## Contract
