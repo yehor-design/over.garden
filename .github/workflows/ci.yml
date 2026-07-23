@@ -205,7 +205,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           ARTIFACT_PREFIX: "ove208-typography-"
-          KEEP_COUNT: "2"
+          KEEP_COUNT: "1"
         run: |
           set -euo pipefail
 
