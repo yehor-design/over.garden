@@ -53,6 +53,7 @@ def journal_row(**overrides: Any) -> dict[str, Any]:
         "public_slug": "first-flowers-abc123",
         "public_noindex": True,
         "public_gone_at": None,
+        "published_at": datetime(2026, 6, 26, 12, 0, tzinfo=timezone.utc),
         "entry_date": date(2026, 6, 25),
         "entry_scope": "object",
         "created_at": datetime(2026, 6, 26, 12, 30, tzinfo=timezone.utc),
@@ -60,6 +61,11 @@ def journal_row(**overrides: Any) -> dict[str, Any]:
         "lifecycle_state": "active",
         "location_visibility": "hidden",
         "coarse_region_code": None,
+        "owner_profile_public_safe": True,
+        "cover_media_asset_id": None,
+        "cover_media_id": None,
+        "cover_usage_role": None,
+        "cover_derivative_key": None,
     }
     row.update(overrides)
     return row

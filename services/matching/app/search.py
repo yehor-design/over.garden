@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from datetime import date, datetime, timezone
 from collections.abc import Iterable, Mapping
 from typing import Any
+from uuid import UUID
 
 import meilisearch
 
@@ -42,8 +44,19 @@ JOURNAL_FILTERABLE_ATTRIBUTES = [
     "locationVisibility",
     "coarseRegionCode",
     "noindex",
+    "coverSource",
 ]
 JOURNAL_SORTABLE_ATTRIBUTES = ["entryDate", "createdAt"]
+JOURNAL_COVER_SOURCES = {
+    "automatic_inline",
+    "explicit_inline",
+    "separate",
+    "none",
+}
+JOURNAL_ENTRY_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
 SUPPORTED_COARSE_REGION_CODES = {
     "UA-05",
     "UA-07",
@@ -132,11 +145,17 @@ select
   journal_entries.public_slug,
   journal_entries.public_noindex,
   journal_entries.public_gone_at,
+  journal_entries.published_at,
   journal_entries.entry_date,
   journal_entries.entry_scope,
   journal_entries.created_at,
   journal_entries.visibility,
   journal_entries.lifecycle_state,
+  journal_entries.cover_media_asset_id::text as cover_media_asset_id,
+  case
+    when user_public_profiles.user_id is not null then true
+    else false
+  end as owner_profile_public_safe,
   case
     when journal_entries.entry_scope = 'space' then spaces.location_visibility
     else plant_objects.location_visibility
@@ -153,7 +172,10 @@ select
         end
       )
     else null
-  end as coarse_region_code
+  end as coarse_region_code,
+  cover_media.media_id::text as cover_media_id,
+  cover_media.usage_role as cover_usage_role,
+  cover_media.derivative_key as cover_derivative_key
 from journal_entries
 left join plant_objects
   on plant_objects.id = journal_entries.plant_object_id
@@ -161,6 +183,39 @@ left join plant_objects
 inner join spaces
   on spaces.id = journal_entries.space_id
  and spaces.owner_user_id = journal_entries.owner_user_id
+left join user_handle_registry
+  on user_handle_registry.user_id = journal_entries.owner_user_id
+ and user_handle_registry.lifecycle_state = 'current'
+left join user_public_profiles
+  on user_public_profiles.user_id = user_handle_registry.user_id
+ and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
+ and user_public_profiles.profile_visibility = 'public'
+ and user_public_profiles.profile_lifecycle_state = 'active'
+ and user_public_profiles.removed_at is null
+left join lateral (
+  select
+    media_assets.id as media_id,
+    media_assets.usage_role,
+    media_assets.derivative_key
+  from media_assets
+  where media_assets.journal_entry_id = journal_entries.id
+    and media_assets.owner_user_id = journal_entries.owner_user_id
+    and media_assets.status = 'processed'
+    and media_assets.derivative_key is not null
+    and media_assets.revoked_at is null
+    and (
+      media_assets.id = journal_entries.cover_media_asset_id
+      or media_assets.usage_role = 'inline'
+    )
+  order by
+    case
+      when media_assets.id = journal_entries.cover_media_asset_id then 0
+      else 1
+    end asc,
+    media_assets.document_position asc nulls last,
+    media_assets.id asc
+  limit 1
+) as cover_media on true
 where journal_entries.id = %s
   and journal_entries.owner_user_id = %s
 limit 1
@@ -285,25 +340,35 @@ def journal_entry_search_document_from_row(
     row: Mapping[str, Any],
 ) -> dict[str, object] | None:
     """Convert one Postgres journal row into the safe public Meili document."""
+    journal_entry_id = _normalize_journal_document_id(_text(row, "id"))
+    if journal_entry_id is None:
+        return None
     if _text(row, "visibility") != "public":
         return None
     if _text(row, "lifecycle_state") != "active":
         return None
     if row.get("public_gone_at") is not None:
         return None
+    if row.get("published_at") is None:
+        return None
+    if not bool(row.get("owner_profile_public_safe")):
+        return None
 
-    journal_entry_id = _text(row, "id")
     title = _text(row, "title")
     body = _text(row, "body")
     public_slug = _text(row, "public_slug")
     entry_scope = _text(row, "entry_scope")
     location_visibility = _text(row, "location_visibility")
 
-    if not journal_entry_id or not title or not body or not public_slug:
+    if not title or not body or not public_slug:
         return None
     if entry_scope not in {"object", "space"}:
         return None
     if location_visibility not in {"hidden", "region"}:
+        return None
+
+    cover_source, cover_public_url = _resolve_cover_presentation(row)
+    if cover_source != "none" and not cover_public_url:
         return None
 
     document: dict[str, object] = {
@@ -318,7 +383,10 @@ def journal_entry_search_document_from_row(
         "entryScope": entry_scope,
         "createdAt": _iso_datetime(row.get("created_at")),
         "kind": "journal_entry",
+        "coverSource": cover_source,
     }
+    if cover_public_url:
+        document["coverPublicUrl"] = cover_public_url
 
     if location_visibility == "region":
         coarse_region_code = _coarse_region_code(row)
@@ -327,6 +395,58 @@ def journal_entry_search_document_from_row(
         document["coarseRegionCode"] = coarse_region_code
 
     return document
+
+
+def assert_safe_journal_search_document_id(value: str) -> str:
+    normalized = _normalize_journal_document_id(value)
+    if normalized is None:
+        raise ValueError("invalid_journal_search_document_id")
+    return normalized
+
+
+def _normalize_journal_document_id(value: str) -> str | None:
+    if not value or not JOURNAL_ENTRY_UUID_RE.fullmatch(value):
+        return None
+    try:
+        return str(UUID(value))
+    except ValueError:
+        return None
+
+
+def _resolve_cover_presentation(
+    row: Mapping[str, Any],
+) -> tuple[str, str | None]:
+    cover_media_id = _text(row, "cover_media_id")
+    cover_derivative_key = _text(row, "cover_derivative_key")
+    if not cover_media_id or not cover_derivative_key:
+        return "none", None
+
+    cover_public_url = _public_derivative_url(cover_derivative_key)
+    if cover_public_url is None:
+        return "none", None
+
+    explicit_cover_id = _text(row, "cover_media_asset_id")
+    usage_role = _text(row, "cover_usage_role")
+    if explicit_cover_id and explicit_cover_id == cover_media_id:
+        if usage_role == "cover_only":
+            return "separate", cover_public_url
+        return "explicit_inline", cover_public_url
+    if usage_role == "inline":
+        return "automatic_inline", cover_public_url
+    return "none", None
+
+
+def _public_derivative_url(object_key: str) -> str | None:
+    base_url = os.environ.get("R2_PUBLIC_BASE_URL", "").strip()
+    if not base_url:
+        return None
+    normalized_base = base_url if base_url.endswith("/") else f"{base_url}/"
+    key = object_key.lstrip("/")
+    if not key or "://" in key or ".." in key:
+        return None
+    if "quarantine/" in key.lower():
+        return None
+    return f"{normalized_base}{key}"
 
 
 def reindex_catalog_typeahead(
@@ -359,17 +479,19 @@ def index_journal_entry(
     meili_client: meilisearch.Client | None = None,
 ) -> dict[str, object]:
     """Index one public-safe journal document, or remove it if no longer safe."""
+    safe_journal_entry_id = assert_safe_journal_search_document_id(journal_entry_id)
+    safe_owner_user_id = assert_safe_journal_search_document_id(owner_user_id)
     c = meili_client or client()
     index = c.index(PUBLIC_JOURNAL_ENTRIES_INDEX)
     _ensure_public_journal_entries_settings(c, index)
 
-    row = fetch_journal_entry_search_row(conn, journal_entry_id, owner_user_id)
+    row = fetch_journal_entry_search_row(conn, safe_journal_entry_id, safe_owner_user_id)
     if row is None:
         raise ValueError("journal entry was not found for the job owner")
 
     document = journal_entry_search_document_from_row(row)
     if document is None:
-        return unindex_journal_entry(journal_entry_id, c)
+        return unindex_journal_entry(safe_journal_entry_id, c)
 
     task = index.add_documents([document], primary_key="id")
     _wait_for_task(c, task.task_uid)
@@ -382,9 +504,11 @@ def unindex_journal_entry_for_owner(
     owner_user_id: str,
     meili_client: meilisearch.Client | None = None,
 ) -> dict[str, object]:
-    if not journal_entry_belongs_to_owner(conn, journal_entry_id, owner_user_id):
+    safe_journal_entry_id = assert_safe_journal_search_document_id(journal_entry_id)
+    safe_owner_user_id = assert_safe_journal_search_document_id(owner_user_id)
+    if not journal_entry_belongs_to_owner(conn, safe_journal_entry_id, safe_owner_user_id):
         raise ValueError("journal entry was not found for the job owner")
-    return unindex_journal_entry(journal_entry_id, meili_client)
+    return unindex_journal_entry(safe_journal_entry_id, meili_client)
 
 
 def unindex_journal_entry(
@@ -392,9 +516,10 @@ def unindex_journal_entry(
     meili_client: meilisearch.Client | None = None,
 ) -> dict[str, object]:
     """Remove one public journal document from the derived search boundary."""
+    safe_journal_entry_id = assert_safe_journal_search_document_id(journal_entry_id)
     c = meili_client or client()
     index = c.index(PUBLIC_JOURNAL_ENTRIES_INDEX)
-    task = index.delete_document(journal_entry_id)
+    task = index.delete_document(safe_journal_entry_id)
     _wait_for_task(c, task.task_uid)
     return {"deleted": 1, "task_uid": task.task_uid}
 

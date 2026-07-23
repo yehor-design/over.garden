@@ -2,8 +2,10 @@
   "index": "journal_entries",
   "runtimeWriter": "services/matching/app/search.py:journal_entry_search_document_from_row",
   "typescriptContractFixture": "apps/web/src/server/search/documents.ts:buildJournalEntrySearchDocumentContractFixture",
+  "documentIdContract": "Journal Meilisearch primary key is the journal entry UUID string. Non-UUID ids are invalid_id and must fail before queue insert or Meili write.",
   "requiredFields": [
     "body",
+    "coverSource",
     "createdAt",
     "entryDate",
     "entryScope",
@@ -15,10 +17,12 @@
     "publicSlug",
     "title"
   ],
-  "optionalFields": ["coarseRegionCode"],
+  "optionalFields": ["coarseRegionCode", "coverPublicUrl"],
   "allowedFields": [
     "body",
     "coarseRegionCode",
+    "coverPublicUrl",
+    "coverSource",
     "createdAt",
     "entryDate",
     "entryScope",
@@ -36,7 +40,8 @@
     "kind",
     "locationVisibility",
     "coarseRegionCode",
-    "noindex"
+    "noindex",
+    "coverSource"
   ],
   "sortableAttributes": ["entryDate", "createdAt"],
   "forbiddenFields": [
@@ -45,6 +50,8 @@
     "coarseRegionCodeRaw",
     "coarse_region_code",
     "coordinates",
+    "coverMediaAssetId",
+    "cover_media_asset_id",
     "derivativeKey",
     "email",
     "exif",

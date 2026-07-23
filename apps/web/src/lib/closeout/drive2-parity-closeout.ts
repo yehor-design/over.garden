@@ -303,6 +303,35 @@ export function assertDrive2ParityCloseoutCoverage(
   }
 }
 
+/**
+ * OVE-196 seam: OVE-186 must fail closed when public journal Meilisearch
+ * parity reports any non-zero unsafe/extraneous/missing/stale/invalid class.
+ */
+export function assertDrive2PublicSearchParityGate(input: {
+  zeroGap: boolean;
+  counts: {
+    missing: number;
+    extraneous: number;
+    stale: number;
+    unsafe_schema: number;
+    duplicate: number;
+    invalid_id: number;
+  };
+}): void {
+  const blocking =
+    input.counts.missing +
+    input.counts.extraneous +
+    input.counts.stale +
+    input.counts.unsafe_schema +
+    input.counts.duplicate +
+    input.counts.invalid_id;
+  if (!input.zeroGap || blocking > 0) {
+    throw new Error(
+      "OVE-186 blocked: OVE-196 public journal search parity is not zero-gap",
+    );
+  }
+}
+
 function buildArchetypeCoverage(
   archetype: CoreJourneyArchetype,
   scenarios: readonly CoreJourneyScenario[],

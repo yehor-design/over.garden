@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   PilotWriteAccessError: class PilotWriteAccessError extends Error {},
   createJournalEntry: vi.fn(),
-  enqueueJob: vi.fn(),
+  enqueueJournalEntryIndexJob: vi.fn(),
   listMyRecentJournalEntries: vi.fn(),
   requireCurrentUserId: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
@@ -31,13 +31,18 @@ vi.mock("@/server/journal-repository", () => ({
   createJournalEntry: mocks.createJournalEntry,
   listMyRecentJournalEntries: mocks.listMyRecentJournalEntries,
 }));
-vi.mock("@/server/queue", () => ({ enqueueJob: mocks.enqueueJob }));
+vi.mock("@/server/search/public-journal-parity", () => ({
+  enqueueJournalEntryIndexJob: mocks.enqueueJournalEntryIndexJob,
+}));
 
 import { GET, POST } from "./route";
 
-const scope = { userId: "user-1", sessionId: "session-1" };
+const scope = {
+  userId: "00000000-0000-4000-8000-000000000101",
+  sessionId: "session-1",
+};
 const entry = {
-  id: "entry-1",
+  id: "00000000-0000-4000-8000-000000000201",
   body: "Local diagnostic entry",
   visibility: "private",
 };
@@ -52,7 +57,7 @@ describe("walking-skeleton journal API", () => {
     mocks.requireWriteEligibleRequestScope.mockResolvedValue(scope);
     mocks.listMyRecentJournalEntries.mockResolvedValue([entry]);
     mocks.createJournalEntry.mockResolvedValue(entry);
-    mocks.enqueueJob.mockResolvedValue("job-1");
+    mocks.enqueueJournalEntryIndexJob.mockResolvedValue("job-1");
   });
 
   it("hard-404s GET and POST before auth, body, or repository access", async () => {
@@ -215,7 +220,7 @@ describe("walking-skeleton journal API", () => {
       visibility: "private",
       clientMutationId: "mutation-1",
     });
-    expect(mocks.enqueueJob).not.toHaveBeenCalled();
+    expect(mocks.enqueueJournalEntryIndexJob).not.toHaveBeenCalled();
     expect(await response.json()).toEqual({ entry, queuedJobId: null });
   });
 
@@ -228,15 +233,10 @@ describe("walking-skeleton journal API", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.enqueueJob).toHaveBeenCalledWith(
-      "matching",
-      {
-        kind: "journal_entry_index",
-        journalEntryId: publicEntry.id,
-        userId: scope.userId,
-      },
-      { idempotencyKey: `journal_entry_index:${publicEntry.id}` },
-    );
+    expect(mocks.enqueueJournalEntryIndexJob).toHaveBeenCalledWith({
+      journalEntryId: publicEntry.id,
+      userId: scope.userId,
+    });
     expect(await response.json()).toEqual({
       entry: publicEntry,
       queuedJobId: "job-1",
@@ -248,7 +248,9 @@ describe("walking-skeleton journal API", () => {
       ...entry,
       visibility: "public",
     });
-    mocks.enqueueJob.mockRejectedValueOnce(new Error("private queue detail"));
+    mocks.enqueueJournalEntryIndexJob.mockRejectedValueOnce(
+      new Error("private queue detail"),
+    );
 
     const response = await POST(
       jsonRequest({ body: "Public entry", visibility: "public" }),

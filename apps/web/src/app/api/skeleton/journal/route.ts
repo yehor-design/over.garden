@@ -10,7 +10,7 @@ import {
   createJournalEntry,
   listMyRecentJournalEntries,
 } from "@/server/journal-repository";
-import { enqueueJob } from "@/server/queue";
+import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
@@ -60,15 +60,10 @@ export async function POST(request: Request) {
 
     let queuedJobId: string | null = null;
     if (entry.visibility === "public") {
-      queuedJobId = await enqueueJob(
-        "matching",
-        {
-          kind: "journal_entry_index",
-          journalEntryId: entry.id,
-          userId: scope.userId,
-        },
-        { idempotencyKey: `journal_entry_index:${entry.id}` },
-      );
+      queuedJobId = await enqueueJournalEntryIndexJob({
+        journalEntryId: entry.id,
+        userId: scope.userId,
+      });
     }
 
     return Response.json(

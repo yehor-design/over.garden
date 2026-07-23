@@ -1,11 +1,16 @@
 # Drive2-Parity Production Closeout
 
 Status: binding OVE-186 release gate
-Last updated: 2026-07-14
+Last updated: 2026-07-23
 
 OVE-186 closes Slice 18 only when the deterministic visual proof and the real
 canonical-production proof both pass for the same tested `main` commit. Neither
 evidence class can substitute for the other.
+
+OVE-196 public journal Meilisearch parity is a hard dependency of OVE-186:
+`assertDrive2PublicSearchParityGate` must see a zero-gap
+`ove196.publicIndexParity.v1` classify report (no missing/extraneous/stale/
+unsafe/duplicate/invalid documents). See `docs/PUBLIC_JOURNAL_INDEX_PARITY.md`.
 
 ## Evidence classes
 

@@ -79,6 +79,7 @@ def journal_row(**overrides):
         "public_slug": "first-flowers-abc123",
         "public_noindex": True,
         "public_gone_at": None,
+        "published_at": datetime(2026, 6, 26, 12, 0, tzinfo=timezone.utc),
         "entry_date": date(2026, 6, 25),
         "entry_scope": "object",
         "created_at": datetime(2026, 6, 26, 12, 30, tzinfo=timezone.utc),
@@ -86,6 +87,11 @@ def journal_row(**overrides):
         "lifecycle_state": "active",
         "location_visibility": "hidden",
         "coarse_region_code": None,
+        "owner_profile_public_safe": True,
+        "cover_media_asset_id": None,
+        "cover_media_id": None,
+        "cover_usage_role": None,
+        "cover_derivative_key": None,
     }
     row.update(overrides)
     return row
@@ -106,6 +112,7 @@ def test_journal_entry_document_indexes_public_hidden_entry_with_safe_fields():
         "entryScope": "object",
         "createdAt": "2026-06-26T12:30:00.000Z",
         "kind": "journal_entry",
+        "coverSource": "none",
     }
 
     assert set(document.keys()) == PUBLIC_JOURNAL_REQUIRED_FIELDS
@@ -133,6 +140,9 @@ def test_public_journal_entry_document_contract_matches_runtime_settings():
         "sortableAttributes"
     ]
     assert "coarseRegionCode" in PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert "coverSource" in PUBLIC_JOURNAL_REQUIRED_FIELDS
+    assert "coverPublicUrl" in PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert "coverMediaAssetId" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
     assert "coarse_region_code" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
     assert "ownerUserId" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
     assert "quarantineKey" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
@@ -140,7 +150,8 @@ def test_public_journal_entry_document_contract_matches_runtime_settings():
     assert "inviteToken" in PUBLIC_JOURNAL_FORBIDDEN_FIELDS
 
 
-def test_journal_entry_document_indexes_supported_region_only_when_visible():
+def test_journal_entry_document_indexes_supported_region_only_when_visible(monkeypatch):
+    monkeypatch.setenv("R2_PUBLIC_BASE_URL", "https://media.example")
     document = search.journal_entry_search_document_from_row(
         journal_row(location_visibility="region", coarse_region_code="UA-30")
     )
@@ -148,8 +159,30 @@ def test_journal_entry_document_indexes_supported_region_only_when_visible():
     assert document is not None
     assert document["locationVisibility"] == "region"
     assert document["coarseRegionCode"] == "UA-30"
-    assert set(document.keys()) == PUBLIC_JOURNAL_ALLOWED_FIELDS
+    assert document["coverSource"] == "none"
+    assert set(document.keys()) == (
+        PUBLIC_JOURNAL_REQUIRED_FIELDS | {"coarseRegionCode"}
+    )
     assert PUBLIC_JOURNAL_FORBIDDEN_FIELDS.isdisjoint(document.keys())
+
+
+def test_journal_entry_document_indexes_effective_cover_without_media_ids(monkeypatch):
+    monkeypatch.setenv("R2_PUBLIC_BASE_URL", "https://media.example")
+    document = search.journal_entry_search_document_from_row(
+        journal_row(
+            cover_media_asset_id="00000000-0000-4000-8000-000000000099",
+            cover_media_id="00000000-0000-4000-8000-000000000099",
+            cover_usage_role="cover_only",
+            cover_derivative_key="derivatives/cover.webp",
+        )
+    )
+
+    assert document is not None
+    assert document["coverSource"] == "separate"
+    assert document["coverPublicUrl"] == "https://media.example/derivatives/cover.webp"
+    assert "mediaAssetId" not in document
+    assert "coverMediaAssetId" not in document
+    assert "derivativeKey" not in document
 
 
 def test_journal_entry_document_refuses_private_archived_or_gone_entries():
@@ -166,6 +199,16 @@ def test_journal_entry_document_refuses_private_archived_or_gone_entries():
     assert (
         search.journal_entry_search_document_from_row(
             journal_row(public_gone_at=datetime(2026, 6, 27, tzinfo=timezone.utc))
+        )
+        is None
+    )
+    assert (
+        search.journal_entry_search_document_from_row(journal_row(published_at=None))
+        is None
+    )
+    assert (
+        search.journal_entry_search_document_from_row(
+            journal_row(owner_profile_public_safe=False)
         )
         is None
     )
@@ -197,6 +240,12 @@ def test_journal_entry_document_refuses_unsafe_public_shape():
         )
         is None
     )
+    assert (
+        search.journal_entry_search_document_from_row(
+            journal_row(id="not-a-uuid")
+        )
+        is None
+    )
 
 
 def test_journal_entry_document_indexes_space_entry_with_bounded_scope():
@@ -206,6 +255,7 @@ def test_journal_entry_document_indexes_space_entry_with_bounded_scope():
 
     assert document is not None
     assert document["entryScope"] == "space"
+    assert document["coverSource"] == "none"
     assert "plantObjectId" not in document
     assert "spaceId" not in document
 

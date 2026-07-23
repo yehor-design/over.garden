@@ -9,7 +9,8 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   scopedToUser: vi.fn(),
   publishJournalEntry: vi.fn(),
-  enqueueJob: vi.fn(),
+  enqueueJournalEntryIndexJob: vi.fn(),
+  enqueueJournalEntryUnindexJob: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -43,7 +44,10 @@ vi.mock("@/server/lineage-repository", () => ({
 vi.mock("@/server/pilot-write-access", () => ({
   requireWriteEligibleRequestScope: vi.fn(),
 }));
-vi.mock("@/server/queue", () => ({ enqueueJob: mocks.enqueueJob }));
+vi.mock("@/server/search/public-journal-parity", () => ({
+  enqueueJournalEntryIndexJob: mocks.enqueueJournalEntryIndexJob,
+  enqueueJournalEntryUnindexJob: mocks.enqueueJournalEntryUnindexJob,
+}));
 vi.mock("@/server/analytics-events", () => ({
   isBackdatedEntryDate: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
@@ -54,6 +58,7 @@ import { publishJournalEntryAction } from "./actions";
 
 const ENTRY_ID = "00000000-0000-4000-8000-000000000301";
 const OBJECT_ID = "00000000-0000-4000-8000-000000000201";
+const USER_ID = "00000000-0000-4000-8000-000000000101";
 
 describe("publishJournalEntryAction authentication intent", () => {
   beforeEach(() => {
@@ -104,8 +109,8 @@ describe("publishJournalEntryAction authentication intent", () => {
   });
 
   it("publishes normally when the session is valid", async () => {
-    mocks.requireCurrentUserId.mockResolvedValueOnce("user-1");
-    mocks.scopedToUser.mockReturnValueOnce({ userId: "user-1" });
+    mocks.requireCurrentUserId.mockResolvedValueOnce(USER_ID);
+    mocks.scopedToUser.mockReturnValueOnce({ userId: USER_ID });
     mocks.publishJournalEntry.mockResolvedValueOnce({
       entry: { id: ENTRY_ID },
       publicUrl: "/journal/first-flowers",
@@ -114,18 +119,13 @@ describe("publishJournalEntryAction authentication intent", () => {
     await publishJournalEntryAction(publishFormData());
 
     expect(mocks.publishJournalEntry).toHaveBeenCalledWith(
-      { userId: "user-1" },
+      { userId: USER_ID },
       { entryId: ENTRY_ID, disclosureAccepted: true },
     );
-    expect(mocks.enqueueJob).toHaveBeenCalledWith(
-      "matching",
-      {
-        kind: "journal_entry_index",
-        journalEntryId: ENTRY_ID,
-        userId: "user-1",
-      },
-      { idempotencyKey: `journal_entry_index:${ENTRY_ID}` },
-    );
+    expect(mocks.enqueueJournalEntryIndexJob).toHaveBeenCalledWith({
+      journalEntryId: ENTRY_ID,
+      userId: USER_ID,
+    });
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 });

@@ -31,7 +31,10 @@ import {
   createProvenanceEdge,
 } from "@/server/lineage-repository";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
-import { enqueueJob } from "@/server/queue";
+import {
+  enqueueJournalEntryIndexJob,
+  enqueueJournalEntryUnindexJob,
+} from "@/server/search/public-journal-parity";
 import { scopedToUser } from "@/server/request-scope";
 
 export async function createPlantObjectJournalEntryAction(formData: FormData) {
@@ -189,15 +192,10 @@ async function enqueuePublishedEntryIndexJob(
   result: PublishJournalEntryResult,
   userId: string,
 ) {
-  await enqueueJob(
-    "matching",
-    {
-      kind: "journal_entry_index",
-      journalEntryId: result.entry.id,
-      userId,
-    },
-    { idempotencyKey: `journal_entry_index:${result.entry.id}` },
-  );
+  await enqueueJournalEntryIndexJob({
+    journalEntryId: result.entry.id,
+    userId,
+  });
 }
 
 async function enqueueArchivedEntryRemovalJob(
@@ -206,15 +204,10 @@ async function enqueueArchivedEntryRemovalJob(
 ) {
   if (!result.publicGone) return;
 
-  await enqueueJob(
-    "matching",
-    {
-      kind: "journal_entry_unindex",
-      journalEntryId: result.entry.id,
-      userId,
-    },
-    { idempotencyKey: `journal_entry_unindex:${result.entry.id}` },
-  );
+  await enqueueJournalEntryUnindexJob({
+    journalEntryId: result.entry.id,
+    userId,
+  });
 }
 
 async function recordPlantObjectJournalEntryEvents(

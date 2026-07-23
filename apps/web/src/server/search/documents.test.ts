@@ -34,12 +34,13 @@ function entry(
   overrides: Partial<JournalEntrySearchContractRow> = {},
 ): JournalEntrySearchContractRow {
   return {
-    id: "00000000-0000-0000-0000-000000000001",
+    id: "00000000-0000-4000-8000-000000000001",
     title: "First flowers",
     body: "Помідори чері",
     public_slug: "first-flowers-abc123",
     public_noindex: true,
     public_gone_at: null,
+    published_at: new Date("2026-06-26T12:00:00.000Z"),
     entry_date: new Date("2026-06-25T00:00:00.000Z"),
     entry_scope: "object",
     visibility,
@@ -47,6 +48,9 @@ function entry(
     location_visibility: "hidden",
     coarse_region_code: null,
     created_at: new Date("2026-06-26T00:00:00.000Z"),
+    owner_profile_public_safe: true,
+    cover_source: "none",
+    cover_public_url: null,
     ...overrides,
   };
 }
@@ -65,9 +69,15 @@ describe("journal entry search documents", () => {
     expect(new Set(contract.allowedFields)).toEqual(
       new Set([...contract.requiredFields, ...contract.optionalFields]),
     );
+    expect(contract.requiredFields).toContain("coverSource");
     expect(contract.requiredFields).not.toContain("coarseRegionCode");
-    expect(contract.optionalFields).toEqual(["coarseRegionCode"]);
-    expect(contract.forbiddenFields).not.toContain("coarseRegionCode");
+    expect(contract.optionalFields).toEqual([
+      "coarseRegionCode",
+      "coverPublicUrl",
+    ]);
+    expect(contract.forbiddenFields).toEqual(
+      expect.arrayContaining(["coverMediaAssetId", "mediaAssetId"]),
+    );
     expect(contract.searchableAttributes).toEqual([
       "title",
       "body",
@@ -79,6 +89,7 @@ describe("journal entry search documents", () => {
       "locationVisibility",
       "coarseRegionCode",
       "noindex",
+      "coverSource",
     ]);
     expect(contract.sortableAttributes).toEqual(["entryDate", "createdAt"]);
   });
@@ -101,6 +112,19 @@ describe("journal entry search documents", () => {
     expect(
       buildJournalEntrySearchDocumentContractFixture(
         entry("public", { lifecycle_state: "archived" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("does not index unpublished or profile-unsafe entries", () => {
+    expect(
+      buildJournalEntrySearchDocumentContractFixture(
+        entry("public", { published_at: null }),
+      ),
+    ).toBeNull();
+    expect(
+      buildJournalEntrySearchDocumentContractFixture(
+        entry("public", { owner_profile_public_safe: false }),
       ),
     ).toBeNull();
   });
@@ -131,6 +155,14 @@ describe("journal entry search documents", () => {
     ).toBeNull();
   });
 
+  it("does not index invalid document ids", () => {
+    expect(
+      buildJournalEntrySearchDocumentContractFixture(
+        entry("public", { id: "not-a-uuid" }),
+      ),
+    ).toBeNull();
+  });
+
   it("does not index region-visible entries without a supported coarse region", () => {
     expect(
       buildJournalEntrySearchDocumentContractFixture(
@@ -142,13 +174,13 @@ describe("journal entry search documents", () => {
     ).toBeNull();
   });
 
-  it("indexes public entries with a narrow payload", () => {
+  it("indexes public entries with a narrow payload including coverSource", () => {
     const document = buildJournalEntrySearchDocumentContractFixture(
       entry("public"),
     );
 
     expect(document).toEqual({
-      id: "00000000-0000-0000-0000-000000000001",
+      id: "00000000-0000-4000-8000-000000000001",
       title: "First flowers",
       body: "Помідори чері",
       publicSlug: "first-flowers-abc123",
@@ -159,6 +191,7 @@ describe("journal entry search documents", () => {
       entryScope: "object",
       createdAt: "2026-06-26T00:00:00.000Z",
       kind: "journal_entry",
+      coverSource: "none",
     });
     expect(Object.keys(document ?? {}).sort()).toEqual(
       [...contract.requiredFields].sort(),
@@ -199,13 +232,27 @@ describe("journal entry search documents", () => {
     expect(document).toMatchObject({
       locationVisibility: "region",
       coarseRegionCode: "UA-30",
+      coverSource: "none",
     });
     expect(Object.keys(document ?? {}).sort()).toEqual(
       [...contract.requiredFields, "coarseRegionCode"].sort(),
     );
-    expect(Object.keys(document ?? {}).sort()).toEqual(
-      expect.arrayContaining(contract.allowedFields),
+  });
+
+  it("indexes bounded cover presentation without media ids", () => {
+    const document = buildJournalEntrySearchDocumentContractFixture(
+      entry("public", {
+        cover_source: "separate",
+        cover_public_url: "https://media.over.garden/derivatives/cover.webp",
+      }),
     );
+
+    expect(document).toMatchObject({
+      coverSource: "separate",
+      coverPublicUrl: "https://media.over.garden/derivatives/cover.webp",
+    });
+    expect(document).not.toHaveProperty("mediaAssetId");
+    expect(document).not.toHaveProperty("coverMediaAssetId");
   });
 
   it("indexes space-level entries only with bounded scope metadata", () => {
@@ -219,6 +266,7 @@ describe("journal entry search documents", () => {
     expect(document).toMatchObject({
       entryScope: "space",
       locationVisibility: "hidden",
+      coverSource: "none",
     });
     expect(document).not.toHaveProperty("plantObjectId");
     expect(document).not.toHaveProperty("spaceId");

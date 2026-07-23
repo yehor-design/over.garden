@@ -62,6 +62,7 @@ export function publicJournalSearchRow(
     public_slug: JOURNEY.publicSlug,
     public_noindex: true,
     public_gone_at: null,
+    published_at: JOURNEY.publishedAt,
     entry_date: JOURNEY.entryDate,
     entry_scope: "object",
     created_at: JOURNEY.publishedAt,
@@ -69,6 +70,9 @@ export function publicJournalSearchRow(
     lifecycle_state: "active",
     location_visibility: "region",
     coarse_region_code: JOURNEY.regionCode,
+    owner_profile_public_safe: true,
+    cover_source: "none",
+    cover_public_url: null,
     ...overrides,
   });
 }

@@ -236,6 +236,15 @@ export function buildPilotSmokeReadiness({
           evidence:
             "Record only job processed/deleted state, derived index presence/absence, document field keys, and privacy booleans. Do not copy indexed document content, journal text, or Meilisearch keys.",
         },
+        {
+          id: "public-journal-index-parity",
+          label: "Public journal Meilisearch parity (OVE-196)",
+          severity: "manual",
+          summary:
+            "Run `pnpm smoke:public-index-parity -- --environment production --confirm-environment production` and require zero missing/extraneous/stale/unsafe/duplicate/invalid counts before OVE-186.",
+          evidence:
+            "Record only redacted parity counts and zeroGap boolean from ove196.publicIndexParity.v1. Never copy document IDs, titles, bodies, slugs, or job payloads.",
+        },
       ],
     },
     {

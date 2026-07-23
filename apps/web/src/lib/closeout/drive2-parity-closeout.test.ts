@@ -8,6 +8,7 @@ import {
 } from "@/lib/accessibility/core-journey-matrix";
 import {
   assertDrive2ParityCloseoutCoverage,
+  assertDrive2PublicSearchParityGate,
   buildDrive2ParityCloseoutCoverage,
   DRIVE2_CLOSEOUT_REQUIRED_OBJECT_KINDS,
 } from "./drive2-parity-closeout";
@@ -46,6 +47,22 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
     expect(report.screenshotEvidence).toHaveLength(
       CORE_JOURNEY_ARCHETYPES.length,
     );
+  });
+
+  it("fails OVE-186 when OVE-196 search parity is not zero-gap", () => {
+    expect(() =>
+      assertDrive2PublicSearchParityGate({
+        zeroGap: false,
+        counts: {
+          missing: 1,
+          extraneous: 0,
+          stale: 0,
+          unsafe_schema: 0,
+          duplicate: 0,
+          invalid_id: 0,
+        },
+      }),
+    ).toThrow(/OVE-196/);
   });
 
   it("keeps every archetype reproducible at 320px and 1440px", () => {

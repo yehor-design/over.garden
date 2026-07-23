@@ -249,16 +249,24 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
     if kind == JOURNAL_ENTRY_INDEX_KIND:
         index_journal_entry(
             conn,
-            _payload_text(payload, "journalEntryId", JOURNAL_ENTRY_INDEX_KIND),
-            _payload_text(payload, "userId", JOURNAL_ENTRY_INDEX_KIND),
+            _payload_uuid_text(
+                payload,
+                "journalEntryId",
+                JOURNAL_ENTRY_INDEX_KIND,
+            ),
+            _payload_uuid_text(payload, "userId", JOURNAL_ENTRY_INDEX_KIND),
         )
         return
 
     if kind == JOURNAL_ENTRY_UNINDEX_KIND:
         unindex_journal_entry_for_owner(
             conn,
-            _payload_text(payload, "journalEntryId", JOURNAL_ENTRY_UNINDEX_KIND),
-            _payload_text(payload, "userId", JOURNAL_ENTRY_UNINDEX_KIND),
+            _payload_uuid_text(
+                payload,
+                "journalEntryId",
+                JOURNAL_ENTRY_UNINDEX_KIND,
+            ),
+            _payload_uuid_text(payload, "userId", JOURNAL_ENTRY_UNINDEX_KIND),
         )
         return
 

@@ -15,7 +15,7 @@ import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
 } from "@/server/pilot-write-access";
-import { enqueueJob } from "@/server/queue";
+import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
 
 export const runtime = "nodejs";
 
@@ -92,17 +92,11 @@ export async function PATCH(
       );
       revalidatePath(publicPath);
       if (!result.isReplay) {
-        await enqueueJob(
-          "matching",
-          {
-            kind: "journal_entry_index",
-            journalEntryId: result.entry.id,
-            userId: scope.userId,
-          },
-          {
-            idempotencyKey: `journal_entry_index:${result.entry.id}:${result.entry.journal_revision}`,
-          },
-        ).catch(() => undefined);
+        await enqueueJournalEntryIndexJob({
+          journalEntryId: result.entry.id,
+          userId: scope.userId,
+          idempotencyKey: `journal_entry_index:${result.entry.id}:${result.entry.journal_revision}`,
+        }).catch(() => undefined);
       }
     }
 
