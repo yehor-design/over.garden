@@ -452,6 +452,23 @@ result: pass
 redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```
 
+OVE-196 live public-index parity evidence:
+
+```text
+verified_at_utc: 2026-07-23T15:55:00Z
+main_commit_sha: 3eb1506355a4e613ca2ff11a79dde39378329ee6
+behavior_commit_sha: 45c712be638ead7f45e3e2e9e011ef0b46502f7a
+vercel_deployment: dpl_5Khunrs83rBmQvcf7HH7Wg4AFx6v READY
+matching_image_workflow: budget-frozen; offline host seal releaseRun=19600000001.1
+active_digest: sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805
+additive_sql: 0005_ove202_ove207_journal_document_cover.sql applied
+parity_before: zeroGap=false; unsafe_schema class non-zero; counts/booleans only
+parity_after_apply: zeroGap=true; expected=4; meiliDocumentCount=4; all gap classes zero
+smoke_matching_queue_health: pass; leakCheck=passed
+result: pass
+redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
+```
+
 ## Vercel
 
 Status: project exists; production deployment is created from GitHub `main`; public Vercel access is enabled for the pilot URL.

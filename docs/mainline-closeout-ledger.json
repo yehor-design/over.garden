@@ -556,6 +556,34 @@
         "Does not claim OVE-186 Drive2 refresh, full interactive Facebook/Google browser callback round-trips, founder physical iPhone checklist, or any production account erasure/invite grant backfill.",
         "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
+    },
+    {
+      "issueId": "OVE-196",
+      "title": "Search parity: public routes and Meilisearch converge with no stale, missing, unsafe, or invalid documents",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "3eb1506355a4e613ca2ff11a79dde39378329ee6",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-196/search-parity-public-routes-and-meilisearch-converge-with-no-stale",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5Khunrs83rBmQvcf7HH7Wg4AFx6v",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/server/search/documents.test.ts src/server/search/public-journal-parity.test.ts",
+        "cd services/matching && uv run --frozen pytest tests/test_search.py tests/test_worker_recovery.py",
+        "cd apps/web && ../../infra/run-with-local-infra-env pnpm smoke:public-index-parity -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm smoke:public-index-parity -- --environment production --confirm-environment production",
+        "cd apps/web && pnpm smoke:matching-queue-health -- --environment production --confirm-environment production --expected-commit 3eb1506355a4e613ca2ff11a79dde39378329ee6 --expected-digest sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit 45c712be638ead7f45e3e2e9e011ef0b46502f7a and closeout baseline 3eb1506355a4e613ca2ff11a79dde39378329ee6 are on main. Vercel production deployment dpl_5Khunrs83rBmQvcf7HH7Wg4AFx6v reached READY for the closeout SHA.",
+        "Additive production SQL 0005_ove202_ove207_journal_document_cover.sql applied (OVE-202/207 columns required by cover-safe eligibility). Production classify/plan/apply repaired Meili to zeroGap with counts only (before: unsafe_schema gap; after: expected=4, meiliDocumentCount=4, all gap classes zero).",
+        "GitHub Actions matching-image remained budget-frozen. Production matching API/worker activated offline-sealed digest sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805 (releaseRun=19600000001.1). smoke:matching-queue-health passed with leakCheck=passed.",
+        "Does not claim OVE-186 Done, ranking redesign, Meili version upgrade, or any private IDs/content/slugs/titles/bodies in evidence."
+      ]
     }
   ]
 }
