@@ -383,9 +383,35 @@
       "notes": [
         "Behavior commit c06fa2ce30d473ae591453e24c09bc949cc1dae6 is on main. Vercel production deployment dpl_DB1wi9J1AVpLb8JAxX11aqxEKbkg reached READY for that exact SHA and owned over.garden / www plus immutable URL https://over-garden-an6hnq6gn-yehors-projects-01221e2b.vercel.app.",
         "Local verification passed lint, typecheck, full vitest (364 files / 2323 tests), smoke:journal-block-reorder, and production build. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
-        "Owner composer ships handle-only pointer/touch drag, localized Move up/down, live-region announcements, and owner-composer-reorder-gesture in-flight locale fencing via blocks.move. Downstream gate OVE-206 is browser-backed with pointer-commit-immediate-transition; OVE-207 remains downstream-owned.",
+        "Owner composer ships handle-only pointer/touch drag, localized Move up/down, live-region announcements, and owner-composer-reorder-gesture in-flight locale fencing via blocks.move. Downstream gate OVE-206 is browser-backed with pointer-commit-immediate-transition.",
         "Founder physical iPhone Safari checklist remains documented in docs/STRUCTURED_JOURNAL_BLOCK_REORDER.md as residual operator smoke; Linear Done accepted after automated + Vercel READY gates per operator request.",
         "No secret, cookie, token, private journal text, media URL, block ID, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
+    },
+    {
+      "issueId": "OVE-207",
+      "title": "Journal cover selection: gardener chooses any story image or uploads a separate safe cover",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "ee666fbc7ac11e01c6b4018926cc3ee8ea113741",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-207/journal-cover-selection-gardener-chooses-any-story-image-or-uploads-a",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/DzaJocvLjED2dBrYzUEWZTp2bTA4",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm smoke:journal-cover-selection",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit ee666fbc7ac11e01c6b4018926cc3ee8ea113741 is on main. Vercel production deployment dpl_DzaJocvLjED2dBrYzUEWZTp2bTA4 reached READY for that exact SHA and owned over.garden / www plus immutable URL https://over-garden-nez3i9782-yehors-projects-01221e2b.vercel.app.",
+        "Local verification passed lint, typecheck, full vitest (365 files / 2330 tests), smoke:journal-cover-selection, and production build under Node 24. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
+        "Additive SQL cover_media_asset_id + usage_role=cover_only; shared resolveEffectiveJournalCover and SQL first_public_media projection replace created_at thumbnail selection. Progressive Cover UI on first/follow-up/space/edit composers with offline cover intents and owner-composer-cover-upload in-flight locale fencing. Downstream gate OVE-207 is browser-backed with locale-transition-with-cover.",
+        "Does not claim OVE-195/196/197 final lifecycle/search/focal proofs. Founder physical iPhone Safari checklist remains residual operator smoke in docs/STRUCTURED_JOURNAL_COVER.md; Linear Done accepted after automated + Vercel READY gates per operator request.",
+        "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
     },
     {

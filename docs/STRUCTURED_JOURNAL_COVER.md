@@ -34,5 +34,14 @@ remove-everywhere / cancel.
 - Contract tests + consumer SQL compile tests
 - Localization gate `separate-cover` is browser-backed with primary scenario
   `locale-transition-with-cover`
+- Behavior SHA `ee666fbc7ac11e01c6b4018926cc3ee8ea113741` / Vercel
+  `dpl_DzaJocvLjED2dBrYzUEWZTp2bTA4` READY
+
+### Residual founder smoke
+
+Physical current-support iPhone Safari checklist (cover pick, separate upload
+in-flight locale block feel, keep-as-cover prompt) remains operator residual
+smoke, same pattern as OVE-206. Automated suite + Vercel READY are the Done
+gate under the Actions budget freeze.
 
 Do not treat this slice as final OVE-195/196/197 lifecycle/search/focal proof.
