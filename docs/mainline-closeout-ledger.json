@@ -341,7 +341,7 @@
       "title": "Global Google Sans typography: every visitor reads a consistent, fast, accessible interface across uk/bg/ru",
       "status": "done_on_main",
       "requiredForNextSlice": true,
-      "mainCommit": "917efd9176fc9b21bf25cb1fca1fc137545b28da",
+      "mainCommit": "6eb978ba46094fb7b85ecd8546838f7e1203b5f3",
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-208/global-google-sans-typography-every-visitor-reads-a-consistent-fast",
       "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29991370703",
@@ -354,9 +354,9 @@
         "git diff --check"
       ],
       "notes": [
-        "Typography behavior and WebKit fallback/CI artifact hardening merged via PR #11 as 917efd9176fc9b21bf25cb1fca1fc137545b28da. Vercel production deployment dpl_3YqyXfxeNbEppyEhB4ULoX2NQqqo reached READY for that SHA and owned over.garden / www.",
+        "Typography behavior, WebKit/CI hardening, and the locale-prefixed object-passport audit fix are contained in main via merge 6eb978ba46094fb7b85ecd8546838f7e1203b5f3 (behavior 1600af12f37824a3ffd7b94ef1c1a680e0377726). Vercel production deployment dpl_321BfqUoZeJAnttDKewbM99DP4o3 reached READY for that SHA and owned over.garden / www.",
         "GitHub Actions run 29991370703 is the last automatic exact-SHA CI attempt for the OVE-208 typography merge; it failed the WebKit fallback gate before the later WebKit allowance fix. Subsequent runs then hit the Actions budget freeze, so ci.yml and matching-image.yml are workflow_dispatch only. Temporary merge gate is Vercel READY for the exact SHA plus local typography and lifecycle proof. See docs/INFRASTRUCTURE_REGISTRY.md.",
-        "Audit follow-up on the same issue fixes locale-prefixed object-passport raw lifecycle matching (/bg|/ru/lineage/objects/...) so those paths return the shared Google Sans noindex/no-store documents instead of the Next shell 404. After that follow-up merges, prefer current main over 917efd917 alone for object-passport lifecycle behavior.",
+        "Live production smoke after that deployment proved /bg and /ru lineage object missing IDs return raw Google Sans 404 documents with noindex/no-store, matching unprefixed passports, journals, and communities.",
         "No secret, cookie, token, private content, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
     }
