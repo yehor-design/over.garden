@@ -1,6 +1,6 @@
 # OVE-202 Structured Journal Composer
 
-Status: implemented; Linear Done awaits founder physical iPhone Safari checklist (decision 1A)
+Status: done on main (founder iPhone Safari checklist confirmed)
 Issue: OVE-202
 
 ## Package pins

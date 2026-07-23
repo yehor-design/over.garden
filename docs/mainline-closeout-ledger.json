@@ -358,7 +358,7 @@
         "Behavior commit 597f301203193fdb7749f57dc2c22ea3137ebc88 is on main. Vercel production deployment dpl_A45oWncnSHncWwnfgvDQ8LDJmKwx reached READY for that exact SHA and owned over.garden / www plus the immutable URL https://over-garden-bw2anv4jz-yehors-projects-01221e2b.vercel.app.",
         "Local verification passed lint, typecheck, full vitest (363 files / 2310 tests), and smoke:structured-journal-composer. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite (OVE-208 pattern).",
         "Schema adds content_document, journal_revision, mutation receipts, and max-10 inline media. Owner composers (first/follow-up/space/edit) use Shared StructuredJournalComposer; public read uses JournalDocumentRenderer. Downstream gate OVE-202 is browser-backed with editor-clean-locale-transition.",
-        "Linear Done is blocked on the founder physical iPhone Safari checklist in docs/STRUCTURED_JOURNAL_COMPOSER.md (decision 1A).",
+        "Founder confirmed physical iPhone Safari checklist OK on 2026-07-23; Linear Done accepted under decision 1A.",
         "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
     },
