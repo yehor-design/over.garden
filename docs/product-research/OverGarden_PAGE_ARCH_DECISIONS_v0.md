@@ -293,3 +293,9 @@ Default визначає geo-IP/Accept-Language на корені `over.garden/`
 - `G1` переописано: **Головна (homepage, indexed)** — НЕ лендинг.
 - НОВИЙ `G0`: корінь-гео-роутер.
 - НОВИЙ `G1b`: **Локальні Landing Pages** (`noindex`/campaign, гнучкий лік per сегмент).
+
+## D9. Object kinds (2026-07-23)
+
+Product exposes exactly two object kinds: `plant` and `animal`. A hive is an
+`animal` with a bee-breed catalog identity. See
+`docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`.
