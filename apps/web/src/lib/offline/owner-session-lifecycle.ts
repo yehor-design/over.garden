@@ -501,6 +501,50 @@ export async function purgeUnsyncedOwnerData(
   return result;
 }
 
+/**
+ * OVE-192 same-device cleanup after account erasure or cross-owner residual
+ * drafts: purge every draft/mutation/activity row for the erased owner id,
+ * including cover photo intents/Blobs, without requiring a live session fence.
+ */
+export async function purgeErasedOwnerOfflineStore(
+  ownerUserId: string,
+): Promise<PurgedUnsyncedOwnerData> {
+  const owner = requireOwnerUserId(ownerUserId);
+  const database = offlineDb;
+  if (!database) {
+    revokeOwnerPreviewObjectUrls(owner);
+    return { draftCount: 0, mutationCount: 0, totalCount: 0 };
+  }
+
+  const result = await database.transaction(
+    "rw",
+    database.drafts,
+    database.mutations,
+    database.ownerActivity,
+    async () => {
+      const draftCount = await database.drafts
+        .where("ownerUserId")
+        .equals(owner)
+        .delete();
+      const mutationCount = await database.mutations
+        .where("ownerUserId")
+        .equals(owner)
+        .delete();
+      await database.ownerActivity.delete(owner);
+      return {
+        draftCount,
+        mutationCount,
+        totalCount: draftCount + mutationCount,
+      };
+    },
+  );
+
+  revokeOwnerPreviewObjectUrls(owner);
+  publishOfflineDraftsChanged();
+  publishOfflineQueueChanged();
+  return result;
+}
+
 export function registerOwnerPreviewObjectUrl(
   ownerUserId: string,
   objectUrl: string,

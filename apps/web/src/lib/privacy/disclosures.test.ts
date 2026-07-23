@@ -111,6 +111,7 @@ describe("MVP privacy disclosure constants", () => {
       ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.map((option) => option.value),
     ).toEqual([
       "completed",
+      "cleanup_pending",
       "declined",
       "duplicate",
       "needs_identity_verification",

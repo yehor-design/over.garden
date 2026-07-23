@@ -5,9 +5,12 @@ export type ErasureDryRunDataClassKey =
   | "lineage_provenance"
   | "journal_entries"
   | "media_assets"
+  | "social_engagement"
+  | "community"
   | "public_exposure"
   | "analytics_events"
   | "catalog_provisional"
+  | "catalog_operator_links"
   | "search_index_artifacts"
   | "pilot_operator_records";
 
@@ -73,14 +76,27 @@ export interface ErasureDryRunCounts {
   mediaAssetsQuarantined: number;
   mediaAssetsProcessed: number;
   mediaAssetsFailed: number;
+  mediaAssetsCoverOnly: number;
+  mediaAssetsWithExplicitCover: number;
+  profileFollows: number;
+  profileBlocks: number;
+  wishlistItems: number;
+  engagementComments: number;
+  engagementBookmarks: number;
+  notificationReceipts: number;
+  communityMemberships: number;
+  communityContributions: number;
+  communityModerationActorRefs: number;
   publicSlugs: number;
   publicGoneTombstones: number;
   analyticsEvents: number;
   catalogProvisionalItems: number;
   plantObjectsUserAdded: number;
+  catalogReviewerLinks: number;
   searchPublicActiveEntries: number;
   searchPendingIndexJobs: number;
   searchPendingUnindexJobs: number;
+  searchTerminalJobsWithUserId: number;
   pilotInterviewRecords: number;
   erasureRequestsTotal: number;
 }
@@ -154,12 +170,39 @@ function buildErasureDryRunDataClasses(
       key: "media_assets",
       label: "Media derivatives and quarantine references",
       description:
-        "Photo processing rows by status. Object keys and signed URLs are never selected into this preview.",
+        "Photo processing rows by status, including cover-only assets. Object keys and signed URLs are never selected into this preview.",
       counts: {
         total: counts.mediaAssetsTotal,
         quarantined: counts.mediaAssetsQuarantined,
         processed: counts.mediaAssetsProcessed,
         failed: counts.mediaAssetsFailed,
+        cover_only: counts.mediaAssetsCoverOnly,
+        explicit_cover_refs: counts.mediaAssetsWithExplicitCover,
+      },
+    },
+    {
+      key: "social_engagement",
+      label: "Social and engagement rows",
+      description:
+        "Profile follows/blocks, wishlist, comments, bookmarks, and notification receipts owned by or targeting the requester. Anonymous likes are classified not-account-linkable and are not counted here.",
+      counts: {
+        profile_follows: counts.profileFollows,
+        profile_blocks: counts.profileBlocks,
+        wishlist_items: counts.wishlistItems,
+        comments: counts.engagementComments,
+        bookmarks: counts.engagementBookmarks,
+        notification_receipts: counts.notificationReceipts,
+      },
+    },
+    {
+      key: "community",
+      label: "Community membership and moderation refs",
+      description:
+        "Memberships, contributions, and moderation actor references that must be rekeyed or cascade-deleted. Raw report text never appears.",
+      counts: {
+        memberships: counts.communityMemberships,
+        contributions: counts.communityContributions,
+        moderation_actor_refs: counts.communityModerationActorRefs,
       },
     },
     {
@@ -192,14 +235,24 @@ function buildErasureDryRunDataClasses(
       },
     },
     {
+      key: "catalog_operator_links",
+      label: "Catalog operator attribution links",
+      description:
+        "Reviewer and author soft links on catalog suggestions, aliases, and seed proofs.",
+      counts: {
+        reviewer_or_author_links: counts.catalogReviewerLinks,
+      },
+    },
+    {
       key: "search_index_artifacts",
       label: "Search and index artifacts",
       description:
-        "Public entries that would have derived search documents plus pending journal index/unindex jobs.",
+        "Public entries that would have derived search documents plus journal index/unindex jobs in any queue status.",
       counts: {
         public_active_entries: counts.searchPublicActiveEntries,
         pending_index_jobs: counts.searchPendingIndexJobs,
         pending_unindex_jobs: counts.searchPendingUnindexJobs,
+        terminal_jobs_with_user_id: counts.searchTerminalJobsWithUserId,
       },
     },
     {

@@ -64,6 +64,14 @@ const consumedJobContracts = new Map<
       testedBy: "services/matching/tests/test_worker.py",
     },
   ],
+  [
+    "erasure:erasure_media_object_delete",
+    {
+      consumer: "apps/web/src/server/erasure-execution.ts",
+      consumerToken: "ERASURE_MEDIA_DELETE_KIND",
+      testedBy: "apps/web/src/server/erasure-execution.test.ts",
+    },
+  ],
 ]);
 
 describe("job queue producer/consumer contract", () => {
@@ -156,6 +164,11 @@ describe("job queue producer/consumer contract", () => {
         source: "server/catalog-source/ua-state-register-import.ts",
         queueName: "matching",
         kind: "catalog_typeahead_reindex",
+      },
+      {
+        source: "server/erasure-execution.ts",
+        queueName: "erasure",
+        kind: "erasure_media_object_delete",
       },
       {
         source: "server/erasure-execution.ts",

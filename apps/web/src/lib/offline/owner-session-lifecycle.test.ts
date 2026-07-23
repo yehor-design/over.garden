@@ -24,6 +24,7 @@ import {
   finalizeOwnerOfflineActivityForSessionChange,
   hydrateOwnerOfflineActivitySession,
   pauseOwnerOfflineActivity,
+  purgeErasedOwnerOfflineStore,
   purgeUnsyncedOwnerData,
   registerOwnerPreviewObjectUrl,
   runOwnerSyncAttempt,
@@ -233,6 +234,54 @@ describe("owner offline session lifecycle", () => {
     expect(mutationsClear).not.toHaveBeenCalled();
     expect(draftsChanged).toHaveBeenCalledTimes(1);
     expect(queueChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it("purges all erased-owner offline rows including cover intents without a session fence", async () => {
+    await upsertOfflineDraft({
+      id: "erased-owner-cover-draft",
+      kind: "first_entry",
+      ownerUserId: OWNER_A,
+      payload: {
+        ...firstEntryDraftPayload("erased cover draft"),
+        cover: {
+          mode: "separate",
+          photoIntent: {
+            fileName: "cover-a.webp",
+            contentType: "image/webp",
+            size: 12,
+            blob: new Blob(["cover-private"], { type: "image/webp" }),
+          },
+        },
+      },
+    });
+    await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload: {
+        ...journalPayload("erased cover mutation"),
+        cover: {
+          mode: "separate",
+          photoIntent: {
+            fileName: "mutation-cover.webp",
+            contentType: "image/webp",
+            size: 8,
+            blob: new Blob(["mutation-cover"], { type: "image/webp" }),
+          },
+        },
+      },
+      idempotencyKey: "erased-cover-mutation",
+    });
+
+    const result = await purgeErasedOwnerOfflineStore(OWNER_A);
+
+    expect(result.totalCount).toBeGreaterThan(0);
+    expect(
+      await offlineDb!.drafts.where("ownerUserId").equals(OWNER_A).count(),
+    ).toBe(0);
+    expect(
+      await offlineDb!.mutations.where("ownerUserId").equals(OWNER_A).count(),
+    ).toBe(0);
+    expect(await offlineDb!.ownerActivity.get(OWNER_A)).toBeUndefined();
   });
 
   it("rolls back every deletion and publishes no event when purge fails", async () => {

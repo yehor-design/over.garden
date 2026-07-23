@@ -90,20 +90,33 @@ describe("erasure dry-run preview assembly", () => {
         mediaAssetsQuarantined: 0,
         mediaAssetsProcessed: 1,
         mediaAssetsFailed: 0,
+        mediaAssetsCoverOnly: 1,
+        mediaAssetsWithExplicitCover: 1,
+        profileFollows: 2,
+        profileBlocks: 1,
+        wishlistItems: 1,
+        engagementComments: 2,
+        engagementBookmarks: 1,
+        notificationReceipts: 1,
+        communityMemberships: 1,
+        communityContributions: 1,
+        communityModerationActorRefs: 2,
         publicSlugs: 1,
         publicGoneTombstones: 0,
         analyticsEvents: 5,
         catalogProvisionalItems: 1,
         plantObjectsUserAdded: 1,
+        catalogReviewerLinks: 1,
         searchPublicActiveEntries: 1,
         searchPendingIndexJobs: 0,
         searchPendingUnindexJobs: 0,
+        searchTerminalJobsWithUserId: 1,
         pilotInterviewRecords: 0,
         erasureRequestsTotal: 1,
       },
     });
 
-    expect(preview.dataClasses).toHaveLength(11);
+    expect(preview.dataClasses).toHaveLength(14);
     expect(
       preview.dataClasses.find(
         (dataClass) => dataClass.key === "public_identity",

@@ -62,14 +62,27 @@ export async function collectErasureDryRunCounts(
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
     mediaAssetsFailed,
+    mediaAssetsCoverOnly,
+    mediaAssetsWithExplicitCover,
+    profileFollows,
+    profileBlocks,
+    wishlistItems,
+    engagementComments,
+    engagementBookmarks,
+    notificationReceipts,
+    communityMemberships,
+    communityContributions,
+    communityModerationActorRefs,
     publicSlugs,
     publicGoneTombstones,
     analyticsEvents,
     catalogProvisionalItems,
     plantObjectsUserAdded,
+    catalogReviewerLinks,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
+    searchTerminalJobsWithUserId,
     pilotInterviewRecords,
     erasureRequestsTotal,
   ] = await Promise.all([
@@ -106,11 +119,23 @@ export async function collectErasureDryRunCounts(
     countMediaAssets(executor, requesterUserId, "quarantined"),
     countMediaAssets(executor, requesterUserId, "processed"),
     countMediaAssets(executor, requesterUserId, "failed"),
+    countCoverOnlyMediaAssets(executor, requesterUserId),
+    countExplicitJournalCovers(executor, requesterUserId),
+    countProfileSocialEdges(executor, requesterUserId),
+    countProfileBlocks(executor, requesterUserId),
+    countWishlistItems(executor, requesterUserId),
+    countEngagementComments(executor, requesterUserId),
+    countEngagementBookmarks(executor, requesterUserId),
+    countNotificationReceipts(executor, requesterUserId),
+    countCommunityMemberships(executor, requesterUserId),
+    countCommunityContributions(executor, requesterUserId),
+    countCommunityModerationActorRefs(executor, requesterUserId),
     countJournalEntriesWithPublicSlug(executor, requesterUserId),
     countJournalEntriesWithPublicGone(executor, requesterUserId),
     countOwnedRows(executor, "analytics_events", requesterUserId),
     countCatalogProvisionalItems(executor, requesterUserId),
     countPlantObjectsUserAdded(executor, requesterUserId),
+    countCatalogReviewerLinks(executor, requesterUserId),
     countJournalEntries(executor, requesterUserId, {
       visibility: "public",
       lifecycleState: "active",
@@ -125,6 +150,7 @@ export async function collectErasureDryRunCounts(
       requesterUserId,
       "journal_entry_unindex",
     ),
+    countTerminalJobQueueRowsWithUserId(executor, requesterUserId),
     countPilotInterviewRecords(executor, requesterUserId),
     countErasureRequestsForUser(executor, requesterUserId),
   ]);
@@ -155,14 +181,27 @@ export async function collectErasureDryRunCounts(
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
     mediaAssetsFailed,
+    mediaAssetsCoverOnly,
+    mediaAssetsWithExplicitCover,
+    profileFollows,
+    profileBlocks,
+    wishlistItems,
+    engagementComments,
+    engagementBookmarks,
+    notificationReceipts,
+    communityMemberships,
+    communityContributions,
+    communityModerationActorRefs,
     publicSlugs,
     publicGoneTombstones,
     analyticsEvents,
     catalogProvisionalItems,
     plantObjectsUserAdded,
+    catalogReviewerLinks,
     searchPublicActiveEntries,
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
+    searchTerminalJobsWithUserId,
     pilotInterviewRecords,
     erasureRequestsTotal,
   };
@@ -463,6 +502,167 @@ export function buildCountErasureRequestsForUserQuery(
     .where("requester_user_id", "=", requesterUserId);
 }
 
+export function buildCountCoverOnlyMediaAssetsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("media_assets")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId)
+    .where("usage_role", "=", "cover_only");
+}
+
+export function buildCountExplicitJournalCoversQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("journal_entries")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId)
+    .where("cover_media_asset_id", "is not", null);
+}
+
+export function buildCountProfileSocialEdgesQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("profile_follows")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("follower_user_id", "=", requesterUserId),
+        eb("target_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountProfileBlocksQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("profile_blocks")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("blocker_user_id", "=", requesterUserId),
+        eb("blocked_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountWishlistItemsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("wishlist_items")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildCountEngagementCommentsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("engagement_comments")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("author_user_id", "=", requesterUserId);
+}
+
+export function buildCountEngagementBookmarksQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("engagement_bookmarks")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildCountNotificationReceiptsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("notification_receipts")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildCountCommunityMembershipsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("community_memberships")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("user_id", "=", requesterUserId);
+}
+
+export function buildCountCommunityContributionsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("community_contributions")
+    .select(sql<number>`count(*)`.as("count"))
+    .where((eb) =>
+      eb.or([
+        eb("contributor_user_id", "=", requesterUserId),
+        eb("removed_by_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+export function buildCountCommunityModerationActorRefsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return sql<{ count: number }>`
+    select (
+      (select count(*)::int from community_contribution_reports
+        where resolved_by_user_id = ${requesterUserId})
+      + (select count(*)::int from community_moderation_audit_log
+        where actor_user_id = ${requesterUserId})
+    ) as count
+  `.execute(executor);
+}
+
+export function buildCountCatalogReviewerLinksQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return sql<{ count: number }>`
+    select (
+      (select count(*)::int from catalog_items
+        where reviewed_by_user_id = ${requesterUserId}
+           or created_by_user_id = ${requesterUserId})
+      + (select count(*)::int from catalog_match_suggestions
+        where reviewed_by_user_id = ${requesterUserId})
+      + (select count(*)::int from catalog_alias_projections
+        where reviewed_by_user_id = ${requesterUserId})
+      + (select count(*)::int from variety_seed_proofs
+        where author_user_id = ${requesterUserId})
+    ) as count
+  `.execute(executor);
+}
+
+export function buildCountTerminalJobQueueRowsWithUserIdQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("job_queue")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("status", "=", "done")
+    .where(sql`payload->>'userId'`, "=", requesterUserId);
+}
+
 async function countAuthUserPresent(
   executor: QueryExecutor,
   requesterUserId: string,
@@ -717,6 +917,149 @@ async function countErasureRequestsForUser(
   requesterUserId: string,
 ) {
   const row = await buildCountErasureRequestsForUserQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countCoverOnlyMediaAssets(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountCoverOnlyMediaAssetsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countExplicitJournalCovers(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountExplicitJournalCoversQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countProfileSocialEdges(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountProfileSocialEdgesQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countProfileBlocks(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountProfileBlocksQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countWishlistItems(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountWishlistItemsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countEngagementComments(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountEngagementCommentsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countEngagementBookmarks(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountEngagementBookmarksQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countNotificationReceipts(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountNotificationReceiptsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countCommunityMemberships(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountCommunityMembershipsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countCommunityContributions(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountCommunityContributionsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countCommunityModerationActorRefs(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const result = await buildCountCommunityModerationActorRefsQuery(
+    executor,
+    requesterUserId,
+  );
+  return toCount(result.rows[0]?.count);
+}
+
+async function countCatalogReviewerLinks(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const result = await buildCountCatalogReviewerLinksQuery(
+    executor,
+    requesterUserId,
+  );
+  return toCount(result.rows[0]?.count);
+}
+
+async function countTerminalJobQueueRowsWithUserId(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountTerminalJobQueueRowsWithUserIdQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

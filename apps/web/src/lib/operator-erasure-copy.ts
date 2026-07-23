@@ -59,7 +59,17 @@ const UK_COPY = {
     media_assets: {
       label: "Похідні медіа та quarantine-посилання",
       description:
-        "Рядки обробки фото за статусом. Ключі об'єктів і підписані URL не вибираються.",
+        "Рядки обробки фото за статусом, включно cover-only. Ключі об'єктів і підписані URL не вибираються.",
+    },
+    social_engagement: {
+      label: "Соціальні та engagement-рядки",
+      description:
+        "Підписки/блоки профілів, wishlist, коментарі, закладки та сповіщення. Анонімні likes не обліковуються як прив'язка до акаунта.",
+    },
+    community: {
+      label: "Спільнота та модераційні посилання",
+      description:
+        "Членства, внески та акторські посилання модерації, що потребують rekey або cascade-delete.",
     },
     public_exposure: {
       label: "Публічні slugs і tombstones",
@@ -76,10 +86,15 @@ const UK_COPY = {
       description:
         "Додані користувачем кандидати каталогу й об'єкти зі статусом `user_added`.",
     },
+    catalog_operator_links: {
+      label: "Операторські посилання каталогу",
+      description:
+        "Soft-посилання рецензентів і авторів на suggestions, aliases і seed proofs.",
+    },
     search_index_artifacts: {
       label: "Артефакти пошуку та індексу",
       description:
-        "Публічні записи, що мають похідні пошукові документи, та очікувані jobs індексації/деіндексації журналу.",
+        "Публічні записи з похідними документами та journal jobs у будь-якому статусі черги.",
     },
     pilot_operator_records: {
       label: "Операторські записи пілоту",
@@ -112,14 +127,27 @@ const UK_COPY = {
     quarantined: "у quarantine",
     processed: "оброблені",
     failed: "з помилкою",
+    cover_only: "лише обкладинка",
+    explicit_cover_refs: "явні обкладинки",
+    profile_follows: "підписки профілів",
+    profile_blocks: "блоки профілів",
+    wishlist_items: "wishlist",
+    comments: "коментарі",
+    bookmarks: "закладки",
+    notification_receipts: "сповіщення",
+    memberships: "членства",
+    contributions: "внески",
+    moderation_actor_refs: "акторські посилання модерації",
     public_slugs: "публічні slugs",
     gone_tombstones: "410 tombstones",
     events: "події",
     provisional_catalog_items: "тимчасові елементи каталогу",
     user_added_objects: "об'єкти user_added",
+    reviewer_or_author_links: "посилання рецензента/автора",
     public_active_entries: "активні публічні записи",
     pending_index_jobs: "очікувані index jobs",
     pending_unindex_jobs: "очікувані unindex jobs",
+    terminal_jobs_with_user_id: "термінальні jobs з user id",
     interview_records: "записи інтерв'ю",
     erasure_requests: "запити на видалення",
   },
@@ -191,7 +219,17 @@ const BG_COPY: OperatorErasureCopy = {
     media_assets: {
       label: "Производни медии и quarantine препратки",
       description:
-        "Редове за обработка на снимки по статус. Ключове и подписани URL не се избират.",
+        "Редове за обработка на снимки по статус, включително cover-only. Ключове и подписани URL не се избират.",
+    },
+    social_engagement: {
+      label: "Социални и engagement редове",
+      description:
+        "Профилни follows/blocks, wishlist, коментари, отметки и известия. Анонимните likes не се броят като връзка към акаунт.",
+    },
+    community: {
+      label: "Общност и модераторски референции",
+      description:
+        "Членства, приноси и актьорски референции за модерация, които изискват rekey или cascade-delete.",
     },
     public_exposure: {
       label: "Публични slugs и tombstones",
@@ -208,10 +246,15 @@ const BG_COPY: OperatorErasureCopy = {
       description:
         "Добавени от потребителя кандидати и обекти със статус `user_added`.",
     },
+    catalog_operator_links: {
+      label: "Операторски връзки в каталога",
+      description:
+        "Soft връзки на рецензенти и автори към suggestions, aliases и seed proofs.",
+    },
     search_index_artifacts: {
       label: "Артефакти на търсенето и индекса",
       description:
-        "Публични записи с производни документи и чакащи jobs за индексиране/премахване.",
+        "Публични записи с производни документи и journal jobs във всеки статус на опашката.",
     },
     pilot_operator_records: {
       label: "Операторски записи на пилота",
@@ -220,40 +263,20 @@ const BG_COPY: OperatorErasureCopy = {
     },
   },
   countLabels: {
-    user_row: "потребителски ред",
-    sessions: "сесии",
-    accounts: "профили",
-    pilot_invite_grant: "разрешение за покана",
-    profiles: "публични профили",
-    current_handle_claims: "текущи потребителски имена",
-    retired_handle_claims: "предишни потребителски имена",
-    unreviewed_policy_rows: "редове без преглед на политиката",
-    spaces: "пространства",
-    plant_objects: "живи обекти",
-    provenance_edges: "връзки на провенанса",
-    pending_identities: "чакащи идентичности",
-    audit_events: "одитни събития",
-    follows: "следвания",
-    questions: "въпроси",
-    total: "общо",
-    private_active: "активни лични",
-    public_active: "активни публични",
-    archived: "архивирани",
-    object_mentions: "споменавания на обекти",
-    catalog_mentions: "споменавания на каталог",
-    quarantined: "в quarantine",
-    processed: "обработени",
-    failed: "неуспешни",
-    public_slugs: "публични slugs",
-    gone_tombstones: "410 tombstones",
-    events: "събития",
-    provisional_catalog_items: "временни каталожни елементи",
-    user_added_objects: "обекти user_added",
-    public_active_entries: "активни публични записи",
-    pending_index_jobs: "чакащи index jobs",
-    pending_unindex_jobs: "чакащи unindex jobs",
-    interview_records: "записи от интервюта",
-    erasure_requests: "заявки за изтриване",
+    ...UK_COPY.countLabels,
+    cover_only: "само корица",
+    explicit_cover_refs: "явни корици",
+    profile_follows: "профилни follows",
+    profile_blocks: "профилни блокирания",
+    wishlist_items: "wishlist",
+    comments: "коментари",
+    bookmarks: "отметки",
+    notification_receipts: "известия",
+    memberships: "членства",
+    contributions: "приноси",
+    moderation_actor_refs: "актьорски референции",
+    reviewer_or_author_links: "връзки рецензент/автор",
+    terminal_jobs_with_user_id: "терминални jobs с user id",
   },
   caveats: [
     "Прегледът е недеструктивен и повторяем. Нищо не се изтрива или анонимизира.",
@@ -321,7 +344,17 @@ const RU_COPY: OperatorErasureCopy = {
     media_assets: {
       label: "Производные медиа и quarantine-ссылки",
       description:
-        "Строки обработки фото по статусу. Ключи и подписанные URL не выбираются.",
+        "Строки обработки фото по статусу, включая cover-only. Ключи и подписанные URL не выбираются.",
+    },
+    social_engagement: {
+      label: "Социальные и engagement-строки",
+      description:
+        "Подписки/блоки профилей, wishlist, комментарии, закладки и уведомления. Анонимные likes не считаются привязкой к аккаунту.",
+    },
+    community: {
+      label: "Сообщество и модераторские ссылки",
+      description:
+        "Членства, вклады и актёрские ссылки модерации, требующие rekey или cascade-delete.",
     },
     public_exposure: {
       label: "Публичные slugs и tombstones",
@@ -338,10 +371,15 @@ const RU_COPY: OperatorErasureCopy = {
       description:
         "Добавленные пользователем кандидаты и объекты со статусом `user_added`.",
     },
+    catalog_operator_links: {
+      label: "Операторские ссылки каталога",
+      description:
+        "Soft-ссылки рецензентов и авторов на suggestions, aliases и seed proofs.",
+    },
     search_index_artifacts: {
       label: "Артефакты поиска и индекса",
       description:
-        "Публичные записи с производными документами и ожидающие jobs индексации/удаления.",
+        "Публичные записи с производными документами и journal jobs в любом статусе очереди.",
     },
     pilot_operator_records: {
       label: "Операторские записи пилота",
@@ -350,40 +388,20 @@ const RU_COPY: OperatorErasureCopy = {
     },
   },
   countLabels: {
-    user_row: "строка пользователя",
-    sessions: "сессии",
-    accounts: "профили",
-    pilot_invite_grant: "разрешение приглашения",
-    profiles: "публичные профили",
-    current_handle_claims: "действующие ники",
-    retired_handle_claims: "прежние ники",
-    unreviewed_policy_rows: "строки без проверки политики",
-    spaces: "пространства",
-    plant_objects: "живые объекты",
-    provenance_edges: "связи провенанса",
-    pending_identities: "ожидающие идентичности",
-    audit_events: "события аудита",
-    follows: "подписки",
-    questions: "вопросы",
-    total: "всего",
-    private_active: "активные приватные",
-    public_active: "активные публичные",
-    archived: "архивированные",
-    object_mentions: "упоминания объектов",
-    catalog_mentions: "упоминания каталога",
-    quarantined: "в quarantine",
-    processed: "обработанные",
-    failed: "с ошибкой",
-    public_slugs: "публичные slugs",
-    gone_tombstones: "410 tombstones",
-    events: "события",
-    provisional_catalog_items: "временные элементы каталога",
-    user_added_objects: "объекты user_added",
-    public_active_entries: "активные публичные записи",
-    pending_index_jobs: "ожидающие index jobs",
-    pending_unindex_jobs: "ожидающие unindex jobs",
-    interview_records: "записи интервью",
-    erasure_requests: "запросы на удаление",
+    ...UK_COPY.countLabels,
+    cover_only: "только обложка",
+    explicit_cover_refs: "явные обложки",
+    profile_follows: "подписки профилей",
+    profile_blocks: "блоки профилей",
+    wishlist_items: "wishlist",
+    comments: "комментарии",
+    bookmarks: "закладки",
+    notification_receipts: "уведомления",
+    memberships: "членства",
+    contributions: "вклады",
+    moderation_actor_refs: "актёрские ссылки модерации",
+    reviewer_or_author_links: "ссылки рецензента/автора",
+    terminal_jobs_with_user_id: "терминальные jobs с user id",
   },
   caveats: [
     "Просмотр недеструктивен и повторяем. Ничего не удаляется и не анонимизируется.",

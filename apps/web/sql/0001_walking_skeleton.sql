@@ -4523,6 +4523,7 @@ create table if not exists erasure_requests (
     handled_status is null
     or handled_status in (
       'completed',
+      'cleanup_pending',
       'declined',
       'duplicate',
       'needs_identity_verification'
@@ -4548,6 +4549,79 @@ create unique index if not exists erasure_requests_one_open_per_user_uidx
 alter table erasure_requests
   add column if not exists dry_run_reviewed_at timestamptz,
   add column if not exists dry_run_reviewed_by_user_id uuid;
+
+-- OVE-192: storage cleanup may leave a request handled but not yet completed.
+do $$
+declare
+  existing_check text;
+begin
+  select conname
+  into existing_check
+  from pg_constraint
+  where conrelid = 'erasure_requests'::regclass
+    and contype = 'c'
+    and pg_get_constraintdef(oid) ilike '%handled_status%'
+  limit 1;
+
+  if existing_check is not null then
+    execute format(
+      'alter table erasure_requests drop constraint %I',
+      existing_check
+    );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'erasure_requests_handled_status_check'
+      and conrelid = 'erasure_requests'::regclass
+  ) then
+    alter table erasure_requests
+      add constraint erasure_requests_handled_status_check
+      check (
+        handled_status is null
+        or handled_status in (
+          'completed',
+          'cleanup_pending',
+          'declined',
+          'duplicate',
+          'needs_identity_verification'
+        )
+      );
+  end if;
+end $$;
+
+-- OVE-192: durable moderation-actor tombstone for ON DELETE RESTRICT community
+-- columns. Triggers are bypassed so this row never receives a public handle.
+do $$
+begin
+  perform set_config('session_replication_role', 'replica', true);
+
+  insert into "user" (
+    id,
+    name,
+    email,
+    "emailVerified",
+    "createdAt",
+    "updatedAt"
+  )
+  values (
+    '00000000-0000-4000-8000-00000000ead1',
+    'Erased moderation actor',
+    'erased-moderation-actor@invalid.local',
+    false,
+    '2026-07-01T00:00:00.000Z'::timestamptz,
+    '2026-07-01T00:00:00.000Z'::timestamptz
+  )
+  on conflict (id) do nothing;
+
+  delete from user_handle_registry
+  where user_id = '00000000-0000-4000-8000-00000000ead1';
+  delete from user_public_profiles
+  where user_id = '00000000-0000-4000-8000-00000000ead1';
+
+  perform set_config('session_replication_role', 'origin', true);
+end $$;
 
 create table if not exists analytics_events (
   id uuid primary key default gen_random_uuid(),

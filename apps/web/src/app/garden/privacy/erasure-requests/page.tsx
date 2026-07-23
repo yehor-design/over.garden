@@ -328,7 +328,8 @@ function NonDestructiveOutcomeForm({
   copy: OperatorErasureCopy;
 }) {
   const nonDestructiveOutcomes = ERASURE_REQUEST_HANDLED_STATUS_OPTIONS.filter(
-    (option) => option.value !== "completed",
+    (option) =>
+      option.value !== "completed" && option.value !== "cleanup_pending",
   );
 
   return (

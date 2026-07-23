@@ -9,6 +9,8 @@ export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
   ? ColumnType<S, I | undefined, U>
   : ColumnType<T, T | undefined, T>;
 
+export type Int8 = ColumnType<string, bigint | number | string, bigint | number | string>;
+
 export type Json = JsonValue;
 
 export type JsonArray = JsonValue[];
@@ -443,14 +445,14 @@ export interface JournalEntries {
   client_mutation_id: string;
   content_document: Json | null;
   content_schema_version: number | null;
+  cover_media_asset_id: string | null;
   created_at: Generated<Timestamp>;
   entry_date: Generated<Timestamp>;
   entry_scope: Generated<string>;
   first_publication_disclosed_at: Timestamp | null;
   first_publication_disclosure_version: string | null;
   id: Generated<string>;
-  journal_revision: Generated<Numeric>;
-  cover_media_asset_id: string | null;
+  journal_revision: Generated<Int8>;
   lifecycle_state: Generated<string>;
   owner_user_id: string;
   plant_object_id: string | null;
@@ -464,23 +466,23 @@ export interface JournalEntries {
   visibility: Generated<string>;
 }
 
-export interface JournalEntryMutationReceipts {
-  base_revision: Numeric;
-  client_mutation_id: string;
-  created_at: Generated<Timestamp>;
-  id: Generated<string>;
-  journal_entry_id: string;
-  mutation_kind: string;
-  owner_user_id: string;
-  result_revision: Numeric;
-}
-
 export interface JournalEntryCatalogMentions {
   catalog_item_id: string;
   created_at: Generated<Timestamp>;
   journal_entry_id: string;
   owner_user_id: string;
   space_id: string;
+}
+
+export interface JournalEntryMutationReceipts {
+  base_revision: Int8;
+  client_mutation_id: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  journal_entry_id: string;
+  mutation_kind: string;
+  owner_user_id: string;
+  result_revision: Int8;
 }
 
 export interface JournalEntryObjectMentions {

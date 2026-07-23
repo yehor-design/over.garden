@@ -93,6 +93,7 @@ export type ErasureRequestStatus =
 export type ErasureRequestScope = "account_data_erasure";
 export type ErasureRequestHandledStatus =
   | "completed"
+  | "cleanup_pending"
   | "declined"
   | "duplicate"
   | "needs_identity_verification";

@@ -96,6 +96,7 @@ export type ErasureRequestStatusCopyKey =
 
 export type ErasureRequestHandledStatusCopyKey =
   | "completed"
+  | "cleanup_pending"
   | "declined"
   | "duplicate"
   | "needs_identity_verification";
@@ -136,6 +137,12 @@ export const ERASURE_REQUEST_HANDLED_STATUS_OPTIONS = [
     label: "Completed",
     description:
       "Operator marked the request handled after maintainer-approved erasure or anonymization work.",
+  },
+  {
+    value: "cleanup_pending",
+    label: "Storage cleanup pending",
+    description:
+      "Database identity erasure committed; OverGarden-controlled media object deletion is still finishing.",
   },
   {
     value: "declined",

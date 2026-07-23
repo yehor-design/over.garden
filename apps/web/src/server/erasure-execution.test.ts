@@ -25,7 +25,9 @@ import {
   buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery,
   buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery,
   buildEnqueueErasureJournalUnindexJobQuery,
+  buildEnqueueErasureMediaDeleteJobQuery,
   buildExecutableErasureRequestQuery,
+  buildMarkErasureCleanupPendingQuery,
   expectedErasureMaintainerApprovalText,
 } from "./erasure-execution";
 
@@ -90,10 +92,11 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.sql).toContain('"body" = $3');
     expect(compiled.sql).toContain('"content_document" = $4');
     expect(compiled.sql).toContain('"content_schema_version" = $5');
+    expect(compiled.sql).toContain('"cover_media_asset_id" = $6');
     expect(compiled.sql).toContain('"journal_revision" = journal_revision + 1');
-    expect(compiled.sql).toContain('"visibility" = $7');
-    expect(compiled.sql).toContain('"lifecycle_state" = $8');
-    expect(compiled.sql).toContain('"public_noindex" = $9');
+    expect(compiled.sql).toContain('"visibility" = $8');
+    expect(compiled.sql).toContain('"lifecycle_state" = $9');
+    expect(compiled.sql).toContain('"public_noindex" = $10');
     expect(compiled.sql).toContain("coalesce(public_gone_at");
     expect(compiled.sql).toContain(
       '\'erased:\' || "journal_entries"."id"::text',
@@ -104,7 +107,7 @@ describe("approved erasure execution SQL contracts", () => {
     expect(compiled.parameters).toContain(requesterUserId);
   });
 
-  it("removes stale requester-owned journal search jobs", () => {
+  it("scrubs all queue statuses that still carry the subject user id", () => {
     const compiled = buildDeletePendingJournalSearchJobsForErasureQuery(
       testDb,
       requesterUserId,
@@ -112,15 +115,19 @@ describe("approved erasure execution SQL contracts", () => {
 
     expect(compiled.sql).toContain('delete from "job_queue"');
     expect(compiled.sql).toContain("payload->>'userId'");
-    expect(compiled.sql).toContain("payload->>'kind'");
-    expect(compiled.parameters).toEqual([
-      "pending",
-      "processing",
-      "failed",
+    expect(compiled.sql).toContain("payload::text");
+    expect(compiled.parameters).toContain(requesterUserId);
+  });
+
+  it("clears explicit cover references before media deletion", () => {
+    const now = new Date("2026-07-01T08:00:00.000Z");
+    const compiled = buildAnonymizeJournalEntriesForErasureQuery(testDb, {
       requesterUserId,
-      "journal_entry_index",
-      "journal_entry_unindex",
-    ]);
+      erasedSubjectUserId,
+      now,
+    }).compile();
+
+    expect(compiled.sql).toContain('"cover_media_asset_id"');
   });
 
   it("deletes owner-scoped journal mention join rows before owner anonymization", () => {
@@ -326,6 +333,35 @@ describe("approved erasure execution SQL contracts", () => {
       null,
       null,
     ]);
+  });
+
+  it("enqueues durable erasure_media_object_delete jobs before claiming cleanup_pending", () => {
+    const compiled = buildEnqueueErasureMediaDeleteJobQuery(testDb, {
+      requestId,
+      mediaObject: {
+        bucket: "quarantine",
+        objectKey: "media/erasure-proof.webp",
+      },
+    }).compile();
+    const pending = buildMarkErasureCleanupPendingQuery(
+      testDb,
+      { userId: "00000000-0000-4000-8000-0000000000aa" },
+      { requestId, now: new Date("2026-07-01T08:00:00.000Z") },
+    ).compile();
+
+    expect(compiled.sql).toContain('insert into "job_queue"');
+    expect(compiled.parameters).toContain("erasure");
+    expect(compiled.parameters).toContainEqual({
+      kind: "erasure_media_object_delete",
+      requestId,
+      bucket: "quarantine",
+      objectKey: "media/erasure-proof.webp",
+    });
+    expect(compiled.parameters).toContain(
+      `erasure_media_delete:${requestId}:quarantine:media/erasure-proof.webp`,
+    );
+    expect(pending.sql).toContain('"handled_status" = $3');
+    expect(pending.parameters).toContain("cleanup_pending");
   });
 
   it("rekeys erasure request subjects away from the original requester id", () => {

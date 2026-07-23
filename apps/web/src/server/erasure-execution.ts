@@ -15,13 +15,18 @@ import type { RequestScope } from "@/server/request-scope";
 
 const OPEN_REQUEST_STATUSES = ["submitted", "reviewing"] as const;
 const JOURNAL_ENTRY_UNINDEX_KIND = "journal_entry_unindex";
+const ERASURE_MEDIA_DELETE_KIND = "erasure_media_object_delete";
 const MATCHING_QUEUE_NAME = "matching";
+const ERASURE_QUEUE_NAME = "erasure";
 const ERASED_ENTRY_TITLE = "Erased journal entry";
 const ERASED_ENTRY_BODY = "This entry was erased by request.";
 const ERASED_SPACE_NAME = "Erased garden";
 const ERASED_OBJECT_NAME = "Erased object";
 const ERASED_LINEAGE_QUESTION_TEXT =
   "This lineage question was erased by request.";
+/** Shared tombstone user for community ON DELETE RESTRICT actor columns. */
+export const ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID =
+  "00000000-0000-4000-8000-00000000ead1";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -47,6 +52,7 @@ export interface ErasureExecutionSummary {
   requesterUserId: string;
   mediaObjectsDeleted: number;
   publicEntriesQueuedForUnindex: number;
+  handledStatus: "cleanup_pending" | "completed";
 }
 
 export async function executeApprovedErasureRequest(
@@ -59,171 +65,244 @@ export async function executeApprovedErasureRequest(
 
   const executor = deps.executor ?? db;
   const now = deps.now ?? new Date();
-  const erasedSubjectUserId = deps.erasedSubjectUserId ?? randomUUID();
   const deleteMediaObject = deps.deleteMediaObject ?? deleteR2MediaObject;
 
-  const executableRequest = await buildExecutableErasureRequestQuery(
+  const existing = await buildLoadErasureRequestForExecutionQuery(
     executor,
     requestId,
   ).executeTakeFirst();
 
-  if (!executableRequest) {
+  if (!existing) {
     throw new Error(
-      "Erasure request must be open and dry-run reviewed before irreversible execution.",
+      "Erasure request must be open and dry-run reviewed, or already in cleanup_pending, before irreversible execution.",
     );
   }
 
-  const requesterUserId = executableRequest.requesterUserId;
-  const mediaObjects = await listMediaObjectReferencesForErasure(
-    executor,
-    requesterUserId,
-  );
-
-  for (const mediaObject of mediaObjects) {
-    await deleteMediaObject(mediaObject);
+  if (existing.handledStatus === "completed") {
+    return {
+      requestId,
+      erasedSubjectUserId: existing.requesterUserId,
+      requesterUserId: existing.requesterUserId,
+      mediaObjectsDeleted: 0,
+      publicEntriesQueuedForUnindex: 0,
+      handledStatus: "completed",
+    };
   }
 
-  const publicEntries = await executor.transaction().execute(async (trx) => {
-    const request = await buildExecutableErasureRequestQuery(
-      trx,
-      requestId,
-    ).executeTakeFirst();
+  let erasedSubjectUserId = deps.erasedSubjectUserId ?? randomUUID();
+  let requesterUserId = existing.requesterUserId;
+  let publicEntriesQueuedForUnindex = 0;
 
-    if (!request) {
-      throw new Error(
-        "Erasure request must remain open and dry-run reviewed during execution.",
-      );
-    }
+  if (existing.handledStatus !== "cleanup_pending") {
+    erasedSubjectUserId = deps.erasedSubjectUserId ?? randomUUID();
+    requesterUserId = existing.requesterUserId;
 
-    const publicEntryRows = await buildListPublicJournalEntriesForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-
-    await buildDeleteVerificationRowsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteAuthSessionsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteAuthAccountsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeletePilotInviteGrantForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteOwnedAnalyticsEventsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteOwnedMediaAssetsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeletePendingJournalSearchJobsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-
-    await buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
-      trx,
-      requesterUserId,
-      now,
-    ).execute();
-    await buildDeleteOwnedProvisionalCatalogItemsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-    await buildAnonymizeOwnedCatalogOperatorFieldsForErasureQuery(
-      trx,
-      requesterUserId,
-      now,
-    ).execute();
-    await buildAnonymizePilotInterviewSubjectsForErasureQuery(
-      trx,
-      requesterUserId,
-      now,
-    ).execute();
-    await buildAnonymizeLineageProvenanceEdgesForErasureQuery(trx, {
-      requesterUserId,
-      now,
-    }).execute();
-    await buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery(
-      trx,
-      requesterUserId,
-      now,
-    ).execute();
-    await buildAnonymizeLineageClaimAuditEventsForErasureQuery(
-      trx,
-      requesterUserId,
-    ).execute();
-
-    await buildAnonymizeSpacesForErasureQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-    await buildAnonymizePlantObjectsForErasureQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-    await buildAnonymizeLineageNodeFollowsForErasureQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-    await buildAnonymizeLineageQuestionsForErasureQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-    await buildAnonymizeJournalEntriesForErasureQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-
-    for (const entry of publicEntryRows) {
-      await buildEnqueueErasureJournalUnindexJobQuery(trx, {
+    const publicEntries = await executor.transaction().execute(async (trx) => {
+      const request = await buildExecutableErasureRequestQuery(
+        trx,
         requestId,
-        journalEntryId: entry.id,
+      ).executeTakeFirst();
+
+      if (!request) {
+        throw new Error(
+          "Erasure request must remain open and dry-run reviewed during execution.",
+        );
+      }
+
+      const mediaObjects = await listMediaObjectReferencesForErasure(
+        trx,
+        requesterUserId,
+      );
+      const publicEntryRows = await buildListPublicJournalEntriesForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+
+      for (const mediaObject of mediaObjects) {
+        await buildEnqueueErasureMediaDeleteJobQuery(trx, {
+          requestId,
+          mediaObject,
+        }).executeTakeFirst();
+      }
+
+      await buildClearJournalCoverMediaForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildDeleteVerificationRowsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteAuthSessionsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteAuthAccountsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeletePilotInviteGrantForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteOwnedAnalyticsEventsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteOwnedMediaAssetsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildScrubAllJobQueuePayloadsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+
+      await buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildDeleteOwnedProvisionalCatalogItemsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
+      await buildAnonymizeOwnedCatalogOperatorFieldsForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizeCatalogMatchReviewersForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizeCatalogAliasReviewersForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizeVarietySeedProofAuthorsForErasureQuery(trx, {
+        requesterUserId,
         erasedSubjectUserId,
-      }).executeTakeFirst();
-    }
+        now,
+      }).execute();
+      await buildAnonymizePilotInterviewSubjectsForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizePilotInterviewRecordersForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildAnonymizeLineageProvenanceEdgesForErasureQuery(trx, {
+        requesterUserId,
+        now,
+      }).execute();
+      await buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizeLineageClaimAuditEventsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
 
-    await buildAnonymizeErasureRequestSubjectsQuery(trx, {
-      requesterUserId,
-      erasedSubjectUserId,
-      now,
-    }).execute();
-    await buildCompleteApprovedErasureRequestQuery(trx, scope, {
-      requestId,
-      now,
-    }).executeTakeFirstOrThrow();
-    await buildDeleteAuthUserForErasureQuery(trx, requesterUserId).execute();
+      await buildRekeyCommunityModerationActorsForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId: ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+        now,
+      }).execute();
 
-    return publicEntryRows;
-  });
+      await buildAnonymizeSpacesForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildAnonymizePlantObjectsForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildAnonymizeLineageNodeFollowsForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildAnonymizeLineageQuestionsForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildAnonymizeJournalEntriesForErasureQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+
+      for (const entry of publicEntryRows) {
+        await buildEnqueueErasureJournalUnindexJobQuery(trx, {
+          requestId,
+          journalEntryId: entry.id,
+          erasedSubjectUserId,
+        }).executeTakeFirst();
+      }
+
+      await buildNullErasureOperatorLinksForErasureQuery(
+        trx,
+        requesterUserId,
+        now,
+      ).execute();
+      await buildAnonymizeErasureRequestSubjectsQuery(trx, {
+        requesterUserId,
+        erasedSubjectUserId,
+        now,
+      }).execute();
+      await buildMarkErasureCleanupPendingQuery(trx, scope, {
+        requestId,
+        now,
+      }).executeTakeFirstOrThrow();
+      await buildDeleteAuthUserForErasureQuery(trx, requesterUserId).execute();
+
+      return publicEntryRows;
+    });
+
+    publicEntriesQueuedForUnindex = publicEntries.length;
+  } else {
+    erasedSubjectUserId = existing.requesterUserId;
+    requesterUserId = existing.requesterUserId;
+  }
+
+  const mediaObjectsDeleted = await processErasureMediaCleanupJobs(
+    executor,
+    requestId,
+    deleteMediaObject,
+  );
+
+  await buildCompleteApprovedErasureRequestQuery(executor, scope, {
+    requestId,
+    now,
+  }).executeTakeFirstOrThrow();
 
   return {
     requestId,
     erasedSubjectUserId,
     requesterUserId,
-    mediaObjectsDeleted: mediaObjects.length,
-    publicEntriesQueuedForUnindex: publicEntries.length,
+    mediaObjectsDeleted,
+    publicEntriesQueuedForUnindex,
+    handledStatus: "completed",
   };
 }
 
@@ -243,10 +322,40 @@ export function buildExecutableErasureRequestQuery(
       "id",
       "requester_user_id as requesterUserId",
       "dry_run_reviewed_at as dryRunReviewedAt",
+      "handled_status as handledStatus",
     ])
     .where("id", "=", requestId)
     .where("status", "in", OPEN_REQUEST_STATUSES)
     .where("dry_run_reviewed_at", "is not", null)
+    .limit(1);
+}
+
+export function buildLoadErasureRequestForExecutionQuery(
+  executor: QueryExecutor,
+  requestId: string,
+) {
+  return executor
+    .selectFrom("erasure_requests")
+    .select([
+      "id",
+      "requester_user_id as requesterUserId",
+      "dry_run_reviewed_at as dryRunReviewedAt",
+      "handled_status as handledStatus",
+      "status",
+    ])
+    .where("id", "=", requestId)
+    .where((eb) =>
+      eb.or([
+        eb.and([
+          eb("status", "in", [...OPEN_REQUEST_STATUSES]),
+          eb("dry_run_reviewed_at", "is not", null),
+        ]),
+        eb.and([
+          eb("status", "=", "handled"),
+          eb("handled_status", "in", ["cleanup_pending", "completed"]),
+        ]),
+      ]),
+    )
     .limit(1);
 }
 
@@ -344,14 +453,36 @@ export function buildDeletePendingJournalSearchJobsForErasureQuery(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
+  return buildScrubAllJobQueuePayloadsForErasureQuery(executor, requesterUserId);
+}
+
+export function buildScrubAllJobQueuePayloadsForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
   return executor
     .deleteFrom("job_queue")
-    .where("status", "in", ["pending", "processing", "failed"])
-    .where(sql`payload->>'userId'`, "=", requesterUserId)
-    .where(sql`payload->>'kind'`, "in", [
-      "journal_entry_index",
-      JOURNAL_ENTRY_UNINDEX_KIND,
-    ]);
+    .where((eb) =>
+      eb.or([
+        eb(sql`payload->>'userId'`, "=", requesterUserId),
+        eb(sql`payload::text`, "like", `%${requesterUserId}%`),
+      ]),
+    );
+}
+
+export function buildClearJournalCoverMediaForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("journal_entries")
+    .set({
+      cover_media_asset_id: null,
+      updated_at: now,
+    })
+    .where("owner_user_id", "=", requesterUserId)
+    .where("cover_media_asset_id", "is not", null);
 }
 
 export function buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery(
@@ -671,6 +802,7 @@ export function buildAnonymizeJournalEntriesForErasureQuery(
       body: ERASED_ENTRY_BODY,
       content_document: null,
       content_schema_version: null,
+      cover_media_asset_id: null,
       journal_revision: sql`journal_revision + 1`,
       entry_date: toDateOnly(input.now),
       visibility: "private",
@@ -765,6 +897,252 @@ export function buildCompleteApprovedErasureRequestQuery(
     })
     .where("id", "=", input.requestId)
     .returning("id");
+}
+
+export function buildMarkErasureCleanupPendingQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  input: {
+    requestId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("erasure_requests")
+    .set({
+      status: "handled",
+      handled_at: input.now,
+      handled_status: "cleanup_pending",
+      handled_by_user_id: scope.userId,
+      updated_at: input.now,
+    })
+    .where("id", "=", input.requestId)
+    .returning("id");
+}
+
+export function buildEnqueueErasureMediaDeleteJobQuery(
+  executor: QueryExecutor,
+  input: {
+    requestId: string;
+    mediaObject: ErasureMediaObjectReference;
+  },
+) {
+  const payload = {
+    kind: ERASURE_MEDIA_DELETE_KIND,
+    requestId: input.requestId,
+    bucket: input.mediaObject.bucket,
+    objectKey: input.mediaObject.objectKey,
+  } satisfies JsonValue;
+
+  return executor
+    .insertInto("job_queue")
+    .values({
+      queue_name: ERASURE_QUEUE_NAME,
+      payload,
+      idempotency_key: `erasure_media_delete:${input.requestId}:${input.mediaObject.bucket}:${input.mediaObject.objectKey}`,
+    })
+    .onConflict((oc) =>
+      oc
+        .column("idempotency_key")
+        .where("idempotency_key", "is not", null)
+        .doUpdateSet({
+          payload,
+          status: "pending",
+          attempts: 0,
+          locked_at: null,
+          locked_by: null,
+          last_error: null,
+          available_at: sql`now()`,
+          updated_at: sql`now()`,
+        }),
+    )
+    .returning("id");
+}
+
+export function buildRekeyCommunityModerationActorsForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+    now: Date;
+  },
+) {
+  return {
+    execute: async () => {
+      await executor
+        .updateTable("community_contributions")
+        .set({
+          removed_by_user_id: input.erasedSubjectUserId,
+          updated_at: input.now,
+        })
+        .where("removed_by_user_id", "=", input.requesterUserId)
+        .execute();
+      await executor
+        .updateTable("community_contribution_reports")
+        .set({
+          resolved_by_user_id: input.erasedSubjectUserId,
+          updated_at: input.now,
+        })
+        .where("resolved_by_user_id", "=", input.requesterUserId)
+        .execute();
+      await executor
+        .updateTable("community_moderation_audit_log")
+        .set({
+          actor_user_id: input.erasedSubjectUserId,
+        })
+        .where("actor_user_id", "=", input.requesterUserId)
+        .execute();
+      await executor
+        .updateTable("community_moderators")
+        .set({
+          granted_by_user_id: null,
+          updated_at: input.now,
+        })
+        .where("granted_by_user_id", "=", input.requesterUserId)
+        .execute();
+    },
+  };
+}
+
+export function buildAnonymizeCatalogMatchReviewersForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("catalog_match_suggestions")
+    .set({
+      reviewed_by_user_id: null,
+      updated_at: now,
+    })
+    .where("reviewed_by_user_id", "=", requesterUserId);
+}
+
+export function buildAnonymizeCatalogAliasReviewersForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("catalog_alias_projections")
+    .set({
+      reviewed_by_user_id: null,
+      updated_at: now,
+    })
+    .where("reviewed_by_user_id", "=", requesterUserId);
+}
+
+export function buildAnonymizeVarietySeedProofAuthorsForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("variety_seed_proofs")
+    .set({
+      author_user_id: input.erasedSubjectUserId,
+      updated_at: input.now,
+    })
+    .where("author_user_id", "=", input.requesterUserId);
+}
+
+export function buildAnonymizePilotInterviewRecordersForErasureQuery(
+  executor: QueryExecutor,
+  input: {
+    requesterUserId: string;
+    erasedSubjectUserId: string;
+    now: Date;
+  },
+) {
+  return executor
+    .updateTable("pilot_interview_learnings")
+    .set({
+      recorded_by_user_id: input.erasedSubjectUserId,
+      updated_at: input.now,
+    })
+    .where("recorded_by_user_id", "=", input.requesterUserId);
+}
+
+export function buildNullErasureOperatorLinksForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+  now: Date,
+) {
+  return executor
+    .updateTable("erasure_requests")
+    .set({
+      handled_by_user_id: sql`case
+        when handled_by_user_id = ${requesterUserId} then null
+        else handled_by_user_id
+      end`,
+      dry_run_reviewed_by_user_id: sql`case
+        when dry_run_reviewed_by_user_id = ${requesterUserId} then null
+        else dry_run_reviewed_by_user_id
+      end`,
+      updated_at: now,
+    })
+    .where((eb) =>
+      eb.or([
+        eb("handled_by_user_id", "=", requesterUserId),
+        eb("dry_run_reviewed_by_user_id", "=", requesterUserId),
+      ]),
+    );
+}
+
+async function processErasureMediaCleanupJobs(
+  executor: QueryExecutor,
+  requestId: string,
+  deleteMediaObject: (
+    reference: ErasureMediaObjectReference,
+  ) => Promise<void>,
+): Promise<number> {
+  const jobs = await executor
+    .selectFrom("job_queue")
+    .select(["id", "payload", "status"])
+    .where("queue_name", "=", ERASURE_QUEUE_NAME)
+    .where(sql`payload->>'kind'`, "=", ERASURE_MEDIA_DELETE_KIND)
+    .where(sql`payload->>'requestId'`, "=", requestId)
+    .where("status", "in", ["pending", "processing", "failed"])
+    .execute();
+
+  let deleted = 0;
+  for (const job of jobs) {
+    const payload = job.payload as {
+      bucket?: string;
+      objectKey?: string;
+    };
+    if (
+      (payload.bucket !== "quarantine" &&
+        payload.bucket !== "public_derivative") ||
+      typeof payload.objectKey !== "string" ||
+      payload.objectKey.length === 0
+    ) {
+      throw new Error("Erasure media cleanup job payload is malformed.");
+    }
+
+    await deleteMediaObject({
+      bucket: payload.bucket,
+      objectKey: payload.objectKey,
+    });
+    deleted += 1;
+
+    await executor
+      .updateTable("job_queue")
+      .set({
+        status: "done",
+        locked_at: null,
+        locked_by: null,
+        last_error: null,
+        updated_at: sql`now()`,
+      })
+      .where("id", "=", job.id)
+      .execute();
+  }
+
+  return deleted;
 }
 
 async function listMediaObjectReferencesForErasure(

@@ -322,7 +322,7 @@ function parseNonDestructiveHandledStatus(
 ): ErasureRequestHandledStatus {
   const status = parseHandledStatus(value);
 
-  if (status === "completed") {
+  if (status === "completed" || status === "cleanup_pending") {
     throw new Error(
       "Completed erasure requests must use the maintainer-approved execution workflow.",
     );
