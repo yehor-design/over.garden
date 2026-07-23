@@ -301,5 +301,5 @@ jobs:
           name: ${{ steps.seal.outputs.artifact_name }}
           path: matching-release/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 14
           compression-level: 9

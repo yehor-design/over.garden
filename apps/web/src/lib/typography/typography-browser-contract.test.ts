@@ -392,12 +392,24 @@ describe("OVE-208 typography browser contract", () => {
     expect(
       evaluateTypographyFallbackObservation(
         fallbackObservation({
+          visibleMeaningfulText: true,
+          firstContentfulPaintMs: 474,
+          visibleAfterDomContentLoadedMs: 1_005,
+          blockedDurationMs: 1_169,
+          fallbackDurationMs: 3_347,
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      evaluateTypographyFallbackObservation(
+        fallbackObservation({
           visibleMeaningfulText: false,
           firstContentfulPaintMs: 1_001,
-          visibleAfterDomContentLoadedMs: 1_001,
+          visibleAfterDomContentLoadedMs: 1_501,
           targetFontUnavailableBeforeRelease: false,
           fallbackFontAvailableBeforeRelease: false,
           computedFallbackFamily: "Arial",
+          fallbackDurationMs: 4_500,
           fontWindowCls: 0.021,
         }),
       ),
@@ -408,6 +420,7 @@ describe("OVE-208 typography browser contract", () => {
       "target-font-not-blocked",
       "fallback-font-unavailable",
       "fallback-family",
+      "fallback-duration",
       "fallback-cls",
     ]);
   });
