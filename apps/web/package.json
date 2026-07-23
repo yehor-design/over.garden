@@ -52,6 +52,7 @@
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",
     "smoke:structured-journal-composer": "tsx scripts/smoke-structured-journal-composer.ts",
+    "smoke:journal-block-reorder": "tsx scripts/smoke-journal-block-reorder.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
     "walking-skeleton:boundary:check": "tsx scripts/check-walking-skeleton-boundary.ts",
     "smoke:protective-dns": "tsx scripts/check-protective-dns.ts",

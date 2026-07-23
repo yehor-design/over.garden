@@ -138,7 +138,7 @@ export interface LocalizationDownstreamUiGate {
   adapterContract: string;
   status: "downstream-owned-real-ui" | "browser-backed";
   browserScenarioId: string | null;
-  proofOwner: "owning-downstream-slice" | "OVE-202";
+  proofOwner: "owning-downstream-slice" | "OVE-202" | "OVE-206";
   blocksCurrentIssue: false;
 }
 
@@ -154,6 +154,11 @@ export const OVE_202_BROWSER_SCENARIO_IDS = [
   "ten-inline-capacity-transition",
   "ukraine-editor-zero-control",
 ] as const;
+
+export {
+  OVE_206_BROWSER_SCENARIO_IDS,
+  OVE_206_PRIMARY_BROWSER_SCENARIO_ID,
+} from "@/components/garden/journal-block-reorder";
 
 const REQUIRED_VIEWPORTS = ["mobile-320", "desktop-1440"] as const;
 const ALL_MARKET_CASES = [
@@ -388,6 +393,16 @@ export const LOCALIZATION_DOWNSTREAM_UI_GATES: readonly LocalizationDownstreamUi
         status: "browser-backed",
         browserScenarioId: "editor-clean-locale-transition",
         proofOwner: "OVE-202",
+        blocksCurrentIssue: false,
+      };
+    }
+    if (requirement.issue === "OVE-206") {
+      return {
+        ...requirement,
+        adapterContract: "owner-composer-drafts",
+        status: "browser-backed",
+        browserScenarioId: "pointer-commit-immediate-transition",
+        proofOwner: "OVE-206",
         blocksCurrentIssue: false,
       };
     }

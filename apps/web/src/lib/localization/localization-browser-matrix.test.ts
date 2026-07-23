@@ -154,7 +154,7 @@ describe("OVE-205 localization browser matrix", () => {
     });
   });
 
-  it("marks OVE-202 browser-backed while OVE-206/207 stay downstream-owned", () => {
+  it("marks OVE-202 and OVE-206 browser-backed while OVE-207 stays downstream-owned", () => {
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES).toHaveLength(3);
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES.map(({ issue }) => issue)).toEqual([
       "OVE-202",
@@ -172,22 +172,28 @@ describe("OVE-205 localization browser matrix", () => {
         blocksCurrentIssue: false,
       }),
     );
-    expect(
-      LOCALIZATION_DOWNSTREAM_UI_GATES.slice(1).every(
-        ({
-          adapterContract,
-          browserScenarioId,
-          proofOwner,
-          status,
-          blocksCurrentIssue,
-        }) =>
-          adapterContract === "owner-composer-drafts" &&
-          browserScenarioId === null &&
-          proofOwner === "owning-downstream-slice" &&
-          status === "downstream-owned-real-ui" &&
-          blocksCurrentIssue === false,
-      ),
-    ).toBe(true);
+    expect(LOCALIZATION_DOWNSTREAM_UI_GATES[1]).toEqual(
+      expect.objectContaining({
+        id: "accessible-block-reorder",
+        issue: "OVE-206",
+        status: "browser-backed",
+        browserScenarioId: "pointer-commit-immediate-transition",
+        proofOwner: "OVE-206",
+        adapterContract: "owner-composer-drafts",
+        blocksCurrentIssue: false,
+      }),
+    );
+    expect(LOCALIZATION_DOWNSTREAM_UI_GATES[2]).toEqual(
+      expect.objectContaining({
+        id: "separate-cover",
+        issue: "OVE-207",
+        status: "downstream-owned-real-ui",
+        browserScenarioId: null,
+        proofOwner: "owning-downstream-slice",
+        adapterContract: "owner-composer-drafts",
+        blocksCurrentIssue: false,
+      }),
+    );
     expect(LOCALIZATION_DOWNSTREAM_UI_GATES).toEqual([
       expect.objectContaining({
         id: "structured-editor-and-inline-photos",

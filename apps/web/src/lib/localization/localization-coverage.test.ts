@@ -273,7 +273,7 @@ describe("OVE-205 market-first localization coverage", () => {
     });
   });
 
-  it("records OVE-202 as browser-backed while OVE-206/207 stay downstream-owned", () => {
+  it("records OVE-202 and OVE-206 as browser-backed while OVE-207 stays downstream-owned", () => {
     const report = buildLocalizationCoverage();
 
     expect(report.downstreamOwnedUiGates).toEqual(
@@ -291,19 +291,28 @@ describe("OVE-205 market-first localization coverage", () => {
         blocksCurrentIssue: false,
       }),
     );
-    expect(
-      report.downstreamOwnedUiGates.slice(1).every(
-        ({ browserScenarioId, status, proofOwner, blocksCurrentIssue }) =>
-          browserScenarioId === null &&
-          status === "downstream-owned-real-ui" &&
-          proofOwner === "owning-downstream-slice" &&
-          blocksCurrentIssue === false,
-      ),
-    ).toBe(true);
+    expect(report.downstreamOwnedUiGates[1]).toEqual(
+      expect.objectContaining({
+        issue: "OVE-206",
+        status: "browser-backed",
+        browserScenarioId: "pointer-commit-immediate-transition",
+        proofOwner: "OVE-206",
+        blocksCurrentIssue: false,
+      }),
+    );
+    expect(report.downstreamOwnedUiGates[2]).toEqual(
+      expect.objectContaining({
+        issue: "OVE-207",
+        browserScenarioId: null,
+        status: "downstream-owned-real-ui",
+        proofOwner: "owning-downstream-slice",
+        blocksCurrentIssue: false,
+      }),
+    );
 
     const invalidDownstreamUiGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(
       (gate, index) =>
-        index === 1
+        index === 2
           ? { ...gate, browserScenarioId: "fabricated:future-ui" as never }
           : gate,
     );
@@ -311,7 +320,7 @@ describe("OVE-205 market-first localization coverage", () => {
       downstreamUiGates: invalidDownstreamUiGates as never,
     });
     expect(invalidReport.missing.invalidDownstreamUiGates).toContain(
-      "accessible-block-reorder:fabricated-current-proof",
+      "separate-cover:fabricated-current-proof",
     );
 
     const incompleteStateGates = LOCALIZATION_DOWNSTREAM_UI_GATES.map(

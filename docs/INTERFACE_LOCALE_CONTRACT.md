@@ -203,6 +203,9 @@ ledger for downstream UI, but it does not claim that nonexistent UI passed.
   confirmed and Linear Done accepted.
 - OVE-206 owns final pointer/touch/keyboard reorder, active-gesture blocking,
   committed-order serialization, focus, announcement, and transition proof.
+  OVE-206 records `browser-backed` proof with scenario
+  `pointer-commit-immediate-transition`; founder physical iPhone Safari
+  checklist is required before Linear Done.
 - OVE-207 owns final automatic/explicit-inline/separate-cover behavior,
   dedicated-cover upload, selected-image removal, and combined ten-inline plus
   one-cover transition proof.

@@ -11,6 +11,11 @@ import type EditorJS from "@editorjs/editorjs";
 import type { OutputData } from "@editorjs/editorjs";
 
 import { JournalDocumentRenderer } from "@/components/garden/journal-document-renderer";
+import {
+  attachJournalBlockReorderController,
+  type JournalBlockReorderController,
+} from "@/components/garden/journal-block-reorder-controller";
+import type { JournalBlockReorderCopy } from "@/components/garden/journal-block-reorder";
 import { OverGardenImageTool } from "@/components/garden/overgarden-image-tool";
 import {
   editorOutputToJournalDocumentV1,
@@ -51,6 +56,7 @@ export interface StructuredJournalComposerLabels {
     italic: string;
     link: string;
   };
+  reorder: JournalBlockReorderCopy;
 }
 
 export interface StructuredJournalComposerProps {
@@ -82,7 +88,12 @@ export interface StructuredJournalComposerHandle {
   flushLatest: () => Promise<JournalDocumentV1 | null>;
   getGeneration: () => number;
   isComposing: () => boolean;
+  isReordering: () => boolean;
   moveBlock: (fromIndex: number, toIndex: number) => Promise<void>;
+  moveBlockById: (
+    sourceBlockId: string,
+    delta: -1 | 1,
+  ) => Promise<"moved" | "noop">;
   insertVoiceTranscript: (transcript: string) => Promise<void>;
   focus: () => void;
 }
@@ -104,7 +115,11 @@ function StructuredJournalComposerInner({
   composerRef,
 }: StructuredJournalComposerProps) {
   const holderId = useId().replace(/:/g, "");
+  const liveRegionId = `${holderId}-reorder-live`;
   const editorRef = useRef<EditorJS | null>(null);
+  const reorderControllerRef = useRef<JournalBlockReorderController | null>(
+    null,
+  );
   const generationRef = useRef(0);
   const composingRef = useRef(false);
   const latestDocumentRef = useRef<JournalDocumentV1>(
@@ -116,6 +131,7 @@ function StructuredJournalComposerInner({
     onRemoveImageBlock,
     labels,
     imagePreviewUrls,
+    disabled,
   });
   const serializeGenerationRef = useRef<
     (editor: EditorJS | null) => Promise<JournalDocumentV1 | null>
@@ -124,6 +140,7 @@ function StructuredJournalComposerInner({
   const [fallbackDocument, setFallbackDocument] = useState<JournalDocumentV1 | null>(
     initialDocument ?? null,
   );
+  const [announcement, setAnnouncement] = useState("");
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -133,6 +150,7 @@ function StructuredJournalComposerInner({
       onRemoveImageBlock,
       labels,
       imagePreviewUrls,
+      disabled,
     };
   }, [
     onDocumentChange,
@@ -140,6 +158,7 @@ function StructuredJournalComposerInner({
     onRemoveImageBlock,
     labels,
     imagePreviewUrls,
+    disabled,
   ]);
 
   useEffect(() => {
@@ -147,6 +166,7 @@ function StructuredJournalComposerInner({
     let editor: EditorJS | null = null;
     let cancelled = false;
     let compositionCleanup: (() => void) | null = null;
+    let reorderCleanup: (() => void) | null = null;
 
     async function serializeGeneration(activeEditor: EditorJS | null) {
       if (!activeEditor) return latestDocumentRef.current;
@@ -180,6 +200,7 @@ function StructuredJournalComposerInner({
         generation,
         hash: semanticJournalDocumentHash(document),
       });
+      reorderControllerRef.current?.sync();
       return document;
     }
 
@@ -229,6 +250,17 @@ function StructuredJournalComposerInner({
                 Bold: currentLabels.tools.bold,
                 Italic: currentLabels.tools.italic,
                 Link: currentLabels.tools.link,
+              },
+              blockTunes: {
+                delete: {
+                  Delete: currentLabels.reorder.deleteBlock,
+                },
+                moveUp: {
+                  "Move up": currentLabels.reorder.moveUp,
+                },
+                moveDown: {
+                  "Move down": currentLabels.reorder.moveDown,
+                },
               },
             },
           },
@@ -284,6 +316,7 @@ function StructuredJournalComposerInner({
           },
           onChange: async () => {
             if (composingRef.current) return;
+            if (reorderControllerRef.current?.isReordering()) return;
             await serializeGeneration(editor);
           },
         });
@@ -310,6 +343,29 @@ function StructuredJournalComposerInner({
             holder.removeEventListener("compositionstart", onStart);
             holder.removeEventListener("compositionend", onEnd);
           };
+
+          const controller = attachJournalBlockReorderController({
+            editor,
+            holder,
+            disabled: propsRef.current.disabled,
+            getCopy: () => propsRef.current.labels.reorder,
+            onCommittedMove: async () => {
+              await serializeGeneration(editorRef.current);
+            },
+            onAnnouncement: (message) => {
+              if (!mountedRef.current) return;
+              setAnnouncement("");
+              // Force a new live-region utterance even for identical copy.
+              window.setTimeout(() => {
+                if (mountedRef.current) setAnnouncement(message);
+              }, 0);
+            },
+          });
+          reorderControllerRef.current = controller;
+          reorderCleanup = () => {
+            controller.destroy();
+            reorderControllerRef.current = null;
+          };
         }
 
         setStatus("ready");
@@ -331,6 +387,7 @@ function StructuredJournalComposerInner({
       cancelled = true;
       mountedRef.current = false;
       compositionCleanup?.();
+      reorderCleanup?.();
       const current = editorRef.current;
       editorRef.current = null;
       if (current) {
@@ -347,18 +404,30 @@ function StructuredJournalComposerInner({
       flushLatest: async () => {
         const editor = editorRef.current;
         if (!editor) return latestDocumentRef.current;
-        while (composingRef.current) {
+        while (
+          composingRef.current ||
+          reorderControllerRef.current?.isReordering()
+        ) {
           await new Promise((resolve) => setTimeout(resolve, 16));
         }
         return serializeGenerationRef.current(editor);
       },
       getGeneration: () => generationRef.current,
       isComposing: () => composingRef.current,
+      isReordering: () =>
+        Boolean(reorderControllerRef.current?.isReordering()),
       moveBlock: async (fromIndex, toIndex) => {
         const editor = editorRef.current;
         if (!editor) return;
+        if (fromIndex === toIndex) return;
         editor.blocks.move(toIndex, fromIndex);
         await serializeGenerationRef.current(editor);
+        reorderControllerRef.current?.sync();
+      },
+      moveBlockById: async (sourceBlockId, delta) => {
+        const controller = reorderControllerRef.current;
+        if (!controller) return "noop";
+        return controller.moveBlockById(sourceBlockId, delta);
       },
       insertVoiceTranscript: async (transcript) => {
         const editor = editorRef.current;
@@ -372,6 +441,7 @@ function StructuredJournalComposerInner({
           true,
         );
         await serializeGenerationRef.current(editor);
+        reorderControllerRef.current?.sync();
       },
       focus: () => {
         editorRef.current?.focus(true);
@@ -419,12 +489,23 @@ function StructuredJournalComposerInner({
       )}
       data-structured-journal-composer="true"
       data-status={status}
+      data-reorder-ready={status === "ready" ? "true" : "false"}
       lang={locale}
     >
       {status === "loading" ? (
         <p className="text-sm text-muted-foreground">{labels.loading}</p>
       ) : null}
       <div id={holderId} className="min-h-40" />
+      <div
+        id={liveRegionId}
+        className="og-reorder-live-region"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-og-reorder-live-region="true"
+      >
+        {announcement}
+      </div>
     </div>
   );
 }

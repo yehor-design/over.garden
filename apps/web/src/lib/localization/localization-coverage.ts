@@ -1911,6 +1911,20 @@ export function buildLocalizationCoverage(
         ) {
           errors.push(`${gate.id}:missing-browser-proof`);
         }
+      } else if (gate.issue === "OVE-206") {
+        if (gate.status !== "browser-backed") {
+          errors.push(`${gate.id}:status`);
+        }
+        if (gate.adapterContract !== "owner-composer-drafts") {
+          errors.push(`${gate.id}:adapter-contract`);
+        }
+        if (
+          gate.browserScenarioId === null ||
+          gate.proofOwner !== "OVE-206" ||
+          gate.blocksCurrentIssue !== false
+        ) {
+          errors.push(`${gate.id}:missing-browser-proof`);
+        }
       } else {
         if (gate.status !== "downstream-owned-real-ui") {
           errors.push(`${gate.id}:status`);

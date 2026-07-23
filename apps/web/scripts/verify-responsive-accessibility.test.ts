@@ -198,8 +198,19 @@ describe("OVE-205 executable localization browser contract", () => {
           proofOwner: "OVE-202",
           blocksCurrentIssue: false,
         }),
-        expect.objectContaining({ issue: "OVE-206" }),
-        expect.objectContaining({ issue: "OVE-207" }),
+        expect.objectContaining({
+          issue: "OVE-206",
+          status: "browser-backed",
+          browserScenarioId: "pointer-commit-immediate-transition",
+          proofOwner: "OVE-206",
+          blocksCurrentIssue: false,
+        }),
+        expect.objectContaining({
+          issue: "OVE-207",
+          status: "downstream-owned-real-ui",
+          browserScenarioId: null,
+          blocksCurrentIssue: false,
+        }),
       ]),
     );
   });
