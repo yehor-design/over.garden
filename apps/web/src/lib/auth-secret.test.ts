@@ -41,6 +41,20 @@ describe("Better Auth secret resolution", () => {
     );
   });
 
+  it("uses local fallback in CI when BETTER_AUTH_SECRET is missing", () => {
+    const secret = resolveBetterAuthSecret({
+      NODE_ENV: "production",
+      VERCEL: "1",
+      VERCEL_ENV: "preview",
+      CI: "1",
+      BETTER_AUTH_SECRET: undefined,
+    });
+
+    expect(secret).toMatch(
+      /^local-development-only-overgarden-better-auth-secret-[0-9a-f-]+$/,
+    );
+  });
+
   it("uses a stable local fallback only outside production-like runtimes", () => {
     const env = {
       NODE_ENV: "development",

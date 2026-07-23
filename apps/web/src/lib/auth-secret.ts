@@ -39,7 +39,11 @@ export function isProductionLikeRuntime(env: EnvLike = process.env): boolean {
 }
 
 function isBuildRuntime(env: EnvLike = process.env): boolean {
-  return env.NEXT_PHASE === "phase-production-build";
+  return (
+    env.NEXT_PHASE === "phase-production-build" ||
+    env.CI === "1" ||
+    env.CI === "true"
+  );
 }
 
 export function isBlockedBetterAuthSecret(value: string | undefined): boolean {
