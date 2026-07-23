@@ -528,6 +528,34 @@
         "Live production smoke after that deployment proved /bg and /ru lineage object missing IDs return raw Google Sans 404 documents with noindex/no-store, matching unprefixed passports, journals, and communities.",
         "No secret, cookie, token, private content, media key, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
+    },
+    {
+      "issueId": "OVE-193",
+      "title": "Self-serve first journal: a new gardener signs up and saves without a pilot invite",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "7a6306aa026436fb7e7bb1afc267552a71ac36ee",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-193/self-serve-first-journal-a-new-gardener-signs-up-and-saves-without-a",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/2znjaaXeytgc51fkkwWFN5xoa2S9",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm test src/server/pilot-write-access.test.ts src/lib/garden/actor-class.test.ts src/app/api/garden/entries/route.test.ts",
+        "cd apps/web && pnpm smoke:self-serve-mvp -- --environment local --confirm-environment local --base-url http://127.0.0.1:3000",
+        "cd apps/web && pnpm smoke:self-serve-providers -- --environment production --confirm-environment production --base-url https://over.garden --expected-commit 7a6306aa026436fb7e7bb1afc267552a71ac36ee",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Unlock commit 820e8e5228386a8b076e1f0457376f21754637b7 and closeout baseline 7a6306aa026436fb7e7bb1afc267552a71ac36ee are on main. Vercel production deployment dpl_2znjaaXeytgc51fkkwWFN5xoa2S9 reached READY for the closeout SHA and owned over.garden / www plus immutable URL https://over-garden-hmtfkxai3-yehors-projects-01221e2b.vercel.app.",
+        "Authenticated writes no longer require pilot_invite_grants; invite cookie/grant remains optional cohort attribution. Bounded actor_class self_serve|closed_pilot|founder_rehearsal|production_smoke|editorial|visual_fixture is emitted on analytics entry paths. Self-serve garden/auth copy no longer claims invite-only access.",
+        "Local smoke:self-serve-mvp proved zero-grant signup → private first entry → follow-up with actor_class=self_serve under run-with-local-infra-env. Production smoke:self-serve-providers proved Google and Facebook authorization starts, Facebook button live on guest garden, and invite-only claim absence on auth help. Composer/reorder/cover contract smokes remained green. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
+        "Does not claim OVE-186 Drive2 refresh, full interactive Facebook/Google browser callback round-trips, founder physical iPhone checklist, or any production account erasure/invite grant backfill.",
+        "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
+      ]
     }
   ]
 }
