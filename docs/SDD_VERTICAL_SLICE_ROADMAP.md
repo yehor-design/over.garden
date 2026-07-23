@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-22 (OVE-188 protective-DNS closeout; OVE-190 matching parity, OVE-191 production-safe scaffold boundary, OVE-203 automatic public identity, OVE-204 reliable current-session sign-out, and OVE-205 corrective market-first localization are complete and exact-SHA proven; OVE-208 defines the active typography boundary, after which OVE-202 is the next dependent localization/editor slice)
+Last operational update: 2026-07-23 (OVE-188 protective-DNS closeout; OVE-190 matching parity, OVE-191 production-safe scaffold boundary, OVE-203 automatic public identity, OVE-204 reliable current-session sign-out, OVE-205 corrective market-first localization, and OVE-208 global Google Sans typography ownership are complete and exact-SHA proven; OVE-202/206/207 remain downstream and now have explicit shared typography, coordinator, and lifecycle owners)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
