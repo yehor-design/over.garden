@@ -662,6 +662,31 @@
         "Pointers wired in AGENTS.md Current MVP Scope, SDD Current Execution State (OVE-186 wording note), and PAGE_ARCH D9. Historical SCAFFOLD/three-kind shipping prose left as provenance until OVE-211.",
         "Does not claim code/schema/UI collapse (OVE-211), product-research corpus reconciliation (OVE-212), or OVE-186 Done."
       ]
+    },
+    {
+      "issueId": "OVE-210",
+      "title": "Pre-migration inventory: operator confirms production bee_colony objects before the collapse",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "cebef59d8900032f5600d929b55da1ad2a76a0a9",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-210/pre-migration-inventory-operator-confirms-production-bee-colony",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/4DQoNM9aWaJaff6K8CnKUc818iXw",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/server/catalog/object-kind-inventory.test.ts",
+        "cd apps/web && pnpm catalog:inventory-object-kinds",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit cebef59d8900032f5600d929b55da1ad2a76a0a9 is on main. Vercel production deployment dpl_4DQoNM9aWaJaff6K8CnKUc818iXw reached READY for that SHA and owned over.garden / www.",
+        "Read-only catalog:inventory-object-kinds prints kind counts, bee_colony catalog identities, dependents counts, and SAFE TO COLLAPSE verdict; SQL contract is SELECT-only.",
+        "Production inventory (vercel env run): animal 14 / bee_colony 16 / plant 229; script SAFE TO COLLAPSE=no solely for visual-fixture rows 18700003-\u2026028 (species) and \u2026030 (user_added). Operator go/no-go=go with OVE-211 required to remediate those fixtures during collapse. All non-fixture bee_colony rows are ua_official_bee_breed.",
+        "Does not claim kind-model migration, production data mutation, credential embedding, or OVE-211 Done. Full pnpm test suite has pre-existing unrelated failures on main; OVE-210 unit tests, lint, and typecheck are green."
+      ]
     }
   ]
 }

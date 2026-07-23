@@ -23,7 +23,7 @@ Redaction rules: record object ids, catalog identities (`catalog_item_id`, `cata
 | Field | Value |
 | --- | --- |
 | Date | 2026-07-23 |
-| Commit SHA | _(filled at closeout; docs + script landing SHA)_ |
+| Commit SHA | `cebef59d8900032f5600d929b55da1ad2a76a0a9` |
 | Environment | production (`vercel env run --environment production`) |
 | Operator initials | YD (agent-executed operator inventory via Vercel env; no secrets recorded) |
 | Counts per `object_kind` | animal: 14; bee_colony: 16; plant: 229 |
