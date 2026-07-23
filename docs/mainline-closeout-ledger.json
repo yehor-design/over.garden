@@ -610,6 +610,33 @@
         "Production canary smoke:media-focal-presentation reported classify all true and productionHtml hasMediaPresentationAttr/hasObjectPositionStyle true on /journals (booleans only).",
         "Does not claim AI subject detection, video, per-surface crop files, OVE-186 Done, Meili focal fields/upgrade, or EXIF/original/quarantine leak into UI/search/analytics/evidence. Cover identity remains OVE-207."
       ]
+    },
+    {
+      "issueId": "OVE-198",
+      "title": "Meilisearch upgrade: public search survives an immutable version rollout with snapshot and rollback",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "85b2d737a88ff58938e99f191b2017eae92ba675",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-198/meilisearch-upgrade-public-search-survives-an-immutable-version",
+      "ciRunUrl": "https://meili.over.garden/health",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "curl -fsS https://meili.over.garden/health",
+        "cd apps/web && pnpm exec vitest run src/server/search/meilisearch-upgrade-contract.test.ts scripts/meilisearch-upgrade-contract.test.ts",
+        "cd apps/web && pnpm smoke:public-index-parity -- --environment production --confirm-environment production",
+        "cd apps/web && pnpm smoke:matching-queue-health -- --environment production --confirm-environment production --expected-commit 3eb1506355a4e613ca2ff11a79dde39378329ee6 --expected-digest sha256:aa1bef90176371a7755439191cfbea59674a171782c95c3eab0fcd2006f8b805",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit 85b2d737a88ff58938e99f191b2017eae92ba675 is on main. Production Meilisearch active pin v1.48.1 digest sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a on volume overgarden-meili-data-v1481; legacy overgarden_meili_data retained (deletion forbidden in OVE-198).",
+        "Live dual-volume path: preflight 1.15.2→1.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
+        "Matching handler canary passed all six handlers including journal index/unindex/restore with cover-safe key contract; leakCheck=passed. Canary validator hotpatched on running containers to match OVE-196 cover fields; sealed matching digest unchanged.",
+        "Does not claim managed-search vendor migration, ranking redesign, legacy volume deletion, or OVE-186 Done. No keys, raw documents, user IDs, journal text, or precise location in evidence."
+      ]
     }
   ]
 }
