@@ -217,6 +217,47 @@ describe("app route cache guardrail", () => {
     expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(3);
   });
 
+  it("returns locale-prefixed passport 404/410 through the same raw Google Sans lifecycle", async () => {
+    const objectId = "00000000-0000-4000-8000-000000000208";
+    mocks.getPublicObjectPassportLookup.mockClear();
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "not_found",
+      plantObjectId: objectId,
+    });
+    const missing = await responseFor(`/bg/lineage/objects/${objectId}`, {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+      "x-vercel-ip-country": "BG",
+    });
+    const missingHtml = await missing.text();
+
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(missing.headers.get("Cache-Control")).toBe(APP_ROUTE_CACHE_CONTROL);
+    expect(missing.headers.get("Content-Language")).toBe("bg");
+    expect(missingHtml).toContain("Паспортът не е намерен");
+    expect(missingHtml).toContain('font-family: "Google Sans"');
+    expect(missingHtml).toContain('name="robots" content="noindex, nofollow"');
+
+    mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
+      status: "gone",
+      plantObjectId: objectId,
+    });
+    const gone = await responseFor(`/ru/lineage/objects/${objectId}`, {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+      "x-vercel-ip-country": "BG",
+    });
+    const goneHtml = await gone.text();
+
+    expect(gone.status).toBe(410);
+    expect(gone.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+    expect(gone.headers.get("Content-Language")).toBe("ru");
+    expect(goneHtml).toContain("Паспорт удален");
+    expect(goneHtml).toContain('font-family: "Google Sans"');
+    expect(mocks.getPublicObjectPassportLookup).toHaveBeenCalledTimes(2);
+  });
+
   it("keeps unprefixed Bulgaria passport tombstones in locale-only POST mode without copying route identity", async () => {
     const objectId = "00000000-0000-4000-8000-000000000199";
     mocks.getPublicObjectPassportLookup.mockResolvedValueOnce({
