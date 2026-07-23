@@ -6,11 +6,8 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, JsonValue } from "@/db/schema";
-import {
-  deletePublicDerivativeObject,
-  deleteQuarantineObject,
-} from "@/lib/storage";
 import { formatErasureRequestReference } from "@/lib/privacy/disclosures";
+import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
 import type { RequestScope } from "@/server/request-scope";
 
 const OPEN_REQUEST_STATUSES = ["submitted", "reviewing"] as const;
@@ -1171,12 +1168,7 @@ async function listMediaObjectReferencesForErasure(
 }
 
 async function deleteR2MediaObject(reference: ErasureMediaObjectReference) {
-  if (reference.bucket === "quarantine") {
-    await deleteQuarantineObject(reference.objectKey);
-    return;
-  }
-
-  await deletePublicDerivativeObject(reference.objectKey);
+  await revokeMediaObjectBytes(reference);
 }
 
 function assertMaintainerApprovalPhrase(requestId: string, value: string) {

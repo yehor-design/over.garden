@@ -372,7 +372,8 @@ export function buildUpdateOwnerPublicProfileQuery(
               .where("id", "=", input.avatarMediaAssetId)
               .where("owner_user_id", "=", scope.userId)
               .where("status", "=", "processed")
-              .where("derivative_key", "is not", null),
+              .where("derivative_key", "is not", null)
+              .where("revoked_at", "is", null),
           )
         : eb.val(true),
     )
@@ -393,6 +394,7 @@ export function buildOwnerAvatarOptionsQuery(
     .where("owner_user_id", "=", scope.userId)
     .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
+    .where("revoked_at", "is", null)
     .orderBy("updated_at", "desc")
     .orderBy("id", "asc")
     .limit(OWNER_AVATAR_OPTION_LIMIT)

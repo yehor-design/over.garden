@@ -52,6 +52,8 @@ describe("processQuarantinedImage", () => {
       document_position: null,
       original_deleted_at: null,
       usage_role: "inline",
+      revoked_at: null,
+      public_unreachable_at: null,
       created_at: new Date("2026-06-26T00:00:00Z"),
       updated_at: new Date("2026-06-26T00:00:00Z"),
     } satisfies MediaAsset);

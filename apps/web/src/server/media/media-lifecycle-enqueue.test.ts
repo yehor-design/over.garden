@@ -1,0 +1,220 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  listAbandonedCoverOnlyRevokeCandidates,
+  listArchiveDerivativeRevokeCandidates,
+  listDetachedInlineRevokeCandidates,
+  listOrphanProcessedDerivativesForEntry,
+} from "./media-lifecycle-enqueue";
+
+type Row = Record<string, unknown>;
+
+function mockExecutor(responses: Row[][]) {
+  let call = 0;
+  const chain = {
+    selectFrom() {
+      return this;
+    },
+    select() {
+      return this;
+    },
+    where() {
+      return this;
+    },
+    async execute() {
+      const rows = responses[call] ?? [];
+      call += 1;
+      return rows;
+    },
+    async executeTakeFirst() {
+      const rows = await this.execute();
+      return rows[0];
+    },
+  };
+  return chain;
+}
+
+describe("media lifecycle cover/10+1 reference safety", () => {
+  it("archives revoke every processed derivative regardless of cover role", async () => {
+    const candidates = await listArchiveDerivativeRevokeCandidates(
+      mockExecutor([
+        [
+          { id: "inline-1", derivative_key: "derivatives/a.webp" },
+          { id: "cover-1", derivative_key: "derivatives/b.webp" },
+        ],
+      ]) as never,
+      { journalEntryId: "entry-1", ownerUserId: "user-1" },
+    );
+    expect(candidates.map((row) => row.mediaAssetId)).toEqual([
+      "inline-1",
+      "cover-1",
+    ]);
+  });
+
+  it("keeps explicit cover and document-referenced inline on orphan cleanup", async () => {
+    const candidates = await listOrphanProcessedDerivativesForEntry(
+      mockExecutor([
+        [
+          {
+            id: "entry-1",
+            cover_media_asset_id: "cover-1",
+            content_document: {
+              schemaVersion: 1,
+              blocks: [
+                { type: "image", data: { mediaAssetId: "inline-1" } },
+                { type: "image", data: { mediaAssetId: "inline-2" } },
+              ],
+            },
+          },
+        ],
+        [
+          {
+            id: "inline-1",
+            derivative_key: "derivatives/a.webp",
+            usage_role: "inline",
+            document_position: 1,
+          },
+          {
+            id: "inline-2",
+            derivative_key: "derivatives/b.webp",
+            usage_role: "inline",
+            document_position: 2,
+          },
+          {
+            id: "cover-1",
+            derivative_key: "derivatives/c.webp",
+            usage_role: "cover_only",
+            document_position: null,
+          },
+          {
+            id: "orphan-1",
+            derivative_key: "derivatives/d.webp",
+            usage_role: "cover_only",
+            document_position: null,
+          },
+        ],
+      ]) as never,
+      { journalEntryId: "entry-1", ownerUserId: "user-1" },
+    );
+    expect(candidates).toEqual([
+      {
+        mediaAssetId: "orphan-1",
+        bucket: "public_derivative",
+        objectKey: "derivatives/d.webp",
+      },
+    ]);
+  });
+
+  it("keeps inline-as-cover when cover pointer equals an inline asset", async () => {
+    const candidates = await listOrphanProcessedDerivativesForEntry(
+      mockExecutor([
+        [
+          {
+            id: "entry-1",
+            cover_media_asset_id: "inline-1",
+            content_document: {
+              schemaVersion: 1,
+              blocks: [{ type: "image", data: { mediaAssetId: "inline-1" } }],
+            },
+          },
+        ],
+        [
+          {
+            id: "inline-1",
+            derivative_key: "derivatives/a.webp",
+            usage_role: "inline",
+            document_position: 1,
+          },
+        ],
+      ]) as never,
+      { journalEntryId: "entry-1", ownerUserId: "user-1" },
+    );
+    expect(candidates).toEqual([]);
+  });
+
+  it("lists abandoned cover-only candidates before unlink", async () => {
+    const candidates = await listAbandonedCoverOnlyRevokeCandidates(
+      mockExecutor([
+        [{ id: "old-cover", derivative_key: "derivatives/old.webp" }],
+      ]) as never,
+      {
+        journalEntryId: "entry-1",
+        ownerUserId: "user-1",
+        keepMediaAssetId: "new-cover",
+      },
+    );
+    expect(candidates).toEqual([
+      {
+        mediaAssetId: "old-cover",
+        bucket: "public_derivative",
+        objectKey: "derivatives/old.webp",
+      },
+    ]);
+  });
+
+  it("lists detached inline candidates excluding keep set and cover-only", async () => {
+    const candidates = await listDetachedInlineRevokeCandidates(
+      mockExecutor([
+        [
+          {
+            id: "keep-1",
+            derivative_key: "derivatives/a.webp",
+            usage_role: "inline",
+            quarantine_key: "q/a",
+          },
+          {
+            id: "drop-1",
+            derivative_key: "derivatives/b.webp",
+            usage_role: "inline",
+            quarantine_key: "q/b",
+          },
+          {
+            id: "cover-1",
+            derivative_key: "derivatives/c.webp",
+            usage_role: "cover_only",
+            quarantine_key: "q/c",
+          },
+        ],
+      ]) as never,
+      {
+        journalEntryId: "entry-1",
+        ownerUserId: "user-1",
+        keepMediaAssetIds: new Set(["keep-1"]),
+      },
+    );
+    expect(candidates).toEqual([
+      {
+        mediaAssetId: "drop-1",
+        bucket: "public_derivative",
+        objectKey: "derivatives/b.webp",
+      },
+    ]);
+  });
+
+  it("no-cover entries still revoke detached inlines only", async () => {
+    const candidates = await listOrphanProcessedDerivativesForEntry(
+      mockExecutor([
+        [
+          {
+            id: "entry-1",
+            cover_media_asset_id: null,
+            content_document: {
+              schemaVersion: 1,
+              blocks: [{ type: "paragraph", data: { text: "hello" } }],
+            },
+          },
+        ],
+        [
+          {
+            id: "stale-1",
+            derivative_key: "derivatives/a.webp",
+            usage_role: "inline",
+            document_position: 1,
+          },
+        ],
+      ]) as never,
+      { journalEntryId: "entry-1", ownerUserId: "user-1" },
+    );
+    expect(candidates.map((row) => row.mediaAssetId)).toEqual(["stale-1"]);
+  });
+});

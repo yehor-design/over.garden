@@ -1,9 +1,9 @@
 /**
- * OVE-194 machine-readable job queue contract.
+ * OVE-194/OVE-195 machine-readable job queue contract.
  * Mirrored by services/matching/app/job_queue_manifest.py — drift fails tests.
  */
 
-export const JOB_QUEUE_MANIFEST_VERSION = "ove194.job-queue.v1" as const;
+export const JOB_QUEUE_MANIFEST_VERSION = "ove195.job-queue.v1" as const;
 
 export const MATCHING_DEFAULT_MAX_ATTEMPTS = 8 as const;
 
@@ -22,7 +22,8 @@ export type JobQueuePrivacyClass =
 
 export type JobQueueConsumer =
   | "matching-python-worker"
-  | "web-erasure-execution";
+  | "web-erasure-execution"
+  | "web-media-lifecycle";
 
 export interface JobQueueManifestEntry {
   queueName: string;
@@ -34,6 +35,10 @@ export interface JobQueueManifestEntry {
   coversStructuredJournalCover: boolean;
   notes: string;
 }
+
+export const MEDIA_LIFECYCLE_QUEUE = "media_lifecycle" as const;
+export const MEDIA_DERIVATIVE_REVOKE_KIND = "media_derivative_revoke" as const;
+export const MEDIA_QUARANTINE_EXPIRE_KIND = "media_quarantine_expire" as const;
 
 export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
   {
@@ -100,7 +105,27 @@ export const JOB_QUEUE_MANIFEST: readonly JobQueueManifestEntry[] = [
     privacyClass: "identifiers_only",
     coversStructuredJournalCover: true,
     notes:
-      "DB-first erasure outbox for quarantine/public object keys after cover refs cleared. Consumed in-process by erasure-execution, not the matching worker.",
+      "DB-first erasure outbox for quarantine/public object keys after cover refs cleared. Consumed in-process by erasure-execution via shared lifecycle revoke helper.",
+  },
+  {
+    queueName: MEDIA_LIFECYCLE_QUEUE,
+    kind: MEDIA_DERIVATIVE_REVOKE_KIND,
+    consumer: "web-media-lifecycle",
+    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
+    privacyClass: "identifiers_only",
+    coversStructuredJournalCover: true,
+    notes:
+      "Archive/unpublish revoke for processed public derivatives. Completes only after canonical custom-domain URL is non-2xx.",
+  },
+  {
+    queueName: MEDIA_LIFECYCLE_QUEUE,
+    kind: MEDIA_QUARANTINE_EXPIRE_KIND,
+    consumer: "web-media-lifecycle",
+    maxAttempts: MATCHING_DEFAULT_MAX_ATTEMPTS,
+    privacyClass: "identifiers_only",
+    coversStructuredJournalCover: true,
+    notes:
+      "Failed/unprocessed quarantine originals older than 7 days. Retention executor enqueues; consumer deletes originals.",
   },
 ] as const;
 

@@ -14,6 +14,11 @@ import {
   normalizeJournalDocumentOrThrow,
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
+import {
+  enqueueMediaDerivativeRevokes,
+  listAbandonedCoverOnlyRevokeCandidates,
+  listDetachedInlineRevokeCandidates,
+} from "@/server/media/media-lifecycle-enqueue";
 import { attachProcessedMediaAssetToEntry } from "@/server/media/media-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { isStructuredJournalAuthoringEnabled } from "@/server/structured-journal-authoring";
@@ -140,6 +145,18 @@ export async function claimOrderedInlineMediaForEntry(
     throw new Error("Duplicate media assets are not allowed.");
   }
 
+  const keep = new Set(ordered);
+  const detached = await listDetachedInlineRevokeCandidates(executor, {
+    journalEntryId: input.journalEntryId,
+    ownerUserId: scope.userId,
+    keepMediaAssetIds: keep,
+  });
+  await enqueueMediaDerivativeRevokes(executor, {
+    candidates: detached,
+    reason: "orphan",
+    journalEntryId: input.journalEntryId,
+  });
+
   const existing = await executor
     .selectFrom("media_assets")
     .select(["id", "document_position", "quarantine_key", "usage_role"])
@@ -147,7 +164,6 @@ export async function claimOrderedInlineMediaForEntry(
     .where("journal_entry_id", "=", input.journalEntryId)
     .execute();
 
-  const keep = new Set(ordered);
   for (const row of existing) {
     if (row.quarantine_key.startsWith("visual-fixtures/")) continue;
     // Cover-only assets are owned by claimJournalEntryCover, not document order.
@@ -322,6 +338,17 @@ async function clearCoverOnlyAssetsForEntry(
   journalEntryId: string,
   keepMediaAssetId?: string,
 ): Promise<void> {
+  const abandoned = await listAbandonedCoverOnlyRevokeCandidates(executor, {
+    journalEntryId,
+    ownerUserId: scope.userId,
+    keepMediaAssetId,
+  });
+  await enqueueMediaDerivativeRevokes(executor, {
+    candidates: abandoned,
+    reason: "orphan",
+    journalEntryId,
+  });
+
   let query = executor
     .updateTable("media_assets")
     .set({

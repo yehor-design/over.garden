@@ -17,8 +17,8 @@ const repoRoot = path.resolve(
 );
 
 describe("job queue manifest", () => {
-  it("covers every matching and erasure producer kind with attempt bounds", () => {
-    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove194.job-queue.v1");
+  it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
+    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove195.job-queue.v1");
     expect(matchingSupportedKinds()).toEqual([
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
@@ -39,6 +39,8 @@ describe("job queue manifest", () => {
       "matching:journal_entry_index",
       "matching:journal_entry_unindex",
       "erasure:erasure_media_object_delete",
+      "media_lifecycle:media_derivative_revoke",
+      "media_lifecycle:media_quarantine_expire",
     ]);
   });
 
@@ -56,6 +58,9 @@ describe("job queue manifest", () => {
     expect(python).toContain("MATCHING_DEFAULT_MAX_ATTEMPTS: Final = 8");
     expect(python).toContain("erasure_media_object_delete");
     expect(python).toContain("web-erasure-execution");
+    expect(python).toContain("media_derivative_revoke");
+    expect(python).toContain("media_quarantine_expire");
+    expect(python).toContain("web-media-lifecycle");
     expect(python).toContain("matching-python-worker");
     expect(python).toContain("JOURNAL_ENTRY_INDEX_KIND");
     expect(python).toContain("JOURNAL_ENTRY_UNINDEX_KIND");

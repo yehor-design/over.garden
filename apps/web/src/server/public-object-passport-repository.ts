@@ -400,6 +400,7 @@ export function buildPublicObjectPassportGalleryQuery(
     ])
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where("media_assets.usage_role", "=", "inline")
     .where("plant_objects.id", "=", plantObjectId)
     .where("journal_entries.visibility", "=", "public")

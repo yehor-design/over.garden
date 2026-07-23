@@ -59,6 +59,7 @@ import {
   readJournalDocumentFromEntry,
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
+import { enqueueArchiveDerivativeRevokes } from "@/server/media/media-lifecycle-enqueue";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 
@@ -958,6 +959,7 @@ export function buildMyPlantObjectCoverMediaQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where((eb) =>
       eb.or([
         eb(
@@ -2335,11 +2337,21 @@ export async function archiveJournalEntry(
   const now = new Date();
   const hadPublicUrl =
     existing.visibility === "public" && existing.public_slug !== null;
-  const archived = await buildArchiveJournalEntryQuery(db, scope, {
-    entryId,
-    now,
-    publicGoneAt: hadPublicUrl ? now : null,
-  }).executeTakeFirstOrThrow();
+
+  const archived = await db.transaction().execute(async (trx) => {
+    const row = await buildArchiveJournalEntryQuery(trx, scope, {
+      entryId,
+      now,
+      publicGoneAt: hadPublicUrl ? now : null,
+    }).executeTakeFirstOrThrow();
+
+    await enqueueArchiveDerivativeRevokes(trx, {
+      journalEntryId: entryId,
+      ownerUserId: scope.userId,
+    });
+
+    return row;
+  });
 
   return {
     entry: archived,
@@ -3372,7 +3384,8 @@ export function buildProcessedMediaForEntriesQuery(
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "in", entryIds)
     .where("status", "=", "processed")
-    .where("derivative_key", "is not", null);
+    .where("derivative_key", "is not", null)
+    .where("revoked_at", "is", null);
 }
 
 export function buildProcessedObjectMediaGalleryQuery(
@@ -3388,6 +3401,7 @@ export function buildProcessedObjectMediaGalleryQuery(
     .where("journal_entry_id", "in", entryIds)
     .where("status", "=", "processed")
     .where("derivative_key", "is not", null)
+    .where("revoked_at", "is", null)
     .where("usage_role", "=", "inline")
     .orderBy("document_position", "asc")
     .orderBy("id", "asc")
@@ -3424,6 +3438,7 @@ export function buildPublicProcessedMediaForEntryQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where("media_assets.usage_role", "=", "inline")
     .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")

@@ -78,10 +78,26 @@ const consumedJobContracts = new Map<
       testedBy: "apps/web/src/server/erasure-execution.test.ts",
     },
   ],
+  [
+    "media_lifecycle:media_derivative_revoke",
+    {
+      consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
+      consumerToken: "MEDIA_DERIVATIVE_REVOKE_KIND",
+      testedBy: "apps/web/src/server/media/media-lifecycle-consumer.test.ts",
+    },
+  ],
+  [
+    "media_lifecycle:media_quarantine_expire",
+    {
+      consumer: "apps/web/src/server/media/media-lifecycle-consumer.ts",
+      consumerToken: "MEDIA_QUARANTINE_EXPIRE_KIND",
+      testedBy: "apps/web/src/server/media/media-lifecycle-consumer.test.ts",
+    },
+  ],
 ]);
 
 describe("job queue producer/consumer contract", () => {
-  it("keeps the shared OVE-194 manifest aligned with tested consumers", () => {
+  it("keeps the shared OVE-195 manifest aligned with tested consumers", () => {
     for (const entry of JOB_QUEUE_MANIFEST) {
       expect(consumedJobContracts.has(jobQueueManifestKey(entry))).toBe(true);
       expect(entry.maxAttempts).toBeGreaterThanOrEqual(1);
@@ -192,6 +208,16 @@ describe("job queue producer/consumer contract", () => {
         source: "server/erasure-execution.ts",
         queueName: "matching",
         kind: "journal_entry_unindex",
+      },
+      {
+        source: "server/media/media-lifecycle-enqueue.ts",
+        queueName: "media_lifecycle",
+        kind: "media_derivative_revoke",
+      },
+      {
+        source: "server/media/retention-executor.ts",
+        queueName: "media_lifecycle",
+        kind: "media_quarantine_expire",
       },
     ]);
   });

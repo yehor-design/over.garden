@@ -264,6 +264,7 @@ export function buildPublicVarietySummaryQuery(
           and public_media.owner_user_id = ${sql.ref("journal_entries.owner_user_id")}
           and public_media.status = 'processed'
           and public_media.derivative_key is not null
+          and public_media.revoked_at is null
       )), 0)`.as("photoCount"),
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",

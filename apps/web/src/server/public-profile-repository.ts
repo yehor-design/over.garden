@@ -854,7 +854,8 @@ export function buildPublicProfileAvatarEvidenceQuery(
     .where("id", "=", mediaAssetId)
     .where("owner_user_id", "=", userId)
     .where("status", "=", "processed")
-    .where("derivative_key", "is not", null);
+    .where("derivative_key", "is not", null)
+    .where("revoked_at", "is", null);
 }
 
 export function buildPublicProfileEntrySummaryQuery(
@@ -1108,6 +1109,7 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
     .where("media_assets.owner_user_id", "=", userId)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where((eb) =>
       eb.or([
         eb(
@@ -1162,6 +1164,7 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
     .where("media_assets.owner_user_id", "=", userId)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where("journal_entries.id", "in", [...entryIds])
     .where((eb) =>
       eb.or([

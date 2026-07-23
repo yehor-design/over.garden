@@ -1132,6 +1132,7 @@ export function buildPublicCommunityContributionsQuery(
         where media_assets.journal_entry_id = journal_entries.id
           and media_assets.status = 'processed'
           and media_assets.derivative_key is not null
+          and media_assets.revoked_at is null
           and media_assets.original_deleted_at is not null
           and (
             media_assets.id = journal_entries.cover_media_asset_id
@@ -1807,6 +1808,7 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
       and cover_entries.published_at is not null
       and cover_media.status = 'processed'
       and cover_media.derivative_key is not null
+      and cover_media.revoked_at is null
       and cover_media.original_deleted_at is not null
       ${viewerPredicate}
     order by cover_contributions.added_at asc, cover_media.created_at asc, cover_media.id asc

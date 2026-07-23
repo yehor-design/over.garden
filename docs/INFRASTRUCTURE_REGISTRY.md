@@ -77,6 +77,7 @@ DNS and edge invariants:
 - Cloudflare is authoritative DNS for `over.garden`.
 - Cloudflare may proxy DNS records, but must not cache app HTML. Vercel owns app HTML/ISR behavior.
 - App-layer cache guardrail (OVE-91): matched Next app routes set `Cache-Control: private, no-store, max-age=0, s-maxage=0, must-revalidate` in `apps/web/src/proxy.ts`. This is defense-in-depth for app HTML/RSC/API responses; it does not change R2 media or static asset caching.
+- OVE-195 media revoke requires production Vercel env `CLOUDFLARE_ZONE_ID` (`aa4ef4e26d4de961897f29555d20b662`) and `CLOUDFLARE_CACHE_PURGE_API_TOKEN` (Zone Cache Purge only) so archived/erased immutable derivatives stop serving at `media.over.garden` within the declared window. Also set `CRON_SECRET` for `/api/cron/media-lifecycle`.
 - Do not manually CNAME media traffic to the `r2.dev` public development URL. R2 custom domains must be attached through the R2 bucket custom-domain flow.
 - OVE-51 canonical app DNS:
   - `over.garden A 76.76.21.21`, DNS-only, auto TTL, bound to Vercel project `over-garden`
@@ -192,7 +193,7 @@ Invariants:
 - Minimum TLS: `1.2`
 - DNS record: `media.over.garden CNAME public.r2.dev`, proxied, R2-managed/read-only
 - Managed `r2.dev` public development URL: `https://pub-e913e6e4251a4ba2b132579a9b771884.r2.dev`
-- `r2.dev` status: enabled temporarily as a development fallback; disable after the first production media slice is verified through `https://media.over.garden`.
+- `r2.dev` status: **disabled** on 2026-07-23 (OVE-195). Live managed-domain API proof moved `enabled → disabled`. Synthetic object probe: canonical `https://media.over.garden` served `2xx`; after disable, managed `r2.dev` no longer serves public development bypass. Keep custom domain `media.over.garden` as the only public read path.
 
 CORS:
 
@@ -208,6 +209,7 @@ Lifecycle:
 - Rule ID: `abort-public-multipart-uploads-after-7-days`
 - Prefix: empty
 - Abort multipart uploads after: `604800` seconds
+- OVE-195 note (2026-07-23): quarantine bucket still uses CF lifecycle delete after `1d` (`delete-quarantine-originals-after-1-day`) as defense-in-depth under the 7-day policy floor. App retention executor `ove195.retention.v1` owns the 7-day failed/unprocessed quarantine class independently of provider lifecycle.
 
 Invariants:
 
@@ -581,3 +583,4 @@ Local storage emulator:
 
 - Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user, or create a separate production process-manager migration with the OVE-76 live-proof gate before replacing it.
 - After `OVE-12` proves production media readback through `https://media.over.garden`, disable the public `r2.dev` development URL for `overgarden-public`.
+- OVE-195 (2026-07-23): public `r2.dev` for `overgarden-public` is disabled; canonical custom domain remains `media.over.garden`.

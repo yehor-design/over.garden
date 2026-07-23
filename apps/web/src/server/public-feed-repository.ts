@@ -351,6 +351,7 @@ export function buildPublicFeedMediaQuery(
     .where("journal_entries.published_at", "is not", null)
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
+    .where("media_assets.revoked_at", "is", null)
     .where((eb) =>
       eb.or([
         eb(

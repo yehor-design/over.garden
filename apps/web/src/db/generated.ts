@@ -601,10 +601,24 @@ export interface MediaAssets {
   journal_entry_id: string | null;
   original_deleted_at: Timestamp | null;
   owner_user_id: string;
+  public_unreachable_at: Timestamp | null;
   quarantine_key: string;
+  revoked_at: Timestamp | null;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
   usage_role: Generated<string>;
+}
+
+export interface MediaLifecycleRetentionRuns {
+  created_at: Generated<Timestamp>;
+  failure_class: string | null;
+  finished_at: Generated<Timestamp>;
+  id: Generated<string>;
+  mode: string;
+  policy_version: string;
+  selection: Generated<Json>;
+  started_at: Generated<Timestamp>;
+  status: string;
 }
 
 export interface NotificationPreferences {
@@ -838,6 +852,7 @@ export interface DB {
   lineage_questions: LineageQuestions;
   matching_worker_heartbeats: MatchingWorkerHeartbeats;
   media_assets: MediaAssets;
+  media_lifecycle_retention_runs: MediaLifecycleRetentionRuns;
   notification_preferences: NotificationPreferences;
   notification_receipts: NotificationReceipts;
   pilot_interview_learnings: PilotInterviewLearnings;
