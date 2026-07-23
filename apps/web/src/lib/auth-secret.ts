@@ -72,6 +72,7 @@ function readRuntimeAuthEnv(): EnvLike {
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: process.env.VERCEL,
     VERCEL_ENV: process.env.VERCEL_ENV,
+    NEXT_PHASE: process.env.NEXT_PHASE,
   };
 }
 
