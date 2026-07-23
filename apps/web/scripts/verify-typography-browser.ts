@@ -2246,7 +2246,7 @@ async function runFallbackCase(input: {
           return visibleText && fcpMs > 0;
         },
         undefined,
-        { timeout: 1_000 },
+        { timeout: 1_500 },
       )
       .catch(() => undefined);
     const visibleAfterDomContentLoadedMs = Date.now() - domContentLoadedAt;

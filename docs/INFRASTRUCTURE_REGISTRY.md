@@ -37,6 +37,17 @@ This is host-local, non-secret operational state. It does not describe productio
 
 Never commit `infra/.runtime/` or `apps/web/.runtime/`. Those directories contain local activation identifiers or short-lived synthetic proof handles and are git-ignored.
 
+## GitHub Actions budget freeze (OVE-208 closeout, 2026-07-23)
+
+Status: GitHub-hosted Actions cannot start jobs (`Actions budget is preventing further use`) and spending limit cannot be raised.
+
+Operational bypass in force:
+
+- `.github/workflows/ci.yml` and `.github/workflows/matching-image.yml` are `workflow_dispatch` only (no auto `push` / `pull_request` triggers).
+- Merge / production gate while freeze lasts: Vercel deployment `READY` for the exact SHA plus local proof (`pnpm typography:assets:check`, focused vitest, `pnpm mainline:closeout:check` from `main`).
+- Cleared Actions artifacts and listed caches during OVE-208; usage meters may lag 6–12 hours.
+- When included minutes/storage recover, restore auto `pull_request`/`push` triggers on CI and optional `push` on matching-image; keep `KEEP_COUNT=0` and short retention.
+
 ## Cloudflare
 
 Account:
