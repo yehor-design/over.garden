@@ -179,8 +179,39 @@ _ALLOWED_JOURNAL_DOCUMENT_KEYS = frozenset(
         "entryScope",
         "createdAt",
         "kind",
+        "coverSource",
+        "coverPublicUrl",
+        "coarseRegionCode",
     }
 )
+_REQUIRED_JOURNAL_DOCUMENT_KEYS = frozenset(
+    {
+        "id",
+        "title",
+        "body",
+        "publicSlug",
+        "publicPath",
+        "locationVisibility",
+        "noindex",
+        "entryDate",
+        "entryScope",
+        "createdAt",
+        "kind",
+        "coverSource",
+    }
+)
+
+
+def _journal_document_matches_public_contract(document: Mapping[str, Any] | None) -> bool:
+    if document is None:
+        return False
+    keys = set(document)
+    if not _REQUIRED_JOURNAL_DOCUMENT_KEYS.issubset(keys):
+        return False
+    if not keys.issubset(_ALLOWED_JOURNAL_DOCUMENT_KEYS):
+        return False
+    return True
+
 
 
 def run_handler_canaries(
@@ -241,7 +272,7 @@ def run_handler_canaries(
     journal_entry_id = str(journal_source["journal_entry_id"])
     owner_user_id = str(journal_source["owner_user_id"])
     document = _journal_document(client, journal_entry_id)
-    if document is None or set(document) != _ALLOWED_JOURNAL_DOCUMENT_KEYS:
+    if not _journal_document_matches_public_contract(document):
         raise RuntimeError("journal index canary failed the public-safe contract")
 
     unindex_payload = {
@@ -274,10 +305,7 @@ def run_handler_canaries(
         )
         _wait_for_done(conn, restore_job, timeout_seconds)
         restored_document = _journal_document(client, journal_entry_id)
-        if (
-            restored_document is None
-            or set(restored_document) != _ALLOWED_JOURNAL_DOCUMENT_KEYS
-        ):
+        if not _journal_document_matches_public_contract(restored_document):
             raise RuntimeError(
                 "journal canary could not restore public-safe search state"
             )

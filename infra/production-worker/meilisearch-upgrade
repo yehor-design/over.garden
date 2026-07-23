@@ -1,0 +1,563 @@
+#!/usr/bin/env bash
+
+# OVE-198 production Meilisearch dual-volume upgrade operator.
+# production-linux-required. Never print meili.env, worker.env, keys, document
+# bodies, user IDs, or journal text.
+
+set -euo pipefail
+
+readonly CONTRACT_SCHEMA="ove198.meilisearchUpgrade.v1"
+readonly PINNED_TARGET_VERSION="1.48.1"
+readonly PINNED_IMAGE_REF="getmeili/meilisearch:v1.48.1@sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a"
+readonly PINNED_IMAGE_DIGEST="sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a"
+readonly UPGRADE_STRATEGY="dual_volume_postgres_rebuild"
+readonly PRODUCTION_ROOT="${OVERGARDEN_PRODUCTION_ROOT:-/opt/overgarden}"
+readonly STATE_ROOT="$PRODUCTION_ROOT/meili-upgrade-state"
+readonly LOCK_FILE="$STATE_ROOT/meilisearch-upgrade.lock"
+readonly CURRENT_POINTER="$STATE_ROOT/current.json"
+readonly PREVIOUS_POINTER="$STATE_ROOT/previous.json"
+readonly FORWARD_POINTER="$STATE_ROOT/forward.json"
+readonly EVIDENCE_POINTER="$STATE_ROOT/evidence.json"
+readonly COMPOSE_FILE="${OVERGARDEN_MEILI_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.meilisearch.yml}"
+readonly LEGACY_COMPOSE_FILE="${OVERGARDEN_LEGACY_COMPOSE_FILE:-$PRODUCTION_ROOT/docker-compose.yml}"
+readonly NEXT_SERVICE="meilisearch-next"
+readonly NEXT_CONTAINER="overgarden-meilisearch-next"
+readonly LEGACY_SERVICE="meilisearch"
+readonly NETWORK_NAME="overgarden_default"
+readonly LEGACY_VOLUME_NAME="overgarden_meili_data"
+readonly NEXT_VOLUME_NAME="overgarden-meili-data-v1481"
+readonly ACTIVE_ALIAS="meilisearch"
+readonly NEXT_ALIAS="meilisearch-next"
+readonly MIN_VIRTUAL_MEMORY_KB=2621440
+readonly MIN_AVAILABLE_VIRTUAL_MEMORY_KB=1048576
+readonly REBUILD_SCRIPT="${OVERGARDEN_MEILI_REBUILD_SCRIPT:-$PRODUCTION_ROOT/meili-rebuild-from-postgres.py}"
+
+fail() {
+  printf 'meilisearch upgrade refused: %s\n' "$1" >&2
+  exit 1
+}
+
+info() {
+  printf 'meilisearch upgrade: %s\n' "$1"
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail "required command is unavailable: $1"
+}
+
+require_runtime() {
+  require_command docker
+  require_command jq
+  require_command flock
+  require_command awk
+  require_command df
+  docker compose version >/dev/null 2>&1 || fail "Docker Compose v2 is unavailable"
+  [[ -f "$COMPOSE_FILE" ]] || fail "committed Meilisearch Compose file is not installed"
+  [[ -f "$LEGACY_COMPOSE_FILE" ]] || fail "legacy production Compose file is missing"
+  [[ -f "$REBUILD_SCRIPT" ]] || fail "committed Meilisearch rebuild script is not installed"
+  [[ -f "$PRODUCTION_ROOT/meili.env" ]] || fail "production meili.env is missing"
+  [[ -f "$PRODUCTION_ROOT/worker.env" ]] || fail "production worker.env is missing"
+  docker network inspect "$NETWORK_NAME" >/dev/null 2>&1 \
+    || fail "existing overgarden_default production network is missing"
+  mkdir -p "$STATE_ROOT"
+  chmod 0750 "$STATE_ROOT"
+}
+
+with_lock() {
+  require_command flock
+  mkdir -p "$STATE_ROOT"
+  exec 9>"$LOCK_FILE"
+  flock -n 9 || fail "another meilisearch-upgrade command holds the lock"
+  "$@"
+}
+
+require_host_capacity() {
+  [[ -r /proc/meminfo ]] || fail "production host memory capacity cannot be verified"
+  local memory_total_kb swap_total_kb memory_available_kb swap_free_kb docker_root
+  memory_total_kb="$(awk '$1 == "MemTotal:" { print $2; exit }' /proc/meminfo)"
+  swap_total_kb="$(awk '$1 == "SwapTotal:" { print $2; exit }' /proc/meminfo)"
+  memory_available_kb="$(awk '$1 == "MemAvailable:" { print $2; exit }' /proc/meminfo)"
+  swap_free_kb="$(awk '$1 == "SwapFree:" { print $2; exit }' /proc/meminfo)"
+  docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)"
+  [[ "$memory_total_kb" =~ ^[0-9]+$
+    && "$swap_total_kb" =~ ^[0-9]+$
+    && "$memory_available_kb" =~ ^[0-9]+$
+    && "$swap_free_kb" =~ ^[0-9]+$
+    && "$docker_root" == /*
+    && -d "$docker_root" ]] \
+    || fail "production host capacity cannot be verified"
+  ((memory_total_kb + swap_total_kb >= MIN_VIRTUAL_MEMORY_KB)) \
+    || fail "production host RAM plus active swap is below the upgrade safety floor"
+  ((memory_available_kb + swap_free_kb >= MIN_AVAILABLE_VIRTUAL_MEMORY_KB)) \
+    || fail "production host available memory plus free swap is below the upgrade safety floor"
+  local capacity_path available_disk_kb
+  for capacity_path in "$PRODUCTION_ROOT" "$docker_root"; do
+    available_disk_kb="$(LC_ALL=C df -Pk -- "$capacity_path" | awk 'END { print $4 }')"
+    [[ "$available_disk_kb" =~ ^[0-9]+$ ]] \
+      || fail "production host disk capacity cannot be verified"
+    ((available_disk_kb >= MIN_AVAILABLE_DISK_KB)) \
+      || fail "production host free disk is below the upgrade safety floor"
+  done
+}
+
+legacy_container_id() {
+  docker compose -f "$LEGACY_COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" \
+    ps -q "$LEGACY_SERVICE" 2>/dev/null | head -n1
+}
+
+matching_api_container() {
+  docker ps --format '{{.Names}}' | awk '/matching-api/ { print; exit }'
+}
+
+meili_auth_header_env() {
+  # Resolve key only inside a matching container that already has env; never echo it.
+  local api_container
+  api_container="$(matching_api_container)"
+  [[ -n "$api_container" ]] || fail "matching-api container is not running"
+  printf '%s\n' "$api_container"
+}
+
+read_meili_pkg_version() {
+  local host="$1"
+  local api_container
+  api_container="$(meili_auth_header_env)"
+  docker exec "$api_container" python -c "
+import os, urllib.request, json
+host = '''${host}'''.rstrip('/')
+key = os.environ.get('MEILISEARCH_API_KEY', '')
+req = urllib.request.Request(host + '/version', headers={'Authorization': 'Bearer ' + key})
+payload = json.loads(urllib.request.urlopen(req, timeout=15).read().decode())
+print(payload.get('pkgVersion', ''))
+" 2>/dev/null
+}
+
+wait_meili_health() {
+  local host="$1"
+  local attempts="${2:-60}"
+  local api_container
+  api_container="$(meili_auth_header_env)"
+  local i
+  for ((i = 1; i <= attempts; i++)); do
+    if docker exec "$api_container" python -c "
+import urllib.request
+urllib.request.urlopen('''${host}'''.rstrip('/') + '/health', timeout=5).read()
+" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+  fail "Meilisearch health did not become available at the target host class"
+}
+
+wait_meili_task() {
+  local host="$1"
+  local task_uid="$2"
+  local api_container
+  api_container="$(meili_auth_header_env)"
+  docker exec "$api_container" python -c "
+import os, urllib.request, json, time, sys
+host = '''${host}'''.rstrip('/')
+key = os.environ.get('MEILISEARCH_API_KEY', '')
+task_uid = int('''${task_uid}''')
+deadline = time.time() + 1800
+while time.time() < deadline:
+    req = urllib.request.Request(
+        host + '/tasks/' + str(task_uid),
+        headers={'Authorization': 'Bearer ' + key},
+    )
+    payload = json.loads(urllib.request.urlopen(req, timeout=15).read().decode())
+    status = payload.get('status')
+    if status == 'succeeded':
+        print(status)
+        raise SystemExit(0)
+    if status in {'failed', 'canceled'}:
+        print(status, file=sys.stderr)
+        raise SystemExit(1)
+    time.sleep(2)
+print('timeout', file=sys.stderr)
+raise SystemExit(1)
+" >/dev/null
+}
+
+enqueue_meili_task() {
+  local host="$1"
+  local path="$2"
+  local api_container
+  api_container="$(meili_auth_header_env)"
+  docker exec "$api_container" python -c "
+import os, urllib.request, json
+host = '''${host}'''.rstrip('/')
+key = os.environ.get('MEILISEARCH_API_KEY', '')
+req = urllib.request.Request(
+    host + '''${path}''',
+    data=b'',
+    method='POST',
+    headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'},
+)
+payload = json.loads(urllib.request.urlopen(req, timeout=30).read().decode())
+print(payload.get('taskUid'))
+"
+}
+
+assert_allowed_source_version() {
+  local version="$1"
+  local normalized="${version#v}"
+  [[ "$normalized" == "1.15" || "$normalized" == 1.15.* ]] \
+    || fail "unsupported source version class"
+}
+
+assert_pinned_compose() {
+  grep -Fq "$PINNED_IMAGE_REF" "$COMPOSE_FILE" \
+    || fail "Compose file does not pin the reviewed digest image ref"
+  grep -Fq "$NEXT_VOLUME_NAME" "$COMPOSE_FILE" \
+    || fail "Compose file does not name the versioned next volume"
+  if grep -Eq '(^|[^@]):latest([[:space:]]|$)|/latest([[:space:]]|$)' "$COMPOSE_FILE"; then
+    fail "Compose file must not mention floating latest"
+  fi
+}
+
+write_json_file() {
+  local path="$1"
+  local payload="$2"
+  umask 077
+  printf '%s\n' "$payload" >"$path"
+  chmod 0600 "$path"
+}
+
+cmd_preflight() {
+  require_runtime
+  require_host_capacity
+  assert_pinned_compose
+
+  local legacy_id
+  legacy_id="$(legacy_container_id)"
+  [[ -n "$legacy_id" ]] || fail "legacy Meilisearch container is not running"
+
+  local source_version
+  source_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
+  [[ -n "$source_version" ]] || fail "unable to read legacy Meilisearch version"
+  assert_allowed_source_version "$source_version"
+
+  docker volume inspect "$LEGACY_VOLUME_NAME" >/dev/null 2>&1 \
+    || fail "legacy Meilisearch volume is missing"
+
+  info "preflight ok source=${source_version} target=${PINNED_TARGET_VERSION} strategy=${UPGRADE_STRATEGY}"
+}
+
+cmd_snapshot() {
+  require_runtime
+  local host="http://${ACTIVE_ALIAS}:7700"
+  wait_meili_health "$host" 30
+
+  local dump_uid snapshot_uid
+  dump_uid="$(enqueue_meili_task "$host" "/dumps")"
+  [[ "$dump_uid" =~ ^[0-9]+$ ]] || fail "dump task uid missing"
+  wait_meili_task "$host" "$dump_uid"
+
+  snapshot_uid="$(enqueue_meili_task "$host" "/snapshots")"
+  [[ "$snapshot_uid" =~ ^[0-9]+$ ]] || fail "snapshot task uid missing"
+  wait_meili_task "$host" "$snapshot_uid"
+
+  local source_version
+  source_version="$(read_meili_pkg_version "$host")"
+  write_json_file "$EVIDENCE_POINTER" "$(jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --arg source "$source_version" \
+    --arg strategy "$UPGRADE_STRATEGY" \
+    --arg dumpUidClass "present" \
+    --arg snapshotUidClass "present" \
+    --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{schema:$schema,sourceVersion:$source,strategy:$strategy,dumpTask:"succeeded",snapshotTask:"succeeded",dumpUidClass:$dumpUidClass,snapshotUidClass:$snapshotUidClass,recordedAt:$at}')"
+
+  info "snapshot ok dump=succeeded snapshot=succeeded"
+}
+
+cmd_provision() {
+  require_runtime
+  require_host_capacity
+  assert_pinned_compose
+  [[ -f "$EVIDENCE_POINTER" ]] || fail "snapshot evidence is required before provision"
+
+  docker compose -f "$COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" pull "$NEXT_SERVICE" >/dev/null
+  docker compose -f "$COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" up -d "$NEXT_SERVICE" >/dev/null
+
+  wait_meili_health "http://${NEXT_ALIAS}:7700" 90
+  local next_version
+  next_version="$(read_meili_pkg_version "http://${NEXT_ALIAS}:7700")"
+  [[ "$next_version" == "$PINNED_TARGET_VERSION" ]] \
+    || fail "provisioned Meilisearch version does not match pinned target"
+
+  local image_id
+  image_id="$(docker inspect "$NEXT_CONTAINER" --format '{{.Image}}')"
+  docker image inspect "$image_id" --format '{{index .RepoDigests 0}}' 2>/dev/null \
+    | grep -Fq "$PINNED_IMAGE_DIGEST" \
+    || info "warning: repo digest string may use tag+digest form; pinned compose digest remains authoritative"
+
+  write_json_file "$STATE_ROOT/provisioned.json" "$(jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --arg version "$next_version" \
+    --arg digest "$PINNED_IMAGE_DIGEST" \
+    --arg volume "$NEXT_VOLUME_NAME" \
+    --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{schema:$schema,status:"provisioned",targetVersion:$version,imageDigest:$digest,volume:$volume,alias:"meilisearch-next",recordedAt:$at}')"
+
+  info "provision ok version=${next_version} volume=${NEXT_VOLUME_NAME}"
+}
+
+cmd_rebuild() {
+  require_runtime
+  [[ -f "$STATE_ROOT/provisioned.json" ]] || fail "provision is required before rebuild"
+  wait_meili_health "http://${NEXT_ALIAS}:7700" 30
+
+  local api_container
+  api_container="$(matching_api_container)"
+  [[ -n "$api_container" ]] || fail "matching-api container is not running"
+
+  # Run inside the live matching container so DIRECT_URL/Meili keys keep the
+  # Compose env_file parsing already proven by production. Counts-only summary.
+  docker cp "$REBUILD_SCRIPT" "$api_container:/tmp/meili-rebuild-from-postgres.py" >/dev/null
+  docker exec \
+    -e "MEILISEARCH_HOST=http://${NEXT_ALIAS}:7700" \
+    -e "OVERGARDEN_MEILI_REBUILD_SUMMARY=/tmp/ove198-rebuild-summary.json" \
+    -e "PYTHONPATH=/app" \
+    -w /app \
+    "$api_container" \
+    python /tmp/meili-rebuild-from-postgres.py
+  docker cp "$api_container:/tmp/ove198-rebuild-summary.json" "$STATE_ROOT/rebuild-summary.json" >/dev/null
+  docker exec "$api_container" rm -f /tmp/meili-rebuild-from-postgres.py /tmp/ove198-rebuild-summary.json >/dev/null
+
+  local catalog_count journal_count
+  catalog_count="$(docker exec "$api_container" python -c "
+import os, urllib.request, json
+host='http://${NEXT_ALIAS}:7700'
+key=os.environ.get('MEILISEARCH_API_KEY','')
+req=urllib.request.Request(host+'/indexes/catalog_typeahead/stats', headers={'Authorization':'Bearer '+key})
+print(json.loads(urllib.request.urlopen(req, timeout=60).read().decode()).get('numberOfDocuments',0))
+")"
+  journal_count="$(docker exec "$api_container" python -c "
+import os, urllib.request, json
+host='http://${NEXT_ALIAS}:7700'
+key=os.environ.get('MEILISEARCH_API_KEY','')
+req=urllib.request.Request(host+'/indexes/journal_entries/stats', headers={'Authorization':'Bearer '+key})
+print(json.loads(urllib.request.urlopen(req, timeout=30).read().decode()).get('numberOfDocuments',0))
+")"
+
+  [[ "$catalog_count" =~ ^[0-9]+$ && "$catalog_count" -gt 60000 ]] \
+    || fail "catalog rebuild document count class failed"
+  [[ "$journal_count" =~ ^[0-9]+$ ]] \
+    || fail "journal rebuild document count missing"
+  # Journal documents are intentionally empty until OVE-196 parity apply.
+
+  write_json_file "$STATE_ROOT/rebuild.json" "$(jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --argjson catalog "$catalog_count" \
+    --argjson journal "$journal_count" \
+    --arg journalConvergence "ove196_public_index_parity_apply" \
+    --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{schema:$schema,status:"rebuilt",catalogDocumentCount:$catalog,journalDocumentCount:$journal,journalConvergence:$journalConvergence,recordedAt:$at}')"
+
+  info "rebuild ok catalogDocuments=${catalog_count} journalDocuments=${journal_count} journalConvergence=ove196_public_index_parity_apply"
+}
+
+disconnect_alias_network() {
+  local container="$1"
+  docker network disconnect "$NETWORK_NAME" "$container" >/dev/null 2>&1 || true
+}
+
+connect_with_aliases() {
+  local container="$1"
+  shift
+  local args=()
+  local alias
+  for alias in "$@"; do
+    args+=(--alias "$alias")
+  done
+  docker network connect "${args[@]}" "$NETWORK_NAME" "$container" >/dev/null
+}
+
+cmd_cutover() {
+  require_runtime
+  [[ -f "$STATE_ROOT/rebuild.json" ]] || fail "rebuild is required before cutover"
+  wait_meili_health "http://${NEXT_ALIAS}:7700" 30
+
+  local legacy_id
+  legacy_id="$(legacy_container_id)"
+  [[ -n "$legacy_id" ]] || fail "legacy Meilisearch container id missing"
+  docker inspect "$NEXT_CONTAINER" >/dev/null 2>&1 \
+    || fail "next Meilisearch container is missing"
+
+  # Stop legacy writers/readers to the old alias, retain volume and container.
+  # Disconnect so the shared DNS alias can move to next without a name clash.
+  docker compose -f "$LEGACY_COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" \
+    stop "$LEGACY_SERVICE" >/dev/null
+  if [[ -n "$legacy_id" ]]; then
+    disconnect_alias_network "$legacy_id"
+  fi
+
+  disconnect_alias_network "$NEXT_CONTAINER"
+  connect_with_aliases "$NEXT_CONTAINER" "$ACTIVE_ALIAS" "$NEXT_ALIAS"
+
+  wait_meili_health "http://${ACTIVE_ALIAS}:7700" 60
+  local active_version
+  active_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
+  [[ "$active_version" == "$PINNED_TARGET_VERSION" ]] \
+    || fail "cutover active version mismatch"
+
+  if [[ -f "$CURRENT_POINTER" ]]; then
+    cp "$CURRENT_POINTER" "$PREVIOUS_POINTER"
+  else
+    write_json_file "$PREVIOUS_POINTER" "$(jq -nc \
+      --arg schema "$CONTRACT_SCHEMA" \
+      --arg version "1.15.2" \
+      --arg volume "$LEGACY_VOLUME_NAME" \
+      --arg role "legacy" \
+      '{schema:$schema,role:$role,version:$version,volume:$volume,containerClass:"legacy"}')"
+  fi
+
+  write_json_file "$CURRENT_POINTER" "$(jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --arg version "$PINNED_TARGET_VERSION" \
+    --arg digest "$PINNED_IMAGE_DIGEST" \
+    --arg volume "$NEXT_VOLUME_NAME" \
+    --arg strategy "$UPGRADE_STRATEGY" \
+    --arg at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{schema:$schema,role:"active",version:$version,imageDigest:$digest,volume:$volume,strategy:$strategy,container:"overgarden-meilisearch-next",recordedAt:$at}')"
+  rm -f "$FORWARD_POINTER"
+
+  info "cutover ok activeVersion=${active_version} legacyVolumeRetained=true"
+}
+
+cmd_rollback() {
+  require_runtime
+  [[ -f "$PREVIOUS_POINTER" ]] || fail "no previous Meilisearch pointer to roll back to"
+  [[ -f "$CURRENT_POINTER" ]] || fail "no current Meilisearch pointer"
+
+  cp "$CURRENT_POINTER" "$FORWARD_POINTER"
+
+  if docker inspect "$NEXT_CONTAINER" >/dev/null 2>&1; then
+    disconnect_alias_network "$NEXT_CONTAINER"
+    connect_with_aliases "$NEXT_CONTAINER" "$NEXT_ALIAS"
+  fi
+
+  # Recreate the retained legacy container, then force network + alias attachment.
+  # `compose up` alone is not enough after an earlier explicit network disconnect.
+  docker compose -f "$LEGACY_COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" \
+    up -d --no-deps "$LEGACY_SERVICE" >/dev/null
+  local legacy_id
+  legacy_id="$(legacy_container_id)"
+  [[ -n "$legacy_id" ]] || fail "legacy Meilisearch container id missing after rollback start"
+  disconnect_alias_network "$legacy_id"
+  connect_with_aliases "$legacy_id" "$ACTIVE_ALIAS"
+  wait_meili_health "http://${ACTIVE_ALIAS}:7700" 60
+
+  local active_version
+  active_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
+  assert_allowed_source_version "$active_version"
+
+  cp "$PREVIOUS_POINTER" "$CURRENT_POINTER"
+  info "rollback ok activeVersion=${active_version} forwardPointer=saved"
+}
+
+cmd_forward() {
+  require_runtime
+  [[ -f "$FORWARD_POINTER" ]] || fail "no forward Meilisearch pointer from a prior rollback"
+  [[ -f "$STATE_ROOT/rebuild.json" ]] || fail "rebuild evidence required before forward"
+
+  wait_meili_health "http://${NEXT_ALIAS}:7700" 30
+
+  local legacy_id
+  legacy_id="$(legacy_container_id || true)"
+  docker compose -f "$LEGACY_COMPOSE_FILE" --project-directory "$PRODUCTION_ROOT" \
+    stop "$LEGACY_SERVICE" >/dev/null
+  if [[ -n "$legacy_id" ]]; then
+    disconnect_alias_network "$legacy_id"
+  fi
+
+  disconnect_alias_network "$NEXT_CONTAINER"
+  connect_with_aliases "$NEXT_CONTAINER" "$ACTIVE_ALIAS" "$NEXT_ALIAS"
+  wait_meili_health "http://${ACTIVE_ALIAS}:7700" 60
+
+  local active_version
+  active_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
+  [[ "$active_version" == "$PINNED_TARGET_VERSION" ]] \
+    || fail "forward active version mismatch"
+
+  write_json_file "$PREVIOUS_POINTER" "$(jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --arg version "1.15.2" \
+    --arg volume "$LEGACY_VOLUME_NAME" \
+    '{schema:$schema,role:"legacy",version:$version,volume:$volume,containerClass:"legacy"}')"
+  cp "$FORWARD_POINTER" "$CURRENT_POINTER"
+  rm -f "$FORWARD_POINTER"
+
+  info "forward ok activeVersion=${active_version} legacyVolumeRetained=true"
+}
+
+cmd_status() {
+  require_runtime
+  local legacy_running=false next_running=false
+  local legacy_id
+  legacy_id="$(legacy_container_id || true)"
+  [[ -n "$legacy_id" ]] && legacy_running=true
+  docker inspect "$NEXT_CONTAINER" >/dev/null 2>&1 && next_running=true
+
+  local active_version="unavailable"
+  if active_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700" 2>/dev/null)"; then
+    :
+  else
+    active_version="unavailable"
+  fi
+
+  jq -nc \
+    --arg schema "$CONTRACT_SCHEMA" \
+    --arg strategy "$UPGRADE_STRATEGY" \
+    --arg target "$PINNED_TARGET_VERSION" \
+    --arg digest "$PINNED_IMAGE_DIGEST" \
+    --arg activeVersion "$active_version" \
+    --argjson legacyRunning "$legacy_running" \
+    --argjson nextRunning "$next_running" \
+    --arg legacyVolume "$LEGACY_VOLUME_NAME" \
+    --arg nextVolume "$NEXT_VOLUME_NAME" \
+    '{schema:$schema,strategy:$strategy,pinnedTargetVersion:$target,pinnedImageDigest:$digest,activeAliasVersion:$activeVersion,legacyContainerRunning:$legacyRunning,nextContainerRunning:$nextRunning,legacyVolume:$legacyVolume,nextVolume:$nextVolume,legacyVolumeDeletion:"forbidden_in_ove198"}'
+}
+
+usage() {
+  cat <<'EOF'
+Usage: meilisearch-upgrade <command>
+
+Commands:
+  preflight   Refuse unsupported source/target/strategy; check capacity
+  snapshot    Create dump + same-version snapshot on the legacy instance
+  provision   Start digest-pinned meilisearch-next on a new volume
+  rebuild     Rebuild catalog + journal indexes from Postgres into next
+  cutover     Point meilisearch alias at next; stop legacy; retain volume
+  rollback    Restore legacy alias path; keep next for forward
+  forward     Cut back to next after a successful rollback rehearsal
+  status      Redacted upgrade state
+
+Install once:
+  sudo install -m 0755 infra/production-worker/meilisearch-upgrade /opt/overgarden/meilisearch-upgrade
+  sudo install -m 0644 infra/production-worker/docker-compose.meilisearch.yml /opt/overgarden/docker-compose.meilisearch.yml
+  sudo install -m 0644 infra/production-worker/meili-rebuild-from-postgres.py /opt/overgarden/meili-rebuild-from-postgres.py
+EOF
+}
+
+main() {
+  local command="${1:-}"
+  case "$command" in
+    preflight|snapshot|provision|rebuild|cutover|rollback|forward)
+      with_lock "cmd_$command"
+      ;;
+    status)
+      cmd_status
+      ;;
+    -h|--help|help|"")
+      usage
+      ;;
+    *)
+      fail "unknown command"
+      ;;
+  esac
+}
+
+main "$@"

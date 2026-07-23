@@ -146,3 +146,56 @@ Forbidden evidence:
 The release script suppresses Compose, image-load, preflight, and readiness
 stdout. Do not add `set -x`, `docker inspect` dumps, container environment dumps,
 or raw database queries to the production proof.
+
+## Meilisearch dual-volume upgrade (OVE-198)
+
+Production Meilisearch must track the same reviewed pin as local/CI:
+`getmeili/meilisearch:v1.48.1` with digest
+`sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a`.
+Never deploy floating `latest`. Never upgrade the live volume in place and never
+use experimental dumpless upgrade on production. Postgres remains the source of
+truth; Meilisearch is rebuilt on a new volume, then the Docker network alias
+`meilisearch` is moved atomically. The legacy volume stays recoverable.
+
+### Install the committed upgrade boundary
+
+```bash
+sudo install -m 0755 infra/production-worker/meilisearch-upgrade /opt/overgarden/meilisearch-upgrade
+sudo install -m 0644 infra/production-worker/docker-compose.meilisearch.yml /opt/overgarden/docker-compose.meilisearch.yml
+sudo install -m 0644 infra/production-worker/meili-rebuild-from-postgres.py /opt/overgarden/meili-rebuild-from-postgres.py
+```
+
+Existing `/opt/overgarden/meili.env`, `worker.env`, Caddy, and the legacy
+`docker-compose.yml` Meilisearch service remain in place. Never copy env files
+off the host.
+
+### Operator sequence
+
+```bash
+sudo /opt/overgarden/meilisearch-upgrade preflight
+sudo /opt/overgarden/meilisearch-upgrade snapshot
+sudo /opt/overgarden/meilisearch-upgrade provision
+sudo /opt/overgarden/meilisearch-upgrade rebuild
+# Dual-run catalog proofs against meilisearch-next, then converge journals with:
+#   cd apps/web && pnpm smoke:public-index-parity -- --environment production \
+#     --confirm-environment production --mode apply --allow-non-local-mutation
+# Then:
+sudo /opt/overgarden/meilisearch-upgrade cutover
+sudo /opt/overgarden/meilisearch-upgrade rollback
+sudo /opt/overgarden/meilisearch-upgrade forward
+sudo /opt/overgarden/meilisearch-upgrade status
+```
+
+Rollback triggers before cutover: preflight failure, snapshot/dump task failure,
+provision version/digest mismatch, catalog rebuild below the expected count
+class, journal/public parity non-zero, Cyrillic typeahead regression, or any
+unsafe document/evidence appearance. After cutover, the same triggers require
+immediate `rollback`, then root-cause before another `forward`.
+
+Allowed evidence: pinned version/digest classes, volume name classes, dump and
+snapshot task success booleans, catalog/journal document counts, parity zero-gap
+booleans, cutover/rollback/forward pass/fail, public `/health` status.
+
+Forbidden evidence: Meilisearch keys, env files, raw documents, journal text,
+user IDs, media keys, database URLs, IPs, user agents, or precise location.
+Do not delete `overgarden_meili_data` in this issue.

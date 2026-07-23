@@ -1,0 +1,38 @@
+name: overgarden
+
+# production-linux-required: DigitalOcean Meilisearch cutover for OVE-198.
+# Apple Container remains the supported-Mac local runtime; this file is not for
+# local development. Dual-volume upgrade only — never mutate the legacy volume
+# in place and never use floating `latest`.
+
+services:
+  meilisearch-next:
+    image: getmeili/meilisearch:v1.48.1@sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a
+    container_name: overgarden-meilisearch-next
+    restart: unless-stopped
+    env_file:
+      - ${OVERGARDEN_PRODUCTION_ROOT:-/opt/overgarden}/meili.env
+    environment:
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili_data_v1481:/meili_data
+    expose:
+      - "7700"
+    networks:
+      default:
+        aliases:
+          - meilisearch-next
+    labels:
+      garden.over.meilisearch.upgrade: ove198
+      garden.over.meilisearch.targetVersion: "1.48.1"
+      garden.over.meilisearch.strategy: dual_volume_postgres_rebuild
+
+volumes:
+  meili_data_v1481:
+    name: overgarden-meili-data-v1481
+
+networks:
+  default:
+    name: overgarden_default
+    external: true

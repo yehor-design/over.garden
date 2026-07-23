@@ -288,9 +288,20 @@ Runtime classification: this production worker/search surface is `production-lin
 - Public matching readiness URL: `https://matching.over.garden/ready`
 - Public Meilisearch URL: `https://meili.over.garden`
 - Reverse proxy/TLS: Caddy on the Droplet
-- Containers: `meilisearch`, `matching-api`, `matching-worker`, `caddy`
+- Containers: active Meilisearch (`overgarden-meilisearch-next` after OVE-198), legacy Meilisearch retained stopped, `matching-api`, `matching-worker`, `caddy`
 - Matching API health returned status `ok` with ICU present on 2026-06-29.
 - Meilisearch health returned status `available` on 2026-06-29.
+
+Meilisearch version pin (OVE-198):
+
+- Reviewed pin shared by local Apple Container, Docker fallback, CI, and production: `v1.48.1`.
+- Production image ref class: `getmeili/meilisearch:v1.48.1@sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a`.
+- Upgrade strategy: `dual_volume_postgres_rebuild` only. In-place volume upgrade and experimental dumpless upgrade are forbidden on production.
+- Active volume class after cutover: `overgarden-meili-data-v1481`.
+- Legacy volume retained for rollback: `overgarden_meili_data` (pre-cutover `v1.15.2` data). Deletion is out of scope for OVE-198.
+- Operator CLI: `/opt/overgarden/meilisearch-upgrade` with committed Compose `docker-compose.meilisearch.yml`.
+- Pre-cutover audit source: production `pkgVersion=1.15.2` with catalog document count class ~61888 and journal count class 4.
+- Live proof on 2026-07-23: preflight accepted `1.15.2` → pinned `1.48.1` dual-volume rebuild; dump+snapshot tasks succeeded; provisioned digest-pinned next volume; rebuild reached catalog `61888`; journals converged via OVE-196 parity apply to `69`/`69` zero-gap; cutover, rollback rehearsal, and forward restored active `1.48.1` with legacy volume `overgarden_meili_data` retained; public `/health` `available`; Cyrillic catalog typeahead returned nonzero hits class; matching handler canary proved journal index/unindex/restore with cover-safe keys (`leakCheck=passed`).
 
 Worker and search invariants:
 
