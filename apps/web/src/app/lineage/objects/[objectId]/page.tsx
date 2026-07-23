@@ -120,10 +120,14 @@ export default async function PublicLineageObjectRoute({
   const scope = userId ? scopedToUser(userId, getSessionId(session)) : null;
   const writeAccess = scope
     ? await resolvePilotWriteAccess(scope)
-    : { invited: false };
+    : {
+        canWrite: false,
+        invited: false,
+        actorClass: "self_serve" as const,
+      };
   const edges = lineagePage?.edges ?? [];
   const interactionTargets =
-    scope && writeAccess.invited && edges.length > 0
+    scope && writeAccess.canWrite && edges.length > 0
       ? await listLineageInteractionTargets(
           scope,
           edges.map((edge) => edge.id),

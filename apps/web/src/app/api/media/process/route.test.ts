@@ -99,9 +99,9 @@ describe("media process API", () => {
     expect(authIntentMock.authIntentRequiredResponse).not.toHaveBeenCalled();
   });
 
-  it("rejects authenticated users who are outside the closed pilot", async () => {
+  it("still maps unexpected write-boundary errors to opaque 403", async () => {
     pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new pilotMock.PilotWriteAccessError("Invite required."),
+      new pilotMock.PilotWriteAccessError("Write boundary failed."),
     );
 
     const response = await POST(

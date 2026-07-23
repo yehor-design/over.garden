@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
+  resolveActorClassForScope: vi.fn(async () => "self_serve" as const),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
@@ -23,6 +24,7 @@ vi.mock("next/cache", () => ({
 vi.mock("@/server/pilot-write-access", () => ({
   PilotWriteAccessError: class PilotWriteAccessError extends Error {},
   requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
+  resolveActorClassForScope: mocks.resolveActorClassForScope,
 }));
 
 vi.mock("@/server/journal-repository", () => ({

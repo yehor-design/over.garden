@@ -163,7 +163,7 @@ describe("/lineage/objects/[objectId]", () => {
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: true });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "self_serve" });
     mocks.listLineageInteractionTargets.mockResolvedValue([
       {
         edgeId: lineageGraphPage.edges[0].id,
@@ -267,7 +267,7 @@ describe("/lineage/objects/[objectId]", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: false });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: false, invited: false, actorClass: "self_serve" });
     const followControl = createAuthIntentControlRef(
       "follow",
       `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,

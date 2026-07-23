@@ -59,6 +59,8 @@
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",
     "smoke:canonical-launch": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-canonical-launch.ts",
     "smoke:account-sign-out": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-account-sign-out.ts",
+    "smoke:self-serve-mvp": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-self-serve-mvp.ts",
+    "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:structured-journal-composer": "tsx scripts/smoke-structured-journal-composer.ts",
     "smoke:journal-block-reorder": "tsx scripts/smoke-journal-block-reorder.ts",
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",

@@ -170,7 +170,11 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   };
   const [writeAccess, workspace] = await Promise.all([
     visualScenario || creationScenario
-      ? Promise.resolve({ invited: true })
+      ? Promise.resolve({
+          canWrite: true,
+          invited: false,
+          actorClass: "visual_fixture" as const,
+        })
       : resolvePilotWriteAccess(scope),
     loadGardenWorkspace(scope, loadOptions),
   ]);
@@ -202,6 +206,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       properties: {
         activation_source: activationSource,
         source_surface_kind: activationSurfaceKindForSource(activationSource),
+        actor_class: writeAccess.actorClass,
       },
     });
   }
@@ -214,19 +219,19 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       />
       <GardenWorkspaceView
         ownerUserId={userId}
-        canWrite={writeAccess.invited}
+        canWrite={writeAccess.canWrite}
         locale={locale}
         today={today}
         workspace={workspaceForView}
         localState={visualLocalState(visualScenario, locale)}
       >
-        {writeAccess.invited && pendingWishlistItem ? (
+        {writeAccess.canWrite && pendingWishlistItem ? (
           <PendingWishlistIntentPanel
             item={pendingWishlistItem}
             locale={locale}
           />
         ) : null}
-        {writeAccess.invited &&
+        {writeAccess.canWrite &&
         normalizeSaveProgressMomentKind(params.saveProgress) ===
           "space-entry" ? (
           <SaveProgressMoment
@@ -241,7 +246,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           />
         ) : null}
         <GardenWriteTools
-          canWrite={writeAccess.invited}
+          canWrite={writeAccess.canWrite}
           today={today}
           locale={locale}
           activationSource={activationSource}

@@ -3,6 +3,11 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import {
+  actorClassFromPilotCohort,
+  SELF_SERVE_ACTOR_CLASS,
+  type ActorClass,
+} from "@/lib/garden/actor-class";
+import {
   DEFAULT_PILOT_INVITE_COHORT,
   signPilotInviteToken,
   verifyPilotInviteToken,
@@ -12,30 +17,30 @@ import {
 import { DEFAULT_PILOT_SEGMENT, type PilotSegment } from "@/lib/pilot/segments";
 import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
+  getPilotInviteGrant,
   grantPilotWriteAccess,
   hasPilotWriteAccess,
 } from "@/server/pilot-invite-repository";
 import type { RequestScope } from "@/server/request-scope";
 
-// Closed-pilot write gate (OVE-42). Eligibility is carried as a signed,
-// HTTP-only cookie (so it survives client navigation and the Better Auth round
-// trip without leaking the raw invite into analytics) and is materialized into a
-// persistent `pilot_invite_grants` row the first time an invited visitor is
-// authenticated. Reads/writes never persist raw invite links, emails, or query
-// strings; only the enum cohort, enum segment, and user id.
+// OVE-193: authentication + resource authorization is enough for normal
+// self-serve writes. `pilot_invite_grants` remains optional closed-pilot /
+// founder-rehearsal cohort attribution (cookie claim → durable row), never a
+// public-MVP authorization dependency. Reads/writes never persist raw invite
+// links, emails, or query strings; only enum cohort, enum segment, and user id.
 
 export const PILOT_INVITE_COOKIE_NAME = "overgarden_pilot_invite";
 
 // The eligibility cookie lives longer than a single invite link so an invited
 // gardener can return after the link expires; the grant row is the durable
-// record once they authenticate.
+// cohort record once they authenticate.
 const COOKIE_TTL_SECONDS = 180 * 24 * 60 * 60; // 180 days.
 
-const PILOT_WRITE_ACCESS_MESSAGE =
-  "OverGarden is invite-only right now. Open your invitation link to start writing in your garden.";
-
+/** @deprecated OVE-193 removed invite authorization; kept for typed HTTP mapping. */
 export class PilotWriteAccessError extends Error {
-  constructor(message: string = PILOT_WRITE_ACCESS_MESSAGE) {
+  constructor(
+    message: string = "OverGarden write access requires a signed-in gardener.",
+  ) {
     super(message);
     this.name = "PilotWriteAccessError";
   }
@@ -49,6 +54,9 @@ export interface PilotWriteAccessDeps {
     cohort: PilotInviteCohort,
     segment: PilotSegment,
   ) => Promise<void>;
+  getGrant?: (
+    userId: string,
+  ) => Promise<{ cohort: PilotInviteCohort; segment: PilotSegment } | null>;
 }
 
 export async function setPilotInviteCookie(
@@ -81,56 +89,99 @@ export async function readPilotInviteFromCookie(): Promise<PilotInviteVerificati
   return verifyPilotInviteToken(token);
 }
 
-// Resolves whether the authenticated scope may write. If a valid eligibility
-// cookie is present but no grant exists yet, this materializes the durable
-// grant. Returns true when the user is (now) write-eligible.
+/**
+ * Optional cohort attribution: materialize a durable grant when a valid invite
+ * cookie is present. Never blocks self-serve writes.
+ */
+export async function claimPilotCohortAttribution(
+  scope: RequestScope,
+  deps: PilotWriteAccessDeps = {},
+): Promise<{ attributed: boolean; actorClass: ActorClass }> {
+  const hasAccess = deps.hasAccess ?? hasPilotWriteAccess;
+  const readCookieInvite = deps.readCookieInvite ?? readPilotInviteFromCookie;
+  const grantAccess = deps.grantAccess ?? grantPilotWriteAccess;
+  const getGrant = deps.getGrant ?? getPilotInviteGrant;
+
+  if (await hasAccess(scope.userId)) {
+    const grant = await getGrant(scope.userId);
+    return {
+      attributed: true,
+      actorClass: actorClassFromPilotCohort(grant?.cohort ?? null),
+    };
+  }
+
+  const invite = await readCookieInvite();
+  if (!invite) {
+    return { attributed: false, actorClass: SELF_SERVE_ACTOR_CLASS };
+  }
+
+  await grantAccess(scope.userId, invite.cohort, invite.segment);
+  return {
+    attributed: true,
+    actorClass: actorClassFromPilotCohort(invite.cohort),
+  };
+}
+
+/** @deprecated Prefer claimPilotCohortAttribution; always returns true after OVE-193. */
 export async function claimOrCheckPilotWriteAccess(
   scope: RequestScope,
   deps: PilotWriteAccessDeps = {},
 ): Promise<boolean> {
-  const hasAccess = deps.hasAccess ?? hasPilotWriteAccess;
-  const readCookieInvite = deps.readCookieInvite ?? readPilotInviteFromCookie;
-  const grantAccess = deps.grantAccess ?? grantPilotWriteAccess;
-
-  if (await hasAccess(scope.userId)) return true;
-
-  const invite = await readCookieInvite();
-  if (!invite) return false;
-
-  await grantAccess(scope.userId, invite.cohort, invite.segment);
+  await claimPilotCohortAttribution(scope, deps);
   return true;
 }
 
 export interface PilotWriteAccessState {
+  /** Authenticated gardeners may write; invite is not required after OVE-193. */
+  canWrite: boolean;
+  /** True when a closed-pilot / founder-rehearsal grant exists (cohort only). */
   invited: boolean;
+  actorClass: ActorClass;
 }
 
-// UI-friendly resolver: never throws, so a non-invited gardener sees the safe
-// closed-pilot state instead of a broken page.
 export async function resolvePilotWriteAccess(
   scope: RequestScope,
   deps: PilotWriteAccessDeps = {},
 ): Promise<PilotWriteAccessState> {
   try {
-    return { invited: await claimOrCheckPilotWriteAccess(scope, deps) };
+    const attribution = await claimPilotCohortAttribution(scope, deps);
+    return {
+      canWrite: true,
+      invited: attribution.attributed,
+      actorClass: attribution.actorClass,
+    };
   } catch {
-    return { invited: false };
+    // Fail closed for attribution only; authenticated scope still may write
+    // once requireWriteEligibleRequestScope has succeeded.
+    return {
+      canWrite: true,
+      invited: false,
+      actorClass: SELF_SERVE_ACTOR_CLASS,
+    };
   }
 }
 
+export async function resolveActorClassForScope(
+  scope: RequestScope,
+  deps: PilotWriteAccessDeps = {},
+): Promise<ActorClass> {
+  return (await resolvePilotWriteAccess(scope, deps)).actorClass;
+}
+
+/** @deprecated Invite no longer gates writes; attribution only. */
 export async function ensurePilotWriteEligible(
   scope: RequestScope,
   deps: PilotWriteAccessDeps = {},
 ): Promise<void> {
-  if (!(await claimOrCheckPilotWriteAccess(scope, deps))) {
-    throw new PilotWriteAccessError();
-  }
+  await claimPilotCohortAttribution(scope, deps);
 }
 
-// Boundary helper for every write path: require authentication AND invited
-// write eligibility before any pilot data is created.
+/**
+ * Boundary helper for every write path: require authentication. Optional invite
+ * cookie still materializes cohort attribution without authorizing access.
+ */
 export async function requireWriteEligibleRequestScope(): Promise<RequestScope> {
   const scope = await requireCurrentRequestScope();
-  await ensurePilotWriteEligible(scope);
+  await claimPilotCohortAttribution(scope);
   return scope;
 }

@@ -3,6 +3,8 @@ import "server-only";
 import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import type { ActorClass } from "@/lib/garden/actor-class";
+import { isActorClass } from "@/lib/garden/actor-class";
 import type {
   ActivationSource,
   ActivationSurfaceKind,
@@ -30,6 +32,7 @@ type NewAnalyticsEventRow = Insertable<Database["analytics_events"]>;
 
 export interface AnalyticsEventProperties {
   activation_source?: ActivationSource;
+  actor_class?: ActorClass;
   entry_scope?: EntryScope;
   has_photo?: boolean;
   is_backdated?: boolean;
@@ -74,6 +77,7 @@ const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
 
 const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "activation_source",
+  "actor_class",
   "entry_scope",
   "has_photo",
   "is_backdated",
@@ -317,6 +321,9 @@ function normalizeAnalyticsEventPropertyValue(
       ) {
         return value;
       }
+      break;
+    case "actor_class":
+      if (isActorClass(value)) return value;
       break;
     case "entry_scope":
       if (value === "object" || value === "space") return value;

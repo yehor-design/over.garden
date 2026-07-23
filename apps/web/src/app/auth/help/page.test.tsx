@@ -29,7 +29,8 @@ describe("/auth/help closed-pilot recovery page copy", () => {
   it("owns recovery guidance in the typed trust namespace", () => {
     const copy = getTrustSurfaceCopy("bg").authHelp;
     expect(copy.description).toContain("еднократни връзки");
-    expect(copy.fallbackBody).toContain("оператор");
+    expect(copy.fallbackBody).toContain("поддръжката");
+    expect(copy.fallbackBody).not.toContain("само с покани");
   });
 
   it("renders a self-serve password reset request without provider secrets", () => {

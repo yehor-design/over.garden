@@ -97,7 +97,7 @@ export default async function LineageClaimInboxPage({
               claim={claim}
               copy={copy}
               locale={locale}
-              writeEnabled={writeAccess.invited}
+              writeEnabled={writeAccess.canWrite}
             />
           ))}
         </ol>

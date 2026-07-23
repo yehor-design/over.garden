@@ -148,7 +148,11 @@ export default async function PlantObjectReadbackPage({
     fixtureScenario ? null : getSessionId(session),
   );
   const writeAccess = fixtureScenario
-    ? { invited: true }
+    ? {
+        canWrite: true,
+        invited: false,
+        actorClass: "visual_fixture" as const,
+      }
     : await resolvePilotWriteAccess(scope);
   const page = await getPlantObjectPage(scope, objectId);
   if (!page) notFound();
@@ -264,7 +268,7 @@ export default async function PlantObjectReadbackPage({
           </p>
         </div>
 
-        {writeAccess.invited ? (
+        {writeAccess.canWrite ? (
           <FollowUpEntryComposer
             ownerUserId={userId}
             locale={locale}
@@ -359,7 +363,7 @@ export default async function PlantObjectReadbackPage({
       <ProvenanceSection
         objectId={objectId}
         provenancePanel={provenancePanel}
-        writeEnabled={writeAccess.invited}
+        writeEnabled={writeAccess.canWrite}
         lineageReadbackPath={lineageReadbackPath}
         locale={locale}
       />

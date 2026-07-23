@@ -110,7 +110,7 @@ describe("/garden workspace V2", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ invited: true });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "self_serve" });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
@@ -210,8 +210,12 @@ describe("/garden workspace V2", () => {
     expect(html).not.toContain("Інструменти журналу простору");
   });
 
-  it("keeps inventory readable when closed-pilot writing is unavailable", async () => {
-    mocks.resolvePilotWriteAccess.mockResolvedValueOnce({ invited: false });
+  it("lets a self-serve gardener write without an invite grant", async () => {
+    mocks.resolvePilotWriteAccess.mockResolvedValueOnce({
+      canWrite: true,
+      invited: false,
+      actorClass: "self_serve",
+    });
 
     const { default: GardenPage } = await import("./page");
     const html = renderToStaticMarkup(
@@ -219,9 +223,9 @@ describe("/garden workspace V2", () => {
     );
 
     expect(html).toContain("Cherry tomato");
-    expect(html).toContain("Перевірити доступ до запису");
-    expect(html).toContain("Наразі писати можна лише за запрошенням");
-    expect(html).not.toContain("First entry composer");
+    expect(html).toContain("First entry composer");
+    expect(html).not.toContain("Наразі писати можна лише за запрошенням");
+    expect(html).not.toContain('data-testid="closed-pilot-write-callout"');
   });
 
   it("shows a contextual reversible sign-in without querying private rows", async () => {

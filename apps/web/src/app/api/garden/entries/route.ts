@@ -27,6 +27,7 @@ import {
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
+  resolveActorClassForScope,
 } from "@/server/pilot-write-access";
 import type { RequestScope } from "@/server/request-scope";
 import {
@@ -34,6 +35,7 @@ import {
   createPlantObjectJournalEntry,
   createSpaceJournalEntry,
 } from "@/server/journal-repository";
+import type { ActorClass } from "@/lib/garden/actor-class";
 
 export const runtime = "nodejs";
 
@@ -52,6 +54,8 @@ export async function POST(request: Request) {
       message: "Sign in to save an entry.",
     });
   }
+
+  const actorClass = await resolveActorClassForScope(scope);
 
   const body = (await request
     .json()
@@ -91,7 +95,7 @@ export async function POST(request: Request) {
         );
       }
 
-      await recordSpaceEntryEvents(scope, result, syncStatus);
+      await recordSpaceEntryEvents(scope, result, syncStatus, actorClass);
       revalidatePath("/garden");
       for (const object of result.mentionedObjects) {
         revalidatePath(`/garden/objects/${object.id}`);
@@ -174,13 +178,14 @@ export async function POST(request: Request) {
         : null;
 
     if (target === "plant_object_entry") {
-      await recordPlantObjectEntryEvents(scope, result, syncStatus);
+      await recordPlantObjectEntryEvents(scope, result, syncStatus, actorClass);
     } else {
       await recordFirstPlantEntryEvents(
         scope,
         result,
         syncStatus,
         activationSource,
+        actorClass,
       );
     }
 
@@ -253,10 +258,12 @@ async function recordSpaceEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createSpaceJournalEntry>>,
   syncStatus: EntrySyncStatus,
+  actorClass: ActorClass,
 ) {
   if (!result.isNewEntry) return;
 
   const properties = {
+    actor_class: actorClass,
     entry_scope: result.entry.entry_scope as EntryScope,
     has_photo: false,
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
@@ -285,6 +292,7 @@ async function recordFirstPlantEntryEvents(
   result: Awaited<ReturnType<typeof createFirstPlantEntry>>,
   syncStatus: EntrySyncStatus,
   activationSource: ActivationSource | null,
+  actorClass: ActorClass,
 ) {
   if (!result.isNewEntry) return;
 
@@ -295,6 +303,7 @@ async function recordFirstPlantEntryEvents(
       }
     : {};
   const sharedEntryProperties = {
+    actor_class: actorClass,
     entry_scope: result.entry.entry_scope as EntryScope,
     has_photo: result.mediaAttached,
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
@@ -314,6 +323,7 @@ async function recordFirstPlantEntryEvents(
   await recordAnalyticsEventSafely(scope, {
     eventName: "space_created",
     properties: {
+      actor_class: actorClass,
       location_visibility_level: result.space
         .location_visibility as LocationVisibility,
     },
@@ -322,6 +332,7 @@ async function recordFirstPlantEntryEvents(
   await recordAnalyticsEventSafely(scope, {
     eventName: "object_created",
     properties: {
+      actor_class: actorClass,
       location_visibility_level: result.plantObject
         .location_visibility as LocationVisibility,
       variety_state: result.plantObject.variety_state as VarietyState,
@@ -370,10 +381,12 @@ async function recordPlantObjectEntryEvents(
   scope: RequestScope,
   result: Awaited<ReturnType<typeof createPlantObjectJournalEntry>>,
   syncStatus: EntrySyncStatus,
+  actorClass: ActorClass,
 ) {
   if (!result.isNewEntry) return;
 
   const sharedEntryProperties = {
+    actor_class: actorClass,
     entry_scope: result.entry.entry_scope as EntryScope,
     has_photo: result.mediaAttached,
     is_backdated: isBackdatedEntryDate(result.entry.entry_date),
