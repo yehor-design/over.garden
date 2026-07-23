@@ -475,6 +475,37 @@
       ]
     },
     {
+      "issueId": "OVE-195",
+      "title": "Media lifecycle closure: archive and retention make old derivatives and expired data unreachable on schedule",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "c6c57c4bc9ff365d6b0d00c260d1b60feba40d99",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-195/media-lifecycle-closure-archive-and-retention-make-old-derivatives-and",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/Cv3aFMqmb6oLNUkYwGMhabo26tTJ",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "cd apps/web && pnpm db:types:check",
+        "cd apps/web && pnpm test src/server/media/ src/server/job-queue-contract.test.ts src/server/job-queue-manifest.test.ts",
+        "cd apps/web && pnpm smoke:media-archive-retention -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm smoke:retention-workflow -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm retention:report -- --environment local --confirm-environment local",
+        "cd apps/web && NODE_OPTIONS=--conditions=react-server pnpm exec tsx scripts/smoke-synthetic-media-revoke.ts -- --environment production --confirm-environment production",
+        "cd apps/web && pnpm lint",
+        "cd apps/web && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Behavior commit c6c57c4bc9ff365d6b0d00c260d1b60feba40d99 is on main. Vercel production deployment dpl_Cv3aFMqmb6oLNUkYwGMhabo26tTJ reached READY for that exact SHA and owned over.garden / www.",
+        "Additive production SQL 0004_media_lifecycle_revocation.sql applied (revoked_at/public_unreachable_at + media_lifecycle_retention_runs). Public overgarden-public managed r2.dev disabled via Cloudflare managed-domain API; synthetic revoke prove showed media.over.garden 2xx→non2xx and r2.dev non2xx.",
+        "Local suite: db:types:check, focused media/job-queue tests, smoke:media-archive-retention, smoke:retention-workflow, retention:report, localization coverage, lint, typecheck, full vitest (372 files / 2351 tests), and production build. GitHub Actions remain workflow_dispatch under budget freeze.",
+        "Does not claim OVE-196/199/200/201 finals. No broad bucket delete or user-content sweep. No object paths, identities, secrets, or private journal text in evidence."
+      ]
+    },
+    {
       "issueId": "OVE-208",
       "title": "Global Google Sans typography: every visitor reads a consistent, fast, accessible interface across uk/bg/ru",
       "status": "done_on_main",
