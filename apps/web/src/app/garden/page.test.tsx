@@ -110,7 +110,7 @@ describe("/garden workspace V2", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
@@ -213,7 +213,7 @@ describe("/garden workspace V2", () => {
     mocks.resolvePilotWriteAccess.mockResolvedValueOnce({
       canWrite: true,
       invited: false,
-      actorClass: "self_serve",
+      actorClass: "real_self_serve",
     });
 
     const { default: GardenPage } = await import("./page");

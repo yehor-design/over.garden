@@ -51,6 +51,7 @@ Public SEO/AEO indexability policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.
 11. Do not guess external service values. Read `docs/INFRASTRUCTURE_REGISTRY.md` before touching DNS, R2, media URLs, deployment env, or external service wiring, then verify live provider state when drift would matter.
 12. Do not make product decisions from implementation convenience alone. Before shaping a feature, UI flow, public page, analytics event, onboarding step, or Linear issue, run the Product Thinking Gate in `docs/product-research/README.md`.
 13. Launch guest corpus hygiene is governed by `docs/LAUNCH_CORPUS.md` (OVE-199): never present production smoke/visual fixtures as real gardeners; production archive/seed requires explicit maintainer sign-off on the exact plan report.
+14. MVP learning for H1/H4/H6 is governed by `docs/MVP_LEARNING_SIGNALS.md` (OVE-200): synthetic/editorial/bot actors are exclusions only; unclassified activity fails the decision gate closed; self-serve and closed-pilot cohorts stay separate.
 
 ## Workflow
 

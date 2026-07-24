@@ -80,6 +80,16 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     dryRunOwned: true,
     executionOwned: true,
   },
+  {
+    id: "learning_actor_attributions.user_id",
+    table: "learning_actor_attributions",
+    columnOrPath: "user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale: "OVE-200 durable learning actor class is removed with the account.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
 
   // OVE-203 public identity (cascade on user delete; still inventory-owned)
   {
@@ -798,6 +808,7 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
     { table: "lineage_questions", column: "asker_user_id" },
     { table: "lineage_questions", column: "recipient_user_id" },
     { table: "pilot_invite_grants", column: "user_id" },
+    { table: "learning_actor_attributions", column: "user_id" },
     { table: "journal_entry_object_mentions", column: "owner_user_id" },
     { table: "journal_entry_catalog_mentions", column: "owner_user_id" },
   ];

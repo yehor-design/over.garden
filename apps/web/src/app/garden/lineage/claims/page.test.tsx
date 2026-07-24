@@ -51,7 +51,7 @@ describe("/garden/lineage/claims", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
     mocks.listLineageClaimInbox.mockResolvedValue([
       {
         id: "00000000-0000-4000-8000-000000000201",

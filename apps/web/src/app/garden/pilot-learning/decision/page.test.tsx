@@ -145,6 +145,13 @@ describe("/garden/pilot-learning/decision", () => {
         segmentSignal: "concentrated",
         dataGaps: ["Segment sample is low."],
       },
+      mvpLearning: {
+        policyVersion: "ove200.learning.v1",
+        decisionGate: "ok",
+        unclassifiedEventCount: 0,
+        selfServeActivated: 0,
+        closedPilotActivated: 3,
+      },
       caveats: [],
       references: [],
     });

@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "issue": "OVE-200",
+  "policyVersion": "ove200.learning.v1",
+  "note": "Redacted baseline placeholder. Refresh with pnpm mvp-learning:plan against the target environment; never commit row IDs, journal text, emails, or media keys.",
+  "cohorts": {
+    "real_self_serve": "separate",
+    "real_closed_pilot": "separate"
+  },
+  "excludedClasses": [
+    "founder_rehearsal",
+    "production_smoke",
+    "visual_fixture",
+    "editorial_seed",
+    "automated_bot"
+  ]
+}

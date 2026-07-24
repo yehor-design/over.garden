@@ -115,7 +115,9 @@ export type AnalyticsEventName =
   | "offline_entry_synced"
   | "progress_screen_shown"
   | "own_record_revisited"
-  | "follow_up_value_pulse";
+  | "follow_up_value_pulse"
+  | "journal_blocks_reordered"
+  | "journal_cover_changed";
 export type EntrySyncStatus = "online" | "offline_queued" | "offline_synced";
 export type LineageSourceKind =
   | "own_object"

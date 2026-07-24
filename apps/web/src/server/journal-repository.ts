@@ -60,6 +60,12 @@ import {
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
 import { enqueueArchiveDerivativeRevokes } from "@/server/media/media-lifecycle-enqueue";
+import type { JournalCoverSource } from "@/lib/garden/journal-cover-contract";
+import {
+  listJournalDocumentImageMediaIds,
+  type JournalDocumentV1,
+} from "@/lib/garden/journal-document";
+import { blockOrderHashFromDocument } from "@/server/mvp-learning/composer-signals";
 
 export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 
@@ -1811,6 +1817,13 @@ export interface UpdateJournalEntryAggregateResult {
   mediaAttached: boolean;
   isReplay: boolean;
   conflict?: never;
+  learning?: {
+    priorBlockOrderHash: string;
+    nextBlockOrderHash: string;
+    priorCoverSource: JournalCoverSource;
+    nextCoverSource: JournalCoverSource;
+    document: JournalDocumentV1;
+  };
 }
 
 export async function updateJournalEntryAggregate(
@@ -1946,10 +1959,31 @@ export async function updateJournalEntryAggregate(
       mutationKind: "edit",
     });
 
+    const priorRead = readJournalDocumentFromEntry(existing);
+    const priorDocument =
+      priorRead.status === "unavailable"
+        ? content.document
+        : priorRead.document;
+    const priorCoverSource = inferCoverSourceFromEntryState({
+      document: priorDocument,
+      explicitCoverMediaAssetId: existing.cover_media_asset_id,
+    });
+    const nextCoverSource = inferCoverSourceFromClaim(
+      input.cover ?? { mode: "automatic" },
+      content.document,
+    );
+
     return {
       entry: updated,
       mediaAttached,
       isReplay: false,
+      learning: {
+        priorBlockOrderHash: blockOrderHashFromDocument(priorDocument),
+        nextBlockOrderHash: blockOrderHashFromDocument(content.document),
+        priorCoverSource,
+        nextCoverSource,
+        document: content.document,
+      },
     };
   });
 }
@@ -4090,4 +4124,41 @@ function normalizeObjectGalleryLimit(limit: number) {
 
 function journalDocumentAsJson(document: unknown): Json {
   return JSON.parse(JSON.stringify(document)) as Json;
+}
+
+function inferCoverSourceFromEntryState(input: {
+  document: JournalDocumentV1;
+  explicitCoverMediaAssetId: string | null;
+}): JournalCoverSource {
+  if (input.explicitCoverMediaAssetId) {
+    return "explicit_inline";
+  }
+  if (listJournalDocumentImageMediaIds(input.document).length > 0) {
+    return "automatic_inline";
+  }
+  return "none";
+}
+
+function inferCoverSourceFromClaim(
+  cover: JournalCoverClaimInput,
+  document: JournalDocumentV1,
+): JournalCoverSource {
+  switch (cover.mode) {
+    case "automatic":
+      return listJournalDocumentImageMediaIds(document).length > 0
+        ? "automatic_inline"
+        : "none";
+    case "none":
+      return "none";
+    case "explicit_inline":
+      return "explicit_inline";
+    case "separate":
+    case "keep_as_cover":
+      return "separate";
+    default: {
+      const _exhaustive: never = cover;
+      void _exhaustive;
+      return "none";
+    }
+  }
 }

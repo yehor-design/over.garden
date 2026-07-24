@@ -104,7 +104,7 @@ describe("/garden/objects/[objectId]", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
     mocks.getObjectProvenancePanel.mockResolvedValue({
       sourceObjectOptions: [],
       edges: [],

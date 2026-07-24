@@ -19,6 +19,7 @@ import {
   getPilotHealthReadoutSafely,
   type PilotHealthMetrics,
 } from "@/server/pilot-health-repository";
+import { getMvpLearningReportSafely } from "@/server/mvp-learning/report";
 import { scopedToUser } from "@/server/request-scope";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { GardenAuthPanel } from "../garden-auth-panel";
@@ -64,7 +65,10 @@ export default async function PilotHealthPage() {
     );
   }
 
-  const readout = await getPilotHealthReadoutSafely();
+  const [readout, mvpLearning] = await Promise.all([
+    getPilotHealthReadoutSafely(),
+    getMvpLearningReportSafely(),
+  ]);
 
   return (
     <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-5 py-8 sm:px-8">
@@ -88,6 +92,52 @@ export default async function PilotHealthPage() {
           </span>
         ) : null}
       </div>
+
+      {mvpLearning ? (
+        <section className="grid gap-3 rounded-lg border border-border p-4">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold text-foreground">
+              {copy.health.mvpLearningTitle}
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {formatOperatorTemplate(copy.health.mvpLearningDescription, {
+                policyVersion: mvpLearning.policyVersion,
+                retentionPolicyVersion: mvpLearning.retentionPolicyVersion,
+                decisionGate: mvpLearning.decisionGate,
+              })}
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <MetricTile
+              label={copy.health.mvpLearningSelfServeActivated}
+              value={mvpLearning.cohorts.real_self_serve.activatedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningSelfServeH1}
+              value={mvpLearning.cohorts.real_self_serve.h1RetainedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningClosedPilotActivated}
+              value={mvpLearning.cohorts.real_closed_pilot.activatedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningClosedPilotH1}
+              value={mvpLearning.cohorts.real_closed_pilot.h1RetainedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningUnclassified}
+              value={mvpLearning.unclassifiedEventCount}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningExcluded}
+              value={Object.values(mvpLearning.exclusions).reduce(
+                (sum, count) => sum + count,
+                0,
+              )}
+            />
+          </div>
+        </section>
+      ) : null}
 
       {!readout ? (
         <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">

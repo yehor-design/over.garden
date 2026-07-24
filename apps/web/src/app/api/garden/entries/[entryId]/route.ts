@@ -11,9 +11,11 @@ import {
   JournalAggregateConflictError,
   updateJournalEntryAggregate,
 } from "@/server/journal-repository";
+import { recordComposerLearningSignalsSafely } from "@/server/mvp-learning/composer-signals";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
+  resolveActorClassForScope,
 } from "@/server/pilot-write-access";
 import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
 
@@ -80,6 +82,22 @@ export async function PATCH(
         : [],
       topicTags: body.topicTags,
     });
+
+    if (!result.isReplay && result.learning) {
+      const actorClass = await resolveActorClassForScope(scope);
+      await recordComposerLearningSignalsSafely(scope, {
+        actorClass,
+        journalEntryId: result.entry.id,
+        plantObjectId: result.entry.plant_object_id,
+        spaceId: result.entry.space_id,
+        document: result.learning.document,
+        coverSource: result.learning.nextCoverSource,
+        priorCoverSource: result.learning.priorCoverSource,
+        priorBlockOrderHash: result.learning.priorBlockOrderHash,
+        nextBlockOrderHash: result.learning.nextBlockOrderHash,
+        mutationOutcome: "succeeded",
+      });
+    }
 
     revalidatePath("/garden");
     if (result.entry.plant_object_id) {

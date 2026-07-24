@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
+import { actorClassFromPilotCohort } from "@/lib/garden/actor-class";
+
 import {
   claimOrCheckPilotWriteAccess,
   claimPilotCohortAttribution,
@@ -14,15 +16,25 @@ const scope: RequestScope = {
   sessionId: "session-1",
 };
 
-describe("self-serve write access (OVE-193)", () => {
+function withDeterministicActorClass(
+  deps: Omit<PilotWriteAccessDeps, "resolveActorClass">,
+): PilotWriteAccessDeps {
+  return {
+    ...deps,
+    resolveActorClass: async ({ grant }) =>
+      actorClassFromPilotCohort(grant?.cohort ?? null),
+  };
+}
+
+describe("self-serve write access (OVE-193/OVE-200)", () => {
   it("allows a gardener with no invite grant or cookie to write", async () => {
     const grantAccess = vi.fn(async () => {});
-    const deps: PilotWriteAccessDeps = {
+    const deps = withDeterministicActorClass({
       hasAccess: vi.fn(async () => false),
       readCookieInvite: vi.fn(async () => null),
       grantAccess,
       getGrant: vi.fn(async () => null),
-    };
+    });
 
     expect(await claimOrCheckPilotWriteAccess(scope, deps)).toBe(true);
     expect(grantAccess).not.toHaveBeenCalled();
@@ -32,13 +44,13 @@ describe("self-serve write access (OVE-193)", () => {
     expect(await resolvePilotWriteAccess(scope, deps)).toEqual({
       canWrite: true,
       invited: false,
-      actorClass: "self_serve",
+      actorClass: "real_self_serve",
     });
   });
 
   it("claims a durable cohort grant from a valid invite cookie without gating writes", async () => {
     const grantAccess = vi.fn(async () => {});
-    const deps: PilotWriteAccessDeps = {
+    const deps = withDeterministicActorClass({
       hasAccess: vi.fn(async () => false),
       readCookieInvite: vi.fn(async () => ({
         cohort: "closed_pilot" as const,
@@ -47,11 +59,11 @@ describe("self-serve write access (OVE-193)", () => {
       })),
       grantAccess,
       getGrant: vi.fn(async () => null),
-    };
+    });
 
     expect(await claimPilotCohortAttribution(scope, deps)).toEqual({
       attributed: true,
-      actorClass: "closed_pilot",
+      actorClass: "real_closed_pilot",
     });
     expect(grantAccess).toHaveBeenCalledWith(
       scope.userId,
@@ -60,9 +72,9 @@ describe("self-serve write access (OVE-193)", () => {
     );
   });
 
-  it("reports closed_pilot actor class for existing grants without re-claiming", async () => {
+  it("reports real_closed_pilot actor class for existing grants without re-claiming", async () => {
     const grantAccess = vi.fn(async () => {});
-    const deps: PilotWriteAccessDeps = {
+    const deps = withDeterministicActorClass({
       hasAccess: vi.fn(async () => true),
       readCookieInvite: vi.fn(async () => null),
       grantAccess,
@@ -70,19 +82,19 @@ describe("self-serve write access (OVE-193)", () => {
         cohort: "closed_pilot" as const,
         segment: "casual_practical_beginner" as const,
       })),
-    };
+    });
 
     expect(await resolvePilotWriteAccess(scope, deps)).toEqual({
       canWrite: true,
       invited: true,
-      actorClass: "closed_pilot",
+      actorClass: "real_closed_pilot",
     });
     expect(grantAccess).not.toHaveBeenCalled();
   });
 
-  it("keeps founder rehearsal attribution distinct from closed_pilot", async () => {
+  it("keeps founder rehearsal attribution distinct from real_closed_pilot", async () => {
     const grantAccess = vi.fn(async () => {});
-    const deps: PilotWriteAccessDeps = {
+    const deps = withDeterministicActorClass({
       hasAccess: vi.fn(async () => false),
       readCookieInvite: vi.fn(async () => ({
         cohort: "founder_rehearsal" as const,
@@ -91,7 +103,7 @@ describe("self-serve write access (OVE-193)", () => {
       })),
       grantAccess,
       getGrant: vi.fn(async () => null),
-    };
+    });
 
     expect(await claimPilotCohortAttribution(scope, deps)).toEqual({
       attributed: true,
@@ -105,19 +117,19 @@ describe("self-serve write access (OVE-193)", () => {
   });
 
   it("resolvePilotWriteAccess fails closed for attribution when a dependency throws", async () => {
-    const deps: PilotWriteAccessDeps = {
+    const deps = withDeterministicActorClass({
       hasAccess: vi.fn(async () => {
         throw new Error("database unavailable");
       }),
       readCookieInvite: vi.fn(async () => null),
       grantAccess: vi.fn(async () => {}),
       getGrant: vi.fn(async () => null),
-    };
+    });
 
     expect(await resolvePilotWriteAccess(scope, deps)).toEqual({
       canWrite: true,
       invited: false,
-      actorClass: "self_serve",
+      actorClass: "real_self_serve",
     });
   });
 });

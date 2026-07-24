@@ -1674,6 +1674,30 @@ export async function seedVisualFixtures(
         `${VISUAL_FIXTURE_NAMESPACE}/%`,
       )
       .execute();
+
+    const fixtureOwnerIds = [
+      ...new Set(manifest.entries.map((entry) => entry.ownerUserId)),
+    ];
+    for (const userId of fixtureOwnerIds) {
+      await trx
+        .insertInto("learning_actor_attributions")
+        .values({
+          user_id: userId,
+          actor_class: "visual_fixture",
+          source: "producer",
+          classified_at: new Date(),
+          updated_at: new Date(),
+        })
+        .onConflict((oc) =>
+          oc.column("user_id").doUpdateSet({
+            actor_class: "visual_fixture",
+            source: "producer",
+            classified_at: new Date(),
+            updated_at: new Date(),
+          }),
+        )
+        .execute();
+    }
   });
 
   return getVisualFixtureStatus(database, manifest);

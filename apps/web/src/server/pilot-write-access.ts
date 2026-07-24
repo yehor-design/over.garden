@@ -3,8 +3,7 @@ import "server-only";
 import { cookies } from "next/headers";
 
 import {
-  actorClassFromPilotCohort,
-  SELF_SERVE_ACTOR_CLASS,
+  REAL_SELF_SERVE_ACTOR_CLASS,
   type ActorClass,
 } from "@/lib/garden/actor-class";
 import {
@@ -16,6 +15,7 @@ import {
 } from "@/lib/garden/pilot-invite";
 import { DEFAULT_PILOT_SEGMENT, type PilotSegment } from "@/lib/pilot/segments";
 import { requireCurrentRequestScope } from "@/server/auth-session";
+import { resolveDurableActorClass } from "@/server/learning-actor-attribution";
 import {
   getPilotInviteGrant,
   grantPilotWriteAccess,
@@ -57,6 +57,10 @@ export interface PilotWriteAccessDeps {
   getGrant?: (
     userId: string,
   ) => Promise<{ cohort: PilotInviteCohort; segment: PilotSegment } | null>;
+  resolveActorClass?: (input: {
+    userId: string;
+    grant: { cohort: PilotInviteCohort; segment: PilotSegment } | null;
+  }) => Promise<ActorClass>;
 }
 
 export async function setPilotInviteCookie(
@@ -101,24 +105,45 @@ export async function claimPilotCohortAttribution(
   const readCookieInvite = deps.readCookieInvite ?? readPilotInviteFromCookie;
   const grantAccess = deps.grantAccess ?? grantPilotWriteAccess;
   const getGrant = deps.getGrant ?? getPilotInviteGrant;
+  const resolveActorClass =
+    deps.resolveActorClass ??
+    (async ({ userId, grant }) =>
+      resolveDurableActorClass(userId, {
+        getGrant: async () => grant,
+      }));
 
   if (await hasAccess(scope.userId)) {
     const grant = await getGrant(scope.userId);
+    const actorClass = await resolveActorClass({
+      userId: scope.userId,
+      grant,
+    });
     return {
       attributed: true,
-      actorClass: actorClassFromPilotCohort(grant?.cohort ?? null),
+      actorClass,
     };
   }
 
   const invite = await readCookieInvite();
   if (!invite) {
-    return { attributed: false, actorClass: SELF_SERVE_ACTOR_CLASS };
+    const actorClass = await resolveActorClass({
+      userId: scope.userId,
+      grant: null,
+    });
+    return { attributed: false, actorClass };
   }
 
   await grantAccess(scope.userId, invite.cohort, invite.segment);
+  const actorClass = await resolveActorClass({
+    userId: scope.userId,
+    grant: {
+      cohort: invite.cohort,
+      segment: invite.segment,
+    },
+  });
   return {
     attributed: true,
-    actorClass: actorClassFromPilotCohort(invite.cohort),
+    actorClass,
   };
 }
 
@@ -156,7 +181,7 @@ export async function resolvePilotWriteAccess(
     return {
       canWrite: true,
       invited: false,
-      actorClass: SELF_SERVE_ACTOR_CLASS,
+      actorClass: REAL_SELF_SERVE_ACTOR_CLASS,
     };
   }
 }

@@ -4,7 +4,7 @@ import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { ActorClass } from "@/lib/garden/actor-class";
-import { isActorClass } from "@/lib/garden/actor-class";
+import { normalizeActorClass } from "@/lib/garden/actor-class";
 import type {
   ActivationSource,
   ActivationSurfaceKind,
@@ -14,6 +14,7 @@ import type {
   FollowUpUsefulnessReason,
   FollowUpValuePulseOutcome,
 } from "@/lib/garden/follow-up-value-pulse";
+import type { JournalCoverSource } from "@/lib/garden/journal-cover-contract";
 import type {
   AnalyticsEvent,
   AnalyticsEventName,
@@ -30,6 +31,28 @@ import type { RequestScope } from "@/server/request-scope";
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewAnalyticsEventRow = Insertable<Database["analytics_events"]>;
 
+export type PhotoCountBucket =
+  | "none"
+  | "one"
+  | "two_to_three"
+  | "four_to_six"
+  | "seven_to_ten";
+
+export type BlockCountBucket =
+  | "one"
+  | "two_to_five"
+  | "six_to_twenty"
+  | "twenty_one_plus";
+
+export type ComposerMutationOutcome =
+  | "succeeded"
+  | "conflict"
+  | "failed"
+  | "offline_queued"
+  | "stale";
+
+export type AnalyticsCoverSource = JournalCoverSource;
+
 export interface AnalyticsEventProperties {
   activation_source?: ActivationSource;
   actor_class?: ActorClass;
@@ -45,6 +68,14 @@ export interface AnalyticsEventProperties {
   usefulness_reason?: FollowUpUsefulnessReason;
   variety_state?: VarietyState;
   followed_by_action?: boolean;
+  photo_count_bucket?: PhotoCountBucket;
+  cover_source?: AnalyticsCoverSource;
+  block_count_bucket?: BlockCountBucket;
+  has_formatting?: boolean;
+  via_voice?: boolean;
+  schema_version?: "v1";
+  mutation_outcome?: ComposerMutationOutcome;
+  latency_bucket?: "fast" | "normal" | "slow";
 }
 
 export interface RecordAnalyticsEventInput {
@@ -73,6 +104,8 @@ const ALLOWED_EVENT_NAMES = new Set<AnalyticsEventName>([
   "progress_screen_shown",
   "own_record_revisited",
   "follow_up_value_pulse",
+  "journal_blocks_reordered",
+  "journal_cover_changed",
 ]);
 
 const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
@@ -90,6 +123,14 @@ const ALLOWED_PROPERTY_KEYS = new Set<keyof AnalyticsEventProperties>([
   "pulse_outcome",
   "usefulness",
   "usefulness_reason",
+  "photo_count_bucket",
+  "cover_source",
+  "block_count_bucket",
+  "has_formatting",
+  "via_voice",
+  "schema_version",
+  "mutation_outcome",
+  "latency_bucket",
 ]);
 
 const FORBIDDEN_PROPERTY_FRAGMENTS = [
@@ -322,15 +363,19 @@ function normalizeAnalyticsEventPropertyValue(
         return value;
       }
       break;
-    case "actor_class":
-      if (isActorClass(value)) return value;
+    case "actor_class": {
+      const normalized = normalizeActorClass(value);
+      if (normalized) return normalized;
       break;
+    }
     case "entry_scope":
       if (value === "object" || value === "space") return value;
       break;
     case "has_photo":
     case "is_backdated":
     case "followed_by_action":
+    case "has_formatting":
+    case "via_voice":
       if (typeof value === "boolean") return value;
       break;
     case "location_visibility_level":
@@ -399,6 +444,56 @@ function normalizeAnalyticsEventPropertyValue(
         value === "hard_to_find_what_i_needed" ||
         value === "not_sure_why"
       ) {
+        return value;
+      }
+      break;
+    case "photo_count_bucket":
+      if (
+        value === "none" ||
+        value === "one" ||
+        value === "two_to_three" ||
+        value === "four_to_six" ||
+        value === "seven_to_ten"
+      ) {
+        return value;
+      }
+      break;
+    case "cover_source":
+      if (
+        value === "automatic_inline" ||
+        value === "explicit_inline" ||
+        value === "separate" ||
+        value === "none"
+      ) {
+        return value;
+      }
+      break;
+    case "block_count_bucket":
+      if (
+        value === "one" ||
+        value === "two_to_five" ||
+        value === "six_to_twenty" ||
+        value === "twenty_one_plus"
+      ) {
+        return value;
+      }
+      break;
+    case "schema_version":
+      if (value === "v1") return value;
+      break;
+    case "mutation_outcome":
+      if (
+        value === "succeeded" ||
+        value === "conflict" ||
+        value === "failed" ||
+        value === "offline_queued" ||
+        value === "stale"
+      ) {
+        return value;
+      }
+      break;
+    case "latency_bucket":
+      if (value === "fast" || value === "normal" || value === "slow") {
         return value;
       }
       break;

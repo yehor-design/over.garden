@@ -123,7 +123,7 @@ export default async function PublicLineageObjectRoute({
     : {
         canWrite: false,
         invited: false,
-        actorClass: "self_serve" as const,
+        actorClass: "real_self_serve" as const,
       };
   const edges = lineagePage?.edges ?? [];
   const interactionTargets =

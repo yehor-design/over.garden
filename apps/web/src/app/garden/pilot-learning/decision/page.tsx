@@ -293,6 +293,22 @@ function DecisionPanel({
         />
       </div>
 
+      <div className="grid gap-2 rounded-lg border border-border p-3 text-sm text-muted-foreground">
+        <p>
+          {formatOperatorTemplate(copy.decision.mvpLearningGate, {
+            policyVersion: readout.mvpLearning.policyVersion,
+            decisionGate: readout.mvpLearning.decisionGate,
+            selfServeActivated: String(readout.mvpLearning.selfServeActivated),
+            closedPilotActivated: String(
+              readout.mvpLearning.closedPilotActivated,
+            ),
+            unclassifiedEventCount: String(
+              readout.mvpLearning.unclassifiedEventCount,
+            ),
+          })}
+        </p>
+      </div>
+
       <div className="grid gap-2 rounded-lg border border-border p-4">
         <p className="text-xl font-semibold text-foreground">
           {copy.decision.headlines[decision.recommendation]}

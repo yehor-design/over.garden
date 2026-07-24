@@ -4640,7 +4640,9 @@ create table if not exists analytics_events (
       'offline_entry_synced',
       'progress_screen_shown',
       'own_record_revisited',
-      'follow_up_value_pulse'
+      'follow_up_value_pulse',
+      'journal_blocks_reordered',
+      'journal_cover_changed'
     )
   ),
   properties jsonb not null default '{}'::jsonb
@@ -4684,7 +4686,9 @@ begin
           'offline_entry_synced',
           'progress_screen_shown',
           'own_record_revisited',
-          'follow_up_value_pulse'
+          'follow_up_value_pulse',
+          'journal_blocks_reordered',
+          'journal_cover_changed'
         )
       );
   end if;
@@ -5100,6 +5104,61 @@ create index if not exists pilot_invite_grants_segment_granted_idx
 
 create index if not exists pilot_invite_grants_cohort_segment_granted_idx
   on pilot_invite_grants (cohort, segment, granted_at desc);
+
+-- OVE-200: durable learning actor/evidence attribution (no PII).
+create table if not exists learning_actor_attributions (
+  user_id uuid primary key references "user"(id) on delete cascade,
+  actor_class text not null,
+  source text not null,
+  classified_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'learning_actor_attributions_actor_class_check'
+      and conrelid = 'learning_actor_attributions'::regclass
+  ) then
+    alter table learning_actor_attributions
+      add constraint learning_actor_attributions_actor_class_check
+      check (
+        actor_class in (
+          'real_self_serve',
+          'real_closed_pilot',
+          'founder_rehearsal',
+          'production_smoke',
+          'visual_fixture',
+          'editorial_seed',
+          'automated_bot'
+        )
+      );
+  end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'learning_actor_attributions_source_check'
+      and conrelid = 'learning_actor_attributions'::regclass
+  ) then
+    alter table learning_actor_attributions
+      add constraint learning_actor_attributions_source_check
+      check (
+        source in (
+          'pilot_grant',
+          'producer',
+          'operator_plan',
+          'self_serve_default'
+        )
+      );
+  end if;
+end $$;
+
+create index if not exists learning_actor_attributions_class_idx
+  on learning_actor_attributions (actor_class, classified_at desc);
 
 -- Founder interview capture (OVE-45). Operator-only structured pilot learnings.
 -- Stores bounded enum fields and an optional short redacted note. Never journal

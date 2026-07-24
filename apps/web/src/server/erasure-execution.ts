@@ -143,6 +143,10 @@ export async function executeApprovedErasureRequest(
         trx,
         requesterUserId,
       ).execute();
+      await buildDeleteLearningActorAttributionForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
       await buildDeleteOwnedAnalyticsEventsForErasureQuery(
         trx,
         requesterUserId,
@@ -425,6 +429,15 @@ export function buildDeletePilotInviteGrantForErasureQuery(
 ) {
   return executor
     .deleteFrom("pilot_invite_grants")
+    .where("user_id", "=", requesterUserId);
+}
+
+export function buildDeleteLearningActorAttributionForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("learning_actor_attributions")
     .where("user_id", "=", requesterUserId);
 }
 

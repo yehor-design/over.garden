@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   resolvePilotHealthOperatorAccess: vi.fn(),
   getPilotHealthReadoutSafely: vi.fn(),
+  getMvpLearningReportSafely: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -32,6 +33,10 @@ vi.mock("@/server/pilot-health-repository", () => ({
   getPilotHealthReadoutSafely: mocks.getPilotHealthReadoutSafely,
 }));
 
+vi.mock("@/server/mvp-learning/report", () => ({
+  getMvpLearningReportSafely: mocks.getMvpLearningReportSafely,
+}));
+
 describe("/garden/pilot-health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,6 +53,7 @@ describe("/garden/pilot-health", () => {
       ],
     });
     mocks.getPilotHealthReadoutSafely.mockResolvedValue(null);
+    mocks.getMvpLearningReportSafely.mockResolvedValue(null);
   });
 
   it("does not read aggregate health data for a signed-in non-operator", async () => {

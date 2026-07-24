@@ -92,6 +92,8 @@ describe("pilot cohort decision repository privacy contracts", () => {
       readout.caveats.some((note) => note.includes("Founder rehearsal")),
     ).toBe(true);
 
+    expect(readout.mvpLearning.policyVersion).toBe("ove200.learning.v1");
+    expect(readout.mvpLearning.decisionGate).toBeTruthy();
     expect(Object.keys(readout.interviews)).toEqual([
       "totalRecords",
       "bySegment",

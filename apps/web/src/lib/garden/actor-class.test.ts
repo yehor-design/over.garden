@@ -2,30 +2,62 @@ import { describe, expect, it } from "vitest";
 
 import {
   ACTOR_CLASSES,
+  AUTOMATED_BOT_ACTOR_CLASS,
   actorClassFromPilotCohort,
+  EDITORIAL_SEED_ACTOR_CLASS,
   isActorClass,
+  isDecisionEligibleActorClass,
+  isExcludedLearningActorClass,
+  normalizeActorClass,
+  REAL_CLOSED_PILOT_ACTOR_CLASS,
+  REAL_SELF_SERVE_ACTOR_CLASS,
   SELF_SERVE_ACTOR_CLASS,
 } from "./actor-class";
 
-describe("actor class (OVE-193)", () => {
-  it("defaults missing cohort attribution to self_serve", () => {
-    expect(actorClassFromPilotCohort(null)).toBe(SELF_SERVE_ACTOR_CLASS);
-    expect(actorClassFromPilotCohort(undefined)).toBe(SELF_SERVE_ACTOR_CLASS);
+describe("actor class (OVE-200)", () => {
+  it("defaults missing cohort attribution to real_self_serve", () => {
+    expect(actorClassFromPilotCohort(null)).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
+    expect(actorClassFromPilotCohort(undefined)).toBe(
+      REAL_SELF_SERVE_ACTOR_CLASS,
+    );
+    expect(SELF_SERVE_ACTOR_CLASS).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
   });
 
-  it("maps pilot cohorts without inventing other classes", () => {
-    expect(actorClassFromPilotCohort("closed_pilot")).toBe("closed_pilot");
+  it("maps pilot cohorts without inventing synthetic classes", () => {
+    expect(actorClassFromPilotCohort("closed_pilot")).toBe(
+      REAL_CLOSED_PILOT_ACTOR_CLASS,
+    );
     expect(actorClassFromPilotCohort("founder_rehearsal")).toBe(
       "founder_rehearsal",
     );
   });
 
-  it("accepts only the bounded enum set", () => {
+  it("accepts only the bounded OVE-200 enum set", () => {
     expect(ACTOR_CLASSES).toContain("production_smoke");
-    expect(ACTOR_CLASSES).toContain("editorial");
+    expect(ACTOR_CLASSES).toContain(EDITORIAL_SEED_ACTOR_CLASS);
     expect(ACTOR_CLASSES).toContain("visual_fixture");
-    expect(isActorClass("self_serve")).toBe(true);
+    expect(ACTOR_CLASSES).toContain(AUTOMATED_BOT_ACTOR_CLASS);
+    expect(isActorClass("real_self_serve")).toBe(true);
+    expect(isActorClass("self_serve")).toBe(false);
     expect(isActorClass("invited_cohort")).toBe(false);
     expect(isActorClass("user-123")).toBe(false);
+  });
+
+  it("normalizes legacy aliases without inventing unclassified as real", () => {
+    expect(normalizeActorClass("self_serve")).toBe(REAL_SELF_SERVE_ACTOR_CLASS);
+    expect(normalizeActorClass("closed_pilot")).toBe(
+      REAL_CLOSED_PILOT_ACTOR_CLASS,
+    );
+    expect(normalizeActorClass("editorial")).toBe(EDITORIAL_SEED_ACTOR_CLASS);
+    expect(normalizeActorClass(null)).toBeNull();
+    expect(normalizeActorClass("mystery")).toBeNull();
+  });
+
+  it("separates decision-eligible from excluded learning classes", () => {
+    expect(isDecisionEligibleActorClass("real_self_serve")).toBe(true);
+    expect(isDecisionEligibleActorClass("self_serve")).toBe(true);
+    expect(isDecisionEligibleActorClass("founder_rehearsal")).toBe(false);
+    expect(isExcludedLearningActorClass("visual_fixture")).toBe(true);
+    expect(isExcludedLearningActorClass("real_closed_pilot")).toBe(false);
   });
 });

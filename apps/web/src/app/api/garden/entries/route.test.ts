@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
-  resolveActorClassForScope: vi.fn(async () => "self_serve" as const),
+  resolveActorClassForScope: vi.fn(async () => "real_self_serve" as const),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),

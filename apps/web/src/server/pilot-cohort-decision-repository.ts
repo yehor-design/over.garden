@@ -18,6 +18,11 @@ import {
   type PilotHealthReadout,
   type PilotSegmentCohortMetrics,
 } from "@/server/pilot-health-repository";
+import {
+  getMvpLearningReport,
+  type MvpLearningReport,
+} from "@/server/mvp-learning/report";
+import { MVP_LEARNING_POLICY_VERSION } from "@/lib/mvp-learning/policy";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -52,6 +57,13 @@ export interface PilotCohortDecisionReadout {
   valuePulse: PilotFollowUpValuePulseMetrics;
   interviews: PilotCohortInterviewAggregates;
   decision: PilotCohortDecisionEvaluation;
+  mvpLearning: {
+    policyVersion: typeof MVP_LEARNING_POLICY_VERSION;
+    decisionGate: MvpLearningReport["decisionGate"];
+    unclassifiedEventCount: number;
+    selfServeActivated: number;
+    closedPilotActivated: number;
+  };
   caveats: string[];
   references: typeof PILOT_HEALTH_RESEARCH_REFERENCES;
 }
@@ -68,12 +80,18 @@ export async function getPilotCohortDecisionReadout(
   executor: QueryExecutor = db,
   now = new Date(),
 ): Promise<PilotCohortDecisionReadout> {
-  const [healthReadout, interviewRows] = await Promise.all([
+  const [healthReadout, interviewRows, mvpLearning] = await Promise.all([
     getPilotHealthReadout(executor, now),
     buildPilotInterviewLearningAggregateQuery(executor).execute(),
+    getMvpLearningReport({ executor, now }),
   ]);
 
-  return assemblePilotCohortDecisionReadout(healthReadout, interviewRows, now);
+  return assemblePilotCohortDecisionReadout(
+    healthReadout,
+    interviewRows,
+    now,
+    mvpLearning,
+  );
 }
 
 export async function getPilotCohortDecisionReadoutSafely(
@@ -127,6 +145,7 @@ export function assemblePilotCohortDecisionReadout(
   healthReadout: PilotHealthReadout,
   interviewRows: InterviewAggregateRow[],
   now = new Date(),
+  mvpLearning?: MvpLearningReport,
 ): PilotCohortDecisionReadout {
   const window =
     healthReadout.windows.find(
@@ -139,7 +158,7 @@ export function assemblePilotCohortDecisionReadout(
     metrics.invitedCohort.firstEntrySaves,
   );
 
-  const decision = evaluatePilotCohortDecision({
+  let decision = evaluatePilotCohortDecision({
     writeEligibleGardeners: healthReadout.writeAccess.writeEligibleGardeners,
     inviteStarts: metrics.invitedCohort.starts,
     firstEntrySaves: metrics.invitedCohort.firstEntrySaves,
@@ -155,6 +174,27 @@ export function assemblePilotCohortDecisionReadout(
     segments: metrics.invitedCohort.segments,
     interviews,
   });
+
+  const learningGate = mvpLearning?.decisionGate ?? "insufficient";
+  if (learningGate === "unclassified" || learningGate === "stale") {
+    decision = {
+      ...decision,
+      recommendation: "insufficient_data",
+      headline: "MVP learning gate refuses go/no-go",
+      rationale: [
+        learningGate === "unclassified"
+          ? "Unclassified actor/evidence activity is present; classify or exclude it before any continue/iterate/stop call."
+          : "Learning evidence is stale relative to retention/policy freshness; refresh before deciding.",
+        ...decision.rationale,
+      ],
+      dataGaps: [
+        ...decision.dataGaps,
+        learningGate === "unclassified"
+          ? "unclassified_actor_evidence"
+          : "stale_learning_evidence",
+      ],
+    };
+  }
 
   return {
     generatedAt: now,
@@ -186,11 +226,21 @@ export function assemblePilotCohortDecisionReadout(
     valuePulse: metrics.followUpValuePulse,
     interviews,
     decision,
+    mvpLearning: {
+      policyVersion: mvpLearning?.policyVersion ?? MVP_LEARNING_POLICY_VERSION,
+      decisionGate: learningGate,
+      unclassifiedEventCount: mvpLearning?.unclassifiedEventCount ?? 0,
+      selfServeActivated:
+        mvpLearning?.cohorts.real_self_serve.activatedGardeners ?? 0,
+      closedPilotActivated:
+        mvpLearning?.cohorts.real_closed_pilot.activatedGardeners ?? 0,
+    },
     caveats: [
       "This panel is decision support, not an automated strategy engine.",
       "All numbers are provisional closed-pilot calibrators grounded in OverGarden_B2_METRICS_v0.md and KILL_CRITERIA_PREREG_v2.md — not statistically validated targets.",
       "Behavioral rates use the invited-cohort enum source only; they never expose journal text, invite identity, email, media keys, IP, user agent, referrer, or raw URLs.",
       "Founder rehearsal grants and founder_rehearsal interview records are excluded from this closed-pilot decision frame; they prove operator readiness only, not OVE-53 field evidence.",
+      "OVE-200 MVP learning gate separates real_self_serve and real_closed_pilot; synthetic/editorial/bot classes cannot change the decision.",
       "Interview categories are bounded enum aggregates; redacted notes and subject identifiers stay out of this readout.",
       "Offline failed mutations remain browser-local Dexie state and are not server-observable.",
       "Founder judgment still required: reconcile behavioral rates, value pulse, and interview categories before changing recruiting posture.",

@@ -516,6 +516,15 @@ export interface JournalTopics {
   updated_at: Generated<Timestamp>;
 }
 
+export interface LearningActorAttributions {
+  actor_class: string;
+  classified_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
+  source: string;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface LineageNodeFollows {
   created_at: Generated<Timestamp>;
   follow_state: Generated<string>;
@@ -851,6 +860,7 @@ export interface DB {
   journal_entry_object_mentions: JournalEntryObjectMentions;
   journal_entry_topic_signals: JournalEntryTopicSignals;
   journal_topics: JournalTopics;
+  learning_actor_attributions: LearningActorAttributions;
   lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;

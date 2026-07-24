@@ -57,6 +57,15 @@ const UK_COPY = {
     writeAccessTitle: "Доступ до запису в закритому пілоті",
     writeAccessDescription:
       "Відрізняє реальних авторів закритого пілоту від репетицій засновника та незапрошених відвідувачів, які можуть читати публічні сторінки. Враховуються лише постійні записи дозволів без посилань, токенів або ідентичності отримувача.",
+    mvpLearningTitle: "Навчання MVP (OVE-200)",
+    mvpLearningDescription:
+      "Окремі знаменники H1/H4 для real_self_serve і real_closed_pilot. Синтетичні / редакційні / бот класи лише у виключеннях. Політика {policyVersion} / утримання {retentionPolicyVersion}. Гейт: {decisionGate}.",
+    mvpLearningSelfServeActivated: "Активовані self-serve",
+    mvpLearningSelfServeH1: "Self-serve H1 утримані",
+    mvpLearningClosedPilotActivated: "Активовані закритого пілоту",
+    mvpLearningClosedPilotH1: "Закритий пілот H1 утримані",
+    mvpLearningUnclassified: "Некласифіковані події",
+    mvpLearningExcluded: "Виключені синтетичні садівники",
     rehearsalNote:
       "Дозволи репетиції засновника можуть перевіряти весь шлях продукту, але виключені з метрик рішення H1/OVE-53 для закритого пілоту.",
     publicVarietyTitle: "Індексованість публічних сортів",
@@ -156,6 +165,8 @@ const UK_COPY = {
     recommendationTitle: "Попередня рекомендація",
     recommendationDescription:
       "Поєднує поведінку запрошеної когорти, пульс цінності та структуровані категорії інтерв'ю. Це не автоматичне рішення щодо стратегії продукту.",
+    mvpLearningGate:
+      "Гейт навчання MVP ({policyVersion}): {decisionGate}. Активовані self-serve {selfServeActivated}; активовані закритого пілоту {closedPilotActivated}; некласифіковані події {unclassifiedEventCount}.",
     behavioralSignal: "Поведінковий сигнал",
     interviewSignal: "Сигнал інтерв'ю",
     segmentSignal: "Сигнал сегмента",
@@ -362,6 +373,15 @@ const BG_COPY: OperatorPilotCopy = {
     writeAccessTitle: "Достъп за писане в затворения пилот",
     writeAccessDescription:
       "Разграничава реалните автори в затворения пилот от репетициите на основателя и непоканените посетители. Броят се само трайни разрешения без връзки, токени или самоличност на получателя.",
+    mvpLearningTitle: "MVP обучение (OVE-200)",
+    mvpLearningDescription:
+      "Отделни знаменатели H1/H4 за real_self_serve и real_closed_pilot. Синтетичните / редакционните / бот класове са само изключения. Политика {policyVersion} / задържане {retentionPolicyVersion}. Гейт: {decisionGate}.",
+    mvpLearningSelfServeActivated: "Активирани self-serve",
+    mvpLearningSelfServeH1: "Self-serve H1 задържани",
+    mvpLearningClosedPilotActivated: "Активирани в затворения пилот",
+    mvpLearningClosedPilotH1: "Затворен пилот H1 задържани",
+    mvpLearningUnclassified: "Некласифицирани събития",
+    mvpLearningExcluded: "Изключени синтетични градинари",
     rehearsalNote:
       "Разрешенията за репетиция могат да проверяват целия продуктов път, но са изключени от H1/OVE-53 метриките за решение.",
     publicVarietyTitle: "Индексируемост на публичните сортове",
@@ -463,6 +483,8 @@ const BG_COPY: OperatorPilotCopy = {
     recommendationTitle: "Предварителна препоръка",
     recommendationDescription:
       "Съчетава поведението, пулса на стойността и интервютата. Не взема автоматично продуктово решение.",
+    mvpLearningGate:
+      "Гейт за MVP обучение ({policyVersion}): {decisionGate}. Активирани self-serve {selfServeActivated}; активирани в затворения пилот {closedPilotActivated}; некласифицирани събития {unclassifiedEventCount}.",
     behavioralSignal: "Поведенчески сигнал",
     interviewSignal: "Сигнал от интервюта",
     segmentSignal: "Сегментен сигнал",
@@ -665,6 +687,15 @@ const RU_COPY: OperatorPilotCopy = {
     writeAccessTitle: "Доступ к записи в закрытом пилоте",
     writeAccessDescription:
       "Отличает реальных авторов закрытого пилота от репетиций основателя и незваных посетителей. Учитываются только постоянные разрешения без ссылок, токенов или личности получателя.",
+    mvpLearningTitle: "Обучение MVP (OVE-200)",
+    mvpLearningDescription:
+      "Отдельные знаменатели H1/H4 для real_self_serve и real_closed_pilot. Синтетические / редакционные / бот классы только в исключениях. Политика {policyVersion} / удержание {retentionPolicyVersion}. Гейт: {decisionGate}.",
+    mvpLearningSelfServeActivated: "Активированные self-serve",
+    mvpLearningSelfServeH1: "Self-serve H1 удержанные",
+    mvpLearningClosedPilotActivated: "Активированные закрытого пилота",
+    mvpLearningClosedPilotH1: "Закрытый пилот H1 удержанные",
+    mvpLearningUnclassified: "Неклассифицированные события",
+    mvpLearningExcluded: "Исключённые синтетические садоводы",
     rehearsalNote:
       "Разрешения репетиции проверяют весь путь продукта, но исключены из метрик решения H1/OVE-53.",
     publicVarietyTitle: "Индексируемость публичных сортов",
@@ -767,6 +798,8 @@ const RU_COPY: OperatorPilotCopy = {
     recommendationTitle: "Предварительная рекомендация",
     recommendationDescription:
       "Сочетает поведение, пульс ценности и интервью. Не принимает автоматическое продуктовое решение.",
+    mvpLearningGate:
+      "Гейт обучения MVP ({policyVersion}): {decisionGate}. Активированные self-serve {selfServeActivated}; активированные закрытого пилота {closedPilotActivated}; неклассифицированные события {unclassifiedEventCount}.",
     behavioralSignal: "Поведенческий сигнал",
     interviewSignal: "Сигнал интервью",
     segmentSignal: "Сигнал сегмента",
