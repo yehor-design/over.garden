@@ -500,7 +500,7 @@
       ],
       "notes": [
         "Behavior commit c6c57c4bc9ff365d6b0d00c260d1b60feba40d99 is on main. Vercel production deployment dpl_Cv3aFMqmb6oLNUkYwGMhabo26tTJ reached READY for that exact SHA and owned over.garden / www.",
-        "Additive production SQL 0004_media_lifecycle_revocation.sql applied (revoked_at/public_unreachable_at + media_lifecycle_retention_runs). Public overgarden-public managed r2.dev disabled via Cloudflare managed-domain API; synthetic revoke prove showed media.over.garden 2xx\u2192non2xx and r2.dev non2xx.",
+        "Additive production SQL 0004_media_lifecycle_revocation.sql applied (revoked_at/public_unreachable_at + media_lifecycle_retention_runs). Public overgarden-public managed r2.dev disabled via Cloudflare managed-domain API; synthetic revoke prove showed media.over.garden 2xx→non2xx and r2.dev non2xx.",
         "Local suite: db:types:check, focused media/job-queue tests, smoke:media-archive-retention, smoke:retention-workflow, retention:report, localization coverage, lint, typecheck, full vitest (372 files / 2351 tests), and production build. GitHub Actions remain workflow_dispatch under budget freeze.",
         "Does not claim OVE-196/199/200/201 finals. No broad bucket delete or user-content sweep. No object paths, identities, secrets, or private journal text in evidence."
       ]
@@ -552,7 +552,7 @@
       "notes": [
         "Unlock commit 820e8e5228386a8b076e1f0457376f21754637b7 and closeout baseline 7a6306aa026436fb7e7bb1afc267552a71ac36ee are on main. Vercel production deployment dpl_2znjaaXeytgc51fkkwWFN5xoa2S9 reached READY for the closeout SHA and owned over.garden / www plus immutable URL https://over-garden-hmtfkxai3-yehors-projects-01221e2b.vercel.app.",
         "Authenticated writes no longer require pilot_invite_grants; invite cookie/grant remains optional cohort attribution. Bounded actor_class self_serve|closed_pilot|founder_rehearsal|production_smoke|editorial|visual_fixture is emitted on analytics entry paths. Self-serve garden/auth copy no longer claims invite-only access.",
-        "Local smoke:self-serve-mvp proved zero-grant signup \u2192 private first entry \u2192 follow-up with actor_class=self_serve under run-with-local-infra-env. Production smoke:self-serve-providers proved Google and Facebook authorization starts, Facebook button live on guest garden, and invite-only claim absence on auth help. Composer/reorder/cover contract smokes remained green. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
+        "Local smoke:self-serve-mvp proved zero-grant signup → private first entry → follow-up with actor_class=self_serve under run-with-local-infra-env. Production smoke:self-serve-providers proved Google and Facebook authorization starts, Facebook button live on guest garden, and invite-only claim absence on auth help. Composer/reorder/cover contract smokes remained green. GitHub Actions remain workflow_dispatch under budget freeze; merge gate is Vercel READY plus local suite.",
         "Does not claim OVE-186 Drive2 refresh, full interactive Facebook/Google browser callback round-trips, founder physical iPhone checklist, or any production account erasure/invite grant backfill.",
         "No secret, cookie, token, private journal text, media URL, identity, raw request metadata, IP address, user agent, or precise location is included in closeout evidence."
       ]
@@ -634,7 +634,7 @@
       "notes": [
         "Behavior commit 85b2d737a88ff58938e99f191b2017eae92ba675 and docs closeout 32a9030f52662f5a04daf58d61baa7ad1d9f36b1 are on main. Vercel production deployment dpl_39prmfUBYY8b6SRTcs4nQBcxLpdu reached READY for the docs closeout SHA and owned over.garden / www.",
         "Production Meilisearch active pin v1.48.1 digest sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a on volume overgarden-meili-data-v1481; legacy overgarden_meili_data retained (deletion forbidden in OVE-198).",
-        "Live dual-volume path: preflight 1.15.2\u21921.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
+        "Live dual-volume path: preflight 1.15.2→1.48.1, dump+snapshot succeeded, catalog rebuild 61888, journal parity apply to zeroGap 69/69, cutover/rollback/forward rehearsed, public health available, Cyrillic typeahead nonzero hits class.",
         "Matching handler canary passed all six handlers including journal index/unindex/restore with cover-safe key contract; leakCheck=passed. Canary validator hotpatched on running containers to match OVE-196 cover fields; sealed matching digest unchanged.",
         "Does not claim managed-search vendor migration, ranking redesign, legacy volume deletion, or OVE-186 Done. No keys, raw documents, user IDs, journal text, or precise location in evidence."
       ]
@@ -684,7 +684,7 @@
       "notes": [
         "Behavior commit cebef59d8900032f5600d929b55da1ad2a76a0a9 is on main. Vercel production deployment dpl_4DQoNM9aWaJaff6K8CnKUc818iXw reached READY for that SHA and owned over.garden / www.",
         "Read-only catalog:inventory-object-kinds prints kind counts, bee_colony catalog identities, dependents counts, and SAFE TO COLLAPSE verdict; SQL contract is SELECT-only.",
-        "Production inventory (vercel env run): animal 14 / bee_colony 16 / plant 229; script SAFE TO COLLAPSE=no solely for visual-fixture rows 18700003-\u2026028 (species) and \u2026030 (user_added). Operator go/no-go=go with OVE-211 required to remediate those fixtures during collapse. All non-fixture bee_colony rows are ua_official_bee_breed.",
+        "Production inventory (vercel env run): animal 14 / bee_colony 16 / plant 229; script SAFE TO COLLAPSE=no solely for visual-fixture rows 18700003-…028 (species) and …030 (user_added). Operator go/no-go=go with OVE-211 required to remediate those fixtures during collapse. All non-fixture bee_colony rows are ua_official_bee_breed.",
         "Does not claim kind-model migration, production data mutation, credential embedding, or OVE-211 Done. Full pnpm test suite has pre-existing unrelated failures on main; OVE-210 unit tests, lint, and typecheck are green."
       ]
     },
@@ -711,6 +711,28 @@
         "Post-apply inventory: SAFE TO COLLAPSE yes; kinds plant|animal only. Acceptance rg leaves only SQL WHERE migration lines plus analytics historical-value comment.",
         "Local DoD green including a11y; loopback Origin alias fix in interface-request-guard unblocked Bulgaria same-path locale preference under 127.0.0.1 harness. smoke:drive2-production commitMatch true with guest reads and auth-intent boundaries.",
         "Does not claim plant_objects rename, bee/pet vertical features, OVE-212 research rewrite, bee catalog deletion, or OVE-186 Done."
+      ]
+    },
+    {
+      "issueId": "OVE-212",
+      "title": "Reconcile product-research corpus with code: object categories and animal/bee scope",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "b13b6055a8be3644df5e58ede05e621fe8156594",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-212/reconcile-product-research-corpus-with-code-object-categories-and",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5cpKEk51yBi28E4bBjZbnDmiXQGJ",
+      "completedAt": "2026-07-24",
+      "verificationCommands": [
+        "rg -n \"2026-07-23\" docs/product-research/OverGarden_MVP_PRD_v0.md docs/product-research/ЦА_CANON_v1.md docs/product-research/B3_INFORMATION_ARCHITECTURE_AND_FLOWS_v0.md",
+        "git show b13b6055a8be3644df5e58ede05e621fe8156594 --stat -- docs/product-research",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git diff --check"
+      ],
+      "notes": [
+        "Docs commit b13b6055a8be3644df5e58ede05e621fe8156594 is on main. Vercel production deployment dpl_5cpKEk51yBi28E4bBjZbnDmiXQGJ reached READY for that SHA and owned over.garden / www.",
+        "Annotate-don't-delete: dated REVISED/ADD-pointer banners on PRD, ЦА_CANON (pointer-only), and B3; D9 sole PAGE_ARCH pointer; OBJECT_CATEGORY_MODEL Implementation notes OVE-211 landed.",
+        "Does not claim code/schema/UI changes, frozen ЦА threshold edits, SCAFFOLD three-kind rewrite, or OVE-186 Done."
       ]
     }
   ]
