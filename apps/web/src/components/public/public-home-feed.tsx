@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookOpen,
   Clock3,
-  Hexagon,
   MapPin,
   PawPrint,
   Sprout,
@@ -36,7 +35,6 @@ export interface PublicHomeFeedCopy {
   followedFilter: string;
   plantFilter: string;
   animalFilter: string;
-  beeFilter: string;
   topicFilterLabel: string;
   readEntry: string;
   publishedBy: string;
@@ -158,7 +156,6 @@ function FeedFilters({
     { kind: "all", label: copy.recentFilter },
     { kind: "plant", label: copy.plantFilter },
     { kind: "animal", label: copy.animalFilter },
-    { kind: "bee_colony", label: copy.beeFilter },
   ];
 
   return (
@@ -190,7 +187,6 @@ function FeedFilters({
             >
               {kind === "plant" ? <Sprout aria-hidden="true" /> : null}
               {kind === "animal" ? <PawPrint aria-hidden="true" /> : null}
-              {kind === "bee_colony" ? <Hexagon aria-hidden="true" /> : null}
               {label}
             </Link>
           );

@@ -13,7 +13,6 @@ describe("public living-object catalog copy", () => {
         all: "Усі",
         plant: "Рослини",
         animal: "Тварини",
-        bee_colony: "Бджолосім'ї",
       },
       identities: {
         plant_variety: "Сорти",
@@ -33,16 +32,13 @@ describe("public living-object catalog copy", () => {
     });
   });
 
-  it("uses domain-specific trust language for provisional animal and bee identities", () => {
+  it("uses domain-specific trust language for provisional plant and animal identities", () => {
     expect(
       publicObjectCatalogIdentityDescription("uk", "plant", "provisional"),
     ).toContain("робоча назва рослини");
     expect(
       publicObjectCatalogIdentityDescription("uk", "animal", "provisional"),
     ).toContain("не підтверджена порода чи вид");
-    expect(
-      publicObjectCatalogIdentityDescription("uk", "bee_colony", "provisional"),
-    ).toContain("лінія сім'ї");
     expect(
       publicObjectCatalogIdentityDescription("bg", "animal", "unknown"),
     ).toContain("не е потвърден");

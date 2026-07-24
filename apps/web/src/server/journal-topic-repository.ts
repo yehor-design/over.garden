@@ -487,12 +487,6 @@ function topicDefinitionForObjectKind(
   switch (value as PlantObjectKind | string | null) {
     case "plant":
       return { slug: "plants", label: "Plants", trustState: "curated" };
-    case "bee_colony":
-      return {
-        slug: "bee-colonies",
-        label: "Bee colonies",
-        trustState: "curated",
-      };
     case "animal":
       return { slug: "animals", label: "Animals", trustState: "curated" };
     default:

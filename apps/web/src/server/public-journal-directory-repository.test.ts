@@ -56,7 +56,7 @@ describe("public journal directory request", () => {
       }),
     ).toEqual({
       query: "зимова волога",
-      kind: "bee_colony",
+      kind: "animal",
       catalog: "visual-apis-mellifera",
       topic: "stress-and-recovery",
       season: "winter",
@@ -280,7 +280,7 @@ describe("public journal directory serialization", () => {
         row({
           entryId: "00000000-0000-4000-8000-000000000002",
           publicSlug: "quiet-apiary-check",
-          objectKind: "bee_colony",
+          objectKind: "animal",
           objectDisplayName: "Сім'я на схилі",
           catalogKind: "species",
           catalogCanonicalName: "Apis mellifera",
@@ -373,7 +373,7 @@ describe("public journal directory serialization", () => {
       safeRegionCode: null,
       author: null,
       object: {
-        kind: "bee_colony",
+        kind: "animal",
         catalogPath: "/species/apis-mellifera",
       },
     });

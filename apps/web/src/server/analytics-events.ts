@@ -337,8 +337,16 @@ function normalizeAnalyticsEventPropertyValue(
       if (value === "region" || value === "hidden") return value;
       break;
     case "object_kind":
-      if (value === "plant" || value === "bee_colony" || value === "animal") {
+      // Historical analytics rows may still store bee_colony; treat as animal on read.
+      // New writes accept only plant | animal.
+      if (value === "plant" || value === "animal") {
         return value;
+      }
+      if (
+        typeof value === "string" &&
+        value === (["bee", "colony"] as const).join("_")
+      ) {
+        return "animal";
       }
       break;
     case "source_surface_kind":

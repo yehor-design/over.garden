@@ -1485,7 +1485,7 @@ function normalizeFollowedFeedSource(value: string): FollowedFeedSource {
 function normalizeFollowedFeedObjectKind(
   value: string,
 ): FollowedFeedObjectKind {
-  if (value === "plant" || value === "animal" || value === "bee_colony") {
+  if (value === "plant" || value === "animal") {
     return value;
   }
   return "all";

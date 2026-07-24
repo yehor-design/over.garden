@@ -1196,6 +1196,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
         "src/app/api/garden/value-pulse/route.ts",
         "src/app/api/interface/context/route.ts",
         "src/app/api/interface/locale/route.ts",
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
         "src/app/api/media/process/route.ts",
         "src/app/api/media/uploads/route.ts",
         "src/app/api/meta/conversions/route.ts",

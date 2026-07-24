@@ -31,7 +31,6 @@ export interface GardenWorkspaceInventorySource {
   totalCount: number;
   plantCount: number;
   animalCount: number;
-  beeColonyCount: number;
   archivedEntryCount: number;
   objects: PlantObjectSummary[];
 }
@@ -49,7 +48,6 @@ export interface GardenWorkspaceSpaceSummary {
   objectCount: number;
   plantCount: number;
   animalCount: number;
-  beeColonyCount: number;
 }
 
 export interface GardenWorkspaceSpacesSource {
@@ -143,7 +141,6 @@ const defaultSources: GardenWorkspaceSources = {
       totalCount: normalizeCount(summary?.totalCount),
       plantCount: normalizeCount(summary?.plantCount),
       animalCount: normalizeCount(summary?.animalCount),
-      beeColonyCount: normalizeCount(summary?.beeColonyCount),
       archivedEntryCount: normalizeCount(summary?.archivedEntryCount),
       objects,
     };
@@ -163,7 +160,6 @@ const defaultSources: GardenWorkspaceSources = {
         objectCount: normalizeCount(row.objectCount),
         plantCount: normalizeCount(row.plantCount),
         animalCount: normalizeCount(row.animalCount),
-        beeColonyCount: normalizeCount(row.beeColonyCount),
       })),
     };
   },
@@ -319,9 +315,6 @@ export function buildGardenWorkspaceInventorySummaryQuery(
       sql<number>`count(distinct ${sql.ref("plant_objects.id")}) filter (
         where ${sql.ref("plant_objects.object_kind")} = 'animal'
       )::int`.as("animalCount"),
-      sql<number>`count(distinct ${sql.ref("plant_objects.id")}) filter (
-        where ${sql.ref("plant_objects.object_kind")} = 'bee_colony'
-      )::int`.as("beeColonyCount"),
       sql<number>`count(${sql.ref("journal_entries.id")}) filter (
         where ${sql.ref("journal_entries.lifecycle_state")} = 'archived'
       )::int`.as("archivedEntryCount"),
@@ -354,9 +347,6 @@ export function buildGardenWorkspaceSpaceSummariesQuery(
       sql<number>`count(${sql.ref("plant_objects.id")}) filter (
         where ${sql.ref("plant_objects.object_kind")} = 'animal'
       )::int`.as("animalCount"),
-      sql<number>`count(${sql.ref("plant_objects.id")}) filter (
-        where ${sql.ref("plant_objects.object_kind")} = 'bee_colony'
-      )::int`.as("beeColonyCount"),
     ])
     .where("spaces.owner_user_id", "=", scope.userId)
     .groupBy(["spaces.id", "spaces.display_name", "spaces.created_at"])
@@ -455,8 +445,5 @@ export function workspaceObjectKindCounts(
       .length,
     animalCount: objects.filter((object) => object.objectKind === "animal")
       .length,
-    beeColonyCount: objects.filter(
-      (object) => object.objectKind === "bee_colony",
-    ).length,
   };
 }

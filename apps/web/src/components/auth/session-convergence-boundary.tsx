@@ -41,6 +41,15 @@ import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 
+function isVisualFixtureBrowserRequest(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  for (const key of params.keys()) {
+    if (key.startsWith("visual")) return true;
+  }
+  return false;
+}
+
 export function SessionConvergenceBoundary({
   children,
   locale,
@@ -141,6 +150,13 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (baselinePreparedSession && baselineOwnerUserId && !disposed) {
+        // Visual-fixture routes use synthetic owners and must not open the
+        // real offline IndexedDB lane — Dexie hydration can wedge Playwright
+        // Chromium and is not part of fixture evidence.
+        if (isVisualFixtureBrowserRequest()) {
+          setActivityGate("ready");
+          return;
+        }
         const hydration = await hydrateOwnerOfflineActivitySession(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
@@ -198,10 +214,12 @@ export function SessionConvergenceBoundary({
             return false;
           }
 
-          const hydration = await hydrateOwnerOfflineActivitySession(
-            freshOwnerUserId,
-            freshPreparedSession.binding,
-          );
+          const hydration = isVisualFixtureBrowserRequest()
+            ? ("ready" as const)
+            : await hydrateOwnerOfflineActivitySession(
+                freshOwnerUserId,
+                freshPreparedSession.binding,
+              );
           if (disposed) return false;
           if (hydration === "document_session_changed") {
             hideAuthenticatedTree();

@@ -65,7 +65,7 @@ const PUBLIC_SEMANTIC_SLUG =
   /^[\p{Letter}\p{Number}]+(?:-[\p{Letter}\p{Number}]+)*$/u;
 const PUBLIC_PROFILE_HANDLE = /^[a-z0-9][a-z0-9_]{2,29}$/;
 const AUTH_INTENT_ACTION_SET = new Set<string>(AUTH_INTENT_ACTIONS);
-const PUBLIC_OBJECT_KINDS = new Set(["all", "plant", "animal", "bee_colony"]);
+const PUBLIC_OBJECT_KINDS = new Set(["all", "plant", "animal"]);
 const PUBLIC_OBJECT_IDENTITIES = new Set([
   "all",
   "plant_variety",

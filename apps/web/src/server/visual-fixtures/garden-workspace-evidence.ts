@@ -21,7 +21,6 @@ export interface VisualFixtureGardenWorkspaceEvidenceResult {
   objectCount: number;
   plantCount: number;
   animalCount: number;
-  beeColonyCount: number;
   recentCount: number;
   spaceIds: readonly string[];
   objectIds: readonly string[];
@@ -37,7 +36,6 @@ export function assertVisualFixtureGardenWorkspaceEvidenceResult(
     actual.objectCount !== expected.expectedObjectCount ||
     actual.plantCount !== expected.expectedPlantCount ||
     actual.animalCount !== expected.expectedAnimalCount ||
-    actual.beeColonyCount !== expected.expectedBeeColonyCount ||
     actual.recentCount !== expected.expectedRecentCount
   ) {
     throw new Error(
@@ -114,7 +112,6 @@ async function readGardenWorkspaceEvidence(
     objectCount: normalizeCount(inventory?.totalCount),
     plantCount: normalizeCount(inventory?.plantCount),
     animalCount: normalizeCount(inventory?.animalCount),
-    beeColonyCount: normalizeCount(inventory?.beeColonyCount),
     recentCount: recent.length,
     spaceIds: spaces.map((space) => space.id),
     objectIds: objects.map((object) => object.id),

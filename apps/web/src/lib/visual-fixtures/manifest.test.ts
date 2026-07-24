@@ -72,7 +72,7 @@ describe("visual fixture manifest", () => {
     expect(evidence.pageSize).toBe(12);
     expect(evidence.communities).toHaveLength(4);
     expect(evidence.rules.length).toBeGreaterThanOrEqual(9);
-    expect(evidence.memberships.length).toBeGreaterThanOrEqual(12);
+    expect(evidence.memberships.length).toBeGreaterThanOrEqual(11);
     expect(evidence.moderators.length).toBeGreaterThanOrEqual(4);
     expect(evidence.contributions.length).toBeGreaterThanOrEqual(24);
     expect(evidence.reports.length).toBeGreaterThanOrEqual(1);
@@ -82,7 +82,7 @@ describe("visual fixture manifest", () => {
     expect(guest?.expectedItemCount).toBe(1);
     expect(guest?.path).toContain("kind=animal");
     expect(contributionKinds).toEqual(
-      new Set(["plant", "animal", "bee_colony"]),
+      new Set(["plant", "animal"]),
     );
     expect(states).toEqual(
       new Set([
@@ -217,7 +217,7 @@ describe("visual fixture manifest", () => {
     expect(first).toHaveLength(11);
     expect(next).toHaveLength(9);
     expect(new Set(first.map((scenario) => scenario.objectKind))).toEqual(
-      new Set(["plant", "animal", "bee_colony"]),
+      new Set(["plant", "animal"]),
     );
     expect(states).toEqual(
       new Set([
@@ -323,7 +323,7 @@ describe("visual fixture manifest", () => {
     expect(dense?.expectedObjectCount).toBeGreaterThan(10);
     expect(dense?.expectedPlantCount).toBeGreaterThan(0);
     expect(dense?.expectedAnimalCount).toBeGreaterThan(0);
-    expect(dense?.expectedBeeColonyCount).toBeGreaterThan(0);
+    expect(dense?.expectedAnimalCount).toBeGreaterThan(0);
     expect(dense?.expectedSpaceIds).toHaveLength(
       dense?.expectedSpaceCount ?? 0,
     );
@@ -539,15 +539,14 @@ describe("visual fixture manifest", () => {
     });
   });
 
-  it("covers plants, animals, bee colonies, languages, visibility, and lifecycle edges", () => {
+  it("covers plants, animals, languages, visibility, and lifecycle edges", () => {
     const kindCounts = Object.groupBy(
       VISUAL_FIXTURE_MANIFEST.objects,
       (object) => object.objectKind,
     );
 
     expect(kindCounts.plant).toHaveLength(18);
-    expect(kindCounts.animal).toHaveLength(8);
-    expect(kindCounts.bee_colony).toHaveLength(4);
+    expect(kindCounts.animal).toHaveLength(12);
     expect(
       new Set(VISUAL_FIXTURE_MANIFEST.entries.map((entry) => entry.locale)),
     ).toEqual(new Set(["uk", "bg", "ru"]));
@@ -587,7 +586,7 @@ describe("visual fixture manifest", () => {
       publiclyVisibleObjectIds.has(object.id),
     );
     const countCatalogGroups = (
-      objectKind: "plant" | "animal" | "bee_colony",
+      objectKind: "plant" | "animal",
       catalogKind: "plant_variety" | "species" | "breed",
     ) =>
       new Set(
@@ -608,8 +607,7 @@ describe("visual fixture manifest", () => {
       new Set(VISUAL_FIXTURE_MANIFEST.catalogItems.map((item) => item.source)),
     ).toEqual(new Set(["visual_fixture"]));
     expect(countCatalogGroups("plant", "species")).toBe(7);
-    expect(countCatalogGroups("animal", "breed")).toBe(6);
-    expect(countCatalogGroups("bee_colony", "breed")).toBe(1);
+    expect(countCatalogGroups("animal", "breed")).toBe(7);
     expect(
       visibleObjects.filter((object) => {
         const item = object.catalogItemId
@@ -661,7 +659,7 @@ describe("visual fixture manifest", () => {
     );
     expect(
       new Set(knowledge.topics.flatMap((topic) => topic.objectKinds)),
-    ).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    ).toEqual(new Set(["plant", "animal"]));
     expect(
       [...knowledge.guides, ...knowledge.answers].map(
         (content) => content.evidence.expectedEntryIds.length,
@@ -922,7 +920,7 @@ describe("visual fixture manifest", () => {
     expect(evidence.maxPublicTimeline).toBe(40);
     expect(
       new Set(evidence.scenarios.map((scenario) => scenario.objectKind)),
-    ).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    ).toEqual(new Set(["plant", "animal"]));
     expect(
       new Set(evidence.scenarios.map((scenario) => scenario.identityState)),
     ).toEqual(new Set(["confirmed", "provisional", "unknown"]));
@@ -1070,7 +1068,7 @@ describe("visual fixture manifest", () => {
         ? objectsById.get(entry.objectId)
         : undefined;
       const expectedKind = beeFiles.test(media.fileName)
-        ? "bee_colony"
+        ? "animal"
         : animalFiles.test(media.fileName)
           ? "animal"
           : "plant";
@@ -1125,7 +1123,7 @@ describe("visual fixture manifest", () => {
       VISUAL_FIXTURE_MANIFEST.feedEvidence.emptyTopicSlug,
     );
 
-    expect(firstPageKinds).toEqual(new Set(["plant", "animal", "bee_colony"]));
+    expect(firstPageKinds).toEqual(new Set(["plant", "animal"]));
     expect(signalsByTopic[typicalTopic!.id]).toHaveLength(4);
     expect(signalsByTopic[denseTopic!.id]!.length).toBeGreaterThan(
       VISUAL_FIXTURE_MANIFEST.feedEvidence.pageSize,

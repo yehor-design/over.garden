@@ -148,10 +148,11 @@ export function locationVisibilityHelpText(value: string | null | undefined) {
 export function catalogKindLabel(
   value: string | null | undefined,
   objectKind?: string | null,
+  catalogSource?: string | null,
 ) {
   switch (value) {
     case "breed":
-      return breedKindLabel(objectKind);
+      return breedKindLabel(objectKind, catalogSource);
     case "species":
       return "Plant species";
     case "plant_variety":
@@ -164,10 +165,11 @@ export function catalogKindLabel(
 export function catalogIdentityLabel(
   value: string | null | undefined,
   objectKind?: string | null,
+  catalogSource?: string | null,
 ) {
   switch (value) {
     case "breed":
-      return breedKindLabel(objectKind);
+      return breedKindLabel(objectKind, catalogSource);
     case "species":
       return "Plant species";
     case "plant_variety":
@@ -179,8 +181,6 @@ export function catalogIdentityLabel(
 
 export function plantObjectKindLabel(value: string | null | undefined) {
   switch (value) {
-    case "bee_colony":
-      return "Bee colony";
     case "animal":
       return "Animal";
     default:
@@ -188,9 +188,17 @@ export function plantObjectKindLabel(value: string | null | undefined) {
   }
 }
 
-function breedKindLabel(objectKind?: string | null) {
-  if (objectKind === "bee_colony") return "Bee breed";
-  if (objectKind === "animal") return "Animal breed";
+function breedKindLabel(
+  objectKind?: string | null,
+  catalogSource?: string | null,
+) {
+  if (catalogSource === "ua_official_bee_breed") return "Bee breed";
+  if (
+    objectKind === "animal" ||
+    catalogSource === "vertebrate_breed_ontology"
+  ) {
+    return "Animal breed";
+  }
   return "Breed";
 }
 

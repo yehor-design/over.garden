@@ -2,15 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   defaultObjectKindForCatalogSelection,
+  normalizePublicObjectKindFilter,
   objectKindAfterCatalogSelection,
   resolveObjectKindForCatalogSelection,
 } from "./catalog-object-kind";
 
 describe("catalog object-kind mapping", () => {
-  it("maps bee manual breeds to bee colonies and VBO breeds to animals", () => {
+  it("maps every breed (including bee breeds) to animal", () => {
     expect(
       defaultObjectKindForCatalogSelection("breed", "ua_official_bee_breed"),
-    ).toBe("bee_colony");
+    ).toBe("animal");
     expect(
       defaultObjectKindForCatalogSelection(
         "breed",
@@ -25,14 +26,14 @@ describe("catalog object-kind mapping", () => {
     ).toBe("plant");
   });
 
-  it("requires breed selections to match their animal or bee source", () => {
-    expect(() =>
+  it("requires breed selections to be animal objects", () => {
+    expect(
       resolveObjectKindForCatalogSelection(
         "animal",
         "breed",
         "ua_official_bee_breed",
       ),
-    ).toThrow("Bee-breed catalog identities require a bee colony object.");
+    ).toBe("animal");
     expect(
       resolveObjectKindForCatalogSelection(
         "",
@@ -52,17 +53,10 @@ describe("catalog object-kind mapping", () => {
     ).toBe("plant");
   });
 
-  it("rejects plant varieties on animal and bee-colony objects", () => {
+  it("rejects plant varieties on animal objects", () => {
     expect(() =>
       resolveObjectKindForCatalogSelection(
         "animal",
-        "plant_variety",
-        "ua_state_register",
-      ),
-    ).toThrow("Plant-variety catalog identities require a plant object.");
-    expect(() =>
-      resolveObjectKindForCatalogSelection(
-        "bee_colony",
         "plant_variety",
         "ua_state_register",
       ),
@@ -76,7 +70,14 @@ describe("catalog object-kind mapping", () => {
         "breed",
         "vertebrate_breed_ontology",
       ),
-    ).toThrow("Object kind must be plant, bee colony, or animal.");
+    ).toThrow("Object kind must be plant or animal.");
+  });
+
+  it("maps legacy public kind filters to animal", () => {
+    expect(normalizePublicObjectKindFilter(" BEE_COLONY ")).toBe("animal");
+    expect(normalizePublicObjectKindFilter("animal")).toBe("animal");
+    expect(normalizePublicObjectKindFilter("plant")).toBe("plant");
+    expect(normalizePublicObjectKindFilter("person")).toBeNull();
   });
 
   it("preserves the user's explicit kind for species suggestions", () => {
@@ -85,14 +86,7 @@ describe("catalog object-kind mapping", () => {
     ).toBe("animal");
     expect(
       objectKindAfterCatalogSelection(
-        "bee_colony",
-        "species",
-        "species_backbone",
-      ),
-    ).toBe("bee_colony");
-    expect(
-      objectKindAfterCatalogSelection(
-        "animal",
+        "plant",
         "plant_variety",
         "ua_state_register",
       ),
@@ -103,6 +97,6 @@ describe("catalog object-kind mapping", () => {
         "breed",
         "ua_official_bee_breed",
       ),
-    ).toBe("bee_colony");
+    ).toBe("animal");
   });
 });

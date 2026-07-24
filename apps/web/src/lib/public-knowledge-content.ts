@@ -1,5 +1,6 @@
 import type { PlantObjectKind } from "@/db/schema";
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 
 const MAX_PUBLIC_KNOWLEDGE_QUERY_LENGTH = 112;
 const UNSAFE_PUBLIC_KNOWLEDGE_QUERY =
@@ -37,7 +38,10 @@ export function normalizePublicKnowledgeRequest(
   return {
     query,
     type: isContentType(type) ? type : "all",
-    kind: isObjectKind(kind) ? kind : "all",
+    kind:
+      kind === "all"
+        ? "all"
+        : (normalizePublicObjectKindFilter(kind) ?? "all"),
   };
 }
 
@@ -86,8 +90,4 @@ function normalizeLower(value: string | undefined) {
 
 function isContentType(value: string): value is PublicKnowledgeContentType {
   return ["all", "guide", "answer", "topic"].includes(value);
-}
-
-function isObjectKind(value: string): value is PublicKnowledgeObjectKind {
-  return ["all", "plant", "animal", "bee_colony"].includes(value);
 }

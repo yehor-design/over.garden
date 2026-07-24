@@ -5,6 +5,7 @@ import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
+import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 
 export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
@@ -84,7 +85,10 @@ export function normalizePublicJournalDirectoryRequest(input: {
 
   return {
     query,
-    kind: isDirectoryKind(kind) ? kind : "all",
+    kind:
+      kind === "all"
+        ? "all"
+        : (normalizePublicObjectKindFilter(kind) ?? "all"),
     catalog,
     topic,
     season: isDirectorySeason(season) ? season : "all",
@@ -365,16 +369,6 @@ function normalizePage(value: string | undefined) {
   if (!Number.isSafeInteger(parsed) || parsed < 1) return 1;
   return Math.min(parsed, MAX_PUBLIC_JOURNAL_DIRECTORY_PAGE);
 }
-
-function isDirectoryKind(value: string): value is PublicJournalDirectoryKind {
-  return (
-    value === "all" ||
-    value === "plant" ||
-    value === "animal" ||
-    value === "bee_colony"
-  );
-}
-
 function isDirectorySeason(
   value: string,
 ): value is PublicJournalDirectorySeason {

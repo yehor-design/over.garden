@@ -11,7 +11,6 @@ describe("public journal directory copy", () => {
       all: "Усі об'єкти",
       plant: "Рослини",
       animal: "Тварини",
-      bee_colony: "Бджолосім'ї",
     });
     expect(copy.seasons.summer).toBe("Літо");
     expect(copy.sorts.relevance).toBe("За відповідністю");

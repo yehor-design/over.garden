@@ -117,7 +117,7 @@ function firstValue(value: string | string[] | undefined) {
 }
 
 function normalizeKind(value: string): CommunityObjectKind {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : "all";
 }

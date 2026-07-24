@@ -122,7 +122,7 @@ async function main() {
     db,
     carpathian.catalogItemId,
     {
-      objectKind: "bee_colony",
+      objectKind: "animal",
       proofLabel: "OVE-86 Carpathian colony",
       entryTitle: "OVE-86 official bee breed proof",
     },
@@ -164,7 +164,7 @@ async function main() {
     ukrainianGrey.catalogItemId,
     "Review-needed localized VBO breed alias reached typeahead.",
   );
-  assertBreedReadback(carpathianReadbackProof, carpathian, "bee_colony");
+  assertBreedReadback(carpathianReadbackProof, carpathian, "animal");
   assertBreedReadback(vboAnimalReadbackProof, ukrainianGrey, "animal");
   for (const proof of aliasCurationProof) {
     assertAliasCurationProof(proof.rows, proof.canonicalName);
@@ -291,7 +291,7 @@ function assertProvenanceProof(
 function assertBreedReadback(
   readback: Awaited<ReturnType<typeof proveBreedSeedGardenReadback>>,
   concept: BreedSeedImportedConceptSummary,
-  expectedObjectKind: "bee_colony" | "animal",
+  expectedObjectKind: "animal",
 ) {
   if (readback.catalogItemId !== concept.catalogItemId) {
     throw new Error("Garden readback proof did not preserve breed identity.");

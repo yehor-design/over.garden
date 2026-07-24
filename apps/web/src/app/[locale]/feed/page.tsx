@@ -170,7 +170,6 @@ function FeedFilters({
     ["all", copy.feed.everyKind],
     ["plant", copy.feed.plants],
     ["animal", copy.feed.animals],
-    ["bee_colony", copy.feed.bees],
   ];
 
   return (
@@ -319,7 +318,7 @@ function parseSource(value: string | undefined): FollowedFeedSource {
 }
 
 function parseObjectKind(value: string | undefined): FollowedFeedObjectKind {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : "all";
 }

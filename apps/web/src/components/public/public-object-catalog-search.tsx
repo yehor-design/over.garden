@@ -213,7 +213,7 @@ function parseSuggestions(value: unknown): PublicObjectSuggestion[] {
 function isObjectKind(
   value: unknown,
 ): value is PublicObjectSuggestion["objectKind"] {
-  return value === "plant" || value === "animal" || value === "bee_colony";
+  return value === "plant" || value === "animal";
 }
 
 function isIdentityState(

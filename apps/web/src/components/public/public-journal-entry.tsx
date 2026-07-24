@@ -6,7 +6,6 @@ import {
   ArrowRight,
   BookOpenText,
   CalendarDays,
-  Hexagon,
   MapPin,
   PawPrint,
   Settings,
@@ -642,10 +641,8 @@ function ObjectKindIcon({
 }: {
   kind: PublicJournalEntryObject["objectKind"];
 }) {
-  if (kind === "animal")
+  if (kind === "animal") {
     return <PawPrint className="size-5" aria-hidden="true" />;
-  if (kind === "bee_colony") {
-    return <Hexagon className="size-5" aria-hidden="true" />;
   }
   return <Sprout className="size-5" aria-hidden="true" />;
 }

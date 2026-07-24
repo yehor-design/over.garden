@@ -2063,7 +2063,7 @@ function normalizeCommunitySearch(value: string | null | undefined) {
 function normalizeCommunityObjectKind(
   value: CommunityObjectKind | undefined,
 ): CommunityObjectKind {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : "all";
 }
@@ -2203,7 +2203,7 @@ function normalizeAuditState(value: string) {
 }
 
 function normalizeProjectedObjectKind(value: string): PlantObjectKind | null {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : null;
 }

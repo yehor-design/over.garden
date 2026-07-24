@@ -53,6 +53,19 @@ describe("interface locale preference endpoint", () => {
     expect(response.headers.get("set-cookie")).not.toMatch(/; Secure/i);
   });
 
+  it("accepts loopback Origin aliases against a localhost request URL", async () => {
+    const response = await POST(
+      request(
+        { locale: "ru" },
+        { origin: "http://127.0.0.1:3000", referer: "" },
+        "http://localhost:3000/api/interface/locale",
+      ),
+    );
+
+    expect(response.status).toBe(204);
+  });
+
+
   it.each([
     [{ locale: "uk" }],
     [{ locale: "en" }],

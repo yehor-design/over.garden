@@ -46,7 +46,6 @@ describe("GardenWorkspaceView", () => {
     expect(html).toContain("Оновіть Object 1");
     expect(html).toContain("Рослини");
     expect(html).toContain("Тварини");
-    expect(html).toContain("Бджолосім");
     expect(html).toContain("Простори");
     expect(html).toContain("Переглянути всі 5 просторів");
     expect(html).toContain("Живі об");
@@ -176,7 +175,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
         totalCount: 9,
         plantCount: 5,
         animalCount: 2,
-        beeColonyCount: 2,
         archivedEntryCount: 1,
         objects: [
           {
@@ -220,7 +218,6 @@ function readyWorkspace(): GardenWorkspaceReadModel {
             objectCount: 5,
             plantCount: 5,
             animalCount: 0,
-            beeColonyCount: 0,
           },
         ],
         hasMore: true,

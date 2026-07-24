@@ -5,6 +5,7 @@ import {
   useId,
   useRef,
   useState,
+  useSyncExternalStore,
   type MutableRefObject,
 } from "react";
 import type EditorJS from "@editorjs/editorjs";
@@ -98,6 +99,19 @@ export interface StructuredJournalComposerHandle {
   focus: () => void;
 }
 
+function subscribeVisualWorkspaceFixture() {
+  return () => undefined;
+}
+
+function getVisualWorkspaceFixtureSnapshot() {
+  const params = new URLSearchParams(window.location.search);
+  return params.has("visualWorkspace") || params.has("visualCreate");
+}
+
+function getVisualWorkspaceFixtureServerSnapshot() {
+  return false;
+}
+
 export function StructuredJournalComposer(props: StructuredJournalComposerProps) {
   return <StructuredJournalComposerInner {...props} />;
 }
@@ -114,6 +128,11 @@ function StructuredJournalComposerInner({
   onRemoveImageBlock,
   composerRef,
 }: StructuredJournalComposerProps) {
+  const isVisualWorkspaceFixture = useSyncExternalStore(
+    subscribeVisualWorkspaceFixture,
+    getVisualWorkspaceFixtureSnapshot,
+    getVisualWorkspaceFixtureServerSnapshot,
+  );
   const holderId = useId().replace(/:/g, "");
   const liveRegionId = `${holderId}-reorder-live`;
   const editorRef = useRef<EditorJS | null>(null);
@@ -136,7 +155,9 @@ function StructuredJournalComposerInner({
   const serializeGenerationRef = useRef<
     (editor: EditorJS | null) => Promise<JournalDocumentV1 | null>
   >(async () => latestDocumentRef.current);
-  const [status, setStatus] = useState<"loading" | "ready" | "failed">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "failed">(
+    "loading",
+  );
   const [fallbackDocument, setFallbackDocument] = useState<JournalDocumentV1 | null>(
     initialDocument ?? null,
   );
@@ -167,6 +188,13 @@ function StructuredJournalComposerInner({
     let cancelled = false;
     let compositionCleanup: (() => void) | null = null;
     let reorderCleanup: (() => void) | null = null;
+
+    if (isVisualWorkspaceFixture) {
+      return () => {
+        cancelled = true;
+        mountedRef.current = false;
+      };
+    }
 
     async function serializeGeneration(activeEditor: EditorJS | null) {
       if (!activeEditor) return latestDocumentRef.current;
@@ -396,7 +424,7 @@ function StructuredJournalComposerInner({
     };
     // Mount-once editor; later prop updates flow through propsRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [holderId]);
+  }, [holderId, isVisualWorkspaceFixture]);
 
   useEffect(() => {
     if (!composerRef) return;
@@ -451,6 +479,24 @@ function StructuredJournalComposerInner({
       if (composerRef) composerRef.current = null;
     };
   }, [composerRef]);
+
+  if (isVisualWorkspaceFixture) {
+    return (
+      <div
+        className={cn("grid gap-3 rounded-md border border-border p-3", className)}
+        data-structured-journal-composer="fixture"
+        lang={locale}
+      >
+        <JournalDocumentRenderer
+          document={initialDocument ?? createEmptyJournalDocument()}
+          copy={{
+            unavailableTitle: labels.unavailableTitle,
+            unavailableBody: labels.unavailableBody,
+          }}
+        />
+      </div>
+    );
+  }
 
   if (status === "failed") {
     return (

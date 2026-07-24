@@ -51,7 +51,7 @@ export interface BreedSeedImportedConceptSummary {
   publicSlug: string;
   source: BreedSeedProjection["source"];
   sourceId: string;
-  expectedObjectKind: "bee_colony" | "animal";
+  expectedObjectKind: "animal";
   aliasesProjected: number;
   aliasesRecorded: number;
   aliasStatusCounts: Record<BreedSeedAliasCandidate["status"], number>;
@@ -388,7 +388,7 @@ export async function proveBreedSeedGardenReadback(
   executor: Kysely<Database>,
   catalogItemId: string,
   options: {
-    objectKind?: "bee_colony" | "animal";
+    objectKind?: "animal";
     proofLabel?: string;
     entryTitle?: string;
   } = {},
@@ -982,10 +982,9 @@ function explicitGateForBreedConcept(concept: BreedSeedConcept) {
   return OVE86_BEE_PROJECTION_GATE;
 }
 
-function expectedObjectKindForBreedSource(
-  source: string,
-): "bee_colony" | "animal" {
-  return source === "ua_official_bee_breed" ? "bee_colony" : "animal";
+function expectedObjectKindForBreedSource(source: string): "animal" {
+  void source;
+  return "animal";
 }
 
 function buildAliasKey(locale: string, normalizedName: string) {

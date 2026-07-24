@@ -742,16 +742,12 @@ export function publicObjectKindLabel(
   value: string | null | undefined,
 ) {
   const labels = {
-    uk: { plant: "Рослина", animal: "Тварина", beeColony: "Бджолина сім'я" },
-    bg: { plant: "Растение", animal: "Животно", beeColony: "Пчелно семейство" },
-    ru: { plant: "Растение", animal: "Животное", beeColony: "Пчелиная семья" },
-  } satisfies Record<
-    InterfaceLocale,
-    Record<"plant" | "animal" | "beeColony", string>
-  >;
+    uk: { plant: "Рослина", animal: "Тварина" },
+    bg: { plant: "Растение", animal: "Животно" },
+    ru: { plant: "Растение", animal: "Животное" },
+  } satisfies Record<InterfaceLocale, Record<"plant" | "animal", string>>;
   const copy = labels[locale];
 
-  if (value === "bee_colony") return copy.beeColony;
   if (value === "animal") return copy.animal;
   return copy.plant;
 }
@@ -760,6 +756,7 @@ export function publicCatalogIdentityLabel(
   locale: InterfaceLocale,
   value: string | null | undefined,
   objectKind?: string | null,
+  catalogSource?: string | null,
 ) {
   const labels = {
     uk: {
@@ -792,8 +789,13 @@ export function publicCatalogIdentityLabel(
   if (value === "species") return copy.plantSpecies;
   if (value === "plant_variety") return copy.plantVariety;
   if (value !== "breed") return copy.catalog;
-  if (objectKind === "bee_colony") return copy.beeBreed;
-  if (objectKind === "animal") return copy.animalBreed;
+  if (catalogSource === "ua_official_bee_breed") return copy.beeBreed;
+  if (
+    objectKind === "animal" ||
+    catalogSource === "vertebrate_breed_ontology"
+  ) {
+    return copy.animalBreed;
+  }
   return copy.breed;
 }
 

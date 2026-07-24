@@ -449,8 +449,7 @@ describe("public profile handle contracts", () => {
         publicObjectCount: "3",
         publicPlantCount: "1",
         publicAnimalCount: "1",
-        publicBeeColonyCount: "1",
-      },
+              },
       lineageSummary: { confirmedLineageEdgeCount: "2" },
       followerSummary: { count: "4" },
       followingSummary: { count: "3" },
@@ -510,7 +509,7 @@ describe("public profile handle contracts", () => {
     expect(page.summary).toMatchObject({
       publicEntryCount: 12,
       publicObjectCount: 3,
-      objectKinds: { plant: 1, animal: 1, beeColony: 1 },
+      objectKinds: { plant: 1, animal: 1 },
       confirmedLineageEdgeCount: 2,
       relationships: { followers: 4, following: 3 },
     });

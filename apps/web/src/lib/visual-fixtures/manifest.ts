@@ -12,7 +12,7 @@ export const VISUAL_FIXTURE_NAMESPACE =
   `visual-fixtures/${VISUAL_FIXTURE_MANIFEST_VERSION}` as const;
 
 export type VisualFixtureLocale = "uk" | "bg" | "ru";
-export type VisualFixtureObjectKind = "plant" | "animal" | "bee_colony";
+export type VisualFixtureObjectKind = "plant" | "animal";
 export type VisualFixtureCatalogKind = "plant_variety" | "species" | "breed";
 export type VisualFixtureCatalogStatus =
   | "seeded"
@@ -554,7 +554,6 @@ export interface VisualFixtureWorkspaceScenarioEvidence {
   expectedObjectCount: number;
   expectedPlantCount: number;
   expectedAnimalCount: number;
-  expectedBeeColonyCount: number;
   expectedRecentCount: number;
   expectedSpaceIds: readonly string[];
   expectedObjectIds: readonly string[];
@@ -1735,7 +1734,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   },
   {
     displayName: "Семейство Север",
-    objectKind: "bee_colony",
+    objectKind: "animal",
     spaceIndex: 5,
     catalogItemId: CATALOG_IDS.carpathianBeeBreed,
     varietyText: "Карпатська бджола",
@@ -1743,7 +1742,7 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   },
   {
     displayName: "Семейство Липа",
-    objectKind: "bee_colony",
+    objectKind: "animal",
     spaceIndex: 5,
     catalogItemId: CATALOG_IDS.honeyBeeSpecies,
     varietyText: "Apis mellifera",
@@ -1751,13 +1750,13 @@ const objectSeedSpecs: readonly ObjectSeedSpec[] = [
   },
   {
     displayName: "Отводок Июнь",
-    objectKind: "bee_colony",
+    objectKind: "animal",
     spaceIndex: 5,
     varietyState: "unknown",
   },
   {
     displayName: "Нуклеус с молодой маткой",
-    objectKind: "bee_colony",
+    objectKind: "animal",
     spaceIndex: 9,
     varietyText: "Матка 2026",
     varietyState: "user_added",
@@ -1861,7 +1860,7 @@ const creationEvidence: VisualFixtureCreationEvidence = {
       flow: "first-entry",
       state: "provisional",
       label: "First bee colony · provisional catalog name",
-      objectKind: "bee_colony",
+      objectKind: "animal",
       objectName: "Карпатська сім'я",
       entryBody: "Сім'я спокійна, розплід рівномірний.",
       catalogQuery: "Локальна карпатська лінія",
@@ -2296,20 +2295,20 @@ const publicFeedEntriesByKind = Object.groupBy(
 const denseTopicEntries = [
   publicFeedEntriesByKind.plant?.[0],
   publicFeedEntriesByKind.animal?.[0],
-  publicFeedEntriesByKind.bee_colony?.[0],
+  publicFeedEntriesByKind.animal?.[20],
   publicFeedEntriesByKind.plant?.[1],
   publicFeedEntriesByKind.animal?.[1],
-  publicFeedEntriesByKind.bee_colony?.[1],
+  publicFeedEntriesByKind.animal?.[21],
   publicFeedEntriesByKind.plant?.[2],
   publicFeedEntriesByKind.animal?.[2],
-  publicFeedEntriesByKind.bee_colony?.[2],
+  publicFeedEntriesByKind.animal?.[22],
   publicFeedEntriesByKind.plant?.[3],
   publicFeedEntriesByKind.animal?.[3],
 ].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
 const typicalTopicEntries = [
   publicFeedEntriesByKind.plant?.[0],
   publicFeedEntriesByKind.animal?.[0],
-  publicFeedEntriesByKind.bee_colony?.[0],
+  publicFeedEntriesByKind.animal?.[20],
   publicFeedEntriesByKind.plant?.[1],
 ].filter((entry): entry is VisualFixtureEntry => Boolean(entry));
 const singleObservationEntry = publicFeedEntriesByKind.plant?.[4];
@@ -2825,7 +2824,7 @@ const scenarios: readonly VisualFixtureScenario[] = [
     "catalog-empty",
     "public-catalog-empty",
     "Empty bee taxonomy category",
-    "/objects?kind=bee_colony&identity=unavailable",
+    "/objects?kind=animal&identity=unavailable",
     200,
   ),
   scenario(
@@ -2839,7 +2838,7 @@ const scenarios: readonly VisualFixtureScenario[] = [
     "catalog-sparse",
     "public-catalog-sparse",
     "Sparse bee breed catalog",
-    "/ru/objects?kind=bee_colony&identity=breed",
+    "/ru/objects?kind=animal&identity=breed",
     200,
   ),
   scenario(
@@ -2874,7 +2873,7 @@ const scenarios: readonly VisualFixtureScenario[] = [
     "catalog-combined-filters",
     "public-catalog-combined-filters",
     "Localized bee species search",
-    "/bg/objects?kind=bee_colony&identity=species&q=Apis",
+    "/bg/objects?kind=animal&identity=species&q=Apis",
     200,
   ),
   scenario(
@@ -4516,9 +4515,6 @@ export function validateVisualFixtureManifest(
       workspace.expectedAnimalCount !==
         ownerObjects.filter((object) => object.objectKind === "animal")
           .length ||
-      workspace.expectedBeeColonyCount !==
-        ownerObjects.filter((object) => object.objectKind === "bee_colony")
-          .length ||
       workspace.expectedRecentCount !==
         Math.min(ownerEntries.length, manifest.workspaceEvidence.recentLimit)
     ) {
@@ -4599,9 +4595,6 @@ function buildWorkspaceEvidence(): VisualFixtureWorkspaceEvidence {
       ).length,
       expectedAnimalCount: ownerObjects.filter(
         (object) => object.objectKind === "animal",
-      ).length,
-      expectedBeeColonyCount: ownerObjects.filter(
-        (object) => object.objectKind === "bee_colony",
       ).length,
       expectedRecentCount: Math.min(ownerEntries.length, 8),
       expectedSpaceIds: ownerSpaces.map((space) => space.id),
@@ -6027,7 +6020,7 @@ function buildJournalEntryEvidence(): VisualFixtureJournalEntryEvidence {
   const bee = entryWithMedia(
     "bee",
     (item) =>
-      objectKindForEntryId(item.entryId) === "bee_colony" &&
+      objectKindForEntryId(item.entryId) === "animal" &&
       item.aspect === "square",
   );
   const hidden = requireEntry(
@@ -6365,7 +6358,7 @@ function buildKnowledgeEvidence(): VisualFixtureKnowledgeEvidence {
       slug: "visual-seasonal-observation",
       path: "/guides/visual-seasonal-observation",
       task: "compare-two-dated-observations",
-      objectKinds: ["plant", "animal", "bee_colony"],
+      objectKinds: ["plant", "animal"],
       editorial,
       evidence: denseRule,
       mediaId: media[0]?.id ?? null,
@@ -6452,7 +6445,7 @@ function buildKnowledgeEvidence(): VisualFixtureKnowledgeEvidence {
       slug: "visual-routine-across-living-objects",
       path: "/guides/visual-routine-across-living-objects",
       task: "build-a-repeatable-care-check",
-      objectKinds: ["plant", "animal", "bee_colony"],
+      objectKinds: ["plant", "animal"],
       editorial,
       evidence: typicalRule,
       mediaId: null,
@@ -6593,7 +6586,7 @@ function buildKnowledgeEvidence(): VisualFixtureKnowledgeEvidence {
       slug: "visual-long-recovery-answer",
       path: "/answers/visual-long-recovery-answer",
       task: "review-a-long-recovery-sequence",
-      objectKinds: ["plant", "animal", "bee_colony"],
+      objectKinds: ["plant", "animal"],
       editorial,
       evidence: recoveryRule,
       mediaId: null,
@@ -6941,7 +6934,7 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
   const combinedEntries = sortedPublicDirectoryEntries.filter((entry) => {
     const object = entry.objectId ? objectById.get(entry.objectId) : null;
     return (
-      object?.objectKind === "bee_colony" &&
+      object?.objectKind === "animal" &&
       object.locationVisibility === "region" &&
       object.coarseRegionCode === "BG-23" &&
       fixtureSeason(entry.entryDate) === "summer"
@@ -6955,7 +6948,7 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
   const sparseEntries = forTopic("watering-and-moisture").filter(
     (entry) =>
       (entry.objectId ? objectById.get(entry.objectId) : null)?.objectKind ===
-      "bee_colony",
+      "animal",
   );
   const finalPage = Math.max(
     1,
@@ -7015,7 +7008,7 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
       journalDirectoryQuery(
         "sparse",
         "Sparse bee-colony topic result",
-        "/ru/journals?kind=bee_colony&topic=watering-and-moisture",
+        "/ru/journals?kind=animal&topic=watering-and-moisture",
         sparseEntries,
         1,
         pageSize,
@@ -7023,7 +7016,7 @@ function buildJournalDirectoryEvidence(): VisualFixtureJournalDirectoryEvidence 
       journalDirectoryQuery(
         "combined-safe-filters",
         "Bee journals in a public coarse region and summer",
-        "/ru/journals?kind=bee_colony&season=summer&region=BG-23",
+        "/ru/journals?kind=animal&season=summer&region=BG-23",
         combinedEntries,
         1,
         pageSize,
@@ -7348,7 +7341,7 @@ function creationScenario(
 function buildCommunityEvidence(): VisualFixtureCommunityEvidence {
   const plantEntries = publicFeedEntriesByKind.plant ?? [];
   const animalEntries = publicFeedEntriesByKind.animal ?? [];
-  const beeEntries = publicFeedEntriesByKind.bee_colony ?? [];
+  const beeEntries = animalEntries.slice(4);
   const typicalEntries = [
     plantEntries[0],
     animalEntries[0],

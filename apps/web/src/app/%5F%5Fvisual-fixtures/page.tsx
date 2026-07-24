@@ -462,7 +462,7 @@ export default async function VisualFixtureIndexPage() {
                       />
                       <PassportEvidenceFact
                         label="Kinds"
-                        value={`${scenario.expectedPlantCount}P · ${scenario.expectedAnimalCount}A · ${scenario.expectedBeeColonyCount}B`}
+                        value={`${scenario.expectedPlantCount}P · ${scenario.expectedAnimalCount}A`}
                       />
                       <PassportEvidenceFact
                         label="Spaces"

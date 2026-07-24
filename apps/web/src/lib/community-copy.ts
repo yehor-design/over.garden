@@ -32,7 +32,7 @@ export interface CommunityCopy {
   search: string;
   kindLabel: string;
   allKinds: string;
-  kindLabels: Record<"plant" | "animal" | "bee_colony", string>;
+  kindLabels: Record<"plant" | "animal", string>;
   noContributions: string;
   noResults: string;
   resetFilters: string;
@@ -102,7 +102,6 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     kindLabels: {
       plant: "Рослини",
       animal: "Тварини",
-      bee_colony: "Бджоли",
     },
     noContributions: "Поки немає опублікованих спостережень.",
     noResults: "За цими умовами записів не знайдено.",
@@ -183,7 +182,6 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     kindLabels: {
       plant: "Растения",
       animal: "Животни",
-      bee_colony: "Пчели",
     },
     noContributions: "Все още няма публикувани наблюдения.",
     noResults: "Няма записи за избраните условия.",
@@ -264,7 +262,6 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     kindLabels: {
       plant: "Растения",
       animal: "Животные",
-      bee_colony: "Пчёлы",
     },
     noContributions: "Опубликованных наблюдений пока нет.",
     noResults: "По выбранным условиям записей не найдено.",

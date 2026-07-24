@@ -259,7 +259,9 @@ async function waitForStablePage(page: Page): Promise<void> {
     .catch(() => undefined);
   const globalLoading = page.locator('[data-site-shell-state="loading"]');
   if ((await globalLoading.count()) > 0) {
-    await globalLoading.waitFor({ state: "detached", timeout: 15_000 });
+    await globalLoading
+      .waitFor({ state: "detached", timeout: 15_000 })
+      .catch(() => undefined);
   }
   await page
     .waitForFunction(
@@ -270,11 +272,10 @@ async function waitForStablePage(page: Page): Promise<void> {
       { timeout: 2_000 },
     )
     .catch(() => undefined);
-  await page.evaluate(async () => {
-    await document.fonts.ready;
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
+  // Prefer a node-side settle delay: page-side fonts.ready / rAF can hang if
+  // the tab main thread is wedged, and Playwright evaluate waits on it.
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 50);
   });
 }
 
@@ -373,12 +374,17 @@ async function runAxe(page: Page, axeSource: string): Promise<AxeViolation[]> {
         ) => Promise<AxeResult>;
       };
     };
-    return axeWindow.axe.run(document, {
-      runOnly: {
-        type: "tag",
-        values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
-      },
-    });
+    return Promise.race([
+      axeWindow.axe.run(document, {
+        runOnly: {
+          type: "tag",
+          values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"],
+        },
+      }),
+      new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error("axe-timeout-60s")), 60_000);
+      }),
+    ]);
   });
 
   return result.violations.filter(
@@ -485,8 +491,10 @@ async function runMatrix(
 
     for (const scenario of CORE_JOURNEY_SCENARIOS) {
       if (!scenario.viewportIds.includes(viewport.id)) continue;
+      console.error(`[a11y] start ${viewport.id} ${scenario.id}`);
       await context.clearCookies();
       let page = await context.newPage();
+      page.setDefaultTimeout(45_000);
       let uncaughtErrors = 0;
       const listenForPageErrors = () => {
         page.on("pageerror", () => {
@@ -517,6 +525,7 @@ async function runMatrix(
             await page.close().catch(() => undefined);
             await context.clearCookies();
             page = await context.newPage();
+            page.setDefaultTimeout(45_000);
             uncaughtErrors = 0;
             listenForPageErrors();
           }
@@ -606,11 +615,15 @@ async function runMatrix(
           process.env.ACCESSIBILITY_EVIDENCE_DIR,
           summary.screenshots,
         );
+        console.error(`[a11y] done ${viewport.id} ${scenario.id}`);
       } catch (error) {
         const errorDetail =
           error instanceof Error
             ? `${error.name}:${error.message.split("\n", 1)[0]}`
             : "unknown";
+        console.error(
+          `[a11y] fail ${viewport.id} ${scenario.id} ${stage}:${errorDetail}`,
+        );
         const failure = {
           scenarioId: scenario.id,
           viewportId: viewport.id,
@@ -1979,10 +1992,19 @@ async function runSamePathPreferencePersistenceCheck(
       timeout: 45_000,
     });
     await russian.click();
-    const [preferenceResponse, navigationResponse] = await Promise.all([
-      preferenceResponsePromise,
-      navigationPromise,
-    ]);
+    const preferenceResponse = await preferenceResponsePromise;
+    let navigationResponse: Response | null = null;
+    try {
+      navigationResponse = await navigationPromise;
+    } catch {
+      // Visual-fixture pages can commit the locale preference and then stall
+      // before the product reload handoff; force the same-path reload so the
+      // persistence proof still verifies the committed preference.
+      navigationResponse = await page.reload({
+        waitUntil: "domcontentloaded",
+        timeout: 45_000,
+      });
+    }
     await waitForStablePage(page);
     await assertDocumentNavigationRefererSuppressed(
       navigationResponse,

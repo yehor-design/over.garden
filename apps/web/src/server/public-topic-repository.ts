@@ -4,6 +4,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
+import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { normalizePublicJournalDirectoryEntryIds } from "@/server/public-journal-directory-query";
 import {
@@ -247,10 +248,14 @@ export function serializePublicKnowledgeTopics(
     const stats = statsBySlug.get(topic.slug);
     const entryCount = Number(stats?.entryCount ?? 0);
     const aggregateBodyLength = Number(stats?.aggregateBodyLength ?? 0);
-    const objectKinds = (kindsBySlug[topic.slug] ?? []).flatMap((row) => {
-      const kind = normalizeObjectKind(row.kind);
-      return kind ? [kind] : [];
-    });
+    const objectKindSet = new Set<PlantObjectKind>();
+    for (const row of kindsBySlug[topic.slug] ?? []) {
+      const kind = normalizePublicObjectKindFilter(row.kind);
+      if (kind) objectKindSet.add(kind);
+    }
+    const objectKinds = (["plant", "animal"] as const).filter((kind) =>
+      objectKindSet.has(kind),
+    );
 
     return {
       slug: topic.slug,
@@ -342,8 +347,3 @@ function normalizePublicTopicSlugs(values?: readonly string[] | null) {
   ].slice(0, 24);
 }
 
-function normalizeObjectKind(value: string): PlantObjectKind | null {
-  return value === "plant" || value === "animal" || value === "bee_colony"
-    ? value
-    : null;
-}

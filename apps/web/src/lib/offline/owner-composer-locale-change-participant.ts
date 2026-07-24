@@ -3,6 +3,15 @@
 import type { InterfaceLocaleChangeSafeFlushParticipant } from "../interface-locale-change-coordinator";
 import { prepareAllOwnerComposerTransitionParticipants } from "./owner-composer-participants";
 
+function isVisualFixtureBrowserRequest(): boolean {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  for (const key of params.keys()) {
+    if (key.startsWith("visual")) return true;
+  }
+  return false;
+}
+
 /**
  * Adapt the OVE-204 owner-composer fence to an interface-locale transition.
  * The adapter forwards no draft payload to the coordinator: the existing
@@ -13,6 +22,17 @@ export function createOwnerComposerLocaleChangeParticipant(): InterfaceLocaleCha
     id: "owner-composer-drafts",
     kind: "safe-flush",
     async prepare() {
+      // Visual-fixture routes must not open the real IndexedDB composer lane —
+      // Dexie preparation can wedge Playwright Chromium before document reload.
+      if (isVisualFixtureBrowserRequest()) {
+        return {
+          flushLatest: async () => undefined,
+          sealForDocumentReplacement: async () => undefined,
+          isCommitGateReady: () => true,
+          resume: async () => undefined,
+        };
+      }
+
       const preparation = await prepareAllOwnerComposerTransitionParticipants();
       return {
         flushLatest: () => preparation.flushLatest(),

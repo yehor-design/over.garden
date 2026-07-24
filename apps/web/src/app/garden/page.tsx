@@ -253,6 +253,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
           initialCatalogItem={initialCatalogItem}
           selectedSpaceTimeline={selectedSpaceTimeline}
           visualScenario={creationScenario}
+          enableOfflinePersistence={!visualScenario && !creationScenario}
           ownerUserId={userId}
         />
       </GardenWorkspaceView>
@@ -436,6 +437,7 @@ function GardenWriteTools({
   initialCatalogItem,
   selectedSpaceTimeline,
   visualScenario,
+  enableOfflinePersistence,
 }: {
   ownerUserId: string;
   canWrite: boolean;
@@ -447,6 +449,7 @@ function GardenWriteTools({
   initialCatalogItem: FirstEntryCatalogSelection | null;
   selectedSpaceTimeline: SpaceJournalTimeline | null;
   visualScenario: VisualFixtureCreationScenarioEvidence | null;
+  enableOfflinePersistence: boolean;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
@@ -480,6 +483,7 @@ function GardenWriteTools({
               initialCatalogItem={initialCatalogItem}
               activationSource={activationSource}
               visualScenario={visualScenario}
+              enableOfflinePersistence={enableOfflinePersistence}
             />
           ) : (
             <ClosedPilotWriteCallout locale={locale} />
@@ -494,6 +498,7 @@ function GardenWriteTools({
           ownerUserId={ownerUserId}
           timeline={selectedSpaceTimeline}
           today={today}
+          enableOfflinePersistence={enableOfflinePersistence}
         />
       ) : null}
     </div>
@@ -506,12 +511,14 @@ function SpaceJournalTools({
   ownerUserId,
   timeline,
   today,
+  enableOfflinePersistence,
 }: {
   canWrite: boolean;
   locale: InterfaceLocale;
   ownerUserId: string;
   timeline: SpaceJournalTimeline;
   today: string;
+  enableOfflinePersistence: boolean;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
@@ -541,6 +548,7 @@ function SpaceJournalTools({
           ownerUserId={ownerUserId}
           spaceId={timeline.space.id}
           today={today}
+          enableOfflinePersistence={enableOfflinePersistence}
           objects={timeline.objects.map((object) => ({
             id: object.id,
             displayName: object.displayName,
@@ -702,6 +710,5 @@ function uuidParam(value: string | string[] | undefined) {
 
 function localizedPageObjectKind(value: string, copy: GardenWorkspaceCopy) {
   if (value === "animal") return copy.composer.objectKind.animal.label;
-  if (value === "bee_colony") return copy.composer.objectKind.beeColony.label;
   return copy.composer.objectKind.plant.label;
 }

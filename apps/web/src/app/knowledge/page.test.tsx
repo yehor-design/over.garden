@@ -39,7 +39,7 @@ describe("/knowledge", () => {
         entryCount: 5,
         aggregateBodyLength: 900,
         latestPublishedAt: "2026-07-10T10:00:00.000Z",
-        objectKinds: ["plant", "animal", "bee_colony"],
+        objectKinds: ["plant", "animal"],
         indexState: { isIndexable: true },
       },
     ]);
@@ -96,7 +96,7 @@ describe("/knowledge", () => {
         entryCount: 11,
         aggregateBodyLength: 2200,
         latestPublishedAt: "2026-07-10T10:00:00.000Z",
-        objectKinds: ["plant", "animal", "bee_colony"],
+        objectKinds: ["plant", "animal"],
         indexState: { isIndexable: true },
       },
     ]);
@@ -144,4 +144,6 @@ function enableVisualFixtureEnv() {
   );
   vi.stubEnv("R2_ENDPOINT", "http://127.0.0.1:9000");
   vi.stubEnv("R2_PUBLIC_BASE_URL", "http://127.0.0.1:9000/overgarden");
+  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 }

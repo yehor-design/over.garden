@@ -43,22 +43,15 @@ describe("public object passport presentation", () => {
     );
   });
 
-  it("uses animal and bee-colony identity labels instead of plant language", () => {
+  it("uses animal identity labels instead of plant language", () => {
     const animal = buildPublicObjectPassportPresentation(
       publicPassport({ objectKind: "animal", catalogKind: "breed" }),
-      "uk",
-      { confirmedProvenanceCount: 0 },
-    );
-    const bees = buildPublicObjectPassportPresentation(
-      publicPassport({ objectKind: "bee_colony", catalogKind: "breed" }),
       "uk",
       { confirmedProvenanceCount: 0 },
     );
 
     expect(animal.identity.label).toBe("Вид або порода");
     expect(animal.facts.map((fact) => fact.label)).toContain("Умови утримання");
-    expect(bees.identity.label).toBe("Порода або вид бджіл");
-    expect(bees.facts.map((fact) => fact.label)).toContain("Умови пасіки");
   });
 });
 

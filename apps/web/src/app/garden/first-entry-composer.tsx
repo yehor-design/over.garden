@@ -135,6 +135,12 @@ interface FirstEntryComposerProps {
   initialCatalogItem?: FirstEntryCatalogSelection | null;
   activationSource?: ActivationSource | null;
   visualScenario?: VisualFixtureCreationScenarioEvidence | null;
+  /**
+   * Visual workspace fixtures must not open real IndexedDB drafts — Dexie
+   * open/hydration can freeze the browser main thread under Playwright and
+   * pollute fixture evidence with local owner state.
+   */
+  enableOfflinePersistence?: boolean;
 }
 
 type SubmitState = "idle" | "queued" | "syncing" | "synced" | "failed";
@@ -159,8 +165,11 @@ export function FirstEntryComposer({
   initialCatalogItem = null,
   activationSource = null,
   visualScenario = null,
+  enableOfflinePersistence = true,
 }: FirstEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
+  const offlinePersistenceEnabled =
+    enableOfflinePersistence && visualScenario == null;
   useScrollToHashOnMount("first-entry-composer");
   const router = useRouter();
   const draftPersistencePausedRef = useRef(false);
@@ -252,7 +261,9 @@ export function FirstEntryComposer({
     localizedVisualScenarioMessage(copy, visualScenario),
   );
   const [mutations, setMutations] = useState<OfflineMutation[]>([]);
-  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(
+    !offlinePersistenceEnabled,
+  );
   const [persistenceFrozen, setPersistenceFrozen] = useState(false);
   const [localeMutationPending, setLocaleMutationPending] = useState(false);
 
@@ -276,7 +287,7 @@ export function FirstEntryComposer({
   }
 
   useEffect(() => {
-    if (visualScenario) return;
+    if (!offlinePersistenceEnabled) return;
 
     const controller =
       createOwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot>(
@@ -302,7 +313,7 @@ export function FirstEntryComposer({
       persistenceFrozenRef.current = false;
       controller.dispose();
     };
-  }, [ownerUserId, visualScenario]);
+  }, [offlinePersistenceEnabled, ownerUserId]);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -324,7 +335,7 @@ export function FirstEntryComposer({
   }, [ownerUserId]);
 
   useEffect(() => {
-    if (visualScenario) return;
+    if (!offlinePersistenceEnabled) return;
 
     const refreshTimer = window.setTimeout(() => {
       setIsOnline(navigator.onLine);
@@ -348,10 +359,10 @@ export function FirstEntryComposer({
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, [refreshQueue, visualScenario]);
+  }, [offlinePersistenceEnabled, refreshQueue]);
 
   useEffect(() => {
-    if (visualScenario) return;
+    if (!offlinePersistenceEnabled) return;
 
     let cancelled = false;
 
@@ -427,10 +438,15 @@ export function FirstEntryComposer({
     return () => {
       cancelled = true;
     };
-  }, [copy, initialSpace, ownerUserId, visualScenario]);
+  }, [
+    copy,
+    initialSpace,
+    offlinePersistenceEnabled,
+    ownerUserId,
+  ]);
 
   useLayoutEffect(() => {
-    if (visualScenario) return;
+    if (!offlinePersistenceEnabled) return;
 
     const payload: FirstEntryDraftPayload = {
       clientMutationId,
@@ -483,7 +499,7 @@ export function FirstEntryComposer({
     today,
     topicTagInput,
     userAddedCatalogName,
-    visualScenario,
+    offlinePersistenceEnabled,
   ]);
 
   useEffect(() => {
@@ -1278,9 +1294,7 @@ export function FirstEntryComposer({
             placeholder={
               draft.objectKind === "animal"
                 ? copy.composer.fields.animalPlaceholder
-                : draft.objectKind === "bee_colony"
-                  ? copy.composer.fields.beePlaceholder
-                  : copy.composer.fields.plantPlaceholder
+                : copy.composer.fields.plantPlaceholder
             }
           />
         </label>
@@ -1450,6 +1464,7 @@ export function FirstEntryComposer({
           type="file"
           accept={COMPOSER_PHOTO_ACCEPT}
           capture="environment"
+          aria-label={copy.composer.photo.choose}
           onChange={(event) =>
             handlePhotoChange(event.currentTarget.files?.[0])
           }
@@ -1588,6 +1603,7 @@ export function FirstEntryComposer({
                       selectedCatalogItem.catalogKind,
                       draft.objectKind,
                       copy,
+                      selectedCatalogItem.source,
                     )}{" "}
                     · {localizedObjectKindLabel(draft.objectKind, copy)}
                   </span>
@@ -2016,7 +2032,6 @@ function localizedObjectKindLabel(
   value: PlantObjectKind,
   copy: GardenWorkspaceCopy,
 ) {
-  if (value === "bee_colony") return copy.composer.objectKind.beeColony.label;
   if (value === "animal") return copy.composer.objectKind.animal.label;
   return copy.composer.objectKind.plant.label;
 }
@@ -2025,10 +2040,18 @@ function localizedCatalogKindLabel(
   value: string | null | undefined,
   objectKind: PlantObjectKind,
   copy: GardenWorkspaceCopy,
+  catalogSource?: string | null,
 ) {
   if (value === "breed") {
-    if (objectKind === "bee_colony") return copy.composer.catalogKinds.beeBreed;
-    if (objectKind === "animal") return copy.composer.catalogKinds.animalBreed;
+    if (catalogSource === "ua_official_bee_breed") {
+      return copy.composer.catalogKinds.beeBreed;
+    }
+    if (
+      objectKind === "animal" ||
+      catalogSource === "vertebrate_breed_ontology"
+    ) {
+      return copy.composer.catalogKinds.animalBreed;
+    }
     return copy.composer.catalogKinds.breed;
   }
   if (value === "species") return copy.composer.catalogKinds.species;

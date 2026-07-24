@@ -33,7 +33,7 @@ const items: PublicKnowledgeHubItem[] = [
     path: "/topics/care-checks",
     title: "Регулярні спостереження",
     description: "Публічний досвід рослин, тварин і бджолосімей.",
-    objectKinds: ["plant", "animal", "bee_colony"],
+    objectKinds: ["plant", "animal"],
     evidenceCount: 11,
     updatedDate: "2026-07-10",
     indexable: true,

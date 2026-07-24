@@ -12,6 +12,7 @@ import {
 } from "@/lib/interface-market";
 import {
   INTERFACE_API_CACHE_CONTROL,
+  hasInterfaceMutationReferer,
   isForbiddenInterfaceSubrequest,
   isSameOriginInterfaceRequest,
 } from "@/lib/interface-request-guard";
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
 
   if (
     !isSameOriginInterfaceRequest(request) ||
-    request.headers.has("referer")
+    hasInterfaceMutationReferer(request.headers)
   ) {
     return response(null, 403);
   }

@@ -31,7 +31,7 @@ describe("owner object passport presentation", () => {
   it("preserves private and archived owner chronology while keeping newest first", () => {
     const presentation = buildOwnerObjectPassportPresentation(
       ownerPage({
-        objectKind: "bee_colony",
+        objectKind: "animal",
         entries: [
           ownerEntry("entry-3", "2026-07-12", "private", "active"),
           ownerEntry("entry-2", "2026-06-01", "public", "active"),
@@ -59,7 +59,7 @@ describe("owner object passport presentation", () => {
       "uk",
     );
 
-    expect(presentation.objectKind).toBe("bee_colony");
+    expect(presentation.objectKind).toBe("animal");
     expect(presentation.timeline.entries.map((entry) => entry.id)).toEqual([
       "entry-3",
       "entry-2",
@@ -104,7 +104,7 @@ function ownerPage({
   objectKind,
   entries,
 }: {
-  objectKind: "plant" | "animal" | "bee_colony";
+  objectKind: "plant" | "animal";
   entries: PlantObjectPage["entries"];
 }): PlantObjectPage {
   return {

@@ -62,7 +62,7 @@ const WORKSPACE: OwnerProfileWorkspace = {
     summary: {
       publicEntryCount: 0,
       publicObjectCount: 0,
-      objectKinds: { plant: 0, animal: 0, beeColony: 0 },
+      objectKinds: { plant: 0, animal: 0 },
       confirmedLineageEdgeCount: 0,
       relationships: { followers: 0, following: 0 },
     },

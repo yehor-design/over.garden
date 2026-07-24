@@ -6,7 +6,6 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Hexagon,
   ImageOff,
   PawPrint,
   Sprout,
@@ -623,9 +622,6 @@ function ObjectKindIcon({
 }) {
   if (kind === "animal") {
     return <PawPrint className="size-5" aria-hidden="true" />;
-  }
-  if (kind === "bee_colony") {
-    return <Hexagon className="size-5" aria-hidden="true" />;
   }
   return <Sprout className="size-5" aria-hidden="true" />;
 }

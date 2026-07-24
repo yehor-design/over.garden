@@ -74,7 +74,7 @@ interface TypeaheadResponse {
 
 interface EntryResponse {
   plantObject: {
-    objectKind: "plant" | "bee_colony" | "animal";
+    objectKind: "plant" | "animal";
     catalogItemId: string | null;
     varietyText: string | null;
     varietyState: string;

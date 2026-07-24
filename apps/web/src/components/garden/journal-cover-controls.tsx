@@ -205,6 +205,7 @@ export function JournalCoverControls({
         accept={COMPOSER_PHOTO_ACCEPT}
         className="sr-only"
         disabled={disabled || uploading}
+        aria-label={copy.uploadSeparate}
         onChange={(event) => {
           const file = event.target.files?.[0] ?? null;
           event.target.value = "";

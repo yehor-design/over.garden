@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   ArrowRight,
   BookOpenText,
-  Bug,
   Camera,
   CirclePlus,
   ImageOff,
@@ -409,12 +408,6 @@ function SpaceRow({
             locale,
             space.animalCount,
             copy.workspace.spaces.counts.animals,
-          )}{" "}
-          ·{" "}
-          {formatGardenCount(
-            locale,
-            space.beeColonyCount,
-            copy.workspace.spaces.counts.colonies,
           )}
         </p>
       </div>
@@ -476,7 +469,7 @@ function InventorySection({
       <div
         role="list"
         aria-label={copy.workspace.inventory.ariaLabel}
-        className="mt-4 grid grid-cols-3 border-y border-border bg-muted/30"
+        className="mt-4 grid grid-cols-2 border-y border-border bg-muted/30"
       >
         <KindFact
           icon={<Leaf aria-hidden="true" />}
@@ -487,11 +480,6 @@ function InventorySection({
           icon={<PawPrint aria-hidden="true" />}
           label={copy.workspace.inventory.animals}
           value={inventory.animalCount}
-        />
-        <KindFact
-          icon={<Bug aria-hidden="true" />}
-          label={copy.workspace.inventory.beeColonies}
-          value={inventory.beeColonyCount}
         />
       </div>
 
@@ -998,7 +986,6 @@ function localizedObjectKindLabel(
   value: string | null | undefined,
   copy: GardenWorkspaceCopy,
 ) {
-  if (value === "bee_colony") return copy.composer.objectKind.beeColony.label;
   if (value === "animal") return copy.composer.objectKind.animal.label;
   return copy.composer.objectKind.plant.label;
 }
@@ -1009,8 +996,9 @@ function localizedCatalogIdentityLabel(
   copy: GardenWorkspaceCopy,
 ) {
   if (value === "breed") {
-    if (objectKind === "bee_colony") return copy.composer.catalogKinds.beeBreed;
-    if (objectKind === "animal") return copy.composer.catalogKinds.animalBreed;
+    if (objectKind === "animal") {
+      return copy.composer.catalogKinds.animalBreed;
+    }
     return copy.composer.catalogKinds.breed;
   }
   if (value === "species") return copy.composer.catalogKinds.species;

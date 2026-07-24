@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187, extended through OVE-184, consumed by OVE-185
 Manifest version: `ove187-v8`
-Manifest SHA-256: `6ab79d02c843b79a74fff9109b9409e5e02bcce331fab3915957ea37b95a4710`
+Manifest SHA-256: `68f1e37ca4ab6566203ca5c8f38ea08a1a59453fbbf17918aafe145bd27bce91`
 
 ## Purpose
 
@@ -49,14 +49,14 @@ The manifest owns exactly:
   suppression, hard `404`, and hard `410` lifecycle boundaries;
 - 17 machine-checkable journal-entry V2 cases through the production public
   read model and owner-control query. They cover guest, authenticated-reader,
-  and owner access; plant, animal, bee-colony, and multi-object space context;
+  and owner access; plant, animal, and multi-object space context;
   short, normal, and long copy; no media, square, portrait, landscape, and
   mixed galleries with alt/caption metadata; safe and hidden regions; first
   and last chronology boundaries; and private `404`, missing `404`, and gone
   `410` lifecycle states;
 - 10 machine-checkable gardener-profile V2 cases through the production public,
   owner-preview, and relationship loaders. They cover empty, typical, dense,
-  mixed-object, plant, animal, bee-colony, no-avatar, raster-avatar,
+  mixed-object, plant, animal, no-avatar, raster-avatar,
   maximum-handle/display-name/bio, hidden/coarse-region, visible/hidden
   relationship counters, guest, authenticated non-owner, owner, private,
   removed, and blocked outcomes with exact object/journal IDs and counts;
@@ -151,7 +151,7 @@ All IDs, timestamps, public slugs, mutation IDs, media keys, content, and the
 manifest hash are deterministic. Test copy is natural Ukrainian, Bulgarian,
 and Russian, with short, normal, seasonal, multiline, and long records rather
 than one repeated filler template. Every raster is bound to a semantically
-matching public plant, animal, or bee-colony entry. The feed includes exact
+matching public plant or animal entry. The feed includes exact
 no-media and one-media examples plus one bounded three-image gallery. The
 trusted fixture seed can attach that gallery while an application guard and a
 partial database unique index still enforce one-photo behavior for every
@@ -423,9 +423,9 @@ filters, aliases, and the six-card pagination boundary:
 /objects?kind=animal&identity=breed
 /objects?kind=plant&identity=species
 /objects?kind=plant&identity=species&page=2
-/objects?kind=bee_colony&identity=unavailable
+/objects?kind=animal&identity=unavailable
 /objects?q=visual-fixture-no-match
-/bg/objects?kind=bee_colony&identity=species&q=Apis
+/bg/objects?kind=animal&identity=species&q=Apis
 /bg/objects?__visualObjects=loading
 /ru/objects?__visualObjects=error
 ```
@@ -441,7 +441,7 @@ deterministic corpus:
 /journals?topic=watering-and-moisture&__visualJournals=corpus
 /journals?topic=stress-and-recovery&__visualJournals=corpus
 /journals?topic=season-preparation&__visualJournals=corpus
-/ru/journals?kind=bee_colony&season=summer&region=BG-23&__visualJournals=corpus
+/ru/journals?kind=animal&season=summer&region=BG-23&__visualJournals=corpus
 /journals?q=visual-fixture-no-match&__visualJournals=corpus
 /bg/journals?__visualJournals=loading
 /ru/journals?__visualJournals=error

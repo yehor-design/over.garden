@@ -194,13 +194,13 @@ describe("/journals", () => {
     await RootJournalsRoute({
       searchParams: Promise.resolve({
         q: "пчёлы",
-        kind: "bee_colony",
+        kind: "animal",
         page: "2",
       }),
     });
 
     expect(mocks.redirect).toHaveBeenCalledWith(
-      "/ru/journals?q=%D0%BF%D1%87%D1%91%D0%BB%D1%8B&kind=bee_colony&page=2",
+      "/ru/journals?q=%D0%BF%D1%87%D1%91%D0%BB%D1%8B&kind=animal&page=2",
     );
   });
 

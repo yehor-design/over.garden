@@ -129,7 +129,7 @@ async function readCommunityEvidence(
   const kind =
     kindValue === "plant" ||
     kindValue === "animal" ||
-    kindValue === "bee_colony"
+    kindValue === "animal"
       ? kindValue
       : "all";
   const viewerScope = expected.actorId ? scopedToUser(expected.actorId) : null;

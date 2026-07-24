@@ -72,7 +72,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       followedFilter: "Підписки",
       plantFilter: "Рослини",
       animalFilter: "Тварини",
-      beeFilter: "Бджоли",
       topicFilterLabel: "Перевірені теми",
       readEntry: "Читати запис",
       publishedBy: "Автор",
@@ -97,7 +96,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       kindLabels: {
         plant: "Рослина",
         animal: "Тварина",
-        bee_colony: "Бджолина сім'я",
       },
     },
   },
@@ -112,7 +110,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       followedFilter: "Следвани",
       plantFilter: "Растения",
       animalFilter: "Животни",
-      beeFilter: "Пчели",
       topicFilterLabel: "Проверени теми",
       readEntry: "Прочетете записа",
       publishedBy: "Автор",
@@ -138,7 +135,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       kindLabels: {
         plant: "Растение",
         animal: "Животно",
-        bee_colony: "Пчелно семейство",
       },
     },
   },
@@ -153,7 +149,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       followedFilter: "Подписки",
       plantFilter: "Растения",
       animalFilter: "Животные",
-      beeFilter: "Пчёлы",
       topicFilterLabel: "Проверенные темы",
       readEntry: "Читать запись",
       publishedBy: "Автор",
@@ -179,7 +174,6 @@ const HOME_CONTENT: Record<PublicLocale, LocalizedHomeContent> = {
       kindLabels: {
         plant: "Растение",
         animal: "Животное",
-        bee_colony: "Пчелиная семья",
       },
     },
   },

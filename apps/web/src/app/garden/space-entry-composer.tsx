@@ -69,6 +69,7 @@ interface SpaceEntryComposerProps {
   spaceId: string;
   objects: SpaceObjectOption[];
   today: string;
+  enableOfflinePersistence?: boolean;
 }
 
 type SubmitState = "idle" | "saving" | "queued" | "failed";
@@ -79,6 +80,7 @@ export function SpaceEntryComposer({
   spaceId,
   objects,
   today,
+  enableOfflinePersistence = true,
 }: SpaceEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
   const labels = getStructuredJournalComposerLabels(locale);
@@ -118,9 +120,13 @@ export function SpaceEntryComposer({
   );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [draftHydrated, setDraftHydrated] = useState(
+    !enableOfflinePersistence,
+  );
 
   useEffect(() => {
+    if (!enableOfflinePersistence) return;
+
     const controller =
       createOwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot>(
         {
@@ -138,7 +144,7 @@ export function SpaceEntryComposer({
       }
       controller.dispose();
     };
-  }, [ownerUserId]);
+  }, [enableOfflinePersistence, ownerUserId]);
 
   useEffect(() => {
     const onOnline = () => setIsOnline(true);
@@ -152,6 +158,8 @@ export function SpaceEntryComposer({
   }, []);
 
   useEffect(() => {
+    if (!enableOfflinePersistence) return;
+
     let cancelled = false;
     void getOfflineDraft<SpaceEntryDraftPayload>(ownerUserId, draftId)
       .then((stored) => {
@@ -172,9 +180,17 @@ export function SpaceEntryComposer({
     return () => {
       cancelled = true;
     };
-  }, [copy.composer.draftRestored, draftId, ownerUserId, spaceId]);
+  }, [
+    copy.composer.draftRestored,
+    draftId,
+    enableOfflinePersistence,
+    ownerUserId,
+    spaceId,
+  ]);
 
   useLayoutEffect(() => {
+    if (!enableOfflinePersistence) return;
+
     const payload: SpaceEntryDraftPayload = {
       clientMutationId,
       spaceId,
@@ -203,6 +219,7 @@ export function SpaceEntryComposer({
     draft,
     draftHydrated,
     draftId,
+    enableOfflinePersistence,
     mentionedPlantObjectIds,
     ownerUserId,
     photoIntentsByBlockId,

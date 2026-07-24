@@ -127,7 +127,7 @@ describe("public living-object catalog", () => {
         page={{
           ...readyPage,
           request: {
-            kind: "bee_colony",
+            kind: "animal",
             identity: "all",
             query: "",
             page: 1,
@@ -195,13 +195,13 @@ describe("public living-object catalog", () => {
   it("builds stable localized hrefs and route-owned context modules", () => {
     expect(
       buildPublicObjectCatalogHref("bg", {
-        kind: "bee_colony",
+        kind: "animal",
         identity: "breed",
         query: "Карника",
         page: 2,
       }),
     ).toBe(
-      "/bg/objects?kind=bee_colony&identity=breed&q=%D0%9A%D0%B0%D1%80%D0%BD%D0%B8%D0%BA%D0%B0&page=2",
+      "/bg/objects?kind=animal&identity=breed&q=%D0%9A%D0%B0%D1%80%D0%BD%D0%B8%D0%BA%D0%B0&page=2",
     );
     const modules = buildPublicObjectCatalogContextModules(
       "ru",

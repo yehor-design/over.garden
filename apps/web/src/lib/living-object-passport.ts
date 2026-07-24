@@ -366,11 +366,6 @@ const DOMAIN_COPY: Record<
       identityLabel: "Вид або порода",
       contextLabel: "Умови утримання",
     },
-    bee_colony: {
-      kindLabel: "Бджолина сім'я",
-      identityLabel: "Порода або вид бджіл",
-      contextLabel: "Умови пасіки",
-    },
   },
   bg: {
     plant: {
@@ -383,11 +378,6 @@ const DOMAIN_COPY: Record<
       identityLabel: "Вид или порода",
       contextLabel: "Среда на отглеждане",
     },
-    bee_colony: {
-      kindLabel: "Пчелно семейство",
-      identityLabel: "Порода или вид пчели",
-      contextLabel: "Среда на пчелина",
-    },
   },
   ru: {
     plant: {
@@ -399,11 +389,6 @@ const DOMAIN_COPY: Record<
       kindLabel: "Животное",
       identityLabel: "Вид или порода",
       contextLabel: "Условия содержания",
-    },
-    bee_colony: {
-      kindLabel: "Пчелиная семья",
-      identityLabel: "Порода или вид пчел",
-      contextLabel: "Условия пасеки",
     },
   },
 };

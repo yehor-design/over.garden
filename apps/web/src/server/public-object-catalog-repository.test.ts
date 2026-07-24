@@ -180,7 +180,7 @@ describe("public living-object catalog serialization", () => {
         }),
         row({
           groupKey: "unavailable:bee:1",
-          objectKind: "bee_colony",
+          objectKind: "animal",
           identityState: "unavailable",
           identityName: null,
           catalogItemId: null,
@@ -227,7 +227,7 @@ describe("public living-object catalog serialization", () => {
       identityName: null,
     });
     expect(page.cards[3]).toMatchObject({
-      objectKind: "bee_colony",
+      objectKind: "animal",
       identityState: "unavailable",
       identityName: null,
     });
@@ -285,7 +285,7 @@ describe("public living-object catalog serialization", () => {
         }),
       ],
       "uk",
-      { kind: "bee_colony", identity: "breed", query: "", page: 1 },
+      { kind: "animal", identity: "breed", query: "", page: 1 },
     );
 
     expect(species.cards[0]?.catalogPath).toBe("/species/solanum-lycopersicum");

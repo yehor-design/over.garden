@@ -65,7 +65,7 @@ export interface BreedSeedProjection {
     vboId: string | null;
     dadIsRef: null;
     efabisRef: null;
-    supportedObjectKind: Extract<PlantObjectKind, "bee_colony" | "animal">;
+    supportedObjectKind: Extract<PlantObjectKind, "animal">;
     speciesGroup: string;
   };
   aliases: Array<{
@@ -400,7 +400,7 @@ function buildOfficialBeeBreedProjection(
       vboId: null,
       dadIsRef: null,
       efabisRef: null,
-      supportedObjectKind: "bee_colony",
+      supportedObjectKind: "animal",
       speciesGroup: "Apis mellifera",
     },
     aliases,

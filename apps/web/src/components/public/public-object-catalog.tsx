@@ -4,7 +4,6 @@ import {
   ArrowRight,
   BookOpen,
   Bug,
-  Hexagon,
   ImageOff,
   PawPrint,
   Sprout,
@@ -152,7 +151,6 @@ function CatalogKindNavigation({
     "all",
     "plant",
     "animal",
-    "bee_colony",
   ];
 
   return (
@@ -180,7 +178,7 @@ function CatalogKindNavigation({
           >
             {kind === "plant" ? <Sprout aria-hidden="true" /> : null}
             {kind === "animal" ? <PawPrint aria-hidden="true" /> : null}
-            {kind === "bee_colony" ? <Hexagon aria-hidden="true" /> : null}
+            {kind === "animal" ? <PawPrint aria-hidden="true" /> : null}
             {copy.kinds[kind]}
           </Link>
         );
@@ -208,7 +206,7 @@ function CatalogIdentityNavigation({
       {identities.map((identity) => {
         const active = request.identity === identity;
         const label =
-          identity === "breed" && request.kind === "bee_colony"
+          identity === "breed" && request.kind === "animal"
             ? copy.identities.bee_breed
             : copy.identities[identity];
         return (
@@ -482,7 +480,7 @@ export function buildPublicObjectCatalogContextModules(
   copy: PublicObjectCatalogCopy,
   page: PublicObjectCatalogPage,
 ): SiteShellContextRailModule[] {
-  const kinds = ["plant", "animal", "bee_colony"] as const;
+  const kinds = ["plant", "animal"] as const;
   return [
     {
       key: "object-kinds",
@@ -521,7 +519,7 @@ function identityFiltersForKind(
     "unavailable",
   ];
   if (kind === "plant") return ["all", "plant_variety", ...shared.slice(1)];
-  if (kind === "animal" || kind === "bee_colony") {
+  if (kind === "animal") {
     return ["all", "species", "breed", "provisional", "unknown", "unavailable"];
   }
   return [

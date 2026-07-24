@@ -82,7 +82,7 @@ describe("follow-up entry composer localization", () => {
           locale={locale}
           objectId="18700003-0000-4000-8000-000000000001"
           objectDisplayName={objectDisplayName}
-          objectKind="bee_colony"
+          objectKind="animal"
           today="2026-07-16"
           initialClientMutationId="test-mutation"
           visualScenario={scenario}
@@ -117,7 +117,7 @@ function visualScenario(): VisualFixtureCreationScenarioEvidence {
     objectId: "18700003-0000-4000-8000-000000000001",
     spaceId: "space",
     spaceName: "Пасіка",
-    objectKind: "bee_colony",
+    objectKind: "animal",
     objectName: "Apis mellifera — Кошер № 7",
     entryTitle: "User-authored follow-up title",
     entryBody: "Оригінальний текст користувача лишається без перекладу.",

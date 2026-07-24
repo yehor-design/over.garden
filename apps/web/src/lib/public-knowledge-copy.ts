@@ -49,7 +49,7 @@ export interface PublicKnowledgeCopy {
   topicNoindex: string;
   filters: {
     types: Record<"all" | "guide" | "answer" | "topic", string>;
-    kinds: Record<"all" | "plant" | "animal" | "bee_colony", string>;
+    kinds: Record<"all" | "plant" | "animal", string>;
   };
 }
 
@@ -115,7 +115,6 @@ const COPY = {
         all: "Усі об'єкти",
         plant: "Рослини",
         animal: "Тварини",
-        bee_colony: "Бджолосім'ї",
       },
     },
   },
@@ -181,7 +180,6 @@ const COPY = {
         all: "Всички обекти",
         plant: "Растения",
         animal: "Животни",
-        bee_colony: "Пчелни семейства",
       },
     },
   },
@@ -246,7 +244,6 @@ const COPY = {
         all: "Все объекты",
         plant: "Растения",
         animal: "Животные",
-        bee_colony: "Пчелиные семьи",
       },
     },
   },

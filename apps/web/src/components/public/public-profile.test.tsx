@@ -26,14 +26,14 @@ const PROFILE: PublicProfileEvidencePage = {
   summary: {
     publicEntryCount: 18,
     publicObjectCount: 7,
-    objectKinds: { plant: 5, animal: 1, beeColony: 1 },
+    objectKinds: { plant: 5, animal: 2 },
     confirmedLineageEdgeCount: 4,
     relationships: { followers: 21, following: 9 },
   },
   objects: Array.from({ length: 7 }, (_, index) => ({
     objectId: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
     displayName: index === 0 ? "Томат Чорний принц" : `Об’єкт ${index + 1}`,
-    objectKind: index === 5 ? "animal" : index === 6 ? "bee_colony" : "plant",
+    objectKind: index >= 5 ? "animal" : "plant",
     identityLabel: index === 0 ? "Solanum lycopersicum" : null,
     identityState: index === 0 ? "confirmed" : "unknown",
     latestEntryDate: "2026-07-10",

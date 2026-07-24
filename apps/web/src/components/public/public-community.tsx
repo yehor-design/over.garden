@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   CalendarDays,
-  Hexagon,
   MessageCircle,
   PawPrint,
   Search,
@@ -158,7 +157,7 @@ export function PublicCommunityView({
   community: PublicCommunityPageModel;
   viewer: "guest" | "member";
   query?: string;
-  kind?: "all" | "plant" | "animal" | "bee_colony";
+  kind?: "all" | "plant" | "animal";
   cursor?: string;
   actionStatus?: string | null;
   state?: PublicCommunityState;
@@ -621,7 +620,7 @@ function CommunityContributionRow({
       ? Sprout
       : item.object.kind === "animal"
         ? PawPrint
-        : Hexagon;
+        : PawPrint;
 
   return (
     <li className="grid gap-4 border-b border-border py-5 sm:flex">

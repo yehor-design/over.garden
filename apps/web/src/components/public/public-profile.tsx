@@ -3,12 +3,11 @@ import Link from "next/link";
 import {
   BookOpen,
   CalendarDays,
-  Cat,
   Flag,
-  Hexagon,
   ImageOff,
   MapPin,
   MoreHorizontal,
+  PawPrint,
   Settings,
   ShieldBan,
   Sprout,
@@ -684,9 +683,7 @@ function ObjectKindIcon({
 }: {
   kind: PublicProfileObjectEvidence["objectKind"];
 }) {
-  if (kind === "animal") return <Cat className="size-4" aria-hidden="true" />;
-  if (kind === "bee_colony")
-    return <Hexagon className="size-4" aria-hidden="true" />;
+  if (kind === "animal") return <PawPrint className="size-4" aria-hidden="true" />;
   return <Sprout className="size-4" aria-hidden="true" />;
 }
 
@@ -712,7 +709,6 @@ export function buildPublicProfileContextModules(
   const domainItems = [
     { label: copy.plants, value: profile.summary.objectKinds.plant },
     { label: copy.animals, value: profile.summary.objectKinds.animal },
-    { label: copy.beeColonies, value: profile.summary.objectKinds.beeColony },
   ]
     .filter((item) => item.value > 0)
     .map((item) => ({

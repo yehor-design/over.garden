@@ -136,7 +136,7 @@ describe("PublicCommunityView", () => {
                 entryDate: "2026-07-13",
                 publicSlug: "next-check",
                 objectDisplayName: "Градски кошер",
-                objectKind: "bee_colony",
+                objectKind: "animal",
               },
             ],
           },

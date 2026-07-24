@@ -76,12 +76,12 @@ describe("pilot UX copy", () => {
       varietyStateLabel("unknown"),
       catalogKindLabel("plant_variety"),
       catalogKindLabel("species"),
-      catalogKindLabel("breed", "bee_colony"),
-      catalogKindLabel("breed", "animal"),
+      catalogKindLabel("breed", "animal", "ua_official_bee_breed"),
+      catalogKindLabel("breed", "animal", "vertebrate_breed_ontology"),
       catalogIdentityLabel("plant_variety"),
       catalogIdentityLabel("species"),
-      catalogIdentityLabel("breed", "bee_colony"),
-      catalogIdentityLabel("breed", "animal"),
+      catalogIdentityLabel("breed", "animal", "ua_official_bee_breed"),
+      catalogIdentityLabel("breed", "animal", "vertebrate_breed_ontology"),
       catalogSuggestionStatusLabel("seeded"),
       publicCatalogStatusLabel("seeded"),
       publicCatalogStatusLabel("confirmed"),
@@ -99,7 +99,12 @@ describe("pilot UX copy", () => {
     expect(copy).toContain("Animal breed");
     expect(catalogIdentityLabel("plant_variety")).toBe("Plant variety");
     expect(catalogIdentityLabel("species")).toBe("Plant species");
-    expect(catalogIdentityLabel("breed", "bee_colony")).toBe("Bee breed");
+    expect(catalogIdentityLabel("breed", "animal", "ua_official_bee_breed")).toBe(
+      "Bee breed",
+    );
+    expect(
+      catalogIdentityLabel("breed", "animal", "vertebrate_breed_ontology"),
+    ).toBe("Animal breed");
     expect(catalogIdentityLabel("breed", "animal")).toBe("Animal breed");
     expect(catalogIdentityLabel("breed")).toBe("Breed");
     expect(publicCatalogStatusLabel("seeded")).toBe("Pilot catalog");

@@ -175,12 +175,12 @@ describe("/", () => {
     const html = renderToStaticMarkup(
       await HomeRoute({
         params: Promise.resolve({ locale: "uk" }),
-        searchParams: Promise.resolve({ kind: "bee_colony" }),
+        searchParams: Promise.resolve({ kind: "animal" }),
       }),
     );
 
     expect(html).toContain("Стрічку не вдалося завантажити");
-    expect(html).toContain('href="/?kind=bee_colony"');
+    expect(html).toContain('href="/?kind=animal"');
     expect(html).not.toMatch(/href="[^"]*(?:sign.?up|register|join)/i);
   });
 

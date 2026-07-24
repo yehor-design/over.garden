@@ -448,7 +448,7 @@ function isPublicObjectCatalogKind(
     value === "all" ||
     value === "plant" ||
     value === "animal" ||
-    value === "bee_colony"
+    value === "animal"
   );
 }
 
@@ -467,7 +467,7 @@ function isPublicObjectCatalogIdentityFilter(
 }
 
 function normalizePublicObjectKind(value: string): PlantObjectKind {
-  if (value === "plant" || value === "animal" || value === "bee_colony") {
+  if (value === "plant" || value === "animal") {
     return value;
   }
   throw new Error(`Unsupported public object kind: ${value}`);

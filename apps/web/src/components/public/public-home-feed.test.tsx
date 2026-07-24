@@ -74,7 +74,6 @@ const copy: PublicHomeFeedCopy = {
   followedFilter: "Підписки",
   plantFilter: "Рослини",
   animalFilter: "Тварини",
-  beeFilter: "Бджоли",
   topicFilterLabel: "Перевірені теми",
   readEntry: "Читати запис",
   publishedBy: "Автор",
@@ -98,7 +97,6 @@ const copy: PublicHomeFeedCopy = {
   kindLabels: {
     plant: "Рослина",
     animal: "Тварина",
-    bee_colony: "Бджолина сім'я",
   },
 };
 
@@ -168,7 +166,7 @@ const page: PublicFeedPage = {
       object: {
         id: "object-2",
         displayName: "Сім'я Карніка",
-        kind: "bee_colony",
+        kind: "animal",
         publicPath: "/lineage/objects/object-2",
         safeRegionCode: null,
       },
@@ -254,7 +252,7 @@ describe("public home feed", () => {
         locale="uk"
         copy={copy}
         feed={page}
-        request={{ cursor: null, kind: "bee_colony", topic: "winter-care" }}
+        request={{ cursor: null, kind: "animal", topic: "winter-care" }}
         topics={topics}
         isAuthenticated={false}
         state="ready"
@@ -273,7 +271,7 @@ describe("public home feed", () => {
     );
 
     expect(moreHtml).toContain(
-      'href="/?cursor=eyJ2ZXJzaW9uIjoxfQ&amp;kind=bee_colony&amp;topic=winter-care"',
+      'href="/?cursor=eyJ2ZXJzaW9uIjoxfQ&amp;kind=animal&amp;topic=winter-care"',
     );
     expect(endHtml).toContain("Усі доступні записи переглянуто");
   });

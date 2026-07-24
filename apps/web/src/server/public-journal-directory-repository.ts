@@ -426,7 +426,7 @@ function seasonForDate(
 }
 
 function normalizeObjectKind(value: string | null | undefined) {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : null;
 }
@@ -473,16 +473,14 @@ function sanitizePublicObjectName(
   if (safe) return safe;
 
   return {
-    uk: { plant: "Рослина", animal: "Тварина", bee_colony: "Бджолосім'я" },
+    uk: { plant: "Рослина", animal: "Тварина" },
     bg: {
       plant: "Растение",
       animal: "Животно",
-      bee_colony: "Пчелно семейство",
     },
     ru: {
       plant: "Растение",
       animal: "Животное",
-      bee_colony: "Пчелиная семья",
     },
   }[locale][kind];
 }

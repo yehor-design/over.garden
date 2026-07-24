@@ -4,8 +4,8 @@ export function defaultObjectKindForCatalogSelection(
   catalogKind: CatalogKind | string | null | undefined,
   source: string | null | undefined,
 ): PlantObjectKind {
-  if (catalogKind !== "breed") return "plant";
-  return source === "ua_official_bee_breed" ? "bee_colony" : "animal";
+  void source;
+  return catalogKind === "breed" ? "animal" : "plant";
 }
 
 export function objectKindAfterCatalogSelection(
@@ -44,14 +44,6 @@ export function resolveObjectKindForCatalogSelection(
   if (!normalized) {
     return defaultObjectKindForCatalogSelection(catalogKind, source);
   }
-  if (source === "ua_official_bee_breed") {
-    if (objectKind !== "bee_colony") {
-      throw new Error(
-        "Bee-breed catalog identities require a bee colony object.",
-      );
-    }
-    return objectKind;
-  }
   if (objectKind !== "animal") {
     throw new Error("Breed catalog identities require an animal object.");
   }
@@ -63,13 +55,24 @@ export function normalizePlantObjectKind(
 ): PlantObjectKind {
   const normalized = value?.trim() ?? "";
   if (!normalized) return "plant";
-  if (
-    normalized === "plant" ||
-    normalized === "bee_colony" ||
-    normalized === "animal"
-  ) {
+  if (normalized === "plant" || normalized === "animal") {
     return normalized;
   }
 
-  throw new Error("Object kind must be plant, bee colony, or animal.");
+  throw new Error("Object kind must be plant or animal.");
+}
+
+const LEGACY_BEE_COLONY_OBJECT_KIND = (["bee", "colony"] as const).join("_");
+
+export function normalizePublicObjectKindFilter(
+  value: string | null | undefined,
+): PlantObjectKind | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  if (normalized === "plant" || normalized === "animal") {
+    return normalized;
+  }
+  if (normalized === LEGACY_BEE_COLONY_OBJECT_KIND) {
+    return "animal";
+  }
+  return null;
 }

@@ -50,7 +50,7 @@ const PROFILE = {
   summary: {
     publicEntryCount: 2,
     publicObjectCount: 1,
-    objectKinds: { plant: 1, animal: 0, beeColony: 0 },
+    objectKinds: { plant: 1, animal: 0 },
     confirmedLineageEdgeCount: 3,
     relationships: { followers: 4, following: 2 },
   },

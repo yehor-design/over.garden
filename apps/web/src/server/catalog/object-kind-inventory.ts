@@ -1,37 +1,31 @@
 /**
- * OVE-210: read-only pre-collapse inventory for plant_objects.object_kind.
- * Classification and SQL are pure/exported so unit tests can prove safety without
- * touching a live database.
+ * OVE-210/211: read-only object-kind inventory after the two-kind collapse.
+ * Flags any plant_objects.object_kind outside {plant, animal} without naming
+ * removed historical kind values in source (acceptance grep gate).
  */
 
-export type BeeColonyCatalogKind = "breed" | "plant_variety" | "species" | null;
+export type AllowedObjectKind = "plant" | "animal";
 
-export type BeeColonyVarietyState =
-  | "selected"
-  | "unknown"
-  | "user_added"
-  | "free_text";
-
-export type BeeColonyRowClassification =
-  | "safe_breed"
-  | "safe_unidentified"
-  | "manual_check";
-
-export type BeeColonyInventoryRow = {
-  id: string;
-  catalogItemId: string | null;
-  varietyState: BeeColonyVarietyState;
-  catalogKind: BeeColonyCatalogKind;
-  catalogSource: string | null;
-  catalogHasPublicSlug: boolean;
-};
+export const ALLOWED_OBJECT_KINDS: readonly AllowedObjectKind[] = [
+  "plant",
+  "animal",
+] as const;
 
 export type ObjectKindCountRow = {
   objectKind: string;
   count: number;
 };
 
-export type BeeColonyDependentsSummary = {
+export type UnexpectedKindRow = {
+  id: string;
+  objectKind: string;
+  catalogItemId: string | null;
+  varietyState: string;
+  catalogKind: string | null;
+  catalogSource: string | null;
+};
+
+export type ObjectKindDependentsSummary = {
   journalEntries: number;
   journalEntryObjectMentions: number;
   lineageSubjectEdges: number;
@@ -42,14 +36,9 @@ export type BeeColonyDependentsSummary = {
 
 export type ObjectKindInventoryReport = {
   kindCounts: ObjectKindCountRow[];
-  beeColonyRows: BeeColonyInventoryRow[];
-  dependents: BeeColonyDependentsSummary;
-  classifications: Array<{
-    id: string;
-    classification: BeeColonyRowClassification;
-  }>;
+  unexpectedRows: UnexpectedKindRow[];
+  dependents: ObjectKindDependentsSummary;
   safeToCollapse: boolean;
-  manualCheckIds: string[];
 };
 
 /** Every statement the inventory script may issue. Must be SELECT-only. */
@@ -61,17 +50,17 @@ group by object_kind
 order by object_kind
 `.trim(),
 
-  beeColonyRows: `
+  unexpectedRows: `
 select
   po.id as id,
+  po.object_kind as "objectKind",
   po.catalog_item_id as "catalogItemId",
   po.variety_state as "varietyState",
   ci.catalog_kind as "catalogKind",
-  ci.source as "catalogSource",
-  (ci.public_slug is not null) as "catalogHasPublicSlug"
+  ci.source as "catalogSource"
 from plant_objects po
 left join catalog_items ci on ci.id = po.catalog_item_id
-where po.object_kind = 'bee_colony'
+where po.object_kind not in ('plant', 'animal')
 order by po.id
 `.trim(),
 
@@ -81,38 +70,38 @@ select
     select count(*)::bigint
     from journal_entries je
     inner join plant_objects po on po.id = je.plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
   ) as "journalEntries",
   (
     select count(*)::bigint
     from journal_entry_object_mentions m
     inner join plant_objects po on po.id = m.plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
   ) as "journalEntryObjectMentions",
   (
     select count(*)::bigint
     from lineage_provenance_edges e
     inner join plant_objects po on po.id = e.subject_plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
   ) as "lineageSubjectEdges",
   (
     select count(*)::bigint
     from lineage_provenance_edges e
     inner join plant_objects po on po.id = e.source_plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
   ) as "lineageSourceEdges",
   (
     select count(*)::bigint
     from media_assets ma
     inner join journal_entries je on je.id = ma.journal_entry_id
     inner join plant_objects po on po.id = je.plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
   ) as "mediaAssetsViaJournal",
   (
     select count(*)::bigint
     from journal_entries je
     inner join plant_objects po on po.id = je.plant_object_id
-    where po.object_kind = 'bee_colony'
+    where po.object_kind not in ('plant', 'animal')
       and je.public_slug is not null
   ) as "publicSlugJournalEntries"
 `.trim(),
@@ -131,7 +120,11 @@ export function assertObjectKindInventorySqlIsSelectOnly(
         `Object-kind inventory statement is not SELECT-only: ${statement.slice(0, 80)}`,
       );
     }
-    if (/\b(insert|update|delete|truncate|alter|drop|create|grant|revoke)\b/i.test(statement)) {
+    if (
+      /\b(insert|update|delete|truncate|alter|drop|create|grant|revoke)\b/i.test(
+        statement,
+      )
+    ) {
       throw new Error(
         `Object-kind inventory statement contains a mutating keyword: ${statement.slice(0, 80)}`,
       );
@@ -139,50 +132,24 @@ export function assertObjectKindInventorySqlIsSelectOnly(
   }
 }
 
-/**
- * SAFE when the hive keeps bee recognition via a breed catalog identity, or is
- * unidentified (unknown/free_text) with no foreign catalog binding.
- * Foreign or missing-selected catalog bindings require manual check before collapse.
- */
-export function classifyBeeColonyRow(
-  row: Pick<BeeColonyInventoryRow, "varietyState" | "catalogKind">,
-): BeeColonyRowClassification {
-  if (row.catalogKind === "breed") {
-    return "safe_breed";
-  }
-
-  const unidentified =
-    row.varietyState === "unknown" || row.varietyState === "free_text";
-  const foreignCatalog =
-    row.catalogKind === "plant_variety" || row.catalogKind === "species";
-
-  if (unidentified && !foreignCatalog) {
-    return "safe_unidentified";
-  }
-
-  return "manual_check";
+export function isAllowedObjectKind(value: string): value is AllowedObjectKind {
+  return value === "plant" || value === "animal";
 }
 
 export function buildObjectKindInventoryReport(input: {
   kindCounts: ObjectKindCountRow[];
-  beeColonyRows: BeeColonyInventoryRow[];
-  dependents: BeeColonyDependentsSummary;
+  unexpectedRows: UnexpectedKindRow[];
+  dependents: ObjectKindDependentsSummary;
 }): ObjectKindInventoryReport {
-  const classifications = input.beeColonyRows.map((row) => ({
-    id: row.id,
-    classification: classifyBeeColonyRow(row),
-  }));
-  const manualCheckIds = classifications
-    .filter((row) => row.classification === "manual_check")
-    .map((row) => row.id);
-
+  const unexpectedFromCounts = input.kindCounts.filter(
+    (row) => !isAllowedObjectKind(row.objectKind) && row.count > 0,
+  );
   return {
     kindCounts: input.kindCounts,
-    beeColonyRows: input.beeColonyRows,
+    unexpectedRows: input.unexpectedRows,
     dependents: input.dependents,
-    classifications,
-    safeToCollapse: manualCheckIds.length === 0,
-    manualCheckIds,
+    safeToCollapse:
+      unexpectedFromCounts.length === 0 && input.unexpectedRows.length === 0,
   };
 }
 
@@ -190,7 +157,7 @@ export function formatObjectKindInventoryReport(
   report: ObjectKindInventoryReport,
 ): string {
   const lines: string[] = [];
-  lines.push("OVE-210 object-kind inventory (redacted)");
+  lines.push("OVE-211 object-kind inventory (redacted)");
   lines.push("");
   lines.push("## Counts by object_kind");
   if (report.kindCounts.length === 0) {
@@ -202,28 +169,26 @@ export function formatObjectKindInventoryReport(
   }
 
   lines.push("");
-  lines.push("## bee_colony rows");
-  if (report.beeColonyRows.length === 0) {
+  lines.push("## Unexpected kinds (outside plant|animal)");
+  if (report.unexpectedRows.length === 0) {
     lines.push("(none)");
   } else {
-    for (const row of report.beeColonyRows) {
-      const classification = classifyBeeColonyRow(row);
+    for (const row of report.unexpectedRows) {
       lines.push(
         [
           `- id=${row.id}`,
+          `object_kind=${row.objectKind}`,
           `catalog_item_id=${row.catalogItemId ?? "null"}`,
           `variety_state=${row.varietyState}`,
           `catalog_kind=${row.catalogKind ?? "null"}`,
           `catalog_source=${row.catalogSource ?? "null"}`,
-          `catalog_has_public_slug=${row.catalogHasPublicSlug}`,
-          `classification=${classification}`,
         ].join(" "),
       );
     }
   }
 
   lines.push("");
-  lines.push("## Dependents of bee_colony objects (counts only)");
+  lines.push("## Dependents of unexpected-kind objects (counts only)");
   lines.push(`- journal_entries.plant_object_id: ${report.dependents.journalEntries}`);
   lines.push(
     `- journal_entry_object_mentions.plant_object_id: ${report.dependents.journalEntryObjectMentions}`,
@@ -245,11 +210,6 @@ export function formatObjectKindInventoryReport(
   lines.push(
     `SAFE TO COLLAPSE: ${report.safeToCollapse ? "yes" : "no"}`,
   );
-  if (!report.safeToCollapse) {
-    lines.push(
-      `manual_check_ids: ${report.manualCheckIds.join(",") || "(none)"}`,
-    );
-  }
 
   return `${lines.join("\n")}\n`;
 }

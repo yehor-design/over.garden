@@ -20,7 +20,7 @@ The OVE-187 v8 manifest owns synthetic density and edge-state evidence. It is
 allowed only on loopback or an explicitly isolated preview. It proves:
 
 - the full guest and authenticated route/state matrix;
-- plant, animal, and bee-colony creation and journal continuity;
+- plant, animal creation and journal continuity;
 - empty, typical, dense, long-text, no-media, gallery, pagination, loading,
   recoverable-error, offline, privacy, moderation, `404`, and `410` states;
 - 320px and 1440px parity for every core archetype plus the wider OVE-185

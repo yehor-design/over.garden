@@ -2937,7 +2937,7 @@ create table if not exists plant_objects (
   owner_user_id uuid not null,
   space_id uuid not null references spaces(id) on delete cascade,
   display_name text not null check (char_length(display_name) between 1 and 120),
-  object_kind text not null default 'plant' check (object_kind in ('plant', 'bee_colony', 'animal')),
+  object_kind text not null default 'plant' check (object_kind in ('plant', 'animal')),
   catalog_item_id uuid references catalog_items(id) on delete set null,
   variety_text text check (variety_text is null or char_length(variety_text) between 1 and 120),
   variety_state text not null default 'unknown' check (variety_state in ('selected', 'unknown', 'user_added', 'free_text')),
@@ -2960,19 +2960,21 @@ alter table plant_objects
   alter column object_kind set default 'plant',
   alter column object_kind set not null;
 
+-- OVE-211: collapse legacy third object_kind to animal, then tighten the check to two kinds.
+-- Always drop/recreate so already-provisioned DBs converge (if-not-exists would leave 3 values).
+update plant_objects
+set object_kind = 'animal'
+where object_kind = 'bee_colony';
+
+alter table plant_objects
+  drop constraint if exists plant_objects_object_kind_check;
+
+alter table plant_objects
+  add constraint plant_objects_object_kind_check
+  check (object_kind in ('plant', 'animal'));
+
 do $$
 begin
-  if not exists (
-    select 1
-    from pg_constraint
-    where conname = 'plant_objects_object_kind_check'
-      and conrelid = 'plant_objects'::regclass
-  ) then
-    alter table plant_objects
-      add constraint plant_objects_object_kind_check
-      check (object_kind in ('plant', 'bee_colony', 'animal'));
-  end if;
-
   if exists (
     select 1
     from pg_constraint

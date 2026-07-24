@@ -199,7 +199,7 @@ describe("public topic repository query contracts", () => {
         { slug: "single-observation", kind: "plant", count: 1 },
         { slug: "care-checks", kind: "plant", count: 4 },
         { slug: "care-checks", kind: "animal", count: 4 },
-        { slug: "care-checks", kind: "bee_colony", count: 3 },
+        { slug: "care-checks", kind: "animal", count: 3 },
       ],
     );
 
@@ -209,7 +209,7 @@ describe("public topic repository query contracts", () => {
       "entry_count_below_threshold",
     );
     expect(topics[2]).toMatchObject({
-      objectKinds: ["plant", "animal", "bee_colony"],
+      objectKinds: ["plant", "animal"],
       indexState: { isIndexable: true, sitemapEligible: true },
     });
   });

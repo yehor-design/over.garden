@@ -129,4 +129,6 @@ function enableVisualFixtureEnv() {
   );
   vi.stubEnv("R2_ENDPOINT", "http://127.0.0.1:9000");
   vi.stubEnv("R2_PUBLIC_BASE_URL", "http://127.0.0.1:9000/overgarden");
+  vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+  vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
 }

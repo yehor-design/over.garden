@@ -63,7 +63,7 @@ interface TypeaheadResponse {
 
 interface EntryResponse {
   plantObject: {
-    objectKind: "plant" | "bee_colony" | "animal";
+    objectKind: "plant" | "animal";
     catalogItemId: string | null;
     varietyText: string | null;
     varietyState: string;
@@ -75,7 +75,7 @@ interface SmokeCase {
   query: string;
   expectedCanonicalName: string;
   expectedCatalogKind: CatalogKind;
-  expectedObjectKind: "plant" | "bee_colony" | "animal";
+  expectedObjectKind: "plant" | "animal";
   expectedIdentityLabel:
     | "Plant variety"
     | "Plant species"
@@ -232,7 +232,7 @@ const SMOKE_CASES: SmokeCase[] = [
     query: "Карпатська",
     expectedCanonicalName: "Карпатська бджола",
     expectedCatalogKind: "breed",
-    expectedObjectKind: "bee_colony",
+    expectedObjectKind: "animal",
     expectedIdentityLabel: "Bee breed",
     plantName: "OVE-67 Carpathian colony",
   },

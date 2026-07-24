@@ -31,7 +31,7 @@ const ITEMS: PublicKnowledgeListItem[] = [
     path: "/topics/care-checks",
     title: "Регулярні спостереження",
     description: "Докази з рослин, тварин і бджолосімей.",
-    objectKinds: ["plant", "animal", "bee_colony"],
+    objectKinds: ["plant", "animal"],
   },
 ];
 
@@ -57,7 +57,7 @@ describe("public knowledge URL and filtering contract", () => {
     ).toEqual({
       query: "догляд ".repeat(16).trim(),
       type: "answer",
-      kind: "bee_colony",
+      kind: "animal",
     });
 
     expect(

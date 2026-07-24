@@ -72,7 +72,7 @@ const secondRow = {
   publicSlug: "week-check",
   objectId: "00000000-0000-4000-8000-000000000102",
   objectDisplayName: "Сім'я Карніка",
-  objectKind: "bee_colony",
+  objectKind: "animal",
   objectLocationVisibility: "hidden",
   objectCoarseRegionCode: "BG-23",
   spaceLocationVisibility: "region",
@@ -323,10 +323,18 @@ describe("public feed repository", () => {
       {
         id: "00000000-0000-4000-8000-000000000201",
         publicUrl: "https://media.example/public/one.png",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 800,
+        intrinsicHeight: 600,
       },
       {
         id: "00000000-0000-4000-8000-000000000202",
         publicUrl: "https://media.example/public/two.png",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: 800,
+        intrinsicHeight: 600,
       },
     ]);
     expect(page.entries[1].object.safeRegionCode).toBeNull();

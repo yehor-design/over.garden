@@ -1,6 +1,6 @@
 "use client";
 
-import { Bug, PawPrint, Sprout } from "lucide-react";
+import { PawPrint, Sprout } from "lucide-react";
 
 import type { PlantObjectKind } from "@/db/schema";
 import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
@@ -17,14 +17,9 @@ const OBJECT_KIND_OPTIONS = [
     copyKey: "animal",
     icon: PawPrint,
   },
-  {
-    value: "bee_colony",
-    copyKey: "beeColony",
-    icon: Bug,
-  },
 ] as const satisfies readonly {
   value: PlantObjectKind;
-  copyKey: "plant" | "animal" | "beeColony";
+  copyKey: "plant" | "animal";
   icon: typeof Sprout;
 }[];
 
@@ -43,7 +38,7 @@ export function JournalObjectKindSelector({
       <legend className="text-sm font-medium text-foreground">
         {copy.legend}
       </legend>
-      <div className="grid min-w-0 grid-cols-3 gap-2" role="group">
+      <div className="grid min-w-0 grid-cols-2 gap-2" role="group">
         {OBJECT_KIND_OPTIONS.map((option) => {
           const Icon = option.icon;
           const selected = option.value === value;

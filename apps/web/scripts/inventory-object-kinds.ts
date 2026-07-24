@@ -14,11 +14,9 @@ import {
   buildObjectKindInventoryReport,
   formatObjectKindInventoryReport,
   OBJECT_KIND_INVENTORY_SQL,
-  type BeeColonyInventoryRow,
-  type BeeColonyDependentsSummary,
-  type BeeColonyVarietyState,
-  type BeeColonyCatalogKind,
   type ObjectKindCountRow,
+  type ObjectKindDependentsSummary,
+  type UnexpectedKindRow,
 } from "../src/server/catalog/object-kind-inventory";
 
 const envFile = argValue("--env-file") ?? ".env.local";
@@ -50,14 +48,14 @@ async function main() {
     count: string;
   }>(OBJECT_KIND_INVENTORY_SQL.kindCounts);
 
-  const beeColonyResult = await pool.query<{
+  const unexpectedResult = await pool.query<{
     id: string;
+    objectKind: string;
     catalogItemId: string | null;
-    varietyState: BeeColonyVarietyState;
-    catalogKind: BeeColonyCatalogKind;
+    varietyState: string;
+    catalogKind: string | null;
     catalogSource: string | null;
-    catalogHasPublicSlug: boolean;
-  }>(OBJECT_KIND_INVENTORY_SQL.beeColonyRows);
+  }>(OBJECT_KIND_INVENTORY_SQL.unexpectedRows);
 
   const dependentsResult = await pool.query<{
     journalEntries: string;
@@ -73,19 +71,19 @@ async function main() {
     count: Number(row.count),
   }));
 
-  const beeColonyRows: BeeColonyInventoryRow[] = beeColonyResult.rows.map(
+  const unexpectedRows: UnexpectedKindRow[] = unexpectedResult.rows.map(
     (row) => ({
       id: row.id,
+      objectKind: row.objectKind,
       catalogItemId: row.catalogItemId,
       varietyState: row.varietyState,
       catalogKind: row.catalogKind,
       catalogSource: row.catalogSource,
-      catalogHasPublicSlug: Boolean(row.catalogHasPublicSlug),
     }),
   );
 
   const dependentsRow = dependentsResult.rows[0];
-  const dependents: BeeColonyDependentsSummary = {
+  const dependents: ObjectKindDependentsSummary = {
     journalEntries: Number(dependentsRow?.journalEntries ?? 0),
     journalEntryObjectMentions: Number(
       dependentsRow?.journalEntryObjectMentions ?? 0,
@@ -100,7 +98,7 @@ async function main() {
 
   const report = buildObjectKindInventoryReport({
     kindCounts,
-    beeColonyRows,
+    unexpectedRows,
     dependents,
   });
 

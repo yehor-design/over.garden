@@ -16,7 +16,6 @@ import {
 export const DRIVE2_CLOSEOUT_REQUIRED_OBJECT_KINDS = [
   "plant",
   "animal",
-  "bee_colony",
 ] as const;
 
 const REQUIRED_GUEST_JOURNEY_SCENARIOS = [

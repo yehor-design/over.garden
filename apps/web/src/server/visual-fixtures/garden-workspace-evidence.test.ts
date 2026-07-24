@@ -48,7 +48,6 @@ function exactResult(): VisualFixtureGardenWorkspaceEvidenceResult {
     objectCount: DENSE.expectedObjectCount,
     plantCount: DENSE.expectedPlantCount,
     animalCount: DENSE.expectedAnimalCount,
-    beeColonyCount: DENSE.expectedBeeColonyCount,
     recentCount: DENSE.expectedRecentCount,
     spaceIds: DENSE.expectedSpaceIds,
     objectIds: DENSE.expectedObjectIds,

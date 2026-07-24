@@ -143,7 +143,6 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("Оновіть Cherry tomato");
     expect(html).toContain("Рослини");
     expect(html).toContain("Тварини");
-    expect(html).toContain("Бджолосім");
     expect(html).toContain("Останні події");
     expect(html).toContain("Flowering changed");
     expect(html).toContain("Додати живий об");
@@ -359,7 +358,6 @@ function visualScenario(state: "offline" | "loading") {
     expectedObjectCount: 12,
     expectedPlantCount: 10,
     expectedAnimalCount: 1,
-    expectedBeeColonyCount: 1,
     expectedRecentCount: 8,
     expectedSpaceIds: ["space-1"],
     expectedObjectIds: ["object-1"],
@@ -383,7 +381,6 @@ function workspaceModel(): GardenWorkspaceReadModel {
         totalCount: 3,
         plantCount: 1,
         animalCount: 1,
-        beeColonyCount: 1,
         archivedEntryCount: 0,
         objects: [workspaceObject()],
         hasMore: false,
@@ -402,7 +399,6 @@ function workspaceModel(): GardenWorkspaceReadModel {
             objectCount: 3,
             plantCount: 1,
             animalCount: 1,
-            beeColonyCount: 1,
           },
         ],
         hasMore: false,
@@ -447,7 +443,6 @@ function emptyWorkspaceModel(): GardenWorkspaceReadModel {
         totalCount: 0,
         plantCount: 0,
         animalCount: 0,
-        beeColonyCount: 0,
         archivedEntryCount: 0,
         objects: [],
         hasMore: false,

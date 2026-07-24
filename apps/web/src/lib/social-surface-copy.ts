@@ -20,7 +20,6 @@ export interface SocialSurfaceCopy {
     everyKind: string;
     plants: string;
     animals: string;
-    bees: string;
     fromPerson: string;
     fromObject: string;
     fromTopic: string;
@@ -112,7 +111,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       everyKind: "Усі типи",
       plants: "Рослини",
       animals: "Тварини",
-      bees: "Бджолосім'ї",
       fromPerson: "Від автора",
       fromObject: "Від об'єкта",
       fromTopic: "За темою",
@@ -214,7 +212,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       everyKind: "Всички типове",
       plants: "Растения",
       animals: "Животни",
-      bees: "Пчелни семейства",
       fromPerson: "От автор",
       fromObject: "От обект",
       fromTopic: "По тема",
@@ -317,7 +314,6 @@ const COPY: Record<PublicLocale, SocialSurfaceCopy> = {
       everyKind: "Все типы",
       plants: "Растения",
       animals: "Животные",
-      bees: "Пчелиные семьи",
       fromPerson: "От автора",
       fromObject: "От объекта",
       fromTopic: "По теме",

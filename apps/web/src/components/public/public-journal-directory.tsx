@@ -5,7 +5,6 @@ import {
   ArrowRight,
   BookOpen,
   CalendarDays,
-  Hexagon,
   ImageOff,
   MapPin,
   PawPrint,
@@ -134,7 +133,6 @@ export function PublicJournalDirectory({
               { value: "", label: copy.kinds.all },
               { value: "plant", label: copy.kinds.plant },
               { value: "animal", label: copy.kinds.animal },
-              { value: "bee_colony", label: copy.kinds.bee_colony },
             ]}
           />
           <FilterSelect
@@ -348,7 +346,6 @@ function JournalResult({
   const KindIcon = {
     plant: Sprout,
     animal: PawPrint,
-    bee_colony: Hexagon,
   }[card.object.kind];
 
   return (

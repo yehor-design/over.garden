@@ -1115,6 +1115,7 @@ export function FollowUpEntryComposer({
           type="file"
           accept={COMPOSER_PHOTO_ACCEPT}
           capture="environment"
+          aria-label={workspaceCopy.composer.photo.choose}
           onChange={(event) =>
             handlePhotoChange(event.currentTarget.files?.[0])
           }

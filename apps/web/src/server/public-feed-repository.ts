@@ -581,13 +581,12 @@ function isPublicFeedKind(value: string | undefined): value is PublicFeedKind {
   return (
     value === "all" ||
     value === "plant" ||
-    value === "animal" ||
-    value === "bee_colony"
+    value === "animal"
   );
 }
 
 function normalizeObjectKind(value: string): PlantObjectKind {
-  if (value === "plant" || value === "animal" || value === "bee_colony") {
+  if (value === "plant" || value === "animal") {
     return value;
   }
 

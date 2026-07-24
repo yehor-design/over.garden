@@ -1098,6 +1098,10 @@ describe("journal repository query contracts", () => {
         publicUrl: expect.stringContaining("public/first.webp"),
         altText: "Стиглі томати на кущі",
         caption: "Перша китиця",
+        focalX: 0.5,
+        focalY: 0.5,
+        intrinsicWidth: null,
+        intrinsicHeight: null,
       },
     ]);
     expect(page.adjacentEntries).toMatchObject({

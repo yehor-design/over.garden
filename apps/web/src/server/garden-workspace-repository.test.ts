@@ -62,7 +62,7 @@ describe("garden workspace query contracts", () => {
     expect(compiled.sql).toContain("object_kind");
     expect(compiled.sql).toContain("plant");
     expect(compiled.sql).toContain("animal");
-    expect(compiled.sql).toContain("bee_colony");
+    expect(compiled.sql).toContain("animal");
     expect(compiled.parameters).toEqual(["object", OWNER_ID]);
   });
 
@@ -248,9 +248,6 @@ function workspaceSources({
       animalCount: inventoryObjects.filter(
         (item) => item.objectKind === "animal",
       ).length,
-      beeColonyCount: inventoryObjects.filter(
-        (item) => item.objectKind === "bee_colony",
-      ).length,
       archivedEntryCount: 0,
       objects: inventoryObjects,
     }),
@@ -263,7 +260,6 @@ function workspaceSources({
           objectCount: inventoryObjects.length,
           plantCount: inventoryObjects.length,
           animalCount: 0,
-          beeColonyCount: 0,
         },
       ],
     }),
@@ -279,7 +275,7 @@ function workspaceSources({
 function workspaceObject(index: number, ownerUserId: string) {
   const objectKind =
     index % 3 === 0
-      ? ("bee_colony" as const)
+      ? ("animal" as const)
       : index % 3 === 2
         ? ("animal" as const)
         : ("plant" as const);

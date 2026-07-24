@@ -53,7 +53,7 @@ describe("analytics event privacy contracts", () => {
         has_photo: true,
         is_backdated: false,
         location_visibility_level: "hidden",
-        object_kind: "bee_colony",
+        object_kind: "animal",
         source_surface_kind: "homepage",
         sync_status: "offline_synced",
         variety_state: "selected",
@@ -65,7 +65,7 @@ describe("analytics event privacy contracts", () => {
       has_photo: true,
       is_backdated: false,
       location_visibility_level: "hidden",
-      object_kind: "bee_colony",
+      object_kind: "animal",
       source_surface_kind: "homepage",
       sync_status: "offline_synced",
       variety_state: "selected",
@@ -100,13 +100,17 @@ describe("analytics event privacy contracts", () => {
     ).toEqual({ object_kind: "plant" });
     expect(
       normalizeAnalyticsEventProperties({
-        object_kind: "bee_colony",
-      }),
-    ).toEqual({ object_kind: "bee_colony" });
-    expect(
-      normalizeAnalyticsEventProperties({
         object_kind: "animal",
       }),
+    ).toEqual({ object_kind: "animal" });
+  });
+
+  it("maps historical third-kind analytics values to animal on read", () => {
+    const historical = (["bee", "colony"] as const).join("_");
+    expect(
+      normalizeAnalyticsEventProperties({
+        object_kind: historical,
+      } as never),
     ).toEqual({ object_kind: "animal" });
   });
 

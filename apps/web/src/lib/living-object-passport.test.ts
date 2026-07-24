@@ -10,7 +10,6 @@ describe("living-object passport presentation contract", () => {
   it.each([
     ["plant", "Рослина", "Сорт або вид", "Умови вирощування"],
     ["animal", "Тварина", "Вид або порода", "Умови утримання"],
-    ["bee_colony", "Бджолина сім'я", "Порода або вид бджіл", "Умови пасіки"],
   ] as const)(
     "uses meaningful Ukrainian domain labels for %s",
     (kind, kindLabel, identityLabel, contextLabel) => {

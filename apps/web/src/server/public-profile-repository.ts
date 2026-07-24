@@ -141,7 +141,6 @@ export interface PublicProfileEvidencePage {
     objectKinds: {
       plant: number;
       animal: number;
-      beeColony: number;
     };
     confirmedLineageEdgeCount: number;
     relationships: {
@@ -186,7 +185,6 @@ interface PublicProfileEntrySummaryRow {
   publicObjectCount: string | number | bigint;
   publicPlantCount?: string | number | bigint;
   publicAnimalCount?: string | number | bigint;
-  publicBeeColonyCount?: string | number | bigint;
 }
 
 interface PublicProfileLineageSummaryRow {
@@ -751,7 +749,6 @@ export function serializePublicProfileEvidencePage(input: {
       objectKinds: {
         plant: numericCount(input.entrySummary?.publicPlantCount),
         animal: numericCount(input.entrySummary?.publicAnimalCount),
-        beeColony: numericCount(input.entrySummary?.publicBeeColonyCount),
       },
       confirmedLineageEdgeCount: numericCount(
         input.lineageSummary?.confirmedLineageEdgeCount,
@@ -920,11 +917,6 @@ export function buildPublicProfileEntrySummaryQuery(
       )} = 'animal' then ${sql.ref("journal_entries.plant_object_id")} end)`.as(
         "publicAnimalCount",
       ),
-      sql<number>`count(distinct case when ${sql.ref(
-        "plant_objects.object_kind",
-      )} = 'bee_colony' then ${sql.ref(
-        "journal_entries.plant_object_id",
-      )} end)`.as("publicBeeColonyCount"),
     ])
     .where("journal_entries.owner_user_id", "=", userId)
     .where("journal_entries.visibility", "=", "public")
@@ -1373,7 +1365,7 @@ function normalizeCatalogKind(value: string | null): CatalogKind | null {
 function normalizePlantObjectKind(
   value: string | null,
 ): PlantObjectKind | null {
-  return value === "plant" || value === "animal" || value === "bee_colony"
+  return value === "plant" || value === "animal"
     ? value
     : null;
 }

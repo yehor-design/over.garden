@@ -145,7 +145,7 @@ const facets: PublicJournalDirectoryFacets = {
   kinds: [
     { kind: "plant", count: 42 },
     { kind: "animal", count: 16 },
-    { kind: "bee_colony", count: 9 },
+    { kind: "animal", count: 9 },
   ],
   catalogs: [
     {
