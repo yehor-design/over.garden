@@ -21,6 +21,8 @@ Bees are a high journal-priority segment, but recognition belongs in the catalog
 
 The code/schema/UI collapse ships in [OVE-211](https://linear.app/overgarden/issue/OVE-211/collapse-object-kinds-to-plant-animal-remove-bee-colony-a-hive-is-an). Until that slice lands, production may still carry the historical three-kind schema; this document is the authoritative product decision for agents and planning.
 
+**[NOTE 2026-07-23]** OVE-211 has landed on `main` (behavior SHA `752b527b51dfd9263598d1367c8c6a33e3aa0920`). Production is the two-kind model; do not treat three-kind production as current. Historical three-kind shipping prose elsewhere (e.g. SCAFFOLD) remains untouched provenance.
+
 Invariant: no future object kind and no per-vertical feature may be added without a superseding dated decision document in `docs/`.
 
 ## Non-goals

@@ -299,3 +299,4 @@ Default визначає geo-IP/Accept-Language на корені `over.garden/`
 Product exposes exactly two object kinds: `plant` and `animal`. A hive is an
 `animal` with a bee-breed catalog identity. See
 `docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`.
+**[ADD 2026-07-23]** D9 is the sole PAGE_ARCH pointer for object kinds; any earlier same-day draft is superseded by `docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`.
