@@ -1,6 +1,6 @@
 # MVP Learning Signals (OVE-200)
 
-Status: shipping contract  
+Status: done on main (Vercel READY)  
 Policy version: `ove200.learning.v1`  
 Date: 2026-07-24
 

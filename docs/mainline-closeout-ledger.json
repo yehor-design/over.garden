@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-23",
+  "updatedAt": "2026-07-24",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "requiredBeforeNextLinearIssues": [],
@@ -733,6 +733,31 @@
         "Docs commit b13b6055a8be3644df5e58ede05e621fe8156594 is on main. Vercel production deployment dpl_5cpKEk51yBi28E4bBjZbnDmiXQGJ reached READY for that SHA and owned over.garden / www.",
         "Annotate-don't-delete: dated REVISED/ADD-pointer banners on PRD, ЦА_CANON (pointer-only), and B3; D9 sole PAGE_ARCH pointer; OBJECT_CATEGORY_MODEL Implementation notes OVE-211 landed.",
         "Does not claim code/schema/UI changes, frozen ЦА threshold edits, SCAFFOLD three-kind rewrite, or OVE-186 Done."
+      ]
+    },
+    {
+      "issueId": "OVE-200",
+      "title": "Trustworthy MVP learning: H1, H4, and H6 exclude synthetic actors and obey privacy and retention",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "33b7d968ef45c89bea11bc951012414dddad945b",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-200/trustworthy-mvp-learning-h1-h4-and-h6-exclude-synthetic-actors-and",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/E6rswkBYD8TCewnqzRhRdSAwVzhh",
+      "completedAt": "2026-07-24",
+      "verificationCommands": [
+        "cd apps/web && pnpm test src/server/analytics-events.test.ts src/server/mvp-learning src/server/pilot-health-repository.test.ts src/server/pilot-cohort-decision-repository.test.ts src/server/pilot-cohort-decision.test.ts",
+        "cd apps/web && pnpm smoke:mvp-learning-signals -- --environment local --confirm-environment local",
+        "cd apps/web && pnpm smoke:mvp-learning-signals -- --environment production --confirm-environment production",
+        "cd apps/web && pnpm retention:report -- --environment production --confirm-environment production --mode dry_run",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm test && pnpm localization:coverage:check && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit a03267cd2edc4ff452b244a3e6385aaddea8abcb plus production-reclassify gate 33b7d968ef45c89bea11bc951012414dddad945b are on main. Vercel production deployment dpl_E6rswkBYD8TCewnqzRhRdSAwVzhh reached READY for 33b7d968e and owned over.garden / www.",
+        "Policy ove200.learning.v1: dual cohorts real_self_serve vs real_closed_pilot; exclusions founder_rehearsal/production_smoke/visual_fixture/editorial_seed/automated_bot; unclassified fails decision closed.",
+        "Additive production SQL 0009 applied; confirmed non-destructive reclassify left unclassifiedEventCount=0 and decisionGate=ok. Redacted baseline in docs/mvp-learning-plan-production-redacted.json (counts/booleans only).",
+        "Does not claim OVE-199 Phase B seed/archive, monetization metrics, BI warehouse, invented pass cohorts, or OVE-186 Done."
       ]
     }
   ]
