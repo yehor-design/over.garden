@@ -716,6 +716,10 @@ claim provenance, `ove203-identity-v1` policy metadata, persisted rename
 cooldown, retired-handle reservation, and clean cascade erasure. The later
 OVE-201 managed-recovery drill must repeat equivalent counts-only checks on a
 new disposable restored cluster; it must never target or overwrite production.
+OVE-201 closed that managed restore on 2026-07-24: see
+`docs/MANAGED_RECOVERY_DRILL.md` and
+`docs/managed-recovery-evidence-redacted.json` (RPO/RTO pass; exact disposable
+teardown; production remained online).
 
 ### Worker and Meilisearch process management
 

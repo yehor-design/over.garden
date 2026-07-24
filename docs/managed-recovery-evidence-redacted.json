@@ -1,0 +1,73 @@
+{
+  "ok": true,
+  "issue": "OVE-201",
+  "policyVersion": "ove201.restore-readiness.v1",
+  "evidenceSafety": "booleans_counts_hashes_durations_only",
+  "drillDateUtc": "2026-07-24",
+  "sourceClusterClass": "overgarden-postgres-prod-fra1",
+  "disposableClusterNameClass": "overgarden-pitr-drill-20260724",
+  "maintenance": {
+    "pendingBefore": true,
+    "action": "applied",
+    "founderConfirmUtc": "2026-07-24T11:57:16Z",
+    "pendingAfter": false,
+    "postStatus": "online",
+    "postBackupRows": 8,
+    "matchingHealthHttp": 200,
+    "siteHealthHttp": 200
+  },
+  "pitr": {
+    "selectedTimestampUtc": "2026-07-24 11:55:46 +0000 UTC",
+    "forkStartedUtc": "2026-07-24T12:00:46Z",
+    "forkOnlineUtc": "2026-07-24T12:07:37Z",
+    "engineVersionMajor": 18
+  },
+  "restoreReadiness": {
+    "ok": true,
+    "schemaAllPresent": true,
+    "identityReady": true,
+    "danglingCoverPointers": 0,
+    "duplicateCoverOnlyAssociations": 0,
+    "crossOwnerCoverClaims": 0,
+    "quarantineOriginalStillPresent": 0,
+    "journalEntries": 196,
+    "mediaAssets": 33,
+    "plantObjects": 174,
+    "authUsers": 64,
+    "publicJournalCandidates": 4,
+    "archivedJournalCandidates": 23,
+    "privateJournalCandidates": 169,
+    "queuePendingOrProcessing": 0,
+    "queueDeadTerminal": 1,
+    "queueDone": 79,
+    "effectiveCoverFingerprintPrefix": "499b9758149aeb34"
+  },
+  "meiliParity": {
+    "environment": "recovery-drill",
+    "meiliHostClass": "loopback_ephemeral",
+    "beforeZeroGap": false,
+    "afterZeroGap": true,
+    "postgresEligibleCount": 4,
+    "meiliDocumentCountAfter": 4,
+    "reindexUpserted": 4,
+    "deletedExtraneous": 69
+  },
+  "rpo": {
+    "predeclaredMaxMs": 3600000,
+    "actualMs": 300000,
+    "pass": true
+  },
+  "rto": {
+    "predeclaredMaxMs": 14400000,
+    "actualMs": 662000,
+    "pass": true
+  },
+  "teardown": {
+    "confirmedExactDisposableId": true,
+    "deleted": true,
+    "teardownUtc": "2026-07-24T12:13:10Z",
+    "productionStatusAfter": "online",
+    "disposableNameRemaining": false
+  },
+  "note": "No credentials, CA bodies, DB URLs, row IDs, emails, journal text, media keys, or precise location recorded."
+}

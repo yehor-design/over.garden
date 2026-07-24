@@ -119,7 +119,6 @@ async function main() {
     }
   } finally {
     await db.destroy();
-    await pool.end();
   }
 }
 

@@ -67,13 +67,15 @@ and behavior include all of the following:
 
 This fresh-bootstrap smoke is the deterministic recovery contract required by
 OVE-203; it is not evidence that DigitalOcean restored a production backup.
-OVE-201 still owns the real managed restore into a newly created disposable
-cluster, predeclared RPO/RTO, restored-data aggregate checks, derived-index
-rebuild, and separately approved exact-target teardown. On that disposable
-fork, run the same identity assertions through OVE-201's guarded
-`smoke:restore-readiness` flow. Never point `smoke:public-identity` at
-production: it intentionally refuses non-loopback database URLs and performs
-synthetic writes even though it cleans them up.
+OVE-201 closed the real managed restore into a newly created disposable
+cluster with predeclared RPO/RTO, restored-data aggregate checks, derived-index
+rebuild, and separately approved exact-target teardown. See
+`docs/MANAGED_RECOVERY_DRILL.md` and
+`docs/managed-recovery-evidence-redacted.json`. On a disposable fork, run the
+same identity assertions through OVE-201's guarded `smoke:restore-readiness`
+flow. Never point `smoke:public-identity` at production: it intentionally
+refuses non-loopback database URLs and performs synthetic writes even though it
+cleans them up.
 
 ## Production sequence
 

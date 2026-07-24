@@ -84,6 +84,16 @@ async function main() {
         "Refuse: recovery-drill DATABASE_URL hostname matches production host class.",
       );
     }
+    const meiliHost = process.env.MEILISEARCH_HOST ?? "";
+    const isLoopbackMeili =
+      meiliHost.startsWith("http://127.0.0.1:") ||
+      meiliHost.startsWith("http://localhost:") ||
+      meiliHost.startsWith("http://[::1]:");
+    if (!isLoopbackMeili) {
+      throw new Error(
+        "Refuse: recovery-drill Meilisearch must be ephemeral loopback (never production Meili).",
+      );
+    }
   }
 
   const {

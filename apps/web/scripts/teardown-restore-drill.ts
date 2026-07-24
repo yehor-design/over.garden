@@ -6,10 +6,8 @@
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 
-import {
-  assertTeardownGate,
-  isDisposableClusterName,
-} from "../src/server/restore-readiness";
+import { isDisposableClusterName } from "../src/server/restore-readiness/contract";
+import { assertTeardownGate } from "../src/server/restore-readiness/gates";
 
 function readFlag(argv: string[], name: string): string | null {
   const index = argv.indexOf(name);
