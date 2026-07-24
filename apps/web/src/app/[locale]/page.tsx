@@ -84,7 +84,7 @@ export async function renderLocalizedHomePage(
       : listPublicFeedPage(request, locale);
   const [feedResult, topicsResult, sessionResult] = await Promise.allSettled([
     feedPromise,
-    listTrustedPublicFeedTopics(),
+    listTrustedPublicFeedTopics(undefined, 6, locale),
     getSiteShellSessionState(),
   ]);
   const feed: PublicFeedPage =

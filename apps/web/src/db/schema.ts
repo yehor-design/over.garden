@@ -8,6 +8,8 @@ export type {
   EntryLifecycleState,
   EntryScope,
   EntryVisibility,
+  JournalContentClass,
+  JournalSourceLanguage,
   EngagementBookmark,
   EngagementBookmarkState,
   EngagementCommentReport,

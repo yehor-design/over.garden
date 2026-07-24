@@ -30,6 +30,8 @@
     "catalog:sources:dry-run": "tsx scripts/dry-run-catalog-full-import.ts",
     "catalog:sources:entity-resolution-qa": "tsx scripts/report-catalog-entity-resolution-qa.ts",
     "catalog:inventory-object-kinds": "tsx scripts/inventory-object-kinds.ts",
+    "launch:corpus:plan": "tsx scripts/launch-corpus-plan.ts",
+    "launch:corpus:check": "tsx scripts/launch-corpus-check.ts",
     "smoke:garden-catalog-ux": "tsx scripts/smoke-garden-catalog-ux.ts",
     "smoke:garden-eu-oj-common-catalogue": "tsx scripts/smoke-garden-eu-oj-common-catalogue.ts",
     "smoke:garden-bg-official-varieties": "tsx scripts/smoke-garden-bg-official-varieties.ts",

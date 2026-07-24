@@ -445,6 +445,7 @@ export interface JournalEntries {
   archived_at: Timestamp | null;
   body: string;
   client_mutation_id: string;
+  content_class: Generated<string>;
   content_document: Json | null;
   content_schema_version: number | null;
   cover_media_asset_id: string | null;
@@ -462,6 +463,7 @@ export interface JournalEntries {
   public_noindex: Generated<boolean>;
   public_slug: string | null;
   published_at: Timestamp | null;
+  source_language: string | null;
   space_id: string;
   title: string;
   updated_at: Generated<Timestamp>;

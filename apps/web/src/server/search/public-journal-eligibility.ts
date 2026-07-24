@@ -15,6 +15,7 @@ import {
   type JournalSearchCoverSource,
 } from "@/server/search/documents";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -169,6 +170,7 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
     .where("journal_entries.entry_scope", "in", ["object", "space"])
     .where("journal_entries.title", "<>", "")
     .where("journal_entries.body", "<>", "")
+    .where(publicLaunchSurfacePredicates())
     .$narrowType<{
       publicSlug: string;
       publishedAt: Date;

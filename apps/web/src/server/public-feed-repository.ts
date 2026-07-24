@@ -12,6 +12,8 @@ import {
 import { isCoarseRegionCode } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -181,6 +183,7 @@ export async function listPublicFeedPage(
 export async function listTrustedPublicFeedTopics(
   executor: QueryExecutor = db,
   limit = 6,
+  locale: PublicLocale = "uk",
 ): Promise<TrustedPublicFeedTopic[]> {
   const rows = await buildTrustedPublicFeedTopicsQuery(
     executor,
@@ -189,7 +192,7 @@ export async function listTrustedPublicFeedTopics(
 
   return rows.map((row) => ({
     slug: row.slug,
-    label: row.label,
+    label: localizeCuratedTopicLabel(row.slug, row.label, locale),
     entryCount: Number(row.entryCount ?? 0),
   }));
 }
@@ -256,6 +259,7 @@ export function buildPublicFeedEntriesQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;
@@ -463,7 +467,8 @@ export function buildTrustedPublicFeedTopicsQuery(
         .on("journal_entries.entry_scope", "=", "object")
         .on("journal_entries.public_gone_at", "is", null)
         .on("journal_entries.public_slug", "is not", null)
-        .on("journal_entries.published_at", "is not", null),
+        .on("journal_entries.published_at", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .leftJoin("plant_objects", (join) =>
       join
@@ -547,7 +552,11 @@ export function serializePublicFeedPage(input: {
         })),
       topics: (topicsByEntry[row.entryId] ?? []).map((topic) => ({
         slug: topic.slug,
-        label: topic.label,
+        label: localizeCuratedTopicLabel(
+          topic.slug,
+          topic.label,
+          input.locale,
+        ),
       })),
     };
   });

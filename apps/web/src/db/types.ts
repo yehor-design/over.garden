@@ -60,6 +60,14 @@ export type { JsonValue };
 export type EntryVisibility = "private" | "public";
 export type EntryLifecycleState = "active" | "archived";
 export type EntryScope = "object" | "space";
+export type JournalContentClass =
+  | "real_ugc"
+  | "founder_first_hand"
+  | "editorial"
+  | "catalog_fact"
+  | "production_smoke"
+  | "visual_fixture";
+export type JournalSourceLanguage = "uk" | "bg";
 export type LocationVisibility = "region" | "hidden";
 export type { CoarseRegionCode } from "@/lib/garden/regions";
 export type VarietyState = "selected" | "unknown" | "user_added" | "free_text";

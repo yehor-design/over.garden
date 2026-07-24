@@ -21,6 +21,7 @@ import {
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import {
   buildPublicFeedMediaQuery,
   buildPublicFeedTopicsForEntriesQuery,
@@ -396,7 +397,8 @@ function publicJournalFacetBase(
     .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .where("journal_entries.published_at", "is not", null);
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 
   const restrictedEntryIds =
     normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);

@@ -1,0 +1,99 @@
+{
+  "ok": true,
+  "environment": "production",
+  "mode": "plan",
+  "issue": "OVE-199",
+  "evidenceClass": "launch_corpus_plan",
+  "report": {
+    "issue": "OVE-199",
+    "evidenceClass": "launch_corpus_plan",
+    "environment": "production",
+    "redacted": true,
+    "contentClassCounts": [
+      {
+        "contentClass": "real_ugc",
+        "count": 196
+      }
+    ],
+    "publicActiveCount": 4,
+    "publicActiveByClass": [
+      {
+        "contentClass": "real_ugc",
+        "count": 4
+      }
+    ],
+    "technicalLabelHits": 0,
+    "tinyPlaceholderMediaHits": 0,
+    "visualFixtureMutationHits": 0,
+    "missingSourceLanguageOnFounderPublic": 0,
+    "archivedWithPublicSlug": 23,
+    "privateActive": 169,
+    "dispositionTargets": [
+      {
+        "qualityClass": "archived_public_slug",
+        "disposition": "reclassify_retain_lifecycle",
+        "count": 23,
+        "notes": "Includes OVE-191 retired synthetic Gone tombs \u2014 retain lifecycle/search parity; never impersonate as real UGC."
+      },
+      {
+        "qualityClass": "founder_seed_slot",
+        "disposition": "seed_after_signoff",
+        "count": 14,
+        "notes": "Seed 14 founder journals (2 spaces / 4 objects) after explicit sign-off + content pack."
+      },
+      {
+        "qualityClass": "public_active_launch",
+        "disposition": "reclassify_production_smoke",
+        "count": 4,
+        "notes": "Existing public-active real_ugc rows must be reviewed under sign-off: archive/hide/reclassify so they are not mistaken for founder first-hand launch corpus."
+      }
+    ],
+    "founderSeedSlots": [
+      "UA-J01",
+      "UA-J02",
+      "UA-J03",
+      "UA-J04",
+      "UA-J05",
+      "UA-J06",
+      "UA-J07",
+      "BG-J01",
+      "BG-J02",
+      "BG-J03",
+      "BG-J04",
+      "BG-J05",
+      "BG-J06",
+      "BG-J07"
+    ],
+    "topology": {
+      "spaces": 2,
+      "objects": 4,
+      "journals": 14,
+      "markets": [
+        "UA",
+        "BG"
+      ]
+    },
+    "localCoverMatrixBranchIds": [
+      "local-no-media",
+      "local-one-inline-auto",
+      "local-multi-explicit",
+      "local-cover-only",
+      "local-reorder-auto",
+      "local-reorder-explicit-stable",
+      "local-keep-as-cover",
+      "local-replace-success",
+      "local-replace-failure",
+      "local-remove-fallback",
+      "local-remove-no-media",
+      "local-aspects",
+      "local-ten-plus-one",
+      "local-eleventh-reject",
+      "local-lifecycle",
+      "local-production-refuse"
+    ],
+    "launchReady": false,
+    "blockingReasons": [
+      "insufficient_founder_first_hand_public"
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import { sql, type Kysely, type RawBuilder, type Transaction } from "kysely";
 import type { Database } from "@/db/schema";
 import {
   VISUAL_FIXTURE_MANIFEST,
+  VISUAL_FIXTURE_NAMESPACE,
   type VisualFixtureManifest,
 } from "@/lib/visual-fixtures/manifest";
 import {
@@ -527,6 +528,9 @@ export function buildVisualFixtureSeedQueries(
         entry_date: entry.entryDate,
         visibility: entry.visibility,
         lifecycle_state: entry.lifecycleState,
+        content_class: "visual_fixture",
+        source_language:
+          entry.locale === "uk" || entry.locale === "bg" ? entry.locale : null,
         public_slug: entry.publicSlug,
         public_noindex: entry.publicNoindex,
         published_at: entry.publishedAt,
@@ -551,6 +555,8 @@ export function buildVisualFixtureSeedQueries(
         entry_date: sql`excluded.entry_date`,
         visibility: sql`excluded.visibility`,
         lifecycle_state: sql`excluded.lifecycle_state`,
+        content_class: sql`excluded.content_class`,
+        source_language: sql`excluded.source_language`,
         public_slug: sql`excluded.public_slug`,
         public_noindex: sql`excluded.public_noindex`,
         published_at: sql`excluded.published_at`,
@@ -1659,6 +1665,15 @@ export async function seedVisualFixtures(
     for (const { query } of buildVisualFixtureSeedQueries(trx, manifest)) {
       await query.execute();
     }
+    await trx
+      .updateTable("journal_entries")
+      .set({ content_class: "visual_fixture" })
+      .where(
+        "client_mutation_id",
+        "like",
+        `${VISUAL_FIXTURE_NAMESPACE}/%`,
+      )
+      .execute();
   });
 
   return getVisualFixtureStatus(database, manifest);
