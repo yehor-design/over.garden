@@ -759,6 +759,31 @@
         "Additive production SQL 0009 applied; confirmed non-destructive reclassify left unclassifiedEventCount=0 and decisionGate=ok. Redacted baseline in docs/mvp-learning-plan-production-redacted.json (counts/booleans only).",
         "Does not claim OVE-199 Phase B seed/archive, monetization metrics, BI warehouse, invented pass cohorts, or OVE-186 Done."
       ]
+    },
+    {
+      "issueId": "OVE-201",
+      "title": "Managed recovery proof: the current journal product restores into a disposable cluster within declared RPO and RTO",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "13a0095e519c3dee3bd781753fe0ae71c081be7c",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-201/managed-recovery-proof-the-current-journal-product-restores-into-a",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/81BPu27C2xom85fXsbeLbPMNKzw7",
+      "completedAt": "2026-07-24",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/server/restore-readiness",
+        "cd apps/web && pnpm smoke:restore-readiness -- --environment recovery-drill --confirm-environment recovery-drill --confirm-cluster-id <disposable> --production-cluster-id <prod> --disposable-cluster-name overgarden-pitr-drill-YYYYMMDD",
+        "cd apps/web && pnpm smoke:public-index-parity -- --environment recovery-drill --confirm-environment recovery-drill --confirm-cluster-id <disposable> --production-cluster-id <prod> --mode apply --allow-non-local-mutation",
+        "cd apps/web && pnpm teardown:restore-drill -- --confirm-delete-cluster-id <disposable> --disposable-cluster-id <disposable> --production-cluster-id <prod> --disposable-cluster-name overgarden-pitr-drill-YYYYMMDD --execute",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm test && pnpm erasure:schema-coverage:check && BETTER_AUTH_SECRET=\"$(openssl rand -base64 32)\" pnpm build",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit 13a0095e519c3dee3bd781753fe0ae71c081be7c is on main. Vercel production deployment dpl_81BPu27C2xom85fXsbeLbPMNKzw7 reached READY for that SHA and owned over.garden / www.",
+        "Predeclared RPO ≤1h / RTO ≤4h; measured RPO 300000 ms and RTO 662000 ms both pass. Maintenance pending cleared by founder-confirmed install_update. Restore-readiness ok; loopback Meili zeroGap true (4/4). Exact disposable teardown deleted=true; production remained online.",
+        "Redacted evidence: docs/managed-recovery-evidence-redacted.json and docs/MANAGED_RECOVERY_DRILL.md. No credentials, CA bodies, DB URLs, row IDs, or private content recorded.",
+        "Does not claim multi-region HA, production failover/cutover, provider migration, or OVE-186 Done."
+      ]
     }
   ]
 }
