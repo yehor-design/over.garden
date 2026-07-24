@@ -2,6 +2,15 @@ import process from "node:process";
 
 import { config as loadEnv } from "dotenv";
 
+import {
+  resolveDatabaseConnection,
+  resolvePgConnectionString,
+} from "../src/db/connection";
+import {
+  hostnameFromDatabaseUrl,
+  hostnameLooksLikeProduction,
+} from "../src/server/restore-readiness";
+
 loadEnv({ path: ".env.local" });
 
 function requireEnvironment(argv: string[]) {
@@ -12,8 +21,14 @@ function requireEnvironment(argv: string[]) {
       "Refuse to run without matching --environment and --confirm-environment.",
     );
   }
-  if (environment !== "local" && environment !== "production") {
-    throw new Error("Environment must be local or production.");
+  if (
+    environment !== "local" &&
+    environment !== "production" &&
+    environment !== "recovery-drill"
+  ) {
+    throw new Error(
+      "Environment must be local, production, or recovery-drill.",
+    );
   }
   return environment;
 }
@@ -26,16 +41,49 @@ function readFlag(argv: string[], name: string): string | null {
 
 async function main() {
   const argv = process.argv.slice(2);
-  // Resolve SSL before any db import — production managed Postgres rejects
+  // Resolve SSL before any db import — managed Postgres rejects
   // non-TLS connections (pg_hba "no encryption").
   const earlyEnvironment = readFlag(argv, "--environment");
-  if (earlyEnvironment === "production" && !process.env.DATABASE_SSL) {
+  if (
+    (earlyEnvironment === "production" ||
+      earlyEnvironment === "recovery-drill") &&
+    !process.env.DATABASE_SSL
+  ) {
     process.env.DATABASE_SSL = "true";
   }
   const environment = requireEnvironment(argv);
   const mode = readFlag(argv, "--mode") ?? "classify";
   if (mode !== "classify" && mode !== "plan" && mode !== "apply") {
     throw new Error("Mode must be classify, plan, or apply.");
+  }
+
+  if (environment === "recovery-drill") {
+    const confirmClusterId = readFlag(argv, "--confirm-cluster-id");
+    const productionClusterId = readFlag(argv, "--production-cluster-id");
+    if (!confirmClusterId || !productionClusterId) {
+      throw new Error(
+        "recovery-drill requires --confirm-cluster-id and --production-cluster-id.",
+      );
+    }
+    if (confirmClusterId === productionClusterId) {
+      throw new Error(
+        "Refuse: recovery-drill confirm-cluster-id equals production-cluster-id.",
+      );
+    }
+    const resolution = resolveDatabaseConnection(process.env);
+    const connectionString = resolvePgConnectionString(
+      process.env,
+      resolution,
+    );
+    if (!connectionString) {
+      throw new Error("recovery-drill requires DATABASE_URL.");
+    }
+    const hostname = hostnameFromDatabaseUrl(connectionString);
+    if (hostnameLooksLikeProduction(hostname)) {
+      throw new Error(
+        "Refuse: recovery-drill DATABASE_URL hostname matches production host class.",
+      );
+    }
   }
 
   const {
@@ -92,9 +140,12 @@ async function main() {
     return;
   }
 
-  if (environment === "production" && !argv.includes("--allow-non-local-mutation")) {
+  if (
+    (environment === "production" || environment === "recovery-drill") &&
+    !argv.includes("--allow-non-local-mutation")
+  ) {
     throw new Error(
-      "Production apply requires --allow-non-local-mutation after reviewing the plan.",
+      "Non-local apply requires --allow-non-local-mutation after reviewing the plan.",
     );
   }
 
