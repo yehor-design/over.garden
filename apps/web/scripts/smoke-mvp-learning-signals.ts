@@ -47,9 +47,9 @@ async function main() {
   );
 
   if (confirmReclassify) {
-    if (environment === "production") {
+    if (environment === "production" && !argv.includes("--confirm-production-reclassify")) {
       throw new Error(
-        "Production reclassify is refused by this CLI without a dedicated maintainer path; run plan only.",
+        "Production reclassify refused without --confirm-production-reclassify after reviewing the SELECT-only plan.",
       );
     }
     const result = await applyMvpLearningReclassify({ confirm: true });

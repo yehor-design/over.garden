@@ -58,7 +58,11 @@ Production plan/smoke require matching `--environment production --confirm-envir
 pnpm smoke:mvp-learning-signals -- --environment local --confirm-environment local --confirm-reclassify
 ```
 
-Production reclassify is refused by the CLI.
+Production reclassify (after reviewing the SELECT-only plan):
+
+```bash
+pnpm smoke:mvp-learning-signals -- --environment production --confirm-environment production --confirm-reclassify --confirm-production-reclassify
+```
 
 ## Operator surfaces
 

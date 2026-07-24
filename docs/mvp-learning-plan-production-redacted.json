@@ -2,16 +2,31 @@
   "ok": true,
   "issue": "OVE-200",
   "policyVersion": "ove200.learning.v1",
-  "note": "Redacted baseline placeholder. Refresh with pnpm mvp-learning:plan against the target environment; never commit row IDs, journal text, emails, or media keys.",
-  "cohorts": {
-    "real_self_serve": "separate",
-    "real_closed_pilot": "separate"
+  "decisionGate": "ok",
+  "agreement": {
+    "selfServeActivated": 6,
+    "closedPilotActivated": 6,
+    "unclassifiedEvents": 0,
+    "exclusionsTotal": 31
   },
-  "excludedClasses": [
-    "founder_rehearsal",
-    "production_smoke",
-    "visual_fixture",
-    "editorial_seed",
-    "automated_bot"
-  ]
+  "exclusions": {
+    "founder_rehearsal": 31,
+    "production_smoke": 0,
+    "visual_fixture": 0,
+    "editorial_seed": 0,
+    "automated_bot": 0
+  },
+  "cohorts": {
+    "real_self_serve": {
+      "activatedGardeners": 6,
+      "h1RetainedGardeners": 1,
+      "publishedEntries": 2
+    },
+    "real_closed_pilot": {
+      "activatedGardeners": 6,
+      "h1RetainedGardeners": 6,
+      "publishedEntries": 2
+    }
+  },
+  "note": "Redacted production baseline after additive 0009 schema + non-destructive reclassify. No row IDs, journal text, emails, or media keys."
 }
