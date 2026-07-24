@@ -687,6 +687,31 @@
         "Production inventory (vercel env run): animal 14 / bee_colony 16 / plant 229; script SAFE TO COLLAPSE=no solely for visual-fixture rows 18700003-\u2026028 (species) and \u2026030 (user_added). Operator go/no-go=go with OVE-211 required to remediate those fixtures during collapse. All non-fixture bee_colony rows are ua_official_bee_breed.",
         "Does not claim kind-model migration, production data mutation, credential embedding, or OVE-211 Done. Full pnpm test suite has pre-existing unrelated failures on main; OVE-210 unit tests, lint, and typecheck are green."
       ]
+    },
+    {
+      "issueId": "OVE-211",
+      "title": "Collapse object kinds to {plant, animal}: remove bee_colony, a hive is an animal with a bee-breed identity",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "752b527b51dfd9263598d1367c8c6a33e3aa0920",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-211/collapse-object-kinds-to-plant-animal-remove-bee-colony-a-hive-is-an",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5pVJyf2i5xukqAybzGcBFKMumjfW",
+      "completedAt": "2026-07-23",
+      "verificationCommands": [
+        "rg -n \"bee_colony|beeColony|BeeColony\" apps/web/src apps/web/app apps/web/sql",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm db:types:check && pnpm test && pnpm test:a11y && pnpm erasure:schema-coverage:check && pnpm build && pnpm drive2:closeout:check",
+        "cd apps/web && pnpm catalog:inventory-object-kinds",
+        "cd apps/web && pnpm smoke:drive2-production -- --base-url https://over.garden --expected-commit 752b527b51dfd9263598d1367c8c6a33e3aa0920 --deployed-commit 752b527b51dfd9263598d1367c8c6a33e3aa0920 --profile-path <redacted-public-profile-path>",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit 752b527b51dfd9263598d1367c8c6a33e3aa0920 is on main. Vercel production deployment dpl_5pVJyf2i5xukqAybzGcBFKMumjfW reached READY for that SHA and owned over.garden / www.",
+        "SQL: 0001 create-table CHECK + bootstrap UPDATE/drop/recreate; additive production 0007 remediates OVE-210 fixture outliers then collapses bee_colony to animal. Production before: animal 5 / bee_colony 6 / plant 163; after: animal 11 / plant 163; unexpected kinds 0; second apply idempotent.",
+        "Post-apply inventory: SAFE TO COLLAPSE yes; kinds plant|animal only. Acceptance rg leaves only SQL WHERE migration lines plus analytics historical-value comment.",
+        "Local DoD green including a11y; loopback Origin alias fix in interface-request-guard unblocked Bulgaria same-path locale preference under 127.0.0.1 harness. smoke:drive2-production commitMatch true with guest reads and auth-intent boundaries.",
+        "Does not claim plant_objects rename, bee/pet vertical features, OVE-212 research rewrite, bee catalog deletion, or OVE-186 Done."
+      ]
     }
   ]
 }
