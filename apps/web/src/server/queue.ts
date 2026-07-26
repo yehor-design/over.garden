@@ -4,6 +4,10 @@ import { randomUUID } from "node:crypto";
 
 import { db } from "@/db";
 import type { JsonValue } from "@/db/types";
+import {
+  JobQueuePayloadContractError,
+  validateJobQueuePayload,
+} from "@/server/job-queue-manifest";
 
 export interface EnqueueJobOptions {
   idempotencyKey?: string;
@@ -15,6 +19,13 @@ export async function enqueueJob(
   payload: JsonValue,
   options: EnqueueJobOptions = {},
 ): Promise<string> {
+  // OVE-225: refuse before the row exists, so a non-conforming payload is never
+  // persisted — not even long enough for the database constraint to reject it.
+  const violation = validateJobQueuePayload(queueName, payload);
+  if (violation) {
+    throw new JobQueuePayloadContractError(violation);
+  }
+
   const availableAt = new Date(Date.now() + (options.delaySeconds ?? 0) * 1000);
   const id = randomUUID();
 

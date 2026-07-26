@@ -18,7 +18,7 @@ const repoRoot = path.resolve(
 
 describe("job queue manifest", () => {
   it("covers every matching, erasure, and media-lifecycle producer kind with attempt bounds", () => {
-    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove195.job-queue.v1");
+    expect(JOB_QUEUE_MANIFEST_VERSION).toBe("ove225.job-queue.v2");
     expect(matchingSupportedKinds()).toEqual([
       "catalog_alias_suggestions_refresh",
       "catalog_fuzzy_duplicate_qa_refresh",
@@ -66,4 +66,58 @@ describe("job queue manifest", () => {
     expect(python).toContain("JOURNAL_ENTRY_UNINDEX_KIND");
     expect(python).toContain("coversStructuredJournalCover\": True");
   });
+
+  it("mirrors every per-kind payload contract in the Python manifest", () => {
+    const python = readFileSync(
+      path.join(repoRoot, "services/matching/app/job_queue_manifest.py"),
+      "utf8",
+    );
+    const mirrored = parsePythonPayloadContracts(python);
+
+    expect([...mirrored.keys()].sort()).toEqual(
+      JOB_QUEUE_MANIFEST.map((entry) => jobQueueManifestKey(entry)).sort(),
+    );
+
+    for (const entry of JOB_QUEUE_MANIFEST) {
+      const key = jobQueueManifestKey(entry);
+      expect(mirrored.get(key), key).toEqual({
+        requiredKeys: [...entry.payloadContract.requiredKeys],
+        optionalKeys: [...entry.payloadContract.optionalKeys],
+        uuidKeys: [...entry.payloadContract.uuidKeys],
+      });
+    }
+  });
 });
+
+/**
+ * Parses JOB_QUEUE_PAYLOAD_CONTRACTS out of the Python mirror. Parsing rather
+ * than substring-matching keeps the drift check independent of ruff formatting
+ * while still failing closed when either side declares a different key set.
+ */
+function parsePythonPayloadContracts(python: string) {
+  const block = /JOB_QUEUE_PAYLOAD_CONTRACTS:\s*Final\s*=\s*\{([\s\S]*?)\n\}/.exec(
+    python,
+  );
+  expect(block, "JOB_QUEUE_PAYLOAD_CONTRACTS is missing").not.toBeNull();
+
+  const entries = new Map<
+    string,
+    { requiredKeys: string[]; optionalKeys: string[]; uuidKeys: string[] }
+  >();
+  const entryPattern =
+    /"([^"]+)":\s*\{\s*"requiredKeys":\s*\[([^\]]*)\],\s*"optionalKeys":\s*\[([^\]]*)\],\s*"uuidKeys":\s*\[([^\]]*)\],?\s*\}/g;
+
+  for (const match of block![1].matchAll(entryPattern)) {
+    entries.set(match[1], {
+      requiredKeys: pythonStringList(match[2]),
+      optionalKeys: pythonStringList(match[3]),
+      uuidKeys: pythonStringList(match[4]),
+    });
+  }
+
+  return entries;
+}
+
+function pythonStringList(source: string): string[] {
+  return [...source.matchAll(/"([^"]*)"/g)].map((match) => match[1]);
+}

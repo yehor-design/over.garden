@@ -5,8 +5,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  formatJobQueuePayloadViolation,
   JOB_QUEUE_MANIFEST,
+  JobQueuePayloadContractError,
   jobQueueManifestKey,
+  payloadContractFor,
+  validateJobQueuePayload,
 } from "./job-queue-manifest";
 
 interface JobProducer {
@@ -224,6 +228,193 @@ describe("job queue producer/consumer contract", () => {
         contract.consumerToken,
       );
       expect(readFileSync(testPath, "utf8")).toContain(kind);
+    }
+  });
+});
+
+const ENTRY_ID = "9f9a1f0c-0f1a-4a2b-8c3d-4e5f60718293";
+const OWNER_ID = "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9";
+
+function journalPayload(overrides: Record<string, unknown> = {}) {
+  return {
+    kind: "journal_entry_index",
+    journalEntryId: ENTRY_ID,
+    userId: OWNER_ID,
+    ...overrides,
+  };
+}
+
+describe("OVE-225 payload contract", () => {
+  it("declares a machine-checkable contract for every manifest kind", () => {
+    for (const entry of JOB_QUEUE_MANIFEST) {
+      const contract = entry.payloadContract;
+      expect(contract.requiredKeys, jobQueueManifestKey(entry)).toContain(
+        "kind",
+      );
+      expect(new Set(contract.requiredKeys).size).toBe(
+        contract.requiredKeys.length,
+      );
+      const declared = new Set([
+        ...contract.requiredKeys,
+        ...contract.optionalKeys,
+      ]);
+      for (const uuidKey of contract.uuidKeys) {
+        expect(declared.has(uuidKey), uuidKey).toBe(true);
+      }
+      for (const optional of contract.optionalKeys) {
+        expect(contract.requiredKeys).not.toContain(optional);
+      }
+    }
+  });
+
+  it("accepts the exact declared shape for both journal kinds", () => {
+    expect(validateJobQueuePayload("matching", journalPayload())).toBeNull();
+    expect(
+      validateJobQueuePayload(
+        "matching",
+        journalPayload({ kind: "journal_entry_unindex" }),
+      ),
+    ).toBeNull();
+  });
+
+  it("refuses an extra key without echoing its name or value", () => {
+    for (const extra of [
+      { title: "private journal title" },
+      { body: "private journal body" },
+      { email: "someone@example.com" },
+      { mediaUrl: "https://media.example/quarantine/original.jpg" },
+      { latitude: "50.4501" },
+    ]) {
+      const violation = validateJobQueuePayload(
+        "matching",
+        journalPayload(extra),
+      );
+      expect(violation?.ruleClass).toBe("unexpected_key");
+      expect(violation?.key).toBeNull();
+
+      const message = formatJobQueuePayloadViolation(violation!);
+      for (const [key, value] of Object.entries(extra)) {
+        expect(message).not.toContain(key);
+        expect(message).not.toContain(value);
+      }
+      expect(message).toContain("unexpected_key");
+    }
+  });
+
+  it("refuses a missing key, a wrong type, a blank value, and a non-UUID id", () => {
+    const missing = journalPayload();
+    delete (missing as Record<string, unknown>).userId;
+    expect(validateJobQueuePayload("matching", missing)).toMatchObject({
+      ruleClass: "missing_required_key",
+      key: "userId",
+    });
+
+    expect(
+      validateJobQueuePayload("matching", journalPayload({ userId: 42 })),
+    ).toMatchObject({ ruleClass: "non_string_value", key: "userId" });
+
+    expect(
+      validateJobQueuePayload("matching", journalPayload({ userId: "  " })),
+    ).toMatchObject({ ruleClass: "non_string_value", key: "userId" });
+
+    expect(
+      validateJobQueuePayload(
+        "matching",
+        journalPayload({ journalEntryId: "entry-id" }),
+      ),
+    ).toMatchObject({ ruleClass: "non_uuid_value", key: "journalEntryId" });
+  });
+
+  it("refuses a non-object payload and an undeclared kind without echoing it", () => {
+    for (const payload of [null, "kind", 7, [journalPayload()]]) {
+      expect(validateJobQueuePayload("matching", payload)?.ruleClass).toBe(
+        "payload_not_object",
+      );
+    }
+
+    const violation = validateJobQueuePayload("matching", {
+      kind: "journal_entry_index_but_not_really",
+      secret: "do-not-leak",
+    });
+    expect(violation?.ruleClass).toBe("unknown_kind");
+    expect(violation?.kind).toBeNull();
+    expect(formatJobQueuePayloadViolation(violation!)).not.toContain(
+      "do-not-leak",
+    );
+  });
+
+  it("scopes a contract to its own queue name", () => {
+    expect(payloadContractFor("matching", "media_derivative_revoke")).toBeNull();
+    expect(validateJobQueuePayload("erasure", journalPayload())?.ruleClass).toBe(
+      "unknown_kind",
+    );
+  });
+
+  it("honours declared optional keys", () => {
+    const revoke = {
+      kind: "media_derivative_revoke",
+      mediaAssetId: ENTRY_ID,
+      bucket: "public",
+      objectKey: "derivatives/a.jpg",
+      reason: "archived",
+    };
+    expect(validateJobQueuePayload("media_lifecycle", revoke)).toBeNull();
+    expect(
+      validateJobQueuePayload("media_lifecycle", {
+        ...revoke,
+        journalEntryId: ENTRY_ID,
+      }),
+    ).toBeNull();
+    expect(
+      validateJobQueuePayload("media_lifecycle", {
+        ...revoke,
+        journalEntryId: "not-a-uuid",
+      })?.ruleClass,
+    ).toBe("non_uuid_value");
+  });
+
+  it("carries the rule class on the producer error without a payload value", () => {
+    const violation = validateJobQueuePayload(
+      "matching",
+      journalPayload({ body: "private journal body" }),
+    );
+    const error = new JobQueuePayloadContractError(violation!);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe("JobQueuePayloadContractError");
+    expect(error.violation.ruleClass).toBe("unexpected_key");
+    expect(error.message).not.toContain("private journal body");
+    expect(error.message).toContain("matching:journal_entry_index");
+  });
+
+  it("keeps the storage constraints aligned with the manifest, added not valid", () => {
+    const migration = readFileSync(
+      path.join(
+        repoRoot,
+        "apps/web/sql/0010_ove225_job_queue_payload_contract.sql",
+      ),
+      "utf8",
+    );
+
+    for (const kind of ["journal_entry_index", "journal_entry_unindex"]) {
+      const constraint = `job_queue_${kind}_payload_check`;
+      expect(migration).toContain(`add constraint ${constraint} check (`);
+      // job_queue retains done/failed/dead rows, so history must not block it.
+      expect(
+        new RegExp(`add constraint ${constraint}[\\s\\S]*?\\) not valid;`).test(
+          migration,
+        ),
+        constraint,
+      ).toBe(true);
+
+      const contract = payloadContractFor("matching", kind);
+      const keyArray = `array[${contract!.requiredKeys
+        .map((key) => `'${key}'`)
+        .join(", ")}]::text[]`;
+      expect(migration).toContain(`payload ?& ${keyArray}`);
+      expect(migration).toContain(`payload - ${keyArray} = '{}'::jsonb`);
+      for (const uuidKey of contract!.uuidKeys) {
+        expect(migration).toContain(`payload->>'${uuidKey}' ~*`);
+      }
     }
   });
 });

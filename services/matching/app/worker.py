@@ -33,7 +33,7 @@ from app.catalog_fuzzy_duplicates import (
     refresh_catalog_fuzzy_duplicate_suggestions,
 )
 from app.job_handlers import SUPPORTED_JOB_KINDS
-from app.job_queue_manifest import max_attempts_for_kind
+from app.job_queue_manifest import max_attempts_for_kind, payload_contract_for_kind
 from app.search import (
     CATALOG_TYPEAHEAD_REINDEX_KIND,
     JOURNAL_ENTRY_INDEX_KIND,
@@ -202,6 +202,7 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         raise TerminalJobError("unsupported_kind", "unsupported job kind")
 
     if kind == CATALOG_TYPEAHEAD_REINDEX_KIND:
+        _require_exact_payload_shape(payload, CATALOG_TYPEAHEAD_REINDEX_KIND)
         reindex_catalog_typeahead(conn)
         return
 
@@ -209,7 +210,6 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         _require_exact_payload_shape(
             payload,
             CATALOG_MATCH_SUGGESTIONS_REFRESH_KIND,
-            {"kind", "sourceCatalogItemId"},
         )
         refresh_catalog_match_suggestions(
             conn,
@@ -225,7 +225,6 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         _require_exact_payload_shape(
             payload,
             CATALOG_ALIAS_SUGGESTIONS_REFRESH_KIND,
-            {"kind", "catalogItemId"},
         )
         refresh_catalog_alias_suggestions(
             conn,
@@ -241,12 +240,12 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         _require_exact_payload_shape(
             payload,
             CATALOG_FUZZY_DUPLICATE_QA_REFRESH_KIND,
-            {"kind"},
         )
         refresh_catalog_fuzzy_duplicate_suggestions(conn)
         return
 
     if kind == JOURNAL_ENTRY_INDEX_KIND:
+        _require_exact_payload_shape(payload, JOURNAL_ENTRY_INDEX_KIND)
         index_journal_entry(
             conn,
             _payload_uuid_text(
@@ -259,6 +258,7 @@ def _handle(conn: psycopg.Connection, payload: Any) -> None:
         return
 
     if kind == JOURNAL_ENTRY_UNINDEX_KIND:
+        _require_exact_payload_shape(payload, JOURNAL_ENTRY_UNINDEX_KIND)
         unindex_journal_entry_for_owner(
             conn,
             _payload_uuid_text(
@@ -294,12 +294,22 @@ def _payload_uuid_text(payload: dict[str, Any], key: str, job_kind: str) -> str:
         ) from error
 
 
-def _require_exact_payload_shape(
-    payload: dict[str, Any],
-    job_kind: str,
-    expected_keys: set[str],
-) -> None:
-    if set(payload) != expected_keys:
+def _require_exact_payload_shape(payload: dict[str, Any], job_kind: str) -> None:
+    """Refuse any key outside the manifest contract for this kind.
+
+    OVE-225: the expected key set is read from the shared manifest rather than
+    restated at each call site, so the TypeScript producer, the Postgres CHECK
+    constraints, and this consumer cannot drift apart.
+    """
+    contract = payload_contract_for_kind(job_kind)
+    if contract is None:
+        raise TerminalJobError("unsupported_kind", "unsupported job kind")
+
+    required = set(contract["requiredKeys"])
+    allowed = required | set(contract["optionalKeys"])
+    present = set(payload)
+
+    if not required <= present or not present <= allowed:
         raise TerminalJobError(
             "invalid_payload",
             f"unsupported payload shape for {job_kind}",
