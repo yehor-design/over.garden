@@ -131,6 +131,10 @@ def test_worker_requires_a_uuid_catalog_match_source_id():
         )
 
 
+JOURNAL_ENTRY_ID = "9f9a1f0c-0f1a-4a2b-8c3d-4e5f60718293"
+JOURNAL_OWNER_ID = "1b2c3d4e-5f60-4718-8293-a4b5c6d7e8f9"
+
+
 def test_worker_handles_journal_entry_index(monkeypatch):
     calls = []
 
@@ -143,12 +147,12 @@ def test_worker_handles_journal_entry_index(monkeypatch):
         "conn",
         {
             "kind": "journal_entry_index",
-            "journalEntryId": "entry-id",
-            "userId": "owner-id",
+            "journalEntryId": JOURNAL_ENTRY_ID,
+            "userId": JOURNAL_OWNER_ID,
         },
     )
 
-    assert calls == [("conn", "entry-id", "owner-id")]
+    assert calls == [("conn", JOURNAL_ENTRY_ID, JOURNAL_OWNER_ID)]
 
 
 def test_worker_handles_journal_entry_unindex(monkeypatch):
@@ -163,12 +167,106 @@ def test_worker_handles_journal_entry_unindex(monkeypatch):
         "conn",
         {
             "kind": "journal_entry_unindex",
-            "journalEntryId": "entry-id",
-            "userId": "owner-id",
+            "journalEntryId": JOURNAL_ENTRY_ID,
+            "userId": JOURNAL_OWNER_ID,
         },
     )
 
-    assert calls == [("conn", "entry-id", "owner-id")]
+    assert calls == [("conn", JOURNAL_ENTRY_ID, JOURNAL_OWNER_ID)]
+
+
+@pytest.mark.parametrize(
+    "job_kind",
+    ["journal_entry_index", "journal_entry_unindex"],
+)
+@pytest.mark.parametrize(
+    "extra_key",
+    ["title", "body", "email", "mediaUrl", "latitude"],
+)
+def test_worker_refuses_extra_journal_payload_keys(monkeypatch, job_kind, extra_key):
+    """OVE-225: an extra key is terminal and its value never reaches the error."""
+
+    def unreachable(*args, **kwargs):
+        raise AssertionError("handler must not run for a non-conforming payload")
+
+    monkeypatch.setattr(worker, "index_journal_entry", unreachable)
+    monkeypatch.setattr(worker, "unindex_journal_entry_for_owner", unreachable)
+
+    with pytest.raises(ValueError, match="unsupported payload shape") as error:
+        worker._handle(
+            "conn",
+            {
+                "kind": job_kind,
+                "journalEntryId": JOURNAL_ENTRY_ID,
+                "userId": JOURNAL_OWNER_ID,
+                extra_key: "do-not-leak",
+            },
+        )
+
+    assert error.value.code == "invalid_payload"
+    assert "do-not-leak" not in str(error.value)
+    assert extra_key not in str(error.value)
+
+
+@pytest.mark.parametrize(
+    "job_kind",
+    ["journal_entry_index", "journal_entry_unindex"],
+)
+def test_worker_refuses_wrong_typed_journal_identifiers(monkeypatch, job_kind):
+    """OVE-225: a non-string or non-UUID identifier is terminal, never retried."""
+
+    def unreachable(*args, **kwargs):
+        raise AssertionError("handler must not run for a non-conforming payload")
+
+    monkeypatch.setattr(worker, "index_journal_entry", unreachable)
+    monkeypatch.setattr(worker, "unindex_journal_entry_for_owner", unreachable)
+
+    with pytest.raises(ValueError, match="journalEntryId is required") as wrong_type:
+        worker._handle(
+            "conn",
+            {
+                "kind": job_kind,
+                "journalEntryId": 42,
+                "userId": JOURNAL_OWNER_ID,
+            },
+        )
+    assert wrong_type.value.code == "invalid_payload"
+
+    with pytest.raises(ValueError, match="must be a valid UUID") as non_uuid:
+        worker._handle(
+            "conn",
+            {
+                "kind": job_kind,
+                "journalEntryId": "entry-id",
+                "userId": JOURNAL_OWNER_ID,
+            },
+        )
+    assert non_uuid.value.code == "invalid_payload"
+
+    with pytest.raises(ValueError, match="unsupported payload shape"):
+        worker._handle(
+            "conn",
+            {
+                "kind": job_kind,
+                "journalEntryId": JOURNAL_ENTRY_ID,
+            },
+        )
+
+
+def test_worker_payload_shape_check_reads_the_shared_manifest():
+    """INV-03/INV-06: one contract owner, consumed rather than restated."""
+    from app.job_queue_manifest import (
+        JOB_QUEUE_PAYLOAD_CONTRACTS,
+        payload_contract_for_kind,
+    )
+
+    contract = payload_contract_for_kind("journal_entry_index")
+    assert contract == JOB_QUEUE_PAYLOAD_CONTRACTS["matching:journal_entry_index"]
+    assert contract["requiredKeys"] == ["kind", "journalEntryId", "userId"]
+    assert payload_contract_for_kind("not_a_declared_kind") is None
+
+    for entry in worker.SUPPORTED_JOB_KINDS:
+        assert payload_contract_for_kind(entry) is not None
 
 
 def test_worker_fails_unknown_job_kind_without_echoing_payload():
@@ -192,7 +290,7 @@ def test_worker_requires_journal_payload_fields_without_echoing_values():
             {
                 "kind": "journal_entry_index",
                 "journalEntryId": " ",
-                "userId": "owner-id",
+                "userId": JOURNAL_OWNER_ID,
             },
         )
 
@@ -201,7 +299,7 @@ def test_worker_requires_journal_payload_fields_without_echoing_values():
             "conn",
             {
                 "kind": "journal_entry_index",
-                "journalEntryId": "entry-id",
+                "journalEntryId": JOURNAL_ENTRY_ID,
                 "userId": " ",
             },
         )
@@ -220,7 +318,7 @@ def test_worker_requires_journal_payload_fields_without_echoing_values():
             "conn",
             {
                 "kind": "journal_entry_unindex",
-                "journalEntryId": "entry-id",
+                "journalEntryId": JOURNAL_ENTRY_ID,
                 "userId": " ",
             },
         )
