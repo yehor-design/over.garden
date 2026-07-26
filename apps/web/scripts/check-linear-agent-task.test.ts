@@ -3839,3 +3839,63 @@ describe("Linear AI execution task validator", () => {
     ).toThrow("Provide exactly one");
   });
 });
+
+describe("Linear list-marker normalization", () => {
+  function toAsteriskBullets(source: string): string {
+    let insideFence = false;
+
+    return source
+      .split("\n")
+      .map((line) => {
+        if (/^\s{0,3}(?:```|~~~)/.test(line)) {
+          insideFence = !insideFence;
+          return line;
+        }
+        if (insideFence) return line;
+        return line.replace(/^( {0,3})-(\s+)/, "$1*$2");
+      })
+      .join("\n");
+  }
+
+  it("validates a saved Linear description that uses `*` list markers", () => {
+    const dashSource = validVerticalExecutionTask();
+    const asteriskSource = toAsteriskBullets(dashSource);
+
+    expect(asteriskSource).not.toBe(dashSource);
+    expect(validateLinearAgentTask(dashSource).errors).toEqual([]);
+    expect(validateLinearAgentTask(asteriskSource).errors).toEqual([]);
+  });
+
+  it("validates a saved description whose issue mentions are `<issue>` tags", () => {
+    const issueTag =
+      '<issue id="abc" href="https://linear.app/overgarden/issue/OVE-195/x">OVE-195</issue>';
+    const tagged = validFinalTask({
+      "Root cause or proof gap":
+        `The proved closest failing boundary is a missing guard first shipped by ${issueTag}, and the regression entered with that refactor. ` +
+        "Stop condition: stop before merge when the reproduction no longer fails. Decision branch: reopen with the exact call site named.",
+    });
+
+    expect(tagged).toContain("<issue ");
+    expect(validateLinearAgentTask(tagged).errors).toEqual([]);
+  });
+
+  it("digests the untouched source rather than the normalized text", () => {
+    const dashSource = validVerticalExecutionTask();
+    const asteriskSource = toAsteriskBullets(dashSource);
+
+    expect(validateLinearAgentTask(asteriskSource).sha256).not.toBe(
+      validateLinearAgentTask(dashSource).sha256,
+    );
+  });
+
+  it("leaves emphasis and fenced code untouched", () => {
+    const report = validateLinearAgentTask(
+      validFinalTask({
+        "Root cause or proof gap":
+          "**Bold lead** stays emphasis, not a list marker. The proved closest failing boundary is a missing guard, and the regression entered with the prior refactor. Stop condition: stop before merge when the reproduction no longer fails. Decision branch: reopen with the exact call site named.",
+      }),
+    );
+
+    expect(report.errors).toEqual([]);
+  });
+});
