@@ -104,8 +104,8 @@ in Vercel or another deployed runtime.
 
 ## Next SDD Rule
 
-From here, product work must be vertical. `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is the living execution roadmap, not a full backlog.
+From here, product implementation must be vertical. `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` is the binding construction contract, and `docs/SDD_VERTICAL_SLICE_ROADMAP.md` is the living repository mirror rather than a full or primary queue.
 
-A valid Linear task must name the end-to-end user behavior and touch the necessary layers together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Do not build all database schema, all UI, all media, all analytics, all public pages, or all worker logic as isolated horizontal phases.
+A valid product execution task names the end-to-end user behavior and touches the necessary layers together: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media/offline/event boundary when relevant -> tests -> docs. Remediation, operator, decision, canon-correction, and coordination-container items use the standard's explicit bounded contracts. Do not build all database schema, all UI, all media, all analytics, all public pages, or all worker logic as isolated horizontal phases.
 
-Before creating or accepting a Linear issue, run the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. If the task only proves one layer in isolation, rewrite it before implementation.
+Before creating or accepting a Linear issue, run the common `SDD Slice Test` and the applicable issue-kind test in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. Rewrite isolated product-layer work; a localized remediation may retain one enforceable boundary only when its kind-specific contract proves the complete affected journey.

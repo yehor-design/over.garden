@@ -1,9 +1,8 @@
 {
-  "schemaVersion": 1,
-  "updatedAt": "2026-07-24",
+  "schemaVersion": 2,
+  "updatedAt": "2026-07-26",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
-  "requiredBeforeNextLinearIssues": [],
   "entries": [
     {
       "issueId": "OVE-29",
@@ -345,6 +344,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-202",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/A45oWncnSHncWwnfgvDQ8LDJmKwx",
+      "githubDeploymentId": 5571466808,
+      "githubDeploymentStatusId": 15840598292,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm smoke:structured-journal-composer",
@@ -371,6 +372,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-206/accessible-story-block-reordering-gardener-drags-or-moves-every",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/DB1wi9J1AVpLb8JAxX11aqxEKbkg",
+      "githubDeploymentId": 5571728607,
+      "githubDeploymentStatusId": 15841358462,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm smoke:journal-block-reorder",
@@ -397,6 +400,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-207/journal-cover-selection-gardener-chooses-any-story-image-or-uploads-a",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/DzaJocvLjED2dBrYzUEWZTp2bTA4",
+      "githubDeploymentId": 5572145636,
+      "githubDeploymentStatusId": 15842579584,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm smoke:journal-cover-selection",
@@ -423,6 +428,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-192/current-schema-erasure-an-approved-account-request-finishes-without-fk",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/7teP4hQiCe4xjRv8auXGKHyrdgXN",
+      "githubDeploymentId": 5572577404,
+      "githubDeploymentStatusId": 15843812180,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm db:types:check",
@@ -453,6 +460,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-194/bounded-queue-recovery-poison-jobs-stop-retrying-and-operators-see",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5xPJcpyvhkq6L43HzbcLUBA1aooC",
+      "githubDeploymentId": 5572940060,
+      "githubDeploymentStatusId": 15844812568,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm db:types:check",
@@ -483,6 +492,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-195/media-lifecycle-closure-archive-and-retention-make-old-derivatives-and",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/Cv3aFMqmb6oLNUkYwGMhabo26tTJ",
+      "githubDeploymentId": 5574139463,
+      "githubDeploymentStatusId": 15848205909,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm db:types:check",
@@ -513,7 +524,9 @@
       "mainCommit": "6eb978ba46094fb7b85ecd8546838f7e1203b5f3",
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-208/global-google-sans-typography-every-visitor-reads-a-consistent-fast",
-      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/29991370703",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/321BfqUoZeJAnttDKewbM99DP4o3",
+      "githubDeploymentId": 5570592879,
+      "githubDeploymentStatusId": 15838058249,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm typography:assets:check",
@@ -538,6 +551,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-193/self-serve-first-journal-a-new-gardener-signs-up-and-saves-without-a",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/2znjaaXeytgc51fkkwWFN5xoa2S9",
+      "githubDeploymentId": 5574714863,
+      "githubDeploymentStatusId": 15849837667,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm test src/server/pilot-write-access.test.ts src/lib/garden/actor-class.test.ts src/app/api/garden/entries/route.test.ts",
@@ -566,6 +581,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-196/search-parity-public-routes-and-meilisearch-converge-with-no-stale",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5Khunrs83rBmQvcf7HH7Wg4AFx6v",
+      "githubDeploymentId": 5575471005,
+      "githubDeploymentStatusId": 15851964311,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm exec vitest run src/server/search/documents.test.ts src/server/search/public-journal-parity.test.ts",
@@ -594,6 +611,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-197",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/7A6SDLQwfbzrcunDtTrqcv816gVs",
+      "githubDeploymentId": 5577165327,
+      "githubDeploymentStatusId": 15856968915,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm exec vitest run src/lib/media/presentation-contract.test.ts src/server/media/processor.test.ts src/server/media/derivatives.test.ts src/server/media/media-schema-contract.test.ts",
@@ -618,8 +637,12 @@
       "requiredForNextSlice": true,
       "mainCommit": "85b2d737a88ff58938e99f191b2017eae92ba675",
       "mainRef": "main",
+      "proofCommit": "32a9030f52662f5a04daf58d61baa7ad1d9f36b1",
+      "proofCommitReason": "closeout_only_descendant",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-198/meilisearch-upgrade-public-search-survives-an-immutable-version",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/39prmfUBYY8b6SRTcs4nQBcxLpdu",
+      "githubDeploymentId": 5577596130,
+      "githubDeploymentStatusId": 15858196598,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "curl -fsS https://meili.over.garden/health",
@@ -648,6 +671,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-209/object-category-canon-record-the-two-kind-plant-animal-decision-as",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/4PYcX19zcpCMRaRQPG9UwDddPjd5",
+      "githubDeploymentId": 5577706831,
+      "githubDeploymentStatusId": 15858506141,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "test -f docs/OBJECT_CATEGORY_MODEL_2026-07-23.md",
@@ -672,6 +697,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-210/pre-migration-inventory-operator-confirms-production-bee-colony",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/4DQoNM9aWaJaff6K8CnKUc818iXw",
+      "githubDeploymentId": 5577867313,
+      "githubDeploymentStatusId": 15858946628,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "cd apps/web && pnpm exec vitest run src/server/catalog/object-kind-inventory.test.ts",
@@ -697,6 +724,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-211/collapse-object-kinds-to-plant-animal-remove-bee-colony-a-hive-is-an",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5pVJyf2i5xukqAybzGcBFKMumjfW",
+      "githubDeploymentId": 5581702069,
+      "githubDeploymentStatusId": 15872475010,
       "completedAt": "2026-07-23",
       "verificationCommands": [
         "rg -n \"bee_colony|beeColony|BeeColony\" apps/web/src apps/web/app apps/web/sql",
@@ -722,6 +751,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-212/reconcile-product-research-corpus-with-code-object-categories-and",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/5cpKEk51yBi28E4bBjZbnDmiXQGJ",
+      "githubDeploymentId": 5583979977,
+      "githubDeploymentStatusId": 15878928042,
       "completedAt": "2026-07-24",
       "verificationCommands": [
         "rg -n \"2026-07-23\" docs/product-research/OverGarden_MVP_PRD_v0.md docs/product-research/ЦА_CANON_v1.md docs/product-research/B3_INFORMATION_ARCHITECTURE_AND_FLOWS_v0.md",
@@ -744,6 +775,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-200/trustworthy-mvp-learning-h1-h4-and-h6-exclude-synthetic-actors-and",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/E6rswkBYD8TCewnqzRhRdSAwVzhh",
+      "githubDeploymentId": 5587998196,
+      "githubDeploymentStatusId": 15890502790,
       "completedAt": "2026-07-24",
       "verificationCommands": [
         "cd apps/web && pnpm test src/server/analytics-events.test.ts src/server/mvp-learning src/server/pilot-health-repository.test.ts src/server/pilot-cohort-decision-repository.test.ts src/server/pilot-cohort-decision.test.ts",
@@ -769,6 +802,8 @@
       "mainRef": "main",
       "linearUrl": "https://linear.app/overgarden/issue/OVE-201/managed-recovery-proof-the-current-journal-product-restores-into-a",
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/81BPu27C2xom85fXsbeLbPMNKzw7",
+      "githubDeploymentId": 5588663487,
+      "githubDeploymentStatusId": 15892453577,
       "completedAt": "2026-07-24",
       "verificationCommands": [
         "cd apps/web && pnpm exec vitest run src/server/restore-readiness",

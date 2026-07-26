@@ -2,15 +2,41 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-23 (OVE-188 protective-DNS closeout; OVE-190 matching parity, OVE-191 production-safe scaffold boundary, OVE-203 automatic public identity, OVE-204 reliable current-session sign-out, OVE-205 corrective market-first localization, and OVE-208 global Google Sans typography ownership are complete; OVE-208 exact-SHA proof is Vercel READY plus local typography gates while GitHub-hosted Actions remain budget-frozen to workflow_dispatch; OVE-202/206/207 remain downstream and now have explicit shared typography, coordinator, and lifecycle owners)
+Last operational update: 2026-07-26 (binding AI-executable Linear task standard and authenticated Slice 19/OVE-213–244 queue read-back; prior 2026-07-23 closeout state retained below)
 Owner: founder
-Repo source of truth: `AGENTS.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
+Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
 This is not the full product backlog. It is the living execution roadmap for the next product-learning slices after the walking skeleton. The skeleton proved the stack; it is not product UI and it is not the final product data model.
 
-From this point forward, work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid execution slice unless it is embedded inside a user-visible path and proves integration through that path.
+From this point forward, product implementation work must be shipped as narrow vertical SDD slices that wire one user behavior end to end: SQL/types -> scoped repository -> route/action/API -> UI -> background job/search/media if relevant -> tests -> docs. A task that only creates schema, only builds UI, only wires media, or only adds instrumentation is not a valid product execution slice unless it is embedded inside a user-visible path and proves integration through that path. Remediation, operator, decision, canon-correction, and coordination-container work uses the bounded issue-kind contracts in `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; never invent fake product layers for those exceptions.
 
 ## Current Execution State
+
+Authenticated current Linear read-back is the primary queue authority; this
+section is its dated repository mirror. If issue status, blocker order, project,
+or milestone differs, do not pick a winner silently: stop task selection,
+reconcile the canon, update this mirror when appropriate, and then read Linear
+back again. The authenticated connector read-back on 2026-07-26 found all 32
+issues OVE-213 through OVE-244 in `Todo` under
+[SDD Slice 19 - MVP Readiness Remediation And Launch Proof](https://linear.app/overgarden/project/sdd-slice-19-mvp-readiness-remediation-and-launch-proof-724bdf2ae236);
+the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
+order alone is not execution order.
+
+All 32 OVE-213 through OVE-244 descriptions predate the v1 contract. Their
+content informed the standard, but no issue in the range is ready for assignment
+or `In Progress` by provenance alone. Before execution, re-audit and materially
+rewrite the selected issue against current `main`, authenticated Linear
+fields/relations, and current external state; run draft plus final validation;
+save and fully read back the issue; and match the saved-description digest. Do
+not bulk-certify or bulk-transition the batch. This governance slice creates the
+gate only and does not perform any of the 32 remediation implementations.
+
+### Dated implementation history — not queue authority
+
+The narrative below preserves decisions and proof snapshots at their stated
+dates. Its words `current`, `next`, `must`, and `remaining` are historical unless
+the authenticated Linear read-back above and current mainline canon explicitly
+reconfirm them. It must never override the primary queue authority.
 
 On 2026-07-23 the founder adopted the two-kind object category model in
 `docs/OBJECT_CATEGORY_MODEL_2026-07-23.md`: exactly `{plant, animal}`, with a
@@ -76,7 +102,7 @@ Those schema-v3 rows for OVE-206/207 remain fail-closed downstream obligations w
 now records `browser-backed` with scenario `editor-clean-locale-transition`.
 They cannot be reported as implemented before their owning slice ships.
 
-The active UI/UX/IA reconstruction queue is Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilds production routes; there is no separate clickable-prototype phase. `OVE-172` provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. `OVE-173` provides the guest-open root feed through a privacy-minimized public repository, explicit kind/trusted-topic filters, stable cursor pagination, mixed-media journal cards, authenticated-only followed access, route-owned context modules, localized edge states, centralized UGC-feed noindex/sitemap exclusion, and matched desktop/mobile visual proof. `OVE-174` provides the shared mutation-time auth boundary: all eight guest mutation classes use one allowlisted encrypted intent, public reads remain session-free, email and social sign-in share the exact resume callback, cancel/expiry/tampering fail safely, canonical mutations independently reauthorize, and the resumed route focuses the interrupted control without carrying draft or private payloads. `OVE-175` provides the guest-open living-object catalog with real grouped taxonomy, URL-owned kind/identity/search filters, canonical pagination, public-safe object evidence, localized states, and deterministic visual thresholds. `OVE-176` provides the guest-open journal directory with canonical Postgres filtering, optional UUID-only Meilisearch relevance hints, kind/catalog/topic/season/coarse-region filters, stable URL state through journal detail and back, bounded derivative media, and deterministic ordered-query evidence. `OVE-177` provides the guest-open localized knowledge hub, authored guides/answers, curated topics, explicit editorial-versus-UGC trust states, explainable topic/catalog evidence, and public journal/object continuation without an authentication prompt. `OVE-178` provides one shared living-object passport presentation contract backed by separate public-safe and owner-scoped loaders, kind-specific identity/context facts, bounded derivative media, chronological journal disclosure, previous/next navigation, mutation-time authentication, owner controls, and hard public `404/410` lifecycle handling. `OVE-179` rebuilds public journal entry readback around lifecycle-safe object/space context, media, chronology, and mutation-time engagement. `OVE-180` rebuilds public and owner gardener profiles around living-object and journal evidence with scoped relationship controls. `OVE-181` replaces the former settings-like garden page with an owner-scoped operational workspace: one next action, mixed inventory, spaces, recent continuity, browser-local drafts, sync/media recovery, and bounded disclosures inside the shared shell; guest entry remains reversible and read-open until a write intent. `OVE-182` rebuilds first-object and next-update creation as low-friction plant/animal/bee flows with existing-space reuse, progressive optional detail, private-first publication, durable owner-scoped drafts/offline retries, bounded derivative media, and canonical idempotency under concurrent retries.
+The historical UI/UX/IA reconstruction queue was Linear project `SDD Slice 18 - Drive2-Parity Product Reconstruction` (`OVE-172` through `OVE-186`). It directly rebuilt production routes; there was no separate clickable-prototype phase. `OVE-172` provides the shared guest/authenticated shell, typed route configuration, minimum session variant, responsive navigation, explicit loading/error/404/410 states, and matched Drive2/OverGarden visual evidence gate. `OVE-173` provides the guest-open root feed through a privacy-minimized public repository, explicit kind/trusted-topic filters, stable cursor pagination, mixed-media journal cards, authenticated-only followed access, route-owned context modules, localized edge states, centralized UGC-feed noindex/sitemap exclusion, and matched desktop/mobile visual proof. `OVE-174` provides the shared mutation-time auth boundary: all eight guest mutation classes use one allowlisted encrypted intent, public reads remain session-free, email and social sign-in share the exact resume callback, cancel/expiry/tampering fail safely, canonical mutations independently reauthorize, and the resumed route focuses the interrupted control without carrying draft or private payloads. `OVE-175` provides the guest-open living-object catalog with real grouped taxonomy, URL-owned kind/identity/search filters, canonical pagination, public-safe object evidence, localized states, and deterministic visual thresholds. `OVE-176` provides the guest-open journal directory with canonical Postgres filtering, optional UUID-only Meilisearch relevance hints, kind/catalog/topic/season/coarse-region filters, stable URL state through journal detail and back, bounded derivative media, and deterministic ordered-query evidence. `OVE-177` provides the guest-open localized knowledge hub, authored guides/answers, curated topics, explicit editorial-versus-UGC trust states, explainable topic/catalog evidence, and public journal/object continuation without an authentication prompt. `OVE-178` provides one shared living-object passport presentation contract backed by separate public-safe and owner-scoped loaders, kind-specific identity/context facts, bounded derivative media, chronological journal disclosure, previous/next navigation, mutation-time authentication, owner controls, and hard public `404/410` lifecycle handling. `OVE-179` rebuilds public journal entry readback around lifecycle-safe object/space context, media, chronology, and mutation-time engagement. `OVE-180` rebuilds public and owner gardener profiles around living-object and journal evidence with scoped relationship controls. `OVE-181` replaces the former settings-like garden page with an owner-scoped operational workspace: one next action, mixed inventory, spaces, recent continuity, browser-local drafts, sync/media recovery, and bounded disclosures inside the shared shell; guest entry remains reversible and read-open until a write intent. `OVE-182` rebuilds first-object and next-update creation as low-friction plant/animal/bee flows with existing-space reuse, progressive optional detail, private-first publication, durable owner-scoped drafts/offline retries, bounded derivative media, and canonical idempotency under concurrent retries.
 
 `OVE-183` completes the in-product return loop with guest-readable chronological comments/replies, exact mutation-time auth resume, profile/object/topic follows, a public-only chronological followed feed, private bookmarks/wishlist, code-owned notification summaries with explicit category preferences, and report/block controls whose two-way block predicate removes actors from every affected read model.
 
@@ -94,7 +120,7 @@ Localization foundations `OVE-164` and `OVE-165`, incremental consumer slices `O
 
 The deterministic catalog-matching queue `OVE-158` through `OVE-163` now includes the completed OVE-158 advisory worker/read-model contract and OVE-159 explicit canonical-match decision contract in `docs/CATALOG_MATCH_SUGGESTION_QUEUE.md`, the completed OVE-160 review-gated synonym/locale-variant contract in `docs/CATALOG_ALIAS_SUGGESTION_REVIEW.md`, the completed OVE-161 gardener typeahead/save/readback contract in `docs/CATALOG_GARDENER_TYPEAHEAD_READBACK.md`, the OVE-162 fuzzy entity-resolution extension in `docs/CATALOG_ENTITY_RESOLUTION_QA.md`, and the combined OVE-163 rollout gate in `docs/DETERMINISTIC_MATCHING_ROLLOUT_PROOF.md`. Provisional saves enqueue privacy-safe off-request matching; evidence alone cannot mutate canonical state. A curator can approve one current canonical suggestion through an atomic merge/object-update/audit/reindex transaction while journal rows remain unchanged, or reject only that suggestion with a bounded reason and no product-state mutation. Separately, deterministic Ukrainian, Bulgarian, and Russian alias variants remain detached from `catalog_item_names` and typeahead until a curator approves current fingerprint-bound evidence; cross-concept collisions fail closed, and rejected or accepted rows survive unchanged replay. Gardeners can discover accepted names through real Meilisearch one-typo evidence or canonical Postgres fallback, explicitly select one UUID in both first-entry and existing-object flows, and retain Unknown/own-name escape paths without leaking search internals or duplicating provisional identities. Source-backed QA persists bounded RapidFuzz near-duplicate pairs beside the existing exact/alias/source-conflict groups; same-locale evidence recommends manual merge review, while cross-locale or stale evidence is held, and no fuzzy path mutates canonical/search state. OVE-163 now composes those behaviors into one loopback proof, verifies recovery/idempotency for every matching refresh kind, recursively rejects unsafe evidence, and adds a strictly read-only production readiness mode. OVE-167 and OVE-168 build on the final OVE-161 picker/readback contract; OVE-170 localizes the final OVE-163 operator surface rather than freezing interim English copy.
 
-Execution Batch 1 and the original Slice 1-7 roadmap text below are historical implementation guidance, not the active Linear queue. The active MVP scope reconciliation and follow-up queue is Linear `OVE-114` through `OVE-139`. `OVE-114` is the docs reconciliation anchor; `OVE-115` through `OVE-139` are the vertical follow-up slices that convert the 2026-07-03 founder/operator MVP decision into product behavior.
+Execution Batch 1, the original Slice 1-7 roadmap text below, and the former OVE-114 through OVE-139 MVP follow-up batch are historical implementation guidance, not an active queue declaration. `OVE-114` is the docs reconciliation anchor; `OVE-115` through `OVE-139` are the vertical follow-up slices that converted the 2026-07-03 founder/operator MVP decision into product behavior. Select current work only from authenticated Linear read-back under the authority rule above.
 
 Before selecting or starting any next Linear issue, run:
 
@@ -105,13 +131,13 @@ pnpm mainline:closeout:check
 
 Then read `docs/MAINLINE_CLOSEOUT.md`. As of OVE-50, the critical OVE-29 and OVE-30 fixes that were branch-only during the 2026-06-29 audit are proven on current `main` by `docs/mainline-closeout-ledger.json`. OVE-53 has founder-provided redacted field-run evidence recorded in Linear and is closed: 8 invited, 8 started, 8 first entries, and 6 same-object follow-ups. Do not add raw participant identities, invite URLs, journal text, media keys, private screenshots, IP/user-agent, or precise location to repo docs.
 
-The 2026-07-01 OVE-96 lineage/social graph post-MVP decision is superseded by the 2026-07-03 founder/operator decision recorded in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. Lineage/social graph is now MVP scope and must be planned as vertical SDD slices with the privacy/consent invariants from `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`. Current Linear coverage is OVE-122 through OVE-126 plus OVE-133 through OVE-135.
+The 2026-07-01 OVE-96 lineage/social graph post-MVP decision is superseded by the 2026-07-03 founder/operator decision recorded in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`. Lineage/social graph is now MVP scope and must be planned as vertical SDD slices with the privacy/consent invariants from `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`. The then-current coverage was OVE-122 through OVE-126 plus OVE-133 through OVE-135.
 
-The previously queued Linear project `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64) remains valid catalog work, but it is no longer the automatic next queue while MVP-critical OVE-114 through OVE-139 are active. When Linear returns to Slice 9, start with OVE-55 live source verification, then proceed through source snapshot quarantine, UA official varieties, species backbone, alias promotion, breed proof, BG official variety proof, genebank long-tail candidates, attribution, and refresh/diff slices.
+The previously queued Linear project `SDD Slice 9 - Catalog Source Ingestion And Canonical Seed` (OVE-55-64) is historical completed catalog work. Its former ordering against OVE-114 through OVE-139 is not a current queue declaration.
 
 OVE-55 is the binding source-readiness gate for that project: later ingestion issues must link back to `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json` and may only consume sources according to the manifest verdicts.
 
-Maintainer-requested operational runtime queue: Linear project `SDD Slice 11 - Apple Container Runtime Migration` (OVE-71-77) moves local containerized development to Apple Container first while retaining Docker only for documented CI/Linux/feature gaps. Treat this as an operational SDD exception: the behavior is founder/agent runtime proof, not a user-facing product path, and every remaining Docker surface must name why Apple Container does not fit. The binding fallback matrix is `docs/CONTAINER_RUNTIME_POLICY.md`.
+The completed maintainer-requested project `SDD Slice 11 - Apple Container Runtime Migration` (OVE-71-77) established Apple Container-first local development while retaining Docker only for documented CI/Linux/feature gaps. Future runtime follow-ups use `operator_execution`: the behavior is founder/agent runtime proof, not a user-facing product path, and every remaining Docker surface must name why Apple Container does not fit. The binding fallback matrix is `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ## Current Baseline
 
@@ -138,29 +164,63 @@ Do not rebuild those proofs. Replace the skeleton surfaces with product behavior
 6. Search indexes public-safe documents only. Treat indexing as a privacy boundary.
 7. Public editorial, landing, guide, and answer SEO/AEO pages may be SSR and indexable at MVP launch when they contain useful first-party content. Thin, unsafe, or UGC-derived surfaces, including UGC, variety, topic, lineage, and profile pages, stay `noindex` and out of sitemaps until explicit quality gates promote them.
 8. Offline capture is honest: queue locally, show queued/syncing/failed/synced states, allow retry, and do not promise iOS background sync reliability.
-9. Each Linear task must carry context files, invariants, data contract, target files, non-goals, acceptance criteria, and verification commands.
+9. Every new or materially rewritten Linear work item must conform to `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, use `docs/linear/AI_AGENT_EXECUTION_ISSUE_TEMPLATE.md`, and pass `pnpm linear:task:check` before Linear write and after exact-description read-back. Links and parent issues never replace the task-local execution contract.
 10. Linear tasks that touch media, DNS, production env, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` and update it if provider values change.
-11. User-facing Linear tasks must run the Product Thinking Gate in `docs/product-research/README.md`, include the relevant research files in `Context files`, and state the product assumption being tested.
+11. User-facing Linear tasks must run the Product Thinking Gate in `docs/product-research/README.md`, include the relevant research files under the exact `Required context` heading, and state the product assumption being tested.
 12. Runtime tasks must prefer Apple Container over Docker for local containerized development on supported Macs. Docker is allowed only when Apple Container is unavailable or lacks the required feature, and the issue must name that gap using `docs/CONTAINER_RUNTIME_POLICY.md`.
 
 ## SDD Slice Test
 
-Before creating or accepting any Linear task from this roadmap, run this test. If the answer to any required question is "no", the task is too horizontal and must be rewritten.
+Before creating or accepting any Linear work item from this roadmap, first select its issue kind under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, then run the common questions and the applicable kind-specific test. Any required "no" keeps the item in draft and requires a rewrite. Layer count is a diagnostic, not a target: never invent UI, schema, or provider work to make a task look vertical.
 
-Required:
+Required for every issue kind:
 
-1. Does the task start with a concrete user behavior, not an implementation layer?
-2. Does the task touch at least three product layers, normally including data, server boundary, UI, and tests?
-3. Does it produce something the founder can manually try in the app, even if ugly?
-4. Does it prove privacy/media/search/offline invariants through executable tests, not prose?
-5. Does it declare what existing skeleton code it replaces or reuses?
-6. Does it include a failure gate that would stop the slice from being marked done?
-7. Does it cite the relevant product research and name the user job, motivation, trust concern, growth mechanism, or market assumption behind the behavior?
+1. Does the task start with one observable user or operator outcome rather than a component/layer inventory?
+2. Does it pin dated evidence and a 40-character baseline SHA while requiring fresh current-main, current-Linear, caller, dependency, and provider read-back before execution?
+3. Does it declare one canonical owner for every shared policy/state/effect and prove that its blocker graph is acyclic?
+4. Does it make every affected privacy, authorization, data, lifecycle, external-effect, failure, and recovery invariant exact and executable?
+5. Does each measurable acceptance criterion map to a named test, command, exact-SHA receipt, provider read-back, or authorized observation?
+6. Does it define migration/compatibility/rollout/rollback/cleanup, concrete failure gates, and the evidence that forbids premature `Done`?
+7. Does it preserve task-local decisions instead of outsourcing them to a link, parent issue, prior chat, or implementing agent?
+8. Does it pass `cd apps/web && pnpm linear:task:check -- --file ../../path/to/issue.md --phase final` before write and after saved-description read-back?
 
-Allowed exceptions:
+Additional test for `vertical_execution`:
 
-- A pure migration or infrastructure task is allowed only when it is a prerequisite for the same issue's user path, not as a standalone batch item.
-- A spike is allowed only when the output is a decision and a patch to this roadmap, not production code.
+1. Is one concrete gardener/visitor/moderator behavior the organizing outcome?
+2. Does the issue own every affected layer necessary for end-to-end proof, normally at least three non-test/documentation layers?
+3. Can the user behavior be exercised through the actual UI/browser, including the market-valid locale matrix, keyboard/accessibility, degraded, retry, and recovery states?
+4. Did the Product Thinking Gate select 2–5 genuinely relevant research files and name the user job, load-bearing assumption, and falsification signal?
+
+Additional test for `remediation`:
+
+1. Is the failure safely reproducible or explicitly bounded as a proof gap?
+2. Is the closest enforceable failing boundary named, with every caller/bypass and the complete affected journey inventoried?
+3. Do regression, negative, fault/race, performance, and recovery proofs demonstrate the actual defect is gone without weakening preserved controls?
+
+Additional test for `operator_execution`:
+
+1. Is there a concrete operator outcome, protected product invariant, bounded blast radius, environment identity, and immutable read-back receipt?
+2. Are classify/plan/apply/verify/rollback/cleanup phases, approval gates, drift refusal, idempotency, external partial-success handling, and post-effect convergence explicit?
+3. Does the issue explain why the work is safer as a standalone operator behavior than inside a product slice, without adding fake UI?
+
+Additional test for `decision_spike` or `canon_correction`:
+
+1. Is the output bounded to named evidence, a decision/authority resolution, exact canon consumers, and a falsification/reopen condition?
+2. Does the task explicitly forbid silent production behavior and name every stale reference that must be removed or preserved as historical context?
+3. Is the time/decision boundary strict enough that implementation cannot hide inside the investigation?
+
+Additional test for `coordination_container`:
+
+1. Is the container explicitly non-executable and unassigned, with no branch, implementation, deployment, or production mutation path of its own?
+2. Does every executable child have its own complete validated contract, owner, dependency relations, rollout, rollback, verification, and closeout evidence?
+3. Is the child graph acyclic, and does the container define the integration read-back required to close only after every child is independently complete?
+
+Valid bounded exceptions:
+
+- A localized remediation may touch fewer than three production layers when the issue proves why one enforceable boundary repairs the complete journey.
+- Migration, infrastructure, provider, release, backup/restore, and production-proof work may be standalone `operator_execution` tasks when they satisfy the operator test above.
+- A decision spike may ship only its evidence/decision/canon update; subsequent production behavior requires a fresh execution issue.
+- A canon correction may be documentation-only when it names contradictory authorities, resolves ownership, inventories every consumer, and proves stale-reference removal.
 
 Anti-patterns:
 
@@ -169,6 +229,8 @@ Anti-patterns:
 - `Add media pipeline`.
 - `Add analytics events`.
 - `Build public pages`.
+- `Upgrade the provider` without environment, plan, approval, read-back, rollback, and protected product behavior.
+- `Investigate the freeze` without a bounded hypothesis matrix, stop conditions, performance budgets, and a follow-up decision contract.
 
 Valid SDD slice shapes:
 
@@ -180,7 +242,7 @@ Valid SDD slice shapes:
 
 ## Vertical Slice Strategy
 
-The first real product bet was H1: will users sustain a useful narrative growing journal habit? The first slices therefore validated safe capture and readback before catalog breadth, SEO breadth, social graph, or monetization. After the 2026-07-03 MVP scope recheck, expansion into SEO/AEO, localization, full M:N journaling, composer friction, self-serve auth, and lineage/social graph is allowed only through the fresh vertical Linear slices in OVE-115 through OVE-139. Monetization remains post-MVP.
+The first real product bet was H1: will users sustain a useful narrative growing journal habit? The first slices therefore validated safe capture and readback before catalog breadth, SEO breadth, social graph, or monetization. After the 2026-07-03 MVP scope recheck, expansion into SEO/AEO, localization, full M:N journaling, composer friction, self-serve auth, and lineage/social graph was routed through the then-created vertical Linear slices OVE-115 through OVE-139. That batch is historical; monetization remains post-MVP.
 
 The fastest useful path is:
 
@@ -281,7 +343,7 @@ Includes:
 
 ### Slice 6: Lineage And Social Graph MVP
 
-Current status: historical shape only. The 2026-07-01 OVE-96 post-MVP deferral is superseded by `docs/MVP_SCOPE_RECHECK_2026-07-03.md`; lineage/social graph is now MVP scope, but only through the fresh vertical Linear slices OVE-122 through OVE-126 and OVE-133 through OVE-135. Read `docs/LINEAGE_SCOPE_DECISION.md` for privacy and consent invariants before touching lineage or social graph work.
+Current status: historical shape only. The 2026-07-01 OVE-96 post-MVP deferral is superseded by `docs/MVP_SCOPE_RECHECK_2026-07-03.md`; lineage/social graph is now MVP scope, while OVE-122 through OVE-126 and OVE-133 through OVE-135 are its then-created historical slice set. Read `docs/LINEAGE_SCOPE_DECISION.md` for privacy and consent invariants before touching lineage or social graph work.
 
 Goal: add cross-user defensibility without exposing another user's identity, location, or visibility beyond consented/public-safe settings.
 
@@ -295,13 +357,13 @@ Includes:
 - Block/report/limits.
 - Noindex full lineage graph.
 
-Current non-goals for this historical roadmap text: do not revive Slice 6 wholesale or implement a schema-only/social-network-generic layer. Use the fresh Linear issues instead: provenance edge (OVE-122), claim inbox (OVE-123), invitations (OVE-124), graph readback/follow/ask-the-lineage (OVE-125/OVE-126), public-safe handles (OVE-133), cross-user mention/typeahead (OVE-134), and followed feed/notifications (OVE-135).
+Current non-goals for this historical roadmap text: do not revive Slice 6 wholesale or implement a schema-only/social-network-generic layer. The then-created issue decomposition was: provenance edge (OVE-122), claim inbox (OVE-123), invitations (OVE-124), graph readback/follow/ask-the-lineage (OVE-125/OVE-126), public-safe handles (OVE-133), cross-user mention/typeahead (OVE-134), and followed feed/notifications (OVE-135); it is not the active queue.
 
 ## Execution Batch 1
 
 Historical note: Batch 1 has been superseded by later Linear slices. Keep this section for slice-shape reference only; do not restart from this batch or use it as the next active queue.
 
-Create the first Linear batch from the issues below. Keep them in one project or milestone named `SDD Slice 1 - Narrative Journal Capture`. These are vertical execution slices, not layer tickets. Every issue owns the schema/server/UI/test/doc changes needed for its own user behavior.
+The first Linear batch was created from the issues below in `SDD Slice 1 - Narrative Journal Capture`. These were vertical execution slices, not layer tickets; every issue owned the schema/server/UI/test/doc changes needed for its own user behavior.
 
 Do not open a separate "schema task" or "UI task" for this batch. The first issue introduces the minimum product schema because it needs it to ship a real user path; later issues extend that schema only where their own path requires it.
 
@@ -311,7 +373,7 @@ User behavior: a signed-in gardener opens the real product workspace, creates on
 
 Why this is first: it replaces the skeleton with the smallest H1 journal loop. If this does not work end to end, photo, offline, public pages, and metrics are premature.
 
-Context files:
+Required context:
 
 - `AGENTS.md`
 - `docs/product-research/README.md`
@@ -410,7 +472,7 @@ Why this is second: photo is core to gardening evidence, but it is safety-critic
 
 Implementation status (2026-06-26): implemented by `OVE-12` in the real `/garden` entry path. Verified with Cloudflare R2 upload/process/public-fetch smoke, derivative-only authenticated SSR readback, desktop/mobile browser checks, repository contract tests, media processor order test, lint, typecheck, full tests, and production build.
 
-Context files:
+Required context:
 
 - `docs/TECH_STACK_DECISIONS.md`
 - `docs/product-research/README.md`
@@ -493,7 +555,7 @@ Why this is third: offline capture matters only if it returns to the same canoni
 
 Implementation status (2026-06-26): implemented by `OVE-9` in the real `/garden` entry path. Verified with Dexie queue transition tests, offline sync tests for retry idempotency and retained photo intent, repository idempotency contracts, lint, typecheck, full tests, production build, and browser QA for offline queued entry -> retry -> authenticated readback with exactly one entry plus offline photo intent -> media processing -> derivative-only readback.
 
-Context files:
+Required context:
 
 - `docs/TECH_STACK_DECISIONS.md`
 - `docs/product-research/README.md`
@@ -564,7 +626,7 @@ User behavior: a gardener publishes an entry, confirms first-publication disclos
 
 Why this is fourth: public pages are the growth engine, but they are also a privacy boundary. This slice forces publication, SSR, metadata, derivative media, and search-document rules to meet in one path.
 
-Context files:
+Required context:
 
 - `AGENTS.md`
 - `docs/TECH_STACK_DECISIONS.md`
@@ -641,7 +703,7 @@ User behavior: a gardener deletes or archives a published entry, the authenticat
 
 Why this is fifth: public-only content is not safe without deletion semantics. This slice closes the loop opened by publication before broadening public surfaces.
 
-Context files:
+Required context:
 
 - `AGENTS.md`
 - `docs/TECH_STACK_DECISIONS.md`
@@ -714,7 +776,7 @@ User behavior: a gardener returns to the same object, reads the previous entry, 
 
 Why this is sixth: the first save is not H1. The H1 proxy requires return behavior around the same object. This slice turns the capture path into a measurable retention loop.
 
-Context files:
+Required context:
 
 - `docs/TECH_STACK_DECISIONS.md`
 - `docs/product-research/README.md`
@@ -801,4 +863,4 @@ The batch is not done if the flow only works through `/skeleton`, if public imag
 
 ## Post-Batch Decision
 
-After Batch 1, review real implementation friction before opening Batch 2. This was the correct historical sequencing guard. It is now superseded by the 2026-07-03 MVP scope recheck for current execution: do not use this paragraph to block OVE-115 through OVE-139, but keep its principle that every expansion must be a vertical SDD slice with executable privacy and quality gates.
+After Batch 1, the plan required review of real implementation friction before opening Batch 2. This was the correct historical sequencing guard. It is superseded for queue selection: OVE-115 through OVE-139 are themselves historical, while the enduring principle is that product expansion remains a vertical SDD slice with executable privacy and quality gates.

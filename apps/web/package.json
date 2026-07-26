@@ -88,6 +88,8 @@
     "typography:report": "tsx scripts/verify-google-sans-assets.ts --runtime-imports",
     "typography:browser": "tsx scripts/verify-typography-browser.ts",
     "typography:performance": "tsx scripts/verify-typography-performance.ts",
+    "linear:task:check": "tsx scripts/check-linear-agent-task.ts",
+    "linear:task:standard:check": "vitest run scripts/check-linear-agent-task.test.ts scripts/check-mainline-closeout.test.ts --testTimeout 60000",
     "test": "vitest run",
     "test:watch": "vitest",
     "local:bootstrap": "tsx scripts/bootstrap-local.ts",

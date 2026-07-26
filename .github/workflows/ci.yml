@@ -3,15 +3,17 @@ name: CI
 # GitHub-hosted runners are paused while the account Actions budget is
 # exhausted and cannot be raised. Auto pull_request/push triggers were
 # creating immediate red checks without running jobs. Until included
-# minutes/storage recover, merge gate is: Vercel READY + local proof
-# (`pnpm typography:assets:check`, focused vitest, `pnpm mainline:closeout:check`
-# from main). Re-enable the pull_request/push triggers below when budget returns.
+# minutes/storage recover, the pre-merge gate is Vercel READY plus local focused
+# and broad proof. Post-merge closeout separately runs
+# `pnpm mainline:closeout:check` from fetched, current main. Re-enable the
+# pull_request/push triggers below when budget returns.
 on:
   workflow_dispatch:
 
 permissions:
   actions: write
   contents: read
+  deployments: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -21,6 +23,7 @@ jobs:
   web:
     name: Web app
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     # ci-required: GitHub-hosted Ubuntu uses Actions service containers and
     # Docker for ad hoc services. This is a platform-bound exception, not a
     # local Docker Desktop prerequisite. Do not move CI to Apple Container
@@ -89,10 +92,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify AI-executable Linear task standard
+        run: pnpm linear:task:standard:check
+
       - name: Verify pinned typography assets
         run: pnpm typography:assets:check
 
       - name: Check mainline closeout ledger
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: pnpm mainline:closeout:check
 
       - name: Start MinIO
@@ -251,6 +259,7 @@ jobs:
   matching:
     name: Python matching tier
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: services/matching
