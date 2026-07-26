@@ -30,14 +30,18 @@ If a copied research file such as `TECH_STACK_DECISIONS.md` conflicts with the c
 
 ## Product Thinking Gate
 
-Before creating, accepting, or implementing any non-trivial Linear issue, product feature, UI flow, public page, onboarding path, analytics event, catalog behavior, or GTM-facing surface:
+Before creating, accepting, or implementing any user-facing Linear issue, product feature, UI flow, public page, onboarding path, analytics event, catalog behavior, or GTM-facing surface:
 
 1. Search this corpus with `rg` for the feature, user behavior, segment, object type, market, language, privacy risk, or growth mechanism.
-2. Select the 2-5 most relevant research files and include them in the task's `Context files`.
+2. Select the 2-5 most relevant research files and include them under the task's exact `Required context` heading.
 3. State the product assumption the slice is testing.
 4. State the user job, motivation, or trust concern that shaped the implementation.
 5. If research docs conflict with each other or with current implementation docs, name the conflict and choose the smallest reversible path.
 6. Keep the SDD shape vertical: the research informs one user behavior; it does not justify layer-only tasks.
+
+For pure remediation, security, privacy, migration, infrastructure, provider, release, decision, canon, or non-executable coordination work with no user-facing behavior, record the protected product/trust/reliability or integration outcome, load-bearing assumption, and falsification signal required by `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`. Cite product-research files only when they genuinely constrain the decision; when none does, record a specific task-local no-direct-research conclusion instead of padding the task with irrelevant context. One of those two paths is mandatory. A coordination container instead proves its child DAG and integration receipt with zero own implementation. This exception does not waive product invariants, executable proof, or the issue-kind contract.
+
+The research and no-direct-research paths above are mutually exclusive. The research path requires identical non-empty sets of non-README file paths in the issue's Product Thinking rationale (each with its task-local constraint) and Required context (for baseline existence verification). The no-direct path requires zero product-research paths. Partial overlap, a Product-Thinking-only citation, a context-only citation, or a no-direct conclusion combined with citations does not satisfy the gate.
 
 ## Fast Routing
 

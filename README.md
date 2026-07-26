@@ -23,9 +23,11 @@ Next.js App Router + TypeScript · shadcn/ui · Better Auth · Kysely · Digital
 
 ## Agentic Execution
 
-Future Linear issues must be vertical SDD slices. Do not split work into isolated schema, UI, media, analytics, search, or public-page tasks. Each execution issue should start from a user behavior and wire the needed layers end to end. Run the `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md` before creating or accepting new Linear work.
+Every new or materially rewritten Linear work item must follow `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, start from its tracked AI-agent template, and pass the validator plus the applicable `SDD Slice Test` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`. Product execution remains a behavior-first vertical slice; remediation, operator, decision, canon-correction, and coordination-container work uses the standard's bounded contracts. Do not split one behavior into isolated schema, UI, media, analytics, search, or public-page layer tickets, and do not invent fake product layers for a legitimate non-product task.
 
-Issues that touch DNS, R2, production env, media URLs, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` in their context files.
+The open OVE-213 through OVE-244 reference batch predates contract v1. Each issue must receive its own current-main/current-Linear re-audit, material v1 rewrite, final validation, saved-body read-back, and digest match before assignment or `In Progress`; the range is not blanket-certified by this repository standard.
+
+Issues that touch DNS, R2, production env, media URLs, deployment, storage, or external services must include `docs/INFRASTRUCTURE_REGISTRY.md` under the exact `Required context` heading.
 
 User-facing issues must also run the Product Thinking Gate in `docs/product-research/README.md` and include the relevant research files in their context.
 

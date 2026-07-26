@@ -25,6 +25,7 @@ jobs:
   release:
     name: Test, publish, and seal matching image
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Check out exact source with main history
         uses: actions/checkout@v7

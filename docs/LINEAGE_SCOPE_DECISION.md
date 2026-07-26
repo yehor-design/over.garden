@@ -11,10 +11,14 @@ This 2026-07-01 decision is no longer the current MVP scope.
 
 On 2026-07-03, the founder/operator explicitly superseded the post-MVP gate and approved lineage/social graph for MVP execution now. The current scope includes provenance edges, chains, claim inbox, invitations, public-safe `@handle` identity/profile, cross-user mention/typeahead, lineage graph readback, follow, ask-the-lineage, followed feed, and bounded notifications, while preserving all privacy and consent invariants below.
 
-Current execution documentation:
+Current scope and execution authority:
 
 - `docs/MVP_SCOPE_RECHECK_2026-07-03.md`
-- Linear `OVE-114` through `OVE-139`, especially `OVE-122` through `OVE-126` and `OVE-133` through `OVE-135`
+- authenticated current Linear read-back for queue selection, reconciled with the dated `Current Execution State` mirror in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`
+- a fresh audit of current `main`, repository callers and dependencies, and relevant external state before implementation
+- `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md` for every new or materially rewritten execution issue
+
+Linear OVE-122 through OVE-126 and OVE-133 through OVE-135 are retained only as the then-created historical lineage issue identifiers. They are not current/fresh task-selection authority and must not be executed from their historical descriptions without current Linear and current-main revalidation plus a compliant rewrite when required.
 
 The historical caution in this file remains useful context, but it is not an instruction to block MVP lineage work anymore.
 
@@ -85,16 +89,16 @@ Any lineage MVP slice must keep AC-INV1-5 from `OverGarden_MVP_PRD_v0.md` and `C
 - cross-links are earned and abuse-resistant;
 - erasure uses irreversible anonymization and removes region from rare tombstones when needed to avoid re-identification.
 
-The current slice sequence must test provenance value in small vertical behaviors without building the whole social network at once. Use the fresh Linear issues named in `docs/MVP_SCOPE_RECHECK_2026-07-03.md`, not the historical Slice 6 text.
+The current slice sequence must test provenance value in small vertical behaviors without building the whole social network at once. Select work from authenticated current Linear read-back, reconcile it with the roadmap's dated execution-state mirror, and re-audit it against current `main`; treat the issue identifiers named in `docs/MVP_SCOPE_RECHECK_2026-07-03.md` only as historical provenance, not executable task authority. Any new or materially rewritten issue must satisfy `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`.
 
 ## Current Next-Agent Instruction
 
 The correct current action is:
 
 1. Treat lineage/social graph as approved MVP scope under `docs/MVP_SCOPE_RECHECK_2026-07-03.md`.
-2. Use the fresh vertical SDD issues in Linear, especially OVE-122 through OVE-126 and OVE-133 through OVE-135.
+2. Use authenticated current Linear read-back as the primary queue authority, reconcile it with `Current Execution State` in `docs/SDD_VERTICAL_SLICE_ROADMAP.md`, and audit the selected work against current `main`; OVE-122 through OVE-126 and OVE-133 through OVE-135 are historical identifiers only.
 3. Preserve every privacy, consent, no-visibility-escalation, erasure, and public-safe projection invariant in this file and in `docs/product-research/CROSS_USER_TRUST_AND_PRIVACY_SPEC_v0.md`.
-4. Do not implement lineage as a schema-only, backend-only, or social-network-generic task.
+4. Construct or materially rewrite the selected issue under `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`; do not implement lineage as a schema-only, backend-only, or social-network-generic task.
 
 ## Historical Next-Agent Instruction (Superseded)
 
