@@ -174,7 +174,7 @@ export function validateLinearAgentTask(
   const phase = options.phase ?? "final";
   const errors: LinearTaskValidationFinding[] = [];
   const warnings: LinearTaskValidationFinding[] = [];
-  const normalized = source.replace(/\r\n?/g, "\n");
+  const normalized = normalizeLinearMarkup(source.replace(/\r\n?/g, "\n"));
   const parsed = parseTask(normalized);
   const sha256 = createHash("sha256").update(source, "utf8").digest("hex");
 
@@ -223,6 +223,33 @@ export function validateLinearAgentTask(
     errors,
     warnings,
   };
+}
+
+/**
+ * Linear rewrites a saved description before it can be read back: `-` list
+ * markers become `*`, and every issue mention is wrapped in an `<issue>` tag.
+ * Both defeat this validator — structured-field matchers are anchored on `-`,
+ * and the tags read as angle-token placeholders — so a contract validated
+ * locally would fail its own Linear read-back and the closeout digest gate
+ * could never pass. Normalize both back to their authored form outside fenced
+ * code. The reported sha256 still digests the untouched source.
+ */
+function normalizeLinearMarkup(source: string): string {
+  let insideFence = false;
+
+  return source
+    .split("\n")
+    .map((line) => {
+      if (/^\s{0,3}(?:```|~~~)/.test(line)) {
+        insideFence = !insideFence;
+        return line;
+      }
+      if (insideFence) return line;
+      return line
+        .replace(/<issue\b[^>]*>([^<]*)<\/issue>/g, "$1")
+        .replace(/^( {0,3})[*+](\s+)/, "$1-$2");
+    })
+    .join("\n");
 }
 
 function parseTask(source: string): ParsedTask {
