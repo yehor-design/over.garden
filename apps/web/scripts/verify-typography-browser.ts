@@ -229,6 +229,8 @@ interface FallbackCaseResult {
   convergedFontFamily: string | null;
   fontsReady: boolean;
   fontWindowCls: number | null;
+  fallbackFaceResolved?: boolean;
+  fallbackSampleWidthPx?: { fallback: number; missingControl: number };
   clsSources?: ReadonlyArray<{
     selector: string;
     value: number;
@@ -2479,6 +2481,8 @@ async function runFallbackCase(input: {
       convergedFontFamily: observation.convergedFontFamily,
       fontsReady,
       fontWindowCls: observation.fontWindowCls,
+      fallbackFaceResolved: beforeRelease.fallbackFaceResolved,
+      fallbackSampleWidthPx: beforeRelease.fallbackSampleWidthPx,
       // Largest contributors first, so a failing gate names what moved.
       clsSources: [...afterRelease.clsSources]
         .sort((left, right) => right.value - left.value)
