@@ -37,6 +37,12 @@ export interface GoogleSansRuntimeAssetV1 {
 export const GOOGLE_SANS_RUNTIME_FALLBACK = {
   family: GOOGLE_SANS_FALLBACK_FAMILY,
   sourceFamily: "Arial",
+  // Arial is absent on Linux and on some Android builds, and `local()` matches
+  // by font name rather than through fontconfig aliasing, so an Arial-only
+  // source leaves the face unresolved there: the overrides below never apply
+  // and text reflows when the real font swaps in. Liberation Sans and Arimo are
+  // metrically identical to Arial, so the same overrides stay correct.
+  metricCompatibleFamilies: ["Liberation Sans", "Arimo"] as const,
   azAverageWidth: 463.3953488372093,
   sourceAzAverageWidth: 934.5116279069767,
   sourceUnitsPerEm: 2_048,
@@ -178,7 +184,12 @@ function renderFallbackFontFace(): string {
   return `/* Metric-compatible fallback generated with Next.js local-font weighting. */
 @font-face {
   font-family: "${GOOGLE_SANS_FALLBACK_FAMILY}";
-  src: local("${GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily}");
+  src: ${[
+    GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily,
+    ...GOOGLE_SANS_RUNTIME_FALLBACK.metricCompatibleFamilies,
+  ]
+    .map((family) => `local("${family}")`)
+    .join(", ")};
   size-adjust: ${GOOGLE_SANS_RUNTIME_FALLBACK.sizeAdjust};
   ascent-override: ${GOOGLE_SANS_RUNTIME_FALLBACK.ascentOverride};
   descent-override: ${GOOGLE_SANS_RUNTIME_FALLBACK.descentOverride};

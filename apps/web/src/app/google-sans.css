@@ -105,7 +105,7 @@
 /* Metric-compatible fallback generated with Next.js local-font weighting. */
 @font-face {
   font-family: "Google Sans Fallback";
-  src: local("Arial");
+  src: local("Arial"), local("Liberation Sans"), local("Arimo");
   size-adjust: 101.55%;
   ascent-override: 95.12%;
   descent-override: 28.16%;
