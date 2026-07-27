@@ -1,13 +1,16 @@
 name: CI
 
-# GitHub-hosted runners are paused while the account Actions budget is
-# exhausted and cannot be raised. Auto pull_request/push triggers were
-# creating immediate red checks without running jobs. Until included
-# minutes/storage recover, the pre-merge gate is Vercel READY plus local focused
-# and broad proof. Post-merge closeout separately runs
-# `pnpm mainline:closeout:check` from fetched, current main. Re-enable the
-# pull_request/push triggers below when budget returns.
+# Auto triggers were paused during the account Actions budget freeze, which
+# made jobs end with zero executed steps. The repository is now public, so
+# GitHub-hosted runners no longer draw on that budget and the pre-merge gate is
+# executed CI again, not Vercel READY plus local proof (OVE-233).
 on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -91,6 +94,18 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The Linear task validator resolves every declared verification
+      # executable in PATH. Task contracts verify the Python matching tier
+      # through `uv`, so this job needs the same pinned `uv` as the matching
+      # job or the validator reports false `verification_executable_missing`.
+      - name: Set up Python for task-standard executable resolution
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install uv for task-standard executable resolution
+        run: python -m pip install uv==0.11.24
 
       - name: Verify AI-executable Linear task standard
         run: pnpm linear:task:standard:check
