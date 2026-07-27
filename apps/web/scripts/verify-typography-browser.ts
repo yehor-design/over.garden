@@ -229,6 +229,11 @@ interface FallbackCaseResult {
   convergedFontFamily: string | null;
   fontsReady: boolean;
   fontWindowCls: number | null;
+  clsSources?: ReadonlyArray<{
+    selector: string;
+    value: number;
+    text: string;
+  }>;
   runtime: {
     pageErrorCount: number;
     consoleErrorCount: number;
@@ -2082,6 +2087,7 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
   await context.addInitScript(() => {
     type FallbackPerformanceState = {
       cls: number;
+      clsSources: Array<{ selector: string; value: number; text: string }>;
       fcpMs: number;
       layoutShiftObserver: PerformanceObserver | null;
       paintObserver: PerformanceObserver | null;
@@ -2091,6 +2097,7 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
     };
     const state: FallbackPerformanceState = {
       cls: 0,
+      clsSources: [],
       fcpMs: 0,
       layoutShiftObserver: null,
       paintObserver: null,
@@ -2115,9 +2122,26 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
           const shift = entry as PerformanceEntry & {
             hadRecentInput?: boolean;
             value?: number;
+            sources?: Array<{ node?: Node | null }>;
           };
           if (!shift.hadRecentInput && typeof shift.value === "number") {
             state.cls += shift.value;
+            // Attribute the shift so a failing gate names the moving element
+            // instead of reporting only a number.
+            for (const source of shift.sources ?? []) {
+              const node = source.node as Element | null | undefined;
+              if (!node || typeof node.tagName !== "string") continue;
+              const id = node.id ? `#${node.id}` : "";
+              const cls =
+                typeof node.className === "string" && node.className
+                  ? `.${node.className.trim().split(/\s+/u).slice(0, 3).join(".")}`
+                  : "";
+              state.clsSources.push({
+                selector: `${node.tagName.toLowerCase()}${id}${cls}`,
+                value: shift.value,
+                text: (node.textContent ?? "").trim().slice(0, 60),
+              });
+            }
           }
         }
       });
@@ -2334,6 +2358,7 @@ async function runFallbackCase(input: {
       async ({ sampleText, targetFamily }) => {
         type FallbackPerformanceState = {
           cls: number;
+          clsSources: Array<{ selector: string; value: number; text: string }>;
           fcpMs: number;
           layoutShiftObserver: PerformanceObserver | null;
           paintObserver: PerformanceObserver | null;
@@ -2363,6 +2388,7 @@ async function runFallbackCase(input: {
           ),
           convergedFontFamily: getComputedStyle(document.body).fontFamily,
           fontWindowCls: state?.cls ?? 0,
+          clsSources: state?.clsSources ?? [],
           fallbackDurationMs:
             firstContentfulPaintMs > 0
               ? performance.now() - firstContentfulPaintMs
@@ -2430,6 +2456,10 @@ async function runFallbackCase(input: {
       convergedFontFamily: observation.convergedFontFamily,
       fontsReady,
       fontWindowCls: observation.fontWindowCls,
+      // Largest contributors first, so a failing gate names what moved.
+      clsSources: [...afterRelease.clsSources]
+        .sort((left, right) => right.value - left.value)
+        .slice(0, 5),
       runtime: { pageErrorCount, consoleErrorCount },
       failures,
     };
