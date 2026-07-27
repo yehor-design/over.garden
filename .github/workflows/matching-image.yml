@@ -110,8 +110,13 @@ jobs:
           bash -n infra/production-worker/matching-release
           test -x infra/production-worker/matching-release
 
-          if grep -R --line-number --fixed-strings ':latest' \
-            infra/production-worker \
+          # Scan the files that actually declare image references. Scanning the
+          # whole directory also matched infra/production-worker/meilisearch-upgrade,
+          # whose own anti-latest guard contains the literal ':latest', so this
+          # step failed on the very control it exists to enforce.
+          if grep --line-number --fixed-strings ':latest' \
+            infra/production-worker/docker-compose.release.yml \
+            infra/production-worker/docker-compose.meilisearch.yml \
             services/matching/Dockerfile \
             || grep -E '^[[:space:]]+tags:.*:latest' .github/workflows/matching-image.yml; then
             echo "Mutable latest image references are forbidden in the matching release path." >&2
