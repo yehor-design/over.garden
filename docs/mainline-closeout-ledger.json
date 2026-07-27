@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-07-26",
+  "updatedAt": "2026-07-27",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "entries": [
@@ -818,6 +818,33 @@
         "Predeclared RPO ≤1h / RTO ≤4h; measured RPO 300000 ms and RTO 662000 ms both pass. Maintenance pending cleared by founder-confirmed install_update. Restore-readiness ok; loopback Meili zeroGap true (4/4). Exact disposable teardown deleted=true; production remained online.",
         "Redacted evidence: docs/managed-recovery-evidence-redacted.json and docs/MANAGED_RECOVERY_DRILL.md. No credentials, CA bodies, DB URLs, row IDs, or private content recorded.",
         "Does not claim multi-region HA, production failover/cutover, provider migration, or OVE-186 Done."
+      ]
+    },
+    {
+      "issueId": "OVE-225",
+      "title": "Privacy-safe job queue contract: every kind enforces exact identifiers-only payloads and matching pytest stays green",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "8f9f3f7726b86224e459d3a4be7aa4fef361bba8",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-225/privacy-safe-job-queue-contract-every-kind-enforces-exact-identifiers",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/HzagymNLt2iiSM1PHbT4rH11GMG9",
+      "githubDeploymentId": 5614132685,
+      "githubDeploymentStatusId": 15965058709,
+      "completedAt": "2026-07-27",
+      "verificationCommands": [
+        "cd services/matching && uv run --frozen pytest -q",
+        "cd apps/web && pnpm exec vitest run src/server/queue.test.ts src/server/job-queue-manifest.test.ts src/server/job-queue-contract.test.ts",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm db:types:check && pnpm build && git diff --check",
+        "cd apps/web && pnpm exec tsx scripts/inventory-job-queue-payloads.ts --environment production --confirm-environment production",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit 8f9f3f7726b86224e459d3a4be7aa4fef361bba8 is on main. Vercel production deployment dpl_HzagymNLt2iiSM1PHbT4rH11GMG9 reached READY for that exact SHA under the Actions budget-freeze gate.",
+        "One versioned payloadContract per kind in apps/web/src/server/job-queue-manifest.ts is the single owner; enqueueJob refuses before insert, sql/0010_ove225_job_queue_payload_contract.sql adds both journal CHECK constraints not valid, and worker.py drives _require_exact_payload_shape from the mirrored manifest. Frozen pytest moved from 3 failed/115 passed to 0 failed/131 passed.",
+        "Live Postgres 18 proof: both constraints present with convalidated=false; extra-key, non-UUID, missing-key and wrong-type direct inserts each rejected by the expected named constraint; conforming rows and the three existing catalog constraints unaffected.",
+        "Refusal reports carry queue name, declared kind, violated rule class and integer counts only. Undeclared key names and undeclared kinds are never echoed. No payload value, journal title or body, email, media object key, signed URL, or precise-location text appears in any receipt.",
+        "Does not claim production SQL apply, validate constraint, or any job_queue row disposition: OVE-225 authorization status remains pending and scripts/inventory-job-queue-payloads.ts is the read-only counts-only approval artifact. Does not claim GitHub Actions budget recovery, matching-image publication, or OVE-186 Done."
       ]
     }
   ]
