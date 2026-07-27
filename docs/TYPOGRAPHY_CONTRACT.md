@@ -616,3 +616,53 @@ direct OVE-208 dependencies.
 Email, PDF, canvas, SVG text, and generated social-image embedding remain
 explicit non-browser non-goals for OVE-208. Transactional email keeps robust
 mail-client system fallbacks.
+
+## Cyrillic Fallback Metrics (OVE-233)
+
+One `size-adjust` cannot serve both scripts. Measured from the shipped binaries
+with `calculateMetricCompatibleFallback`:
+
+| Corpus | Arial | Google Sans | Required size-adjust |
+| --- | --- | --- | --- |
+| Latin | 934.51 | 463.40 | 101.55% |
+| Cyrillic | 1054.21 | 507.19 | 98.53% |
+
+The Latin-derived 101.55% rendered Cyrillic fallback text about 3% too wide.
+Every OverGarden locale is Cyrillic, so the mistuning affected real first
+paints, not just the probed route. `google-sans.css` therefore carries a second
+fallback face with Cyrillic-derived metrics and an explicit `unicode-range`,
+declared after the default face so it wins for Cyrillic code points. The asset
+verifier recomputes both sets from the shipped binary, so they cannot drift.
+
+The fallback face also lists `Liberation Sans` and `Arimo` alongside `Arial`,
+in family, full-name, and PostScript spellings. Arial is absent on Linux and on
+some Android builds, and `local()` matches by font name rather than through
+fontconfig aliasing, so an Arial-only source left the face unresolved there.
+
+## Known Runner Artifacts (OVE-233, tracked by OVE-245)
+
+`KNOWN_FALLBACK_RUNNER_ARTIFACTS` in `scripts/verify-typography-browser.ts`
+lists fallback-probe codes that the GitHub-hosted runner produces without a
+matching product defect. They stay measured and are reported as
+`suppressedFailures`; they never vanish from the evidence.
+
+Chromium `fallback-cls`. With Liberation Sans backing the face, the runner's
+Chromium renders the sample at 360.0px against an unscaled 359.625px, so it is
+not applying `size-adjust`. Firefox and WebKit apply it on the same runner, and
+the same browser, font, and CSS on a developer machine renders 355.89px:
+
+| Environment | Backing font | Sample width | Fallback CLS |
+| --- | --- | --- | --- |
+| Local, real Arial | Arial 359.625 | 355.89 | 0.0004 |
+| Local, Liberation Sans first | Liberation Sans 359.625 | 355.89 | 0.0004 |
+| Runner, Chromium | Liberation Sans 359.625 | 360.00 | 0.0354 |
+| Runner, Firefox | Liberation Sans 359.53 | 355.93 | 0 |
+| Runner, WebKit | Liberation Sans 359.625 | 355.86 | 0 |
+
+WebKit `fallback-not-visible-within-1s` and `fallback-delay-window`. Bimodal on
+the runner: ~1505ms across six of seven runs and 142ms once, always at 0 layout
+shift, against 69ms locally. That is runner scheduling, not a font contract
+failure.
+
+Do not extend the list to hide a regression. Every entry requires a
+cross-engine or local measurement showing the product itself is correct.
