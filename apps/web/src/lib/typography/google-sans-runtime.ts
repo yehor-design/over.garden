@@ -61,6 +61,23 @@ export const GOOGLE_SANS_RUNTIME_FALLBACK = {
   lineGapOverride: "0.00%",
 } as const;
 
+// One size-adjust cannot serve both scripts. Google Sans is 1.55% wider than
+// Arial across the Latin corpus but 1.47% narrower across the Cyrillic one, so
+// the Latin-derived 101.55% renders Cyrillic fallback text about 3% too wide.
+// Every OverGarden locale is Cyrillic, so that mistuning reflowed real text on
+// every first paint and tripped the layout-shift gate on the Bulgarian route.
+// This face carries Cyrillic-derived metrics and is declared after the default
+// one so it wins for Cyrillic code points.
+export const GOOGLE_SANS_RUNTIME_CYRILLIC_FALLBACK = {
+  azAverageWidth: 507.1860465116279,
+  sourceAzAverageWidth: 1_054.2093023255813,
+  sourceUnitsPerEm: 2_048,
+  sizeAdjust: "98.53%",
+  ascentOverride: "98.04%",
+  descentOverride: "29.03%",
+  lineGapOverride: "0.00%",
+} as const;
+
 const CYRILLIC_EXT_RANGE =
   "U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F";
 const CYRILLIC_RANGE = "U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116";
@@ -193,16 +210,35 @@ function renderFallbackFontFace(): string {
   return `/* Metric-compatible fallback generated with Next.js local-font weighting. */
 @font-face {
   font-family: "${GOOGLE_SANS_FALLBACK_FAMILY}";
-  src: ${[
-    GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily,
-    ...GOOGLE_SANS_RUNTIME_FALLBACK.metricCompatibleFamilies,
-  ]
-    .map((family) => `local("${family}")`)
-    .join(", ")};
+  src: ${renderFallbackLocalSources()};
   size-adjust: ${GOOGLE_SANS_RUNTIME_FALLBACK.sizeAdjust};
   ascent-override: ${GOOGLE_SANS_RUNTIME_FALLBACK.ascentOverride};
   descent-override: ${GOOGLE_SANS_RUNTIME_FALLBACK.descentOverride};
   line-gap-override: ${GOOGLE_SANS_RUNTIME_FALLBACK.lineGapOverride};
+}`;
+}
+
+function renderFallbackLocalSources(): string {
+  return [
+    GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily,
+    ...GOOGLE_SANS_RUNTIME_FALLBACK.metricCompatibleFamilies,
+  ]
+    .map((family) => `local("${family}")`)
+    .join(", ");
+}
+
+function renderCyrillicFallbackFontFace(): string {
+  return `/* Cyrillic-derived fallback metrics. Declared after the default face so
+   it wins for Cyrillic code points, where the Latin-derived size-adjust is
+   about 3% too wide and reflows text on the font swap. */
+@font-face {
+  font-family: "${GOOGLE_SANS_FALLBACK_FAMILY}";
+  src: ${renderFallbackLocalSources()};
+  size-adjust: ${GOOGLE_SANS_RUNTIME_CYRILLIC_FALLBACK.sizeAdjust};
+  ascent-override: ${GOOGLE_SANS_RUNTIME_CYRILLIC_FALLBACK.ascentOverride};
+  descent-override: ${GOOGLE_SANS_RUNTIME_CYRILLIC_FALLBACK.descentOverride};
+  line-gap-override: ${GOOGLE_SANS_RUNTIME_CYRILLIC_FALLBACK.lineGapOverride};
+  unicode-range: ${CYRILLIC_RANGE}, ${CYRILLIC_EXT_RANGE};
 }`;
 }
 
@@ -211,4 +247,6 @@ export const GOOGLE_SANS_FONT_FACE_CSS = `${GENERATED_CSS_HEADER}
 ${GOOGLE_SANS_RUNTIME_ASSETS.map(renderFontFace).join("\n\n")}
 
 ${renderFallbackFontFace()}
+
+${renderCyrillicFallbackFontFace()}
 `;

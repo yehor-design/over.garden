@@ -93,6 +93,18 @@ export interface TypographyAssetManifestV1 {
     descentOverride: "28.16%";
     lineGapOverride: "0.00%";
   };
+  // Cyrillic-derived metrics for the same fallback family. Every OverGarden
+  // locale is Cyrillic, and the Latin-derived size-adjust above renders
+  // Cyrillic about 3% too wide, so this face corrects the swap reflow.
+  cyrillicFallback: {
+    azAverageWidth: number;
+    sourceAzAverageWidth: number;
+    sourceUnitsPerEm: 2048;
+    sizeAdjust: "98.53%";
+    ascentOverride: "98.04%";
+    descentOverride: "29.03%";
+    lineGapOverride: "0.00%";
+  };
   budgets: {
     normalCoreMaxBytes: number;
     normalSingleExtendedMaxBytes: number;
@@ -174,6 +186,15 @@ export const GOOGLE_SANS_ASSET_MANIFEST = {
     sizeAdjust: "101.55%",
     ascentOverride: "95.12%",
     descentOverride: "28.16%",
+    lineGapOverride: "0.00%",
+  },
+  cyrillicFallback: {
+    azAverageWidth: 507.1860465116279,
+    sourceAzAverageWidth: 1_054.2093023255813,
+    sourceUnitsPerEm: 2_048,
+    sizeAdjust: "98.53%",
+    ascentOverride: "98.04%",
+    descentOverride: "29.03%",
     lineGapOverride: "0.00%",
   },
   budgets: {

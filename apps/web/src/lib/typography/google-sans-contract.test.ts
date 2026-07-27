@@ -81,8 +81,9 @@ describe("Google Sans asset contract", () => {
 
   it("generates only same-origin real Roman and Italic faces", () => {
     expect(GOOGLE_SANS_FONT_FACE_CSS).not.toMatch(/https?:\/\//u);
+    // Eight real assets plus the default and Cyrillic fallback faces.
     expect(GOOGLE_SANS_FONT_FACE_CSS.match(/@font-face\s*\{/gu)).toHaveLength(
-      9,
+      10,
     );
     expect(
       GOOGLE_SANS_FONT_FACE_CSS.match(/font-display:\s*swap;/gu),
