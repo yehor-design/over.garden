@@ -4595,34 +4595,39 @@ end $$;
 
 -- OVE-192: durable moderation-actor tombstone for ON DELETE RESTRICT community
 -- columns. Triggers are bypassed so this row never receives a public handle.
+-- Better Auth owns "user", so on a fresh database this file's first pass runs
+-- before that table exists. Guard like every other Better Auth-dependent block
+-- here and let the post-migration second pass seed the tombstone.
 do $$
 begin
-  perform set_config('session_replication_role', 'replica', true);
+  if to_regclass('"user"') is not null then
+    perform set_config('session_replication_role', 'replica', true);
 
-  insert into "user" (
-    id,
-    name,
-    email,
-    "emailVerified",
-    "createdAt",
-    "updatedAt"
-  )
-  values (
-    '00000000-0000-4000-8000-00000000ead1',
-    'Erased moderation actor',
-    'erased-moderation-actor@invalid.local',
-    false,
-    '2026-07-01T00:00:00.000Z'::timestamptz,
-    '2026-07-01T00:00:00.000Z'::timestamptz
-  )
-  on conflict (id) do nothing;
+    insert into "user" (
+      id,
+      name,
+      email,
+      "emailVerified",
+      "createdAt",
+      "updatedAt"
+    )
+    values (
+      '00000000-0000-4000-8000-00000000ead1',
+      'Erased moderation actor',
+      'erased-moderation-actor@invalid.local',
+      false,
+      '2026-07-01T00:00:00.000Z'::timestamptz,
+      '2026-07-01T00:00:00.000Z'::timestamptz
+    )
+    on conflict (id) do nothing;
 
-  delete from user_handle_registry
-  where user_id = '00000000-0000-4000-8000-00000000ead1';
-  delete from user_public_profiles
-  where user_id = '00000000-0000-4000-8000-00000000ead1';
+    delete from user_handle_registry
+    where user_id = '00000000-0000-4000-8000-00000000ead1';
+    delete from user_public_profiles
+    where user_id = '00000000-0000-4000-8000-00000000ead1';
 
-  perform set_config('session_replication_role', 'origin', true);
+    perform set_config('session_replication_role', 'origin', true);
+  end if;
 end $$;
 
 create table if not exists analytics_events (
@@ -5106,8 +5111,10 @@ create index if not exists pilot_invite_grants_cohort_segment_granted_idx
   on pilot_invite_grants (cohort, segment, granted_at desc);
 
 -- OVE-200: durable learning actor/evidence attribution (no PII).
+-- Better Auth owns "user", so this table declares no inline foreign key and
+-- attaches it in the guarded block below once that table exists.
 create table if not exists learning_actor_attributions (
-  user_id uuid primary key references "user"(id) on delete cascade,
+  user_id uuid primary key,
   actor_class text not null,
   source text not null,
   classified_at timestamptz not null default now(),
@@ -5117,6 +5124,19 @@ create table if not exists learning_actor_attributions (
 
 do $$
 begin
+  if to_regclass('"user"') is not null then
+    if not exists (
+      select 1
+      from pg_constraint
+      where conname = 'learning_actor_attributions_user_id_fkey'
+        and conrelid = 'learning_actor_attributions'::regclass
+    ) then
+      alter table learning_actor_attributions
+        add constraint learning_actor_attributions_user_id_fkey
+        foreign key (user_id) references "user"(id) on delete cascade;
+    end if;
+  end if;
+
   if not exists (
     select 1
     from pg_constraint
