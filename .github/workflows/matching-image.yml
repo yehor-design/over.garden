@@ -1,10 +1,15 @@
 name: Matching image release
 
-# Matching image builds are large (Docker + sealed artifact) and were the
-# primary Actions storage/minute burn. While GitHub-hosted Actions budget is
-# exhausted, release only via explicit workflow_dispatch. Re-add `push` to
-# main when budget recovers and KEEP_COUNT=0 retention is confirmed healthy.
+# Matching image builds are large (Docker plus a sealed artifact) and were the
+# primary Actions storage/minute burn, so they were reduced to manual dispatch
+# during the account budget freeze. The repository is now public, GitHub-hosted
+# runners and GHCR no longer draw on that budget, and a dispatch on
+# 594aed2572fea0ddff8aaf7bbf589a73d5390a2b published and sealed a real image, so
+# every main revision earns its own immutable release again (OVE-233).
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       source_sha:
