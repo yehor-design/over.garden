@@ -77,12 +77,34 @@ export interface TypographyAssetManifestV1 {
   fallback: {
     family: typeof GOOGLE_SANS_FALLBACK_FAMILY;
     sourceFamily: "Arial";
+    // Metrically identical to Arial, so they share the overrides below and keep
+    // the face resolvable where Arial is absent.
+    metricCompatibleFamilies: readonly [
+      "Liberation Sans",
+      "Liberation Sans Regular",
+      "LiberationSans",
+      "LiberationSans-Regular",
+      "Arimo",
+      "Arimo-Regular",
+    ];
     azAverageWidth: number;
     sourceAzAverageWidth: number;
     sourceUnitsPerEm: 2048;
     sizeAdjust: "101.55%";
     ascentOverride: "95.12%";
     descentOverride: "28.16%";
+    lineGapOverride: "0.00%";
+  };
+  // Cyrillic-derived metrics for the same fallback family. Every OverGarden
+  // locale is Cyrillic, and the Latin-derived size-adjust above renders
+  // Cyrillic about 3% too wide, so this face corrects the swap reflow.
+  cyrillicFallback: {
+    azAverageWidth: number;
+    sourceAzAverageWidth: number;
+    sourceUnitsPerEm: 2048;
+    sizeAdjust: "98.53%";
+    ascentOverride: "98.04%";
+    descentOverride: "29.03%";
     lineGapOverride: "0.00%";
   };
   budgets: {
@@ -154,12 +176,29 @@ export const GOOGLE_SANS_ASSET_MANIFEST = {
   fallback: {
     family: GOOGLE_SANS_FALLBACK_FAMILY,
     sourceFamily: "Arial",
+    metricCompatibleFamilies: [
+      "Liberation Sans",
+      "Liberation Sans Regular",
+      "LiberationSans",
+      "LiberationSans-Regular",
+      "Arimo",
+      "Arimo-Regular",
+    ],
     azAverageWidth: 463.3953488372093,
     sourceAzAverageWidth: 934.5116279069767,
     sourceUnitsPerEm: 2_048,
     sizeAdjust: "101.55%",
     ascentOverride: "95.12%",
     descentOverride: "28.16%",
+    lineGapOverride: "0.00%",
+  },
+  cyrillicFallback: {
+    azAverageWidth: 507.1860465116279,
+    sourceAzAverageWidth: 1_054.2093023255813,
+    sourceUnitsPerEm: 2_048,
+    sizeAdjust: "98.53%",
+    ascentOverride: "98.04%",
+    descentOverride: "29.03%",
     lineGapOverride: "0.00%",
   },
   budgets: {

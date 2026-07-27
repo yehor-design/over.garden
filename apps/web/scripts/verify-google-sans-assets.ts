@@ -40,6 +40,16 @@ const PINNED_ARIAL_FALLBACK_METRICS = {
   azAverageWidth: 934.5116279069767,
   unitsPerEm: 2_048,
 } as const;
+// The Cyrillic letters every OverGarden locale renders, each once, kept at the
+// same space-to-letter proportion as the Latin corpus above so both scripts are
+// weighted the same way.
+const CYRILLIC_AVERAGE_WIDTH_CHARACTERS =
+  "абвгдежзийклмнопрстуфхцчшщъыьэюяєіїґё      ";
+const PINNED_ARIAL_CYRILLIC_FALLBACK_METRICS = {
+  family: "Arial",
+  azAverageWidth: 1_054.2093023255813,
+  unitsPerEm: 2_048,
+} as const;
 const BULGARIAN_SHAPING_SAMPLE = "вгдпт";
 const EXPECTED_CYRILLIC_BASE_GLYPHS = [
   { id: 90, name: "uni0432", codePoint: 0x0432 },
@@ -732,6 +742,71 @@ function inspectAverageWidth(errors: string[], font: FontKitFont | null): void {
   );
 }
 
+function inspectCyrillicAverageWidth(
+  errors: string[],
+  font: FontKitFont | null,
+): void {
+  if (!font) return;
+
+  const glyphs = font.glyphsForString(CYRILLIC_AVERAGE_WIDTH_CHARACTERS);
+  const hasAllCharacters = glyphs
+    .flatMap((glyph) => glyph.codePoints)
+    .every((codePoint) => font.hasGlyphForCodePoint(codePoint));
+  const averageWidth =
+    glyphs.reduce((total, glyph) => total + glyph.advanceWidth, 0) /
+    glyphs.length;
+  const fallback = GOOGLE_SANS_ASSET_MANIFEST.cyrillicFallback;
+
+  addError(
+    errors,
+    hasAllCharacters,
+    "normal-cyrillic: fallback average-width corpus is incomplete.",
+  );
+  addError(
+    errors,
+    Math.abs(averageWidth - fallback.azAverageWidth) < Number.EPSILON,
+    `normal-cyrillic: azAvgWidth is ${averageWidth}.`,
+  );
+  addError(
+    errors,
+    fallback.sourceAzAverageWidth ===
+      PINNED_ARIAL_CYRILLIC_FALLBACK_METRICS.azAverageWidth &&
+      fallback.sourceUnitsPerEm ===
+        PINNED_ARIAL_CYRILLIC_FALLBACK_METRICS.unitsPerEm,
+    "normal-cyrillic: pinned Arial Cyrillic fallback baseline drifted.",
+  );
+
+  const calculated = calculateMetricCompatibleFallback({
+    targetAzAverageWidth: averageWidth,
+    targetUnitsPerEm: font.unitsPerEm,
+    targetAscent: font.ascent,
+    targetDescent: font.descent,
+    targetLineGap: font.lineGap,
+    sourceAzAverageWidth: PINNED_ARIAL_CYRILLIC_FALLBACK_METRICS.azAverageWidth,
+    sourceUnitsPerEm: PINNED_ARIAL_CYRILLIC_FALLBACK_METRICS.unitsPerEm,
+  });
+  addError(
+    errors,
+    calculated.sizeAdjust === fallback.sizeAdjust,
+    `normal-cyrillic: calculated size-adjust is ${calculated.sizeAdjust} from ratio ${calculated.sizeAdjustRatio}.`,
+  );
+  addError(
+    errors,
+    calculated.ascentOverride === fallback.ascentOverride,
+    `normal-cyrillic: calculated ascent-override is ${calculated.ascentOverride}.`,
+  );
+  addError(
+    errors,
+    calculated.descentOverride === fallback.descentOverride,
+    `normal-cyrillic: calculated descent-override is ${calculated.descentOverride}.`,
+  );
+  addError(
+    errors,
+    calculated.lineGapOverride === fallback.lineGapOverride,
+    `normal-cyrillic: calculated line-gap-override is ${calculated.lineGapOverride}.`,
+  );
+}
+
 function inspectGeistMonoManifest(errors: string[]): {
   assetCount: number;
   totalBytes: number;
@@ -1129,8 +1204,8 @@ async function inspectGeneratedCss(
     );
     addError(
       errors,
-      (css.match(/@font-face\s*\{/gu) ?? []).length === 9,
-      "Generated font CSS must contain eight assets and one fallback face.",
+      (css.match(/@font-face\s*\{/gu) ?? []).length === 10,
+      "Generated font CSS must contain eight assets plus the default and Cyrillic fallback faces.",
     );
     addError(
       errors,
@@ -1279,6 +1354,9 @@ async function inspectAssets(
           fontFromBuffer,
         );
         if (asset.id === "normal-latin") inspectAverageWidth(errors, font);
+        if (asset.id === "normal-cyrillic") {
+          inspectCyrillicAverageWidth(errors, font);
+        }
       }
     } catch (error) {
       errors.push(
