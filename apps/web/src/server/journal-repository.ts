@@ -18,6 +18,10 @@ import type {
 } from "@/db/schema";
 import type { Json } from "@/db/generated";
 import { normalizeCoarseRegionCode } from "@/lib/garden/regions";
+import {
+  MAX_PUBLIC_JOURNAL_SLUG_LENGTH,
+  normalizePublicJournalSlug,
+} from "@/lib/garden/public-journal-slug";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   publicJournalEntryPath,
@@ -73,7 +77,7 @@ export { JournalAggregateConflictError, readJournalDocumentFromEntry };
 const MAX_TITLE_LENGTH = 140;
 const MAX_NAME_LENGTH = 120;
 const MAX_RECENT_ITEMS = 20;
-const MAX_PUBLIC_SLUG_LENGTH = 96;
+const MAX_PUBLIC_SLUG_LENGTH = MAX_PUBLIC_JOURNAL_SLUG_LENGTH;
 const MAX_RELATED_PUBLIC_JOURNAL_ENTRIES = 3;
 const MAX_OBJECT_GALLERY_MEDIA = 6;
 const MAX_PUBLIC_JOURNAL_MEDIA = 10;
@@ -4010,11 +4014,12 @@ function normalizeCount(value: number | string | bigint | null | undefined) {
   return 0;
 }
 
+/**
+ * OVE-227: the slug rule is owned by `@/lib/garden/public-journal-slug` so the
+ * write path and the public search parity gate cannot drift apart.
+ */
 function normalizePublicSlug(value: string) {
-  const normalized = value.trim();
-  if (!normalized || normalized.length > MAX_PUBLIC_SLUG_LENGTH) return null;
-  if (!/^[\p{Letter}\p{Number}-]+$/u.test(normalized)) return null;
-  return normalized;
+  return normalizePublicJournalSlug(value);
 }
 
 function isResolvableVarietyState(

@@ -70,6 +70,7 @@
     "smoke:self-serve-mvp": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-self-serve-mvp.ts",
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:public-index-parity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity.ts",
+    "smoke:public-index-parity-adversarial": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity-adversarial.ts",
     "smoke:restore-readiness": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-restore-readiness.ts",
     "teardown:restore-drill": "tsx scripts/teardown-restore-drill.ts",
     "smoke:media-focal-presentation": "tsx scripts/smoke-media-focal-presentation.ts",

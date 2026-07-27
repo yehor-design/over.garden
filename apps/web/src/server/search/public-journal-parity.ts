@@ -6,7 +6,6 @@ import { db } from "@/db";
 import { enqueueJob } from "@/server/queue";
 import { meiliSearchClient } from "@/server/search/client";
 import {
-  fingerprintJournalSearchDocument,
   listGloballyEligibleJournalSearchDocuments,
   type PublicJournalSearchExpectedRow,
 } from "@/server/search/public-journal-eligibility";
@@ -14,11 +13,39 @@ import {
   assertSafeJournalSearchDocumentId,
   isSafeJournalSearchDocumentId,
 } from "@/server/search/public-journal-document-id";
-import type { JournalEntrySearchContractDocument } from "@/server/search/documents";
+import {
+  ALLOWED_JOURNAL_DOCUMENT_FIELDS,
+  corpusFingerprint,
+  diffJournalSearchDocumentFields,
+  fingerprintJournalSearchDocument,
+  validateObservedJournalSearchDocument,
+  type JournalDocumentReason,
+} from "@/server/search/public-journal-document-contract";
 
-export const PUBLIC_JOURNAL_SEARCH_PARITY_POLICY = "ove196.publicIndexParity.v1";
+/**
+ * OVE-227 supersedes the OVE-196 `v1` gate. `v1` compared identifiers, key
+ * sets, and projection classes while substituting expected values for observed
+ * ones, so stale content passed. `v2` compares exact full-value hashes,
+ * validates the observed schema on its own merits, and refuses `zeroGap` while
+ * overdue or terminal indexing work could still be hiding drift.
+ */
+export const PUBLIC_JOURNAL_SEARCH_PARITY_POLICY = "ove227.publicIndexParity.v2";
+export const PUBLIC_JOURNAL_PARITY_ISSUE = "OVE-227";
 export const PUBLIC_JOURNAL_ENTRIES_INDEX = "journal_entries";
 export const DEFAULT_PUBLIC_INDEX_REPAIR_BATCH_SIZE = 100;
+export const MAX_PUBLIC_INDEX_REPAIR_BATCH_SIZE = 500;
+export const PUBLIC_INDEX_REPAIR_MAX_ATTEMPTS = 3;
+const PUBLIC_INDEX_REPAIR_RETRY_BASE_MS = 250;
+
+/**
+ * A journal index/unindex job that has been runnable for longer than this is
+ * not "in flight", it is stuck — and a stuck job can hide drift that the Meili
+ * snapshot has not yet received.
+ */
+export const JOURNAL_SEARCH_JOB_OVERDUE_SECONDS = 300;
+
+const MEILI_TASK_TIMEOUT_MS = 120_000;
+const MEILI_TASK_POLL_INTERVAL_MS = 250;
 
 export type PublicJournalParityClass =
   | "expected"
@@ -29,6 +56,7 @@ export type PublicJournalParityClass =
   | "duplicate"
   | "invalid_id"
   | "pending"
+  | "overdue"
   | "terminal_failure";
 
 export interface PublicJournalParityCounts {
@@ -40,6 +68,7 @@ export interface PublicJournalParityCounts {
   duplicate: number;
   invalid_id: number;
   pending: number;
+  overdue: number;
   terminal_failure: number;
   meiliDocumentCount: number;
   postgresEligibleCount: number;
@@ -47,21 +76,34 @@ export interface PublicJournalParityCounts {
 
 export interface PublicJournalParityReport {
   policyVersion: typeof PUBLIC_JOURNAL_SEARCH_PARITY_POLICY;
-  issue: "OVE-196";
+  issue: typeof PUBLIC_JOURNAL_PARITY_ISSUE;
   zeroGap: boolean;
   counts: PublicJournalParityCounts;
-  evidenceSafety: "counts_and_booleans_only";
+  /** Field names (never values) whose observed hash differs from expected. */
+  driftFieldClasses: string[];
+  /** Schema/value/lifecycle rejection classes observed in the index. */
+  invalidReasonClasses: JournalDocumentReason[];
+  /** Order-independent digests over the two corpora. Safe to publish. */
+  expectedCorpusHash: string;
+  observedCorpusHash: string;
+  evidenceSafety: "counts_classes_and_safe_hashes";
 }
 
 export interface PublicJournalRepairPlan {
   policyVersion: typeof PUBLIC_JOURNAL_SEARCH_PARITY_POLICY;
-  issue: "OVE-196";
+  issue: typeof PUBLIC_JOURNAL_PARITY_ISSUE;
   actions: {
     reindex: number;
     unindexDelete: number;
     deleteInvalid: number;
   };
-  evidenceSafety: "counts_and_booleans_only";
+  evidenceSafety: "counts_classes_and_safe_hashes";
+}
+
+export interface PublicJournalQueueGate {
+  pending: number;
+  overdue: number;
+  terminalFailure: number;
 }
 
 interface InternalParityState {
@@ -73,39 +115,6 @@ interface InternalParityState {
   invalidIds: string[];
 }
 
-const ALLOWED_DOCUMENT_KEYS = new Set([
-  "body",
-  "coarseRegionCode",
-  "coverPublicUrl",
-  "coverSource",
-  "createdAt",
-  "entryDate",
-  "entryScope",
-  "id",
-  "kind",
-  "locationVisibility",
-  "noindex",
-  "publicPath",
-  "publicSlug",
-  "title",
-]);
-
-const FORBIDDEN_DOCUMENT_KEYS = new Set([
-  "ownerUserId",
-  "owner_user_id",
-  "userId",
-  "mediaAssetId",
-  "coverMediaAssetId",
-  "derivativeKey",
-  "quarantineKey",
-  "originalKey",
-  "signedUrl",
-  "latitude",
-  "longitude",
-  "visibility",
-  "lifecycleState",
-]);
-
 export async function classifyPublicJournalIndexParity(): Promise<PublicJournalParityReport> {
   const state = await buildInternalParityState();
   return state.report;
@@ -113,16 +122,7 @@ export async function classifyPublicJournalIndexParity(): Promise<PublicJournalP
 
 export async function planPublicJournalIndexRepair(): Promise<PublicJournalRepairPlan> {
   const state = await buildInternalParityState();
-  return {
-    policyVersion: PUBLIC_JOURNAL_SEARCH_PARITY_POLICY,
-    issue: "OVE-196",
-    actions: {
-      reindex: state.missingIds.length + state.staleIds.length,
-      unindexDelete: state.extraneousIds.length,
-      deleteInvalid: state.invalidIds.length,
-    },
-    evidenceSafety: "counts_and_booleans_only",
-  };
+  return buildRepairPlan(state);
 }
 
 export async function applyPublicJournalIndexRepair(input?: {
@@ -137,22 +137,18 @@ export async function applyPublicJournalIndexRepair(input?: {
 }> {
   const batchSize = Math.max(
     1,
-    Math.min(input?.batchSize ?? DEFAULT_PUBLIC_INDEX_REPAIR_BATCH_SIZE, 100),
+    Math.min(
+      input?.batchSize ?? DEFAULT_PUBLIC_INDEX_REPAIR_BATCH_SIZE,
+      MAX_PUBLIC_INDEX_REPAIR_BATCH_SIZE,
+    ),
   );
   const state = await buildInternalParityState();
-  const plan: PublicJournalRepairPlan = {
-    policyVersion: PUBLIC_JOURNAL_SEARCH_PARITY_POLICY,
-    issue: "OVE-196",
-    actions: {
-      reindex: state.missingIds.length + state.staleIds.length,
-      unindexDelete: state.extraneousIds.length,
-      deleteInvalid: state.invalidIds.length,
-    },
-    evidenceSafety: "counts_and_booleans_only",
-  };
+  const plan = buildRepairPlan(state);
 
   const index = meiliSearchClient().index(PUBLIC_JOURNAL_ENTRIES_INDEX);
-  let reindexUpserted = 0;
+
+  // Reindex first: an eligible document that is both missing and stale must end
+  // up present and exact, never deleted by the removal pass below.
   const reindexTargets = [...state.missingIds, ...state.staleIds].slice(
     0,
     batchSize,
@@ -161,39 +157,25 @@ export async function applyPublicJournalIndexRepair(input?: {
     const expected = state.expectedById.get(id);
     return expected ? [expected.document] : [];
   });
+  let reindexUpserted = 0;
   if (documents.length > 0) {
-    const task = await index.addDocuments(documents, { primaryKey: "id" });
-    const taskUid =
-      typeof task === "object" && task && "taskUid" in task
-        ? Number((task as { taskUid?: unknown }).taskUid)
-        : NaN;
-    if (Number.isFinite(taskUid)) {
-      await meiliSearchClient().tasks.waitForTask(taskUid, {
-        timeout: 120_000,
-        interval: 250,
-      });
-    }
+    await withBoundedRetry(async () => {
+      const task = await index.addDocuments(documents, { primaryKey: "id" });
+      await waitForMeiliTask(task);
+    });
     reindexUpserted = documents.length;
   }
 
+  const deleteTargets = [...state.extraneousIds, ...state.invalidIds]
+    .filter((id) => !state.expectedById.has(id))
+    .slice(0, batchSize);
   let deleted = 0;
-  const deleteTargets = [...state.extraneousIds, ...state.invalidIds].slice(
-    0,
-    batchSize,
-  );
-  for (const id of deleteTargets) {
-    const task = await index.deleteDocument(id);
-    const taskUid =
-      typeof task === "object" && task && "taskUid" in task
-        ? Number((task as { taskUid?: unknown }).taskUid)
-        : NaN;
-    if (Number.isFinite(taskUid)) {
-      await meiliSearchClient().tasks.waitForTask(taskUid, {
-        timeout: 120_000,
-        interval: 250,
-      });
-    }
-    deleted += 1;
+  if (deleteTargets.length > 0) {
+    await withBoundedRetry(async () => {
+      const task = await index.deleteDocuments(deleteTargets);
+      await waitForMeiliTask(task);
+    });
+    deleted = deleteTargets.length;
   }
 
   const after = await classifyPublicJournalIndexParity();
@@ -246,15 +228,23 @@ export async function enqueueJournalEntryUnindexJob(input: {
   );
 }
 
+/**
+ * Evidence projection. Every retained value is a count, a class name, a boolean
+ * or a SHA-256 digest — never a document id, title, body, slug, or job payload.
+ */
 export function redactParityReportForEvidence(
   report: PublicJournalParityReport,
 ): PublicJournalParityReport {
   return {
     policyVersion: report.policyVersion,
-    issue: "OVE-196",
+    issue: PUBLIC_JOURNAL_PARITY_ISSUE,
     zeroGap: report.zeroGap,
     counts: { ...report.counts },
-    evidenceSafety: "counts_and_booleans_only",
+    driftFieldClasses: [...report.driftFieldClasses].sort(),
+    invalidReasonClasses: [...report.invalidReasonClasses].sort(),
+    expectedCorpusHash: report.expectedCorpusHash,
+    observedCorpusHash: report.observedCorpusHash,
+    evidenceSafety: "counts_classes_and_safe_hashes",
   };
 }
 
@@ -262,14 +252,50 @@ export function assertPublicJournalParityZeroGap(
   report: PublicJournalParityReport,
 ): void {
   if (!report.zeroGap) {
-    throw new Error("OVE-196 public journal search parity is not zero-gap");
+    throw new Error(
+      `${PUBLIC_JOURNAL_PARITY_ISSUE} public journal search parity is not zero-gap`,
+    );
   }
+}
+
+/**
+ * `zeroGap` is true only when the index matches Postgres exactly *and* no
+ * overdue or terminal indexing job could still be masking drift.
+ */
+export function derivePublicJournalZeroGap(
+  counts: PublicJournalParityCounts,
+): boolean {
+  return (
+    counts.missing === 0 &&
+    counts.extraneous === 0 &&
+    counts.stale === 0 &&
+    counts.unsafe_schema === 0 &&
+    counts.duplicate === 0 &&
+    counts.invalid_id === 0 &&
+    counts.overdue === 0 &&
+    counts.terminal_failure === 0
+  );
+}
+
+function buildRepairPlan(state: InternalParityState): PublicJournalRepairPlan {
+  return {
+    policyVersion: PUBLIC_JOURNAL_SEARCH_PARITY_POLICY,
+    issue: PUBLIC_JOURNAL_PARITY_ISSUE,
+    actions: {
+      reindex: state.missingIds.length + state.staleIds.length,
+      unindexDelete: state.extraneousIds.length,
+      deleteInvalid: state.invalidIds.length,
+    },
+    evidenceSafety: "counts_classes_and_safe_hashes",
+  };
 }
 
 async function buildInternalParityState(): Promise<InternalParityState> {
   const expectedRows = await listGloballyEligibleJournalSearchDocuments();
   const expectedById = new Map(expectedRows.map((row) => [row.id, row]));
   const meiliDocs = await listMeiliJournalDocuments();
+  const publicDerivativeBaseUrl =
+    process.env.R2_PUBLIC_BASE_URL?.trim() || null;
   const seenIds = new Map<string, number>();
 
   let missing = 0;
@@ -283,11 +309,15 @@ async function buildInternalParityState(): Promise<InternalParityState> {
   const staleIds: string[] = [];
   const extraneousIds: string[] = [];
   const invalidIds: string[] = [];
+  const driftFieldClasses = new Set<string>();
+  const invalidReasonClasses = new Set<JournalDocumentReason>();
+  const observedFingerprints: string[] = [];
 
   for (const doc of meiliDocs) {
     const rawId = doc.id;
-    if (!isSafeJournalSearchDocumentId(rawId)) {
+    if (typeof rawId !== "string" || !isSafeJournalSearchDocumentId(rawId)) {
       invalidId += 1;
+      invalidReasonClasses.add("invalid_id");
       if (typeof rawId === "string") invalidIds.push(rawId);
       continue;
     }
@@ -299,17 +329,29 @@ async function buildInternalParityState(): Promise<InternalParityState> {
     }
 
     const expected = expectedById.get(id);
-    if (hasUnsafeSchema(doc)) {
+    const validation = validateObservedJournalSearchDocument(doc, {
+      publicDerivativeBaseUrl,
+    });
+
+    if (!validation.ok || validation.document === null) {
       unsafeSchema += 1;
-      // Eligible IDs with unsafe Meili payloads must be upserted, not only
-      // deleted — otherwise apply would leave missing docs and zeroGap false.
-      if (expected) {
-        staleIds.push(id);
-      } else {
-        extraneousIds.push(id);
+      for (const reason of validation.reasons) invalidReasonClasses.add(reason);
+      for (const field of validation.fields) {
+        if ((ALLOWED_JOURNAL_DOCUMENT_FIELDS as readonly string[]).includes(field)) {
+          driftFieldClasses.add(field);
+        }
       }
+      // An eligible id with an unsafe payload must be upserted, not only
+      // deleted — otherwise repair would leave it missing and zeroGap false.
+      if (expected) staleIds.push(id);
+      else extraneousIds.push(id);
       continue;
     }
+
+    const observedFingerprint = fingerprintJournalSearchDocument(
+      validation.document,
+    );
+    observedFingerprints.push(observedFingerprint);
 
     if (!expected) {
       extraneous += 1;
@@ -317,10 +359,15 @@ async function buildInternalParityState(): Promise<InternalParityState> {
       continue;
     }
 
-    const observedFingerprint = fingerprintObservedDocument(doc, expected.document);
     if (observedFingerprint !== expected.fingerprint) {
       stale += 1;
       staleIds.push(id);
+      for (const field of diffJournalSearchDocumentFields(
+        expected.document,
+        validation.document,
+      )) {
+        driftFieldClasses.add(field);
+      }
     }
   }
 
@@ -331,7 +378,7 @@ async function buildInternalParityState(): Promise<InternalParityState> {
     }
   }
 
-  const queue = await loadJournalSearchQueueClasses();
+  const queue = await loadJournalSearchQueueGate();
   const counts: PublicJournalParityCounts = {
     expected: expectedRows.length - missing - stale,
     missing,
@@ -341,26 +388,25 @@ async function buildInternalParityState(): Promise<InternalParityState> {
     duplicate,
     invalid_id: invalidId,
     pending: queue.pending,
+    overdue: queue.overdue,
     terminal_failure: queue.terminalFailure,
     meiliDocumentCount: meiliDocs.length,
     postgresEligibleCount: expectedRows.length,
   };
 
-  const zeroGap =
-    counts.missing === 0 &&
-    counts.extraneous === 0 &&
-    counts.stale === 0 &&
-    counts.unsafe_schema === 0 &&
-    counts.duplicate === 0 &&
-    counts.invalid_id === 0;
-
   return {
     report: {
       policyVersion: PUBLIC_JOURNAL_SEARCH_PARITY_POLICY,
-      issue: "OVE-196",
-      zeroGap,
+      issue: PUBLIC_JOURNAL_PARITY_ISSUE,
+      zeroGap: derivePublicJournalZeroGap(counts),
       counts,
-      evidenceSafety: "counts_and_booleans_only",
+      driftFieldClasses: [...driftFieldClasses].sort(),
+      invalidReasonClasses: [...invalidReasonClasses].sort(),
+      expectedCorpusHash: corpusFingerprint(
+        expectedRows.map((row) => row.fingerprint),
+      ),
+      observedCorpusHash: corpusFingerprint(observedFingerprints),
+      evidenceSafety: "counts_classes_and_safe_hashes",
     },
     expectedById,
     missingIds,
@@ -379,29 +425,12 @@ async function listMeiliJournalDocuments(): Promise<
   const limit = 200;
 
   for (;;) {
-    const page = await index.getDocuments({
-      offset,
-      limit,
-      fields: [
-        "id",
-        "kind",
-        "entryScope",
-        "locationVisibility",
-        "coarseRegionCode",
-        "noindex",
-        "coverSource",
-        "coverPublicUrl",
-        "title",
-        "body",
-        "publicSlug",
-        "publicPath",
-        "entryDate",
-        "createdAt",
-      ],
-    });
-    const results = ((page.results ?? []) as unknown as Array<
+    // No `fields` projection: parity must see every stored attribute, because
+    // an unexpected or forbidden key is exactly what the schema gate looks for.
+    const page = await index.getDocuments({ offset, limit });
+    const results = (page.results ?? []) as unknown as Array<
       Record<string, unknown> & { id?: unknown }
-    >);
+    >;
     documents.push(...results);
     if (results.length < limit) break;
     offset += limit;
@@ -410,73 +439,30 @@ async function listMeiliJournalDocuments(): Promise<
   return documents;
 }
 
-function hasUnsafeSchema(doc: Record<string, unknown>): boolean {
-  for (const key of Object.keys(doc)) {
-    if (FORBIDDEN_DOCUMENT_KEYS.has(key)) return true;
-    if (!ALLOWED_DOCUMENT_KEYS.has(key)) return true;
-  }
-  if (doc.kind !== "journal_entry") return true;
-  if (typeof doc.coverSource !== "string") return true;
-  return false;
-}
+/**
+ * Queue classes that can hide index drift.
+ *
+ * - `pending`: claimable or in-flight work, informational only.
+ * - `overdue`: runnable for longer than the budget, or a retry that has been
+ *   waiting past it. Blocks `zeroGap`.
+ * - `terminalFailure`: dead-lettered. Blocks `zeroGap`.
+ */
+export async function loadJournalSearchQueueGate(): Promise<PublicJournalQueueGate> {
+  const overdueBefore = new Date(
+    Date.now() - JOURNAL_SEARCH_JOB_OVERDUE_SECONDS * 1000,
+  );
 
-function fingerprintObservedDocument(
-  doc: Record<string, unknown>,
-  expected: JournalEntrySearchContractDocument,
-): string {
-  const observed = {
-    id: typeof doc.id === "string" ? doc.id.toLowerCase() : "",
-    title: typeof doc.title === "string" ? doc.title : "",
-    body: typeof doc.body === "string" ? doc.body : "",
-    publicSlug: typeof doc.publicSlug === "string" ? doc.publicSlug : "",
-    publicPath: typeof doc.publicPath === "string" ? doc.publicPath : "",
-    locationVisibility:
-      doc.locationVisibility === "region" || doc.locationVisibility === "hidden"
-        ? doc.locationVisibility
-        : expected.locationVisibility,
-    ...(typeof doc.coarseRegionCode === "string"
-      ? { coarseRegionCode: doc.coarseRegionCode as never }
-      : {}),
-    noindex: Boolean(doc.noindex),
-    entryDate: typeof doc.entryDate === "string" ? doc.entryDate : "",
-    entryScope:
-      doc.entryScope === "object" || doc.entryScope === "space"
-        ? doc.entryScope
-        : expected.entryScope,
-    createdAt: typeof doc.createdAt === "string" ? doc.createdAt : "",
-    kind: "journal_entry" as const,
-    coverSource:
-      doc.coverSource === "automatic_inline" ||
-      doc.coverSource === "explicit_inline" ||
-      doc.coverSource === "separate" ||
-      doc.coverSource === "none"
-        ? doc.coverSource
-        : "none",
-    ...(typeof doc.coverPublicUrl === "string"
-      ? { coverPublicUrl: doc.coverPublicUrl }
-      : {}),
-  } satisfies JournalEntrySearchContractDocument;
-
-  // Stale compares public-safe projection classes, not private content equality
-  // of title/body (those are allowed fields but evidence stays class-based).
-  return fingerprintJournalSearchDocument({
-    ...observed,
-    title: expected.title,
-    body: expected.body,
-    publicSlug: expected.publicSlug,
-    publicPath: expected.publicPath,
-    entryDate: expected.entryDate,
-    createdAt: expected.createdAt,
-  });
-}
-
-async function loadJournalSearchQueueClasses(): Promise<{
-  pending: number;
-  terminalFailure: number;
-}> {
   const rows = await db
     .selectFrom("job_queue")
-    .select(["status", sql<number>`count(*)::int`.as("count")])
+    .select([
+      "status",
+      sql<number>`count(*)::int`.as("count"),
+      sql<number>`
+        count(*) filter (
+          where ${sql.ref("job_queue.available_at")} < ${overdueBefore}
+        )::int
+      `.as("overdueCount"),
+    ])
     .where("queue_name", "=", "matching")
     .where((eb) =>
       eb.or([
@@ -489,10 +475,53 @@ async function loadJournalSearchQueueClasses(): Promise<{
     .execute();
 
   let pending = 0;
+  let overdue = 0;
   let terminalFailure = 0;
   for (const row of rows) {
-    if (row.status === "dead") terminalFailure += Number(row.count);
-    else pending += Number(row.count);
+    const count = Number(row.count);
+    if (row.status === "dead") {
+      terminalFailure += count;
+      continue;
+    }
+    pending += count;
+    overdue += Number(row.overdueCount);
   }
-  return { pending, terminalFailure };
+  return { pending, overdue, terminalFailure };
+}
+
+async function waitForMeiliTask(task: unknown): Promise<void> {
+  const taskUid =
+    typeof task === "object" && task && "taskUid" in task
+      ? Number((task as { taskUid?: unknown }).taskUid)
+      : NaN;
+  if (!Number.isFinite(taskUid)) return;
+  await meiliSearchClient().tasks.waitForTask(taskUid, {
+    timeout: MEILI_TASK_TIMEOUT_MS,
+    interval: MEILI_TASK_POLL_INTERVAL_MS,
+  });
+}
+
+/**
+ * Bounded retry for one Meilisearch repair batch. Repair is idempotent
+ * (upsert by primary key, delete by id), so a retried batch converges to the
+ * same state instead of double-applying.
+ */
+async function withBoundedRetry<T>(operation: () => Promise<T>): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= PUBLIC_INDEX_REPAIR_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt === PUBLIC_INDEX_REPAIR_MAX_ATTEMPTS) break;
+      await sleep(PUBLIC_INDEX_REPAIR_RETRY_BASE_MS * 2 ** (attempt - 1));
+    }
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("public journal index repair batch failed");
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
