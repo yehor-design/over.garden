@@ -49,7 +49,7 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
     );
   });
 
-  it("fails OVE-186 when OVE-196 search parity is not zero-gap", () => {
+  it("fails OVE-186 when OVE-227 search parity is not zero-gap", () => {
     expect(() =>
       assertDrive2PublicSearchParityGate({
         zeroGap: false,
@@ -60,9 +60,42 @@ describe("OVE-186 Drive2-parity closeout coverage", () => {
           unsafe_schema: 0,
           duplicate: 0,
           invalid_id: 0,
+          overdue: 0,
+          terminal_failure: 0,
         },
       }),
-    ).toThrow(/OVE-196/);
+    ).toThrow(/OVE-227/);
+  });
+
+  it("fails OVE-186 when overdue or dead indexing jobs can hide drift", () => {
+    const converged = {
+      missing: 0,
+      extraneous: 0,
+      stale: 0,
+      unsafe_schema: 0,
+      duplicate: 0,
+      invalid_id: 0,
+      overdue: 0,
+      terminal_failure: 0,
+    };
+
+    expect(() =>
+      assertDrive2PublicSearchParityGate({
+        zeroGap: true,
+        counts: { ...converged, overdue: 1 },
+      }),
+    ).toThrow(/OVE-227/);
+
+    expect(() =>
+      assertDrive2PublicSearchParityGate({
+        zeroGap: true,
+        counts: { ...converged, terminal_failure: 1 },
+      }),
+    ).toThrow(/OVE-227/);
+
+    expect(() =>
+      assertDrive2PublicSearchParityGate({ zeroGap: true, counts: converged }),
+    ).not.toThrow();
   });
 
   it("keeps every archetype reproducible at 320px and 1440px", () => {

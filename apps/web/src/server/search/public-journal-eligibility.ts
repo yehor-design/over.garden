@@ -14,6 +14,7 @@ import {
   type JournalEntrySearchContractDocument,
   type JournalSearchCoverSource,
 } from "@/server/search/documents";
+import { fingerprintJournalSearchDocument } from "@/server/search/public-journal-document-contract";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 
@@ -223,21 +224,12 @@ export async function listGloballyEligibleJournalSearchDocuments(
   return expected;
 }
 
-export function fingerprintJournalSearchDocument(
-  document: JournalEntrySearchContractDocument,
-): string {
-  return [
-    document.id,
-    document.kind,
-    document.entryScope,
-    document.locationVisibility,
-    document.coarseRegionCode ?? "",
-    document.noindex ? "1" : "0",
-    document.coverSource,
-    document.coverPublicUrl ? "url" : "none",
-    Object.keys(document).sort().join(","),
-  ].join("|");
-}
+/**
+ * OVE-227: the fingerprint is the exact full-value SHA-256 digest owned by
+ * `public-journal-document-contract.ts`. It is re-exported here because this
+ * module is the historical import site for the parity gate and its callers.
+ */
+export { fingerprintJournalSearchDocument };
 
 export function resolveCoverPresentation(input: {
   coverMediaId: string | null;

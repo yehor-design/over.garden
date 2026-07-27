@@ -303,8 +303,11 @@ export function assertDrive2ParityCloseoutCoverage(
 }
 
 /**
- * OVE-196 seam: OVE-186 must fail closed when public journal Meilisearch
- * parity reports any non-zero unsafe/extraneous/missing/stale/invalid class.
+ * OVE-227 seam (supersedes the OVE-196 `v1` seam): OVE-186 must fail closed
+ * when public journal Meilisearch parity reports any non-zero
+ * unsafe/extraneous/missing/stale/invalid class, and equally when overdue or
+ * dead-lettered indexing work could still be hiding drift behind a snapshot
+ * that merely looks converged.
  */
 export function assertDrive2PublicSearchParityGate(input: {
   zeroGap: boolean;
@@ -315,6 +318,8 @@ export function assertDrive2PublicSearchParityGate(input: {
     unsafe_schema: number;
     duplicate: number;
     invalid_id: number;
+    overdue: number;
+    terminal_failure: number;
   };
 }): void {
   const blocking =
@@ -323,10 +328,12 @@ export function assertDrive2PublicSearchParityGate(input: {
     input.counts.stale +
     input.counts.unsafe_schema +
     input.counts.duplicate +
-    input.counts.invalid_id;
+    input.counts.invalid_id +
+    input.counts.overdue +
+    input.counts.terminal_failure;
   if (!input.zeroGap || blocking > 0) {
     throw new Error(
-      "OVE-186 blocked: OVE-196 public journal search parity is not zero-gap",
+      "OVE-186 blocked: OVE-227 public journal search parity is not zero-gap",
     );
   }
 }
