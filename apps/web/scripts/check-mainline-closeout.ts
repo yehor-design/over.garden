@@ -62,6 +62,7 @@ export const REQUIRED_LEDGER_ISSUES = [
   "OVE-211",
   "OVE-212",
   "OVE-225",
+  "OVE-234",
 ] as const;
 
 export const CANONICAL_ORIGIN_URL =

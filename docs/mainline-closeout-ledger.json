@@ -847,6 +847,40 @@
         "Maintainer approved the additive catch-up on 2026-07-27 after a zero-violation production inventory (journal_entry_index 34/34 conforming, journal_entry_unindex 25/25 conforming, violations=0). 0010_ove225_job_queue_payload_contract.sql is applied to production; pg_constraint read-back shows both names present with convalidated=false and the declared key set intact, and the post-apply inventory still reports zero violations.",
         "Does not claim validate constraint: the constraints stay not valid deliberately, since that already enforces every new insert without scanning retained history. Does not claim any job_queue row disposition. The deployed matching worker image predates this change, so consumer-side refusal is not live until that image is republished. Does not claim GitHub Actions budget recovery, matching-image publication, or OVE-186 Done."
       ]
+    },
+    {
+      "issueId": "OVE-234",
+      "title": "P0 — Precise-location text firewall: coordinates never enter, persist, render, index, queue, or log on any user surface",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "f52d83cd139e17f4e8c5e10fc8c55d39f82b9d5c",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-234/p0-precise-location-text-firewall-coordinates-never-enter",
+      "completedAt": "2026-07-27",
+      "verificationCommands": [
+        "cd apps/web && pnpm lint && pnpm typecheck",
+        "cd apps/web && pnpm exec vitest run src/lib/privacy/precise-location-text.test.ts src/server/privacy/precise-location-boundaries.test.ts src/server/job-queue-contract.test.ts",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm linear:task:standard:check",
+        "cd services/matching && uv run pytest -q",
+        "cd apps/web && pnpm smoke:precise-location-firewall",
+        "cd apps/web && pnpm privacy:location:audit",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit f52d83cd139e17f4e8c5e10fc8c55d39f82b9d5c is on main via PR #19. One authoritative policy (ove234.precise-location.v1) in apps/web/src/lib/privacy/precise-location-text.ts, mirrored by services/matching/app/precise_location.py, with both pinned to contracts/privacy/precise-location-text-corpus.json.",
+        "Write boundaries refuse before any DB/outbox/queue/log write: journal title, journal document plus derived body, comments, profile bio and display name, lineage source and pending labels, lineage questions, subject-linked interview notes, and analytics properties. Structured traversal checks every span, nested list item, quote attribution, and link href plus the joined block text, and never rewrites the canonical document shape.",
+        "Public journal directory search and community search drop a coordinate-bearing term instead of searching, reflecting, or logging it. Read side fails closed on legacy rows: Meili projection (TS fixture and Python runtime writer), public profile serializer, comment readback, notification labels, and feed excerpts.",
+        "OVE-225 keeps owning identifiers-only queue payloads at producer, storage CHECK, and Python consumer; OVE-234 adds the standing assertion that no manifest kind declares a free-text payload key.",
+        "Refusals are typed (code precise_location_text) and carry surface plus classification only. No message, stack, HTTP body, redirect status, or inventory report echoes the rejected value. Localized uk/bg/ru copy is actionable and tells the gardener to describe the place by region.",
+        "Live Postgres proof: pnpm smoke:precise-location-firewall refused a synthetic coordinate payload on every named surface with row counts unchanged (journal_entries 311, lineage_provenance_edges 2, lineage_questions 0, user_public_profiles 42). pnpm privacy:location:audit reported 0 affected of 663 scanned rows, so no cleanup plan was required.",
+        "Gates: lint and typecheck clean; pnpm test 2751 passed with only the pre-existing 5s-timeout failures in scripts/check-linear-agent-task.test.ts, reproduced on the same main baseline, whose own gate pnpm linear:task:standard:check passes 197/197; matching pytest 186 passed.",
+        "Exact-SHA production proof: Vercel deployment dpl_Dt8o4Xtw11DBPta3LB4RjM7cBP1h reached READY for githubCommitSha f52d83cd139e17f4e8c5e10fc8c55d39f82b9d5c and owns over.garden plus www.over.garden; GitHub deployment 5621818201 / status 15986778430 recorded success. A production HTML canary returned 200 with no coordinate-shaped text. Local pnpm build fails identically before and after this change on Node 20 (Object.groupBy, added in Node 21); Vercel builds on a newer Node, so this is an environment limit, not a regression.",
+        "Does not claim any production data mutation, cleanup or reclassification of existing rows, Meilisearch reindex, worker image republication, or deployment. Cleanup of legacy rows remains a separate exact, reversible, maintainer-approved plan."
+      ],
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/Dt8o4Xtw11DBPta3LB4RjM7cBP1h",
+      "githubDeploymentId": 5621818201,
+      "githubDeploymentStatusId": 15986778430
     }
   ]
 }
