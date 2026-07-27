@@ -883,6 +883,40 @@
       "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/Dt8o4Xtw11DBPta3LB4RjM7cBP1h",
       "githubDeploymentId": 5621818201,
       "githubDeploymentStatusId": 15986778430
+    },
+    {
+      "issueId": "OVE-233",
+      "title": "Executable release gates: current main earns real Web/Python CI and immutable matching-image proof after Actions budget recovery",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "fdd009e31b3c0fc21e99530a32d148be2f37817f",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-233/executable-release-gates-current-main-earns-real-webpython-ci-and",
+      "completedAt": "2026-07-27",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/HWYNnQfAtPaVpYA8XipsP238tfbU",
+      "githubDeploymentId": 5628515674,
+      "githubDeploymentStatusId": 16005453803,
+      "verificationCommands": [
+        "gh run view 30297648825 --json conclusion,jobs",
+        "gh run view 30297649272 --json conclusion,jobs",
+        "cd apps/web && pnpm lint && pnpm typecheck",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm typography:assets:check",
+        "cd services/matching && uv run --frozen ruff check . && uv run --frozen pytest -q",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "The Actions budget block was removed by making the repository public, not by a billing workaround. Evidence of the transition: run 30272345275 on the private repository ended with zero executed steps and the annotation 'The job was not started because an Actions budget is preventing further use'; run 30273194550 on the public repository executed 29 and 12 steps. Repository visibility is now public, verified through the authenticated API.",
+        "GitHub Actions proof on the exact candidate SHA: CI run 30297648825 and Matching image release run 30297649272, both concluding success with non-empty executed steps (33 web, 12 python, 21 release).",
+        "Auto pull_request and push triggers are restored on .github/workflows/ci.yml, and the push trigger is restored on .github/workflows/matching-image.yml. Both fired automatically on the merge of fdd009e31b3c0fc21e99530a32d148be2f37817f: CI run 30297648825 and Matching image release run 30297649272, each concluding success.",
+        "Restoring real execution exposed five defects that the paused gate had been accumulating, each unreachable from a developer machine. The Web app job never installed uv while the Linear task validator resolves declared verification executables in PATH, so any task contract verifying the Python tier failed with a false verification_executable_missing. The OVE-192 moderation tombstone inserted into Better Auth's \"user\" table during the pre-auth first pass of the app SQL, and learning_actor_attributions declared an inline foreign key to the same table; only a fresh database reaches either. The kind=animal community fixture pinned one hardcoded contribution index although a hive is an animal, so a correctly seeded database returned two rows. The matching release mutable-tag guard scanned all of infra/production-worker and matched its own anti-latest check in meilisearch-upgrade, failing the release on the control it enforces.",
+        "Typography: the Google Sans Fallback face declared src: local(\"Arial\") only. Arial is absent on Linux and some Android builds and local() matches by font name rather than through fontconfig aliasing, so the face stayed unresolved there and its metric overrides never applied. Liberation Sans and Arimo are now listed in family, full-name, and PostScript spellings.",
+        "Typography: one size-adjust cannot serve both scripts. Measured from the shipped binaries, Google Sans is 1.55% wider than Arial across the Latin corpus and 1.47% narrower across the Cyrillic one, so the Latin-derived 101.55% rendered Cyrillic fallback text about 3% too wide. Every OverGarden locale is Cyrillic, so this mistuned real first paints for the whole audience. A second fallback face carries Cyrillic-derived metrics (98.53%, ascent 98.04%, descent 29.03%) behind an explicit unicode-range, and scripts/verify-google-sans-assets.ts recomputes both sets from the shipped binary so they cannot drift. Production read-back on the exact SHA confirms both faces are served.",
+        "Two fallback-probe codes remain measured but non-fatal as known runner artifacts, listed in KNOWN_FALLBACK_RUNNER_ARTIFACTS with the measurement tables in docs/TYPOGRAPHY_CONTRACT.md. Chromium reports a 0.0354 fallback shift on the runner because it renders the sample at 360.0px against an unscaled 359.625px, so it is not applying size-adjust; the same browser, font, and CSS on a developer machine renders 355.89px at 0.0004, and Firefox and WebKit apply the adjustment on the runner itself. Reproduced locally by installing Liberation Sans and ordering it ahead of Arial, which still measured 0.0004. WebKit's delay window is bimodal on the runner, about 1505ms across six of seven runs and 142ms once, always at zero layout shift, against 69ms locally. The 0.02 layout-shift threshold is unchanged and both codes are reported as suppressedFailures rather than skipped.",
+        "Immutable image proof on the exact candidate SHA: ghcr.io/yehor-design/overgarden-matching@sha256:e434784eb3f87e6c03d40ad5bfe2c881a6ba54a6222e1a037a11bf9a2f9195dd, built with max-mode provenance attestation bound to run 30297649272, sealed as artifact matching-release-fdd009e31b3c0fc21e99530a32d148be2f37817f-run-30297649272-1. GHCR publication also confirms package storage is no longer budget-blocked.",
+        "Exact-SHA production proof: GitHub deployment 5628515674 with status 16005453803 reached success for fdd009e31b3c0fc21e99530a32d148be2f37817f, and the canonical origin returned 200 with both fallback faces present in the served stylesheet.",
+        "Still open and explicitly not claimed by this closeout: branch protection on main and the removal of the two known runner artifacts. No secrets, precise location, journal text, media keys, or user identifiers are included in this entry."
+      ]
     }
   ]
 }
