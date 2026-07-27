@@ -188,6 +188,18 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The Google Sans Fallback face is `src: local("Arial")` with metric
+      # overrides derived from Arial. Ubuntu runners ship no Arial, so each
+      # engine resolves that source differently and Chromium shifts layout on
+      # swap. Liberation Sans is metric-compatible with Arial, so installing it
+      # makes the runner match the metrics the contract already assumes instead
+      # of loosening the layout-shift gate.
+      - name: Install metric-compatible fallback fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-liberation
+          fc-match Arial
+
       - name: Install Playwright typography and accessibility browsers
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
