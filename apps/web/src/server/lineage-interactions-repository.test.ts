@@ -26,6 +26,7 @@ import {
   buildLineageQuestionInboxQuery,
   normalizeLineageQuestionText,
 } from "./lineage-interactions-repository";
+import { PreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -243,11 +244,23 @@ describe("lineage interaction repository query contracts", () => {
       "+380 67 123 45 67",
       "https://example.com",
       "@private-handle",
-      "50.450100, 30.523400",
     ]) {
       expect(() => normalizeLineageQuestionText(unsafe)).toThrow(
         /contact details/i,
       );
+    }
+  });
+
+  it("rejects precise coordinates in questions with the OVE-234 typed error", () => {
+    for (const unsafe of [
+      "50.450100, 30.523400",
+      "широта 50.4501",
+      "geo:50.45010,30.52340",
+    ]) {
+      expect(() => normalizeLineageQuestionText(unsafe)).toThrow(
+        PreciseLocationTextError,
+      );
+      expect(() => normalizeLineageQuestionText(unsafe)).not.toThrow(/50\.45/);
     }
   });
 });

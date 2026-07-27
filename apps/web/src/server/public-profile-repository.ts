@@ -28,6 +28,7 @@ import {
   parsePublicHandleSyntax,
 } from "@/server/identity-policy";
 import type { RequestScope } from "@/server/request-scope";
+import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -736,8 +737,10 @@ export function serializePublicProfileEvidencePage(input: {
     mention: `@${input.profile.handle}`,
     displayName,
     avatarUrl: publicMediaUrl(input.profile.avatarDerivativeKey),
-    avatarAlt: input.profile.avatarAltText?.trim() || displayName,
-    bio: input.profile.bio?.trim() || null,
+    avatarAlt: publicSafeText(input.profile.avatarAltText) || displayName,
+    // OVE-234: legacy bios written before the firewall are withheld from the
+    // public serializer instead of being rendered or indexed.
+    bio: publicSafeText(input.profile.bio),
     languages: normalizeProfileLanguages(input.profile.languages),
     coarseRegionCode:
       input.profile.locationVisibility === "region"
@@ -1393,4 +1396,14 @@ function isPublicHandleUpdateStatus(
     value === "unavailable" ||
     value === "cooldown"
   );
+}
+
+/**
+ * OVE-234 read-side firewall: any legacy public text that carries precise
+ * location is withheld rather than rendered, indexed, or serialized.
+ */
+function publicSafeText(value: string | null | undefined): string | null {
+  const trimmed = value?.trim() || null;
+  if (!trimmed) return null;
+  return containsPreciseLocationText(trimmed) ? null : trimmed;
 }

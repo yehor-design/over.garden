@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
+import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { addEngagementComment } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
@@ -40,12 +41,25 @@ export async function POST(request: Request) {
     userId,
     visualActor ? null : getSessionId(session),
   );
-  await addEngagementComment(scope, {
-    target,
-    body: String(formData.get("body") ?? ""),
-    clientMutationId: String(formData.get("clientMutationId") ?? ""),
-    parentCommentId,
-  });
+  try {
+    await addEngagementComment(scope, {
+      target,
+      body: String(formData.get("body") ?? ""),
+      clientMutationId: String(formData.get("clientMutationId") ?? ""),
+      parentCommentId,
+    });
+  } catch (error) {
+    // OVE-234: the refusal is reported as a localized status only. Neither the
+    // redirect nor any log line carries the rejected text.
+    if (isPreciseLocationTextError(error)) {
+      return redirectWithEngagementStatus(
+        request,
+        returnTo,
+        "comment-precise-location",
+      );
+    }
+    throw error;
+  }
 
   revalidatePath(new URL(returnTo, request.url).pathname);
   return redirectWithEngagementStatus(request, returnTo, "commented");

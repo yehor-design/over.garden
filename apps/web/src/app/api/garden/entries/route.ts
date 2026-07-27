@@ -11,6 +11,9 @@ import type {
 } from "@/lib/garden/entry-contracts";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
 import { AuthenticationRequiredError } from "@/server/auth-session";
+import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
+import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
+import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import type {
   EntryScope,
@@ -223,6 +226,21 @@ export async function POST(request: Request) {
 
     return Response.json(response);
   } catch (error) {
+    // OVE-234: a precise-location refusal answers with a stable code plus
+    // localized guidance and never echoes the rejected text back.
+    if (isPreciseLocationTextError(error)) {
+      return Response.json(
+        {
+          error: preciseLocationRejectionMessage(
+            error.surface,
+            request.headers.get(INTERFACE_LOCALE_REQUEST_HEADER),
+          ),
+          code: error.code,
+          surface: error.surface,
+        },
+        { status: 400 },
+      );
+    }
     return Response.json(
       {
         error:

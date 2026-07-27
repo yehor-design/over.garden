@@ -39,6 +39,8 @@
     "smoke:garden-eu-oj-common-catalogue": "tsx scripts/smoke-garden-eu-oj-common-catalogue.ts",
     "smoke:garden-bg-official-varieties": "tsx scripts/smoke-garden-bg-official-varieties.ts",
     "smoke:erasure-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-erasure-workflow.ts",
+    "smoke:precise-location-firewall": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-precise-location-firewall.ts",
+    "privacy:location:audit": "tsx scripts/audit-precise-location-text.ts",
     "erasure:schema-coverage:check": "tsx scripts/check-erasure-schema-coverage.ts",
     "smoke:public-identity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-identity.ts",
     "smoke:catalog-match-approval": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-catalog-match-approval.ts",

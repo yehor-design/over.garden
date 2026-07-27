@@ -244,6 +244,42 @@ function journalPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
+describe("OVE-234 queue payload cannot carry precise location", () => {
+  it("refuses free text alongside the declared identifiers-only shape", () => {
+    // A coordinate can only reach the queue through an undeclared key or a
+    // non-uuid value; both are already contract violations, and neither the
+    // violation nor this assertion echoes the rejected text.
+    for (const payload of [
+      journalPayload({ note: "50.45010,30.52340" }),
+      journalPayload({ userId: "50.45010,30.52340" }),
+    ]) {
+      const violation = validateJobQueuePayload("matching", payload);
+      expect(violation).not.toBeNull();
+      expect(JSON.stringify(violation)).not.toContain("50.45010");
+    }
+  });
+
+  it("declares no free-text payload key on any kind", () => {
+    // Free-text keys are the only way user prose — and therefore a
+    // coordinate — could reach a queue row or a Python consumer.
+    const FREE_TEXT_KEY = /(note|text|body|title|label|comment|query|message)/i;
+
+    for (const entry of JOB_QUEUE_MANIFEST) {
+      const declared = [
+        ...entry.payloadContract.requiredKeys,
+        ...entry.payloadContract.optionalKeys,
+      ].filter((key) => key !== "kind");
+
+      for (const key of declared) {
+        expect(
+          FREE_TEXT_KEY.test(key),
+          `${jobQueueManifestKey(entry)}:${key}`,
+        ).toBe(false);
+      }
+    }
+  });
+});
+
 describe("OVE-225 payload contract", () => {
   it("declares a machine-checkable contract for every manifest kind", () => {
     for (const entry of JOB_QUEUE_MANIFEST) {

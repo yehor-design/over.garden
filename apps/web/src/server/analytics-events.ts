@@ -27,6 +27,7 @@ import type {
   VarietyState,
 } from "@/db/schema";
 import type { RequestScope } from "@/server/request-scope";
+import { assertNoPreciseLocationTextInValues } from "@/lib/privacy/precise-location-text";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 type NewAnalyticsEventRow = Insertable<Database["analytics_events"]>;
@@ -297,6 +298,14 @@ export function normalizeAnalyticsEventProperties(
       value,
     );
   }
+
+  // OVE-234 defence in depth: analytics values are already an allowlisted,
+  // bucketed vocabulary, so any precise-location string here is a contract
+  // break and must fail closed rather than reach storage or a log line.
+  assertNoPreciseLocationTextInValues(
+    Object.values(normalized),
+    "queue_payload",
+  );
 
   return normalized;
 }
