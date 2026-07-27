@@ -79,7 +79,12 @@ export interface TypographyAssetManifestV1 {
     sourceFamily: "Arial";
     // Metrically identical to Arial, so they share the overrides below and keep
     // the face resolvable where Arial is absent.
-    metricCompatibleFamilies: readonly ["Liberation Sans", "Arimo"];
+    metricCompatibleFamilies: readonly [
+      "Liberation Sans",
+      "LiberationSans",
+      "Arimo",
+      "Arimo-Regular",
+    ];
     azAverageWidth: number;
     sourceAzAverageWidth: number;
     sourceUnitsPerEm: 2048;
@@ -157,7 +162,12 @@ export const GOOGLE_SANS_ASSET_MANIFEST = {
   fallback: {
     family: GOOGLE_SANS_FALLBACK_FAMILY,
     sourceFamily: "Arial",
-    metricCompatibleFamilies: ["Liberation Sans", "Arimo"],
+    metricCompatibleFamilies: [
+      "Liberation Sans",
+      "LiberationSans",
+      "Arimo",
+      "Arimo-Regular",
+    ],
     azAverageWidth: 463.3953488372093,
     sourceAzAverageWidth: 934.5116279069767,
     sourceUnitsPerEm: 2_048,

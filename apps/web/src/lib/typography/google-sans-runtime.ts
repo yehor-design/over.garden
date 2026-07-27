@@ -42,7 +42,16 @@ export const GOOGLE_SANS_RUNTIME_FALLBACK = {
   // source leaves the face unresolved there: the overrides below never apply
   // and text reflows when the real font swaps in. Liberation Sans and Arimo are
   // metrically identical to Arial, so the same overrides stay correct.
-  metricCompatibleFamilies: ["Liberation Sans", "Arimo"] as const,
+  //
+  // Both spellings are required. WebKit matches the family name, while Chromium
+  // matches the PostScript name, which carries no space. Listing only the
+  // spaced family left Chromium unresolved and still shifting.
+  metricCompatibleFamilies: [
+    "Liberation Sans",
+    "LiberationSans",
+    "Arimo",
+    "Arimo-Regular",
+  ] as const,
   azAverageWidth: 463.3953488372093,
   sourceAzAverageWidth: 934.5116279069767,
   sourceUnitsPerEm: 2_048,
