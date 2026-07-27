@@ -18,6 +18,7 @@ import {
   getPublicCommunityPage,
   type CommunityObjectKind,
 } from "@/server/community-repository";
+import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import { evaluatePublicSurfaceIndexability } from "@/server/public-surface-indexing-policy";
 import { scopedToUser, type RequestScope } from "@/server/request-scope";
 
@@ -80,7 +81,11 @@ export default async function CommunityDetailRoute({
       : null
     : await currentViewerScope();
 
-  const query = firstValue(queryParams.q).slice(0, 100).trim();
+  // OVE-234: a coordinate-bearing term is dropped before it is searched or
+  // reflected back into the rendered input.
+  const { query } = sanitizePreciseLocationSearchQuery(
+    firstValue(queryParams.q).slice(0, 100),
+  );
   const kind = normalizeKind(firstValue(queryParams.kind));
   const cursor = firstValue(queryParams.cursor).slice(0, 512) || null;
   const community = await getPublicCommunityPage(slug, localeParam, {

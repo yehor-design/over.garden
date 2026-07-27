@@ -60,6 +60,8 @@ const COPY = {
     displayUnavailable: "Ім’я для показу недоступне. Спробуйте інше.",
     invalid: "Перевірте виділені значення.",
     avatarInvalid: "Оберіть доступне оброблене фото.",
+    preciseLocation:
+      "Приберіть точні координати. Вкажіть лише область або регіон.",
   },
   bg: {
     editorTitle: "Публичен профил",
@@ -96,6 +98,8 @@ const COPY = {
     displayUnavailable: "Името за показване не е достъпно. Опитайте друго.",
     invalid: "Проверете въведените стойности.",
     avatarInvalid: "Изберете достъпна обработена снимка.",
+    preciseLocation:
+      "Премахнете точните координати. Посочете само област или регион.",
   },
   ru: {
     editorTitle: "Публичный профиль",
@@ -132,6 +136,8 @@ const COPY = {
     displayUnavailable: "Отображаемое имя недоступно. Попробуйте другое.",
     invalid: "Проверьте введённые значения.",
     avatarInvalid: "Выберите доступное обработанное фото.",
+    preciseLocation:
+      "Уберите точные координаты. Укажите только область или регион.",
   },
 } as const;
 
@@ -717,6 +723,7 @@ function profileEditorStatus(
   if (status === "unchanged") return copy.unchanged;
   if (status === "display_name_unavailable") return copy.displayUnavailable;
   if (status === "avatar") return copy.avatarInvalid;
+  if (status === "precise_location") return copy.preciseLocation;
   if (
     status &&
     [

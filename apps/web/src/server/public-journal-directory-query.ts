@@ -6,6 +6,7 @@ import {
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
+import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 
 export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
@@ -345,9 +346,11 @@ export function publicJournalSafeRegionExpression(): RawBuilder<string | null> {
 function normalizePublicJournalDirectoryQuery(value: string | undefined) {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
   if (!normalized || UNSAFE_QUERY_PATTERN.test(normalized)) return "";
-  return normalized
-    .slice(0, MAX_PUBLIC_JOURNAL_DIRECTORY_QUERY_LENGTH)
-    .trimEnd();
+  // OVE-234: a coordinate-bearing term is dropped before it reaches the SQL
+  // predicate, Meilisearch, the reflected input, or a query log.
+  return sanitizePreciseLocationSearchQuery(
+    normalized.slice(0, MAX_PUBLIC_JOURNAL_DIRECTORY_QUERY_LENGTH).trimEnd(),
+  ).query;
 }
 
 function normalizeSlug(value: string | undefined | null) {

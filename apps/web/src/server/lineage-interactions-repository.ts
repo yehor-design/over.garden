@@ -11,6 +11,7 @@ import type {
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
+import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   looksLikePrivateContactOrPreciseLocation,
   normalizeRequiredText,
@@ -578,6 +579,7 @@ export function buildLineageFollowReadbackQuery(
 
 export function normalizeLineageQuestionText(value: string) {
   const questionText = normalizeRequiredText(value, "Lineage question", 360);
+  assertNoPreciseLocationText(questionText, "lineage_question");
 
   if (looksLikePrivateContactOrPreciseLocation(questionText)) {
     throw new Error(

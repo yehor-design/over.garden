@@ -18,6 +18,7 @@ import {
   normalizePilotSegment,
   PILOT_SEGMENT_OPTIONS,
 } from "@/lib/pilot/segments";
+import { findPreciseLocationText } from "@/lib/privacy/precise-location-text";
 
 export const MAX_REDACTED_NOTE_LENGTH = 280;
 
@@ -414,6 +415,10 @@ export function findForbiddenInterviewCaptureContent(
 
     if (EMAIL_PATTERN.test(normalized)) return "email";
     if (PHONE_PATTERN.test(normalized)) return "phone";
+    // OVE-234: subject-linked interview notes are operator evidence, so
+    // precise location is rejected before the note can be stored or logged.
+    const preciseLocation = findPreciseLocationText(normalized);
+    if (preciseLocation) return `precise_location:${preciseLocation.kind}`;
   }
 
   return null;

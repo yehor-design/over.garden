@@ -25,6 +25,7 @@ import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import type { RequestScope } from "@/server/request-scope";
+import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -2057,7 +2058,10 @@ function normalizeUuid(value: string, label: string) {
 
 function normalizeCommunitySearch(value: string | null | undefined) {
   const normalized = value?.replace(/\s+/g, " ").trim() ?? "";
-  return normalized.slice(0, MAX_COMMUNITY_SEARCH_LENGTH).trimEnd();
+  const bounded = normalized.slice(0, MAX_COMMUNITY_SEARCH_LENGTH).trimEnd();
+  // OVE-234: a coordinate-bearing GET term is dropped, so it can never reach
+  // the SQL predicate, the reflected input, or a query log.
+  return sanitizePreciseLocationSearchQuery(bounded).query;
 }
 
 function normalizeCommunityObjectKind(

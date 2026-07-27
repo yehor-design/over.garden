@@ -23,6 +23,10 @@ import {
   verifyLineageInviteToken,
   type LineageInviteVerification,
 } from "@/server/lineage-invite-token";
+import {
+  assertNoPreciseLocationText,
+  containsPreciseLocationText,
+} from "@/lib/privacy/precise-location-text";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -991,6 +995,7 @@ export function buildInsertLineageClaimAuditEventQuery(
 
 export function normalizeLineageSourceReferenceLabel(value: string) {
   const label = normalizeRequiredText(value, "Source label", 120);
+  assertNoPreciseLocationText(label, "lineage_source_label");
 
   if (looksLikePrivateContactOrPreciseLocation(label)) {
     throw new Error(
@@ -1003,6 +1008,7 @@ export function normalizeLineageSourceReferenceLabel(value: string) {
 
 export function normalizeLineagePendingSourceLabel(value: string) {
   const label = normalizeRequiredText(value, "Invited source label", 120);
+  assertNoPreciseLocationText(label, "lineage_source_label");
 
   if (looksLikePrivateContactOrPreciseLocation(label)) {
     throw new Error(
@@ -1269,7 +1275,14 @@ function lineageClaimActionForDecision(
   return decision === "confirmed" ? "confirm" : "decline";
 }
 
+/**
+ * Contact/handle/URL moderation only. The precise-location boundary is owned
+ * by `@/lib/privacy/precise-location-text` (OVE-234) and is applied
+ * separately so a weakening of this heuristic cannot weaken the location
+ * firewall.
+ */
 export function looksLikePrivateContactOrPreciseLocation(value: string) {
+  if (containsPreciseLocationText(value)) return true;
   return /(@|https?:\/\/|www\.|[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}|\+?\d[\d\s().-]{6,}\d|[-+]?\d{1,2}\.\d{3,}\s*,\s*[-+]?\d{1,3}\.\d{3,})/i.test(
     value,
   );

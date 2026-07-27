@@ -676,6 +676,8 @@ function engagementStatusMessage(status: string, locale: InterfaceLocale) {
       return copy.engagement.commentAuthorBlocked;
     case "comment-unavailable":
       return copy.engagement.commentUnavailable;
+    case "comment-precise-location":
+      return copy.engagement.commentPreciseLocation;
     default:
       return "";
   }

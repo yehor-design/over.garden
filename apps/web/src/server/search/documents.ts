@@ -3,6 +3,7 @@ import {
   normalizeCoarseRegionCode,
   type CoarseRegionCode,
 } from "@/lib/garden/regions";
+import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 
 /*
@@ -76,6 +77,15 @@ export function buildJournalEntrySearchDocumentContractFixture(
       ? normalizeCoarseRegionCode(entry.coarse_region_code)
       : null;
   if (entry.location_visibility === "region" && !coarseRegionCode) {
+    return null;
+  }
+
+  // OVE-234: legacy rows written before the firewall must never be projected
+  // into the public index. This is fail-closed: the document is dropped.
+  if (
+    containsPreciseLocationText(entry.title) ||
+    containsPreciseLocationText(entry.body)
+  ) {
     return null;
   }
 

@@ -19,6 +19,10 @@ import {
   publicLineageObjectPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
+import {
+  assertNoPreciseLocationText,
+  containsPreciseLocationText,
+} from "@/lib/privacy/precise-location-text";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import type { RequestScope } from "@/server/request-scope";
@@ -1261,12 +1265,18 @@ function serializeCommentRow(
     replyToken: row.commentId,
     body:
       row.commentState === "active"
-        ? row.body
+        ? // OVE-234: a legacy comment carrying precise location is withheld
+          // on read instead of being rendered, notified, or indexed.
+          containsPreciseLocationText(row.body)
+          ? "Comment is under review."
+          : row.body
         : row.commentState === "deleted"
           ? "Comment deleted by its author."
           : "Comment is under review.",
     authorLabel:
-      row.authorDisplayName?.trim() ||
+      (containsPreciseLocationText(row.authorDisplayName)
+        ? null
+        : row.authorDisplayName?.trim()) ||
       (authorHandle ? `@${authorHandle}` : "Gardener"),
     authorHandle,
     parentReplyToken: row.parentCommentId,
@@ -1288,6 +1298,9 @@ function normalizeCommentBody(value: string) {
       "Comment cannot include contact details, handles, URLs, invite tokens, or precise location text.",
     );
   }
+  // OVE-234: the keyword pattern above is contact moderation, not the
+  // location boundary. The authoritative detector runs before persistence.
+  assertNoPreciseLocationText(body, "comment");
   return body;
 }
 

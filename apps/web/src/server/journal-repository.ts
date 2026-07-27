@@ -47,6 +47,7 @@ import {
 } from "@/server/journal-topic-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
+import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
 import {
   claimJournalEntryCover,
   claimOrderedInlineMediaForEntry,
@@ -1857,7 +1858,7 @@ export async function updateJournalEntryAggregate(
     };
   }
 
-  const title = normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH);
+  const title = normalizeJournalEntryTitle(input.title);
   const entryDate = normalizeEntryDate(input.entryDate);
   const content = resolveJournalContentForWrite({
     contentDocument: input.contentDocument,
@@ -3737,7 +3738,7 @@ function normalizeCreateFirstPlantEntryInput(
       : userAddedCatalogName
         ? "user_added"
         : "unknown") satisfies VarietyState,
-    title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
+    title: normalizeJournalEntryTitle(input.title),
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
@@ -3786,7 +3787,7 @@ function normalizeCreatePlantObjectJournalEntryInput(
       "Plant object id",
       200,
     ),
-    title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
+    title: normalizeJournalEntryTitle(input.title),
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
@@ -3841,7 +3842,7 @@ function normalizeCreateSpaceJournalEntryInput(
   return {
     spaceId,
     mentionedPlantObjectIds,
-    title: normalizeRequiredText(input.title, "Entry title", MAX_TITLE_LENGTH),
+    title: normalizeJournalEntryTitle(input.title),
     body: content.body,
     contentDocument: content.document,
     contentSchemaVersion: content.contentSchemaVersion,
@@ -3955,6 +3956,16 @@ function normalizeResolvePlantObjectCatalogInput(
       200,
     ),
   };
+}
+
+/**
+ * Entry titles are publishable and indexable, so the precise-location
+ * firewall (OVE-234) runs before the value can reach any insert or update.
+ */
+function normalizeJournalEntryTitle(value: string) {
+  const title = normalizeRequiredText(value, "Entry title", MAX_TITLE_LENGTH);
+  assertNoPreciseLocationText(title, "journal_title");
+  return title;
 }
 
 function normalizeRequiredText(
