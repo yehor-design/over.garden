@@ -79,7 +79,9 @@ describe("visual fixture manifest", () => {
     expect(evidence.auditEvents.length).toBeGreaterThanOrEqual(1);
     expect(dense?.expectedItemCount).toBeGreaterThan(12);
     expect(dense?.expectedHasNextPage).toBe(true);
-    expect(guest?.expectedItemCount).toBe(1);
+    // The typical community holds two animal contributions, because a hive is
+    // an animal (docs/OBJECT_CATEGORY_MODEL_2026-07-23.md).
+    expect(guest?.expectedItemCount).toBe(2);
     expect(guest?.path).toContain("kind=animal");
     expect(contributionKinds).toEqual(
       new Set(["plant", "animal"]),

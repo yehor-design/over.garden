@@ -2,7 +2,7 @@
 
 Status: implemented by OVE-187, extended through OVE-184, consumed by OVE-185
 Manifest version: `ove187-v8`
-Manifest SHA-256: `68f1e37ca4ab6566203ca5c8f38ea08a1a59453fbbf17918aafe145bd27bce91`
+Manifest SHA-256: `fd1952a1013b858fda3067e22d4f439d36bd1d4ccd40c24b7c13fdc5a36deab9`
 
 ## Purpose
 

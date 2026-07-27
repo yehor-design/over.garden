@@ -7568,6 +7568,15 @@ function buildCommunityEvidence(): VisualFixtureCommunityEvidence {
   ];
 
   const typicalActiveIds = typicalContributions.map(({ id }) => id).reverse();
+  // Bee entries are animals (docs/OBJECT_CATEGORY_MODEL_2026-07-23.md), so the
+  // typical community holds more than one animal contribution. Derive the
+  // kind=animal expectation from the fixtures instead of pinning an index, or
+  // it silently drifts whenever the entry mix changes.
+  const animalEntryIds = new Set(animalEntries.map(({ id }) => id));
+  const typicalAnimalActiveIds = typicalContributions
+    .filter((contribution) => animalEntryIds.has(contribution.journalEntryId))
+    .map(({ id }) => id)
+    .reverse();
   const denseActiveIds = denseContributions.map(({ id }) => id).reverse();
   const archivedActiveIds = archivedContributions.map(({ id }) => id).reverse();
   const blockedHiddenIds = denseContributions
@@ -7601,7 +7610,7 @@ function buildCommunityEvidence(): VisualFixtureCommunityEvidence {
       communities[1],
       null,
       "guest",
-      [typicalContributions[1].id],
+      typicalAnimalActiveIds,
       { query: "kind=animal" },
     ),
     communityScenario(

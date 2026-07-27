@@ -127,11 +127,7 @@ async function readCommunityEvidence(
   const query = url.searchParams.get("q");
   const kindValue = url.searchParams.get("kind");
   const kind =
-    kindValue === "plant" ||
-    kindValue === "animal" ||
-    kindValue === "animal"
-      ? kindValue
-      : "all";
+    kindValue === "plant" || kindValue === "animal" ? kindValue : "all";
   const viewerScope = expected.actorId ? scopedToUser(expected.actorId) : null;
   const community = await getPublicCommunityPage(expected.communitySlug, "uk", {
     viewerScope,
