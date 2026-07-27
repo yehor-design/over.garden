@@ -230,7 +230,14 @@ interface FallbackCaseResult {
   fontsReady: boolean;
   fontWindowCls: number | null;
   fallbackFaceResolved?: boolean;
-  fallbackSampleWidthPx?: { fallback: number; missingControl: number };
+  fallbackSampleWidthPx?: {
+    fallback: number;
+    missingControl: number;
+    arial: number;
+    liberationSans: number;
+    arimo: number;
+    dejaVuSans: number;
+  };
   clsSources?: ReadonlyArray<{
     selector: string;
     value: number;
@@ -2350,6 +2357,13 @@ async function runFallbackCase(input: {
             return {
               fallback: measure(`"${fallbackFamily}"`),
               missingControl: measure('"OveMissingFontControl"'),
+              // Which local font the face actually resolved to. Engines pick
+              // differently, and a mismatch here explains a shift that no
+              // metric change can move.
+              arial: measure('"Arial"'),
+              liberationSans: measure('"Liberation Sans"'),
+              arimo: measure('"Arimo"'),
+              dejaVuSans: measure('"DejaVu Sans"'),
             };
           })(),
           computedFontStack,
