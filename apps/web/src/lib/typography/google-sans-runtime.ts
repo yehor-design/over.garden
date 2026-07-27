@@ -48,7 +48,9 @@ export const GOOGLE_SANS_RUNTIME_FALLBACK = {
   // spaced family left Chromium unresolved and still shifting.
   metricCompatibleFamilies: [
     "Liberation Sans",
+    "Liberation Sans Regular",
     "LiberationSans",
+    "LiberationSans-Regular",
     "Arimo",
     "Arimo-Regular",
   ] as const,

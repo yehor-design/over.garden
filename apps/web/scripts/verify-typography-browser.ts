@@ -2327,6 +2327,29 @@ async function runFallbackCase(input: {
             (visibleMeaningfulText &&
               !targetFontAvailableBeforeRelease &&
               orderedFallbackFamily === fallbackFamily),
+          // Raw resolution signal. The combined flag above is OR'd with a
+          // weaker heuristic, so it cannot prove the local() face resolved.
+          fallbackFaceResolved: document.fonts.check(
+            `normal 400 17px "${fallbackFamily}"`,
+            sampleText,
+          ),
+          fallbackSampleWidthPx: (() => {
+            const measure = (family: string) => {
+              const probe = document.createElement("span");
+              probe.style.cssText =
+                "position:absolute;visibility:hidden;white-space:pre;font:normal 400 17px " +
+                family;
+              probe.textContent = sampleText;
+              document.body.append(probe);
+              const width = probe.getBoundingClientRect().width;
+              probe.remove();
+              return width;
+            };
+            return {
+              fallback: measure(`"${fallbackFamily}"`),
+              missingControl: measure('"OveMissingFontControl"'),
+            };
+          })(),
           computedFontStack,
           clsBeforeRelease: state?.cls ?? 0,
         };

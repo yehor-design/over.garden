@@ -81,7 +81,9 @@ export interface TypographyAssetManifestV1 {
     // the face resolvable where Arial is absent.
     metricCompatibleFamilies: readonly [
       "Liberation Sans",
+      "Liberation Sans Regular",
       "LiberationSans",
+      "LiberationSans-Regular",
       "Arimo",
       "Arimo-Regular",
     ];
@@ -176,7 +178,9 @@ export const GOOGLE_SANS_ASSET_MANIFEST = {
     sourceFamily: "Arial",
     metricCompatibleFamilies: [
       "Liberation Sans",
+      "Liberation Sans Regular",
       "LiberationSans",
+      "LiberationSans-Regular",
       "Arimo",
       "Arimo-Regular",
     ],
