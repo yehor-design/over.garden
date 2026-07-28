@@ -355,7 +355,14 @@ async function executePlan(implementationSha: string, approvalDigest: string) {
       product,
       parity,
     );
-    if (!report.ok) throw new Error("strict restore readiness did not pass");
+    if (!report.ok) {
+      const failedGates = Object.entries(report.gates)
+        .filter(([, passed]) => !passed)
+        .map(([gate]) => gate)
+        .sort()
+        .join(",");
+      throw new Error(`strict restore readiness did not pass:${failedGates}`);
+    }
     await updateState(context, "readiness_passed");
 
     const targetFingerprint = redactIdentifier(context.targetId);

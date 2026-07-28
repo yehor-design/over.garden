@@ -11,6 +11,7 @@ import {
   isTrustedGeneratedHandle,
   parsePublicHandleSyntax,
 } from "@/server/identity-policy";
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "@/server/system-actors";
 
 export const PUBLIC_IDENTITY_INTEGRITY_SCHEMA =
   "ove203.public-identity-integrity.v1";
@@ -128,7 +129,10 @@ export interface PublicIdentityMigrationStore {
 export function buildPublicIdentityIntegrityReportQuery() {
   return sql<PublicIdentityIntegrityRow>`
     select
-      (select count(*) from "user") as total_users,
+      (
+        select count(*) from "user"
+        where id <> ${ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID}::uuid
+      ) as total_users,
       (select count(*) from user_public_profiles) as public_profiles,
       (
         select count(*)
@@ -143,7 +147,8 @@ export function buildPublicIdentityIntegrityReportQuery() {
       (
         select count(*)
         from "user" auth_user
-        where not exists (
+        where auth_user.id <> ${ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID}::uuid
+          and not exists (
           select 1
           from user_public_profiles profile
           where profile.user_id = auth_user.id
@@ -152,7 +157,8 @@ export function buildPublicIdentityIntegrityReportQuery() {
       (
         select count(*)
         from "user" auth_user
-        where not exists (
+        where auth_user.id <> ${ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID}::uuid
+          and not exists (
           select 1
           from user_handle_registry registry
           where registry.user_id = auth_user.id
@@ -235,6 +241,7 @@ export function buildPublicIdentityProvisionCandidatesQuery(
   return db
     .selectFrom("user as auth_user")
     .select("auth_user.id as userId")
+    .where("auth_user.id", "!=", ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID)
     .where(
       sql<boolean>`
         not exists (

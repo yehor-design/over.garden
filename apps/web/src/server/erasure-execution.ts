@@ -14,6 +14,7 @@ import {
   convergePublicProjectionsNow,
   recordPublicProjectionIntent,
 } from "@/server/search/public-projection-outbox";
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "@/server/system-actors";
 
 const OPEN_REQUEST_STATUSES = ["submitted", "reviewing"] as const;
 const ERASURE_MEDIA_DELETE_KIND = "erasure_media_object_delete";
@@ -24,9 +25,7 @@ const ERASED_SPACE_NAME = "Erased garden";
 const ERASED_OBJECT_NAME = "Erased object";
 const ERASED_LINEAGE_QUESTION_TEXT =
   "This lineage question was erased by request.";
-/** Shared tombstone user for community ON DELETE RESTRICT actor columns. */
-export const ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID =
-  "00000000-0000-4000-8000-00000000ead1";
+export { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "@/server/system-actors";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -113,10 +112,11 @@ export async function executeApprovedErasureRequest(
         trx,
         requesterUserId,
       );
-      const publicEntryRows = await buildListPublicJournalEntriesForErasureQuery(
-        trx,
-        requesterUserId,
-      ).execute();
+      const publicEntryRows =
+        await buildListPublicJournalEntriesForErasureQuery(
+          trx,
+          requesterUserId,
+        ).execute();
 
       for (const mediaObject of mediaObjects) {
         await buildEnqueueErasureMediaDeleteJobQuery(trx, {
@@ -523,7 +523,10 @@ export function buildDeletePendingJournalSearchJobsForErasureQuery(
   executor: QueryExecutor,
   requesterUserId: string,
 ) {
-  return buildScrubAllJobQueuePayloadsForErasureQuery(executor, requesterUserId);
+  return buildScrubAllJobQueuePayloadsForErasureQuery(
+    executor,
+    requesterUserId,
+  );
 }
 
 export function buildScrubAllJobQueuePayloadsForErasureQuery(
@@ -1126,9 +1129,7 @@ export function buildNullErasureOperatorLinksForErasureQuery(
 async function processErasureMediaCleanupJobs(
   executor: QueryExecutor,
   requestId: string,
-  deleteMediaObject: (
-    reference: ErasureMediaObjectReference,
-  ) => Promise<void>,
+  deleteMediaObject: (reference: ErasureMediaObjectReference) => Promise<void>,
 ): Promise<number> {
   const jobs = await executor
     .selectFrom("job_queue")

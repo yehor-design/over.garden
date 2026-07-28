@@ -8,7 +8,6 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   acquireRecoveryLock,
   classifyProtectedIdentityTransition,
-  ERASED_MODERATION_ACTOR_USER_ID,
   pollUntil,
   RECOVERY_STATE_FILE,
   readSafeRecoveryDiagnostic,
@@ -19,6 +18,7 @@ import {
   writeSecretFile,
   type RecoveryStateReceipt,
 } from "../src/server/restore-readiness/runtime";
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "../src/server/system-actors";
 
 const RECEIPT: RecoveryStateReceipt = {
   issue: "OVE-230",
@@ -142,10 +142,13 @@ describe("OVE-230 recovery drill runtime", () => {
     expect(
       classifyProtectedIdentityTransition(before, {
         ...before,
-        authUsers: new Set(["user-a", ERASED_MODERATION_ACTOR_USER_ID]),
+        authUsers: new Set([
+          "user-a",
+          ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+        ]),
       }),
     ).toEqual({
-      addedAuthUsers: [ERASED_MODERATION_ACTOR_USER_ID],
+      addedAuthUsers: [ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID],
       addedPlants: [],
     });
     try {
