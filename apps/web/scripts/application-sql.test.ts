@@ -16,7 +16,38 @@ describe("versioned application SQL bootstrap", () => {
       "0009_ove200_learning_actor_attributions.sql",
       "0010_ove225_job_queue_payload_contract.sql",
       "0011_ove242_public_projection_outbox.sql",
+      "0012_ove230_restore_schema_convergence.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
+  });
+
+  it("converges history-dependent restore objects to one current-main shape", async () => {
+    const migrations = await loadVersionedApplicationSql(path.resolve("sql"));
+    const convergence = migrations.find(
+      ({ name }) => name === "0012_ove230_restore_schema_convergence.sql",
+    )?.sql;
+
+    expect(convergence).toContain(
+      "drop constraint if exists community_contributions_removed_by_user_id_fkey",
+    );
+    expect(convergence).toContain(
+      'foreign key (removed_by_user_id) references "user"(id) on delete restrict',
+    );
+    expect(convergence).toContain(
+      "drop constraint if exists erasure_requests_handled_status_check",
+    );
+    expect(convergence).toContain("'cleanup_pending'");
+    expect(convergence).toContain(
+      "drop index if exists journal_entry_catalog_mentions_owner_entry_idx",
+    );
+    expect(convergence).toContain(
+      "on journal_entry_catalog_mentions (owner_user_id, space_id, journal_entry_id)",
+    );
+    expect(convergence).toContain(
+      "drop constraint if exists matching_worker_heartbeats_supported_handlers_check",
+    );
+    expect(convergence).toContain(
+      "drop constraint if exists catalog_match_suggestions_source_matching_fingerprint_check",
+    );
   });
 });
