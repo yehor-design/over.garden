@@ -189,11 +189,6 @@ describe("job queue producer/consumer contract", () => {
         kind: "erasure_media_object_delete",
       },
       {
-        source: "server/erasure-execution.ts",
-        queueName: "matching",
-        kind: "journal_entry_unindex",
-      },
-      {
         source: "server/media/media-lifecycle-enqueue.ts",
         queueName: "media_lifecycle",
         kind: "media_derivative_revoke",

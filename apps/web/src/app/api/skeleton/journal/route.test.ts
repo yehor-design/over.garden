@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   PilotWriteAccessError: class PilotWriteAccessError extends Error {},
   createJournalEntry: vi.fn(),
-  enqueueJournalEntryIndexJob: vi.fn(),
+  convergePublicProjectionsNow: vi.fn(),
   listMyRecentJournalEntries: vi.fn(),
   requireCurrentUserId: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
@@ -31,8 +31,8 @@ vi.mock("@/server/journal-repository", () => ({
   createJournalEntry: mocks.createJournalEntry,
   listMyRecentJournalEntries: mocks.listMyRecentJournalEntries,
 }));
-vi.mock("@/server/search/public-journal-parity", () => ({
-  enqueueJournalEntryIndexJob: mocks.enqueueJournalEntryIndexJob,
+vi.mock("@/server/search/public-projection-outbox", () => ({
+  convergePublicProjectionsNow: mocks.convergePublicProjectionsNow,
 }));
 
 import { GET, POST } from "./route";
@@ -57,7 +57,7 @@ describe("walking-skeleton journal API", () => {
     mocks.requireWriteEligibleRequestScope.mockResolvedValue(scope);
     mocks.listMyRecentJournalEntries.mockResolvedValue([entry]);
     mocks.createJournalEntry.mockResolvedValue(entry);
-    mocks.enqueueJournalEntryIndexJob.mockResolvedValue("job-1");
+    mocks.convergePublicProjectionsNow.mockResolvedValue(undefined);
   });
 
   it("hard-404s GET and POST before auth, body, or repository access", async () => {
@@ -203,7 +203,7 @@ describe("walking-skeleton journal API", () => {
     expect(JSON.stringify(bodies)).not.toContain("private");
   });
 
-  it("creates a private entry without queueing public-index work", async () => {
+  it("creates a private entry without touching the public projection", async () => {
     const response = await POST(
       jsonRequest({
         body: "  Local diagnostic entry  ",
@@ -220,11 +220,11 @@ describe("walking-skeleton journal API", () => {
       visibility: "private",
       clientMutationId: "mutation-1",
     });
-    expect(mocks.enqueueJournalEntryIndexJob).not.toHaveBeenCalled();
-    expect(await response.json()).toEqual({ entry, queuedJobId: null });
+    expect(mocks.convergePublicProjectionsNow).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ entry });
   });
 
-  it("queues idempotent indexing only for a public entry", async () => {
+  it("converges the durable public projection only for a public entry", async () => {
     const publicEntry = { ...entry, visibility: "public" };
     mocks.createJournalEntry.mockResolvedValueOnce(publicEntry);
 
@@ -233,23 +233,17 @@ describe("walking-skeleton journal API", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.enqueueJournalEntryIndexJob).toHaveBeenCalledWith({
-      journalEntryId: publicEntry.id,
-      userId: scope.userId,
-    });
-    expect(await response.json()).toEqual({
-      entry: publicEntry,
-      queuedJobId: "job-1",
-    });
+    expect(mocks.convergePublicProjectionsNow).toHaveBeenCalledWith([
+      publicEntry.id,
+    ]);
+    expect(await response.json()).toEqual({ entry: publicEntry });
   });
 
-  it("returns an opaque 500 when queueing fails", async () => {
-    mocks.createJournalEntry.mockResolvedValueOnce({
-      ...entry,
-      visibility: "public",
-    });
-    mocks.enqueueJournalEntryIndexJob.mockRejectedValueOnce(
-      new Error("private queue detail"),
+  it("still succeeds when immediate convergence fails, because the intent is durable", async () => {
+    const publicEntry = { ...entry, visibility: "public" };
+    mocks.createJournalEntry.mockResolvedValueOnce(publicEntry);
+    mocks.convergePublicProjectionsNow.mockRejectedValueOnce(
+      new Error("private search detail"),
     );
 
     const response = await POST(
@@ -257,9 +251,12 @@ describe("walking-skeleton journal API", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body).toEqual({ error: "The request could not be completed." });
-    expect(JSON.stringify(body)).not.toContain("queue detail");
+    // OVE-242: the canonical write and its projection intent already committed
+    // together. A search outage delays convergence; it must not turn a
+    // committed entry into an error, and it must not leak a dependency detail.
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ entry: publicEntry });
+    expect(JSON.stringify(body)).not.toContain("search detail");
   });
 });
 

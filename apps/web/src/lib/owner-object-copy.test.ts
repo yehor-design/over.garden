@@ -43,6 +43,17 @@ describe("owner object copy", () => {
     );
   });
 
+  it("keeps a distinct pending-removal state in every locale until convergence is verified", () => {
+    // OVE-242: an archived entry may only claim it is out of public search
+    // after the public projection has verifiably converged. Until then the
+    // owner reads the pending wording, never the removed wording.
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      const actions = getOwnerObjectCopy(locale).entryActions;
+      expect(actions.archivedGonePending.trim().length).toBeGreaterThan(0);
+      expect(actions.archivedGonePending).not.toBe(actions.archivedGone);
+    }
+  });
+
   it("preserves user, catalog, and source values inside localized templates", () => {
     const objectName = "Apis mellifera — Кошер № 7";
     const sourceName = "Official Journal of the European Union / EUR-Lex";

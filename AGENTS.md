@@ -44,7 +44,7 @@ Public SEO/AEO indexability policy lives in `docs/PUBLIC_SEO_AEO_SURFACE_POLICY.
 4. No browser-direct broad database access. All app data access goes through server APIs/server actions/repositories. Presigned upload URLs are narrow object-specific exceptions.
 5. Kysely is allowed and expected. Do not introduce Prisma, Drizzle, TypeORM, or another ORM without a superseding ADR.
 6. Scoped repositories are mandatory for user/private data. Types do not protect against missing `user_id`, visibility, or public/private predicates.
-7. Meilisearch indexes public rows only. Treat search indexing as a privacy boundary and test it.
+7. Meilisearch indexes public rows only. Treat search indexing as a privacy boundary and test it. Every canonical write that can change a public projection must record its intent in the same transaction through `apps/web/src/server/search/public-projection-outbox.ts` (OVE-242, `docs/PUBLIC_PROJECTION_REVOCATION.md`); never add a post-commit enqueue as the durability mechanism, and never report archive, erasure, moderation or location-hide as removed before verified convergence.
 8. Realtime is not a source of truth. Add live updates only after the canonical server fetch path exists.
 9. Public editorial, landing, guide, and answer SEO/AEO pages may be server-rendered and indexable at MVP launch when they contain useful first-party content. Thin, unsafe, or user-generated public pages, including UGC, variety, topic, lineage, and profile pages, must stay `noindex` and out of sitemaps until explicit quality gates promote them.
 10. No secrets in git. Use env vars/platform secret stores. `.env*` is git-ignored except `.env.example`.

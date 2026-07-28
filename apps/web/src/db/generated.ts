@@ -727,6 +727,28 @@ export interface ProfileReports {
   updated_at: Generated<Timestamp>;
 }
 
+export interface PublicProjectionIntents {
+  applied_at: Timestamp | null;
+  applied_generation: Generated<Int8>;
+  applied_state: string | null;
+  attempts: Generated<number>;
+  available_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
+  desired_generation: Int8;
+  desired_reason: string;
+  desired_state: string;
+  entity_id: string;
+  entity_kind: string;
+  last_error_class: string | null;
+  lease_expires_at: Timestamp | null;
+  lease_owner: string | null;
+  owner_user_id: string;
+  privacy_reducing: Generated<boolean>;
+  status: Generated<string>;
+  updated_at: Generated<Timestamp>;
+  verified_at: Timestamp | null;
+}
+
 export interface Session {
   createdAt: Generated<Timestamp>;
   expiresAt: Timestamp;
@@ -877,6 +899,7 @@ export interface DB {
   profile_blocks: ProfileBlocks;
   profile_follows: ProfileFollows;
   profile_reports: ProfileReports;
+  public_projection_intents: PublicProjectionIntents;
   session: Session;
   spaces: Spaces;
   user: User;

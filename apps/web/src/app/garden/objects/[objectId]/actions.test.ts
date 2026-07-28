@@ -9,8 +9,8 @@ const mocks = vi.hoisted(() => ({
   redirect: vi.fn(),
   scopedToUser: vi.fn(),
   publishJournalEntry: vi.fn(),
-  enqueueJournalEntryIndexJob: vi.fn(),
-  enqueueJournalEntryUnindexJob: vi.fn(),
+  convergePublicProjectionsNow: vi.fn(),
+  arePublicProjectionsConverged: vi.fn(),
   revalidatePath: vi.fn(),
 }));
 
@@ -44,9 +44,9 @@ vi.mock("@/server/lineage-repository", () => ({
 vi.mock("@/server/pilot-write-access", () => ({
   requireWriteEligibleRequestScope: vi.fn(),
 }));
-vi.mock("@/server/search/public-journal-parity", () => ({
-  enqueueJournalEntryIndexJob: mocks.enqueueJournalEntryIndexJob,
-  enqueueJournalEntryUnindexJob: mocks.enqueueJournalEntryUnindexJob,
+vi.mock("@/server/search/public-projection-outbox", () => ({
+  convergePublicProjectionsNow: mocks.convergePublicProjectionsNow,
+  arePublicProjectionsConverged: mocks.arePublicProjectionsConverged,
 }));
 vi.mock("@/server/analytics-events", () => ({
   isBackdatedEntryDate: vi.fn(),
@@ -68,6 +68,8 @@ describe("publishJournalEntryAction authentication intent", () => {
     mocks.redirect.mockImplementation((url: string) => {
       throw new Error(`NEXT_REDIRECT:${url}`);
     });
+    mocks.convergePublicProjectionsNow.mockResolvedValue(undefined);
+    mocks.arePublicProjectionsConverged.mockResolvedValue(true);
   });
 
   it("redirects an expired session through an opaque intent for the exact publish control", async () => {
@@ -122,10 +124,9 @@ describe("publishJournalEntryAction authentication intent", () => {
       { userId: USER_ID },
       { entryId: ENTRY_ID, disclosureAccepted: true },
     );
-    expect(mocks.enqueueJournalEntryIndexJob).toHaveBeenCalledWith({
-      journalEntryId: ENTRY_ID,
-      userId: USER_ID,
-    });
+    // OVE-242: the projection intent committed with the publish itself; the
+    // action only asks for immediate convergence.
+    expect(mocks.convergePublicProjectionsNow).toHaveBeenCalledWith([ENTRY_ID]);
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 });

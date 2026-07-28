@@ -25,6 +25,9 @@ const CONVERGED_COUNTS: PublicJournalParityCounts = {
   pending: 0,
   overdue: 0,
   terminal_failure: 0,
+  projection_unconverged: 0,
+  projection_overdue: 0,
+  projection_dead: 0,
   meiliDocumentCount: 4,
   postgresEligibleCount: 4,
 };
@@ -100,6 +103,27 @@ describe("zero-gap derivation (OVE-227)", () => {
     expect(
       derivePublicJournalZeroGap({ ...CONVERGED_COUNTS, pending: 3 }),
     ).toBe(true);
+    // OVE-242: a projection intent recorded moments ago is in flight, not drift.
+    expect(
+      derivePublicJournalZeroGap({
+        ...CONVERGED_COUNTS,
+        projection_unconverged: 2,
+      }),
+    ).toBe(true);
+  });
+
+  it("fails closed on overdue or dead-lettered projection revocation", () => {
+    // OVE-242: an archive, erasure, moderation or location-hide whose intent
+    // never converged means the previous document may still be searchable.
+    expect(
+      derivePublicJournalZeroGap({
+        ...CONVERGED_COUNTS,
+        projection_overdue: 1,
+      }),
+    ).toBe(false);
+    expect(
+      derivePublicJournalZeroGap({ ...CONVERGED_COUNTS, projection_dead: 1 }),
+    ).toBe(false);
   });
 });
 
@@ -161,7 +185,7 @@ describe("public journal search parity gate and evidence", () => {
 
   it("pins the superseding policy version", () => {
     expect(PUBLIC_JOURNAL_SEARCH_PARITY_POLICY).toBe(
-      "ove227.publicIndexParity.v2",
+      "ove242.publicIndexParity.v3",
     );
     expect(PUBLIC_JOURNAL_PARITY_ISSUE).toBe("OVE-227");
   });

@@ -130,6 +130,15 @@ The canonical handler manifest is exactly:
 5. `journal_entry_index`
 6. `journal_entry_unindex`
 
+Before claiming queue work the loop drains the OVE-242 public-projection
+outbox (`app/public_projection.py`). Those intents are not `job_queue` rows:
+they are written by the TypeScript app inside the same transaction as the
+canonical write, claimed with a lease, applied, verified against the real index,
+and settled under a generation-fenced compare-and-set. A revocation an owner or
+moderator already committed must not wait behind ordinary matching work, and a
+failed one is dead-lettered rather than silently forgotten. See
+`docs/PUBLIC_PROJECTION_REVOCATION.md`.
+
 Use the CLI forms inside a candidate or active image when HTTP is not the right
 boundary:
 

@@ -65,6 +65,11 @@ import {
   type JournalCoverClaimInput,
 } from "@/server/journal-document-persistence";
 import { enqueueArchiveDerivativeRevokes } from "@/server/media/media-lifecycle-enqueue";
+import {
+  ensurePublicProjectionIntent,
+  recordPublicProjectionIntent,
+  recordPublicProjectionIntentsForPlantObject,
+} from "@/server/search/public-projection-outbox";
 import type { JournalCoverSource } from "@/lib/garden/journal-cover-contract";
 import {
   listJournalDocumentImageMediaIds,
@@ -1690,6 +1695,14 @@ export async function resolvePlantObjectCatalog(
     await refreshJournalEntryTopicSignalsForPlantObject(trx, scope, {
       plantObjectId: resolved.id,
     });
+    // OVE-242: resolving a catalog identity reclassifies the object's public
+    // entries, so their projections are re-emitted from the same transaction
+    // rather than left to a post-commit revalidate.
+    await recordPublicProjectionIntentsForPlantObject(trx, {
+      plantObjectId: resolved.id,
+      ownerUserId: scope.userId,
+      reason: "catalog_identity",
+    });
 
     const entryCount = await countJournalEntriesForObject(
       trx,
@@ -1736,11 +1749,27 @@ export async function updatePlantObjectLocation(
   input: UpdatePlantObjectLocationInput,
 ): Promise<PlantObjectLocationUpdateResult> {
   const normalized = normalizeUpdatePlantObjectLocationInput(input);
-  const updated = await buildUpdatePlantObjectLocationQuery(
-    db,
-    scope,
-    normalized,
-  ).executeTakeFirst();
+  // OVE-242: hiding a location, or moving to another coarse region, rewrites
+  // the public region of every public entry on this object. The canonical
+  // update and those projection intents commit together, so the old region can
+  // never survive in the index behind a successful UI response.
+  const updated = await db.transaction().execute(async (trx) => {
+    const row = await buildUpdatePlantObjectLocationQuery(
+      trx,
+      scope,
+      normalized,
+    ).executeTakeFirst();
+
+    if (!row) return null;
+
+    await recordPublicProjectionIntentsForPlantObject(trx, {
+      plantObjectId: row.id,
+      ownerUserId: scope.userId,
+      reason: "location_change",
+    });
+
+    return row;
+  });
 
   if (!updated) {
     throw new Error("Plant object was not found in this garden.");
@@ -1780,13 +1809,26 @@ export async function createJournalEntry(
 
   if (input.visibility === "private") return result.entry;
 
-  return db
-    .updateTable("journal_entries")
-    .set({ visibility: input.visibility, updated_at: new Date() })
-    .where("id", "=", result.entry.id)
-    .where("owner_user_id", "=", scope.userId)
-    .returningAll()
-    .executeTakeFirstOrThrow();
+  // OVE-242: the skeleton path makes an entry public, so it owes the same
+  // atomic projection intent as the product publish path.
+  return db.transaction().execute(async (trx) => {
+    const entry = await trx
+      .updateTable("journal_entries")
+      .set({ visibility: input.visibility, updated_at: new Date() })
+      .where("id", "=", result.entry.id)
+      .where("owner_user_id", "=", scope.userId)
+      .returningAll()
+      .executeTakeFirstOrThrow();
+
+    await recordPublicProjectionIntent(trx, {
+      entityId: entry.id,
+      ownerUserId: scope.userId,
+      desiredState: "present",
+      reason: "publish",
+    });
+
+    return entry;
+  });
 }
 
 export async function listMyRecentJournalEntries(
@@ -1855,6 +1897,7 @@ export async function updateJournalEntryAggregate(
     if (!entry) {
       throw new Error("Journal entry was not found in this garden.");
     }
+    await repairPublicProjectionIntentForReplay(scope, entry);
     return {
       entry,
       mediaAttached: false,
@@ -1884,6 +1927,14 @@ export async function updateJournalEntryAggregate(
       const entry = await findJournalEntryById(scope, entryId, trx);
       if (!entry) {
         throw new Error("Journal entry was not found in this garden.");
+      }
+      if (entry.visibility === "public" && entry.public_slug) {
+        await ensurePublicProjectionIntent(trx, {
+          entityId: entry.id,
+          ownerUserId: scope.userId,
+          desiredState: "present",
+          reason: "edit",
+        });
       }
       return { entry, mediaAttached: false, isReplay: true };
     }
@@ -1964,6 +2015,23 @@ export async function updateJournalEntryAggregate(
       mutationKind: "edit",
     });
 
+    // OVE-242: an edit of a public entry records its projection intent in this
+    // same transaction. An edit that drops previously published text is
+    // treated as privacy-reducing and is applied before neutral work, because
+    // the removed sentence stays searchable until the index is rewritten.
+    if (updated.visibility === "public" && updated.public_slug) {
+      await recordPublicProjectionIntent(trx, {
+        entityId: updated.id,
+        ownerUserId: scope.userId,
+        desiredState: "present",
+        reason: "edit",
+        privacyReducing: isPublicTextReducingEdit(
+          { title: existing.title, body: existing.body },
+          { title, body: content.body },
+        ),
+      });
+    }
+
     const priorRead = readJournalDocumentFromEntry(existing);
     const priorDocument =
       priorRead.status === "unavailable"
@@ -1993,6 +2061,39 @@ export async function updateJournalEntryAggregate(
   });
 }
 
+/**
+ * OVE-242. True when the new public text does not still contain the previously
+ * published text. Removing a sentence, a name or a landmark is the transition
+ * that must reach the index first, so it is classified conservatively: any
+ * change that is not a pure addition counts as reducing.
+ */
+export function isPublicTextReducingEdit(
+  prior: { title: string; body: string },
+  next: { title: string; body: string },
+): boolean {
+  const priorTitle = prior.title.trim();
+  const priorBody = prior.body.trim();
+  return (
+    !next.title.trim().includes(priorTitle) ||
+    !next.body.trim().includes(priorBody)
+  );
+}
+
+async function repairPublicProjectionIntentForReplay(
+  scope: RequestScope,
+  entry: JournalEntry,
+): Promise<void> {
+  if (entry.visibility !== "public" || !entry.public_slug) return;
+  await db.transaction().execute(async (trx) => {
+    await ensurePublicProjectionIntent(trx, {
+      entityId: entry.id,
+      ownerUserId: scope.userId,
+      desiredState: "present",
+      reason: "edit",
+    });
+  });
+}
+
 export async function publishJournalEntry(
   scope: RequestScope,
   input: PublishJournalEntryInput,
@@ -2009,6 +2110,17 @@ export async function publishJournalEntry(
   }
 
   if (existing.visibility === "public" && existing.public_slug) {
+    // OVE-242: a replayed publish must still leave a durable projection intent
+    // behind, so an entry published before the outbox existed — or one whose
+    // intent was lost — is repaired instead of silently trusted.
+    await db.transaction().execute(async (trx) => {
+      await ensurePublicProjectionIntent(trx, {
+        entityId: existing.id,
+        ownerUserId: scope.userId,
+        desiredState: "present",
+        reason: "publish",
+      });
+    });
     return {
       entry: existing,
       publicUrl: publicJournalEntryPath(existing.public_slug),
@@ -2032,13 +2144,27 @@ export async function publishJournalEntry(
     createPublicSlug(existing.title, MAX_PUBLIC_SLUG_LENGTH);
   const publishedAt = existing.published_at ?? now;
 
-  const published = await buildPublishJournalEntryQuery(db, scope, {
-    entryId,
-    publicSlug,
-    publishedAt,
-    now,
-    disclosureLogged: needsDisclosure,
-  }).executeTakeFirstOrThrow();
+  // OVE-242: the canonical publish and its public-projection intent share one
+  // transaction. There is no window in which the entry is public but nothing
+  // durable records that the index owes a document.
+  const published = await db.transaction().execute(async (trx) => {
+    const row = await buildPublishJournalEntryQuery(trx, scope, {
+      entryId,
+      publicSlug,
+      publishedAt,
+      now,
+      disclosureLogged: needsDisclosure,
+    }).executeTakeFirstOrThrow();
+
+    await recordPublicProjectionIntent(trx, {
+      entityId: row.id,
+      ownerUserId: scope.userId,
+      desiredState: "present",
+      reason: "publish",
+    });
+
+    return row;
+  });
 
   return {
     entry: published,
@@ -2420,6 +2546,18 @@ export async function archiveJournalEntry(
       journalEntryId: entryId,
       ownerUserId: scope.userId,
     });
+
+    // OVE-242: archive commits the removal intent atomically. Previously the
+    // unindex job was enqueued by the action after this transaction, so a
+    // failure there left archived content searchable with nothing recording it.
+    if (existing.public_slug !== null) {
+      await recordPublicProjectionIntent(trx, {
+        entityId: row.id,
+        ownerUserId: scope.userId,
+        desiredState: "absent",
+        reason: "archive",
+      });
+    }
 
     return row;
   });

@@ -17,7 +17,7 @@ import {
   requireWriteEligibleRequestScope,
   resolveActorClassForScope,
 } from "@/server/pilot-write-access";
-import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
+import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
 export const runtime = "nodejs";
 
@@ -109,13 +109,13 @@ export async function PATCH(
         publicJournalEntryPath(result.entry.public_slug),
       );
       revalidatePath(publicPath);
-      if (!result.isReplay) {
-        await enqueueJournalEntryIndexJob({
-          journalEntryId: result.entry.id,
-          userId: scope.userId,
-          idempotencyKey: `journal_entry_index:${result.entry.id}:${result.entry.journal_revision}`,
-        }).catch(() => undefined);
-      }
+      // OVE-242: the projection intent was already committed with the entry
+      // edit, including on the replay path. This only attempts to converge it
+      // immediately; if it fails, the durable outbox and the worker still owe
+      // the rewrite, so a removed sentence cannot stay searchable forever.
+      await convergePublicProjectionsNow([result.entry.id]).catch(
+        () => undefined,
+      );
     }
 
     return Response.json({
