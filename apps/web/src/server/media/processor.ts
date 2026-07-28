@@ -12,18 +12,24 @@ import {
 } from "@/lib/media/image-limits";
 import { createPublicImageDerivative } from "./derivatives";
 import {
+  classifyLaunchMediaDerivative,
+  type LaunchMediaQualityClass,
+} from "./launch-media-quality";
+import {
   admitSafeMediaBytes,
   SafeMediaAdmissionError,
 } from "./safe-media-admission";
 
 export class MediaLaunchQualityError extends Error {
   readonly code = "media_launch_quality_rejected" as const;
+  readonly qualityClass: Exclude<LaunchMediaQualityClass, "pass">;
 
-  constructor() {
+  constructor(qualityClass: Exclude<LaunchMediaQualityClass, "pass">) {
     super(
-      "Image is too small for launch media. Upload a clearer photo or save without it.",
+      "This photo cannot be published safely. Choose another photo or save without it.",
     );
     this.name = "MediaLaunchQualityError";
+    this.qualityClass = qualityClass;
   }
 }
 
@@ -56,7 +62,16 @@ export async function processQuarantinedImage(
       height: derivative.height,
     })
   ) {
-    throw new MediaLaunchQualityError();
+    throw new MediaLaunchQualityError("reject");
+  }
+  const quality = await classifyLaunchMediaDerivative({
+    buffer: derivative.buffer,
+    width: derivative.width,
+    height: derivative.height,
+    abortSignal,
+  });
+  if (quality.qualityClass !== "pass") {
+    throw new MediaLaunchQualityError(quality.qualityClass);
   }
 
   const derivativeKey = `derivatives/${asset.public_object_id}.${derivative.extension}`;
@@ -74,5 +89,6 @@ export async function processQuarantinedImage(
     intrinsicWidth: derivative.width,
     intrinsicHeight: derivative.height,
     admittedMediaType,
+    qualityPolicyVersion: quality.policyVersion,
   };
 }

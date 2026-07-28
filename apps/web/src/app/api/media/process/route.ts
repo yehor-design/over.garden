@@ -70,14 +70,17 @@ export async function POST(request: Request) {
   }
   const claim = await claimMediaAssetForProcessing(scope, asset.id);
   if (!claim) {
-    return Response.json({ error: "Image processing is already in progress." }, { status: 409 });
+    return Response.json(
+      { error: "Image processing is already in progress." },
+      { status: 409 },
+    );
   }
 
   try {
     let derivativeKey = claim.asset.derivative_key;
     if (claim.phase === "process_original") {
-      const derivative = await withProcessingDeadline(
-        (abortSignal) => processQuarantinedImage(claim.asset, abortSignal),
+      const derivative = await withProcessingDeadline((abortSignal) =>
+        processQuarantinedImage(claim.asset, abortSignal),
       );
       derivativeKey = derivative.derivativeKey;
       const written = await markClaimedMediaDerivativeWritten(
@@ -108,7 +111,8 @@ export async function POST(request: Request) {
       throw new Error("Original absence is not authoritative.");
     }
     const updated = await settleClaimedMediaPublicReady(scope, claim);
-    if (!updated?.derivative_key) throw new Error("Media processing claim was superseded.");
+    if (!updated?.derivative_key)
+      throw new Error("Media processing claim was superseded.");
 
     return Response.json({
       mediaAsset: {
@@ -124,13 +128,20 @@ export async function POST(request: Request) {
   } catch (error) {
     const terminal =
       error instanceof SafeMediaAdmissionError ||
-      error instanceof MediaLaunchQualityError;
+      (error instanceof MediaLaunchQualityError &&
+        error.qualityClass === "reject");
     await releaseMediaProcessingClaim(scope, claim, terminal);
     if (error instanceof MediaLaunchQualityError) {
-      return Response.json({ error: error.message, code: error.code }, { status: 422 });
+      return Response.json(
+        { error: error.message, code: error.code },
+        { status: 422 },
+      );
     }
     if (error instanceof SafeMediaAdmissionError) {
-      return Response.json({ error: error.message, code: error.code }, { status: 422 });
+      return Response.json(
+        { error: error.message, code: error.code },
+        { status: 422 },
+      );
     }
     return Response.json(
       {
@@ -151,13 +162,10 @@ async function withProcessingDeadline<T>(
     return await Promise.race([
       operation(controller.signal),
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(
-          () => {
-            controller.abort(new Error("Media processing deadline exceeded."));
-            reject(new Error("Media processing deadline exceeded."));
-          },
-          SAFE_MEDIA_PROCESSING_TIMEOUT_MS,
-        );
+        timeout = setTimeout(() => {
+          controller.abort(new Error("Media processing deadline exceeded."));
+          reject(new Error("Media processing deadline exceeded."));
+        }, SAFE_MEDIA_PROCESSING_TIMEOUT_MS);
       }),
     ]);
   } finally {

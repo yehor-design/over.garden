@@ -68,6 +68,26 @@ Reports are redacted: counts, quality classes, disposition targets — never tit
 
 SQL used by plan/check is SELECT-only (`assertLaunchCorpusInventorySqlIsSelectOnly`).
 
+## Launch media quality policy
+
+OVE-231 owns `ove231.launch-media-quality.v1` in
+`apps/web/src/server/media/launch-media-quality.ts`. It classifies only the
+server-stripped derivative, never the quarantine original:
+
+- `pass` is the only class that a new processing claim may publish.
+- `reject` covers corrupt/tiny, fully transparent, flat-color, and pinned
+  mechanical placeholder failures.
+- `review_required` is fail-closed for ambiguous darkness or low contrast;
+  it never auto-revokes existing real-user media.
+
+`pnpm audit:launch-corpus-media-quality -- --environment production
+--confirm-environment production --mode inventory` reuses the OVE-244 public
+eligibility predicate, scans at most 256 currently eligible derivatives with
+four concurrent bounded reads, and emits policy version plus aggregate classes
+only. Its SQL is part of the SELECT-only inventory manifest. Any archive,
+revoke, seed, reclassify, reindex, or other production mutation remains an
+OVE-199 exact-manifest sign-off action.
+
 ## Shot-list (founder content pack — after sign-off)
 
 Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 journals**.
@@ -96,7 +116,7 @@ Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
 | Quality class | Before | After (only with sign-off) |
 |---------------|--------|----------------------------|
 | `production_smoke_suspect` / technical-label public | Visible smoke | `archive` (lifecycle archived; out of feed/search) |
-| `tiny_or_placeholder_media` | Tiny/black public derivatives | `revoke_via_ove195` |
+| `tiny_or_placeholder_media` | Dimension-tiny legacy fast count; OVE-231 supplies byte-quality classes | `revoke_via_ove195` only after exact OVE-199 review |
 | `visual_fixture_namespace` (production) | Must be zero | Remove/reclassify; never seed |
 | `archived_public_slug` (incl. OVE-191 retired synthetic) | Lifecycle tombs | `reclassify_retain_lifecycle` — not real UGC; keep Gone/Meili parity |
 | `founder_seed_slot` | Missing | `seed_after_signoff` via canonical composer as founder; `content_class=founder_first_hand` |

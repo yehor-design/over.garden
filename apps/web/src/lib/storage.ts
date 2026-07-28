@@ -124,6 +124,28 @@ export async function putPublicDerivativeObject(
   );
 }
 
+export async function getPublicDerivativeObjectBuffer(
+  objectKey: string,
+  maxBytes: number,
+  abortSignal?: AbortSignal,
+): Promise<Buffer> {
+  const response = await r2Client().send(
+    new GetObjectCommand({
+      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
+      Key: objectKey,
+    }),
+    { abortSignal: boundedMediaProviderSignal(abortSignal) },
+  );
+  if ((response.ContentLength ?? 0) > maxBytes) {
+    throw new Error("Public derivative exceeds the inventory byte budget.");
+  }
+  const bytes = await response.Body?.transformToByteArray();
+  if (!bytes || bytes.byteLength > maxBytes) {
+    throw new Error("Public derivative is unavailable within the byte budget.");
+  }
+  return Buffer.from(bytes);
+}
+
 function boundedMediaProviderSignal(parent?: AbortSignal): AbortSignal {
   const timeout = AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS);
   return parent ? AbortSignal.any([parent, timeout]) : timeout;

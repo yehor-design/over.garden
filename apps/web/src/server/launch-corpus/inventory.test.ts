@@ -28,6 +28,11 @@ describe("launch corpus inventory", () => {
   it("exposes only SELECT statements", () => {
     expect(listLaunchCorpusInventoryStatements().length).toBeGreaterThan(5);
     expect(() => assertLaunchCorpusInventorySqlIsSelectOnly()).not.toThrow();
+    expect(
+      listLaunchCorpusInventoryStatements().find((statement) =>
+        statement.includes('"derivativeKey"'),
+      ),
+    ).toMatch(/media_readiness_state = 'public_ready'/);
   });
 
   it("plans founder seed slots and cover matrix without private content", () => {
@@ -62,7 +67,9 @@ describe("launch corpus inventory", () => {
         (target) => target.disposition === "seed_after_signoff",
       ),
     ).toBe(true);
-    expect(JSON.stringify(report)).not.toMatch(/@|password|media\.|quarantine/i);
+    expect(JSON.stringify(report)).not.toMatch(
+      /@|password|media\.|quarantine/i,
+    );
   });
 
   it("blocks production launch readiness without founder_first_hand public rows", () => {
@@ -92,9 +99,7 @@ describe("launch corpus inventory", () => {
         ...emptyInventory,
         technicalLabelHits: 1,
         tinyPlaceholderMediaHits: 1,
-        publicActiveByClass: [
-          { contentClass: "production_smoke", count: 1 },
-        ],
+        publicActiveByClass: [{ contentClass: "production_smoke", count: 1 }],
       },
     });
     const check = buildLaunchCorpusCheckReport({

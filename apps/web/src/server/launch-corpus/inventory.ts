@@ -18,6 +18,7 @@ import {
   assertLocalCoverMatrixComplete,
   listLocalCoverMatrixBranchIds,
 } from "@/lib/launch-corpus/cover-matrix";
+import { publicMediaEligibilitySqlText } from "@/server/media/public-media-eligibility";
 
 export type LaunchCorpusDisposition =
   | "archive"
@@ -93,6 +94,20 @@ export interface LaunchCorpusCheckReport {
 
 /** Every statement the plan script may issue. Must be SELECT-only. */
 export const LAUNCH_CORPUS_INVENTORY_SQL = {
+  launchMediaQualityCandidates: `
+select ma.derivative_key as "derivativeKey",
+       ma.intrinsic_width as width,
+       ma.intrinsic_height as height
+from media_assets ma
+inner join journal_entries je on je.id = ma.journal_entry_id
+where je.visibility = 'public'
+  and je.lifecycle_state = 'active'
+  and je.public_slug is not null
+  and ${publicMediaEligibilitySqlText("ma")}
+order by ma.created_at desc, ma.id desc
+limit 256
+`.trim(),
+
   contentClassCounts: `
 select coalesce(content_class, 'unset') as "contentClass", count(*)::bigint as count
 from journal_entries
@@ -129,8 +144,7 @@ inner join journal_entries je on je.id = ma.journal_entry_id
 where je.visibility = 'public'
   and je.lifecycle_state = 'active'
   and je.public_slug is not null
-  and ma.status = 'processed'
-  and ma.revoked_at is null
+  and ${publicMediaEligibilitySqlText("ma")}
   and (
     (ma.intrinsic_width is not null and ma.intrinsic_width <= 16)
     or (ma.intrinsic_height is not null and ma.intrinsic_height <= 16)
@@ -239,7 +253,7 @@ export function buildLaunchCorpusPlanReport(input: {
       disposition: "revoke_via_ove195",
       count: input.inventory.tinyPlaceholderMediaHits,
       notes:
-        "Tiny/flat/black public derivatives → revoke via OVE-195 lifecycle; not bulk row delete.",
+        "Dimension-tiny public derivatives are a legacy fast count; OVE-231 classifies flat, transparent, dark-ambiguous, and placeholder bytes before any OVE-199 disposition.",
     });
   }
 
@@ -370,7 +384,8 @@ export function buildLaunchCorpusCheckReport(input: {
       code: "placeholder_media",
       severity: "fail",
       count: input.plan.tinyPlaceholderMediaHits,
-      message: "Public-active journals still reference tiny/placeholder media.",
+      message:
+        "Public-active journals still reference dimension-tiny media; use the OVE-231 classifier inventory for byte-quality classes.",
     });
   }
 
@@ -454,7 +469,10 @@ export function validateFounderPublicRow(input: {
   ) {
     errors.push("missing_source_language");
   }
-  if (detectTechnicalLabelText(input.title) || detectTechnicalLabelText(input.body)) {
+  if (
+    detectTechnicalLabelText(input.title) ||
+    detectTechnicalLabelText(input.body)
+  ) {
     errors.push("technical_label");
   }
   return errors;
