@@ -50,6 +50,7 @@ export function attachJournalBlockReorderController(
   let unregisterInFlight: (() => void) | null = null;
   let indicator: HTMLDivElement | null = null;
   let autoScrollFrame: number | null = null;
+  let syncFrame: number | null = null;
   let lastPointerY = 0;
   let gesture: {
     sourceBlockId: string;
@@ -72,7 +73,11 @@ export function attachJournalBlockReorderController(
     return ids;
   }
 
-  function announceForCommit(sourceBlockId: string, toIndex: number, total: number) {
+  function announceForCommit(
+    sourceBlockId: string,
+    toIndex: number,
+    total: number,
+  ) {
     const block = editor.blocks.getById(sourceBlockId);
     const typeClass = mapEditorToolNameToTypeClass(block?.name);
     const copy = options.getCopy();
@@ -163,7 +168,9 @@ export function attachJournalBlockReorderController(
         blocks[insertBeforeIndex].getBoundingClientRect().top - holderRect.top;
     }
     el.hidden = false;
-    el.style.transform = reducedMotion ? `translateY(${top}px)` : `translateY(${top}px)`;
+    el.style.transform = reducedMotion
+      ? `translateY(${top}px)`
+      : `translateY(${top}px)`;
   }
 
   function clearIndicator() {
@@ -200,7 +207,10 @@ export function attachJournalBlockReorderController(
     if (lastPointerY < edge) delta = -12;
     else if (lastPointerY > viewportHeight - edge) delta = 12;
     if (delta !== 0) {
-      window.scrollBy({ top: delta, behavior: reducedMotion ? "auto" : "smooth" });
+      window.scrollBy({
+        top: delta,
+        behavior: reducedMotion ? "auto" : "smooth",
+      });
       updateInsertFromY(lastPointerY);
     }
     autoScrollFrame = window.requestAnimationFrame(tickAutoScroll);
@@ -340,7 +350,11 @@ export function attachJournalBlockReorderController(
     await controller.moveBlockById(block.id, action === "up" ? -1 : 1);
   }
 
-  function syncControlsForBlock(blockEl: HTMLElement, index: number, total: number) {
+  function syncControlsForBlock(
+    blockEl: HTMLElement,
+    index: number,
+    total: number,
+  ) {
     let controls = blockEl.querySelector<HTMLElement>(`[${CONTROLS_ATTR}]`);
     const copy = options.getCopy();
     const block = editor.blocks.getBlockByElement(blockEl);
@@ -360,7 +374,9 @@ export function attachJournalBlockReorderController(
       blockEl.prepend(controls);
     }
 
-    const handle = controls.querySelector<HTMLButtonElement>(`[${HANDLE_ATTR}]`);
+    const handle = controls.querySelector<HTMLButtonElement>(
+      `[${HANDLE_ATTR}]`,
+    );
     const up = controls.querySelector<HTMLButtonElement>(
       '[data-og-reorder-action="up"]',
     );
@@ -368,28 +384,34 @@ export function attachJournalBlockReorderController(
       '[data-og-reorder-action="down"]',
     );
     if (handle) {
-      handle.textContent = "⋮⋮";
-      handle.setAttribute(
+      setTextIfChanged(handle, "⋮⋮");
+      setAttributeIfChanged(
+        handle,
         "aria-label",
         `${copy.dragHandle}: ${typeLabel}, ${position} / ${total}`,
       );
-      handle.disabled = Boolean(options.disabled);
+      setDisabledIfChanged(handle, Boolean(options.disabled));
     }
     if (up) {
-      up.textContent = "↑";
-      up.setAttribute(
+      setTextIfChanged(up, "↑");
+      setAttributeIfChanged(
+        up,
         "aria-label",
         `${copy.moveUp}: ${typeLabel}, ${position} / ${total}`,
       );
-      up.disabled = Boolean(options.disabled) || index === 0;
+      setDisabledIfChanged(up, Boolean(options.disabled) || index === 0);
     }
     if (down) {
-      down.textContent = "↓";
-      down.setAttribute(
+      setTextIfChanged(down, "↓");
+      setAttributeIfChanged(
+        down,
         "aria-label",
         `${copy.moveDown}: ${typeLabel}, ${position} / ${total}`,
       );
-      down.disabled = Boolean(options.disabled) || index >= total - 1;
+      setDisabledIfChanged(
+        down,
+        Boolean(options.disabled) || index >= total - 1,
+      );
     }
   }
 
@@ -402,9 +424,18 @@ export function attachJournalBlockReorderController(
     });
   }
 
-  const observer = new MutationObserver(() => {
+  function scheduleSync() {
+    if (destroyed || reordering || syncFrame !== null) return;
+    syncFrame = window.requestAnimationFrame(() => {
+      syncFrame = null;
+      sync();
+    });
+  }
+
+  const observer = new MutationObserver((records) => {
     if (destroyed || reordering) return;
-    sync();
+    if (records.every(isControllerOwnedMutation)) return;
+    scheduleSync();
   });
   observer.observe(holder, { childList: true, subtree: true });
 
@@ -422,6 +453,10 @@ export function attachJournalBlockReorderController(
     destroy() {
       destroyed = true;
       cancelGesture();
+      if (syncFrame !== null) {
+        window.cancelAnimationFrame(syncFrame);
+        syncFrame = null;
+      }
       observer.disconnect();
       holder.removeEventListener("pointerdown", onPointerDown, true);
       holder.removeEventListener("pointermove", onPointerMove, true);
@@ -460,4 +495,38 @@ export function attachJournalBlockReorderController(
 
   sync();
   return controller;
+}
+
+function setTextIfChanged(element: HTMLElement, value: string) {
+  if (element.textContent !== value) element.textContent = value;
+}
+
+function setAttributeIfChanged(
+  element: HTMLElement,
+  name: string,
+  value: string,
+) {
+  if (element.getAttribute(name) !== value) element.setAttribute(name, value);
+}
+
+function setDisabledIfChanged(element: HTMLButtonElement, value: boolean) {
+  if (element.disabled !== value) element.disabled = value;
+}
+
+function isControllerOwnedMutation(record: MutationRecord) {
+  if (
+    record.target instanceof Element &&
+    record.target.closest(`[${CONTROLS_ATTR}]`)
+  ) {
+    return true;
+  }
+  if (record.type !== "childList" || record.addedNodes.length === 0)
+    return false;
+  return [...record.addedNodes].every(
+    (node) =>
+      node instanceof Element &&
+      (node.hasAttribute(CONTROLS_ATTR) ||
+        node.hasAttribute(INDICATOR_ATTR) ||
+        Boolean(node.closest(`[${CONTROLS_ATTR}], [${INDICATOR_ATTR}]`))),
+  );
 }

@@ -1490,6 +1490,17 @@ describe("Linear AI execution task validator", () => {
     expect(codes).toContain("fault_matrix_acceptance_missing");
   });
 
+  it("accepts Linear-normalized two-dash table delimiters on read-back", () => {
+    const task = validFinalTask().replace(
+      /\| --- \| --- \| --- \| --- \| --- \| --- \| --- \|/g,
+      "| -- | -- | -- | -- | -- | -- | -- |",
+    );
+
+    expect(
+      validateLinearAgentTask(task, { phase: "final", repoRoot }),
+    ).toMatchObject({ valid: true, errors: [] });
+  });
+
   it("rejects stale baseline declarations and empty or escaping target inventories", () => {
     const staleCodes = validateLinearAgentTask(
       validFinalTask({
