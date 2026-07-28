@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -9,6 +8,7 @@ import { config as loadEnv } from "dotenv";
 import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
+import { loadVersionedApplicationSql } from "./application-sql";
 import {
   resolveDatabaseConnection,
   resolveDatabaseSslConfig,
@@ -87,21 +87,22 @@ async function main() {
   recoveryBootstrapStage = "protected_identity_before";
   const before = recoveryMode ? await collectProtectedIdentitySnapshot() : null;
   recoveryBootstrapStage = "application_schema";
-  const appSql = await readFile(
-    path.join(scriptDir, "..", "sql/0001_walking_skeleton.sql"),
-    "utf8",
+  const applicationSql = await loadVersionedApplicationSql(
+    path.join(scriptDir, "..", "sql"),
   );
-  await pool.query(appSql);
+  await pool.query(applicationSql[0]!.sql);
 
   recoveryBootstrapStage = "better_auth_schema";
   betterAuth(authOptions);
   const migrations = await getMigrations(authOptions);
   await migrations.runMigrations();
 
-  // Re-run idempotent app SQL so app-owned tables can attach optional FKs to
-  // Better Auth tables on a fresh database after Better Auth creates them.
+  // Re-run the base schema and then every tracked versioned migration so a
+  // fresh or restored database converges to the complete current-main schema.
   recoveryBootstrapStage = "application_schema_reconcile";
-  await pool.query(appSql);
+  for (const migration of applicationSql) {
+    await pool.query(migration.sql);
+  }
 
   recoveryBootstrapStage = "protected_identity_after";
   const after = recoveryMode ? await collectProtectedIdentitySnapshot() : null;

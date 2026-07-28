@@ -1,4 +1,3 @@
-import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -14,6 +13,7 @@ import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+import { loadVersionedApplicationSql } from "./application-sql";
 
 loadEnv({ path: ".env.local" });
 
@@ -46,20 +46,21 @@ const authOptions = {
 } satisfies BetterAuthOptions;
 
 async function main() {
-  const appSql = await readFile(
-    path.join(process.cwd(), "sql/0001_walking_skeleton.sql"),
-    "utf8",
+  const applicationSql = await loadVersionedApplicationSql(
+    path.join(process.cwd(), "sql"),
   );
-  await pool.query(appSql);
+  await pool.query(applicationSql[0]!.sql);
 
   // Constructing auth validates the options against the installed Better Auth API.
   betterAuth(authOptions);
   const migrations = await getMigrations(authOptions);
   await migrations.runMigrations();
 
-  // Re-run idempotent app SQL so app-owned tables can attach optional FKs to
-  // Better Auth tables on a fresh database after Better Auth creates them.
-  await pool.query(appSql);
+  // Re-run the base schema and then every tracked versioned migration so local
+  // schema authority matches recovery and current main.
+  for (const migration of applicationSql) {
+    await pool.query(migration.sql);
+  }
 
   await ensureBucket(requiredEnv("R2_QUARANTINE_BUCKET"));
   await ensureBucket(requiredEnv("R2_PUBLIC_BUCKET"));
