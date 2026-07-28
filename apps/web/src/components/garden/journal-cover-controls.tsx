@@ -79,6 +79,12 @@ export interface JournalCoverControlsProps {
   ) => void;
 }
 
+export function isJournalMediaWaitSafeControlDisabled(
+  formDisabled: boolean,
+): boolean {
+  return formDisabled;
+}
+
 export function JournalCoverControls({
   copy,
   selection,
@@ -181,7 +187,7 @@ export function JournalCoverControls({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={disabled || uploading}
+            disabled={isJournalMediaWaitSafeControlDisabled(disabled)}
             onClick={() => onChange({ mode: "automatic" })}
           >
             {copy.removeCover}
@@ -191,7 +197,7 @@ export function JournalCoverControls({
           type="button"
           variant={selection.mode === "none" ? "default" : "ghost"}
           size="sm"
-          disabled={disabled || uploading}
+          disabled={isJournalMediaWaitSafeControlDisabled(disabled)}
           onClick={() => onChange({ mode: "none" })}
         >
           {copy.noCover}

@@ -16,6 +16,7 @@ const ALLOWED_CONTENT_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
 ]);
 
 export async function POST(request: Request) {
@@ -63,8 +64,16 @@ export async function POST(request: Request) {
   }
 
   const extension = contentType.split("/")[1] ?? "bin";
-  const objectKey = `quarantine/${scope.userId}/${randomUUID()}.${extension}`;
-  const mediaAsset = await createQuarantinedMediaAsset(scope, objectKey);
+  const uploadGenerationId = randomUUID();
+  const publicObjectId = randomUUID();
+  const objectKey = `quarantine/${uploadGenerationId}.${extension}`;
+  const mediaAsset = await createQuarantinedMediaAsset(scope, {
+    quarantineKey: objectKey,
+    declaredMediaType: contentType,
+    declaredSizeBytes: sizeBytes,
+    uploadGenerationId,
+    publicObjectId,
+  });
   const upload = await createQuarantineUploadUrl({
     objectKey,
     contentType,
@@ -73,6 +82,7 @@ export async function POST(request: Request) {
 
   return Response.json({
     mediaAssetId: mediaAsset.id,
-    ...upload,
+    uploadUrl: upload.uploadUrl,
+    expiresInSeconds: upload.expiresInSeconds,
   });
 }

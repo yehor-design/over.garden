@@ -9,12 +9,14 @@ import {
   MAX_COMPOSER_IMAGE_MEGABYTES,
 } from "@/lib/media/image-limits";
 
-export const COMPOSER_PHOTO_ACCEPT = "image/jpeg,image/png,image/webp";
+export const COMPOSER_PHOTO_ACCEPT =
+  "image/jpeg,image/png,image/webp,image/heic,.heic";
 
 const SUPPORTED_COMPOSER_PHOTO_TYPES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
+  "image/heic",
 ]);
 
 export function isSupportedComposerPhoto(
@@ -27,7 +29,7 @@ export function composerPhotoSelectionError(
   file: Pick<File, "type" | "size"> | null | undefined,
 ) {
   if (!file || !SUPPORTED_COMPOSER_PHOTO_TYPES.has(file.type)) {
-    return "Use a JPEG, PNG, or WebP photo.";
+    return "Use a JPEG, PNG, WebP, or HEIC photo.";
   }
   if (!isAllowedComposerImageSize(file.size)) {
     return `Choose a photo up to ${MAX_COMPOSER_IMAGE_MEGABYTES} MB.`;

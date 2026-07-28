@@ -33,12 +33,16 @@ interface ProcessResponse {
   mediaAsset: {
     id: string;
     status: string;
-    derivative_key: string | null;
   };
   publicUrl: string;
 }
 
-const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+]);
 
 export class JournalEntrySyncError extends Error {
   readonly status: number;
@@ -553,7 +557,7 @@ async function processPhotoIntent(
   const processed = (await processResponse.json()) as ProcessResponse;
   if (
     processed.mediaAsset.status !== "processed" ||
-    !processed.mediaAsset.derivative_key
+    !processed.publicUrl
   ) {
     throw new Error("Photo was not processed.");
   }

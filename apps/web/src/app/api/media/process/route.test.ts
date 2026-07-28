@@ -25,21 +25,27 @@ const authIntentMock = vi.hoisted(() => ({
 }));
 
 const mediaRepositoryMock = vi.hoisted(() => ({
-  getMediaAssetForOwner: vi.fn(),
-  markMediaAssetFailed: vi.fn(),
-  markMediaAssetOriginalDeleted: vi.fn(),
-  markMediaAssetProcessed: vi.fn(),
+  claimMediaAssetForProcessing: vi.fn(),
+  findMediaAssetForOwner: vi.fn(),
+  markClaimedMediaDerivativeWritten: vi.fn(),
+  releaseMediaProcessingClaim: vi.fn(),
+  settleClaimedMediaPublicReady: vi.fn(),
 }));
 
 const processorMock = vi.hoisted(() => ({
+  MediaLaunchQualityError: class MediaLaunchQualityError extends Error {
+    readonly code = "media_launch_quality_rejected";
+  },
   processQuarantinedImage: vi.fn(),
 }));
 
 const storageMock = vi.hoisted(() => ({
-  deleteQuarantineObject: vi.fn(),
   getPublicDerivativeUrl: vi.fn(
     (key: string) => `https://media.over.garden/${key}`,
   ),
+}));
+const lifecycleMock = vi.hoisted(() => ({
+  revokeMediaObjectBytes: vi.fn(async () => ({ outcome: "confirmed_gone" })),
 }));
 
 vi.mock("@/server/auth-session", () => authMock);
@@ -48,12 +54,19 @@ vi.mock("@/server/auth-intent-http", () => authIntentMock);
 vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/server/media/processor", () => processorMock);
 vi.mock("@/lib/storage", () => storageMock);
+vi.mock("@/server/media/lifecycle-revoke", () => lifecycleMock);
 
 import { POST } from "./route";
 
 describe("media process API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    lifecycleMock.revokeMediaObjectBytes.mockResolvedValue({
+      outcome: "confirmed_gone",
+    });
+    mediaRepositoryMock.releaseMediaProcessingClaim.mockResolvedValue(
+      undefined,
+    );
   });
 
   it("returns an opaque authentication intent before reading a private media id", async () => {
@@ -80,7 +93,7 @@ describe("media process API", () => {
     );
     expect(serialized).toContain("opaque-media-intent");
     expect(serialized).not.toContain("00000000-0000-4000-8000-000000000099");
-    expect(mediaRepositoryMock.getMediaAssetForOwner).not.toHaveBeenCalled();
+    expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
   it("does not misclassify an operational authentication failure", async () => {
@@ -112,10 +125,10 @@ describe("media process API", () => {
     );
 
     expect(response.status).toBe(403);
-    expect(mediaRepositoryMock.getMediaAssetForOwner).not.toHaveBeenCalled();
+    expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
-  it("persists processed state before deleting the quarantine original", async () => {
+  it("fences derivative state and proves original absence before readiness", async () => {
     const calls: string[] = [];
     const asset = {
       id: "media-1",
@@ -123,32 +136,37 @@ describe("media process API", () => {
       quarantine_key: "quarantine/user/photo.jpg",
       derivative_key: null,
       status: "quarantined",
+      media_readiness_state: "quarantined",
+      upload_generation_id: "generation-1",
     };
-    mediaRepositoryMock.getMediaAssetForOwner.mockResolvedValue(asset);
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+    const claim = {
+      asset: { ...asset, media_readiness_state: "processing" },
+      claimToken: "claim-1",
+      phase: "process_original",
+    };
+    mediaRepositoryMock.claimMediaAssetForProcessing.mockResolvedValue(claim);
     processorMock.processQuarantinedImage.mockImplementation(async () => {
       calls.push("put-derivative");
       return {
-        derivativeKey: "derivatives/user/photo.webp",
-        publicUrl: "https://media.over.garden/derivatives/user/photo.webp",
+        derivativeKey: "derivatives/opaque.webp",
+        admittedMediaType: "image/jpeg",
+        intrinsicWidth: 800,
+        intrinsicHeight: 600,
       };
     });
-    mediaRepositoryMock.markMediaAssetProcessed.mockImplementation(async () => {
-      calls.push("mark-processed");
-      return {
-        ...asset,
-        derivative_key: "derivatives/user/photo.webp",
-        status: "processed",
-      };
+    mediaRepositoryMock.markClaimedMediaDerivativeWritten.mockImplementation(async () => {
+      calls.push("mark-derivative-written");
+      return { ...asset, derivative_key: "derivatives/opaque.webp" };
     });
-    storageMock.deleteQuarantineObject.mockImplementation(async () => {
-      calls.push("delete-original");
+    lifecycleMock.revokeMediaObjectBytes.mockImplementation(async () => {
+      calls.push("prove-original-gone");
+      return { outcome: "confirmed_gone" };
     });
-    mediaRepositoryMock.markMediaAssetOriginalDeleted.mockImplementation(
-      async () => {
-        calls.push("mark-original-deleted");
-        return { ...asset, status: "processed" };
-      },
-    );
+    mediaRepositoryMock.settleClaimedMediaPublicReady.mockImplementation(async () => {
+      calls.push("settle-public-ready");
+      return { ...asset, derivative_key: "derivatives/opaque.webp", status: "processed" };
+    });
 
     const response = await POST(
       new Request("http://localhost/api/media/process", {
@@ -160,24 +178,46 @@ describe("media process API", () => {
     expect(response.status).toBe(200);
     expect(calls).toEqual([
       "put-derivative",
-      "mark-processed",
-      "delete-original",
-      "mark-original-deleted",
+      "mark-derivative-written",
+      "prove-original-gone",
+      "settle-public-ready",
     ]);
   });
 
-  it("retries only original cleanup when derivative state is already durable", async () => {
+  it("uses one generic denial for absent and foreign owner-scoped assets", async () => {
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(undefined);
+
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: "opaque-unavailable-id" }),
+      }),
+    );
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: "Media asset is unavailable.",
+    });
+    expect(mediaRepositoryMock.claimMediaAssetForProcessing).not.toHaveBeenCalled();
+  });
+
+  it("recovers derivative-written state without reading the deleted original again", async () => {
     const asset = {
       id: "media-1",
-      owner_user_id: "00000000-0000-0000-0000-000000000001",
-      quarantine_key: "quarantine/user/photo.jpg",
-      derivative_key: "derivatives/user/photo.webp",
-      status: "processed",
-      original_deleted_at: null,
+      status: "quarantined",
+      media_readiness_state: "derivative_written",
+      derivative_key: "derivatives/recovery.webp",
+      quarantine_key: "quarantine/recovery.jpg",
     };
-    mediaRepositoryMock.getMediaAssetForOwner.mockResolvedValue(asset);
-    mediaRepositoryMock.markMediaAssetOriginalDeleted.mockResolvedValue({
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+    mediaRepositoryMock.claimMediaAssetForProcessing.mockResolvedValue({
+      asset,
+      claimToken: "recovery-claim",
+      phase: "prove_original_absence",
+    });
+    mediaRepositoryMock.settleClaimedMediaPublicReady.mockResolvedValue({
       ...asset,
+      status: "processed",
       original_deleted_at: new Date(),
     });
 
@@ -190,9 +230,122 @@ describe("media process API", () => {
 
     expect(response.status).toBe(200);
     expect(processorMock.processQuarantinedImage).not.toHaveBeenCalled();
-    expect(storageMock.deleteQuarantineObject).toHaveBeenCalledWith(
-      asset.quarantine_key,
+    expect(lifecycleMock.revokeMediaObjectBytes).toHaveBeenCalledWith({
+      bucket: "quarantine",
+      objectKey: "quarantine/recovery.jpg",
+    });
+    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).toHaveBeenCalled();
+  });
+
+  it("keeps a written derivative recoverable when original absence is indeterminate", async () => {
+    const asset = {
+      id: "media-1",
+      status: "quarantined",
+      media_readiness_state: "processing",
+      derivative_key: null,
+      quarantine_key: "quarantine/opaque.jpg",
+    };
+    const claim = {
+      asset,
+      claimToken: "claim-1",
+      phase: "process_original",
+    };
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+    mediaRepositoryMock.claimMediaAssetForProcessing.mockResolvedValue(claim);
+    processorMock.processQuarantinedImage.mockResolvedValue({
+      derivativeKey: "derivatives/opaque.webp",
+      admittedMediaType: "image/jpeg",
+      intrinsicWidth: 800,
+      intrinsicHeight: 600,
+    });
+    mediaRepositoryMock.markClaimedMediaDerivativeWritten.mockResolvedValue({
+      ...asset,
+      derivative_key: "derivatives/opaque.webp",
+      media_readiness_state: "derivative_written",
+    });
+    lifecycleMock.revokeMediaObjectBytes.mockResolvedValue({
+      outcome: "indeterminate_transport",
+    });
+
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: asset.id }),
+      }),
     );
-    expect(mediaRepositoryMock.markMediaAssetFailed).not.toHaveBeenCalled();
+
+    expect(response.status).toBe(500);
+    expect(mediaRepositoryMock.releaseMediaProcessingClaim).toHaveBeenCalledWith(
+      expect.anything(),
+      claim,
+      false,
+    );
+    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
+  });
+
+  it("deletes an unreachable stale derivative when claim settlement loses", async () => {
+    const asset = {
+      id: "media-1",
+      status: "quarantined",
+      media_readiness_state: "processing",
+      derivative_key: null,
+      quarantine_key: "quarantine/opaque.jpg",
+    };
+    const claim = {
+      asset,
+      claimToken: "stale-claim",
+      phase: "process_original",
+    };
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+    mediaRepositoryMock.claimMediaAssetForProcessing.mockResolvedValue(claim);
+    processorMock.processQuarantinedImage.mockResolvedValue({
+      derivativeKey: "derivatives/stale.webp",
+      admittedMediaType: "image/jpeg",
+      intrinsicWidth: 800,
+      intrinsicHeight: 600,
+    });
+    mediaRepositoryMock.markClaimedMediaDerivativeWritten.mockResolvedValue(
+      undefined,
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: asset.id }),
+      }),
+    );
+
+    expect(response.status).toBe(500);
+    expect(lifecycleMock.revokeMediaObjectBytes).toHaveBeenCalledWith({
+      bucket: "public_derivative",
+      objectKey: "derivatives/stale.webp",
+    });
+    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
+  });
+
+  it("returns an idempotent receipt when media is already public-ready", async () => {
+    const asset = {
+      id: "media-1",
+      owner_user_id: "00000000-0000-0000-0000-000000000001",
+      quarantine_key: "quarantine/user/photo.jpg",
+      derivative_key: "derivatives/user/photo.webp",
+      status: "processed",
+      original_deleted_at: new Date(),
+      media_readiness_state: "public_ready",
+      public_object_id: "00000000-0000-4000-8000-000000000011",
+      revoked_at: null,
+    };
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: asset.id }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(processorMock.processQuarantinedImage).not.toHaveBeenCalled();
+    expect(mediaRepositoryMock.claimMediaAssetForProcessing).not.toHaveBeenCalled();
   });
 });

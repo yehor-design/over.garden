@@ -14,6 +14,7 @@ import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { localizeCuratedTopicLabel } from "@/lib/launch-corpus/topic-labels";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -365,9 +366,7 @@ export function buildPublicFeedMediaQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
         eb(

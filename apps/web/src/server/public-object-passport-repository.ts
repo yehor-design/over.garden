@@ -1,4 +1,5 @@
 import "server-only";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -442,9 +443,7 @@ export function buildPublicObjectPassportGalleryQuery(
       "media_assets.intrinsic_width as mediaIntrinsicWidth",
       "media_assets.intrinsic_height as mediaIntrinsicHeight",
     ])
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where("media_assets.usage_role", "=", "inline")
     .where("plant_objects.id", "=", plantObjectId)
     .where("journal_entries.visibility", "=", "public")

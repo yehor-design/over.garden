@@ -15,6 +15,7 @@ import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import {
   evaluatePublicVarietyIndexState,
   PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
@@ -263,9 +264,7 @@ export function buildPublicVarietySummaryQuery(
         from media_assets as public_media
         where public_media.journal_entry_id = ${sql.ref("journal_entries.id")}
           and public_media.owner_user_id = ${sql.ref("journal_entries.owner_user_id")}
-          and public_media.status = 'processed'
-          and public_media.derivative_key is not null
-          and public_media.revoked_at is null
+          and ${publicMediaEligibilityPredicate("public_media")}
       )), 0)`.as("photoCount"),
       sql<number>`coalesce(sum(char_length(${sql.ref("journal_entries.body")})), 0)`.as(
         "aggregateBodyLength",

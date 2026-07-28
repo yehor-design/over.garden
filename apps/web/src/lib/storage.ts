@@ -38,6 +38,7 @@ export type MediaProviderObjectState =
   | "provider_error";
 
 let cachedR2Client: S3Client | undefined;
+const MEDIA_PROVIDER_REQUEST_TIMEOUT_MS = 5_000;
 
 function r2Client() {
   cachedR2Client ??= new S3Client({
@@ -83,12 +84,14 @@ export async function createQuarantineUploadUrl({
 export async function getQuarantineObjectBuffer(
   objectKey: string,
   maxBytes: number,
+  abortSignal?: AbortSignal,
 ): Promise<Buffer> {
   const response = await r2Client().send(
     new GetObjectCommand({
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
       Key: objectKey,
     }),
+    { abortSignal: boundedMediaProviderSignal(abortSignal) },
   );
 
   if ((response.ContentLength ?? 0) > maxBytes) {
@@ -107,6 +110,7 @@ export async function putPublicDerivativeObject(
   objectKey: string,
   body: Buffer,
   contentType: string,
+  abortSignal?: AbortSignal,
 ): Promise<void> {
   await r2Client().send(
     new PutObjectCommand({
@@ -116,7 +120,13 @@ export async function putPublicDerivativeObject(
       ContentType: contentType,
       CacheControl: "public, max-age=31536000, immutable",
     }),
+    { abortSignal: boundedMediaProviderSignal(abortSignal) },
   );
+}
+
+function boundedMediaProviderSignal(parent?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS);
+  return parent ? AbortSignal.any([parent, timeout]) : timeout;
 }
 
 export async function copyPublicDerivativeObject(
@@ -133,6 +143,7 @@ export async function copyPublicDerivativeObject(
       MetadataDirective: "REPLACE",
       ContentType: "image/png",
     }),
+    { abortSignal: AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
   );
 }
 
@@ -145,7 +156,7 @@ export async function deleteQuarantineObject(
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
       Key: objectKey,
     }),
-    { abortSignal },
+    { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
   );
 }
 
@@ -189,7 +200,7 @@ export async function deletePublicDerivativeObject(
       Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
       Key: objectKey,
     }),
-    { abortSignal },
+    { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
   );
 }
 
@@ -207,7 +218,7 @@ async function probeObjectState(
   try {
     await r2Client().send(
       new HeadObjectCommand({ Bucket: bucket, Key: objectKey }),
-      { abortSignal },
+      { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
     );
     return "present";
   } catch (error) {

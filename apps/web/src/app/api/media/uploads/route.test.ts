@@ -137,12 +137,16 @@ describe("media upload API", () => {
     const createMediaCall = mediaRepositoryMock.createQuarantinedMediaAsset.mock
       .calls[0] as unknown[];
     expect(createMediaCall).toHaveLength(2);
-    expect(createMediaCall[1]).toMatch(
-      /^quarantine\/00000000-0000-0000-0000-000000000001\/.+\.webp$/,
-    );
+    expect(createMediaCall[1]).toEqual(expect.objectContaining({
+      quarantineKey: expect.stringMatching(/^quarantine\/[0-9a-f-]+\.webp$/),
+      declaredMediaType: "image/webp",
+      declaredSizeBytes: 123,
+      uploadGenerationId: expect.any(String),
+      publicObjectId: expect.any(String),
+    }));
     expect(storageMock.createQuarantineUploadUrl).toHaveBeenCalledWith({
       objectKey: expect.stringMatching(
-        /^quarantine\/00000000-0000-0000-0000-000000000001\/.+\.webp$/,
+        /^quarantine\/[0-9a-f-]+\.webp$/,
       ),
       contentType: "image/webp",
       contentLength: 123,

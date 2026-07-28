@@ -54,7 +54,7 @@ describe("OVE-184 community repository contracts", () => {
 
     for (const compiled of [publicLookup, lifecycleLookup]) {
       expect(compiled.sql).toContain('"lifecycle_state" in');
-      expect(compiled.parameters).toEqual([
+      expect(compiled.parameters.slice(-4)).toEqual([
         "observation-and-care",
         "active",
         "archived",

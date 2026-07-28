@@ -25,6 +25,7 @@ import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 import type { RequestScope } from "@/server/request-scope";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import {
@@ -1373,10 +1374,7 @@ export function buildPublicCommunityContributionsQuery(
         select media_assets.derivative_key
         from media_assets
         where media_assets.journal_entry_id = journal_entries.id
-          and media_assets.status = 'processed'
-          and media_assets.derivative_key is not null
-          and media_assets.revoked_at is null
-          and media_assets.original_deleted_at is not null
+          and ${publicMediaEligibilityPredicate("media_assets")}
           and (
             media_assets.id = journal_entries.cover_media_asset_id
             or media_assets.usage_role = 'inline'
@@ -1394,10 +1392,7 @@ export function buildPublicCommunityContributionsQuery(
         select media_assets.focal_x
         from media_assets
         where media_assets.journal_entry_id = journal_entries.id
-          and media_assets.status = 'processed'
-          and media_assets.derivative_key is not null
-          and media_assets.revoked_at is null
-          and media_assets.original_deleted_at is not null
+          and ${publicMediaEligibilityPredicate("media_assets")}
           and (
             media_assets.id = journal_entries.cover_media_asset_id
             or media_assets.usage_role = 'inline'
@@ -1415,10 +1410,7 @@ export function buildPublicCommunityContributionsQuery(
         select media_assets.focal_y
         from media_assets
         where media_assets.journal_entry_id = journal_entries.id
-          and media_assets.status = 'processed'
-          and media_assets.derivative_key is not null
-          and media_assets.revoked_at is null
-          and media_assets.original_deleted_at is not null
+          and ${publicMediaEligibilityPredicate("media_assets")}
           and (
             media_assets.id = journal_entries.cover_media_asset_id
             or media_assets.usage_role = 'inline'
@@ -1436,10 +1428,7 @@ export function buildPublicCommunityContributionsQuery(
         select media_assets.intrinsic_width
         from media_assets
         where media_assets.journal_entry_id = journal_entries.id
-          and media_assets.status = 'processed'
-          and media_assets.derivative_key is not null
-          and media_assets.revoked_at is null
-          and media_assets.original_deleted_at is not null
+          and ${publicMediaEligibilityPredicate("media_assets")}
           and (
             media_assets.id = journal_entries.cover_media_asset_id
             or media_assets.usage_role = 'inline'
@@ -1457,10 +1446,7 @@ export function buildPublicCommunityContributionsQuery(
         select media_assets.intrinsic_height
         from media_assets
         where media_assets.journal_entry_id = journal_entries.id
-          and media_assets.status = 'processed'
-          and media_assets.derivative_key is not null
-          and media_assets.revoked_at is null
-          and media_assets.original_deleted_at is not null
+          and ${publicMediaEligibilityPredicate("media_assets")}
           and (
             media_assets.id = journal_entries.cover_media_asset_id
             or media_assets.usage_role = 'inline'
@@ -2300,10 +2286,7 @@ function communityCoverDerivativeKey(viewerScope: RequestScope | null = null) {
       and cover_entries.public_gone_at is null
       and cover_entries.public_slug is not null
       and cover_entries.published_at is not null
-      and cover_media.status = 'processed'
-      and cover_media.derivative_key is not null
-      and cover_media.revoked_at is null
-      and cover_media.original_deleted_at is not null
+      and ${publicMediaEligibilityPredicate("cover_media")}
       ${viewerPredicate}
     order by cover_contributions.added_at asc, cover_media.created_at asc, cover_media.id asc
     limit 1
@@ -2350,10 +2333,7 @@ function communityCoverFocalColumn(
       and cover_entries.public_gone_at is null
       and cover_entries.public_slug is not null
       and cover_entries.published_at is not null
-      and cover_media.status = 'processed'
-      and cover_media.derivative_key is not null
-      and cover_media.revoked_at is null
-      and cover_media.original_deleted_at is not null
+      and ${publicMediaEligibilityPredicate("cover_media")}
       ${viewerPredicate}
     order by cover_contributions.added_at asc, cover_media.created_at asc, cover_media.id asc
     limit 1

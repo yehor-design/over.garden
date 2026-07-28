@@ -1,4 +1,5 @@
 import "server-only";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 import { sql, type Kysely, type Transaction } from "kysely";
 
@@ -886,9 +887,7 @@ export function buildPublicProfileAvatarEvidenceQuery(
     .select(["derivative_key as derivativeKey", "alt_text as altText"])
     .where("id", "=", mediaAssetId)
     .where("owner_user_id", "=", userId)
-    .where("status", "=", "processed")
-    .where("derivative_key", "is not", null)
-    .where("revoked_at", "is", null);
+    .where(publicMediaEligibilityPredicate());
 }
 
 export function buildPublicProfileEntrySummaryQuery(
@@ -1153,9 +1152,7 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
       "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .where("media_assets.owner_user_id", "=", userId)
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
         eb(
@@ -1213,9 +1210,7 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
       "media_assets.intrinsic_height as intrinsicHeight",
     ])
     .where("media_assets.owner_user_id", "=", userId)
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where("journal_entries.id", "in", [...entryIds])
     .where((eb) =>
       eb.or([

@@ -85,7 +85,11 @@ export async function listOrphanProcessedDerivativesForEntry(
           continue;
         }
         const typed = block as { type?: unknown; data?: unknown };
-        if (typed.type !== "image" || !typed.data || typeof typed.data !== "object") {
+        if (
+          typed.type !== "image" ||
+          !typed.data ||
+          typeof typed.data !== "object"
+        ) {
           continue;
         }
         const mediaAssetId = (typed.data as { mediaAssetId?: unknown })
@@ -131,22 +135,21 @@ export async function listOrphanProcessedDerivativesForEntry(
 export function buildEnqueueMediaDerivativeRevokeJobQuery(
   executor: QueryExecutor,
   input: {
-    mediaAssetId: string;
+    mediaAssetId?: string;
     bucket: MediaLifecycleBucket;
     objectKey: string;
-    reason: "archive" | "orphan" | "erasure";
+    reason: "archive" | "orphan" | "erasure" | "superseded_processing";
     journalEntryId?: string;
+    availableAt?: Date;
   },
 ) {
   const payload = {
     kind: MEDIA_DERIVATIVE_REVOKE_KIND,
-    mediaAssetId: input.mediaAssetId,
+    ...(input.mediaAssetId ? { mediaAssetId: input.mediaAssetId } : {}),
     bucket: input.bucket,
     objectKey: input.objectKey,
     reason: input.reason,
-    ...(input.journalEntryId
-      ? { journalEntryId: input.journalEntryId }
-      : {}),
+    ...(input.journalEntryId ? { journalEntryId: input.journalEntryId } : {}),
   } satisfies JsonValue;
 
   return executor
@@ -155,6 +158,7 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
       queue_name: MEDIA_LIFECYCLE_QUEUE,
       payload,
       idempotency_key: `media_derivative_revoke:${input.bucket}:${input.objectKey}`,
+      ...(input.availableAt ? { available_at: input.availableAt } : {}),
     })
     .onConflict((oc) =>
       oc
@@ -169,7 +173,7 @@ export function buildEnqueueMediaDerivativeRevokeJobQuery(
           last_error: null,
           terminal_error_code: null,
           terminalized_at: null,
-          available_at: sql`now()`,
+          available_at: input.availableAt ?? sql`now()`,
           updated_at: sql`now()`,
         }),
     )
@@ -180,7 +184,10 @@ export async function enqueueArchiveDerivativeRevokes(
   executor: QueryExecutor,
   input: { journalEntryId: string; ownerUserId: string },
 ): Promise<number> {
-  const candidates = await listArchiveDerivativeRevokeCandidates(executor, input);
+  const candidates = await listArchiveDerivativeRevokeCandidates(
+    executor,
+    input,
+  );
   return enqueueMediaDerivativeRevokes(executor, {
     candidates,
     reason: "archive",
@@ -212,6 +219,19 @@ export async function enqueueMediaDerivativeRevokes(
   },
 ): Promise<number> {
   for (const candidate of input.candidates) {
+    // OVE-244: invalidate the current generation before the external cleanup
+    // intent is recorded. Callers pass their existing transaction, so public
+    // eligibility and cleanup enqueue commit together.
+    await executor
+      .updateTable("media_assets")
+      .set({
+        media_readiness_state: "invalidated",
+        processing_claim_token: null,
+        processing_claimed_at: null,
+        updated_at: new Date(),
+      })
+      .where("id", "=", candidate.mediaAssetId)
+      .execute();
     await buildEnqueueMediaDerivativeRevokeJobQuery(executor, {
       ...candidate,
       reason: input.reason,

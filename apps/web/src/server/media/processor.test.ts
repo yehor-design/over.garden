@@ -35,6 +35,21 @@ vi.mock("./derivatives", () => ({
     };
   }),
 }));
+vi.mock("./safe-media-admission", () => ({
+  admitSafeMediaBytes: vi.fn(async () => "image/png"),
+}));
+
+const safeFields = {
+  admitted_media_type: null,
+  declared_media_type: "image/png",
+  declared_size_bytes: "8",
+  media_readiness_state: "processing",
+  processing_claim_token: "00000000-0000-4000-8000-000000000010",
+  processing_claimed_at: new Date("2026-06-26T00:00:00Z"),
+  public_object_id: "00000000-0000-4000-8000-000000000011",
+  upload_generation: 1,
+  upload_generation_id: "00000000-0000-4000-8000-000000000012",
+} as const;
 
 import { MediaLaunchQualityError, processQuarantinedImage } from "./processor";
 import { createPublicImageDerivative } from "./derivatives";
@@ -63,6 +78,7 @@ describe("processQuarantinedImage", () => {
       focal_y: 0.5,
       created_at: new Date("2026-06-26T00:00:00Z"),
       updated_at: new Date("2026-06-26T00:00:00Z"),
+      ...safeFields,
     } satisfies MediaAsset);
 
     expect(storageMock.calls).toEqual([
@@ -73,10 +89,13 @@ describe("processQuarantinedImage", () => {
     expect(storageMock.getQuarantineObjectBuffer).toHaveBeenCalledWith(
       "quarantine/user/photo.png",
       MAX_COMPOSER_IMAGE_BYTES,
+      undefined,
     );
-    expect(result.derivativeKey).toBe("derivatives/user/photo.webp");
+    expect(result.derivativeKey).toBe(
+      "derivatives/00000000-0000-4000-8000-000000000011.webp",
+    );
     expect(result.publicUrl).toBe(
-      "https://media.over.garden/derivatives/user/photo.webp",
+      "https://media.over.garden/derivatives/00000000-0000-4000-8000-000000000011.webp",
     );
     expect(result.intrinsicWidth).toBe(800);
     expect(result.intrinsicHeight).toBe(600);
@@ -112,6 +131,7 @@ describe("processQuarantinedImage", () => {
         focal_y: 0.5,
         created_at: new Date("2026-06-26T00:00:00Z"),
         updated_at: new Date("2026-06-26T00:00:00Z"),
+        ...safeFields,
       } satisfies MediaAsset),
     ).rejects.toBeInstanceOf(MediaLaunchQualityError);
   });
