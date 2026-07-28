@@ -24,7 +24,6 @@ import {
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery,
   buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery,
-  buildEnqueueErasureJournalUnindexJobQuery,
   buildEnqueueErasureMediaDeleteJobQuery,
   buildExecutableErasureRequestQuery,
   buildMarkErasureCleanupPendingQuery,
@@ -301,38 +300,6 @@ describe("approved erasure execution SQL contracts", () => {
     );
     expect(compiled.parameters).toContain("anonymized");
     expect(compiled.parameters).toContain(now);
-  });
-
-  it("enqueues erasure unindex jobs against the synthetic erased owner id", () => {
-    const compiled = buildEnqueueErasureJournalUnindexJobQuery(testDb, {
-      requestId,
-      journalEntryId: "00000000-0000-4000-8000-000000000777",
-      erasedSubjectUserId,
-    }).compile();
-
-    expect(compiled.sql).toContain('insert into "job_queue"');
-    expect(compiled.sql).toContain(
-      'on conflict ("idempotency_key") where "idempotency_key" is not null do update',
-    );
-    expect(compiled.parameters).toEqual([
-      "matching",
-      {
-        kind: "journal_entry_unindex",
-        journalEntryId: "00000000-0000-4000-8000-000000000777",
-        userId: erasedSubjectUserId,
-      },
-      `journal_entry_unindex:00000000-0000-4000-8000-000000000777:erasure:${requestId}`,
-      {
-        kind: "journal_entry_unindex",
-        journalEntryId: "00000000-0000-4000-8000-000000000777",
-        userId: erasedSubjectUserId,
-      },
-      "pending",
-      0,
-      null,
-      null,
-      null,
-    ]);
   });
 
   it("enqueues durable erasure_media_object_delete jobs before claiming cleanup_pending", () => {

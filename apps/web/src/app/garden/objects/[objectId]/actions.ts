@@ -18,11 +18,9 @@ import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
 import {
   archiveJournalEntry,
-  type ArchiveJournalEntryResult,
   createPlantObjectJournalEntry,
   publishJournalEntry,
   type PlantObjectJournalEntryResult,
-  type PublishJournalEntryResult,
   resolvePlantObjectCatalog,
   updatePlantObjectLocation,
 } from "@/server/journal-repository";
@@ -31,10 +29,7 @@ import {
   createProvenanceEdge,
 } from "@/server/lineage-repository";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
-import {
-  enqueueJournalEntryIndexJob,
-  enqueueJournalEntryUnindexJob,
-} from "@/server/search/public-journal-parity";
+import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { scopedToUser } from "@/server/request-scope";
 
 export async function createPlantObjectJournalEntryAction(formData: FormData) {
@@ -127,7 +122,7 @@ export async function publishJournalEntryAction(formData: FormData) {
     disclosureAccepted,
   });
 
-  await enqueuePublishedEntryIndexJob(result, scope.userId);
+  await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
 
   revalidatePath("/garden");
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);
@@ -181,33 +176,14 @@ export async function archiveJournalEntryAction(formData: FormData) {
 
   const result = await archiveJournalEntry(scope, { entryId });
 
-  await enqueueArchivedEntryRemovalJob(result, scope.userId);
+  // OVE-242: the removal intent already committed with the archive. Converge
+  // it now; the owner object page then reports the verified convergence state
+  // from the durable outbox rather than claiming "a job was queued".
+  await convergePublicProjectionsNow([result.entry.id]).catch(() => undefined);
 
   revalidatePath("/garden");
   if (objectId) revalidatePath(`/garden/objects/${objectId}`);
   if (result.publicUrl) revalidatePath(result.publicUrl);
-}
-
-async function enqueuePublishedEntryIndexJob(
-  result: PublishJournalEntryResult,
-  userId: string,
-) {
-  await enqueueJournalEntryIndexJob({
-    journalEntryId: result.entry.id,
-    userId,
-  });
-}
-
-async function enqueueArchivedEntryRemovalJob(
-  result: ArchiveJournalEntryResult,
-  userId: string,
-) {
-  if (!result.publicGone) return;
-
-  await enqueueJournalEntryUnindexJob({
-    journalEntryId: result.entry.id,
-    userId,
-  });
 }
 
 async function recordPlantObjectJournalEntryEvents(

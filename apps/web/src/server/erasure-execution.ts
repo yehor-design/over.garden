@@ -9,11 +9,14 @@ import type { Database, JsonValue } from "@/db/schema";
 import { formatErasureRequestReference } from "@/lib/privacy/disclosures";
 import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
 import type { RequestScope } from "@/server/request-scope";
+import {
+  arePublicProjectionsConverged,
+  convergePublicProjectionsNow,
+  recordPublicProjectionIntent,
+} from "@/server/search/public-projection-outbox";
 
 const OPEN_REQUEST_STATUSES = ["submitted", "reviewing"] as const;
-const JOURNAL_ENTRY_UNINDEX_KIND = "journal_entry_unindex";
 const ERASURE_MEDIA_DELETE_KIND = "erasure_media_object_delete";
-const MATCHING_QUEUE_NAME = "matching";
 const ERASURE_QUEUE_NAME = "erasure";
 const ERASED_ENTRY_TITLE = "Erased journal entry";
 const ERASED_ENTRY_BODY = "This entry was erased by request.";
@@ -253,12 +256,17 @@ export async function executeApprovedErasureRequest(
         now,
       }).execute();
 
+      // OVE-242/OVE-215: the removal intent for every public entry is written
+      // in the same transaction as the erasure itself, keyed to the synthetic
+      // erased-subject id. Erasure can no longer be recorded as executed while
+      // nothing durable owes the public index a deletion.
       for (const entry of publicEntryRows) {
-        await buildEnqueueErasureJournalUnindexJobQuery(trx, {
-          requestId,
-          journalEntryId: entry.id,
-          erasedSubjectUserId,
-        }).executeTakeFirst();
+        await recordPublicProjectionIntent(trx, {
+          entityId: entry.id,
+          ownerUserId: erasedSubjectUserId,
+          desiredState: "absent",
+          reason: "erasure",
+        });
       }
 
       await buildNullErasureOperatorLinksForErasureQuery(
@@ -292,6 +300,37 @@ export async function executeApprovedErasureRequest(
     deleteMediaObject,
   );
 
+  // OVE-242/OVE-215: erasure is only `completed` once every public projection
+  // it owes has verifiably converged to absence. A queued or retrying removal
+  // keeps the request in `cleanup_pending`, so the product never claims a
+  // deletion it has not proved.
+  const erasedEntryIds = await listErasureProjectionEntityIds(
+    executor,
+    requestId,
+    erasedSubjectUserId,
+  );
+  await convergePublicProjectionsNow(erasedEntryIds, executor);
+  const publicProjectionsConverged = await arePublicProjectionsConverged(
+    erasedEntryIds,
+    executor,
+  );
+
+  if (!publicProjectionsConverged) {
+    await buildMarkErasureCleanupPendingQuery(executor, scope, {
+      requestId,
+      now,
+    }).executeTakeFirstOrThrow();
+
+    return {
+      requestId,
+      erasedSubjectUserId,
+      requesterUserId,
+      mediaObjectsDeleted,
+      publicEntriesQueuedForUnindex,
+      handledStatus: "cleanup_pending",
+    };
+  }
+
   await buildCompleteApprovedErasureRequestQuery(executor, scope, {
     requestId,
     now,
@@ -305,6 +344,27 @@ export async function executeApprovedErasureRequest(
     publicEntriesQueuedForUnindex,
     handledStatus: "completed",
   };
+}
+
+/**
+ * OVE-242. Ids of the public projections this erasure owes. Reads the outbox by
+ * the synthetic erased-subject id, so a resumed `cleanup_pending` execution
+ * sees exactly the same set as the first pass.
+ */
+async function listErasureProjectionEntityIds(
+  executor: Kysely<Database>,
+  requestId: string,
+  erasedSubjectUserId: string,
+): Promise<string[]> {
+  const rows = await executor
+    .selectFrom("public_projection_intents")
+    .select("entity_id as entityId")
+    .where("entity_kind", "=", "journal_entry")
+    .where("owner_user_id", "=", erasedSubjectUserId)
+    .where("desired_reason", "=", "erasure")
+    .execute();
+  void requestId;
+  return rows.map((row) => row.entityId);
 }
 
 export function expectedErasureMaintainerApprovalText(requestId: string) {
@@ -830,45 +890,6 @@ export function buildAnonymizeJournalEntriesForErasureQuery(
       updated_at: input.now,
     })
     .where("owner_user_id", "=", input.requesterUserId);
-}
-
-export function buildEnqueueErasureJournalUnindexJobQuery(
-  executor: QueryExecutor,
-  input: {
-    requestId: string;
-    journalEntryId: string;
-    erasedSubjectUserId: string;
-  },
-) {
-  const payload = {
-    kind: JOURNAL_ENTRY_UNINDEX_KIND,
-    journalEntryId: input.journalEntryId,
-    userId: input.erasedSubjectUserId,
-  } satisfies JsonValue;
-
-  return executor
-    .insertInto("job_queue")
-    .values({
-      queue_name: MATCHING_QUEUE_NAME,
-      payload,
-      idempotency_key: `journal_entry_unindex:${input.journalEntryId}:erasure:${input.requestId}`,
-    })
-    .onConflict((oc) =>
-      oc
-        .column("idempotency_key")
-        .where("idempotency_key", "is not", null)
-        .doUpdateSet({
-          payload,
-          status: "pending",
-          attempts: 0,
-          locked_at: null,
-          locked_by: null,
-          last_error: null,
-          available_at: sql`now()`,
-          updated_at: sql`now()`,
-        }),
-    )
-    .returning("id");
 }
 
 export function buildAnonymizeErasureRequestSubjectsQuery(

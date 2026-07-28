@@ -33,6 +33,7 @@ from app.catalog_fuzzy_duplicates import (
     refresh_catalog_fuzzy_duplicate_suggestions,
 )
 from app.job_handlers import SUPPORTED_JOB_KINDS
+from app.public_projection import drain_public_projection_intents
 from app.job_queue_manifest import max_attempts_for_kind, payload_contract_for_kind
 from app.search import (
     CATALOG_TYPEAHEAD_REINDEX_KIND,
@@ -59,6 +60,9 @@ CATALOG_MATCH_VISIBILITY_TIMEOUT_SECONDS = int(
     os.environ.get("CATALOG_MATCH_WORKER_VT_SECONDS", "300")
 )
 MAX_BACKOFF_SECONDS = int(os.environ.get("WORKER_MAX_BACKOFF_SECONDS", "3600"))
+PUBLIC_PROJECTION_DRAIN_BATCH = int(
+    os.environ.get("PUBLIC_PROJECTION_DRAIN_BATCH", "25")
+)
 WORKER_HEARTBEAT_INTERVAL_SECONDS = 10.0
 if WORKER_HEARTBEAT_INTERVAL_SECONDS * 3 > min(
     VISIBILITY_TIMEOUT_SECONDS,
@@ -407,6 +411,10 @@ def run() -> None:
         heartbeat_thread.start()
         try:
             while True:
+                # OVE-242: the durable public-projection outbox is drained
+                # first. A revocation that the request path could not converge
+                # must not wait behind ordinary matching work.
+                _drain_public_projections(conn)
                 job = _claim(conn)
                 if job is None:
                     time.sleep(POLL_INTERVAL_SECONDS)
@@ -415,6 +423,15 @@ def run() -> None:
         finally:
             heartbeat_stop.set()
             heartbeat_thread.join(timeout=WORKER_HEARTBEAT_INTERVAL_SECONDS + 1)
+
+
+def _drain_public_projections(conn: psycopg.Connection) -> None:
+    """Converge outstanding revocations without ever failing the worker loop."""
+    try:
+        drain_public_projection_intents(conn, PUBLIC_PROJECTION_DRAIN_BATCH)
+    except Exception:
+        # The intents stay durable and claimable; the next poll retries them.
+        return
 
 
 def _process_claimed_job(

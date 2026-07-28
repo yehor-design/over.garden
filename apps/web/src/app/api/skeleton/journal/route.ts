@@ -10,7 +10,7 @@ import {
   createJournalEntry,
   listMyRecentJournalEntries,
 } from "@/server/journal-repository";
-import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
+import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
@@ -58,16 +58,14 @@ export async function POST(request: Request) {
   try {
     const entry = await createJournalEntry(scope, input);
 
-    let queuedJobId: string | null = null;
+    // OVE-242: createJournalEntry commits the public-projection intent with
+    // the entry itself; this only attempts immediate convergence.
     if (entry.visibility === "public") {
-      queuedJobId = await enqueueJournalEntryIndexJob({
-        journalEntryId: entry.id,
-        userId: scope.userId,
-      });
+      await convergePublicProjectionsNow([entry.id]).catch(() => undefined);
     }
 
     return Response.json(
-      { entry, queuedJobId },
+      { entry },
       { headers: NO_STORE_HEADERS },
     );
   } catch (error) {

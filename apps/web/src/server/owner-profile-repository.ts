@@ -10,6 +10,7 @@ import {
 } from "@/lib/garden/regions";
 import type { PublicLocale } from "@/lib/public-localization";
 import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
+import { recordPublicProjectionIntentsForOwner } from "@/server/search/public-projection-outbox";
 import {
   evaluatePublicIdentity,
   IDENTITY_POLICY_VERSION,
@@ -299,11 +300,30 @@ export async function updateOwnerPublicProfile(
     return { status: "unchanged", profile: current };
   }
 
-  const updated = await buildUpdateOwnerPublicProfileQuery(
-    executor,
-    scope,
-    value,
-  ).executeTakeFirst();
+  // OVE-242: making a profile private (or public again) reclassifies every
+  // public journal entry this owner has. The canonical profile write and those
+  // projection intents commit together, so a hidden profile can never leave the
+  // owner's entries searchable.
+  const visibilityChanged =
+    current.profile_visibility !== value.profileVisibility;
+  const updated = await executor.transaction().execute(async (trx) => {
+    const row = await buildUpdateOwnerPublicProfileQuery(
+      trx,
+      scope,
+      value,
+    ).executeTakeFirst();
+
+    if (row && visibilityChanged) {
+      await recordPublicProjectionIntentsForOwner(trx, {
+        ownerUserId: scope.userId,
+        desiredState:
+          value.profileVisibility === "public" ? "present" : "absent",
+        reason: "profile_visibility",
+      });
+    }
+
+    return row;
+  });
   return updated
     ? { status: "updated", profile: updated }
     : {

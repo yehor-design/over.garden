@@ -1,7 +1,17 @@
 # Public journal Meilisearch parity (OVE-227)
 
 Status: active operator contract
-Policy version: `ove227.publicIndexParity.v2` (supersedes `ove196.publicIndexParity.v1`)
+Policy version: `ove242.publicIndexParity.v3` (supersedes
+`ove227.publicIndexParity.v2`, which superseded `ove196.publicIndexParity.v1`)
+
+## What changed in v3 (OVE-242)
+
+`v2` compared the index against Postgres exactly, but it could still report
+`zeroGap` while a committed revocation had never reached Meilisearch, because
+nothing durable recorded that the revocation was owed. `v3` also reads the
+transactional public-projection outbox: `zeroGap` additionally requires
+`projection_overdue = 0` and `projection_dead = 0`. The outbox contract itself
+is owned by `docs/PUBLIC_PROJECTION_REVOCATION.md`.
 
 ## What changed in v2
 

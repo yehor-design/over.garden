@@ -7,7 +7,7 @@ import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
 } from "@/server/pilot-write-access";
-import { enqueueJournalEntryIndexJob } from "@/server/search/public-journal-parity";
+import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { normalizeFocalPoint } from "@/lib/media/presentation-contract";
 
 export const runtime = "nodejs";
@@ -93,11 +93,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       result.visibility === "public" &&
       result.journalRevision != null
     ) {
-      await enqueueJournalEntryIndexJob({
-        journalEntryId: result.journalEntryId,
-        userId: scope.userId,
-        idempotencyKey: `journal_entry_index:${result.journalEntryId}:${result.journalRevision}:focal`,
-      });
+      // OVE-242: the intent is already durable from the focal transaction;
+      // this only converges it now.
+      await convergePublicProjectionsNow([result.journalEntryId]).catch(
+        () => undefined,
+      );
     }
 
     return Response.json({

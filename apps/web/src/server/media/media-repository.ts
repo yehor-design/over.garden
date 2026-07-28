@@ -6,6 +6,7 @@ import { db } from "@/db";
 import type { Database, MediaAsset } from "@/db/schema";
 import { MAX_JOURNAL_INLINE_IMAGES } from "@/lib/garden/journal-document";
 import type { RequestScope } from "@/server/request-scope";
+import { recordPublicProjectionIntent } from "@/server/search/public-projection-outbox";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -149,6 +150,18 @@ export async function updateMediaAssetFocalForOwner(
       const conflict = new Error("Journal revision conflict.");
       (conflict as Error & { statusCode?: number }).statusCode = 409;
       throw conflict;
+    }
+
+    // OVE-242: a focal change rewrites how the public cover is presented, so
+    // the projection intent commits with the revision bump instead of being
+    // enqueued afterwards by the route.
+    if (bumped.visibility === "public" && bumped.public_slug) {
+      await recordPublicProjectionIntent(trx, {
+        entityId: bumped.id,
+        ownerUserId: scope.userId,
+        desiredState: "present",
+        reason: "media_presentation",
+      });
     }
 
     return {

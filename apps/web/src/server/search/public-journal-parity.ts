@@ -13,6 +13,7 @@ import {
   assertSafeJournalSearchDocumentId,
   isSafeJournalSearchDocumentId,
 } from "@/server/search/public-journal-document-id";
+import { loadPublicProjectionOutboxGate } from "@/server/search/public-projection-outbox";
 import {
   ALLOWED_JOURNAL_DOCUMENT_FIELDS,
   corpusFingerprint,
@@ -29,7 +30,7 @@ import {
  * validates the observed schema on its own merits, and refuses `zeroGap` while
  * overdue or terminal indexing work could still be hiding drift.
  */
-export const PUBLIC_JOURNAL_SEARCH_PARITY_POLICY = "ove227.publicIndexParity.v2";
+export const PUBLIC_JOURNAL_SEARCH_PARITY_POLICY = "ove242.publicIndexParity.v3";
 export const PUBLIC_JOURNAL_PARITY_ISSUE = "OVE-227";
 export const PUBLIC_JOURNAL_ENTRIES_INDEX = "journal_entries";
 export const DEFAULT_PUBLIC_INDEX_REPAIR_BATCH_SIZE = 100;
@@ -57,7 +58,10 @@ export type PublicJournalParityClass =
   | "invalid_id"
   | "pending"
   | "overdue"
-  | "terminal_failure";
+  | "terminal_failure"
+  | "projection_unconverged"
+  | "projection_overdue"
+  | "projection_dead";
 
 export interface PublicJournalParityCounts {
   expected: number;
@@ -70,6 +74,12 @@ export interface PublicJournalParityCounts {
   pending: number;
   overdue: number;
   terminal_failure: number;
+  /** OVE-242 outbox rows whose applied generation is behind the desired one. */
+  projection_unconverged: number;
+  /** OVE-242 unconverged rows past the overdue budget. Blocks `zeroGap`. */
+  projection_overdue: number;
+  /** OVE-242 dead-lettered rows. Blocks `zeroGap`. */
+  projection_dead: number;
   meiliDocumentCount: number;
   postgresEligibleCount: number;
 }
@@ -273,7 +283,12 @@ export function derivePublicJournalZeroGap(
     counts.duplicate === 0 &&
     counts.invalid_id === 0 &&
     counts.overdue === 0 &&
-    counts.terminal_failure === 0
+    counts.terminal_failure === 0 &&
+    // OVE-242: an unconverged privacy-reducing intent means the index may still
+    // be serving text, a region or a document the canonical write already
+    // revoked. Overdue or dead-lettered projection work fails the gate closed.
+    counts.projection_overdue === 0 &&
+    counts.projection_dead === 0
   );
 }
 
@@ -379,6 +394,7 @@ async function buildInternalParityState(): Promise<InternalParityState> {
   }
 
   const queue = await loadJournalSearchQueueGate();
+  const outbox = await loadPublicProjectionOutboxGate();
   const counts: PublicJournalParityCounts = {
     expected: expectedRows.length - missing - stale,
     missing,
@@ -390,6 +406,9 @@ async function buildInternalParityState(): Promise<InternalParityState> {
     pending: queue.pending,
     overdue: queue.overdue,
     terminal_failure: queue.terminalFailure,
+    projection_unconverged: outbox.unconverged,
+    projection_overdue: outbox.overdue,
+    projection_dead: outbox.dead,
     meiliDocumentCount: meiliDocs.length,
     postgresEligibleCount: expectedRows.length,
   };

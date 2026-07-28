@@ -5678,3 +5678,114 @@ create index if not exists journal_entries_public_launch_corpus_idx
   where visibility = 'public'
     and lifecycle_state = 'active'
     and public_slug is not null;
+
+-- OVE-242 — transactional public-projection revocation outbox. The canonical
+-- definition, with the rationale for every constraint, is
+-- `apps/web/sql/0011_ove242_public_projection_outbox.sql`; it is repeated here
+-- so a fresh bootstrap creates the table with the same shape.
+create sequence if not exists public_projection_generation_seq as bigint;
+
+create table if not exists public_projection_intents (
+  entity_kind text not null,
+  entity_id uuid not null,
+  owner_user_id uuid not null,
+  desired_state text not null,
+  desired_generation bigint not null,
+  desired_reason text not null,
+  privacy_reducing boolean not null default false,
+  applied_state text,
+  applied_generation bigint not null default 0,
+  status text not null default 'pending',
+  attempts integer not null default 0,
+  available_at timestamptz not null default now(),
+  lease_owner text,
+  lease_expires_at timestamptz,
+  last_error_class text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  applied_at timestamptz,
+  verified_at timestamptz,
+  primary key (entity_kind, entity_id)
+);
+
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_entity_kind_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_entity_kind_check
+  check (entity_kind in ('journal_entry'));
+
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_desired_state_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_desired_state_check
+  check (desired_state in ('present', 'absent'));
+
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_applied_state_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_applied_state_check
+  check (applied_state is null or applied_state in ('present', 'absent'));
+
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_status_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_status_check
+  check (status in ('pending', 'processing', 'applied', 'failed', 'dead'));
+
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_reason_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_reason_check
+  check (
+    desired_reason in (
+      'publish',
+      'edit',
+      'archive',
+      'erasure',
+      'moderation',
+      'location_change',
+      'catalog_identity',
+      'media_presentation',
+      'profile_visibility',
+      'repair'
+    )
+  );
+
+-- An applier may never record progress beyond the generation it claimed, and a
+-- generation is always drawn from the shared sequence, so it is always > 0.
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_generation_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_generation_check
+  check (
+    desired_generation > 0
+    and applied_generation >= 0
+    and applied_generation <= desired_generation
+  );
+
+-- `applied` is the only status that claims convergence, and it is unavailable
+-- unless the applied generation, the applied state, and a real verification
+-- read-back all agree with the desired row. "Job queued" can never be recorded
+-- as deletion proof.
+alter table public_projection_intents
+  drop constraint if exists public_projection_intents_converged_check;
+alter table public_projection_intents
+  add constraint public_projection_intents_converged_check
+  check (
+    status <> 'applied'
+    or (
+      applied_generation = desired_generation
+      and applied_state = desired_state
+      and verified_at is not null
+    )
+  );
+
+-- Claim order: privacy-reducing transitions first, then oldest desired
+-- generation. The partial index keeps the claim scan proportional to
+-- unconverged work rather than to the whole public corpus.
+create index if not exists public_projection_intents_claim_idx
+  on public_projection_intents (privacy_reducing desc, desired_generation asc)
+  where applied_generation < desired_generation;
+
+create index if not exists public_projection_intents_owner_idx
+  on public_projection_intents (owner_user_id);
