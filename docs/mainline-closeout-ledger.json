@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-07-27",
+  "updatedAt": "2026-07-28",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "entries": [
@@ -916,6 +916,35 @@
         "Immutable image proof on the exact candidate SHA: ghcr.io/yehor-design/overgarden-matching@sha256:e434784eb3f87e6c03d40ad5bfe2c881a6ba54a6222e1a037a11bf9a2f9195dd, built with max-mode provenance attestation bound to run 30297649272, sealed as artifact matching-release-fdd009e31b3c0fc21e99530a32d148be2f37817f-run-30297649272-1. GHCR publication also confirms package storage is no longer budget-blocked.",
         "Exact-SHA production proof: GitHub deployment 5628515674 with status 16005453803 reached success for fdd009e31b3c0fc21e99530a32d148be2f37817f, and the canonical origin returned 200 with both fallback faces present in the served stylesheet.",
         "Still open and explicitly not claimed by this closeout: branch protection on main and the removal of the two known runner artifacts. No secrets, precise location, journal text, media keys, or user identifiers are included in this entry."
+      ]
+    },
+    {
+      "issueId": "OVE-242",
+      "title": "P0 — Transactional public-projection revocation: edit, archive, erasure, moderation, and location changes cannot leave stale Meilisearch data",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "e497ebf9c4daf2892e20a068596d1de868aec837",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-242/p0-transactional-public-projection-revocation-edit-archive-erasure",
+      "completedAt": "2026-07-28",
+      "verificationCommands": [
+        "cd apps/web && pnpm lint && pnpm typecheck",
+        "cd apps/web && pnpm exec vitest run src/server/search/public-projection-outbox.test.ts src/server/search/public-journal-parity.test.ts src/lib/owner-object-copy.test.ts",
+        "cd apps/web && pnpm smoke:public-projection-revocation",
+        "cd apps/web && pnpm smoke:public-index-parity-adversarial -- --environment local --confirm-environment local",
+        "cd services/matching && uv run --frozen pytest tests -q",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/30330006364",
+      "notes": [
+        "Before this commit every declassification event was commit-then-enqueue: the canonical write committed and a separate connection afterwards inserted a Meilisearch index/unindex job. A crash, a queue error, a swallowed rejection or an idempotent replay between those steps permanently lost the revocation, and queue status, parity snapshot and erasure status all read 'no job' as 'nothing owed'.",
+        "public_projection_intents plus public_projection_generation_seq hold one durable intent per projected entity, written inside the canonical write transaction by publish, edit, archive, location change, catalog identity, cover focal, profile visibility and erasure. Database CHECK constraints keep applied_generation at or below desired_generation and make status 'applied' unavailable unless generations match, states match and verified_at is non-null, so a queued job can never be stored as deletion proof.",
+        "One state machine applies it: apps/web/src/server/search/public-projection-outbox.ts on the request path and services/matching/app/public_projection.py in the worker, which drains intents before ordinary queue work. Claim uses a lease with for update skip locked, apply is followed by a real index read-back, and settle is a compare-and-set on desired_generation and lease_owner, so an older applier reports superseded instead of overwriting newer state. Failures back off and dead-letter after 5 attempts.",
+        "Product surfaces report removal only from verified convergence: the owner object page shows archivedGonePending in uk, bg and ru until the projection converges, and executeApprovedErasureRequest stays cleanup-pending instead of completed until every erasure intent it owes is verified absent.",
+        "The parity gate is raised to ove242.publicIndexParity.v3: zeroGap additionally requires projection_overdue = 0 and projection_dead = 0. docs/PUBLIC_PROJECTION_REVOCATION.md is the canonical contract and AGENTS.md hard rule 7 now forbids adding a post-commit enqueue as the durability mechanism.",
+        "Local proof on real Postgres and Meilisearch: pnpm smoke:public-projection-revocation reported ok true for all eight cases (atomic publish intent, crash-before-apply recovered by a later drain, removed sentence gone from the index, hidden region gone from the index, replay repairs a missing intent exactly once, an older generation settling zero rows, moderation removal converging to verified absence, and a dead-lettered revocation making zeroGap false). The adversarial parity smoke stayed ok true, converged and idempotent.",
+        "CI run 30330006364 on main covers the exact SHA with lint, typecheck, generated DB types against a fresh bootstrap, the full vitest suite, build and the accessibility matrix; the Python tier passed in the pull-request run 30329128718.",
+        "Explicit non-claims: no production data mutation, no production application of sql/0011_ove242_public_projection_outbox.sql, no Meilisearch reindex, no worker image republication for the new drain, and no backfill of intents for entries published before this commit. Local pnpm build still fails on Node 20 for the pre-existing Object.groupBy reason; CI on Node 22 builds successfully. Evidence in this entry is counts, class names, state names and identifiers only."
       ]
     }
   ]
