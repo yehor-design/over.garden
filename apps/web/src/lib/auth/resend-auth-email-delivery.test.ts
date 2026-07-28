@@ -125,5 +125,11 @@ describe("Resend auth email delivery", () => {
       }),
     ).toBe("required");
     expect(authEmailVerificationPolicy({ NODE_ENV: "test" })).toBe("optional");
+    expect(
+      authEmailVerificationPolicy({
+        NODE_ENV: "production",
+        OVE230_RECOVERY_DRILL: "true",
+      }),
+    ).toBe("optional");
   });
 });

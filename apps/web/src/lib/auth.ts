@@ -97,6 +97,8 @@ export const auth = betterAuth({
   plugins: [nextCookies()],
   advanced: {
     cookiePrefix: "overgarden",
+    useSecureCookies:
+      process.env.OVE230_RECOVERY_DRILL === "true" ? false : undefined,
     database: {
       generateId: "uuid",
     },

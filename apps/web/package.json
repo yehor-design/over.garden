@@ -73,6 +73,7 @@
     "smoke:public-projection-revocation": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-projection-revocation.ts --environment local --confirm-environment local",
     "smoke:public-index-parity-adversarial": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity-adversarial.ts",
     "smoke:restore-readiness": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-restore-readiness.ts",
+    "restore:schema-manifest": "NODE_OPTIONS=--conditions=react-server tsx scripts/print-restore-schema-manifest.ts",
     "teardown:restore-drill": "tsx scripts/teardown-restore-drill.ts",
     "smoke:media-focal-presentation": "tsx scripts/smoke-media-focal-presentation.ts",
     "smoke:structured-journal-composer": "tsx scripts/smoke-structured-journal-composer.ts",

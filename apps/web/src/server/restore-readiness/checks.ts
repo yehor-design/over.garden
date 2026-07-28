@@ -43,7 +43,7 @@ export interface RestoreIntegrityCounts {
 
 export interface RestoreReadinessReport {
   policyVersion: typeof RESTORE_READINESS_POLICY;
-  issue: "OVE-201";
+  issue: "OVE-230";
   evidenceSafety: "booleans_counts_hashes_durations_only";
   schema: RestoreSchemaPresenceReport;
   integrity: RestoreIntegrityCounts;
@@ -69,8 +69,27 @@ export interface RestoreReadinessReport {
   };
   queueCompatibility: {
     pendingOrProcessing: number;
+    processing: number;
     deadTerminal: number;
     done: number;
+    invalidTerminalMetadata: number;
+  };
+  projection: {
+    unconverged: number;
+    overdue: number;
+    dead: number;
+    ready: boolean;
+  };
+  schemaManifest: {
+    digest: string;
+    expectedDigest: string;
+    matches: boolean;
+  };
+  product: {
+    readbackPassed: boolean;
+    mediaOriginalAbsent: boolean;
+    exactParityZeroGap: boolean;
+    sameTargetAndSha: boolean;
   };
   rpo: {
     predeclaredMaxMs: number;
@@ -397,13 +416,17 @@ export async function collectAppReadClasses(db: Kysely<Database>): Promise<{
 
 export async function collectQueueCompatibility(db: Kysely<Database>): Promise<{
   pendingOrProcessing: number;
+  processing: number;
   deadTerminal: number;
   done: number;
+  invalidTerminalMetadata: number;
 }> {
   const row = await sql<{
     pending_or_processing: unknown;
+    processing: unknown;
     dead_terminal: unknown;
     done: unknown;
+    invalid_terminal_metadata: unknown;
   }>`
     select
       (
@@ -411,6 +434,7 @@ export async function collectQueueCompatibility(db: Kysely<Database>): Promise<{
         from job_queue
         where status in ('pending', 'processing')
       ) as pending_or_processing,
+      (select count(*)::bigint from job_queue where status = 'processing') as processing,
       (
         select count(*)::bigint
         from job_queue
@@ -420,23 +444,123 @@ export async function collectQueueCompatibility(db: Kysely<Database>): Promise<{
         select count(*)::bigint
         from job_queue
         where status = 'done'
-      ) as done
+      ) as done,
+      (
+        select count(*)::bigint
+        from job_queue
+        where (status = 'dead' and (terminal_error_code is null or terminalized_at is null))
+           or (status <> 'dead' and (terminal_error_code is not null or terminalized_at is not null))
+      ) as invalid_terminal_metadata
   `.execute(db);
   const first = row.rows[0];
   if (!first) throw new Error("Queue compatibility counts unavailable.");
   return {
     pendingOrProcessing: toCount(first.pending_or_processing),
+    processing: toCount(first.processing),
     deadTerminal: toCount(first.dead_terminal),
     done: toCount(first.done),
+    invalidTerminalMetadata: toCount(first.invalid_terminal_metadata),
   };
+}
+
+export async function collectNormalizedSchemaManifestDigest(
+  db: Kysely<Database>,
+): Promise<string> {
+  const result = await sql<{ line: string }>`
+    with manifest as (
+      select 'column|' || table_name || '|' || column_name || '|' || data_type || '|' || is_nullable || '|' || coalesce(column_default, '') as line
+      from information_schema.columns
+      where table_schema = 'public'
+      union all
+      select 'constraint|' || t.relname || '|' || c.conname || '|' || c.contype::text || '|' || pg_get_constraintdef(c.oid, true)
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace
+      where n.nspname = 'public'
+      union all
+      select 'index|' || tablename || '|' || indexname || '|' || indexdef
+      from pg_indexes
+      where schemaname = 'public'
+    )
+    select line from manifest order by line
+  `.execute(db);
+  const hash = createHash("sha256");
+  for (const row of result.rows) hash.update(`${row.line}\n`);
+  return hash.digest("hex");
+}
+
+export async function collectProjectionReadiness(
+  db: Kysely<Database>,
+): Promise<{
+  unconverged: number;
+  overdue: number;
+  dead: number;
+  ready: boolean;
+}> {
+  const exists = await tableExists(db, "public_projection_intents");
+  if (!exists) return { unconverged: 1, overdue: 1, dead: 1, ready: false };
+  const result = await sql<{
+    unconverged: unknown;
+    overdue: unknown;
+    dead: unknown;
+  }>`
+    select
+      count(*) filter (where applied_generation < desired_generation)::bigint as unconverged,
+      count(*) filter (
+        where applied_generation < desired_generation
+          and available_at <= now() - interval '300 seconds'
+      )::bigint as overdue,
+      count(*) filter (where status = 'dead')::bigint as dead
+    from public_projection_intents
+  `.execute(db);
+  const row = result.rows[0];
+  if (!row) throw new Error("Projection readiness unavailable.");
+  const projection = {
+    unconverged: toCount(row.unconverged),
+    overdue: toCount(row.overdue),
+    dead: toCount(row.dead),
+    ready: false,
+  };
+  projection.ready =
+    projection.unconverged === 0 &&
+    projection.overdue === 0 &&
+    projection.dead === 0;
+  return projection;
+}
+
+export interface RestoreAdmissionInput {
+  actualRpoMs: number;
+  actualRtoMs: number;
+  expectedSchemaManifestDigest: string;
+  productReadbackPassed: boolean;
+  mediaOriginalAbsent: boolean;
+  exactParityZeroGap: boolean;
+  sameTargetAndSha: boolean;
+}
+
+export interface TerminalReadinessSignals {
+  schemaOk: boolean;
+  integrityOk: boolean;
+  identityReady: boolean;
+  queueReady: boolean;
+  projectionReady: boolean;
+  rpoPass: boolean;
+  rtoPass: boolean;
+  productReadbackPassed: boolean;
+  mediaOriginalAbsent: boolean;
+  exactParityZeroGap: boolean;
+  sameTargetAndSha: boolean;
+}
+
+export function evaluateTerminalReadiness(
+  signals: TerminalReadinessSignals,
+): boolean {
+  return Object.values(signals).every((signal) => signal === true);
 }
 
 export async function buildRestoreReadinessReport(
   db: Kysely<Database>,
-  timing?: {
-    actualRpoMs?: number | null;
-    actualRtoMs?: number | null;
-  },
+  admission: RestoreAdmissionInput,
 ): Promise<RestoreReadinessReport> {
   const schema = await collectRestoreSchemaPresence(db);
   const integrity = await collectRestoreIntegrityCounts(db);
@@ -446,11 +570,10 @@ export async function buildRestoreReadinessReport(
   const effectiveCoverFingerprint = await collectEffectiveCoverFingerprint(db);
   const appReadClasses = await collectAppReadClasses(db);
   const queueCompatibility = await collectQueueCompatibility(db);
-
-  const actualRpoMs =
-    timing?.actualRpoMs === undefined ? null : timing.actualRpoMs;
-  const actualRtoMs =
-    timing?.actualRtoMs === undefined ? null : timing.actualRtoMs;
+  const projection = await collectProjectionReadiness(db);
+  const schemaManifestDigest = await collectNormalizedSchemaManifestDigest(db);
+  const actualRpoMs = admission.actualRpoMs;
+  const actualRtoMs = admission.actualRtoMs;
 
   const schemaOk =
     schema.engineVersionMajor !== null &&
@@ -462,26 +585,38 @@ export async function buildRestoreReadinessReport(
     schema.hasIdentityRegistryTables &&
     schema.hasIdentityProvisionFunction &&
     schema.hasJobQueueDeadStatus &&
-    schema.hasJobQueueClaimIndex;
+    schema.hasJobQueueClaimIndex &&
+    schema.hasLearningActorAttributions &&
+    schemaManifestDigest === admission.expectedSchemaManifestDigest;
 
   const integrityOk =
     integrity.danglingCoverPointers === 0 &&
     integrity.duplicateCoverOnlyAssociations === 0 &&
-    integrity.crossOwnerCoverClaims === 0;
+    integrity.crossOwnerCoverClaims === 0 &&
+    integrity.quarantineOriginalStillPresent === 0;
 
-  const rpoPass =
-    actualRpoMs === null ? null : evaluateRpoPass(actualRpoMs);
-  const rtoPass =
-    actualRtoMs === null ? null : evaluateRtoPass(actualRtoMs);
-
-  const timingOk =
-    (rpoPass === null || rpoPass) && (rtoPass === null || rtoPass);
-
-  const ok = schemaOk && integrityOk && identityReady && timingOk;
+  const rpoPass = evaluateRpoPass(actualRpoMs);
+  const rtoPass = evaluateRtoPass(actualRtoMs);
+  const queueOk =
+    queueCompatibility.processing === 0 &&
+    queueCompatibility.invalidTerminalMetadata === 0;
+  const ok = evaluateTerminalReadiness({
+    schemaOk,
+    integrityOk,
+    identityReady,
+    queueReady: queueOk,
+    projectionReady: projection.ready,
+    rpoPass,
+    rtoPass,
+    productReadbackPassed: admission.productReadbackPassed,
+    mediaOriginalAbsent: admission.mediaOriginalAbsent,
+    exactParityZeroGap: admission.exactParityZeroGap,
+    sameTargetAndSha: admission.sameTargetAndSha,
+  });
 
   return {
     policyVersion: RESTORE_READINESS_POLICY,
-    issue: "OVE-201",
+    issue: "OVE-230",
     evidenceSafety: "booleans_counts_hashes_durations_only",
     schema,
     integrity,
@@ -502,6 +637,18 @@ export async function buildRestoreReadinessReport(
     effectiveCoverFingerprint,
     appReadClasses,
     queueCompatibility,
+    projection,
+    schemaManifest: {
+      digest: schemaManifestDigest,
+      expectedDigest: admission.expectedSchemaManifestDigest,
+      matches: schemaManifestDigest === admission.expectedSchemaManifestDigest,
+    },
+    product: {
+      readbackPassed: admission.productReadbackPassed,
+      mediaOriginalAbsent: admission.mediaOriginalAbsent,
+      exactParityZeroGap: admission.exactParityZeroGap,
+      sameTargetAndSha: admission.sameTargetAndSha,
+    },
     rpo: {
       predeclaredMaxMs: PREDECLARED_RPO_MAX_MS,
       actualMs: actualRpoMs,

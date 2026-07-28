@@ -1,86 +1,46 @@
-# Managed Recovery Drill (OVE-201)
+# Managed Recovery Drill (OVE-230)
 
-Status: done on main (live disposable PITR drill complete)  
-Policy version: `ove201.restore-readiness.v1`  
-Date: 2026-07-24
+Status: strict v2 executable contract
+Policy: ove230.managedRecovery.v2 / ove230.restore-readiness.v2
+Targets: RPO at most 1 hour; RTO at most 4 hours
 
-## Predeclared recovery targets (locked)
+OVE-230 restores production PostgreSQL into one new DigitalOcean fork, runs the exact contained main application against it with fresh loopback-only MinIO and Meilisearch, proves the synthetic gardener/public/archive path, and deletes the exact fork. It never fails over, restores over, bootstraps, reconfigures, or writes production.
 
-| Metric | Target | Mechanism |
-| --- | --- | --- |
-| RPO | ≤ 1 hour | DigitalOcean Managed PostgreSQL PITR (7-day window; registry-confirmed) |
-| RTO | ≤ 4 hours | Wall-clock from disposable fork start until restore-readiness + ephemeral Meili zero-gap |
+## Safety model
 
-Expected measured RTO band: ~30–60 minutes on first manual drill. The 4h ceiling is intentional margin. A miss against these targets is a blocker or a documented product/ops decision — **thresholds are not rewritten after seeing results**.
+- plan reads the authenticated production ID/name/engine/version/region/status/size, requires exact target-name cardinality zero, selects a restore point five minutes earlier, binds the contained implementation SHA and maintainer approval digest, and persists canonical redacted JSON plus its SHA-256.
+- execute reproduces that digest, takes the single-host lock, rechecks source/target facts, and creates at most one overgarden-pitr-drill-YYYYMMDD fork.
+- Every database effect re-reads target ID/name/engine/region/status and provider hostname and compares it with the parsed DATABASE_URL hostname. Production-ID equality refuses.
+- Fork credential env and CA are mode 0600 temporary files. Raw provider output, credentials, CA body, DB URL, host IP, restored rows, synthetic identity/content/keys, cookies, and request metadata never enter evidence.
+- Next binds 127.0.0.1:13000; Meilisearch binds 127.0.0.1:17700; MinIO binds 127.0.0.1:19000. Containers and volumes have a random OVE-230 suffix, start empty, and are deleted on every terminal path. Production R2/search/matching/email/analytics/social endpoints are disabled or refused.
+- No general worker runs. Initial OVE-227 parity projects only canonical public-safe rows into the fresh index. Synthetic publish/archive uses the canonical durable public-projection owner for only that entity.
+- Teardown freshly verifies exact target identity, deletes only its ID, and polls an authenticated provider list until exact-ID cardinality is zero. Authentication, permission, throttle, and provider-server failures are not absence.
 
-## Source and target classes
+## Commands
 
-- Source cluster class: `overgarden-postgres-prod-fra1` (FRA1, Postgres 18). Resolve live UUID via `doctl databases list`; never use production UUID as a restore *target*.
-- Disposable target name pattern: `overgarden-pitr-drill-YYYYMMDD` only.
-- Connectivity: private/restricted, TLS with CA, time-bounded. Credentials stay in env only.
-- Teardown: separate exact disposable cluster-ID confirmation immediately after green checks (`pnpm teardown:restore-drill -- --confirm-delete-cluster-id … --execute`).
+Run only after the implementation SHA is merged and contained in origin/main:
 
-## Maintenance gate
+    git fetch origin main
+    git merge-base --is-ancestor "$OVE230_IMPLEMENTATION_SHA" origin/main
+    cd apps/web
+    pnpm mainline:closeout:check
+    pnpm smoke:restore-readiness -- plan --environment recovery-drill --confirm-environment recovery-drill --approval-digest e87bd9c0118bcf88a6fac07c069b01396b5b2c0322b7c961f058b016554a31ae --implementation-sha "$OVE230_IMPLEMENTATION_SHA"
+    pnpm smoke:restore-readiness -- execute --environment recovery-drill --confirm-environment recovery-drill --approval-digest e87bd9c0118bcf88a6fac07c069b01396b5b2c0322b7c961f058b016554a31ae --implementation-sha "$OVE230_IMPLEMENTATION_SHA"
 
-1. Inspect live maintenance window (`pending` boolean).
-2. Apply on-demand only after founder confirms the exact moment: `doctl databases maintenance-window install <production-id>` (API `PUT /v2/databases/{id}/install_update`).
-3. If DO cannot install on-demand: record launch blocker (owner: Yehor, date: before launch) and continue the drill against the current cluster state.
+During any wait, these commands bypass the execution lock and use the fenced state:
 
-## Fail-closed tooling
+    pnpm smoke:restore-readiness -- status
+    pnpm smoke:restore-readiness -- cancel
 
-```bash
-cd apps/web
-pnpm smoke:restore-readiness -- \
-  --environment recovery-drill \
-  --confirm-environment recovery-drill \
-  --confirm-cluster-id <disposable-uuid> \
-  --production-cluster-id <production-uuid> \
-  --disposable-cluster-name overgarden-pitr-drill-YYYYMMDD \
-  --actual-rpo-ms <ms> \
-  --actual-rto-ms <ms>
+## Terminal admission
 
-# Ephemeral loopback Meili + fork DATABASE_URL only (never production Meili)
-pnpm smoke:public-index-parity -- \
-  --environment recovery-drill \
-  --confirm-environment recovery-drill \
-  --confirm-cluster-id <disposable-uuid> \
-  --production-cluster-id <production-uuid> \
-  --mode classify
-```
+Green requires all of the following in one same-target/SHA receipt:
 
-Any command whose confirm ID, cluster name, or `DATABASE_URL` host class resolves to production must refuse. Recovery-drill Meili must be loopback.
+- authoritative RPO from provider fork acceptance UTC minus selected restore point UTC, at most 3600000 ms;
+- monotonic RTO from fork-command start through final product/parity/readiness, corroborated by ordered UTC timestamps within 30 seconds, at most 14400000 ms;
+- normalized pg_catalog manifest equal to the fresh exact-SHA reference plus named identity, learning, media, queue, projection, document, cover, and erasure predicates;
+- protected restored-row aggregates unchanged by bootstrap and job_queue lifecycle fingerprint unchanged by product proof, with zero processing rows and valid terminal metadata;
+- real JPEG quarantine upload, stripped WebP derivative HeadObject success, original HeadObject 404, owner save/readback, public 200, archive 410, and exact final OVE-227 zeroGap=true;
+- authenticated target absence plus production database and canonical /health online before and after.
 
-## Evidence rules
-
-Allowed: timestamps, engine/schema versions, constraint/index booleans, bounded counts, effective-cover fingerprint hash, durations, RPO/RTO pass class, cleanup boolean.  
-Forbidden: credentials, CA bodies, DB URLs, row IDs, emails, journal text, media keys, exact location, IP, user agent, raw backup contents.
-
-Redacted live artifact: [`docs/managed-recovery-evidence-redacted.json`](managed-recovery-evidence-redacted.json).
-
-## Live drill log (2026-07-24)
-
-```
-drill_date_utc: 2026-07-24
-maintenance_pending_before: true
-maintenance_action: applied
-maintenance_founder_confirm_utc: 2026-07-24T11:57:16Z
-post_maintenance_status: online (pending=false; backups=8; matching/site health 200)
-selected_pitr_timestamp_utc: 2026-07-24 11:55:46 +0000 UTC
-fork_started_utc: 2026-07-24T12:00:46Z
-disposable_cluster_name: overgarden-pitr-drill-20260724
-disposable_cluster_id_class: uuid_confirmed_non_production
-fork_online_utc: 2026-07-24T12:07:37Z
-restore_readiness_ok: true
-meili_parity_zero_gap: true
-actual_rpo_ms: 300000
-actual_rto_ms: 662000
-rpo_pass: true
-rto_pass: true
-teardown_confirmed_utc: 2026-07-24T12:13:10Z
-teardown_deleted: true
-production_available_throughout: true
-```
-
-## Cadence
-
-Next drill: after any schema migration that touches journal/cover/identity/queue/search eligibility, or at least once before public launch if older than 30 days.
+The actual post-merge receipt belongs in Linear. The repository JSON is a schema/redaction fixture, not a fabricated live result.

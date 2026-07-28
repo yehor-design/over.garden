@@ -7,6 +7,8 @@ import {
   resolvePgConnectionString,
 } from "../src/db/connection";
 import {
+  assertProviderBinding,
+  DigitalOceanDatabaseProvider,
   hostnameFromDatabaseUrl,
   hostnameLooksLikeProduction,
 } from "../src/server/restore-readiness";
@@ -60,9 +62,18 @@ async function main() {
   if (environment === "recovery-drill") {
     const confirmClusterId = readFlag(argv, "--confirm-cluster-id");
     const productionClusterId = readFlag(argv, "--production-cluster-id");
-    if (!confirmClusterId || !productionClusterId) {
+    const disposableClusterName = readFlag(argv, "--disposable-cluster-name");
+    const expectedEngine = readFlag(argv, "--expected-engine");
+    const expectedRegion = readFlag(argv, "--expected-region");
+    if (
+      !confirmClusterId ||
+      !productionClusterId ||
+      !disposableClusterName ||
+      !expectedEngine ||
+      !expectedRegion
+    ) {
       throw new Error(
-        "recovery-drill requires --confirm-cluster-id and --production-cluster-id.",
+        "recovery-drill requires provider id, name, engine, and region binding flags.",
       );
     }
     if (confirmClusterId === productionClusterId) {
@@ -71,10 +82,7 @@ async function main() {
       );
     }
     const resolution = resolveDatabaseConnection(process.env);
-    const connectionString = resolvePgConnectionString(
-      process.env,
-      resolution,
-    );
+    const connectionString = resolvePgConnectionString(process.env, resolution);
     if (!connectionString) {
       throw new Error("recovery-drill requires DATABASE_URL.");
     }
@@ -94,6 +102,20 @@ async function main() {
         "Refuse: recovery-drill Meilisearch must be ephemeral loopback (never production Meili).",
       );
     }
+    const provider = new DigitalOceanDatabaseProvider();
+    const cluster = await provider.getCluster(confirmClusterId);
+    const providerHost = await provider.getHost(confirmClusterId);
+    assertProviderBinding({
+      provider: cluster,
+      expectedId: confirmClusterId,
+      expectedName: disposableClusterName,
+      expectedEngine,
+      expectedRegion,
+      providerHost,
+      databaseUrl: connectionString,
+      productionId: productionClusterId,
+      ca: process.env.DATABASE_SSL_CA ?? "",
+    });
   }
 
   const {
@@ -121,7 +143,11 @@ async function main() {
         2,
       ),
     );
-    if (!report.zeroGap && environment === "production" && !argv.includes("--allow-gap")) {
+    if (
+      !report.zeroGap &&
+      environment === "production" &&
+      !argv.includes("--allow-gap")
+    ) {
       process.exitCode = 2;
     }
     return;
