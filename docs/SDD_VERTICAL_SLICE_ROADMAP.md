@@ -22,6 +22,12 @@ issues OVE-213 through OVE-244 in `Todo` under
 the newest issue update in that set was `2026-07-25T22:18:33.986Z`. Identifier
 order alone is not execution order.
 
+On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
+`main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,
+was saved and read back, moved to `In Progress`, and closed on `main` through
+merge commit `e497ebf9c4daf2892e20a068596d1de868aec837`. The remaining 31
+issues in the range stay in `Todo` and are still unrewritten.
+
 All 32 OVE-213 through OVE-244 descriptions predate the v1 contract. Their
 content informed the standard, but no issue in the range is ready for assignment
 or `In Progress` by provenance alone. Before execution, re-audit and materially
