@@ -30,6 +30,13 @@ export interface QuarantineUploadUrl {
   expiresInSeconds: number;
 }
 
+export type MediaProviderObjectState =
+  | "present"
+  | "not_found"
+  | "indeterminate_auth"
+  | "indeterminate_transport"
+  | "provider_error";
+
 let cachedR2Client: S3Client | undefined;
 
 function r2Client() {
@@ -129,48 +136,60 @@ export async function copyPublicDerivativeObject(
   );
 }
 
-export async function deleteQuarantineObject(objectKey: string): Promise<void> {
+export async function deleteQuarantineObject(
+  objectKey: string,
+  abortSignal?: AbortSignal,
+): Promise<void> {
   await r2Client().send(
     new DeleteObjectCommand({
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
       Key: objectKey,
     }),
+    { abortSignal },
   );
 }
 
-export async function quarantineObjectExists(objectKey: string): Promise<boolean> {
-  try {
-    await r2Client().send(
-      new HeadObjectCommand({
-        Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
-        Key: objectKey,
-      }),
-    );
-    return true;
-  } catch (error) {
-    const candidate = error as {
-      name?: string;
-      $metadata?: { httpStatusCode?: number };
-    };
-    if (
-      candidate.name === "NotFound" ||
-      candidate.name === "NoSuchKey" ||
-      candidate.$metadata?.httpStatusCode === 404
-    ) {
-      return false;
-    }
-    throw error;
-  }
+export async function quarantineObjectExists(
+  objectKey: string,
+): Promise<boolean> {
+  const state = await probeQuarantineObjectState(objectKey);
+  if (state === "present") return true;
+  if (state === "not_found") return false;
+  throw new Error(`Quarantine provider proof was ${state}.`);
+}
+
+export async function probeQuarantineObjectState(
+  objectKey: string,
+  abortSignal?: AbortSignal,
+): Promise<MediaProviderObjectState> {
+  return probeObjectState(
+    requiredServerEnv("R2_QUARANTINE_BUCKET"),
+    objectKey,
+    abortSignal,
+  );
+}
+
+export async function probePublicDerivativeObjectState(
+  objectKey: string,
+  abortSignal?: AbortSignal,
+): Promise<MediaProviderObjectState> {
+  return probeObjectState(
+    requiredServerEnv("R2_PUBLIC_BUCKET"),
+    objectKey,
+    abortSignal,
+  );
 }
 
 export async function deletePublicDerivativeObject(
   objectKey: string,
+  abortSignal?: AbortSignal,
 ): Promise<void> {
   await r2Client().send(
     new DeleteObjectCommand({
       Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
       Key: objectKey,
     }),
+    { abortSignal },
   );
 }
 
@@ -178,4 +197,54 @@ export function getPublicDerivativeUrl(objectKey: string): string {
   const baseUrl = requiredServerEnv("R2_PUBLIC_BASE_URL");
   const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   return new URL(objectKey.replace(/^\/+/, ""), normalizedBase).toString();
+}
+
+async function probeObjectState(
+  bucket: string,
+  objectKey: string,
+  abortSignal?: AbortSignal,
+): Promise<MediaProviderObjectState> {
+  try {
+    await r2Client().send(
+      new HeadObjectCommand({ Bucket: bucket, Key: objectKey }),
+      { abortSignal },
+    );
+    return "present";
+  } catch (error) {
+    return classifyMediaProviderError(error);
+  }
+}
+
+export function classifyMediaProviderError(
+  error: unknown,
+): Exclude<MediaProviderObjectState, "present"> {
+  const candidate = error as {
+    name?: string;
+    code?: string;
+    $metadata?: { httpStatusCode?: number };
+  };
+  const status = candidate?.$metadata?.httpStatusCode;
+  const name = candidate?.name ?? candidate?.code ?? "";
+  if (status === 404 || name === "NotFound" || name === "NoSuchKey") {
+    return "not_found";
+  }
+  if (
+    status === 401 ||
+    status === 403 ||
+    /^(?:AccessDenied|InvalidAccessKeyId|SignatureDoesNotMatch|ExpiredToken)$/i.test(
+      name,
+    )
+  ) {
+    return "indeterminate_auth";
+  }
+  if (typeof status === "number") return "provider_error";
+  if (
+    error instanceof TypeError ||
+    /(?:timeout|timed out|abort|network|socket|connect|dns|tls|econn|enotfound)/i.test(
+      error instanceof Error ? error.message : "",
+    )
+  ) {
+    return "indeterminate_transport";
+  }
+  return "provider_error";
 }

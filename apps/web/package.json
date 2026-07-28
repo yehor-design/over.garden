@@ -62,6 +62,7 @@
     "smoke:media-archive-retention": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-media-archive-retention.ts",
     "smoke:retention-workflow": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-retention-workflow.ts",
     "smoke:synthetic-media-revoke": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-synthetic-media-revoke.ts",
+    "smoke:media-lifecycle-worker": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-media-lifecycle-worker.ts",
     "retention:report": "NODE_OPTIONS=--conditions=react-server tsx scripts/retention-report.ts",
     "prove:r2-media-lifecycle": "tsx scripts/prove-r2-media-lifecycle-provider.ts",
     "smoke:admin-role": "tsx scripts/smoke-admin-role.ts",

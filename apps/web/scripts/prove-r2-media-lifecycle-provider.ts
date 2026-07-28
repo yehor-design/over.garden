@@ -11,7 +11,7 @@ import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local" });
 
 /**
- * OVE-195 provider probe: prove canonical media.over.garden serves a synthetic
+ * OVE-216 provider probe: prove canonical media.over.garden serves a synthetic
  * object, observe managed r2.dev reachability class, optionally disable r2.dev
  * when CLOUDFLARE_API_TOKEN is present, then delete the probe object.
  *
@@ -32,8 +32,8 @@ async function main() {
     .update(randomBytes(16))
     .digest("hex")
     .slice(0, 24);
-  const objectKey = `ove195-lifecycle-probe/${probeSuffix}.txt`;
-  const body = Buffer.from("ove195-synthetic-probe\n", "utf8");
+  const objectKey = `ove216-lifecycle-probe/${probeSuffix}.txt`;
+  const body = Buffer.from("ove216-synthetic-probe\n", "utf8");
 
   const client = new S3Client({
     region: "auto",
@@ -94,8 +94,12 @@ async function main() {
     await client.send(
       new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
     );
-  } catch {
-    originGone = true;
+  } catch (error) {
+    if (isProviderNotFound(error)) originGone = true;
+    else {
+      await safeDelete(client, objectKey);
+      throw new Error("Origin delete proof was indeterminate.");
+    }
   }
 
   const afterDeleteCanonical = await headStatus(canonicalUrl);
@@ -107,11 +111,11 @@ async function main() {
           beforeCanonical >= 200 &&
           beforeCanonical < 300 &&
           originGone &&
-          (afterDeleteCanonical < 200 || afterDeleteCanonical >= 300) &&
+          (afterDeleteCanonical === 404 || afterDeleteCanonical === 410) &&
           (managedEnabledAfter === false ||
             managedEnabledAfter === null ||
             !disableAttempted),
-        issue: "OVE-195",
+        issue: "OVE-216",
         evidenceClass: "r2-provider-probe",
         canonicalServeClass: statusClass(beforeCanonical),
         r2DevServeClassBefore: statusClass(beforeR2Dev),
@@ -215,6 +219,21 @@ async function headStatus(url: string): Promise<number> {
   } catch {
     return 0;
   }
+}
+
+function isProviderNotFound(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as {
+    name?: string;
+    Code?: string;
+    $metadata?: { httpStatusCode?: number };
+  };
+  return (
+    candidate.$metadata?.httpStatusCode === 404 ||
+    candidate.name === "NotFound" ||
+    candidate.name === "NoSuchKey" ||
+    candidate.Code === "NoSuchKey"
+  );
 }
 
 async function safeDelete(client: S3Client, objectKey: string) {
