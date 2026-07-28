@@ -65,7 +65,6 @@ async function main() {
     .png()
     .toBuffer();
   let mediaAssetId: string | null = null;
-  let derivativeKey: string | null = null;
   const attemptedDerivativeKeys = new Set<string>();
 
   try {
@@ -142,7 +141,6 @@ async function main() {
       throw new Error("Superseded provider identity settled canonical state.");
     }
     const derivative = await processQuarantinedImage(claim.asset);
-    derivativeKey = derivative.derivativeKey;
     const written = await markClaimedMediaDerivativeWritten(
       scope,
       claim,
@@ -226,6 +224,7 @@ async function main() {
     );
   } finally {
     const cleanupErrors: string[] = [];
+    const removedDerivativeKeys = new Set<string>();
     try {
       if (mediaAssetId) {
         await db
@@ -241,13 +240,16 @@ async function main() {
       cleanupErrors.push("database invalidation");
     }
     try {
-      if (derivativeKey) {
+      for (const key of attemptedDerivativeKeys) {
         const proof = await revokeMediaObjectBytes({
           bucket: "public_derivative",
-          objectKey: derivativeKey,
+          objectKey: key,
         });
-        if (proof.outcome !== "confirmed_gone")
+        if (proof.outcome !== "confirmed_gone") {
           cleanupErrors.push("derivative removal");
+        } else {
+          removedDerivativeKeys.add(key);
+        }
       }
     } catch {
       cleanupErrors.push("derivative removal");
@@ -273,7 +275,7 @@ async function main() {
       cleanupErrors.push("database row removal");
     }
     try {
-      for (const key of attemptedDerivativeKeys) {
+      for (const key of removedDerivativeKeys) {
         await db
           .deleteFrom("job_queue")
           .where(
