@@ -16,6 +16,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import { Kysely, PostgresDialect } from "kysely";
+import { Meilisearch } from "meilisearch";
 import { Pool } from "pg";
 
 import type { Database } from "../src/db/schema";
@@ -596,7 +597,25 @@ async function startIsolatedServices(context: ExecuteContext) {
     `http://127.0.0.1:${MINIO_PORT}/minio/health/ready`,
     90_000,
   );
+  await createSearchIndex();
   await createBuckets();
+}
+
+async function createSearchIndex() {
+  const client = new Meilisearch({
+    host: `http://127.0.0.1:${MEILI_PORT}`,
+    apiKey: "ove230-recovery-only-master-key-123456",
+  });
+  const task = await client.createIndex("journal_entries", {
+    primaryKey: "id",
+  });
+  const completed = await client.tasks.waitForTask(task.taskUid, {
+    timeout: 90_000,
+    interval: 250,
+  });
+  if (completed.status !== "succeeded") {
+    throw new Error("isolated recovery search index initialization failed");
+  }
 }
 
 async function createBuckets() {
