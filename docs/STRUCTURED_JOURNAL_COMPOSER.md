@@ -57,3 +57,20 @@ Required before Linear Done (decision 1A):
 7. Edit existing entry with expectedRevision conflict path
 
 Do not record private journal text, media URLs, or identities in evidence.
+
+## OVE-213 responsiveness boundary
+
+- Reorder chrome writes text, labels, and disabled state only when the value
+  changes. Controller-owned cosmetic mutations are ignored by its subtree
+  observer instead of feeding another synchronization delivery.
+- Real Editor.js mutation bursts schedule at most one synchronization per
+  animation frame. Destroy cancels that frame before disconnecting listeners
+  and removing controller chrome, so a departed composer cannot receive a late
+  write.
+- `pnpm smoke:journal-composer-responsiveness` bundles the production controller
+  source into a native Chromium DOM, proves zero no-op and five-second idle
+  observer deliveries, converges a 100-block/10-image mutation burst within the
+  34 ms policy, exercises the two wait-safe actions, and proves teardown fencing.
+- Receipts contain only bounded state classes. Journal content, block/media IDs,
+  identity, payloads, precise location, IP/user-agent, and credentials remain
+  forbidden evidence.

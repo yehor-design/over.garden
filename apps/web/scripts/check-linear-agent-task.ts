@@ -5218,7 +5218,11 @@ function validateFaultMatrix(
   }
   const rows = tableLines
     .slice(headerIndex + 1)
-    .filter((cells) => !cells.every((cell) => /^:?-{3,}:?$/.test(cell)));
+    // Linear's editor normalizes Markdown table delimiters to two dashes on
+    // authenticated read-back. Accept that canonical provider form as well as
+    // CommonMark's three-or-more-dash source form so saved-body validation can
+    // evaluate the actual rows instead of treating the delimiter as row one.
+    .filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/.test(cell)));
   if (rows.length === 0) {
     addFinding(
       errors,
