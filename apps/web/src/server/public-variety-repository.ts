@@ -14,6 +14,7 @@ import { publicJournalEntryPath } from "@/lib/garden/public-paths";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import {
   evaluatePublicVarietyIndexState,
   PUBLIC_VARIETY_INDEXABILITY_THRESHOLD,
@@ -284,6 +285,7 @@ export function buildPublicVarietySummaryQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .groupBy([
       "catalog_items.canonical_name",
       "catalog_items.id",
@@ -351,6 +353,7 @@ export function buildIndexablePublicVarietySitemapRowsQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .groupBy(["catalog_items.catalog_kind", "catalog_items.public_slug"])
     .having(
       sql<boolean>`count(${sql.ref("journal_entries.id")}) >= ${PUBLIC_VARIETY_INDEXABILITY_THRESHOLD.minPublicEntryCount}`,
@@ -421,7 +424,8 @@ export function buildPublicVarietyEntriesQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null);
+    .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 
   if (expectedCatalogKind) {
     query = query.where("catalog_items.catalog_kind", "=", expectedCatalogKind);

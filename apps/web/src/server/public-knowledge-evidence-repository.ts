@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database } from "@/db/schema";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import {
@@ -133,6 +134,7 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
     .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .where("journal_entries.published_at", "is not", null)
     .$narrowType<{ entryId: string; objectId: string; publishedAt: Date }>();
 

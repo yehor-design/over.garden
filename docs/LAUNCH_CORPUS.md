@@ -25,6 +25,31 @@ Persisted on `journal_entries.content_class`:
 
 Public feed, journal directory, and Meilisearch eligibility only include `real_ugc | founder_first_hand | editorial`.
 
+### One launch-corpus public-surface policy (OVE-221)
+
+All guest-visible journal reads use `ove221.publicLaunchSurface.v1` from
+`apps/web/src/server/launch-corpus/public-surface.ts`. The shared predicate is
+applied to feed, directory, journal lifecycle and related reads, object
+passports, profiles, lineage, varieties, topics, knowledge evidence, social
+readbacks, community counts, engagement targets, and journal mention lookup.
+Meilisearch projection eligibility uses the same content-class allowlist.
+
+`apps/web/src/server/launch-corpus/public-surface-inventory.ts` is the
+machine-checked caller inventory. Its source audit fails when a listed public
+module loses the shared predicate. The local real-Postgres smoke inserts all
+six content classes inside a rolled-back transaction and proves that only the
+three launch-eligible classes survive direct, lifecycle, relationship, and
+count paths:
+
+```bash
+cd apps/web
+../../infra/run-with-local-infra-env pnpm smoke:launch-corpus-surfaces
+```
+
+Operator-only inventory, moderation, owner-control, learning-signal, privacy,
+and restore-readiness queries are intentionally outside this guest-surface
+policy because they must observe excluded rows to enforce or report on them.
+
 ## Commands
 
 ```bash
