@@ -101,6 +101,13 @@ export async function writeSecretFile(file: string, value: string) {
   }
 }
 
+export function readSafeRecoveryDiagnostic(output: string) {
+  const match = output.match(
+    /"recoveryBootstrapStage":"([a-z_]+)","errorCode":"([A-Z0-9_]+)"/,
+  );
+  return match?.[1] && match[2] ? { stage: match[1], code: match[2] } : null;
+}
+
 export async function pollUntil<T>(input: {
   read: () => Promise<T>;
   done: (value: T) => boolean;

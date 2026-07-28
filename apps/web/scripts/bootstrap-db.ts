@@ -22,6 +22,8 @@ import {
 const envFile = argValue("--env-file") ?? ".env.local";
 const caFile = argValue("--ca-file");
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const recoveryEnvironment = argValue("--environment");
+let recoveryBootstrapStage = "initializing";
 
 loadEnv({ path: envFile });
 
@@ -71,25 +73,32 @@ const authOptions = {
 } satisfies BetterAuthOptions;
 
 async function main() {
-  const recoveryMode = Boolean(argValue("--environment"));
+  const recoveryMode = Boolean(recoveryEnvironment);
+  recoveryBootstrapStage = "provider_binding";
   await assertRecoveryTargetBeforeAccess();
+  recoveryBootstrapStage = "timeout_policy";
   await pool.query("set statement_timeout = '10min'");
   await pool.query("set lock_timeout = '30s'");
+  recoveryBootstrapStage = "protected_counts_before";
   const before = recoveryMode ? await collectProtectedRowCounts() : null;
+  recoveryBootstrapStage = "application_schema";
   const appSql = await readFile(
     path.join(scriptDir, "..", "sql/0001_walking_skeleton.sql"),
     "utf8",
   );
   await pool.query(appSql);
 
+  recoveryBootstrapStage = "better_auth_schema";
   betterAuth(authOptions);
   const migrations = await getMigrations(authOptions);
   await migrations.runMigrations();
 
   // Re-run idempotent app SQL so app-owned tables can attach optional FKs to
   // Better Auth tables on a fresh database after Better Auth creates them.
+  recoveryBootstrapStage = "application_schema_reconcile";
   await pool.query(appSql);
 
+  recoveryBootstrapStage = "protected_counts_after";
   const after = recoveryMode ? await collectProtectedRowCounts() : null;
   if (recoveryMode && JSON.stringify(before) !== JSON.stringify(after)) {
     throw new Error(
@@ -170,6 +179,16 @@ main()
     await db.destroy();
   })
   .catch((error) => {
-    console.error(error instanceof Error ? error.message : error);
+    if (recoveryEnvironment) {
+      const providerCode = (error as { code?: unknown })?.code;
+      const errorCode =
+        typeof providerCode === "string" &&
+        /^[A-Z0-9_]{2,16}$/.test(providerCode)
+          ? providerCode
+          : "UNCLASSIFIED";
+      console.error(JSON.stringify({ recoveryBootstrapStage, errorCode }));
+    } else {
+      console.error(error instanceof Error ? error.message : error);
+    }
     process.exitCode = 1;
   });

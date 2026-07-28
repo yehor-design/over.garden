@@ -37,6 +37,7 @@ import {
 import {
   acquireRecoveryLock,
   pollUntil,
+  readSafeRecoveryDiagnostic,
   readRecoveryState,
   RECOVERY_PLAN_FILE,
   RECOVERY_RUNTIME_DIR,
@@ -942,11 +943,21 @@ async function runChecked(
     });
     return result.stdout.trim();
   } catch (error) {
-    const candidate = error as { code?: string | number; killed?: boolean };
+    const candidate = error as {
+      code?: string | number;
+      killed?: boolean;
+      stdout?: string;
+      stderr?: string;
+    };
+    if (candidate.killed) throw new Error("bounded child timeout");
+    const childClass = /^[a-z0-9:_-]+$/i.test(args[0] ?? "")
+      ? args[0]
+      : "child";
+    const diagnostic = readSafeRecoveryDiagnostic(
+      `${candidate.stdout ?? ""}\n${candidate.stderr ?? ""}`,
+    );
     throw new Error(
-      candidate.killed
-        ? "bounded child timeout"
-        : `bounded child failed:${String(candidate.code ?? "unknown")}`,
+      `bounded child failed:${childClass}:${String(candidate.code ?? "unknown")}${diagnostic ? `:${diagnostic.stage}:${diagnostic.code}` : ""}`,
     );
   }
 }
