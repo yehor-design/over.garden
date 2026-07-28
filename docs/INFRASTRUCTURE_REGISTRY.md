@@ -301,6 +301,15 @@ Meilisearch version pin (OVE-198):
 - Active volume class after cutover: `overgarden-meili-data-v1481`.
 - Legacy volume retained for rollback: `overgarden_meili_data` (pre-cutover `v1.15.2` data). Deletion is out of scope for OVE-198.
 - Operator CLI: `/opt/overgarden/meilisearch-upgrade` with committed Compose `docker-compose.meilisearch.yml`.
+- OVE-228 preflight capacity contract: Linux memory comes from
+  `/proc/meminfo`; Docker storage location comes from Docker's
+  `.DockerRootDir`; free storage comes from POSIX `df -Pk` and is measured in
+  KiB. The immutable safety floors are 2.5 GiB total RAM plus swap, 1 GiB
+  available RAM plus free swap, and 5 GiB free on both `/opt/overgarden` and
+  Docker root. Missing, nonnumeric, zero, or below-floor values fail before any
+  snapshot, provision, rebuild, cutover, rollback, forward, alias, volume, or
+  index mutation. `OVERGARDEN_MEILI_MEMINFO_PATH` is accepted only with the
+  hermetic test flag, which permits only `preflight`, `status`, and `help`.
 - Pre-cutover audit source: production `pkgVersion=1.15.2` with catalog document count class ~61888 and journal count class 4.
 - Live proof on 2026-07-23: preflight accepted `1.15.2` → pinned `1.48.1` dual-volume rebuild; dump+snapshot tasks succeeded; provisioned digest-pinned next volume; rebuild reached catalog `61888`; journals converged via OVE-196 parity apply to `69`/`69` zero-gap; cutover, rollback rehearsal, and forward restored active `1.48.1` with legacy volume `overgarden_meili_data` retained; public `/health` `available`; Cyrillic catalog typeahead returned nonzero hits class; matching handler canary proved journal index/unindex/restore with cover-safe keys (`leakCheck=passed`).
 

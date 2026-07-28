@@ -30,6 +30,9 @@ readonly ACTIVE_ALIAS="meilisearch"
 readonly NEXT_ALIAS="meilisearch-next"
 readonly MIN_VIRTUAL_MEMORY_KB=2621440
 readonly MIN_AVAILABLE_VIRTUAL_MEMORY_KB=1048576
+readonly MIN_AVAILABLE_DISK_KB=5242880
+readonly HERMETIC_TEST_MODE="${OVERGARDEN_MEILI_HERMETIC_TEST:-0}"
+readonly MEMINFO_PATH="${OVERGARDEN_MEILI_MEMINFO_PATH:-/proc/meminfo}"
 readonly REBUILD_SCRIPT="${OVERGARDEN_MEILI_REBUILD_SCRIPT:-$PRODUCTION_ROOT/meili-rebuild-from-postgres.py}"
 
 fail() {
@@ -43,6 +46,24 @@ info() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "required command is unavailable: $1"
+}
+
+require_positive_kib() {
+  local name="$1"
+  local value="$2"
+  [[ "$value" =~ ^[1-9][0-9]*$ ]] \
+    || fail "$name must be a positive integer measured in KiB"
+}
+
+require_capacity_contract() {
+  require_positive_kib "MIN_VIRTUAL_MEMORY_KB" "$MIN_VIRTUAL_MEMORY_KB"
+  require_positive_kib "MIN_AVAILABLE_VIRTUAL_MEMORY_KB" "$MIN_AVAILABLE_VIRTUAL_MEMORY_KB"
+  require_positive_kib "MIN_AVAILABLE_DISK_KB" "$MIN_AVAILABLE_DISK_KB"
+  [[ "$HERMETIC_TEST_MODE" == "0" || "$HERMETIC_TEST_MODE" == "1" ]] \
+    || fail "OVERGARDEN_MEILI_HERMETIC_TEST must be 0 or 1"
+  if [[ "$HERMETIC_TEST_MODE" != "1" && "$MEMINFO_PATH" != "/proc/meminfo" ]]; then
+    fail "production preflight must read memory capacity from /proc/meminfo"
+  fi
 }
 
 require_runtime() {
@@ -64,20 +85,31 @@ require_runtime() {
 }
 
 with_lock() {
-  require_command flock
   mkdir -p "$STATE_ROOT"
+  if [[ "$HERMETIC_TEST_MODE" == "1" ]]; then
+    local test_lock="${LOCK_FILE}.d"
+    mkdir "$test_lock" 2>/dev/null \
+      || fail "another meilisearch-upgrade command holds the lock"
+    trap 'rmdir "${LOCK_FILE}.d" 2>/dev/null || true' EXIT
+    "$@"
+    rmdir "$test_lock"
+    trap - EXIT
+    return 0
+  fi
+  require_command flock
   exec 9>"$LOCK_FILE"
   flock -n 9 || fail "another meilisearch-upgrade command holds the lock"
   "$@"
 }
 
 require_host_capacity() {
-  [[ -r /proc/meminfo ]] || fail "production host memory capacity cannot be verified"
+  require_capacity_contract
+  [[ -r "$MEMINFO_PATH" ]] || fail "production host memory capacity cannot be verified"
   local memory_total_kb swap_total_kb memory_available_kb swap_free_kb docker_root
-  memory_total_kb="$(awk '$1 == "MemTotal:" { print $2; exit }' /proc/meminfo)"
-  swap_total_kb="$(awk '$1 == "SwapTotal:" { print $2; exit }' /proc/meminfo)"
-  memory_available_kb="$(awk '$1 == "MemAvailable:" { print $2; exit }' /proc/meminfo)"
-  swap_free_kb="$(awk '$1 == "SwapFree:" { print $2; exit }' /proc/meminfo)"
+  memory_total_kb="$(awk '$1 == "MemTotal:" { print $2; exit }' "$MEMINFO_PATH")"
+  swap_total_kb="$(awk '$1 == "SwapTotal:" { print $2; exit }' "$MEMINFO_PATH")"
+  memory_available_kb="$(awk '$1 == "MemAvailable:" { print $2; exit }' "$MEMINFO_PATH")"
+  swap_free_kb="$(awk '$1 == "SwapFree:" { print $2; exit }' "$MEMINFO_PATH")"
   docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)"
   [[ "$memory_total_kb" =~ ^[0-9]+$
     && "$swap_total_kb" =~ ^[0-9]+$
@@ -544,6 +576,15 @@ EOF
 
 main() {
   local command="${1:-}"
+  if [[ "$HERMETIC_TEST_MODE" == "1" \
+    && "$command" != "preflight" \
+    && "$command" != "status" \
+    && "$command" != "help" \
+    && "$command" != "-h" \
+    && "$command" != "--help" \
+    && -n "$command" ]]; then
+    fail "hermetic test mode permits only preflight, status, and help"
+  fi
   case "$command" in
     preflight|snapshot|provision|rebuild|cutover|rollback|forward)
       with_lock "cmd_$command"
