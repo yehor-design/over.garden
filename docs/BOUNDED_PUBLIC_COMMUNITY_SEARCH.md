@@ -1,6 +1,6 @@
 # Bounded Public Community Search
 
-Status: active guardrail  
+Status: active guardrail
 Owner: OVE-239
 
 Public community search reuses the `journal_entries` Meilisearch index only for UUID hints. PostgreSQL remains authoritative and reapplies the complete community, contribution, membership-ban, journal-publication, profile, object, media, viewer-block, kind, and cursor boundary before rendering a card.
