@@ -3,6 +3,8 @@
  * SELECT-only SQL. Redacted reports — never titles, bodies, emails, or media keys.
  */
 
+import { createHash } from "node:crypto";
+
 import {
   isJournalContentClass,
   isJournalSourceLanguage,
@@ -61,6 +63,7 @@ export interface LaunchCorpusPlanReport {
   contentClassCounts: LaunchCorpusContentClassCount[];
   publicActiveCount: number;
   publicActiveByClass: LaunchCorpusContentClassCount[];
+  publicActiveTargetHashes: string[];
   technicalLabelHits: number;
   tinyPlaceholderMediaHits: number;
   visualFixtureMutationHits: number;
@@ -129,6 +132,16 @@ where visibility = 'public'
   and public_slug is not null
 group by coalesce(content_class, 'unset')
 order by coalesce(content_class, 'unset')
+`.trim(),
+
+  publicActiveTargets: `
+select id
+from journal_entries
+where visibility = 'public'
+  and lifecycle_state = 'active'
+  and public_slug is not null
+  and coalesce(content_class, 'real_ugc') = 'real_ugc'
+order by id
 `.trim(),
 
   technicalLabelHits: `
@@ -222,6 +235,7 @@ export function assertLaunchCorpusInventorySqlIsSelectOnly(
 export interface LaunchCorpusInventoryRows {
   contentClassCounts: LaunchCorpusContentClassCount[];
   publicActiveByClass: LaunchCorpusContentClassCount[];
+  publicActiveTargetIds: string[];
   technicalLabelHits: number;
   tinyPlaceholderMediaHits: number;
   visualFixtureMutationHits: number;
@@ -352,6 +366,9 @@ export function buildLaunchCorpusPlanReport(input: {
     contentClassCounts: input.inventory.contentClassCounts,
     publicActiveCount: input.inventory.publicActiveCount,
     publicActiveByClass: input.inventory.publicActiveByClass,
+    publicActiveTargetHashes: input.inventory.publicActiveTargetIds
+      .map(redactLaunchCorpusTargetId)
+      .sort(),
     technicalLabelHits: input.inventory.technicalLabelHits,
     tinyPlaceholderMediaHits: input.inventory.tinyPlaceholderMediaHits,
     visualFixtureMutationHits: input.inventory.visualFixtureMutationHits,
@@ -366,6 +383,12 @@ export function buildLaunchCorpusPlanReport(input: {
     launchReady: blockingReasons.length === 0,
     blockingReasons,
   };
+}
+
+export function redactLaunchCorpusTargetId(id: string): string {
+  return createHash("sha256")
+    .update(`ove199.production-target.v1:${id}`, "utf8")
+    .digest("hex");
 }
 
 export function buildLaunchCorpusCheckReport(input: {

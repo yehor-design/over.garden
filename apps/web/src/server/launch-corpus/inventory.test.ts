@@ -6,6 +6,7 @@ import {
   buildLaunchCorpusPlanReport,
   detectTechnicalLabelText,
   listLaunchCorpusInventoryStatements,
+  redactLaunchCorpusTargetId,
   validateFounderPublicRow,
   type LaunchCorpusInventoryRows,
 } from "@/server/launch-corpus/inventory";
@@ -15,6 +16,7 @@ import { listLocalCoverMatrixBranchIds } from "@/lib/launch-corpus/cover-matrix"
 const emptyInventory: LaunchCorpusInventoryRows = {
   contentClassCounts: [{ contentClass: "real_ugc", count: 0 }],
   publicActiveByClass: [],
+  publicActiveTargetIds: [],
   technicalLabelHits: 0,
   tinyPlaceholderMediaHits: 0,
   visualFixtureMutationHits: 0,
@@ -25,6 +27,17 @@ const emptyInventory: LaunchCorpusInventoryRows = {
 };
 
 describe("launch corpus inventory", () => {
+  it("redacts exact production targets deterministically", () => {
+    expect(redactLaunchCorpusTargetId("00000000-0000-0000-0000-000000000001"))
+      .toMatch(/^[0-9a-f]{64}$/);
+    expect(redactLaunchCorpusTargetId("target-a")).toBe(
+      redactLaunchCorpusTargetId("target-a"),
+    );
+    expect(redactLaunchCorpusTargetId("target-a")).not.toBe(
+      redactLaunchCorpusTargetId("target-b"),
+    );
+  });
+
   it("exposes only SELECT statements", () => {
     expect(listLaunchCorpusInventoryStatements().length).toBeGreaterThan(5);
     expect(() => assertLaunchCorpusInventorySqlIsSelectOnly()).not.toThrow();

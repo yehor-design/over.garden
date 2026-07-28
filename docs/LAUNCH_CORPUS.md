@@ -66,6 +66,12 @@ pnpm launch:corpus:check -- --environment production --confirm-environment produ
 
 Reports are redacted: counts, quality classes, disposition targets — never titles, bodies, emails, or media keys.
 
+The plan also emits deterministic SHA-256 target hashes for the exact
+public-active `real_ugc` rows. They bind maintainer review and later apply to
+individual rows without placing database IDs, titles, bodies, owners, or media
+identifiers in evidence. The current redacted plan output digest is
+`77e0011deac277bfad4f64c0b339de8f78dd8ba695b194b50abafde681d9153b`.
+
 SQL used by plan/check is SELECT-only (`assertLaunchCorpusInventorySqlIsSelectOnly`).
 
 ## Launch media quality policy
@@ -107,6 +113,22 @@ Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 j
 Photo budget ≈ 18–22 owned/licensed files. Pipeline: quarantine → stripped derivative. Never seed `test/visual-fixtures/media/` into production.
 
 Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
+
+The pre-approval content pack uses
+`ove199.launch-corpus-content-pack.v1` from
+`apps/web/src/lib/launch-corpus/content-pack.ts`. It requires every shot-list
+slot, reviewed source language, truthful rights/provenance receipts, media byte
+digests, closed cover semantics, the four signed target hashes, and the
+authoritative precise-location firewall. Validation reads local files but emits
+only counts, closed error codes, and the content-pack digest:
+
+```bash
+pnpm launch:corpus:validate-pack -- --environment local --confirm-environment local --pack-file "$OVE199_CONTENT_PACK"
+```
+
+`launch:corpus:apply` is intentionally dry-run-only until the authentic pack
+and matching Linear approval receipt exist. `--apply` fails closed and performs
+zero mutations in this pre-approval implementation.
 
 ## Local cover matrix (fixtures / unit — not production photos)
 

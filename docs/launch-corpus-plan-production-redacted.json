@@ -22,6 +22,12 @@
         "count": 4
       }
     ],
+    "publicActiveTargetHashes": [
+      "54aa4a7e756d7ff36e91d8bfe011b06ba673bcf6d8540f36fa8c83e45ae279c9",
+      "677fe428cdf4e67bba636e1034a39d3030de6e769f9b0016bb65fa552b3db180",
+      "9942a170eb84ce8c8c3b2bfc1acd466929988301011cb02797cc24986690a8d0",
+      "ff2908f5b7dc4a6eaf16a87592a4928aae05bda214a7cdfcddcc5c576be7d538"
+    ],
     "technicalLabelHits": 0,
     "tinyPlaceholderMediaHits": 0,
     "visualFixtureMutationHits": 0,

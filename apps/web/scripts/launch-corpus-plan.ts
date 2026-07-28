@@ -109,6 +109,10 @@ async function loadInventory(pool: Pool): Promise<LaunchCorpusInventoryRows> {
   return {
     contentClassCounts,
     publicActiveByClass,
+    publicActiveTargetIds: await queryIds(
+      pool,
+      LAUNCH_CORPUS_INVENTORY_SQL.publicActiveTargets,
+    ),
     technicalLabelHits: await queryCount(
       pool,
       LAUNCH_CORPUS_INVENTORY_SQL.technicalLabelHits,
@@ -138,6 +142,11 @@ async function loadInventory(pool: Pool): Promise<LaunchCorpusInventoryRows> {
       LAUNCH_CORPUS_INVENTORY_SQL.publicActiveCount,
     ),
   };
+}
+
+async function queryIds(pool: Pool, sql: string): Promise<string[]> {
+  const result = await pool.query<{ id: string }>(sql);
+  return result.rows.map((row) => row.id);
 }
 
 async function queryClassCounts(
