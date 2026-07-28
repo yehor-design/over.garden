@@ -207,6 +207,8 @@ describe("/journals", () => {
     expect(facetOptions.restrictToEntryIds).toEqual(
       pageOptions.restrictToEntryIds,
     );
+    expect(pageOptions.contentClassMode).toBe("visual_fixture");
+    expect(facetOptions.contentClassMode).toBe("visual_fixture");
     expect(facetOptions.searchScope).toEqual(pageOptions.searchScope);
     expect(html).toContain(
       'type="hidden" name="__visualJournals" value="corpus"',

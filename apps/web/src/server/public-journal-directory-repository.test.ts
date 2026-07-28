@@ -260,6 +260,28 @@ describe("public journal directory query", () => {
     expect(compiled.parameters).not.toContain("%синонім з індексу%");
   });
 
+  it("keeps gated visual evidence explicit without weakening the launch default", () => {
+    const request = normalizePublicJournalDirectoryRequest({});
+    const visualEntries = buildPublicJournalDirectoryEntriesQuery(
+      testDb,
+      request,
+      [],
+      ["00000000-0000-4000-8000-000000000010"],
+      "apply",
+      "visual_fixture",
+    ).compile();
+    const visualCandidates = buildPublicJournalDirectoryFallbackCandidateQuery(
+      testDb,
+      undefined,
+      "visual_fixture",
+    ).compile();
+
+    expect(visualEntries.sql).toContain('"journal_entries"."content_class" =');
+    expect(visualEntries.parameters).toContain("visual_fixture");
+    expect(visualCandidates.parameters).toContain("visual_fixture");
+    expect(visualEntries.sql).not.toContain("journal_entries.content_class in");
+  });
+
   it("never selects user accounts, private text, exact location, or raw media/source data", () => {
     const sql = buildPublicJournalDirectoryEntriesQuery(testDb, {
       query: "",

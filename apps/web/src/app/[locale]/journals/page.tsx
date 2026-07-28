@@ -88,6 +88,7 @@ export async function renderPublicJournalsPage(
     : null;
   const searchScopePromise = resolvePublicJournalDirectorySearchScope(request, {
     restrictToEntryIds: restrictedEntryIds,
+    contentClassMode: visualCorpus ? "visual_fixture" : "launch",
     ...(visualCorpus
       ? {
           findSearchCandidates: async () => ({
@@ -103,6 +104,7 @@ export async function renderPublicJournalsPage(
       ? listPublicJournalDirectoryPage(request, locale, {
           restrictToEntryIds: restrictedEntryIds,
           searchScope,
+          contentClassMode: "visual_fixture",
         })
       : listPublicJournalDirectoryPage(request, locale, { searchScope }),
   );
@@ -111,6 +113,7 @@ export async function renderPublicJournalsPage(
       ? listPublicJournalDirectoryFacets({
           restrictToEntryIds: restrictedEntryIds,
           searchScope,
+          contentClassMode: "visual_fixture",
         })
       : listPublicJournalDirectoryFacets({ searchScope }),
   );
