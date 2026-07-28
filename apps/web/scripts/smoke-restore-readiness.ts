@@ -535,7 +535,7 @@ function createRecoveryPool(env: NodeJS.ProcessEnv) {
 async function readReferenceSchemaDigest() {
   const output = await runChecked(
     path.join(INFRA_ROOT, "run-with-local-infra-env"),
-    ["pnpm", "restore:schema-manifest"],
+    ["pnpm", "restore:schema-manifest:fresh"],
     process.env,
     120_000,
   );
