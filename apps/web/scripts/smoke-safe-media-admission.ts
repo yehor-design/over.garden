@@ -5,7 +5,8 @@ import sharp from "sharp";
 
 loadEnv({ path: ".env.local" });
 
-const PLAN_DIGEST = "3585dce4442abdb93c108ef9908586a30888c7c0f3ba84097606d52f3c743a18";
+const PLAN_DIGEST =
+  "3585dce4442abdb93c108ef9908586a30888c7c0f3ba84097606d52f3c743a18";
 
 function requireEnvironment(argv: string[]) {
   const environment = readFlag(argv, "--environment");
@@ -16,7 +17,10 @@ function requireEnvironment(argv: string[]) {
   if (environment !== "local" && environment !== "production") {
     throw new Error("Environment must be local or production.");
   }
-  if (environment === "production" && readFlag(argv, "--plan-digest") !== PLAN_DIGEST) {
+  if (
+    environment === "production" &&
+    readFlag(argv, "--plan-digest") !== PLAN_DIGEST
+  ) {
     throw new Error("Production requires the approved OVE-244 plan digest.");
   }
   return environment;
@@ -24,7 +28,7 @@ function requireEnvironment(argv: string[]) {
 
 function readFlag(argv: string[], name: string) {
   const index = argv.indexOf(name);
-  return index >= 0 ? argv[index + 1] ?? null : null;
+  return index >= 0 ? (argv[index + 1] ?? null) : null;
 }
 
 async function main() {
@@ -57,9 +61,12 @@ async function main() {
   const scope = { userId: ownerUserId, sessionId: "synthetic-proof" };
   const bytes = await sharp({
     create: { width: 128, height: 96, channels: 3, background: "#4f772d" },
-  }).png().toBuffer();
+  })
+    .png()
+    .toBuffer();
   let mediaAssetId: string | null = null;
   let derivativeKey: string | null = null;
+  const attemptedDerivativeKeys = new Set<string>();
 
   try {
     const asset = await createQuarantinedMediaAsset(scope, {
@@ -77,7 +84,10 @@ async function main() {
     });
     const put = await fetch(upload.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": "image/png", "Content-Length": String(bytes.byteLength) },
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Length": String(bytes.byteLength),
+      },
       body: bytes,
       signal: AbortSignal.timeout(5_000),
     });
@@ -88,13 +98,31 @@ async function main() {
       claimMediaAssetForProcessing(scope, asset.id),
     ]);
     const claims = [first, second].filter((value) => value !== null);
-    if (claims.length !== 1) throw new Error("Processing CAS did not produce one winner.");
+    if (claims.length !== 1)
+      throw new Error("Processing CAS did not produce one winner.");
     const claim = claims[0]!;
     if (claim.phase !== "process_original") {
       throw new Error("Fresh generation entered the wrong processing phase.");
     }
     if (claim.asset.public_object_id === asset.public_object_id) {
       throw new Error("Fresh claim did not rotate its provider identity.");
+    }
+    const claimedDerivativeKey = `derivatives/${claim.asset.public_object_id}.webp`;
+    attemptedDerivativeKeys.add(claimedDerivativeKey);
+    const cleanupIntent = await db
+      .selectFrom("job_queue")
+      .select("id")
+      .where(
+        "idempotency_key",
+        "=",
+        `media_derivative_revoke:public_derivative:${claimedDerivativeKey}`,
+      )
+      .where("status", "=", "pending")
+      .executeTakeFirst();
+    if (!cleanupIntent) {
+      throw new Error(
+        "Provider write was not preceded by durable cleanup intent.",
+      );
     }
     const staleSettlement = await markClaimedMediaDerivativeWritten(
       scope,
@@ -115,7 +143,11 @@ async function main() {
     }
     const derivative = await processQuarantinedImage(claim.asset);
     derivativeKey = derivative.derivativeKey;
-    const written = await markClaimedMediaDerivativeWritten(scope, claim, derivative);
+    const written = await markClaimedMediaDerivativeWritten(
+      scope,
+      claim,
+      derivative,
+    );
     if (!written) throw new Error("Claim lost before derivative settlement.");
     await releaseMediaProcessingClaim(scope, claim, false);
     const recoveryClaim = await claimMediaAssetForProcessing(scope, asset.id);
@@ -125,7 +157,9 @@ async function main() {
       recoveryClaim.asset.public_object_id !== claim.asset.public_object_id ||
       recoveryClaim.asset.derivative_key !== derivative.derivativeKey
     ) {
-      throw new Error("Derivative-written recovery did not preserve the winner.");
+      throw new Error(
+        "Derivative-written recovery did not preserve the winner.",
+      );
     }
     const originalProof = await revokeMediaObjectBytes({
       bucket: "quarantine",
@@ -136,10 +170,25 @@ async function main() {
     }
     const ready = await settleClaimedMediaPublicReady(scope, recoveryClaim);
     if (!ready) throw new Error("Claim lost before public-ready settlement.");
+    const settledCleanupIntent = await db
+      .selectFrom("job_queue")
+      .select("id")
+      .where(
+        "idempotency_key",
+        "=",
+        `media_derivative_revoke:public_derivative:${derivative.derivativeKey}`,
+      )
+      .executeTakeFirst();
+    if (settledCleanupIntent) {
+      throw new Error("Public-ready settlement retained its cleanup intent.");
+    }
 
     const replay = await fetch(upload.uploadUrl, {
       method: "PUT",
-      headers: { "Content-Type": "image/png", "Content-Length": String(bytes.byteLength) },
+      headers: {
+        "Content-Type": "image/png",
+        "Content-Length": String(bytes.byteLength),
+      },
       body: bytes,
       signal: AbortSignal.timeout(5_000),
     });
@@ -148,7 +197,8 @@ async function main() {
     if (
       afterReplay.media_readiness_state !== "public_ready" ||
       afterReplay.upload_generation_id !== uploadGenerationId
-    ) throw new Error("Stale replay changed current generation state.");
+    )
+      throw new Error("Stale replay changed current generation state.");
     const replayCleanup = await revokeMediaObjectBytes({
       bucket: "quarantine",
       objectKey: quarantineKey,
@@ -158,27 +208,34 @@ async function main() {
     }
 
     const durationMs = Math.round(performance.now() - startedAt);
-    if (durationMs > 30_000) throw new Error("Safe media processing exceeded its budget.");
-    console.log(JSON.stringify({
-      ok: true,
-      environment,
-      planDigest: PLAN_DIGEST,
-      claimWinners: 1,
-      staleClaimant: "fenced",
-      recoveryPhase: "proof_only",
-      state: "public_ready",
-      originalProof: "confirmed_gone",
-      staleReplay: "non_current",
-      safeMediaProcessingLatencyMs: durationMs,
-    }));
+    if (durationMs > 30_000)
+      throw new Error("Safe media processing exceeded its budget.");
+    console.log(
+      JSON.stringify({
+        ok: true,
+        environment,
+        planDigest: PLAN_DIGEST,
+        claimWinners: 1,
+        staleClaimant: "fenced",
+        recoveryPhase: "proof_only",
+        state: "public_ready",
+        originalProof: "confirmed_gone",
+        staleReplay: "non_current",
+        safeMediaProcessingLatencyMs: durationMs,
+      }),
+    );
   } finally {
     const cleanupErrors: string[] = [];
     try {
       if (mediaAssetId) {
-        await db.updateTable("media_assets").set({
-          media_readiness_state: "invalidated",
-          updated_at: new Date(),
-        }).where("id", "=", mediaAssetId).execute();
+        await db
+          .updateTable("media_assets")
+          .set({
+            media_readiness_state: "invalidated",
+            updated_at: new Date(),
+          })
+          .where("id", "=", mediaAssetId)
+          .execute();
       }
     } catch {
       cleanupErrors.push("database invalidation");
@@ -189,7 +246,8 @@ async function main() {
           bucket: "public_derivative",
           objectKey: derivativeKey,
         });
-        if (proof.outcome !== "confirmed_gone") cleanupErrors.push("derivative removal");
+        if (proof.outcome !== "confirmed_gone")
+          cleanupErrors.push("derivative removal");
       }
     } catch {
       cleanupErrors.push("derivative removal");
@@ -199,25 +257,48 @@ async function main() {
         bucket: "quarantine",
         objectKey: quarantineKey,
       });
-      if (proof.outcome !== "confirmed_gone") cleanupErrors.push("quarantine removal");
+      if (proof.outcome !== "confirmed_gone")
+        cleanupErrors.push("quarantine removal");
     } catch {
       cleanupErrors.push("quarantine removal");
     }
     try {
       if (mediaAssetId) {
-        await db.deleteFrom("media_assets").where("id", "=", mediaAssetId).execute();
+        await db
+          .deleteFrom("media_assets")
+          .where("id", "=", mediaAssetId)
+          .execute();
       }
     } catch {
       cleanupErrors.push("database row removal");
     }
+    try {
+      for (const key of attemptedDerivativeKeys) {
+        await db
+          .deleteFrom("job_queue")
+          .where(
+            "idempotency_key",
+            "=",
+            `media_derivative_revoke:public_derivative:${key}`,
+          )
+          .where("status", "in", ["pending", "failed", "done", "dead"])
+          .execute();
+      }
+    } catch {
+      cleanupErrors.push("cleanup intent removal");
+    }
     await db.destroy();
     if (cleanupErrors.length > 0) {
-      throw new Error(`Synthetic cleanup failed: ${[...new Set(cleanupErrors)].join(", ")}.`);
+      throw new Error(
+        `Synthetic cleanup failed: ${[...new Set(cleanupErrors)].join(", ")}.`,
+      );
     }
   }
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : "Safe media smoke failed.");
+  console.error(
+    error instanceof Error ? error.message : "Safe media smoke failed.",
+  );
   process.exitCode = 1;
 });
