@@ -10,6 +10,10 @@ import { config as loadEnv } from "dotenv";
 
 loadEnv({ path: ".env.local" });
 
+const PROVIDER_REQUEST_TIMEOUT_MS = 5_000;
+const CANONICAL_DELETE_PROOF_TIMEOUT_MS = 12_000;
+const CANONICAL_DELETE_PROOF_POLL_MS = 1_000;
+
 /**
  * OVE-216 provider probe: prove canonical media.over.garden serves a synthetic
  * object, observe managed r2.dev reachability class, optionally disable r2.dev
@@ -103,7 +107,8 @@ async function main() {
       }
     }
 
-    const afterDeleteCanonical = await headStatus(canonicalUrl);
+    const afterDeleteCanonical =
+      await waitForCanonicalDeleteProof(canonicalUrl);
 
     console.log(
       JSON.stringify(
@@ -161,7 +166,10 @@ async function main() {
 async function getManagedEnabled(token: string): Promise<boolean> {
   const response = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT_ID}/r2/buckets/${PUBLIC_BUCKET}/domains/managed`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+    },
   );
   if (!response.ok) {
     throw new Error("Cloudflare managed-domain read failed.");
@@ -189,6 +197,7 @@ async function setManagedEnabled(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ enabled }),
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
     },
   );
   if (!response.ok) {
@@ -208,7 +217,11 @@ async function setManagedEnabled(
 
 async function headStatus(url: string): Promise<number> {
   try {
-    const head = await fetch(url, { method: "HEAD", redirect: "manual" });
+    const head = await fetch(url, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
+    });
     if (head.status !== 405 && head.status !== 501) return head.status;
   } catch {
     // fall through
@@ -218,11 +231,24 @@ async function headStatus(url: string): Promise<number> {
       method: "GET",
       redirect: "manual",
       headers: { Range: "bytes=0-0" },
+      signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
     });
     return get.status;
   } catch {
     return 0;
   }
+}
+
+async function waitForCanonicalDeleteProof(url: string): Promise<number> {
+  const deadline = Date.now() + CANONICAL_DELETE_PROOF_TIMEOUT_MS;
+  let status = await headStatus(url);
+  while (status !== 404 && status !== 410 && Date.now() < deadline) {
+    await new Promise((resolve) =>
+      setTimeout(resolve, CANONICAL_DELETE_PROOF_POLL_MS),
+    );
+    status = await headStatus(url);
+  }
+  return status;
 }
 
 function isProviderNotFound(error: unknown): boolean {
