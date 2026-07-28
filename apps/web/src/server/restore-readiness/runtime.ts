@@ -108,6 +108,38 @@ export function readSafeRecoveryDiagnostic(output: string) {
   return match?.[1] && match[2] ? { stage: match[1], code: match[2] } : null;
 }
 
+export interface ProtectedIdentitySets {
+  authUsers: ReadonlySet<string>;
+  journalEntries: ReadonlySet<string>;
+  mediaAssets: ReadonlySet<string>;
+  plantObjects: ReadonlySet<string>;
+}
+
+export function classifyProtectedIdentityTransition(
+  before: ProtectedIdentitySets,
+  after: ProtectedIdentitySets,
+): string[] {
+  assertSameIdentitySet(before.authUsers, after.authUsers);
+  assertSameIdentitySet(before.journalEntries, after.journalEntries);
+  assertSameIdentitySet(before.mediaAssets, after.mediaAssets);
+  if ([...before.plantObjects].some((id) => !after.plantObjects.has(id))) {
+    throw new Error("recovery bootstrap removed protected plant identities");
+  }
+  return [...after.plantObjects].filter((id) => !before.plantObjects.has(id));
+}
+
+function assertSameIdentitySet(
+  before: ReadonlySet<string>,
+  after: ReadonlySet<string>,
+) {
+  if (
+    before.size !== after.size ||
+    [...before].some((identity) => !after.has(identity))
+  ) {
+    throw new Error("recovery bootstrap changed protected identities");
+  }
+}
+
 export async function pollUntil<T>(input: {
   read: () => Promise<T>;
   done: (value: T) => boolean;

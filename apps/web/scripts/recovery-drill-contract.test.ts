@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   acquireRecoveryLock,
+  classifyProtectedIdentityTransition,
   pollUntil,
   RECOVERY_STATE_FILE,
   readSafeRecoveryDiagnostic,
@@ -96,5 +97,32 @@ describe("OVE-230 recovery drill runtime", () => {
         '{"recoveryBootstrapStage":"application-schema","errorCode":"secret value"}',
       ),
     ).toBeNull();
+  });
+
+  it("allows only additive plant identities before row-level classification", () => {
+    const before = {
+      authUsers: new Set(["user-a"]),
+      journalEntries: new Set(["journal-a"]),
+      mediaAssets: new Set(["media-a"]),
+      plantObjects: new Set(["plant-a"]),
+    };
+    expect(
+      classifyProtectedIdentityTransition(before, {
+        ...before,
+        plantObjects: new Set(["plant-a", "plant-backfill"]),
+      }),
+    ).toEqual(["plant-backfill"]);
+    expect(() =>
+      classifyProtectedIdentityTransition(before, {
+        ...before,
+        journalEntries: new Set(["journal-a", "journal-new"]),
+      }),
+    ).toThrow("changed protected identities");
+    expect(() =>
+      classifyProtectedIdentityTransition(before, {
+        ...before,
+        plantObjects: new Set(["plant-replacement"]),
+      }),
+    ).toThrow("removed protected plant identities");
   });
 });
