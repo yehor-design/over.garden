@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database } from "@/db/schema";
 import { buildPublicJournalDirectoryHref } from "@/lib/public-journal-directory-navigation";
 import {
@@ -12,6 +13,7 @@ import {
 import {
   normalizePublicJournalDirectoryEntryIds,
   PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
+  type PublicJournalDirectoryContentClassMode,
 } from "@/server/public-journal-directory-query";
 import {
   listPublicJournalDirectoryPage,
@@ -65,6 +67,7 @@ export async function listPublicKnowledgeEvidence(
     executor,
     normalizedRule,
     options.restrictToEntryIds,
+    options.visualCorpus ? "visual_fixture" : "launch",
   ).execute();
   const request = normalizePublicJournalDirectoryRequest({});
 
@@ -81,6 +84,7 @@ export async function listPublicKnowledgeEvidence(
   const page = await listPublicJournalDirectoryPage(request, locale, {
     executor,
     restrictToEntryIds: rows.map((row) => row.entryId),
+    contentClassMode: options.visualCorpus ? "visual_fixture" : "launch",
   });
 
   return serializePublicKnowledgeEvidence(
@@ -96,6 +100,7 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
   executor: QueryExecutor,
   rule: PublicKnowledgeEvidenceRule,
   restrictToEntryIds?: readonly string[] | null,
+  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   const normalizedRule = normalizePublicKnowledgeEvidenceRule(rule);
   let query = executor
@@ -135,6 +140,11 @@ export function buildPublicKnowledgeEvidenceEntryIdsQuery(
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
     .$narrowType<{ entryId: string; objectId: string; publishedAt: Date }>();
+
+  query =
+    contentClassMode === "visual_fixture"
+      ? query.where("journal_entries.content_class", "=", "visual_fixture")
+      : query.where(publicLaunchSurfacePredicates());
 
   const hasTopics = normalizedRule.topicSlugs.length > 0;
   const hasCatalogs = normalizedRule.catalogSlugs.length > 0;

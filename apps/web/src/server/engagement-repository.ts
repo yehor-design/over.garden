@@ -24,6 +24,7 @@ import {
   containsPreciseLocationText,
 } from "@/lib/privacy/precise-location-text";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import type { RequestScope } from "@/server/request-scope";
 
@@ -994,6 +995,7 @@ export function buildPublicJournalEntryTargetQuery(
     .where("visibility", "=", "public")
     .where("lifecycle_state", "=", "active")
     .where("public_gone_at", "is", null)
+    .where(publicLaunchSurfacePredicates())
     .$narrowType<{ publicSlug: string }>();
 }
 
@@ -1014,7 +1016,12 @@ export function buildPublicLineageObjectTargetQuery(
         .on("public_entries.visibility", "=", "public")
         .on("public_entries.lifecycle_state", "=", "active")
         .on("public_entries.public_gone_at", "is", null)
-        .on("public_entries.public_slug", "is not", null),
+        .on("public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("public_entries.content_class"),
+          ),
+        ),
     )
     .select([
       "plant_objects.id as plantObjectId",
@@ -1064,6 +1071,7 @@ export function buildPublicVarietyTargetQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .groupBy(["catalog_items.public_slug", "catalog_items.canonical_name"])
     .$narrowType<{ publicSlug: string }>();
 }
@@ -1096,6 +1104,7 @@ export function buildPublicTopicTargetQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
+    .where(publicLaunchSurfacePredicates())
     .groupBy(["journal_topics.slug", "journal_topics.label"]);
 }
 

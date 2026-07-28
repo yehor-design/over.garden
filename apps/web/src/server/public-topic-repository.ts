@@ -3,6 +3,7 @@ import "server-only";
 import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
@@ -317,7 +318,8 @@ function buildPublicTopicMembershipBaseQuery(
     .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .where("journal_entries.published_at", "is not", null);
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 
   if (slug) query = query.where("journal_topics.slug", "=", slug);
 
@@ -346,4 +348,3 @@ function normalizePublicTopicSlugs(values?: readonly string[] | null) {
     ),
   ].slice(0, 24);
 }
-

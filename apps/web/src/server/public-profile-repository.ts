@@ -27,6 +27,7 @@ import {
   evaluatePublicIdentity,
   parsePublicHandleSyntax,
 } from "@/server/identity-policy";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 import { containsPreciseLocationText } from "@/lib/privacy/precise-location-text";
 
@@ -926,7 +927,8 @@ export function buildPublicProfileEntrySummaryQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .where("journal_entries.published_at", "is not", null);
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 }
 
 export function buildPublicProfileLineageSummaryQuery(
@@ -950,7 +952,12 @@ export function buildPublicProfileLineageSummaryQuery(
         .on("subject_public_entries.visibility", "=", "public")
         .on("subject_public_entries.lifecycle_state", "=", "active")
         .on("subject_public_entries.public_gone_at", "is", null)
-        .on("subject_public_entries.public_slug", "is not", null),
+        .on("subject_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("subject_public_entries.content_class"),
+          ),
+        ),
     )
     .innerJoin("journal_entries as source_public_entries", (join) =>
       join
@@ -967,7 +974,12 @@ export function buildPublicProfileLineageSummaryQuery(
         .on("source_public_entries.visibility", "=", "public")
         .on("source_public_entries.lifecycle_state", "=", "active")
         .on("source_public_entries.public_gone_at", "is", null)
-        .on("source_public_entries.public_slug", "is not", null),
+        .on("source_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("source_public_entries.content_class"),
+          ),
+        ),
     )
     .select(() => [
       sql<number>`count(distinct ${sql.ref("lineage_provenance_edges.id")})`.as(
@@ -1011,7 +1023,8 @@ export function buildPublicProfileObjectEvidenceQuery(
         .on("journal_entries.lifecycle_state", "=", "active")
         .on("journal_entries.public_gone_at", "is", null)
         .on("journal_entries.public_slug", "is not", null)
-        .on("journal_entries.published_at", "is not", null),
+        .on("journal_entries.published_at", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .leftJoin("catalog_items", (join) =>
       join
@@ -1090,6 +1103,7 @@ export function buildPublicProfileJournalEvidenceQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entries.published_at", "desc")
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
@@ -1116,7 +1130,8 @@ export function buildPublicProfileObjectMediaEvidenceQuery(
         .on("journal_entries.lifecycle_state", "=", "active")
         .on("journal_entries.public_gone_at", "is", null)
         .on("journal_entries.public_slug", "is not", null)
-        .on("journal_entries.published_at", "is not", null),
+        .on("journal_entries.published_at", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .innerJoin("plant_objects", (join) =>
       join
@@ -1185,7 +1200,8 @@ export function buildPublicProfileJournalMediaEvidenceQuery(
         .on("journal_entries.lifecycle_state", "=", "active")
         .on("journal_entries.public_gone_at", "is", null)
         .on("journal_entries.public_slug", "is not", null)
-        .on("journal_entries.published_at", "is not", null),
+        .on("journal_entries.published_at", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .select([
       "journal_entries.id as entryId",
@@ -1314,6 +1330,7 @@ export function buildPublicProfileLinksQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entries.published_at", "desc")
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.id", "asc")

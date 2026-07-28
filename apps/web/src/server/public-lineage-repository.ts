@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { Kysely, Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -11,6 +11,7 @@ import type {
   VarietyState,
 } from "@/db/schema";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 
 const MAX_PUBLIC_LINEAGE_DEPTH = 5;
 const MAX_PUBLIC_LINEAGE_FRONTIER = 40;
@@ -166,7 +167,12 @@ export function buildPublicLineageRootObjectQuery(
         .on("public_entries.visibility", "=", "public")
         .on("public_entries.lifecycle_state", "=", "active")
         .on("public_entries.public_gone_at", "is", null)
-        .on("public_entries.public_slug", "is not", null),
+        .on("public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("public_entries.content_class"),
+          ),
+        ),
     )
     .leftJoin("catalog_items", (join) =>
       join
@@ -249,7 +255,12 @@ export function buildPublicLineageEdgesForSubjectsQuery(
         .on("subject_public_entries.visibility", "=", "public")
         .on("subject_public_entries.lifecycle_state", "=", "active")
         .on("subject_public_entries.public_gone_at", "is", null)
-        .on("subject_public_entries.public_slug", "is not", null),
+        .on("subject_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("subject_public_entries.content_class"),
+          ),
+        ),
     )
     .innerJoin("journal_entries as source_public_entries", (join) =>
       join
@@ -266,7 +277,12 @@ export function buildPublicLineageEdgesForSubjectsQuery(
         .on("source_public_entries.visibility", "=", "public")
         .on("source_public_entries.lifecycle_state", "=", "active")
         .on("source_public_entries.public_gone_at", "is", null)
-        .on("source_public_entries.public_slug", "is not", null),
+        .on("source_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("source_public_entries.content_class"),
+          ),
+        ),
     )
     .leftJoin("catalog_items as subject_catalog_items", (join) =>
       join

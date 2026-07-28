@@ -24,6 +24,7 @@ import {
   buildInsertProvenanceEdgeQuery,
   normalizeLineageSourceReferenceLabel,
 } from "@/server/lineage-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import {
   sealPublicHandleMentionTarget,
   unsealPublicHandleMentionTarget,
@@ -355,7 +356,8 @@ export function buildPublicObjectMentionSuggestionsQuery(
         .on("journal_entries.visibility", "=", "public")
         .on("journal_entries.lifecycle_state", "=", "active")
         .on("journal_entries.public_gone_at", "is", null)
-        .on("journal_entries.public_slug", "is not", null),
+        .on("journal_entries.public_slug", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .leftJoin("catalog_items", (join) =>
       join
@@ -524,7 +526,8 @@ export function buildResolvePublicObjectMentionTargetsQuery(
         .on("journal_entries.visibility", "=", "public")
         .on("journal_entries.lifecycle_state", "=", "active")
         .on("journal_entries.public_gone_at", "is", null)
-        .on("journal_entries.public_slug", "is not", null),
+        .on("journal_entries.public_slug", "is not", null)
+        .on(publicLaunchSurfacePredicates()),
     )
     .select([
       "plant_objects.id as id",

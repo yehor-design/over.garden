@@ -80,6 +80,7 @@ export async function verifyVisualFixtureKnowledgeEvidence(
       executor,
       fixtureCase.rule,
       eligibleEntryIds,
+      "visual_fixture",
     ).execute();
     assertVisualFixtureKnowledgeEvidenceResults(
       fixtureCase.label,
