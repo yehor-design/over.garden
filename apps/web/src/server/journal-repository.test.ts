@@ -473,6 +473,8 @@ describe("journal repository query contracts", () => {
       "active",
       "processed",
       "public_ready",
+      "ove231.launch-media-quality.v1",
+      "accepted",
       "inline",
     ]);
   });
@@ -1185,7 +1187,7 @@ describe("journal repository query contracts", () => {
     expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).toContain('"media_assets"."id" asc');
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain("limit $7");
+    expect(compiled.sql).toContain("limit $9");
     expect(compiled.sql).not.toContain("quarantine_key");
     expect(compiled.parameters).toEqual([
       "00000000-0000-0000-0000-000000000020",
@@ -1193,6 +1195,8 @@ describe("journal repository query contracts", () => {
       "active",
       "processed",
       "public_ready",
+      "ove231.launch-media-quality.v1",
+      "accepted",
       "inline",
       10,
     ]);
@@ -1219,6 +1223,8 @@ describe("journal repository query contracts", () => {
       "00000000-0000-0000-0000-000000000021",
       "processed",
       "public_ready",
+      "ove231.launch-media-quality.v1",
+      "accepted",
     ]);
   });
 

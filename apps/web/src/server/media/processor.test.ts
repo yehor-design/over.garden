@@ -13,15 +13,31 @@ const qualityMock = vi.hoisted(() => ({
   classifyLaunchMediaDerivative: vi.fn<
     () => Promise<{
       policyVersion: string;
-      qualityClass: "pass" | "reject" | "review_required";
-      reason: string;
-      metrics: Record<string, never>;
+      qualityClass: "accepted" | "rejected" | "review_required";
+      reasonCodes: string[];
+      metrics: {
+        sampledPixels: number;
+        visibleFraction: number;
+        meanLuminance: number;
+        luminanceDeviation: number;
+        luminanceEntropy: number;
+        edgeEnergy: number;
+        occupiedColorBins: number;
+      };
     }>
   >(async () => ({
     policyVersion: "ove231.launch-media-quality.v1",
-    qualityClass: "pass",
-    reason: "quality_pass",
-    metrics: {},
+    qualityClass: "accepted",
+    reasonCodes: ["quality_accepted"],
+    metrics: {
+      sampledPixels: 4096,
+      visibleFraction: 1,
+      meanLuminance: 96,
+      luminanceDeviation: 24,
+      luminanceEntropy: 3,
+      edgeEnergy: 4,
+      occupiedColorBins: 24,
+    },
   })),
 }));
 
@@ -67,6 +83,11 @@ const safeFields = {
   public_object_id: "00000000-0000-4000-8000-000000000011",
   upload_generation: 1,
   upload_generation_id: "00000000-0000-4000-8000-000000000012",
+  quality_policy_version: null,
+  quality_class: null,
+  quality_reason_codes: null,
+  quality_metrics: null,
+  quality_evaluated_at: null,
 } as const;
 
 import { MediaLaunchQualityError, processQuarantinedImage } from "./processor";
@@ -159,8 +180,16 @@ describe("processQuarantinedImage", () => {
     qualityMock.classifyLaunchMediaDerivative.mockResolvedValueOnce({
       policyVersion: "ove231.launch-media-quality.v1",
       qualityClass: "review_required",
-      reason: "ambiguous_dark_low_contrast",
-      metrics: {},
+      reasonCodes: ["ambiguous_dark_low_contrast"],
+      metrics: {
+        sampledPixels: 4096,
+        visibleFraction: 1,
+        meanLuminance: 12,
+        luminanceDeviation: 4,
+        luminanceEntropy: 1,
+        edgeEnergy: 1,
+        occupiedColorBins: 8,
+      },
     });
 
     await expect(

@@ -59,8 +59,19 @@ async function main() {
   const publicObjectId = randomUUID();
   const quarantineKey = `quarantine/${uploadGenerationId}.png`;
   const scope = { userId: ownerUserId, sessionId: "synthetic-proof" };
-  const bytes = await sharp({
-    create: { width: 128, height: 96, channels: 3, background: "#4f772d" },
+  const width = 128;
+  const height = 96;
+  const pixels = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const offset = (y * width + x) * 3;
+      pixels[offset] = 45 + ((x * 3 + y) % 140);
+      pixels[offset + 1] = 70 + ((x + y * 2) % 150);
+      pixels[offset + 2] = 30 + ((x * 2 + y * 3) % 110);
+    }
+  }
+  const bytes = await sharp(pixels, {
+    raw: { width, height, channels: 3 },
   })
     .png()
     .toBuffer();
@@ -135,6 +146,20 @@ async function main() {
         admittedMediaType: "image/png",
         intrinsicWidth: 128,
         intrinsicHeight: 96,
+        quality: {
+          policyVersion: "ove231.launch-media-quality.v1",
+          qualityClass: "accepted",
+          reasonCodes: ["quality_accepted"],
+          metrics: {
+            sampledPixels: 4096,
+            visibleFraction: 1,
+            meanLuminance: 96,
+            luminanceDeviation: 24,
+            luminanceEntropy: 3,
+            edgeEnergy: 4,
+            occupiedColorBins: 24,
+          },
+        },
       },
     );
     if (staleSettlement) {

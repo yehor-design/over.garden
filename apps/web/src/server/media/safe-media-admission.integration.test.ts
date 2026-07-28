@@ -65,6 +65,8 @@ describe("OVE-244 safe media admission", () => {
       revokedAt: null,
       mediaReadinessState: "public_ready",
       publicObjectId: "00000000-0000-4000-8000-000000000011",
+      qualityPolicyVersion: "ove231.launch-media-quality.v1",
+      qualityClass: "accepted",
     };
     expect(isPublicMediaEligible(ready)).toBe(true);
     for (const missing of [
@@ -72,7 +74,16 @@ describe("OVE-244 safe media admission", () => {
       { ...ready, mediaReadinessState: "derivative_written" },
       { ...ready, publicObjectId: null },
       { ...ready, revokedAt: new Date() },
+      { ...ready, qualityClass: "review_required" },
+      { ...ready, qualityPolicyVersion: "stale-policy" },
     ]) expect(isPublicMediaEligible(missing)).toBe(false);
+    expect(
+      isPublicMediaEligible({
+        ...ready,
+        qualityPolicyVersion: null,
+        qualityClass: null,
+      }),
+    ).toBe(true);
   });
 
   it("keeps every public media query on the shared eligibility contract", () => {

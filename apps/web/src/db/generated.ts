@@ -624,6 +624,11 @@ export interface MediaAssets {
   processing_claimed_at: Timestamp | null;
   public_object_id: string | null;
   public_unreachable_at: Timestamp | null;
+  quality_class: string | null;
+  quality_evaluated_at: Timestamp | null;
+  quality_metrics: Json | null;
+  quality_policy_version: string | null;
+  quality_reason_codes: string[] | null;
   quarantine_key: string;
   revoked_at: Timestamp | null;
   status: Generated<string>;

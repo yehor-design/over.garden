@@ -5,6 +5,7 @@ import {
   claimMediaAssetForProcessing,
   findMediaAssetForOwner,
   markClaimedMediaDerivativeWritten,
+  recordClaimedMediaQuality,
   releaseMediaProcessingClaim,
   settleClaimedMediaPublicReady,
 } from "@/server/media/media-repository";
@@ -17,6 +18,7 @@ import {
   SafeMediaAdmissionError,
 } from "@/server/media/safe-media-admission";
 import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
+import { isPublicMediaEligible } from "@/server/media/public-media-eligibility";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
@@ -56,12 +58,16 @@ export async function POST(request: Request) {
     );
   }
   if (
-    asset.status === "processed" &&
-    asset.media_readiness_state === "public_ready" &&
-    asset.derivative_key &&
-    asset.original_deleted_at &&
-    asset.public_object_id &&
-    !asset.revoked_at
+    isPublicMediaEligible({
+      status: asset.status,
+      derivativeKey: asset.derivative_key,
+      originalDeletedAt: asset.original_deleted_at,
+      revokedAt: asset.revoked_at,
+      mediaReadinessState: asset.media_readiness_state,
+      publicObjectId: asset.public_object_id,
+      qualityPolicyVersion: asset.quality_policy_version,
+      qualityClass: asset.quality_class,
+    }) && asset.derivative_key
   ) {
     return Response.json({
       mediaAsset: { id: asset.id, status: asset.status },
@@ -126,10 +132,12 @@ export async function POST(request: Request) {
       publicUrl: getPublicDerivativeUrl(updated.derivative_key),
     });
   } catch (error) {
+    if (error instanceof MediaLaunchQualityError) {
+      await recordClaimedMediaQuality(scope, claim, error.quality);
+    }
     const terminal =
       error instanceof SafeMediaAdmissionError ||
-      (error instanceof MediaLaunchQualityError &&
-        error.qualityClass === "reject");
+      error instanceof MediaLaunchQualityError;
     await releaseMediaProcessingClaim(scope, claim, terminal);
     if (error instanceof MediaLaunchQualityError) {
       return Response.json(

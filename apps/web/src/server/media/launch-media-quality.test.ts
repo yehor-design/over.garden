@@ -49,7 +49,7 @@ describe("launch media quality policy", () => {
       expect(
         classified.qualityClass,
         `${fixture.name}: ${JSON.stringify(classified)}`,
-      ).not.toBe("pass");
+      ).not.toBe("accepted");
     }
   });
 
@@ -58,8 +58,8 @@ describe("launch media quality policy", () => {
     const lowKey = await gradient({ low: 3, high: 70 });
     const ambiguous = await gradient({ low: 2, high: 18 });
 
-    await expectClass(normal, "pass");
-    await expectClass(lowKey, "pass");
+    await expectClass(normal, "accepted");
+    await expectClass(lowKey, "accepted");
     await expectClass(ambiguous, "review_required");
   });
 
@@ -95,7 +95,7 @@ describe("launch media quality policy", () => {
 
 async function expectClass(
   buffer: Buffer,
-  qualityClass: "pass" | "review_required",
+  qualityClass: "accepted" | "review_required",
 ) {
   const result = await classifyLaunchMediaDerivative({
     buffer,

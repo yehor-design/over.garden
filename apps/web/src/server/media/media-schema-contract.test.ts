@@ -37,4 +37,17 @@ describe("journal media schema contract", () => {
       "on media_assets (journal_entry_id, created_at asc, id asc)",
     );
   });
+
+  it("stores one closed OVE-231 quality receipt while preserving legacy nulls", () => {
+    const sql = readFileSync(
+      new URL("../../../sql/0014_ove231_launch_media_quality.sql", import.meta.url),
+      "utf8",
+    );
+    expect(sql).toContain("quality_policy_version text");
+    expect(sql).toContain("quality_reason_codes text[]");
+    expect(sql).toContain("quality_metrics jsonb");
+    expect(sql).toContain("media_assets_quality_receipt_shape_check");
+    expect(sql).toContain("'accepted', 'review_required', 'rejected'");
+    expect(sql).toContain("quality_policy_version is null");
+  });
 });
