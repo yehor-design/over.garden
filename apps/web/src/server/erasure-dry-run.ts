@@ -72,6 +72,7 @@ export interface ErasureDryRunCounts {
   journalEntriesArchived: number;
   journalEntryObjectMentions: number;
   journalEntryCatalogMentions: number;
+  journalMutationReceipts: number;
   mediaAssetsTotal: number;
   mediaAssetsQuarantined: number;
   mediaAssetsProcessed: number;
@@ -97,6 +98,7 @@ export interface ErasureDryRunCounts {
   searchPendingIndexJobs: number;
   searchPendingUnindexJobs: number;
   searchTerminalJobsWithUserId: number;
+  publicProjectionIntents: number;
   pilotInterviewRecords: number;
   erasureRequestsTotal: number;
 }
@@ -164,6 +166,7 @@ function buildErasureDryRunDataClasses(
         archived: counts.journalEntriesArchived,
         object_mentions: counts.journalEntryObjectMentions,
         catalog_mentions: counts.journalEntryCatalogMentions,
+        mutation_receipts: counts.journalMutationReceipts,
       },
     },
     {
@@ -253,6 +256,7 @@ function buildErasureDryRunDataClasses(
         pending_index_jobs: counts.searchPendingIndexJobs,
         pending_unindex_jobs: counts.searchPendingUnindexJobs,
         terminal_jobs_with_user_id: counts.searchTerminalJobsWithUserId,
+        public_projection_intents: counts.publicProjectionIntents,
       },
     },
     {

@@ -21,9 +21,11 @@ import {
   buildAnonymizeLineagePendingSourceIdentitiesForErasureQuery,
   buildAnonymizeLineageProvenanceEdgesForErasureQuery,
   buildAnonymizeLineageQuestionsForErasureQuery,
+  buildCountUnconvergedErasureMediaCleanupJobsQuery,
   buildDeletePendingJournalSearchJobsForErasureQuery,
   buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery,
   buildDeleteOwnedJournalEntryObjectMentionsForErasureQuery,
+  buildDeleteOwnedJournalMutationReceiptsForErasureQuery,
   buildEnqueueErasureMediaDeleteJobQuery,
   buildExecutableErasureRequestQuery,
   buildMarkErasureCleanupPendingQuery,
@@ -155,6 +157,19 @@ describe("approved erasure execution SQL contracts", () => {
       );
       expect(compiled.parameters).toEqual([requesterUserId]);
     }
+  });
+
+  it("deletes owner-scoped mutation receipts before journal ownership is rekeyed", () => {
+    const compiled = buildDeleteOwnedJournalMutationReceiptsForErasureQuery(
+      testDb,
+      requesterUserId,
+    ).compile();
+
+    expect(compiled.sql).toContain(
+      'delete from "journal_entry_mutation_receipts"',
+    );
+    expect(compiled.sql).toContain('"owner_user_id" = $1');
+    expect(compiled.parameters).toEqual([requesterUserId]);
   });
 
   it("anonymizes lineage provenance edges without deleting structural tombstones", () => {
@@ -329,6 +344,22 @@ describe("approved erasure execution SQL contracts", () => {
     );
     expect(pending.sql).toContain('"handled_status" = $3');
     expect(pending.parameters).toContain("cleanup_pending");
+  });
+
+  it("treats every non-done media cleanup state as unconverged", () => {
+    const compiled = buildCountUnconvergedErasureMediaCleanupJobsQuery(
+      testDb,
+      requestId,
+    ).compile();
+
+    expect(compiled.sql).toContain('from "job_queue"');
+    expect(compiled.sql).toContain('"status" != $4');
+    expect(compiled.parameters).toEqual([
+      "erasure",
+      "erasure_media_object_delete",
+      requestId,
+      "done",
+    ]);
   });
 
   it("rekeys erasure request subjects away from the original requester id", () => {

@@ -26,7 +26,7 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove192.erasure-schema.v1";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove215.erasure-schema.v2";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -103,12 +103,42 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "user_public_profiles.handle",
+    table: "user_public_profiles",
+    columnOrPath: "handle",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale: "Deleted with the public profile before the auth user row.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "user_public_profiles.normalized_handle",
+    table: "user_public_profiles",
+    columnOrPath: "normalized_handle",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale: "Deleted with the public profile before the auth user row.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "user_handle_registry.user_id",
     table: "user_handle_registry",
     columnOrPath: "user_id",
     kind: "fk",
     disposition: "delete",
     rationale: "ON DELETE CASCADE for current and retired handle claims.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "user_handle_registry.normalized_handle",
+    table: "user_handle_registry",
+    columnOrPath: "normalized_handle",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale: "Current and retired handle claims are deleted with the user.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -517,6 +547,16 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "lineage_node_follows.target_owner_user_id",
+    table: "lineage_node_follows",
+    columnOrPath: "target_owner_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale: "Rekeyed to the synthetic erased subject and marked anonymized.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "lineage_questions.asker_user_id",
     table: "lineage_questions",
     columnOrPath: "asker_user_id",
@@ -687,6 +727,26 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
 
   // Queue / outbox
   {
+    id: "journal_entry_mutation_receipts.owner_user_id",
+    table: "journal_entry_mutation_receipts",
+    columnOrPath: "owner_user_id",
+    kind: "soft_column",
+    disposition: "delete",
+    rationale: "Owner mutation receipts are deleted before journal ownership is rekeyed.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "public_projection_intents.owner_user_id",
+    table: "public_projection_intents",
+    columnOrPath: "owner_user_id",
+    kind: "soft_column",
+    disposition: "anonymize",
+    rationale: "OVE-242 erasure intents are rekeyed to the synthetic erased subject.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "job_queue.payload.userId",
     table: "job_queue",
     columnOrPath: "payload.userId",
@@ -758,29 +818,40 @@ export function discoverErasurePathsFromWalkingSkeletonSql(
 ): string[] {
   const discovered = new Set<string>();
 
+  // Read the owning table from the DDL, never from the constraint name. Several
+  // historical constraints abbreviate the table name.
   for (const match of sqlText.matchAll(
-    /foreign key \((\w+)\)\s+references\s+"user"\(id\)/gi,
+    /alter table\s+"?(\w+)"?[^;]{0,600}?add constraint\s+\w+\s+foreign key \((\w+)\)\s+references\s+"user"\(id\)/gi,
   )) {
-    // Constraint names encode table; recover from nearby add constraint lines.
-    void match;
+    discovered.add(`${match[1]}.${match[2]}`);
   }
 
-  for (const match of sqlText.matchAll(
-    /add constraint (\w+)\s+foreign key \((\w+)\)\s+references\s+"user"\(id\)/gi,
+  // Discover identity-shaped columns from CREATE TABLE bodies. This is broader
+  // than the manifest on purpose: a new path must fail CI until it receives an
+  // explicit disposition.
+  for (const tableMatch of sqlText.matchAll(
+    /create table if not exists\s+"?(\w+)"?\s*\(([\s\S]*?)\n\);/gi,
   )) {
-    const constraint = match[1] ?? "";
-    const column = match[2] ?? "";
-    const table = constraint
-      .replace(/_fkey$/i, "")
-      .replace(new RegExp(`_${column}$`, "i"), "");
-    // community_reports_* constraints target community_contribution_reports
-    const normalizedTable =
-      table === "community_reports"
-        ? "community_contribution_reports"
-        : table === "community_moderation_audit"
-          ? "community_moderation_audit_log"
-          : table;
-    discovered.add(`${normalizedTable}.${column}`);
+    const table = tableMatch[1] ?? "";
+    const body = tableMatch[2] ?? "";
+    for (const columnMatch of body.matchAll(/^\s*"?(\w+)"?\s+[^,\n]+/gm)) {
+      const column = columnMatch[1] ?? "";
+      if (
+        /_user_id$/.test(column) ||
+        /(?:^|_)(?:email|handle|identifier)$/.test(column) ||
+        /^(?:anonymous_device_hash|cover_media_asset_id|usage_role|content_document)$/.test(
+          column,
+        )
+      ) {
+        discovered.add(`${table}.${column}`);
+      }
+    }
+
+    for (const jsonPath of body.matchAll(
+      /"?(\w+)"?\s*->>\s*'([A-Za-z][A-Za-z0-9_]*)'/g,
+    )) {
+      discovered.add(`${table}.${jsonPath[1]}.${jsonPath[2]}`);
+    }
   }
 
   const softColumns: Array<{ table: string; column: string }> = [

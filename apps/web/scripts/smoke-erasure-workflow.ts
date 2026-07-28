@@ -46,14 +46,14 @@ function assertLoopbackEnvironment() {
   const confirm = readFlagValue("--confirm-environment");
   if (environment !== "local" || confirm !== "local") {
     throw new Error(
-      "OVE-192 smoke requires --environment local --confirm-environment local.",
+      "OVE-215 smoke requires --environment local --confirm-environment local.",
     );
   }
 
   const databaseUrl = process.env.DATABASE_URL ?? process.env.DIRECT_URL;
   if (!databaseUrl || !isLoopbackDatabase(databaseUrl)) {
     throw new Error(
-      "OVE-192 smoke refuses non-loopback or missing DATABASE_URL before any write.",
+      "OVE-215 smoke refuses non-loopback or missing DATABASE_URL before any write.",
     );
   }
 }
@@ -97,6 +97,7 @@ async function main() {
   assertEqual(before.retiredHandleClaims, 1, "dry-run retired handle claim");
   assertEqual(before.unreviewedIdentityRows, 0, "dry-run reviewed identity");
   assertEqual(before.journalEntriesTotal, 2, "dry-run journal entries");
+  assertEqual(before.journalMutationReceipts, 1, "dry-run mutation receipts");
   assertEqual(before.mediaAssetsTotal, 2, "dry-run media assets");
   assertEqual(before.mediaAssetsCoverOnly, 1, "dry-run cover-only media");
   assertEqual(before.mediaAssetsWithExplicitCover, 1, "dry-run explicit cover");
@@ -162,8 +163,44 @@ async function main() {
     "cleanup_pending handled_status",
   );
 
-  const summary = await executeApprovedErasureRequest(
+  const terminalJob = await db
+    .selectFrom("job_queue")
+    .select("id")
+    .where("queue_name", "=", "erasure")
+    .where(sql`payload->>'requestId'`, "=", REQUEST_ID)
+    .orderBy("created_at", "asc")
+    .executeTakeFirstOrThrow();
+  await db
+    .updateTable("job_queue")
+    .set({ status: "dead", terminal_error_code: "max_attempts_exceeded" })
+    .where("id", "=", terminalJob.id)
+    .execute();
+
+  const terminalSummary = await executeApprovedErasureRequest(
     { userId: OPERATOR_USER_ID, sessionId: "ove-192-smoke-operator" },
+    {
+      requestId: REQUEST_ID,
+      approvalText: expectedErasureMaintainerApprovalText(REQUEST_ID),
+    },
+    {
+      erasedSubjectUserId: ERASED_SUBJECT_USER_ID,
+      deleteMediaObject,
+    },
+  );
+  assertEqual(
+    terminalSummary.handledStatus,
+    "cleanup_pending",
+    "dead media cleanup blocks completion",
+  );
+
+  await db
+    .updateTable("job_queue")
+    .set({ status: "failed", terminal_error_code: null })
+    .where("id", "=", terminalJob.id)
+    .execute();
+
+  const summary = await executeApprovedErasureRequest(
+    { userId: OPERATOR_USER_ID, sessionId: "ove-215-smoke-operator" },
     {
       requestId: REQUEST_ID,
       approvalText: expectedErasureMaintainerApprovalText(REQUEST_ID),
@@ -206,6 +243,11 @@ async function main() {
     afterOldUser.journalEntriesTotal,
     0,
     "old journal ownership gone",
+  );
+  assertEqual(
+    afterOldUser.journalMutationReceipts,
+    0,
+    "old mutation receipts removed",
   );
   assertEqual(afterOldUser.mediaAssetsTotal, 0, "old media rows removed");
   assertEqual(afterOldUser.analyticsEvents, 0, "old analytics removed");
@@ -294,35 +336,43 @@ async function main() {
     throw new Error("public tombstone missing public_gone_at");
   }
 
-  const unindexJob = await db
-    .selectFrom("job_queue")
-    .select(["payload", "status"])
-    .where("idempotency_key", "=", `${unindexIdempotencyKey()}`)
+  const projectionIntent = await db
+    .selectFrom("public_projection_intents")
+    .select([
+      "owner_user_id as ownerUserId",
+      "desired_state as desiredState",
+      "desired_generation as desiredGeneration",
+      "applied_state as appliedState",
+      "applied_generation as appliedGeneration",
+      "status",
+      "verified_at as verifiedAt",
+    ])
+    .where("entity_kind", "=", "journal_entry")
+    .where("entity_id", "=", PUBLIC_ENTRY_ID)
     .executeTakeFirstOrThrow();
 
-  assertEqual(unindexJob.status, "pending", "unindex job pending");
-  const payload = unindexJob.payload as {
-    kind?: string;
-    journalEntryId?: string;
-    userId?: string;
-  };
-  assertEqual(payload.kind, "journal_entry_unindex", "unindex job kind");
+  assertEqual(projectionIntent.status, "applied", "projection intent applied");
   assertEqual(
-    payload.journalEntryId,
-    PUBLIC_ENTRY_ID,
-    "unindex job journal entry",
-  );
-  assertEqual(
-    payload.userId,
+    projectionIntent.ownerUserId,
     ERASED_SUBJECT_USER_ID,
-    "unindex job synthetic owner",
+    "projection intent synthetic owner",
   );
+  assertEqual(projectionIntent.desiredState, "absent", "desired absence");
+  assertEqual(projectionIntent.appliedState, "absent", "applied absence");
+  assertEqual(
+    projectionIntent.appliedGeneration,
+    projectionIntent.desiredGeneration,
+    "generation-fenced convergence",
+  );
+  if (!projectionIntent.verifiedAt) {
+    throw new Error("projection absence missing verified_at");
+  }
 
   console.log(
     JSON.stringify(
       {
         ok: true,
-        request: "OVE-192",
+        request: "OVE-215",
         dryRunClassesChecked: [
           "auth",
           "public_identity",
@@ -336,9 +386,10 @@ async function main() {
           "queue_terminal",
         ],
         storageFailureRetryRecovered: true,
+        deadMediaCleanupBlockedCompletion: true,
         erasedSubjectRekeyed: true,
         publicTombstone410Ready: true,
-        unindexJobQueuedWithSyntheticOwner: true,
+        publicProjectionAbsenceVerifiedWithSyntheticOwner: true,
         productionDestructiveExecution: false,
       },
       null,
@@ -543,6 +594,19 @@ async function seedSmokeRows() {
         updated_at: now,
       },
     ])
+    .execute();
+
+  await db
+    .insertInto("journal_entry_mutation_receipts")
+    .values({
+      owner_user_id: REQUESTER_USER_ID,
+      journal_entry_id: PUBLIC_ENTRY_ID,
+      client_mutation_id: "ove-215-erasure-receipt",
+      base_revision: 0,
+      result_revision: 1,
+      mutation_kind: "create",
+      created_at: now,
+    })
     .execute();
 
   await db
@@ -879,10 +943,6 @@ async function cleanupSmokeRows() {
   await db.deleteFrom("user").where("id", "=", CONTRIBUTOR_USER_ID).execute();
 }
 
-function unindexIdempotencyKey() {
-  return `journal_entry_unindex:${PUBLIC_ENTRY_ID}:erasure:${REQUEST_ID}`;
-}
-
 function assertEqual<T>(actual: T, expected: T, label: string) {
   if (actual !== expected) {
     throw new Error(
@@ -899,7 +959,7 @@ main()
     console.error(
       JSON.stringify({
         ok: false,
-        request: "OVE-192",
+        request: "OVE-215",
         error: "erasure_smoke_failed",
         detail: error instanceof Error ? error.message : String(error),
       }),

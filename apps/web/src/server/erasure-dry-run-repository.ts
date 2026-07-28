@@ -58,6 +58,7 @@ export async function collectErasureDryRunCounts(
     journalEntriesArchived,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
+    journalMutationReceipts,
     mediaAssetsTotal,
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
@@ -83,6 +84,7 @@ export async function collectErasureDryRunCounts(
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
     searchTerminalJobsWithUserId,
+    publicProjectionIntents,
     pilotInterviewRecords,
     erasureRequestsTotal,
   ] = await Promise.all([
@@ -115,6 +117,7 @@ export async function collectErasureDryRunCounts(
     }),
     countOwnedRows(executor, "journal_entry_object_mentions", requesterUserId),
     countOwnedRows(executor, "journal_entry_catalog_mentions", requesterUserId),
+    countJournalMutationReceipts(executor, requesterUserId),
     countMediaAssets(executor, requesterUserId),
     countMediaAssets(executor, requesterUserId, "quarantined"),
     countMediaAssets(executor, requesterUserId, "processed"),
@@ -151,6 +154,7 @@ export async function collectErasureDryRunCounts(
       "journal_entry_unindex",
     ),
     countTerminalJobQueueRowsWithUserId(executor, requesterUserId),
+    countPublicProjectionIntents(executor, requesterUserId),
     countPilotInterviewRecords(executor, requesterUserId),
     countErasureRequestsForUser(executor, requesterUserId),
   ]);
@@ -177,6 +181,7 @@ export async function collectErasureDryRunCounts(
     journalEntriesArchived,
     journalEntryObjectMentions,
     journalEntryCatalogMentions,
+    journalMutationReceipts,
     mediaAssetsTotal,
     mediaAssetsQuarantined,
     mediaAssetsProcessed,
@@ -202,6 +207,7 @@ export async function collectErasureDryRunCounts(
     searchPendingIndexJobs,
     searchPendingUnindexJobs,
     searchTerminalJobsWithUserId,
+    publicProjectionIntents,
     pilotInterviewRecords,
     erasureRequestsTotal,
   };
@@ -291,6 +297,26 @@ export function buildCountUnreviewedIdentityRowsQuery(
       )`.as("count"),
     )
     .where("user_id", "=", requesterUserId);
+}
+
+export function buildCountJournalMutationReceiptsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("journal_entry_mutation_receipts")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildCountPublicProjectionIntentsQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .selectFrom("public_projection_intents")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("owner_user_id", "=", requesterUserId);
 }
 
 export function buildCountOwnedRowsQuery(
@@ -736,6 +762,28 @@ async function countUnreviewedIdentityRows(
   requesterUserId: string,
 ) {
   const row = await buildCountUnreviewedIdentityRowsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countJournalMutationReceipts(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountJournalMutationReceiptsQuery(
+    executor,
+    requesterUserId,
+  ).executeTakeFirst();
+  return toCount(row?.count);
+}
+
+async function countPublicProjectionIntents(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  const row = await buildCountPublicProjectionIntentsQuery(
     executor,
     requesterUserId,
   ).executeTakeFirst();

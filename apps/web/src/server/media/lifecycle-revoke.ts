@@ -4,6 +4,7 @@ import {
   deletePublicDerivativeObject,
   deleteQuarantineObject,
   getPublicDerivativeUrl,
+  quarantineObjectExists,
 } from "@/lib/storage";
 import { optionalServerEnv } from "@/lib/env";
 import type { MediaLifecycleBucket } from "@/server/media/media-lifecycle-enqueue";
@@ -21,6 +22,9 @@ export async function revokeMediaObjectBytes(
 ): Promise<{ provedUnreachable: boolean; canonicalStatus: number | null }> {
   if (reference.bucket === "quarantine") {
     await deleteQuarantineObject(reference.objectKey);
+    if (await quarantineObjectExists(reference.objectKey)) {
+      throw new Error("Quarantine object remained present after delete.");
+    }
     return { provedUnreachable: true, canonicalStatus: null };
   }
 

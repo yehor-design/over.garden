@@ -4,6 +4,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -135,6 +136,31 @@ export async function deleteQuarantineObject(objectKey: string): Promise<void> {
       Key: objectKey,
     }),
   );
+}
+
+export async function quarantineObjectExists(objectKey: string): Promise<boolean> {
+  try {
+    await r2Client().send(
+      new HeadObjectCommand({
+        Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
+        Key: objectKey,
+      }),
+    );
+    return true;
+  } catch (error) {
+    const candidate = error as {
+      name?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    if (
+      candidate.name === "NotFound" ||
+      candidate.name === "NoSuchKey" ||
+      candidate.$metadata?.httpStatusCode === 404
+    ) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function deletePublicDerivativeObject(
