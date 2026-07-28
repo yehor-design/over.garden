@@ -737,9 +737,12 @@ Runtime classification: this section is `production-linux-required` under `docs/
   Linux `/proc/meminfo`, Docker `.DockerRootDir`, and `df -Pk`; it refuses below
   2.5 GiB total virtual memory, 1 GiB available virtual memory, or 5 GiB free
   storage at either production root or Docker root. Record only digest equality,
-  source/target/strategy classes, capacity pass class, bounded duration, public
-  health, and unchanged volume classes. Never record host addresses, env files,
-  keys, indexed content, job payloads, or user identity.
+  active/target/strategy classes, `upgrade_required|already_target`, capacity
+  pass class, bounded duration, public health, and unchanged volume classes.
+  `upgrade_required` requires active `1.15.x` plus the running legacy container
+  and volume; `already_target` requires active `1.48.1`, the target container and
+  target volume, plus the retained legacy rollback volume. Never record host
+  addresses, env files, keys, indexed content, job payloads, or user identity.
 
 Do not remove or rewrite these production Docker Compose instructions for Apple Container. A non-Docker production path is a separate production migration, not a local Apple Container follow-up. Acceptable replacement candidates include systemd units, managed Meilisearch plus a separately managed worker, or another Linux runtime, but only after live redacted proof shows equivalent process restart/reboot recovery, matching and Meilisearch health, `journal_entry_index`/`journal_entry_unindex` completion, and the same public-safe Meilisearch document contract proven by OVE-39.
 
