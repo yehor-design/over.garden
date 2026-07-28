@@ -100,6 +100,32 @@ describe("OVE-230 recovery drill runtime", () => {
     ).toBeNull();
   });
 
+  it("initializes isolated search before public parity and keeps diagnostics redacted", async () => {
+    const recoverySource = await readFile(
+      path.resolve("scripts/smoke-restore-readiness.ts"),
+      "utf8",
+    );
+    expect(
+      recoverySource.indexOf("await createSearchIndex();"),
+    ).toBeGreaterThan(recoverySource.indexOf("await waitForHttp("));
+    expect(
+      recoverySource.indexOf('await runParity(context, "plan")'),
+    ).toBeGreaterThan(
+      recoverySource.indexOf("await startIsolatedServices(context)"),
+    );
+
+    const paritySource = await readFile(
+      path.resolve("scripts/smoke-public-index-parity.ts"),
+      "utf8",
+    );
+    expect(paritySource).toContain("recoveryBootstrapStage: recoveryStage");
+    const recoveryCatch = paritySource.slice(
+      paritySource.indexOf('if (process.argv.includes("recovery-drill"))'),
+      paritySource.indexOf("  } else {", paritySource.indexOf("main().catch")),
+    );
+    expect(recoveryCatch).not.toContain("error.message");
+  });
+
   it("allows only classified additive bootstrap identities", () => {
     const before = {
       authUsers: new Set(["user-a"]),

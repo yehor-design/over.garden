@@ -13,6 +13,8 @@ import {
   hostnameLooksLikeProduction,
 } from "../src/server/restore-readiness";
 
+let recoveryStage = "initializing";
+
 loadEnv({ path: ".env.local" });
 
 function requireEnvironment(argv: string[]) {
@@ -60,6 +62,7 @@ async function main() {
   }
 
   if (environment === "recovery-drill") {
+    recoveryStage = "public_index_provider_binding";
     const confirmClusterId = readFlag(argv, "--confirm-cluster-id");
     const productionClusterId = readFlag(argv, "--production-cluster-id");
     const disposableClusterName = readFlag(argv, "--disposable-cluster-name");
@@ -126,6 +129,7 @@ async function main() {
   } = await import("../src/server/search/public-journal-parity");
 
   if (mode === "classify") {
+    recoveryStage = "public_index_classify";
     const report = redactParityReportForEvidence(
       await classifyPublicJournalIndexParity(),
     );
@@ -154,6 +158,7 @@ async function main() {
   }
 
   if (mode === "plan") {
+    recoveryStage = "public_index_plan";
     const before = redactParityReportForEvidence(
       await classifyPublicJournalIndexParity(),
     );
@@ -185,6 +190,7 @@ async function main() {
     );
   }
 
+  recoveryStage = "public_index_apply";
   const before = redactParityReportForEvidence(
     await classifyPublicJournalIndexParity(),
   );
@@ -209,8 +215,25 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    error instanceof Error ? error.message : "public index parity smoke failed",
-  );
+  if (process.argv.includes("recovery-drill")) {
+    const rawCode = (error as { code?: unknown })?.code;
+    const normalizedCode =
+      typeof rawCode === "string" ? rawCode.toUpperCase() : "UNCLASSIFIED";
+    const errorCode = /^[A-Z0-9_]{2,24}$/.test(normalizedCode)
+      ? normalizedCode
+      : "UNCLASSIFIED";
+    console.error(
+      JSON.stringify({
+        recoveryBootstrapStage: recoveryStage,
+        errorCode,
+      }),
+    );
+  } else {
+    console.error(
+      error instanceof Error
+        ? error.message
+        : "public index parity smoke failed",
+    );
+  }
   process.exitCode = 1;
 });
