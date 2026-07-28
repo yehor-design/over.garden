@@ -144,6 +144,13 @@ R2 API token requirement:
 - Prefer an account API token for production if available. A user API token is acceptable for local/dev continuity but is tied to the individual Cloudflare user.
 - Cloudflare R2 does not support S3 `PutBucketPolicy` on this endpoint. Public reads are controlled through R2 bucket/domain settings, not by committing or replaying S3 bucket policy JSON from the app bootstrap script.
 
+OVE-216 lifecycle proof contract:
+
+- Cleanup may settle only after the official S3-compatible `HeadObject` classifies the object as not found; authentication, transport, and provider uncertainty remain unfinished.
+- A public derivative additionally requires the canonical `media.over.garden` URL to converge to exactly `404` or `410`.
+- The production provider probe creates one random synthetic object, uses bounded requests and canonical polling, and proves deletion again in a mandatory `finally` cleanup. Its receipt is class-only and must not expose bucket names, object keys, object URLs, credentials, or user content.
+- Run the probe only through the Vercel production environment on the exact deployed SHA: `cd apps/web && vercel env run -e production -- pnpm exec tsx scripts/prove-r2-media-lifecycle-provider.ts`.
+
 ### Quarantine Bucket
 
 - Bucket name: `overgarden-quarantine`

@@ -45,6 +45,14 @@ The public `/erasure` form records an operator-reviewed request. It does not aut
 8. Quarantine deletion is followed by an actual-byte `HeadObject` absence check. Public derivative deletion retains the OVE-195 origin/CDN unreachable proof. A transport error or still-present object keeps cleanup pending.
 9. Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.
 
+## Media Lifecycle Settlement
+
+- `confirmed_gone` is the only proof class that may settle a cleanup job or advance a media deletion marker. Provider-specific not-found metadata is required for R2; the canonical public URL must return exactly 404 or 410.
+- Authentication uncertainty, transport uncertainty, provider failures, and reachable bytes remain unfinished and retryable. They must never be converted into successful absence.
+- A processing claim expires after 180 seconds. Reclaim assigns a unique fencing token; completion, failure, and the related media marker settle in one transaction guarded by job id, processing state, and that exact token. An expired claimant cannot overwrite its successor.
+- One cron invocation is capped at 45 seconds with bounded provider calls and polling. Failed, dead, remaining, or deadline-truncated work reports non-ready using class-only evidence.
+- Verification uses synthetic objects only. Receipts must not expose bucket names, object keys, canonical object URLs, credentials, or user content.
+
 ## Forbidden Evidence
 
 Operator, support, legal, smoke, audit, and erasure evidence must not include:
@@ -68,6 +76,8 @@ Public support contact text may show `support.overgarden@gmail.com`; that except
 - First-publication disclosure: `apps/web/src/app/first-publication-disclosure/page.tsx`
 - Support page: `apps/web/src/app/support/page.tsx`
 - Operator erasure workflow: `apps/web/src/app/garden/privacy/erasure-requests/page.tsx`
+- Media lifecycle consumer: `apps/web/src/server/media/media-lifecycle-consumer.ts`
+- Provider and canonical absence proof: `apps/web/src/server/media/lifecycle-revoke.ts`
 
 ## Verification
 

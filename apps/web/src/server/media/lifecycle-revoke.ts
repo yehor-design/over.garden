@@ -4,46 +4,69 @@ import {
   deletePublicDerivativeObject,
   deleteQuarantineObject,
   getPublicDerivativeUrl,
-  quarantineObjectExists,
+  probePublicDerivativeObjectState,
+  probeQuarantineObjectState,
 } from "@/lib/storage";
 import { optionalServerEnv } from "@/lib/env";
 import type { MediaLifecycleBucket } from "@/server/media/media-lifecycle-enqueue";
 
-export const MEDIA_REVOKE_PROVE_TIMEOUT_MS = 120_000;
+export const MEDIA_REVOKE_PROVE_TIMEOUT_MS = 12_000;
 export const MEDIA_REVOKE_PROVE_POLL_MS = 1_000;
+const MEDIA_PROVIDER_REQUEST_TIMEOUT_MS = 5_000;
 
 export interface MediaObjectReference {
   bucket: MediaLifecycleBucket;
   objectKey: string;
 }
 
+export type MediaUnreachabilityOutcome =
+  | "confirmed_gone"
+  | "still_reachable"
+  | "indeterminate_transport"
+  | "indeterminate_auth"
+  | "provider_error";
+
+export interface MediaUnreachabilityProof {
+  outcome: MediaUnreachabilityOutcome;
+  canonicalStatus: number | null;
+}
+
 export async function revokeMediaObjectBytes(
   reference: MediaObjectReference,
-): Promise<{ provedUnreachable: boolean; canonicalStatus: number | null }> {
+): Promise<MediaUnreachabilityProof> {
   if (reference.bucket === "quarantine") {
-    await deleteQuarantineObject(reference.objectKey);
-    if (await quarantineObjectExists(reference.objectKey)) {
-      throw new Error("Quarantine object remained present after delete.");
-    }
-    return { provedUnreachable: true, canonicalStatus: null };
+    await deleteQuarantineObject(
+      reference.objectKey,
+      AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    );
+    const providerState = await probeQuarantineObjectState(
+      reference.objectKey,
+      AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    );
+    return {
+      outcome: providerOutcome(providerState),
+      canonicalStatus: null,
+    };
   }
 
   const canonicalUrl = getPublicDerivativeUrl(reference.objectKey);
   await purgeCloudflareCacheUrls([canonicalUrl]);
-  await deletePublicDerivativeObject(reference.objectKey);
+  await deletePublicDerivativeObject(
+    reference.objectKey,
+    AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+  );
   await purgeCloudflareCacheUrls([canonicalUrl]);
 
-  const prove = await proveCanonicalUrlUnreachable(canonicalUrl);
-  if (!prove.unreachable) {
-    throw new Error(
-      "Canonical public derivative URL remained reachable after delete/purge.",
-    );
+  const providerState = await probePublicDerivativeObjectState(
+    reference.objectKey,
+    AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+  );
+  if (providerState !== "not_found") {
+    return { outcome: providerOutcome(providerState), canonicalStatus: null };
   }
 
-  return {
-    provedUnreachable: true,
-    canonicalStatus: prove.status,
-  };
+  const prove = await proveCanonicalUrlUnreachable(canonicalUrl);
+  return prove;
 }
 
 export async function proveCanonicalUrlUnreachable(
@@ -52,21 +75,20 @@ export async function proveCanonicalUrlUnreachable(
     timeoutMs?: number;
     pollMs?: number;
   } = {},
-): Promise<{ unreachable: boolean; status: number | null }> {
+): Promise<MediaUnreachabilityProof> {
   const timeoutMs = options.timeoutMs ?? MEDIA_REVOKE_PROVE_TIMEOUT_MS;
   const pollMs = options.pollMs ?? MEDIA_REVOKE_PROVE_POLL_MS;
   const deadline = Date.now() + timeoutMs;
   let lastStatus: number | null = null;
 
   while (Date.now() <= deadline) {
-    lastStatus = await headStatus(canonicalUrl);
-    if (lastStatus === null || lastStatus < 200 || lastStatus >= 300) {
-      return { unreachable: true, status: lastStatus };
-    }
+    const read = await canonicalStatus(canonicalUrl);
+    lastStatus = read.canonicalStatus;
+    if (read.outcome !== "still_reachable") return read;
     await sleep(pollMs);
   }
 
-  return { unreachable: false, status: lastStatus };
+  return { outcome: "still_reachable", canonicalStatus: lastStatus };
 }
 
 async function purgeCloudflareCacheUrls(urls: string[]): Promise<void> {
@@ -89,6 +111,7 @@ async function purgeCloudflareCacheUrls(urls: string[]): Promise<void> {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ files: urls }),
+      signal: AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
     },
   );
 
@@ -102,11 +125,15 @@ async function purgeCloudflareCacheUrls(urls: string[]): Promise<void> {
   }
 }
 
-async function headStatus(url: string): Promise<number | null> {
+async function canonicalStatus(url: string): Promise<MediaUnreachabilityProof> {
   try {
-    const head = await fetch(url, { method: "HEAD", redirect: "manual" });
+    const head = await fetch(url, {
+      method: "HEAD",
+      redirect: "manual",
+      signal: AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    });
     if (head.status !== 405 && head.status !== 501) {
-      return head.status;
+      return classifyCanonicalStatus(head.status);
     }
   } catch {
     // Fall through to GET.
@@ -117,11 +144,33 @@ async function headStatus(url: string): Promise<number | null> {
       method: "GET",
       redirect: "manual",
       headers: { Range: "bytes=0-0" },
+      signal: AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
     });
-    return get.status;
+    return classifyCanonicalStatus(get.status);
   } catch {
-    return null;
+    return { outcome: "indeterminate_transport", canonicalStatus: null };
   }
+}
+
+function classifyCanonicalStatus(status: number): MediaUnreachabilityProof {
+  if (status === 404 || status === 410) {
+    return { outcome: "confirmed_gone", canonicalStatus: status };
+  }
+  if (status === 401 || status === 403) {
+    return { outcome: "indeterminate_auth", canonicalStatus: status };
+  }
+  if (status >= 500) {
+    return { outcome: "provider_error", canonicalStatus: status };
+  }
+  return { outcome: "still_reachable", canonicalStatus: status };
+}
+
+function providerOutcome(
+  state: Awaited<ReturnType<typeof probeQuarantineObjectState>>,
+): MediaUnreachabilityOutcome {
+  if (state === "not_found") return "confirmed_gone";
+  if (state === "present") return "still_reachable";
+  return state;
 }
 
 function sleep(ms: number): Promise<void> {
