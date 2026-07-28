@@ -15,6 +15,7 @@ describe("public journal directory copy", () => {
     expect(copy.seasons.summer).toBe("Літо");
     expect(copy.sorts.relevance).toBe("За відповідністю");
     expect(copy.loadMore).toBe("Показати більше журналів");
+    expect(copy.degradedSearchTitle).toBe("Пошук тимчасово обмежений");
   });
 
   it("does not fall back to Ukrainian or English chrome in Bulgarian and Russian", () => {
@@ -27,5 +28,7 @@ describe("public journal directory copy", () => {
     expect(ru.heading).toBe("Журналы");
     expect(ru.regionLabel).toBe("Безопасный регион");
     expect(ru.errorTitle).toBe("Журналы временно недоступны");
+    expect(bg.degradedSearchTitle).not.toBe("Пошук тимчасово обмежений");
+    expect(ru.degradedSearchTitle).not.toBe("Пошук тимчасово обмежений");
   });
 });

@@ -9,6 +9,7 @@ import type {
 const mocks = vi.hoisted(() => ({
   listPage: vi.fn(),
   listFacets: vi.fn(),
+  resolveSearchScope: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   resolveVisualMode: vi.fn(),
   redirect: vi.fn(),
@@ -30,6 +31,7 @@ vi.mock(
       ...actual,
       listPublicJournalDirectoryPage: mocks.listPage,
       listPublicJournalDirectoryFacets: mocks.listFacets,
+      resolvePublicJournalDirectorySearchScope: mocks.resolveSearchScope,
     };
   },
 );
@@ -61,6 +63,7 @@ const page: PublicJournalDirectoryPage = {
   hasPreviousPage: false,
   hasNextPage: false,
   searchSource: "database",
+  searchFallbackReason: null,
 };
 
 const facets: PublicJournalDirectoryFacets = {
@@ -78,6 +81,11 @@ describe("/journals", () => {
     mocks.resolveVisualMode.mockReturnValue(null);
     mocks.listPage.mockResolvedValue(page);
     mocks.listFacets.mockResolvedValue(facets);
+    mocks.resolveSearchScope.mockResolvedValue({
+      entryIds: ["00000000-0000-4000-8000-000000000001"],
+      source: "hybrid",
+      reason: null,
+    });
   });
 
   it("renders localized URL-owned search through canonical public repositories", async () => {
@@ -93,7 +101,11 @@ describe("/journals", () => {
       params: Promise.resolve({ locale: "bg" }),
     });
 
-    expect(mocks.listPage).toHaveBeenCalledWith(request, "bg");
+    expect(mocks.listPage).toHaveBeenCalledWith(
+      request,
+      "bg",
+      expect.objectContaining({ searchScope: expect.any(Object) }),
+    );
     expect(mocks.listFacets).toHaveBeenCalledTimes(1);
     expect(html).toContain('lang="bg"');
     expect(html).toContain("Дневници");
@@ -123,6 +135,22 @@ describe("/journals", () => {
 
     expect(html).toContain("Журнали тимчасово недоступні");
     expect(html).not.toMatch(/sign.?in|register|увійти|створити акаунт/i);
+  });
+
+  it("renders the same recoverable error when candidate-scope resolution fails", async () => {
+    mocks.resolveSearchScope.mockRejectedValue(
+      new Error("database unavailable"),
+    );
+    const { default: Route } = await import("../[locale]/journals/page");
+    const html = renderToStaticMarkup(
+      await Route({
+        params: Promise.resolve({ locale: "uk" }),
+        searchParams: Promise.resolve({ q: "орхідея" }),
+      }),
+    );
+
+    expect(html).toContain('data-public-journal-directory-state="error"');
+    expect(html).toContain("Журнали тимчасово недоступні");
   });
 
   it("renders stable fixture loading and error states without data calls", async () => {
@@ -172,16 +200,14 @@ describe("/journals", () => {
       "uk",
       expect.objectContaining({
         restrictToEntryIds: expect.any(Array),
-        findSearchCandidates: expect.any(Function),
+        searchScope: expect.any(Object),
       }),
     );
     expect(pageOptions.restrictToEntryIds.length).toBeGreaterThan(8);
     expect(facetOptions.restrictToEntryIds).toEqual(
       pageOptions.restrictToEntryIds,
     );
-    await expect(
-      pageOptions.findSearchCandidates("орхідея"),
-    ).resolves.toBeNull();
+    expect(facetOptions.searchScope).toEqual(pageOptions.searchScope);
     expect(html).toContain(
       'type="hidden" name="__visualJournals" value="corpus"',
     );

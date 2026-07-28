@@ -7,12 +7,14 @@ import {
 } from "@/lib/garden/regions";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 
 export type PublicJournalDirectoryQueryExecutor =
   | Kysely<Database>
   | Transaction<Database>;
 
 export const PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE = 8;
+export const PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT = 256;
 export const PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES = [
   "seeded",
   "confirmed",
@@ -108,6 +110,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
   request: PublicJournalDirectoryRequest,
   relevanceIds: readonly string[] = [],
   restrictToEntryIds?: readonly string[] | null,
+  textSearchMode: "apply" | "skip" = "apply",
 ) {
   const safeRegion = publicJournalSafeRegionExpression();
   let query = executor
@@ -186,6 +189,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .$narrowType<{
       publishedAt: Date;
       publicSlug: string;
@@ -246,7 +250,7 @@ export function buildPublicJournalDirectoryEntriesQuery(
       .where("plant_objects.location_visibility", "=", "region")
       .where(safeRegion, "=", request.region);
   }
-  if (request.query) {
+  if (request.query && textSearchMode === "apply") {
     const pattern = `%${escapeLikePattern(request.query)}%`;
     query = query.where(({ eb, exists, or, selectFrom }) =>
       or([
@@ -316,6 +320,50 @@ export function buildPublicJournalDirectoryEntriesQuery(
     .limit(PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE + 1)
     .offset((request.page - 1) * PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE)
     .$castTo<PublicJournalDirectoryEntryRow>();
+}
+
+export function buildPublicJournalDirectoryFallbackCandidateQuery(
+  executor: PublicJournalDirectoryQueryExecutor,
+  restrictToEntryIds?: readonly string[] | null,
+) {
+  let query = executor
+    .selectFrom("journal_entries")
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .innerJoin("spaces", (join) =>
+      join
+        .onRef("spaces.id", "=", "journal_entries.space_id")
+        .onRef("spaces.owner_user_id", "=", "journal_entries.owner_user_id"),
+    )
+    .select("journal_entries.id as entryId")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates());
+
+  const restricted =
+    normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);
+  if (restricted) {
+    query = restricted.length
+      ? query.where("journal_entries.id", "in", restricted)
+      : query.where(sql<boolean>`false`);
+  }
+
+  return query
+    .orderBy("journal_entries.published_at", "desc")
+    .orderBy("journal_entries.entry_date", "desc")
+    .orderBy("journal_entries.id", "asc")
+    .limit(PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT);
 }
 
 export function normalizePublicJournalDirectoryEntryIds(

@@ -14,6 +14,10 @@ import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/db/schema";
 import {
+  buildPublicJournalDirectoryFallbackCandidateQuery,
+  PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT,
+} from "./public-journal-directory-query";
+import {
   buildPublicJournalDirectoryEntriesQuery,
   normalizePublicJournalDirectoryRequest,
   PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
@@ -194,6 +198,9 @@ describe("public journal directory query", () => {
     expect(compiled.sql).toContain("array_position");
     expect(compiled.sql).toContain("count(*) over()");
     expect(compiled.sql).toContain("ilike");
+    expect(compiled.sql.indexOf('"journal_entries"."id" in')).toBeLessThan(
+      compiled.sql.indexOf("ilike"),
+    );
     expect(compiled.parameters).toContain("public");
     expect(compiled.parameters).toContain("active");
     expect(compiled.parameters).toContain("current");
@@ -207,6 +214,50 @@ describe("public journal directory query", () => {
       PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE + 1,
     );
     expect(compiled.parameters).toContain(PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE);
+  });
+
+  it("bounds degraded search candidates before any text predicate runs", () => {
+    const compiled =
+      buildPublicJournalDirectoryFallbackCandidateQuery(testDb).compile();
+
+    expect(compiled.sql).toContain('from "journal_entries"');
+    expect(compiled.sql).toContain('inner join "plant_objects"');
+    expect(compiled.sql).toContain('inner join "spaces"');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" =');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" =');
+    expect(compiled.sql).toContain("journal_entries.content_class in");
+    expect(compiled.sql).not.toContain("ilike");
+    expect(compiled.parameters.at(-1)).toBe(
+      PUBLIC_JOURNAL_DIRECTORY_FALLBACK_CANDIDATE_LIMIT,
+    );
+  });
+
+  it("uses hybrid IDs as the complete match set without repeating database text search", () => {
+    const candidateIds = [
+      "00000000-0000-4000-8000-000000000010",
+      "00000000-0000-4000-8000-000000000011",
+    ];
+    const compiled = buildPublicJournalDirectoryEntriesQuery(
+      testDb,
+      {
+        query: "синонім з індексу",
+        kind: "all",
+        catalog: null,
+        topic: null,
+        season: "all",
+        region: null,
+        sort: "relevance",
+        page: 1,
+      },
+      candidateIds,
+      candidateIds,
+      "skip",
+    ).compile();
+
+    expect(compiled.sql).toContain('"journal_entries"."id" in');
+    expect(compiled.sql).toContain("array_position");
+    expect(compiled.sql).not.toContain("ilike");
+    expect(compiled.parameters).not.toContain("%синонім з індексу%");
   });
 
   it("never selects user accounts, private text, exact location, or raw media/source data", () => {

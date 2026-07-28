@@ -62,6 +62,7 @@ const page: PublicJournalDirectoryPage = {
   hasPreviousPage: true,
   hasNextPage: true,
   searchSource: "hybrid",
+  searchFallbackReason: null,
   cards: [
     {
       title: "Відновлення після зміни режиму",
@@ -166,6 +167,28 @@ const facets: PublicJournalDirectoryFacets = {
 };
 
 describe("public journal directory", () => {
+  it("discloses bounded degraded search without turning it into a blocking error", () => {
+    const html = renderToStaticMarkup(
+      <PublicJournalDirectory
+        locale="uk"
+        copy={getPublicJournalDirectoryCopy("uk")}
+        page={{
+          ...page,
+          searchSource: "bounded_fallback",
+          searchFallbackReason: "timeout",
+        }}
+        facets={facets}
+        state="ready"
+      />,
+    );
+
+    expect(html).toContain('role="status"');
+    expect(html).toContain('data-public-journal-search-degraded="true"');
+    expect(html).toContain("Пошук тимчасово обмежений");
+    expect(html).toContain("Кішка після адаптації");
+    expect(html).not.toContain('data-public-journal-directory-state="error"');
+  });
+
   it("renders dense real result context and retains the exact directory URL through detail", () => {
     const html = renderToStaticMarkup(
       <PublicJournalDirectory

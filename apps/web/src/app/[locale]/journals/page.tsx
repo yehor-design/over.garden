@@ -17,6 +17,7 @@ import { resolveVisualFixturePublicJournalDirectoryMode } from "@/lib/visual-fix
 import {
   listPublicJournalDirectoryFacets,
   listPublicJournalDirectoryPage,
+  resolvePublicJournalDirectorySearchScope,
   normalizePublicJournalDirectoryRequest,
   type PublicJournalDirectoryFacets,
   type PublicJournalDirectoryPage,
@@ -85,17 +86,34 @@ export async function renderPublicJournalsPage(
   const restrictedEntryIds = visualCorpus
     ? await loadVisualFixturePublicJournalEntryIds()
     : null;
-  const pagePromise = visualCorpus
-    ? listPublicJournalDirectoryPage(request, locale, {
-        restrictToEntryIds: restrictedEntryIds,
-        findSearchCandidates: async () => null,
-      })
-    : listPublicJournalDirectoryPage(request, locale);
-  const facetsPromise = visualCorpus
-    ? listPublicJournalDirectoryFacets({
-        restrictToEntryIds: restrictedEntryIds,
-      })
-    : listPublicJournalDirectoryFacets();
+  const searchScopePromise = resolvePublicJournalDirectorySearchScope(request, {
+    restrictToEntryIds: restrictedEntryIds,
+    ...(visualCorpus
+      ? {
+          findSearchCandidates: async () => ({
+            source: "bounded_fallback" as const,
+            ids: null,
+            reason: "unavailable" as const,
+          }),
+        }
+      : {}),
+  });
+  const pagePromise = searchScopePromise.then((searchScope) =>
+    visualCorpus
+      ? listPublicJournalDirectoryPage(request, locale, {
+          restrictToEntryIds: restrictedEntryIds,
+          searchScope,
+        })
+      : listPublicJournalDirectoryPage(request, locale, { searchScope }),
+  );
+  const facetsPromise = searchScopePromise.then((searchScope) =>
+    visualCorpus
+      ? listPublicJournalDirectoryFacets({
+          restrictToEntryIds: restrictedEntryIds,
+          searchScope,
+        })
+      : listPublicJournalDirectoryFacets({ searchScope }),
+  );
 
   const [pageResult, facetsResult] = await Promise.allSettled([
     pagePromise,
@@ -150,6 +168,7 @@ export function emptyPublicJournalDirectoryPage(
     hasPreviousPage: request.page > 1,
     hasNextPage: false,
     searchSource: "database",
+    searchFallbackReason: null,
   };
 }
 

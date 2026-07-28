@@ -81,7 +81,6 @@ export async function listPublicKnowledgeEvidence(
   const page = await listPublicJournalDirectoryPage(request, locale, {
     executor,
     restrictToEntryIds: rows.map((row) => row.entryId),
-    findSearchCandidates: async () => null,
   });
 
   return serializePublicKnowledgeEvidence(
@@ -325,5 +324,6 @@ function emptyDirectoryPage(
     hasPreviousPage: false,
     hasNextPage: false,
     searchSource: "database",
+    searchFallbackReason: null,
   };
 }

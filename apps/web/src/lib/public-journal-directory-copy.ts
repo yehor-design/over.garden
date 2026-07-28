@@ -36,6 +36,8 @@ export interface PublicJournalDirectoryCopy {
   emptyBody: string;
   errorTitle: string;
   errorBody: string;
+  degradedSearchTitle: string;
+  degradedSearchBody: string;
   retry: string;
   previousPage: string;
   loadMore: string;
@@ -99,6 +101,9 @@ const COPY = {
     errorTitle: "Журнали тимчасово недоступні",
     errorBody:
       "Запит не вдалося виконати. Параметри збережені, тому його можна безпечно повторити.",
+    degradedSearchTitle: "Пошук тимчасово обмежений",
+    degradedSearchBody:
+      "Показуємо збіги з обмеженої добірки свіжих публічних журналів. Повторіть пошук, щоб перевірити весь індекс.",
     retry: "Спробувати ще раз",
     previousPage: "Попередня сторінка",
     loadMore: "Показати більше журналів",
@@ -160,6 +165,9 @@ const COPY = {
     errorTitle: "Дневниците временно не са достъпни",
     errorBody:
       "Заявката не можа да бъде изпълнена. Параметрите са запазени и може безопасно да опитате отново.",
+    degradedSearchTitle: "Търсенето временно е ограничено",
+    degradedSearchBody:
+      "Показваме съвпадения от ограничен набор скорошни публични дневници. Повторете търсенето, за да проверите целия индекс.",
     retry: "Опитайте отново",
     previousPage: "Предишна страница",
     loadMore: "Покажи още дневници",
@@ -221,6 +229,9 @@ const COPY = {
     errorTitle: "Журналы временно недоступны",
     errorBody:
       "Запрос не удалось выполнить. Параметры сохранены, поэтому его можно безопасно повторить.",
+    degradedSearchTitle: "Поиск временно ограничен",
+    degradedSearchBody:
+      "Показываем совпадения из ограниченной подборки свежих публичных журналов. Повторите поиск, чтобы проверить весь индекс.",
     retry: "Повторить",
     previousPage: "Предыдущая страница",
     loadMore: "Показать больше журналов",
