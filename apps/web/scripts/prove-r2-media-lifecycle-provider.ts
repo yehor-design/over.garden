@@ -42,115 +42,119 @@ async function main() {
     credentials: { accessKeyId, secretAccessKey },
   });
 
-  await client.send(
-    new PutObjectCommand({
-      Bucket: PUBLIC_BUCKET,
-      Key: objectKey,
-      Body: body,
-      ContentType: "text/plain",
-      CacheControl: "public, max-age=60",
-    }),
-  );
-
-  const canonicalUrl = `https://${CANONICAL_HOST}/${objectKey}`;
-  const r2DevUrl = `https://${R2DEV_HOST}/${objectKey}`;
-
-  const beforeCanonical = await headStatus(canonicalUrl);
-  const beforeR2Dev = await headStatus(r2DevUrl);
-
-  if (beforeCanonical < 200 || beforeCanonical >= 300) {
-    await safeDelete(client, objectKey);
-    throw new Error(
-      `Canonical media host did not serve synthetic probe (statusClass=${statusClass(beforeCanonical)}).`,
-    );
-  }
-
-  let managedEnabledBefore: boolean | null = null;
-  let managedEnabledAfter: boolean | null = null;
-  let disableAttempted = false;
-
-  const cfToken = process.env.CLOUDFLARE_API_TOKEN;
-  if (cfToken) {
-    managedEnabledBefore = await getManagedEnabled(cfToken);
-    if (managedEnabledBefore === true) {
-      disableAttempted = true;
-      managedEnabledAfter = await setManagedEnabled(cfToken, false);
-    } else {
-      managedEnabledAfter = managedEnabledBefore;
-    }
-  }
-
-  const afterDisableR2Dev = disableAttempted
-    ? await headStatus(r2DevUrl)
-    : beforeR2Dev;
-
-  await client.send(
-    new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
-  );
-
-  // Confirm object gone from origin.
-  let originGone = false;
+  let objectMayExist = false;
   try {
+    objectMayExist = true;
     await client.send(
-      new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+      new PutObjectCommand({
+        Bucket: PUBLIC_BUCKET,
+        Key: objectKey,
+        Body: body,
+        ContentType: "text/plain",
+        CacheControl: "public, max-age=60",
+      }),
     );
-  } catch (error) {
-    if (isProviderNotFound(error)) originGone = true;
-    else {
-      await safeDelete(client, objectKey);
-      throw new Error("Origin delete proof was indeterminate.");
+
+    const canonicalUrl = `https://${CANONICAL_HOST}/${objectKey}`;
+    const r2DevUrl = `https://${R2DEV_HOST}/${objectKey}`;
+
+    const beforeCanonical = await headStatus(canonicalUrl);
+    const beforeR2Dev = await headStatus(r2DevUrl);
+
+    if (beforeCanonical < 200 || beforeCanonical >= 300) {
+      throw new Error(
+        `Canonical media host did not serve synthetic probe (statusClass=${statusClass(beforeCanonical)}).`,
+      );
     }
-  }
 
-  const afterDeleteCanonical = await headStatus(canonicalUrl);
+    let managedEnabledBefore: boolean | null = null;
+    let managedEnabledAfter: boolean | null = null;
+    let disableAttempted = false;
 
-  console.log(
-    JSON.stringify(
-      {
-        ok:
-          beforeCanonical >= 200 &&
-          beforeCanonical < 300 &&
-          originGone &&
-          (afterDeleteCanonical === 404 || afterDeleteCanonical === 410) &&
-          (managedEnabledAfter === false ||
-            managedEnabledAfter === null ||
-            !disableAttempted),
-        issue: "OVE-216",
-        evidenceClass: "r2-provider-probe",
-        canonicalServeClass: statusClass(beforeCanonical),
-        r2DevServeClassBefore: statusClass(beforeR2Dev),
-        r2DevServeClassAfterDisable: statusClass(afterDisableR2Dev),
-        managedEnabledBeforeClass:
-          managedEnabledBefore === null
-            ? "unknown_no_api_token"
-            : managedEnabledBefore
-              ? "enabled"
-              : "disabled",
-        managedEnabledAfterClass:
-          managedEnabledAfter === null
-            ? "unknown_no_api_token"
-            : managedEnabledAfter
-              ? "enabled"
-              : "disabled",
-        disableAttempted,
-        originDeleteClass: originGone ? "gone" : "still_present",
-        canonicalAfterDeleteClass: statusClass(afterDeleteCanonical),
-        customDomain: CANONICAL_HOST,
-        quarantineLifecycleRuleClass: "documented_1d_delete",
-        publicLifecycleRuleClass: "documented_abort_multipart_7d",
-      },
-      null,
-      2,
-    ),
-  );
+    const cfToken = process.env.CLOUDFLARE_API_TOKEN;
+    if (cfToken) {
+      managedEnabledBefore = await getManagedEnabled(cfToken);
+      if (managedEnabledBefore === true) {
+        disableAttempted = true;
+        managedEnabledAfter = await setManagedEnabled(cfToken, false);
+      } else {
+        managedEnabledAfter = managedEnabledBefore;
+      }
+    }
 
-  if (
-    managedEnabledAfter === true ||
-    (disableAttempted &&
-      afterDisableR2Dev >= 200 &&
-      afterDisableR2Dev < 300)
-  ) {
-    process.exitCode = 1;
+    const afterDisableR2Dev = disableAttempted
+      ? await headStatus(r2DevUrl)
+      : beforeR2Dev;
+
+    await client.send(
+      new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+    );
+
+    // Confirm object gone from origin.
+    let originGone = false;
+    try {
+      await client.send(
+        new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+      );
+    } catch (error) {
+      if (isProviderNotFound(error)) originGone = true;
+      else {
+        throw new Error("Origin delete proof was indeterminate.");
+      }
+    }
+
+    const afterDeleteCanonical = await headStatus(canonicalUrl);
+
+    console.log(
+      JSON.stringify(
+        {
+          ok:
+            beforeCanonical >= 200 &&
+            beforeCanonical < 300 &&
+            originGone &&
+            (afterDeleteCanonical === 404 || afterDeleteCanonical === 410) &&
+            (managedEnabledAfter === false ||
+              managedEnabledAfter === null ||
+              !disableAttempted),
+          issue: "OVE-216",
+          evidenceClass: "r2-provider-probe",
+          canonicalServeClass: statusClass(beforeCanonical),
+          r2DevServeClassBefore: statusClass(beforeR2Dev),
+          r2DevServeClassAfterDisable: statusClass(afterDisableR2Dev),
+          managedEnabledBeforeClass:
+            managedEnabledBefore === null
+              ? "unknown_no_api_token"
+              : managedEnabledBefore
+                ? "enabled"
+                : "disabled",
+          managedEnabledAfterClass:
+            managedEnabledAfter === null
+              ? "unknown_no_api_token"
+              : managedEnabledAfter
+                ? "enabled"
+                : "disabled",
+          disableAttempted,
+          originDeleteClass: originGone ? "gone" : "still_present",
+          canonicalAfterDeleteClass: statusClass(afterDeleteCanonical),
+          customDomain: CANONICAL_HOST,
+          quarantineLifecycleRuleClass: "documented_1d_delete",
+          publicLifecycleRuleClass: "documented_abort_multipart_7d",
+        },
+        null,
+        2,
+      ),
+    );
+
+    if (
+      managedEnabledAfter === true ||
+      (disableAttempted && afterDisableR2Dev >= 200 && afterDisableR2Dev < 300)
+    ) {
+      process.exitCode = 1;
+    }
+  } finally {
+    if (objectMayExist) {
+      await deleteAndProveSyntheticCleanup(client, objectKey);
+    }
   }
 }
 
@@ -236,14 +240,27 @@ function isProviderNotFound(error: unknown): boolean {
   );
 }
 
-async function safeDelete(client: S3Client, objectKey: string) {
+async function deleteAndProveSyntheticCleanup(
+  client: S3Client,
+  objectKey: string,
+) {
   try {
     await client.send(
       new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
     );
   } catch {
-    // ignore cleanup failure
+    // The authoritative HeadObject below decides cleanup, not DeleteObject's
+    // transport receipt.
   }
+  try {
+    await client.send(
+      new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+    );
+  } catch (error) {
+    if (isProviderNotFound(error)) return;
+    throw new Error("Synthetic provider cleanup proof was indeterminate.");
+  }
+  throw new Error("Synthetic provider cleanup left the object present.");
 }
 
 function statusClass(status: number): string {
@@ -261,6 +278,8 @@ function requireEnv(name: string): string {
 }
 
 main().catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : "provider probe failed");
+  console.error(
+    error instanceof Error ? error.message : "provider probe failed",
+  );
   process.exitCode = 1;
 });
