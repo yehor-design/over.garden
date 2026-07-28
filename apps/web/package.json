@@ -82,6 +82,8 @@
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
     "smoke:public-journal-search-budget": "NODE_OPTIONS=--conditions=react-server tsx scripts/prove-public-journal-search-budget.ts",
+    "smoke:public-community-search-plan": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-public-community-search-plan.ts --environment local --confirm-environment local",
+    "smoke:public-community-search-load": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-public-community-search-load.ts --environment local --confirm-environment local",
     "walking-skeleton:boundary:check": "tsx scripts/check-walking-skeleton-boundary.ts",
     "smoke:protective-dns": "tsx scripts/check-protective-dns.ts",
     "smoke:local-media-runtime": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-local-media-runtime.ts",

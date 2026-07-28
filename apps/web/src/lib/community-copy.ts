@@ -30,6 +30,8 @@ export interface CommunityCopy {
   searchLabel: string;
   searchPlaceholder: string;
   search: string;
+  shortSearch: string;
+  degradedSearch: string;
   kindLabel: string;
   allKinds: string;
   kindLabels: Record<"plant" | "animal", string>;
@@ -97,6 +99,9 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     searchLabel: "Пошук у спільноті",
     searchPlaceholder: "Тема, об’єкт або спостереження",
     search: "Знайти",
+    shortSearch: "Введіть щонайменше 2 символи, щоб шукати в спільноті.",
+    degradedSearch:
+      "Пошук тимчасово обмежений найновішими записами цієї спільноти. Можна надіслати запит ще раз.",
     kindLabel: "Тип об’єкта",
     allKinds: "Усі",
     kindLabels: {
@@ -177,6 +182,9 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     searchLabel: "Търсене в общността",
     searchPlaceholder: "Тема, обект или наблюдение",
     search: "Търсене",
+    shortSearch: "Въведете поне 2 знака, за да търсите в общността.",
+    degradedSearch:
+      "Търсенето временно е ограничено до най-новите записи в тази общност. Можете да изпратите заявката отново.",
     kindLabel: "Тип обект",
     allKinds: "Всички",
     kindLabels: {
@@ -257,6 +265,9 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     searchLabel: "Поиск в сообществе",
     searchPlaceholder: "Тема, объект или наблюдение",
     search: "Найти",
+    shortSearch: "Введите не менее 2 символов для поиска в сообществе.",
+    degradedSearch:
+      "Поиск временно ограничен новейшими записями этого сообщества. Запрос можно отправить ещё раз.",
     kindLabel: "Тип объекта",
     allKinds: "Все",
     kindLabels: {

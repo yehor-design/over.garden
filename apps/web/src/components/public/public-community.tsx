@@ -180,6 +180,11 @@ export function PublicCommunityView({
   });
   const knowledgePath = localizedPath(locale, `/topics/${community.topicSlug}`);
   const actionMessage = actionStatus ? copy.actionMessages[actionStatus] : null;
+  const searchState = community.search ?? {
+    mode: "browse" as const,
+    degradedReason: null,
+    shortQuery: false,
+  };
   const contextModules = [
     {
       key: "community-rules",
@@ -356,6 +361,19 @@ export function PublicCommunityView({
           {copy.search}
         </button>
       </form>
+
+      {searchState.shortQuery ? (
+        <p className="py-3 text-sm text-muted-foreground" role="status">
+          {copy.shortSearch}
+        </p>
+      ) : searchState.degradedReason ? (
+        <p
+          className="my-3 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
+          role="status"
+        >
+          {copy.degradedSearch}
+        </p>
+      ) : null}
 
       <section aria-labelledby="community-journals" className="grid">
         <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border py-3">
