@@ -20,6 +20,11 @@ import { Pool } from "pg";
 
 import type { Database } from "../src/db/schema";
 import {
+  resolveDatabaseConnection,
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "../src/db/connection";
+import {
   assertMeasuredRto,
   assertProviderBinding,
   buildRecoveryPlan,
@@ -474,11 +479,7 @@ async function finalReadiness(
   product: ProductReceipt,
   parity: ParityReceipt,
 ) {
-  const pool = new Pool({
-    connectionString: env.DATABASE_URL,
-    max: 1,
-    ssl: { ca: env.DATABASE_SSL_CA, rejectUnauthorized: true },
-  });
+  const pool = createRecoveryPool(env);
   const db = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
   try {
     return await buildRestoreReadinessReport(db, {
@@ -496,11 +497,7 @@ async function finalReadiness(
 }
 
 async function queueFingerprint(env: NodeJS.ProcessEnv) {
-  const pool = new Pool({
-    connectionString: env.DATABASE_URL,
-    max: 1,
-    ssl: { ca: env.DATABASE_SSL_CA, rejectUnauthorized: true },
-  });
+  const pool = createRecoveryPool(env);
   try {
     const result = await pool.query<{ fingerprint: string }>(`
       select md5(string_agg(status || ':' || count, '|' order by status)) as fingerprint
@@ -512,6 +509,19 @@ async function queueFingerprint(env: NodeJS.ProcessEnv) {
   } finally {
     await pool.end();
   }
+}
+
+function createRecoveryPool(env: NodeJS.ProcessEnv) {
+  const resolution = resolveDatabaseConnection(env);
+  const connectionString = resolvePgConnectionString(env, resolution);
+  if (!connectionString) {
+    throw new Error("recovery database connection unavailable");
+  }
+  return new Pool({
+    connectionString,
+    max: 1,
+    ssl: resolveDatabaseSslConfig(env, resolution),
+  });
 }
 
 async function readReferenceSchemaDigest() {
