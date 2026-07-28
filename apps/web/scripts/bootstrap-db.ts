@@ -20,6 +20,7 @@ import {
 } from "../src/server/restore-readiness";
 import {
   classifyProtectedIdentityTransition,
+  ERASED_MODERATION_ACTOR_USER_ID,
   ProtectedIdentityTransitionError,
 } from "../src/server/restore-readiness/runtime";
 
@@ -175,7 +176,36 @@ async function assertProtectedIdentityTransition(
   before: ProtectedIdentitySnapshot,
   after: ProtectedIdentitySnapshot,
 ) {
-  const addedPlants = classifyProtectedIdentityTransition(before, after);
+  const { addedAuthUsers, addedPlants } = classifyProtectedIdentityTransition(
+    before,
+    after,
+  );
+
+  if (addedAuthUsers.length > 0) {
+    const classified = await pool.query<{ count: string }>(
+      `
+        select count(*)::text as count
+        from "user" auth_user
+        where auth_user.id = $1::uuid
+          and auth_user.name = 'Erased moderation actor'
+          and auth_user.email = 'erased-moderation-actor@invalid.local'
+          and auth_user."emailVerified" = false
+          and not exists (
+            select 1 from user_public_profiles profile
+            where profile.user_id = auth_user.id
+          )
+          and not exists (
+            select 1 from user_handle_registry registry
+            where registry.user_id = auth_user.id
+          )
+      `,
+      [ERASED_MODERATION_ACTOR_USER_ID],
+    );
+    if (Number(classified.rows[0]?.count ?? -1) !== 1) {
+      throw new ProtectedIdentityTransitionError("AUTH_DRIFT");
+    }
+  }
+
   if (addedPlants.length === 0) return;
 
   const classified = await pool.query<{ count: string }>(
