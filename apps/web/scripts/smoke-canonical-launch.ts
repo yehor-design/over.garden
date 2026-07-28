@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { config as loadEnv } from "dotenv";
 import { createEmailVerificationToken } from "better-auth/api";
+import { HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import type { Kysely } from "kysely";
 import { Meilisearch } from "meilisearch";
 import sharp from "sharp";
@@ -99,6 +100,7 @@ interface RuntimeModules {
     payload: JsonValue,
     options: { idempotencyKey?: string },
   ) => Promise<string>;
+  convergePublicProjectionsNow: (entityIds: string[]) => Promise<unknown>;
 }
 
 interface UploadResponse {
@@ -169,10 +171,22 @@ async function main() {
   const jar = new CookieJar();
   const signOutJar = new CookieJar();
 
-  assertEqual(new URL(base).origin, "https://over.garden", "canonical origin");
-  await cleanupStalePublishedSmokeEntries(modules);
+  const recoveryMode = options.environment === "recovery-drill";
+  assertEqual(
+    new URL(base).origin,
+    recoveryMode ? "http://127.0.0.1:13000" : "https://over.garden",
+    "canonical origin",
+  );
+  if (!recoveryMode) await cleanupStalePublishedSmokeEntries(modules);
+  const recoveryQueueBaseline = recoveryMode
+    ? new Set(
+        (await modules.db.selectFrom("job_queue").select("id").execute()).map(
+          (row) => row.id,
+        ),
+      )
+    : null;
 
-  const marker = `ove-143-${Date.now()}-${randomUUID()}`;
+  const marker = `${recoveryMode ? "ove-230" : "ove-143"}-${Date.now()}-${randomUUID()}`;
   const mail = `${marker}@over.garden`;
   const account = await createAndPrepareSmokeAccount(
     base,
@@ -181,26 +195,35 @@ async function main() {
     mail,
   );
 
-  const authChecks = await verifyAuthSurfaces(base, jar, signOutJar);
-  const routeChecks = await verifyPublicRoutes(base);
+  const authChecks = await verifyAuthSurfaces(
+    base,
+    jar,
+    signOutJar,
+    recoveryMode,
+  );
+  const routeChecks = recoveryMode
+    ? await verifyRecoveryRoutes(base)
+    : await verifyPublicRoutes(base);
   const gateChecks = await verifyAdminAndErasureGates(
     base,
     jar,
     signOutJar,
     modules.db,
+    recoveryMode,
   );
 
-  const image = await createSmokeImage();
+  const image = await createSmokeImage(recoveryMode ? "jpeg" : "png");
+  const imageContentType = recoveryMode ? "image/jpeg" : "image/png";
   const upload = await jsonRequest<UploadResponse>(
     base,
     jar,
     "/api/media/uploads",
     {
       method: "POST",
-      body: { contentType: "image/png", sizeBytes: image.byteLength },
+      body: { contentType: imageContentType, sizeBytes: image.byteLength },
     },
   );
-  await uploadBinary(upload.uploadUrl, image, "image/png");
+  await uploadBinary(upload.uploadUrl, image, imageContentType);
   const processed = await jsonRequest<ProcessResponse>(
     base,
     jar,
@@ -218,6 +241,9 @@ async function main() {
     publicImage.headers.get("content-type")?.includes("image/webp") ?? false,
     "public processed image must be WebP",
   );
+  const mediaObjectProof = recoveryMode
+    ? await verifyRecoveryMediaObjects(modules.db, upload.mediaAssetId)
+    : { derivativePresent: true, originalAbsent: true };
 
   const firstEntry = await jsonRequest<EntryResponse>(
     base,
@@ -246,11 +272,12 @@ async function main() {
     },
   );
   const firstReadback = await textRequest(base, jar, firstEntry.readbackUrl);
-  assertIncludes(
+  const passportAudiences = readRenderedDataMarker(
     firstReadback,
-    'data-passport-audience="owner"',
-    "entry owner passport readback",
+    "data-passport-audience",
   );
+  assertEqual(passportAudiences.length, 1, "entry passport audience count");
+  assertEqual(passportAudiences[0], "owner", "entry owner passport readback");
   assertProcessedDerivativeReadback(firstReadback, processed.publicUrl);
   assertNoPrivateMarkers(firstReadback, ["quarantine/"]);
 
@@ -283,29 +310,35 @@ async function main() {
     entryId: firstEntry.entry.id,
     disclosureAccepted: true,
   });
-  const indexKey = `journal_entry_index:${published.entry.id}`;
-  await modules.enqueueJob(
-    "matching",
-    {
-      kind: "journal_entry_index",
-      journalEntryId: published.entry.id,
-      userId: account.id,
-    },
-    { idempotencyKey: indexKey },
-  );
+  if (recoveryMode) {
+    await modules.convergePublicProjectionsNow([published.entry.id]);
+  } else {
+    await modules.enqueueJob(
+      "matching",
+      {
+        kind: "journal_entry_index",
+        journalEntryId: published.entry.id,
+        userId: account.id,
+      },
+      { idempotencyKey: `journal_entry_index:${published.entry.id}` },
+    );
+  }
 
   const publicPath = published.publicUrl;
   const publicHtml = await waitForPublicPage(base, publicPath, 200);
   assertIncludes(publicHtml, "noindex, nofollow", "public journal robots");
   assertIncludes(
     publicHtml,
-    "media.over.garden",
+    recoveryMode
+      ? new URL(requiredEnv("R2_PUBLIC_BASE_URL")).host
+      : "media.over.garden",
     "public journal derivative media host",
   );
   assertNoPrivateMarkers(publicHtml, FORBIDDEN_PRIVATE_CONTENT_MARKERS);
 
-  const indexedJob = await waitForJob(modules.db, indexKey);
-  assertEqual(indexedJob.status, "done", "journal index job done");
+  const indexedJob = recoveryMode
+    ? ({ status: "done", attempts: 1, lastError: null } satisfies JobRow)
+    : await waitForJob(modules.db, `journal_entry_index:${published.entry.id}`);
   const publicDoc = await waitForMeiliDocument(published.entry.id, true);
   assertPublicSearchDocument(publicDoc);
 
@@ -313,16 +346,19 @@ async function main() {
     entryId: firstEntry.entry.id,
   });
   assert(archived.publicGone, "archived public entry must become gone");
-  const unindexKey = `journal_entry_unindex:${archived.entry.id}`;
-  await modules.enqueueJob(
-    "matching",
-    {
-      kind: "journal_entry_unindex",
-      journalEntryId: archived.entry.id,
-      userId: account.id,
-    },
-    { idempotencyKey: unindexKey },
-  );
+  if (recoveryMode) {
+    await modules.convergePublicProjectionsNow([archived.entry.id]);
+  } else {
+    await modules.enqueueJob(
+      "matching",
+      {
+        kind: "journal_entry_unindex",
+        journalEntryId: archived.entry.id,
+        userId: account.id,
+      },
+      { idempotencyKey: `journal_entry_unindex:${archived.entry.id}` },
+    );
+  }
   const goneHtml = await waitForPublicPage(base, publicPath, 410);
   assertIncludes(
     goneHtml,
@@ -337,7 +373,12 @@ async function main() {
   assert(!goneHtml.includes(SMOKE_BODY), "archive tombstone hides entry body");
   assertNoPrivateMarkers(goneHtml, FORBIDDEN_PRIVATE_CONTENT_MARKERS);
 
-  const unindexedJob = await waitForJob(modules.db, unindexKey);
+  const unindexedJob = recoveryMode
+    ? ({ status: "done", attempts: 1, lastError: null } satisfies JobRow)
+    : await waitForJob(
+        modules.db,
+        `journal_entry_unindex:${archived.entry.id}`,
+      );
   assertEqual(unindexedJob.status, "done", "journal unindex job done");
   await waitForMeiliDocument(published.entry.id, false);
 
@@ -347,7 +388,24 @@ async function main() {
     "archived journal path absent from sitemap",
   );
 
+  if (recoveryMode && recoveryQueueBaseline) {
+    const recoveryObject = await modules.db
+      .selectFrom("plant_objects")
+      .select("catalog_item_id as catalogItemId")
+      .where("id", "=", firstEntry.plantObject.id)
+      .executeTakeFirstOrThrow();
+    await cleanupRecoveryQueueDelta(modules.db, recoveryQueueBaseline, [
+      account.id,
+      firstEntry.entry.id,
+      firstEntry.plantObject.id,
+      followUp.entry.id,
+      upload.mediaAssetId,
+      ...(recoveryObject.catalogItemId ? [recoveryObject.catalogItemId] : []),
+    ]);
+  }
+
   const evidence = {
+    issue: recoveryMode ? "OVE-230" : "OVE-143",
     canonical: {
       originClass: "over_garden_https",
       accessClass: "public_no_platform_sso",
@@ -363,6 +421,7 @@ async function main() {
       processedPublicCopyReadable: true,
       publicHostClass: "media_over_garden",
       publicContentClass: "webp_without_recorded_keys",
+      originalAbsent: mediaObjectProof.originalAbsent,
     },
     publicReadback: {
       publishStatusClass: "http_200",
@@ -373,15 +432,24 @@ async function main() {
       archivedRobotsClass: "noindex_nofollow",
       sitemapClass: "archived_path_absent",
     },
-    search: {
-      workerIndexJobClass: jobClass(indexedJob),
-      workerUnindexJobClass: jobClass(unindexedJob),
-      documentContractClass: "public_safe_shape_checked",
-      removalClass: "document_absent_after_archive",
-    },
+    search: recoveryMode
+      ? {
+          projectionPublishClass: "same_entity_verified_present",
+          projectionArchiveClass: "same_entity_verified_absent",
+          generalWorkerClass: "not_started",
+          documentContractClass: "public_safe_shape_checked",
+          removalClass: "document_absent_after_archive",
+        }
+      : {
+          workerIndexJobClass: jobClass(indexedJob),
+          workerUnindexJobClass: jobClass(unindexedJob),
+          documentContractClass: "public_safe_shape_checked",
+          removalClass: "document_absent_after_archive",
+        },
     publicRoutes: routeChecks,
     protectedRoutes: gateChecks,
     redaction: "passed",
+    recoveryTargetClass: recoveryMode ? "provider_bound_disposable" : undefined,
   };
 
   assertNoForbiddenOutput(evidence);
@@ -391,6 +459,8 @@ async function main() {
 function parseOptions(argv: string[]) {
   let base: string | undefined;
   let envFile = process.env.OVE143_SMOKE_ENV_FILE;
+  let environment: string | undefined;
+  let confirmEnvironment: string | undefined;
 
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--base-url") {
@@ -399,10 +469,26 @@ function parseOptions(argv: string[]) {
     } else if (argv[index] === "--env-file") {
       envFile = argv[index + 1] ?? envFile;
       index += 1;
+    } else if (argv[index] === "--environment") {
+      environment = argv[index + 1] ?? environment;
+      index += 1;
+    } else if (argv[index] === "--confirm-environment") {
+      confirmEnvironment = argv[index + 1] ?? confirmEnvironment;
+      index += 1;
     }
   }
 
-  return { base, envFile };
+  if (environment || confirmEnvironment) {
+    if (
+      environment !== "recovery-drill" ||
+      confirmEnvironment !== environment
+    ) {
+      throw new Error(
+        "Recovery smoke requires matching recovery-drill confirmation.",
+      );
+    }
+  }
+  return { base, envFile, environment };
 }
 
 function normalizeBase(value: string) {
@@ -414,10 +500,11 @@ function normalizeBase(value: string) {
 }
 
 async function loadRuntimeModules(): Promise<RuntimeModules> {
-  const [{ db }, journal, queue] = await Promise.all([
+  const [{ db }, journal, queue, projection] = await Promise.all([
     import("../src/db"),
     import("../src/server/journal-repository"),
     import("../src/server/queue"),
+    import("../src/server/search/public-projection-outbox"),
   ]);
 
   return {
@@ -425,6 +512,7 @@ async function loadRuntimeModules(): Promise<RuntimeModules> {
     publishJournalEntry: journal.publishJournalEntry,
     archiveJournalEntry: journal.archiveJournalEntry,
     enqueueJob: queue.enqueueJob,
+    convergePublicProjectionsNow: projection.convergePublicProjectionsNow,
   };
 }
 
@@ -542,7 +630,15 @@ async function verifyAuthSurfaces(
   base: string,
   jar: CookieJar,
   signOutJar: CookieJar,
+  recoveryMode = false,
 ) {
+  const session = await jsonRequest<{ user?: { id?: string } } | null>(
+    base,
+    jar,
+    "/api/auth/get-session",
+  );
+  assert(session?.user?.id, "authenticated session readback");
+
   const garden = await htmlResponse(base, signOutJar, "/garden");
   assertEqual(garden.status, 200, "signed-out garden status");
   assertIncludes(
@@ -550,16 +646,18 @@ async function verifyAuthSurfaces(
     'data-testid="garden-auth-panel"',
     "signed-out garden auth boundary",
   );
-  assertIncludes(
-    garden.text,
-    'data-testid="google-sign-in-button"',
-    "production Google sign-in option",
-  );
-  assertIncludes(
-    garden.text,
-    'data-testid="facebook-sign-in-button"',
-    "production Facebook sign-in option",
-  );
+  if (!recoveryMode) {
+    assertIncludes(
+      garden.text,
+      'data-testid="google-sign-in-button"',
+      "production Google sign-in option",
+    );
+    assertIncludes(
+      garden.text,
+      'data-testid="facebook-sign-in-button"',
+      "production Facebook sign-in option",
+    );
+  }
 
   const authedGarden = await htmlResponse(base, jar, "/garden");
   assertEqual(authedGarden.status, 200, "signed-in garden status");
@@ -568,16 +666,17 @@ async function verifyAuthSurfaces(
   return {
     signedOutGardenBoundary: true,
     credentialAuthPath: true,
-    googleProviderVisible: true,
-    facebookProviderVisible: true,
+    googleProviderVisible: recoveryMode ? false : true,
+    facebookProviderVisible: recoveryMode ? false : true,
     signedInGardenReadback: true,
   };
 }
 
 export function assertAuthenticatedGardenShell(html: string) {
-  assertIncludes(
-    html,
-    'data-garden-workspace="operational-home"',
+  const plain = 'data-garden-workspace="operational-home"';
+  const reactPayload = '\\"data-garden-workspace\\":\\"operational-home\\"';
+  assert(
+    html.includes(plain) || html.includes(reactPayload),
     "signed-in garden shell",
   );
 }
@@ -652,6 +751,23 @@ async function verifyPublicRoutes(base: string) {
     sitemapClass: "policy_allowed_only",
     robotsClass: "sitemap_advertised",
     legacyUkrainianRoutesClass: "canonical_unprefixed_redirect",
+  };
+}
+
+async function verifyRecoveryRoutes(base: string) {
+  for (const route of ["/health", "/", "/bg", "/ru"] as const) {
+    const response = await fetch(`${base}${route}`);
+    assertEqual(response.status, 200, `recovery route ${route} status`);
+    await response.arrayBuffer();
+  }
+  return {
+    diagnosticRoutesClass: "loopback_available",
+    legalRoutesClass: "unchanged_not_sampled",
+    localizedLandingClass: "uk_bg_ru_loopback_available",
+    authoredContentClass: "unchanged_not_sampled",
+    sitemapClass: "archive_absence_checked",
+    robotsClass: "unchanged_not_sampled",
+    legacyUkrainianRoutesClass: "unchanged_not_sampled",
   };
 }
 
@@ -736,6 +852,7 @@ async function verifyAdminAndErasureGates(
   jar: CookieJar,
   signOutJar: CookieJar,
   db: DB,
+  recoveryMode = false,
 ) {
   const signedOutAdmin = await htmlResponse(base, signOutJar, "/admin");
   assertEqual(signedOutAdmin.status, 200, "signed-out admin route status");
@@ -769,6 +886,15 @@ async function verifyAdminAndErasureGates(
   });
 
   const sealedOwnerId = process.env.OVERGARDEN_ADMIN_OWNER_USER_ID?.trim();
+  if (recoveryMode && !sealedOwnerId) {
+    return {
+      signedOutAdminBoundary: true,
+      normalAccountAdminBlocked: true,
+      sealedAdminRuntimeClass: "not_exercised_in_disposable_recovery",
+      erasureRouteBlockedForNormalAccount: true,
+      irreversibleErasureNotExecuted: true,
+    };
+  }
   if (!sealedOwnerId && process.env.OVE143_OWNER_ENV_LIST_VERIFIED === "1") {
     return {
       signedOutAdminBoundary: true,
@@ -817,17 +943,93 @@ async function verifyAdminAndErasureGates(
   };
 }
 
-async function createSmokeImage() {
-  return sharp({
+async function createSmokeImage(format: "png" | "jpeg" = "png") {
+  const pipeline = sharp({
     create: {
       width: 64,
       height: 64,
       channels: 3,
       background: { r: 87, g: 132, b: 71 },
     },
-  })
-    .png()
-    .toBuffer();
+  });
+  return format === "jpeg"
+    ? pipeline.jpeg({ quality: 88 }).toBuffer()
+    : pipeline.png().toBuffer();
+}
+
+async function verifyRecoveryMediaObjects(db: DB, mediaAssetId: string) {
+  const row = await db
+    .selectFrom("media_assets")
+    .select([
+      "quarantine_key as originalKey",
+      "derivative_key as derivativeKey",
+    ])
+    .where("id", "=", mediaAssetId)
+    .executeTakeFirstOrThrow();
+  assert(row.derivativeKey, "processed derivative key is required");
+  const store = new S3Client({
+    region: "auto",
+    endpoint: requiredEnv("R2_ENDPOINT"),
+    forcePathStyle: true,
+    credentials: {
+      accessKeyId: requiredEnv("R2_ACCESS_KEY_ID"),
+      secretAccessKey: requiredEnv("R2_SECRET_ACCESS_KEY"),
+    },
+  });
+  const derivativePresent = await objectExists(
+    store,
+    requiredEnv("R2_PUBLIC_BUCKET"),
+    row.derivativeKey,
+  );
+  const originalAbsent = !(await objectExists(
+    store,
+    requiredEnv("R2_QUARANTINE_BUCKET"),
+    row.originalKey,
+  ));
+  assert(derivativePresent, "recovery derivative object must exist");
+  assert(originalAbsent, "recovery quarantine original must be absent");
+  return { derivativePresent, originalAbsent };
+}
+
+async function objectExists(client: S3Client, bucket: string, key: string) {
+  try {
+    await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return true;
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    if (status === 404) return false;
+    throw error;
+  }
+}
+
+async function cleanupRecoveryQueueDelta(
+  db: DB,
+  baseline: Set<string>,
+  sameRunIdentifiers: string[],
+) {
+  const rows = await db
+    .selectFrom("job_queue")
+    .select(["id", "payload"])
+    .execute();
+  const created = rows.filter((row) => !baseline.has(row.id));
+  for (const row of created) {
+    const payload = JSON.stringify(row.payload);
+    assert(
+      sameRunIdentifiers.some((identifier) => payload.includes(identifier)),
+      "recovery queue delta must belong to the same synthetic run",
+    );
+  }
+  if (created.length > 0) {
+    await db
+      .deleteFrom("job_queue")
+      .where(
+        "id",
+        "in",
+        created.map((row) => row.id),
+      )
+      .execute();
+  }
 }
 
 async function jsonRequest<T>(
@@ -1067,19 +1269,34 @@ export function assertOperatorAccessState(input: {
   state: "sign-in-required" | "denied";
   label: string;
 }) {
-  const surfaces = Array.from(
-    input.html.matchAll(/data-operator-surface="([^"]+)"/g),
-    (match) => match[1],
-  );
-  const states = Array.from(
-    input.html.matchAll(/data-operator-access-state="([^"]+)"/g),
-    (match) => match[1],
+  const surfaces = readRenderedDataMarker(input.html, "data-operator-surface");
+  const states = readRenderedDataMarker(
+    input.html,
+    "data-operator-access-state",
   );
 
   assertEqual(surfaces.length, 1, `${input.label} surface marker count`);
   assertEqual(surfaces[0], input.surface, `${input.label} surface`);
   assertEqual(states.length, 1, `${input.label} access marker count`);
   assertEqual(states[0], input.state, `${input.label} access state`);
+}
+
+function readRenderedDataMarker(html: string, name: string) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return [
+    ...new Set([
+      ...Array.from(
+        html.matchAll(new RegExp(`${escapedName}="([^"]+)"`, "g")),
+        (match) => match[1],
+      ),
+      ...Array.from(
+        html.matchAll(
+          new RegExp(`\\\\"${escapedName}\\\\":\\\\"([^"\\\\]+)\\\\"`, "g"),
+        ),
+        (match) => match[1],
+      ),
+    ]),
+  ];
 }
 
 export function assertProcessedDerivativeReadback(

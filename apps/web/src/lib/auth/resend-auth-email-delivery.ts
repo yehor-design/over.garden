@@ -40,6 +40,7 @@ interface AuthEmailContent {
 export function authEmailVerificationPolicy(
   env: EnvLike = process.env,
 ): AuthEmailVerificationPolicy {
+  if (env.OVE230_RECOVERY_DRILL === "true") return "optional";
   return isProductionLikeRuntime(env) ? "required" : "optional";
 }
 
@@ -101,7 +102,9 @@ export function resolveResendAuthEmailConfig(
   const replyTo = configuredEnvValue(env[RESEND_AUTH_REPLY_TO_ENV]);
 
   if (!apiKey) {
-    throw new Error(`Missing required environment variable: ${RESEND_API_KEY_ENV}`);
+    throw new Error(
+      `Missing required environment variable: ${RESEND_API_KEY_ENV}`,
+    );
   }
 
   if (!from) {
@@ -224,7 +227,11 @@ function configuredEnvValue(value: string | undefined): string | undefined {
   return trimmed;
 }
 
-function idempotencyKey(category: string, identity: string, url: string): string {
+function idempotencyKey(
+  category: string,
+  identity: string,
+  url: string,
+): string {
   return [
     "overgarden",
     category,
