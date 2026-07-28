@@ -151,6 +151,13 @@ OVE-216 lifecycle proof contract:
 - The production provider probe creates one random synthetic object, uses bounded requests and canonical polling, and proves deletion again in a mandatory `finally` cleanup. Its receipt is class-only and must not expose bucket names, object keys, object URLs, credentials, or user content.
 - Run the probe only through the Vercel production environment on the exact deployed SHA: `cd apps/web && vercel env run -e production -- pnpm exec tsx scripts/prove-r2-media-lifecycle-provider.ts`.
 
+OVE-244 safe media admission contract:
+
+- Quarantine keys are `quarantine/<random-generation-id>.<closed-extension>` and never contain an owner/account id. Public derivatives are `derivatives/<random-public-object-id>.webp` and never inherit quarantine identity.
+- Every S3-compatible Get/Put/Copy/Delete/Head call has a finite request timeout. Actual-byte admission precedes Sharp decode, and only token-fenced `public_ready` rows with provider-confirmed original absence are public-serializable.
+- Local proof: `../../infra/run-with-local-infra-env pnpm smoke:safe-media-admission -- --environment local --confirm-environment local`.
+- Production proof is allowed exactly once for the approved plan digest and exact READY deployment: `vercel env run -e production -- pnpm smoke:safe-media-admission -- --environment production --confirm-environment production --plan-digest 3585dce4442abdb93c108ef9908586a30888c7c0f3ba84097606d52f3c743a18`. It creates one random synthetic generation, proves one CAS winner, actual-byte admission, authoritative original absence and stale replay non-current, then invalidates and authoritatively removes all synthetic objects and the synthetic row in `finally`. It never selects real-user media and emits class-only evidence.
+
 ### Quarantine Bucket
 
 - Bucket name: `overgarden-quarantine`

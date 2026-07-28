@@ -17,6 +17,7 @@ import {
 import { fingerprintJournalSearchDocument } from "@/server/search/public-journal-document-contract";
 import { isSafeJournalSearchDocumentId } from "@/server/search/public-journal-document-id";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -54,9 +55,7 @@ export function buildGloballyEligibleJournalSearchRowsQuery(
       "journal_entries.cover_media_asset_id as coverMediaAssetId",
     ])
     .where("media_assets.journal_entry_id", "is not", null)
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
         eb(

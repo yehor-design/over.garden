@@ -228,9 +228,18 @@ describe("public feed repository", () => {
     expect(media.sql).toContain('"media_assets"."derivative_key" is not null');
     expect(media.sql).toContain("row_number() over");
     expect(media.sql).toContain('"media_rank" <=');
-    expect(media.sql).not.toMatch(/quarantine_key|original_deleted_at/i);
+    expect(media.sql).not.toContain("quarantine_key");
+    expect(media.sql).toContain('"media_assets"."original_deleted_at" is not null');
+    expect(media.sql).toContain('"media_assets"."media_readiness_state" =');
     expect(media.parameters).toEqual(
-      expect.arrayContaining([...entryIds, "public", "active", "processed", 3]),
+      expect.arrayContaining([
+        ...entryIds,
+        "public",
+        "active",
+        "processed",
+        "public_ready",
+        3,
+      ]),
     );
 
     for (const compiled of [topics, trusted]) {

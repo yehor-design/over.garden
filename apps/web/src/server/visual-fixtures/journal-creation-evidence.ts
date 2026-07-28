@@ -428,6 +428,13 @@ export async function seedScenarioMediaAsset(
       caption: scenario.mediaFileName,
       status: "processed",
       original_deleted_at: new Date("2026-07-12T12:00:00.000Z"),
+      upload_generation_id: mediaAssetId,
+      public_object_id: mediaAssetId,
+      upload_generation: 1,
+      declared_media_type: "image/png",
+      declared_size_bytes: 1,
+      admitted_media_type: "image/png",
+      media_readiness_state: "public_ready",
     })
     .execute();
 }
@@ -435,7 +442,11 @@ export async function seedScenarioMediaAsset(
 function scenarioMediaDerivativeKey(
   scenario: VisualFixtureCreationScenarioEvidence,
 ) {
-  return `${VISUAL_FIXTURE_NAMESPACE}/journal-creation/${scenario.id}/placeholder.png`;
+  const mediaAssetId = scenario.expectedMediaAssetIds[0];
+  if (!mediaAssetId) {
+    throw new Error(`Scenario ${scenario.id} has no media identity.`);
+  }
+  return `derivatives/${mediaAssetId}.webp`;
 }
 
 async function deleteScenarioCatalogCandidate(

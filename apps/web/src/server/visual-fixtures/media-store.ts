@@ -8,6 +8,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 
 import { booleanServerEnv, requiredServerEnv } from "@/lib/env";
 import type { VisualFixtureManifest } from "@/lib/visual-fixtures/manifest";
@@ -22,7 +23,7 @@ const RETIRED_VISUAL_FIXTURE_MEDIA_NAMESPACES = [
 export interface VisualFixturePutObjectInput {
   key: string;
   body: Buffer;
-  contentType: "image/png";
+  contentType: "image/png" | "image/webp";
   cacheControl: string;
   sha256: string;
 }
@@ -39,18 +40,32 @@ export async function uploadVisualFixtureMedia(
   manifest: VisualFixtureManifest,
   rootDirectory: string,
 ): Promise<number> {
-  for (const item of manifest.media) {
-    assertNamespaceKey(item.derivativeKey, manifest.namespace);
-    const body = await readFile(path.resolve(rootDirectory, item.localPath));
-    const digest = createHash("sha256").update(body).digest("hex");
-    if (digest !== item.sha256) {
-      throw new Error(`Visual fixture media digest mismatch: ${item.fileName}`);
-    }
+  const prepared = await Promise.all(
+    manifest.media.map(async (item) => {
+      assertCanonicalFixtureDerivativeKey(item.derivativeKey, item.id);
+      const source = await readFile(
+        path.resolve(rootDirectory, item.localPath),
+      );
+      const digest = createHash("sha256").update(source).digest("hex");
+      if (digest !== item.sha256) {
+        throw new Error(
+          `Visual fixture media digest mismatch: ${item.fileName}`,
+        );
+      }
+      return {
+        item,
+        body: await sharp(source).rotate().webp({ quality: 88 }).toBuffer(),
+      };
+    }),
+  );
 
+  // Keep provider effects ordered even though local CPU preparation is
+  // parallel across the fixed 16-item manifest.
+  for (const { item, body } of prepared) {
     await store.putObject({
       key: item.derivativeKey,
       body,
-      contentType: item.contentType,
+      contentType: "image/webp",
       cacheControl: IMMUTABLE_CACHE_CONTROL,
       sha256: item.sha256,
     });
@@ -78,7 +93,11 @@ export async function deleteVisualFixtureMedia(
         namespace === manifest.namespace
           ? item.quarantineKey
           : `${namespace}/quarantine/${item.fileName}`;
-      assertNamespaceKey(derivativeKey, namespace);
+      if (namespace === manifest.namespace) {
+        assertCanonicalFixtureDerivativeKey(derivativeKey, item.id);
+      } else {
+        assertNamespaceKey(derivativeKey, namespace);
+      }
       assertNamespaceKey(quarantineKey, namespace);
       await store.deletePublicObject(derivativeKey);
       await store.deleteQuarantineObject(quarantineKey);
@@ -159,6 +178,14 @@ function assertNamespaceKey(key: string, namespace: string) {
   if (!key.startsWith(`${namespace}/`)) {
     throw new Error(
       "Refusing visual fixture media access outside its namespace.",
+    );
+  }
+}
+
+function assertCanonicalFixtureDerivativeKey(key: string, mediaId: string) {
+  if (key !== `derivatives/${mediaId}.webp`) {
+    throw new Error(
+      "Refusing visual fixture media access outside its exact derivative identity.",
     );
   }
 }

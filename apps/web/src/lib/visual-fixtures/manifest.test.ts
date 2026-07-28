@@ -83,9 +83,7 @@ describe("visual fixture manifest", () => {
     // an animal (docs/OBJECT_CATEGORY_MODEL_2026-07-23.md).
     expect(guest?.expectedItemCount).toBe(2);
     expect(guest?.path).toContain("kind=animal");
-    expect(contributionKinds).toEqual(
-      new Set(["plant", "animal"]),
-    );
+    expect(contributionKinds).toEqual(new Set(["plant", "animal"]));
     expect(states).toEqual(
       new Set([
         "empty",
@@ -1033,7 +1031,7 @@ describe("visual fixture manifest", () => {
     expect(aspectCounts.wide_16_9).toHaveLength(4);
     for (const media of VISUAL_FIXTURE_MANIFEST.media) {
       expect(media.derivativeKey).toMatch(
-        /^visual-fixtures\/ove187-v8\/[a-z0-9-]+\.png$/,
+        /^derivatives\/18700005-0000-4000-8000-[0-9]{12}\.webp$/,
       );
       expect(media.localPath).toMatch(
         /^test\/visual-fixtures\/media\/[a-z0-9-]+\.png$/,

@@ -25,6 +25,7 @@ import {
 } from "@/server/public-profile-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { getPublicDerivativeUrl } from "@/lib/storage";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -398,9 +399,7 @@ export function buildUpdateOwnerPublicProfileQuery(
               .select("id")
               .where("id", "=", input.avatarMediaAssetId)
               .where("owner_user_id", "=", scope.userId)
-              .where("status", "=", "processed")
-              .where("derivative_key", "is not", null)
-              .where("revoked_at", "is", null),
+              .where(publicMediaEligibilityPredicate()),
           )
         : eb.val(true),
     )
@@ -419,9 +418,7 @@ export function buildOwnerAvatarOptionsQuery(
       "alt_text as altText",
     ])
     .where("owner_user_id", "=", scope.userId)
-    .where("status", "=", "processed")
-    .where("derivative_key", "is not", null)
-    .where("revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .orderBy("updated_at", "desc")
     .orderBy("id", "asc")
     .limit(OWNER_AVATAR_OPTION_LIMIT)

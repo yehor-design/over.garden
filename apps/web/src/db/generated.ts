@@ -603,9 +603,12 @@ export interface MatchingWorkerHeartbeats {
 }
 
 export interface MediaAssets {
+  admitted_media_type: string | null;
   alt_text: string | null;
   caption: string | null;
   created_at: Generated<Timestamp>;
+  declared_media_type: string | null;
+  declared_size_bytes: Int8 | null;
   derivative_key: string | null;
   document_position: number | null;
   focal_x: Generated<number>;
@@ -614,13 +617,19 @@ export interface MediaAssets {
   intrinsic_height: number | null;
   intrinsic_width: number | null;
   journal_entry_id: string | null;
+  media_readiness_state: Generated<string>;
   original_deleted_at: Timestamp | null;
   owner_user_id: string;
+  processing_claim_token: string | null;
+  processing_claimed_at: Timestamp | null;
+  public_object_id: string | null;
   public_unreachable_at: Timestamp | null;
   quarantine_key: string;
   revoked_at: Timestamp | null;
   status: Generated<string>;
   updated_at: Generated<Timestamp>;
+  upload_generation: number | null;
+  upload_generation_id: string | null;
   usage_role: Generated<string>;
 }
 

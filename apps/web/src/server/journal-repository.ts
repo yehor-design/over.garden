@@ -1,4 +1,5 @@
 import "server-only";
+import { publicMediaEligibilityPredicate } from "@/server/media/public-media-eligibility";
 
 import { sql, type Insertable, type Kysely, type Transaction } from "kysely";
 
@@ -994,9 +995,7 @@ export function buildMyPlantObjectCoverMediaQuery(
     .where("plant_objects.owner_user_id", "=", scope.userId)
     .where("journal_entries.plant_object_id", "in", [...plantObjectIds])
     .where("journal_entries.lifecycle_state", "=", "active")
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where((eb) =>
       eb.or([
         eb(
@@ -3610,9 +3609,7 @@ export function buildProcessedMediaForEntriesQuery(
     ])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "in", entryIds)
-    .where("status", "=", "processed")
-    .where("derivative_key", "is not", null)
-    .where("revoked_at", "is", null);
+    .where(publicMediaEligibilityPredicate());
 }
 
 export function buildProcessedObjectMediaGalleryQuery(
@@ -3633,9 +3630,7 @@ export function buildProcessedObjectMediaGalleryQuery(
     ])
     .where("owner_user_id", "=", scope.userId)
     .where("journal_entry_id", "in", entryIds)
-    .where("status", "=", "processed")
-    .where("derivative_key", "is not", null)
-    .where("revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where("usage_role", "=", "inline")
     .orderBy("document_position", "asc")
     .orderBy("id", "asc")
@@ -3675,9 +3670,7 @@ export function buildPublicProcessedMediaForEntryQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where(publicLaunchSurfacePredicates())
-    .where("media_assets.status", "=", "processed")
-    .where("media_assets.derivative_key", "is not", null)
-    .where("media_assets.revoked_at", "is", null)
+    .where(publicMediaEligibilityPredicate())
     .where("media_assets.usage_role", "=", "inline")
     .orderBy("media_assets.document_position", "asc")
     .orderBy("media_assets.id", "asc")

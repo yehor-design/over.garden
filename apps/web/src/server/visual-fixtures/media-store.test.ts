@@ -49,13 +49,11 @@ describe("visual fixture media store", () => {
     expect(store.puts.map(({ key }) => key)).toEqual(
       VISUAL_FIXTURE_MANIFEST.media.map(({ derivativeKey }) => derivativeKey),
     );
+    expect(store.puts.every(({ key }) => key.startsWith("derivatives/"))).toBe(
+      true,
+    );
     expect(
-      store.puts.every(({ key }) =>
-        key.startsWith(`${VISUAL_FIXTURE_NAMESPACE}/`),
-      ),
-    ).toBe(true);
-    expect(
-      store.puts.every(({ contentType }) => contentType === "image/png"),
+      store.puts.every(({ contentType }) => contentType === "image/webp"),
     ).toBe(true);
     expect(
       store.puts.every(({ cacheControl }) =>
@@ -110,8 +108,11 @@ describe("visual fixture media store", () => {
       ...expectedQuarantineKeys,
       ...retiredQuarantineKeys,
     ]);
+    expect(store.publicDeletes.slice(0, expectedDerivativeKeys.length)).toEqual(
+      expectedDerivativeKeys,
+    );
     expect(
-      [...store.publicDeletes, ...store.quarantineDeletes].every((key) =>
+      [...retiredDerivativeKeys, ...store.quarantineDeletes].every((key) =>
         [VISUAL_FIXTURE_NAMESPACE, ...retiredNamespaces].some((namespace) =>
           key.startsWith(`${namespace}/`),
         ),

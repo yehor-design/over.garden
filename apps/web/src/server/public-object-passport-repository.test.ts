@@ -185,8 +185,8 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).toContain("cover_media_asset_id");
     expect(compiled.sql).toContain('"media_assets"."document_position" asc');
     expect(compiled.sql).not.toContain('"media_assets"."created_at" asc');
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );
@@ -198,6 +198,7 @@ describe("public object passport repository query contracts", () => {
     );
     expect(compiled.parameters).toEqual([
       "processed",
+      "public_ready",
       "inline",
       plantObjectId,
       "public",
@@ -219,8 +220,8 @@ describe("public object passport repository query contracts", () => {
     expect(compiled.sql).toContain(
       '"media_assets"."derivative_key" is not null',
     );
-    expect(compiled.sql).toContain('"journal_entries"."visibility" = $4');
-    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."visibility" = $5');
+    expect(compiled.sql).toContain('"journal_entries"."lifecycle_state" = $6');
     expect(compiled.sql).toContain(
       '"journal_entries"."public_gone_at" is null',
     );

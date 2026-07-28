@@ -182,9 +182,9 @@ describe("owner profile repository", () => {
     expect(compiled.sql).toContain('"status" =');
     expect(compiled.sql).toContain('"derivative_key" is not null');
     expect(compiled.parameters).toContain(ownerUserId);
-    expect(compiled.sql).not.toMatch(
-      /quarantine_key|original|latitude|longitude/i,
-    );
+    expect(compiled.sql).not.toMatch(/quarantine_key|latitude|longitude/i);
+    expect(compiled.sql).not.toContain('"original_deleted_at" as');
+    expect(compiled.sql).toContain('"original_deleted_at" is not null');
   });
 
   it("lists only active blocks created by the current owner", () => {
