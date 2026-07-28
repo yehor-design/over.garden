@@ -310,6 +310,10 @@ Meilisearch version pin (OVE-198):
   snapshot, provision, rebuild, cutover, rollback, forward, alias, volume, or
   index mutation. `OVERGARDEN_MEILI_MEMINFO_PATH` is accepted only with the
   hermetic test flag, which permits only `preflight`, `status`, and `help`.
+  The same preflight is repeatable before and after upgrade: active `1.15.x`
+  reports `upgrade_required` only with its running legacy container and volume;
+  active `1.48.1` reports `already_target` only with the target container,
+  versioned target volume, and retained legacy rollback volume all present.
 - Pre-cutover audit source: production `pkgVersion=1.15.2` with catalog document count class ~61888 and journal count class 4.
 - Live proof on 2026-07-23: preflight accepted `1.15.2` → pinned `1.48.1` dual-volume rebuild; dump+snapshot tasks succeeded; provisioned digest-pinned next volume; rebuild reached catalog `61888`; journals converged via OVE-196 parity apply to `69`/`69` zero-gap; cutover, rollback rehearsal, and forward restored active `1.48.1` with legacy volume `overgarden_meili_data` retained; public `/health` `available`; Cyrillic catalog typeahead returned nonzero hits class; matching handler canary proved journal index/unindex/restore with cover-safe keys (`leakCheck=passed`).
 

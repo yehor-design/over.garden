@@ -231,10 +231,15 @@ print(payload.get('taskUid'))
 "
 }
 
-assert_allowed_source_version() {
+is_allowed_meilisearch_source_version() {
   local version="$1"
   local normalized="${version#v}"
-  [[ "$normalized" == "1.15" || "$normalized" == 1.15.* ]] \
+  [[ "$normalized" == "1.15" || "$normalized" == 1.15.* ]]
+}
+
+assert_allowed_source_version() {
+  local version="$1"
+  is_allowed_meilisearch_source_version "$version" \
     || fail "unsupported source version class"
 }
 
@@ -261,19 +266,31 @@ cmd_preflight() {
   require_host_capacity
   assert_pinned_compose
 
-  local legacy_id
-  legacy_id="$(legacy_container_id)"
-  [[ -n "$legacy_id" ]] || fail "legacy Meilisearch container is not running"
+  local active_version
+  active_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
+  [[ -n "$active_version" ]] || fail "unable to read active Meilisearch version"
 
-  local source_version
-  source_version="$(read_meili_pkg_version "http://${ACTIVE_ALIAS}:7700")"
-  [[ -n "$source_version" ]] || fail "unable to read legacy Meilisearch version"
-  assert_allowed_source_version "$source_version"
+  local state
+  if is_allowed_meilisearch_source_version "$active_version"; then
+    local legacy_id
+    legacy_id="$(legacy_container_id)"
+    [[ -n "$legacy_id" ]] || fail "legacy Meilisearch container is not running"
+    docker volume inspect "$LEGACY_VOLUME_NAME" >/dev/null 2>&1 \
+      || fail "legacy Meilisearch volume is missing"
+    state="upgrade_required"
+  elif [[ "${active_version#v}" == "$PINNED_TARGET_VERSION" ]]; then
+    docker inspect "$NEXT_CONTAINER" >/dev/null 2>&1 \
+      || fail "active target Meilisearch container is missing"
+    docker volume inspect "$NEXT_VOLUME_NAME" >/dev/null 2>&1 \
+      || fail "active target Meilisearch volume is missing"
+    docker volume inspect "$LEGACY_VOLUME_NAME" >/dev/null 2>&1 \
+      || fail "retained legacy Meilisearch volume is missing"
+    state="already_target"
+  else
+    fail "unsupported active Meilisearch version class"
+  fi
 
-  docker volume inspect "$LEGACY_VOLUME_NAME" >/dev/null 2>&1 \
-    || fail "legacy Meilisearch volume is missing"
-
-  info "preflight ok source=${source_version} target=${PINNED_TARGET_VERSION} strategy=${UPGRADE_STRATEGY}"
+  info "preflight ok state=${state} active=${active_version} target=${PINNED_TARGET_VERSION} strategy=${UPGRADE_STRATEGY}"
 }
 
 cmd_snapshot() {

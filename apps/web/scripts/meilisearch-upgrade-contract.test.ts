@@ -208,13 +208,29 @@ describe("OVE-228 executable Meilisearch preflight", () => {
       expect(result.stderr).toBe("");
       expect(result.status).toBe(0);
       expect(result.stdout).toContain(
-        "preflight ok source=1.15.2 target=1.48.1 strategy=dual_volume_postgres_rebuild",
+        "preflight ok state=upgrade_required active=1.15.2 target=1.48.1 strategy=dual_volume_postgres_rebuild",
       );
       expect(duration).toBeLessThanOrEqual(60_000);
       expectNoUpgradeMutation(await dockerCalls(harness));
       expect(result.stdout + result.stderr).not.toMatch(
         /(?:DATABASE_URL|MEILI_MASTER_KEY|MEILISEARCH_API_KEY|MATCHING_SERVICE_TOKEN)/,
       );
+    } finally {
+      await rm(harness.root, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts the verified active target with both rollback volumes retained", async () => {
+    const harness = await createPreflightHarness({
+      OVERGARDEN_TEST_SOURCE_VERSION: "1.48.1",
+    });
+    try {
+      const result = runPreflight(harness);
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain(
+        "preflight ok state=already_target active=1.48.1 target=1.48.1 strategy=dual_volume_postgres_rebuild",
+      );
+      expectNoUpgradeMutation(await dockerCalls(harness));
     } finally {
       await rm(harness.root, { recursive: true, force: true });
     }
