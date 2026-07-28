@@ -656,6 +656,15 @@ Local storage emulator:
   - `overgarden-quarantine`
   - `overgarden-public`
 
+OVE-231 adds no provider, bucket, environment variable, schema, or mutable
+production control. Its read-only media-quality inventory uses the existing
+server-side `R2_PUBLIC_BUCKET` GetObject capability and DigitalOcean
+PostgreSQL connection, caps candidates at 256, concurrency at four, and each
+object at the existing composer byte budget. Evidence may contain only policy
+version, aggregate class counts, candidate count, SELECT-only status, and
+duration; never derivative keys/URLs, image bytes, identity, EXIF, request
+metadata, credentials, or location.
+
 ## Open Operational Items
 
 - Codify the current Droplet Docker Compose deployment as repeatable infra if the pilot continues beyond the first controlled user, or create a separate production process-manager migration with the OVE-76 live-proof gate before replacing it.

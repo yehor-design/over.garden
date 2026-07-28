@@ -189,3 +189,11 @@ OVE-230 replaces the historical OVE-201 self-supplied recovery receipt with the 
 OVE-216 closes crash-safe media lifecycle settlement with leased claims, token-fenced atomic marker updates, provider-specific not-found proof, canonical 404/410 convergence, and a bounded class-only synthetic provider probe. It is the required lifecycle prerequisite for OVE-244; the immutable exact-main CI, Vercel and provider receipts remain in Linear so evidence does not require a post-feature commit.
 
 OVE-244 closeout additionally requires additive migration `0013_ove244_safe_media_admission.sql`, generated-type parity, the safe-media focused/UI suites, local CAS/provider smoke, and one exact-READY production smoke bound to the approved digest. The final class-only receipt must report one claim winner, `public_ready`, `confirmed_gone`, stale replay `non_current`, latency at most 30 seconds, and authoritative finally cleanup; a key, URL, owner id, upload id, media bytes or second synthetic generation fails the gate.
+
+OVE-231 closeout requires the versioned golden derivative corpus, processor and
+inventory parity, localized recoverable controls, the 250 ms classifier budget,
+exact-head/main CI, exact-SHA Vercel READY, and one bounded SELECT-only
+production inventory. The production receipt may report aggregate
+`pass`/`reject`/`review_required`/`unreadable` counts only. It must
+perform zero archive, revoke, delete, update, seed, reclassify, reindex, or
+provider write; those effects remain behind OVE-199 exact sign-off.

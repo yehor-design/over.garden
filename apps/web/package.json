@@ -32,6 +32,8 @@
     "catalog:inventory-object-kinds": "tsx scripts/inventory-object-kinds.ts",
     "launch:corpus:plan": "tsx scripts/launch-corpus-plan.ts",
     "launch:corpus:check": "tsx scripts/launch-corpus-check.ts",
+    "verify:launch-media-quality": "NODE_OPTIONS=--conditions=react-server tsx scripts/verify-launch-media-quality.ts",
+    "audit:launch-corpus-media-quality": "NODE_OPTIONS=--conditions=react-server tsx scripts/launch-corpus-media-quality.ts",
     "smoke:launch-corpus-surfaces": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-launch-corpus-surfaces.ts",
     "mvp-learning:plan": "NODE_OPTIONS=--conditions=react-server tsx scripts/mvp-learning-plan.ts",
     "mvp-learning:reconcile": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-mvp-learning-signals.ts",

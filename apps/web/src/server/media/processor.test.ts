@@ -9,6 +9,21 @@ const storageMock = vi.hoisted(() => ({
     return Buffer.from("original");
   }),
 }));
+const qualityMock = vi.hoisted(() => ({
+  classifyLaunchMediaDerivative: vi.fn<
+    () => Promise<{
+      policyVersion: string;
+      qualityClass: "pass" | "reject" | "review_required";
+      reason: string;
+      metrics: Record<string, never>;
+    }>
+  >(async () => ({
+    policyVersion: "ove231.launch-media-quality.v1",
+    qualityClass: "pass",
+    reason: "quality_pass",
+    metrics: {},
+  })),
+}));
 
 vi.mock("@/lib/storage", () => ({
   getQuarantineObjectBuffer: storageMock.getQuarantineObjectBuffer,
@@ -37,6 +52,9 @@ vi.mock("./derivatives", () => ({
 }));
 vi.mock("./safe-media-admission", () => ({
   admitSafeMediaBytes: vi.fn(async () => "image/png"),
+}));
+vi.mock("./launch-media-quality", () => ({
+  classifyLaunchMediaDerivative: qualityMock.classifyLaunchMediaDerivative,
 }));
 
 const safeFields = {
@@ -134,5 +152,42 @@ describe("processQuarantinedImage", () => {
         ...safeFields,
       } satisfies MediaAsset),
     ).rejects.toBeInstanceOf(MediaLaunchQualityError);
+  });
+
+  it("does not publish a derivative classified for review", async () => {
+    storageMock.calls = [];
+    qualityMock.classifyLaunchMediaDerivative.mockResolvedValueOnce({
+      policyVersion: "ove231.launch-media-quality.v1",
+      qualityClass: "review_required",
+      reason: "ambiguous_dark_low_contrast",
+      metrics: {},
+    });
+
+    await expect(
+      processQuarantinedImage({
+        id: "00000000-0000-0000-0000-000000000001",
+        owner_user_id: "00000000-0000-0000-0000-000000000002",
+        journal_entry_id: null,
+        quarantine_key: "quarantine/user/dark.png",
+        derivative_key: null,
+        alt_text: null,
+        caption: null,
+        status: "quarantined",
+        document_position: null,
+        original_deleted_at: null,
+        usage_role: "inline",
+        revoked_at: null,
+        public_unreachable_at: null,
+        intrinsic_width: null,
+        intrinsic_height: null,
+        focal_x: 0.5,
+        focal_y: 0.5,
+        created_at: new Date("2026-06-26T00:00:00Z"),
+        updated_at: new Date("2026-06-26T00:00:00Z"),
+        ...safeFields,
+      } satisfies MediaAsset),
+    ).rejects.toMatchObject({ qualityClass: "review_required" });
+
+    expect(storageMock.calls).toEqual(["get-original", "create-derivative"]);
   });
 });

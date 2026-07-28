@@ -16,6 +16,21 @@ export function publicMediaEligibilityPredicate(
   `;
 }
 
+/** Canonical fragment for bounded operator SQL that cannot use Kysely builders. */
+export function publicMediaEligibilitySqlText(alias = "media_assets"): string {
+  if (!/^[a-z_][a-z0-9_]*$/i.test(alias)) {
+    throw new Error("Invalid media eligibility SQL alias.");
+  }
+  return `
+    ${alias}.status = 'processed'
+    and ${alias}.derivative_key is not null
+    and ${alias}.original_deleted_at is not null
+    and ${alias}.revoked_at is null
+    and ${alias}.media_readiness_state = 'public_ready'
+    and ${alias}.public_object_id is not null
+  `.trim();
+}
+
 export function isPublicMediaEligible(row: {
   status: string;
   derivativeKey: string | null;
@@ -24,7 +39,12 @@ export function isPublicMediaEligible(row: {
   mediaReadinessState?: string | null;
   publicObjectId?: string | null;
 }): boolean {
-  return row.status === "processed" && Boolean(row.derivativeKey) &&
-    Boolean(row.originalDeletedAt) && !row.revokedAt &&
-    row.mediaReadinessState === "public_ready" && Boolean(row.publicObjectId);
+  return (
+    row.status === "processed" &&
+    Boolean(row.derivativeKey) &&
+    Boolean(row.originalDeletedAt) &&
+    !row.revokedAt &&
+    row.mediaReadinessState === "public_ready" &&
+    Boolean(row.publicObjectId)
+  );
 }
