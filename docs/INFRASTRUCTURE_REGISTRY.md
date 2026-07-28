@@ -460,6 +460,27 @@ result: pass
 redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
 ```
 
+OVE-242 superseding production rollout evidence:
+
+```text
+verified_at_utc: 2026-07-28T19:07:00Z
+runtime_source_sha: bbda84156d4c6bd3088cd208913ae45544d89b64
+release_a_digest: sha256:ba428c5ae55249e784857064ac05e0011b4f180c24605e65d7790b306cc52e99
+release_b_digest: sha256:fd063367e46f501aee4eafe6e037cfa136581c425b5a462bf21c2660b36223a4
+matching_image_workflow_runs: 30386916883, 30387886356
+active_digest_after_forward: sha256:fd063367e46f501aee4eafe6e037cfa136581c425b5a462bf21c2660b36223a4
+database_binding: authoritative Vercel production DIRECT_URL; digest-compared without exposing the value
+application_schema: 0011_ove242_public_projection_outbox.sql additive transaction applied
+runtime_readiness: exact-sha-and-digest-pass; exact-six-handlers; all dependencies available
+queue_buckets: depth=empty, lag=none, unsupportedRetryingClass=none, terminalCountClass=low
+public_index_repair_plan: reindex=4, unindexDelete=69, deleteInvalid=0
+public_index_after: zeroGap=true, expected=4, observed=4, every gap class zero
+rollback_forward: release-b-to-release-a-to-release-b-pass
+cleanup: inactive reconstructible build cache/releases removed; temporary secret backup removed; production data and volumes preserved
+result: pass
+redaction: pass; no secrets, env contents, payloads, row/user ids, content, precise location, hosts, IPs, user agents, or raw errors
+```
+
 OVE-194 live queue-recovery evidence:
 
 ```text
