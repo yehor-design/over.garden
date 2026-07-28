@@ -730,6 +730,16 @@ Runtime classification: this section is `production-linux-required` under `docs/
 - Health endpoints: live-confirmed on 2026-06-29: matching `https://matching.over.garden/health` returned `ok` with ICU present, and Meilisearch `https://meili.over.garden/health` returned `available`.
 - Stale-job reclaim: the worker claims `job_queue` rows with `FOR UPDATE SKIP LOCKED` and reclaims `processing` rows once `locked_at` is older than `WORKER_VT_SECONDS` (default 30s). Handlers are idempotent (Meili upsert by primary key / delete by id), so a restart mid-job re-delivers the work at-least-once without duplicating or corrupting the public index. Failed jobs back off and retry; unknown kinds fail with `last_error` rather than being marked done.
 - Meilisearch version pin (OVE-198): local/CI/production reviewed pin `v1.48.1` with production digest class `sha256:93ea15e3e46499281fb5bcd55c63e147d76680073ebd95a3a74d632176225d8a`. Upgrade path is dual-volume Postgres rebuild via `/opt/overgarden/meilisearch-upgrade` only. Pre-cutover production source was `1.15.2`. Legacy volume `overgarden_meili_data` stays recoverable; active volume class `overgarden-meili-data-v1481`. Do not delete the legacy volume in this issue.
+- Meilisearch operator preflight (OVE-228): run the committed executable
+  contract proof and `shellcheck` before installing the script. Install the
+  exact reviewed bytes, verify local/remote SHA-256 equality, and invoke only
+  `sudo /opt/overgarden/meilisearch-upgrade preflight`. The preflight reads
+  Linux `/proc/meminfo`, Docker `.DockerRootDir`, and `df -Pk`; it refuses below
+  2.5 GiB total virtual memory, 1 GiB available virtual memory, or 5 GiB free
+  storage at either production root or Docker root. Record only digest equality,
+  source/target/strategy classes, capacity pass class, bounded duration, public
+  health, and unchanged volume classes. Never record host addresses, env files,
+  keys, indexed content, job payloads, or user identity.
 
 Do not remove or rewrite these production Docker Compose instructions for Apple Container. A non-Docker production path is a separate production migration, not a local Apple Container follow-up. Acceptable replacement candidates include systemd units, managed Meilisearch plus a separately managed worker, or another Linux runtime, but only after live redacted proof shows equivalent process restart/reboot recovery, matching and Meilisearch health, `journal_entry_index`/`journal_entry_unindex` completion, and the same public-safe Meilisearch document contract proven by OVE-39.
 
