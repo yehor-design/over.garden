@@ -20,9 +20,9 @@ import {
 } from "../src/server/restore-readiness";
 import {
   classifyProtectedIdentityTransition,
-  ERASED_MODERATION_ACTOR_USER_ID,
   ProtectedIdentityTransitionError,
 } from "../src/server/restore-readiness/runtime";
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "../src/server/system-actors";
 
 const envFile = argValue("--env-file") ?? ".env.local";
 const caFile = argValue("--ca-file");
@@ -199,7 +199,7 @@ async function assertProtectedIdentityTransition(
             where registry.user_id = auth_user.id
           )
       `,
-      [ERASED_MODERATION_ACTOR_USER_ID],
+      [ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID],
     );
     if (Number(classified.rows[0]?.count ?? -1) !== 1) {
       throw new ProtectedIdentityTransitionError("AUTH_DRIFT");

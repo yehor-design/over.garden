@@ -1,6 +1,8 @@
 import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "../system-actors";
+
 export const RECOVERY_RUNTIME_DIR = path.join(
   process.cwd(),
   ".runtime",
@@ -115,9 +117,6 @@ export interface ProtectedIdentitySets {
   plantObjects: ReadonlySet<string>;
 }
 
-export const ERASED_MODERATION_ACTOR_USER_ID =
-  "00000000-0000-4000-8000-00000000ead1";
-
 export interface ProtectedIdentityTransition {
   addedAuthUsers: string[];
   addedPlants: string[];
@@ -148,7 +147,9 @@ export function classifyProtectedIdentityTransition(
     (id) => !before.authUsers.has(id),
   );
   if (
-    addedAuthUsers.some((id) => id !== ERASED_MODERATION_ACTOR_USER_ID) ||
+    addedAuthUsers.some(
+      (id) => id !== ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+    ) ||
     addedAuthUsers.length > 1
   ) {
     throw new ProtectedIdentityTransitionError("AUTH_DRIFT");

@@ -27,6 +27,7 @@ import {
   type PublicIdentityProfileHandleReviewCandidate,
   type PublicIdentityProvisionCandidate,
 } from "@/server/public-identity-integrity";
+import { ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID } from "@/server/system-actors";
 
 class TestPostgresDialect implements Dialect {
   createDriver(): Driver {
@@ -234,6 +235,9 @@ describe("OVE-203 public identity integrity tooling", () => {
     expect(compiled.sql).not.toMatch(/select\s+[^()]*email/i);
     expect(compiled.sql).not.toMatch(/select\s+[^()]*display_name\s+as/i);
     expect(compiled.parameters).toEqual([
+      ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+      ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+      ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
       "ove203-identity-v1",
       "ove203-identity-v1",
       "ove203-identity-v1",
@@ -248,7 +252,9 @@ describe("OVE-203 public identity integrity tooling", () => {
     expect(compiled.sql).toContain("not exists");
     expect(compiled.sql).toContain("user_public_profiles");
     expect(compiled.sql).toContain("user_handle_registry");
-    expect(compiled.parameters).toEqual([]);
+    expect(compiled.parameters).toEqual([
+      ERASURE_MODERATION_ACTOR_TOMBSTONE_USER_ID,
+    ]);
   });
 
   it("provisions missing identities, reviews safe legacy values, and is idempotent", async () => {
