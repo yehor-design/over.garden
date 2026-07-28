@@ -2190,6 +2190,7 @@ const mediaSeedSpecs: readonly MediaSeedSpec[] = [
 const media: readonly VisualFixtureMedia[] = mediaSeedSpecs.map(
   (spec, offset) => {
     const index = offset + 1;
+    const mediaId = fixtureUuid(5, index);
     const object = objects[spec.objectIndex];
     const matchingEntries = entries.filter(
       (entry) =>
@@ -2207,13 +2208,13 @@ const media: readonly VisualFixtureMedia[] = mediaSeedSpecs.map(
     }
 
     return {
-      id: fixtureUuid(5, index),
+      id: mediaId,
       ownerUserId: entry.ownerUserId,
       entryId: entry.id,
       fileName: spec.fileName,
       localPath: `test/visual-fixtures/media/${spec.fileName}`,
       quarantineKey: `${VISUAL_FIXTURE_NAMESPACE}/quarantine/${spec.fileName}`,
-      derivativeKey: `${VISUAL_FIXTURE_NAMESPACE}/${spec.fileName}`,
+      derivativeKey: `derivatives/${mediaId}.webp`,
       contentType: "image/png",
       aspect: spec.aspect,
       width: spec.width,
@@ -4236,8 +4237,8 @@ export function validateVisualFixtureManifest(
     if (!entryIds.has(item.entryId)) {
       errors.push(`Media ${item.id} references an unknown entry.`);
     }
-    if (!item.derivativeKey.startsWith(`${manifest.namespace}/`)) {
-      errors.push(`Media ${item.id} is outside the fixture namespace.`);
+    if (item.derivativeKey !== `derivatives/${item.id}.webp`) {
+      errors.push(`Media ${item.id} has a non-canonical derivative identity.`);
     }
   }
   for (const signal of manifest.topicSignals) {

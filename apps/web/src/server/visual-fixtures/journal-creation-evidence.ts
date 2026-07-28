@@ -442,7 +442,11 @@ export async function seedScenarioMediaAsset(
 function scenarioMediaDerivativeKey(
   scenario: VisualFixtureCreationScenarioEvidence,
 ) {
-  return `${VISUAL_FIXTURE_NAMESPACE}/journal-creation/${scenario.id}/placeholder.png`;
+  const mediaAssetId = scenario.expectedMediaAssetIds[0];
+  if (!mediaAssetId) {
+    throw new Error(`Scenario ${scenario.id} has no media identity.`);
+  }
+  return `derivatives/${mediaAssetId}.webp`;
 }
 
 async function deleteScenarioCatalogCandidate(

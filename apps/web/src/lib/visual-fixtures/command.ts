@@ -394,7 +394,9 @@ function countsEqual(left: VisualFixtureCounts, right: VisualFixtureCounts) {
 }
 
 function assertFixtureStorageKey(key: string) {
-  if (!key.startsWith(`${VISUAL_FIXTURE_MANIFEST.namespace}/`)) {
+  if (
+    !VISUAL_FIXTURE_MANIFEST.media.some((item) => item.derivativeKey === key)
+  ) {
     throw new Error("Visual fixture storage key escaped its namespace.");
   }
 }
