@@ -10,7 +10,7 @@ import {
   type Driver,
   type QueryCompiler,
 } from "kysely";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import { scopedToUser } from "@/server/request-scope";
@@ -134,6 +134,85 @@ describe("OVE-184 community repository contracts", () => {
         minimumReadyContributions: 1,
       }),
     ).toBe(false);
+  });
+
+  it("derives global navigation readiness with one public-only aggregate statement", async () => {
+    const repository = await import("./community-repository");
+    const compiled = repository
+      .buildReadyCommunityNavigationQuery(testDb)
+      .compile();
+
+    expect(compiled.sql).toContain("select exists");
+    expect(compiled.sql).toContain("from communities");
+    expect(compiled.sql).toContain("join journal_topics");
+    expect(compiled.sql).toContain("from community_rules");
+    expect(compiled.sql).toContain("from community_moderators");
+    expect(compiled.sql).toContain("from community_contributions");
+    expect(compiled.sql).toContain("join journal_entries");
+    expect(compiled.sql).toContain("join user_handle_registry");
+    expect(compiled.sql).toContain("join user_public_profiles");
+    expect(compiled.sql).toContain("join community_memberships");
+    expect(compiled.sql).toContain("community_memberships.membership_state != 'banned'");
+    expect(compiled.sql).toContain("journal_entries.visibility = 'public'");
+    expect(compiled.sql).toContain("journal_entries.public_gone_at is null");
+    expect(compiled.sql).toContain(">= communities.minimum_ready_contributions");
+    expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
+    expect(compiled.parameters).toEqual([]);
+  });
+
+  it("fails closed at the readiness deadline and fences late completion", async () => {
+    vi.useFakeTimers();
+    try {
+      const repository = await import("./community-repository");
+      let complete:
+        | ((row: { hasReadyCommunity: boolean }) => void)
+        | undefined;
+      const load = vi.fn(
+        () =>
+          new Promise<{ hasReadyCommunity: boolean }>((resolve) => {
+            complete = resolve;
+          }),
+      );
+
+      const pending = repository.resolveCommunityNavigationReadiness(load, 250);
+      await vi.advanceTimersByTimeAsync(249);
+      let settled = false;
+      void pending.then(() => {
+        settled = true;
+      });
+      await Promise.resolve();
+      expect(settled).toBe(false);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await expect(pending).resolves.toEqual({
+        value: false,
+        cacheable: false,
+      });
+      complete?.({ hasReadyCommunity: true });
+      await Promise.resolve();
+      await expect(pending).resolves.toEqual({
+        value: false,
+        cacheable: false,
+      });
+      expect(load).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns successful readiness values as cacheable and rejects fail closed", async () => {
+    const repository = await import("./community-repository");
+
+    await expect(
+      repository.resolveCommunityNavigationReadiness(async () => ({
+        hasReadyCommunity: true,
+      })),
+    ).resolves.toEqual({ value: true, cacheable: true });
+    await expect(
+      repository.resolveCommunityNavigationReadiness(async () => {
+        throw new Error("dependency unavailable");
+      }),
+    ).resolves.toEqual({ value: false, cacheable: false });
   });
 
   it("projects a bounded canonical journal stream and applies two-way blocks", async () => {

@@ -30,11 +30,18 @@ import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-locati
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
 export const COMMUNITY_PAGE_SIZE = 12;
+export const COMMUNITY_NAVIGATION_READINESS_DEADLINE_MS = 250;
+export const COMMUNITY_NAVIGATION_READINESS_TTL_MS = 30_000;
 const MAX_COMMUNITY_PAGE_SIZE = 30;
 const MAX_COMMUNITY_SEARCH_LENGTH = 100;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{1,63}$/;
+
+let communityNavigationReadinessCache:
+  | { value: boolean; expiresAt: number }
+  | undefined;
+let communityNavigationReadinessInFlight: Promise<boolean> | undefined;
 
 export type CommunityObjectKind = "all" | PlantObjectKind;
 
@@ -387,21 +394,65 @@ export async function getPublicCommunityLifecycleLookup(
 export async function hasReadyCommunityNavigation(
   executor: QueryExecutor = db,
 ) {
-  const rows = await executor
-    .selectFrom("communities")
-    .select("slug")
-    .where("lifecycle_state", "=", "active")
-    .where("participation_state", "=", "open")
-    .orderBy("created_at", "asc")
-    .limit(12)
-    .execute();
+  if (executor !== db) {
+    return resolveCommunityNavigationReadiness(() =>
+      buildReadyCommunityNavigationQuery(executor).executeTakeFirst(),
+    ).then((result) => result.value);
+  }
 
-  const readiness = await Promise.all(
-    rows.map((row) =>
-      buildCommunityReadinessQuery(executor, row.slug).executeTakeFirst(),
-    ),
-  );
-  return readiness.some(communityIsNavigationReady);
+  const now = Date.now();
+  if (
+    communityNavigationReadinessCache &&
+    communityNavigationReadinessCache.expiresAt > now
+  ) {
+    return communityNavigationReadinessCache.value;
+  }
+
+  if (communityNavigationReadinessInFlight) {
+    return communityNavigationReadinessInFlight;
+  }
+
+  const refresh = resolveCommunityNavigationReadiness(() =>
+    buildReadyCommunityNavigationQuery(db).executeTakeFirst(),
+  ).then((result) => {
+    if (result.cacheable) {
+      communityNavigationReadinessCache = {
+        value: result.value,
+        expiresAt: Date.now() + COMMUNITY_NAVIGATION_READINESS_TTL_MS,
+      };
+    }
+    return result.value;
+  });
+  communityNavigationReadinessInFlight = refresh;
+
+  try {
+    return await refresh;
+  } finally {
+    if (communityNavigationReadinessInFlight === refresh) {
+      communityNavigationReadinessInFlight = undefined;
+    }
+  }
+}
+
+export async function resolveCommunityNavigationReadiness(
+  load: () => Promise<{ hasReadyCommunity: boolean } | undefined>,
+  deadlineMs = COMMUNITY_NAVIGATION_READINESS_DEADLINE_MS,
+): Promise<{ value: boolean; cacheable: boolean }> {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value: boolean, cacheable: boolean) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({ value, cacheable });
+    };
+    const timer = setTimeout(() => finish(false, false), deadlineMs);
+
+    void load().then(
+      (row) => finish(Boolean(row?.hasReadyCommunity), true),
+      () => finish(false, false),
+    );
+  });
 }
 
 export async function setCommunityMembership(
@@ -820,6 +871,62 @@ export function buildCommunityReadinessQuery(
     .where("communities.participation_state", "=", "open")
     .where("journal_topics.trust_state", "=", "curated")
     .limit(1);
+}
+
+export function buildReadyCommunityNavigationQuery(executor: QueryExecutor) {
+  return executor.selectNoFrom([
+    sql<boolean>`exists (
+      select 1
+      from communities
+      join journal_topics
+        on journal_topics.id = communities.journal_topic_id
+      where communities.lifecycle_state = 'active'
+        and communities.participation_state = 'open'
+        and journal_topics.trust_state = 'curated'
+        and exists (
+          select 1
+          from community_rules
+          where community_rules.community_id = communities.id
+            and community_rules.rule_state = 'active'
+        )
+        and exists (
+          select 1
+          from community_moderators
+          where community_moderators.community_id = communities.id
+            and community_moderators.assignment_state = 'active'
+            and community_moderators.revoked_at is null
+        )
+        and (
+          select count(distinct community_contributions.id)
+          from community_contributions
+          join journal_entries
+            on journal_entries.id = community_contributions.journal_entry_id
+          join user_handle_registry
+            on user_handle_registry.user_id = journal_entries.owner_user_id
+           and user_handle_registry.lifecycle_state = 'current'
+          join user_public_profiles
+            on user_public_profiles.user_id = user_handle_registry.user_id
+           and user_public_profiles.normalized_handle = user_handle_registry.normalized_handle
+           and user_public_profiles.profile_visibility = 'public'
+           and user_public_profiles.profile_lifecycle_state = 'active'
+           and user_public_profiles.removed_at is null
+          join community_memberships
+            on community_memberships.community_id = community_contributions.community_id
+           and community_memberships.user_id = community_contributions.contributor_user_id
+          where community_contributions.community_id = communities.id
+            and community_contributions.contribution_state = 'active'
+            and community_contributions.contributor_user_id = journal_entries.owner_user_id
+            and community_memberships.membership_state != 'banned'
+            and journal_entries.visibility = 'public'
+            and journal_entries.lifecycle_state = 'active'
+            and journal_entries.entry_scope = 'object'
+            and journal_entries.public_gone_at is null
+            and journal_entries.public_slug is not null
+            and journal_entries.published_at is not null
+        ) >= communities.minimum_ready_contributions
+      limit 1
+    )`.as("hasReadyCommunity"),
+  ]);
 }
 
 export function serializePublicCommunityContributionPage(
