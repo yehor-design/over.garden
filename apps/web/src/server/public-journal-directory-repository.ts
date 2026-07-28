@@ -30,15 +30,20 @@ import {
 } from "@/server/public-feed-repository";
 import {
   buildPublicJournalDirectoryEntriesQuery,
+  buildPublicJournalDirectoryFallbackCandidateQuery,
   normalizePublicJournalDirectoryEntryIds,
   publicJournalSafeRegionExpression,
   PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
   PUBLIC_JOURNAL_DIRECTORY_SELECTABLE_CATALOG_STATUSES,
   type PublicJournalDirectoryEntryRow,
+  type PublicJournalDirectoryContentClassMode,
   type PublicJournalDirectoryRequest,
   type PublicJournalDirectorySeason,
 } from "@/server/public-journal-directory-query";
-import { searchPublicJournalDirectoryCandidates } from "@/server/search/public-journal-directory-search";
+import {
+  searchPublicJournalDirectoryCandidates,
+  type PublicJournalDirectorySearchResult,
+} from "@/server/search/public-journal-directory-search";
 
 export {
   buildPublicJournalDirectoryEntriesQuery,
@@ -54,7 +59,9 @@ export type {
 } from "@/server/public-journal-directory-query";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
-type SearchCandidates = (query: string) => Promise<string[] | null>;
+type SearchCandidates = (
+  query: string,
+) => Promise<PublicJournalDirectorySearchResult>;
 
 const MAX_PUBLIC_JOURNAL_DIRECTORY_EXCERPT_LENGTH = 320;
 const MAX_PUBLIC_JOURNAL_DIRECTORY_FACETS = 24;
@@ -106,7 +113,14 @@ export interface PublicJournalDirectoryPage {
   totalPages: number;
   hasPreviousPage: boolean;
   hasNextPage: boolean;
-  searchSource: "hybrid" | "database";
+  searchSource: "hybrid" | "bounded_fallback" | "database";
+  searchFallbackReason: "timeout" | "unavailable" | "circuit_open" | null;
+}
+
+export interface PublicJournalDirectorySearchScope {
+  entryIds: readonly string[] | null;
+  source: PublicJournalDirectoryPage["searchSource"];
+  reason: PublicJournalDirectoryPage["searchFallbackReason"];
 }
 
 export interface PublicJournalDirectoryFacets {
@@ -125,6 +139,42 @@ export interface PublicJournalDirectoryListOptions {
   executor?: QueryExecutor;
   findSearchCandidates?: SearchCandidates;
   restrictToEntryIds?: readonly string[] | null;
+  searchScope?: PublicJournalDirectorySearchScope;
+  contentClassMode?: PublicJournalDirectoryContentClassMode;
+}
+
+export async function resolvePublicJournalDirectorySearchScope(
+  request: PublicJournalDirectoryRequest,
+  options: PublicJournalDirectoryListOptions = {},
+): Promise<PublicJournalDirectorySearchScope> {
+  if (!request.query) {
+    return {
+      entryIds: options.restrictToEntryIds ?? null,
+      source: "database",
+      reason: null,
+    };
+  }
+  const findSearchCandidates =
+    options.findSearchCandidates ?? searchPublicJournalDirectoryCandidates;
+  const result = await findSearchCandidates(request.query);
+  if (result.source === "hybrid") {
+    return {
+      entryIds: intersectEntryIds(result.ids, options.restrictToEntryIds),
+      source: "hybrid",
+      reason: null,
+    };
+  }
+  const executor = options.executor ?? db;
+  const fallbackRows = await buildPublicJournalDirectoryFallbackCandidateQuery(
+    executor,
+    options.restrictToEntryIds,
+    options.contentClassMode,
+  ).execute();
+  return {
+    entryIds: fallbackRows.map((row) => row.entryId),
+    source: "bounded_fallback",
+    reason: result.reason,
+  };
 }
 
 export async function listPublicJournalDirectoryPage(
@@ -133,16 +183,18 @@ export async function listPublicJournalDirectoryPage(
   options: PublicJournalDirectoryListOptions = {},
 ): Promise<PublicJournalDirectoryPage> {
   const executor = options.executor ?? db;
-  const findSearchCandidates =
-    options.findSearchCandidates ?? searchPublicJournalDirectoryCandidates;
-  const relevanceIds = request.query
-    ? await findSearchCandidates(request.query)
-    : null;
+  const searchScope =
+    options.searchScope ??
+    (await resolvePublicJournalDirectorySearchScope(request, options));
+  const relevanceIds =
+    searchScope.source === "hybrid" ? (searchScope.entryIds ?? []) : [];
   const rows = await buildPublicJournalDirectoryEntriesQuery(
     executor,
     request,
-    relevanceIds ?? [],
-    options.restrictToEntryIds,
+    relevanceIds,
+    searchScope.entryIds,
+    searchScope.source === "hybrid" ? "skip" : "apply",
+    options.contentClassMode,
   ).execute();
   const visibleRows = rows.slice(0, PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE);
   const entryIds = visibleRows.map((row) => row.entryId);
@@ -162,22 +214,30 @@ export async function listPublicJournalDirectoryPage(
       locale,
       request,
     ),
-    searchSource:
-      request.query && relevanceIds !== null ? "hybrid" : "database",
+    searchSource: searchScope.source,
+    searchFallbackReason: searchScope.reason,
   };
 }
 
 export async function listPublicJournalDirectoryFacets(
   options: Pick<
     PublicJournalDirectoryListOptions,
-    "executor" | "restrictToEntryIds"
+    | "executor"
+    | "restrictToEntryIds"
+    | "searchScope"
+    | "contentClassMode"
   > = {},
 ): Promise<PublicJournalDirectoryFacets> {
   const executor = options.executor ?? db;
-  const restrictedEntryIds = options.restrictToEntryIds;
+  const restrictedEntryIds =
+    options.searchScope?.entryIds ?? options.restrictToEntryIds;
   const safeRegion = publicJournalSafeRegionExpression();
   const [kindRows, catalogRows, topicRows, regionRows] = await Promise.all([
-    publicJournalFacetBase(executor, restrictedEntryIds)
+    publicJournalFacetBase(
+      executor,
+      restrictedEntryIds,
+      options.contentClassMode,
+    )
       .select([
         "plant_objects.object_kind as value",
         sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
@@ -187,7 +247,11 @@ export async function listPublicJournalDirectoryFacets(
       .groupBy("plant_objects.object_kind")
       .orderBy("count", "desc")
       .execute(),
-    publicJournalFacetBase(executor, restrictedEntryIds)
+    publicJournalFacetBase(
+      executor,
+      restrictedEntryIds,
+      options.contentClassMode,
+    )
       .innerJoin("catalog_items", (join) =>
         join
           .onRef("catalog_items.id", "=", "plant_objects.catalog_item_id")
@@ -216,7 +280,11 @@ export async function listPublicJournalDirectoryFacets(
       .limit(MAX_PUBLIC_JOURNAL_DIRECTORY_FACETS)
       .$narrowType<{ slug: string }>()
       .execute(),
-    publicJournalFacetBase(executor, restrictedEntryIds)
+    publicJournalFacetBase(
+      executor,
+      restrictedEntryIds,
+      options.contentClassMode,
+    )
       .innerJoin(
         "journal_entry_topic_signals",
         "journal_entry_topic_signals.journal_entry_id",
@@ -250,7 +318,11 @@ export async function listPublicJournalDirectoryFacets(
       .orderBy("journal_topics.label", "asc")
       .limit(MAX_PUBLIC_JOURNAL_DIRECTORY_FACETS)
       .execute(),
-    publicJournalFacetBase(executor, restrictedEntryIds)
+    publicJournalFacetBase(
+      executor,
+      restrictedEntryIds,
+      options.contentClassMode,
+    )
       .select([
         safeRegion.as("code"),
         sql<number>`count(distinct ${sql.ref("journal_entries.id")})`.as(
@@ -288,6 +360,20 @@ export async function listPublicJournalDirectoryFacets(
   };
 }
 
+function intersectEntryIds(
+  primary: readonly string[],
+  restriction: readonly string[] | null | undefined,
+) {
+  if (restriction == null)
+    return normalizePublicJournalDirectoryEntryIds(primary) ?? [];
+  const allowed = new Set(
+    normalizePublicJournalDirectoryEntryIds(restriction) ?? [],
+  );
+  return (normalizePublicJournalDirectoryEntryIds(primary) ?? []).filter((id) =>
+    allowed.has(id),
+  );
+}
+
 export function serializePublicJournalDirectoryPage(
   rows: PublicJournalDirectoryEntryRow[],
   mediaRows: PublicFeedMediaRow[],
@@ -296,7 +382,7 @@ export function serializePublicJournalDirectoryPage(
   request: PublicJournalDirectoryRequest,
   pageSize = PUBLIC_JOURNAL_DIRECTORY_PAGE_SIZE,
   publicMediaUrl: (derivativeKey: string) => string = getPublicDerivativeUrl,
-): Omit<PublicJournalDirectoryPage, "searchSource"> {
+): Omit<PublicJournalDirectoryPage, "searchSource" | "searchFallbackReason"> {
   const visibleRows = rows.slice(0, pageSize);
   const mediaByEntry = Object.groupBy(mediaRows, (row) => row.entryId);
   const topicsByEntry = Object.groupBy(topicRows, (row) => row.entryId);
@@ -375,6 +461,7 @@ export function serializePublicJournalDirectoryPage(
 function publicJournalFacetBase(
   executor: QueryExecutor,
   restrictToEntryIds?: readonly string[] | null,
+  contentClassMode: PublicJournalDirectoryContentClassMode = "launch",
 ) {
   let query = executor
     .selectFrom("journal_entries")
@@ -397,8 +484,12 @@ function publicJournalFacetBase(
     .where("journal_entries.entry_scope", "=", "object")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
-    .where("journal_entries.published_at", "is not", null)
-    .where(publicLaunchSurfacePredicates());
+    .where("journal_entries.published_at", "is not", null);
+
+  query =
+    contentClassMode === "visual_fixture"
+      ? query.where("journal_entries.content_class", "=", "visual_fixture")
+      : query.where(publicLaunchSurfacePredicates());
 
   const restrictedEntryIds =
     normalizePublicJournalDirectoryEntryIds(restrictToEntryIds);

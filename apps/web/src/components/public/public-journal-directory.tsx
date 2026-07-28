@@ -246,6 +246,21 @@ export function PublicJournalDirectory({
         ) : null}
       </section>
 
+      {page.request.query && page.searchSource === "bounded_fallback" ? (
+        <aside
+          role="status"
+          data-public-journal-search-degraded="true"
+          className="grid gap-1 border-b border-border bg-muted/40 px-3 py-3 text-sm"
+        >
+          <strong className="font-medium text-foreground">
+            {copy.degradedSearchTitle}
+          </strong>
+          <span className="text-muted-foreground">
+            {copy.degradedSearchBody}
+          </span>
+        </aside>
+      ) : null}
+
       {state === "loading" ? (
         <DirectoryLoading label={copy.loadingLabel} />
       ) : null}

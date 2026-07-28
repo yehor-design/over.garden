@@ -192,5 +192,6 @@ function page(): PublicJournalDirectoryPage {
     hasPreviousPage: false,
     hasNextPage: false,
     searchSource: "database",
+    searchFallbackReason: null,
   };
 }

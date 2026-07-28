@@ -78,6 +78,8 @@ export async function verifyVisualFixtureJournalDirectoryEvidence(
       request,
       [],
       eligibleEntryIds,
+      "apply",
+      "visual_fixture",
     ).execute();
     const actual: VisualFixtureJournalDirectoryActualResult = {
       totalCount: Number(rows[0]?.totalCount ?? 0),
