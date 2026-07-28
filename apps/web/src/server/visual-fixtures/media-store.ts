@@ -40,17 +40,31 @@ export async function uploadVisualFixtureMedia(
   manifest: VisualFixtureManifest,
   rootDirectory: string,
 ): Promise<number> {
-  for (const item of manifest.media) {
-    assertCanonicalFixtureDerivativeKey(item.derivativeKey, item.id);
-    const source = await readFile(path.resolve(rootDirectory, item.localPath));
-    const digest = createHash("sha256").update(source).digest("hex");
-    if (digest !== item.sha256) {
-      throw new Error(`Visual fixture media digest mismatch: ${item.fileName}`);
-    }
+  const prepared = await Promise.all(
+    manifest.media.map(async (item) => {
+      assertCanonicalFixtureDerivativeKey(item.derivativeKey, item.id);
+      const source = await readFile(
+        path.resolve(rootDirectory, item.localPath),
+      );
+      const digest = createHash("sha256").update(source).digest("hex");
+      if (digest !== item.sha256) {
+        throw new Error(
+          `Visual fixture media digest mismatch: ${item.fileName}`,
+        );
+      }
+      return {
+        item,
+        body: await sharp(source).rotate().webp({ quality: 88 }).toBuffer(),
+      };
+    }),
+  );
 
+  // Keep provider effects ordered even though local CPU preparation is
+  // parallel across the fixed 16-item manifest.
+  for (const { item, body } of prepared) {
     await store.putObject({
       key: item.derivativeKey,
-      body: await sharp(source).rotate().webp({ quality: 88 }).toBuffer(),
+      body,
       contentType: "image/webp",
       cacheControl: IMMUTABLE_CACHE_CONTROL,
       sha256: item.sha256,
