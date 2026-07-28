@@ -57,6 +57,7 @@ async function main() {
         ContentType: "text/plain",
         CacheControl: "public, max-age=60",
       }),
+      { abortSignal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
     );
 
     const canonicalUrl = `https://${CANONICAL_HOST}/${objectKey}`;
@@ -92,6 +93,7 @@ async function main() {
 
     await client.send(
       new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+      { abortSignal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
     );
 
     // Confirm object gone from origin.
@@ -99,6 +101,7 @@ async function main() {
     try {
       await client.send(
         new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+        { abortSignal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
       );
     } catch (error) {
       if (isProviderNotFound(error)) originGone = true;
@@ -273,6 +276,7 @@ async function deleteAndProveSyntheticCleanup(
   try {
     await client.send(
       new DeleteObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+      { abortSignal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
     );
   } catch {
     // The authoritative HeadObject below decides cleanup, not DeleteObject's
@@ -281,6 +285,7 @@ async function deleteAndProveSyntheticCleanup(
   try {
     await client.send(
       new HeadObjectCommand({ Bucket: PUBLIC_BUCKET, Key: objectKey }),
+      { abortSignal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS) },
     );
   } catch (error) {
     if (isProviderNotFound(error)) return;
