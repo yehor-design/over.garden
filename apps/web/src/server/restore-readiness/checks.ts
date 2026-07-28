@@ -101,6 +101,7 @@ export interface RestoreReadinessReport {
     actualMs: number | null;
     pass: boolean | null;
   };
+  gates: TerminalReadinessSignals;
   ok: boolean;
 }
 
@@ -600,7 +601,7 @@ export async function buildRestoreReadinessReport(
   const queueOk =
     queueCompatibility.processing === 0 &&
     queueCompatibility.invalidTerminalMetadata === 0;
-  const ok = evaluateTerminalReadiness({
+  const gates: TerminalReadinessSignals = {
     schemaOk,
     integrityOk,
     identityReady,
@@ -612,7 +613,8 @@ export async function buildRestoreReadinessReport(
     mediaOriginalAbsent: admission.mediaOriginalAbsent,
     exactParityZeroGap: admission.exactParityZeroGap,
     sameTargetAndSha: admission.sameTargetAndSha,
-  });
+  };
+  const ok = evaluateTerminalReadiness(gates);
 
   return {
     policyVersion: RESTORE_READINESS_POLICY,
@@ -659,6 +661,7 @@ export async function buildRestoreReadinessReport(
       actualMs: actualRtoMs,
       pass: rtoPass,
     },
+    gates,
     ok,
   };
 }
