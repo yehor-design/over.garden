@@ -9,6 +9,7 @@ import {
   acquireRecoveryLock,
   pollUntil,
   RECOVERY_STATE_FILE,
+  readSafeRecoveryDiagnostic,
   readRecoveryState,
   releaseRecoveryLock,
   requestRecoveryCancellation,
@@ -82,5 +83,18 @@ describe("OVE-230 recovery drill runtime", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+
+  it("extracts only the allowlisted recovery stage and error code", () => {
+    expect(
+      readSafeRecoveryDiagnostic(
+        'ignored {"recoveryBootstrapStage":"application_schema","errorCode":"23514"}',
+      ),
+    ).toEqual({ stage: "application_schema", code: "23514" });
+    expect(
+      readSafeRecoveryDiagnostic(
+        '{"recoveryBootstrapStage":"application-schema","errorCode":"secret value"}',
+      ),
+    ).toBeNull();
   });
 });
