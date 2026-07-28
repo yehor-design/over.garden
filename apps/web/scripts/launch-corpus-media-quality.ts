@@ -1,16 +1,10 @@
 import { Pool } from "pg";
 
-import { MAX_COMPOSER_IMAGE_BYTES } from "@/lib/media/image-limits";
-import { getPublicDerivativeObjectBuffer } from "@/lib/storage";
+import { LAUNCH_MEDIA_QUALITY_POLICY_VERSION } from "@/lib/media/launch-media-quality";
 import {
   LAUNCH_CORPUS_INVENTORY_SQL,
   assertLaunchCorpusInventorySqlIsSelectOnly,
 } from "@/server/launch-corpus/inventory";
-import {
-  LAUNCH_MEDIA_QUALITY_POLICY_VERSION,
-  classifyLaunchMediaDerivative,
-  type LaunchMediaQualityClass,
-} from "@/server/media/launch-media-quality";
 import {
   resolveDatabaseConnection,
   resolveDatabaseSslConfig,
@@ -36,9 +30,7 @@ assertLaunchCorpusInventorySqlIsSelectOnly();
 async function main() {
   const resolution = resolveDatabaseConnection(process.env);
   const connectionString = resolvePgConnectionString(process.env, resolution);
-  if (!connectionString)
-    throw new Error("Missing supported database connection.");
-
+  if (!connectionString) throw new Error("Missing supported database connection.");
   const pool = new Pool({
     connectionString,
     max: 1,
@@ -46,39 +38,12 @@ async function main() {
   });
 
   try {
-    const result = await pool.query<{
-      derivativeKey: string;
-      width: number | null;
-      height: number | null;
-    }>(LAUNCH_CORPUS_INVENTORY_SQL.launchMediaQualityCandidates);
-    const counts: Record<LaunchMediaQualityClass | "unreadable", number> = {
-      pass: 0,
-      reject: 0,
-      review_required: 0,
-      unreadable: 0,
-    };
-
-    for (let offset = 0; offset < result.rows.length; offset += 4) {
-      await Promise.all(
-        result.rows.slice(offset, offset + 4).map(async (row) => {
-          try {
-            const buffer = await getPublicDerivativeObjectBuffer(
-              row.derivativeKey,
-              MAX_COMPOSER_IMAGE_BYTES,
-            );
-            const quality = await classifyLaunchMediaDerivative({
-              buffer,
-              width: row.width ?? 0,
-              height: row.height ?? 0,
-            });
-            counts[quality.qualityClass] += 1;
-          } catch {
-            counts.unreadable += 1;
-          }
-        }),
-      );
-    }
-
+    const result = await pool.query<{ qualityClass: string; count: string }>(
+      LAUNCH_CORPUS_INVENTORY_SQL.launchMediaQualityCounts,
+    );
+    const counts = Object.fromEntries(
+      result.rows.map((row) => [row.qualityClass, Number(row.count)]),
+    );
     console.log(
       JSON.stringify({
         ok: true,
@@ -87,8 +52,8 @@ async function main() {
         mode: "inventory",
         redacted: true,
         selectOnly: true,
+        providerObjectReads: 0,
         policyVersion: LAUNCH_MEDIA_QUALITY_POLICY_VERSION,
-        candidateCount: result.rows.length,
         counts,
       }),
     );

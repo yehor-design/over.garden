@@ -28,11 +28,11 @@ describe("launch corpus inventory", () => {
   it("exposes only SELECT statements", () => {
     expect(listLaunchCorpusInventoryStatements().length).toBeGreaterThan(5);
     expect(() => assertLaunchCorpusInventorySqlIsSelectOnly()).not.toThrow();
-    expect(
-      listLaunchCorpusInventoryStatements().find((statement) =>
-        statement.includes('"derivativeKey"'),
-      ),
-    ).toMatch(/media_readiness_state = 'public_ready'/);
+    const qualityStatement = listLaunchCorpusInventoryStatements().find(
+      (statement) => statement.includes('"qualityClass"'),
+    );
+    expect(qualityStatement).toMatch(/quality_policy_version/);
+    expect(qualityStatement).not.toMatch(/derivative_key\s+as|quarantine_key/);
   });
 
   it("plans founder seed slots and cover matrix without private content", () => {

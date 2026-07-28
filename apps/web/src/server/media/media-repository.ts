@@ -11,6 +11,10 @@ import type { RequestScope } from "@/server/request-scope";
 import { recordPublicProjectionIntent } from "@/server/search/public-projection-outbox";
 import { SAFE_MEDIA_PROCESSING_LEASE_SECONDS } from "@/server/media/safe-media-admission";
 import { buildEnqueueMediaDerivativeRevokeJobQuery } from "@/server/media/media-lifecycle-enqueue";
+import {
+  LAUNCH_MEDIA_QUALITY_POLICY_VERSION,
+  type LaunchMediaQualityResult,
+} from "@/lib/media/launch-media-quality";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -96,6 +100,11 @@ export async function claimMediaAssetForProcessing(
         public_object_id: publicObjectId,
         derivative_key: null,
         admitted_media_type: null,
+        quality_policy_version: null,
+        quality_class: null,
+        quality_reason_codes: null,
+        quality_metrics: null,
+        quality_evaluated_at: null,
         intrinsic_width: null,
         intrinsic_height: null,
         updated_at: sql<Date>`now()`,
@@ -147,6 +156,7 @@ export async function markClaimedMediaDerivativeWritten(
     admittedMediaType: string;
     intrinsicWidth: number;
     intrinsicHeight: number;
+    quality: LaunchMediaQualityResult;
   },
 ): Promise<MediaAsset | undefined> {
   return db
@@ -158,8 +168,38 @@ export async function markClaimedMediaDerivativeWritten(
       intrinsic_height: input.intrinsicHeight,
       focal_x: 0.5,
       focal_y: 0.5,
+      quality_policy_version: input.quality.policyVersion,
+      quality_class: input.quality.qualityClass,
+      quality_reason_codes: [...input.quality.reasonCodes],
+      quality_metrics: { ...input.quality.metrics },
+      quality_evaluated_at: sql<Date>`now()`,
       media_readiness_state: "derivative_written",
       updated_at: new Date(),
+    })
+    .where("id", "=", claim.asset.id)
+    .where("owner_user_id", "=", scope.userId)
+    .where("upload_generation_id", "=", claim.asset.upload_generation_id)
+    .where("public_object_id", "=", claim.asset.public_object_id)
+    .where("processing_claim_token", "=", claim.claimToken)
+    .where("media_readiness_state", "=", "processing")
+    .returningAll()
+    .executeTakeFirst();
+}
+
+export async function recordClaimedMediaQuality(
+  scope: RequestScope,
+  claim: MediaProcessingClaim,
+  quality: LaunchMediaQualityResult,
+): Promise<MediaAsset | undefined> {
+  return db
+    .updateTable("media_assets")
+    .set({
+      quality_policy_version: quality.policyVersion,
+      quality_class: quality.qualityClass,
+      quality_reason_codes: [...quality.reasonCodes],
+      quality_metrics: { ...quality.metrics },
+      quality_evaluated_at: sql<Date>`now()`,
+      updated_at: sql<Date>`now()`,
     })
     .where("id", "=", claim.asset.id)
     .where("owner_user_id", "=", scope.userId)
@@ -193,6 +233,8 @@ export async function settleClaimedMediaPublicReady(
       .where("processing_claim_token", "=", claim.claimToken)
       .where("media_readiness_state", "=", "derivative_written")
       .where("derivative_key", "is not", null)
+      .where("quality_policy_version", "=", LAUNCH_MEDIA_QUALITY_POLICY_VERSION)
+      .where("quality_class", "=", "accepted")
       .returningAll()
       .executeTakeFirst();
     if (!settled?.derivative_key) return settled;

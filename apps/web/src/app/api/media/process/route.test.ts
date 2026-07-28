@@ -28,6 +28,7 @@ const mediaRepositoryMock = vi.hoisted(() => ({
   claimMediaAssetForProcessing: vi.fn(),
   findMediaAssetForOwner: vi.fn(),
   markClaimedMediaDerivativeWritten: vi.fn(),
+  recordClaimedMediaQuality: vi.fn(),
   releaseMediaProcessingClaim: vi.fn(),
   settleClaimedMediaPublicReady: vi.fn(),
 }));
@@ -35,6 +36,9 @@ const mediaRepositoryMock = vi.hoisted(() => ({
 const processorMock = vi.hoisted(() => ({
   MediaLaunchQualityError: class MediaLaunchQualityError extends Error {
     readonly code = "media_launch_quality_rejected";
+    constructor(readonly quality: Record<string, unknown>) {
+      super("This photo cannot be published safely.");
+    }
   },
   processQuarantinedImage: vi.fn(),
 }));
@@ -347,5 +351,53 @@ describe("media process API", () => {
     expect(response.status).toBe(200);
     expect(processorMock.processQuarantinedImage).not.toHaveBeenCalled();
     expect(mediaRepositoryMock.claimMediaAssetForProcessing).not.toHaveBeenCalled();
+  });
+
+  it("persists the fenced review receipt before terminal replacement guidance", async () => {
+    const asset = {
+      id: "media-review",
+      owner_user_id: "00000000-0000-0000-0000-000000000001",
+      quarantine_key: "quarantine/review.png",
+      status: "quarantined",
+      media_readiness_state: "processing",
+      upload_generation_id: "generation-review",
+      public_object_id: "public-review",
+    };
+    const claim = {
+      asset,
+      claimToken: "claim-review",
+      phase: "process_original",
+    };
+    const quality = {
+      policyVersion: "ove231.launch-media-quality.v1",
+      qualityClass: "review_required",
+      reasonCodes: ["ambiguous_dark_low_contrast"],
+      metrics: { sampledPixels: 4096 },
+    };
+    mediaRepositoryMock.findMediaAssetForOwner.mockResolvedValue(asset);
+    mediaRepositoryMock.claimMediaAssetForProcessing.mockResolvedValue(claim);
+    processorMock.processQuarantinedImage.mockRejectedValue(
+      new processorMock.MediaLaunchQualityError(quality),
+    );
+
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: asset.id }),
+      }),
+    );
+
+    expect(response.status).toBe(422);
+    expect(mediaRepositoryMock.recordClaimedMediaQuality).toHaveBeenCalledWith(
+      expect.anything(),
+      claim,
+      quality,
+    );
+    expect(mediaRepositoryMock.releaseMediaProcessingClaim).toHaveBeenCalledWith(
+      expect.anything(),
+      claim,
+      true,
+    );
+    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
   });
 });

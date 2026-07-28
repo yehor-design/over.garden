@@ -13,7 +13,7 @@ import {
 import { createPublicImageDerivative } from "./derivatives";
 import {
   classifyLaunchMediaDerivative,
-  type LaunchMediaQualityClass,
+  type LaunchMediaQualityResult,
 } from "./launch-media-quality";
 import {
   admitSafeMediaBytes,
@@ -22,14 +22,16 @@ import {
 
 export class MediaLaunchQualityError extends Error {
   readonly code = "media_launch_quality_rejected" as const;
-  readonly qualityClass: Exclude<LaunchMediaQualityClass, "pass">;
+  readonly quality: LaunchMediaQualityResult;
+  readonly qualityClass: LaunchMediaQualityResult["qualityClass"];
 
-  constructor(qualityClass: Exclude<LaunchMediaQualityClass, "pass">) {
+  constructor(quality: LaunchMediaQualityResult) {
     super(
       "This photo cannot be published safely. Choose another photo or save without it.",
     );
     this.name = "MediaLaunchQualityError";
-    this.qualityClass = qualityClass;
+    this.quality = quality;
+    this.qualityClass = quality.qualityClass;
   }
 }
 
@@ -62,7 +64,20 @@ export async function processQuarantinedImage(
       height: derivative.height,
     })
   ) {
-    throw new MediaLaunchQualityError("reject");
+    throw new MediaLaunchQualityError({
+      policyVersion: "ove231.launch-media-quality.v1",
+      qualityClass: "rejected",
+      reasonCodes: ["launch_dimensions"],
+      metrics: {
+        sampledPixels: 0,
+        visibleFraction: 0,
+        meanLuminance: 0,
+        luminanceDeviation: 0,
+        luminanceEntropy: 0,
+        edgeEnergy: 0,
+        occupiedColorBins: 0,
+      },
+    });
   }
   const quality = await classifyLaunchMediaDerivative({
     buffer: derivative.buffer,
@@ -70,8 +85,8 @@ export async function processQuarantinedImage(
     height: derivative.height,
     abortSignal,
   });
-  if (quality.qualityClass !== "pass") {
-    throw new MediaLaunchQualityError(quality.qualityClass);
+  if (quality.qualityClass !== "accepted") {
+    throw new MediaLaunchQualityError(quality);
   }
 
   const derivativeKey = `derivatives/${asset.public_object_id}.${derivative.extension}`;
@@ -89,6 +104,6 @@ export async function processQuarantinedImage(
     intrinsicWidth: derivative.width,
     intrinsicHeight: derivative.height,
     admittedMediaType,
-    qualityPolicyVersion: quality.policyVersion,
+    quality,
   };
 }

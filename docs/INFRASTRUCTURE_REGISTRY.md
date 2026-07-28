@@ -656,14 +656,14 @@ Local storage emulator:
   - `overgarden-quarantine`
   - `overgarden-public`
 
-OVE-231 adds no provider, bucket, environment variable, schema, or mutable
-production control. Its read-only media-quality inventory uses the existing
-server-side `R2_PUBLIC_BUCKET` GetObject capability and DigitalOcean
-PostgreSQL connection, caps candidates at 256, concurrency at four, and each
-object at the existing composer byte budget. Evidence may contain only policy
-version, aggregate class counts, candidate count, SELECT-only status, and
-duration; never derivative keys/URLs, image bytes, identity, EXIF, request
-metadata, credentials, or location.
+OVE-231 adds no provider, bucket, environment variable, or mutable production
+control. Additive migration `0014_ove231_launch_media_quality.sql` stores the
+versioned, generation-fenced receipt. Its read-only production inventory uses
+only the existing DigitalOcean PostgreSQL connection and aggregate SELECT; it
+performs zero R2 GetObject calls. Evidence may contain only policy version,
+aggregate class counts, SELECT-only status, and duration; never derivative
+keys/URLs, image bytes, identity, EXIF, request metadata, credentials, or
+location.
 
 ## Open Operational Items
 

@@ -71,20 +71,21 @@ SQL used by plan/check is SELECT-only (`assertLaunchCorpusInventorySqlIsSelectOn
 ## Launch media quality policy
 
 OVE-231 owns `ove231.launch-media-quality.v1` in
-`apps/web/src/server/media/launch-media-quality.ts`. It classifies only the
+`apps/web/src/lib/media/launch-media-quality.ts` and the bounded server analyzer
+in `apps/web/src/server/media/launch-media-quality-analyzer.ts`. It classifies only the
 server-stripped derivative, never the quarantine original:
 
-- `pass` is the only class that a new processing claim may publish.
-- `reject` covers corrupt/tiny, fully transparent, flat-color, and pinned
+- `accepted` is the only class that a new processing claim may publish.
+- `rejected` covers corrupt/tiny, fully transparent, flat-color, and pinned
   mechanical placeholder failures.
 - `review_required` is fail-closed for ambiguous darkness or low contrast;
   it never auto-revokes existing real-user media.
 
 `pnpm audit:launch-corpus-media-quality -- --environment production
 --confirm-environment production --mode inventory` reuses the OVE-244 public
-eligibility predicate, scans at most 256 currently eligible derivatives with
-four concurrent bounded reads, and emits policy version plus aggregate classes
-only. Its SQL is part of the SELECT-only inventory manifest. Any archive,
+eligibility state and reads only persisted receipt classes through aggregate
+SQL. It performs zero R2/provider-object reads and emits policy version plus
+aggregate classes only. Its SQL is part of the SELECT-only inventory manifest. Any archive,
 revoke, seed, reclassify, reindex, or other production mutation remains an
 OVE-199 exact-manifest sign-off action.
 

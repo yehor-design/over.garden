@@ -18,6 +18,7 @@ describe("versioned application SQL bootstrap", () => {
       "0011_ove242_public_projection_outbox.sql",
       "0012_ove230_restore_schema_convergence.sql",
       "0013_ove244_safe_media_admission.sql",
+      "0014_ove231_launch_media_quality.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

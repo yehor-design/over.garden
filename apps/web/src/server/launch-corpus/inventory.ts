@@ -94,18 +94,24 @@ export interface LaunchCorpusCheckReport {
 
 /** Every statement the plan script may issue. Must be SELECT-only. */
 export const LAUNCH_CORPUS_INVENTORY_SQL = {
-  launchMediaQualityCandidates: `
-select ma.derivative_key as "derivativeKey",
-       ma.intrinsic_width as width,
-       ma.intrinsic_height as height
+  launchMediaQualityCounts: `
+select case
+         when ma.quality_policy_version is null then 'legacy_unassessed'
+         when ma.quality_policy_version <> 'ove231.launch-media-quality.v1' then 'stale_policy'
+         when ma.quality_class = 'accepted' then 'accepted_current'
+         when ma.quality_class = 'review_required' then 'review_required'
+         when ma.quality_class = 'rejected' then 'rejected'
+         else 'invalid_receipt'
+       end as "qualityClass",
+       count(*)::bigint as count
 from media_assets ma
 inner join journal_entries je on je.id = ma.journal_entry_id
 where je.visibility = 'public'
   and je.lifecycle_state = 'active'
   and je.public_slug is not null
-  and ${publicMediaEligibilitySqlText("ma")}
-order by ma.created_at desc, ma.id desc
-limit 256
+  and ma.revoked_at is null
+group by 1
+order by 1
 `.trim(),
 
   contentClassCounts: `
