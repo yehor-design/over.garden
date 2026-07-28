@@ -24,6 +24,7 @@ import {
 import { localizedPath, type PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
 import {
@@ -942,6 +943,7 @@ export function buildCommunityReadinessQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
+          and ${publicLaunchSurfacePredicates()}
       )`.as("activeContributionCount"),
     ])
     .where("communities.slug", "=", normalizedSlug)
@@ -1001,6 +1003,7 @@ export function buildReadyCommunityNavigationQuery(executor: QueryExecutor) {
             and journal_entries.public_gone_at is null
             and journal_entries.public_slug is not null
             and journal_entries.published_at is not null
+            and ${publicLaunchSurfacePredicates()}
         ) >= communities.minimum_ready_contributions
       limit 1
     )`.as("hasReadyCommunity"),
@@ -1216,6 +1219,7 @@ export function buildCommunityStatsQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
+          and ${publicLaunchSurfacePredicates()}
           ${contributionViewerPredicate}
       )`.as("activeContributionCount"),
       sql<number>`(
@@ -1248,6 +1252,7 @@ export function buildCommunityStatsQuery(
           and journal_entries.public_gone_at is null
           and journal_entries.public_slug is not null
           and journal_entries.published_at is not null
+          and ${publicLaunchSurfacePredicates()}
           ${contributionViewerPredicate}
       )`.as("activeObjectCount"),
     ])
@@ -1486,6 +1491,7 @@ export function buildPublicCommunityContributionsQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .$if(Boolean(viewer), (qb) =>
       qb.where(
         noCommunityBlockPredicate(
@@ -1629,6 +1635,7 @@ export function buildPublicCommunityFallbackCandidateQuery(
           .where("journal_entries.public_gone_at", "is", null)
           .where("journal_entries.public_slug", "is not", null)
           .where("journal_entries.published_at", "is not", null)
+          .where(publicLaunchSurfacePredicates())
           .$if(kind !== "all", (qb) =>
             qb.where("plant_objects.object_kind", "=", kind as PlantObjectKind),
           )
@@ -1787,6 +1794,7 @@ export function buildEligibleCommunityContributionCandidatesQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .$if(Boolean(normalizedJournalEntryId), (query) =>
       query.where("journal_entries.id", "=", normalizedJournalEntryId!),
     )
@@ -1971,6 +1979,7 @@ export function buildCommunityReportTargetQuery(
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
     .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .where(
       noCommunityBlockPredicate(scope.userId, "journal_entries.owner_user_id"),
     )

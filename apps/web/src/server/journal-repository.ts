@@ -44,6 +44,7 @@ import {
   createUserAddedCatalogCandidate,
   findSelectableCatalogItem,
 } from "@/server/catalog-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { persistJournalEntryMentions } from "@/server/journal-mention-repository";
 import {
   persistJournalEntryTopicSignals,
@@ -2820,7 +2821,8 @@ export function buildPublicEntrySlugsForObjectQuery(
     .where("visibility", "=", "public")
     .where("lifecycle_state", "=", "active")
     .where("public_gone_at", "is", null)
-    .where("public_slug", "is not", null);
+    .where("public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 }
 
 export function buildPlantObjectPageObjectQuery(
@@ -3127,7 +3129,8 @@ export function buildPublicJournalEntryLifecycleQuery(
       "journal_entries.plant_object_id as plantObjectId",
       "plant_objects.id as joinedPlantObjectId",
     ])
-    .where("journal_entries.public_slug", "=", publicSlug);
+    .where("journal_entries.public_slug", "=", publicSlug)
+    .where(publicLaunchSurfacePredicates());
 }
 
 export function buildPublicJournalEntryLookupQuery(
@@ -3216,7 +3219,8 @@ export function buildPublicJournalEntryLookupQuery(
       "user_public_profiles.display_name as authorDisplayName",
       "user_public_profiles.avatar_url as authorAvatarUrl",
     ])
-    .where("journal_entries.public_slug", "=", publicSlug);
+    .where("journal_entries.public_slug", "=", publicSlug)
+    .where(publicLaunchSurfacePredicates());
 }
 
 export function buildRelatedPublicJournalEntriesQuery(
@@ -3240,6 +3244,7 @@ export function buildRelatedPublicJournalEntriesQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
@@ -3269,6 +3274,7 @@ export function buildPublicJournalEntryTopicsQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
+    .where(publicLaunchSurfacePredicates())
     .where("journal_entry_topic_signals.review_state", "=", "accepted")
     .where(
       "journal_entry_topic_signals.public_membership_state",
@@ -3310,7 +3316,8 @@ export function buildAdjacentPublicJournalEntryQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null);
+    .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates());
 
   query =
     input.entryScope === "object" && input.plantObjectId
@@ -3412,6 +3419,7 @@ export function buildPublicMentionedObjectsForEntryQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
+    .where(publicLaunchSurfacePredicates())
     .where((eb) =>
       eb.exists(
         eb
@@ -3431,7 +3439,12 @@ export function buildPublicMentionedObjectsForEntryQuery(
           .where("object_public_entries.visibility", "=", "public")
           .where("object_public_entries.lifecycle_state", "=", "active")
           .where("object_public_entries.public_gone_at", "is", null)
-          .where("object_public_entries.public_slug", "is not", null),
+          .where("object_public_entries.public_slug", "is not", null)
+          .where(
+            publicLaunchSurfacePredicates(
+              sql.ref<string | null>("object_public_entries.content_class"),
+            ),
+          ),
       ),
     )
     .orderBy("plant_objects.display_name", "asc")
@@ -3509,6 +3522,7 @@ export function buildPublicJournalEntryPersonMentionsQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .where("person_mentions.source_kind", "=", "source_reference")
     .where("person_mentions.source_reference_kind", "=", "person")
     .where("person_mentions.source_plant_object_id", "is", null)
@@ -3660,6 +3674,7 @@ export function buildPublicProcessedMediaForEntryQuery(
     .where("journal_entries.visibility", "=", "public")
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
+    .where(publicLaunchSurfacePredicates())
     .where("media_assets.status", "=", "processed")
     .where("media_assets.derivative_key", "is not", null)
     .where("media_assets.revoked_at", "is", null)

@@ -32,6 +32,7 @@
     "catalog:inventory-object-kinds": "tsx scripts/inventory-object-kinds.ts",
     "launch:corpus:plan": "tsx scripts/launch-corpus-plan.ts",
     "launch:corpus:check": "tsx scripts/launch-corpus-check.ts",
+    "smoke:launch-corpus-surfaces": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-launch-corpus-surfaces.ts",
     "mvp-learning:plan": "NODE_OPTIONS=--conditions=react-server tsx scripts/mvp-learning-plan.ts",
     "mvp-learning:reconcile": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-mvp-learning-signals.ts",
     "smoke:mvp-learning-signals": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-mvp-learning-signals.ts",

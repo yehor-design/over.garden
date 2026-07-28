@@ -13,6 +13,7 @@ import type {
   VarietyState,
 } from "@/db/schema";
 import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -205,7 +206,12 @@ export function buildFollowedFeedStoriesQuery(
         .on("target_public_entries.visibility", "=", "public")
         .on("target_public_entries.lifecycle_state", "=", "active")
         .on("target_public_entries.public_gone_at", "is", null)
-        .on("target_public_entries.public_slug", "is not", null),
+        .on("target_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("target_public_entries.content_class"),
+          ),
+        ),
     )
     .leftJoin("catalog_items as target_catalog_items", (join) =>
       join
@@ -520,7 +526,12 @@ export function buildNotificationFollowEventsQuery(
         .on("target_public_entries.visibility", "=", "public")
         .on("target_public_entries.lifecycle_state", "=", "active")
         .on("target_public_entries.public_gone_at", "is", null)
-        .on("target_public_entries.public_slug", "is not", null),
+        .on("target_public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("target_public_entries.content_class"),
+          ),
+        ),
     )
     .leftJoin("catalog_items as target_catalog_items", (join) =>
       join
