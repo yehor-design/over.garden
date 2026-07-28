@@ -115,6 +115,14 @@ export interface ProtectedIdentitySets {
   plantObjects: ReadonlySet<string>;
 }
 
+export const ERASED_MODERATION_ACTOR_USER_ID =
+  "00000000-0000-4000-8000-00000000ead1";
+
+export interface ProtectedIdentityTransition {
+  addedAuthUsers: string[];
+  addedPlants: string[];
+}
+
 export type ProtectedIdentityErrorCode =
   | "AUTH_DRIFT"
   | "JOURNAL_DRIFT"
@@ -132,8 +140,19 @@ export class ProtectedIdentityTransitionError extends Error {
 export function classifyProtectedIdentityTransition(
   before: ProtectedIdentitySets,
   after: ProtectedIdentitySets,
-): string[] {
-  assertSameIdentitySet(before.authUsers, after.authUsers, "AUTH_DRIFT");
+): ProtectedIdentityTransition {
+  if ([...before.authUsers].some((id) => !after.authUsers.has(id))) {
+    throw new ProtectedIdentityTransitionError("AUTH_DRIFT");
+  }
+  const addedAuthUsers = [...after.authUsers].filter(
+    (id) => !before.authUsers.has(id),
+  );
+  if (
+    addedAuthUsers.some((id) => id !== ERASED_MODERATION_ACTOR_USER_ID) ||
+    addedAuthUsers.length > 1
+  ) {
+    throw new ProtectedIdentityTransitionError("AUTH_DRIFT");
+  }
   assertSameIdentitySet(
     before.journalEntries,
     after.journalEntries,
@@ -143,7 +162,12 @@ export function classifyProtectedIdentityTransition(
   if ([...before.plantObjects].some((id) => !after.plantObjects.has(id))) {
     throw new ProtectedIdentityTransitionError("PLANT_REMOVED");
   }
-  return [...after.plantObjects].filter((id) => !before.plantObjects.has(id));
+  return {
+    addedAuthUsers,
+    addedPlants: [...after.plantObjects].filter(
+      (id) => !before.plantObjects.has(id),
+    ),
+  };
 }
 
 function assertSameIdentitySet(

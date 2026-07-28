@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   acquireRecoveryLock,
   classifyProtectedIdentityTransition,
+  ERASED_MODERATION_ACTOR_USER_ID,
   pollUntil,
   RECOVERY_STATE_FILE,
   readSafeRecoveryDiagnostic,
@@ -99,7 +100,7 @@ describe("OVE-230 recovery drill runtime", () => {
     ).toBeNull();
   });
 
-  it("allows only additive plant identities before row-level classification", () => {
+  it("allows only classified additive bootstrap identities", () => {
     const before = {
       authUsers: new Set(["user-a"]),
       journalEntries: new Set(["journal-a"]),
@@ -111,7 +112,25 @@ describe("OVE-230 recovery drill runtime", () => {
         ...before,
         plantObjects: new Set(["plant-a", "plant-backfill"]),
       }),
-    ).toEqual(["plant-backfill"]);
+    ).toEqual({ addedAuthUsers: [], addedPlants: ["plant-backfill"] });
+    expect(
+      classifyProtectedIdentityTransition(before, {
+        ...before,
+        authUsers: new Set(["user-a", ERASED_MODERATION_ACTOR_USER_ID]),
+      }),
+    ).toEqual({
+      addedAuthUsers: [ERASED_MODERATION_ACTOR_USER_ID],
+      addedPlants: [],
+    });
+    try {
+      classifyProtectedIdentityTransition(before, {
+        ...before,
+        authUsers: new Set(["user-a", "user-new"]),
+      });
+      throw new Error("expected unclassified auth identity refusal");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "AUTH_DRIFT" });
+    }
     try {
       classifyProtectedIdentityTransition(before, {
         ...before,
