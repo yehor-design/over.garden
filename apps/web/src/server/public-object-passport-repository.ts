@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type Kysely, type Transaction } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type {
@@ -22,6 +22,7 @@ import {
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
+import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { buildFirstProcessedMediaPerEntryQuery } from "@/server/public-media-repository";
 
 const PUBLIC_OBJECT_JOURNAL_PREVIEW_PAGE_SIZE = 5;
@@ -217,6 +218,11 @@ export function buildPublicObjectPassportLifecycleQuery(
           "journal_entries.owner_user_id",
           "=",
           "plant_objects.owner_user_id",
+        )
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("journal_entries.content_class"),
+          ),
         ),
     )
     .select([
@@ -268,7 +274,12 @@ export function buildPublicObjectPassportRootQuery(
         .on("public_entries.visibility", "=", "public")
         .on("public_entries.lifecycle_state", "=", "active")
         .on("public_entries.public_gone_at", "is", null)
-        .on("public_entries.public_slug", "is not", null),
+        .on("public_entries.public_slug", "is not", null)
+        .on(
+          publicLaunchSurfacePredicates(
+            sql.ref<string | null>("public_entries.content_class"),
+          ),
+        ),
     )
     .innerJoin("spaces", (join) =>
       join
@@ -390,6 +401,7 @@ export function buildPublicObjectPassportTimelineQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("journal_entries.id", "asc")
@@ -439,6 +451,7 @@ export function buildPublicObjectPassportGalleryQuery(
     .where("journal_entries.lifecycle_state", "=", "active")
     .where("journal_entries.public_gone_at", "is", null)
     .where("journal_entries.public_slug", "is not", null)
+    .where(publicLaunchSurfacePredicates())
     .orderBy("journal_entries.entry_date", "desc")
     .orderBy("journal_entries.created_at", "desc")
     .orderBy("media_assets.document_position", "asc")
