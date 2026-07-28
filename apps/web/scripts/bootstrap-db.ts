@@ -18,7 +18,10 @@ import {
   assertProviderBinding,
   DigitalOceanDatabaseProvider,
 } from "../src/server/restore-readiness";
-import { classifyProtectedIdentityTransition } from "../src/server/restore-readiness/runtime";
+import {
+  classifyProtectedIdentityTransition,
+  ProtectedIdentityTransitionError,
+} from "../src/server/restore-readiness/runtime";
 
 const envFile = argValue("--env-file") ?? ".env.local";
 const caFile = argValue("--ca-file");
@@ -193,9 +196,7 @@ async function assertProtectedIdentityTransition(
     [addedPlants, [...before.journalEntries]],
   );
   if (Number(classified.rows[0]?.count ?? -1) !== addedPlants.length) {
-    throw new Error(
-      "Recovery bootstrap produced unclassified plant identities.",
-    );
+    throw new ProtectedIdentityTransitionError("PLANT_UNCLASSIFIED");
   }
 }
 
@@ -221,7 +222,7 @@ main()
       const providerCode = (error as { code?: unknown })?.code;
       const errorCode =
         typeof providerCode === "string" &&
-        /^[A-Z0-9_]{2,16}$/.test(providerCode)
+        /^[A-Z0-9_]{2,24}$/.test(providerCode)
           ? providerCode
           : "UNCLASSIFIED";
       console.error(JSON.stringify({ recoveryBootstrapStage, errorCode }));
