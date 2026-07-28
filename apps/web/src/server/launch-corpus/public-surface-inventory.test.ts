@@ -14,7 +14,7 @@ import {
   type Driver,
   type QueryCompiler,
 } from "kysely";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Database } from "@/db/schema";
 import { PUBLIC_LAUNCH_CONTENT_CLASSES } from "@/lib/launch-corpus/content-class";
@@ -41,6 +41,10 @@ class TestPostgresDialect implements Dialect {
 }
 
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("public launch journal caller inventory", () => {
   it("pins one versioned policy application in every inventoried module", () => {
@@ -76,5 +80,43 @@ describe("public launch journal caller inventory", () => {
     );
     expect(compiled.parameters).toEqual([]);
     expect(PUBLIC_LAUNCH_CONTENT_CLASSES).toHaveLength(3);
+  });
+
+  it("admits fixtures only for a resolved isolated visual environment", () => {
+    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+    vi.stubEnv("DATABASE_URL", "postgresql://local:local@localhost:5432/overgarden");
+    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
+    vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("VERCEL_ENV", "development");
+
+    const compiled = testDb
+      .selectFrom("journal_entries")
+      .select("id")
+      .where(publicLaunchSurfacePredicates())
+      .compile();
+    expect(compiled.sql).toContain("'visual_fixture'");
+  });
+
+  it("rejects the fixture exception on canonical production origins", () => {
+    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+    vi.stubEnv("DATABASE_URL", "postgresql://local:local@localhost:5432/overgarden");
+    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
+    vi.stubEnv("PUBLIC_SITE_URL", "https://over.garden");
+    vi.stubEnv("BETTER_AUTH_URL", "https://over.garden");
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    const compiled = testDb
+      .selectFrom("journal_entries")
+      .select("id")
+      .where(publicLaunchSurfacePredicates())
+      .compile();
+    expect(compiled.sql).not.toContain("'visual_fixture'");
   });
 });

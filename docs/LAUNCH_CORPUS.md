@@ -49,6 +49,10 @@ cd apps/web
 Operator-only inventory, moderation, owner-control, learning-signal, privacy,
 and restore-readiness queries are intentionally outside this guest-surface
 policy because they must observe excluded rows to enforce or report on them.
+The shared predicate admits `visual_fixture` only when the fail-closed visual
+fixture environment resolver proves an isolated local or preview target; it
+rejects Vercel Production and canonical OverGarden origins. This preserves the
+CI/visual harness without weakening launch eligibility in production.
 
 ## Commands
 
