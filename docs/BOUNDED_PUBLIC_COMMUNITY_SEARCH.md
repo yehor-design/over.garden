@@ -12,6 +12,7 @@ Public community search reuses the `journal_entries` Meilisearch index only for 
 - Degraded search selects at most 256 newest eligible identifiers from the requested community without reading journal text, then applies `ILIKE` only inside that set under transaction-local `statement_timeout = 700ms`.
 - The process bulkhead permits 4 active database phases and 16 FIFO waiters. Queue wait is 100 ms and the repository response fence is 1,200 ms.
 - Dependency errors are reduced to bounded reason classes. Query text, hit content, identifiers, SQL, provider errors, request metadata, and precise location are forbidden in logs and receipts.
+- Coordinate-bearing community query URLs are redirected without `q` or its cursor at Proxy before App Router can serialize raw search parameters into HTML or an RSC response.
 
 ## User-visible degradation
 
