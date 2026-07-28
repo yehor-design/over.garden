@@ -112,17 +112,23 @@ describe("OVE-230 recovery drill runtime", () => {
         plantObjects: new Set(["plant-a", "plant-backfill"]),
       }),
     ).toEqual(["plant-backfill"]);
-    expect(() =>
+    try {
       classifyProtectedIdentityTransition(before, {
         ...before,
         journalEntries: new Set(["journal-a", "journal-new"]),
-      }),
-    ).toThrow("changed protected identities");
-    expect(() =>
+      });
+      throw new Error("expected journal identity drift refusal");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "JOURNAL_DRIFT" });
+    }
+    try {
       classifyProtectedIdentityTransition(before, {
         ...before,
         plantObjects: new Set(["plant-replacement"]),
-      }),
-    ).toThrow("removed protected plant identities");
+      });
+      throw new Error("expected plant removal refusal");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "PLANT_REMOVED" });
+    }
   });
 });

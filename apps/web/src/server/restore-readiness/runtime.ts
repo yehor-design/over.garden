@@ -115,15 +115,33 @@ export interface ProtectedIdentitySets {
   plantObjects: ReadonlySet<string>;
 }
 
+export type ProtectedIdentityErrorCode =
+  | "AUTH_DRIFT"
+  | "JOURNAL_DRIFT"
+  | "MEDIA_DRIFT"
+  | "PLANT_REMOVED"
+  | "PLANT_UNCLASSIFIED";
+
+export class ProtectedIdentityTransitionError extends Error {
+  constructor(readonly code: ProtectedIdentityErrorCode) {
+    super("recovery bootstrap protected identity transition refused");
+    this.name = "ProtectedIdentityTransitionError";
+  }
+}
+
 export function classifyProtectedIdentityTransition(
   before: ProtectedIdentitySets,
   after: ProtectedIdentitySets,
 ): string[] {
-  assertSameIdentitySet(before.authUsers, after.authUsers);
-  assertSameIdentitySet(before.journalEntries, after.journalEntries);
-  assertSameIdentitySet(before.mediaAssets, after.mediaAssets);
+  assertSameIdentitySet(before.authUsers, after.authUsers, "AUTH_DRIFT");
+  assertSameIdentitySet(
+    before.journalEntries,
+    after.journalEntries,
+    "JOURNAL_DRIFT",
+  );
+  assertSameIdentitySet(before.mediaAssets, after.mediaAssets, "MEDIA_DRIFT");
   if ([...before.plantObjects].some((id) => !after.plantObjects.has(id))) {
-    throw new Error("recovery bootstrap removed protected plant identities");
+    throw new ProtectedIdentityTransitionError("PLANT_REMOVED");
   }
   return [...after.plantObjects].filter((id) => !before.plantObjects.has(id));
 }
@@ -131,12 +149,13 @@ export function classifyProtectedIdentityTransition(
 function assertSameIdentitySet(
   before: ReadonlySet<string>,
   after: ReadonlySet<string>,
+  code: ProtectedIdentityErrorCode,
 ) {
   if (
     before.size !== after.size ||
     [...before].some((identity) => !after.has(identity))
   ) {
-    throw new Error("recovery bootstrap changed protected identities");
+    throw new ProtectedIdentityTransitionError(code);
   }
 }
 
