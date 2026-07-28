@@ -75,6 +75,11 @@ const COMMUNITY: PublicCommunityPageModel = {
     ],
     nextCursor: "next-page",
   },
+  search: {
+    mode: "browse",
+    degradedReason: null,
+    shortQuery: false,
+  },
   viewer: {
     membershipState: null,
     isModerator: false,
@@ -83,6 +88,32 @@ const COMMUNITY: PublicCommunityPageModel = {
 };
 
 describe("PublicCommunityView", () => {
+  it("announces localized bounded search degradation without blocking controls", async () => {
+    const { PublicCommunityView } = await import("./public-community");
+    const html = renderToStaticMarkup(
+      <PublicCommunityView
+        locale="bg"
+        community={{
+          ...COMMUNITY,
+          search: {
+            mode: "bounded_fallback",
+            degradedReason: "timeout",
+            shortQuery: false,
+          },
+        }}
+        viewer="guest"
+        query="домати"
+        kind="all"
+        cursor=""
+      />,
+    );
+
+    expect(html).toContain('role="status"');
+    expect(html).toContain("Търсенето временно е ограничено");
+    expect(html).toContain('type="search"');
+    expect(html).toContain('type="submit"');
+  });
+
   it("keeps reading guest-open and gates only participation and safety mutations", async () => {
     const { PublicCommunityView } = await import("./public-community");
     const html = renderToStaticMarkup(

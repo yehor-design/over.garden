@@ -205,9 +205,9 @@ describe("lineage write boundaries", () => {
   });
 
   it("keeps accepting ordinary provenance text", () => {
-    expect(normalizeLineageSourceReferenceLabel("Насіння від Марії, 2026")).toBe(
-      "Насіння від Марії, 2026",
-    );
+    expect(
+      normalizeLineageSourceReferenceLabel("Насіння від Марії, 2026"),
+    ).toBe("Насіння від Марії, 2026");
     expect(normalizeLineageQuestionText("Коли ви збирали насіння?")).toBe(
       "Коли ви збирали насіння?",
     );
@@ -279,6 +279,17 @@ describe("public query boundaries", () => {
       rejected: false,
     });
   });
+
+  it("keeps the community search boundary on the same canonical sanitizer", () => {
+    const communityQuery = sanitizePreciseLocationSearchQuery(
+      `догляд ${COORDINATES}`,
+    );
+    expect(communityQuery).toMatchObject({
+      query: "",
+      rejected: true,
+    });
+    expect(JSON.stringify(communityQuery)).not.toContain(COORDINATES);
+  });
 });
 
 describe("public search projection", () => {
@@ -327,19 +338,22 @@ describe("analytics boundary", () => {
 });
 
 describe("localized refusal copy", () => {
-  it.each(PUBLIC_LOCALES)("has actionable %s guidance without the value", (locale) => {
-    for (const surface of [
-      "journal_body",
-      "comment",
-      "profile_bio",
-      "lineage_question",
-      "queue_payload",
-    ] as const) {
-      const message = preciseLocationRejectionMessage(surface, locale);
-      expect(message.length).toBeGreaterThan(20);
-      expect(message).not.toContain("50.45010");
-    }
-  });
+  it.each(PUBLIC_LOCALES)(
+    "has actionable %s guidance without the value",
+    (locale) => {
+      for (const surface of [
+        "journal_body",
+        "comment",
+        "profile_bio",
+        "lineage_question",
+        "queue_payload",
+      ] as const) {
+        const message = preciseLocationRejectionMessage(surface, locale);
+        expect(message.length).toBeGreaterThan(20);
+        expect(message).not.toContain("50.45010");
+      }
+    },
+  );
 
   it("falls back to the default locale for unknown input", () => {
     expect(preciseLocationRejectionMessage("comment", "de")).toBe(

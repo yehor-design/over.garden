@@ -152,10 +152,14 @@ describe("OVE-184 community repository contracts", () => {
     expect(compiled.sql).toContain("join user_handle_registry");
     expect(compiled.sql).toContain("join user_public_profiles");
     expect(compiled.sql).toContain("join community_memberships");
-    expect(compiled.sql).toContain("community_memberships.membership_state != 'banned'");
+    expect(compiled.sql).toContain(
+      "community_memberships.membership_state != 'banned'",
+    );
     expect(compiled.sql).toContain("journal_entries.visibility = 'public'");
     expect(compiled.sql).toContain("journal_entries.public_gone_at is null");
-    expect(compiled.sql).toContain(">= communities.minimum_ready_contributions");
+    expect(compiled.sql).toContain(
+      ">= communities.minimum_ready_contributions",
+    );
     expect(compiled.sql).not.toMatch(forbiddenPrivatePattern);
     expect(compiled.parameters).toEqual([]);
   });
@@ -164,9 +168,7 @@ describe("OVE-184 community repository contracts", () => {
     vi.useFakeTimers();
     try {
       const repository = await import("./community-repository");
-      let complete:
-        | ((row: { hasReadyCommunity: boolean }) => void)
-        | undefined;
+      let complete: ((row: { hasReadyCommunity: boolean }) => void) | undefined;
       const load = vi.fn(
         () =>
           new Promise<{ hasReadyCommunity: boolean }>((resolve) => {
@@ -266,6 +268,40 @@ describe("OVE-184 community repository contracts", () => {
     expect(compiled.parameters).toEqual(
       expect.arrayContaining([communityId, member.userId, "active", "public"]),
     );
+  });
+
+  it("restricts hybrid text work to UUID hints and bounds fallback candidates before ILIKE", async () => {
+    const repository = await import("./community-repository");
+    const hybrid = repository
+      .buildPublicCommunityContributionsQuery(testDb, {
+        communityId,
+        viewerScope: null,
+        query: "tomato",
+        restrictToEntryIds: [entryId],
+        applyTextSearch: false,
+      })
+      .compile();
+    const fallbackCandidates = repository
+      .buildPublicCommunityFallbackCandidateQuery(testDb, {
+        communityId,
+        viewerScope: null,
+        kind: "plant",
+      })
+      .compile();
+
+    expect(hybrid.sql).toContain('"journal_entries"."id" in');
+    expect(hybrid.sql).not.toContain("ilike");
+    expect(hybrid.parameters).toContain(entryId);
+    expect(fallbackCandidates.sql).not.toContain("ilike");
+    expect(fallbackCandidates.sql).toContain(
+      '"community_contributions"."community_id" =',
+    );
+    expect(fallbackCandidates.sql).toContain(
+      '"community_contributions"."added_at" desc',
+    );
+    expect(fallbackCandidates.sql).toContain("limit");
+    expect(fallbackCandidates.parameters).toContain(256);
+    expect(fallbackCandidates.sql).not.toMatch(forbiddenPrivatePattern);
   });
 
   it("keeps follow and leave actor-scoped and refuses self-unban semantics", async () => {

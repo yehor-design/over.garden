@@ -26,6 +26,13 @@ import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import type { RequestScope } from "@/server/request-scope";
 import { sanitizePreciseLocationSearchQuery } from "@/lib/privacy/precise-location-text";
+import {
+  findPublicCommunitySearchCandidates,
+  PUBLIC_COMMUNITY_SEARCH_CANDIDATE_LIMIT,
+  type PublicCommunitySearchCandidates,
+  type PublicCommunitySearchReason,
+  withPublicCommunitySearchPermit,
+} from "@/server/search/public-community-search";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -67,6 +74,8 @@ export interface PublicCommunityContributionQueryInput {
   kind?: CommunityObjectKind;
   limit?: number;
   cursor?: CommunityContributionCursor | null;
+  restrictToEntryIds?: readonly string[] | null;
+  applyTextSearch?: boolean;
 }
 
 export interface CommunityModerationAuditInput {
@@ -161,6 +170,11 @@ export interface PublicCommunityDirectoryItem {
 export interface PublicCommunityPageModel extends PublicCommunityDirectoryItem {
   rules: { id: string; key: string; order: number }[];
   contributions: PublicCommunityContributionPage;
+  search: {
+    mode: "browse" | "hybrid" | "bounded_fallback";
+    degradedReason: PublicCommunitySearchReason | null;
+    shortQuery: boolean;
+  };
   viewer: {
     membershipState: CommunityMembershipState | null;
     isModerator: boolean;
@@ -269,6 +283,9 @@ export async function getPublicCommunityPage(
     pageSize?: number;
     executor?: QueryExecutor;
     mediaUrlForKey?: (key: string) => string;
+    findSearchCandidates?: (
+      query: string,
+    ) => Promise<PublicCommunitySearchCandidates>;
   } = {},
 ): Promise<PublicCommunityPageModel | null> {
   const executor = options.executor ?? db;
@@ -284,6 +301,57 @@ export async function getPublicCommunityPage(
     : null;
   const pageSize = normalizeRequestedPageSize(options.pageSize);
 
+  const normalizedQuery = normalizeCommunitySearch(options.query);
+  const searchMode = normalizedQuery.length >= 2;
+  const searchResult = searchMode
+    ? await withPublicCommunitySearchPermit(async () => {
+        const candidates = await (
+          options.findSearchCandidates ?? findPublicCommunitySearchCandidates
+        )(normalizedQuery);
+        if (candidates.source === "hybrid") {
+          return {
+            candidates,
+            rows: await executeCommunitySearchStatement(executor, (trx) =>
+              buildPublicCommunityContributionsQuery(trx, {
+                communityId: community.id,
+                viewerScope,
+                query: null,
+                kind: options.kind,
+                limit: pageSize + 1,
+                cursor,
+                restrictToEntryIds: candidates.ids,
+                applyTextSearch: false,
+              }).execute(),
+            ),
+          };
+        }
+
+        const fallbackRows = await executeBoundedCommunityFallback(executor, {
+          communityId: community.id,
+          viewerScope,
+          query: normalizedQuery,
+          kind: options.kind,
+          limit: pageSize + 1,
+          cursor,
+        });
+        return { candidates, rows: fallbackRows };
+      })
+    : null;
+
+  const resolvedSearch =
+    searchResult?.ok === true
+      ? searchResult.value
+      : searchMode
+        ? {
+            candidates: {
+              source: "bounded_fallback" as const,
+              ids: null,
+              reason: searchResult?.reason ?? ("unavailable" as const),
+            },
+            rows: [] as PublicCommunityContributionRow[],
+          }
+        : null;
+
   const [rules, stats, readiness, contributionRows, membership, moderator] =
     await Promise.all([
       buildCommunityRulesQuery(executor, community.id).execute(),
@@ -293,14 +361,16 @@ export async function getPublicCommunityPage(
         viewerScope,
       ).executeTakeFirst(),
       buildCommunityReadinessQuery(executor, community.slug).executeTakeFirst(),
-      buildPublicCommunityContributionsQuery(executor, {
-        communityId: community.id,
-        viewerScope,
-        query: options.query,
-        kind: options.kind,
-        limit: pageSize + 1,
-        cursor,
-      }).execute(),
+      resolvedSearch
+        ? Promise.resolve(resolvedSearch.rows)
+        : buildPublicCommunityContributionsQuery(executor, {
+            communityId: community.id,
+            viewerScope,
+            query: null,
+            kind: options.kind,
+            limit: pageSize + 1,
+            cursor,
+          }).execute(),
       viewerScope
         ? buildCommunityMembershipStateQuery(
             executor,
@@ -367,6 +437,14 @@ export async function getPublicCommunityPage(
       pageSize,
       options.mediaUrlForKey ?? getPublicDerivativeUrl,
     ),
+    search: {
+      mode: resolvedSearch?.candidates.source ?? "browse",
+      degradedReason:
+        resolvedSearch?.candidates.source === "bounded_fallback"
+          ? resolvedSearch.candidates.reason
+          : null,
+      shortQuery: normalizedQuery.length === 1,
+    },
     viewer: {
       membershipState,
       isModerator: Boolean(moderator),
@@ -1420,7 +1498,14 @@ export function buildPublicCommunityContributionsQuery(
   if (kind !== "all") {
     query = query.where("plant_objects.object_kind", "=", kind);
   }
-  if (queryText) {
+  if (input.restrictToEntryIds) {
+    query = query.where(
+      "journal_entries.id",
+      "in",
+      normalizeCommunityEntryIds(input.restrictToEntryIds),
+    );
+  }
+  if (queryText && input.applyTextSearch !== false) {
     const pattern = `%${escapeLikePattern(queryText)}%`;
     query = query.where(({ or, eb }) =>
       or([
@@ -1446,6 +1531,149 @@ export function buildPublicCommunityContributionsQuery(
     .orderBy("community_contributions.added_at", "desc")
     .orderBy("community_contributions.id", "asc")
     .limit(normalizeCommunityLimit(input.limit));
+}
+
+export function buildPublicCommunityFallbackCandidateQuery(
+  executor: QueryExecutor,
+  input: Pick<
+    PublicCommunityContributionQueryInput,
+    "communityId" | "viewerScope" | "kind" | "cursor"
+  >,
+) {
+  const communityId = normalizeUuid(input.communityId, "Community");
+  const kind = normalizeCommunityObjectKind(input.kind);
+  const cursor = normalizeCommunityCursor(input.cursor);
+  const viewer = input.viewerScope;
+  let query = executor
+    .selectFrom("community_contributions")
+    .innerJoin(
+      "communities",
+      "communities.id",
+      "community_contributions.community_id",
+    )
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "community_contributions.journal_entry_id",
+    )
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .innerJoin("community_memberships", (join) =>
+      join
+        .onRef(
+          "community_memberships.community_id",
+          "=",
+          "community_contributions.community_id",
+        )
+        .onRef(
+          "community_memberships.user_id",
+          "=",
+          "community_contributions.contributor_user_id",
+        ),
+    )
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .innerJoin("user_public_profiles", (join) =>
+      join
+        .onRef(
+          "user_public_profiles.user_id",
+          "=",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
+        )
+        .on("user_public_profiles.profile_visibility", "=", "public")
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
+    )
+    .select("journal_entries.id as entryId")
+    .where("community_contributions.community_id", "=", communityId)
+    .where("communities.lifecycle_state", "in", ["active", "archived"])
+    .where("community_contributions.contribution_state", "=", "active")
+    .whereRef(
+      "community_contributions.contributor_user_id",
+      "=",
+      "journal_entries.owner_user_id",
+    )
+    .where("community_memberships.membership_state", "!=", "banned")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null)
+    .$if(Boolean(viewer), (qb) =>
+      qb.where(
+        noCommunityBlockPredicate(
+          viewer!.userId,
+          "journal_entries.owner_user_id",
+        ),
+      ),
+    );
+  if (kind !== "all")
+    query = query.where("plant_objects.object_kind", "=", kind);
+  if (cursor) {
+    query = query.where(({ or, and, eb }) =>
+      or([
+        eb("community_contributions.added_at", "<", cursor.addedAt),
+        and([
+          eb("community_contributions.added_at", "=", cursor.addedAt),
+          eb("community_contributions.id", ">", cursor.id),
+        ]),
+      ]),
+    );
+  }
+  return query
+    .orderBy("community_contributions.added_at", "desc")
+    .orderBy("community_contributions.id", "asc")
+    .limit(PUBLIC_COMMUNITY_SEARCH_CANDIDATE_LIMIT);
+}
+
+async function executeBoundedCommunityFallback(
+  executor: QueryExecutor,
+  input: PublicCommunityContributionQueryInput,
+) {
+  return executeCommunitySearchStatement(executor, async (trx) => {
+    const candidates = await buildPublicCommunityFallbackCandidateQuery(
+      trx,
+      input,
+    ).execute();
+    return buildPublicCommunityContributionsQuery(trx, {
+      ...input,
+      restrictToEntryIds: candidates.map((row) => row.entryId),
+      applyTextSearch: true,
+    }).execute();
+  });
+}
+
+async function executeCommunitySearchStatement<T>(
+  executor: QueryExecutor,
+  execute: (trx: QueryExecutor) => Promise<T>,
+) {
+  const inTransaction = async (trx: QueryExecutor) => {
+    await sql`set local statement_timeout = '700ms'`.execute(trx);
+    return execute(trx);
+  };
+  return "transaction" in executor
+    ? (executor as Kysely<Database>).transaction().execute(inTransaction)
+    : inTransaction(executor);
 }
 
 export function buildCommunityMembershipStateQuery(
@@ -2171,12 +2399,18 @@ function normalizeCommunitySearch(value: string | null | undefined) {
   return sanitizePreciseLocationSearchQuery(bounded).query;
 }
 
+function normalizeCommunityEntryIds(values: readonly string[]) {
+  const ids = [
+    ...new Set(values.filter((value) => UUID_PATTERN.test(value))),
+  ].slice(0, PUBLIC_COMMUNITY_SEARCH_CANDIDATE_LIMIT);
+  // A non-matching sentinel keeps the SQL valid while preserving an empty result.
+  return ids.length > 0 ? ids : ["00000000-0000-4000-8000-000000000000"];
+}
+
 function normalizeCommunityObjectKind(
   value: CommunityObjectKind | undefined,
 ): CommunityObjectKind {
-  return value === "plant" || value === "animal"
-    ? value
-    : "all";
+  return value === "plant" || value === "animal" ? value : "all";
 }
 
 function normalizeCommunityCursor(
@@ -2314,9 +2548,7 @@ function normalizeAuditState(value: string) {
 }
 
 function normalizeProjectedObjectKind(value: string): PlantObjectKind | null {
-  return value === "plant" || value === "animal"
-    ? value
-    : null;
+  return value === "plant" || value === "animal" ? value : null;
 }
 
 function normalizeProjectedHandle(value: string | null) {
