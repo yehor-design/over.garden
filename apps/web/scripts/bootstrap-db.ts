@@ -18,6 +18,7 @@ import {
   assertProviderBinding,
   DigitalOceanDatabaseProvider,
 } from "../src/server/restore-readiness";
+import { classifyProtectedIdentityTransition } from "../src/server/restore-readiness/runtime";
 
 const envFile = argValue("--env-file") ?? ".env.local";
 const caFile = argValue("--ca-file");
@@ -79,8 +80,8 @@ async function main() {
   recoveryBootstrapStage = "timeout_policy";
   await pool.query("set statement_timeout = '10min'");
   await pool.query("set lock_timeout = '30s'");
-  recoveryBootstrapStage = "protected_counts_before";
-  const before = recoveryMode ? await collectProtectedRowCounts() : null;
+  recoveryBootstrapStage = "protected_identity_before";
+  const before = recoveryMode ? await collectProtectedIdentitySnapshot() : null;
   recoveryBootstrapStage = "application_schema";
   const appSql = await readFile(
     path.join(scriptDir, "..", "sql/0001_walking_skeleton.sql"),
@@ -98,12 +99,11 @@ async function main() {
   recoveryBootstrapStage = "application_schema_reconcile";
   await pool.query(appSql);
 
-  recoveryBootstrapStage = "protected_counts_after";
-  const after = recoveryMode ? await collectProtectedRowCounts() : null;
-  if (recoveryMode && JSON.stringify(before) !== JSON.stringify(after)) {
-    throw new Error(
-      "Recovery bootstrap changed protected restored-row aggregates.",
-    );
+  recoveryBootstrapStage = "protected_identity_after";
+  const after = recoveryMode ? await collectProtectedIdentitySnapshot() : null;
+  if (before && after) {
+    recoveryBootstrapStage = "protected_identity_validation";
+    await assertProtectedIdentityTransition(before, after);
   }
 
   console.log(
@@ -145,20 +145,58 @@ async function assertRecoveryTargetBeforeAccess() {
   });
 }
 
-async function collectProtectedRowCounts() {
-  const result = await pool.query<{
-    auth_users: string;
-    journal_entries: string;
-    media_assets: string;
-    plant_objects: string;
-  }>(`
-    select
-      case when to_regclass('public.user') is null then 0 else (select count(*) from "user") end::text as auth_users,
-      case when to_regclass('public.journal_entries') is null then 0 else (select count(*) from journal_entries) end::text as journal_entries,
-      case when to_regclass('public.media_assets') is null then 0 else (select count(*) from media_assets) end::text as media_assets,
-      case when to_regclass('public.plant_objects') is null then 0 else (select count(*) from plant_objects) end::text as plant_objects
-  `);
-  return result.rows[0];
+interface ProtectedIdentitySnapshot {
+  authUsers: Set<string>;
+  journalEntries: Set<string>;
+  mediaAssets: Set<string>;
+  plantObjects: Set<string>;
+}
+
+async function collectProtectedIdentitySnapshot(): Promise<ProtectedIdentitySnapshot> {
+  const [authUsers, journalEntries, mediaAssets, plantObjects] =
+    await Promise.all([
+      pool.query<{ id: string }>('select id::text as id from "user"'),
+      pool.query<{ id: string }>("select id::text as id from journal_entries"),
+      pool.query<{ id: string }>("select id::text as id from media_assets"),
+      pool.query<{ id: string }>("select id::text as id from plant_objects"),
+    ]);
+  return {
+    authUsers: new Set(authUsers.rows.map((row) => row.id)),
+    journalEntries: new Set(journalEntries.rows.map((row) => row.id)),
+    mediaAssets: new Set(mediaAssets.rows.map((row) => row.id)),
+    plantObjects: new Set(plantObjects.rows.map((row) => row.id)),
+  };
+}
+
+async function assertProtectedIdentityTransition(
+  before: ProtectedIdentitySnapshot,
+  after: ProtectedIdentitySnapshot,
+) {
+  const addedPlants = classifyProtectedIdentityTransition(before, after);
+  if (addedPlants.length === 0) return;
+
+  const classified = await pool.query<{ count: string }>(
+    `
+      select count(distinct plant.id)::text as count
+      from plant_objects plant
+      where plant.id = any($1::uuid[])
+        and plant.display_name = 'Skeleton plant'
+        and exists (
+          select 1
+          from journal_entries journal
+          where journal.id = any($2::uuid[])
+            and journal.plant_object_id = plant.id
+            and journal.owner_user_id = plant.owner_user_id
+            and journal.space_id = plant.space_id
+        )
+    `,
+    [addedPlants, [...before.journalEntries]],
+  );
+  if (Number(classified.rows[0]?.count ?? -1) !== addedPlants.length) {
+    throw new Error(
+      "Recovery bootstrap produced unclassified plant identities.",
+    );
+  }
 }
 
 function argValue(name: string): string | undefined {
