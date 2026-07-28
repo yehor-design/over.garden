@@ -170,6 +170,10 @@ export async function executeApprovedErasureRequest(
         trx,
         requesterUserId,
       ).execute();
+      await buildDeleteOwnedJournalMutationReceiptsForErasureQuery(
+        trx,
+        requesterUserId,
+      ).execute();
 
       await buildDetachOwnedPlantObjectsFromUserCatalogForErasureQuery(
         trx,
@@ -299,6 +303,10 @@ export async function executeApprovedErasureRequest(
     requestId,
     deleteMediaObject,
   );
+  const mediaCleanupConverged = await areErasureMediaCleanupJobsConverged(
+    executor,
+    requestId,
+  );
 
   // OVE-242/OVE-215: erasure is only `completed` once every public projection
   // it owes has verifiably converged to absence. A queued or retrying removal
@@ -315,7 +323,7 @@ export async function executeApprovedErasureRequest(
     executor,
   );
 
-  if (!publicProjectionsConverged) {
+  if (!mediaCleanupConverged || !publicProjectionsConverged) {
     await buildMarkErasureCleanupPendingQuery(executor, scope, {
       requestId,
       now,
@@ -344,6 +352,30 @@ export async function executeApprovedErasureRequest(
     publicEntriesQueuedForUnindex,
     handledStatus: "completed",
   };
+}
+
+export async function areErasureMediaCleanupJobsConverged(
+  executor: QueryExecutor,
+  requestId: string,
+): Promise<boolean> {
+  const row = await buildCountUnconvergedErasureMediaCleanupJobsQuery(
+    executor,
+    requestId,
+  ).executeTakeFirst();
+  return Number(row?.count ?? 0) === 0;
+}
+
+export function buildCountUnconvergedErasureMediaCleanupJobsQuery(
+  executor: QueryExecutor,
+  requestId: string,
+) {
+  return executor
+    .selectFrom("job_queue")
+    .select(sql<number>`count(*)`.as("count"))
+    .where("queue_name", "=", ERASURE_QUEUE_NAME)
+    .where(sql`payload->>'kind'`, "=", ERASURE_MEDIA_DELETE_KIND)
+    .where(sql`payload->>'requestId'`, "=", requestId)
+    .where("status", "!=", "done");
 }
 
 /**
@@ -573,6 +605,15 @@ export function buildDeleteOwnedJournalEntryCatalogMentionsForErasureQuery(
 ) {
   return executor
     .deleteFrom("journal_entry_catalog_mentions")
+    .where("owner_user_id", "=", requesterUserId);
+}
+
+export function buildDeleteOwnedJournalMutationReceiptsForErasureQuery(
+  executor: QueryExecutor,
+  requesterUserId: string,
+) {
+  return executor
+    .deleteFrom("journal_entry_mutation_receipts")
     .where("owner_user_id", "=", requesterUserId);
 }
 

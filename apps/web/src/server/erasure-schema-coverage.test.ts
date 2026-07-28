@@ -4,19 +4,48 @@ import { join } from "node:path";
 
 import {
   assertErasureCoverageCompleteness,
+  discoverErasurePathsFromWalkingSkeletonSql,
   ERASURE_SCHEMA_COVERAGE,
   ERASURE_SCHEMA_COVERAGE_VERSION,
   ERASURE_SQL_DISCOVERY_REQUIRED_IDS,
   listErasureCoverageEntries,
 } from "./erasure-schema-coverage";
 
-describe("OVE-192 erasure schema coverage", () => {
+describe("OVE-215 erasure schema coverage", () => {
   it("exposes a versioned owned coverage manifest", () => {
-    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove192.erasure-schema.v1");
+    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove215.erasure-schema.v2");
     expect(listErasureCoverageEntries().length).toBeGreaterThan(40);
+    const sql = readFileSync(
+      join(process.cwd(), "sql/0001_walking_skeleton.sql"),
+      "utf8",
+    );
     assertErasureCoverageCompleteness({
-      discoveredPathIds: listErasureCoverageEntries().map((entry) => entry.id),
+      discoveredPathIds: discoverErasurePathsFromWalkingSkeletonSql(sql),
     });
+  });
+
+  it.each([
+    [
+      "user FK",
+      `create table if not exists synthetic_identity (\n  id uuid primary key,\n  owner_user_id uuid\n);\nalter table synthetic_identity add constraint synthetic_identity_owner_fkey foreign key (owner_user_id) references "user"(id);`,
+      "synthetic_identity.owner_user_id",
+    ],
+    [
+      "soft identity column",
+      `create table if not exists synthetic_identity (\n  id uuid primary key,\n  recovery_email text\n);`,
+      "synthetic_identity.recovery_email",
+    ],
+    [
+      "JSON identity path",
+      `create table if not exists synthetic_identity (\n  id uuid primary key,\n  identity_payload jsonb check ((identity_payload->>'userId') is not null)\n);`,
+      "synthetic_identity.identity_payload.userId",
+    ],
+  ])("fails closed for an unclassified %s", (_label, sqlFixture, expectedPath) => {
+    const discovered = discoverErasurePathsFromWalkingSkeletonSql(sqlFixture);
+    expect(discovered).toContain(expectedPath);
+    expect(() =>
+      assertErasureCoverageCompleteness({ discoveredPathIds: discovered }),
+    ).toThrow(expectedPath);
   });
 
   it("classifies community restrict FKs as anonymize without weaken", () => {

@@ -40,7 +40,10 @@ The public `/erasure` form records an operator-reviewed request. It does not aut
 3. Maintainer-approved operator executes irreversible erasure or anonymization only after dry-run review and request-specific approval.
 4. Archive removes public OverGarden surfaces first.
 5. Approved erasure deletes or anonymizes current-schema account, garden, journal, media, analytics, catalog-provisional, and search-job references where OverGarden controls them.
-6. Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.
+6. The request remains `cleanup_pending` while any request-bound media job is pending, processing, failed, dead, or otherwise unverifiable, or while any OVE-242 public-projection intent has not verified absence from Meilisearch. `completed` is a verified terminal claim, not an enqueue receipt.
+7. The versioned erasure schema gate independently discovers user foreign keys, identity-shaped soft columns, and explicit JSON identity paths from SQL and compares them with the disposition manifest. A manifest-to-itself comparison is invalid proof; every newly discovered path fails CI until dry-run and execution ownership are explicit.
+8. Quarantine deletion is followed by an actual-byte `HeadObject` absence check. Public derivative deletion retains the OVE-195 origin/CDN unreachable proof. A transport error or still-present object keeps cleanup pending.
+9. Search-engine, crawler, or AI copies outside OverGarden are removal best-effort only.
 
 ## Forbidden Evidence
 

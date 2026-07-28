@@ -8,7 +8,6 @@ import {
   ERASURE_SCHEMA_COVERAGE,
   ERASURE_SCHEMA_COVERAGE_VERSION,
   ERASURE_SQL_DISCOVERY_REQUIRED_IDS,
-  listErasureCoverageEntries,
 } from "../src/server/erasure-schema-coverage";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -75,7 +74,7 @@ function main() {
   }
 
   assertErasureCoverageCompleteness({
-    discoveredPathIds: listErasureCoverageEntries().map((entry) => entry.id),
+    discoveredPathIds: discovered,
   });
 
   const unowned = ERASURE_SCHEMA_COVERAGE.filter(
