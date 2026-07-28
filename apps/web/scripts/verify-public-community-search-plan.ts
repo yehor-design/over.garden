@@ -18,6 +18,23 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function collectSortKeys(value: unknown, keys: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    for (const item of value) collectSortKeys(item, keys);
+  } else if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    if (record["Node Type"] === "Sort" && Array.isArray(record["Sort Key"])) {
+      keys.push(
+        ...record["Sort Key"].filter(
+          (key): key is string => typeof key === "string",
+        ),
+      );
+    }
+    for (const child of Object.values(record)) collectSortKeys(child, keys);
+  }
+  return keys;
+}
+
 async function main() {
   assert(
     process.argv.includes("--environment") &&
@@ -119,6 +136,9 @@ async function main() {
           now() - (generated.ordinal * interval '1 second')
         from generate_series(1, ${REPRESENTATIVE_CORPUS_SIZE}) as generated(ordinal)
       `.execute(transaction);
+      await sql`analyze community_contributions, journal_entries`.execute(
+        transaction,
+      );
 
       const candidateQuery = buildPublicCommunityFallbackCandidateQuery(
         transaction,
@@ -148,6 +168,10 @@ async function main() {
         resultQuery.execute(),
       ]);
       assert(
+        collectSortKeys(candidatePlan).length === 0,
+        "Fallback candidate plan lost its indexed community order.",
+      );
+      assert(
         !/seq scan[^}]+(?:title|body)[^}]+~~\*/i.test(
           JSON.stringify(resultPlan).toLocaleLowerCase("en"),
         ),
@@ -160,11 +184,16 @@ async function main() {
         candidateCap: 256,
         observedCandidates: candidates.length,
         resultRows: resultRows.length,
-        planNodeClasses: [
+        candidatePlanNodeClasses: [
           ...new Set(
-            JSON.stringify([candidatePlan, resultPlan]).match(
-              /\"Node Type\":\"[^\"]+/g,
-            ) ?? [],
+            JSON.stringify(candidatePlan).match(/\"Node Type\":\"[^\"]+/g) ??
+              [],
+          ),
+        ],
+        candidateSortKeys: collectSortKeys(candidatePlan),
+        resultPlanNodeClasses: [
+          ...new Set(
+            JSON.stringify(resultPlan).match(/\"Node Type\":\"[^\"]+/g) ?? [],
           ),
         ],
         result: "PASS",
@@ -175,6 +204,7 @@ async function main() {
     if (!(error instanceof ProofRollback)) throw error;
     process.stdout.write(`${JSON.stringify(error.report, null, 2)}\n`);
   } finally {
+    await sql`analyze community_contributions, journal_entries`.execute(db);
     await db.destroy();
   }
 }

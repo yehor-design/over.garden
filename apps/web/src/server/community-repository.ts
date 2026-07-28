@@ -1546,89 +1546,102 @@ export function buildPublicCommunityFallbackCandidateQuery(
   const viewer = input.viewerScope;
   let query = executor
     .selectFrom("community_contributions")
-    .innerJoin(
-      "communities",
-      "communities.id",
-      "community_contributions.community_id",
-    )
-    .innerJoin(
-      "journal_entries",
-      "journal_entries.id",
-      "community_contributions.journal_entry_id",
-    )
-    .innerJoin("plant_objects", (join) =>
-      join
-        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
-        .onRef(
-          "plant_objects.owner_user_id",
-          "=",
-          "journal_entries.owner_user_id",
-        ),
-    )
-    .innerJoin("community_memberships", (join) =>
-      join
-        .onRef(
-          "community_memberships.community_id",
-          "=",
-          "community_contributions.community_id",
-        )
-        .onRef(
-          "community_memberships.user_id",
-          "=",
-          "community_contributions.contributor_user_id",
-        ),
-    )
-    .innerJoin("user_handle_registry", (join) =>
-      join
-        .onRef(
-          "user_handle_registry.user_id",
-          "=",
-          "journal_entries.owner_user_id",
-        )
-        .on("user_handle_registry.lifecycle_state", "=", "current"),
-    )
-    .innerJoin("user_public_profiles", (join) =>
-      join
-        .onRef(
-          "user_public_profiles.user_id",
-          "=",
-          "user_handle_registry.user_id",
-        )
-        .onRef(
-          "user_public_profiles.normalized_handle",
-          "=",
-          "user_handle_registry.normalized_handle",
-        )
-        .on("user_public_profiles.profile_visibility", "=", "public")
-        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
-        .on("user_public_profiles.removed_at", "is", null),
-    )
-    .select("journal_entries.id as entryId")
+    .select("community_contributions.journal_entry_id as entryId")
     .where("community_contributions.community_id", "=", communityId)
-    .where("communities.lifecycle_state", "in", ["active", "archived"])
     .where("community_contributions.contribution_state", "=", "active")
-    .whereRef(
-      "community_contributions.contributor_user_id",
-      "=",
-      "journal_entries.owner_user_id",
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom("communities")
+          .select("communities.id")
+          .whereRef(
+            "communities.id",
+            "=",
+            "community_contributions.community_id",
+          )
+          .where("communities.lifecycle_state", "in", ["active", "archived"]),
+      ),
     )
-    .where("community_memberships.membership_state", "!=", "banned")
-    .where("journal_entries.visibility", "=", "public")
-    .where("journal_entries.lifecycle_state", "=", "active")
-    .where("journal_entries.entry_scope", "=", "object")
-    .where("journal_entries.public_gone_at", "is", null)
-    .where("journal_entries.public_slug", "is not", null)
-    .where("journal_entries.published_at", "is not", null)
-    .$if(Boolean(viewer), (qb) =>
-      qb.where(
-        noCommunityBlockPredicate(
-          viewer!.userId,
-          "journal_entries.owner_user_id",
-        ),
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom("journal_entries")
+          .innerJoin("plant_objects", (join) =>
+            join
+              .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+              .onRef(
+                "plant_objects.owner_user_id",
+                "=",
+                "journal_entries.owner_user_id",
+              ),
+          )
+          .innerJoin("community_memberships", (join) =>
+            join
+              .onRef(
+                "community_memberships.community_id",
+                "=",
+                "community_contributions.community_id",
+              )
+              .onRef(
+                "community_memberships.user_id",
+                "=",
+                "community_contributions.contributor_user_id",
+              ),
+          )
+          .innerJoin("user_handle_registry", (join) =>
+            join
+              .onRef(
+                "user_handle_registry.user_id",
+                "=",
+                "journal_entries.owner_user_id",
+              )
+              .on("user_handle_registry.lifecycle_state", "=", "current"),
+          )
+          .innerJoin("user_public_profiles", (join) =>
+            join
+              .onRef(
+                "user_public_profiles.user_id",
+                "=",
+                "user_handle_registry.user_id",
+              )
+              .onRef(
+                "user_public_profiles.normalized_handle",
+                "=",
+                "user_handle_registry.normalized_handle",
+              )
+              .on("user_public_profiles.profile_visibility", "=", "public")
+              .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+              .on("user_public_profiles.removed_at", "is", null),
+          )
+          .select("journal_entries.id")
+          .whereRef(
+            "journal_entries.id",
+            "=",
+            "community_contributions.journal_entry_id",
+          )
+          .whereRef(
+            "community_contributions.contributor_user_id",
+            "=",
+            "journal_entries.owner_user_id",
+          )
+          .where("community_memberships.membership_state", "!=", "banned")
+          .where("journal_entries.visibility", "=", "public")
+          .where("journal_entries.lifecycle_state", "=", "active")
+          .where("journal_entries.entry_scope", "=", "object")
+          .where("journal_entries.public_gone_at", "is", null)
+          .where("journal_entries.public_slug", "is not", null)
+          .where("journal_entries.published_at", "is not", null)
+          .$if(kind !== "all", (qb) =>
+            qb.where("plant_objects.object_kind", "=", kind as PlantObjectKind),
+          )
+          .$if(Boolean(viewer), (qb) =>
+            qb.where(
+              noCommunityBlockPredicate(
+                viewer!.userId,
+                "journal_entries.owner_user_id",
+              ),
+            ),
+          ),
       ),
     );
-  if (kind !== "all")
-    query = query.where("plant_objects.object_kind", "=", kind);
   if (cursor) {
     query = query.where(({ or, and, eb }) =>
       or([

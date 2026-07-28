@@ -27,7 +27,7 @@ tsx scripts/verify-public-community-search-plan.ts --environment local --confirm
 tsx scripts/verify-public-community-search-load.ts --environment local --confirm-environment local
 ```
 
-The scripts are loopback-only and read-only. Receipts contain aggregate counts, timing, plan-node classes, and reason classes only.
+The scripts are loopback-only. The plan proof creates 10,000 transactional fixtures, analyzes the temporary corpus, always rolls the rows back, and refreshes local planner statistics after cleanup; the load proof is read-only. Receipts contain aggregate counts, timing, plan-node classes, and reason classes only.
 
 ## Rollback
 
