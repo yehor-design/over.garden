@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247 account-method continuity
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247/OVE-248 account-method continuity
 Last updated: 2026-07-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -528,6 +528,22 @@ Auth and account continuity evidence:
 - Google OAuth production continuity is covered by OVE-111 redacted provider smoke on 2026-07-02.
 - Facebook Login provider-start continuity is covered by OVE-112 redacted provider smoke on 2026-07-02. OVE-142 adds the public launch gate: until `FACEBOOK_LOGIN_PUBLIC_READY` is explicitly true after real non-role Meta proof, production intentionally hides/disables Facebook Login and keeps email/Google as the usable fallback.
 - No provider ids, provider secrets, callback query parameters, message ids, reset links, verification links, cookies, or tokens are recorded here.
+
+### OVE-248 final social-method recovery proof
+
+For an approved disposable, non-personal account-method session, open the active
+final-provider Disconnect control on `/garden/profile`. A verified social-only
+session must expose the password bridge in that dialog and perform one credential
+creation before at most one selected-provider unlink. An unverified or otherwise
+ineligible social-only session must expose a localized recovery explanation with
+zero unlink submit. A non-final provider must require an explicit scoped
+confirmation. Cancel, Escape, outside dismissal, invalid password, and a failed
+unlink preserve every existing method; after credential success plus unlink
+failure, record only the class `credential-success-unlink-failed` and retain both
+methods. The native erasure path cleans up the exact disposable account after the
+proof. Retain only redacted state classes, exact commit/deployment identifiers,
+and pass/fail outcomes—never an email, password, provider subject, callback URL,
+token, cookie, account identifier, journal data, media key, or precise location.
 
 Current public-product smoke coverage:
 
