@@ -651,6 +651,35 @@ describe("Linear AI execution task validator", () => {
     expect(report.sha256).toMatch(/^[0-9a-f]{64}$/);
   });
 
+  it("accepts Linear's canonical asterisk unordered-list serialization", () => {
+    const report = validateLinearAgentTask(
+      validFinalTask().replace(/^- /gm, "* "),
+      { checkRepositoryPathsAtBaseline: false },
+    );
+
+    expect(report.errors).toEqual([]);
+    expect(report.valid).toBe(true);
+  });
+
+  it("keeps a planned-new target valid after it appears in the uncommitted working tree", () => {
+    const task = validFinalTask({
+      "Exact vertical scope, target files, and caller inventory": [
+        "| Layer/surface | Exact existing owner or planned new path | Required change/read-back | Status |",
+        "| --- | --- | --- | --- |",
+        "| Tests | `apps/web/src/server/media/media-runtime-boundary.test.ts` (new) | Prove a bounded native-runtime import boundary | required |",
+      ].join("\n"),
+    });
+
+    const report = validateLinearAgentTask(task);
+
+    expect(report.errors.map((error) => error.code)).not.toContain(
+      "target_path_new_conflict",
+    );
+    expect(report.errors.map((error) => error.code)).not.toContain(
+      "target_path_not_at_baseline",
+    );
+  });
+
   it("rejects template drift in PERF/WAIT identity, operative fields, and post-merge order", async () => {
     const template = await readFile(
       path.join(

@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity
-Last updated: 2026-07-18
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof
+Last updated: 2026-07-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -29,6 +29,36 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
+
+## OVE-226 Exact-SHA Self-Serve Runtime Proof
+
+The canonical guest `/garden` shell must stay independent of native image decode.
+The only native decoder boundary is the authenticated `/api/media/process` route;
+it retains quarantine admission, stripped-derivative creation, and original
+absence proof. Before browser-backed production proof, use the Vercel deployment
+read-back to obtain the immutable deployment URL and its exact Git SHA, then run:
+
+```bash
+cd apps/web
+pnpm smoke:exact-sha-self-serve -- \
+  --environment production \
+  --confirm-environment production \
+  --base-url https://over.garden \
+  --immutable-deployment-url https://<exact-deployment>.vercel.app \
+  --expected-commit <exact-main-sha> \
+  --deployed-commit <exact-vercel-git-sha>
+```
+
+The command accepts only the canonical origin, an HTTPS immutable Vercel origin,
+matching full lowercase SHA values, and a rendered guest-shell marker from both
+origins within 10 seconds. Its JSON receipt intentionally contains only status,
+elapsed time, and boolean classes. It does not create an account, accept media,
+or prove provider identity by itself. The subsequent browser journey must use a
+dedicated controlled mailbox, a synthetic non-human image through the normal
+upload/process flow, and an explicitly linked non-personal Google identity with
+the same mailbox email. Retain no credential, token, email, private text, media
+bytes, object key, stable identity, or precise location; finish through native
+account/media/projection cleanup before considering the proof terminal.
 
 ## OVE-191 Production Scaffold Isolation
 
