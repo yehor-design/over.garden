@@ -58,8 +58,25 @@ const UK_COPY = {
       connected: "Підключено",
       connect: "Підключити {provider}",
       disconnect: "Відв'язати {provider}",
-      disconnectProtected:
-        "Спершу додайте пароль або інший спосіб входу, щоб не втратити доступ.",
+      disconnectPasswordBridgeHint:
+        "Створіть пароль у наступному кроці, щоб безпечно відв'язати цей спосіб входу.",
+      disconnectVerificationRequiredHint:
+        "Підтвердьте адресу або підключіть інший спосіб входу, перш ніж відв'язувати цей.",
+      disconnectPasswordBridgeTitle:
+        "Збережіть доступ перед відв'язуванням {provider}",
+      disconnectPasswordBridgeDescription:
+        "Створіть пароль для цього облікового запису. Потім {provider} буде відв'язано.",
+      disconnectVerificationRequiredDescription:
+        "Спершу підтвердьте адресу електронної пошти або підключіть інший спосіб входу. Нічого не буде відв'язано.",
+      disconnectConfirmTitle: "Відв'язати {provider}?",
+      disconnectConfirmDescription:
+        "Ви більше не зможете входити через {provider}, але інші способи входу залишаться доступними.",
+      cancelDisconnect: "Скасувати",
+      closeDisconnectDialog: "Закрити",
+      confirmDisconnect: "Відв'язати {provider}",
+      createPasswordAndDisconnect: "Створити пароль і відв'язати",
+      passwordCreatedDisconnectError:
+        "Пароль створено, але {provider} не відв'язано. Ваші способи входу збережено — спробуйте ще раз пізніше.",
       linkError:
         "Не вдалося підключити {provider}. Нічого не змінено — спробуйте ще раз.",
       unlinkError: "Не вдалося відв'язати {provider}. Нічого не змінено.",
@@ -519,8 +536,25 @@ const BG_COPY = {
       connected: "Свързан",
       connect: "Свързване с {provider}",
       disconnect: "Прекъсване на връзката с {provider}",
-      disconnectProtected:
-        "Първо добавете парола или друг начин за вход, за да не изгубите достъп.",
+      disconnectPasswordBridgeHint:
+        "Създайте парола в следващата стъпка, за да прекъснете връзката с този начин за вход безопасно.",
+      disconnectVerificationRequiredHint:
+        "Потвърдете имейла или свържете друг начин за вход, преди да прекъснете тази връзка.",
+      disconnectPasswordBridgeTitle:
+        "Запазете достъпа преди прекъсване на връзката с {provider}",
+      disconnectPasswordBridgeDescription:
+        "Създайте парола за този профил. След това връзката с {provider} ще бъде прекъсната.",
+      disconnectVerificationRequiredDescription:
+        "Първо потвърдете имейла или свържете друг начин за вход. Нищо няма да бъде прекъснато.",
+      disconnectConfirmTitle: "Прекъсване на връзката с {provider}?",
+      disconnectConfirmDescription:
+        "Няма да можете да влизате чрез {provider}, но другите начини за вход ще останат достъпни.",
+      cancelDisconnect: "Отказ",
+      closeDisconnectDialog: "Затваряне",
+      confirmDisconnect: "Прекъсване на връзката с {provider}",
+      createPasswordAndDisconnect: "Създаване на парола и прекъсване",
+      passwordCreatedDisconnectError:
+        "Паролата е създадена, но връзката с {provider} не е прекъсната. Начините ви за вход са запазени — опитайте отново по-късно.",
       linkError:
         "{provider} не може да бъде свързан. Нищо не е променено — опитайте отново.",
       unlinkError:
@@ -974,8 +1008,25 @@ const RU_COPY = {
       connected: "Подключено",
       connect: "Подключить {provider}",
       disconnect: "Отвязать {provider}",
-      disconnectProtected:
-        "Сначала добавьте пароль или другой способ входа, чтобы не потерять доступ.",
+      disconnectPasswordBridgeHint:
+        "Создайте пароль на следующем шаге, чтобы безопасно отвязать этот способ входа.",
+      disconnectVerificationRequiredHint:
+        "Подтвердите почту или подключите другой способ входа, прежде чем отвязывать этот.",
+      disconnectPasswordBridgeTitle:
+        "Сохраните доступ перед отвязкой {provider}",
+      disconnectPasswordBridgeDescription:
+        "Сначала создайте пароль для этого аккаунта. Затем {provider} будет отвязан.",
+      disconnectVerificationRequiredDescription:
+        "Сначала подтвердите адрес электронной почты или подключите другой способ входа. Ничего не будет отвязано.",
+      disconnectConfirmTitle: "Отвязать {provider}?",
+      disconnectConfirmDescription:
+        "Вход через {provider} станет недоступен, но другие способы входа сохранятся.",
+      cancelDisconnect: "Отмена",
+      closeDisconnectDialog: "Закрыть",
+      confirmDisconnect: "Отвязать {provider}",
+      createPasswordAndDisconnect: "Создать пароль и отвязать",
+      passwordCreatedDisconnectError:
+        "Пароль создан, но {provider} не отвязан. Ваши способы входа сохранены — попробуйте позже.",
       linkError:
         "Не удалось подключить {provider}. Ничего не изменено — попробуйте ещё раз.",
       unlinkError: "Не удалось отвязать {provider}. Ничего не изменено.",
