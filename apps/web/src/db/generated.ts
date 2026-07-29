@@ -78,6 +78,22 @@ export interface AnalyticsEvents {
   updated_at: Generated<Timestamp>;
 }
 
+export interface AuthEmailOutbox {
+  attempts: Generated<number>;
+  available_at: Generated<Timestamp>;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  kind: Generated<string>;
+  last_error_class: string | null;
+  locked_at: Timestamp | null;
+  locked_by: string | null;
+  sent_at: Timestamp | null;
+  state: Generated<string>;
+  terminalized_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+  verification_id: string;
+}
+
 export interface CatalogAliasProjections {
   alias_kind: string;
   attribution_required: Generated<boolean>;
@@ -865,6 +881,7 @@ export interface DB {
   admin_role_audit_log: AdminRoleAuditLog;
   admin_user_roles: AdminUserRoles;
   analytics_events: AnalyticsEvents;
+  auth_email_outbox: AuthEmailOutbox;
   catalog_alias_projections: CatalogAliasProjections;
   catalog_fuzzy_duplicate_suggestions: CatalogFuzzyDuplicateSuggestions;
   catalog_item_names: CatalogItemNames;

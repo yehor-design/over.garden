@@ -131,6 +131,11 @@ git merge-base --is-ancestor <completed-issue-sha> origin/main
 - For an auth dependency change, the `pnpm auth:security:check` receipt must show only the patched version, bounded duration, and auth-boundary pass/fail classes; it never replaces the required exact-SHA provider or real-gardener smoke.
 - CI run URL for the contained commit when repository content changed; external-state-only work instead records the exact existing-control/provider proof receipt, and coordination records child/integration receipts.
 - Deployment id, public URL, and redacted smoke evidence when the issue touches live production behavior.
+- For OVE-241 or a successor reset-delivery change: the exact-SHA deployment
+  must prove the generic request boundary, the 60-second post-response budget,
+  the listed daily auth-email-outbox Cron recovery route, and a class-only
+  authenticated Cron receipt. Never include an outbox id, recipient, reset URL,
+  token, provider message id, or Cron secret in that evidence.
 - A statement that no secrets, invite URLs, journal text, media keys, raw request metadata, live user identifiers, or precise location data were included in the evidence.
 
 Use this Linear closeout template:
