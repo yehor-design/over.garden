@@ -13,6 +13,7 @@ describe("OVE-243 vertical inline-media integration", () => {
       "app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
     ]) {
       const source = readFileSync(path.join(root, file), "utf8");
+      expect(source).toContain("<StructuredJournalComposer");
       expect(source).toMatch(
         /useInlineMediaSelection\((ownerUserId|entryId)\)/,
       );
@@ -31,6 +32,7 @@ describe("OVE-243 vertical inline-media integration", () => {
       ),
       "utf8",
     );
+    expect(source).toContain("<StructuredJournalComposer");
     expect(source).toContain("await uploadComposerPhotoIntent(");
     expect(source).toContain("return { mediaAssetId, previewUrl }");
     expect(source).not.toContain(
