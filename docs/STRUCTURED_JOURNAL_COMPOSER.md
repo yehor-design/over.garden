@@ -5,13 +5,13 @@ Issue: OVE-202
 
 ## Package pins
 
-| Package | Version | License |
-| --- | --- | --- |
-| `@editorjs/editorjs` | 2.31.6 | Apache-2.0 |
-| `@editorjs/header` | 2.8.9 | MIT |
-| `@editorjs/list` | 2.0.9 | MIT |
-| `@editorjs/quote` | 2.7.6 | MIT |
-| `@editorjs/delimiter` | 1.4.2 | MIT |
+| Package               | Version | License    |
+| --------------------- | ------- | ---------- |
+| `@editorjs/editorjs`  | 2.31.6  | Apache-2.0 |
+| `@editorjs/header`    | 2.8.9   | MIT        |
+| `@editorjs/list`      | 2.0.9   | MIT        |
+| `@editorjs/quote`     | 2.7.6   | MIT        |
+| `@editorjs/delimiter` | 1.4.2   | MIT        |
 
 Image handling uses first-party `OverGardenImageTool` (no `@editorjs/image`, no CDN).
 
@@ -38,9 +38,27 @@ Image handling uses first-party `OverGardenImageTool` (no `@editorjs/image`, no 
 ```bash
 cd apps/web
 pnpm smoke:structured-journal-composer
+pnpm smoke:inline-media-integrity -- --environment local --confirm-environment local
 pnpm lint && pnpm typecheck
 pnpm test src/lib/garden/journal-document.test.ts src/server/erasure-execution.test.ts
 ```
+
+## Inline media integrity
+
+OVE-243 makes photo selection one shared atomic boundary across first-entry,
+follow-up, space, and edit composers. Each file is synchronously reserved before
+the first asynchronous read, so parallel picker callbacks cannot exceed ten
+inline images or the logical byte budget through stale React state. Create flows
+own a copied offline intent before a block becomes canonical; edit uploads obtain
+a processed durable media identity before insertion. Preview object URLs have one
+controller owner and are revoked on removal, owner or entry transition, cancel,
+and unmount.
+
+Explicit save waits at most 1500 ms for composition or reorder recovery and then
+serializes the latest editor generation. The finite deadline prevents a lost
+terminal browser event from leaving Save or Cancel permanently blocked. The
+local-only smoke refuses preview/production and emits only bounded synthetic
+counts and latency; it never uploads media or mutates a canonical journal.
 
 Closeout pattern matches OVE-208: local suite + Vercel `READY` for exact SHA. GitHub Actions may remain `workflow_dispatch` under budget freeze.
 
