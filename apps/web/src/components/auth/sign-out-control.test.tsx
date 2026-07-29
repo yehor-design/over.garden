@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   beforeRequest: vi.fn(),
   phase: "idle" as
     | "idle"
+    | "awaiting-confirmation"
     | "checking"
     | "waiting-for-choice"
     | "signing-out"
@@ -51,6 +52,16 @@ describe("shared sign-out control", () => {
     expect(html).toContain("Перевіряємо локальні зміни…");
     expect(html).toContain('aria-busy="true"');
     expect(html).toContain("disabled");
+  });
+
+  it("keeps the initiating control available while the confirmation owns the decision", async () => {
+    mocks.phase = "awaiting-confirmation";
+    const { SignOutControl } = await import("./sign-out-control");
+    const html = renderToStaticMarkup(<SignOutControl />);
+
+    expect(html).toContain('data-sign-out-phase="awaiting-confirmation"');
+    expect(html).not.toContain('aria-busy="true"');
+    expect(html).not.toContain(" disabled=");
   });
 
   it("keeps the offline guard ordered and the unsynced dialog bounded", async () => {

@@ -51,6 +51,22 @@ vi.mock("@/components/ui/button", () => ({
     return <button {...buttonProps} />;
   },
 }));
+vi.mock("@/components/ui/alert-dialog", () => ({
+  AlertDialog: ({
+    open,
+    children,
+  }: {
+    open: boolean;
+    children: React.ReactNode;
+  }) => (open ? <div>{children}</div> : null),
+  AlertDialogContent: (props: React.ComponentProps<"div">) => (
+    <div {...props} />
+  ),
+  AlertDialogDescription: (props: React.ComponentProps<"div">) => (
+    <div {...props} />
+  ),
+  AlertDialogTitle: (props: React.ComponentProps<"h2">) => <h2 {...props} />,
+}));
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   SheetContent: ({
@@ -294,7 +310,25 @@ describe("sign-out provider state machine", () => {
     expect(mocks.locationReplace).toHaveBeenCalledWith("/");
   });
 
-  it("locks double activation while owner resolution is in flight", async () => {
+  it("does not mutate before confirmation and lets cancel restore idle", async () => {
+    const renderer = await renderProvider("uk");
+
+    await click(renderer, "trigger", { confirm: false });
+
+    expect(button(renderer, "Вийти")).toBeDefined();
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.publishPreparation).not.toHaveBeenCalled();
+    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
+
+    await click(renderer, "Залишитися в обліковому записі");
+
+    expect(button(renderer, "trigger")).toBeDefined();
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
+  });
+
+  it("locks double confirmation while owner resolution is in flight", async () => {
     let resolveSession: ((value: unknown) => void) | undefined;
     mocks.getSession.mockReturnValue(
       new Promise((resolve) => {
@@ -305,8 +339,15 @@ describe("sign-out provider state machine", () => {
     const trigger = button(renderer, "trigger");
 
     await act(async () => {
-      const first = trigger.props.onClick();
-      const second = trigger.props.onClick();
+      await trigger.props.onClick();
+    });
+    const confirmation = renderer.root
+      .findAllByType("button")
+      .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
+    if (!confirmation) throw new Error("Missing sign-out confirmation action");
+    await act(async () => {
+      const first = confirmation.props.onClick();
+      const second = confirmation.props.onClick();
       expect(mocks.getSession).toHaveBeenCalledOnce();
       resolveSession?.({ data: { user: { id: "owner-scope-only" } } });
       await Promise.all([first, second]);
@@ -688,11 +729,15 @@ describe("sign-out provider state machine", () => {
       }),
     );
     const renderer = await renderProvider("uk");
-    const trigger = button(renderer, "trigger");
+    await click(renderer, "trigger", { confirm: false });
+    const confirmation = renderer.root
+      .findAllByType("button")
+      .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
+    if (!confirmation) throw new Error("Missing sign-out confirmation action");
     let pending: Promise<void> | undefined;
 
     await act(async () => {
-      pending = trigger.props.onClick();
+      pending = confirmation.props.onClick();
       await vi.waitFor(() =>
         expect(mocks.promoteToCommitFence).toHaveBeenCalledOnce(),
       );
@@ -822,10 +867,22 @@ async function renderProvider(locale: InterfaceLocale) {
   return renderer!;
 }
 
-async function click(renderer: ReactTestRenderer, label: string) {
+async function click(
+  renderer: ReactTestRenderer,
+  label: string,
+  { confirm = true }: { confirm?: boolean } = {},
+) {
   const target = button(renderer, label);
   await act(async () => {
     await target.props.onClick();
+  });
+  if (label !== "trigger" || !confirm) return;
+  const confirmation = renderer.root
+    .findAllByType("button")
+    .find((candidate) => candidate.props["data-sign-out-confirm-action"]);
+  if (!confirmation) throw new Error("Missing sign-out confirmation action");
+  await act(async () => {
+    await confirmation.props.onClick();
   });
 }
 

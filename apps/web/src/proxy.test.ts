@@ -63,11 +63,44 @@ async function responseFor(
   );
 }
 
+async function responseForHost(
+  url: string,
+  headers?: HeadersInit,
+  init?: Pick<RequestInit, "method">,
+) {
+  return proxy(
+    new NextRequest(url, {
+      headers,
+      method: init?.method,
+    }),
+  );
+}
+
 function interfaceCookies(market: InterfaceMarket, locale: "uk" | "bg" | "ru") {
   return `${INTERFACE_MARKET_COOKIE_NAME}=${market}; ${INTERFACE_LOCALE_COOKIE_NAME}=${locale}`;
 }
 
 describe("app route cache guardrail", () => {
+  it("redirects www document navigation to the canonical apex before auth UI can render", async () => {
+    const response = await responseForHost(
+      "https://www.over.garden/garden?returnTo=%2Fgarden%2Fprofile",
+      { accept: "text/html", "sec-fetch-dest": "document" },
+    );
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/garden?returnTo=%2Fgarden%2Fprofile",
+    );
+    expect(response.headers.get("set-cookie")).toBeNull();
+
+    const apiResponse = await responseForHost(
+      "https://www.over.garden/api/auth/sign-in/email",
+      { accept: "application/json" },
+      { method: "POST" },
+    );
+    expect(apiResponse.status).toBe(200);
+  });
+
   it("redirects coordinate-bearing community search before App Router can serialize it", async () => {
     const coordinate = "50.4501,30.5234";
     const headerCases: HeadersInit[] = [

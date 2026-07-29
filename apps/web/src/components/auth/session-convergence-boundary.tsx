@@ -18,6 +18,7 @@ import {
   createSessionTabId,
   createSignOutOperationId,
   publishCommittedSessionInvalidation,
+  publishSignOutPreparationReceived,
   publishSignOutPreparationFailed,
   publishSignOutPreparationReady,
   SESSION_CONVERGENCE_SIGNALS,
@@ -735,22 +736,25 @@ export function SessionConvergenceBoundary({
     const unsubscribe = subscribeToSessionConvergence((payload) => {
       if (payload.signal === SESSION_CONVERGENCE_SIGNALS.preparation) {
         if (terminalOperationIdsRef.current.has(payload.operationId)) return;
+        if (!payload.preparationRoundId || !tabLease) {
+          return;
+        }
+        // This is intentionally synchronous and payload-free. It proves this
+        // exact peer received the round before its asynchronous composer and
+        // offline preparation begins; the later ready/failed result remains
+        // the strict safety gate for every acknowledged peer.
+        publishSignOutPreparationReceived(
+          payload.operationId,
+          tabLease.tabId,
+          payload.preparationRoundId,
+        );
         activeOperationIdsRef.current.add(payload.operationId);
         updateRemotePreparationFence();
-        if (!payload.preparationRoundId) return;
         operationPreparationRoundsRef.current.set(
           payload.operationId,
           payload.preparationRoundId,
         );
         operationLastSeenAtRef.current.set(payload.operationId, Date.now());
-        if (!tabLease) {
-          publishPreparationResult(
-            "failed",
-            payload.operationId,
-            payload.preparationRoundId,
-          );
-          return;
-        }
         schedulePreparationRound(
           payload.operationId,
           payload.preparationRoundId,
