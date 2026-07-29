@@ -1181,6 +1181,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/api/%5F%5Fvisual-fixtures/journal-creation/route.ts",
         "src/app/api/auth/[...all]/route.ts",
+        "src/app/api/cron/auth-email-outbox/route.ts",
         "src/app/api/cron/media-lifecycle/route.ts",
         "src/app/api/engagement/bookmarks/route.ts",
         "src/app/api/engagement/comments/block/route.ts",

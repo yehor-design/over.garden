@@ -9,6 +9,7 @@ import {
 export const RESEND_API_KEY_ENV = "RESEND_API_KEY";
 export const RESEND_AUTH_FROM_ENV = "RESEND_AUTH_FROM";
 export const RESEND_AUTH_REPLY_TO_ENV = "RESEND_AUTH_REPLY_TO";
+export const RESEND_AUTH_DELIVERY_TIMEOUT_MS = 20_000;
 
 const RESEND_EMAILS_API_URL = "https://api.resend.com/emails";
 
@@ -21,6 +22,7 @@ interface AuthEmailDeliveryPayload {
   email: string;
   env?: EnvLike;
   fetcher?: Fetcher;
+  signal?: AbortSignal;
   url: string;
   userId?: string;
 }
@@ -54,6 +56,7 @@ export function sendAuthPasswordResetEmail({
   email,
   env = process.env,
   fetcher = fetch,
+  signal,
   url,
   userId,
 }: AuthEmailDeliveryPayload): Promise<void> {
@@ -67,6 +70,7 @@ export function sendAuthPasswordResetEmail({
     content,
     email,
     fetcher,
+    signal,
     url: canonicalUrl,
     userId,
   });
@@ -76,6 +80,7 @@ export function sendAuthVerificationEmail({
   email,
   env = process.env,
   fetcher = fetch,
+  signal,
   url,
   userId,
 }: AuthEmailDeliveryPayload): Promise<void> {
@@ -89,6 +94,7 @@ export function sendAuthVerificationEmail({
     content,
     email,
     fetcher,
+    signal,
     url: canonicalUrl,
     userId,
   });
@@ -179,6 +185,7 @@ async function sendResendAuthEmail({
   content,
   email,
   fetcher,
+  signal,
   url,
   userId,
 }: {
@@ -187,6 +194,7 @@ async function sendResendAuthEmail({
   content: AuthEmailContent;
   email: string;
   fetcher: Fetcher;
+  signal?: AbortSignal;
   url: string;
   userId?: string;
 }): Promise<void> {
@@ -197,6 +205,7 @@ async function sendResendAuthEmail({
       "Content-Type": "application/json",
       "Idempotency-Key": idempotencyKey(category, userId ?? email, url),
     },
+    signal: signal ?? AbortSignal.timeout(RESEND_AUTH_DELIVERY_TIMEOUT_MS),
     body: JSON.stringify({
       from: config.from,
       to: [email],

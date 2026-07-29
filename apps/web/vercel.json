@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/media-lifecycle",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/auth-email-outbox",
+      "schedule": "0 4 * * *"
     }
   ]
 }

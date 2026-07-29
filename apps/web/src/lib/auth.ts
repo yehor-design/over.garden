@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
 import { resolveBetterAuthSecret } from "@/lib/auth-secret";
+import { logBetterAuth } from "@/lib/auth/better-auth-logger";
 import { resolveFacebookSocialProviderConfig } from "@/lib/auth/facebook-oauth";
 import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
 import {
@@ -14,9 +15,7 @@ import {
 } from "@/lib/auth/retired-shared-identity";
 import { hardenCurrentSessionSignOut } from "@/lib/auth/sign-out-hardening";
 import { socialAccountPolicy } from "@/lib/auth/social-account-policy";
-import { capturePilotPasswordResetLink } from "@/lib/auth/pilot-password-reset-delivery";
 import {
-  sendAuthPasswordResetEmail,
   sendAuthVerificationEmail,
   shouldRequireAuthEmailVerification,
 } from "@/lib/auth/resend-auth-email-delivery";
@@ -34,6 +33,11 @@ export const auth = betterAuth({
   baseURL: getAuthBaseUrl(),
   basePath: "/api/auth",
   secret: resolveBetterAuthSecret(),
+  logger: {
+    disableColors: true,
+    level: "warn",
+    log: logBetterAuth,
+  },
   database: {
     db,
     type: "postgres",
@@ -43,20 +47,9 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: shouldRequireAuthEmailVerification(),
     revokeSessionsOnPasswordReset: true,
-    sendResetPassword: ({ user, url }) => {
-      const delivery = capturePilotPasswordResetLink({
-        email: user.email,
-        url,
-      });
-
-      if (delivery === "operator_cli") return Promise.resolve();
-
-      return sendAuthPasswordResetEmail({
-        email: user.email,
-        url,
-        userId: user.id,
-      });
-    },
+    // The public route owns reset admission. Keep Better Auth's callback
+    // non-effectful so an accidental direct handler call cannot await Resend.
+    sendResetPassword: () => Promise.resolve(),
   },
   emailVerification: {
     autoSignInAfterVerification: true,

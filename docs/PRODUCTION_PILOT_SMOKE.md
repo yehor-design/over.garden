@@ -149,7 +149,7 @@ Binding implementation and local browser proof:
 - prove guest, health, skeleton, and visual-fixture surfaces do not render or
   mount an authenticated sign-out utility;
 - with no unsynced rows, require one canonical Better Auth `POST
-  /api/auth/sign-out`, a fresh database-backed null-session confirmation, and a
+/api/auth/sign-out`, a fresh database-backed null-session confirmation, and a
   hard replace to `/`, `/bg`, or `/ru` for the selected interface locale;
 - with unsynced text and nested photo Blob data, require exactly stay,
   sync-first, or explicit discard-and-sign-out; pause new owner-local writes
@@ -939,7 +939,12 @@ Goal: a gardener who loses access or forgets how to sign in can recover through 
 ### What landed
 
 - `/garden` auth panel accepts real email/password sign-in and sign-up instead of a hardcoded local-only account. Duplicate sign-up attempts map to calm recovery copy that steers the gardener back to sign-in on the existing account rather than creating a second garden.
-- Better Auth password reset is wired with `sendResetPassword`. Normal app traffic sends password reset email through Resend when `RESEND_API_KEY` and `RESEND_AUTH_FROM` are configured; operator CLI mode still captures the one-time reset URL for private handoff when `PILOT_OPERATOR_PASSWORD_RESET=1`.
+- Better Auth remains canonical for password-reset tokens, expiry, mutation, and
+  session revocation. OVE-241 replaces the requester-path Resend call with a
+  durable `auth_email_outbox`: the generic response returns after local
+  admission, the route schedules one bounded post-response drain, and the
+  Vercel daily Cron is crash/retry recovery. Operator CLI mode still captures a
+  one-time reset URL for private handoff when `PILOT_OPERATOR_PASSWORD_RESET=1`.
 - Production-like email/password sign-up requires email verification and sends verification email through the same Resend transactional path. Local/test runtimes keep verification optional.
 - `/auth/help` (`noindex`) offers a self-serve reset request form plus the closed-pilot operator fallback.
 - `/auth/reset-password` (`noindex`) lets a gardener set a new password from the emailed or operator-provided one-time link and return to `/garden`.
@@ -948,8 +953,14 @@ Goal: a gardener who loses access or forgets how to sign in can recover through 
 ### Self-serve recovery workflow (redacted evidence only)
 
 1. Confirm production/preview readiness reports `RESEND_API_KEY` and `RESEND_AUTH_FROM` as configured without exposing values.
-2. From `/auth/help`, request a reset link for an existing gardener account.
-3. Confirm a Resend transactional email is delivered from the approved OverGarden sender and that the visible link origin is `https://over.garden` in production.
+2. From `/auth/help`, request a reset link for an existing gardener account and
+   compare the redacted HTTP status/body/cache-header class with an absent
+   address; neither request may wait for a provider.
+3. Confirm a Resend transactional email is delivered from the approved
+   OverGarden sender and that the visible link origin is `https://over.garden`
+   in production. If the immediate post-response attempt is interrupted, read
+   the authenticated daily Cron schedule and its safe worker-result class
+   instead of disclosing an outbox row or recipient identity.
 4. Set a new password through `/auth/reset-password`, then confirm `/garden` shows the same owner-scoped plant objects and entries.
 5. Evidence may record provider class, sender domain class, canonical origin class, delivery success/failure class, and account-continuity pass/fail only. Do not record recipient email addresses, provider message IDs, reset/verification tokens, tokenized URLs, cookies, or provider payloads.
 
@@ -985,6 +996,9 @@ Do not treat auth recovery as complete if any of the following are true:
 - Reset links, tokens, or passwords appear in docs, Linear, logs, analytics, or UI evidence.
 - A recovered gardener lands in a duplicate account/garden instead of the original owner-scoped data.
 - Production self-serve reset or email verification claims are made without Resend env readiness and redacted live delivery proof.
+- OVE-241 is claimed complete without the exact-SHA Vercel deployment, a listed
+  daily `/api/cron/auth-email-outbox` schedule, a class-only authenticated Cron
+  receipt, and the paired generic-response proof.
 
 ## Product Assumption
 
