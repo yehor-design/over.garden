@@ -8,6 +8,8 @@ type GlobalWithLocalAuthSecret = typeof globalThis & {
 export const BETTER_AUTH_SECRETS_ENV = "BETTER_AUTH_SECRETS";
 export const BETTER_AUTH_CURRENT_SECRET_VERSION_ENV =
   "BETTER_AUTH_CURRENT_SECRET_VERSION";
+export const BETTER_AUTH_LEGACY_GRACE_UNTIL_ENV =
+  "BETTER_AUTH_LEGACY_GRACE_UNTIL";
 
 const missingAuthSecretMessage =
   "Invalid Better Auth secret policy: a versioned current secret is required.";
@@ -16,6 +18,9 @@ const localDevelopmentSecretPrefix =
 const LOCAL_FALLBACK_VERSION = 0;
 const VERSION_PATTERN = /^(0|[1-9]\d*)$/;
 const STRONG_SECRET_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const STRICT_UTC_INSTANT_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+const LEGACY_GRACE_MAX_UNTIL = Date.parse("2026-08-07T00:00:00.000Z");
 
 export type AuthSecretHealthClass =
   | "versioned_current"
@@ -107,7 +112,10 @@ export function resolveBetterAuthSecretOptions(
   const configuration = resolveAuthSecretConfiguration(env);
   if (configuration.health.class === "versioned_current") {
     return {
-      secret: configuration.legacySecret,
+      // Better Auth otherwise falls back to the ambient singular environment
+      // variable. Supplying the active key explicitly prevents an inadmissible
+      // legacy value from becoming a decryptable fallback by accident.
+      secret: configuration.legacySecret ?? configuration.active.value,
       secrets: configuration.versionedSecrets,
     };
   }
@@ -175,10 +183,14 @@ export function isBlockedBetterAuthSecret(value: string | undefined): boolean {
 function evaluateAuthSecretConfiguration(
   env: EnvLike,
 ): EvaluatedAuthSecretConfiguration {
-  const legacySecret = configuredLegacyBetterAuthSecret(env.BETTER_AUTH_SECRET);
-  const hasBlockedLegacySecret = Boolean(
-    configuredRawValue(env.BETTER_AUTH_SECRET) && !legacySecret,
+  const configuredLegacySecret = configuredLegacyBetterAuthSecret(
+    env.BETTER_AUTH_SECRET,
   );
+  const servingRuntime = isProductionLikeRuntime(env) && !isBuildRuntime(env);
+  const legacySecret =
+    configuredLegacySecret && (!servingRuntime || hasActiveLegacyGrace(env))
+      ? configuredLegacySecret
+      : undefined;
   const versionedSecrets = parseVersionedAuthSecrets(
     env[BETTER_AUTH_SECRETS_ENV],
   );
@@ -187,7 +199,6 @@ function evaluateAuthSecretConfiguration(
   );
 
   if (
-    !hasBlockedLegacySecret &&
     versionedSecrets &&
     activeVersion !== null &&
     versionedSecrets[0]?.version === activeVersion
@@ -277,12 +288,41 @@ function isStrongEncodedSecret(value: string): boolean {
   }
 }
 
+function isStrongLegacySecret(value: string): boolean {
+  if (isStrongEncodedSecret(value)) return true;
+  if (!/^[A-Za-z0-9+/]{43}=$/.test(value)) return false;
+
+  try {
+    const decoded = Buffer.from(value, "base64");
+    return decoded.length === 32 && decoded.toString("base64") === value;
+  } catch {
+    return false;
+  }
+}
+
 function configuredLegacyBetterAuthSecret(value: string | undefined) {
   const trimmed = configuredRawValue(value);
   if (!trimmed) return undefined;
-  if (isBlockedBetterAuthSecret(trimmed)) return undefined;
+  if (isBlockedBetterAuthSecret(trimmed) || !isStrongLegacySecret(trimmed)) {
+    return undefined;
+  }
 
   return trimmed;
+}
+
+function hasActiveLegacyGrace(env: EnvLike): boolean {
+  const configured = env[BETTER_AUTH_LEGACY_GRACE_UNTIL_ENV];
+  if (!configured || !STRICT_UTC_INSTANT_PATTERN.test(configured)) {
+    return false;
+  }
+
+  const until = Date.parse(configured);
+  return (
+    Number.isFinite(until) &&
+    new Date(until).toISOString() === configured &&
+    until > Date.now() &&
+    until < LEGACY_GRACE_MAX_UNTIL
+  );
 }
 
 function configuredRawValue(value: string | undefined) {
@@ -293,8 +333,7 @@ function configuredRawValue(value: string | undefined) {
 function isBuildRuntime(env: EnvLike = process.env): boolean {
   return (
     env.NEXT_PHASE === "phase-production-build" ||
-    env.CI === "1" ||
-    env.CI === "true"
+    (!isProductionLikeRuntime(env) && (env.CI === "1" || env.CI === "true"))
   );
 }
 
@@ -305,6 +344,7 @@ function readRuntimeAuthEnv(): EnvLike {
     BETTER_AUTH_SECRETS: process.env.BETTER_AUTH_SECRETS,
     BETTER_AUTH_CURRENT_SECRET_VERSION:
       process.env.BETTER_AUTH_CURRENT_SECRET_VERSION,
+    BETTER_AUTH_LEGACY_GRACE_UNTIL: process.env.BETTER_AUTH_LEGACY_GRACE_UNTIL,
     NODE_ENV: process.env.NODE_ENV,
     VERCEL: process.env.VERCEL,
     VERCEL_ENV: process.env.VERCEL_ENV,

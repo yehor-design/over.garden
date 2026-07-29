@@ -15,6 +15,9 @@ describe("lineage claim browser handoff", () => {
     expect(lineageClaimTokenFromHash("#token=v2.2.payload.signature")).toBe(
       "v2.2.payload.signature",
     );
+    expect(
+      lineageClaimTokenFromHash("#token=v2.9007199254740991.payload.signature"),
+    ).toBe("v2.9007199254740991.payload.signature");
     expect(lineageClaimTokenFromHash("?token=v1.payload.signature")).toBeNull();
     expect(
       lineageClaimTokenFromHash("#token=v2.02.payload.signature"),

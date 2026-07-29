@@ -6,7 +6,7 @@ export const LINEAGE_CLAIM_COOKIE_NAME = "overgarden-lineage-claim";
 export const LINEAGE_CLAIM_COOKIE_MAX_AGE_SECONDS = 30 * 60;
 
 const LINEAGE_INVITE_TOKEN_PATTERN =
-  /^(?:v1\.[A-Za-z0-9_-]{1,3072}\.[A-Za-z0-9_-]{1,512}|v2\.(?:0|[1-9]\d{0,14})\.[A-Za-z0-9_-]{1,3072}\.[A-Za-z0-9_-]{1,512})$/;
+  /^(?:v1\.[A-Za-z0-9_-]{1,3072}\.[A-Za-z0-9_-]{1,512}|v2\.(?:0|[1-9]\d{0,15})\.[A-Za-z0-9_-]{1,3072}\.[A-Za-z0-9_-]{1,512})$/;
 
 export function lineageClaimTokenFromHash(hash: string): string | null {
   if (!hash.startsWith("#") || hash.length > 4096) return null;

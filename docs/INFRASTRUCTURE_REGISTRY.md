@@ -627,18 +627,22 @@ CRON_SECRET`. Authenticated production env-name read-back on 2026-07-29
   ordered `version:secret` set and `BETTER_AUTH_CURRENT_SECRET_VERSION` as
   non-secret metadata. Serving Production and Preview fail closed unless the
   declared current version is the first unique entry and that active entry is a
-  canonical 32-byte base64url key class. `BETTER_AUTH_SECRET` remains only as
-  the bounded legacy compatibility fallback on the first migration; do not
-  read, replace, disclose, hash, or remove it until a separately approved
-  grace-window closure. The Vercel write order is: name-class read-back,
-  independent cryptographic generation per target without output, Sensitive
-  versioned write, matching metadata write, exact-SHA deployment/read-back,
-  then redacted health and continuity proof. The direct rollback removes the
-  new versioned pair and redeploys the known-good artifact while the singular
-  fallback remains. Provider evidence records only target, env-name/sensitivity
-  class, current version class, deployment identity/status, aliases, and
-  pass/fail—never material, a digest, prefix, encoded/decoded size, token,
-  cookie, callback parameter, identity, or provider payload.
+  canonical 32-byte base64url key class. `BETTER_AUTH_SECRET` is admitted only
+  as a bounded legacy compatibility fallback: it must be an exact 32-byte
+  standard Base64 or base64url key and have the non-secret, strict-UTC
+  `BETTER_AUTH_LEGACY_GRACE_UNTIL` before the code-capped deadline. Any
+  inadmissible or expired singular value is clean-cut from auth reads; the
+  active versioned key is passed explicitly so Better Auth cannot fall back to
+  the ambient legacy environment variable. The Vercel write order is:
+  name-class read-back, independent cryptographic generation per target without
+  output, Sensitive versioned write, matching metadata write, exact-SHA
+  deployment/read-back, then redacted health and continuity proof. Once a
+  production deployment proves clean-cut behavior, remove the stale singular
+  provider variable and redeploy the exact artifact. Provider evidence records
+  only target, env-name/sensitivity class, current version class, deployment
+  identity/status, aliases, and pass/fail—never material, a digest, prefix,
+  encoded/decoded size, token, cookie, callback parameter, identity, or
+  provider payload.
 - On 2026-07-05, Google Analytics 4 page measurement was installed through a consent-first Google tag with public measurement id `G-71LP7XZ5NE`. On 2026-07-05, that loader was moved behind the consent-first Google Tag Manager container `GTM-W979KSX3`. The consent banner appears only on authored public, legal, and support pages; the external Google Tag Manager container must not load until the visitor accepts analytics. The tag is intentionally scoped away from private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes. The GTM account must publish a GA4 tag that sends to `G-71LP7XZ5NE`; app code only loads the container after consent.
 - OVE-144 consent-first Meta Ads attribution is separate from Facebook Login. Runtime env names are `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED` (single public kill switch), `NEXT_PUBLIC_META_PIXEL_ID` (public Pixel/Data Source id), `META_CONVERSIONS_API_ACCESS_TOKEN` (secret), optional `META_CONVERSIONS_API_TEST_EVENT_CODE`, and optional `META_CONVERSIONS_API_GRAPH_VERSION` (default implementation version `v23.0`, re-check Meta before enabling live if the dashboard recommends a newer version). The public flag must stay absent/false unless Meta Pixel/Data Source, CAPI token, Test Events proof, and privacy smoke are ready. App code never loads Meta Pixel before explicit marketing consent, never loads it on private garden/admin/auth/journal/API/callback routes, and never sends Meta journal text, private plant/object/catalog names, precise location, media keys/URLs, auth payloads, account identifiers, IP/user-agent evidence, provider cookies, or raw URLs/referrers. Implementation source checks on 2026-07-05 used Meta Pixel consent controls (`https://developers.facebook.com/docs/meta-pixel/implementation/gdpr`), Pixel+CAPI deduplication (`https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events`), and CAPI customer information parameter docs (`https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters/`).
 - OVE-157 consent-first Microsoft Clarity is an optional UX observation layer for authored public, legal, and support pages only. Runtime env names are `NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED` (single public kill switch) and `NEXT_PUBLIC_MICROSOFT_CLARITY_PROJECT_ID` (public Clarity project id). Keep `NEXT_PUBLIC_MICROSOFT_CLARITY_ENABLED` absent/false in production until the operator creates the Clarity project, verifies project settings and under-18 targeting constraints, and passes the privacy smoke. App code uses the NPM package `@microsoft/clarity`, never the raw GTM Custom HTML snippet, never loads Clarity before explicit analytics consent, calls Clarity consent v2 with ad storage denied and analytics storage granted, revokes Clarity analytics storage when the visitor moves to a disallowed route, never calls `Clarity.identify`, and never initializes Clarity on private garden/admin/auth/journal/lineage/join/invite/API/callback/erasure routes. If Clarity is disabled, the consent flow and app must continue to work with Google Tag Manager only.

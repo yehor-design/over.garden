@@ -37,7 +37,12 @@ versioned pair `BETTER_AUTH_SECRETS` and
 `BETTER_AUTH_CURRENT_SECRET_VERSION`; the first ordered entry is current.
 Keep the legacy singular `BETTER_AUTH_SECRET` only during the bounded
 migration grace period so existing encrypted state and verification links can
-complete. Never put real values in this repository or command history.
+complete. Serving compatibility also requires a canonical 32-byte standard
+Base64 or Base64url legacy key and the non-secret, strict UTC
+`BETTER_AUTH_LEGACY_GRACE_UNTIL` deadline. An invalid or expired singular
+value is clean-cut from auth reads while the declared current key remains the
+explicit Better Auth fallback. Never put real values in this repository or
+command history.
 
 Database type generation after a DB is available:
 
