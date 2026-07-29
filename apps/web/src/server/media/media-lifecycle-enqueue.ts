@@ -231,6 +231,11 @@ export async function enqueueMediaDerivativeRevokes(
         updated_at: new Date(),
       })
       .where("id", "=", candidate.mediaAssetId)
+      // Pre-OVE-244 assets intentionally lack generation fields. The safe
+      // generation shape constraint therefore requires them to remain in the
+      // legacy state while the canonical archive still enqueues and proves
+      // byte revocation below.
+      .where("media_readiness_state", "!=", "legacy_non_ready")
       .execute();
     await buildEnqueueMediaDerivativeRevokeJobQuery(executor, {
       ...candidate,
