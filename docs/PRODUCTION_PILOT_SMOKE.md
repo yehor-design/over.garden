@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247/OVE-248 account-method continuity
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247/OVE-248 account-method continuity plus OVE-249 canonical sign-out convergence
 Last updated: 2026-07-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -204,6 +204,25 @@ Binding implementation and local browser proof:
   the old generation while the POST outcome or fresh session state is unknown;
 - exercise keyboard focus, dialog semantics, live states, 320 px and 1440 px,
   and exact-parity Ukrainian, Bulgarian, and Russian copy.
+
+OVE-249 adds the following exact-SHA browser proof before this sign-out claim
+may be refreshed:
+
+- a `www.over.garden` document navigation to `/garden` (including a safe query)
+  receives one `308` redirect to the identical `https://over.garden` path and
+  query before any localized or authenticated form can render; API mutations
+  are not forwarded across origins by that document redirect;
+- each profile/menu/utility sign-out control opens one localized confirmation
+  before inventory, queue pause, broadcast, Better Auth request, or local-data
+  mutation; cancel and Escape return to idle with zero such effect;
+- a closed or suspended tab may leave an unexpired presence lease, but is
+  excluded only after the `1500 ms` exact-round liveness acknowledgement bound;
+  a peer that acknowledges stays behind the existing `ready` or `failed`
+  preparation gate and cannot be silently bypassed;
+- retain only redacted confirmation, liveness, redirect, guest-navigation, and
+  exact deployment/SHA result classes. Never retain a credential, cookie,
+  email, account/tab identifier, local draft, storage value, or private
+  content.
 
 The healthy-database smoke must use a bounded synthetic account and two cookie
 jars. It establishes exactly two current sessions, ends jar A through the

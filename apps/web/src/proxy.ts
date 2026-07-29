@@ -64,6 +64,8 @@ const INTERNAL_PROFILE_REWRITE_SIGNATURE_HEADER =
 const INTERNAL_PROFILE_REWRITE_VERSION = "v1";
 const INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT =
   "overgarden:internal-profile-rewrite:v1";
+const CANONICAL_PRODUCTION_HOST = "over.garden";
+const NON_CANONICAL_PRODUCTION_HOST = "www.over.garden";
 
 function isPrefetchRequest(request: NextRequest) {
   const purpose = request.headers.get("purpose")?.toLowerCase() ?? "";
@@ -94,6 +96,20 @@ function isDocumentNavigationRequest(request: NextRequest) {
 
   const accept = request.headers.get("accept")?.toLowerCase();
   return !accept || accept.includes("text/html") || accept.includes("*/*");
+}
+
+function getCanonicalHostResponse(request: NextRequest) {
+  if (
+    request.nextUrl.hostname !== NON_CANONICAL_PRODUCTION_HOST ||
+    !isDocumentNavigationRequest(request)
+  ) {
+    return null;
+  }
+  const url = request.nextUrl.clone();
+  url.protocol = "https:";
+  url.hostname = CANONICAL_PRODUCTION_HOST;
+  url.port = "";
+  return NextResponse.redirect(url, { status: 308 });
 }
 
 function withAppRouteContract(
@@ -303,6 +319,8 @@ async function getPublicProfileLifecycleResponse(
 // viewer solely to fail closed on mutual blocks and is not a mutation authz
 // boundary.
 export async function proxy(request: NextRequest) {
+  const canonicalHostResponse = getCanonicalHostResponse(request);
+  if (canonicalHostResponse) return canonicalHostResponse;
   const localization = resolveRequestLocalization(request);
   const { locale } = localization;
   const pathname = normalizePathname(request.nextUrl.pathname);

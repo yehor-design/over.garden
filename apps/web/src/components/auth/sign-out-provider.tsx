@@ -13,6 +13,12 @@ import { flushSync } from "react-dom";
 
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -61,6 +67,7 @@ import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 type SignOutCopy = ReturnType<typeof getTrustSurfaceCopy>["signOut"];
 type SignOutPhase =
   | "idle"
+  | "awaiting-confirmation"
   | "checking"
   | "waiting-for-choice"
   | "signing-out"
@@ -104,6 +111,7 @@ export function SignOutProvider({
     pending: state.phase !== "idle" || authoritativeTransition,
   });
   const operationLockedRef = useRef(false);
+  const confirmationOpenRef = useRef(false);
   const ownerUserIdRef = useRef<string | null>(null);
   const pauseHandleRef = useRef<OwnerOfflineActivityPauseHandle | null>(null);
   const composerPreparationRef = useRef<OwnerComposerPreparationHandle | null>(
@@ -479,7 +487,7 @@ export function SignOutProvider({
     window.location.replace(window.location.href);
   }, [stopOperationHeartbeat]);
 
-  const requestSignOut = useCallback(async () => {
+  const beginConfirmedSignOut = useCallback(async () => {
     if (operationLockedRef.current) return;
     operationLockedRef.current = true;
     setState({ phase: "checking" });
@@ -543,6 +551,24 @@ export function SignOutProvider({
     startOperationHeartbeat,
   ]);
 
+  const requestSignOut = useCallback(async () => {
+    if (operationLockedRef.current || confirmationOpenRef.current) return;
+    confirmationOpenRef.current = true;
+    setState({ phase: "awaiting-confirmation" });
+  }, []);
+
+  const cancelSignOutConfirmation = useCallback(() => {
+    if (!confirmationOpenRef.current) return;
+    confirmationOpenRef.current = false;
+    setState({ phase: "idle" });
+  }, []);
+
+  const confirmSignOut = useCallback(async () => {
+    if (!confirmationOpenRef.current || operationLockedRef.current) return;
+    confirmationOpenRef.current = false;
+    await beginConfirmedSignOut();
+  }, [beginConfirmedSignOut]);
+
   const staySignedIn = useCallback(async () => {
     if (operationLockedRef.current) return;
     operationLockedRef.current = true;
@@ -574,7 +600,7 @@ export function SignOutProvider({
     if (operationLockedRef.current) return;
     const ownerUserId = ownerUserIdRef.current;
     if (!ownerUserId) {
-      await requestSignOut();
+      await beginConfirmedSignOut();
       return;
     }
 
@@ -695,7 +721,7 @@ export function SignOutProvider({
     awaitRemotePreparation,
     hardReloadChangedSession,
     performCanonicalSignOut,
-    requestSignOut,
+    beginConfirmedSignOut,
     resumePreparedActivity,
     state.summary,
   ]);
@@ -721,15 +747,15 @@ export function SignOutProvider({
     }
 
     if (isBeforePurgeServerError(state.errorKind)) {
-      await requestSignOut();
+      await beginConfirmedSignOut();
       return;
     }
 
     const resumed = await resumePreparedActivity();
-    if (resumed) await requestSignOut();
+    if (resumed) await beginConfirmedSignOut();
   }, [
     performCanonicalSignOut,
-    requestSignOut,
+    beginConfirmedSignOut,
     reconcileUnknownCanonicalAttempt,
     resumePreparedActivity,
     state.errorKind,
@@ -858,6 +884,7 @@ export function SignOutProvider({
   );
   const dialogOpen =
     state.phase === "waiting-for-choice" || state.phase === "error";
+  const confirmationOpen = state.phase === "awaiting-confirmation";
 
   return (
     <SignOutContext.Provider value={value}>
@@ -881,6 +908,36 @@ export function SignOutProvider({
             ? copy.signingOut
             : ""}
       </p>
+      <AlertDialog
+        open={confirmationOpen}
+        onOpenChange={(open) => {
+          if (!open) cancelSignOutConfirmation();
+        }}
+      >
+        <AlertDialogContent data-sign-out-confirmation="true">
+          <AlertDialogTitle>{copy.confirmationTitle}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {copy.confirmationDescription}
+          </AlertDialogDescription>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={cancelSignOutConfirmation}
+            >
+              {copy.confirmationCancel}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              data-sign-out-confirm-action="true"
+              onClick={() => void confirmSignOut()}
+            >
+              {copy.confirmationAction}
+            </Button>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
       <Sheet
         open={dialogOpen}
         onOpenChange={(open) => {

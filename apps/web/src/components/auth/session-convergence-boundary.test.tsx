@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   listener: null as null | ((payload: SessionSignal) => void),
   acquireLease: vi.fn(),
   releaseLease: vi.fn(),
+  publishReceived: vi.fn(),
   publishReady: vi.fn(),
   publishFailed: vi.fn(),
   publishCommitted: vi.fn(),
@@ -84,6 +85,7 @@ vi.mock("@/lib/auth/sign-out-contract", () => ({
 vi.mock("@/lib/auth/session-convergence", () => ({
   SESSION_CONVERGENCE_SIGNALS: {
     preparation: "sign_out_preparation",
+    received: "sign_out_preparation_received",
     ready: "sign_out_preparation_ready",
     failed: "sign_out_preparation_failed",
     cancellation: "sign_out_preparation_cancelled",
@@ -92,6 +94,7 @@ vi.mock("@/lib/auth/session-convergence", () => ({
   acquireAuthenticatedSessionTabLease: mocks.acquireLease,
   createSessionTabId: () => "tab-unregistered-test-1234",
   createSignOutOperationId: () => "op-fallback-fence-1234",
+  publishSignOutPreparationReceived: mocks.publishReceived,
   publishSignOutPreparationReady: mocks.publishReady,
   publishSignOutPreparationFailed: mocks.publishFailed,
   publishCommittedSessionInvalidation: mocks.publishCommitted,
@@ -184,6 +187,7 @@ describe("session convergence boundary", () => {
     );
 
     expect(source).toContain("subscribeToSessionConvergence");
+    expect(source).toContain("publishSignOutPreparationReceived");
     expect(source).toContain("publishSignOutPreparationReady");
     expect(source).toContain("publishSignOutPreparationFailed");
     expect(source).toContain('window.addEventListener("pageshow"');
@@ -289,6 +293,22 @@ describe("session convergence boundary", () => {
         pending: false,
       }),
     );
+    await unmount(renderer);
+  });
+
+  it("publishes the exact-round liveness receipt before asynchronous preparation", async () => {
+    const renderer = await renderBoundary();
+
+    await emit("sign_out_preparation", "op-liveness-boundary-1234");
+
+    expect(mocks.publishReceived).toHaveBeenCalledWith(
+      "op-liveness-boundary-1234",
+      "tab-boundary-test-1234",
+      "round-boundary-test-1234",
+    );
+    expect(
+      mocks.publishReceived.mock.invocationCallOrder[0],
+    ).toBeLessThan(mocks.publishReady.mock.invocationCallOrder[0]!);
     await unmount(renderer);
   });
 
@@ -445,7 +465,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("fails the initiator quorum when this authenticated tab cannot register presence", async () => {
+  it("does not acknowledge or prepare when this tab cannot register presence", async () => {
     mocks.acquireLease.mockImplementation(() => {
       throw new Error("storage unavailable");
     });
@@ -453,11 +473,8 @@ describe("session convergence boundary", () => {
 
     await emit("sign_out_preparation", "op-unregistered-tab-1234");
 
-    expect(mocks.publishFailed).toHaveBeenCalledWith(
-      "op-unregistered-tab-1234",
-      "tab-unregistered-test-1234",
-      "round-boundary-test-1234",
-    );
+    expect(mocks.publishReceived).not.toHaveBeenCalled();
+    expect(mocks.publishFailed).not.toHaveBeenCalled();
     expect(mocks.prepareComposer).not.toHaveBeenCalled();
     expect(mocks.publishReady).not.toHaveBeenCalled();
     await unmount(renderer);
@@ -964,7 +981,10 @@ async function emit(
       operationId,
       tabId: "tab-external-test-1234",
       preparationRoundId:
-        signal === "sign_out_preparation" ? preparationRoundId : null,
+        signal === "sign_out_preparation" ||
+        signal === "sign_out_preparation_received"
+          ? preparationRoundId
+          : null,
     });
     await Promise.resolve();
     await Promise.resolve();

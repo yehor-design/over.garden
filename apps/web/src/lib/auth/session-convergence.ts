@@ -6,6 +6,7 @@ export const SESSION_CONVERGENCE_STORAGE_KEY =
 
 export const SESSION_CONVERGENCE_SIGNALS = {
   preparation: "sign_out_preparation",
+  received: "sign_out_preparation_received",
   ready: "sign_out_preparation_ready",
   failed: "sign_out_preparation_failed",
   cancellation: "sign_out_preparation_cancelled",
@@ -17,6 +18,7 @@ export type SessionConvergenceSignal =
 
 export const SESSION_CONVERGENCE_PHASE_RANK = {
   [SESSION_CONVERGENCE_SIGNALS.preparation]: 1,
+  [SESSION_CONVERGENCE_SIGNALS.received]: 2,
   [SESSION_CONVERGENCE_SIGNALS.ready]: 2,
   [SESSION_CONVERGENCE_SIGNALS.failed]: 2,
   [SESSION_CONVERGENCE_SIGNALS.cancellation]: 3,
@@ -47,6 +49,7 @@ const AUTHENTICATED_TAB_LEASE_KEY_PREFIX =
 // owner session-generation fence prevents an expired document resurrecting A.
 const AUTHENTICATED_TAB_LEASE_TTL_MS = 10 * 60_000;
 const AUTHENTICATED_TAB_HEARTBEAT_MS = 15_000;
+const PREPARATION_LIVENESS_ACKNOWLEDGEMENT_TIMEOUT_MS = 1_500;
 const PREPARATION_ACKNOWLEDGEMENT_TIMEOUT_MS = 8_000;
 
 interface ActiveSessionTabLease {
@@ -145,10 +148,12 @@ export function createPreparationAcknowledgementBarrier(
   }
   const expectedTabIds = listLiveAuthenticatedSessionTabIds(initiatingTabId);
   const expectedTabCount = expectedTabIds.size;
+  const acknowledgedTabIds = new Set<string>();
   let settled = false;
   let resolveWait: (() => void) | undefined;
   let rejectWait: ((error: Error) => void) | undefined;
-  let timeoutId: number | null = null;
+  let livenessTimeoutId: number | null = null;
+  let preparationTimeoutId: number | null = null;
   let unsubscribe: () => void = () => undefined;
   const waitPromise = new Promise<void>((resolve, reject) => {
     resolveWait = resolve;
@@ -157,10 +162,25 @@ export function createPreparationAcknowledgementBarrier(
   const finish = (error?: Error) => {
     if (settled) return;
     settled = true;
-    if (timeoutId !== null) window.clearTimeout(timeoutId);
+    if (livenessTimeoutId !== null) window.clearTimeout(livenessTimeoutId);
+    if (preparationTimeoutId !== null) {
+      window.clearTimeout(preparationTimeoutId);
+    }
     unsubscribe();
     if (error) rejectWait?.(error);
     else resolveWait?.();
+  };
+
+  const startPreparationDeadline = () => {
+    if (settled || expectedTabIds.size === 0) {
+      finish();
+      return;
+    }
+    preparationTimeoutId = window.setTimeout(
+      () =>
+        finish(new Error("Not every active tab confirmed sign-out readiness.")),
+      PREPARATION_ACKNOWLEDGEMENT_TIMEOUT_MS,
+    );
   };
 
   if (expectedTabIds.size === 0) {
@@ -169,23 +189,32 @@ export function createPreparationAcknowledgementBarrier(
     unsubscribe = subscribeToSessionConvergence((payload) => {
       if (payload.operationId !== operationId) return;
       if (payload.preparationRoundId !== preparationRoundId) return;
+      if (!expectedTabIds.has(payload.tabId)) return;
+      if (payload.signal === SESSION_CONVERGENCE_SIGNALS.received) {
+        acknowledgedTabIds.add(payload.tabId);
+        return;
+      }
+      if (!acknowledgedTabIds.has(payload.tabId)) return;
       if (payload.signal === SESSION_CONVERGENCE_SIGNALS.failed) {
         finish(new Error("Another tab could not prepare for sign-out."));
         return;
       }
       if (
-        payload.signal !== SESSION_CONVERGENCE_SIGNALS.ready ||
-        !expectedTabIds.has(payload.tabId)
+        payload.signal !== SESSION_CONVERGENCE_SIGNALS.ready
       ) {
         return;
       }
       expectedTabIds.delete(payload.tabId);
       if (expectedTabIds.size === 0) finish();
     });
-    timeoutId = window.setTimeout(
-      () =>
-        finish(new Error("Not every active tab confirmed sign-out readiness.")),
-      PREPARATION_ACKNOWLEDGEMENT_TIMEOUT_MS,
+    livenessTimeoutId = window.setTimeout(
+      () => {
+        for (const tabId of expectedTabIds) {
+          if (!acknowledgedTabIds.has(tabId)) expectedTabIds.delete(tabId);
+        }
+        startPreparationDeadline();
+      },
+      PREPARATION_LIVENESS_ACKNOWLEDGEMENT_TIMEOUT_MS,
     );
   }
 
@@ -349,6 +378,19 @@ export function publishSignOutPreparationReady(
   );
 }
 
+export function publishSignOutPreparationReceived(
+  operationId: string,
+  tabId: string,
+  preparationRoundId: string,
+) {
+  return publishSessionConvergenceSignal(
+    SESSION_CONVERGENCE_SIGNALS.received,
+    operationId,
+    tabId,
+    preparationRoundId,
+  );
+}
+
 export function publishSignOutPreparationFailed(
   operationId: string,
   tabId: string,
@@ -449,6 +491,7 @@ export function parseSessionConvergencePayload(
   if (!isOpaqueId(candidate.tabId, "tab")) return null;
   const preparationSignal =
     candidate.signal === SESSION_CONVERGENCE_SIGNALS.preparation ||
+    candidate.signal === SESSION_CONVERGENCE_SIGNALS.received ||
     candidate.signal === SESSION_CONVERGENCE_SIGNALS.ready ||
     candidate.signal === SESSION_CONVERGENCE_SIGNALS.failed;
   if (
@@ -495,6 +538,7 @@ function publishSessionConvergenceSignal(
   }
   const preparationSignal =
     signal === SESSION_CONVERGENCE_SIGNALS.preparation ||
+    signal === SESSION_CONVERGENCE_SIGNALS.received ||
     signal === SESSION_CONVERGENCE_SIGNALS.ready ||
     signal === SESSION_CONVERGENCE_SIGNALS.failed;
   if (

@@ -10,6 +10,7 @@ import {
   publishSignOutPreparation,
   publishSignOutPreparationCancelled,
   publishSignOutPreparationFailed,
+  publishSignOutPreparationReceived,
   publishSignOutPreparationReady,
   SESSION_CONVERGENCE_SIGNALS,
   SESSION_CONVERGENCE_STORAGE_KEY,
@@ -32,6 +33,7 @@ describe("session convergence signals", () => {
 
     const payloads = [
       publishSignOutPreparation(operationId, tabId, preparationRoundId),
+      publishSignOutPreparationReceived(operationId, tabId, preparationRoundId),
       publishSignOutPreparationReady(operationId, tabId, preparationRoundId),
       publishSignOutPreparationFailed(operationId, tabId, preparationRoundId),
       publishSignOutPreparationCancelled(operationId, tabId),
@@ -41,6 +43,7 @@ describe("session convergence signals", () => {
     expect(listener).not.toHaveBeenCalled();
     expect(payloads.map(({ signal }) => signal)).toEqual([
       SESSION_CONVERGENCE_SIGNALS.preparation,
+      SESSION_CONVERGENCE_SIGNALS.received,
       SESSION_CONVERGENCE_SIGNALS.ready,
       SESSION_CONVERGENCE_SIGNALS.failed,
       SESSION_CONVERGENCE_SIGNALS.cancellation,
@@ -163,6 +166,16 @@ describe("session convergence signals", () => {
     harness.emitStorage(
       SESSION_CONVERGENCE_STORAGE_KEY,
       payload(
+        SESSION_CONVERGENCE_SIGNALS.received,
+        operationId,
+        remoteTabA,
+        "msg-received-remote-a-1234",
+        preparationRoundId,
+      ),
+    );
+    harness.emitStorage(
+      SESSION_CONVERGENCE_STORAGE_KEY,
+      payload(
         SESSION_CONVERGENCE_SIGNALS.ready,
         operationId,
         remoteTabA,
@@ -173,6 +186,16 @@ describe("session convergence signals", () => {
     await Promise.resolve();
     expect(resolved).toBe(false);
 
+    harness.emitStorage(
+      SESSION_CONVERGENCE_STORAGE_KEY,
+      payload(
+        SESSION_CONVERGENCE_SIGNALS.received,
+        operationId,
+        remoteTabB,
+        "msg-received-remote-b-1234",
+        preparationRoundId,
+      ),
+    );
     harness.emitStorage(
       SESSION_CONVERGENCE_STORAGE_KEY,
       payload(
@@ -188,7 +211,7 @@ describe("session convergence signals", () => {
     lease.release();
   });
 
-  it("rejects the quorum when an expected tab fails or never acknowledges", async () => {
+  it("rejects an acknowledged peer failure and excludes a silent stale lease", async () => {
     vi.useFakeTimers();
     const harness = installBrowserHarness();
     const lease = acquireAuthenticatedSessionTabLease();
@@ -198,6 +221,16 @@ describe("session convergence signals", () => {
       "op-failed-quorum-1234",
       lease.tabId,
       "round-failed-quorum-1234",
+    );
+    harness.emitStorage(
+      SESSION_CONVERGENCE_STORAGE_KEY,
+      payload(
+        SESSION_CONVERGENCE_SIGNALS.received,
+        "op-failed-quorum-1234",
+        remoteTab,
+        "msg-received-failed-remote-1234",
+        "round-failed-quorum-1234",
+      ),
     );
     harness.emitStorage(
       SESSION_CONVERGENCE_STORAGE_KEY,
@@ -216,11 +249,39 @@ describe("session convergence signals", () => {
       lease.tabId,
       "round-timeout-quorum-1234",
     );
-    const timeoutResult = expect(timeoutBarrier.wait()).rejects.toThrow(
+    const timeoutResult = timeoutBarrier.wait();
+    await vi.advanceTimersByTimeAsync(1_500);
+    await expect(timeoutResult).resolves.toBeUndefined();
+    lease.release();
+  });
+
+  it("keeps every liveness-confirmed peer behind the existing ready-or-failed deadline", async () => {
+    vi.useFakeTimers();
+    const harness = installBrowserHarness();
+    const lease = acquireAuthenticatedSessionTabLease();
+    const remoteTab = "tab-liveness-confirmed-1234";
+    harness.putLiveLease(remoteTab);
+    const barrier = createPreparationAcknowledgementBarrier(
+      "op-liveness-confirmed-1234",
+      lease.tabId,
+      "round-liveness-confirmed-1234",
+    );
+    harness.emitStorage(
+      SESSION_CONVERGENCE_STORAGE_KEY,
+      payload(
+        SESSION_CONVERGENCE_SIGNALS.received,
+        "op-liveness-confirmed-1234",
+        remoteTab,
+        "msg-liveness-confirmed-1234",
+        "round-liveness-confirmed-1234",
+      ),
+    );
+
+    const result = expect(barrier.wait()).rejects.toThrow(
       /not every active tab/i,
     );
-    await vi.advanceTimersByTimeAsync(8_000);
-    await timeoutResult;
+    await vi.advanceTimersByTimeAsync(1_500 + 8_000);
+    await result;
     lease.release();
   });
 
@@ -320,6 +381,16 @@ describe("session convergence signals", () => {
     harness.emitStorage(
       SESSION_CONVERGENCE_STORAGE_KEY,
       payload(
+        SESSION_CONVERGENCE_SIGNALS.received,
+        operationId,
+        remoteTab,
+        "msg-round-current-received-1234",
+        currentRound,
+      ),
+    );
+    harness.emitStorage(
+      SESSION_CONVERGENCE_STORAGE_KEY,
+      payload(
         SESSION_CONVERGENCE_SIGNALS.ready,
         operationId,
         remoteTab,
@@ -410,6 +481,7 @@ function payload(
   messageId: string,
   preparationRoundId: string | null = signal ===
     SESSION_CONVERGENCE_SIGNALS.preparation ||
+  signal === SESSION_CONVERGENCE_SIGNALS.received ||
   signal === SESSION_CONVERGENCE_SIGNALS.ready ||
   signal === SESSION_CONVERGENCE_SIGNALS.failed
     ? "round-default-payload-1234"
@@ -425,7 +497,8 @@ function payload(
     phaseRank:
       signal === SESSION_CONVERGENCE_SIGNALS.preparation
         ? (1 as const)
-        : signal === SESSION_CONVERGENCE_SIGNALS.ready ||
+        : signal === SESSION_CONVERGENCE_SIGNALS.received ||
+            signal === SESSION_CONVERGENCE_SIGNALS.ready ||
             signal === SESSION_CONVERGENCE_SIGNALS.failed
           ? (2 as const)
           : (3 as const),
