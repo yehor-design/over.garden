@@ -196,6 +196,25 @@ describe("Better Auth secret policy", () => {
     }
   });
 
+  it("accepts an explicit versioned policy in production-shaped CI without a singular fallback", () => {
+    const env = productionEnv({
+      VERCEL: undefined,
+      VERCEL_ENV: undefined,
+      BETTER_AUTH_SECRET: undefined,
+      [BETTER_AUTH_LEGACY_GRACE_UNTIL_ENV]: undefined,
+      CI: "true",
+    });
+
+    expect(getAuthSecretHealth(env)).toEqual({
+      class: "versioned_current",
+      activeVersion: 2,
+    });
+    expect(resolveBetterAuthSecretOptions(env)).toMatchObject({
+      secret: currentFixture,
+      secrets: [{ version: 2 }, { version: 1 }],
+    });
+  });
+
   it("keeps singular local development configuration in an explicit legacy-transition class", () => {
     const env = {
       NODE_ENV: "development",

@@ -58,7 +58,6 @@ jobs:
         working-directory: apps/web
     env:
       BETTER_AUTH_URL: http://localhost:3000
-      BETTER_AUTH_SECRET: ci-overgarden-better-auth-secret-for-test-runtime
       DATABASE_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DIRECT_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DATABASE_POOL_MAX: "1"
@@ -91,6 +90,14 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: apps/web/pnpm-lock.yaml
+
+      - name: Generate isolated versioned Better Auth CI fixture
+        run: |
+          # Keep the production-shaped `next start` gate on the same strict
+          # versioned policy as Vercel without placing deterministic or legacy
+          # material in the workflow. This value exists only for this run and
+          # is never printed, uploaded, or used outside localhost CI.
+          node -e 'const { randomBytes } = require("node:crypto"); console.log(`BETTER_AUTH_SECRETS=2:${randomBytes(32).toString("base64url")}`); console.log("BETTER_AUTH_CURRENT_SECRET_VERSION=2")' >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
