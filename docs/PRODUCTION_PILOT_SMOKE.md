@@ -963,6 +963,12 @@ Goal: a gardener who loses access or forgets how to sign in can recover through 
 - Production runtime check: pass. Vercel production runtime logs and runtime error clusters for the post-smoke window showed no error/fatal Resend auth-email logs and no `/api/auth` runtime errors.
 - Evidence redaction: pass. The smoke did not record a recipient email address, provider message id, tokenized verification/reset URL, reset token, verification token, cookie, provider payload, IP address, user agent, or secret.
 
+### OVE-232 Better Auth dependency admission
+
+- Run `cd apps/web && pnpm auth:security:check` before accepting a Better Auth dependency change. The executable guard requires one exact stable `better-auth` package version at or above the patched `1.6.22` floor, a matching importer and package resolution in `pnpm-lock.yaml`, and the current email/password, verification, social, sign-out, retired-identity, and Next cookie boundaries.
+- The guard rejects magic-link and email-OTP registration. It prints only the patched version, a bounded duration, and pass/fail classes; it never prints package source, credentials, tokens, callback URLs, identities, or email content.
+- This is an admission boundary, not a replacement for the OVE-226 exact-SHA real-gardener proof or OVE-241 reset-delivery timing proof. Run the affected auth regression suites and the canonical redacted provider smoke after the dependency is contained in `main`.
+
 ### Founder fallback workflow (no secrets in git or Linear)
 
 1. Confirm the gardener already created an account with the email they want to recover. Do not create a second account for them.

@@ -128,6 +128,7 @@ git merge-base --is-ancestor <completed-issue-sha> origin/main
 ```
 
 - Verification commands/read-back operations that passed.
+- For an auth dependency change, the `pnpm auth:security:check` receipt must show only the patched version, bounded duration, and auth-boundary pass/fail classes; it never replaces the required exact-SHA provider or real-gardener smoke.
 - CI run URL for the contained commit when repository content changed; external-state-only work instead records the exact existing-control/provider proof receipt, and coordination records child/integration receipts.
 - Deployment id, public URL, and redacted smoke evidence when the issue touches live production behavior.
 - A statement that no secrets, invite URLs, journal text, media keys, raw request metadata, live user identifiers, or precise location data were included in the evidence.
