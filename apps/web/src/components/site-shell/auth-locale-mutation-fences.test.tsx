@@ -51,10 +51,8 @@ vi.mock("@/lib/meta-marketing/client", () => ({
   trackMetaMarketingEvent: vi.fn(),
 }));
 
-import {
-  GardenAuthPanel,
-  SocialAccountLinkPanel,
-} from "@/app/garden/garden-auth-panel";
+import { AccountMethodsPanel } from "@/app/garden/account-methods-panel";
+import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
 import { PasswordResetRequestForm } from "@/app/auth/help/password-reset-request-form";
 import { ResetPasswordForm } from "@/app/auth/reset-password/reset-password-form";
 import { interfaceLocaleChangeCoordinator } from "@/lib/interface-locale-change-coordinator";
@@ -91,7 +89,15 @@ describe("auth locale mutation fences", () => {
     const request = deferred<{ error: null }>();
     mocks.linkSocial.mockReturnValue(request.promise);
     const renderer = await render(
-      <SocialAccountLinkPanel googleSignInEnabled locale="ru" />,
+      <AccountMethodsPanel
+        canSetPassword={false}
+        facebookSignInEnabled={false}
+        googleSignInEnabled
+        hasCredential
+        hasFacebook={false}
+        hasGoogle={false}
+        locale="ru"
+      />,
     );
 
     await act(async () => {
@@ -102,7 +108,7 @@ describe("auth locale mutation fences", () => {
         .props.onClick();
       await Promise.resolve();
     });
-    expectPending("social-account-link-mutation");
+    expectPending("account-method-mutation");
 
     await act(async () => request.resolve({ error: null }));
     expectSettled();

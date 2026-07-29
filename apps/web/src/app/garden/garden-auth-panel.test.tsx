@@ -8,7 +8,6 @@ import {
   GardenAuthPanel,
   resolveAuthCallbackPath,
   runNativeValidatedAuthAction,
-  SocialAccountLinkPanel,
 } from "@/app/garden/garden-auth-panel";
 
 import {
@@ -126,19 +125,16 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(enabledHtml).not.toContain("FACEBOOK_CLIENT_SECRET");
   });
 
-  it("offers explicit social linking for the signed-in garden account", () => {
-    const html = renderToStaticMarkup(
-      <SocialAccountLinkPanel
-        facebookSignInEnabled
-        googleSignInEnabled
-        locale="bg"
-      />,
+  it("owns guest provider navigation explicitly instead of relying on the redirect plugin", () => {
+    const source = readFileSync(
+      path.join(process.cwd(), "src/app/garden/garden-auth-panel.tsx"),
+      "utf8",
     );
 
-    expect(html).toContain("Свързване на вход с Google");
-    expect(html).toContain("Свързване на вход с Facebook");
-    expect(html).toContain("използва само за вход");
-    expect(html).not.toContain("client_secret");
+    expect(source).toContain("disableRedirect: true");
+    expect(source).toContain(
+      "navigateToOAuthAuthorization(provider, data?.url)",
+    );
   });
 
   it("uses the validated intent resume path for email and social auth", () => {

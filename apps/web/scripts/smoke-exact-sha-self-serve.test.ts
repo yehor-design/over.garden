@@ -4,7 +4,9 @@ import { runExactShaSelfServeSmoke } from "./smoke-exact-sha-self-serve";
 
 const commit = "a".repeat(40);
 
-function response(html = '<main data-garden-workspace="guest"></main>') {
+function response(
+  html = '<main data-garden-workspace="guest" data-garden-profile-auth-shell="guest"></main>',
+) {
   return new Response(html, { status: 200 });
 }
 
@@ -27,6 +29,8 @@ describe("exact SHA self-serve smoke", () => {
       commitMatch: true,
       canonicalGarden: { status: 200, guestShell: true },
       immutableGarden: { status: 200, guestShell: true },
+      canonicalProfileAuth: { status: 200, guestAuthShell: true },
+      immutableProfileAuth: { status: 200, guestAuthShell: true },
     });
   });
 

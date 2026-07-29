@@ -1,7 +1,16 @@
 export const GOOGLE_PROVIDER_ID = "google";
 export const FACEBOOK_PROVIDER_ID = "facebook";
 
+export type SocialProviderId =
+  | typeof GOOGLE_PROVIDER_ID
+  | typeof FACEBOOK_PROVIDER_ID;
+
 type QueryValue = string | string[] | undefined;
+
+const OAUTH_AUTHORIZATION_HOSTS: Record<SocialProviderId, string> = {
+  [GOOGLE_PROVIDER_ID]: "accounts.google.com",
+  [FACEBOOK_PROVIDER_ID]: "www.facebook.com",
+};
 
 export const OAUTH_ERROR_CODES = [
   "account_not_linked",
@@ -42,6 +51,41 @@ export function oauthErrorCodeForRedirect(
   return KNOWN_OAUTH_ERROR_CODES.has(normalized as OAuthErrorCode)
     ? (normalized as OAuthErrorCode)
     : "oauth_error";
+}
+
+export function getSafeOAuthAuthorizationUrl(
+  provider: SocialProviderId,
+  value: unknown,
+): string | null {
+  if (typeof value !== "string" || value.length === 0) return null;
+
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return null;
+  }
+
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== OAUTH_AUTHORIZATION_HOSTS[provider]
+  ) {
+    return null;
+  }
+
+  return url.toString();
+}
+
+export function navigateToOAuthAuthorization(
+  provider: SocialProviderId,
+  value: unknown,
+  navigate: (url: string) => void = (url) => window.location.assign(url),
+) {
+  const authorizationUrl = getSafeOAuthAuthorizationUrl(provider, value);
+  if (!authorizationUrl) return false;
+
+  navigate(authorizationUrl);
+  return true;
 }
 
 function normalizeQueryValue(value: QueryValue) {

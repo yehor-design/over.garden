@@ -16,7 +16,9 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { getOwnerProfileWorkspace } from "@/server/owner-profile-repository";
 import { scopedToUser } from "@/server/request-scope";
-import { GardenAuthPanel, SocialAccountLinkPanel } from "../garden-auth-panel";
+import { getCurrentAccountMethodProjection } from "@/server/auth/account-methods";
+import { AccountMethodsPanel } from "../account-methods-panel";
+import { GardenAuthPanel } from "../garden-auth-panel";
 import { unblockProfileAction } from "./actions";
 import { OwnerProfileEditor } from "./owner-profile-editor";
 
@@ -86,6 +88,7 @@ export default async function GardenPublicProfilePage({
     return (
       <main
         lang={locale}
+        data-garden-profile-auth-shell="guest"
         className="mx-auto grid w-full max-w-4xl gap-6 px-4 py-6 sm:px-6 sm:py-8"
       >
         <ProfileHeader locale={locale} />
@@ -94,10 +97,13 @@ export default async function GardenPublicProfilePage({
     );
   }
 
-  const workspace = await getOwnerProfileWorkspace(
-    scopedToUser(userId, getSessionId(session)),
-    locale,
-  );
+  const [workspace, accountMethods] = await Promise.all([
+    getOwnerProfileWorkspace(
+      scopedToUser(userId, getSessionId(session)),
+      locale,
+    ),
+    getCurrentAccountMethodProjection(),
+  ]);
   const publicPath = publicProfilePath(locale, workspace.editor.handle);
   const relationshipStatus = firstParam(params.relationshipStatus);
 
@@ -120,11 +126,12 @@ export default async function GardenPublicProfilePage({
       />
 
       <section className="border-t border-border pt-7">
-        <SocialAccountLinkPanel
+        <AccountMethodsPanel
           facebookSignInEnabled={isFacebookSignInEnabled()}
           googleSignInEnabled={isGoogleSignInEnabled()}
           initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
           locale={locale}
+          {...accountMethods}
         />
       </section>
 
@@ -219,6 +226,7 @@ function ProfileHeader({
         <Link
           href="/garden"
           className={buttonVariants({ variant: "outline", size: "sm" })}
+          data-testid="profile-return-navigation"
         >
           <ArrowLeft aria-hidden="true" />
           {copy.back}

@@ -13,7 +13,9 @@ export function socialAccountPolicy() {
       enabled: true,
       disableImplicitLinking: true,
       trustedProviders: [GOOGLE_PROVIDER_ID, FACEBOOK_PROVIDER_ID],
-      allowDifferentEmails: false,
+      // A different provider may carry a different verified email, but only an
+      // already authenticated gardener can explicitly start that link flow.
+      allowDifferentEmails: true,
       allowUnlinkingAll: false,
       updateUserInfoOnLink: false,
     },
