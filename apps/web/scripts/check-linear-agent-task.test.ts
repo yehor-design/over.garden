@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -661,23 +661,31 @@ describe("Linear AI execution task validator", () => {
     expect(report.valid).toBe(true);
   });
 
-  it("keeps a planned-new target valid after it appears in the uncommitted working tree", () => {
-    const task = validFinalTask({
-      "Exact vertical scope, target files, and caller inventory": [
-        "| Layer/surface | Exact existing owner or planned new path | Required change/read-back | Status |",
-        "| --- | --- | --- | --- |",
-        "| Tests | `apps/web/src/server/media/media-runtime-boundary.test.ts` (new) | Prove a bounded native-runtime import boundary | required |",
-      ].join("\n"),
-    });
+  it("keeps a planned-new target valid after it appears in the uncommitted working tree", async () => {
+    const repositoryPath = `apps/web/.linear-task-validator-${crypto.randomUUID()}.tmp`;
+    const temporaryPath = path.join(repoRoot, repositoryPath);
+    await writeFile(temporaryPath, "temporary validator fixture\n", "utf8");
 
-    const report = validateLinearAgentTask(task);
+    try {
+      const task = validFinalTask({
+        "Exact vertical scope, target files, and caller inventory": [
+          "| Layer/surface | Exact existing owner or planned new path | Required change/read-back | Status |",
+          "| --- | --- | --- | --- |",
+          `| Tests | \`${repositoryPath}\` (new) | Prove a bounded native-runtime import boundary | required |`,
+        ].join("\n"),
+      });
 
-    expect(report.errors.map((error) => error.code)).not.toContain(
-      "target_path_new_conflict",
-    );
-    expect(report.errors.map((error) => error.code)).not.toContain(
-      "target_path_not_at_baseline",
-    );
+      const report = validateLinearAgentTask(task);
+
+      expect(report.errors.map((error) => error.code)).not.toContain(
+        "target_path_new_conflict",
+      );
+      expect(report.errors.map((error) => error.code)).not.toContain(
+        "target_path_not_at_baseline",
+      );
+    } finally {
+      await rm(temporaryPath, { force: true });
+    }
   });
 
   it("rejects template drift in PERF/WAIT identity, operative fields, and post-merge order", async () => {
