@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -12,15 +14,29 @@ type Ove213ControllerApi = {
   };
 };
 
+const require = createRequire(import.meta.url);
+
 async function main() {
+  await run("pnpm", [
+    "exec",
+    "vitest",
+    "run",
+    "src/components/garden/journal-block-reorder.test.tsx",
+    "src/lib/garden/journal-composer-shared-owner.integration.test.ts",
+  ]);
+
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const controllerPath = path.join(
     root,
     "src/components/garden/journal-block-reorder-controller.ts",
   );
-const controllerSource = (await readFile(controllerPath, "utf8"))
-  .replace(/import[\s\S]*?from\s+"[^"]+";\n/g, "")
-  .replace(/^export /gm, "");
+  const [controllerFile, editorJsSource] = await Promise.all([
+    readFile(controllerPath, "utf8"),
+    readFile(require.resolve("@editorjs/editorjs"), "utf8"),
+  ]);
+  const controllerSource = controllerFile
+    .replace(/import[\s\S]*?from\s+"[^"]+";\n/g, "")
+    .replace(/^export /gm, "");
   const browserDependencies = `
 const OWNER_COMPOSER_REORDER_GESTURE_PARTICIPANT_ID = "owner-composer-reorder-gesture";
 const interfaceLocaleChangeCoordinator = { register: () => () => undefined };
@@ -47,9 +63,28 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
     <button id="save">Save</button><a id="cancel" href="#cancel">Cancel</a>
     <div id="holder"></div>
     </body></html>`);
-    await page.addScriptTag({ content: source });
+    await page.addScriptTag({ content: editorJsSource });
     await page.addScriptTag({ content: "globalThis.__name = (target) => target;" });
+    await page.addScriptTag({ content: source });
     const receipt = await page.evaluate(async () => {
+      class SmokeImageTool {
+        static get toolbox() {
+          return { title: "Image" };
+        }
+
+        constructor(private readonly options: { data: Record<string, string> }) {}
+
+        render() {
+          const element = document.createElement("div");
+          element.textContent = "Synthetic image";
+          return element;
+        }
+
+        save() {
+          return this.options.data;
+        }
+      }
+
       const holder = document.querySelector<HTMLElement>("#holder")!;
       const save = document.querySelector<HTMLButtonElement>("#save")!;
       const cancel = document.querySelector<HTMLAnchorElement>("#cancel")!;
@@ -61,39 +96,37 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
         cancelClicks++;
       });
 
-      const ids = Array.from({ length: 100 }, (_, index) => `block-${index}`);
-      const blocks = new Map<
-        string,
-        { id: string; name: string; holder: HTMLElement }
-      >();
-      const appendBlock = (id: string, index: number) => {
-        const element = document.createElement("div");
-        element.className = "ce-block";
-        element.dataset.id = id;
-        holder.appendChild(element);
-        blocks.set(id, {
-          id,
-          name: index < 10 ? "image" : "paragraph",
-          holder: element,
-        });
-      };
-      appendBlock(ids[0]!, 0);
+      const blocks = Array.from({ length: 100 }, (_, index) =>
+        index < 10
+          ? {
+              type: "image",
+              data: { mediaAssetId: `synthetic-media-${index + 1}` },
+            }
+          : { type: "paragraph", data: { text: `Paragraph ${index + 1}` } },
+      );
+      const EditorJSCtor = (
+        globalThis as typeof globalThis & {
+          EditorJS: new (options: unknown) => {
+            isReady: Promise<void>;
+            blocks: {
+              insert: (type: string, data: unknown) => Promise<void> | void;
+            };
+            save: () => Promise<{
+              blocks: Array<{ type: string; data: Record<string, string> }>;
+            }>;
+            destroy: () => void;
+          };
+        }
+      ).EditorJS;
+      const editor = new EditorJSCtor({
+        holder,
+        autofocus: false,
+        minHeight: 0,
+        tools: { image: SmokeImageTool },
+        data: { time: Date.now(), blocks },
+      });
+      await editor.isReady;
 
-      const editor = {
-        blocks: {
-          getBlocksCount: () => blocks.size,
-          getBlockByIndex: (index: number) =>
-            blocks.get([...blocks.keys()][index]!),
-          getById: (id: string) => blocks.get(id),
-          getBlockByElement: (element: Element) => {
-            const id = (element as HTMLElement).dataset.id;
-            return id ? blocks.get(id) : undefined;
-          },
-          getBlockIndex: (id: string) => [...blocks.keys()].indexOf(id),
-          move: () => undefined,
-        },
-        caret: { setToBlock: () => undefined },
-      };
       const copy = {
         dragHandle: "Drag",
         moveUp: "Move up",
@@ -117,10 +150,10 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
         subtree: true,
         attributes: true,
       });
-    const api = (globalThis as typeof globalThis & {
-      OVE213Controller: Ove213ControllerApi;
-    }).OVE213Controller;
-    const controller = api.attachJournalBlockReorderController({
+      const api = (globalThis as typeof globalThis & {
+        OVE213Controller: Ove213ControllerApi;
+      }).OVE213Controller;
+      const controller = api.attachJournalBlockReorderController({
         editor,
         holder,
         getCopy: () => copy,
@@ -128,10 +161,12 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
         onAnnouncement: () => undefined,
       });
 
-      const twoFrames = () =>
-        new Promise<void>((resolve) =>
-          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-        );
+      const nextFrame = () =>
+        new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const twoFrames = async () => {
+        await nextFrame();
+        await nextFrame();
+      };
       await twoFrames();
       const stableDeliveries = deliveries;
       controller.sync();
@@ -142,40 +177,56 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
       const idleDeliveries = deliveries - stableDeliveries;
 
       const startedAt = performance.now();
-      for (let index = 1; index < ids.length; index++)
-        appendBlock(ids[index]!, index);
+      await editor.blocks.insert("paragraph", { text: "Burst one" });
+      await editor.blocks.insert("paragraph", { text: "Burst two" });
+      await editor.blocks.insert("paragraph", { text: "Burst three" });
       save.click();
       cancel.click();
-      await twoFrames();
+      await nextFrame();
       const composerSyncLatency = performance.now() - startedAt;
       const controlCount = holder.querySelectorAll(
         "[data-og-reorder-controls]",
       ).length;
+      await nextFrame();
+      const output = await editor.save();
+      const imageMediaAssetIds = output.blocks
+        .filter((block) => block.type === "image")
+        .map((block) => block.data.mediaAssetId);
 
       controller.destroy();
-      const deliveriesAtDestroy = deliveries;
-      appendBlock("after-destroy", 101);
+      await editor.blocks.insert("paragraph", { text: "After destroy" });
       await twoFrames();
+      const lateControls = holder.querySelectorAll(
+        "[data-og-reorder-controls]",
+      ).length;
       observer.disconnect();
+      editor.destroy();
 
       return {
         noOpDeliveries,
         idleDeliveries,
         composerSyncLatency,
         controlCount,
+        imageMediaAssetIds,
         saveClicks,
         cancelClicks,
-        lateControls: holder.querySelectorAll("[data-og-reorder-controls]")
-          .length,
-        lateDeliveries: deliveries - deliveriesAtDestroy,
+        lateControls,
       };
     });
 
+    const expectedImageMediaAssetIds = Array.from(
+      { length: 10 },
+      (_, index) => `synthetic-media-${index + 1}`,
+    );
+    const identityOrderPreserved =
+      receipt.imageMediaAssetIds.join(",") ===
+      expectedImageMediaAssetIds.join(",");
     const ok =
       receipt.noOpDeliveries === 0 &&
       receipt.idleDeliveries === 0 &&
       receipt.composerSyncLatency <= 34 &&
-      receipt.controlCount === 100 &&
+      receipt.controlCount === 103 &&
+      identityOrderPreserved &&
       receipt.saveClicks === 1 &&
       receipt.cancelClicks === 1 &&
       receipt.lateControls === 0;
@@ -183,12 +234,13 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
       JSON.stringify({
         ok,
         issue: "OVE-213",
-        evidenceClass: "native-editorjs-controller",
+        evidenceClass: "real-editorjs-controller",
         idleDeliveryClass: receipt.idleDeliveries === 0 ? "zero" : "nonzero",
         syncLatencyClass:
           receipt.composerSyncLatency <= 34 ? "within_budget" : "over_budget",
         mutationBurstClass:
-          receipt.controlCount === 100 ? "converged" : "partial",
+          receipt.controlCount === 103 ? "converged" : "partial",
+        imageIdentityClass: identityOrderPreserved ? "preserved" : "lost",
         waitControlsClass:
           receipt.saveClicks === 1 && receipt.cancelClicks === 1
             ? "responsive"
@@ -200,6 +252,25 @@ const resolveMoveByOffset = () => ({ kind: "noop" });
   } finally {
     await browser.close();
   }
+}
+
+function run(command: string, args: string[]) {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn(command, args, { stdio: "inherit" });
+    const timeout = setTimeout(() => {
+      child.kill("SIGTERM");
+      reject(new Error(`${command} exceeded the bounded smoke deadline.`));
+    }, 120_000);
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once("exit", (code) => {
+      clearTimeout(timeout);
+      if (code === 0) resolve();
+      else reject(new Error(`${command} exited with code ${code ?? "null"}.`));
+    });
+  });
 }
 
 void main().catch((error: unknown) => {
