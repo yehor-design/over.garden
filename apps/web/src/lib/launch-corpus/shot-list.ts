@@ -1,5 +1,5 @@
 /**
- * OVE-199 production seed shot-list (founder pack after sign-off).
+ * OVE-199 production editorial seed shot-list (licensed pack after sign-off).
  * Stable IDs for manifest disposition — not product UUIDs.
  */
 
@@ -190,6 +190,6 @@ export const LAUNCH_CORPUS_SHOT_LIST: readonly LaunchCorpusShotSpec[] = [
   },
 ] as const;
 
-export function listFounderSeedShotIds(): string[] {
+export function listEditorialSeedShotIds(): string[] {
   return LAUNCH_CORPUS_SHOT_LIST.map((shot) => shot.id);
 }

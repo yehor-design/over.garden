@@ -21,6 +21,7 @@ type QueryExecutor = Kysely<Database> | Transaction<Database>;
 export async function createQuarantinedMediaAsset(
   scope: RequestScope,
   input: {
+    internalDeterministicId?: string;
     quarantineKey: string;
     declaredMediaType: string;
     declaredSizeBytes: number;
@@ -31,6 +32,9 @@ export async function createQuarantinedMediaAsset(
   return db
     .insertInto("media_assets")
     .values({
+      ...(input.internalDeterministicId
+        ? { id: input.internalDeterministicId }
+        : {}),
       owner_user_id: scope.userId,
       quarantine_key: input.quarantineKey,
       journal_entry_id: null,

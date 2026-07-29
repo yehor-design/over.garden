@@ -1,7 +1,7 @@
 # Launch Corpus (OVE-199)
 
-Status: Phase A tooling landed · Production seed/archive **blocked on maintainer sign-off**
-Owner: founder
+Status: exact editorial manifest approved · production apply awaits exact-main deployment
+Owner: maintainer
 Issue: [OVE-199](https://linear.app/overgarden/issue/OVE-199/launch-corpus-bulgarian-and-ukrainian-visitors-see-real-localized)
 
 ## Purpose
@@ -66,6 +66,12 @@ pnpm launch:corpus:check -- --environment production --confirm-environment produ
 
 Reports are redacted: counts, quality classes, disposition targets — never titles, bodies, emails, or media keys.
 
+The plan also emits deterministic SHA-256 target hashes for the exact
+public-active `real_ugc` rows. They bind maintainer review and later apply to
+individual rows without placing database IDs, titles, bodies, owners, or media
+identifiers in evidence. The current redacted plan output digest is
+`25480c784580dd7b5d008bf33511b0f5d427c14f1b038a72631bee07cbd8accf`.
+
 SQL used by plan/check is SELECT-only (`assertLaunchCorpusInventorySqlIsSelectOnly`).
 
 ## Launch media quality policy
@@ -89,7 +95,7 @@ aggregate classes only. Its SQL is part of the SELECT-only inventory manifest. A
 revoke, seed, reclassify, reindex, or other production mutation remains an
 OVE-199 exact-manifest sign-off action.
 
-## Shot-list (founder content pack — after sign-off)
+## Shot-list (truthfully labelled editorial content pack)
 
 Topology: **2 spaces**, **4 objects** (UA plant+animal, BG plant+animal), **14 journals**.
 
@@ -108,6 +114,38 @@ Photo budget ≈ 18–22 owned/licensed files. Pipeline: quarantine → stripped
 
 Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
 
+The approved content pack uses
+`ove199.launch-corpus-content-pack.v1` from
+`apps/web/src/lib/launch-corpus/content-pack.ts`. It requires every shot-list
+slot, reviewed source language, truthful rights/provenance receipts, media byte
+digests, closed cover semantics, the four signed target hashes, and the
+authoritative precise-location firewall. Validation reads local files but emits
+only counts, closed error codes, and the content-pack digest:
+
+```bash
+pnpm launch:corpus:validate-pack -- --environment local --confirm-environment local --pack-file "$OVE199_CONTENT_PACK"
+```
+
+`launch:corpus:apply` validates the exact plan and content-pack digests before
+loading any mutating module. `--dry-run` performs zero mutations. `--apply`
+uses the sealed editorial owner, deterministic slot/media IDs, canonical
+quarantine and stripped-derivative processing, canonical journal publish/archive,
+OVE-242 outbox intents, exact legacy-target hashes, and a final topology/media
+read-back. Missing or drifted digests fail before mutation:
+
+```bash
+pnpm launch:corpus:apply -- \
+  --environment production --confirm-environment production \
+  --pack-file "$OVE199_CONTENT_PACK" \
+  --plan-digest "$OVE199_PLAN_DIGEST" \
+  --content-pack-digest "$OVE199_CONTENT_PACK_DIGEST" \
+  --apply
+```
+
+The approved 2026-07-29 pack contains 14 OverGarden-authored editorial entries
+and 18 normalized Unsplash photographs. The official-license and exact source
+receipt is [`docs/launch-corpus-unsplash-license-receipt.md`](launch-corpus-unsplash-license-receipt.md).
+
 ## Local cover matrix (fixtures / unit — not production photos)
 
 `apps/web/src/lib/launch-corpus/cover-matrix.ts` covers 10+1, eleventh reject, keep-as-cover, replace failure, removal fallback, aspects, lifecycle surfaces, and production fixture refusal **without** mutating the frozen `ove187-v8` visual fixture manifest hash.
@@ -120,9 +158,9 @@ Machine source of truth: `apps/web/src/lib/launch-corpus/shot-list.ts`.
 | `tiny_or_placeholder_media` | Dimension-tiny legacy fast count; OVE-231 supplies byte-quality classes | `revoke_via_ove195` only after exact OVE-199 review |
 | `visual_fixture_namespace` (production) | Must be zero | Remove/reclassify; never seed |
 | `archived_public_slug` (incl. OVE-191 retired synthetic) | Lifecycle tombs | `reclassify_retain_lifecycle` — not real UGC; keep Gone/Meili parity |
-| `founder_seed_slot` | Missing | `seed_after_signoff` via canonical composer as founder; `content_class=founder_first_hand` |
+| `editorial_seed_slot` | Missing | `seed_after_signoff` via canonical operator path; `content_class=editorial`, an explicit OverGarden editorial byline, and licensed illustrative media attribution |
 
-No bulk delete. No production mutate until the founder replies with explicit sign-off naming this doc + the plan report SHA/environment.
+No bulk delete. No production mutation until the maintainer approves the exact editorial content-pack and plan digests. Editorial seed must never be presented as independent gardener evidence, a testimonial, or first-hand chronology.
 
 ## Current production plan snapshot (redacted)
 
@@ -130,22 +168,22 @@ See checked-in [`docs/launch-corpus-plan-production-redacted.json`](launch-corpu
 
 Observed aggregates at Phase A cut:
 
-- `publicActiveCount`: 4 (`real_ugc` only — **not** founder first-hand)
+- `publicActiveCount`: 4 (`real_ugc` legacy rows pending exact review)
 - `archivedWithPublicSlug`: 23 (retain lifecycle; OVE-191 class)
 - `visualFixtureMutationHits`: 0 in production
-- `launchReady`: **false** — `insufficient_founder_first_hand_public`
-- Disposition: review/reclassify the 4 public `real_ugc` rows under sign-off; seed 14 founder shot-list journals after content pack
+- `launchReady`: **false** — `insufficient_editorial_launch_public`
+- Disposition: review/reclassify the 4 legacy public `real_ugc` rows under sign-off; seed 14 explicitly labelled editorial shot-list journals from a licensed content pack
 
 Re-run `pnpm launch:corpus:plan -- --environment production --confirm-environment production` before signing off so counts stay current.
 
 
 1. Run `launch:corpus:plan` against production; attach redacted JSON.
 2. Confirm disposition targets match the table above.
-3. Deliver content pack (texts + photos) matching shot-list IDs.
+3. Deliver the OverGarden-authored `uk`/`bg` editorial pack and exact Unsplash source/license receipts matching shot-list IDs.
 4. Reply: `SIGN-OFF OVE-199 manifest <report-id-or-sha> — proceed with archive/seed`.
 5. Phase B: seed → archive/revoke exact targets → parity → guest uk/bg proof → Linear Done.
 
-## Phase A non-claims
+## Pre-production non-claims
 
 - No production archive/seed in Phase A.
 - No OVE-186 Done.
