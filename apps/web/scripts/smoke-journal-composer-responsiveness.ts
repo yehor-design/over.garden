@@ -17,6 +17,15 @@ type Ove213ControllerApi = {
 const require = createRequire(import.meta.url);
 
 async function main() {
+  const { version: editorJsVersion } = require(
+    "@editorjs/editorjs/package.json",
+  ) as { version?: string };
+  if (editorJsVersion !== "2.31.6") {
+    throw new Error(
+      `OVE-213 proof requires Editor.js 2.31.6, received ${editorJsVersion ?? "unknown"}.`,
+    );
+  }
+
   await run("pnpm", [
     "exec",
     "vitest",
