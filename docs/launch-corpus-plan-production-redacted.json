@@ -42,19 +42,19 @@
         "notes": "Includes OVE-191 retired synthetic Gone tombs \u2014 retain lifecycle/search parity; never impersonate as real UGC."
       },
       {
-        "qualityClass": "founder_seed_slot",
+        "qualityClass": "editorial_seed_slot",
         "disposition": "seed_after_signoff",
         "count": 14,
-        "notes": "Seed 14 founder journals (2 spaces / 4 objects) after explicit sign-off + content pack."
+        "notes": "Seed 14 clearly labelled editorial journals (2 spaces / 4 objects) after explicit sign-off + licensed content pack."
       },
       {
         "qualityClass": "public_active_launch",
         "disposition": "reclassify_production_smoke",
         "count": 4,
-        "notes": "Existing public-active real_ugc rows must be reviewed under sign-off: archive/hide/reclassify so they are not mistaken for founder first-hand launch corpus."
+        "notes": "Existing public-active legacy real_ugc rows must be reviewed under sign-off: archive/hide/reclassify so they are not mistaken for independent gardener evidence."
       }
     ],
-    "founderSeedSlots": [
+    "editorialSeedSlots": [
       "UA-J01",
       "UA-J02",
       "UA-J03",
@@ -99,7 +99,7 @@
     ],
     "launchReady": false,
     "blockingReasons": [
-      "insufficient_founder_first_hand_public"
+      "insufficient_editorial_launch_public"
     ]
   }
 }

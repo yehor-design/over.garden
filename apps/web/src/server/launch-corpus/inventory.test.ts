@@ -48,7 +48,7 @@ describe("launch corpus inventory", () => {
     expect(qualityStatement).not.toMatch(/derivative_key\s+as|quarantine_key/);
   });
 
-  it("plans founder seed slots and cover matrix without private content", () => {
+  it("plans editorial seed slots and cover matrix without private content", () => {
     const report = buildLaunchCorpusPlanReport({
       environment: "production",
       inventory: {
@@ -62,7 +62,7 @@ describe("launch corpus inventory", () => {
     });
 
     expect(report.redacted).toBe(true);
-    expect(report.founderSeedSlots).toEqual(
+    expect(report.editorialSeedSlots).toEqual(
       LAUNCH_CORPUS_SHOT_LIST.map((shot) => shot.id),
     );
     expect(report.localCoverMatrixBranchIds).toEqual(
@@ -85,7 +85,7 @@ describe("launch corpus inventory", () => {
     );
   });
 
-  it("blocks production launch readiness without founder_first_hand public rows", () => {
+  it("blocks production launch readiness without enough editorial public rows", () => {
     const report = buildLaunchCorpusPlanReport({
       environment: "production",
       inventory: {
@@ -96,7 +96,7 @@ describe("launch corpus inventory", () => {
     });
     expect(report.launchReady).toBe(false);
     expect(report.blockingReasons).toContain(
-      "insufficient_founder_first_hand_public",
+      "insufficient_editorial_launch_public",
     );
     expect(
       report.dispositionTargets.some(

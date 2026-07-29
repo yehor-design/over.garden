@@ -14,7 +14,7 @@ import {
 import {
   LAUNCH_CORPUS_SHOT_LIST,
   LAUNCH_CORPUS_TOPOLOGY,
-  listFounderSeedShotIds,
+  listEditorialSeedShotIds,
 } from "@/lib/launch-corpus/shot-list";
 import {
   assertLocalCoverMatrixComplete,
@@ -41,7 +41,7 @@ export type LaunchCorpusQualityClass =
   | "visual_fixture_namespace"
   | "archived_public_slug"
   | "private_active"
-  | "founder_seed_slot";
+  | "editorial_seed_slot";
 
 export interface LaunchCorpusDispositionTarget {
   qualityClass: LaunchCorpusQualityClass;
@@ -71,7 +71,7 @@ export interface LaunchCorpusPlanReport {
   archivedWithPublicSlug: number;
   privateActive: number;
   dispositionTargets: LaunchCorpusDispositionTarget[];
-  founderSeedSlots: readonly string[];
+  editorialSeedSlots: readonly string[];
   topology: typeof LAUNCH_CORPUS_TOPOLOGY;
   localCoverMatrixBranchIds: readonly string[];
   launchReady: boolean;
@@ -303,10 +303,10 @@ export function buildLaunchCorpusPlanReport(input: {
   }
 
   dispositionTargets.push({
-    qualityClass: "founder_seed_slot",
+    qualityClass: "editorial_seed_slot",
     disposition: "seed_after_signoff",
     count: LAUNCH_CORPUS_SHOT_LIST.length,
-    notes: `Seed ${LAUNCH_CORPUS_TOPOLOGY.journals} founder journals (${LAUNCH_CORPUS_TOPOLOGY.spaces} spaces / ${LAUNCH_CORPUS_TOPOLOGY.objects} objects) after explicit sign-off + content pack.`,
+    notes: `Seed ${LAUNCH_CORPUS_TOPOLOGY.journals} clearly labelled editorial journals (${LAUNCH_CORPUS_TOPOLOGY.spaces} spaces / ${LAUNCH_CORPUS_TOPOLOGY.objects} objects) after explicit sign-off + licensed content pack.`,
   });
 
   const nonFounderPublic = countClass(
@@ -319,7 +319,7 @@ export function buildLaunchCorpusPlanReport(input: {
       disposition: "reclassify_production_smoke",
       count: nonFounderPublic,
       notes:
-        "Existing public-active real_ugc rows must be reviewed under sign-off: archive/hide/reclassify so they are not mistaken for founder first-hand launch corpus.",
+        "Existing public-active legacy real_ugc rows must be reviewed under sign-off: archive/hide/reclassify so they are not mistaken for independent gardener evidence.",
     });
   }
 
@@ -339,22 +339,22 @@ export function buildLaunchCorpusPlanReport(input: {
   if (input.inventory.missingSourceLanguageOnFounderPublic > 0) {
     blockingReasons.push("missing_founder_source_language");
   }
-  const founderPublic = countClass(
+  const editorialPublic = countClass(
     input.inventory.publicActiveByClass,
-    "founder_first_hand",
+    "editorial",
   );
-  if (input.environment === "production" && founderPublic < 4) {
-    blockingReasons.push("insufficient_founder_first_hand_public");
+  if (input.environment === "production" && editorialPublic < 8) {
+    blockingReasons.push("insufficient_editorial_launch_public");
   }
 
   // Public-only real_ugc without founder seed still blocks launch readiness.
   if (
     input.environment === "production" &&
     input.inventory.publicActiveCount > 0 &&
-    founderPublic === 0
+    editorialPublic === 0
   ) {
-    if (!blockingReasons.includes("insufficient_founder_first_hand_public")) {
-      blockingReasons.push("insufficient_founder_first_hand_public");
+    if (!blockingReasons.includes("insufficient_editorial_launch_public")) {
+      blockingReasons.push("insufficient_editorial_launch_public");
     }
   }
 
@@ -377,7 +377,7 @@ export function buildLaunchCorpusPlanReport(input: {
     archivedWithPublicSlug: input.inventory.archivedWithPublicSlug,
     privateActive: input.inventory.privateActive,
     dispositionTargets,
-    founderSeedSlots: listFounderSeedShotIds(),
+    editorialSeedSlots: listEditorialSeedShotIds(),
     topology: LAUNCH_CORPUS_TOPOLOGY,
     localCoverMatrixBranchIds: listLocalCoverMatrixBranchIds(),
     launchReady: blockingReasons.length === 0,

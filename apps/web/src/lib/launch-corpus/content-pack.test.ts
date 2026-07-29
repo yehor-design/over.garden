@@ -57,6 +57,8 @@ function buildPack(): LaunchCorpusContentPack {
         id: spec.id,
         market: spec.market,
         sourceLanguage: spec.sourceLanguage,
+        contentClass: "editorial",
+        byline: "OverGarden editorial",
         objectKind: spec.objectKind,
         visibility: spec.visibility,
         coverBranch: spec.coverBranch,

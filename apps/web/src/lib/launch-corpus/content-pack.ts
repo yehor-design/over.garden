@@ -33,6 +33,8 @@ const slotSchema = z.object({
   id: z.string().min(1).max(20),
   market: z.enum(["UA", "BG"]),
   sourceLanguage: z.enum(["uk", "bg"]),
+  contentClass: z.literal("editorial"),
+  byline: z.string().min(2).max(120),
   objectKind: z.enum(["plant", "animal"]),
   visibility: z.enum(["public", "private", "archived_410"]),
   coverBranch: z.enum([
