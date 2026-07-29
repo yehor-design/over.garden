@@ -23,6 +23,7 @@ import {
   assertNoPreciseLocationText,
   containsPreciseLocationText,
 } from "@/lib/privacy/precise-location-text";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockProfile } from "@/server/profile-interaction-repository";
@@ -1143,17 +1144,7 @@ export function normalizeEngagementReturnTo(
   value: string | null | undefined,
   target: EngagementTarget,
 ) {
-  const raw = String(value ?? "").trim();
-  if (
-    raw.startsWith("/") &&
-    !raw.startsWith("//") &&
-    !raw.includes("\n") &&
-    !raw.includes("\r")
-  ) {
-    return raw;
-  }
-
-  return engagementTargetPath(target);
+  return normalizeInternalReturnPath(value, engagementTargetPath(target));
 }
 
 export function engagementTargetPath(target: EngagementTarget) {

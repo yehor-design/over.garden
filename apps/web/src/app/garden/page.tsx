@@ -16,6 +16,7 @@ import {
   normalizeAuthIntentResumeAction,
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -679,16 +680,7 @@ function engagementAuthPrompt(
 }
 
 function normalizeGardenReturnToParam(value: string | string[] | undefined) {
-  const raw = firstParam(value);
-  if (
-    raw.startsWith("/") &&
-    !raw.startsWith("//") &&
-    !raw.includes("\n") &&
-    !raw.includes("\r")
-  ) {
-    return raw;
-  }
-  return "/garden";
+  return normalizeInternalReturnPath(firstParam(value), "/garden");
 }
 
 function firstParam(value: string | string[] | undefined) {

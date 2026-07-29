@@ -93,7 +93,11 @@ vi.mock("./first-entry-composer", () => ({
 }));
 
 vi.mock("./garden-auth-panel", () => ({
-  GardenAuthPanel: () => <section>Garden auth panel</section>,
+  GardenAuthPanel: (props: { postAuthPath?: string | null }) => (
+    <section data-post-auth-path={props.postAuthPath ?? ""}>
+      Garden auth panel
+    </section>
+  ),
 }));
 
 describe("/garden workspace V2", () => {
@@ -110,7 +114,11 @@ describe("/garden workspace V2", () => {
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),
     );
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({
+      canWrite: true,
+      invited: false,
+      actorClass: "real_self_serve",
+    });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
     mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
@@ -241,6 +249,27 @@ describe("/garden workspace V2", () => {
     expect(html).toContain('href="/journals"');
     expect(mocks.loadGardenWorkspace).not.toHaveBeenCalled();
     expect(mocks.getMySpaceJournalTimeline).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "/\\attacker.example/steal",
+    "/%5cattacker.example/steal",
+    "/%252f%255cattacker.example/steal",
+  ])("falls back from unsafe post-auth return path %s", async (returnTo) => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+
+    const { default: GardenPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({
+          engagement: "comment-auth",
+          returnTo,
+        }),
+      }),
+    );
+
+    expect(html).toContain('data-post-auth-path="/garden"');
+    expect(html).not.toContain("attacker");
   });
 
   it("renders a deterministic owner on the real route without credentials or analytics", async () => {

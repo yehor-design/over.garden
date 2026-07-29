@@ -91,27 +91,35 @@ describe("notification mutation routes", () => {
     );
   });
 
-  it("dismisses grouped keys individually and rejects unsafe return paths", async () => {
-    const { POST } = await import("./receipts/route");
-    const keys = ["c".repeat(32), "d".repeat(32)];
-    const response = await POST(
-      multiValueFormRequest("/api/notifications/receipts", [
-        ["eventKey", keys[0]],
-        ["eventKey", "not-an-event-key"],
-        ["eventKey", keys[1]],
-        ["receiptState", "dismissed"],
-        ["returnTo", "https://attacker.example/notifications"],
-      ]),
-    );
+  it.each([
+    "https://attacker.example/notifications",
+    "/\\attacker.example/notifications",
+    "/%5cattacker.example/notifications",
+    "/%252f%255cattacker.example/notifications",
+  ])(
+    "dismisses grouped keys individually and rejects unsafe return path %s",
+    async (returnTo) => {
+      const { POST } = await import("./receipts/route");
+      const keys = ["c".repeat(32), "d".repeat(32)];
+      const response = await POST(
+        multiValueFormRequest("/api/notifications/receipts", [
+          ["eventKey", keys[0]],
+          ["eventKey", "not-an-event-key"],
+          ["eventKey", keys[1]],
+          ["receiptState", "dismissed"],
+          ["returnTo", returnTo],
+        ]),
+      );
 
-    expect(mocks.setNotificationReceipt.mock.calls).toEqual([
-      [scope, { eventKey: keys[0], state: "dismissed" }],
-      [scope, { eventKey: keys[1], state: "dismissed" }],
-    ]);
-    expect(response.headers.get("location")).toBe(
-      "https://over.garden/notifications?engagement=notification-updated",
-    );
-  });
+      expect(mocks.setNotificationReceipt.mock.calls).toEqual([
+        [scope, { eventKey: keys[0], state: "dismissed" }],
+        [scope, { eventKey: keys[1], state: "dismissed" }],
+      ]);
+      expect(response.headers.get("location")).toBe(
+        "https://over.garden/notifications?engagement=notification-updated",
+      );
+    },
+  );
 
   it("does not mutate notification state while signed out", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);

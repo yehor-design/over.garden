@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { publicVarietyPath } from "@/lib/garden/public-paths";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import {
   DEFAULT_PUBLIC_LOCALE,
   isPublicLocale,
@@ -117,18 +118,10 @@ function normalizeReturnToField(
   locale: PublicLocale,
 ) {
   const raw = typeof value === "string" ? value.trim() : "";
-  if (
-    raw.startsWith("/") &&
-    !raw.startsWith("//") &&
-    !raw.includes("\n") &&
-    !raw.includes("\r")
-  ) {
-    return raw;
-  }
-
-  return publicSlug
+  const fallback = publicSlug
     ? publicVarietyPath(publicSlug)
     : localizedPath(locale, "/wishlist");
+  return normalizeInternalReturnPath(raw, fallback);
 }
 
 function withStatusParam(path: string, status: "saved" | "removed") {

@@ -38,6 +38,7 @@ import {
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
   hashAnonymousEngagementToken,
+  normalizeEngagementReturnTo,
   normalizeEngagementTarget,
 } from "./engagement-repository";
 
@@ -396,5 +397,15 @@ describe("engagement repository contracts", () => {
     expect(() =>
       normalizeEngagementTarget("lineage_object", "not-a-uuid"),
     ).toThrow("Engagement target is not available.");
+  });
+
+  it.each([
+    "/\\attacker.example/steal",
+    "/%5cattacker.example/steal",
+    "/%252f%255cattacker.example/steal",
+  ])("falls back from unsafe engagement return path %s", (returnTo) => {
+    expect(normalizeEngagementReturnTo(returnTo, journalTarget)).toBe(
+      "/journal/first-public-harvest",
+    );
   });
 });

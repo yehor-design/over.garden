@@ -105,6 +105,24 @@ describe("wishlist actions", () => {
     );
   });
 
+  it.each([
+    "/\\attacker.example/steal",
+    "/%5cattacker.example/steal",
+    "/%252f%255cattacker.example/steal",
+  ])("falls back from unsafe return path %s", async (returnTo) => {
+    mocks.getCurrentSession.mockResolvedValueOnce(null);
+    const { addCatalogPublicSlugToWishlistAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("catalogPublicSlug", "pomidor-cheri-0000000101");
+    formData.set("returnTo", returnTo);
+
+    await addCatalogPublicSlugToWishlistAction(formData);
+
+    expect(mocks.redirect).toHaveBeenCalledWith(
+      "/garden?wishlist=pomidor-cheri-0000000101&returnTo=%2Fvariety%2Fpomidor-cheri-0000000101&source=wishlist",
+    );
+  });
+
   it("removes wishlist items inside the signed-in scope", async () => {
     const { removeCatalogPublicSlugFromWishlistAction } =
       await import("./actions");

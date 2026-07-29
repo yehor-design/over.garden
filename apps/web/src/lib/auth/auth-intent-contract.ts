@@ -1,3 +1,5 @@
+import { parseInternalReturnPath } from "@/lib/navigation/internal-return-path";
+
 export const AUTH_INTENT_ACTIONS = [
   "comment",
   "bookmark",
@@ -258,16 +260,10 @@ function normalizeControl(value: unknown): string | undefined {
 }
 
 function normalizeReturnTo(value: unknown): string {
-  if (typeof value !== "string") throw new AuthIntentContractError();
-
-  const candidate = value.trim();
-  if (
-    !candidate.startsWith("/") ||
-    candidate.startsWith("//") ||
-    candidate.includes("\\") ||
-    /%2f%2f|%5c/i.test(candidate) ||
-    candidate.length > 1024
-  ) {
+  let candidate: string;
+  try {
+    candidate = parseInternalReturnPath(value);
+  } catch {
     throw new AuthIntentContractError();
   }
 
