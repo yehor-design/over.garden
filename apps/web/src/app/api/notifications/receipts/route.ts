@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import {
   markNotificationEventsRead,
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
 }
 
 function notificationReturnTo(value: FormDataEntryValue | null) {
-  const raw = typeof value === "string" ? value : "/notifications";
+  const raw = normalizeInternalReturnPath(value, "/notifications");
   const url = new URL(raw, "https://over.garden");
   if (!/^\/(?:(?:bg|ru)\/)?notifications$/.test(url.pathname)) {
     return "/notifications";

@@ -5,6 +5,7 @@ import {
   type AuthIntentTarget,
   normalizeAuthIntentDraft,
 } from "@/lib/auth/auth-intent-contract";
+import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
 import type { EngagementTarget } from "@/server/engagement-repository";
 import {
@@ -37,7 +38,7 @@ export function redirectWithEngagementStatus(
   returnTo: string,
   status: string,
 ) {
-  const url = new URL(returnTo, request.url);
+  const url = new URL(normalizeInternalReturnPath(returnTo, "/"), request.url);
   url.searchParams.set("engagement", status);
   return NextResponse.redirect(url, 303);
 }
@@ -49,7 +50,10 @@ export function redirectToEngagementAuth(
   intent: "bookmark" | "comment" | "follow" | "report" | "block",
   control?: string,
 ) {
-  const normalizedReturnTo = returnTo || engagementTargetPath(target);
+  const normalizedReturnTo = normalizeInternalReturnPath(
+    returnTo,
+    engagementTargetPath(target),
+  );
   const draft = {
     action: intent,
     returnTo: normalizedReturnTo,

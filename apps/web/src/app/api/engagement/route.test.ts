@@ -235,31 +235,38 @@ describe("engagement routes", () => {
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
   });
 
-  it("never carries a protocol-confused return path into the auth token", async () => {
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
-    const { POST } = await import("./comments/route");
+  it.each([
+    "/\\attacker.example/steal",
+    "/%5cattacker.example/steal",
+    "/%252f%255cattacker.example/steal",
+  ])(
+    "never carries protocol-confused return path %s into the auth token",
+    async (returnTo) => {
+      mocks.getCurrentSession.mockResolvedValueOnce(null);
+      const { POST } = await import("./comments/route");
 
-    const response = await POST(
-      formRequest("/api/engagement/comments", {
-        targetKind: "journal_entry",
-        targetRef: "first-public-harvest",
-        returnTo: "/\\attacker.example/steal",
-        body: "Private draft",
-      }),
-    );
+      const response = await POST(
+        formRequest("/api/engagement/comments", {
+          targetKind: "journal_entry",
+          targetRef: "first-public-harvest",
+          returnTo,
+          body: "Private draft",
+        }),
+      );
 
-    expect(response.headers.get("location")).toBe(
-      "https://over.garden/auth/intent?intent=opaque-intent-token",
-    );
-    expect(mocks.createAuthIntentToken).toHaveBeenLastCalledWith({
-      action: "comment",
-      returnTo: "/journal/first-public-harvest",
-      target: { kind: "journal", ref: "first-public-harvest" },
-    });
-    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
-      /attacker|Private draft/i,
-    );
-  });
+      expect(response.headers.get("location")).toBe(
+        "https://over.garden/auth/intent?intent=opaque-intent-token",
+      );
+      expect(mocks.createAuthIntentToken).toHaveBeenLastCalledWith({
+        action: "comment",
+        returnTo: "/journal/first-public-harvest",
+        target: { kind: "journal", ref: "first-public-harvest" },
+      });
+      expect(
+        JSON.stringify(mocks.createAuthIntentToken.mock.calls),
+      ).not.toMatch(/attacker|Private draft/i);
+    },
+  );
 
   it("routes signed-out bookmark intent to auth without mutating", async () => {
     mocks.getCurrentSession.mockResolvedValueOnce(null);
