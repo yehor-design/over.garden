@@ -135,8 +135,8 @@ const drafts = [
     title: "Избрана корица, която не зависи от реда",
     body: "Редакционна бележка на OverGarden. Корица трябва да показва ясно предмета на записа, а не задължително да бъде първата добавена снимка. След пренареждане на илюстрациите избраният кадър остава корица. Това пази разпознаваемостта в списъците и позволява вътре да се подреди по-смислен визуален разказ.",
     entryDate: "2026-06-17", media: [
-      {file:"bg05a",aspect:"landscape",alt:"Кошер в зелено поле под открито небе",photographer:"Being Organic in EU"},
-      {file:"bg05b",aspect:"portrait",alt:"Кошер сред цъфтяща растителност",photographer:"Eric Dekker"},
+      {file:"bg05a",aspect:"portrait",alt:"Зреещи домати върху зелено растение",photographer:"gibblesmash asdf"},
+      {file:"bg05b",aspect:"portrait",alt:"Домати растат върху растение в оранжерия",photographer:"Eileen Kummer"},
     ], explicit: "bg05b",
   },
   {
@@ -144,7 +144,7 @@ const drafts = [
     spaceLabel: "Редакционна градина", objectLabel: "Домат", catalogIdentity: "Solanum lycopersicum",
     title: "Личен план за следващата проверка",
     body: "Редакционен пример за лична бележка. Тук може да остане работен план: проверка на опората, сравнение на влагата и ново наблюдение на листата след няколко дни. Частният запис не трябва да се появява в публични списъци, профили или търсене, докато собственикът не промени видимостта съзнателно.",
-    entryDate: "2026-06-21", media: [{file:"bg06",aspect:"landscape",alt:"Ред дървени кошери върху зелена поляна",photographer:"iridial"}], explicit: null,
+    entryDate: "2026-06-21", media: [{file:"bg06",aspect:"landscape",alt:"Редове зелени доматени растения в градина",photographer:"Divaris Shirichena"}], explicit: null,
   },
   {
     id: "BG-J07", market: "BG", sourceLanguage: "bg", objectKind: "plant", visibility: "archived_410", coverBranch: "archived_one_inline",
