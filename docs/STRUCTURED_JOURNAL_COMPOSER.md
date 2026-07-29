@@ -58,7 +58,13 @@ Explicit save waits at most 1500 ms for composition or reorder recovery and then
 serializes the latest editor generation. The finite deadline prevents a lost
 terminal browser event from leaving Save or Cancel permanently blocked. The
 local-only smoke refuses preview/production and emits only bounded synthetic
-counts and latency; it never uploads media or mutates a canonical journal.
+counts and latency; it never uploads media or mutates a canonical journal. It
+loads the pinned Editor.js 2.31.6 browser bundle and the production shared
+reservation controller, starts eleven concurrent picker callbacks, proves ten
+atomic reservations/ordered durable image blocks, the synchronous eleventh
+rejection, and zero object-URL residue after controller teardown. Its companion
+integration test proves all four composer callers still route through the shared
+`StructuredJournalComposer` owner.
 
 Closeout pattern matches OVE-208: local suite + Vercel `READY` for exact SHA. GitHub Actions may remain `workflow_dispatch` under budget freeze.
 
@@ -85,10 +91,13 @@ Do not record private journal text, media URLs, or identities in evidence.
   animation frame. Destroy cancels that frame before disconnecting listeners
   and removing controller chrome, so a departed composer cannot receive a late
   write.
-- `pnpm smoke:journal-composer-responsiveness` bundles the production controller
-  source into a native Chromium DOM, proves zero no-op and five-second idle
-  observer deliveries, converges a 100-block/10-image mutation burst within the
-  34 ms policy, exercises the two wait-safe actions, and proves teardown fencing.
+- `pnpm smoke:journal-composer-responsiveness` loads the pinned Editor.js 2.31.6
+  bundle plus the production controller in Chromium, proves zero no-op and
+  five-second idle observer deliveries, measures a real 100-block/10-image
+  mutation burst at the first animation frame against the 34 ms policy, checks
+  its second-frame convergence, exercises the two wait-safe actions, and proves
+  teardown fencing. Its companion integration test proves first-entry,
+  follow-up, space-entry, and edit all use that one owner.
 - Receipts contain only bounded state classes. Journal content, block/media IDs,
   identity, payloads, precise location, IP/user-agent, and credentials remain
   forbidden evidence.
