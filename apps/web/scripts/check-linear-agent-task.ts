@@ -272,7 +272,7 @@ function parseTask(source: string): ParsedTask {
   const metadataBody = semanticMarkdownText(
     sections.get("Execution metadata") ?? "",
   );
-  for (const match of metadataBody.matchAll(/^- ([^:\n]+):\s*(.+)$/gm)) {
+  for (const match of metadataBody.matchAll(/^[-*+] ([^:\n]+):\s*(.+)$/gm)) {
     const key = match[1]?.trim();
     const value = match[2]?.trim();
     if (key && value) {
@@ -2415,7 +2415,7 @@ function validateAcceptanceAndVerification(
       block.id,
       {
         proves: uniqueMatches(
-          block.body.match(/^- Proves:\s*(.+)$/m)?.[1] ?? "",
+          block.body.match(/^[-*+] Proves:\s*(.+)$/m)?.[1] ?? "",
           /\bAC-\d{2}\b/g,
         ),
         body: block.body,
@@ -2456,7 +2456,7 @@ function validateAcceptanceAndVerification(
       "Expected receipt",
     ]) {
       if (
-        !new RegExp(`^- ${escapeRegExp(marker)}:\\s+`, "m").test(block.body)
+        !new RegExp(`^[-*+] ${escapeRegExp(marker)}:\\s+`, "m").test(block.body)
       ) {
         addFinding(
           errors,
@@ -2617,7 +2617,7 @@ function validateVerificationCommandContract(
   errors: LinearTaskValidationFinding[],
 ) {
   const rawStatus =
-    block.body.match(/^- Command status:\s*(.+)$/m)?.[1]?.trim() ?? "";
+    block.body.match(/^[-*+] Command status:\s*(.+)$/m)?.[1]?.trim() ?? "";
   const status = unwrapBackticks(rawStatus);
   const allowedStatuses = new Set([
     "existing",
@@ -3376,7 +3376,7 @@ function validateDeliveryContract(
     dependencySection
       .split("\n")
       .filter((line) =>
-        /^- (Blocked by|Blocks|Related|Duplicate\/replaces):/i.test(line),
+        /^[-*+] (Blocked by|Blocks|Related|Duplicate\/replaces):/i.test(line),
       )
       .some((line) =>
         new RegExp(`\\b${escapeRegExp(issueIdentifier)}\\b`, "i").test(line),
@@ -3565,7 +3565,7 @@ function validateAuthorizationContract(
     "Work forbidden before approval",
     "Stop/read-back condition",
   ]) {
-    if (!new RegExp(`^- ${escapeRegExp(field)}:\\s+`, "m").test(body)) {
+    if (!new RegExp(`^[-*+] ${escapeRegExp(field)}:\\s+`, "m").test(body)) {
       addFinding(
         errors,
         "authorization_field_missing",
@@ -3574,12 +3574,12 @@ function validateAuthorizationContract(
     }
   }
   const sectionStatus = unwrapBackticks(
-    body.match(/^- Authorization status:\s*(.+)$/m)?.[1]?.trim() ?? "",
+    body.match(/^[-*+] Authorization status:\s*(.+)$/m)?.[1]?.trim() ?? "",
   );
   const approvalReceipt =
-    body.match(/^- Approval receipt:\s*(.+)$/m)?.[1]?.trim() ?? "";
+    body.match(/^[-*+] Approval receipt:\s*(.+)$/m)?.[1]?.trim() ?? "";
   const approvalArtifact =
-    body.match(/^- Required approval artifact:\s*(.+)$/m)?.[1]?.trim() ?? "";
+    body.match(/^[-*+] Required approval artifact:\s*(.+)$/m)?.[1]?.trim() ?? "";
   if (sectionStatus !== authorizationStatus) {
     addFinding(
       errors,
@@ -3589,7 +3589,7 @@ function validateAuthorizationContract(
   }
   if (
     authorizationStatus === "pending" &&
-    !/^- Approval receipt:\s*pending\b/im.test(body)
+    !/^[-*+] Approval receipt:\s*pending\b/im.test(body)
   ) {
     addFinding(
       errors,
@@ -4393,13 +4393,18 @@ function validateTargetInventoryPaths(
         continue;
       }
       const exists = existsSync(resolvedPath);
+      const existsAtBaseline =
+        exists &&
+        options.checkRepositoryPathsAtBaseline !== false &&
+        /^[0-9a-f]{40}$/.test(baselineSha) &&
+        gitPathExistsAtCommit(repoRoot, baselineSha, repositoryPath);
       if (!exists && !markedNew) {
         addFinding(
           errors,
           "target_path_missing",
           `Target/caller path \`${repositoryPath}\` does not exist and is not explicitly marked \`(new)\`.`,
         );
-      } else if (exists && markedNew) {
+      } else if (existsAtBaseline && markedNew) {
         addFinding(
           errors,
           "target_path_new_conflict",
@@ -4411,7 +4416,7 @@ function validateTargetInventoryPaths(
         !markedNew &&
         options.checkRepositoryPathsAtBaseline !== false &&
         /^[0-9a-f]{40}$/.test(baselineSha) &&
-        !gitPathExistsAtCommit(repoRoot, baselineSha, repositoryPath)
+        !existsAtBaseline
       ) {
         addFinding(
           errors,
@@ -4689,7 +4694,7 @@ function isConcreteVerificationTarget(target: string) {
 
 function verificationBodyBindsTarget(body: string, target: string) {
   const commandStatus = unwrapBackticks(
-    body.match(/^- Command status:\s*(.+)$/m)?.[1]?.trim() ?? "",
+    body.match(/^[-*+] Command status:\s*(.+)$/m)?.[1]?.trim() ?? "",
   );
   const bashBlocks = extractFencedCodeBlocks(body).filter(
     (block) => block.info === "bash",
@@ -4883,7 +4888,7 @@ function hasConflictingPerformanceRestatement(
 
 function getStructuredFieldValues(source: string, label: string) {
   const pattern = new RegExp(
-    `^ {0,3}-\\s+${escapeRegExp(label)}:\\s*(\\S.*)$`,
+    `^ {0,3}[-*+]\\s+${escapeRegExp(label)}:\\s*(\\S.*)$`,
     "i",
   );
   return scanMarkdown(semanticMarkdownText(source)).lines.flatMap((line) => {
@@ -5478,14 +5483,14 @@ function validateCoordinationChildContract(
       );
     }
   }
-  if (!/^- Integration criterion:\s*\S.{8,}$/im.test(dependencies)) {
+  if (!/^[-*+] Integration criterion:\s*\S.{8,}$/im.test(dependencies)) {
     addFinding(
       errors,
       "coordination_integration_criterion",
       "Coordination dependencies must define a concrete `Integration criterion:` field.",
     );
   }
-  if (!/^- DAG proof:\s*\S.{8,}$/im.test(dependencies)) {
+  if (!/^[-*+] DAG proof:\s*\S.{8,}$/im.test(dependencies)) {
     addFinding(
       errors,
       "coordination_dag_proof",

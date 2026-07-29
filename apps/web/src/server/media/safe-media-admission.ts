@@ -2,8 +2,9 @@ import "server-only";
 
 import sharp from "sharp";
 
+export { SAFE_MEDIA_PROCESSING_LEASE_SECONDS } from "./media-processing-contract";
+
 export const SAFE_MEDIA_ADMISSION_POLICY_VERSION = "ove244.safe-media.v1";
-export const SAFE_MEDIA_PROCESSING_LEASE_SECONDS = 90;
 export const SAFE_MEDIA_PROVIDER_TIMEOUT_MS = 5_000;
 export const SAFE_MEDIA_PROCESSING_TIMEOUT_MS = 30_000;
 

@@ -9,7 +9,7 @@ import type { Database, MediaAsset } from "@/db/schema";
 import { MAX_JOURNAL_INLINE_IMAGES } from "@/lib/garden/journal-document";
 import type { RequestScope } from "@/server/request-scope";
 import { recordPublicProjectionIntent } from "@/server/search/public-projection-outbox";
-import { SAFE_MEDIA_PROCESSING_LEASE_SECONDS } from "@/server/media/safe-media-admission";
+import { SAFE_MEDIA_PROCESSING_LEASE_SECONDS } from "@/server/media/media-processing-contract";
 import { buildEnqueueMediaDerivativeRevokeJobQuery } from "@/server/media/media-lifecycle-enqueue";
 import {
   LAUNCH_MEDIA_QUALITY_POLICY_VERSION,

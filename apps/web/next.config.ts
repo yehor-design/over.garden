@@ -38,6 +38,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, "..", ".."),
   },
+  // Keep the native decoder at its one explicit server route. The garden SSR
+  // graph must not cause sharp to load; tracing below packages its Linux
+  // runtime only for the protected processing boundary.
+  serverExternalPackages: ["sharp"],
   outputFileTracingIncludes: {
     "/api/media/process": [
       "./node_modules/.pnpm/@img+sharp-linux-x64@*/node_modules/@img/sharp-linux-x64/**/*",
