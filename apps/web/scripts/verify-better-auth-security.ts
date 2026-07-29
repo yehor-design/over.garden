@@ -19,6 +19,7 @@ export type BetterAuthSecurityGuardReport = {
   patchedVersion: string;
   passwordlessPlugins: "absent";
   authBoundary: "present";
+  versionedSecretPolicy: "present";
 };
 
 export type BetterAuthSecurityGuardFailureCode =
@@ -29,6 +30,7 @@ export type BetterAuthSecurityGuardFailureCode =
   | "lockfile_resolution_mismatch"
   | "forbidden_passwordless_plugin"
   | "missing_auth_boundary"
+  | "missing_versioned_secret_policy"
   | "guard_timeout";
 
 export class BetterAuthSecurityGuardError extends Error {
@@ -67,6 +69,7 @@ export function verifyBetterAuthSecurity(
     patchedVersion: configuredVersion,
     passwordlessPlugins: "absent",
     authBoundary: "present",
+    versionedSecretPolicy: "present",
   };
 }
 
@@ -143,6 +146,10 @@ function assertAuthBoundary(authSource: string) {
   if (requiredMarkers.some((marker) => !authSource.includes(marker))) {
     throw new BetterAuthSecurityGuardError("missing_auth_boundary");
   }
+
+  if (!authSource.includes("resolveBetterAuthSecretOptions()")) {
+    throw new BetterAuthSecurityGuardError("missing_versioned_secret_policy");
+  }
 }
 
 function readGuardInput(): BetterAuthSecurityGuardInput {
@@ -172,6 +179,7 @@ function runCli() {
       `duration_ms=${durationMs}`,
       `passwordless_plugins=${report.passwordlessPlugins}`,
       `auth_boundary=${report.authBoundary}`,
+      `versioned_secret_policy=${report.versionedSecretPolicy}`,
     ].join(" "),
   );
 }

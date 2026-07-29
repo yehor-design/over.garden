@@ -1,7 +1,7 @@
 import "server-only";
 
 import { resolveDatabaseConnection } from "@/db/connection";
-import { isBlockedBetterAuthSecret } from "@/lib/auth-secret";
+import { getAuthSecretHealth } from "@/lib/auth-secret";
 import {
   FACEBOOK_CLIENT_ID_ENV,
   FACEBOOK_CLIENT_SECRET_ENV,
@@ -680,25 +680,41 @@ function checkRequiredSecretPresence(
 }
 
 function checkBetterAuthSecret(env: EnvLike): PilotSmokeCheck {
-  const value = env.BETTER_AUTH_SECRET;
-
-  if (isBlockedBetterAuthSecret(value)) {
+  const health = getAuthSecretHealth(env);
+  if (health.class === "versioned_current") {
     return {
       id: "better-auth-secret",
-      label: "Better Auth secret",
-      severity: "fail",
-      summary:
-        "BETTER_AUTH_SECRET is missing, placeholder-like, or uses a local development fallback.",
+      label: "Better Auth secret policy",
+      severity: "pass",
+      summary: `Versioned Better Auth current key v${health.activeVersion} is configured.`,
       evidence:
-        "Evidence may say missing, placeholder-like, or local fallback only. Never copy this value into docs, Linear, logs, or chat.",
+        "Evidence may name only the versioned current class and numeric version. Never copy secret material, encoded length, digest, or Vercel payload.",
     };
   }
 
-  return checkRequiredSecretPresence(
-    env,
-    "BETTER_AUTH_SECRET",
-    "Better Auth secret",
-  );
+  if (health.class === "legacy_transition") {
+    return {
+      id: "better-auth-secret",
+      label: "Better Auth secret policy",
+      severity: "fail",
+      summary:
+        "Better Auth remains in legacy_transition; Production and Preview require a declared versioned current key.",
+      evidence:
+        "Prepare a Sensitive versioned key and matching non-secret numeric metadata before deployment. Never copy any value into docs, Linear, logs, or chat.",
+    };
+  }
+
+  return {
+    id: "better-auth-secret",
+    label: "Better Auth secret policy",
+    severity: "fail",
+    summary:
+      health.class === "local_fallback"
+        ? "Better Auth is using an isolated local fallback."
+        : "Better Auth versioned configuration is missing or invalid.",
+    evidence:
+      "Evidence may report only a closed or local-fallback class. Never copy a secret value, encoded length, digest, environment payload, or provider response.",
+  };
 }
 
 function checkResendAuthEmailConfiguration(env: EnvLike): PilotSmokeCheck {

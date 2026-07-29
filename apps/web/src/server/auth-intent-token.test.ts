@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { AuthSecretConfiguration } from "@/lib/auth-secret";
 import {
   AuthIntentTokenError,
   createAuthIntentToken,
@@ -8,6 +9,25 @@ import {
 
 const SECRET = "ove-174-test-secret-with-at-least-thirty-two-characters";
 const NOW = Date.parse("2026-07-11T08:00:00.000Z");
+const CURRENT_SECRET = Buffer.alloc(32, 5).toString("base64url");
+const LEGACY_SECRET = "auth-intent-legacy-test-secret-with-at-least-thirty-two";
+const TWO_KEY_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "versioned_current", activeVersion: 2 },
+  active: { version: 2, value: CURRENT_SECRET },
+  versionedSecrets: [{ version: 2, value: CURRENT_SECRET }],
+  legacySecret: LEGACY_SECRET,
+};
+const LEGACY_TRANSITION_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "legacy_transition" },
+  active: { version: 0, value: LEGACY_SECRET },
+  versionedSecrets: [],
+  legacySecret: LEGACY_SECRET,
+};
+const LOCAL_FALLBACK_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "local_fallback", activeVersion: 0 },
+  active: { version: 0, value: CURRENT_SECRET },
+  versionedSecrets: [],
+};
 
 describe("auth intent token", () => {
   it("round-trips a normalized short-lived payload through opaque authenticated encryption", () => {
@@ -69,6 +89,63 @@ describe("auth intent token", () => {
     expect(JSON.stringify(payload)).not.toMatch(
       /private body|person@example|private\.invite|42\.0/i,
     );
+  });
+
+  it("labels current writers and selects either the named current key or one legacy fallback", () => {
+    const current = createAuthIntentToken(
+      { action: "save", returnTo: "/garden" },
+      { authSecrets: TWO_KEY_CONFIGURATION, now: NOW },
+    );
+    const legacy = createAuthIntentToken(
+      { action: "save", returnTo: "/garden" },
+      { secret: LEGACY_SECRET, now: NOW },
+    );
+
+    expect(current).toMatch(/^v2\.2\./);
+    expect(
+      verifyAuthIntentToken(current, {
+        authSecrets: TWO_KEY_CONFIGURATION,
+        now: NOW,
+      }).action,
+    ).toBe("save");
+    expect(
+      verifyAuthIntentToken(legacy, {
+        authSecrets: TWO_KEY_CONFIGURATION,
+        now: NOW,
+      }).action,
+    ).toBe("save");
+    expect(() =>
+      verifyAuthIntentToken(current.replace(/^v2\.2\./, "v2.3."), {
+        authSecrets: TWO_KEY_CONFIGURATION,
+        now: NOW,
+      }),
+    ).toThrow(AuthIntentTokenError);
+  });
+
+  it("uses v1 only for legacy transition and retains isolated local fallback reads", () => {
+    const legacyToken = createAuthIntentToken(
+      { action: "save", returnTo: "/garden" },
+      { authSecrets: LEGACY_TRANSITION_CONFIGURATION, now: NOW },
+    );
+    const localToken = createAuthIntentToken(
+      { action: "save", returnTo: "/garden" },
+      { authSecrets: LOCAL_FALLBACK_CONFIGURATION, now: NOW },
+    );
+
+    expect(legacyToken).toMatch(/^v1\./);
+    expect(
+      verifyAuthIntentToken(legacyToken, {
+        authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+        now: NOW,
+      }).action,
+    ).toBe("save");
+    expect(localToken).toMatch(/^v2\.0\./);
+    expect(
+      verifyAuthIntentToken(localToken, {
+        authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+        now: NOW,
+      }).action,
+    ).toBe("save");
   });
 
   it("rejects modified ciphertext, tag, wrong secrets, and malformed versions", () => {

@@ -216,7 +216,10 @@ const UK_COPY = {
     utf8: "UTF-8 / кирилиця",
     auth: "Автентифікація (Better Auth)",
     database: "База даних (Kysely / Postgres)",
-    authConfigured: "Маршрут Better Auth підключено — secret налаштовано",
+    authVersionedCurrent:
+      "Маршрут Better Auth підключено — versioned_current_v{version}",
+    authLegacyTransition:
+      "Маршрут Better Auth підключено — legacy_transition; потрібна підготовлена versioned-конфігурація",
     authClosed:
       "Маршрут Better Auth підключено — secret відсутній або схожий на placeholder, автентифікація fail-closed",
     authLocalFallback:
@@ -435,8 +438,10 @@ const BG_COPY = {
     utf8: "UTF-8 / кирилица",
     auth: "Автентикация (Better Auth)",
     database: "База данни (Kysely / Postgres)",
-    authConfigured:
-      "Маршрутът на Better Auth е свързан — secret е конфигуриран",
+    authVersionedCurrent:
+      "Маршрутът на Better Auth е свързан — versioned_current_v{version}",
+    authLegacyTransition:
+      "Маршрутът на Better Auth е свързан — legacy_transition; нужна е подготвена versioned конфигурация",
     authClosed:
       "Маршрутът на Better Auth е свързан — secret липсва или прилича на placeholder, автентикацията е fail-closed",
     authLocalFallback:
@@ -653,7 +658,10 @@ const RU_COPY = {
     utf8: "UTF-8 / кириллица",
     auth: "Аутентификация (Better Auth)",
     database: "База данных (Kysely / Postgres)",
-    authConfigured: "Маршрут Better Auth подключён — secret настроен",
+    authVersionedCurrent:
+      "Маршрут Better Auth подключён — versioned_current_v{version}",
+    authLegacyTransition:
+      "Маршрут Better Auth подключён — legacy_transition; нужна подготовленная versioned-конфигурация",
     authClosed:
       "Маршрут Better Auth подключён — secret отсутствует или похож на placeholder, аутентификация fail-closed",
     authLocalFallback:

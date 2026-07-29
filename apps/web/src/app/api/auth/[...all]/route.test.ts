@@ -6,6 +6,7 @@ const parsePasswordResetRequest = vi.fn();
 const handlerPost = vi.fn();
 const after = vi.hoisted(() => vi.fn());
 const drainAuthEmailOutbox = vi.hoisted(() => vi.fn());
+const bridgeLegacyEmailVerificationRequest = vi.hoisted(() => vi.fn());
 
 vi.mock("next/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("next/server")>();
@@ -36,6 +37,9 @@ vi.mock("@/server/auth/auth-email-outbox", () => ({
 vi.mock("@/server/auth/auth-email-outbox-consumer", () => ({
   drainAuthEmailOutbox,
 }));
+vi.mock("@/server/auth/legacy-email-verification-bridge", () => ({
+  bridgeLegacyEmailVerificationRequest,
+}));
 
 describe("password-reset API boundary", () => {
   beforeEach(() => {
@@ -46,12 +50,16 @@ describe("password-reset API boundary", () => {
     handlerPost.mockReset();
     after.mockReset();
     drainAuthEmailOutbox.mockReset();
+    bridgeLegacyEmailVerificationRequest.mockReset();
     isTrustedPasswordResetOrigin.mockReturnValue(true);
     parsePasswordResetRequest.mockReturnValue({
       email: "gardener@example.test",
     });
     handlerPost.mockResolvedValue(
       new Response(JSON.stringify({ status: true })),
+    );
+    bridgeLegacyEmailVerificationRequest.mockImplementation(
+      async (request: Request) => request,
     );
   });
 

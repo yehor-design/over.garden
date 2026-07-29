@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeJournalMentionSelections } from "@/lib/garden/journal-mentions";
+import type { AuthSecretConfiguration } from "@/lib/auth-secret";
 import {
   PUBLIC_HANDLE_MENTION_TOKEN_MAX_LENGTH,
   sealPublicHandleMentionTarget,
@@ -11,6 +12,26 @@ const SECRET = "ove-203-public-handle-token-test-secret-with-adequate-length";
 const TARGET_USER_ID = "00000000-0000-4000-8000-000000000010";
 const AUDIENCE_USER_ID = "00000000-0000-4000-8000-000000000001";
 const OTHER_AUDIENCE_USER_ID = "00000000-0000-4000-8000-000000000002";
+const CURRENT_SECRET = Buffer.alloc(32, 6).toString("base64url");
+const LEGACY_SECRET =
+  "mention-legacy-test-secret-with-at-least-thirty-two-characters";
+const TWO_KEY_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "versioned_current", activeVersion: 2 },
+  active: { version: 2, value: CURRENT_SECRET },
+  versionedSecrets: [{ version: 2, value: CURRENT_SECRET }],
+  legacySecret: LEGACY_SECRET,
+};
+const LEGACY_TRANSITION_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "legacy_transition" },
+  active: { version: 0, value: LEGACY_SECRET },
+  versionedSecrets: [],
+  legacySecret: LEGACY_SECRET,
+};
+const LOCAL_FALLBACK_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "local_fallback", activeVersion: 0 },
+  active: { version: 0, value: CURRENT_SECRET },
+  versionedSecrets: [],
+};
 
 describe("public handle mention target token", () => {
   it("round-trips one stable target through a bounded opaque non-expiring token", () => {
@@ -60,6 +81,63 @@ describe("public handle mention target token", () => {
         }),
       ).toBe(TARGET_USER_ID);
     }
+  });
+
+  it("labels current mentions and reads a legacy selection only through its fallback", () => {
+    const current = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: TWO_KEY_CONFIGURATION,
+    });
+    const legacy = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      secret: LEGACY_SECRET,
+    });
+
+    expect(current).toMatch(/^v2\.2\./);
+    expect(
+      unsealPublicHandleMentionTarget(current, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(
+      unsealPublicHandleMentionTarget(legacy, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(
+      unsealPublicHandleMentionTarget(current.replace(/^v2\.2\./, "v2.3."), {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBeNull();
+  });
+
+  it("uses v1 only for legacy transition and retains isolated local fallback reads", () => {
+    const legacyToken = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+    });
+    const localToken = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+    });
+
+    expect(legacyToken).toMatch(/^v1\./);
+    expect(
+      unsealPublicHandleMentionTarget(legacyToken, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(localToken).toMatch(/^v2\.0\./);
+    expect(
+      unsealPublicHandleMentionTarget(localToken, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
   });
 
   it("fails closed for tampering, transfer to another audience, and a wrong secret", () => {

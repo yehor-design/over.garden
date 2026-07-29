@@ -5,10 +5,14 @@ import {
   type PilotSmokeCheck,
 } from "./pilot-smoke-readiness";
 
+const versionedAuthSecretFixture = Buffer.alloc(32, 7).toString("base64url");
+
 const productionLikeEnv = {
   BETTER_AUTH_URL: "https://over.garden",
   PUBLIC_SITE_URL: "https://over.garden",
   BETTER_AUTH_SECRET: "auth-secret-that-must-not-leak",
+  BETTER_AUTH_SECRETS: `2:${versionedAuthSecretFixture}`,
+  BETTER_AUTH_CURRENT_SECRET_VERSION: "2",
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
@@ -188,7 +192,7 @@ describe("pilot smoke readiness", () => {
     });
   });
 
-  it("blocks deployed smoke when the auth secret is a local fallback", () => {
+  it("keeps deployed smoke on the versioned key when a local fallback is clean-cut", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
@@ -199,19 +203,19 @@ describe("pilot smoke readiness", () => {
       generatedAt: new Date("2026-06-27T00:00:00.000Z"),
     });
 
-    expect(readout.overall).toBe("blocked");
+    expect(readout.overall).toBe("ready");
     expect(
       findCheck(
         readout.sections.flatMap((section) => section.checks),
         "better-auth-secret",
       ),
     ).toMatchObject({
-      severity: "fail",
-      summary: expect.stringContaining("local development fallback"),
+      severity: "pass",
+      summary: expect.stringContaining("current key v2"),
     });
   });
 
-  it("blocks deployed smoke when the auth secret is still a placeholder", () => {
+  it("keeps deployed smoke on the versioned key when a placeholder is clean-cut", () => {
     const readout = buildPilotSmokeReadiness({
       env: {
         ...productionLikeEnv,
@@ -222,15 +226,15 @@ describe("pilot smoke readiness", () => {
       generatedAt: new Date("2026-06-27T00:00:00.000Z"),
     });
 
-    expect(readout.overall).toBe("blocked");
+    expect(readout.overall).toBe("ready");
     expect(
       findCheck(
         readout.sections.flatMap((section) => section.checks),
         "better-auth-secret",
       ),
     ).toMatchObject({
-      severity: "fail",
-      summary: expect.stringContaining("placeholder-like"),
+      severity: "pass",
+      summary: expect.stringContaining("current key v2"),
     });
   });
 

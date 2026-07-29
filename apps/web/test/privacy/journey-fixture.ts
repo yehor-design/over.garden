@@ -282,8 +282,9 @@ export function publicVarietyPage(
   };
 }
 
-// An env where every secret/operator value is poison. The pilot smoke readiness
-// readout must report presence/HTTPS classes only, never echo a secret value.
+// An env where every externally supplied secret/operator value is poison. The
+// versioned policy also needs an admissible fixture key to reach its public
+// health-class path; the readiness readout must never echo either class.
 export function poisonOperatorEnv(): Record<string, string> {
   return {
     VERCEL: "1",
@@ -291,6 +292,8 @@ export function poisonOperatorEnv(): Record<string, string> {
     PUBLIC_SITE_URL: "https://over.garden",
     BETTER_AUTH_URL: "https://over.garden",
     BETTER_AUTH_SECRET: POISON.betterAuthSecret,
+    BETTER_AUTH_SECRETS: `2:${Buffer.alloc(32, 7).toString("base64url")}`,
+    BETTER_AUTH_CURRENT_SECRET_VERSION: "2",
     GOOGLE_CLIENT_ID: POISON.googleClientId,
     GOOGLE_CLIENT_SECRET: POISON.googleClientSecret,
     FACEBOOK_CLIENT_ID: POISON.facebookClientId,

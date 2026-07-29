@@ -13,6 +13,7 @@ import { Kysely, PostgresDialect } from "kysely";
 import { Pool } from "pg";
 
 import { assertLoopbackLocalRuntimeEnvironment } from "../src/lib/local-runtime-safety";
+import { resolveBetterAuthSecretOptions } from "../src/lib/auth-secret";
 import { loadVersionedApplicationSql } from "./application-sql";
 
 loadEnv({ path: ".env.local" });
@@ -27,7 +28,7 @@ const authOptions = {
   appName: "OverGarden",
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
   basePath: "/api/auth",
-  secret: requiredEnv("BETTER_AUTH_SECRET"),
+  ...resolveBetterAuthSecretOptions(process.env),
   database: {
     db,
     type: "postgres",

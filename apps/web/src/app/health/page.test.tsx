@@ -2,16 +2,14 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  hasUsableBetterAuthSecret: vi.fn(),
-  isProductionLikeRuntime: vi.fn(),
+  getAuthSecretHealth: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   pingDatabase: vi.fn(),
   readRecentHealth: vi.fn(),
 }));
 
 vi.mock("@/lib/auth-secret", () => ({
-  hasUsableBetterAuthSecret: mocks.hasUsableBetterAuthSecret,
-  isProductionLikeRuntime: mocks.isProductionLikeRuntime,
+  getAuthSecretHealth: mocks.getAuthSecretHealth,
 }));
 
 vi.mock("@/server/health-repository", () => ({
@@ -27,8 +25,10 @@ describe("/health", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.hasUsableBetterAuthSecret.mockReturnValue(true);
-    mocks.isProductionLikeRuntime.mockReturnValue(false);
+    mocks.getAuthSecretHealth.mockReturnValue({
+      class: "versioned_current",
+      activeVersion: 2,
+    });
     mocks.pingDatabase.mockResolvedValue(true);
     mocks.readRecentHealth.mockResolvedValue([
       { id: "00000000-0000-4000-8000-000000000001" },
@@ -64,5 +64,13 @@ describe("/health", () => {
     expect(html).not.toContain("secret-user");
     expect(html).not.toContain("secret-pass");
     expect(html).not.toContain("example.internal");
+  });
+
+  it("renders only the declared version class when auth is ready", async () => {
+    const { default: HealthPage } = await import("./page");
+    const html = renderToStaticMarkup(await HealthPage());
+
+    expect(html).toContain("versioned_current_v2");
+    expect(html).not.toMatch(/BETTER_AUTH_SECRETS|[A-Za-z0-9_-]{43}/);
   });
 });

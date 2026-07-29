@@ -22,6 +22,7 @@ const supportedAuthSource = `
   },
   databaseHooks: createRetiredSharedIdentityDatabaseHooks(),
   plugins: [nextCookies()],
+  ...resolveBetterAuthSecretOptions(),
 `;
 
 function makeInput(options?: {
@@ -73,6 +74,7 @@ describe("Better Auth security guard", () => {
       patchedVersion: "1.6.25",
       passwordlessPlugins: "absent",
       authBoundary: "present",
+      versionedSecretPolicy: "present",
     });
   });
 
@@ -119,6 +121,18 @@ describe("Better Auth security guard", () => {
         authSource: supportedAuthSource.replace("sendVerificationEmail:", ""),
       }),
       "missing_auth_boundary",
+    );
+  });
+
+  it("rejects an auth source that bypasses the versioned secret policy", () => {
+    expectFailure(
+      makeInput({
+        authSource: supportedAuthSource.replace(
+          "...resolveBetterAuthSecretOptions(),",
+          "",
+        ),
+      }),
+      "missing_versioned_secret_policy",
     );
   });
 
