@@ -10,13 +10,18 @@ import {
   PASSWORD_RESET_RESPONSE_HEADERS,
 } from "@/server/auth/auth-email-outbox";
 import { drainAuthEmailOutbox } from "@/server/auth/auth-email-outbox-consumer";
+import { bridgeLegacyEmailVerificationRequest } from "@/server/auth/legacy-email-verification-bridge";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const handler = toNextJsHandler(auth);
 
-export const { GET, PATCH, PUT, DELETE } = handler;
+export async function GET(request: Request) {
+  return handler.GET(await bridgeLegacyEmailVerificationRequest(request));
+}
+
+export const { PATCH, PUT, DELETE } = handler;
 
 export async function POST(request: Request) {
   if (isPasswordResetRequest(request)) {

@@ -136,6 +136,12 @@ git merge-base --is-ancestor <completed-issue-sha> origin/main
   the listed daily auth-email-outbox Cron recovery route, and a class-only
   authenticated Cron receipt. Never include an outbox id, recipient, reset URL,
   token, provider message id, or Cron secret in that evidence.
+- For OVE-240 or a successor auth-secret rotation: prove the exact-SHA `READY`
+  deployment, canonical aliases, a noindex `/health` `versioned_current_vN`
+  class, redacted current/legacy session, OAuth-state, and email-verification
+  continuity, plus Vercel target/name/sensitivity-class read-back and the
+  retained-legacy rollback receipt. Never include a key value, digest, prefix,
+  size, token, cookie, callback parameter, identity, or provider payload.
 - A statement that no secrets, invite URLs, journal text, media keys, raw request metadata, live user identifiers, or precise location data were included in the evidence.
 
 Use this Linear closeout template:

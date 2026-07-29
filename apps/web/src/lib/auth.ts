@@ -5,7 +5,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
-import { resolveBetterAuthSecret } from "@/lib/auth-secret";
+import { resolveBetterAuthSecretOptions } from "@/lib/auth-secret";
 import { logBetterAuth } from "@/lib/auth/better-auth-logger";
 import { resolveFacebookSocialProviderConfig } from "@/lib/auth/facebook-oauth";
 import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
@@ -32,7 +32,7 @@ export const auth = betterAuth({
   appName: "OverGarden",
   baseURL: getAuthBaseUrl(),
   basePath: "/api/auth",
-  secret: resolveBetterAuthSecret(),
+  ...resolveBetterAuthSecretOptions(),
   logger: {
     disableColors: true,
     level: "warn",

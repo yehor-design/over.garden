@@ -5,10 +5,14 @@ import {
   type PilotSmokeCheck,
 } from "./pilot-smoke-readiness";
 
+const versionedAuthSecretFixture = Buffer.alloc(32, 7).toString("base64url");
+
 const productionLikeEnv = {
   BETTER_AUTH_URL: "https://over.garden",
   PUBLIC_SITE_URL: "https://over.garden",
   BETTER_AUTH_SECRET: "auth-secret-that-must-not-leak",
+  BETTER_AUTH_SECRETS: `2:${versionedAuthSecretFixture}`,
+  BETTER_AUTH_CURRENT_SECRET_VERSION: "2",
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
@@ -207,7 +211,7 @@ describe("pilot smoke readiness", () => {
       ),
     ).toMatchObject({
       severity: "fail",
-      summary: expect.stringContaining("local development fallback"),
+      summary: expect.stringContaining("versioned configuration is missing"),
     });
   });
 
@@ -230,7 +234,7 @@ describe("pilot smoke readiness", () => {
       ),
     ).toMatchObject({
       severity: "fail",
-      summary: expect.stringContaining("placeholder-like"),
+      summary: expect.stringContaining("versioned configuration is missing"),
     });
   });
 

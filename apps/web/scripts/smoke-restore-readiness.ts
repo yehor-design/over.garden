@@ -869,7 +869,11 @@ function buildRuntimeEnv(
     BETTER_AUTH_URL: `http://127.0.0.1:${APP_PORT}`,
     PUBLIC_SITE_URL: `http://127.0.0.1:${APP_PORT}`,
     NEXT_PUBLIC_SITE_URL: `http://127.0.0.1:${APP_PORT}`,
+    // The drill deliberately exercises the serving versioned policy. This
+    // process-local material is never logged or persisted outside the drill.
     BETTER_AUTH_SECRET: `ove230-${context.nonce}-${randomBytes(24).toString("hex")}`,
+    BETTER_AUTH_SECRETS: `2:${randomBytes(32).toString("base64url")}`,
+    BETTER_AUTH_CURRENT_SECRET_VERSION: "2",
     R2_ENDPOINT: `http://127.0.0.1:${MINIO_PORT}`,
     R2_ACCESS_KEY_ID: "ove230",
     R2_SECRET_ACCESS_KEY: "ove230-recovery-only-secret",

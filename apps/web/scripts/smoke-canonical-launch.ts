@@ -13,6 +13,7 @@ import sharp from "sharp";
 import type { Database, JsonValue, JournalEntry } from "../src/db/schema";
 import { buildVerifiedOwnerAccountEvidence } from "../src/lib/admin/owner-account-contract";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "../src/lib/auth/public-identity-compatibility";
+import { resolveBetterAuthSecret } from "../src/lib/auth-secret";
 import { FOUNDER_REHEARSAL_COHORT } from "../src/lib/garden/pilot-invite";
 import { DEFAULT_PILOT_SEGMENT } from "../src/lib/pilot/segments";
 
@@ -554,7 +555,7 @@ async function createAndPrepareSmokeAccount(
   db: DB,
   mail: string,
 ) {
-  const authSecret = requiredEnv("BETTER_AUTH_SECRET");
+  const authSecret = resolveBetterAuthSecret(process.env);
 
   await jsonRequest<unknown>(base, jar, "/api/auth/sign-up/email", {
     method: "POST",

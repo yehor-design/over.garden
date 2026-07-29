@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { AuthSecretConfiguration } from "@/lib/auth-secret";
 import {
   signLineageInviteToken,
   verifyLineageInviteToken,
@@ -9,6 +10,14 @@ const pendingIdentityId = "00000000-0000-4000-8000-000000000301";
 const edgeId = "00000000-0000-4000-8000-000000000201";
 const createdAt = new Date("2026-07-03T18:00:00.000Z");
 const secret = "lineage-invite-test-secret";
+const currentSecret = Buffer.alloc(32, 10).toString("base64url");
+const legacySecret = "lineage-invite-legacy-secret-with-at-least-thirty-two";
+const twoKeyConfiguration: AuthSecretConfiguration = {
+  health: { class: "versioned_current", activeVersion: 2 },
+  active: { version: 2, value: currentSecret },
+  versionedSecrets: [{ version: 2, value: currentSecret }],
+  legacySecret,
+};
 
 describe("lineage invitation tokens", () => {
   it("signs and verifies only edge-scoped pending identity metadata", () => {
@@ -63,6 +72,41 @@ describe("lineage invitation tokens", () => {
       verifyLineageInviteToken(token, {
         now: createdAt.getTime() + 61_000,
         secret,
+      }),
+    ).toBeNull();
+  });
+
+  it("uses a current key label for Better Auth fallback material and one legacy reader", () => {
+    const current = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt,
+      authSecrets: twoKeyConfiguration,
+    });
+    const legacy = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt,
+      secret: legacySecret,
+    });
+
+    expect(current).toMatch(/^v2\.2\./);
+    expect(
+      verifyLineageInviteToken(current, {
+        now: createdAt.getTime(),
+        authSecrets: twoKeyConfiguration,
+      }),
+    ).not.toBeNull();
+    expect(
+      verifyLineageInviteToken(legacy, {
+        now: createdAt.getTime(),
+        authSecrets: twoKeyConfiguration,
+      }),
+    ).not.toBeNull();
+    expect(
+      verifyLineageInviteToken(current.replace(/^v2\.2\./, "v2.7."), {
+        now: createdAt.getTime(),
+        authSecrets: twoKeyConfiguration,
       }),
     ).toBeNull();
   });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { normalizeJournalMentionSelections } from "@/lib/garden/journal-mentions";
+import type { AuthSecretConfiguration } from "@/lib/auth-secret";
 import {
   PUBLIC_HANDLE_MENTION_TOKEN_MAX_LENGTH,
   sealPublicHandleMentionTarget,
@@ -11,6 +12,15 @@ const SECRET = "ove-203-public-handle-token-test-secret-with-adequate-length";
 const TARGET_USER_ID = "00000000-0000-4000-8000-000000000010";
 const AUDIENCE_USER_ID = "00000000-0000-4000-8000-000000000001";
 const OTHER_AUDIENCE_USER_ID = "00000000-0000-4000-8000-000000000002";
+const CURRENT_SECRET = Buffer.alloc(32, 6).toString("base64url");
+const LEGACY_SECRET =
+  "mention-legacy-test-secret-with-at-least-thirty-two-characters";
+const TWO_KEY_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "versioned_current", activeVersion: 2 },
+  active: { version: 2, value: CURRENT_SECRET },
+  versionedSecrets: [{ version: 2, value: CURRENT_SECRET }],
+  legacySecret: LEGACY_SECRET,
+};
 
 describe("public handle mention target token", () => {
   it("round-trips one stable target through a bounded opaque non-expiring token", () => {
@@ -60,6 +70,37 @@ describe("public handle mention target token", () => {
         }),
       ).toBe(TARGET_USER_ID);
     }
+  });
+
+  it("labels current mentions and reads a legacy selection only through its fallback", () => {
+    const current = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: TWO_KEY_CONFIGURATION,
+    });
+    const legacy = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      secret: LEGACY_SECRET,
+    });
+
+    expect(current).toMatch(/^v2\.2\./);
+    expect(
+      unsealPublicHandleMentionTarget(current, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(
+      unsealPublicHandleMentionTarget(legacy, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(
+      unsealPublicHandleMentionTarget(current.replace(/^v2\.2\./, "v2.3."), {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: TWO_KEY_CONFIGURATION,
+      }),
+    ).toBeNull();
   });
 
   it("fails closed for tampering, transfer to another audience, and a wrong secret", () => {

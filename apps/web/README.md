@@ -28,12 +28,16 @@ Checks:
 ```bash
 pnpm lint
 pnpm typecheck
-BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
+pnpm build
 ```
 
-Production-like builds fail closed unless `BETTER_AUTH_SECRET` is configured.
-Local `pnpm dev` can use the local-only fallback after copying `.env.example`,
-but preview/production deployments must set an explicit platform secret.
+Local builds and `pnpm dev` can use the isolated local-only fallback after
+copying `.env.example`. Production and Preview serving require the platform
+versioned pair `BETTER_AUTH_SECRETS` and
+`BETTER_AUTH_CURRENT_SECRET_VERSION`; the first ordered entry is current.
+Keep the legacy singular `BETTER_AUTH_SECRET` only during the bounded
+migration grace period so existing encrypted state and verification links can
+complete. Never put real values in this repository or command history.
 
 Database type generation after a DB is available:
 
@@ -65,5 +69,5 @@ The boundary is machine-checked in source and fresh production build output:
 
 ```bash
 pnpm walking-skeleton:boundary:check
-BETTER_AUTH_SECRET="$(openssl rand -base64 32)" pnpm build
+pnpm build
 ```

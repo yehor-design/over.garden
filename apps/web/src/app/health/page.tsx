@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 
 import { Button } from "@/components/ui/button";
-import {
-  hasUsableBetterAuthSecret,
-  isProductionLikeRuntime,
-} from "@/lib/auth-secret";
+import { getAuthSecretHealth } from "@/lib/auth-secret";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import { formatOperatorTemplate, getOperatorCopy } from "@/lib/operator-copy";
 import { pingDatabase, readRecentHealth } from "@/server/health-repository";
@@ -23,15 +20,20 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function getAuthStatus(locale: InterfaceLocale): Promise<string> {
   const copy = getOperatorCopy(locale).health;
-  if (hasUsableBetterAuthSecret()) {
-    return copy.authConfigured;
+  const health = getAuthSecretHealth();
+  if (health.class === "versioned_current") {
+    return formatOperatorTemplate(copy.authVersionedCurrent, {
+      version: String(health.activeVersion),
+    });
   }
 
-  if (isProductionLikeRuntime()) {
-    return copy.authClosed;
+  if (health.class === "legacy_transition") {
+    return copy.authLegacyTransition;
   }
 
-  return copy.authLocalFallback;
+  return health.class === "local_fallback"
+    ? copy.authLocalFallback
+    : copy.authClosed;
 }
 
 async function getDbStatus(locale: InterfaceLocale): Promise<string> {

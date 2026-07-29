@@ -5,7 +5,7 @@
  *   pnpm pilot:reset-password -- --email gardener@example.com
  *   pnpm pilot:reset-password -- --email gardener@example.com --base-url https://over.garden
  *
- * Requires DATABASE_URL and BETTER_AUTH_SECRET in the environment (or .env.local).
+ * Requires DATABASE_URL and the canonical Better Auth secret policy in the environment (or .env.local).
  * Prints the reset URL privately for operator handoff. Never commit printed links.
  */
 
@@ -16,6 +16,7 @@ import { Kysely, PostgresDialect } from "kysely";
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { getMigrations } from "better-auth/db/migration";
 
+import { resolveBetterAuthSecretOptions } from "../src/lib/auth-secret";
 import {
   consumeCapturedPasswordResetLinks,
   PILOT_OPERATOR_PASSWORD_RESET_ENV,
@@ -66,7 +67,9 @@ function requiredEnv(name: string): string {
 async function main() {
   const options = parseCliOptions(process.argv.slice(2));
   if (!options.email) {
-    throw new Error("Pass --email <address> for the gardener account to reset.");
+    throw new Error(
+      "Pass --email <address> for the gardener account to reset.",
+    );
   }
 
   const connectionString = requiredEnv("DATABASE_URL");
@@ -77,7 +80,7 @@ async function main() {
     appName: "OverGarden",
     baseURL: process.env.BETTER_AUTH_URL ?? options.baseUrl,
     basePath: "/api/auth",
-    secret: requiredEnv("BETTER_AUTH_SECRET"),
+    ...resolveBetterAuthSecretOptions(process.env),
     database: {
       db,
       type: "postgres",
@@ -88,9 +91,8 @@ async function main() {
       requireEmailVerification: false,
       revokeSessionsOnPasswordReset: true,
       sendResetPassword: async ({ user, url }) => {
-        const { capturePilotPasswordResetLink } = await import(
-          "../src/lib/auth/pilot-password-reset-delivery"
-        );
+        const { capturePilotPasswordResetLink } =
+          await import("../src/lib/auth/pilot-password-reset-delivery");
         void capturePilotPasswordResetLink({ email: user.email, url });
       },
     },

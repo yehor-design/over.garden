@@ -14,6 +14,7 @@ import {
   resolveDatabaseSslConfig,
   resolvePgConnectionString,
 } from "../src/db/connection";
+import { resolveBetterAuthSecretOptions } from "../src/lib/auth-secret";
 import {
   assertProviderBinding,
   DigitalOceanDatabaseProvider,
@@ -57,9 +58,7 @@ const authOptions = {
     process.env.PUBLIC_SITE_URL ??
     "http://localhost:3000",
   basePath: "/api/auth",
-  secret:
-    process.env.BETTER_AUTH_SECRET ??
-    "migration-only-overgarden-better-auth-secret",
+  ...resolveBetterAuthSecretOptions(process.env),
   database: {
     db,
     type: "postgres",

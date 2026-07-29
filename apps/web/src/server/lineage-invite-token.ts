@@ -2,13 +2,20 @@ import "server-only";
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
+import {
+  type AuthSecretConfiguration,
+  resolveAuthSecretConfiguration,
+  selectLegacyAuthSecret,
+  selectVersionedAuthSecret,
+} from "@/lib/auth-secret";
+
 export const LINEAGE_INVITE_SIGNING_SECRET_ENV =
   "LINEAGE_INVITE_SIGNING_SECRET";
-export const DEV_LINEAGE_INVITE_SECRET =
-  "development-only-overgarden-lineage-invite-secret-change-before-deploy";
 
-const TOKEN_VERSION = "v1";
+const LEGACY_TOKEN_VERSION = "v1";
+const CURRENT_TOKEN_VERSION = "v2";
 const DEFAULT_INVITE_TTL_SECONDS = 30 * 24 * 60 * 60;
+const VERSION_PATTERN = /^(0|[1-9]\d*)$/;
 
 interface LineageInvitePayload {
   p: string;
@@ -28,12 +35,15 @@ export interface SignLineageInviteTokenOptions {
   edgeId: string;
   createdAt: Date | string;
   ttlSeconds?: number;
+  /** Test or separately managed lineage signing material. */
   secret?: string;
+  authSecrets?: AuthSecretConfiguration;
 }
 
 export interface VerifyLineageInviteTokenOptions {
   now?: number;
   secret?: string;
+  authSecrets?: AuthSecretConfiguration;
 }
 
 export function signLineageInviteToken(
@@ -51,12 +61,16 @@ export function signLineageInviteToken(
     exp: issuedAtSeconds + ttlSeconds,
   };
   const body = encodeBase64Url(JSON.stringify(payload));
-  const signature = sign(
-    `${TOKEN_VERSION}.${body}`,
-    resolveLineageInviteSecret(options.secret),
-  );
+  const writer = resolveWriter(options);
+  const version =
+    writer.version === null ? LEGACY_TOKEN_VERSION : CURRENT_TOKEN_VERSION;
+  const signed = [
+    version,
+    ...(writer.version === null ? [] : [String(writer.version)]),
+    body,
+  ].join(".");
 
-  return `${TOKEN_VERSION}.${body}.${signature}`;
+  return `${signed}.${sign(signed, writer.secret)}`;
 }
 
 export function verifyLineageInviteToken(
@@ -65,15 +79,27 @@ export function verifyLineageInviteToken(
 ): LineageInviteVerification | null {
   if (!token || typeof token !== "string") return null;
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
+  const isLegacy = parts.length === 3 && parts[0] === LEGACY_TOKEN_VERSION;
+  const isCurrent = parts.length === 4 && parts[0] === CURRENT_TOKEN_VERSION;
+  if (!isLegacy && !isCurrent) return null;
 
-  const [version, body, signature] = parts;
-  if (version !== TOKEN_VERSION || !body || !signature) return null;
+  const keyVersion = isCurrent ? parseVersion(parts[1]!) : null;
+  if (isCurrent && keyVersion === null) return null;
+  const body = parts[isCurrent ? 2 : 1];
+  const signature = parts[isCurrent ? 3 : 2];
+  if (!body || !signature || !/^[A-Za-z0-9_-]+$/.test(body)) return null;
 
-  const expectedSignature = sign(
-    `${version}.${body}`,
-    resolveLineageInviteSecret(options.secret),
-  );
+  const secret =
+    keyVersion === null
+      ? resolveLegacySecret(options)
+      : selectVersionedAuthSecret(
+          keyVersion,
+          options.authSecrets ?? resolveAuthSecretConfiguration(),
+        )?.value;
+  if (!secret) return null;
+
+  const signed = parts.slice(0, isCurrent ? 3 : 2).join(".");
+  const expectedSignature = sign(signed, secret);
   if (!safeEqual(signature, expectedSignature)) return null;
 
   const payload = decodePayload(body);
@@ -93,20 +119,49 @@ export function verifyLineageInviteToken(
   };
 }
 
-export function resolveLineageInviteSecret(explicitSecret?: string): string {
+/**
+ * Returns independently managed lineage material only. Falling back to a
+ * Better Auth key is handled by the version-aware writer/reader above; there
+ * is no production development constant.
+ */
+export function resolveLineageInviteSecret(
+  explicitSecret?: string,
+): string | null {
   if (explicitSecret && explicitSecret.length > 0) return explicitSecret;
   const lineageSecret = process.env[LINEAGE_INVITE_SIGNING_SECRET_ENV];
-  if (lineageSecret && lineageSecret.length > 0) return lineageSecret;
-  const authSecret = process.env.BETTER_AUTH_SECRET;
-  if (authSecret && authSecret.length > 0) return authSecret;
-  return DEV_LINEAGE_INVITE_SECRET;
+  return lineageSecret && lineageSecret.length > 0 ? lineageSecret : null;
+}
+
+function resolveWriter(options: SignLineageInviteTokenOptions) {
+  const dedicatedSecret = resolveLineageInviteSecret(options.secret);
+  if (dedicatedSecret) return { version: null, secret: dedicatedSecret };
+  const configuration = options.authSecrets ?? resolveAuthSecretConfiguration();
+  return {
+    version: configuration.active.version,
+    secret: configuration.active.value,
+  };
+}
+
+function resolveLegacySecret(options: VerifyLineageInviteTokenOptions) {
+  return (
+    resolveLineageInviteSecret(options.secret) ??
+    selectLegacyAuthSecret(
+      options.authSecrets ?? resolveAuthSecretConfiguration(),
+    )
+  );
+}
+
+function parseVersion(value: string): number | null {
+  if (!VERSION_PATTERN.test(value)) return null;
+  const version = Number(value);
+  return Number.isSafeInteger(version) && version >= 0 ? version : null;
 }
 
 function decodePayload(body: string): LineageInvitePayload | null {
   try {
-    const parsed = JSON.parse(
-      decodeBase64Url(body).toString("utf8"),
-    ) as unknown;
+    const decoded = decodeBase64Url(body);
+    if (decoded.toString("base64url") !== body) return null;
+    const parsed = JSON.parse(decoded.toString("utf8")) as unknown;
     if (!parsed || typeof parsed !== "object") return null;
     return parsed as LineageInvitePayload;
   } catch {
