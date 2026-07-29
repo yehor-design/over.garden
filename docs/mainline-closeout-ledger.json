@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-07-28",
+  "updatedAt": "2026-07-29",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "entries": [
@@ -916,6 +916,32 @@
         "Immutable image proof on the exact candidate SHA: ghcr.io/yehor-design/overgarden-matching@sha256:e434784eb3f87e6c03d40ad5bfe2c881a6ba54a6222e1a037a11bf9a2f9195dd, built with max-mode provenance attestation bound to run 30297649272, sealed as artifact matching-release-fdd009e31b3c0fc21e99530a32d148be2f37817f-run-30297649272-1. GHCR publication also confirms package storage is no longer budget-blocked.",
         "Exact-SHA production proof: GitHub deployment 5628515674 with status 16005453803 reached success for fdd009e31b3c0fc21e99530a32d148be2f37817f, and the canonical origin returned 200 with both fallback faces present in the served stylesheet.",
         "Still open and explicitly not claimed by this closeout: branch protection on main and the removal of the two known runner artifacts. No secrets, precise location, journal text, media keys, or user identifiers are included in this entry."
+      ]
+    },
+    {
+      "issueId": "OVE-238",
+      "title": "P0 — Canonical internal return paths: malformed auth and engagement redirects cannot leave OverGarden",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "cd70b3e632650f7b0e74ea929c032e2944bc8e6c",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-238/p0-canonical-internal-return-paths-malformed-auth-and-engagement",
+      "completedAt": "2026-07-29",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/lib/navigation/internal-return-path.test.ts src/lib/auth/auth-intent-contract.test.ts src/server/engagement-repository.test.ts src/app/api/engagement/route.test.ts src/app/api/notifications/route.test.ts src/app/api/notifications/receipts/route.test.ts src/app/wishlist/actions.test.ts src/app/garden/page.test.tsx",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm build",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm mainline:closeout:check",
+        "git merge-base --is-ancestor d2fcb8d99058b8b0eeb87c6e86b7b7bef347c23f origin/main"
+      ],
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/84mFTk4rMcsbs2YCa83GAvv2zqDd",
+      "githubDeploymentId": 5665877135,
+      "githubDeploymentStatusId": 16111124830,
+      "notes": [
+        "Behavior commit d2fcb8d99058b8b0eeb87c6e86b7b7bef347c23f is contained in main through merge commit cd70b3e632650f7b0e74ea929c032e2944bc8e6c. The single shared parser accepts only a canonical relative same-origin path and rejects malformed, authority, control-character, backslash, and recursively percent-decoded traversal forms before an auth-intent, route redirect, or repository persistence boundary uses them.",
+        "The protected journey covers auth intent recovery plus engagement, notifications, wishlist, and garden routes. Invalid input falls back to the route-owned safe destination; it never becomes an external or scheme-relative redirect. The focused suite, lint, typecheck, production build, and full test suite passed locally; exact-main CI run 30495816073 passed its Web and Python matching jobs including build and the browser/accessibility matrix.",
+        "Exact-SHA production proof: Vercel deployment dpl_84mFTk4rMcsbs2YCa83GAvv2zqDd reached READY for cd70b3e632650f7b0e74ea929c032e2944bc8e6c and owns over.garden plus www.over.garden. Authenticated GitHub deployment 5665877135 / status 16111124830 recorded Production success. One unauthenticated, non-mutating receipt-boundary probe returned a same-origin 303 to the notifications route; its controlled malformed input is intentionally not recorded.",
+        "No schema, production data, provider configuration, secret, invite URL, journal text, media key, raw request metadata, live identifier, or precise location was changed or included in this evidence. The description digest and terminal Linear read-back remain the task-system receipt."
       ]
     },
     {

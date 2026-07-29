@@ -64,6 +64,7 @@ export const REQUIRED_LEDGER_ISSUES = [
   "OVE-225",
   "OVE-233",
   "OVE-234",
+  "OVE-238",
   "OVE-242",
 ] as const;
 

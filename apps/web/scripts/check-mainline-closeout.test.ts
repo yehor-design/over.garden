@@ -26,7 +26,7 @@ const repoRoot = path.resolve(
   "../../..",
 );
 const ledgerPath = path.join(repoRoot, "docs", "mainline-closeout-ledger.json");
-const fixtureToday = new Date("2026-07-28T12:00:00.000Z");
+const fixtureToday = new Date("2026-07-30T12:00:00.000Z");
 
 function rawLedger(): Record<string, unknown> {
   return JSON.parse(readFileSync(ledgerPath, "utf8")) as Record<
@@ -484,7 +484,7 @@ describe("mainline closeout guard", () => {
   it("rejects impossible and future ISO dates", () => {
     expect(isValidNonFutureIsoDate("2026-07-26", fixtureToday)).toBe(true);
     expect(isValidNonFutureIsoDate("2026-02-30", fixtureToday)).toBe(false);
-    expect(isValidNonFutureIsoDate("2026-07-29", fixtureToday)).toBe(false);
+    expect(isValidNonFutureIsoDate("2026-07-31", fixtureToday)).toBe(false);
   });
 
   it("uses the Europe/Sofia calendar across the UTC midnight boundary", () => {
