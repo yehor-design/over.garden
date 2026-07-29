@@ -1,6 +1,6 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247 account-method continuity
 Last updated: 2026-07-29
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
@@ -50,15 +50,19 @@ pnpm smoke:exact-sha-self-serve -- \
 ```
 
 The command accepts only the canonical origin, an HTTPS immutable Vercel origin,
-matching full lowercase SHA values, and a rendered guest-shell marker from both
-origins within 10 seconds. Its JSON receipt intentionally contains only status,
-elapsed time, and boolean classes. It does not create an account, accept media,
-or prove provider identity by itself. The subsequent browser journey must use a
-dedicated controlled mailbox, a synthetic non-human image through the normal
-upload/process flow, and an explicitly linked non-personal Google identity with
-the same mailbox email. Retain no credential, token, email, private text, media
-bytes, object key, stable identity, or precise location; finish through native
-account/media/projection cleanup before considering the proof terminal.
+matching full lowercase SHA values, and rendered guest `/garden` plus
+`/garden/profile` auth-shell markers from both origins within 10 seconds. Its
+JSON receipt intentionally contains only status, elapsed time, and boolean
+classes. It does not create an account, accept media, or prove provider identity
+by itself. The subsequent browser journey must use disposable non-personal
+provider identities: begin one first-time Google or Facebook account normally,
+confirm that the profile records it as connected, add a password for the
+provider-supplied verified email, then explicitly connect the other provider
+and prove that either social method or email/password returns to the same
+garden. A matching email alone must never merge an existing garden. Retain no
+credential, token, email, private text, media bytes, object key, stable identity,
+or precise location; finish through native account/media/projection cleanup
+before considering the proof terminal.
 
 ## OVE-191 Production Scaffold Isolation
 

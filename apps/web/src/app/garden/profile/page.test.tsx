@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getSessionId: vi.fn(),
   getOwnerProfileWorkspace: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
+  getCurrentAccountMethodProjection: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -18,9 +19,28 @@ vi.mock("@/server/owner-profile-repository", () => ({
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));
+vi.mock("@/server/auth/account-methods", () => ({
+  getCurrentAccountMethodProjection: mocks.getCurrentAccountMethodProjection,
+}));
 vi.mock("../garden-auth-panel", () => ({
   GardenAuthPanel: () => <section>Sign in panel</section>,
-  SocialAccountLinkPanel: () => <section>Account sign-in methods</section>,
+}));
+vi.mock("../account-methods-panel", () => ({
+  AccountMethodsPanel: ({
+    hasCredential,
+    hasFacebook,
+    hasGoogle,
+  }: {
+    hasCredential: boolean;
+    hasFacebook: boolean;
+    hasGoogle: boolean;
+  }) => (
+    <section
+      data-account-methods={`${hasCredential}:${hasFacebook}:${hasGoogle}`}
+    >
+      Account sign-in methods
+    </section>
+  ),
 }));
 vi.mock("@/components/auth/sign-out-control", () => ({
   SignOutControl: ({ presentation }: { presentation: string }) => (
@@ -88,6 +108,12 @@ describe("/garden/profile", () => {
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.getOwnerProfileWorkspace.mockResolvedValue(WORKSPACE);
+    mocks.getCurrentAccountMethodProjection.mockResolvedValue({
+      hasCredential: true,
+      hasFacebook: false,
+      hasGoogle: true,
+      canSetPassword: false,
+    });
   });
 
   it("loads the scoped owner workspace and exact preview", async () => {
@@ -107,6 +133,8 @@ describe("/garden/profile", () => {
     expect(html).toContain('href="/@green_thumb"');
     expect(html).toContain("Blocked Keeper");
     expect(html).toContain("Account sign-in methods");
+    expect(html).toContain('data-account-methods="true:false:true"');
+    expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
     expect(html).toContain("Обліковий запис і безпека");
     expect(html).toContain('data-sign-out-control="profile"');
     expect(html).toContain("Вийти з облікового запису");
@@ -150,5 +178,7 @@ describe("/garden/profile", () => {
 
     expect(html).toContain("Sign in panel");
     expect(mocks.getOwnerProfileWorkspace).not.toHaveBeenCalled();
+    expect(mocks.getCurrentAccountMethodProjection).not.toHaveBeenCalled();
+    expect(html).toContain('data-garden-profile-auth-shell="guest"');
   });
 });

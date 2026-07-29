@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { oauthCallbackPath, oauthErrorCodeForRedirect } from "./social-oauth";
+import {
+  getSafeOAuthAuthorizationUrl,
+  navigateToOAuthAuthorization,
+  oauthCallbackPath,
+  oauthErrorCodeForRedirect,
+} from "./social-oauth";
 
 describe("social OAuth client helpers", () => {
   it("keeps callback URLs path-scoped and strips stale OAuth errors", () => {
@@ -30,5 +35,49 @@ describe("social OAuth client helpers", () => {
     expect(oauthErrorCodeForRedirect(["email_doesn't_match"])).toBe(
       "email_doesnt_match",
     );
+  });
+
+  it("admits only HTTPS authorization hosts owned by the selected provider", () => {
+    expect(
+      getSafeOAuthAuthorizationUrl(
+        "google",
+        "https://accounts.google.com/o/oauth2/v2/auth?state=opaque",
+      ),
+    ).toContain("https://accounts.google.com/");
+    expect(
+      getSafeOAuthAuthorizationUrl(
+        "facebook",
+        "https://www.facebook.com/v19.0/dialog/oauth?state=opaque",
+      ),
+    ).toContain("https://www.facebook.com/");
+
+    expect(
+      getSafeOAuthAuthorizationUrl(
+        "google",
+        "https://www.facebook.com/v19.0/dialog/oauth",
+      ),
+    ).toBeNull();
+    expect(
+      getSafeOAuthAuthorizationUrl("facebook", "http://www.facebook.com/"),
+    ).toBeNull();
+    expect(getSafeOAuthAuthorizationUrl("google", "not-a-url")).toBeNull();
+  });
+
+  it("performs exactly one supplied top-level navigation only for an admitted URL", () => {
+    const navigate = vi.fn();
+
+    expect(
+      navigateToOAuthAuthorization(
+        "google",
+        "https://accounts.google.com/o/oauth2/v2/auth",
+        navigate,
+      ),
+    ).toBe(true);
+    expect(navigate).toHaveBeenCalledOnce();
+
+    expect(
+      navigateToOAuthAuthorization("google", "https://example.test/", navigate),
+    ).toBe(false);
+    expect(navigate).toHaveBeenCalledOnce();
   });
 });

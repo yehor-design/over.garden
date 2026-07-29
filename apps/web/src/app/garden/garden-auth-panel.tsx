@@ -13,6 +13,7 @@ import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-comp
 import {
   FACEBOOK_PROVIDER_ID,
   GOOGLE_PROVIDER_ID,
+  navigateToOAuthAuthorization,
   oauthCallbackPath,
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
@@ -166,14 +167,15 @@ export function GardenAuthPanel({
 
     try {
       const callbackURL = resolveAuthCallbackPath(postAuthPath);
-      const { error } = await authClient.signIn.social({
+      const { data, error } = await authClient.signIn.social({
         provider,
         callbackURL,
         newUserCallbackURL: callbackURL,
         errorCallbackURL: callbackURL,
+        disableRedirect: true,
       });
 
-      if (error) {
+      if (error || !navigateToOAuthAuthorization(provider, data?.url)) {
         setMessage({
           kind: "error",
           text:
@@ -329,103 +331,6 @@ function hasAuthToken(data: unknown) {
     Boolean(data) &&
     typeof data === "object" &&
     typeof (data as { token?: unknown }).token === "string"
-  );
-}
-
-interface SocialAccountLinkPanelProps {
-  facebookSignInEnabled?: boolean;
-  googleSignInEnabled?: boolean;
-  initialMessage?: string | null;
-  locale?: InterfaceLocale;
-}
-
-export function SocialAccountLinkPanel({
-  facebookSignInEnabled = false,
-  googleSignInEnabled = false,
-  initialMessage = null,
-  locale: localeOverride,
-}: SocialAccountLinkPanelProps) {
-  const inheritedLocale = useSiteShellLocale();
-  const locale = localeOverride ?? inheritedLocale;
-  const copy = getTrustSurfaceCopy(locale).authPanel;
-  const [message, setMessage] = useState<string>(initialMessage ?? "");
-  const [isPending, setIsPending] = useState(false);
-  useInterfaceLocaleChangeFormState({
-    id: "social-account-link-mutation",
-    dirty: false,
-    pending: isPending,
-  });
-  const socialLinkOptions = availableSocialProviderOptions({
-    facebookSignInEnabled,
-    googleSignInEnabled,
-  });
-
-  if (socialLinkOptions.length === 0) return null;
-
-  async function linkSocial(provider: SocialProviderId, label: string) {
-    setIsPending(true);
-    setMessage("");
-
-    try {
-      const callbackURL = currentOAuthCallbackPath();
-      const { error } = await authClient.linkSocial({
-        provider,
-        callbackURL,
-        errorCallbackURL: callbackURL,
-      });
-
-      if (error) {
-        setMessage(
-          getLocalizedAuthClientErrorMessage(locale, error) ??
-            formatTrustTemplate(copy.methods.linkError, { provider: label }),
-        );
-      }
-    } finally {
-      setIsPending(false);
-    }
-  }
-
-  return (
-    <section
-      className="flex max-w-xl flex-col gap-3 rounded-lg border border-border p-4"
-      data-testid="social-account-link-panel"
-      lang={locale}
-    >
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">
-          {copy.methods.title}
-        </h2>
-        <p className="text-sm leading-6 text-muted-foreground">
-          {copy.methods.description}
-        </p>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {socialLinkOptions.map((provider) => (
-          <Button
-            key={provider.id}
-            type="button"
-            variant="outline"
-            onClick={() => linkSocial(provider.id, provider.label)}
-            disabled={isPending}
-            data-testid={provider.linkTestId}
-          >
-            {formatTrustTemplate(copy.methods.link, {
-              provider: provider.label,
-            })}
-          </Button>
-        ))}
-      </div>
-      {message ? (
-        <p
-          role="alert"
-          aria-live="polite"
-          className="text-sm text-destructive"
-          data-testid="social-link-message"
-        >
-          {message}
-        </p>
-      ) : null}
-    </section>
   );
 }
 

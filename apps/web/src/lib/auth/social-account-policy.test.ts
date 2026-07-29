@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { socialAccountPolicy } from "./social-account-policy";
 
 describe("social account policy", () => {
-  it("requires explicit same-account linking instead of implicit email takeover", () => {
+  it("allows different provider emails only through explicit current-session linking", () => {
     const policy = socialAccountPolicy();
 
     expect(policy.encryptOAuthTokens).toBe(true);
@@ -11,7 +11,7 @@ describe("social account policy", () => {
       enabled: true,
       disableImplicitLinking: true,
       trustedProviders: ["google", "facebook"],
-      allowDifferentEmails: false,
+      allowDifferentEmails: true,
       allowUnlinkingAll: false,
       updateUserInfoOnLink: false,
     });

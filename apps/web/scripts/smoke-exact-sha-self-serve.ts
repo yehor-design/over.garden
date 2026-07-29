@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 const CANONICAL_ORIGIN = "https://over.garden";
 const GARDEN_ROUTE = "/garden";
+const PROFILE_ROUTE = "/garden/profile";
 const GARDEN_TIMEOUT_MS = 10_000;
 
 export interface ExactShaSelfServeSmokeOptions {
@@ -29,6 +30,16 @@ export interface ExactShaSelfServeSmokeReport {
     elapsedMs: number;
     guestShell: true;
   };
+  canonicalProfileAuth: {
+    status: 200;
+    elapsedMs: number;
+    guestAuthShell: true;
+  };
+  immutableProfileAuth: {
+    status: 200;
+    elapsedMs: number;
+    guestAuthShell: true;
+  };
 }
 
 export async function runExactShaSelfServeSmoke(
@@ -53,9 +64,16 @@ export async function runExactShaSelfServeSmoke(
   }
 
   const fetchImpl = options.fetchImpl ?? fetch;
-  const [canonicalGarden, immutableGarden] = await Promise.all([
+  const [
+    canonicalGarden,
+    immutableGarden,
+    canonicalProfileAuth,
+    immutableProfileAuth,
+  ] = await Promise.all([
     readGuestGarden(fetchImpl, canonicalBase, "canonical"),
     readGuestGarden(fetchImpl, immutableBase, "immutable"),
+    readGuestProfileAuthShell(fetchImpl, canonicalBase, "canonical"),
+    readGuestProfileAuthShell(fetchImpl, immutableBase, "immutable"),
   ]);
 
   return {
@@ -64,7 +82,38 @@ export async function runExactShaSelfServeSmoke(
     commitMatch: true,
     canonicalGarden,
     immutableGarden,
+    canonicalProfileAuth,
+    immutableProfileAuth,
   };
+}
+
+async function readGuestProfileAuthShell(
+  fetchImpl: typeof fetch,
+  baseUrl: string,
+  label: string,
+): Promise<{ status: 200; elapsedMs: number; guestAuthShell: true }> {
+  const startedAt = performance.now();
+  let response: Response;
+  try {
+    response = await fetchImpl(`${baseUrl}${PROFILE_ROUTE}`, {
+      headers: { Accept: "text/html" },
+      redirect: "error",
+      signal: AbortSignal.timeout(GARDEN_TIMEOUT_MS),
+    });
+  } catch {
+    throw new Error(
+      `${label} profile auth response did not complete within 10000 ms.`,
+    );
+  }
+  const elapsedMs = Math.round(performance.now() - startedAt);
+  if (response.status !== 200) {
+    throw new Error(`${label} profile auth returned HTTP ${response.status}.`);
+  }
+  const html = await response.text();
+  if (!html.includes('data-garden-profile-auth-shell="guest"')) {
+    throw new Error(`${label} profile auth did not render the guest shell.`);
+  }
+  return { status: 200, elapsedMs, guestAuthShell: true };
 }
 
 async function readGuestGarden(
@@ -81,7 +130,9 @@ async function readGuestGarden(
       signal: AbortSignal.timeout(GARDEN_TIMEOUT_MS),
     });
   } catch {
-    throw new Error(`${label} garden response did not complete within 10000 ms.`);
+    throw new Error(
+      `${label} garden response did not complete within 10000 ms.`,
+    );
   }
   const elapsedMs = Math.round(performance.now() - startedAt);
   if (response.status !== 200) {
@@ -97,7 +148,9 @@ async function readGuestGarden(
 function normalizeCanonicalBase(value: string) {
   const url = new URL(value);
   if (url.origin !== CANONICAL_ORIGIN || url.pathname !== "/") {
-    throw new Error("Base URL must be the canonical https://over.garden origin.");
+    throw new Error(
+      "Base URL must be the canonical https://over.garden origin.",
+    );
   }
   return url.origin;
 }
