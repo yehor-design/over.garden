@@ -61,9 +61,7 @@ export async function submitJournalEntryPayload(
   options: {
     idempotencyKey?: string;
     onProcessedMediaAsset?: (mediaAssetId: string) => Promise<void>;
-    onResolvedPayload?: (
-      next: OfflineJournalEntryPayload,
-    ) => Promise<void>;
+    onResolvedPayload?: (next: OfflineJournalEntryPayload) => Promise<void>;
     signal?: AbortSignal;
   } = {},
 ): Promise<FirstPlantEntryResponse> {
@@ -461,9 +459,7 @@ async function resolveOfflineMediaForJournalPayload(
       contentDocument: nextDocument,
       cover: nextCover,
       photoIntentsByBlockId:
-        Object.keys(remainingIntents).length > 0
-          ? remainingIntents
-          : undefined,
+        Object.keys(remainingIntents).length > 0 ? remainingIntents : undefined,
       photoIntent: primaryMediaAssetId ? null : payload.photoIntent,
       processedMediaAssetId: primaryMediaAssetId,
     },
@@ -555,14 +551,20 @@ async function processPhotoIntent(
   }
 
   const processed = (await processResponse.json()) as ProcessResponse;
-  if (
-    processed.mediaAsset.status !== "processed" ||
-    !processed.publicUrl
-  ) {
+  if (processed.mediaAsset.status !== "processed" || !processed.publicUrl) {
     throw new Error("Photo was not processed.");
   }
 
   return processed.mediaAsset.id;
+}
+
+/** OVE-243 durable identity boundary for online edit composers. */
+export async function uploadComposerPhotoIntent(
+  intent: OfflinePhotoIntent,
+  authReturnTo: string,
+  signal?: AbortSignal,
+) {
+  return processPhotoIntent(intent, authReturnTo, signal);
 }
 
 async function readSafeSyncError(response: Response, fallback: string) {
