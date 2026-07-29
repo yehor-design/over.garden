@@ -17,6 +17,17 @@ const TWO_KEY_CONFIGURATION: AuthSecretConfiguration = {
   versionedSecrets: [{ version: 2, value: CURRENT_SECRET }],
   legacySecret: LEGACY_SECRET,
 };
+const LEGACY_TRANSITION_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "legacy_transition" },
+  active: { version: 0, value: LEGACY_SECRET },
+  versionedSecrets: [],
+  legacySecret: LEGACY_SECRET,
+};
+const LOCAL_FALLBACK_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "local_fallback", activeVersion: 0 },
+  active: { version: 0, value: CURRENT_SECRET },
+  versionedSecrets: [],
+};
 
 describe("lineage claim cookie", () => {
   it("encrypts and authenticates the invite token", () => {
@@ -64,6 +75,28 @@ describe("lineage claim cookie", () => {
         authSecrets: TWO_KEY_CONFIGURATION,
       }),
     ).toBeNull();
+  });
+
+  it("uses v1 only for legacy transition and retains isolated local fallback reads", () => {
+    const legacySealed = sealLineageClaimToken(TOKEN, {
+      authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+    });
+    const localSealed = sealLineageClaimToken(TOKEN, {
+      authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+    });
+
+    expect(legacySealed).toMatch(/^v1\./);
+    expect(
+      unsealLineageClaimToken(legacySealed, {
+        authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+      }),
+    ).toBe(TOKEN);
+    expect(localSealed).toMatch(/^v2\.0\./);
+    expect(
+      unsealLineageClaimToken(localSealed, {
+        authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+      }),
+    ).toBe(TOKEN);
   });
 
   it("rejects empty and oversized plaintext", () => {

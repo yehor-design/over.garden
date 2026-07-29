@@ -21,6 +21,17 @@ const TWO_KEY_CONFIGURATION: AuthSecretConfiguration = {
   versionedSecrets: [{ version: 2, value: CURRENT_SECRET }],
   legacySecret: LEGACY_SECRET,
 };
+const LEGACY_TRANSITION_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "legacy_transition" },
+  active: { version: 0, value: LEGACY_SECRET },
+  versionedSecrets: [],
+  legacySecret: LEGACY_SECRET,
+};
+const LOCAL_FALLBACK_CONFIGURATION: AuthSecretConfiguration = {
+  health: { class: "local_fallback", activeVersion: 0 },
+  active: { version: 0, value: CURRENT_SECRET },
+  versionedSecrets: [],
+};
 
 describe("public handle mention target token", () => {
   it("round-trips one stable target through a bounded opaque non-expiring token", () => {
@@ -101,6 +112,32 @@ describe("public handle mention target token", () => {
         authSecrets: TWO_KEY_CONFIGURATION,
       }),
     ).toBeNull();
+  });
+
+  it("uses v1 only for legacy transition and retains isolated local fallback reads", () => {
+    const legacyToken = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+    });
+    const localToken = sealPublicHandleMentionTarget(TARGET_USER_ID, {
+      audienceUserId: AUDIENCE_USER_ID,
+      authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+    });
+
+    expect(legacyToken).toMatch(/^v1\./);
+    expect(
+      unsealPublicHandleMentionTarget(legacyToken, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: LEGACY_TRANSITION_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
+    expect(localToken).toMatch(/^v2\.0\./);
+    expect(
+      unsealPublicHandleMentionTarget(localToken, {
+        audienceUserId: AUDIENCE_USER_ID,
+        authSecrets: LOCAL_FALLBACK_CONFIGURATION,
+      }),
+    ).toBe(TARGET_USER_ID);
   });
 
   it("fails closed for tampering, transfer to another audience, and a wrong secret", () => {

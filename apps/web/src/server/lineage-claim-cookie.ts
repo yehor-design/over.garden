@@ -115,6 +115,9 @@ export function unsealLineageClaimToken(
 function resolveWriter(options: LineageClaimTokenOptions) {
   if (options.secret) return { version: null, secret: options.secret };
   const configuration = options.authSecrets ?? resolveAuthSecretConfiguration();
+  if (configuration.health.class === "legacy_transition") {
+    return { version: null, secret: configuration.active.value };
+  }
   return {
     version: configuration.active.version,
     secret: configuration.active.value,

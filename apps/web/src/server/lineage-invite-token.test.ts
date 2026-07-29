@@ -18,6 +18,17 @@ const twoKeyConfiguration: AuthSecretConfiguration = {
   versionedSecrets: [{ version: 2, value: currentSecret }],
   legacySecret,
 };
+const legacyTransitionConfiguration: AuthSecretConfiguration = {
+  health: { class: "legacy_transition" },
+  active: { version: 0, value: legacySecret },
+  versionedSecrets: [],
+  legacySecret,
+};
+const localFallbackConfiguration: AuthSecretConfiguration = {
+  health: { class: "local_fallback", activeVersion: 0 },
+  active: { version: 0, value: currentSecret },
+  versionedSecrets: [],
+};
 
 describe("lineage invitation tokens", () => {
   it("signs and verifies only edge-scoped pending identity metadata", () => {
@@ -109,5 +120,35 @@ describe("lineage invitation tokens", () => {
         authSecrets: twoKeyConfiguration,
       }),
     ).toBeNull();
+  });
+
+  it("uses v1 only for legacy transition and retains isolated local fallback reads", () => {
+    const legacyToken = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt,
+      authSecrets: legacyTransitionConfiguration,
+    });
+    const localToken = signLineageInviteToken({
+      pendingIdentityId,
+      edgeId,
+      createdAt,
+      authSecrets: localFallbackConfiguration,
+    });
+
+    expect(legacyToken).toMatch(/^v1\./);
+    expect(
+      verifyLineageInviteToken(legacyToken, {
+        now: createdAt.getTime(),
+        authSecrets: legacyTransitionConfiguration,
+      }),
+    ).not.toBeNull();
+    expect(localToken).toMatch(/^v2\.0\./);
+    expect(
+      verifyLineageInviteToken(localToken, {
+        now: createdAt.getTime(),
+        authSecrets: localFallbackConfiguration,
+      }),
+    ).not.toBeNull();
   });
 });

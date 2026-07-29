@@ -136,6 +136,9 @@ function resolveWriter(options: SignLineageInviteTokenOptions) {
   const dedicatedSecret = resolveLineageInviteSecret(options.secret);
   if (dedicatedSecret) return { version: null, secret: dedicatedSecret };
   const configuration = options.authSecrets ?? resolveAuthSecretConfiguration();
+  if (configuration.health.class === "legacy_transition") {
+    return { version: null, secret: configuration.active.value };
+  }
   return {
     version: configuration.active.version,
     secret: configuration.active.value,
