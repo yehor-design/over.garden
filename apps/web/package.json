@@ -86,6 +86,7 @@
     "smoke:structured-journal-composer": "tsx scripts/smoke-structured-journal-composer.ts",
     "smoke:journal-block-reorder": "tsx scripts/smoke-journal-block-reorder.ts",
     "smoke:journal-composer-responsiveness": "tsx scripts/smoke-journal-composer-responsiveness.ts",
+    "smoke:inline-media-integrity": "tsx scripts/smoke-inline-media-integrity.ts",
     "smoke:journal-cover-selection": "tsx scripts/smoke-journal-cover-selection.ts",
     "smoke:drive2-production": "tsx scripts/smoke-drive2-production.ts",
     "smoke:public-journal-search-budget": "NODE_OPTIONS=--conditions=react-server tsx scripts/prove-public-journal-search-budget.ts",

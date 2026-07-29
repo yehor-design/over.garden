@@ -22,10 +22,11 @@ import {
   extractJournalDocumentPlainText,
   listJournalDocumentImageMediaIds,
 } from "@/lib/garden/journal-document";
-import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 import {
-  getGardenWorkspaceCopy,
-} from "@/lib/garden-workspace-copy";
+  selectInlineMedia,
+  useInlineMediaSelection,
+} from "@/lib/garden/use-inline-media-selection";
+import { getGardenWorkspaceCopy } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   deleteOfflineDraft,
@@ -41,15 +42,10 @@ import {
   submitOnlineJournalEntryPayload,
 } from "@/lib/offline/journal-entry-sync";
 import {
-  assertOfflinePhotoQuotaAllows,
-  sumOfflinePhotoIntentBytes,
-} from "@/lib/offline/offline-media-quota";
-import {
   createOwnerComposerPersistenceController,
   type OwnerComposerPersistenceController,
   type OwnerComposerPersistenceWriteContext,
 } from "@/lib/offline/owner-composer-participants";
-import { registerOwnerPreviewObjectUrl } from "@/lib/offline/owner-session-lifecycle";
 import {
   enqueueOfflineMutation,
   type OfflinePhotoIntent,
@@ -85,8 +81,9 @@ export function SpaceEntryComposer({
   const copy = getGardenWorkspaceCopy(locale);
   const labels = getStructuredJournalComposerLabels(locale);
   const draftId = spaceEntryDraftId(spaceId);
-  const structuredComposerRef =
-    useRef<StructuredJournalComposerHandle | null>(null);
+  const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
+    null,
+  );
   const draftPersistencePausedRef = useRef(false);
   const persistenceControllerRef =
     useRef<OwnerComposerPersistenceController<SpaceComposerPersistenceSnapshot> | null>(
@@ -107,6 +104,7 @@ export function SpaceEntryComposer({
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
     Record<string, OfflinePhotoIntent>
   >({});
+  const inlineMedia = useInlineMediaSelection(ownerUserId);
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
   const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
@@ -120,9 +118,7 @@ export function SpaceEntryComposer({
   );
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [draftHydrated, setDraftHydrated] = useState(
-    !enableOfflinePersistence,
-  );
+  const [draftHydrated, setDraftHydrated] = useState(!enableOfflinePersistence);
 
   useEffect(() => {
     if (!enableOfflinePersistence) return;
@@ -289,7 +285,12 @@ export function SpaceEntryComposer({
       });
       await deleteOfflineDraft(ownerUserId, draftId);
       setClientMutationId(crypto.randomUUID());
-      setDraft({ title: "", body: "", contentDocument: null, entryDate: today });
+      setDraft({
+        title: "",
+        body: "",
+        contentDocument: null,
+        entryDate: today,
+      });
       setMentionedPlantObjectIds([]);
       setPhotoIntentsByBlockId({});
       setStoredPhotoIntent(null);
@@ -303,9 +304,7 @@ export function SpaceEntryComposer({
         return;
       }
       setSubmitState("failed");
-      setMessage(
-        error instanceof Error ? error.message : labels.failureBody,
-      );
+      setMessage(error instanceof Error ? error.message : labels.failureBody);
     }
   }
 
@@ -379,26 +378,23 @@ export function SpaceEntryComposer({
             }));
           }}
           onSelectImageFile={async (file, blockId) => {
-            const existingBytes = sumOfflinePhotoIntentBytes(
-              Object.values(photoIntentsByBlockId),
-            );
-            await assertOfflinePhotoQuotaAllows({
-              existingBytes,
-              nextBytes: file.size,
-            });
-            const mediaAssetId = crypto.randomUUID();
-            const intent = await createComposerPhotoIntent(file);
+            const { mediaAssetId, intent, previewUrl } =
+              await selectInlineMedia({
+                controller: inlineMedia,
+                file,
+                blockId,
+                existing: photoIntentsByBlockId,
+              });
             setPhotoIntentsByBlockId((current) => ({
               ...current,
               [mediaAssetId]: intent,
               [blockId]: intent,
             }));
             setStoredPhotoIntent(intent);
-            const previewUrl = URL.createObjectURL(file);
-            registerOwnerPreviewObjectUrl(ownerUserId, previewUrl);
             return { mediaAssetId, previewUrl };
           }}
           onRemoveImageBlock={(blockId) => {
+            inlineMedia.revoke(blockId);
             const mediaId = (() => {
               const block = draft.contentDocument?.blocks.find(
                 (item) => item.id === blockId,
@@ -518,7 +514,9 @@ async function persistSpaceComposerSnapshot(
     throw new Error("The space draft is not hydrated yet.");
   }
 
-  if (hasPersistableSpaceEntryDraft(snapshot.payload, snapshot.defaultEntryDate)) {
+  if (
+    hasPersistableSpaceEntryDraft(snapshot.payload, snapshot.defaultEntryDate)
+  ) {
     await upsertOfflineDraft(
       {
         ownerUserId: snapshot.ownerUserId,

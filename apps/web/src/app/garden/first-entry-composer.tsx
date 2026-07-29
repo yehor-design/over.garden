@@ -67,8 +67,10 @@ import {
   composerPhotoSelectionError,
   createComposerPhotoIntent,
 } from "@/lib/garden/composer-photo-selection";
-import { assertOfflinePhotoQuotaAllows, sumOfflinePhotoIntentBytes } from "@/lib/offline/offline-media-quota";
-import { registerOwnerPreviewObjectUrl } from "@/lib/offline/owner-session-lifecycle";
+import {
+  selectInlineMedia,
+  useInlineMediaSelection,
+} from "@/lib/garden/use-inline-media-selection";
 import {
   catalogItemIdForSelection,
   parseCatalogTypeaheadResponse,
@@ -180,8 +182,9 @@ export function FirstEntryComposer({
     );
   const titleEditedByUserRef = useRef(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const structuredComposerRef =
-    useRef<StructuredJournalComposerHandle | null>(null);
+  const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
+    null,
+  );
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const photoIntentRequestRef = useRef(0);
   const localeMutationCountRef = useRef(0);
@@ -210,6 +213,7 @@ export function FirstEntryComposer({
   const [photoIntentsByBlockId, setPhotoIntentsByBlockId] = useState<
     Record<string, OfflinePhotoIntent>
   >({});
+  const inlineMedia = useInlineMediaSelection(ownerUserId);
   const [coverSelection, setCoverSelection] =
     useState<JournalCoverSelectionState>({ mode: "automatic" });
   const [pendingCoverInlineRemoval, setPendingCoverInlineRemoval] = useState<{
@@ -438,12 +442,7 @@ export function FirstEntryComposer({
     return () => {
       cancelled = true;
     };
-  }, [
-    copy,
-    initialSpace,
-    offlinePersistenceEnabled,
-    ownerUserId,
-  ]);
+  }, [copy, initialSpace, offlinePersistenceEnabled, ownerUserId]);
 
   useLayoutEffect(() => {
     if (!offlinePersistenceEnabled) return;
@@ -1364,15 +1363,13 @@ export function FirstEntryComposer({
             }));
           }}
           onSelectImageFile={async (file, blockId) => {
-            const existingBytes = sumOfflinePhotoIntentBytes(
-              Object.values(photoIntentsByBlockId),
-            );
-            await assertOfflinePhotoQuotaAllows({
-              existingBytes,
-              nextBytes: file.size,
-            });
-            const mediaAssetId = crypto.randomUUID();
-            const intent = await createComposerPhotoIntent(file);
+            const { mediaAssetId, intent, previewUrl } =
+              await selectInlineMedia({
+                controller: inlineMedia,
+                file,
+                blockId,
+                existing: photoIntentsByBlockId,
+              });
             setPhotoIntentsByBlockId((current) => ({
               ...current,
               [mediaAssetId]: intent,
@@ -1380,14 +1377,13 @@ export function FirstEntryComposer({
             }));
             setStoredPhotoIntent(intent);
             setPhotoFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            registerOwnerPreviewObjectUrl(ownerUserId, previewUrl);
             return {
               mediaAssetId,
               previewUrl,
             };
           }}
           onRemoveImageBlock={(blockId) => {
+            inlineMedia.revoke(blockId);
             const mediaId = (() => {
               const block = draft.contentDocument?.blocks.find(
                 (item) => item.id === blockId,

@@ -20,6 +20,8 @@ import {
   listJournalDocumentImageMediaIds,
 } from "@/lib/garden/journal-document";
 import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
+import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
+import { uploadComposerPhotoIntent } from "@/lib/offline/journal-entry-sync";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 
@@ -46,6 +48,7 @@ export function JournalEntryEditComposer({
 }) {
   const router = useRouter();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
+  const inlineMedia = useInlineMediaSelection(entryId);
   const [title, setTitle] = useState(initialTitle);
   const [entryDate, setEntryDate] = useState(initialEntryDate);
   const [document, setDocument] = useState<JournalDocumentV1 | null>(
@@ -86,7 +89,8 @@ export function JournalEntryEditComposer({
     if (cover.mode === "explicit_inline" || cover.mode === "separate") {
       const mediaAssetId = cover.mediaAssetId;
       if (!mediaAssetId) return null;
-      const previewUrl = cover.previewUrl ?? previewMap.get(mediaAssetId) ?? null;
+      const previewUrl =
+        cover.previewUrl ?? previewMap.get(mediaAssetId) ?? null;
       if (!previewUrl) return null;
       return { mediaAssetId, previewUrl };
     }
@@ -100,19 +104,20 @@ export function JournalEntryEditComposer({
   }, [cover, document, previewMap]);
   const eligibleInline = useMemo(() => {
     if (!document) return [];
-    return listJournalDocumentImageMediaIds(document).map((mediaAssetId, index) => ({
-      mediaAssetId,
-      previewUrl: previewMap.get(mediaAssetId) ?? null,
-      label: `${coverCopy.useAsCover} ${index + 1}`,
-    }));
+    return listJournalDocumentImageMediaIds(document).map(
+      (mediaAssetId, index) => ({
+        mediaAssetId,
+        previewUrl: previewMap.get(mediaAssetId) ?? null,
+        label: `${coverCopy.useAsCover} ${index + 1}`,
+      }),
+    );
   }, [coverCopy.useAsCover, document, previewMap]);
 
   async function save() {
     setSaving(true);
     setMessage(null);
     try {
-      const flushed =
-        (await composerRef.current?.flushLatest()) ?? document;
+      const flushed = (await composerRef.current?.flushLatest()) ?? document;
       if (!flushed) {
         setMessage(labels.failureBody);
         return;
@@ -193,14 +198,27 @@ export function JournalEntryEditComposer({
         imagePreviewUrls={previewMap}
         composerRef={composerRef}
         onDocumentChange={setDocument}
-        onSelectImageFile={async (file) => {
-          await createComposerPhotoIntent(file);
-          return { previewUrl: URL.createObjectURL(file) };
+        onSelectImageFile={async (file, blockId) => {
+          const reservation = inlineMedia.reserve(file, {});
+          try {
+            const intent = await createComposerPhotoIntent(file);
+            const mediaAssetId = await uploadComposerPhotoIntent(
+              intent,
+              `/garden/entries/${entryId}/edit`,
+            );
+            if (!mediaAssetId) throw new Error(labels.failureBody);
+            const previewUrl = URL.createObjectURL(file);
+            inlineMedia.commit(reservation, blockId, previewUrl);
+            return { mediaAssetId, previewUrl };
+          } catch (error) {
+            inlineMedia.release(reservation);
+            throw error;
+          }
         }}
         onRemoveImageBlock={(blockId) => {
+          inlineMedia.revoke(blockId);
           const block = document?.blocks.find((item) => item.id === blockId);
-          const mediaId =
-            block?.type === "image" ? block.mediaAssetId : null;
+          const mediaId = block?.type === "image" ? block.mediaAssetId : null;
           if (
             mediaId &&
             cover.mode === "explicit_inline" &&
@@ -252,7 +270,9 @@ export function JournalEntryEditComposer({
         <Button type="button" disabled={saving} onClick={() => void save()}>
           {labels.saveLabel}
         </Button>
-        {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+        {message ? (
+          <p className="text-sm text-muted-foreground">{message}</p>
+        ) : null}
       </div>
     </section>
   );

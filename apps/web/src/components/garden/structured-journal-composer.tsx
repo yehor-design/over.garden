@@ -17,6 +17,7 @@ import {
   type JournalBlockReorderController,
 } from "@/components/garden/journal-block-reorder-controller";
 import type { JournalBlockReorderCopy } from "@/components/garden/journal-block-reorder";
+import { waitForComposerIdle } from "@/lib/garden/composer-idle-deadline";
 import { OverGardenImageTool } from "@/components/garden/overgarden-image-tool";
 import {
   editorOutputToJournalDocumentV1,
@@ -112,7 +113,9 @@ function getVisualWorkspaceFixtureServerSnapshot() {
   return false;
 }
 
-export function StructuredJournalComposer(props: StructuredJournalComposerProps) {
+export function StructuredJournalComposer(
+  props: StructuredJournalComposerProps,
+) {
   return <StructuredJournalComposerInner {...props} />;
 }
 
@@ -158,9 +161,8 @@ function StructuredJournalComposerInner({
   const [status, setStatus] = useState<"loading" | "ready" | "failed">(
     "loading",
   );
-  const [fallbackDocument, setFallbackDocument] = useState<JournalDocumentV1 | null>(
-    initialDocument ?? null,
-  );
+  const [fallbackDocument, setFallbackDocument] =
+    useState<JournalDocumentV1 | null>(initialDocument ?? null);
   const [announcement, setAnnouncement] = useState("");
   const mountedRef = useRef(true);
 
@@ -328,7 +330,8 @@ function StructuredJournalComposerInner({
                     (block) => block.type === "image",
                   ).length,
                 onSelectFile: async (file: File) => {
-                  const blockId = crypto.randomUUID()
+                  const blockId = crypto
+                    .randomUUID()
                     .replace(/-/g, "")
                     .slice(0, 16);
                   const result = await propsRef.current.onSelectImageFile(
@@ -419,7 +422,9 @@ function StructuredJournalComposerInner({
       const current = editorRef.current;
       editorRef.current = null;
       if (current) {
-        void current.isReady.then(() => current.destroy()).catch(() => undefined);
+        void current.isReady
+          .then(() => current.destroy())
+          .catch(() => undefined);
       }
     };
     // Mount-once editor; later prop updates flow through propsRef.
@@ -432,18 +437,16 @@ function StructuredJournalComposerInner({
       flushLatest: async () => {
         const editor = editorRef.current;
         if (!editor) return latestDocumentRef.current;
-        while (
-          composingRef.current ||
-          reorderControllerRef.current?.isReordering()
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 16));
-        }
+        await waitForComposerIdle({
+          isBusy: () =>
+            composingRef.current ||
+            Boolean(reorderControllerRef.current?.isReordering()),
+        });
         return serializeGenerationRef.current(editor);
       },
       getGeneration: () => generationRef.current,
       isComposing: () => composingRef.current,
-      isReordering: () =>
-        Boolean(reorderControllerRef.current?.isReordering()),
+      isReordering: () => Boolean(reorderControllerRef.current?.isReordering()),
       moveBlock: async (fromIndex, toIndex) => {
         const editor = editorRef.current;
         if (!editor) return;
@@ -483,7 +486,10 @@ function StructuredJournalComposerInner({
   if (isVisualWorkspaceFixture) {
     return (
       <div
-        className={cn("grid gap-3 rounded-md border border-border p-3", className)}
+        className={cn(
+          "grid gap-3 rounded-md border border-border p-3",
+          className,
+        )}
         data-structured-journal-composer="fixture"
         lang={locale}
       >
@@ -501,7 +507,10 @@ function StructuredJournalComposerInner({
   if (status === "failed") {
     return (
       <div
-        className={cn("grid gap-3 rounded-md border border-border p-3", className)}
+        className={cn(
+          "grid gap-3 rounded-md border border-border p-3",
+          className,
+        )}
         data-structured-journal-composer="failed"
         lang={locale}
       >
