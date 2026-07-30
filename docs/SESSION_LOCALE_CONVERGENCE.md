@@ -1,6 +1,6 @@
 # Session and locale convergence
 
-Status: OVE-214 canonical protocol
+Status: OVE-214 canonical protocol; OVE-236 ordinary-recheck privacy fence
 
 This document owns the bounded recovery contract for an authenticated session
 gate and a Bulgaria `bg`/`ru` interface transition. It is deliberately a
@@ -10,20 +10,23 @@ cookie value, request body, timing sample, or private route.
 ## Protected outcome
 
 A gardener can always leave a slow local persistence or session read without
-losing the current owner-scoped in-memory work. The current locale and private
-tree remain in place until a current operation has made a guarded handoff.
+losing the current owner-scoped in-memory work. During an ordinary locale
+handoff, the current locale and private tree remain in place until a current
+operation has made a guarded handoff. During a focus, visible-page, or explicit
+session retry, the old private tree is synchronously replaced by a payload-free
+gate before any asynchronous identity read; only exact-A proof may re-admit it.
 Shell navigation and the existing sign-out control are not disabled by a locale
 wait.
 
 ## Canonical owners
 
-| Owner | Responsibility |
-| --- | --- |
-| `interfaceLocaleChangeCoordinator` | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release. |
-| `owner-composer-participants` | Acquires each mounted composer fence synchronously, flushes the latest generation, then resumes or cancels exactly that fence. |
-| `SessionConvergenceBoundary` | Bounded authoritative session read and owner-local hydration/recheck epoch. |
-| `language-switcher` | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup. |
-| `owner-session-lifecycle` / `sign-out-provider` | Existing owner activity and sign-out commit fence; neither is replaced by this protocol. |
+| Owner                                           | Responsibility                                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `interfaceLocaleChangeCoordinator`              | One locale operation, participant registry, synchronous commit gate, cancellation, and retryable release.                      |
+| `owner-composer-participants`                   | Acquires each mounted composer fence synchronously, flushes the latest generation, then resumes or cancels exactly that fence. |
+| `SessionConvergenceBoundary`                    | Bounded authoritative session read and owner-local hydration/recheck epoch.                                                    |
+| `language-switcher`                             | Inline pending/recovery status, explicit cancellation, guarded preference rollback, and document handoff cleanup.              |
+| `owner-session-lifecycle` / `sign-out-provider` | Existing owner activity and sign-out commit fence; neither is replaced by this protocol.                                       |
 
 ## Deadline and state contract
 
@@ -92,10 +95,32 @@ cd apps/web
 pnpm smoke:session-locale-convergence -- --environment production --confirm-environment production --base-url https://over.garden --expected-commit "$OVE214_IMPLEMENTATION_SHA"
 ```
 
-## OVE-236 handoff
+## OVE-236 ordinary recheck fence
 
-OVE-236 consumes only this terminal bounded protocol after OVE-214 is in
-current `origin/main` and Linear records it `Done`. It may add the
-cross-account identity/generation fence, but it must not create another locale
-timeout owner, pre-empt cancellation UX, weaken owner-composer fencing, or
-reuse a stale completion as an identity decision.
+Focus, visible-page, and explicit recovery retries are identity boundaries. The
+boundary increments an in-memory epoch and synchronously commits the
+payload-free `checking` gate before its no-cache session read or owner-local
+work begins. It aborts owner-A sync attempts and starts the existing
+owner-A composer/offline pause path; no new queue, session, or sign-out owner
+exists.
+
+Only an authoritative result matching the immutable document-A baseline, a
+current epoch, a settled matching pause/composer fence, and successful
+owner-generation hydration may reopen the tree. A signed-out or changed
+session uses the existing terminal finalizers. A malformed, rejected, unknown,
+or timed-out result remains `blocked`, does not retry automatically, and keeps
+both enabled payload-free escapes: public-home navigation and current-page
+reload. A late session, hydration, composer, or sync continuation cannot
+override a later epoch or release a terminal fence.
+
+The browser race harness is deliberately local and synthetic. Its route is
+inside the already fail-closed visual-fixture environment, its only private
+markup is labelled synthetic, and the runner accepts loopback origins only. It
+does not read production accounts, cookies, drafts, queues, media, or service
+credentials.
+
+```bash
+cd apps/web
+pnpm smoke:session-recheck-fence -- --browser chromium --base-url http://127.0.0.1:3000
+pnpm smoke:session-recheck-fence -- --browser safari-technology-preview --base-url http://127.0.0.1:3000
+```
