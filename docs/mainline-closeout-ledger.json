@@ -962,7 +962,7 @@
         "git merge-base --is-ancestor e6969117a5e1932369b52b64aaaa66881523ae24 origin/main",
         "cd apps/web && pnpm mainline:closeout:check"
       ],
-      "ciRunUrl": "https://github.com/yehor-design/over.garden/actions/runs/30506384943",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/FzWQKdbxjo8JgP7uXbqKMFCbWWKJ",
       "githubDeploymentId": 5667736695,
       "githubDeploymentStatusId": 16116469542,
       "notes": [
