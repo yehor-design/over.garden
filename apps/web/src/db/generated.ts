@@ -411,6 +411,7 @@ export interface EngagementFollows {
 
 export interface EngagementLikes {
   anonymous_device_hash: string;
+  capability_expires_at: Timestamp | null;
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   like_state: Generated<string>;
@@ -418,6 +419,14 @@ export interface EngagementLikes {
   target_ref: string;
   toggle_count: Generated<number>;
   toggle_window_started_at: Generated<Timestamp>;
+  updated_at: Generated<Timestamp>;
+}
+
+export interface EngagementLikeTargetBudgets {
+  active_like_count: Generated<number>;
+  resident_like_count: Generated<number>;
+  target_kind: string;
+  target_ref: string;
   updated_at: Generated<Timestamp>;
 }
 
@@ -453,6 +462,18 @@ export interface Health {
   created_at: Generated<Timestamp>;
   id: Generated<string>;
   message: string;
+}
+
+export interface InteractionQuotaWindows {
+  actor_user_id: string;
+  created_at: Generated<Timestamp>;
+  expires_at: Timestamp;
+  id: Generated<string>;
+  quota_policy: string;
+  quota_scope: string;
+  updated_at: Generated<Timestamp>;
+  used_count: Generated<number>;
+  window_started_at: Timestamp;
 }
 
 export interface JobQueue {
@@ -919,10 +940,12 @@ export interface DB {
   engagement_comment_reports: EngagementCommentReports;
   engagement_comments: EngagementComments;
   engagement_follows: EngagementFollows;
+  engagement_like_target_budgets: EngagementLikeTargetBudgets;
   engagement_likes: EngagementLikes;
   engagement_moderation_audit_log: EngagementModerationAuditLog;
   erasure_requests: ErasureRequests;
   health: Health;
+  interaction_quota_windows: InteractionQuotaWindows;
   job_queue: JobQueue;
   journal_entries: JournalEntries;
   journal_entry_catalog_mentions: JournalEntryCatalogMentions;

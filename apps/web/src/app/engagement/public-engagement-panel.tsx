@@ -124,66 +124,66 @@ export function PublicEngagementPanel({
     >
       {!commentOnly ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
-          <EngagementButtonForm
-            action="/api/engagement/likes"
-            target={target}
-            returnTo={returnTo}
-            label={copy.engagement.like}
-            icon={<Heart className="size-4" />}
-          />
-          {isAuthenticated ? (
+          <div className="flex flex-wrap gap-2">
             <EngagementButtonForm
-              action="/api/engagement/bookmarks"
-              intentAction="bookmark"
-              target={{ kind: target.kind, ref: target.ref }}
+              action="/api/engagement/likes"
+              target={target}
               returnTo={returnTo}
-              label={copy.engagement.bookmark}
-              icon={<Bookmark className="size-4" />}
-              variant="outline"
-              stateName="bookmarkState"
-              stateValue={
-                "viewerBookmarked" in summary && summary.viewerBookmarked
-                  ? "removed"
-                  : "active"
-              }
-              pressed={
-                "viewerBookmarked" in summary &&
-                Boolean(summary.viewerBookmarked)
-              }
-              autoFocus={resumeAction === "bookmark"}
+              label={copy.engagement.like}
+              icon={<Heart className="size-4" />}
             />
-          ) : (
-            <AuthIntentTrigger
-              action="bookmark"
-              returnTo={returnTo}
-              target={intentTarget}
-              label={copy.engagement.bookmark}
-              icon={<Bookmark className="size-4" />}
-              variant="outline"
-            />
-          )}
-          {target.kind === "lineage_object" || target.kind === "topic" ? (
-            <EngagementFollowControl
-              isAuthenticated={isAuthenticated}
-              locale={locale}
-              target={{ kind: target.kind, ref: target.ref }}
-              returnTo={returnTo}
-              following={
-                "viewerFollowing" in summary && summary.viewerFollowing
-              }
-              resumeAction={resumeControl ? null : resumeAction}
-            />
-          ) : null}
+            {isAuthenticated ? (
+              <EngagementButtonForm
+                action="/api/engagement/bookmarks"
+                intentAction="bookmark"
+                target={{ kind: target.kind, ref: target.ref }}
+                returnTo={returnTo}
+                label={copy.engagement.bookmark}
+                icon={<Bookmark className="size-4" />}
+                variant="outline"
+                stateName="bookmarkState"
+                stateValue={
+                  "viewerBookmarked" in summary && summary.viewerBookmarked
+                    ? "removed"
+                    : "active"
+                }
+                pressed={
+                  "viewerBookmarked" in summary &&
+                  Boolean(summary.viewerBookmarked)
+                }
+                autoFocus={resumeAction === "bookmark"}
+              />
+            ) : (
+              <AuthIntentTrigger
+                action="bookmark"
+                returnTo={returnTo}
+                target={intentTarget}
+                label={copy.engagement.bookmark}
+                icon={<Bookmark className="size-4" />}
+                variant="outline"
+              />
+            )}
+            {target.kind === "lineage_object" || target.kind === "topic" ? (
+              <EngagementFollowControl
+                isAuthenticated={isAuthenticated}
+                locale={locale}
+                target={{ kind: target.kind, ref: target.ref }}
+                returnTo={returnTo}
+                following={
+                  "viewerFollowing" in summary && summary.viewerFollowing
+                }
+                resumeAction={resumeControl ? null : resumeAction}
+              />
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground" role="status">
+            {formatPublicCount(
+              locale,
+              "like",
+              "activeLikeCount" in summary ? summary.activeLikeCount : 0,
+            )}
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          {formatPublicCount(
-            locale,
-            "like",
-            "activeLikeCount" in summary ? summary.activeLikeCount : 0,
-          )}
-        </p>
-      </div>
       ) : null}
 
       {status ? (
@@ -680,6 +680,10 @@ function engagementStatusMessage(status: string, locale: InterfaceLocale) {
       return copy.engagement.unliked;
     case "like-rate-limited":
       return copy.engagement.likeRateLimited;
+    case "comment-rate-limited":
+      return copy.engagement.commentRateLimited;
+    case "interaction-unavailable":
+      return copy.engagement.interactionUnavailable;
     case "bookmarked":
       return copy.engagement.bookmarked;
     case "bookmark-removed":

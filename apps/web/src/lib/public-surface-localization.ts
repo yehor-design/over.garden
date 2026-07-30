@@ -60,6 +60,8 @@ interface PublicSurfaceCopy {
     liked: string;
     unliked: string;
     likeRateLimited: string;
+    commentRateLimited: string;
+    interactionUnavailable: string;
     bookmarked: string;
     bookmarkRemoved: string;
     commented: string;
@@ -118,6 +120,8 @@ interface PublicSurfaceCopy {
     depth: string;
     lineageUpdatesFrom: string;
     lineageQuestionSafety: string;
+    lineageQuestionRateLimited: string;
+    interactionUnavailable: string;
     followUpdates: string;
     followRequiresWriteAccess: string;
     askWithinLineage: string;
@@ -218,6 +222,10 @@ const COPY = {
       liked: "Позначено вподобанням.",
       unliked: "Вподобання прибрано.",
       likeRateLimited: "Забагато змін уподобання. Спробуйте пізніше.",
+      commentRateLimited:
+        "Забагато коментарів за короткий час. Спробуйте пізніше.",
+      interactionUnavailable:
+        "Дію тимчасово не вдалося виконати. Спробуйте ще раз.",
       bookmarked: "Збережено в закладках.",
       bookmarkRemoved: "Прибрано із закладок.",
       commented: "Коментар опубліковано.",
@@ -281,6 +289,10 @@ const COPY = {
       lineageUpdatesFrom: "Оновлення походження від",
       lineageQuestionSafety:
         "Запитання залишаються в межах цього підтвердженого ланцюга та не містять контактних даних.",
+      lineageQuestionRateLimited:
+        "Забагато запитань за короткий час. Спробуйте пізніше.",
+      interactionUnavailable:
+        "Дію тимчасово не вдалося виконати. Спробуйте ще раз.",
       followUpdates: "Стежити за оновленнями",
       followRequiresWriteAccess:
         "Щоб стежити за цим походженням, потрібен чинний доступ до записів.",
@@ -382,6 +394,10 @@ const COPY = {
       unliked: "Харесването е премахнато.",
       likeRateLimited:
         "Твърде много промени на харесването. Опитайте по-късно.",
+      commentRateLimited:
+        "Твърде много коментари за кратко време. Опитайте по-късно.",
+      interactionUnavailable:
+        "Действието временно не можа да бъде изпълнено. Опитайте отново.",
       bookmarked: "Запазено в отметките.",
       bookmarkRemoved: "Премахнато от отметките.",
       commented: "Коментарът е публикуван.",
@@ -446,6 +462,10 @@ const COPY = {
       lineageUpdatesFrom: "Обновявания на произхода от",
       lineageQuestionSafety:
         "Въпросите остават в тази потвърдена верига и не съдържат данни за контакт.",
+      lineageQuestionRateLimited:
+        "Твърде много въпроси за кратко време. Опитайте по-късно.",
+      interactionUnavailable:
+        "Действието временно не можа да бъде изпълнено. Опитайте отново.",
       followUpdates: "Следете обновяванията",
       followRequiresWriteAccess:
         "За да следите този произход, е необходим активен достъп за записване.",
@@ -546,6 +566,10 @@ const COPY = {
       unliked: "Отметка нравится удалена.",
       likeRateLimited:
         "Слишком много изменений отметки нравится. Попробуйте позже.",
+      commentRateLimited:
+        "Слишком много комментариев за короткое время. Попробуйте позже.",
+      interactionUnavailable:
+        "Действие временно не удалось выполнить. Попробуйте ещё раз.",
       bookmarked: "Сохранено в закладках.",
       bookmarkRemoved: "Удалено из закладок.",
       commented: "Комментарий опубликован.",
@@ -610,6 +634,10 @@ const COPY = {
       lineageUpdatesFrom: "Обновления происхождения от",
       lineageQuestionSafety:
         "Вопросы остаются в пределах этой подтвержденной цепочки и не содержат контактных данных.",
+      lineageQuestionRateLimited:
+        "Слишком много вопросов за короткое время. Попробуйте позже.",
+      interactionUnavailable:
+        "Действие временно не удалось выполнить. Попробуйте ещё раз.",
       followUpdates: "Следить за обновлениями",
       followRequiresWriteAccess:
         "Чтобы следить за этим происхождением, нужен действующий доступ к записям.",

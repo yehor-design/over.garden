@@ -26,7 +26,7 @@ export interface ErasureCoverageEntry {
   executionOwned: boolean;
 }
 
-export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove215.erasure-schema.v2";
+export const ERASURE_SCHEMA_COVERAGE_VERSION = "ove237.erasure-schema.v3";
 
 export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
   // Auth / Better Auth
@@ -66,7 +66,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "identifier",
     kind: "soft_column",
     disposition: "delete",
-    rationale: "Email verification rows keyed by the subject email are deleted.",
+    rationale:
+      "Email verification rows keyed by the subject email are deleted.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -86,7 +87,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "user_id",
     kind: "fk",
     disposition: "delete",
-    rationale: "OVE-200 durable learning actor class is removed with the account.",
+    rationale:
+      "OVE-200 durable learning actor class is removed with the account.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -255,6 +257,28 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "engagement_comment_reports.reviewed_by_user_id",
+    table: "engagement_comment_reports",
+    columnOrPath: "reviewed_by_user_id",
+    kind: "fk",
+    disposition: "anonymize",
+    rationale:
+      "ON DELETE SET NULL preserves the review state without its actor.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "engagement_moderation_audit_log.actor_user_id",
+    table: "engagement_moderation_audit_log",
+    columnOrPath: "actor_user_id",
+    kind: "fk",
+    disposition: "anonymize",
+    rationale:
+      "ON DELETE SET NULL retains the moderation audit without its actor.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "notification_receipts.owner_user_id",
     table: "notification_receipts",
     columnOrPath: "owner_user_id",
@@ -282,6 +306,17 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     disposition: "not-account-linkable",
     rationale:
       "No user_id column; hash is SHA-256 of a device token via hashAnonymousEngagementToken, not an account id.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "interaction_quota_windows.actor_user_id",
+    table: "interaction_quota_windows",
+    columnOrPath: "actor_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Bounded admission counters are deleted by the user FK ON DELETE CASCADE.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -732,7 +767,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "owner_user_id",
     kind: "soft_column",
     disposition: "delete",
-    rationale: "Owner mutation receipts are deleted before journal ownership is rekeyed.",
+    rationale:
+      "Owner mutation receipts are deleted before journal ownership is rekeyed.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -742,7 +778,8 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     columnOrPath: "owner_user_id",
     kind: "soft_column",
     disposition: "anonymize",
-    rationale: "OVE-242 erasure intents are rekeyed to the synthetic erased subject.",
+    rationale:
+      "OVE-242 erasure intents are rekeyed to the synthetic erased subject.",
     dryRunOwned: true,
     executionOwned: true,
   },
@@ -808,6 +845,8 @@ export const ERASURE_SQL_DISCOVERY_REQUIRED_IDS = [
   "journal_entries.cover_media_asset_id",
   "media_assets.usage_role",
   "engagement_likes.anonymous_device_hash",
+  "engagement_comment_reports.reviewed_by_user_id",
+  "interaction_quota_windows.actor_user_id",
   "job_queue.payload.userId",
   "user_public_profiles.user_id",
   "user_handle_registry.user_id",

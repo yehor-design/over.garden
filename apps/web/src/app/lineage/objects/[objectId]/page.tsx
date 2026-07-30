@@ -146,6 +146,7 @@ export default async function PublicLineageObjectRoute({
   });
   const resumeAction = normalizeAuthIntentResumeAction(query.authIntent);
   const resumeControl = normalizeAuthIntentResumeControl(query.authControl);
+  const lineageInteractionStatus = firstParam(query.engagement) ?? null;
   const presentation = buildPublicObjectPassportPresentation(passport, locale, {
     confirmedProvenanceCount: edges.length,
   });
@@ -217,6 +218,7 @@ export default async function PublicLineageObjectRoute({
                   canInteract={Boolean(authorizedInteractionTarget)}
                   resumeAction={resumeAction}
                   resumeControl={resumeControl}
+                  status={lineageInteractionStatus}
                   locale={locale}
                 />
               );
@@ -249,6 +251,7 @@ function PublicLineageEdgeCard({
   canInteract,
   resumeAction,
   resumeControl,
+  status,
   locale,
 }: {
   edge: PublicLineageEdge;
@@ -260,6 +263,7 @@ function PublicLineageEdgeCard({
   canInteract: boolean;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
+  status: string | null;
   locale: InterfaceLocale;
 }) {
   const copy = getPublicSurfaceCopy(locale);
@@ -302,6 +306,7 @@ function PublicLineageEdgeCard({
           canInteract={canInteract}
           resumeAction={resumeAction}
           resumeControl={resumeControl}
+          status={status}
           locale={locale}
         />
       ) : null}
@@ -317,6 +322,7 @@ function LineageInteractionPanel({
   canInteract,
   resumeAction,
   resumeControl,
+  status,
   locale,
 }: {
   edge: PublicLineageEdge;
@@ -326,6 +332,7 @@ function LineageInteractionPanel({
   canInteract: boolean;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
+  status: string | null;
   locale: InterfaceLocale;
 }) {
   const copy = getPublicSurfaceCopy(locale);
@@ -349,6 +356,15 @@ function LineageInteractionPanel({
           {copy.passport.lineageQuestionSafety}
         </p>
       </div>
+
+      {status === "lineage-question-rate-limited" ||
+      status === "interaction-unavailable" ? (
+        <p className="text-sm text-muted-foreground" role="status">
+          {status === "lineage-question-rate-limited"
+            ? copy.passport.lineageQuestionRateLimited
+            : copy.passport.interactionUnavailable}
+        </p>
+      ) : null}
 
       {canInteract ? (
         <div className="grid gap-3 md:grid-cols-2">

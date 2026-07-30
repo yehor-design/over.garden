@@ -4,6 +4,7 @@ import { getCurrentSession, getSessionId } from "@/server/auth-session";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
 import { addEngagementComment } from "@/server/engagement-repository";
+import { isInteractionAdmissionError } from "@/server/interaction-admission";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
@@ -56,6 +57,15 @@ export async function POST(request: Request) {
         request,
         returnTo,
         "comment-precise-location",
+      );
+    }
+    if (isInteractionAdmissionError(error)) {
+      return redirectWithEngagementStatus(
+        request,
+        returnTo,
+        error.failure === "quota"
+          ? "comment-rate-limited"
+          : "interaction-unavailable",
       );
     }
     throw error;

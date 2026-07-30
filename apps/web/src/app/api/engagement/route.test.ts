@@ -326,7 +326,7 @@ describe("engagement routes", () => {
     );
   });
 
-  it("allows signed-out anonymous likes with a device cookie only", async () => {
+  it("allows signed-out likes only with a short-lived target-bound capability", async () => {
     const { POST } = await import("./likes/route");
 
     const response = await POST(
@@ -344,12 +344,58 @@ describe("engagement routes", () => {
         ref: "first-public-harvest",
       },
       anonymousToken: expect.any(String),
+      capabilityExpiresAt: expect.any(Date),
     });
     expect(response.headers.get("location")).toBe(
       "https://over.garden/journal/first-public-harvest?engagement=liked",
     );
-    expect(response.headers.get("set-cookie")).toContain(
-      "og_engagement_device=",
+    const cookies = response.headers.getSetCookie().join("\n");
+    expect(cookies).toContain("og_like_");
+    expect(cookies).toContain("Path=/api/engagement/likes");
+    expect(cookies).not.toMatch(/og_engagement_device=[^;]+/);
+  });
+
+  it("returns a localized-safe rate status without exposing admission internals", async () => {
+    const { InteractionAdmissionError } =
+      await import("@/server/interaction-admission");
+    mocks.addEngagementComment.mockRejectedValueOnce(
+      new InteractionAdmissionError("quota"),
+    );
+    const { POST } = await import("./comments/route");
+
+    const response = await POST(
+      formRequest("/api/engagement/comments", {
+        targetKind: "journal_entry",
+        targetRef: "first-public-harvest",
+        returnTo: "/journal/first-public-harvest",
+        body: "A safe comment.",
+        clientMutationId: "comment-submit-000000000001",
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/journal/first-public-harvest?engagement=comment-rate-limited",
+    );
+  });
+
+  it("collapses like capacity and database contention into one retry-safe status", async () => {
+    const { InteractionAdmissionError } =
+      await import("@/server/interaction-admission");
+    mocks.toggleAnonymousEngagementLike.mockRejectedValueOnce(
+      new InteractionAdmissionError("capacity"),
+    );
+    const { POST } = await import("./likes/route");
+
+    const response = await POST(
+      formRequest("/api/engagement/likes", {
+        targetKind: "journal_entry",
+        targetRef: "first-public-harvest",
+        returnTo: "/journal/first-public-harvest",
+      }),
+    );
+
+    expect(response.headers.get("location")).toBe(
+      "https://over.garden/journal/first-public-harvest?engagement=interaction-unavailable",
     );
   });
 

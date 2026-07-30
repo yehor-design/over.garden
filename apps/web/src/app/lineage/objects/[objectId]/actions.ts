@@ -11,6 +11,7 @@ import {
   askLineageQuestion,
   followLineageNode,
 } from "@/server/lineage-interactions-repository";
+import { isInteractionAdmissionError } from "@/server/interaction-admission";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 
 const LINEAGE_UPDATES_PATH = "/garden/lineage/questions";
@@ -35,17 +36,36 @@ export async function followLineageNodeAction(formData: FormData) {
 
 export async function askLineageQuestionAction(formData: FormData) {
   const scope = await requireWriteEligibleRequestScope();
+  const rootPlantObjectId = String(formData.get("rootPlantObjectId") ?? "");
 
-  await askLineageQuestion(scope, {
-    edgeId: String(formData.get("edgeId") ?? ""),
-    targetPlantObjectId: String(formData.get("targetPlantObjectId") ?? ""),
-    questionText: String(formData.get("questionText") ?? ""),
-    clientMutationId: String(formData.get("clientMutationId") ?? ""),
-  });
+  try {
+    await askLineageQuestion(scope, {
+      edgeId: String(formData.get("edgeId") ?? ""),
+      targetPlantObjectId: String(formData.get("targetPlantObjectId") ?? ""),
+      questionText: String(formData.get("questionText") ?? ""),
+      clientMutationId: String(formData.get("clientMutationId") ?? ""),
+    });
+  } catch (error) {
+    if (
+      isInteractionAdmissionError(error) &&
+      UUID_PATTERN.test(rootPlantObjectId)
+    ) {
+      const url = new URL(
+        publicLineageObjectPath(rootPlantObjectId),
+        "https://over.garden",
+      );
+      url.searchParams.set(
+        "engagement",
+        error.failure === "quota"
+          ? "lineage-question-rate-limited"
+          : "interaction-unavailable",
+      );
+      redirect(`${url.pathname}${url.search}#passport-provenance`);
+    }
+    throw error;
+  }
 
-  revalidateLineageInteractionPaths(
-    String(formData.get("rootPlantObjectId") ?? ""),
-  );
+  revalidateLineageInteractionPaths(rootPlantObjectId);
 }
 
 function revalidateLineageInteractionPaths(rootPlantObjectId: string) {
