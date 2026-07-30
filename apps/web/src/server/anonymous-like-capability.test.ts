@@ -43,7 +43,13 @@ describe("anonymous like capabilities", () => {
         Math.floor(createdAt.getTime() / 1000) +
         ANONYMOUS_LIKE_CAPABILITY_TTL_SECONDS,
     });
-    expect(JSON.stringify(payload)).not.toMatch(
+    // The random opaque nonce has no textual contract. Scan the semantic
+    // payload fields instead: a random byte sequence can coincidentally
+    // contain a forbidden word fragment such as "ip".
+    const semanticPayload = Object.fromEntries(
+      Object.entries(payload).filter(([key]) => key !== "n"),
+    );
+    expect(JSON.stringify(semanticPayload)).not.toMatch(
       /ip|user.?agent|email|phone|contact|coordinate|latitude|longitude/i,
     );
   });
