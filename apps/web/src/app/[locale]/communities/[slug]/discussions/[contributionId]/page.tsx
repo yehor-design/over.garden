@@ -26,6 +26,8 @@ interface ContributionDiscussionRouteProps {
 }
 
 const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
+const COMMUNITY_CONTRIBUTION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function generateMetadata(): Promise<Metadata> {
   return { robots: { index: false, follow: false } };
@@ -39,7 +41,11 @@ export default async function ContributionDiscussionRoute({
     params,
     searchParams ?? Promise.resolve(EMPTY_SEARCH_PARAMS),
   ]);
-  if (!isPublicLocale(locale) || !/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug)) {
+  if (
+    !isPublicLocale(locale) ||
+    !/^[a-z0-9][a-z0-9-]{1,63}$/.test(slug) ||
+    !COMMUNITY_CONTRIBUTION_ID_PATTERN.test(contributionId)
+  ) {
     return notFound();
   }
   const session = await getCurrentSession();
