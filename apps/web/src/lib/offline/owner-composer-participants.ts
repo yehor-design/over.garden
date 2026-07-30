@@ -31,6 +31,14 @@ export interface AllOwnerComposerTransitionPreparationHandle {
   sealForDocumentReplacement(): Promise<void>;
   isDocumentReplacementParticipantSetStable(): boolean;
   resume(): Promise<void>;
+  /** Release the locale-transition fence without an additional persistence wait. */
+  cancel(): Promise<void>;
+}
+
+export interface StartedAllOwnerComposerTransitionPreparation
+  extends AllOwnerComposerTransitionPreparationHandle {
+  /** The initial durable flush started after the synchronous fence acquisition. */
+  ready: Promise<void>;
 }
 
 export interface OwnerComposerOfflineActivityScope {
@@ -222,7 +230,7 @@ export async function prepareOwnerComposerParticipants(
  * point across those new participants. A failed preparation releases every
  * freeze it acquired; a failed resume keeps the handle active for retry.
  */
-export async function prepareAllOwnerComposerTransitionParticipants(): Promise<AllOwnerComposerTransitionPreparationHandle> {
+export function startAllOwnerComposerTransitionParticipants(): StartedAllOwnerComposerTransitionPreparation {
   const token = Symbol("all-owner-composer-transition-preparation");
   activeAllOwnerPreparationTokens.add(token);
   let active = true;
@@ -265,7 +273,7 @@ export async function prepareAllOwnerComposerTransitionParticipants(): Promise<A
     }
   };
 
-  const resume = async () => {
+  const release = async (flushNewestGeneration: boolean) => {
     if (!active) return;
     const resumedParticipants = new Set<RegisteredOwnerComposerParticipant>();
     while (true) {
@@ -274,7 +282,9 @@ export async function prepareAllOwnerComposerTransitionParticipants(): Promise<A
       );
       if (participants.length === 0) break;
       await Promise.all(
-        participants.map((participant) => participant.resume(token, true)),
+        participants.map((participant) =>
+          participant.resume(token, flushNewestGeneration),
+        ),
       );
       for (const participant of participants) {
         resumedParticipants.add(participant);
@@ -284,21 +294,10 @@ export async function prepareAllOwnerComposerTransitionParticipants(): Promise<A
     active = false;
   };
 
-  try {
-    await flushEveryCurrentParticipant();
-  } catch (error) {
-    deactivateToken();
-    await Promise.allSettled(
-      currentParticipants().map((participant) =>
-        participant.resume(token, false),
-      ),
-    );
-    active = false;
-    throw error;
-  }
-
+  const ready = flushEveryCurrentParticipant();
   return {
     isActive: () => active,
+    ready,
     flushLatest: async () => {
       if (!active) return;
       await flushEveryCurrentParticipant();
@@ -319,8 +318,25 @@ export async function prepareAllOwnerComposerTransitionParticipants(): Promise<A
       active &&
       sealedParticipantRevision !== null &&
       sealedParticipantRevision === allOwnerParticipantRevision,
-    resume,
+    resume: () => release(true),
+    cancel: () => release(false),
   };
+}
+
+/**
+ * Compatibility wrapper for OVE-204 and callers that need preparation only
+ * after the initial flush. Locale transitions use the started form above so a
+ * stalled IndexedDB write can always be cancelled through its acquired fence.
+ */
+export async function prepareAllOwnerComposerTransitionParticipants(): Promise<AllOwnerComposerTransitionPreparationHandle> {
+  const preparation = startAllOwnerComposerTransitionParticipants();
+  try {
+    await preparation.ready;
+    return preparation;
+  } catch (error) {
+    await preparation.cancel().catch(() => undefined);
+    throw error;
+  }
 }
 
 /**

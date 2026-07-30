@@ -4,6 +4,7 @@ export const INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER =
 const GLOBAL_ERROR_VISUAL_FIXTURE_PARAM = "visualLocaleState";
 const GLOBAL_ERROR_VISUAL_FIXTURE_VALUE = "global-error";
 const SAFE_FLUSH_FAILURE_VISUAL_FIXTURE_VALUE = "safe-flush-failure";
+const SAFE_FLUSH_TIMEOUT_VISUAL_FIXTURE_VALUE = "safe-flush-timeout";
 const SERVER_ACTION_PENDING_VISUAL_FIXTURE_VALUE = "server-action-pending";
 
 export const INTERFACE_SERVER_ACTION_PENDING_VISUAL_FIXTURE_DELAY_MS = 2_000;
@@ -35,6 +36,16 @@ export function isInterfaceSafeFlushFailureVisualFixtureValue(
   return (
     typeof value === "string" &&
     value === SAFE_FLUSH_FAILURE_VISUAL_FIXTURE_VALUE
+  );
+}
+
+/** Local/preview-only browser fault injection for OVE-214's bounded fence. */
+export function isInterfaceSafeFlushTimeoutVisualFixtureValue(
+  value: string | string[] | undefined,
+) {
+  return (
+    typeof value === "string" &&
+    value === SAFE_FLUSH_TIMEOUT_VISUAL_FIXTURE_VALUE
   );
 }
 

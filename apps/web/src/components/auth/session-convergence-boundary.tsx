@@ -41,6 +41,8 @@ import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
+export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
+const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS = 1_000;
 
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
@@ -135,11 +137,10 @@ export function SessionConvergenceBoundary({
         // Better Auth's client atom commonly starts as pending with data:null.
         // Only a no-cache authoritative read may establish this document's
         // immutable session baseline.
-        const sessionResult = await authClient.getSession(
-          AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
+        const sessionResult = await readBoundedAuthoritativeSession();
+        baselinePreparedSession = await prepareBoundedSessionSignOut(
+          sessionResult,
         );
-        baselinePreparedSession =
-          await prepareCurrentSessionSignOut(sessionResult);
         baselineOwnerUserId = readOwnerUserId(sessionResult);
       } catch {
         baselinePreparedSession = undefined;
@@ -158,7 +159,7 @@ export function SessionConvergenceBoundary({
           setActivityGate("ready");
           return;
         }
-        const hydration = await hydrateOwnerOfflineActivitySession(
+        const hydration = await hydrateBoundedOwnerOfflineActivitySession(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
         ).catch(() => "blocked" as const);
@@ -187,11 +188,10 @@ export function SessionConvergenceBoundary({
         try {
           // Recovery may prune a bounded orphan fence, so it always requires a
           // new no-cache proof of the exact owner/session generation first.
-          const sessionResult = await authClient.getSession(
-            AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
+          const sessionResult = await readBoundedAuthoritativeSession();
+          const freshPreparedSession = await prepareBoundedSessionSignOut(
+            sessionResult,
           );
-          const freshPreparedSession =
-            await prepareCurrentSessionSignOut(sessionResult);
           const freshOwnerUserId = readOwnerUserId(sessionResult);
 
           if (freshPreparedSession === null) {
@@ -217,7 +217,7 @@ export function SessionConvergenceBoundary({
 
           const hydration = isVisualFixtureBrowserRequest()
             ? ("ready" as const)
-            : await hydrateOwnerOfflineActivitySession(
+            : await hydrateBoundedOwnerOfflineActivitySession(
                 freshOwnerUserId,
                 freshPreparedSession.binding,
               );
@@ -250,8 +250,9 @@ export function SessionConvergenceBoundary({
       await baselineReady;
       let freshPreparedSession: PreparedCurrentSessionSignOut | null;
       try {
-        freshPreparedSession =
-          await prepareCurrentSessionSignOut(sessionResult);
+        freshPreparedSession = await prepareBoundedSessionSignOut(
+          sessionResult,
+        );
       } catch {
         return "unavailable" as const;
       }
@@ -427,9 +428,7 @@ export function SessionConvergenceBoundary({
       let composerPreparation: OwnerComposerPreparationHandle | null = null;
       let pauseHandle: OwnerOfflineActivityPauseHandle | null = null;
       try {
-        const sessionResult = await authClient.getSession(
-          AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-        );
+        const sessionResult = await readBoundedAuthoritativeSession();
         const sessionComparison =
           await compareFreshSessionToBaseline(sessionResult);
         if (sessionComparison === "signed_out") {
@@ -594,9 +593,7 @@ export function SessionConvergenceBoundary({
       await preparationPromiseRef.current?.catch(() => undefined);
 
       try {
-        const sessionResult = await authClient.getSession(
-          AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-        );
+        const sessionResult = await readBoundedAuthoritativeSession();
         const confirmation = classifySessionConfirmation(sessionResult);
         if (confirmation === "signed_out") {
           beginSignedOutTransition();
@@ -630,9 +627,7 @@ export function SessionConvergenceBoundary({
       if (disposed || authoritativeRecheck) return;
       authoritativeRecheck = (async () => {
         try {
-          const sessionResult = await authClient.getSession(
-            AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-          );
+          const sessionResult = await readBoundedAuthoritativeSession();
           const confirmation = classifySessionConfirmation(sessionResult);
           if (confirmation === "authenticated") {
             const sessionComparison =
@@ -675,9 +670,7 @@ export function SessionConvergenceBoundary({
 
       staleOperationRecheck = (async () => {
         try {
-          const sessionResult = await authClient.getSession(
-            AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
-          );
+          const sessionResult = await readBoundedAuthoritativeSession();
           const confirmation = classifySessionConfirmation(sessionResult);
           if (confirmation === "signed_out") {
             for (const operationId of staleOperationIds) {
@@ -929,4 +922,55 @@ function startBestEffort(task: () => Promise<unknown>) {
     // generation. Local fence cleanup is therefore best-effort after the old
     // private tree is hidden and hard navigation has begun.
   }
+}
+
+async function readBoundedAuthoritativeSession() {
+  return requireSettledWithin(
+    () => authClient.getSession(AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS),
+    AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+  );
+}
+
+async function prepareBoundedSessionSignOut(sessionResult: unknown) {
+  return requireSettledWithin(
+    () => prepareCurrentSessionSignOut(sessionResult),
+    AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+  );
+}
+
+async function hydrateBoundedOwnerOfflineActivitySession(
+  ownerUserId: string,
+  sessionGeneration: string,
+) {
+  return requireSettledWithin(
+    () => hydrateOwnerOfflineActivitySession(ownerUserId, sessionGeneration),
+    AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+  );
+}
+
+function requireSettledWithin<T>(
+  operation: () => Promise<T>,
+  timeoutMs: number,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      globalThis.clearTimeout(timeoutId);
+      callback();
+    };
+    const timeoutId = globalThis.setTimeout(
+      () => settle(() => reject(new Error("Session convergence deadline"))),
+      timeoutMs,
+    );
+    try {
+      void operation().then(
+        (value) => settle(() => resolve(value)),
+        () => settle(() => reject(new Error("Session convergence failed"))),
+      );
+    } catch {
+      settle(() => reject(new Error("Session convergence failed")));
+    }
+  });
 }

@@ -346,7 +346,7 @@ describe("interface language control", () => {
     expect(signal).toBeInstanceOf(AbortSignal);
     expect(signal?.aborted).toBe(false);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(10_000);
+      await vi.advanceTimersByTimeAsync(3_000);
     });
     expect(signal?.aborted).toBe(false);
     await act(async () => renderer.unmount());
@@ -914,6 +914,46 @@ describe("interface language control", () => {
     await act(async () => renderer.unmount());
   });
 
+  it("bounds a stalled final seal and releases the acquired locale fence", async () => {
+    vi.useFakeTimers();
+    const sealStarted = vi.fn();
+    const cancel = vi.fn(async () => undefined);
+    const unregister = interfaceLocaleChangeCoordinator.register({
+      id: "stalled-final-seal",
+      kind: "safe-flush",
+      prepare: async () => ({
+        sealForDocumentReplacement: async () => {
+          sealStarted();
+          await new Promise<void>(() => undefined);
+        },
+        cancel,
+        resume: async () => undefined,
+      }),
+    });
+    const renderer = await renderControl();
+    const russianAnchor = renderer.root
+      .findAllByType("a")
+      .find((anchor) => anchor.props.lang === "ru");
+
+    await act(async () => {
+      russianAnchor?.props.onClick({ preventDefault: vi.fn() });
+    });
+    await vi.waitFor(() => expect(sealStarted).toHaveBeenCalledOnce());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3_000);
+    });
+
+    await vi.waitFor(() => expect(cancel).toHaveBeenCalledOnce());
+    expect(interfaceLocaleChangeCoordinator.readState().phase).toBe("idle");
+    expect(mocks.navigations).toHaveLength(0);
+    expect(renderer.root.findAllByProps({ role: "alertdialog" })).toHaveLength(
+      0,
+    );
+    unregister();
+    await act(async () => renderer.unmount());
+    vi.useRealTimers();
+  });
+
   it("recovers the sealed fence when a document replacement never starts", async () => {
     vi.useFakeTimers();
     mocks.dispatchPageHide = false;
@@ -1133,6 +1173,46 @@ describe("interface language control", () => {
     expect(mocks.navigations).toHaveLength(0);
     unregisterFailure();
     await act(async () => failedRenderer.unmount());
+  });
+
+  it("keeps a stalled locale flush inline and lets the gardener cancel its acquired fence", async () => {
+    let resolveReady: (() => void) | undefined;
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve;
+    });
+    const cancel = vi.fn(async () => undefined);
+    const unregister = interfaceLocaleChangeCoordinator.register({
+      id: "stalled-owner-composer-drafts",
+      kind: "safe-flush",
+      prepare: () => ({ ready, cancel, resume: async () => undefined }),
+    });
+    const renderer = await renderControl();
+    const russianAnchor = renderer.root
+      .findAllByType("a")
+      .find((anchor) => anchor.props.lang === "ru");
+
+    await act(async () => {
+      russianAnchor?.props.onClick({ preventDefault: vi.fn() });
+      await Promise.resolve();
+    });
+
+    expect(renderer.root.findAllByProps({ role: "alertdialog" })).toHaveLength(
+      0,
+    );
+    const cancelButton = renderer.root
+      .findAllByType("button")
+      .find((button) => button.children.includes("Отказ"));
+    expect(cancelButton).toBeDefined();
+    await act(async () => {
+      await cancelButton?.props.onClick();
+    });
+
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(interfaceLocaleChangeCoordinator.readState().phase).toBe("idle");
+    expect(mocks.navigations).toHaveLength(0);
+    resolveReady?.();
+    unregister();
+    await act(async () => renderer.unmount());
   });
 
   it("keeps a stopped-preparation recovery retryable from localized UI", async () => {

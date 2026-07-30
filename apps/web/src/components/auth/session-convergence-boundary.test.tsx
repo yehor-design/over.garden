@@ -803,6 +803,46 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
+  it("bounds a never-settling initial auth read and requires an explicit retry", async () => {
+    vi.useFakeTimers();
+    const stalled = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockReturnValueOnce(stalled.promise);
+    const renderer = await renderBoundary();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    expect(mocks.hydrate).not.toHaveBeenCalled();
+
+    mocks.getSession.mockResolvedValueOnce(activeSession());
+    const retry = renderer.root
+      .findAllByType("button")
+      .find((node) => textContent(node.props.children) === "Опитайте отново");
+    await act(async () => {
+      await retry?.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(1);
+    stalled.resolve(activeSession());
+    await Promise.resolve();
+    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    await unmount(renderer);
+    vi.useRealTimers();
+  });
+
   it("recovers an unavailable initial baseline only through a fresh authoritative retry", async () => {
     mocks.getSession
       .mockRejectedValueOnce(new Error("network unavailable"))

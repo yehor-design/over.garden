@@ -20,6 +20,12 @@ export interface InterfaceLocaleChangePreparedParticipant {
    */
   resume(): Promise<void>;
   /**
+   * Releases a transition fence without requiring another durable flush.
+   * A participant may expose this only when its in-memory latest generation
+   * remains intact and ordinary persistence can resume safely afterwards.
+   */
+  cancel?(): Promise<void>;
+  /**
    * Re-flush state that advanced while the destination request was pending.
    * Participants without mutable durable state may omit this callback.
    */
@@ -37,13 +43,24 @@ export interface InterfaceLocaleChangePreparedParticipant {
 export interface InterfaceLocaleChangeSafeFlushParticipant extends InterfaceLocaleChangeParticipantBase {
   kind: "safe-flush";
   /**
-   * Freeze the surface and durably flush its latest complete generation.
-   * Implementations must release any partial fence before rejecting.
-   * The coordinator must not impose a generic Promise timeout here: until this
-   * resolves with `resume`, it cannot cancel an acquired fence without risking
-   * an orphaned frozen surface.
+   * Start by acquiring a payload-free recovery handle synchronously, then
+   * expose durable flush completion separately through `ready`. This lets the
+   * coordinator abort a slow preparation without abandoning a partial fence.
+   *
+   * The Promise form is a temporary compatibility lane for existing test-only
+   * participants. Production registrations must return the started form.
    */
-  prepare(): Promise<InterfaceLocaleChangePreparedParticipant>;
+  prepare(options: {
+    signal: AbortSignal;
+  }):
+    | InterfaceLocaleChangeSafeFlushPreparation
+    | Promise<InterfaceLocaleChangePreparedParticipant>;
+}
+
+export interface InterfaceLocaleChangeSafeFlushPreparation
+  extends InterfaceLocaleChangePreparedParticipant {
+  /** Settles only after the initial durable flush is complete. */
+  ready: Promise<void>;
 }
 
 export interface InterfaceLocaleChangeDirtyParticipant extends InterfaceLocaleChangeParticipantBase {
@@ -154,6 +171,8 @@ export interface InterfaceLocaleChangeCoordinator {
   prepare(
     options?: PrepareInterfaceLocaleChangeOptions,
   ): Promise<InterfaceLocaleChangePreparationResult>;
+  /** Abort the current preparation and release every acquired fence safely. */
+  cancel(): Promise<InterfaceLocaleChangeRecoveryHandle | null>;
 }
 
 type InternalParticipant =
@@ -181,9 +200,19 @@ type InterfaceLocaleChangeStoppedPreparationInput =
 interface PreparedParticipantRecord {
   id: string;
   resume(): Promise<void>;
+  cancel?(): Promise<void>;
   flushLatest?(): Promise<void>;
   sealForDocumentReplacement?(): Promise<void>;
   isCommitGateReady?(): boolean;
+}
+
+interface ActiveTransition {
+  token: symbol;
+  abortController: AbortController;
+  prepared: PreparedParticipantRecord[];
+  stop?: (
+    result: InterfaceLocaleChangeStoppedPreparationInput,
+  ) => Promise<InterfaceLocaleChangeStoppedPreparationResult>;
 }
 
 const PARTICIPANT_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
@@ -193,7 +222,7 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
   const listeners = new Set<
     (state: InterfaceLocaleChangeCoordinatorState) => void
   >();
-  let activeTransition: symbol | null = null;
+  let activeTransition: ActiveTransition | null = null;
   let pendingDirtyConfirmation: {
     revision: number;
     registrationTokens: Set<symbol>;
@@ -231,7 +260,7 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
   };
 
   const releaseTransition = (token: symbol) => {
-    if (activeTransition !== token) return;
+    if (activeTransition?.token !== token) return;
     activeTransition = null;
     notify();
   };
@@ -317,9 +346,24 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
       releaseTransition(token);
       return null;
     }
-    const recovery = createRecoveryHandle(records, token, false);
-    const result = await recovery.resume();
-    return result === "retry-required" ? recovery : null;
+    const failures: PreparedParticipantRecord[] = [];
+    for (const record of [...records].reverse()) {
+      try {
+        const cancelled = record.cancel ?? record.resume;
+        const completed = await settleWithin(
+          cancelled(),
+          INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS,
+        );
+        if (completed !== "completed") failures.unshift(record);
+      } catch {
+        failures.unshift(record);
+      }
+    }
+    if (failures.length === 0) {
+      releaseTransition(token);
+      return null;
+    }
+    return createRecoveryHandle(failures, token, false);
   };
 
   return {
@@ -355,7 +399,12 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
       }
 
       const token = Symbol("interface-locale-change");
-      activeTransition = token;
+      const transition: ActiveTransition = {
+        token,
+        abortController: new AbortController(),
+        prepared: [],
+      };
+      activeTransition = transition;
       notify();
       const confirmation =
         options.discardConfirmed === true ? pendingDirtyConfirmation : null;
@@ -364,17 +413,26 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
         confirmation?.revision === dirtyRevision
           ? confirmation.registrationTokens
           : new Set<symbol>();
-      const prepared: PreparedParticipantRecord[] = [];
+      const prepared = transition.prepared;
       const preparedRegistrationTokens = new Set<symbol>();
       const discardedRegistrationTokens = new Set<symbol>();
+      let stopped: Promise<InterfaceLocaleChangeStoppedPreparationResult> | null =
+        null;
 
       const stop = async (
         result: InterfaceLocaleChangeStoppedPreparationInput,
-      ): Promise<InterfaceLocaleChangeStoppedPreparationResult> =>
-        ({
-          ...result,
-          recovery: await recoverStoppedTransition(prepared, token),
-        }) as InterfaceLocaleChangeStoppedPreparationResult;
+      ): Promise<InterfaceLocaleChangeStoppedPreparationResult> => {
+        if (stopped) return stopped;
+        stopped = (async () => {
+          transition.abortController.abort();
+          return {
+            ...result,
+            recovery: await recoverStoppedTransition(prepared, token),
+          } as InterfaceLocaleChangeStoppedPreparationResult;
+        })();
+        return stopped;
+      };
+      transition.stop = stop;
 
       while (true) {
         const inFlightIds = participantIds("in-flight");
@@ -421,7 +479,12 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
           const [registrationToken, participant] = safeEntry;
           preparedRegistrationTokens.add(registrationToken);
           try {
-            const participantPreparation = await participant.prepare();
+            const candidate = participant.prepare({
+              signal: transition.abortController.signal,
+            });
+            const started = isSafeFlushPreparation(candidate);
+            const participantPreparation: InterfaceLocaleChangePreparedParticipant =
+              started ? candidate : await candidate;
             if (typeof participantPreparation?.resume !== "function") {
               throw new Error(
                 "Safe locale-change preparation did not return a resume callback.",
@@ -434,6 +497,10 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
             prepared.push({
               id: participant.id,
               resume: () => participantPreparation.resume(),
+              cancel:
+                typeof participantPreparation.cancel === "function"
+                  ? () => participantPreparation.cancel!()
+                  : undefined,
               flushLatest: flushLatest ? () => flushLatest() : undefined,
               sealForDocumentReplacement: sealForDocumentReplacement
                 ? () => sealForDocumentReplacement()
@@ -442,6 +509,26 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
                 ? () => isCommitGateReady()
                 : undefined,
             });
+            if (started) {
+              const ready = await settleWithin(
+                candidate.ready,
+                INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS,
+              );
+              if (ready !== "completed") {
+                return stop({
+                  status: "failed",
+                  reason: "safe-flush-failed",
+                  participantIds: [participant.id],
+                });
+              }
+            }
+            if (transition.abortController.signal.aborted) {
+              return stop({
+                status: "blocked",
+                reason: "transition-in-progress",
+                participantIds: [],
+              });
+            }
           } catch {
             return stop({
               status: "failed",
@@ -575,6 +662,16 @@ export function createInterfaceLocaleChangeCoordinator(): InterfaceLocaleChangeC
         };
       }
     },
+    async cancel() {
+      const transition = activeTransition;
+      if (!transition) return null;
+      const stopped = await transition.stop?.({
+        status: "blocked",
+        reason: "transition-in-progress",
+        participantIds: [],
+      });
+      return stopped?.recovery ?? null;
+    },
   };
 }
 
@@ -610,4 +707,47 @@ function requireParticipantId(id: string) {
 
 function uniqueSortedIds(ids: string[]) {
   return [...new Set(ids)].sort();
+}
+
+/**
+ * Reserve rendering and event-loop settlement inside the product's three
+ * second interactive-recovery budget. The transition owner therefore stops
+ * dependency work at 2.25s; the gardener sees the recovered controls before
+ * the externally promised 3s deadline.
+ */
+export const INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS = 2_250;
+
+async function settleWithin<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<"completed" | "failed" | "timed-out"> {
+  return new Promise((resolve) => {
+    const timeoutId = globalThis.setTimeout(
+      () => resolve("timed-out"),
+      timeoutMs,
+    );
+    void promise.then(
+      () => {
+        globalThis.clearTimeout(timeoutId);
+        resolve("completed");
+      },
+      () => {
+        globalThis.clearTimeout(timeoutId);
+        resolve("failed");
+      },
+    );
+  });
+}
+
+function isSafeFlushPreparation(
+  value:
+    | InterfaceLocaleChangeSafeFlushPreparation
+    | Promise<InterfaceLocaleChangePreparedParticipant>,
+): value is InterfaceLocaleChangeSafeFlushPreparation {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "ready" in value &&
+      (value as { ready?: unknown }).ready instanceof Promise,
+  );
 }

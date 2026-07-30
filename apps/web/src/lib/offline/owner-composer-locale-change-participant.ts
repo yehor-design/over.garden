@@ -1,7 +1,7 @@
 "use client";
 
 import type { InterfaceLocaleChangeSafeFlushParticipant } from "../interface-locale-change-coordinator";
-import { prepareAllOwnerComposerTransitionParticipants } from "./owner-composer-participants";
+import { startAllOwnerComposerTransitionParticipants } from "./owner-composer-participants";
 
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
@@ -21,26 +21,30 @@ export function createOwnerComposerLocaleChangeParticipant(): InterfaceLocaleCha
   return {
     id: "owner-composer-drafts",
     kind: "safe-flush",
-    async prepare() {
+    prepare() {
       // Visual-fixture routes must not open the real IndexedDB composer lane —
       // Dexie preparation can wedge Playwright Chromium before document reload.
       if (isVisualFixtureBrowserRequest()) {
         return {
+          ready: Promise.resolve(),
           flushLatest: async () => undefined,
           sealForDocumentReplacement: async () => undefined,
           isCommitGateReady: () => true,
           resume: async () => undefined,
+          cancel: async () => undefined,
         };
       }
 
-      const preparation = await prepareAllOwnerComposerTransitionParticipants();
+      const preparation = startAllOwnerComposerTransitionParticipants();
       return {
+        ready: preparation.ready,
         flushLatest: () => preparation.flushLatest(),
         sealForDocumentReplacement: () =>
           preparation.sealForDocumentReplacement(),
         isCommitGateReady: () =>
           preparation.isDocumentReplacementParticipantSetStable(),
         resume: () => preparation.resume(),
+        cancel: () => preparation.cancel(),
       };
     },
   };
