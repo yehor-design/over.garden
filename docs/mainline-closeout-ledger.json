@@ -945,6 +945,34 @@
       ]
     },
     {
+      "issueId": "OVE-235",
+      "title": "Moderation that actually protects: block, report, removal, and closed discussions enforce one canonical comment policy",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "f470448c70de8135c9fb357f47ef9ce70ebe1492",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-235/moderation-that-actually-protects-block-report-removal-and-closed",
+      "completedAt": "2026-07-30",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/server/engagement-repository.test.ts src/server/profile-interaction-repository.test.ts src/app/api/engagement/route.test.ts src/app/engagement/public-engagement-panel.test.tsx src/server/community-repository.test.ts src/server/social-return-repository.test.ts src/lib/auth/auth-intent-contract.test.ts src/app/[locale]/communities/[slug]/discussions/[contributionId]/page.test.tsx",
+        "cd apps/web && pnpm local:bootstrap && pnpm db:types && pnpm db:types:check",
+        "cd apps/web && pnpm exec vitest run src/server/community-repository.integration.test.ts src/server/community-repository.test.ts",
+        "cd apps/web && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:a11y",
+        "git merge-base --is-ancestor b285b3fb882a72180af4ee38fa62ed3bcf904be5 origin/main",
+        "git merge-base --is-ancestor e6969117a5e1932369b52b64aaaa66881523ae24 origin/main",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/FzWQKdbxjo8JgP7uXbqKMFCbWWKJ",
+      "githubDeploymentId": 5667736695,
+      "githubDeploymentStatusId": 16116469542,
+      "notes": [
+        "Behavior commits b285b3fb882a72180af4ee38fa62ed3bcf904be5 and e6969117a5e1932369b52b64aaaa66881523ae24 are contained in main through f470448c70de8135c9fb357f47ef9ce70ebe1492. The first makes community-contribution discussions a distinct comment-only target with canonical moderation, bilateral blocks, sealed-owner review, retention-safe audit references, deterministic row locking, and independent journal discussion state. The second rejects malformed contribution route parameters before session or repository access.",
+        "Focused repository, route, auth-intent, integration-race, generated-type, lint, typecheck, full-test, production-build, and accessibility checks passed before merge. Exact-main CI run 30506384943 passed its Web and Python matching jobs, including the browser/accessibility matrix; exact-main matching-image run 30506384967 passed.",
+        "Exact-SHA production proof: Vercel deployment dpl_FzWQKdbxjo8JgP7uXbqKMFCbWWKJ reached READY for f470448c70de8135c9fb357f47ef9ce70ebe1492 and owns over.garden plus www.over.garden. Authenticated GitHub deployment 5667736695 / status 16116469542 recorded Production success. A non-mutating production direct-route boundary probe rendered the localized not-found state for a controlled malformed contribution parameter and produced no application error log.",
+        "No production moderation state, provider configuration, secret, stable user identity, comment body, report text, journal content, media key, raw request metadata, or precise location was changed or included in this evidence. The saved Linear-description digest and final authenticated relation read-back remain the task-system receipts."
+      ]
+    },
+    {
       "issueId": "OVE-242",
       "title": "P0 — Transactional public-projection revocation: edit, archive, erasure, moderation, and location changes cannot leave stale Meilisearch data",
       "status": "done_on_main",
