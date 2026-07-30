@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 
 import { chromium } from "playwright";
 
+import { PUBLIC_LOCALE_CONFIG } from "@/lib/public-localization";
+
 const CANONICAL_ORIGIN = "https://over.garden";
 const PUBLIC_BG_ROUTE = "/bg/journals";
 const PUBLIC_RU_ROUTE = "/ru/journals";
@@ -74,7 +76,14 @@ export async function runSessionLocaleConvergenceSmoke(
       }
       const trigger = control.locator('[data-interface-language-trigger="true"]');
       await trigger.click();
-      const navigation = page.waitForURL(
+      const russianOption = page.getByRole("menuitemradio", {
+        name: PUBLIC_LOCALE_CONFIG.ru.label,
+      });
+      if ((await russianOption.count()) !== 1) {
+        throw new Error("Expected exactly one public Russian language option.");
+      }
+      await russianOption.click();
+      await page.waitForURL(
         (url) =>
           url.origin === baseUrl &&
           url.pathname === PUBLIC_RU_ROUTE &&
@@ -82,8 +91,6 @@ export async function runSessionLocaleConvergenceSmoke(
           url.hash === "",
         { timeout: 15_000 },
       );
-      await control.locator('[lang="ru"]').click();
-      await navigation;
       if (
         (await page.locator("html").getAttribute("lang")) !== "ru" ||
         preferenceRequests !== 0
