@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-22 for the OVE-188 protective-DNS closeout; 2026-07-18 for the OVE-204 exact-main current-session sign-out rollout, OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
+Last verified: 2026-07-30 for the OVE-237 versioned-auth runtime recovery and interaction-admission schema rollout; 2026-07-22 for the OVE-188 protective-DNS closeout; 2026-07-18 for the OVE-204 exact-main current-session sign-out rollout, OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -623,9 +623,10 @@ CRON_SECRET`. Authenticated production env-name read-back on 2026-07-29
   outbox stores no recipient, token, URL, user id, provider message id, or
   response body. Do not claim this schedule is live until the exact merged
   deployment and Cron listing both identify it.
-- OVE-240 versioned Better Auth policy uses `BETTER_AUTH_SECRETS` as a Sensitive
-  ordered `version:secret` set and `BETTER_AUTH_CURRENT_SECRET_VERSION` as
-  non-secret metadata. Serving Production and Preview fail closed unless the
+- OVE-240 versioned Better Auth policy uses `BETTER_AUTH_SECRETS` as an
+  encrypted production environment value containing an ordered
+  `version:secret` set and `BETTER_AUTH_CURRENT_SECRET_VERSION` as non-secret
+  metadata. Serving Production and Preview fail closed unless the
   declared current version is the first unique entry and that active entry is a
   canonical 32-byte base64url key class. `BETTER_AUTH_SECRET` is admitted only
   as a bounded legacy compatibility fallback: it must be an exact 32-byte
@@ -635,14 +636,23 @@ CRON_SECRET`. Authenticated production env-name read-back on 2026-07-29
   active versioned key is passed explicitly so Better Auth cannot fall back to
   the ambient legacy environment variable. The Vercel write order is:
   name-class read-back, independent cryptographic generation per target without
-  output, Sensitive versioned write, matching metadata write, exact-SHA
+  output, encrypted versioned write, matching metadata write, exact-SHA
   deployment/read-back, then redacted health and continuity proof. Once a
   production deployment proves clean-cut behavior, remove the stale singular
   provider variable and redeploy the exact artifact. Provider evidence records
-  only target, env-name/sensitivity class, current version class, deployment
+  only target, env-name/storage class, current version class, deployment
   identity/status, aliases, and pass/fail—never material, a digest, prefix,
   encoded/decoded size, token, cookie, callback parameter, identity, or
-  provider payload.
+  provider payload. On 2026-07-30, OVE-237 proved that a Vercel Sensitive
+  placement did not reach this project's server runtime: exact-main health
+  stayed `closed` and the unauthenticated Better Auth session route returned
+  `500`. The production value was recreated as the standard encrypted Vercel
+  environment class, with matching current-version metadata. Exact-main
+  deployment `dpl_6T1Nk7dGyFvPfDNq2pA7TmBo2Qg6` reached `READY`, owned every
+  canonical alias, returned health class `versioned_current_v1` with database
+  health, and returned `200` from the unauthenticated session route. No secret
+  value, digest, prefix, size, cookie, identity, or provider payload was read
+  or recorded.
 - OVE-247/OVE-248 account-method continuity uses the existing Google and `FACEBOOK_LOGIN_PUBLIC_READY` provider gates without a provider-console, DNS, or secret change. Client OAuth starts may navigate only to the verified `accounts.google.com` or `www.facebook.com` HTTPS authorization hosts after Better Auth returns the URL with automatic redirect disabled. First-time social callbacks create their provider account normally; a second provider link is allowed only from an authenticated session, including when providers report different emails. `disableImplicitLinking` remains required, so matching email alone never merges gardens. A final connected Google/Facebook method opens an in-profile recovery dialog: a verified gardener may create a credential fallback and then explicitly unlink only the selected provider; an ineligible gardener receives a no-mutation verification/second-method recovery state. Better Auth remains the final-method backstop. Production proof must use disposable non-personal identities and retain only redacted method-state and deployment classes.
 - On 2026-07-05, Google Analytics 4 page measurement was installed through a consent-first Google tag with public measurement id `G-71LP7XZ5NE`. On 2026-07-05, that loader was moved behind the consent-first Google Tag Manager container `GTM-W979KSX3`. The consent banner appears only on authored public, legal, and support pages; the external Google Tag Manager container must not load until the visitor accepts analytics. The tag is intentionally scoped away from private garden, admin/operator, auth, join/invite, erasure, journal, lineage, API, and callback routes. The GTM account must publish a GA4 tag that sends to `G-71LP7XZ5NE`; app code only loads the container after consent.
 - OVE-144 consent-first Meta Ads attribution is separate from Facebook Login. Runtime env names are `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED` (single public kill switch), `NEXT_PUBLIC_META_PIXEL_ID` (public Pixel/Data Source id), `META_CONVERSIONS_API_ACCESS_TOKEN` (secret), optional `META_CONVERSIONS_API_TEST_EVENT_CODE`, and optional `META_CONVERSIONS_API_GRAPH_VERSION` (default implementation version `v23.0`, re-check Meta before enabling live if the dashboard recommends a newer version). The public flag must stay absent/false unless Meta Pixel/Data Source, CAPI token, Test Events proof, and privacy smoke are ready. App code never loads Meta Pixel before explicit marketing consent, never loads it on private garden/admin/auth/journal/API/callback routes, and never sends Meta journal text, private plant/object/catalog names, precise location, media keys/URLs, auth payloads, account identifiers, IP/user-agent evidence, provider cookies, or raw URLs/referrers. Implementation source checks on 2026-07-05 used Meta Pixel consent controls (`https://developers.facebook.com/docs/meta-pixel/implementation/gdpr`), Pixel+CAPI deduplication (`https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events`), and CAPI customer information parameter docs (`https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/customer-information-parameters/`).
