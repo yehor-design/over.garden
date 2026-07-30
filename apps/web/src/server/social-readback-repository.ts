@@ -12,7 +12,11 @@ import type {
   PlantObjectKind,
   VarietyState,
 } from "@/db/schema";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { localizedPublicJournalEvidencePath } from "@/lib/garden/public-paths";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { RequestScope } from "@/server/request-scope";
 
@@ -139,9 +143,10 @@ export interface NotificationCenterRows {
 export async function listFollowedFeedStories(
   scope: RequestScope,
   limit = FOLLOWED_FEED_LIMIT,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<FollowedFeedStory[]> {
   const rows = await buildFollowedFeedStoriesQuery(db, scope, limit).execute();
-  return serializeFollowedFeedStories(rows);
+  return serializeFollowedFeedStories(rows, locale);
 }
 
 export async function listNotificationCenter(
@@ -609,6 +614,7 @@ export function buildNotificationFollowEventsQuery(
 
 export function serializeFollowedFeedStories(
   rows: FollowedFeedStoryRow[],
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): FollowedFeedStory[] {
   return rows.flatMap((row) => {
     if (!row.publicSlug) return [];
@@ -616,7 +622,7 @@ export function serializeFollowedFeedStories(
     return [
       {
         key: stableReadbackKey("followed-feed", row.followId),
-        href: publicJournalEntryPath(row.publicSlug),
+        href: localizedPublicJournalEvidencePath(locale, row.publicSlug),
         ownerMention: row.ownerHandle ? `@${row.ownerHandle}` : null,
         targetObject: mapTargetObject(row),
         entryDate: row.entryDate,

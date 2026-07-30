@@ -17,11 +17,11 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
-import { localizedPath, type PublicLocale } from "@/lib/public-localization";
+import type { PublicLocale } from "@/lib/public-localization";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { blockProfile } from "@/server/profile-interaction-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
@@ -1032,7 +1032,7 @@ export function serializePublicCommunityContributionPage(
     return [
       {
         id: row.contributionId,
-        href: localizedPath(locale, publicJournalEntryPath(publicSlug)),
+        href: localizedPublicJournalEvidencePath(locale, publicSlug),
         title: row.title,
         excerpt: publicExcerpt(row.body),
         entryDate: row.entryDate,

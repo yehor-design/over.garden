@@ -11,7 +11,7 @@ import type {
   PlantObjectKind,
 } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -384,7 +384,7 @@ export function serializeFollowedFeedPage(
     return [
       {
         key: stableOpaqueKey("feed", row.entryId),
-        href: publicJournalEntryPath(row.publicSlug),
+        href: localizedPublicJournalEvidencePath(locale, row.publicSlug),
         title: row.title,
         excerpt: summarizePublicText(row.body, 240),
         entryDate: row.entryDate,
@@ -484,7 +484,7 @@ export async function listNotificationCenterPage(
 
   const candidates = [
     ...(commentRows as NotificationCommentRow[]).map((row) =>
-      mapCommentNotification(row),
+      mapCommentNotification(row, locale),
     ),
     ...(profileFollowRows as NotificationFollowRow[]).map((row) => ({
       sourceId: row.sourceId,
@@ -1276,6 +1276,7 @@ function serializeNotificationEvent(
 
 function mapCommentNotification(
   row: NotificationCommentRow,
+  locale: PublicLocale,
 ): NotificationCandidateRow {
   const reply = Boolean(row.parentCommentId);
   return {
@@ -1285,7 +1286,7 @@ function mapCommentNotification(
     actorHandle: row.actorHandle,
     targetRef: row.targetRef,
     targetLabel: null,
-    href: publicJournalEntryPath(row.targetRef),
+    href: localizedPublicJournalEvidencePath(locale, row.targetRef),
     summaryKey: reply ? "reply_to_comment" : "comment_on_journal",
     groupRef: `journal:${row.targetRef}`,
     actionKind: "open_journal",

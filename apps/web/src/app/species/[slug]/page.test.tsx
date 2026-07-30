@@ -59,6 +59,8 @@ describe("species and breed catalog evidence routes", () => {
     expect(mocks.getPublicVarietyPage).toHaveBeenCalledWith(
       "solanum-lycopersicum",
       "species",
+      undefined,
+      "uk",
     );
     expect(html).toContain("Публічний вид");
     expect(html).toContain("Записати цей вид");

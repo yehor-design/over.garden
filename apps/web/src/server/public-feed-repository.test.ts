@@ -315,7 +315,7 @@ describe("public feed repository", () => {
     );
     expect(page.entries[0]).toMatchObject({
       id: firstRow.entryId,
-      publicPath: "/journal/morning-check",
+      publicPath: "/bg/journal/morning-check",
       object: {
         id: firstRow.objectId,
         kind: "plant",

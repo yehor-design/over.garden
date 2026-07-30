@@ -16,7 +16,7 @@ import {
   type PublicLocale,
 } from "@/lib/public-localization";
 import {
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicProfilePath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
@@ -146,14 +146,20 @@ interface PublicObjectPassportLifecycleRow {
 export async function getPublicObjectPassportPage(
   plantObjectId: string,
   executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicObjectPassportPage | null> {
-  const lookup = await getPublicObjectPassportLookup(plantObjectId, executor);
+  const lookup = await getPublicObjectPassportLookup(
+    plantObjectId,
+    executor,
+    locale,
+  );
   return lookup.status === "active" ? lookup.page : null;
 }
 
 export async function getPublicObjectPassportLookup(
   plantObjectId: string,
   executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicObjectPassportLookup> {
   const normalizedPlantObjectId =
     normalizePublicObjectPassportId(plantObjectId);
@@ -192,7 +198,12 @@ export async function getPublicObjectPassportLookup(
 
   return {
     status: "active",
-    page: serializePublicObjectPassportPage(root, journalRows, galleryRows),
+    page: serializePublicObjectPassportPage(
+      root,
+      journalRows,
+      galleryRows,
+      locale,
+    ),
   };
 }
 
@@ -471,7 +482,10 @@ export function serializePublicObjectPassportPage(
     bodyPreview: publicJournalBodyPreview(entry.entryBody),
     entryDate: entry.entryDate,
     publicSlug: entry.entryPublicSlug,
-    publicPath: publicJournalEntryPath(entry.entryPublicSlug),
+    publicPath: localizedPublicJournalEvidencePath(
+      locale,
+      entry.entryPublicSlug,
+    ),
     mediaPublicUrl: entry.mediaDerivativeKey
       ? getPublicDerivativeUrl(entry.mediaDerivativeKey)
       : null,

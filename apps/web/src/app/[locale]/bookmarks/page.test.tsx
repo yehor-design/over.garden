@@ -76,10 +76,14 @@ describe("/{locale}/bookmarks", () => {
       }),
     );
 
-    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
-    });
+    expect(mocks.listEngagementBookmarks).toHaveBeenCalledWith(
+      {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+      undefined,
+      "uk",
+    );
     expect(html).toContain("Закладки");
     expect(html).toContain("First ripe cluster");
     expect(html).toContain("/journal/first-ripe-cluster");

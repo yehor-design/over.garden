@@ -190,7 +190,7 @@ describe("public living-object catalog serialization", () => {
           totalCount: 4,
         }),
       ],
-      "uk",
+      "bg",
       {
         kind: "all",
         identity: "all",
@@ -214,7 +214,7 @@ describe("public living-object catalog serialization", () => {
       representativeObject: {
         path: "/lineage/objects/00000000-0000-4000-8000-000000000201",
       },
-      latestJournal: { path: "/journal/catalog-entry" },
+      latestJournal: { path: "/bg/journal/catalog-entry" },
     });
     expect(page.cards[1]).toMatchObject({
       objectKind: "animal",

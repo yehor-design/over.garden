@@ -329,6 +329,7 @@ describe("public object passport repository query contracts", () => {
           mediaIntrinsicHeight: 1200,
         },
       ],
+      "ru",
     );
 
     expect(page.object.catalogPath).toBe(
@@ -339,12 +340,12 @@ describe("public object passport repository query contracts", () => {
       handle: "green_thumb",
       mention: "@green_thumb",
       displayName: "Green Thumb",
-      profilePath: "/@green_thumb",
+      profilePath: "/ru/@green_thumb",
     });
     expect(page.journalPreview[0]).toMatchObject({
       title: "First flowering",
       bodyPreview: "Two new flower clusters opened after the balcony warmed.",
-      publicPath: "/journal/first-flowering",
+      publicPath: "/ru/journal/first-flowering",
       mediaPublicUrl:
         "https://media.over.garden/derivatives/first-flowering.webp",
     });

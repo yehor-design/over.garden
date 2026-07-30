@@ -40,8 +40,8 @@ export interface PublicCatalogEvidenceRouteProps {
 const EMPTY_SEARCH_PARAMS: Record<string, string | string[] | undefined> = {};
 
 const getCachedPublicCatalogEvidencePage = cache(
-  (slug: string, catalogKind: CatalogKind) =>
-    getPublicVarietyPage(slug, catalogKind),
+  (slug: string, catalogKind: CatalogKind, locale: InterfaceLocale) =>
+    getPublicVarietyPage(slug, catalogKind, undefined, locale),
 );
 
 export async function generatePublicCatalogEvidenceMetadata(
@@ -53,7 +53,11 @@ export async function generatePublicCatalogEvidenceMetadata(
     getRequestInterfaceLocale(),
   ]);
   const routeCopy = getCatalogEvidenceCopy(locale, catalogKind);
-  const page = await getCachedPublicCatalogEvidencePage(slug, catalogKind);
+  const page = await getCachedPublicCatalogEvidencePage(
+    slug,
+    catalogKind,
+    locale,
+  );
 
   if (!page) {
     const missingIndexState = evaluatePublicSurfaceIndexability({
@@ -91,7 +95,11 @@ export async function renderPublicCatalogEvidenceRoute(
   ]);
   const publicCopy = getPublicSurfaceCopy(locale);
   const routeCopy = getCatalogEvidenceCopy(locale, catalogKind);
-  const page = await getCachedPublicCatalogEvidencePage(slug, catalogKind);
+  const page = await getCachedPublicCatalogEvidencePage(
+    slug,
+    catalogKind,
+    locale,
+  );
 
   if (!page) notFound();
 

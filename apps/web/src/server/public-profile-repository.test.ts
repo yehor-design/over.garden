@@ -431,7 +431,7 @@ describe("public profile handle contracts", () => {
   it("serializes the evidence page without user ids or media keys", () => {
     vi.stubEnv("R2_PUBLIC_BASE_URL", "https://media.over.garden");
     const page = serializePublicProfileEvidencePage({
-      locale: "uk",
+      locale: "bg",
       profile: {
         userId,
         handle: "green_thumb",
@@ -520,7 +520,7 @@ describe("public profile handle contracts", () => {
     });
     expect(page.journals[0]).toMatchObject({
       title: "New growth after moving the pot",
-      publicPath: "/journal/lemon-new-growth",
+      publicPath: "/bg/journal/lemon-new-growth",
     });
     expect(JSON.stringify(page)).not.toContain(userId);
     expect(JSON.stringify(page)).not.toMatch(
@@ -530,6 +530,7 @@ describe("public profile handle contracts", () => {
 
   it("serializes public profile readback without raw user ids", () => {
     const page = serializePublicProfilePage({
+      locale: "ru",
       profile: {
         userId,
         handle: "green_thumb",
@@ -564,7 +565,7 @@ describe("public profile handle contracts", () => {
       links: [
         {
           kind: "journal_entry",
-          href: "/journal/first-public-entry",
+          href: "/ru/journal/first-public-entry",
           entryDate: "2026-07-04",
         },
       ],

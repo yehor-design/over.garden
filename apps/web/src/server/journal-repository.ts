@@ -25,6 +25,7 @@ import {
 } from "@/lib/garden/public-journal-slug";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
+  localizedPublicJournalEvidencePath,
   publicJournalEntryPath,
   publicLineageObjectPath,
   publicProfilePath,
@@ -2391,9 +2392,9 @@ export function serializePublicJournalEntryPage(input: {
       createdAt: root.entryCreatedAt,
       entryScope: root.entryScope as EntryScope,
       publicSlug: root.publicSlug ?? "",
-      publicPath: localizedPath(
+      publicPath: localizedPublicJournalEvidencePath(
         locale,
-        publicJournalEntryPath(root.publicSlug ?? ""),
+        root.publicSlug ?? "",
       ),
       publicNoindex: root.publicNoindex,
       publishedAt: root.publishedAt,
@@ -2491,7 +2492,7 @@ function serializeRelatedPublicJournalEntry(
     bodyPreview: publicJournalEntryBodyPreview(row.body),
     entryDate: row.entryDate,
     publicSlug: row.publicSlug,
-    publicPath: localizedPath(locale, publicJournalEntryPath(row.publicSlug)),
+    publicPath: localizedPublicJournalEvidencePath(locale, row.publicSlug),
   };
 }
 

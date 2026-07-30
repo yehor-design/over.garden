@@ -215,7 +215,11 @@ describe("/lineage/objects/[objectId]", () => {
       }),
     );
 
-    expect(mocks.getPublicObjectPassportPage).toHaveBeenCalledWith(objectId);
+    expect(mocks.getPublicObjectPassportPage).toHaveBeenCalledWith(
+      objectId,
+      undefined,
+      "bg",
+    );
     expect(mocks.getPublicLineageGraphPage).toHaveBeenCalledWith(objectId);
     expect(html).toContain("Публичен паспорт");
     expect(html).toContain("Публичен дневник на обекта");

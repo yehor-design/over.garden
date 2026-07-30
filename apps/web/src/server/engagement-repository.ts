@@ -16,10 +16,11 @@ import type {
   EngagementTargetKind,
 } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
   publicVarietyPath,
 } from "@/lib/garden/public-paths";
+import type { PublicLocale } from "@/lib/public-localization";
 import {
   assertNoPreciseLocationText,
   containsPreciseLocationText,
@@ -695,6 +696,7 @@ export async function moderateEngagementCommentReport(
 export async function listEngagementBookmarks(
   scope: RequestScope,
   executor: QueryExecutor = db,
+  locale: PublicLocale = "uk",
 ): Promise<EngagementBookmarkShelfItem[]> {
   const rows = await buildListEngagementBookmarksQuery(
     executor,
@@ -709,6 +711,7 @@ export async function listEngagementBookmarks(
       target,
       executor,
       scope,
+      locale,
     );
     if (!publicTarget) continue;
 
@@ -825,6 +828,7 @@ export async function findPublicEngagementTarget(
   target: EngagementTarget,
   executor: QueryExecutor = db,
   viewerScope: RequestScope | null = null,
+  locale: PublicLocale = "uk",
 ): Promise<PublicEngagementTarget | null> {
   switch (target.kind) {
     case "journal_entry": {
@@ -847,7 +851,7 @@ export async function findPublicEngagementTarget(
             kind: target.kind,
             ref: row.publicSlug,
             label: row.title,
-            href: publicJournalEntryPath(row.publicSlug),
+            href: localizedPublicJournalEvidencePath(locale, row.publicSlug),
           }
         : null;
     }
@@ -1714,7 +1718,7 @@ export function normalizeEngagementReturnTo(
 export function engagementTargetPath(target: EngagementCommentTarget) {
   switch (target.kind) {
     case "journal_entry":
-      return publicJournalEntryPath(target.ref);
+      return localizedPublicJournalEvidencePath("uk", target.ref);
     case "lineage_object":
       return publicLineageObjectPath(target.ref);
     case "variety":
