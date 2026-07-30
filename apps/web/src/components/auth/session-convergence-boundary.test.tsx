@@ -36,6 +36,8 @@ const mocks = vi.hoisted(() => ({
   flushSync: vi.fn((callback: () => void) => callback()),
   localeFormState: vi.fn(),
   intervalCallbacks: [] as Array<() => void>,
+  windowListeners: new Map<string, (event: Event) => void>(),
+  documentListeners: new Map<string, (event: Event) => void>(),
 }));
 
 vi.mock("react-dom", () => ({ flushSync: mocks.flushSync }));
@@ -119,14 +121,34 @@ describe("session convergence boundary", () => {
     vi.clearAllMocks();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
     mocks.intervalCallbacks.length = 0;
+    mocks.windowListeners.clear();
+    mocks.documentListeners.clear();
     vi.stubGlobal("document", {
       visibilityState: "visible",
-      addEventListener: vi.fn(),
+      addEventListener: vi.fn(
+        (type: string, listener: EventListenerOrEventListenerObject) => {
+          mocks.documentListeners.set(
+            type,
+            typeof listener === "function"
+              ? listener
+              : listener.handleEvent.bind(listener),
+          );
+        },
+      ),
       removeEventListener: vi.fn(),
     });
     vi.stubGlobal("window", {
       location: { replace: mocks.replace, reload: mocks.reload },
-      addEventListener: vi.fn(),
+      addEventListener: vi.fn(
+        (type: string, listener: EventListenerOrEventListenerObject) => {
+          mocks.windowListeners.set(
+            type,
+            typeof listener === "function"
+              ? listener
+              : listener.handleEvent.bind(listener),
+          );
+        },
+      ),
       removeEventListener: vi.fn(),
       setInterval: (callback: () => void) => {
         mocks.intervalCallbacks.push(callback);
@@ -268,6 +290,198 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
+  it.each([
+    ["focus", () => mocks.windowListeners.get("focus")],
+    [
+      "visible-page recovery",
+      () => mocks.documentListeners.get("visibilitychange"),
+    ],
+  ])(
+    "synchronously removes A private content and seals owner activity before a deferred %s identity result",
+    async (_name, readListener) => {
+      const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+      expectPrivateSignOutDialogPresent(renderer, "waiting");
+      const confirmation = deferred<ReturnType<typeof activeSession>>();
+      mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+      await dispatchAuthoritativeRecheck(readListener());
+
+      expectPrivateSignOutDialogAbsent(renderer);
+      expect(
+        renderer.root.findAllByProps({
+          "data-session-convergence-gate": "checking",
+        }),
+      ).toHaveLength(1);
+      expect(mocks.abort).toHaveBeenCalledWith("session-a");
+      expect(mocks.prepareComposer).toHaveBeenCalledOnce();
+      expect(mocks.pause).toHaveBeenCalledOnce();
+      expect(mocks.pause.mock.invocationCallOrder[0]).toBeLessThan(
+        mocks.getSession.mock.invocationCallOrder[1]!,
+      );
+      const publicHome = renderer.root.findByProps({
+        "data-session-convergence-public-home": "true",
+      });
+      expect(publicHome.props.href).toBe("/bg");
+      const reload = renderer.root.findByProps({
+        "data-session-convergence-reload": "true",
+      });
+      expect(reload.props.disabled).not.toBe(true);
+
+      await act(async () => {
+        confirmation.resolve(activeSession());
+        await Promise.resolve();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+      await vi.waitFor(() =>
+        expectPrivateSignOutDialogPresent(renderer, "waiting"),
+      );
+      expect(mocks.resume).toHaveBeenCalledOnce();
+      expect(mocks.composerResume).toHaveBeenCalledOnce();
+      expect(mocks.reload).not.toHaveBeenCalled();
+      await unmount(renderer);
+    },
+  );
+
+  it("never admits A or B private content when a focus recheck confirms account B", async () => {
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    expectPrivateSignOutDialogAbsent(renderer);
+
+    await act(async () => {
+      confirmation.resolve(activeSession("session-b"));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.finalizeSessionChange).toHaveBeenCalledOnce();
+    expect(mocks.resume).not.toHaveBeenCalled();
+    expect(mocks.composerResume).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("bounds a stalled focus recheck behind safe exits and rejects its late completion", async () => {
+    vi.useFakeTimers();
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-public-home": "true",
+      }).props.href,
+    ).toBe("/bg");
+    const reload = renderer.root.findByProps({
+      "data-session-convergence-reload": "true",
+    });
+    expect(reload.props.disabled).not.toBe(true);
+    await act(async () => {
+      reload.props.onClick();
+    });
+    expect(mocks.reload).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      confirmation.resolve(activeSession());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    await unmount(renderer);
+    vi.useRealTimers();
+  });
+
+  it("keeps a partial owner fence sealed until an exact-A retry can release it", async () => {
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    mocks.prepareComposer.mockRejectedValueOnce(
+      new Error("composer preparation unavailable"),
+    );
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    await vi.waitFor(() =>
+      expect(
+        renderer.root.findAllByProps({
+          "data-session-convergence-gate": "blocked",
+        }),
+      ).toHaveLength(1),
+    );
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.pause).toHaveBeenCalledOnce();
+    expect(mocks.resume).not.toHaveBeenCalled();
+
+    const retry = renderer.root
+      .findAllByType("button")
+      .find((node) => textContent(node.props.children) === "Опитайте отново");
+    await act(async () => {
+      retry?.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() =>
+      expectPrivateSignOutDialogPresent(renderer, "waiting"),
+    );
+    expect(mocks.pause).toHaveBeenCalledTimes(2);
+    expect(mocks.resume).toHaveBeenCalledTimes(2);
+    await unmount(renderer);
+  });
+
+  it("lets only a newer exact-A retry reopen the tree after an older focus epoch times out", async () => {
+    vi.useFakeTimers();
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const olderConfirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => olderConfirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_000);
+    });
+    expectPrivateSignOutDialogAbsent(renderer);
+
+    mocks.getSession.mockResolvedValueOnce(activeSession());
+    const retry = renderer.root
+      .findAllByType("button")
+      .find((node) => textContent(node.props.children) === "Опитайте отново");
+    await act(async () => {
+      retry?.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await vi.waitFor(() =>
+      expectPrivateSignOutDialogPresent(renderer, "waiting"),
+    );
+    const hydrationCountAfterRetry = mocks.hydrate.mock.calls.length;
+
+    await act(async () => {
+      olderConfirmation.resolve(activeSession());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    expect(mocks.hydrate).toHaveBeenCalledTimes(hydrationCountAfterRetry);
+    await unmount(renderer);
+    vi.useRealTimers();
+  });
+
   it("keeps the locale fence active for a remote preparation through cancellation recovery", async () => {
     const renderer = await renderBoundary();
     expect(mocks.localeFormState).toHaveBeenLastCalledWith({
@@ -306,9 +520,9 @@ describe("session convergence boundary", () => {
       "tab-boundary-test-1234",
       "round-boundary-test-1234",
     );
-    expect(
-      mocks.publishReceived.mock.invocationCallOrder[0],
-    ).toBeLessThan(mocks.publishReady.mock.invocationCallOrder[0]!);
+    expect(mocks.publishReceived.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.publishReady.mock.invocationCallOrder[0]!,
+    );
     await unmount(renderer);
   });
 
@@ -1026,6 +1240,17 @@ async function emit(
           ? preparationRoundId
           : null,
     });
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+async function dispatchAuthoritativeRecheck(
+  listener: ((event: Event) => void) | undefined,
+) {
+  expect(listener).toBeDefined();
+  await act(async () => {
+    listener?.(new Event("session-recheck"));
     await Promise.resolve();
     await Promise.resolve();
   });

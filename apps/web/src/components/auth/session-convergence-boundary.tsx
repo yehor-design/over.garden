@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
@@ -44,6 +44,16 @@ const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
 const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS = 1_000;
 
+type SessionRecheckFence = {
+  epoch: number;
+  ownerUserId: string;
+  pauseHandle: OwnerOfflineActivityPauseHandle | null;
+  composerPreparation: OwnerComposerPreparationHandle | null;
+  status: "preparing" | "ready" | "failed";
+  terminal: "signed_out" | "changed" | null;
+  ready: Promise<void>;
+};
+
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
   const params = new URLSearchParams(window.location.search);
@@ -57,11 +67,14 @@ export function SessionConvergenceBoundary({
   children,
   locale,
   localeControlFallback,
+  authoritativeSessionRead,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
   /** Payload-free control only; authenticated children stay hidden by the gate. */
   localeControlFallback?: React.ReactNode;
+  /** Local visual-fixture seam; production callers use Better Auth directly. */
+  authoritativeSessionRead?: () => Promise<unknown>;
 }) {
   // Mount Better Auth's session atom so its built-in session signal and the
   // product's explicit offline-safe convergence signal are both active.
@@ -88,6 +101,13 @@ export function SessionConvergenceBoundary({
   const operationLastSeenAtRef = useRef(new Map<string, number>());
   const operationPreparationRoundsRef = useRef(new Map<string, string>());
   const terminalOperationIdsRef = useRef(new Map<string, string>());
+  const readAuthoritativeSession = useCallback(
+    () =>
+      authoritativeSessionRead
+        ? authoritativeSessionRead()
+        : authClient.getSession(AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS),
+    [authoritativeSessionRead],
+  );
 
   useEffect(() => {
     let disposed = false;
@@ -105,7 +125,16 @@ export function SessionConvergenceBoundary({
     const terminalOperationIds = terminalOperationIdsRef.current;
     let authoritativeRecheck: Promise<void> | null = null;
     let staleOperationRecheck: Promise<void> | null = null;
+    let sessionRecheckEpoch = 0;
+    const sessionRecheckFences = new Map<number, SessionRecheckFence>();
     const committedOperationsInFlight = new Set<string>();
+    const beginPayloadFreeSessionCheck = () => {
+      if (disposed) return;
+      // The ordinary focus/visibility path is an identity boundary too. Commit
+      // the payload-free checking gate before any asynchronous session or
+      // owner-store work can observe the potentially changed cookie.
+      flushSync(() => setActivityGate("checking"));
+    };
     const updateRemotePreparationFence = () => {
       if (disposed) return;
       setRemotePreparationPending(
@@ -137,10 +166,11 @@ export function SessionConvergenceBoundary({
         // Better Auth's client atom commonly starts as pending with data:null.
         // Only a no-cache authoritative read may establish this document's
         // immutable session baseline.
-        const sessionResult = await readBoundedAuthoritativeSession();
-        baselinePreparedSession = await prepareBoundedSessionSignOut(
-          sessionResult,
+        const sessionResult = await readBoundedAuthoritativeSession(
+          readAuthoritativeSession,
         );
+        baselinePreparedSession =
+          await prepareBoundedSessionSignOut(sessionResult);
         baselineOwnerUserId = readOwnerUserId(sessionResult);
       } catch {
         baselinePreparedSession = undefined;
@@ -188,10 +218,11 @@ export function SessionConvergenceBoundary({
         try {
           // Recovery may prune a bounded orphan fence, so it always requires a
           // new no-cache proof of the exact owner/session generation first.
-          const sessionResult = await readBoundedAuthoritativeSession();
-          const freshPreparedSession = await prepareBoundedSessionSignOut(
-            sessionResult,
+          const sessionResult = await readBoundedAuthoritativeSession(
+            readAuthoritativeSession,
           );
+          const freshPreparedSession =
+            await prepareBoundedSessionSignOut(sessionResult);
           const freshOwnerUserId = readOwnerUserId(sessionResult);
 
           if (freshPreparedSession === null) {
@@ -227,6 +258,10 @@ export function SessionConvergenceBoundary({
             window.location.reload();
             return false;
           }
+          if (sessionRecheckFences.size > 0) {
+            setActivityGate("blocked");
+            return false;
+          }
           setActivityGate(hydration === "ready" ? "ready" : "blocked");
           return hydration === "ready";
         } catch {
@@ -241,18 +276,12 @@ export function SessionConvergenceBoundary({
       void refresh.then(clearRefresh, clearRefresh);
       return refresh;
     };
-    retryHydrationRef.current = () => {
-      setActivityGate("checking");
-      void refreshActivityGate();
-    };
-
     const compareFreshSessionToBaseline = async (sessionResult: unknown) => {
       await baselineReady;
       let freshPreparedSession: PreparedCurrentSessionSignOut | null;
       try {
-        freshPreparedSession = await prepareBoundedSessionSignOut(
-          sessionResult,
-        );
+        freshPreparedSession =
+          await prepareBoundedSessionSignOut(sessionResult);
       } catch {
         return "unavailable" as const;
       }
@@ -314,8 +343,155 @@ export function SessionConvergenceBoundary({
       return true;
     };
 
+    const releaseSessionRecheckFence = async (fence: SessionRecheckFence) => {
+      if (fence.status === "preparing" || fence.terminal) return false;
+      const pauseHandle = fence.pauseHandle;
+      if (pauseHandle) {
+        await pauseHandle.resume();
+        fence.pauseHandle = null;
+      }
+      const composerPreparation = fence.composerPreparation;
+      if (composerPreparation) {
+        await composerPreparation.resume();
+        fence.composerPreparation = null;
+      }
+      sessionRecheckFences.delete(fence.epoch);
+      return true;
+    };
+
+    const releaseReadySessionRecheckFences = async () => {
+      const fences = [...sessionRecheckFences.values()];
+      if (fences.some((fence) => fence.status === "preparing")) {
+        return false;
+      }
+      for (const fence of fences) {
+        try {
+          if (!(await releaseSessionRecheckFence(fence))) return false;
+        } catch {
+          return false;
+        }
+      }
+      return sessionRecheckFences.size === 0;
+    };
+
+    const finalizeSessionRecheckFence = async (
+      fence: SessionRecheckFence,
+      terminal: "signed_out" | "changed",
+    ) => {
+      fence.terminal = terminal;
+      if (fence.status === "preparing") return;
+      const pauseHandle = fence.pauseHandle;
+      if (pauseHandle) {
+        if (terminal === "signed_out") {
+          await pauseHandle.finalizeForSignedOut();
+        } else {
+          await pauseHandle.finalizeForSessionChange();
+        }
+        fence.pauseHandle = null;
+      }
+      // A document replacement owns the terminal composer freeze. Do not
+      // resume it and risk recreating an A-owned draft in this document.
+      sessionRecheckFences.delete(fence.epoch);
+    };
+
+    const finalizeSessionRecheckFences = (
+      terminal: "signed_out" | "changed",
+    ) => {
+      sessionRecheckEpoch += 1;
+      for (const fence of sessionRecheckFences.values()) {
+        fence.terminal = terminal;
+        startBestEffort(() => finalizeSessionRecheckFence(fence, terminal));
+      }
+    };
+
+    const startSessionRecheckFence = (epoch: number) => {
+      if (
+        !baselineOwnerUserId ||
+        !baselinePreparedSession ||
+        isVisualFixtureBrowserRequest()
+      ) {
+        return null;
+      }
+
+      const ownerUserId = baselineOwnerUserId;
+      const sessionGeneration = baselinePreparedSession.binding;
+      let resolveReady!: () => void;
+      let rejectReady!: (error: unknown) => void;
+      const fence: SessionRecheckFence = {
+        epoch,
+        ownerUserId,
+        pauseHandle: null,
+        composerPreparation: null,
+        status: "preparing",
+        terminal: null,
+        ready: new Promise<void>((resolve, reject) => {
+          resolveReady = resolve;
+          rejectReady = reject;
+        }),
+      };
+      sessionRecheckFences.set(epoch, fence);
+
+      // Both calls acquire their in-memory safety fences before their first
+      // await. Abort active sync first so no owner-A request can outlive the
+      // transition into the payload-free React gate.
+      abortOwnerSyncAttempts(ownerUserId);
+      const composerPreparation = prepareOwnerComposerParticipants(ownerUserId);
+      const pauseHandle = pauseOwnerOfflineActivity(ownerUserId, {
+        operationId: createSignOutOperationId(),
+        sessionGeneration,
+      });
+      void Promise.allSettled([composerPreparation, pauseHandle]).then(
+        async ([composerResult, pauseResult]) => {
+          if (
+            composerResult.status !== "fulfilled" ||
+            pauseResult.status !== "fulfilled"
+          ) {
+            // A partial owner fence is still a security boundary. Keep every
+            // successful handle sealed until a later exact-A retry can release
+            // it, or a signed-out/session-change finalizer makes it terminal.
+            fence.composerPreparation =
+              composerResult.status === "fulfilled"
+                ? composerResult.value
+                : null;
+            fence.pauseHandle =
+              pauseResult.status === "fulfilled" ? pauseResult.value : null;
+            fence.status = "failed";
+            rejectReady(new Error("Session recheck owner fence unavailable."));
+            return;
+          }
+
+          fence.composerPreparation = composerResult.value;
+          fence.pauseHandle = pauseResult.value;
+          try {
+            fence.composerPreparation.bindOfflineActivityScope(
+              fence.pauseHandle,
+            );
+            abortOwnerSyncAttempts(ownerUserId);
+            await fence.pauseHandle.waitForSyncDrain();
+            fence.status = "ready";
+            if (fence.terminal) {
+              await finalizeSessionRecheckFence(fence, fence.terminal);
+            }
+            resolveReady();
+          } catch (error) {
+            // A failed drain/bind is not permission to reopen an owner-A
+            // lane. The retained handles may be released only after the next
+            // exact-A confirmation or made terminal by an identity change.
+            fence.status = "failed";
+            rejectReady(error);
+          }
+        },
+      );
+      // The active recheck consumes this promise through a bounded wait. Keep
+      // a handled continuation for a stale operation whose source promise
+      // settles only after that bound has elapsed.
+      void fence.ready.catch(() => undefined);
+      return fence;
+    };
+
     const finalizeSignedOutActivity = async () => {
       await baselineReady;
+      finalizeSessionRecheckFences("signed_out");
       const pauseHandle = pauseHandleRef.current;
       if (!pauseHandle) {
         if (!baselineOwnerUserId || !baselinePreparedSession) {
@@ -334,6 +510,7 @@ export function SessionConvergenceBoundary({
 
     const finalizeChangedSessionActivity = async () => {
       await baselineReady;
+      finalizeSessionRecheckFences("changed");
       if (!baselineOwnerUserId || !baselinePreparedSession) {
         throw new Error("Changed-session owner activity cannot be fenced.");
       }
@@ -428,7 +605,9 @@ export function SessionConvergenceBoundary({
       let composerPreparation: OwnerComposerPreparationHandle | null = null;
       let pauseHandle: OwnerOfflineActivityPauseHandle | null = null;
       try {
-        const sessionResult = await readBoundedAuthoritativeSession();
+        const sessionResult = await readBoundedAuthoritativeSession(
+          readAuthoritativeSession,
+        );
         const sessionComparison =
           await compareFreshSessionToBaseline(sessionResult);
         if (sessionComparison === "signed_out") {
@@ -593,7 +772,9 @@ export function SessionConvergenceBoundary({
       await preparationPromiseRef.current?.catch(() => undefined);
 
       try {
-        const sessionResult = await readBoundedAuthoritativeSession();
+        const sessionResult = await readBoundedAuthoritativeSession(
+          readAuthoritativeSession,
+        );
         const confirmation = classifySessionConfirmation(sessionResult);
         if (confirmation === "signed_out") {
           beginSignedOutTransition();
@@ -624,40 +805,119 @@ export function SessionConvergenceBoundary({
     };
 
     const recheckAuthoritativeSession = () => {
-      if (disposed || authoritativeRecheck) return;
-      authoritativeRecheck = (async () => {
+      if (disposed || authoritativeNavigationStarted || authoritativeRecheck) {
+        return;
+      }
+      const epoch = sessionRecheckEpoch + 1;
+      sessionRecheckEpoch = epoch;
+      beginPayloadFreeSessionCheck();
+      let fence = startSessionRecheckFence(epoch);
+
+      const recheck = (async () => {
+        const isCurrentEpoch = () =>
+          !disposed &&
+          !authoritativeNavigationStarted &&
+          sessionRecheckEpoch === epoch;
         try {
-          const sessionResult = await readBoundedAuthoritativeSession();
+          const sessionResult = await readBoundedAuthoritativeSession(
+            readAuthoritativeSession,
+          );
+          if (!isCurrentEpoch()) return;
           const confirmation = classifySessionConfirmation(sessionResult);
           if (confirmation === "authenticated") {
-            const sessionComparison =
+            let sessionComparison =
               await compareFreshSessionToBaseline(sessionResult);
+            if (!isCurrentEpoch()) return;
+            if (
+              sessionComparison === "unavailable" &&
+              baselinePreparedSession === undefined
+            ) {
+              // The initial read may have timed out before any private tree was
+              // admitted. An explicit retry may establish the first immutable
+              // document baseline, but still acquires the owner fence before
+              // it can render authenticated children.
+              const freshPreparedSession =
+                await prepareBoundedSessionSignOut(sessionResult);
+              const freshOwnerUserId = readOwnerUserId(sessionResult);
+              if (!isCurrentEpoch()) return;
+              if (!freshPreparedSession || !freshOwnerUserId) {
+                setActivityGate("blocked");
+                return;
+              }
+              baselinePreparedSession = freshPreparedSession;
+              baselineOwnerUserId = freshOwnerUserId;
+              sessionComparison = "matches";
+            }
             if (sessionComparison === "changed") {
               beginChangedSessionTransition();
               return;
             }
-            if (sessionComparison !== "matches") return;
-            if (
-              activeOperationIdsRef.current.size === 0 &&
-              committedOperationsInFlight.size === 0 &&
-              (pauseHandleRef.current || composerPreparationRef.current)
-            ) {
-              await resumeRemotePreparation();
-            } else if (activeOperationIdsRef.current.size === 0) {
-              await refreshActivityGate();
+            if (sessionComparison !== "matches") {
+              setActivityGate("blocked");
+              return;
             }
+
+            // A focus that lands while the initial baseline was still loading
+            // had no private tree to seal. Once the exact-A baseline exists,
+            // it still acquires the same owner fence before any admission.
+            fence ??= startSessionRecheckFence(epoch);
+            if (fence) {
+              await requireSettledWithin(
+                () => fence?.ready ?? Promise.resolve(),
+                AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+              );
+            }
+            if (!isCurrentEpoch()) return;
+            if (
+              activeOperationIdsRef.current.size > 0 ||
+              committedOperationsInFlight.size > 0 ||
+              pauseHandleRef.current ||
+              composerPreparationRef.current ||
+              !(await releaseReadySessionRecheckFences())
+            ) {
+              setActivityGate("blocked");
+              return;
+            }
+
+            const ownerUserId = readOwnerUserId(sessionResult);
+            if (!ownerUserId || !baselinePreparedSession) {
+              setActivityGate("blocked");
+              return;
+            }
+            const hydration = isVisualFixtureBrowserRequest()
+              ? ("ready" as const)
+              : await hydrateBoundedOwnerOfflineActivitySession(
+                  ownerUserId,
+                  baselinePreparedSession.binding,
+                );
+            if (!isCurrentEpoch()) return;
+            if (hydration === "document_session_changed") {
+              beginChangedSessionTransition();
+              return;
+            }
+            setActivityGate(hydration === "ready" ? "ready" : "blocked");
             return;
           }
-          if (confirmation !== "signed_out") return;
-          await preparationPromiseRef.current?.catch(() => undefined);
-          beginSignedOutTransition();
+          if (!isCurrentEpoch()) return;
+          if (confirmation === "signed_out") {
+            await preparationPromiseRef.current?.catch(() => undefined);
+            if (isCurrentEpoch()) beginSignedOutTransition();
+            return;
+          }
+          setActivityGate("blocked");
         } catch {
-          // A focus refresh is advisory; an unknown result never claims logout.
+          // A timeout, malformed response, failed owner fence, or stale
+          // continuation remains payload-free until the user explicitly
+          // starts a newer epoch.
+          if (isCurrentEpoch()) setActivityGate("blocked");
         } finally {
           authoritativeRecheck = null;
         }
       })();
+      authoritativeRecheck = recheck;
     };
+
+    retryHydrationRef.current = recheckAuthoritativeSession;
 
     const recheckStaleOperations = () => {
       if (disposed || staleOperationRecheck) return;
@@ -670,7 +930,9 @@ export function SessionConvergenceBoundary({
 
       staleOperationRecheck = (async () => {
         try {
-          const sessionResult = await readBoundedAuthoritativeSession();
+          const sessionResult = await readBoundedAuthoritativeSession(
+            readAuthoritativeSession,
+          );
           const confirmation = classifySessionConfirmation(sessionResult);
           if (confirmation === "signed_out") {
             for (const operationId of staleOperationIds) {
@@ -835,10 +1097,11 @@ export function SessionConvergenceBoundary({
       }
       tabLease?.release();
     };
-  }, [locale]);
+  }, [locale, readAuthoritativeSession]);
 
   if (activityGate !== "ready") {
-    const copy = getTrustSurfaceCopy(locale).signOut;
+    const trustCopy = getTrustSurfaceCopy(locale);
+    const copy = trustCopy.signOut;
     return (
       <div
         data-session-convergence-gate={activityGate}
@@ -854,9 +1117,16 @@ export function SessionConvergenceBoundary({
           </div>
         ) : null}
         {activityGate === "checking" ? (
-          <p role="status" className="text-sm text-muted-foreground">
-            {copy.checking}
-          </p>
+          <>
+            <p role="status" className="text-sm text-muted-foreground">
+              {copy.checking}
+            </p>
+            <SessionConvergenceSafeExits
+              locale={locale}
+              publicHomeLabel={trustCopy.authIntent.returnToReading}
+              reloadLabel={copy.reloadAndRecheck}
+            />
+          </>
         ) : (
           <>
             <p role="alert" className="font-medium text-foreground">
@@ -874,12 +1144,47 @@ export function SessionConvergenceBoundary({
                 {copy.retry}
               </Button>
             </div>
+            <SessionConvergenceSafeExits
+              locale={locale}
+              publicHomeLabel={trustCopy.authIntent.returnToReading}
+              reloadLabel={copy.reloadAndRecheck}
+            />
           </>
         )}
       </div>
     );
   }
   return children;
+}
+
+function SessionConvergenceSafeExits({
+  locale,
+  publicHomeLabel,
+  reloadLabel,
+}: {
+  locale: InterfaceLocale;
+  publicHomeLabel: string;
+  reloadLabel: string;
+}) {
+  return (
+    <div className="flex flex-wrap justify-center gap-2">
+      <a
+        href={localizedPublicRoot(locale)}
+        data-session-convergence-public-home="true"
+        className="inline-flex min-h-9 items-center justify-center rounded-md border border-input px-3 py-2 text-sm font-medium text-foreground underline-offset-4 hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        {publicHomeLabel}
+      </a>
+      <Button
+        type="button"
+        variant="outline"
+        data-session-convergence-reload="true"
+        onClick={() => window.location.reload()}
+      >
+        {reloadLabel}
+      </Button>
+    </div>
+  );
 }
 
 const MAX_TERMINAL_OPERATIONS = 128;
@@ -924,9 +1229,11 @@ function startBestEffort(task: () => Promise<unknown>) {
   }
 }
 
-async function readBoundedAuthoritativeSession() {
+async function readBoundedAuthoritativeSession(
+  readAuthoritativeSession: () => Promise<unknown>,
+) {
   return requireSettledWithin(
-    () => authClient.getSession(AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS),
+    readAuthoritativeSession,
     AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
   );
 }

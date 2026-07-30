@@ -902,6 +902,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/%5F%5Fvisual-fixtures/intent/[scenarioId]/route.ts",
         "src/app/%5F%5Fvisual-fixtures/page.tsx",
+        "src/app/%5F%5Fvisual-fixtures/session-recheck/page.tsx",
         "src/app/skeleton/page.tsx",
       ],
       "internal-fixture",
@@ -1324,6 +1325,15 @@ export const LOCALIZATION_AUTHORED_LITERAL_ALLOWLIST: readonly LocalizationLiter
         ["jsx-text", "Test profiles"],
         ["jsx-text", "EXIF-free generated raster set"],
         ["jsx-text", "Media aspect gallery"],
+      ],
+    ),
+    ...allowExactLiterals(
+      "src/app/%5F%5Fvisual-fixtures/session-recheck/session-recheck-visual-fixture.tsx",
+      "internal-fixture",
+      INTERNAL_FIXTURE_RATIONALE,
+      [
+        ["jsx-text", "Synthetic session recheck fixture"],
+        ["jsx-text", "Synthetic private action"],
       ],
     ),
     ...allowExactLiterals(
