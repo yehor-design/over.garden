@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-07-29",
+  "updatedAt": "2026-07-30",
   "canonicalDoc": "docs/MAINLINE_CLOSEOUT.md",
   "nextAgentCommand": "cd apps/web && pnpm mainline:closeout:check",
   "entries": [
@@ -764,6 +764,32 @@
         "Docs commit b13b6055a8be3644df5e58ede05e621fe8156594 is on main. Vercel production deployment dpl_5cpKEk51yBi28E4bBjZbnDmiXQGJ reached READY for that SHA and owned over.garden / www.",
         "Annotate-don't-delete: dated REVISED/ADD-pointer banners on PRD, ЦА_CANON (pointer-only), and B3; D9 sole PAGE_ARCH pointer; OBJECT_CATEGORY_MODEL Implementation notes OVE-211 landed.",
         "Does not claim code/schema/UI changes, frozen ЦА threshold edits, SCAFFOLD three-kind rewrite, or OVE-186 Done."
+      ]
+    },
+    {
+      "issueId": "OVE-214",
+      "title": "P0 — Bounded session and locale convergence: stalled storage never traps the user behind a wait modal",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "63a4e7df54e2162466dee7cfb3cf525c1408628b",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-214/p0-bounded-session-and-locale-convergence-stalled-storage-never-traps",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/7pzKYUwgDZsponohTZmQJN2pU93E",
+      "githubDeploymentId": 5672291466,
+      "githubDeploymentStatusId": 16129739082,
+      "completedAt": "2026-07-30",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/lib/interface-locale-change-coordinator.test.ts src/lib/offline/owner-composer-locale-change-participant.test.ts src/components/public/language-switcher.test.tsx src/components/auth/session-convergence-boundary.test.tsx",
+        "cd apps/web && pnpm test:a11y",
+        "cd apps/web && pnpm smoke:session-locale-convergence -- --environment production --confirm-environment production --base-url https://over.garden --expected-commit 63a4e7df54e2162466dee7cfb3cf525c1408628b",
+        "git merge-base --is-ancestor b0b111767 origin/main",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "Behavior commit b0b111767 and the deterministic privacy and production-smoke follow-ups 369d0383a05d9228956964e8a075a6975aad0139 and 63a4e7df54e2162466dee7cfb3cf525c1408628b are contained in main. The canonical coordinator now owns one abortable bounded locale operation, and session convergence fences stale hydration/recheck completions without replacing sign-out ownership.",
+        "Exact-main CI run 30530522406 and matching-image run 30530522469 passed. Vercel production deployment dpl_7pzKYUwgDZsponohTZmQJN2pU93E reached READY for 63a4e7df54e2162466dee7cfb3cf525c1408628b and owns over.garden plus www.over.garden; authenticated GitHub deployment 5672291466 / status 16129739082 recorded Production success.",
+        "The read-only public production smoke passed against the canonical alias and exact deployment SHA. A Safari Technology Preview 27.0 WebDriver keyboard trace completed the public bg-to-ru handoff with the final shell language set to ru and the interface-language control present and enabled inside the three-second recovery budget.",
+        "No session material, stable user identity, draft or queue payload, cookie, request body, secret, raw request metadata, media key, journal text, precise location, or individual timing sample is included in this evidence. OVE-236 may consume only this terminal bounded protocol after its own re-audit and authenticated Linear blocker read-back."
       ]
     },
     {
