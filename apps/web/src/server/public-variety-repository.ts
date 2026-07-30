@@ -10,7 +10,11 @@ import type {
   LocationVisibility,
   VarietyState,
 } from "@/db/schema";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { localizedPublicJournalEvidencePath } from "@/lib/garden/public-paths";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { getCoarseRegionLabel } from "@/lib/garden/regions";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
@@ -89,6 +93,7 @@ export async function getPublicVarietyPage(
   publicSlug: string,
   expectedCatalogKind?: CatalogKind,
   executor: QueryExecutor = db,
+  locale: PublicLocale = DEFAULT_PUBLIC_LOCALE,
 ): Promise<PublicVarietyPage | null> {
   const slug = normalizeCatalogPublicSlug(publicSlug);
   if (!slug) return null;
@@ -157,7 +162,10 @@ export async function getPublicVarietyPage(
       title: entry.entryTitle,
       body: entry.entryBody,
       entryDate: entry.entryDate,
-      publicPath: publicJournalEntryPath(entry.entryPublicSlug),
+      publicPath: localizedPublicJournalEvidencePath(
+        locale,
+        entry.entryPublicSlug,
+      ),
       plantObjectDisplayName: entry.objectDisplayName,
       varietyText: entry.varietyText,
       safeLocationLabel: getPublicLocationLabel(entry),

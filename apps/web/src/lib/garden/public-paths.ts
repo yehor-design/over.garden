@@ -5,6 +5,18 @@ export function publicJournalEntryPath(publicSlug: string): string {
   return `/journal/${encodeURIComponent(publicSlug)}`;
 }
 
+/**
+ * Interactive public journal evidence must preserve the already-resolved
+ * interface locale. Keep the canonical base path above locale-neutral for
+ * metadata and search documents.
+ */
+export function localizedPublicJournalEvidencePath(
+  locale: PublicLocale,
+  publicSlug: string,
+): string {
+  return localizedPath(locale, publicJournalEntryPath(publicSlug));
+}
+
 export function publicVarietyPath(publicSlug: string): string {
   return publicCatalogEvidencePath("plant_variety", publicSlug);
 }

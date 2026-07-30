@@ -47,6 +47,17 @@ matching-image run `30506384967`, and Vercel production deployment
 relations are deliberately not duplicated here: they must be obtained by the
 authenticated read-back before selecting OVE-237, OVE-184, or OVE-222.
 
+On 2026-07-30, OVE-222 established one typed locale-aware journal-evidence URL
+owner for every selected-locale public and social projection. Ukrainian journal
+evidence remains unprefixed, while Bulgarian and Russian evidence is rendered
+directly under `/bg/journal/...` and `/ru/journal/...`; the locale-neutral base
+path remains the canonical owner for metadata and search documents. The scope
+does not change Ukraine's uk-only market fence, Bulgarian bg/ru policy,
+same-path catalog or passport URLs, public eligibility, lifecycle, indexing, or
+the OVE-238 return-path firewall. Its terminal Linear status and production
+receipt must be read through the authenticated connector before selecting the
+next dependent work.
+
 All 32 OVE-213 through OVE-244 descriptions predate the v1 contract. Their
 content informed the standard, but no issue in the range is ready for assignment
 or `In Progress` by provenance alone. Before execution, re-audit and materially

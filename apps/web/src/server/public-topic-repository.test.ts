@@ -20,6 +20,7 @@ import {
   buildPublicTopicListQuery,
   buildPublicTopicLookupQuery,
   buildPublicTopicStatsListQuery,
+  serializePublicTopicEntries,
   serializePublicKnowledgeTopics,
 } from "./public-topic-repository";
 
@@ -44,6 +45,35 @@ class TestPostgresDialect implements Dialect {
 const testDb = new Kysely<Database>({ dialect: new TestPostgresDialect() });
 
 describe("public topic repository query contracts", () => {
+  it("serializes public topic evidence in the selected locale only", () => {
+    expect(
+      serializePublicTopicEntries(
+        [
+          {
+            id: "00000000-0000-4000-8000-000000000101",
+            title: "Care check",
+            entryDate: "2026-07-30",
+            publicSlug: "care-check",
+          },
+          {
+            id: "00000000-0000-4000-8000-000000000102",
+            title: "Unavailable",
+            entryDate: "2026-07-30",
+            publicSlug: null,
+          },
+        ],
+        "bg",
+      ),
+    ).toEqual([
+      {
+        id: "00000000-0000-4000-8000-000000000101",
+        title: "Care check",
+        entryDate: "2026-07-30",
+        publicPath: "/bg/journal/care-check",
+      },
+    ]);
+  });
+
   it("looks up only curated topic surfaces", () => {
     const compiled = buildPublicTopicLookupQuery(testDb, "plants").compile();
 

@@ -9,6 +9,7 @@ import {
   pilotInviteJoinUrl,
   publicLineageObjectPath,
   publicCatalogEvidencePath,
+  localizedPublicJournalEvidencePath,
 } from "./public-paths";
 
 describe("garden public paths", () => {
@@ -80,6 +81,18 @@ describe("garden public paths", () => {
     );
     expect(publicCatalogEvidencePath("breed", "carpathian-bee")).toBe(
       "/breed/carpathian-bee",
+    );
+  });
+
+  it("keeps interactive journal evidence in the resolved public locale", () => {
+    expect(localizedPublicJournalEvidencePath("uk", "demo entry")).toBe(
+      "/journal/demo%20entry",
+    );
+    expect(localizedPublicJournalEvidencePath("bg", "demo entry")).toBe(
+      "/bg/journal/demo%20entry",
+    );
+    expect(localizedPublicJournalEvidencePath("ru", "demo entry")).toBe(
+      "/ru/journal/demo%20entry",
     );
   });
 

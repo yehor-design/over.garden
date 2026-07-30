@@ -402,7 +402,7 @@ describe("public journal directory serialization", () => {
           label: "Відновлення після стресу",
         },
       ],
-      "uk",
+      "ru",
       {
         query: "холод",
         kind: "all",
@@ -420,7 +420,7 @@ describe("public journal directory serialization", () => {
     expect(page.totalCount).toBe(2);
     expect(page.cards[0]).toMatchObject({
       title: "Після холодної ночі",
-      publicPath: "/journal/after-cold-night",
+      publicPath: "/ru/journal/after-cold-night",
       safeRegionCode: "UA-30",
       object: {
         displayName: "Черрі біля стінки",
@@ -432,7 +432,7 @@ describe("public journal directory serialization", () => {
       },
       author: {
         displayName: "Олена",
-        profilePath: "/@demo_olena",
+        profilePath: "/ru/@demo_olena",
       },
       topics: [
         {

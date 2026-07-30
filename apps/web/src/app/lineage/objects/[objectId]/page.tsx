@@ -60,9 +60,10 @@ const EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS: Record<
   string | string[] | undefined
 > = {};
 
-const getCachedPublicObjectPassportPage = cache((objectId: string) =>
-  getPublicObjectPassportPage(objectId),
-);
+const getCachedPublicObjectPassportPage = cache((
+  objectId: string,
+  locale: InterfaceLocale,
+) => getPublicObjectPassportPage(objectId, undefined, locale));
 
 const getCachedPublicLineageGraphPage = cache((objectId: string) =>
   getPublicLineageGraphPage(objectId),
@@ -76,7 +77,7 @@ export async function generateMetadata({
     getRequestInterfaceLocale(),
   ]);
   const copy = getPublicSurfaceCopy(locale);
-  const page = await getCachedPublicObjectPassportPage(objectId);
+  const page = await getCachedPublicObjectPassportPage(objectId, locale);
   const indexState = evaluatePublicSurfaceIndexability({
     kind: page ? "object_passport" : "missing",
   });
@@ -107,7 +108,7 @@ export default async function PublicLineageObjectRoute({
     searchParams ?? Promise.resolve(EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS),
     getRequestInterfaceLocale(),
   ]);
-  const passport = await getCachedPublicObjectPassportPage(objectId);
+  const passport = await getCachedPublicObjectPassportPage(objectId, locale);
 
   if (!passport) notFound();
 

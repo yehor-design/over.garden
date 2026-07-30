@@ -39,6 +39,7 @@ export async function generateMetadata({
   );
   if (visual.mode === "unavailable") return missingTopicMetadata(localeParam);
   const topic = await getPublicTopicAggregationPage(slug, {
+    locale: localeParam,
     restrictToEntryIds: visual.publicEntryIds,
   }).catch(() => null);
   if (!topic) return missingTopicMetadata(localeParam);
@@ -84,6 +85,7 @@ export default async function TopicRoute({
   ]);
   if (visual.mode === "unavailable") notFound();
   const topic = await getPublicTopicAggregationPage(slug, {
+    locale: localeParam,
     restrictToEntryIds: visual.publicEntryIds,
   }).catch(() => null);
   if (!topic) notFound();

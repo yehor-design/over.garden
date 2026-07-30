@@ -95,6 +95,8 @@ export default async function LocalizedBookmarksRoute({
   const page = parsePage(firstParam(query.page));
   const allItems = await listEngagementBookmarks(
     scopedToUser(userId, visualScenario ? null : getSessionId(session)),
+    undefined,
+    localeParam,
   );
   const filtered = allItems.filter((item) =>
     filter === "all" ? true : item.target.kind === filter,

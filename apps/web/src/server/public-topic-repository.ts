@@ -6,7 +6,11 @@ import { db } from "@/db";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import { normalizePublicObjectKindFilter } from "@/lib/garden/catalog-object-kind";
-import { publicJournalEntryPath } from "@/lib/garden/public-paths";
+import { localizedPublicJournalEvidencePath } from "@/lib/garden/public-paths";
+import {
+  DEFAULT_PUBLIC_LOCALE,
+  type PublicLocale,
+} from "@/lib/public-localization";
 import { normalizePublicJournalDirectoryEntryIds } from "@/server/public-journal-directory-query";
 import {
   evaluatePublicSurfaceIndexability,
@@ -43,6 +47,7 @@ export interface PublicKnowledgeTopic {
 
 export interface PublicTopicRepositoryOptions {
   executor?: QueryExecutor;
+  locale?: PublicLocale;
   restrictToEntryIds?: readonly string[] | null;
   restrictToTopicSlugs?: readonly string[] | null;
 }
@@ -63,6 +68,13 @@ interface TopicKindRow {
   slug: string;
   kind: string;
   count: number | string | bigint;
+}
+
+export interface PublicTopicEntryRow {
+  id: string;
+  title: string;
+  entryDate: Date | string;
+  publicSlug: string | null;
 }
 
 export async function getPublicTopicAggregationPage(
@@ -102,17 +114,9 @@ export async function getPublicTopicAggregationPage(
       aggregateBodyLength,
       topicTrust: "curated",
     }),
-    entries: entries.flatMap((entry) =>
-      entry.publicSlug
-        ? [
-            {
-              id: entry.id,
-              title: entry.title,
-              entryDate: entry.entryDate,
-              publicPath: publicJournalEntryPath(entry.publicSlug),
-            },
-          ]
-        : [],
+    entries: serializePublicTopicEntries(
+      entries,
+      options.locale ?? DEFAULT_PUBLIC_LOCALE,
     ),
   };
 }
@@ -235,6 +239,27 @@ export function buildPublicTopicAggregationEntriesQuery(
     .orderBy("journal_entries.published_at", "desc")
     .orderBy("journal_entries.id", "asc")
     .limit(12);
+}
+
+export function serializePublicTopicEntries(
+  rows: readonly PublicTopicEntryRow[],
+  locale: PublicLocale,
+): PublicTopicEntry[] {
+  return rows.flatMap((entry) =>
+    entry.publicSlug
+      ? [
+          {
+            id: entry.id,
+            title: entry.title,
+            entryDate: entry.entryDate,
+            publicPath: localizedPublicJournalEvidencePath(
+              locale,
+              entry.publicSlug,
+            ),
+          },
+        ]
+      : [],
+  );
 }
 
 export function serializePublicKnowledgeTopics(

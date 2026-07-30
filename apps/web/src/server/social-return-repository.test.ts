@@ -74,6 +74,40 @@ function expectMutualBlockExclusion(sql: string, actorRef: string) {
 }
 
 describe("OVE-183 social return read models", () => {
+  it("keeps followed journal evidence in the selected locale", async () => {
+    const repository = await loadRepository();
+    const page = repository.serializeFollowedFeedPage(
+      [
+        {
+          entryId: "00000000-0000-4000-8000-000000000201",
+          publicSlug: "late-summer-check",
+          title: "Late summer check",
+          body: "The leaves stayed firm after a hot day.",
+          entryDate: "2026-07-30",
+          publishedAt: "2026-07-30T08:00:00.000Z",
+          ownerHandle: "green_thumb",
+          ownerDisplayName: "Green Thumb",
+          objectId: "00000000-0000-4000-8000-000000000202",
+          objectDisplayName: "Balcony tomato",
+          objectKind: "plant",
+          varietyText: "Red Cherry",
+          catalogKind: "plant_variety",
+          followedByProfile: true,
+          followedByObject: false,
+          followedByTopic: false,
+          followedByLineage: false,
+        },
+      ],
+      12,
+      "ru",
+    );
+
+    expect(page.items[0]).toMatchObject({
+      href: "/ru/journal/late-summer-check",
+      author: { href: "/ru/@green_thumb" },
+    });
+  });
+
   it("projects one chronological public-only feed across profile, object, topic, and lineage follows", async () => {
     const repository = await loadRepository();
     expect(repository.buildFollowedFeedCandidatesQuery).toBeTypeOf("function");

@@ -12,7 +12,7 @@ import type {
 } from "@/db/schema";
 import {
   publicCatalogEvidencePath,
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
 } from "@/lib/garden/public-paths";
 import type { PublicLocale } from "@/lib/public-localization";
@@ -276,7 +276,7 @@ export function buildPublicObjectCatalogGroupsQuery(
 
 export function serializePublicObjectCatalogPage(
   rows: PublicObjectCatalogGroupRow[],
-  _locale: PublicLocale,
+  locale: PublicLocale,
   request: PublicObjectCatalogRequest,
   pageSize = PUBLIC_OBJECT_CATALOG_PAGE_SIZE,
   publicMediaUrl: (derivativeKey: string) => string = getPublicDerivativeUrl,
@@ -285,7 +285,7 @@ export function serializePublicObjectCatalogPage(
   const visibleRows = rows.slice(0, normalizedPageSize);
   const totalCount = Number(rows[0]?.totalCount ?? 0);
   const cards = visibleRows.map((row) =>
-    serializePublicObjectCatalogCard(row, publicMediaUrl),
+    serializePublicObjectCatalogCard(row, locale, publicMediaUrl),
   );
 
   return {
@@ -302,6 +302,7 @@ export function serializePublicObjectCatalogPage(
 
 function serializePublicObjectCatalogCard(
   row: PublicObjectCatalogGroupRow,
+  locale: PublicLocale,
   publicMediaUrl: (derivativeKey: string) => string,
 ): PublicObjectCatalogCard {
   const objectKind = normalizePublicObjectKind(row.objectKind);
@@ -352,7 +353,10 @@ function serializePublicObjectCatalogCard(
     },
     latestJournal: {
       title: row.latestEntryTitle,
-      path: publicJournalEntryPath(row.latestEntryPublicSlug),
+      path: localizedPublicJournalEvidencePath(
+        locale,
+        row.latestEntryPublicSlug,
+      ),
       entryDate: row.latestEntryDate,
     },
     mediaPublicUrl: row.mediaDerivativeKey

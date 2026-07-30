@@ -12,7 +12,7 @@ import type {
 } from "@/db/schema";
 import {
   publicLineageObjectPath,
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
 import {
@@ -592,6 +592,7 @@ export function normalizePublicHandleInput(
 }
 
 export function serializePublicProfilePage(input: {
+  locale?: PublicLocale;
   profile: Pick<
     PublicProfileInternalRow,
     "userId" | "handle" | "displayName" | "avatarUrl"
@@ -617,7 +618,10 @@ export function serializePublicProfilePage(input: {
         ? [
             {
               kind: "journal_entry" as const,
-              href: publicJournalEntryPath(link.publicSlug),
+              href: localizedPublicJournalEvidencePath(
+                input.locale ?? DEFAULT_PUBLIC_LOCALE,
+                link.publicSlug,
+              ),
               entryDate: link.entryDate,
             },
           ]
@@ -702,7 +706,10 @@ export function serializePublicProfileEvidencePage(input: {
           bodyPreview: boundedBodyPreview(row.body),
           entryDate: row.entryDate,
           publishedAt: row.publishedAt,
-          publicPath: publicJournalEntryPath(row.publicSlug),
+          publicPath: localizedPublicJournalEvidencePath(
+            input.locale,
+            row.publicSlug,
+          ),
           context: isObject
             ? {
                 kind: "object" as const,

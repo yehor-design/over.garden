@@ -5,7 +5,7 @@ import { sql, type Kysely, type Transaction } from "kysely";
 import { db } from "@/db";
 import type { Database, PlantObjectKind } from "@/db/schema";
 import {
-  publicJournalEntryPath,
+  localizedPublicJournalEvidencePath,
   publicLineageObjectPath,
   publicProfilePath,
 } from "@/lib/garden/public-paths";
@@ -519,7 +519,7 @@ export function serializePublicFeedPage(input: {
       excerpt: buildPublicFeedExcerpt(row.body),
       entryDate: row.entryDate,
       publishedAt: row.publishedAt,
-      publicPath: publicJournalEntryPath(row.publicSlug),
+      publicPath: localizedPublicJournalEvidencePath(input.locale, row.publicSlug),
       object: {
         id: row.objectId,
         displayName: row.objectDisplayName,
