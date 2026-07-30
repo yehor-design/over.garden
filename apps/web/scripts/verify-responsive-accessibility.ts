@@ -149,6 +149,7 @@ interface AuditSummary {
       globalError: boolean;
       globalErrorMetadataFallback: boolean;
       safeFlushFailure: boolean;
+      stalledSafeFlushRecovery: boolean;
       dirtyCancel: boolean;
       dirtyDiscard: boolean;
       inFlightBlocked: boolean;
@@ -3096,6 +3097,86 @@ async function runSafeFlushFailureLocalizationCheck(
   }
 }
 
+async function runStalledSafeFlushRecoveryCheck(
+  browser: Browser,
+  baseUrl: URL,
+) {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+  let monitorRequests = false;
+  let preferenceRequests = 0;
+  let documentRequests = 0;
+  page.on("request", (request) => {
+    if (!monitorRequests) return;
+    if (
+      new URL(request.url()).pathname === INTERFACE_LOCALE_PREFERENCE_ENDPOINT
+    ) {
+      preferenceRequests += 1;
+    }
+    if (
+      request.isNavigationRequest() &&
+      request.resourceType() === "document"
+    ) {
+      documentRequests += 1;
+    }
+  });
+
+  try {
+    await openLocalizationInteractionCase({
+      context,
+      page,
+      baseUrl,
+      route: "/garden?visualLocaleState=safe-flush-timeout",
+      routeMode: "same-path-preference",
+      marketCase: "bulgaria-bg-exactly-one-control",
+    });
+    if (
+      (await page
+        .locator('[data-interface-safe-flush-timeout-fixture="true"]')
+        .count()) !== 1
+    ) {
+      throw new Error("Stalled safe-flush fixture was not registered.");
+    }
+
+    monitorRequests = true;
+    const { trigger } = await openInterfaceLanguageMenu(page);
+    const startedAt = performance.now();
+    await interfaceLanguageMenuItem(page, "ru").click();
+    const failureMessage = getInterfaceCopy("bg").shell.languageFlushFailure;
+    await page
+      .locator('[role="status"]')
+      .filter({ hasText: failureMessage })
+      .waitFor({ state: "visible", timeout: 3_500 });
+    const elapsedMs = Math.round(performance.now() - startedAt);
+    const brand = page.locator('[data-site-shell-brand="true"]');
+    const failures = [
+      ...(await localizationControlFailures(
+        page,
+        "site-shell-interface-language-control",
+        1,
+      )),
+    ];
+    await brand.click({ trial: true, timeout: 1_000 });
+
+    if (
+      elapsedMs > 3_000 ||
+      preferenceRequests !== 0 ||
+      documentRequests !== 0 ||
+      !(await trigger.isEnabled()) ||
+      (await page.getByRole("alertdialog").count()) !== 0 ||
+      failures.length > 0
+    ) {
+      throw new Error(
+        `Stalled safe-flush did not recover within the canonical budget: ${failures.join(",")}`,
+      );
+    }
+  } finally {
+    await context.close();
+  }
+}
+
 async function runMixedLocaleTopicCheck(browser: Browser, baseUrl: URL) {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -3656,6 +3737,8 @@ async function runInteractions(
   summary.localization.interactionProofs.serverActionPendingFence = true;
   await runSafeFlushFailureLocalizationCheck(browser, baseUrl);
   summary.localization.interactionProofs.safeFlushFailure = true;
+  await runStalledSafeFlushRecoveryCheck(browser, baseUrl);
+  summary.localization.interactionProofs.stalledSafeFlushRecovery = true;
   await runGlobalErrorLocalizationCheck(browser, baseUrl);
   summary.localization.interactionProofs.globalError = true;
   await runGlobalErrorMetadataFallbackCheck(browser, baseUrl);
@@ -3742,6 +3825,7 @@ async function main(): Promise<void> {
         globalError: false,
         globalErrorMetadataFallback: false,
         safeFlushFailure: false,
+        stalledSafeFlushRecovery: false,
         dirtyCancel: false,
         dirtyDiscard: false,
         inFlightBlocked: false,

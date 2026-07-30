@@ -32,6 +32,7 @@ import {
 } from "@/lib/interface-localization";
 import {
   interfaceLocaleChangeCoordinator,
+  INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS,
   type InterfaceLocaleChangeCommitGateResult,
   type InterfaceLocaleChangePreparationResult,
   type InterfaceLocaleChangeRecoveryHandle,
@@ -89,9 +90,15 @@ export function InterfaceLanguageControl({
   const [recovery, setRecovery] =
     useState<InterfaceLocaleChangeRecoveryHandle | null>(null);
   const [retryingRecovery, setRetryingRecovery] = useState(false);
+  const [cancellingTransition, setCancellingTransition] = useState(false);
   const statusId = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const transitionEpochRef = useRef(0);
+  const transitionAbortRef = useRef<AbortController | null>(null);
+  const transitionPreparationRef =
+    useRef<PreparedInterfaceLocaleChange | null>(null);
+  const preferenceMayHaveChangedRef = useRef(false);
 
   useEffect(
     () => interfaceLocaleChangeCoordinator.subscribe(setCoordinatorState),
@@ -146,6 +153,12 @@ export function InterfaceLanguageControl({
   const navigate = useCallback(
     async (targetLocale: PublicLocale, discardConfirmed = false) => {
       if (targetLocale === locale || disabled) return;
+      const transitionEpoch = transitionEpochRef.current + 1;
+      transitionEpochRef.current = transitionEpoch;
+      const isCurrentTransition = () =>
+        transitionEpochRef.current === transitionEpoch;
+      const abortController = new AbortController();
+      transitionAbortRef.current = abortController;
       const sourceLocation = readInterfaceLocationSnapshot();
       if (sourceLocation.pathname !== activePathname) {
         if (discardConfirmed) {
@@ -156,12 +169,14 @@ export function InterfaceLanguageControl({
       }
       setFeedback(null);
       setRecovery(null);
+      setCancellingTransition(false);
       setSwitching(true);
       let preparation: PreparedInterfaceLocaleChange | null = null;
       let replacementHandedOff = false;
       let preferenceMayHaveChanged = false;
       try {
         const result = await prepare(discardConfirmed);
+        if (!isCurrentTransition()) return;
         if (result.status === "confirmation-required") {
           if (!isCurrentInterfaceLocation(sourceLocation)) {
             setConfirmationCommitted(false);
@@ -178,6 +193,7 @@ export function InterfaceLanguageControl({
           return;
         }
         preparation = result.preparation;
+        transitionPreparationRef.current = preparation;
 
         const stopStaleCommit = async (
           gate: Exclude<
@@ -274,7 +290,10 @@ export function InterfaceLanguageControl({
           if (targetUrl.origin !== window.location.origin) {
             throw new Error("Cross-origin locale target rejected.");
           }
-          await preparation.sealForDocumentReplacement();
+          await settleLocaleTransitionPhase(
+            preparation.sealForDocumentReplacement(),
+          );
+          if (!isCurrentTransition()) return;
           if (!isCurrentInterfaceLocation(sourceLocation)) {
             await stopChangedLocation(false);
             return;
@@ -297,7 +316,10 @@ export function InterfaceLanguageControl({
         if (routePolicy.mode !== "same-path-preference") {
           throw new Error("Interface locale changes are disabled here.");
         }
-        await preparation.sealForDocumentReplacement();
+        await settleLocaleTransitionPhase(
+          preparation.sealForDocumentReplacement(),
+        );
+        if (!isCurrentTransition()) return;
         if (!isCurrentInterfaceLocation(sourceLocation)) {
           await stopChangedLocation(false);
           return;
@@ -308,7 +330,12 @@ export function InterfaceLanguageControl({
           return;
         }
         preferenceMayHaveChanged = true;
-        const response = await postInterfaceLocalePreference(targetLocale);
+        preferenceMayHaveChangedRef.current = true;
+        const response = await postInterfaceLocalePreference(
+          targetLocale,
+          abortController.signal,
+        );
+        if (!isCurrentTransition()) return;
         if (response.status !== 204 || response.redirected) {
           throw new Error("Locale preference request was not committed.");
         }
@@ -332,6 +359,7 @@ export function InterfaceLanguageControl({
           onCanceled: () => recoverPreferenceHandoff(rollbackRecovery),
         });
       } catch {
+        if (!isCurrentTransition()) return;
         if (preparation?.isActive()) {
           if (preferenceMayHaveChanged) {
             const rollbackRecovery = createLocalePreferenceRollbackRecovery(
@@ -345,15 +373,24 @@ export function InterfaceLanguageControl({
               preferenceMayHaveChanged = false;
             }
           } else {
-            const recoveryResult = await preparation.resume();
-            if (recoveryResult === "retry-required") setRecovery(preparation);
+            // A failed or timed-out handoff must never wait for another
+            // durable flush before returning control to the gardener. The
+            // coordinator cancels through the synchronous recovery fence and
+            // retains a retry handle only if that bounded release fails.
+            const recovery = await interfaceLocaleChangeCoordinator.cancel();
+            if (recovery?.isActive()) setRecovery(recovery);
           }
         }
         setConfirmationCommitted(false);
         setConfirmationTarget(null);
         setFeedback("flush-failed");
       } finally {
-        if (!replacementHandedOff) setSwitching(false);
+        if (!replacementHandedOff && isCurrentTransition()) {
+          transitionAbortRef.current = null;
+          transitionPreparationRef.current = null;
+          preferenceMayHaveChangedRef.current = false;
+          setSwitching(false);
+        }
       }
     },
     [activePathname, disabled, locale, prepare, routePolicy.mode],
@@ -378,6 +415,33 @@ export function InterfaceLanguageControl({
     if (result === "resumed") setRecovery(null);
     setRetryingRecovery(false);
   }, [recovery, retryingRecovery]);
+
+  const cancelTransition = useCallback(async () => {
+    if (!switching || cancellingTransition) return;
+    setCancellingTransition(true);
+    transitionEpochRef.current += 1;
+    transitionAbortRef.current?.abort();
+    transitionAbortRef.current = null;
+    const preparation = transitionPreparationRef.current;
+    let nextRecovery: InterfaceLocaleChangeRecoveryHandle | null = null;
+    if (preferenceMayHaveChangedRef.current && preparation?.isActive()) {
+      // A request aborted after leaving the browser can have reached the
+      // server. Keep the handle for explicit guarded rollback rather than
+      // treating cancellation as proof that the preference stayed unchanged.
+      nextRecovery = createLocalePreferenceRollbackRecovery(preparation, locale);
+    } else {
+      nextRecovery = await interfaceLocaleChangeCoordinator.cancel();
+    }
+    transitionPreparationRef.current = null;
+    preferenceMayHaveChangedRef.current = false;
+    setRecovery(nextRecovery);
+    setFeedback(nextRecovery ? "flush-failed" : null);
+    setConfirmationCommitted(false);
+    setConfirmationTarget(null);
+    setSwitching(false);
+    setCancellingTransition(false);
+    triggerRef.current?.focus();
+  }, [cancellingTransition, locale, switching]);
 
   if (
     market !== "bulgaria" ||
@@ -482,12 +546,24 @@ export function InterfaceLanguageControl({
               {copy.retry}
             </Button>
           ) : null}
+          {switching ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={cancellingTransition}
+              data-interface-language-cancel="true"
+              onClick={() => void cancelTransition()}
+            >
+              {copy.languageDiscardCancel}
+            </Button>
+          ) : null}
         </div>
       ) : null}
       <AlertDialog
-        open={confirmationTarget !== null || switching || recovery !== null}
+        open={confirmationTarget !== null}
         onOpenChange={(open) => {
-          if (!open && !confirmationCommitted && !switching && !recovery) {
+          if (!open && !confirmationCommitted) {
             cancelConfirmation();
           }
         }}
@@ -495,28 +571,9 @@ export function InterfaceLanguageControl({
         <AlertDialogContent
           initialFocus={confirmationTarget ? cancelRef : true}
           finalFocus={triggerRef}
-          aria-busy={
-            confirmationCommitted || switching || retryingRecovery || undefined
-          }
+          aria-busy={confirmationCommitted || undefined}
         >
-          {recovery ? (
-            <>
-              <AlertDialogTitle>{copy.languageFlushFailure}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {copy.languageFlushFailure}
-              </AlertDialogDescription>
-              <div className="mt-5 flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={retryingRecovery}
-                  onClick={() => void retryRecovery()}
-                >
-                  {copy.retry}
-                </Button>
-              </div>
-            </>
-          ) : confirmationTarget ? (
+          {confirmationTarget ? (
             <>
               <AlertDialogTitle>{copy.languageDiscardTitle}</AlertDialogTitle>
               <AlertDialogDescription>
@@ -540,16 +597,7 @@ export function InterfaceLanguageControl({
                 </Button>
               </div>
             </>
-          ) : (
-            <>
-              <AlertDialogTitle>
-                {copy.languageSwitchingPending}
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                {copy.languageSwitchingPending}
-              </AlertDialogDescription>
-            </>
-          )}
+          ) : null}
         </AlertDialogContent>
       </AlertDialog>
     </nav>
@@ -626,10 +674,39 @@ function emptyBrowserSearch() {
   return "";
 }
 
-const INTERFACE_LOCALE_PREFERENCE_TIMEOUT_MS = 10_000;
+const INTERFACE_LOCALE_PREFERENCE_TIMEOUT_MS =
+  INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS;
 
-async function postInterfaceLocalePreference(locale: PublicLocale) {
+class LocaleTransitionPhaseTimeoutError extends Error {
+  constructor() {
+    super("Locale transition phase timed out.");
+  }
+}
+
+async function settleLocaleTransitionPhase(operation: Promise<void>) {
+  let timeoutId: number | undefined;
+  try {
+    await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeoutId = window.setTimeout(
+          () => reject(new LocaleTransitionPhaseTimeoutError()),
+          INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+}
+
+async function postInterfaceLocalePreference(
+  locale: PublicLocale,
+  parentSignal?: AbortSignal,
+) {
   const controller = new AbortController();
+  const abortFromParent = () => controller.abort();
+  parentSignal?.addEventListener("abort", abortFromParent, { once: true });
   const timeoutId = window.setTimeout(
     () => controller.abort(),
     INTERFACE_LOCALE_PREFERENCE_TIMEOUT_MS,
@@ -648,6 +725,7 @@ async function postInterfaceLocalePreference(locale: PublicLocale) {
     });
   } finally {
     window.clearTimeout(timeoutId);
+    parentSignal?.removeEventListener("abort", abortFromParent);
   }
 }
 
@@ -688,7 +766,8 @@ function createLocalePreferenceRollbackRecovery(
   };
 }
 
-const DOCUMENT_REPLACEMENT_FALLBACK_MS = 10_000;
+const DOCUMENT_REPLACEMENT_FALLBACK_MS =
+  INTERFACE_LOCALE_CHANGE_PHASE_TIMEOUT_MS;
 
 type NoReferrerDocumentReplacementInput = {
   preparation: PreparedInterfaceLocaleChange;

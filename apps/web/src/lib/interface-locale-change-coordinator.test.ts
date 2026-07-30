@@ -341,6 +341,46 @@ describe("interface locale change coordinator", () => {
     expect(coordinator.readState().phase).toBe("idle");
   });
 
+  it("bounds a never-settling started flush and cancels its acquired fence", async () => {
+    vi.useFakeTimers();
+    const coordinator = createInterfaceLocaleChangeCoordinator();
+    let resolveReady: (() => void) | undefined;
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve;
+    });
+    const cancel = vi.fn(async () => undefined);
+    let aborted = false;
+    coordinator.register({
+      id: "owner-composer-drafts",
+      kind: "safe-flush",
+      prepare: ({ signal }) => {
+        signal.addEventListener("abort", () => {
+          aborted = true;
+        });
+        return { ready, cancel, resume: async () => undefined };
+      },
+    });
+
+    const resultPromise = coordinator.prepare();
+    await vi.advanceTimersByTimeAsync(3_000);
+    const result = await resultPromise;
+
+    expect(result).toMatchObject({
+      status: "failed",
+      reason: "safe-flush-failed",
+      participantIds: ["owner-composer-drafts"],
+      recovery: null,
+    });
+    expect(aborted).toBe(true);
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(coordinator.readState().phase).toBe("idle");
+
+    resolveReady?.();
+    await Promise.resolve();
+    expect(coordinator.readState().phase).toBe("idle");
+    vi.useRealTimers();
+  });
+
   it("keeps successful preparations frozen for document replacement without mutation replay", async () => {
     const coordinator = createInterfaceLocaleChangeCoordinator();
     const resume = vi.fn(async () => undefined);

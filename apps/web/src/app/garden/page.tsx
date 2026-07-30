@@ -22,6 +22,7 @@ import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
   isInterfaceSafeFlushFailureVisualFixtureValue,
+  isInterfaceSafeFlushTimeoutVisualFixtureValue,
   isInterfaceServerActionPendingVisualFixtureSearchParams,
 } from "@/lib/localization/localization-visual-fixture";
 import {
@@ -62,6 +63,7 @@ import { GardenWorkspaceView } from "./garden-workspace-view";
 import type { GardenWorkspaceLocalStateSnapshot } from "./garden-workspace-local-state";
 import { GardenLoadingView } from "./loading";
 import { InterfaceSafeFlushFailureFixture } from "./interface-safe-flush-failure-fixture";
+import { InterfaceSafeFlushTimeoutFixture } from "./interface-safe-flush-timeout-fixture";
 import { holdInterfaceServerActionPendingVisualFixtureAction } from "./interface-server-action-pending-fixture-action";
 import { InterfaceServerActionPendingFixture } from "./interface-server-action-pending-fixture";
 import { SaveProgressMoment } from "./save-progress-moment";
@@ -94,6 +96,10 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
   const safeFlushFailureFixture = Boolean(
     visualFixtureEnvironment &&
     isInterfaceSafeFlushFailureVisualFixtureValue(params.visualLocaleState),
+  );
+  const safeFlushTimeoutFixture = Boolean(
+    visualFixtureEnvironment &&
+    isInterfaceSafeFlushTimeoutVisualFixtureValue(params.visualLocaleState),
   );
   const serverActionPendingFixture = Boolean(
     visualFixtureEnvironment?.target === "local" &&
@@ -153,6 +159,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         }
         postAuthPath={engagementPostAuthPath}
         safeFlushFailureFixture={safeFlushFailureFixture}
+        safeFlushTimeoutFixture={safeFlushTimeoutFixture}
         serverActionPendingFixture={serverActionPendingFixture}
       />
     );
@@ -218,6 +225,7 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
         action={normalizeAuthIntentResumeAction(params.authIntent)}
         control={normalizeAuthIntentResumeControl(params.authControl)}
       />
+      {safeFlushTimeoutFixture ? <InterfaceSafeFlushTimeoutFixture /> : null}
       <GardenWorkspaceView
         ownerUserId={userId}
         canWrite={writeAccess.canWrite}
@@ -333,6 +341,7 @@ function GuestGardenEntry({
   initialMessage,
   postAuthPath,
   safeFlushFailureFixture,
+  safeFlushTimeoutFixture,
   serverActionPendingFixture,
 }: {
   locale: InterfaceLocale;
@@ -341,6 +350,7 @@ function GuestGardenEntry({
   initialMessage?: string | null;
   postAuthPath?: string | null;
   safeFlushFailureFixture: boolean;
+  safeFlushTimeoutFixture: boolean;
   serverActionPendingFixture: boolean;
 }) {
   const copy = getTrustSurfaceCopy(locale).gardenGuest;
@@ -352,6 +362,7 @@ function GuestGardenEntry({
       className="mx-auto grid w-full max-w-4xl gap-8 px-4 py-6 sm:px-6 sm:py-8"
     >
       {safeFlushFailureFixture ? <InterfaceSafeFlushFailureFixture /> : null}
+      {safeFlushTimeoutFixture ? <InterfaceSafeFlushTimeoutFixture /> : null}
       {serverActionPendingFixture ? (
         <InterfaceServerActionPendingFixture
           action={holdInterfaceServerActionPendingVisualFixtureAction}
