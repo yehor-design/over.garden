@@ -9,6 +9,7 @@ import type {
   Database,
   EngagementBookmarkState,
   EngagementCommentReportReason,
+  EngagementCommentReportState,
   EngagementCommentState,
   EngagementFollowState,
   EngagementLikeState,
@@ -26,7 +27,8 @@ import {
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
-import { blockProfile } from "@/server/profile-interaction-repository";
+import { blockUserId } from "@/server/profile-interaction-repository";
+import { assertAdminCapabilityForScope } from "@/server/admin-access";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -46,6 +48,18 @@ const UNSAFE_COMMENT_PATTERN =
 
 export interface EngagementTarget {
   kind: EngagementTargetKind;
+  ref: string;
+}
+
+/** Comment targets intentionally have a narrower surface than generic social
+ * engagement targets. Community contributions may host discussion, but never
+ * likes, bookmarks, follows, counts, or anonymous device activity. */
+export type EngagementCommentTargetKind =
+  | EngagementTargetKind
+  | "community_contribution";
+
+export interface EngagementCommentTarget {
+  kind: EngagementCommentTargetKind;
   ref: string;
 }
 
@@ -78,11 +92,30 @@ export interface PublicEngagementSummary {
   viewerFollowing?: boolean;
 }
 
+export interface PublicEngagementCommentThread {
+  target: EngagementCommentTarget;
+  comments: PublicEngagementComment[];
+  hasMoreComments?: boolean;
+  nextCommentCursor?: string | null;
+}
+
 export interface EngagementBookmarkShelfItem {
   key: string;
   target: PublicEngagementTarget;
   addedAt: Date | string;
   updatedAt: Date | string;
+}
+
+export type EngagementModerationAction = "review" | "dismiss" | "remove";
+
+export interface EngagementCommentModerationQueueItem {
+  reportId: string;
+  commentId: string;
+  targetKind: EngagementCommentTargetKind;
+  targetRef: string;
+  reason: EngagementCommentReportReason;
+  reportState: EngagementCommentReportState;
+  createdAt: Date | string;
 }
 
 interface EngagementCommentRow {
@@ -147,22 +180,72 @@ export async function getEngagementSummary(
   };
 }
 
+export async function getEngagementCommentThread(
+  target: EngagementCommentTarget,
+  viewerScope: RequestScope | null = null,
+  options: { commentCursor?: string | null } = {},
+  executor: QueryExecutor = db,
+): Promise<PublicEngagementCommentThread> {
+  const normalizedTarget = normalizeEngagementCommentTarget(
+    target.kind,
+    target.ref,
+  );
+  await ensureEngagementCommentTargetIsPublic(
+    normalizedTarget,
+    executor,
+    viewerScope,
+  );
+  const commentPage = await listEngagementComments(
+    normalizedTarget,
+    viewerScope,
+    decodeCommentPage(options.commentCursor),
+    executor,
+  );
+  return {
+    target: normalizedTarget,
+    comments: commentPage.comments,
+    hasMoreComments: commentPage.hasMore,
+    nextCommentCursor: commentPage.nextCursor,
+  };
+}
+
 export async function addEngagementComment(
   scope: RequestScope,
   input: {
-    target: EngagementTarget;
+    target: EngagementCommentTarget;
     body: string;
     clientMutationId: string;
     parentCommentId?: string | null;
   },
   executor: QueryExecutor = db,
 ): Promise<PublicEngagementComment> {
-  const target = normalizeEngagementTarget(input.target.kind, input.target.ref);
+  const target = normalizeEngagementCommentTarget(
+    input.target.kind,
+    input.target.ref,
+  );
   const body = normalizeCommentBody(input.body);
   const clientMutationId = normalizeClientMutationId(input.clientMutationId);
   const parentCommentId = normalizeOptionalCommentId(input.parentCommentId);
 
-  await ensureEngagementTargetIsPublic(target, executor, scope);
+  if (target.kind === "community_contribution") {
+    if (!isDatabaseTransaction(executor)) {
+      return (executor as Kysely<Database>).transaction().execute((trx) =>
+        addEngagementComment(scope, input, trx),
+      );
+    }
+    const contribution = await buildPublicCommunityContributionCommentTargetQuery(
+      executor,
+      target.ref,
+      scope,
+    )
+      .forUpdate()
+      .executeTakeFirst();
+    if (!contribution || contribution.discussionState !== "open") {
+      throw new Error("Engagement comment target is not available.");
+    }
+  } else {
+    await ensureEngagementCommentTargetIsPublic(target, executor, scope);
+  }
   if (parentCommentId) {
     const parent = await buildEngagementReplyTargetQuery(
       executor,
@@ -283,12 +366,14 @@ export async function getEngagementFollowState(
 export async function deleteEngagementComment(
   scope: RequestScope,
   commentId: string,
+  target: EngagementCommentTarget,
   executor: QueryExecutor = db,
 ) {
   const row = await buildDeleteEngagementCommentQuery(
     executor,
     scope,
     commentId,
+    target,
   ).executeTakeFirst();
   if (!row) throw new Error("Comment is not available.");
   return row;
@@ -299,13 +384,16 @@ export async function reportEngagementComment(
   input: {
     commentId: string;
     reason: string;
-    target: EngagementTarget;
+    target: EngagementCommentTarget;
   },
   executor: QueryExecutor = db,
 ) {
   const reason = normalizeCommentReportReason(input.reason);
-  const target = normalizeEngagementTarget(input.target.kind, input.target.ref);
-  await ensureEngagementTargetIsPublic(target, executor, scope);
+  const target = normalizeEngagementCommentTarget(
+    input.target.kind,
+    input.target.ref,
+  );
+  await ensureEngagementCommentTargetIsPublic(target, executor, scope);
   const comment = await buildActionableEngagementCommentQuery(
     executor,
     scope,
@@ -324,26 +412,190 @@ export async function reportEngagementComment(
 
 export async function blockEngagementCommentAuthor(
   scope: RequestScope,
-  input: { commentId: string; target: EngagementTarget },
+  input: { commentId: string; target: EngagementCommentTarget },
   database: Kysely<Database> = db,
 ) {
-  const target = normalizeEngagementTarget(input.target.kind, input.target.ref);
-  await ensureEngagementTargetIsPublic(target, database, scope);
+  const target = normalizeEngagementCommentTarget(
+    input.target.kind,
+    input.target.ref,
+  );
+  await ensureEngagementCommentTargetIsPublic(target, database, scope);
   const comment = await buildActionableEngagementCommentQuery(
     database,
     scope,
     input.commentId,
     target,
   ).executeTakeFirst();
-  if (!comment?.authorHandle || comment.authorUserId === scope.userId) {
+  if (!comment || comment.authorUserId === scope.userId) {
     throw new Error("Comment author is not available.");
   }
-  const result = await blockProfile(scope, comment.authorHandle, database);
+  const result = await blockUserId(scope, comment.authorUserId, database);
   if (result !== "blocked") throw new Error("Comment author is not available.");
   return {
     target: { kind: comment.targetKind, ref: comment.targetRef },
-    handle: comment.authorHandle,
   };
+}
+
+export async function listEngagementCommentModerationQueue(
+  scope: RequestScope,
+  executor: Kysely<Database> = db,
+): Promise<EngagementCommentModerationQueueItem[]> {
+  await assertAdminCapabilityForScope(scope, "operator:mutate", executor);
+  const rows = await executor
+    .selectFrom("engagement_comment_reports")
+    .innerJoin(
+      "engagement_comments",
+      "engagement_comments.id",
+      "engagement_comment_reports.comment_id",
+    )
+    .select([
+      "engagement_comment_reports.id as reportId",
+      "engagement_comment_reports.comment_id as commentId",
+      "engagement_comment_reports.report_reason as reason",
+      "engagement_comment_reports.report_state as reportState",
+      "engagement_comment_reports.created_at as createdAt",
+      "engagement_comments.target_kind as targetKind",
+      "engagement_comments.target_ref as targetRef",
+    ])
+    .where("engagement_comment_reports.report_state", "in", [
+      "submitted",
+      "reviewed",
+    ])
+    .where("engagement_comments.comment_state", "=", "active")
+    .orderBy("engagement_comment_reports.created_at", "asc")
+    .orderBy("engagement_comment_reports.id", "asc")
+    .limit(100)
+    .execute();
+
+  return rows.map((row) => ({
+    reportId: row.reportId,
+    commentId: row.commentId,
+    targetKind: normalizeEngagementCommentTarget(
+      row.targetKind,
+      row.targetRef,
+    ).kind,
+    targetRef: row.targetRef,
+    reason: normalizeCommentReportReason(row.reason),
+    reportState: normalizeEngagementCommentReportState(row.reportState),
+    createdAt: row.createdAt,
+  }));
+}
+
+export async function moderateEngagementCommentReport(
+  scope: RequestScope,
+  input: { reportId: string; action: EngagementModerationAction },
+  database: Kysely<Database> = db,
+) {
+  await assertAdminCapabilityForScope(scope, "operator:mutate", database);
+  const reportId = normalizeCommentId(input.reportId);
+  const action = normalizeEngagementModerationAction(input.action);
+
+  return database.transaction().execute(async (trx) => {
+    const selected = await trx
+      .selectFrom("engagement_comment_reports")
+      .innerJoin(
+        "engagement_comments",
+        "engagement_comments.id",
+        "engagement_comment_reports.comment_id",
+      )
+      .select([
+        "engagement_comment_reports.id as reportId",
+        "engagement_comment_reports.comment_id as commentId",
+        "engagement_comment_reports.report_reason as reason",
+        "engagement_comment_reports.report_state as reportState",
+        "engagement_comments.comment_state as commentState",
+      ])
+      .where("engagement_comment_reports.id", "=", reportId)
+      .forUpdate()
+      .executeTakeFirst();
+    if (!selected) throw new Error("Comment report is not available.");
+
+    const reports = await trx
+      .selectFrom("engagement_comment_reports")
+      .select(["id", "report_state"])
+      .where("comment_id", "=", selected.commentId)
+      .where("report_state", "in", ["submitted", "reviewed"])
+      .orderBy("id", "asc")
+      .forUpdate()
+      .execute();
+    const selectedOpen = reports.find((report) => report.id === reportId);
+    if (!selectedOpen || selected.commentState !== "active") {
+      return { state: selected.reportState, changed: false } as const;
+    }
+
+    const now = new Date();
+    if (action === "review") {
+      if (selectedOpen.report_state !== "submitted") {
+        return { state: selected.reportState, changed: false } as const;
+      }
+      await trx
+        .updateTable("engagement_comment_reports")
+        .set({
+          report_state: "reviewed",
+          reviewed_at: now,
+          reviewed_by_user_id: scope.userId,
+          updated_at: now,
+        })
+        .where("id", "=", reportId)
+        .where("report_state", "=", "submitted")
+        .executeTakeFirstOrThrow();
+      await insertEngagementModerationAudit(trx, {
+        commentId: selected.commentId,
+        reportId,
+        actorUserId: scope.userId,
+        action,
+        reason: selected.reason,
+        previousState: "submitted",
+        nextState: "reviewed",
+        now,
+      });
+      return { state: "reviewed", changed: true } as const;
+    }
+
+    const terminalState = action === "dismiss" ? "dismissed" : "actioned";
+    if (action === "remove") {
+      await trx
+        .updateTable("engagement_comments")
+        .set({ comment_state: "removed", updated_at: now })
+        .where("id", "=", selected.commentId)
+        .where("comment_state", "=", "active")
+        .executeTakeFirstOrThrow();
+      await trx
+        .updateTable("engagement_comment_reports")
+        .set({
+          report_state: "actioned",
+          resolved_at: now,
+          resolved_by_user_id: scope.userId,
+          updated_at: now,
+        })
+        .where("comment_id", "=", selected.commentId)
+        .where("report_state", "in", ["submitted", "reviewed"])
+        .executeTakeFirst();
+    } else {
+      await trx
+        .updateTable("engagement_comment_reports")
+        .set({
+          report_state: terminalState,
+          resolved_at: now,
+          resolved_by_user_id: scope.userId,
+          updated_at: now,
+        })
+        .where("id", "=", reportId)
+        .where("report_state", "in", ["submitted", "reviewed"])
+        .executeTakeFirstOrThrow();
+    }
+    await insertEngagementModerationAudit(trx, {
+      commentId: selected.commentId,
+      reportId,
+      actorUserId: scope.userId,
+      action,
+      reason: selected.reason,
+      previousState: selectedOpen.report_state as "submitted" | "reviewed",
+      nextState: terminalState,
+      now,
+    });
+    return { state: terminalState, changed: true } as const;
+  });
 }
 
 export async function listEngagementBookmarks(
@@ -526,11 +778,35 @@ export async function ensureEngagementTargetIsPublic(
   return publicTarget;
 }
 
+export async function ensureEngagementCommentTargetIsPublic(
+  target: EngagementCommentTarget,
+  executor: QueryExecutor = db,
+  viewerScope: RequestScope | null = null,
+) {
+  if (target.kind !== "community_contribution") {
+    return ensureEngagementTargetIsPublic(
+      target as EngagementTarget,
+      executor,
+      viewerScope,
+    );
+  }
+
+  const contribution = await buildPublicCommunityContributionCommentTargetQuery(
+    executor,
+    target.ref,
+    viewerScope,
+  ).executeTakeFirst();
+  if (!contribution) {
+    throw new Error("Engagement comment target is not public.");
+  }
+  return contribution;
+}
+
 export function buildInsertEngagementCommentQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   input: {
-    target: EngagementTarget;
+    target: EngagementCommentTarget;
     body: string;
     clientMutationId: string;
     parentCommentId?: string | null;
@@ -561,7 +837,7 @@ export function buildInsertEngagementCommentQuery(
 export function buildEngagementReplyTargetQuery(
   executor: QueryExecutor,
   scope: RequestScope,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
   parentCommentId: string,
 ) {
   return executor
@@ -582,7 +858,7 @@ export function buildEngagementReplyTargetQuery(
 
 export function buildListEngagementCommentsQuery(
   executor: QueryExecutor,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
   limit = MAX_COMMENT_READBACK,
   viewerScope: RequestScope | null = null,
   cursor: { createdAt: Date; commentId: string } | null = null,
@@ -661,7 +937,7 @@ export function buildListEngagementCommentsQuery(
 
 export function buildListEngagementCommentRepliesQuery(
   executor: QueryExecutor,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
   parentCommentIds: readonly string[],
   viewerScope: RequestScope | null = null,
 ) {
@@ -726,7 +1002,7 @@ export function buildListEngagementCommentRepliesQuery(
 export function buildGetEngagementBookmarkQuery(
   executor: QueryExecutor,
   scope: RequestScope,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ) {
   return executor
     .selectFrom("engagement_bookmarks")
@@ -818,6 +1094,7 @@ export function buildDeleteEngagementCommentQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   commentId: string,
+  target: EngagementCommentTarget,
   now = new Date(),
 ) {
   return executor
@@ -829,6 +1106,8 @@ export function buildDeleteEngagementCommentQuery(
     })
     .where("id", "=", normalizeCommentId(commentId))
     .where("author_user_id", "=", scope.userId)
+    .where("target_kind", "=", target.kind)
+    .where("target_ref", "=", target.ref)
     .where("comment_state", "=", "active")
     .returning(["id", "target_kind", "target_ref"]);
 }
@@ -855,9 +1134,8 @@ export function buildReportEngagementCommentQuery(
     })
     .onConflict((oc) =>
       oc.columns(["reporter_user_id", "comment_id"]).doUpdateSet({
-        report_reason: input.reason,
-        report_state: "submitted",
-        updated_at: now,
+        report_reason: sql`case when engagement_comment_reports.report_state = 'submitted' then excluded.report_reason else engagement_comment_reports.report_reason end`,
+        updated_at: sql`case when engagement_comment_reports.report_state = 'submitted' then excluded.updated_at else engagement_comment_reports.updated_at end`,
       }),
     )
     .returning("id");
@@ -867,18 +1145,14 @@ export function buildActionableEngagementCommentQuery(
   executor: QueryExecutor,
   scope: RequestScope,
   commentId: string,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ) {
   return executor
     .selectFrom("engagement_comments as comments")
-    .leftJoin("user_public_profiles as profiles", (join) =>
-      join.onRef("profiles.user_id", "=", "comments.author_user_id"),
-    )
     .select([
       "comments.author_user_id as authorUserId",
       "comments.target_kind as targetKind",
       "comments.target_ref as targetRef",
-      "profiles.handle as authorHandle",
     ])
     .where("comments.id", "=", normalizeCommentId(commentId))
     .where("comments.target_kind", "=", target.kind)
@@ -1109,6 +1383,107 @@ export function buildPublicTopicTargetQuery(
     .groupBy(["journal_topics.slug", "journal_topics.label"]);
 }
 
+/**
+ * Mirrors the visibility joins used by public community contributions. This is
+ * deliberately a comment-target resolver rather than a generic engagement
+ * resolver: the contribution UUID must not unlock likes/bookmarks/follows.
+ */
+export function buildPublicCommunityContributionCommentTargetQuery(
+  executor: QueryExecutor,
+  contributionId: string,
+  viewerScope: RequestScope | null = null,
+) {
+  return executor
+    .selectFrom("community_contributions")
+    .innerJoin(
+      "communities",
+      "communities.id",
+      "community_contributions.community_id",
+    )
+    .innerJoin(
+      "journal_entries",
+      "journal_entries.id",
+      "community_contributions.journal_entry_id",
+    )
+    .innerJoin("plant_objects", (join) =>
+      join
+        .onRef("plant_objects.id", "=", "journal_entries.plant_object_id")
+        .onRef(
+          "plant_objects.owner_user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        ),
+    )
+    .innerJoin("community_memberships", (join) =>
+      join
+        .onRef(
+          "community_memberships.community_id",
+          "=",
+          "community_contributions.community_id",
+        )
+        .onRef(
+          "community_memberships.user_id",
+          "=",
+          "community_contributions.contributor_user_id",
+        ),
+    )
+    .innerJoin("user_handle_registry", (join) =>
+      join
+        .onRef(
+          "user_handle_registry.user_id",
+          "=",
+          "journal_entries.owner_user_id",
+        )
+        .on("user_handle_registry.lifecycle_state", "=", "current"),
+    )
+    .innerJoin("user_public_profiles", (join) =>
+      join
+        .onRef(
+          "user_public_profiles.user_id",
+          "=",
+          "user_handle_registry.user_id",
+        )
+        .onRef(
+          "user_public_profiles.normalized_handle",
+          "=",
+          "user_handle_registry.normalized_handle",
+        )
+        .on("user_public_profiles.profile_visibility", "=", "public")
+        .on("user_public_profiles.profile_lifecycle_state", "=", "active")
+        .on("user_public_profiles.removed_at", "is", null),
+    )
+    .select([
+      "community_contributions.id as contributionId",
+      "community_contributions.discussion_state as discussionState",
+      "communities.slug as communitySlug",
+    ])
+    .where("community_contributions.id", "=", normalizeCommentId(contributionId))
+    .where("communities.lifecycle_state", "in", ["active", "archived"])
+    .where("community_contributions.contribution_state", "=", "active")
+    .whereRef(
+      "community_contributions.contributor_user_id",
+      "=",
+      "journal_entries.owner_user_id",
+    )
+    .where("community_memberships.membership_state", "!=", "banned")
+    .where("journal_entries.visibility", "=", "public")
+    .where("journal_entries.lifecycle_state", "=", "active")
+    .where("journal_entries.entry_scope", "=", "object")
+    .where("journal_entries.public_gone_at", "is", null)
+    .where("journal_entries.public_slug", "is not", null)
+    .where("journal_entries.published_at", "is not", null)
+    .where(publicLaunchSurfacePredicates())
+    .$if(Boolean(viewerScope), (query) =>
+      query.where(
+        noEngagementBlockPredicate(
+          viewerScope!.userId,
+          "journal_entries.owner_user_id",
+        ),
+      ),
+    )
+    .limit(1);
+}
+
 export function normalizeEngagementTarget(
   kindValue: string,
   refValue: string,
@@ -1140,14 +1515,28 @@ export function normalizeEngagementTarget(
   return assertNever(kind);
 }
 
+export function normalizeEngagementCommentTarget(
+  kindValue: string,
+  refValue: string,
+): EngagementCommentTarget {
+  if (kindValue === "community_contribution") {
+    const ref = String(refValue ?? "").trim().toLowerCase();
+    if (!UUID_PATTERN.test(ref)) {
+      throw new Error("Engagement comment target is not available.");
+    }
+    return { kind: "community_contribution", ref };
+  }
+  return normalizeEngagementTarget(kindValue, refValue);
+}
+
 export function normalizeEngagementReturnTo(
   value: string | null | undefined,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ) {
   return normalizeInternalReturnPath(value, engagementTargetPath(target));
 }
 
-export function engagementTargetPath(target: EngagementTarget) {
+export function engagementTargetPath(target: EngagementCommentTarget) {
   switch (target.kind) {
     case "journal_entry":
       return publicJournalEntryPath(target.ref);
@@ -1157,6 +1546,11 @@ export function engagementTargetPath(target: EngagementTarget) {
       return publicVarietyPath(target.ref);
     case "topic":
       return `/topics/${encodeURIComponent(target.ref)}`;
+    case "community_contribution":
+      // A UUID alone cannot safely reconstruct a locale or community slug.
+      // Valid server-rendered return paths are preserved; malformed input gets
+      // this neutral same-origin fallback instead.
+      return "/";
   }
 }
 
@@ -1172,7 +1566,7 @@ export function hashAnonymousEngagementToken(token: string) {
 }
 
 async function listEngagementComments(
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
   viewerScope: RequestScope | null,
   page: number,
   executor: QueryExecutor,
@@ -1355,6 +1749,57 @@ function normalizeCommentReportReason(
   throw new Error("Comment report reason is not available.");
 }
 
+function normalizeEngagementCommentReportState(
+  value: string,
+): EngagementCommentReportState {
+  if (
+    value === "submitted" ||
+    value === "reviewed" ||
+    value === "dismissed" ||
+    value === "actioned"
+  ) {
+    return value;
+  }
+  throw new Error("Comment report is not available.");
+}
+
+function normalizeEngagementModerationAction(
+  value: string,
+): EngagementModerationAction {
+  if (value === "review" || value === "dismiss" || value === "remove") {
+    return value;
+  }
+  throw new Error("Comment moderation action is not available.");
+}
+
+function insertEngagementModerationAudit(
+  executor: QueryExecutor,
+  input: {
+    commentId: string;
+    reportId: string;
+    actorUserId: string;
+    action: EngagementModerationAction;
+    reason: string;
+    previousState: "submitted" | "reviewed";
+    nextState: "reviewed" | "dismissed" | "actioned";
+    now: Date;
+  },
+) {
+  return executor
+    .insertInto("engagement_moderation_audit_log")
+    .values({
+      comment_id: input.commentId,
+      report_id: input.reportId,
+      actor_user_id: input.actorUserId,
+      action: input.action,
+      reason: normalizeCommentReportReason(input.reason),
+      previous_state: input.previousState,
+      next_state: input.nextState,
+      created_at: input.now,
+    })
+    .executeTakeFirstOrThrow();
+}
+
 function normalizeEngagementTargetKind(value: string): EngagementTargetKind {
   if (
     value === "journal_entry" ||
@@ -1426,6 +1871,12 @@ function noEngagementBlockPredicate(userId: string, actorRef: string) {
           and profile_blocks.blocked_user_id = ${userId})
       )
   )`;
+}
+
+function isDatabaseTransaction(
+  executor: QueryExecutor,
+): executor is Transaction<Database> {
+  return "isTransaction" in executor && executor.isTransaction === true;
 }
 
 export function buildEngagementBlockStateQuery(

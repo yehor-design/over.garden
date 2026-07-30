@@ -1046,6 +1046,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/[locale]/bookmarks/page.tsx",
         "src/app/[locale]/communities/[slug]/page.tsx",
+        "src/app/[locale]/communities/[slug]/discussions/[contributionId]/page.tsx",
         "src/app/[locale]/communities/page.tsx",
         "src/app/[locale]/notifications/page.tsx",
         "src/app/[locale]/wishlist/page.tsx",
@@ -1113,6 +1114,7 @@ export const LOCALIZATION_ROUTE_REGISTRY: readonly LocalizationRouteRegistration
       [
         "src/app/admin/communities/[slug]/page.tsx",
         "src/app/admin/communities/page.tsx",
+        "src/app/admin/moderation/comments/page.tsx",
         "src/app/admin/page.tsx",
         "src/app/admin/users/page.tsx",
         "src/app/garden/catalog/curation/page.tsx",

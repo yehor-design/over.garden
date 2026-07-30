@@ -101,6 +101,22 @@ describe("auth intent contract", () => {
     expect(buildAuthIntentResumeHref(communityIntent)).toContain(
       "authControl=contribution-00000000-0000-4000-8000-000000000201",
     );
+
+    for (const returnTo of [
+      "/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201",
+      "/bg/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201",
+    ]) {
+      expect(
+        normalizeAuthIntentDraft({
+          action: "comment",
+          returnTo,
+          target: {
+            kind: "contribution",
+            ref: "00000000-0000-4000-8000-000000000201",
+          },
+        }),
+      ).toMatchObject({ returnTo, target: { kind: "contribution" } });
+    }
   });
 
   it("preserves one opaque control locator without exposing a raw private id", () => {

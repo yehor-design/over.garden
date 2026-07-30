@@ -680,7 +680,10 @@ function CommunityContributionRow({
           </Link>
           {item.discussionState === "open" ? (
             <Link
-              href={`${item.href}#comments`}
+              href={localizedPath(
+                locale,
+                `/communities/${community.slug}/discussions/${item.id}`,
+              )}
               className={buttonVariants({ variant: "ghost", size: "sm" })}
             >
               <MessageCircle aria-hidden="true" />

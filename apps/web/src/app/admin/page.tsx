@@ -202,6 +202,13 @@ function adminLinks(copy: OperatorCopy) {
       ...copy.admin.links.communities,
       icon: ShieldAlert,
     },
+    {
+      href: "/admin/moderation/comments",
+      label: "Comment moderation",
+      detail: "Review bounded comment-report states without rendering user content.",
+      required: "Sealed owner capability required.",
+      icon: ShieldAlert,
+    },
     { href: "/admin/users", ...copy.admin.links.users, icon: UsersRound },
     { href: "/garden/pilot-smoke", ...copy.admin.links.smoke, icon: Activity },
     {

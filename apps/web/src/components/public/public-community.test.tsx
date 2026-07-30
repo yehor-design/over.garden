@@ -131,7 +131,9 @@ describe("PublicCommunityView", () => {
     expect(html).toContain("Спостереження і догляд");
     expect(html).toContain("Томат після тижня спеки");
     expect(html).toContain('href="/journal/tomato-after-heat"');
-    expect(html).toContain('href="/journal/tomato-after-heat#comments"');
+    expect(html).toContain(
+      'href="/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201"',
+    );
     expect(html).toContain('href="/topics/observation-and-care"');
     expect(html).toContain('action="/auth/intent/start"');
     expect(html).toContain('name="targetKind" value="collection"');

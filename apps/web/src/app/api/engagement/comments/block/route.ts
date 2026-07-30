@@ -7,14 +7,14 @@ import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
   parseEngagementReturnTo,
-  parseEngagementTarget,
+  parseEngagementCommentTarget,
   redirectToEngagementAuth,
   redirectWithEngagementStatus,
 } from "../../shared";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const target = parseEngagementTarget(formData);
+  const target = parseEngagementCommentTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
   const commentId = String(formData.get("commentId") ?? "");
   const session = await getCurrentSession();

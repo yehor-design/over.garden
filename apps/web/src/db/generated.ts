@@ -379,6 +379,10 @@ export interface EngagementCommentReports {
   report_reason: string;
   report_state: Generated<string>;
   reporter_user_id: string;
+  resolved_at: Timestamp | null;
+  resolved_by_user_id: string | null;
+  reviewed_at: Timestamp | null;
+  reviewed_by_user_id: string | null;
   updated_at: Generated<Timestamp>;
 }
 
@@ -415,6 +419,18 @@ export interface EngagementLikes {
   toggle_count: Generated<number>;
   toggle_window_started_at: Generated<Timestamp>;
   updated_at: Generated<Timestamp>;
+}
+
+export interface EngagementModerationAuditLog {
+  action: string;
+  actor_user_id: string | null;
+  comment_id: string | null;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  next_state: string;
+  previous_state: string;
+  reason: string;
+  report_id: string | null;
 }
 
 export interface ErasureRequests {
@@ -904,6 +920,7 @@ export interface DB {
   engagement_comments: EngagementComments;
   engagement_follows: EngagementFollows;
   engagement_likes: EngagementLikes;
+  engagement_moderation_audit_log: EngagementModerationAuditLog;
   erasure_requests: ErasureRequests;
   health: Health;
   job_queue: JobQueue;

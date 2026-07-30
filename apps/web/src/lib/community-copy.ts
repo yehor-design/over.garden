@@ -41,6 +41,7 @@ export interface CommunityCopy {
   readJournal: string;
   comments: string;
   discussionClosed: string;
+  backToCommunity: string;
   report: string;
   block: string;
   reportReason: string;
@@ -114,6 +115,7 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     readJournal: "Читати запис",
     comments: "Обговорення",
     discussionClosed: "Обговорення закрито модератором",
+    backToCommunity: "Повернутися до спільноти",
     report: "Поскаржитися",
     block: "Заблокувати автора",
     reportReason: "Причина",
@@ -197,6 +199,7 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     readJournal: "Прочитане на записа",
     comments: "Обсъждане",
     discussionClosed: "Обсъждането е затворено от модератор",
+    backToCommunity: "Назад към общността",
     report: "Докладване",
     block: "Блокиране на автора",
     reportReason: "Причина",
@@ -280,6 +283,7 @@ const COPY: Record<PublicLocale, CommunityCopy> = {
     readJournal: "Читать запись",
     comments: "Обсуждение",
     discussionClosed: "Обсуждение закрыто модератором",
+    backToCommunity: "Вернуться к сообществу",
     report: "Пожаловаться",
     block: "Заблокировать автора",
     reportReason: "Причина",
