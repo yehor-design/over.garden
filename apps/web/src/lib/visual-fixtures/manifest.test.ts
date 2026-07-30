@@ -141,6 +141,17 @@ describe("visual fixture manifest", () => {
     expect(evidence.follows).toHaveLength(8);
     expect(evidence.bookmarks).toHaveLength(16);
     expect(evidence.commentReports).toHaveLength(2);
+    expect(evidence.commentReports).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          state: "reviewed",
+          reviewedAt: expect.any(String),
+          reviewedByUserId: expect.any(String),
+          resolvedAt: null,
+          resolvedByUserId: null,
+        }),
+      ]),
+    );
     expect(evidence.notificationReceipts).toHaveLength(2);
     expect(evidence.notificationPreferences).toHaveLength(2);
     expect(evidence.wishlistItems).toHaveLength(14);

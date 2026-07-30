@@ -935,6 +935,10 @@ export function buildVisualFixtureSeedQueries(
         comment_id: report.commentId,
         report_reason: report.reason,
         report_state: report.state,
+        reviewed_at: report.reviewedAt,
+        reviewed_by_user_id: report.reviewedByUserId,
+        resolved_at: report.resolvedAt,
+        resolved_by_user_id: report.resolvedByUserId,
         created_at: report.createdAt,
         updated_at: report.createdAt,
       })),
@@ -943,6 +947,10 @@ export function buildVisualFixtureSeedQueries(
       oc.columns(["reporter_user_id", "comment_id"]).doUpdateSet({
         report_reason: sql`excluded.report_reason`,
         report_state: sql`excluded.report_state`,
+        reviewed_at: sql`excluded.reviewed_at`,
+        reviewed_by_user_id: sql`excluded.reviewed_by_user_id`,
+        resolved_at: sql`excluded.resolved_at`,
+        resolved_by_user_id: sql`excluded.resolved_by_user_id`,
         updated_at: sql`excluded.updated_at`,
       }),
     );

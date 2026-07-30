@@ -7,9 +7,13 @@ import {
 } from "@/lib/auth/auth-intent-contract";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
-import type { EngagementTarget } from "@/server/engagement-repository";
+import type {
+  EngagementCommentTarget,
+  EngagementTarget,
+} from "@/server/engagement-repository";
 import {
   engagementTargetPath,
+  normalizeEngagementCommentTarget,
   normalizeEngagementReturnTo,
   normalizeEngagementTarget,
 } from "@/server/engagement-repository";
@@ -21,9 +25,18 @@ export function parseEngagementTarget(formData: FormData): EngagementTarget {
   );
 }
 
+export function parseEngagementCommentTarget(
+  formData: FormData,
+): EngagementCommentTarget {
+  return normalizeEngagementCommentTarget(
+    String(formData.get("targetKind") ?? ""),
+    String(formData.get("targetRef") ?? ""),
+  );
+}
+
 export function parseEngagementReturnTo(
   formData: FormData,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ) {
   return normalizeEngagementReturnTo(
     typeof formData.get("returnTo") === "string"
@@ -45,7 +58,7 @@ export function redirectWithEngagementStatus(
 
 export function redirectToEngagementAuth(
   request: Request,
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
   returnTo: string,
   intent: "bookmark" | "comment" | "follow" | "report" | "block",
   control?: string,
@@ -76,13 +89,16 @@ export function redirectToEngagementAuth(
 }
 
 function engagementAuthIntentTarget(
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ): AuthIntentTarget {
   if (target.kind === "journal_entry") {
     return { kind: "journal", ref: target.ref };
   }
   if (target.kind === "lineage_object") {
     return { kind: "object", ref: target.ref };
+  }
+  if (target.kind === "community_contribution") {
+    return { kind: "contribution", ref: target.ref };
   }
   return { kind: "collection", ref: target.ref };
 }

@@ -5,6 +5,34 @@ import { PublicEngagementPanel } from "./public-engagement-panel";
 import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 
 describe("PublicEngagementPanel", () => {
+  it("renders a contribution thread without generic engagement controls or device activity", () => {
+    const html = renderToStaticMarkup(
+      <PublicEngagementPanel
+        isAuthenticated={false}
+        locale="uk"
+        target={{
+          kind: "community_contribution",
+          ref: "00000000-0000-4000-8000-000000000201",
+        }}
+        returnTo="/communities/observation-and-care/discussions/00000000-0000-4000-8000-000000000201"
+        commentOnly
+        summary={{
+          target: {
+            kind: "community_contribution",
+            ref: "00000000-0000-4000-8000-000000000201",
+          },
+          comments: [],
+        }}
+      />,
+    );
+
+    expect(html).toContain('name="action" value="comment"');
+    expect(html).not.toContain("/api/engagement/likes");
+    expect(html).not.toContain("/api/engagement/bookmarks");
+    expect(html).not.toContain("/api/engagement/follows");
+    expect(html).not.toContain("anonymousToken");
+  });
+
   it("localizes engagement chrome without changing public comments", () => {
     const html = renderToStaticMarkup(
       <PublicEngagementPanel

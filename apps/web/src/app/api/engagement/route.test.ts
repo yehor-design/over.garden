@@ -62,6 +62,10 @@ vi.mock("@/server/engagement-repository", () => ({
     kind,
     ref,
   }),
+  normalizeEngagementCommentTarget: (kind: string, ref: string) => ({
+    kind,
+    ref,
+  }),
 }));
 
 vi.mock("@/server/auth-intent-token", () => ({
@@ -442,6 +446,7 @@ describe("engagement routes", () => {
     expect(mocks.deleteEngagementComment).toHaveBeenCalledWith(
       expectedScope,
       commentId,
+      { kind: "journal_entry", ref: "first-public-harvest" },
     );
     expect(mocks.blockEngagementCommentAuthor).toHaveBeenCalledWith(
       expectedScope,

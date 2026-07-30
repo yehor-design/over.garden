@@ -655,6 +655,11 @@ export function buildCountCommunityModerationActorRefsQuery(
         where resolved_by_user_id = ${requesterUserId})
       + (select count(*)::int from community_moderation_audit_log
         where actor_user_id = ${requesterUserId})
+      + (select count(*)::int from engagement_comment_reports
+        where reviewed_by_user_id = ${requesterUserId}
+           or resolved_by_user_id = ${requesterUserId})
+      + (select count(*)::int from engagement_moderation_audit_log
+        where actor_user_id = ${requesterUserId})
     ) as count
   `.execute(executor);
 }

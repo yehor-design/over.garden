@@ -20,6 +20,7 @@ describe("versioned application SQL bootstrap", () => {
       "0013_ove244_safe_media_admission.sql",
       "0014_ove231_launch_media_quality.sql",
       "0015_ove241_auth_email_outbox.sql",
+      "0016_ove235_comment_moderation.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

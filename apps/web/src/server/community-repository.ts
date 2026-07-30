@@ -1817,7 +1817,8 @@ export function buildCommunityContributionStateQuery(
     .select(["id", "contribution_state", "discussion_state"])
     .where("community_id", "=", normalizeUuid(communityId, "Community"))
     .where("id", "=", normalizeUuid(contributionId, "Contribution"))
-    .limit(1);
+    .limit(1)
+    .forUpdate();
 }
 
 export function buildInsertCommunityContributionQuery(

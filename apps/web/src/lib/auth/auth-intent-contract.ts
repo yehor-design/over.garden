@@ -18,7 +18,8 @@ export type AuthIntentTargetKind =
   | "journal"
   | "object"
   | "profile"
-  | "collection";
+  | "collection"
+  | "contribution";
 
 export interface AuthIntentTarget {
   kind: AuthIntentTargetKind;
@@ -51,6 +52,7 @@ const TARGET_KINDS = new Set<AuthIntentTargetKind>([
   "object",
   "profile",
   "collection",
+  "contribution",
 ]);
 const QUERY_KEYS = new Set([
   "q",
@@ -80,6 +82,7 @@ const ROUTE_PATTERNS = [
   /^\/(?:uk|bg|ru)\/@[a-z0-9_]{2,40}$/,
   /^\/(?:(?:uk|bg|ru)\/)?topics\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/(?:(?:uk|bg|ru)\/)?communities\/[a-z0-9][a-z0-9-]{0,95}$/,
+  /^\/(?:(?:uk|bg|ru)\/)?communities\/[a-z0-9][a-z0-9-]{0,95}\/discussions\/[0-9a-f-]{36}$/,
   /^\/(?:uk|bg|ru)\/(?:objects|journals|knowledge|feed|notifications|bookmarks|wishlist)$/,
   /^\/garden$/,
   /^\/garden\/objects\/[0-9a-f-]{36}$/,
@@ -89,11 +92,11 @@ const ACTION_TARGET_KINDS: Record<
   AuthIntentAction,
   readonly AuthIntentTargetKind[] | null
 > = {
-  comment: ["journal", "object", "collection"],
+  comment: ["journal", "object", "collection", "contribution"],
   bookmark: ["journal", "object", "profile", "collection"],
   follow: ["object", "profile", "collection"],
-  report: ["journal", "object", "profile", "collection"],
-  block: ["journal", "object", "profile", "collection"],
+  report: ["journal", "object", "profile", "collection", "contribution"],
+  block: ["journal", "object", "profile", "collection", "contribution"],
   claim: ["object"],
   create_object: null,
   create_entry: null,
@@ -236,7 +239,7 @@ function normalizeTarget(value: unknown): AuthIntentTarget | undefined {
   const kind = record.kind as AuthIntentTargetKind;
   const ref = record.ref.trim().toLowerCase();
   const valid =
-    kind === "object"
+    kind === "object" || kind === "contribution"
       ? UUID_PATTERN.test(ref)
       : kind === "profile"
         ? HANDLE_PATTERN.test(ref.replace(/^@/, ""))

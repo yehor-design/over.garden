@@ -29,6 +29,8 @@ import {
 } from "@/lib/public-surface-localization";
 import type {
   EngagementTarget,
+  EngagementCommentTarget,
+  PublicEngagementCommentThread,
   PublicEngagementSummary,
   PublicEngagementComment,
 } from "@/server/engagement-repository";
@@ -37,9 +39,10 @@ import { createAuthIntentControlRef } from "@/server/auth-intent-control";
 interface PublicEngagementPanelProps {
   isAuthenticated: boolean;
   locale: InterfaceLocale;
-  target: EngagementTarget;
-  summary: PublicEngagementSummary;
+  target: EngagementCommentTarget;
+  summary: PublicEngagementSummary | PublicEngagementCommentThread;
   returnTo: string;
+  commentOnly?: boolean;
   status?: string | null;
   resumeAction?: AuthIntentAction | null;
   resumeControl?: string | null;
@@ -105,6 +108,7 @@ export function PublicEngagementPanel({
   summary,
   returnTo,
   status,
+  commentOnly = false,
   resumeAction = null,
   resumeControl = null,
 }: PublicEngagementPanelProps) {
@@ -118,7 +122,8 @@ export function PublicEngagementPanel({
       data-auth-intent-resumed={resumeAction ?? undefined}
       className="grid gap-4 border-y border-border py-5"
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      {!commentOnly ? (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap gap-2">
           <EngagementButtonForm
             action="/api/engagement/likes"
@@ -137,8 +142,15 @@ export function PublicEngagementPanel({
               icon={<Bookmark className="size-4" />}
               variant="outline"
               stateName="bookmarkState"
-              stateValue={summary.viewerBookmarked ? "removed" : "active"}
-              pressed={Boolean(summary.viewerBookmarked)}
+              stateValue={
+                "viewerBookmarked" in summary && summary.viewerBookmarked
+                  ? "removed"
+                  : "active"
+              }
+              pressed={
+                "viewerBookmarked" in summary &&
+                Boolean(summary.viewerBookmarked)
+              }
               autoFocus={resumeAction === "bookmark"}
             />
           ) : (
@@ -157,15 +169,22 @@ export function PublicEngagementPanel({
               locale={locale}
               target={{ kind: target.kind, ref: target.ref }}
               returnTo={returnTo}
-              following={summary.viewerFollowing}
+              following={
+                "viewerFollowing" in summary && summary.viewerFollowing
+              }
               resumeAction={resumeControl ? null : resumeAction}
             />
           ) : null}
         </div>
         <p className="text-sm text-muted-foreground">
-          {formatPublicCount(locale, "like", summary.activeLikeCount)}
+          {formatPublicCount(
+            locale,
+            "like",
+            "activeLikeCount" in summary ? summary.activeLikeCount : 0,
+          )}
         </p>
       </div>
+      ) : null}
 
       {status ? (
         <p className="text-sm text-muted-foreground">
@@ -396,7 +415,7 @@ function CommentActions({
   comment: PublicEngagementComment;
   isAuthenticated: boolean;
   locale: InterfaceLocale;
-  target: EngagementTarget;
+  target: EngagementCommentTarget;
   returnTo: string;
   resumeAction: AuthIntentAction | null;
   resumeControl: string | null;
@@ -553,7 +572,7 @@ function EngagementButtonForm({
   pressed,
 }: {
   action: string;
-  target: EngagementTarget;
+  target: EngagementCommentTarget;
   returnTo: string;
   label: string;
   icon: ReactNode;
@@ -595,13 +614,16 @@ function EngagementButtonForm({
 }
 
 function engagementAuthIntentTarget(
-  target: EngagementTarget,
+  target: EngagementCommentTarget,
 ): AuthIntentTarget {
   if (target.kind === "journal_entry") {
     return { kind: "journal", ref: target.ref };
   }
   if (target.kind === "lineage_object") {
     return { kind: "object", ref: target.ref };
+  }
+  if (target.kind === "community_contribution") {
+    return { kind: "contribution", ref: target.ref };
   }
   return { kind: "collection", ref: target.ref };
 }
@@ -610,7 +632,7 @@ function EngagementTargetFields({
   target,
   returnTo,
 }: {
-  target: EngagementTarget;
+  target: EngagementCommentTarget;
   returnTo: string;
 }) {
   return (

@@ -34,11 +34,13 @@ import {
   buildPublicJournalEntryTargetQuery,
   buildPublicLineageObjectTargetQuery,
   buildPublicVarietyTargetQuery,
+  buildPublicCommunityContributionCommentTargetQuery,
   buildReportEngagementCommentQuery,
   buildUpsertEngagementBookmarkQuery,
   buildUpsertEngagementFollowQuery,
   hashAnonymousEngagementToken,
   normalizeEngagementReturnTo,
+  normalizeEngagementCommentTarget,
   normalizeEngagementTarget,
 } from "./engagement-repository";
 
@@ -101,6 +103,28 @@ function expectCurrentEligibleCommentIdentity(
 }
 
 describe("engagement repository contracts", () => {
+  it("keeps a contribution discussion comment-only and resolves it through the public block boundary", () => {
+    const target = normalizeEngagementCommentTarget(
+      "community_contribution",
+      "00000000-0000-4000-8000-000000000201",
+    );
+    expect(target).toEqual({
+      kind: "community_contribution",
+      ref: "00000000-0000-4000-8000-000000000201",
+    });
+    expect(() => normalizeEngagementTarget(target.kind, target.ref)).toThrow();
+
+    const compiled = buildPublicCommunityContributionCommentTargetQuery(
+      testDb,
+      target.ref,
+      scopedToUser("00000000-0000-4000-8000-000000000002"),
+    ).compile();
+    expect(compiled.sql).toContain('from "community_contributions"');
+    expect(compiled.sql).toContain('from "profile_blocks"');
+    expect(compiled.sql).toContain('"discussion_state"');
+    expect(compiled.parameters).toContain(target.ref);
+  });
+
   it("inserts signed-in comments against a public target handle only", () => {
     const compiled = buildInsertEngagementCommentQuery(testDb, scope, {
       target: journalTarget,
@@ -228,6 +252,7 @@ describe("engagement repository contracts", () => {
       testDb,
       scope,
       commentId,
+      journalTarget,
       new Date("2026-07-13T10:00:00.000Z"),
     ).compile();
     const report = buildReportEngagementCommentQuery(testDb, scope, {

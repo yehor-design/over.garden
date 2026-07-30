@@ -745,6 +745,10 @@ export interface VisualFixtureEngagementCommentReport {
   commentId: string;
   reason: "spam" | "harassment" | "privacy" | "misinformation" | "other";
   state: "submitted" | "reviewed" | "dismissed" | "actioned";
+  reviewedAt: string | null;
+  reviewedByUserId: string | null;
+  resolvedAt: string | null;
+  resolvedByUserId: string | null;
   createdAt: string;
 }
 
@@ -5383,6 +5387,10 @@ function buildSocialEvidence(): VisualFixtureSocialEvidence {
       commentId: denseRoots[4].id,
       reason: "misinformation",
       state: "submitted",
+      reviewedAt: null,
+      reviewedByUserId: null,
+      resolvedAt: null,
+      resolvedByUserId: null,
       createdAt: timestampForIndex(950),
     },
     {
@@ -5391,6 +5399,10 @@ function buildSocialEvidence(): VisualFixtureSocialEvidence {
       commentId: denseRoots[6].id,
       reason: "privacy",
       state: "reviewed",
+      reviewedAt: timestampForIndex(951),
+      reviewedByUserId: actors[0].id,
+      resolvedAt: null,
+      resolvedByUserId: null,
       createdAt: timestampForIndex(951),
     },
   ];

@@ -114,20 +114,50 @@ export async function blockProfile(
   return database.transaction().execute(async (trx) => {
     const target = await resolveInteractionTarget(scope, rawHandle, trx);
     if (!target) return "unavailable";
-
-    await buildUpsertProfileBlockQuery(trx, scope, target.userId).execute();
-    await buildRemoveBlockedProfileFollowsQuery(
-      trx,
-      scope,
-      target.userId,
-    ).execute();
-    await buildRemoveBlockedObjectFollowsQuery(
-      trx,
-      scope,
-      target.userId,
-    ).execute();
-    return "blocked";
+    return blockUserIdInTransaction(scope, target.userId, trx);
   });
+}
+
+/**
+ * Blocks an already-authorized immutable user subject. Callers must obtain the
+ * subject from a scoped canonical record; this deliberately performs no public
+ * profile lookup so private or removed profiles cannot change the outcome.
+ */
+export async function blockUserId(
+  scope: RequestScope,
+  targetUserId: string,
+  database: Kysely<Database> = db,
+): Promise<ProfileInteractionResult> {
+  const normalizedTargetUserId = targetUserId.trim().toLowerCase();
+  if (
+    !UUID_PATTERN.test(normalizedTargetUserId) ||
+    normalizedTargetUserId === scope.userId
+  ) {
+    return "unavailable";
+  }
+
+  return database.transaction().execute(async (trx) => {
+    return blockUserIdInTransaction(scope, normalizedTargetUserId, trx);
+  });
+}
+
+async function blockUserIdInTransaction(
+  scope: RequestScope,
+  targetUserId: string,
+  executor: QueryExecutor,
+): Promise<ProfileInteractionResult> {
+  await buildUpsertProfileBlockQuery(executor, scope, targetUserId).execute();
+  await buildRemoveBlockedProfileFollowsQuery(
+    executor,
+    scope,
+    targetUserId,
+  ).execute();
+  await buildRemoveBlockedObjectFollowsQuery(
+    executor,
+    scope,
+    targetUserId,
+  ).execute();
+  return "blocked";
 }
 
 export async function unblockProfile(
