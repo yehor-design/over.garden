@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-30 (OVE-238 mainline and production closeout evidence; authenticated Linear remains primary queue authority)
+Last operational update: 2026-07-30 (OVE-235 and OVE-238 mainline and production closeout evidence; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -36,6 +36,16 @@ validated, saved, and read back before implementation. Its behavior commit
 `dpl_84mFTk4rMcsbs2YCa83GAvv2zqDd` passed. The terminal Linear state and
 relations are deliberately not duplicated here: they must be obtained by the
 authenticated read-back before selecting OVE-235 or OVE-222.
+
+On 2026-07-30, OVE-235 was individually re-audited, materially rewritten,
+validated, saved, and read back before implementation. Its behavior commits
+`b285b3fb882a72180af4ee38fa62ed3bcf904be5` and
+`e6969117a5e1932369b52b64aaaa66881523ae24` are contained in `main` through
+`f470448c70de8135c9fb357f47ef9ce70ebe1492`; exact-main CI `30506384943`,
+matching-image run `30506384967`, and Vercel production deployment
+`dpl_FzWQKdbxjo8JgP7uXbqKMFCbWWKJ` passed. The terminal Linear state and
+relations are deliberately not duplicated here: they must be obtained by the
+authenticated read-back before selecting OVE-237, OVE-184, or OVE-222.
 
 All 32 OVE-213 through OVE-244 descriptions predate the v1 contract. Their
 content informed the standard, but no issue in the range is ready for assignment
