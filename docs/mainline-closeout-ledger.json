@@ -793,6 +793,32 @@
       ]
     },
     {
+      "issueId": "OVE-236",
+      "title": "P0 — Cross-session privacy fence: stale account UI and offline state disappear before any identity recheck",
+      "status": "done_on_main",
+      "requiredForNextSlice": true,
+      "mainCommit": "ccb40b279837dd42d747203505aadbd97608248d",
+      "mainRef": "main",
+      "linearUrl": "https://linear.app/overgarden/issue/OVE-236/p0-cross-session-privacy-fence-stale-account-ui-and-offline-state-disappear",
+      "ciRunUrl": "https://vercel.com/yehors-projects-01221e2b/over-garden/9Vc7V6zKN4xxSt9jZFUzRoJhp3xa",
+      "githubDeploymentId": 5674572842,
+      "githubDeploymentStatusId": 16136179308,
+      "completedAt": "2026-07-30",
+      "verificationCommands": [
+        "cd apps/web && pnpm exec vitest run src/components/auth/session-convergence-boundary.test.tsx",
+        "cd apps/web && pnpm test",
+        "cd apps/web && pnpm smoke:session-recheck-fence -- --browser chromium --base-url http://127.0.0.1:3000",
+        "cd apps/web && pnpm smoke:session-recheck-fence -- --browser safari-technology-preview --base-url http://127.0.0.1:3000",
+        "git merge-base --is-ancestor e5ff0b36c4589073c151df5092168a39efaf70df origin/main",
+        "cd apps/web && pnpm mainline:closeout:check"
+      ],
+      "notes": [
+        "The ordinary recheck boundary synchronously removes private account and owner-scoped offline UI before it starts a focus/visibility/retry identity read. It reopens only after the current exact session binding completes every retained owner fence; timeout, unknown, changed, and signed-out outcomes remain fail-closed with safe exits.",
+        "The originally reviewed implementation SHA e5ff0b36c4589073c151df5092168a39efaf70df is an ancestor of main through containment receipt c3926f0a6abbed1e144a4004605919138be9fb55 and main merge 2294a3eeb7dbcdbe204a9960bc9bcc92f6b1d694. The behavior-equivalent main integration SHA ccb40b279837dd42d747203505aadbd97608248d passed CI run 30540705280 and Vercel production deployment dpl_9Vc7V6zKN4xxSt9jZFUzRoJhp3xa reached READY for that exact SHA; authenticated GitHub deployment 5674572842 / status 16136179308 recorded Production success and owned over.garden plus www.over.garden.",
+        "A local synthetic fixture proved the focus-recheck race in Chromium and Safari Technology Preview: private tree removal preceded identity-read resolution, safe exit controls stayed usable, and recovery required the exact original session binding. The full suite passed 3,101 tests with four intentional skips; no production account, session material, draft or queue payload, cookie, secret, raw request metadata, media key, journal text, precise location, or individual timing sample is included in evidence."
+      ]
+    },
+    {
       "issueId": "OVE-200",
       "title": "Trustworthy MVP learning: H1, H4, and H6 exclude synthetic actors and obey privacy and retention",
       "status": "done_on_main",

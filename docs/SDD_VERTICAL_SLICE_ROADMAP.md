@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-07-30 (OVE-235 and OVE-238 mainline and production closeout evidence; authenticated Linear remains primary queue authority)
+Last operational update: 2026-07-30 (OVE-236 mainline and production closeout evidence; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -47,6 +47,19 @@ deployment `dpl_7pzKYUwgDZsponohTZmQJN2pU93E`, the canonical public smoke, and a
 Safari Technology Preview keyboard handoff trace passed. OVE-236 may be
 selected only after OVE-214's terminal Linear state and blocker relation are
 read back through the authenticated connector.
+
+On 2026-07-30, OVE-236 was individually re-audited, materially rewritten,
+validated, saved, and read back before implementation. Its reviewed behavior
+commit `e5ff0b36c4589073c151df5092168a39efaf70df` is retained as a true `main`
+ancestor through containment receipt `c3926f0a6abbed1e144a4004605919138be9fb55`
+and merge `2294a3eeb7dbcdbe204a9960bc9bcc92f6b1d694`; the behavior-equivalent
+main integration commit `ccb40b279837dd42d747203505aadbd97608248d` passed CI
+`30540705280` and Vercel production deployment `dpl_9Vc7V6zKN4xxSt9jZFUzRoJhp3xa`
+reached `READY` for that exact SHA with both canonical aliases. The bounded
+synthetic race harness passed in Chromium and Safari Technology Preview, proving
+private-tree removal precedes identity-read resolution and reopening requires
+the exact same binding. The terminal Linear status and relations remain an
+authenticated read-back requirement before selecting OVE-186.
 
 On 2026-07-30, OVE-235 was individually re-audited, materially rewritten,
 validated, saved, and read back before implementation. Its behavior commits
