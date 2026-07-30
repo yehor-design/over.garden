@@ -37,6 +37,17 @@ validated, saved, and read back before implementation. Its behavior commit
 relations are deliberately not duplicated here: they must be obtained by the
 authenticated read-back before selecting OVE-235 or OVE-222.
 
+On 2026-07-30, OVE-214 was individually re-audited, materially rewritten,
+validated, saved, and read back before implementation. Its behavior commit
+`b0b111767` and the deterministic privacy and production-smoke follow-ups
+`369d0383a05d9228956964e8a075a6975aad0139` and
+`63a4e7df54e2162466dee7cfb3cf525c1408628b` are contained in `main`.
+Exact-main CI `30530522406`, matching-image run `30530522469`, Vercel production
+deployment `dpl_7pzKYUwgDZsponohTZmQJN2pU93E`, the canonical public smoke, and a
+Safari Technology Preview keyboard handoff trace passed. OVE-236 may be
+selected only after OVE-214's terminal Linear state and blocker relation are
+read back through the authenticated connector.
+
 On 2026-07-30, OVE-235 was individually re-audited, materially rewritten,
 validated, saved, and read back before implementation. Its behavior commits
 `b285b3fb882a72180af4ee38fa62ed3bcf904be5` and
