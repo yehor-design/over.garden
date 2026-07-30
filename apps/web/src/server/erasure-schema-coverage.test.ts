@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -13,12 +13,9 @@ import {
 
 describe("OVE-215 erasure schema coverage", () => {
   it("exposes a versioned owned coverage manifest", () => {
-    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove215.erasure-schema.v2");
+    expect(ERASURE_SCHEMA_COVERAGE_VERSION).toBe("ove237.erasure-schema.v3");
     expect(listErasureCoverageEntries().length).toBeGreaterThan(40);
-    const sql = readFileSync(
-      join(process.cwd(), "sql/0001_walking_skeleton.sql"),
-      "utf8",
-    );
+    const sql = readCurrentSchemaSql();
     assertErasureCoverageCompleteness({
       discoveredPathIds: discoverErasurePathsFromWalkingSkeletonSql(sql),
     });
@@ -40,13 +37,16 @@ describe("OVE-215 erasure schema coverage", () => {
       `create table if not exists synthetic_identity (\n  id uuid primary key,\n  identity_payload jsonb check ((identity_payload->>'userId') is not null)\n);`,
       "synthetic_identity.identity_payload.userId",
     ],
-  ])("fails closed for an unclassified %s", (_label, sqlFixture, expectedPath) => {
-    const discovered = discoverErasurePathsFromWalkingSkeletonSql(sqlFixture);
-    expect(discovered).toContain(expectedPath);
-    expect(() =>
-      assertErasureCoverageCompleteness({ discoveredPathIds: discovered }),
-    ).toThrow(expectedPath);
-  });
+  ])(
+    "fails closed for an unclassified %s",
+    (_label, sqlFixture, expectedPath) => {
+      const discovered = discoverErasurePathsFromWalkingSkeletonSql(sqlFixture);
+      expect(discovered).toContain(expectedPath);
+      expect(() =>
+        assertErasureCoverageCompleteness({ discoveredPathIds: discovered }),
+      ).toThrow(expectedPath);
+    },
+  );
 
   it("classifies community restrict FKs as anonymize without weaken", () => {
     for (const id of [
@@ -54,7 +54,9 @@ describe("OVE-215 erasure schema coverage", () => {
       "community_contribution_reports.resolved_by_user_id",
       "community_moderation_audit_log.actor_user_id",
     ]) {
-      const entry = ERASURE_SCHEMA_COVERAGE.find((candidate) => candidate.id === id);
+      const entry = ERASURE_SCHEMA_COVERAGE.find(
+        (candidate) => candidate.id === id,
+      );
       expect(entry?.disposition).toBe("anonymize");
     }
   });
@@ -66,20 +68,33 @@ describe("OVE-215 erasure schema coverage", () => {
     expect(entry?.disposition).toBe("not-account-linkable");
   });
 
+  it("deletes bounded admission counters with their account", () => {
+    const entry = ERASURE_SCHEMA_COVERAGE.find(
+      (candidate) => candidate.id === "interaction_quota_windows.actor_user_id",
+    );
+    expect(entry).toMatchObject({ kind: "fk", disposition: "delete" });
+  });
+
   it("requires OVE-203 identity and OVE-207 cover inventory", () => {
     for (const id of ERASURE_SQL_DISCOVERY_REQUIRED_IDS) {
-      expect(
-        ERASURE_SCHEMA_COVERAGE.some((entry) => entry.id === id),
-      ).toBe(true);
+      expect(ERASURE_SCHEMA_COVERAGE.some((entry) => entry.id === id)).toBe(
+        true,
+      );
     }
 
-    const sql = readFileSync(
-      join(process.cwd(), "sql/0001_walking_skeleton.sql"),
-      "utf8",
-    );
+    const sql = readCurrentSchemaSql();
     expect(sql).toContain("cover_media_asset_id");
     expect(sql).toContain("usage_role");
     expect(sql).toContain("user_handle_registry");
     expect(sql).toContain("cleanup_pending");
   });
 });
+
+function readCurrentSchemaSql() {
+  const sqlDirectory = join(process.cwd(), "sql");
+  return readdirSync(sqlDirectory)
+    .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/.test(name))
+    .sort((left, right) => left.localeCompare(right, "en"))
+    .map((name) => readFileSync(join(sqlDirectory, name), "utf8"))
+    .join("\n\n");
+}

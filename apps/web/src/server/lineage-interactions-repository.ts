@@ -16,6 +16,14 @@ import {
   looksLikePrivateContactOrPreciseLocation,
   normalizeRequiredText,
 } from "@/server/lineage-repository";
+import {
+  acquireInteractionAdmissionLock,
+  configureInteractionAdmissionTransaction,
+  consumeInteractionQuota,
+  removeExpiredInteractionQuotaWindows,
+  rethrowAsInteractionUnavailable,
+  utcDayWindow,
+} from "@/server/interaction-admission";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -79,8 +87,7 @@ interface NormalizedFollowLineageNodeInput {
   targetPlantObjectId: string;
 }
 
-interface NormalizedAskLineageQuestionInput
-  extends NormalizedFollowLineageNodeInput {
+interface NormalizedAskLineageQuestionInput extends NormalizedFollowLineageNodeInput {
   questionText: string;
   clientMutationId: string;
 }
@@ -205,76 +212,88 @@ export async function askLineageQuestion(
   now: Date = new Date(),
 ): Promise<LineageQuestionResult> {
   const normalized = normalizeAskLineageQuestionInput(input);
-  const since = new Date(now.getTime() - ONE_DAY_MS);
 
   return db.transaction().execute(async (trx) => {
-    const existing = await buildFindLineageQuestionByClientMutationQuery(
-      trx,
-      scope,
-      normalized.clientMutationId,
-    ).executeTakeFirst();
-
-    if (existing) {
-      assertExistingQuestionMatchesInput(existing, normalized);
-      return { question: existing, isNewQuestion: false };
-    }
-
-    const eligibility = await readEligibleLineageInteractionEdge(
-      trx,
-      scope,
-      normalized,
-    );
-
-    const [recentForAsker, recentForEdge] = await Promise.all([
-      buildCountRecentLineageQuestionsQuery(trx, scope, {
-        since,
-      }).executeTakeFirst(),
-      buildCountRecentLineageQuestionsQuery(trx, scope, {
-        since,
-        edgeId: normalized.edgeId,
-      }).executeTakeFirst(),
-    ]);
-
-    if (Number(recentForAsker?.count ?? 0) >= LINEAGE_QUESTION_DAILY_LIMIT) {
-      throw new Error("Lineage question limit reached. Try again later.");
-    }
-
-    if (
-      Number(recentForEdge?.count ?? 0) >= LINEAGE_QUESTION_EDGE_DAILY_LIMIT
-    ) {
-      throw new Error(
-        "Lineage question limit for this chain reached. Try again later.",
+    try {
+      await configureInteractionAdmissionTransaction(trx);
+      await acquireInteractionAdmissionLock(
+        trx,
+        `ove237:lineage-question:${scope.userId}:${normalized.clientMutationId}`,
       );
-    }
-
-    const question = await buildInsertLineageQuestionQuery(trx, {
-      asker_user_id: scope.userId,
-      recipient_user_id: eligibility.targetOwnerUserId,
-      lineage_edge_id: eligibility.edgeId,
-      subject_plant_object_id: eligibility.subjectPlantObjectId,
-      target_plant_object_id: normalized.targetPlantObjectId,
-      question_text: normalized.questionText,
-      question_state: "delivered",
-      client_mutation_id: normalized.clientMutationId,
-    }).executeTakeFirst();
-
-    if (question) {
-      return { question, isNewQuestion: true };
-    }
-
-    const existingAfterConflict =
-      await buildFindLineageQuestionByClientMutationQuery(
+      const existing = await buildFindLineageQuestionByClientMutationQuery(
         trx,
         scope,
         normalized.clientMutationId,
       ).executeTakeFirst();
 
-    if (!existingAfterConflict) {
-      throw new Error("Lineage question conflict could not be resolved.");
-    }
+      if (existing) {
+        assertExistingQuestionMatchesInput(existing, normalized);
+        return { question: existing, isNewQuestion: false };
+      }
 
-    assertExistingQuestionMatchesInput(existingAfterConflict, normalized);
-    return { question: existingAfterConflict, isNewQuestion: false };
+      const eligibility = await readEligibleLineageInteractionEdge(
+        trx,
+        scope,
+        normalized,
+      );
+      const quota = utcDayWindow(now);
+      await removeExpiredInteractionQuotaWindows(trx, scope.userId, now);
+      await consumeInteractionQuota(trx, {
+        actorUserId: scope.userId,
+        policy: "lineage_question_global",
+        scope: "global",
+        limit: LINEAGE_QUESTION_DAILY_LIMIT,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+      await consumeInteractionQuota(trx, {
+        actorUserId: scope.userId,
+        policy: "lineage_question_edge",
+        scope: eligibility.edgeId,
+        limit: LINEAGE_QUESTION_EDGE_DAILY_LIMIT,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+      await consumeInteractionQuota(trx, {
+        actorUserId: scope.userId,
+        policy: "lineage_question_recipient",
+        scope: eligibility.targetOwnerUserId,
+        limit: 2,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+
+      const question = await buildInsertLineageQuestionQuery(trx, {
+        asker_user_id: scope.userId,
+        recipient_user_id: eligibility.targetOwnerUserId,
+        lineage_edge_id: eligibility.edgeId,
+        subject_plant_object_id: eligibility.subjectPlantObjectId,
+        target_plant_object_id: normalized.targetPlantObjectId,
+        question_text: normalized.questionText,
+        question_state: "delivered",
+        client_mutation_id: normalized.clientMutationId,
+      }).executeTakeFirst();
+
+      if (question) {
+        return { question, isNewQuestion: true };
+      }
+
+      const existingAfterConflict =
+        await buildFindLineageQuestionByClientMutationQuery(
+          trx,
+          scope,
+          normalized.clientMutationId,
+        ).executeTakeFirst();
+
+      if (!existingAfterConflict) {
+        throw new Error("Lineage question conflict could not be resolved.");
+      }
+
+      assertExistingQuestionMatchesInput(existingAfterConflict, normalized);
+      return { question: existingAfterConflict, isNewQuestion: false };
+    } catch (error) {
+      rethrowAsInteractionUnavailable(error);
+    }
   });
 }
 

@@ -29,6 +29,15 @@ import { SELECTABLE_CATALOG_STATUSES } from "@/server/catalog-repository";
 import { publicLaunchSurfacePredicates } from "@/server/launch-corpus/public-surface";
 import { blockUserId } from "@/server/profile-interaction-repository";
 import { assertAdminCapabilityForScope } from "@/server/admin-access";
+import {
+  acquireInteractionAdmissionLock,
+  configureInteractionAdmissionTransaction,
+  consumeInteractionQuota,
+  InteractionAdmissionError,
+  removeExpiredInteractionQuotaWindows,
+  rethrowAsInteractionUnavailable,
+  utcDayWindow,
+} from "@/server/interaction-admission";
 import type { RequestScope } from "@/server/request-scope";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
@@ -37,8 +46,10 @@ const MAX_COMMENT_BODY_LENGTH = 600;
 export const ENGAGEMENT_COMMENT_PAGE_SIZE = 8;
 const MAX_COMMENT_READBACK = 24;
 const MAX_BOOKMARK_READBACK = 50;
-const ANONYMOUS_LIKE_WINDOW_MS = 60 * 60 * 1000;
+const ANONYMOUS_LIKE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const ANONYMOUS_LIKE_WINDOW_LIMIT = 20;
+const ANONYMOUS_LIKE_ACTIVE_TARGET_LIMIT = 64;
+const ANONYMOUS_LIKE_RESIDENT_TARGET_LIMIT = 128;
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const JOURNAL_SLUG_PATTERN = /^[\p{Letter}\p{Number}-]+$/u;
 const UUID_PATTERN =
@@ -99,6 +110,11 @@ export interface PublicEngagementCommentThread {
   nextCommentCursor?: string | null;
 }
 
+export interface AnonymousEngagementLikeResult {
+  liked: boolean;
+  activeLikeCount: number;
+}
+
 export interface EngagementBookmarkShelfItem {
   key: string;
   target: PublicEngagementTarget;
@@ -134,6 +150,7 @@ interface EngagementLikeRow {
   like_state: string;
   toggle_window_started_at: Date | string;
   toggle_count: number;
+  capability_expires_at: Date | string | null;
 }
 
 export async function getEngagementSummary(
@@ -227,58 +244,137 @@ export async function addEngagementComment(
   const clientMutationId = normalizeClientMutationId(input.clientMutationId);
   const parentCommentId = normalizeOptionalCommentId(input.parentCommentId);
 
-  if (target.kind === "community_contribution") {
-    if (!isDatabaseTransaction(executor)) {
-      return (executor as Kysely<Database>).transaction().execute((trx) =>
-        addEngagementComment(scope, input, trx),
+  if (!isDatabaseTransaction(executor)) {
+    return (executor as Kysely<Database>)
+      .transaction()
+      .execute((trx) => addEngagementComment(scope, input, trx));
+  }
+
+  try {
+    const now = new Date();
+    await configureInteractionAdmissionTransaction(executor);
+    await acquireInteractionAdmissionLock(
+      executor,
+      `ove237:comment:${scope.userId}:${clientMutationId}`,
+    );
+
+    const existing = await buildFindEngagementCommentByClientMutationQuery(
+      executor,
+      scope,
+      clientMutationId,
+    ).executeTakeFirst();
+    if (existing) {
+      assertExistingCommentMatchesInput(existing, {
+        target,
+        body,
+        parentCommentId,
+      });
+      return serializeCommentRow(
+        {
+          commentId: existing.id,
+          authorUserId: existing.author_user_id,
+          parentCommentId: existing.parent_comment_id,
+          body: existing.body,
+          commentState: existing.comment_state,
+          createdAt: existing.created_at,
+          authorHandle: null,
+          authorDisplayName: null,
+        },
+        scope,
       );
     }
-    const contribution = await buildPublicCommunityContributionCommentTargetQuery(
-      executor,
-      target.ref,
-      scope,
-    )
-      .forUpdate()
-      .executeTakeFirst();
-    if (!contribution || contribution.discussionState !== "open") {
-      throw new Error("Engagement comment target is not available.");
+
+    if (target.kind === "community_contribution") {
+      const contribution =
+        await buildPublicCommunityContributionCommentTargetQuery(
+          executor,
+          target.ref,
+          scope,
+        )
+          .forUpdate()
+          .executeTakeFirst();
+      if (!contribution || contribution.discussionState !== "open") {
+        throw new Error("Engagement comment target is not available.");
+      }
+    } else {
+      await ensureEngagementCommentTargetIsPublic(target, executor, scope);
     }
-  } else {
-    await ensureEngagementCommentTargetIsPublic(target, executor, scope);
-  }
-  if (parentCommentId) {
-    const parent = await buildEngagementReplyTargetQuery(
-      executor,
-      scope,
+    if (parentCommentId) {
+      const parent = await buildEngagementReplyTargetQuery(
+        executor,
+        scope,
+        target,
+        parentCommentId,
+      ).executeTakeFirst();
+
+      if (!parent) {
+        throw new Error("Comment reply target is not available.");
+      }
+    }
+
+    const quota = utcDayWindow(now);
+    const targetScope = `${target.kind}:${target.ref}`;
+    await removeExpiredInteractionQuotaWindows(executor, scope.userId, now);
+    if (parentCommentId) {
+      await consumeInteractionQuota(executor, {
+        actorUserId: scope.userId,
+        policy: "comment_reply_global",
+        scope: "global",
+        limit: 24,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+      await consumeInteractionQuota(executor, {
+        actorUserId: scope.userId,
+        policy: "comment_reply_target",
+        scope: targetScope,
+        limit: 6,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+    } else {
+      await consumeInteractionQuota(executor, {
+        actorUserId: scope.userId,
+        policy: "comment_root_global",
+        scope: "global",
+        limit: 12,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+      await consumeInteractionQuota(executor, {
+        actorUserId: scope.userId,
+        policy: "comment_root_target",
+        scope: targetScope,
+        limit: 3,
+        windowStartedAt: quota.startedAt,
+        expiresAt: quota.expiresAt,
+      });
+    }
+
+    const row = await buildInsertEngagementCommentQuery(executor, scope, {
       target,
+      body,
+      clientMutationId,
       parentCommentId,
-    ).executeTakeFirst();
+      now,
+    }).executeTakeFirstOrThrow();
 
-    if (!parent) {
-      throw new Error("Comment reply target is not available.");
-    }
+    return serializeCommentRow(
+      {
+        commentId: row.id,
+        authorUserId: row.author_user_id,
+        parentCommentId: row.parent_comment_id,
+        body: row.body,
+        commentState: row.comment_state,
+        createdAt: row.created_at,
+        authorHandle: null,
+        authorDisplayName: null,
+      },
+      scope,
+    );
+  } catch (error) {
+    rethrowAsInteractionUnavailable(error);
   }
-
-  const row = await buildInsertEngagementCommentQuery(executor, scope, {
-    target,
-    body,
-    clientMutationId,
-    parentCommentId,
-  }).executeTakeFirstOrThrow();
-
-  return serializeCommentRow(
-    {
-      commentId: row.id,
-      authorUserId: row.author_user_id,
-      parentCommentId: row.parent_comment_id,
-      body: row.body,
-      commentState: row.comment_state,
-      createdAt: row.created_at,
-      authorHandle: null,
-      authorDisplayName: null,
-    },
-    scope,
-  );
 }
 
 export async function toggleEngagementBookmark(
@@ -470,10 +566,8 @@ export async function listEngagementCommentModerationQueue(
   return rows.map((row) => ({
     reportId: row.reportId,
     commentId: row.commentId,
-    targetKind: normalizeEngagementCommentTarget(
-      row.targetKind,
-      row.targetRef,
-    ).kind,
+    targetKind: normalizeEngagementCommentTarget(row.targetKind, row.targetRef)
+      .kind,
     targetRef: row.targetRef,
     reason: normalizeCommentReportReason(row.reason),
     reportState: normalizeEngagementCommentReportState(row.reportState),
@@ -630,51 +724,101 @@ export async function listEngagementBookmarks(
 }
 
 export async function toggleAnonymousEngagementLike(
-  input: { target: EngagementTarget; anonymousToken: string; now?: Date },
+  input: {
+    target: EngagementTarget;
+    anonymousToken: string;
+    capabilityExpiresAt: Date;
+    now?: Date;
+  },
   executor: QueryExecutor = db,
-) {
+): Promise<AnonymousEngagementLikeResult> {
   const target = normalizeEngagementTarget(input.target.kind, input.target.ref);
   const anonymousDeviceHash = hashAnonymousEngagementToken(
     input.anonymousToken,
   );
   const now = input.now ?? new Date();
+  if (input.capabilityExpiresAt.getTime() <= now.getTime()) {
+    throw new InteractionAdmissionError("unavailable");
+  }
 
-  await ensureEngagementTargetIsPublic(target, executor);
-  const existing = await buildGetAnonymousLikeQuery(
-    executor,
-    target,
-    anonymousDeviceHash,
-  ).executeTakeFirst();
+  if (!isDatabaseTransaction(executor)) {
+    return (executor as Kysely<Database>)
+      .transaction()
+      .execute((trx) => toggleAnonymousEngagementLike(input, trx));
+  }
 
-  if (!existing) {
-    await buildInsertAnonymousLikeQuery(executor, {
+  try {
+    await configureInteractionAdmissionTransaction(executor);
+    await acquireInteractionAdmissionLock(
+      executor,
+      `ove237:like:${target.kind}:${target.ref}`,
+    );
+    await ensureEngagementTargetIsPublic(target, executor);
+    await removeExpiredAnonymousLikeRows(executor, target, now);
+    const budget = await synchronizeAnonymousLikeTargetBudget(
+      executor,
+      target,
+      now,
+    );
+    const existing = await buildGetAnonymousLikeQuery(
+      executor,
       target,
       anonymousDeviceHash,
       now,
+    ).executeTakeFirst();
+
+    if (!existing) {
+      if (
+        budget.activeLikeCount >= ANONYMOUS_LIKE_ACTIVE_TARGET_LIMIT ||
+        budget.residentLikeCount >= ANONYMOUS_LIKE_RESIDENT_TARGET_LIMIT
+      ) {
+        throw new InteractionAdmissionError("capacity");
+      }
+      await buildInsertAnonymousLikeQuery(executor, {
+        target,
+        anonymousDeviceHash,
+        capabilityExpiresAt: input.capabilityExpiresAt,
+        now,
+      }).executeTakeFirstOrThrow();
+
+      const synchronized = await synchronizeAnonymousLikeTargetBudget(
+        executor,
+        target,
+        now,
+      );
+      return { liked: true, activeLikeCount: synchronized.activeLikeCount };
+    }
+
+    const nextRateWindow = nextAnonymousLikeRateWindow(existing, now);
+    const nextState: EngagementLikeState =
+      existing.like_state === "active" ? "removed" : "active";
+    if (
+      nextState === "active" &&
+      budget.activeLikeCount >= ANONYMOUS_LIKE_ACTIVE_TARGET_LIMIT
+    ) {
+      throw new InteractionAdmissionError("capacity");
+    }
+
+    await buildUpdateAnonymousLikeQuery(executor, {
+      id: existing.id,
+      likeState: nextState,
+      toggleWindowStartedAt: nextRateWindow.startedAt,
+      toggleCount: nextRateWindow.count,
+      now,
     }).executeTakeFirstOrThrow();
 
+    const synchronized = await synchronizeAnonymousLikeTargetBudget(
+      executor,
+      target,
+      now,
+    );
     return {
-      liked: true,
-      activeLikeCount: await countActiveEngagementLikes(target, executor),
+      liked: nextState === "active",
+      activeLikeCount: synchronized.activeLikeCount,
     };
+  } catch (error) {
+    rethrowAsInteractionUnavailable(error);
   }
-
-  const nextRateWindow = nextAnonymousLikeRateWindow(existing, now);
-  const nextState: EngagementLikeState =
-    existing.like_state === "active" ? "removed" : "active";
-
-  await buildUpdateAnonymousLikeQuery(executor, {
-    id: existing.id,
-    likeState: nextState,
-    toggleWindowStartedAt: nextRateWindow.startedAt,
-    toggleCount: nextRateWindow.count,
-    now,
-  }).executeTakeFirstOrThrow();
-
-  return {
-    liked: nextState === "active",
-    activeLikeCount: await countActiveEngagementLikes(target, executor),
-  };
 }
 
 export async function findPublicEngagementTarget(
@@ -832,6 +976,19 @@ export function buildInsertEngagementCommentQuery(
       }),
     )
     .returningAll();
+}
+
+function buildFindEngagementCommentByClientMutationQuery(
+  executor: QueryExecutor,
+  scope: RequestScope,
+  clientMutationId: string,
+) {
+  return executor
+    .selectFrom("engagement_comments")
+    .selectAll()
+    .where("author_user_id", "=", scope.userId)
+    .where("client_mutation_id", "=", clientMutationId)
+    .limit(1);
 }
 
 export function buildEngagementReplyTargetQuery(
@@ -1188,13 +1345,21 @@ export function buildGetAnonymousLikeQuery(
   executor: QueryExecutor,
   target: EngagementTarget,
   anonymousDeviceHash: string,
+  now: Date = new Date(),
 ) {
   return executor
     .selectFrom("engagement_likes")
-    .select(["id", "like_state", "toggle_window_started_at", "toggle_count"])
+    .select([
+      "id",
+      "like_state",
+      "toggle_window_started_at",
+      "toggle_count",
+      "capability_expires_at",
+    ])
     .where("target_kind", "=", target.kind)
     .where("target_ref", "=", target.ref)
-    .where("anonymous_device_hash", "=", anonymousDeviceHash);
+    .where("anonymous_device_hash", "=", anonymousDeviceHash)
+    .where("capability_expires_at", ">", now);
 }
 
 export function buildInsertAnonymousLikeQuery(
@@ -1202,6 +1367,7 @@ export function buildInsertAnonymousLikeQuery(
   input: {
     target: EngagementTarget;
     anonymousDeviceHash: string;
+    capabilityExpiresAt: Date;
     now?: Date;
   },
 ) {
@@ -1213,6 +1379,7 @@ export function buildInsertAnonymousLikeQuery(
       target_kind: input.target.kind,
       target_ref: input.target.ref,
       anonymous_device_hash: input.anonymousDeviceHash,
+      capability_expires_at: input.capabilityExpiresAt,
       toggle_window_started_at: now,
       updated_at: now,
     })
@@ -1246,13 +1413,15 @@ export function buildUpdateAnonymousLikeQuery(
 export function buildCountActiveEngagementLikesQuery(
   executor: QueryExecutor,
   target: EngagementTarget,
+  now: Date = new Date(),
 ) {
   return executor
     .selectFrom("engagement_likes")
     .select(({ fn }) => [fn.count<number>("id").as("activeLikeCount")])
     .where("target_kind", "=", target.kind)
     .where("target_ref", "=", target.ref)
-    .where("like_state", "=", "active");
+    .where("like_state", "=", "active")
+    .where("capability_expires_at", ">", now);
 }
 
 export function buildPublicJournalEntryTargetQuery(
@@ -1457,7 +1626,11 @@ export function buildPublicCommunityContributionCommentTargetQuery(
       "community_contributions.discussion_state as discussionState",
       "communities.slug as communitySlug",
     ])
-    .where("community_contributions.id", "=", normalizeCommentId(contributionId))
+    .where(
+      "community_contributions.id",
+      "=",
+      normalizeCommentId(contributionId),
+    )
     .where("communities.lifecycle_state", "in", ["active", "archived"])
     .where("community_contributions.contribution_state", "=", "active")
     .whereRef(
@@ -1520,7 +1693,9 @@ export function normalizeEngagementCommentTarget(
   refValue: string,
 ): EngagementCommentTarget {
   if (kindValue === "community_contribution") {
-    const ref = String(refValue ?? "").trim().toLowerCase();
+    const ref = String(refValue ?? "")
+      .trim()
+      .toLowerCase();
     if (!UUID_PATTERN.test(ref)) {
       throw new Error("Engagement comment target is not available.");
     }
@@ -1622,10 +1797,12 @@ async function listEngagementComments(
 async function countActiveEngagementLikes(
   target: EngagementTarget,
   executor: QueryExecutor,
+  now: Date = new Date(),
 ) {
   const row = await buildCountActiveEngagementLikesQuery(
     executor,
     target,
+    now,
   ).executeTakeFirst();
 
   return Number(row?.activeLikeCount ?? 0);
@@ -1638,13 +1815,101 @@ function nextAnonymousLikeRateWindow(row: EngagementLikeRow, now: Date) {
     now.getTime() - startedAt.getTime() <= ANONYMOUS_LIKE_WINDOW_MS;
 
   if (withinWindow && row.toggle_count >= ANONYMOUS_LIKE_WINDOW_LIMIT) {
-    throw new Error("Anonymous engagement rate limit reached.");
+    throw new InteractionAdmissionError("quota");
   }
 
   return {
     startedAt: withinWindow ? startedAt : now,
     count: withinWindow ? row.toggle_count + 1 : 1,
   };
+}
+
+async function removeExpiredAnonymousLikeRows(
+  executor: QueryExecutor,
+  target: EngagementTarget,
+  now: Date,
+) {
+  await executor
+    .deleteFrom("engagement_likes")
+    .where("target_kind", "=", target.kind)
+    .where("target_ref", "=", target.ref)
+    .where((eb) =>
+      eb.or([
+        eb("capability_expires_at", "is", null),
+        eb("capability_expires_at", "<=", now),
+      ]),
+    )
+    .execute();
+}
+
+async function synchronizeAnonymousLikeTargetBudget(
+  executor: QueryExecutor,
+  target: EngagementTarget,
+  now: Date,
+) {
+  const [active, resident] = await Promise.all([
+    countActiveEngagementLikes(target, executor, now),
+    executor
+      .selectFrom("engagement_likes")
+      .select(({ fn }) => [fn.count<number>("id").as("residentLikeCount")])
+      .where("target_kind", "=", target.kind)
+      .where("target_ref", "=", target.ref)
+      .where("capability_expires_at", ">", now)
+      .executeTakeFirst(),
+  ]);
+  const residentLikeCount = Number(resident?.residentLikeCount ?? 0);
+
+  if (active === 0 && residentLikeCount === 0) {
+    await executor
+      .deleteFrom("engagement_like_target_budgets")
+      .where("target_kind", "=", target.kind)
+      .where("target_ref", "=", target.ref)
+      .execute();
+    return { activeLikeCount: 0, residentLikeCount: 0 };
+  }
+
+  await executor
+    .insertInto("engagement_like_target_budgets")
+    .values({
+      target_kind: target.kind,
+      target_ref: target.ref,
+      active_like_count: active,
+      resident_like_count: residentLikeCount,
+      updated_at: now,
+    })
+    .onConflict((oc) =>
+      oc.columns(["target_kind", "target_ref"]).doUpdateSet({
+        active_like_count: active,
+        resident_like_count: residentLikeCount,
+        updated_at: now,
+      }),
+    )
+    .execute();
+
+  return { activeLikeCount: active, residentLikeCount };
+}
+
+function assertExistingCommentMatchesInput(
+  existing: {
+    target_kind: string;
+    target_ref: string;
+    body: string;
+    parent_comment_id: string | null;
+  },
+  input: {
+    target: EngagementCommentTarget;
+    body: string;
+    parentCommentId: string | null;
+  },
+) {
+  if (
+    existing.target_kind !== input.target.kind ||
+    existing.target_ref !== input.target.ref ||
+    existing.body !== input.body ||
+    existing.parent_comment_id !== input.parentCommentId
+  ) {
+    throw new Error("Comment submission is not available.");
+  }
 }
 
 function serializeCommentRow(

@@ -323,6 +323,7 @@ describe("engagement repository contracts", () => {
     const compiled = buildInsertAnonymousLikeQuery(testDb, {
       target: journalTarget,
       anonymousDeviceHash: hash,
+      capabilityExpiresAt: new Date("2026-07-05T08:00:00.000Z"),
       now: new Date("2026-07-04T08:00:00.000Z"),
     }).compile();
 
@@ -330,6 +331,7 @@ describe("engagement repository contracts", () => {
     expect(hash).not.toContain(token);
     expect(compiled.sql).toContain('insert into "engagement_likes"');
     expect(compiled.parameters).toContain(hash);
+    expect(compiled.sql).toContain('"capability_expires_at"');
     expect(compiled.parameters).not.toContain(token);
     expect(compiled.sql).not.toMatch(/ip_address|user_agent|owner_user_id/i);
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
@@ -343,6 +345,7 @@ describe("engagement repository contracts", () => {
 
     expect(compiled.sql).toContain('from "engagement_likes"');
     expect(compiled.sql).toContain('"like_state" =');
+    expect(compiled.sql).toContain('"capability_expires_at" >');
     expect(compiled.sql).not.toMatch(promotionCouplingPattern);
     expect(compiled.parameters).toContain("active");
   });

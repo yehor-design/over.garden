@@ -117,6 +117,26 @@ describe("/lineage/objects/[objectId] actions", () => {
     );
   });
 
+  it("redirects an admission refusal to a generic public status without revalidating", async () => {
+    const { InteractionAdmissionError } =
+      await import("@/server/interaction-admission");
+    mocks.askLineageQuestion.mockRejectedValueOnce(
+      new InteractionAdmissionError("quota"),
+    );
+    const { askLineageQuestionAction } = await import("./actions");
+    const formData = new FormData();
+    formData.set("edgeId", "00000000-0000-4000-8000-000000000201");
+    formData.set("targetPlantObjectId", "00000000-0000-4000-8000-000000000102");
+    formData.set("questionText", "How did this line handle balcony heat?");
+    formData.set("clientMutationId", "lineage-question-1");
+    formData.set("rootPlantObjectId", "00000000-0000-4000-8000-000000000101");
+
+    await expect(askLineageQuestionAction(formData)).rejects.toThrow(
+      "NEXT_REDIRECT:/lineage/objects/00000000-0000-4000-8000-000000000101?engagement=lineage-question-rate-limited#passport-provenance",
+    );
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
   it("does not mutate when the viewer is not write eligible", async () => {
     mocks.requireWriteEligibleRequestScope.mockRejectedValue(
       new Error("write access required"),

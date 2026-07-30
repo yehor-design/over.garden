@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -11,14 +11,17 @@ import {
 } from "../src/server/erasure-schema-coverage";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const sqlPath = join(root, "sql/0001_walking_skeleton.sql");
+const sqlDirectory = join(root, "sql");
 
 function main() {
-  const sqlText = readFileSync(sqlPath, "utf8");
+  const sqlText = readCurrentSchemaSql();
   const discovered = discoverErasurePathsFromWalkingSkeletonSql(sqlText);
 
   for (const required of ERASURE_SQL_DISCOVERY_REQUIRED_IDS) {
-    if (!discovered.includes(required) && !sqlText.includes(required.split(".")[1]!)) {
+    if (
+      !discovered.includes(required) &&
+      !sqlText.includes(required.split(".")[1]!)
+    ) {
       // Fall back: column token must appear in SQL for required inventory.
       const column = required.split(".")[1];
       if (!column || !sqlText.includes(column)) {
@@ -55,9 +58,7 @@ function main() {
     const entry = ERASURE_SCHEMA_COVERAGE.find(
       (candidate) =>
         candidate.columnOrPath === column &&
-        (constraint.includes(
-          candidate.table.replace(/_/g, "_").slice(0, 20),
-        ) ||
+        (constraint.includes(candidate.table.replace(/_/g, "_").slice(0, 20)) ||
           candidate.id.endsWith(`.${column}`)),
     );
     const byColumn = ERASURE_SCHEMA_COVERAGE.filter(
@@ -112,6 +113,14 @@ function main() {
       2,
     ),
   );
+}
+
+function readCurrentSchemaSql() {
+  return readdirSync(sqlDirectory)
+    .filter((name) => /^\d{4}_[a-z0-9_]+\.sql$/.test(name))
+    .sort((left, right) => left.localeCompare(right, "en"))
+    .map((name) => readFileSync(join(sqlDirectory, name), "utf8"))
+    .join("\n\n");
 }
 
 main();
