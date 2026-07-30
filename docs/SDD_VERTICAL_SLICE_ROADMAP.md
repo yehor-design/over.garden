@@ -58,6 +58,17 @@ the OVE-238 return-path firewall. Its terminal Linear status and production
 receipt must be read through the authenticated connector before selecting the
 next dependent work.
 
+On 2026-07-30, OVE-184 was individually re-audited against current main after
+its completed blockers were read back. The revalidation confirms the existing
+guest-readable, readiness-gated `observation-and-care` community behavior and
+its later OVE-217, OVE-239, and OVE-235 hardening: canonical public journal
+references, actor-scoped participation and moderation, localized fail-closed
+lifecycle, noindex policy, bounded public-search degradation, and
+production-refusing visual fixtures remain owned by their established modules.
+The closeout record adds no community capability, data mutation, or policy
+owner; terminal Linear status, exact-head CI, and production evidence remain
+required before a dependent item is selected.
+
 All 32 OVE-213 through OVE-244 descriptions predate the v1 contract. Their
 content informed the standard, but no issue in the range is ready for assignment
 or `In Progress` by provenance alone. Before execution, re-audit and materially
