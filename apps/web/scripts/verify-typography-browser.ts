@@ -76,32 +76,6 @@ const FONT_URL_PATTERN = /\.(?:woff2?|ttf|otf)(?:$|[?#])/i;
 const FALLBACK_DELAY_MS = 600;
 const FALLBACK_ROUTE_ID = "bg-home";
 
-/**
- * Fallback-probe failures that the GitHub-hosted runner produces without a
- * matching product defect. They stay measured and are reported as
- * `suppressedFailures`, so the numbers never disappear from the evidence.
- *
- * Chromium `fallback-cls`: with Liberation Sans backing the face, the runner's
- * Chromium renders the sample at 360.0px, essentially the unscaled 359.625px,
- * so it is not applying `size-adjust`. The same browser, font, and CSS on a
- * developer machine renders 355.89px and measures a 0.0004 shift, and Firefox
- * and WebKit apply the adjustment on the runner itself. See
- * docs/TYPOGRAPHY_CONTRACT.md for the full measurement table.
- *
- * WebKit delay/visibility: bimodal on the runner, measured across seven runs as
- * ~1505ms six times and 142ms once, at 0 layout shift, against 69ms locally.
- * That is runner scheduling, not a font contract failure.
- *
- * Tracked for removal by OVE-245. Do not extend this list to hide a real
- * regression: every entry needs a cross-engine or local measurement proving the
- * product is correct.
- */
-const KNOWN_FALLBACK_RUNNER_ARTIFACTS: Partial<
-  Record<TypographyBrowserName, readonly string[]>
-> = {
-  chromium: ["fallback-cls"],
-  webkit: ["fallback-not-visible-within-1s", "fallback-delay-window"],
-};
 const GLOBAL_ERROR_ROUTE_ID = "local-global-error";
 const GLOBAL_ERROR_VIEWPORTS = [
   { id: "mobile-390", width: 390, height: 844 },
@@ -249,6 +223,7 @@ interface FallbackCaseResult {
   fallbackFontAvailableBeforeRelease: boolean;
   computedFallbackFamily: string | null;
   blockedFontRequestCount: number;
+  blockedFontResourceTimingCount: number | null;
   configuredDelayMs: typeof FALLBACK_DELAY_MS;
   blockedDurationMs: number | null;
   fallbackDurationMs: number | null;
@@ -256,11 +231,6 @@ interface FallbackCaseResult {
   convergedFontFamily: string | null;
   fontsReady: boolean;
   fontWindowCls: number | null;
-  /**
-   * Codes still measured and reported, but not failing the gate. See
-   * KNOWN_FALLBACK_RUNNER_ARTIFACTS.
-   */
-  suppressedFailures?: string[];
   fallbackFaceResolved?: boolean;
   fallbackSampleWidthPx?: {
     fallback: number;
@@ -2129,9 +2099,11 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
     type FallbackPerformanceState = {
       cls: number;
       clsSources: Array<{ selector: string; value: number; text: string }>;
+      domContentLoadedMs: number;
       fcpMs: number;
       layoutShiftObserver: PerformanceObserver | null;
       paintObserver: PerformanceObserver | null;
+      visibleMeaningfulTextMs: number;
     };
     const target = window as typeof window & {
       __ove208TypographyFallback?: FallbackPerformanceState;
@@ -2139,11 +2111,54 @@ async function installFallbackPerformanceObservers(context: BrowserContext) {
     const state: FallbackPerformanceState = {
       cls: 0,
       clsSources: [],
+      domContentLoadedMs: 0,
       fcpMs: 0,
       layoutShiftObserver: null,
       paintObserver: null,
+      visibleMeaningfulTextMs: 0,
     };
     target.__ove208TypographyFallback = state;
+
+    const recordVisibleMeaningfulText = () => {
+      if (state.visibleMeaningfulTextMs > 0) return true;
+      const visibleText = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          "main h1, main h2, main p, main a, main button, h1, h2, p",
+        ),
+      ).some((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return (
+          element.innerText.replaceAll(/\s+/gu, " ").trim().length >= 4 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          Number(style.opacity) > 0 &&
+          rect.width > 0 &&
+          rect.height > 0
+        );
+      });
+      if (visibleText) state.visibleMeaningfulTextMs = performance.now();
+      return visibleText;
+    };
+
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        state.domContentLoadedMs = performance.now();
+        const deadlineMs = state.domContentLoadedMs + 1_500;
+        const observeVisibility = () => {
+          if (
+            recordVisibleMeaningfulText() ||
+            performance.now() >= deadlineMs
+          ) {
+            return;
+          }
+          requestAnimationFrame(observeVisibility);
+        };
+        requestAnimationFrame(observeVisibility);
+      },
+      { once: true },
+    );
 
     try {
       state.paintObserver = new PerformanceObserver((list) => {
@@ -2216,8 +2231,9 @@ async function runFallbackCase(input: {
   let pageErrorCount = 0;
   let consoleErrorCount = 0;
   let blockedFontRequestCount = 0;
-  let firstBlockedAt: number | null = null;
-  let releaseAt: number | null = null;
+  let firstBlockedBrowserTimelineMs: number | null = null;
+  let firstBlockedControllerAt: number | null = null;
+  let releaseBrowserTimelineMs: number | null = null;
   let released = false;
   let signalFirstBlocked: () => void = () => undefined;
   const firstBlocked = new Promise<void>((resolve) => {
@@ -2228,7 +2244,6 @@ async function runFallbackCase(input: {
     releaseBlockedRequests = () => {
       if (released) return;
       released = true;
-      releaseAt = Date.now();
       resolve();
     };
   });
@@ -2260,8 +2275,11 @@ async function runFallbackCase(input: {
       return;
     }
     blockedFontRequestCount += 1;
-    if (firstBlockedAt === null) {
-      firstBlockedAt = Date.now();
+    if (firstBlockedControllerAt === null) {
+      firstBlockedControllerAt = Date.now();
+      firstBlockedBrowserTimelineMs = await page
+        .evaluate(() => performance.now())
+        .catch(() => null);
       signalFirstBlocked();
     }
     await releaseGate;
@@ -2277,11 +2295,13 @@ async function runFallbackCase(input: {
       resolveRouteUrl(input.baseUrl, input.route.target).href,
       { waitUntil: "domcontentloaded", timeout: 45_000 },
     );
-    const domContentLoadedAt = Date.now();
     await page
       .waitForFunction(
         () => {
-          type FallbackPerformanceState = { fcpMs: number };
+          type FallbackPerformanceState = {
+            fcpMs: number;
+            visibleMeaningfulTextMs: number;
+          };
           const state = (
             window as typeof window & {
               __ove208TypographyFallback?: FallbackPerformanceState;
@@ -2292,32 +2312,20 @@ async function runFallbackCase(input: {
             performance.getEntriesByName("first-contentful-paint")[0]
               ?.startTime ??
             0;
-          const visibleText = Array.from(
-            document.querySelectorAll<HTMLElement>(
-              "main h1, main h2, main p, main a, main button, h1, h2, p",
-            ),
-          ).some((element) => {
-            const style = getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return (
-              element.innerText.replaceAll(/\s+/gu, " ").trim().length >= 4 &&
-              style.display !== "none" &&
-              style.visibility !== "hidden" &&
-              Number(style.opacity) > 0 &&
-              rect.width > 0 &&
-              rect.height > 0
-            );
-          });
-          return visibleText && fcpMs > 0;
+          return (state?.visibleMeaningfulTextMs ?? 0) > 0 && fcpMs > 0;
         },
         undefined,
         { timeout: 1_500 },
       )
       .catch(() => undefined);
-    const visibleAfterDomContentLoadedMs = Date.now() - domContentLoadedAt;
     const beforeRelease = await page.evaluate(
       async ({ fallbackFamily, sampleText, targetFamily }) => {
-        type FallbackPerformanceState = { cls: number; fcpMs: number };
+        type FallbackPerformanceState = {
+          cls: number;
+          domContentLoadedMs: number;
+          fcpMs: number;
+          visibleMeaningfulTextMs: number;
+        };
         const state = (
           window as typeof window & {
             __ove208TypographyFallback?: FallbackPerformanceState;
@@ -2359,6 +2367,12 @@ async function runFallbackCase(input: {
         return {
           visibleMeaningfulText,
           firstContentfulPaintMs: observedFcp,
+          visibleAfterDomContentLoadedMs:
+            (state?.domContentLoadedMs ?? 0) > 0 &&
+            (state?.visibleMeaningfulTextMs ?? 0) > 0
+              ? (state?.visibleMeaningfulTextMs ?? 0) -
+                (state?.domContentLoadedMs ?? 0)
+              : -1,
           targetFontUnavailableBeforeRelease: !targetFontAvailableBeforeRelease,
           fallbackFontAvailableBeforeRelease:
             document.fonts.check(
@@ -2409,20 +2423,24 @@ async function runFallbackCase(input: {
       },
     );
 
-    if (firstBlockedAt === null) {
+    if (firstBlockedControllerAt === null) {
       await Promise.race([
         firstBlocked,
         new Promise<void>((resolve) => setTimeout(resolve, 250)),
       ]);
     }
-    if (firstBlockedAt !== null) {
-      const remainingDelay = FALLBACK_DELAY_MS - (Date.now() - firstBlockedAt);
+    if (firstBlockedControllerAt !== null) {
+      const remainingDelay =
+        FALLBACK_DELAY_MS - (Date.now() - firstBlockedControllerAt);
       if (remainingDelay > 0) {
         await new Promise<void>((resolve) =>
           setTimeout(resolve, remainingDelay),
         );
       }
     }
+    releaseBrowserTimelineMs = await page
+      .evaluate(() => performance.now())
+      .catch(() => null);
     releaseBlockedRequests();
     const fontsReady = await waitForFonts(page);
     const afterRelease = await page.evaluate(
@@ -2430,9 +2448,11 @@ async function runFallbackCase(input: {
         type FallbackPerformanceState = {
           cls: number;
           clsSources: Array<{ selector: string; value: number; text: string }>;
+          domContentLoadedMs: number;
           fcpMs: number;
           layoutShiftObserver: PerformanceObserver | null;
           paintObserver: PerformanceObserver | null;
+          visibleMeaningfulTextMs: number;
         };
         await document.fonts.load(
           `normal 400 17px "${targetFamily}"`,
@@ -2452,6 +2472,15 @@ async function runFallbackCase(input: {
           performance.getEntriesByName("first-contentful-paint")[0]
             ?.startTime ??
           0;
+        const fontResourceDurationsMs = performance
+          .getEntriesByType("resource")
+          .filter((entry) =>
+            /\.(?:woff2?|ttf|otf)(?:$|[?#])/iu.test(entry.name),
+          )
+          .map((entry) => {
+            const resource = entry as PerformanceResourceTiming;
+            return resource.responseEnd - resource.startTime;
+          });
         const result = {
           targetFontAvailableAfterRelease: document.fonts.check(
             `normal 400 17px "${targetFamily}"`,
@@ -2464,6 +2493,7 @@ async function runFallbackCase(input: {
             firstContentfulPaintMs > 0
               ? performance.now() - firstContentfulPaintMs
               : 0,
+          blockedFontResourceTimingCount: fontResourceDurationsMs.length,
         };
         state?.paintObserver?.disconnect();
         state?.layoutShiftObserver?.disconnect();
@@ -2474,7 +2504,8 @@ async function runFallbackCase(input: {
     const observation: TypographyFallbackObservation = {
       visibleMeaningfulText: beforeRelease.visibleMeaningfulText,
       firstContentfulPaintMs: beforeRelease.firstContentfulPaintMs,
-      visibleAfterDomContentLoadedMs,
+      visibleAfterDomContentLoadedMs:
+        beforeRelease.visibleAfterDomContentLoadedMs,
       targetFontUnavailableBeforeRelease:
         beforeRelease.targetFontUnavailableBeforeRelease,
       fallbackFontAvailableBeforeRelease:
@@ -2482,10 +2513,13 @@ async function runFallbackCase(input: {
       computedFallbackFamily:
         computedFontFamilies(beforeRelease.computedFontStack)[1] ?? "",
       blockedFontRequestCount,
+      blockedFontResourceTimingCount:
+        afterRelease.blockedFontResourceTimingCount,
       configuredDelayMs: FALLBACK_DELAY_MS,
       blockedDurationMs:
-        firstBlockedAt !== null && releaseAt !== null
-          ? releaseAt - firstBlockedAt
+        firstBlockedBrowserTimelineMs !== null &&
+        releaseBrowserTimelineMs !== null
+          ? releaseBrowserTimelineMs - firstBlockedBrowserTimelineMs
           : 0,
       fallbackDurationMs: afterRelease.fallbackDurationMs,
       targetFontAvailableAfterRelease:
@@ -2503,13 +2537,7 @@ async function runFallbackCase(input: {
       expectedFamily: input.expectedFamily,
       expectedFallbackFamily: GOOGLE_SANS_FALLBACK_FAMILY,
     });
-    const knownArtifacts = KNOWN_FALLBACK_RUNNER_ARTIFACTS[input.browserName];
-    const failures = evaluated.filter(
-      (code) => !knownArtifacts?.includes(code),
-    );
-    const suppressedFailures = evaluated.filter((code) =>
-      Boolean(knownArtifacts?.includes(code)),
-    );
+    const failures = [...evaluated];
     if (response?.status() !== 200) failures.unshift("fallback-http-status");
     return {
       browser: input.browserName,
@@ -2526,6 +2554,8 @@ async function runFallbackCase(input: {
         observation.fallbackFontAvailableBeforeRelease,
       computedFallbackFamily: observation.computedFallbackFamily,
       blockedFontRequestCount,
+      blockedFontResourceTimingCount:
+        observation.blockedFontResourceTimingCount,
       configuredDelayMs: FALLBACK_DELAY_MS,
       blockedDurationMs: observation.blockedDurationMs,
       fallbackDurationMs: observation.fallbackDurationMs,
@@ -2534,7 +2564,6 @@ async function runFallbackCase(input: {
       convergedFontFamily: observation.convergedFontFamily,
       fontsReady,
       fontWindowCls: observation.fontWindowCls,
-      suppressedFailures,
       fallbackFaceResolved: beforeRelease.fallbackFaceResolved,
       fallbackSampleWidthPx: beforeRelease.fallbackSampleWidthPx,
       // Largest contributors first, so a failing gate names what moved.
@@ -2938,6 +2967,7 @@ function failedFallbackCase(input: {
     fallbackFontAvailableBeforeRelease: false,
     computedFallbackFamily: null,
     blockedFontRequestCount: 0,
+    blockedFontResourceTimingCount: null,
     configuredDelayMs: FALLBACK_DELAY_MS,
     blockedDurationMs: null,
     fallbackDurationMs: null,

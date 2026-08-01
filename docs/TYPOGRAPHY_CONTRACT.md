@@ -634,35 +634,31 @@ fallback face with Cyrillic-derived metrics and an explicit `unicode-range`,
 declared after the default face so it wins for Cyrillic code points. The asset
 verifier recomputes both sets from the shipped binary, so they cannot drift.
 
-The fallback face also lists `Liberation Sans` and `Arimo` alongside `Arial`,
-in family, full-name, and PostScript spellings. Arial is absent on Linux and on
-some Android builds, and `local()` matches by font name rather than through
-fontconfig aliasing, so an Arial-only source left the face unresolved there.
+The fallback face prioritizes direct `Liberation Sans` and `Arimo` names, in
+family, full-name, and PostScript spellings, before the `Arial` alias. Arial is
+absent on Linux and on some Android builds; direct names prevent Chromium Linux
+from resolving an alias before it applies the fallback face's metric overrides.
 
-## Known Runner Artifacts (OVE-233, tracked by OVE-245)
+## Browser-Timeline Fallback Gate (OVE-245)
 
-`KNOWN_FALLBACK_RUNNER_ARTIFACTS` in `scripts/verify-typography-browser.ts`
-lists fallback-probe codes that the GitHub-hosted runner produces without a
-matching product defect. They stay measured and are reported as
-`suppressedFailures`; they never vanish from the evidence.
+Every fallback code is a direct CI failure. The evaluator has no engine
+allowlist, suppression field, tolerance, or pass branch.
 
-Chromium `fallback-cls`. With Liberation Sans backing the face, the runner's
-Chromium renders the sample at 360.0px against an unscaled 359.625px, so it is
-not applying `size-adjust`. Firefox and WebKit apply it on the same runner, and
-the same browser, font, and CSS on a developer machine renders 355.89px:
+The probe records first contentful paint, meaningful-text visibility after
+`DOMContentLoaded`, the browser high-resolution interval while the intercepted
+font is blocked, a separate font-resource timing entry, and font-window CLS.
+Node timestamps only coordinate the deterministic 600ms release gate; they are
+not emitted or admitted as pass/fail evidence. Missing browser visibility or
+font-resource timing fails closed.
 
-| Environment | Backing font | Sample width | Fallback CLS |
-| --- | --- | --- | --- |
-| Local, real Arial | Arial 359.625 | 355.89 | 0.0004 |
-| Local, Liberation Sans first | Liberation Sans 359.625 | 355.89 | 0.0004 |
-| Runner, Chromium | Liberation Sans 359.625 | 360.00 | 0.0354 |
-| Runner, Firefox | Liberation Sans 359.53 | 355.93 | 0 |
-| Runner, WebKit | Liberation Sans 359.625 | 355.86 | 0 |
+Run the self-contained local matrix from a clean preview:
 
-WebKit `fallback-not-visible-within-1s` and `fallback-delay-window`. Bimodal on
-the runner: ~1505ms across six of seven runs and 142ms once, always at 0 layout
-shift, against 69ms locally. That is runner scheduling, not a font contract
-failure.
+```bash
+cd apps/web
+../../infra/run-with-local-infra-env pnpm test:typography-browser-local -- --browsers chromium,firefox,webkit --sha "$(git rev-parse HEAD)"
+```
 
-Do not extend the list to hide a regression. Every entry requires a
-cross-engine or local measurement showing the product itself is correct.
+The command verifies the seeded local visual fixtures, builds the current
+checkout, starts a loopback preview, waits boundedly for root and fixture HTTP
+health, runs the existing matrix, and terminates the preview process group even
+after a failure.

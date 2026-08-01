@@ -106,9 +106,9 @@
 @font-face {
   font-family: "Google Sans Fallback";
   src:
-    local("Arial"), local("Liberation Sans"), local("Liberation Sans Regular"),
+    local("Liberation Sans"), local("Liberation Sans Regular"),
     local("LiberationSans"), local("LiberationSans-Regular"), local("Arimo"),
-    local("Arimo-Regular");
+    local("Arimo-Regular"), local("Arial");
   size-adjust: 101.55%;
   ascent-override: 95.12%;
   descent-override: 28.16%;
@@ -121,9 +121,9 @@
 @font-face {
   font-family: "Google Sans Fallback";
   src:
-    local("Arial"), local("Liberation Sans"), local("Liberation Sans Regular"),
+    local("Liberation Sans"), local("Liberation Sans Regular"),
     local("LiberationSans"), local("LiberationSans-Regular"), local("Arimo"),
-    local("Arimo-Regular");
+    local("Arimo-Regular"), local("Arial");
   size-adjust: 98.53%;
   ascent-override: 98.04%;
   descent-override: 29.03%;

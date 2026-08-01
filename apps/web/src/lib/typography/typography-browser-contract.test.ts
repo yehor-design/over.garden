@@ -89,6 +89,7 @@ function fallbackObservation(
     fallbackFontAvailableBeforeRelease: true,
     computedFallbackFamily: '"Google Sans Fallback", Arial, sans-serif',
     blockedFontRequestCount: 2,
+    blockedFontResourceTimingCount: 2,
     configuredDelayMs: 600,
     blockedDurationMs: 610,
     fallbackDurationMs: 710,
@@ -394,8 +395,8 @@ describe("OVE-208 typography browser contract", () => {
         fallbackObservation({
           visibleMeaningfulText: true,
           firstContentfulPaintMs: 474,
-          visibleAfterDomContentLoadedMs: 1_005,
-          blockedDurationMs: 1_169,
+          visibleAfterDomContentLoadedMs: 1_499,
+          blockedDurationMs: 1_599,
           fallbackDurationMs: 3_347,
         }),
       ),
@@ -422,6 +423,34 @@ describe("OVE-208 typography browser contract", () => {
       "fallback-family",
       "fallback-duration",
       "fallback-cls",
+    ]);
+  });
+
+  it("fails closed on missing or out-of-window browser timeline evidence", () => {
+    expect(
+      evaluateTypographyFallbackObservation(
+        fallbackObservation({
+          visibleAfterDomContentLoadedMs: -1,
+          blockedFontResourceTimingCount: 0,
+          blockedDurationMs: 0,
+        }),
+      ),
+    ).toEqual([
+      "fallback-not-visible-within-1s",
+      "fallback-no-font-resource-timing",
+      "fallback-delay-window",
+    ]);
+
+    expect(
+      evaluateTypographyFallbackObservation(
+        fallbackObservation({
+          visibleAfterDomContentLoadedMs: 1_501,
+          blockedDurationMs: 1_601,
+        }),
+      ),
+    ).toEqual([
+      "fallback-not-visible-within-1s",
+      "fallback-delay-window",
     ]);
   });
 

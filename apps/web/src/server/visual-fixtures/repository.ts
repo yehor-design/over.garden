@@ -64,9 +64,9 @@ export function buildVisualFixtureSeedQueries(
     ({ id }) => id,
   );
   const mediaCleanup = executor.deleteFrom("media_assets").where(
-    "id",
+    "owner_user_id",
     "in",
-    manifest.media.map(({ id }) => id),
+    actorIds,
   );
   const objectMentionsCleanup = executor
     .deleteFrom("journal_entry_object_mentions")
@@ -1227,9 +1227,9 @@ export function buildVisualFixtureResetQueries(
     {
       label: "media",
       query: executor.deleteFrom("media_assets").where(
-        "id",
+        "owner_user_id",
         "in",
-        manifest.media.map(({ id }) => id),
+        actorIds,
       ),
     },
     {

@@ -114,6 +114,7 @@
     "typography:check": "pnpm typography:assets:check && vitest run src/lib/typography scripts/verify-google-sans-assets.test.ts",
     "typography:report": "tsx scripts/verify-google-sans-assets.ts --runtime-imports",
     "typography:browser": "tsx scripts/verify-typography-browser.ts",
+    "test:typography-browser-local": "tsx scripts/run-typography-browser-local.ts",
     "typography:performance": "tsx scripts/verify-typography-performance.ts",
     "linear:task:check": "tsx scripts/check-linear-agent-task.ts",
     "linear:task:standard:check": "vitest run scripts/check-linear-agent-task.test.ts scripts/check-mainline-closeout.test.ts --testTimeout 60000",
