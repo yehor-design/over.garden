@@ -1,4 +1,5 @@
 import { parseInternalReturnPath } from "@/lib/navigation/internal-return-path";
+import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
 
 export const AUTH_INTENT_ACTIONS = [
   "comment",
@@ -76,7 +77,6 @@ const ROUTE_PATTERNS = [
   /^\/$/,
   /^\/(?:uk|bg|ru)$/,
   /^\/variety\/[a-z0-9][a-z0-9-]{0,95}$/,
-  /^\/(?:(?:uk|bg|ru)\/)?journal\/[a-z0-9][a-z0-9-]{0,95}$/,
   /^\/lineage\/objects\/[0-9a-f-]{36}$/,
   /^\/@[a-z0-9_]{2,40}$/,
   /^\/(?:uk|bg|ru)\/@[a-z0-9_]{2,40}$/,
@@ -237,7 +237,14 @@ function normalizeTarget(value: unknown): AuthIntentTarget | undefined {
   }
 
   const kind = record.kind as AuthIntentTargetKind;
-  const ref = record.ref.trim().toLowerCase();
+  const rawRef = record.ref.trim();
+  if (kind === "journal") {
+    const ref = normalizePublicJournalSlug(rawRef);
+    if (!ref) throw new AuthIntentContractError();
+    return { kind, ref };
+  }
+
+  const ref = rawRef.toLowerCase();
   const valid =
     kind === "object" || kind === "contribution"
       ? UUID_PATTERN.test(ref)
@@ -279,7 +286,7 @@ function normalizeReturnTo(value: unknown): string {
 
   if (
     url.origin !== "https://over.garden" ||
-    !ROUTE_PATTERNS.some((pattern) => pattern.test(url.pathname))
+    !isAllowedReturnPath(url.pathname)
   ) {
     throw new AuthIntentContractError();
   }
@@ -309,4 +316,16 @@ function normalizeReturnTo(value: unknown): string {
   }
 
   return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function isAllowedReturnPath(pathname: string) {
+  return (
+    ROUTE_PATTERNS.some((pattern) => pattern.test(pathname)) ||
+    isPublicJournalReturnPath(pathname)
+  );
+}
+
+function isPublicJournalReturnPath(pathname: string) {
+  const match = /^\/(?:(?:uk|bg|ru)\/)?journal\/([^/]+)$/.exec(pathname);
+  return Boolean(match && normalizePublicJournalSlug(match[1]));
 }

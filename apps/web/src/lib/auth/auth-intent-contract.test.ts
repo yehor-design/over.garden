@@ -119,6 +119,24 @@ describe("auth intent contract", () => {
     }
   });
 
+  it("admits the canonical encoded return path and Unicode target for public journals", () => {
+    const journalSlug = "избрана-корица";
+    const intent = normalizeAuthIntentDraft({
+      action: "comment",
+      returnTo: `/bg/journal/${encodeURIComponent(journalSlug)}#comments`,
+      target: { kind: "journal", ref: encodeURIComponent(journalSlug) },
+    });
+
+    expect(intent).toEqual({
+      action: "comment",
+      returnTo: `/bg/journal/${encodeURIComponent(journalSlug)}#comments`,
+      target: { kind: "journal", ref: journalSlug },
+    });
+    expect(buildAuthIntentResumeHref(intent)).toBe(
+      `/bg/journal/${encodeURIComponent(journalSlug)}?authIntent=comment#comments`,
+    );
+  });
+
   it("preserves one opaque control locator without exposing a raw private id", () => {
     const intent = normalizeAuthIntentDraft({
       action: "publish",
@@ -190,6 +208,7 @@ describe("auth intent contract", () => {
     "/%5cattacker.example/steal",
     "/%252f%255cattacker.example/steal",
     "/journal/entry%250aattacker",
+    "/bg/journal/safe%2Fsegment",
     "/journal/entry?next=https://attacker.example",
     "/unknown/private-route",
     "/journal/entry?email=person%40example.com",
@@ -207,6 +226,7 @@ describe("auth intent contract", () => {
 
   it.each([
     { kind: "journal", ref: "../private" },
+    { kind: "journal", ref: "safe%2Fsegment" },
     { kind: "object", ref: "not-a-uuid" },
     { kind: "profile", ref: "person@example.com" },
     { kind: "collection", ref: "x".repeat(100) },
