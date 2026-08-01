@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   revalidatePath: vi.fn(),
   redirect: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
+  scheduleLearningAttributionDrain: vi.fn(),
   createSpaceJournalEntry: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
@@ -20,6 +21,10 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/server/pilot-write-access", () => ({
   requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
+}));
+
+vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
+  scheduleLearningAttributionDrain: mocks.scheduleLearningAttributionDrain,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -83,6 +88,9 @@ describe("garden entry actions", () => {
     );
     expect(mocks.redirect).toHaveBeenCalledWith(
       "/garden?saveProgress=space-entry",
+    );
+    expect(mocks.scheduleLearningAttributionDrain).toHaveBeenCalledWith(
+      expect.any(Function),
     );
     expect(
       JSON.stringify(mocks.recordAnalyticsEventSafely.mock.calls),

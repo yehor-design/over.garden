@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
   revalidatePath: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
-  resolveActorClassForScope: vi.fn(async () => "real_self_serve" as const),
+  scheduleLearningAttributionDrain: vi.fn(),
   createFirstPlantEntry: vi.fn(),
   createPlantObjectJournalEntry: vi.fn(),
   recordAnalyticsEventSafely: vi.fn(),
@@ -24,7 +24,10 @@ vi.mock("next/cache", () => ({
 vi.mock("@/server/pilot-write-access", () => ({
   PilotWriteAccessError: class PilotWriteAccessError extends Error {},
   requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
-  resolveActorClassForScope: mocks.resolveActorClassForScope,
+}));
+
+vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
+  scheduleLearningAttributionDrain: mocks.scheduleLearningAttributionDrain,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -162,6 +165,9 @@ describe("POST /api/garden/entries save progress readback", () => {
         topicTags: ["watering", "seedlings"],
       }),
     );
+    const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];
+    expect(deferred).toEqual(expect.any(Function));
+    await deferred?.();
     expect(mocks.recordAnalyticsEventSafely).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ eventName: "progress_screen_shown" }),
@@ -211,6 +217,8 @@ describe("POST /api/garden/entries save progress readback", () => {
     ).not.toMatch(
       /Second flowering wave|stronger new leaves|email|phone|ip_address|user_agent|media_key|coordinate|latitude|longitude/i,
     );
+    const deferred = mocks.scheduleLearningAttributionDrain.mock.calls[0]?.[0];
+    expect(deferred).toEqual(expect.any(Function));
   });
 });
 

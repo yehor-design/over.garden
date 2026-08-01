@@ -578,6 +578,24 @@ export interface LearningActorAttributions {
   user_id: string;
 }
 
+export interface LearningAttributionOutbox {
+  applied_generation: Generated<number>;
+  attempts: Generated<number>;
+  available_at: Generated<Timestamp>;
+  cohort: string | null;
+  created_at: Generated<Timestamp>;
+  desired_generation: Generated<number>;
+  id: Generated<string>;
+  last_error_class: string | null;
+  locked_at: Timestamp | null;
+  locked_by: string | null;
+  segment: string | null;
+  state: Generated<string>;
+  terminalized_at: Timestamp | null;
+  updated_at: Generated<Timestamp>;
+  user_id: string;
+}
+
 export interface LineageNodeFollows {
   created_at: Generated<Timestamp>;
   follow_state: Generated<string>;
@@ -954,6 +972,7 @@ export interface DB {
   journal_entry_topic_signals: JournalEntryTopicSignals;
   journal_topics: JournalTopics;
   learning_actor_attributions: LearningActorAttributions;
+  learning_attribution_outbox: LearningAttributionOutbox;
   lineage_node_follows: LineageNodeFollows;
   lineage_pending_source_identities: LineagePendingSourceIdentities;
   lineage_provenance_edge_audit_events: LineageProvenanceEdgeAuditEvents;

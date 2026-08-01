@@ -15,6 +15,7 @@ import {
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
+import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
   createSpaceJournalEntry,
   type SpaceJournalEntryResult,
@@ -34,7 +35,11 @@ export async function createSpaceJournalEntryAction(formData: FormData) {
     topicTags: String(formData.get("topicTags") ?? ""),
   });
 
-  await recordSpaceJournalEntryEvents(scope, result);
+  if (result.isNewEntry) {
+    scheduleLearningAttributionDrain(async () => {
+      await recordSpaceJournalEntryEvents(scope, result);
+    });
+  }
 
   revalidatePath("/garden");
   for (const object of result.mentionedObjects) {

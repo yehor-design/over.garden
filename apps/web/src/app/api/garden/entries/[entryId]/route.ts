@@ -15,8 +15,8 @@ import { recordComposerLearningSignalsSafely } from "@/server/mvp-learning/compo
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
-  resolveActorClassForScope,
 } from "@/server/pilot-write-access";
+import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
 export const runtime = "nodejs";
@@ -83,20 +83,26 @@ export async function PATCH(
       topicTags: body.topicTags,
     });
 
-    if (!result.isReplay && result.learning) {
-      const actorClass = await resolveActorClassForScope(scope);
-      await recordComposerLearningSignalsSafely(scope, {
-        actorClass,
-        journalEntryId: result.entry.id,
-        plantObjectId: result.entry.plant_object_id,
-        spaceId: result.entry.space_id,
-        document: result.learning.document,
-        coverSource: result.learning.nextCoverSource,
-        priorCoverSource: result.learning.priorCoverSource,
-        priorBlockOrderHash: result.learning.priorBlockOrderHash,
-        nextBlockOrderHash: result.learning.nextBlockOrderHash,
-        mutationOutcome: "succeeded",
+    const learning = result.learning;
+    if (!result.isReplay && learning) {
+      scheduleLearningAttributionDrain(async () => {
+        // OVE-219: actor class arrives from the durable outbox. These bounded
+        // composer events are written after the response and are backfilled by
+        // the same consumer, never synchronously resolved from a request.
+        await recordComposerLearningSignalsSafely(scope, {
+          journalEntryId: result.entry.id,
+          plantObjectId: result.entry.plant_object_id,
+          spaceId: result.entry.space_id,
+          document: learning.document,
+          coverSource: learning.nextCoverSource,
+          priorCoverSource: learning.priorCoverSource,
+          priorBlockOrderHash: learning.priorBlockOrderHash,
+          nextBlockOrderHash: learning.nextBlockOrderHash,
+          mutationOutcome: "succeeded",
+        });
       });
+    } else if (!result.isReplay) {
+      scheduleLearningAttributionDrain();
     }
 
     revalidatePath("/garden");

@@ -207,6 +207,14 @@ export async function ensurePilotWriteEligible(
  */
 export async function requireWriteEligibleRequestScope(): Promise<RequestScope> {
   const scope = await requireCurrentRequestScope();
-  await claimPilotCohortAttribution(scope);
-  return scope;
+  // OVE-219: authenticated journal writes must not await attribution reads or
+  // writes. Cookie verification is pure and only supplies bounded metadata for
+  // the transactionally committed outbox intent.
+  const invite = await readPilotInviteFromCookie();
+  return {
+    ...scope,
+    learningAttributionHint: invite
+      ? { cohort: invite.cohort, segment: invite.segment }
+      : null,
+  };
 }

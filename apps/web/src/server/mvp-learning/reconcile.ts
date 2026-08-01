@@ -15,6 +15,7 @@ export interface MvpLearningReconcileReport {
     selfServeActivated: number;
     closedPilotActivated: number;
     unclassifiedEvents: number;
+    attributionOutstanding: number;
     exclusionsTotal: number;
   };
   forbiddenFieldHits: number;
@@ -39,9 +40,14 @@ export async function buildMvpLearningReconcileReport(input: {
       key.toLowerCase().includes(fragment),
     ),
   ).length;
+  const attributionOutstanding =
+    report.attributionOutbox.pending +
+    report.attributionOutbox.processing +
+    report.attributionOutbox.failed +
+    report.attributionOutbox.dead;
 
   const ok =
-    report.unclassifiedEventCount === 0 &&
+    report.decisionGate !== "unclassified" &&
     forbiddenFieldHits === 0 &&
     report.policyVersion === MVP_LEARNING_POLICY_VERSION;
 
@@ -53,6 +59,7 @@ export async function buildMvpLearningReconcileReport(input: {
       selfServeActivated: report.cohorts.real_self_serve.activatedGardeners,
       closedPilotActivated: report.cohorts.real_closed_pilot.activatedGardeners,
       unclassifiedEvents: report.unclassifiedEventCount,
+      attributionOutstanding,
       exclusionsTotal,
     },
     forbiddenFieldHits,

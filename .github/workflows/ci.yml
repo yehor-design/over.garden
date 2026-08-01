@@ -62,6 +62,9 @@ jobs:
       DIRECT_URL: postgresql://overgarden:overgarden@localhost:5432/overgarden
       DATABASE_POOL_MAX: "1"
       DATABASE_SSL: "false"
+      # OVE-219 must exercise transactional outbox leasing against this
+      # PostgreSQL service; the test stays opt-in for non-CI local unit runs.
+      OVE219_POSTGRES_INTEGRATION: "true"
       R2_ENDPOINT: http://localhost:9000
       R2_ACCESS_KEY_ID: overgarden-ci
       R2_SECRET_ACCESS_KEY: overgarden-ci-secret
