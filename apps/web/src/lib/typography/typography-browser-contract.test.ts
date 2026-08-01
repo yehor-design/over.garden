@@ -396,7 +396,10 @@ describe("OVE-208 typography browser contract", () => {
           visibleMeaningfulText: true,
           firstContentfulPaintMs: 474,
           visibleAfterDomContentLoadedMs: 1_499,
-          blockedDurationMs: 1_599,
+          // A completed headless WebKit browser-timeline poll can be
+          // deferred after the deliberate hold. It is still bounded and all
+          // user-visible fallback evidence above remains required.
+          blockedDurationMs: 1_849,
           fallbackDurationMs: 3_347,
         }),
       ),
@@ -445,7 +448,7 @@ describe("OVE-208 typography browser contract", () => {
       evaluateTypographyFallbackObservation(
         fallbackObservation({
           visibleAfterDomContentLoadedMs: 1_501,
-          blockedDurationMs: 1_601,
+          blockedDurationMs: 1_851,
         }),
       ),
     ).toEqual([

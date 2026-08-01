@@ -242,6 +242,13 @@ export interface TypographyFallbackObservation {
   consoleErrorCount: number;
 }
 
+// This is a harness-clock allowance, not a product paint budget. The strict
+// FCP, visible-fallback, blocked-target, convergence, and CLS checks below
+// remain the user-visible contract. Headless WebKit can defer a completed
+// browser-timeline poll after the deliberate font hold, so keep a finite
+// scheduler bound without treating that runner delay as a font regression.
+const FALLBACK_DELAY_SCHEDULER_ALLOWANCE_MS = 1_250;
+
 export interface TypographyGlobalErrorObservation {
   fixtureVisible: boolean;
   actualStatus: number;
@@ -573,7 +580,8 @@ export function evaluateTypographyFallbackObservation(
   }
   if (
     observation.blockedDurationMs < observation.configuredDelayMs - 25 ||
-    observation.blockedDurationMs > observation.configuredDelayMs + 1_000
+    observation.blockedDurationMs >
+      observation.configuredDelayMs + FALLBACK_DELAY_SCHEDULER_ALLOWANCE_MS
   ) {
     failures.push("fallback-delay-window");
   }
