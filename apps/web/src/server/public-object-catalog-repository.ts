@@ -245,7 +245,7 @@ export function buildPublicObjectCatalogGroupsQuery(
   }
 
   if (request.query) {
-    const pattern = `%${request.query}%`;
+    const pattern = `%${escapeLikePattern(request.query)}%`;
     query = query.where(({ eb, exists, or, selectFrom }) =>
       or([
         eb("plant_objects.display_name", "ilike", pattern),
@@ -450,12 +450,11 @@ function normalizePublicObjectCatalogPage(value: string | undefined) {
 function isPublicObjectCatalogKind(
   value: string,
 ): value is PublicObjectCatalogKind {
-  return (
-    value === "all" ||
-    value === "plant" ||
-    value === "animal" ||
-    value === "animal"
-  );
+  return value === "all" || value === "plant" || value === "animal";
+}
+
+function escapeLikePattern(value: string) {
+  return value.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
 
 function isPublicObjectCatalogIdentityFilter(

@@ -147,11 +147,7 @@ function CatalogKindNavigation({
   copy: PublicObjectCatalogCopy;
   request: PublicObjectCatalogRequest;
 }) {
-  const kinds: PublicObjectCatalogKind[] = [
-    "all",
-    "plant",
-    "animal",
-  ];
+  const kinds: PublicObjectCatalogKind[] = ["all", "plant", "animal"];
 
   return (
     <nav
@@ -177,7 +173,6 @@ function CatalogKindNavigation({
             })}
           >
             {kind === "plant" ? <Sprout aria-hidden="true" /> : null}
-            {kind === "animal" ? <PawPrint aria-hidden="true" /> : null}
             {kind === "animal" ? <PawPrint aria-hidden="true" /> : null}
             {copy.kinds[kind]}
           </Link>
@@ -205,10 +200,6 @@ function CatalogIdentityNavigation({
     >
       {identities.map((identity) => {
         const active = request.identity === identity;
-        const label =
-          identity === "breed" && request.kind === "animal"
-            ? copy.identities.bee_breed
-            : copy.identities[identity];
         return (
           <Link
             key={identity}
@@ -224,7 +215,7 @@ function CatalogIdentityNavigation({
               className: "shrink-0",
             })}
           >
-            {label}
+            {copy.identities[identity]}
           </Link>
         );
       })}

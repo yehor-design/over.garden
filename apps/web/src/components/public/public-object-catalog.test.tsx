@@ -107,7 +107,7 @@ describe("public living-object catalog", () => {
     expect(html).not.toMatch(/register|sign.?up|створити акаунт/i);
   });
 
-  it("uses animal and bee-specific second-level filters", () => {
+  it("uses the same catalog-backed breed filter for every animal", () => {
     const animalHtml = renderToStaticMarkup(
       <PublicObjectCatalog
         locale="uk"
@@ -120,29 +120,14 @@ describe("public living-object catalog", () => {
         state="empty"
       />,
     );
-    const beeHtml = renderToStaticMarkup(
-      <PublicObjectCatalog
-        locale="uk"
-        copy={copy}
-        page={{
-          ...readyPage,
-          request: {
-            kind: "animal",
-            identity: "all",
-            query: "",
-            page: 1,
-          },
-          cards: [],
-        }}
-        state="empty"
-      />,
-    );
-
     expect(animalHtml).toContain("Породи");
     expect(animalHtml).toContain("Види");
     expect(animalHtml).not.toContain("Сорти");
-    expect(beeHtml).toContain("Породи та лінії");
-    expect(beeHtml).not.toContain("Сорти");
+    expect(animalHtml).not.toContain("Породи та лінії");
+    expect(animalHtml).toContain(
+      'href="/objects?kind=animal&amp;identity=breed"',
+    );
+    expect(animalHtml.match(/lucide-paw-print/g)).toHaveLength(1);
   });
 
   it("renders searchable, recoverable empty, loading, and repository-error states", () => {

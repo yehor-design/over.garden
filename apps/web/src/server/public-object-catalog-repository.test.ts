@@ -135,6 +135,22 @@ describe("public living-object catalog query", () => {
     expect(sql).not.toContain('join "catalog_source_snapshots"');
     expect(sql).not.toContain('join "spaces"');
   });
+
+  it("treats SQL LIKE wildcards in a public query as literal characters", () => {
+    const compiled = buildPublicObjectCatalogGroupsQuery(testDb, {
+      kind: "all",
+      identity: "all",
+      query: "bee%_\\hive",
+      page: 1,
+    }).compile();
+
+    expect(compiled.sql).toContain("ilike");
+    expect(compiled.parameters).toContain("%bee\\%\\_\\\\hive%");
+    expect(
+      compiled.parameters.filter((value) => value === "%bee\\%\\_\\\\hive%"),
+    ).toHaveLength(4);
+    expect(compiled.parameters).not.toContain("%bee%_\\hive%");
+  });
 });
 
 describe("public living-object catalog serialization", () => {
