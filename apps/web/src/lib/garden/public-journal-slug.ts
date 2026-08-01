@@ -26,6 +26,11 @@ export function isValidPublicJournalSlug(value: unknown): value is string {
 
 /** Trim-normalize an inbound slug, or `null` when it cannot be canonical. */
 export function normalizePublicJournalSlug(value: string): string | null {
-  const normalized = value.trim();
-  return isValidPublicJournalSlug(normalized) ? normalized : null;
+  const encoded = value.trim();
+  try {
+    const normalized = decodeURIComponent(encoded);
+    return isValidPublicJournalSlug(normalized) ? normalized : null;
+  } catch {
+    return null;
+  }
 }

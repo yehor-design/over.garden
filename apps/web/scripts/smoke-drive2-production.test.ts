@@ -9,6 +9,7 @@ const COMMIT = "1".repeat(40);
 const OBJECT_ID = "11111111-1111-4111-8111-111111111111";
 const OBJECT_PATH = `/lineage/objects/${OBJECT_ID}`;
 const JOURNAL_PATH = "/journal/closeout-public-journal";
+const LOCALIZED_JOURNAL_PATH = `/bg/journal/${encodeURIComponent("избрана-корица")}`;
 const PROFILE_PATH = "/bg/@closeout_profile";
 const OPAQUE_SKELETON_BODY = "skeleton-response-body-must-not-be-recorded";
 
@@ -18,6 +19,7 @@ type FetchOverrides = {
     | "GET /api/skeleton/journal"
     | "POST /api/skeleton/journal";
   fixtureExposed?: boolean;
+  journalPath?: string;
   onSkeletonResponse?: (response: Response) => void;
 };
 
@@ -36,6 +38,7 @@ function html(marker = "") {
 }
 
 function createFetch(overrides: FetchOverrides = {}) {
+  const journalPath = overrides.journalPath ?? JOURNAL_PATH;
   return vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(
       input instanceof Request ? input.url : input.toString(),
@@ -108,7 +111,7 @@ function createFetch(overrides: FetchOverrides = {}) {
     if (url.pathname === "/bg") {
       return response(
         html(
-          `<a href="${OBJECT_PATH}">Object</a><a href="${JOURNAL_PATH}">Journal</a>`,
+          `<a href="${OBJECT_PATH}">Object</a><a href="${journalPath}">Journal</a>`,
         ),
         { status: 200, headers },
         url.toString(),
@@ -121,7 +124,7 @@ function createFetch(overrides: FetchOverrides = {}) {
         url.toString(),
       );
     }
-    if (url.pathname === JOURNAL_PATH) {
+    if (url.pathname === journalPath) {
       return response(
         html('<article data-public-journal-entry="true"></article>'),
         { status: 200, headers },
@@ -227,6 +230,26 @@ describe("OVE-186 canonical production smoke", () => {
         deployedCommitSha: "2".repeat(40),
       }),
     ).rejects.toThrow(/deployed commit does not match tested main/);
+  });
+
+  it("follows a percent-encoded localized public journal continuation", async () => {
+    const report = await runDrive2ProductionSmoke(
+      options(createFetch({ journalPath: LOCALIZED_JOURNAL_PATH })),
+    );
+
+    expect(report.guestRead.journalEntry).toBe(true);
+  });
+
+  it("fails closed when an encoded separator attempts to escape the journal slug", async () => {
+    await expect(
+      runDrive2ProductionSmoke(
+        options(
+          createFetch({
+            journalPath: "/bg/journal/safe%2Fsegment",
+          }),
+        ),
+      ),
+    ).rejects.toThrow(/Production feed has no journal entry continuation/);
   });
 
   it("fails when Production exposes the fixture namespace", async () => {
