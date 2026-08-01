@@ -307,6 +307,11 @@ function DecisionPanel({
             ),
           })}
         </p>
+        <p>
+          {formatOperatorTemplate(copy.decision.mvpLearningH6, {
+            status: readout.mvpLearning.organicAcquisition.status,
+          })}
+        </p>
       </div>
 
       <div className="grid gap-2 rounded-lg border border-border p-4">

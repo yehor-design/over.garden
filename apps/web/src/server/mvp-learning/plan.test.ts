@@ -68,6 +68,7 @@ describe("mvp learning reconcile (OVE-200)", () => {
           activatedGardeners: 0,
           h1RetainedGardeners: 0,
           h1Rate: 0,
+          publishedGardeners: 0,
           publishedEntries: 0,
           publishRate: 0,
           sameObjectFollowUpEntries: 0,
@@ -78,6 +79,7 @@ describe("mvp learning reconcile (OVE-200)", () => {
           activatedGardeners: 0,
           h1RetainedGardeners: 0,
           h1Rate: 0,
+          publishedGardeners: 0,
           publishedEntries: 0,
           publishRate: 0,
           sameObjectFollowUpEntries: 0,
@@ -101,6 +103,10 @@ describe("mvp learning reconcile (OVE-200)", () => {
       },
       unclassifiedEventCount: 2,
       unclassifiedActiveGardenerCount: 1,
+      organicAcquisition: {
+        status: "not_instrumented",
+        decisionReady: false,
+      },
       editorialPublicTrafficProxy: 0,
       decisionGate: "unclassified",
       notes: [],
@@ -109,7 +115,7 @@ describe("mvp learning reconcile (OVE-200)", () => {
     const bad = await buildMvpLearningReconcileReport({
       environment: "local",
       report,
-      samplePropertyKeys: ["actor_class", "email"],
+      forbiddenPropertyKeyScanner: async () => 1,
     });
     expect(bad.ok).toBe(false);
     expect(bad.forbiddenFieldHits).toBe(1);
@@ -117,7 +123,7 @@ describe("mvp learning reconcile (OVE-200)", () => {
     const good = await buildMvpLearningReconcileReport({
       environment: "local",
       report: { ...report, unclassifiedEventCount: 0, decisionGate: "ok" },
-      samplePropertyKeys: ["actor_class", "photo_count_bucket"],
+      forbiddenPropertyKeyScanner: async () => 0,
     });
     expect(good.ok).toBe(true);
     expect(good.forbiddenFieldHits).toBe(0);

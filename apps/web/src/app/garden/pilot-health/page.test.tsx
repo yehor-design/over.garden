@@ -106,4 +106,71 @@ describe("/garden/pilot-health", () => {
     expect(html).toContain("Репетиція засновника");
     expect(html).toContain("виключені з метрик рішення H1/OVE-53");
   });
+
+  it("renders separate H4 publisher rates and the explicit H6 deferral", async () => {
+    mocks.getMvpLearningReportSafely.mockResolvedValue({
+      policyVersion: "ove200.learning.v1",
+      policyDate: "2026-07-24",
+      retentionPolicyVersion: "ove195.retention.v1",
+      generatedAt: new Date("2026-08-01T12:00:00.000Z"),
+      windowDays: 30,
+      since: new Date("2026-07-02T12:00:00.000Z"),
+      cohorts: {
+        real_self_serve: {
+          cohort: "real_self_serve",
+          activatedGardeners: 2,
+          h1RetainedGardeners: 1,
+          h1Rate: 0.5,
+          publishedGardeners: 1,
+          publishedEntries: 2,
+          publishRate: 0.5,
+          sameObjectFollowUpEntries: 1,
+          sameSessionRevisitFollowUps: 1,
+        },
+        real_closed_pilot: {
+          cohort: "real_closed_pilot",
+          activatedGardeners: 1,
+          h1RetainedGardeners: 0,
+          h1Rate: 0,
+          publishedGardeners: 1,
+          publishedEntries: 1,
+          publishRate: 1,
+          sameObjectFollowUpEntries: 0,
+          sameSessionRevisitFollowUps: 0,
+        },
+      },
+      exclusions: {
+        founder_rehearsal: 0,
+        production_smoke: 0,
+        visual_fixture: 0,
+        editorial_seed: 0,
+        automated_bot: 0,
+      },
+      attributionOutbox: {
+        pending: 0,
+        processing: 0,
+        failed: 0,
+        dead: 0,
+        attributed: 0,
+        cancelled: 0,
+      },
+      unclassifiedEventCount: 0,
+      unclassifiedActiveGardenerCount: 0,
+      organicAcquisition: {
+        status: "not_instrumented",
+        decisionReady: false,
+      },
+      editorialPublicTrafficProxy: 3,
+      decisionGate: "insufficient",
+      notes: [],
+    });
+
+    const { default: PilotHealthPage } = await import("./page");
+    const html = renderToStaticMarkup(await PilotHealthPage());
+
+    expect(html).toContain("Self-serve H4 публікатори");
+    expect(html).toContain("Закритий пілот H4 частка публікації");
+    expect(html).toContain("Органічне залучення ще не вимірюється");
+    expect(html).toContain("not_instrumented");
+  });
 });

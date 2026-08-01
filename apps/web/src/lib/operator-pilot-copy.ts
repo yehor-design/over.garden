@@ -62,10 +62,16 @@ const UK_COPY = {
       "Окремі знаменники H1/H4 для real_self_serve і real_closed_pilot. Синтетичні / редакційні / бот класи лише у виключеннях. Політика {policyVersion} / утримання {retentionPolicyVersion}. Гейт: {decisionGate}.",
     mvpLearningSelfServeActivated: "Активовані self-serve",
     mvpLearningSelfServeH1: "Self-serve H1 утримані",
+    mvpLearningSelfServeH4: "Self-serve H4 публікатори",
+    mvpLearningSelfServeH4Rate: "Self-serve H4 частка публікації",
     mvpLearningClosedPilotActivated: "Активовані закритого пілоту",
     mvpLearningClosedPilotH1: "Закритий пілот H1 утримані",
+    mvpLearningClosedPilotH4: "Закритий пілот H4 публікатори",
+    mvpLearningClosedPilotH4Rate: "Закритий пілот H4 частка публікації",
     mvpLearningUnclassified: "Некласифіковані події",
     mvpLearningExcluded: "Виключені синтетичні садівники",
+    mvpLearningH6:
+      "Органічне залучення ще не вимірюється (H6). Статус: {status}; H1/H4 не можуть зробити стратегічне рішення зеленим.",
     rehearsalNote:
       "Дозволи репетиції засновника можуть перевіряти весь шлях продукту, але виключені з метрик рішення H1/OVE-53 для закритого пілоту.",
     publicVarietyTitle: "Індексованість публічних сортів",
@@ -167,6 +173,8 @@ const UK_COPY = {
       "Поєднує поведінку запрошеної когорти, пульс цінності та структуровані категорії інтерв'ю. Це не автоматичне рішення щодо стратегії продукту.",
     mvpLearningGate:
       "Гейт навчання MVP ({policyVersion}): {decisionGate}. Активовані self-serve {selfServeActivated}; активовані закритого пілоту {closedPilotActivated}; некласифіковані події {unclassifiedEventCount}.",
+    mvpLearningH6:
+      "H6: органічне залучення ще не вимірюється ({status}); стратегічне рішення залишається недостатнім.",
     behavioralSignal: "Поведінковий сигнал",
     interviewSignal: "Сигнал інтерв'ю",
     segmentSignal: "Сигнал сегмента",
@@ -378,10 +386,16 @@ const BG_COPY: OperatorPilotCopy = {
       "Отделни знаменатели H1/H4 за real_self_serve и real_closed_pilot. Синтетичните / редакционните / бот класове са само изключения. Политика {policyVersion} / задържане {retentionPolicyVersion}. Гейт: {decisionGate}.",
     mvpLearningSelfServeActivated: "Активирани self-serve",
     mvpLearningSelfServeH1: "Self-serve H1 задържани",
+    mvpLearningSelfServeH4: "Self-serve H4 публикуващи",
+    mvpLearningSelfServeH4Rate: "Self-serve H4 дял публикации",
     mvpLearningClosedPilotActivated: "Активирани в затворения пилот",
     mvpLearningClosedPilotH1: "Затворен пилот H1 задържани",
+    mvpLearningClosedPilotH4: "Затворен пилот H4 публикуващи",
+    mvpLearningClosedPilotH4Rate: "Затворен пилот H4 дял публикации",
     mvpLearningUnclassified: "Некласифицирани събития",
     mvpLearningExcluded: "Изключени синтетични градинари",
+    mvpLearningH6:
+      "Органичното привличане все още не се измерва (H6). Статус: {status}; H1/H4 не могат да направят стратегическото решение зелено.",
     rehearsalNote:
       "Разрешенията за репетиция могат да проверяват целия продуктов път, но са изключени от H1/OVE-53 метриките за решение.",
     publicVarietyTitle: "Индексируемост на публичните сортове",
@@ -485,6 +499,8 @@ const BG_COPY: OperatorPilotCopy = {
       "Съчетава поведението, пулса на стойността и интервютата. Не взема автоматично продуктово решение.",
     mvpLearningGate:
       "Гейт за MVP обучение ({policyVersion}): {decisionGate}. Активирани self-serve {selfServeActivated}; активирани в затворения пилот {closedPilotActivated}; некласифицирани събития {unclassifiedEventCount}.",
+    mvpLearningH6:
+      "H6: органичното привличане все още не се измерва ({status}); стратегическото решение остава недостатъчно.",
     behavioralSignal: "Поведенчески сигнал",
     interviewSignal: "Сигнал от интервюта",
     segmentSignal: "Сегментен сигнал",
@@ -692,10 +708,16 @@ const RU_COPY: OperatorPilotCopy = {
       "Отдельные знаменатели H1/H4 для real_self_serve и real_closed_pilot. Синтетические / редакционные / бот классы только в исключениях. Политика {policyVersion} / удержание {retentionPolicyVersion}. Гейт: {decisionGate}.",
     mvpLearningSelfServeActivated: "Активированные self-serve",
     mvpLearningSelfServeH1: "Self-serve H1 удержанные",
+    mvpLearningSelfServeH4: "Self-serve H4 публикующие",
+    mvpLearningSelfServeH4Rate: "Self-serve H4 доля публикаций",
     mvpLearningClosedPilotActivated: "Активированные закрытого пилота",
     mvpLearningClosedPilotH1: "Закрытый пилот H1 удержанные",
+    mvpLearningClosedPilotH4: "Закрытый пилот H4 публикующие",
+    mvpLearningClosedPilotH4Rate: "Закрытый пилот H4 доля публикаций",
     mvpLearningUnclassified: "Неклассифицированные события",
     mvpLearningExcluded: "Исключённые синтетические садоводы",
+    mvpLearningH6:
+      "Органическое привлечение пока не измеряется (H6). Статус: {status}; H1/H4 не могут сделать стратегическое решение зелёным.",
     rehearsalNote:
       "Разрешения репетиции проверяют весь путь продукта, но исключены из метрик решения H1/OVE-53.",
     publicVarietyTitle: "Индексируемость публичных сортов",
@@ -800,6 +822,8 @@ const RU_COPY: OperatorPilotCopy = {
       "Сочетает поведение, пульс ценности и интервью. Не принимает автоматическое продуктовое решение.",
     mvpLearningGate:
       "Гейт обучения MVP ({policyVersion}): {decisionGate}. Активированные self-serve {selfServeActivated}; активированные закрытого пилота {closedPilotActivated}; неклассифицированные события {unclassifiedEventCount}.",
+    mvpLearningH6:
+      "H6: органическое привлечение пока не измеряется ({status}); стратегическое решение остаётся недостаточным.",
     behavioralSignal: "Поведенческий сигнал",
     interviewSignal: "Сигнал интервью",
     segmentSignal: "Сигнал сегмента",

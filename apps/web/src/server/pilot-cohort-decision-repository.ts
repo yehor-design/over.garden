@@ -20,6 +20,7 @@ import {
 } from "@/server/pilot-health-repository";
 import {
   getMvpLearningReport,
+  MVP_LEARNING_ORGANIC_ACQUISITION_STATUS,
   type MvpLearningReport,
 } from "@/server/mvp-learning/report";
 import { MVP_LEARNING_POLICY_VERSION } from "@/lib/mvp-learning/policy";
@@ -63,6 +64,7 @@ export interface PilotCohortDecisionReadout {
     unclassifiedEventCount: number;
     selfServeActivated: number;
     closedPilotActivated: number;
+    organicAcquisition: MvpLearningReport["organicAcquisition"];
   };
   caveats: string[];
   references: typeof PILOT_HEALTH_RESEARCH_REFERENCES;
@@ -176,22 +178,22 @@ export function assemblePilotCohortDecisionReadout(
   });
 
   const learningGate = mvpLearning?.decisionGate ?? "insufficient";
-  if (learningGate === "unclassified" || learningGate === "stale") {
+  const organicAcquisition = mvpLearning?.organicAcquisition ?? {
+    status: MVP_LEARNING_ORGANIC_ACQUISITION_STATUS,
+    decisionReady: false,
+  };
+  if (learningGate !== "ok") {
     decision = {
       ...decision,
       recommendation: "insufficient_data",
       headline: "MVP learning gate refuses go/no-go",
       rationale: [
-        learningGate === "unclassified"
-          ? "Unclassified actor/evidence activity is present; classify or exclude it before any continue/iterate/stop call."
-          : "Learning evidence is stale relative to retention/policy freshness; refresh before deciding.",
+        learningGateRationale(learningGate, organicAcquisition.status),
         ...decision.rationale,
       ],
       dataGaps: [
         ...decision.dataGaps,
-        learningGate === "unclassified"
-          ? "unclassified_actor_evidence"
-          : "stale_learning_evidence",
+        learningGateDataGap(learningGate, organicAcquisition.status),
       ],
     };
   }
@@ -234,19 +236,48 @@ export function assemblePilotCohortDecisionReadout(
         mvpLearning?.cohorts.real_self_serve.activatedGardeners ?? 0,
       closedPilotActivated:
         mvpLearning?.cohorts.real_closed_pilot.activatedGardeners ?? 0,
+      organicAcquisition,
     },
     caveats: [
       "This panel is decision support, not an automated strategy engine.",
       "All numbers are provisional closed-pilot calibrators grounded in OverGarden_B2_METRICS_v0.md and KILL_CRITERIA_PREREG_v2.md — not statistically validated targets.",
       "Behavioral rates use the invited-cohort enum source only; they never expose journal text, invite identity, email, media keys, IP, user agent, referrer, or raw URLs.",
       "Founder rehearsal grants and founder_rehearsal interview records are excluded from this closed-pilot decision frame; they prove operator readiness only, not OVE-53 field evidence.",
-      "OVE-200 MVP learning gate separates real_self_serve and real_closed_pilot; synthetic/editorial/bot classes cannot change the decision.",
+      "OVE-200 MVP learning gate separates real_self_serve and real_closed_pilot; synthetic/editorial/bot classes cannot change the decision, and non-instrumented H6 cannot become a green proxy.",
       "Interview categories are bounded enum aggregates; redacted notes and subject identifiers stay out of this readout.",
       "Offline failed mutations remain browser-local Dexie state and are not server-observable.",
       "Founder judgment still required: reconcile behavioral rates, value pulse, and interview categories before changing recruiting posture.",
     ],
     references: healthReadout.references,
   };
+}
+
+function learningGateRationale(
+  gate: MvpLearningReport["decisionGate"],
+  organicAcquisitionStatus: MvpLearningReport["organicAcquisition"]["status"],
+) {
+  if (gate === "unclassified") {
+    return "Unclassified actor/evidence activity is present; classify or exclude it before any continue/iterate/stop call.";
+  }
+  if (gate === "stale") {
+    return "Learning evidence is stale relative to retention/policy freshness; refresh before deciding.";
+  }
+  if (organicAcquisitionStatus === "not_instrumented") {
+    return "Organic acquisition is not instrumented, so H1/H4 cannot authorize a continue/iterate/stop call.";
+  }
+  return "Learning evidence is insufficient for a continue/iterate/stop call.";
+}
+
+function learningGateDataGap(
+  gate: MvpLearningReport["decisionGate"],
+  organicAcquisitionStatus: MvpLearningReport["organicAcquisition"]["status"],
+) {
+  if (gate === "unclassified") return "unclassified_actor_evidence";
+  if (gate === "stale") return "stale_learning_evidence";
+  if (organicAcquisitionStatus === "not_instrumented") {
+    return "organic_acquisition_not_instrumented";
+  }
+  return "insufficient_learning_evidence";
 }
 
 function flattenInterviewAggregateRows(

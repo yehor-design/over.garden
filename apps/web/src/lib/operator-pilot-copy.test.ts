@@ -30,6 +30,27 @@ describe("operator pilot copy", () => {
       "future_segment",
     );
   });
+
+  it("states the deferred H6 acquisition status in every supported locale", () => {
+    expect(getOperatorPilotCopy("uk").health.mvpLearningH6).toContain(
+      "ще не вимірюється",
+    );
+    expect(getOperatorPilotCopy("bg").health.mvpLearningH6).toContain(
+      "не се измерва",
+    );
+    expect(getOperatorPilotCopy("ru").health.mvpLearningH6).toContain(
+      "не измеряется",
+    );
+    expect(getOperatorPilotCopy("uk").decision.mvpLearningH6).toContain(
+      "ще не вимірюється",
+    );
+    expect(getOperatorPilotCopy("bg").decision.mvpLearningH6).toContain(
+      "не се измерва",
+    );
+    expect(getOperatorPilotCopy("ru").decision.mvpLearningH6).toContain(
+      "не измеряется",
+    );
+  });
 });
 
 function recursiveKeys(value: unknown, prefix = ""): string[] {

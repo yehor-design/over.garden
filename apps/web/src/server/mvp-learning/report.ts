@@ -1,6 +1,6 @@
 import "server-only";
 
-import { sql, type Kysely, type Transaction } from "kysely";
+import { Kysely, sql, type Transaction } from "kysely";
 
 import { db } from "@/db";
 import type { Database } from "@/db/schema";
@@ -40,11 +40,31 @@ export type MvpLearningDecisionGate =
   | "stale"
   | "insufficient";
 
+/**
+ * H6 has deliberately not been instrumented. This is a product and privacy
+ * decision, not a zero-valued organic-acquisition result.
+ */
+export const MVP_LEARNING_ORGANIC_ACQUISITION_STATUS =
+  "not_instrumented" as const;
+
+export interface MvpLearningOrganicAcquisition {
+  status: typeof MVP_LEARNING_ORGANIC_ACQUISITION_STATUS;
+  decisionReady: false;
+}
+
+const ORGANIC_ACQUISITION_NOT_INSTRUMENTED: MvpLearningOrganicAcquisition = {
+  status: MVP_LEARNING_ORGANIC_ACQUISITION_STATUS,
+  decisionReady: false,
+};
+
+const MVP_LEARNING_REPORT_STATEMENT_TIMEOUT_MS = 450;
+
 export interface MvpLearningCohortSignals {
   cohort: MvpLearningCohortKey;
   activatedGardeners: number;
   h1RetainedGardeners: number;
   h1Rate: number;
+  publishedGardeners: number;
   publishedEntries: number;
   publishRate: number;
   sameObjectFollowUpEntries: number;
@@ -74,6 +94,11 @@ export interface MvpLearningReport {
   attributionOutbox: LearningAttributionOutboxCounts;
   unclassifiedEventCount: number;
   unclassifiedActiveGardenerCount: number;
+  organicAcquisition: MvpLearningOrganicAcquisition;
+  /**
+   * Editorial-public activity is a content diagnostic. It is never an H6
+   * acquisition substitute.
+   */
   editorialPublicTrafficProxy: number;
   decisionGate: MvpLearningDecisionGate;
   notes: string[];
@@ -99,56 +124,62 @@ export async function getMvpLearningReport(
   const now = options.now ?? new Date();
   const since = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-  const [
-    selfServe,
-    closedPilot,
-    exclusions,
-    unclassified,
-    editorialPublic,
-    attributionOutbox,
-  ] = await Promise.all([
-    loadCohortSignals(executor, REAL_SELF_SERVE_ACTOR_CLASS, since),
-    loadCohortSignals(executor, REAL_CLOSED_PILOT_ACTOR_CLASS, since),
-    loadExclusionCounts(executor, since),
-    loadUnclassifiedCounts(executor, since),
-    loadEditorialPublicProxy(executor, since),
-    getLearningAttributionOutboxCounts(executor),
-  ]);
+  return withMvpLearningReadSnapshot(executor, async (snapshot) => {
+    const [
+      selfServe,
+      closedPilot,
+      exclusions,
+      unclassified,
+      editorialPublic,
+      attributionOutbox,
+    ] = await Promise.all([
+      loadCohortSignals(snapshot, REAL_SELF_SERVE_ACTOR_CLASS, since),
+      loadCohortSignals(snapshot, REAL_CLOSED_PILOT_ACTOR_CLASS, since),
+      loadExclusionCounts(snapshot, since),
+      loadUnclassifiedCounts(snapshot, since),
+      loadEditorialPublicProxy(snapshot, since),
+      getLearningAttributionOutboxCounts(snapshot),
+    ]);
 
-  const decisionGate = evaluateDecisionGate({
-    selfServe,
-    closedPilot,
-    unclassifiedEventCount: unclassified.events,
-    unclassifiedActiveGardenerCount: unclassified.gardeners,
-    attributionOutbox,
+    const organicAcquisition = ORGANIC_ACQUISITION_NOT_INSTRUMENTED;
+    const decisionGate = evaluateMvpLearningDecisionGate({
+      selfServe,
+      closedPilot,
+      unclassifiedEventCount: unclassified.events,
+      unclassifiedActiveGardenerCount: unclassified.gardeners,
+      attributionOutbox,
+      organicAcquisition,
+    });
+
+    return {
+      policyVersion: MVP_LEARNING_POLICY_VERSION,
+      policyDate: MVP_LEARNING_POLICY_DATE,
+      retentionPolicyVersion: RETENTION_POLICY_VERSION,
+      generatedAt: now,
+      windowDays,
+      since,
+      cohorts: {
+        real_self_serve: selfServe,
+        real_closed_pilot: closedPilot,
+      },
+      exclusions,
+      attributionOutbox,
+      unclassifiedEventCount: unclassified.events,
+      unclassifiedActiveGardenerCount: unclassified.gardeners,
+      organicAcquisition,
+      editorialPublicTrafficProxy: editorialPublic,
+      decisionGate,
+      notes: [
+        "H1 requires same-object follow-up plus a same-session revisit/decision proxy; first save alone is not retention.",
+        "H4 counts distinct eligible gardeners with at least one active public decision-eligible entry; raw entry volume is diagnostic only.",
+        "H6 organic acquisition is not instrumented and cannot be inferred from editorial public traffic.",
+        "Closed-pilot and self-serve cohorts are never mixed into one denominator.",
+        "Synthetic/editorial/bot classes are exclusion counts only and cannot drive continue/iterate/stop.",
+        "Unclassified activity fails the decision gate closed rather than defaulting to real.",
+        "Pending, retried, or dead learning-attribution work keeps the decision gate closed until durable classification converges.",
+      ],
+    };
   });
-
-  return {
-    policyVersion: MVP_LEARNING_POLICY_VERSION,
-    policyDate: MVP_LEARNING_POLICY_DATE,
-    retentionPolicyVersion: RETENTION_POLICY_VERSION,
-    generatedAt: now,
-    windowDays,
-    since,
-    cohorts: {
-      real_self_serve: selfServe,
-      real_closed_pilot: closedPilot,
-    },
-    exclusions,
-    attributionOutbox,
-    unclassifiedEventCount: unclassified.events,
-    unclassifiedActiveGardenerCount: unclassified.gardeners,
-    editorialPublicTrafficProxy: editorialPublic,
-    decisionGate,
-    notes: [
-      "H1 requires same-object follow-up plus a same-session revisit/decision proxy; first save alone is not retention.",
-      "H4 publication counts only decision-eligible content classes (real_ugc, founder_first_hand) for eligible actor classes.",
-      "Closed-pilot and self-serve cohorts are never mixed into one denominator.",
-      "Synthetic/editorial/bot classes are exclusion counts only and cannot drive continue/iterate/stop.",
-      "Unclassified activity fails the decision gate closed rather than defaulting to real.",
-      "Pending, retried, or dead learning-attribution work keeps the decision gate closed until durable classification converges.",
-    ],
-  };
 }
 
 export async function getMvpLearningReportSafely(
@@ -172,12 +203,13 @@ export async function getMvpLearningReportSafely(
   }
 }
 
-function evaluateDecisionGate(input: {
+export function evaluateMvpLearningDecisionGate(input: {
   selfServe: MvpLearningCohortSignals;
   closedPilot: MvpLearningCohortSignals;
   unclassifiedEventCount: number;
   unclassifiedActiveGardenerCount: number;
   attributionOutbox: LearningAttributionOutboxCounts;
+  organicAcquisition: MvpLearningOrganicAcquisition;
 }): MvpLearningDecisionGate {
   if (
     input.unclassifiedEventCount > 0 ||
@@ -190,11 +222,14 @@ function evaluateDecisionGate(input: {
     return "unclassified";
   }
 
+  if (!input.organicAcquisition.decisionReady) {
+    return "insufficient";
+  }
+
   const activated =
     input.selfServe.activatedGardeners + input.closedPilot.activatedGardeners;
   if (activated < 1) {
-    // Honest zero is valid and decision-ready for "no real signal yet".
-    return "ok";
+    return "insufficient";
   }
   if (activated < 3) {
     return "insufficient";
@@ -262,6 +297,15 @@ async function loadCohortSignals(
             sql.lit(value),
           ),
         )})
+        then journal_entries.owner_user_id end)::int`.as("publishedGardeners"),
+      sql<number>`count(distinct case when ${eligibleActorPredicate(cohort)}
+        and journal_entries.visibility = 'public'
+        and journal_entries.lifecycle_state = 'active'
+        and journal_entries.content_class in (${sql.join(
+          MVP_LEARNING_DECISION_ELIGIBLE_CONTENT_CLASSES.map((value) =>
+            sql.lit(value),
+          ),
+        )})
         then journal_entries.id end)::int`.as("publishedEntries"),
     ])
     .where("journal_entries.created_at", ">=", since)
@@ -269,6 +313,7 @@ async function loadCohortSignals(
 
   const activatedGardeners = toCount(row?.activatedGardeners);
   const h1RetainedGardeners = toCount(row?.h1RetainedGardeners);
+  const publishedGardeners = toCount(row?.publishedGardeners);
   const publishedEntries = toCount(row?.publishedEntries);
 
   return {
@@ -276,8 +321,9 @@ async function loadCohortSignals(
     activatedGardeners,
     h1RetainedGardeners,
     h1Rate: safeRate(h1RetainedGardeners, activatedGardeners),
+    publishedGardeners,
     publishedEntries,
-    publishRate: safeRate(publishedEntries, activatedGardeners),
+    publishRate: safeRate(publishedGardeners, activatedGardeners),
     sameObjectFollowUpEntries: toCount(row?.sameObjectFollowUpEntries),
     sameSessionRevisitFollowUps: toCount(row?.sameSessionRevisitFollowUps),
   };
@@ -392,7 +438,28 @@ function isExcludedKey(value: ActorClass): value is ExcludedLearningActorClass {
 
 function safeRate(numerator: number, denominator: number) {
   if (denominator <= 0) return 0;
-  return numerator / denominator;
+  return Math.min(1, Math.max(0, numerator / denominator));
+}
+
+async function withMvpLearningReadSnapshot<T>(
+  executor: QueryExecutor,
+  reader: (snapshot: QueryExecutor) => Promise<T>,
+): Promise<T> {
+  if (!(executor instanceof Kysely) || executor.isTransaction) {
+    return reader(executor);
+  }
+
+  return executor.transaction().execute(async (snapshot) => {
+    await sql
+      .raw("set transaction isolation level repeatable read, read only")
+      .execute(snapshot);
+    await sql
+      .raw(
+        `set local statement_timeout = '${MVP_LEARNING_REPORT_STATEMENT_TIMEOUT_MS}ms'`,
+      )
+      .execute(snapshot);
+    return reader(snapshot);
+  });
 }
 
 function toCount(value: string | number | bigint | null | undefined): number {

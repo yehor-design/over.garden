@@ -14,15 +14,15 @@ Honest zero real users is a valid baseline. Synthetic activity must never pad it
 
 Canonical write set:
 
-| Class | Decision eligible? |
-| --- | --- |
-| `real_self_serve` | Yes (self-serve baseline cohort) |
+| Class               | Decision eligible?                                                |
+| ------------------- | ----------------------------------------------------------------- |
+| `real_self_serve`   | Yes (self-serve baseline cohort)                                  |
 | `real_closed_pilot` | Yes (historical closed-pilot cohort; never mixed into self-serve) |
-| `founder_rehearsal` | Exclusion only |
-| `production_smoke` | Exclusion only |
-| `visual_fixture` | Exclusion only |
-| `editorial_seed` | Exclusion only |
-| `automated_bot` | Exclusion only |
+| `founder_rehearsal` | Exclusion only                                                    |
+| `production_smoke`  | Exclusion only                                                    |
+| `visual_fixture`    | Exclusion only                                                    |
+| `editorial_seed`    | Exclusion only                                                    |
+| `automated_bot`     | Exclusion only                                                    |
 
 Legacy event property aliases still readable: `self_serve` → `real_self_serve`, `closed_pilot` → `real_closed_pilot`, `editorial` → `editorial_seed`.
 
@@ -31,8 +31,18 @@ Durable rows live in `learning_actor_attributions` (`user_id`, bounded `actor_cl
 ## Metric rules
 
 - **H1:** activated eligible gardeners with ≥2 dated same-object entries plus same-session revisit/decision proxy (`own_record_revisited` followed by action). First save alone is not retention.
-- **H4:** publication counts only for eligible actors and decision-eligible journal `content_class` values (`real_ugc`, `founder_first_hand`). Location visibility stays a separate diagnostic.
-- **H6:** privacy-safe public-surface aggregates; editorial public traffic reported separately. No private paths, referrers, IDs, or content in evidence.
+- **H4:** the rate numerator is distinct eligible gardeners with at least one active public, decision-eligible journal `content_class` value (`real_ugc`, `founder_first_hand`). Raw publication-entry volume is diagnostic only, so the rate remains within `[0, 1]`. Location visibility stays a separate diagnostic.
+- **H6:** organic acquisition is deliberately `not_instrumented` and `decisionReady: false`. It is visibly reported as “organic acquisition is not measured yet”; editorial public traffic and indexability remain separate content diagnostics, never an H6 proxy. No new consent, cookie, referrer, ID, content, or third-party acquisition collection is authorized by this policy.
+
+## Decision gate
+
+The canonical report owns the gate and evaluates it fail-closed:
+
+1. Missing or inconsistent durable attribution, outstanding attribution work, or unclassified activity returns `unclassified`.
+2. Until a future founder-approved, consented H6 instrumentation contract exists, H6 is `not_instrumented` and returns `insufficient`, regardless of H1/H4 values or zero real users.
+3. A strategic continue/iterate/stop recommendation is permitted only when the canonical `decisionGate` is exactly `ok`; every other state is `insufficient_data`.
+
+The reconciliation smoke scans keys that actually exist in `analytics_events.properties` and emits an aggregate hit count only. A forbidden key, timeout, or scan error is non-green and exposes neither a key nor a value.
 
 ## Composer / cover measurement
 
@@ -66,8 +76,8 @@ pnpm smoke:mvp-learning-signals -- --environment production --confirm-environmen
 
 ## Operator surfaces
 
-- `/garden/pilot-health` — closed-pilot health plus MVP learning dual-cohort panel
-- `/garden/pilot-learning/decision` — refuse go/no-go when MVP learning gate is `unclassified` or `stale`
+- `/garden/pilot-health` — closed-pilot health plus MVP-learning dual-cohort H1/H4 panel and visible H6 deferral
+- `/garden/pilot-learning/decision` — visible H6 deferral and refusal of go/no-go unless the MVP-learning gate is exactly `ok`
 
 ## Retention
 

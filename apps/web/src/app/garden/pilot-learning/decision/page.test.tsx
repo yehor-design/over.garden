@@ -147,10 +147,14 @@ describe("/garden/pilot-learning/decision", () => {
       },
       mvpLearning: {
         policyVersion: "ove200.learning.v1",
-        decisionGate: "ok",
+        decisionGate: "insufficient",
         unclassifiedEventCount: 0,
         selfServeActivated: 0,
         closedPilotActivated: 3,
+        organicAcquisition: {
+          status: "not_instrumented",
+          decisionReady: false,
+        },
       },
       caveats: [],
       references: [],
@@ -164,5 +168,6 @@ describe("/garden/pilot-learning/decision", () => {
     expect(html).toContain("Сигнал сегмента: сконцентрований");
     expect(html).toContain("Репетиція засновника");
     expect(html).toContain("мала вибірка");
+    expect(html).toContain("органічне залучення ще не вимірюється");
   });
 });

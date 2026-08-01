@@ -117,12 +117,32 @@ export default async function PilotHealthPage() {
               value={mvpLearning.cohorts.real_self_serve.h1RetainedGardeners}
             />
             <MetricTile
+              label={copy.health.mvpLearningSelfServeH4}
+              value={mvpLearning.cohorts.real_self_serve.publishedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningSelfServeH4Rate}
+              value={formatPercent(
+                mvpLearning.cohorts.real_self_serve.publishRate,
+              )}
+            />
+            <MetricTile
               label={copy.health.mvpLearningClosedPilotActivated}
               value={mvpLearning.cohorts.real_closed_pilot.activatedGardeners}
             />
             <MetricTile
               label={copy.health.mvpLearningClosedPilotH1}
               value={mvpLearning.cohorts.real_closed_pilot.h1RetainedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningClosedPilotH4}
+              value={mvpLearning.cohorts.real_closed_pilot.publishedGardeners}
+            />
+            <MetricTile
+              label={copy.health.mvpLearningClosedPilotH4Rate}
+              value={formatPercent(
+                mvpLearning.cohorts.real_closed_pilot.publishRate,
+              )}
             />
             <MetricTile
               label={copy.health.mvpLearningUnclassified}
@@ -136,6 +156,11 @@ export default async function PilotHealthPage() {
               )}
             />
           </div>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {formatOperatorTemplate(copy.health.mvpLearningH6, {
+              status: mvpLearning.organicAcquisition.status,
+            })}
+          </p>
         </section>
       ) : null}
 
