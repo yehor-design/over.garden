@@ -11,7 +11,12 @@ import {
   type InterfaceMarket,
 } from "@/lib/interface-market";
 import { INTERFACE_GLOBAL_ERROR_VISUAL_FIXTURE_HEADER } from "@/lib/localization/localization-visual-fixture";
-import { APP_ROUTE_CACHE_CONTROL, config, proxy } from "./proxy";
+import {
+  APP_ROUTE_CACHE_CONTROL,
+  classifyInternalNamespacePath,
+  config,
+  proxy,
+} from "./proxy";
 
 const mocks = vi.hoisted(() => ({
   getPublicObjectPassportLookup: vi.fn().mockResolvedValue({
@@ -211,6 +216,141 @@ describe("app route cache guardrail", () => {
     expect(rejectedUrlHost.status).toBe(404);
     expect(preview.status).toBe(404);
     expect(production.status).toBe(404);
+  });
+
+  it("hard-404s every production internal representation before locale, auth, or lifecycle work", async () => {
+    vi.stubEnv("VISUAL_FIXTURES_ENABLED", "true");
+    vi.stubEnv("VISUAL_FIXTURES_TARGET", "local");
+    vi.stubEnv("VISUAL_FIXTURES_DATABASE", "overgarden");
+    vi.stubEnv(
+      "DATABASE_URL",
+      "postgresql://overgarden:test@localhost:5432/overgarden",
+    );
+    vi.stubEnv("PUBLIC_SITE_URL", "http://localhost:3000");
+    vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+    vi.stubEnv("R2_ENDPOINT", "http://localhost:9000");
+    vi.stubEnv("R2_PUBLIC_BASE_URL", "http://localhost:9000/overgarden-public");
+    vi.stubEnv("VERCEL_ENV", "production");
+
+    mocks.getPublicObjectPassportLookup.mockClear();
+    mocks.getPublicJournalEntryLifecycleLookup.mockClear();
+    mocks.getPublicProfileLifecycleLookup.mockClear();
+    mocks.getPublicCommunityLifecycleLookup.mockClear();
+    mocks.getSession.mockClear();
+
+    const requests: Array<{
+      path: string;
+      headers?: HeadersInit;
+      init?: Pick<RequestInit, "method">;
+    }> = [
+      { path: "/__visual-fixtures" },
+      { path: "/__visual-fixtures/" },
+      { path: "/__visual-fixtures/intent/ove174-i001" },
+      {
+        path: "/api/__visual-fixtures/journal-creation",
+        init: { method: "POST" },
+      },
+      { path: "/skeleton" },
+      { path: "/skeleton/internal" },
+      { path: "/api/skeleton/journal", init: { method: "POST" } },
+      { path: "/%5F%5Fvisual-fixtures" },
+      { path: "/%5f%5fvisual-fixtures/intent/ove174-i001" },
+      { path: "/api/%5F%5Fvisual-fixtures/journal-creation" },
+      { path: "/%2F__visual-fixtures" },
+      { path: "/%2f__visual-fixtures" },
+      { path: "/%255F%255Fvisual-fixtures" },
+      { path: "/%252F__visual-fixtures" },
+      { path: "/%5F%5Fvisual-fixtures%" },
+      { path: "/api/%5F%5Fvisual-fixtures%" },
+      { path: "/%73keleton" },
+      {
+        path: "/api/%73keleton/journal",
+        headers: { accept: "text/x-component", rsc: "1" },
+      },
+      {
+        path: "/%5F%5Fvisual-fixtures",
+        headers: { "next-router-prefetch": "1" },
+      },
+      {
+        path: "/%5F%5Fvisual-fixtures",
+        init: { method: "HEAD" },
+      },
+    ];
+
+    try {
+      for (const request of requests) {
+        const response = await responseFor(
+          request.path,
+          request.headers,
+          request.init,
+        );
+        expect(response.status).toBe(404);
+        expect(response.headers.get("Cache-Control")).toBe(
+          APP_ROUTE_CACHE_CONTROL,
+        );
+        expect(response.headers.get("X-Robots-Tag")).toBe(
+          "noindex, nofollow",
+        );
+        expect(response.headers.get("Content-Language")).toBeNull();
+        expect(response.headers.get("set-cookie")).toBeNull();
+        expect(await response.text()).toBe("");
+      }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+
+    expect(mocks.getPublicObjectPassportLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicJournalEntryLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicProfileLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getPublicCommunityLifecycleLookup).not.toHaveBeenCalled();
+    expect(mocks.getSession).not.toHaveBeenCalled();
+  });
+
+  it("classifies only reserved internal representations and keeps the classifier bounded", async () => {
+    expect(classifyInternalNamespacePath("/__visual-fixtures")).toEqual({
+      namespace: "visual-fixtures",
+      representation: "canonical",
+    });
+    expect(classifyInternalNamespacePath("/api/skeleton/journal")).toEqual({
+      namespace: "skeleton",
+      representation: "canonical",
+    });
+    expect(classifyInternalNamespacePath("/%5F%5Fvisual-fixtures")).toEqual({
+      namespace: "visual-fixtures",
+      representation: "encoded",
+    });
+    expect(classifyInternalNamespacePath("/%255F%255Fvisual-fixtures")).toEqual({
+      namespace: "visual-fixtures",
+      representation: "encoded",
+    });
+    expect(classifyInternalNamespacePath("/%5F%5Fvisual-fixtures%")).toEqual({
+      namespace: "visual-fixtures",
+      representation: "encoded",
+    });
+    expect(classifyInternalNamespacePath("/uk/%D1%81%D0%B0%D0%B4")).toBeNull();
+    expect(classifyInternalNamespacePath("/api/garden/entries")).toBeNull();
+
+    const start = performance.now();
+    for (let index = 0; index < 100_000; index += 1) {
+      classifyInternalNamespacePath(
+        index % 2 === 0
+          ? "/%255F%255Fvisual-fixtures/intent"
+          : "/uk/%D1%81%D0%B0%D0%B4",
+      );
+    }
+    expect(performance.now() - start).toBeLessThan(250);
+
+    const unicodeRoute = await responseFor("/uk/%D1%81%D0%B0%D0%B4", {
+      accept: "text/html",
+      "sec-fetch-dest": "document",
+    });
+    const apiRoute = await responseFor("/api/garden/entries", {
+      accept: "application/json",
+    });
+
+    expect(unicodeRoute.status).toBe(308);
+    expect(unicodeRoute.headers.get("Content-Language")).toBe("uk");
+    expect(apiRoute.status).toBe(200);
   });
 
   it.each([

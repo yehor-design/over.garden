@@ -67,6 +67,94 @@ const INTERNAL_PROFILE_REWRITE_SIGNATURE_CONTEXT =
 const CANONICAL_PRODUCTION_HOST = "over.garden";
 const NON_CANONICAL_PRODUCTION_HOST = "www.over.garden";
 
+type InternalNamespace = "visual-fixtures" | "skeleton";
+
+type InternalNamespacePath = {
+  namespace: InternalNamespace;
+  representation: "canonical" | "encoded";
+};
+
+function getInternalNamespaceHardNotFoundResponse() {
+  return new NextResponse(null, {
+    status: 404,
+    headers: {
+      "Cache-Control": APP_ROUTE_CACHE_CONTROL,
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}
+
+function matchInternalNamespacePath(
+  pathname: string,
+): InternalNamespace | null {
+  const segments = pathname.replace(/\\/g, "/").split("/");
+  const firstSegmentIndex = segments.findIndex((segment) => segment.length > 0);
+  if (firstSegmentIndex === -1) return null;
+
+  const first = segments[firstSegmentIndex];
+  const second = segments[firstSegmentIndex + 1];
+  if (first === "__visual-fixtures") return "visual-fixtures";
+  if (first === "skeleton") return "skeleton";
+  if (first !== "api") return null;
+  if (second === "__visual-fixtures") return "visual-fixtures";
+  if (second === "skeleton") return "skeleton";
+  return null;
+}
+
+/**
+ * Classifies only the reserved route syntax. `decodeURIComponent` runs at most
+ * once, and the shallow escape check never decodes route data: it recognizes
+ * only the percent bytes that spell an internal separator or namespace token.
+ * That keeps a double-encoded internal path fail-closed without introducing a
+ * general recursive URL normalizer.
+ */
+function matchEscapedInternalNamespacePath(
+  pathname: string,
+): InternalNamespace | null {
+  const reservedSyntax = pathname
+    .replace(/%2f|%5c/gi, "/")
+    .replace(/%5f/gi, "_");
+  const match = matchInternalNamespacePath(reservedSyntax);
+  if (match) return match;
+
+  const malformedReservedPrefix = reservedSyntax.match(
+    /^\/+(?:api\/)?((?:__visual-fixtures)|(?:skeleton))(?:[%\\/]|$)/,
+  );
+  if (malformedReservedPrefix?.[1] === "__visual-fixtures") {
+    return "visual-fixtures";
+  }
+  if (malformedReservedPrefix?.[1] === "skeleton") return "skeleton";
+  return null;
+}
+
+export function classifyInternalNamespacePath(
+  rawPathname: string,
+): InternalNamespacePath | null {
+  const canonical = matchInternalNamespacePath(rawPathname);
+  if (canonical) return { namespace: canonical, representation: "canonical" };
+
+  try {
+    const decoded = decodeURIComponent(rawPathname);
+    const decodedNamespace = matchInternalNamespacePath(decoded);
+    if (decodedNamespace) {
+      return { namespace: decodedNamespace, representation: "encoded" };
+    }
+    const escapedNamespace = matchEscapedInternalNamespacePath(decoded);
+    return escapedNamespace
+      ? { namespace: escapedNamespace, representation: "encoded" }
+      : null;
+  } catch {
+    const malformedNamespace = matchEscapedInternalNamespacePath(rawPathname);
+    return malformedNamespace
+      ? { namespace: malformedNamespace, representation: "encoded" }
+      : null;
+  }
+}
+
+function isProductionInternalNamespaceRequest() {
+  return process.env.VERCEL_ENV === "production";
+}
+
 function isPrefetchRequest(request: NextRequest) {
   const purpose = request.headers.get("purpose")?.toLowerCase() ?? "";
   const secPurpose = request.headers.get("sec-purpose")?.toLowerCase() ?? "";
@@ -319,44 +407,37 @@ async function getPublicProfileLifecycleResponse(
 // viewer solely to fail closed on mutual blocks and is not a mutation authz
 // boundary.
 export async function proxy(request: NextRequest) {
-  const canonicalHostResponse = getCanonicalHostResponse(request);
-  if (canonicalHostResponse) return canonicalHostResponse;
-  const localization = resolveRequestLocalization(request);
-  const { locale } = localization;
-  const pathname = normalizePathname(request.nextUrl.pathname);
+  const internalNamespacePath = classifyInternalNamespacePath(
+    request.nextUrl.pathname,
+  );
   if (
-    isWalkingSkeletonPath(pathname) &&
+    internalNamespacePath &&
+    (internalNamespacePath.representation === "encoded" ||
+      isProductionInternalNamespaceRequest())
+  ) {
+    return getInternalNamespaceHardNotFoundResponse();
+  }
+
+  if (
+    internalNamespacePath?.namespace === "skeleton" &&
     (!tryResolveWalkingSkeletonEnvironment(process.env) ||
       !isWalkingSkeletonRequestHostAllowed(request.nextUrl.hostname) ||
       !isWalkingSkeletonRequestHostAllowed(request.headers.get("host")))
   ) {
-    return withAppRouteContract(
-      new NextResponse(null, {
-        status: 404,
-        headers: {
-          "X-Robots-Tag": "noindex, nofollow",
-        },
-      }),
-      request,
-      localization,
-    );
+    return getInternalNamespaceHardNotFoundResponse();
   }
 
   if (
-    isVisualFixturePath(pathname) &&
+    internalNamespacePath?.namespace === "visual-fixtures" &&
     !tryResolveVisualFixtureEnvironment(process.env)
   ) {
-    return withAppRouteContract(
-      new NextResponse(null, {
-        status: 404,
-        headers: {
-          "X-Robots-Tag": "noindex, nofollow",
-        },
-      }),
-      request,
-      localization,
-    );
+    return getInternalNamespaceHardNotFoundResponse();
   }
+
+  const canonicalHostResponse = getCanonicalHostResponse(request);
+  if (canonicalHostResponse) return canonicalHostResponse;
+  const localization = resolveRequestLocalization(request);
+  const { locale } = localization;
 
   const isDocumentNavigation = isDocumentNavigationRequest(request);
   if (
@@ -576,28 +657,6 @@ async function resolvePublicProfileViewer(
   } catch {
     return { ok: false };
   }
-}
-
-function isVisualFixturePath(pathname: string) {
-  return (
-    pathname === "/__visual-fixtures" ||
-    pathname.startsWith("/__visual-fixtures/") ||
-    pathname === "/api/__visual-fixtures" ||
-    pathname.startsWith("/api/__visual-fixtures/")
-  );
-}
-
-function isWalkingSkeletonPath(pathname: string) {
-  return (
-    pathname === "/skeleton" ||
-    pathname.startsWith("/skeleton/") ||
-    pathname === "/api/skeleton" ||
-    pathname.startsWith("/api/skeleton/")
-  );
-}
-
-function normalizePathname(pathname: string) {
-  return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 }
 
 function signInternalProfileRewrite(method: string, pathname: string) {
