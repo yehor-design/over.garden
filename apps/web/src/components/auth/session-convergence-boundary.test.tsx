@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   useSession: vi.fn(),
+  canonicalSignOut: vi.fn(),
   subscribe: vi.fn(),
   listener: null as null | ((payload: SessionSignal) => void),
   acquireLease: vi.fn(),
@@ -83,6 +84,7 @@ vi.mock("@/lib/auth/sign-out-contract", () => ({
   },
   localizedPublicRoot: (locale: string) =>
     locale === "uk" ? "/" : `/${locale}`,
+  signOutCurrentSessionOnce: mocks.canonicalSignOut,
 }));
 vi.mock("@/lib/auth/session-convergence", () => ({
   SESSION_CONVERGENCE_SIGNALS: {
@@ -169,6 +171,10 @@ describe("session convergence boundary", () => {
       release: mocks.releaseLease,
     });
     mocks.getSession.mockResolvedValue(activeSession());
+    mocks.canonicalSignOut.mockResolvedValue({
+      status: "committed",
+      reconciliation: "canonical_response",
+    });
     mocks.prepareComposer.mockResolvedValue({
       isActive: () => true,
       bindOfflineActivityScope: mocks.composerBindScope,
@@ -1138,6 +1144,159 @@ describe("session convergence boundary", () => {
     expect(mocks.hydrate).toHaveBeenCalledOnce();
     expect(mocks.replace).toHaveBeenCalledWith("/bg");
     await unmount(renderer);
+  });
+
+  it("offers a bound no-deletion exit from blocked hydration and hides private UI before public navigation", async () => {
+    mocks.hydrate.mockResolvedValue("blocked");
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+    expect(textContent(fallbackExit.props.children)).toBe(
+      "Изход без изтриване на локалните промени",
+    );
+    expect(mocks.prepareComposer).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.abort).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.canonicalSignOut).toHaveBeenCalledOnce());
+    expect(mocks.canonicalSignOut).toHaveBeenCalledWith(
+      {
+        version: 1,
+        binding: "opaque-binding-for-session-a",
+      },
+      expect.objectContaining({
+        getSession: expect.any(Function),
+        signOut: expect.any(Function),
+      }),
+    );
+    expect(mocks.prepareComposer).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.publishCommitted).toHaveBeenCalledWith(
+      "op-fallback-fence-1234",
+      "tab-boundary-test-1234",
+    );
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expectPrivateSignOutDialogAbsent(renderer);
+    await unmount(renderer);
+  });
+
+  it("keeps the recovery gate and no-deletion exit when the bound session remains active", async () => {
+    mocks.hydrate.mockResolvedValue("blocked");
+    mocks.canonicalSignOut.mockResolvedValue({
+      status: "failed",
+      reason: "session_still_active",
+    });
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() =>
+      expect(
+        renderer.root.findAllByProps({ role: "status" }).some((node) =>
+          textContent(node.props.children).includes("не можа да бъде потвърдено"),
+        ),
+      ).toBe(true),
+    );
+    expect(mocks.publishCommitted).not.toHaveBeenCalled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(mocks.reload).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    await unmount(renderer);
+  });
+
+  it("reloads a changed fallback session without publishing a sign-out receipt", async () => {
+    mocks.hydrate.mockResolvedValue("blocked");
+    mocks.canonicalSignOut.mockResolvedValue({
+      status: "failed",
+      reason: "session_changed",
+    });
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
+    expect(mocks.publishCommitted).not.toHaveBeenCalled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    await unmount(renderer);
+  });
+
+  it("bounds duplicate fallback exit, keeps the safe exits usable, and rejects late completion", async () => {
+    vi.useFakeTimers();
+    mocks.hydrate.mockResolvedValue("blocked");
+    const result = deferred<{
+      status: "committed";
+      reconciliation: "canonical_response";
+    }>();
+    mocks.canonicalSignOut.mockReturnValue(result.promise);
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+    });
+    expect(mocks.canonicalSignOut).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_000);
+    });
+
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-fallback-sign-out": "true",
+      }).props.disabled,
+    ).not.toBe(true);
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-public-home": "true",
+      }).props.href,
+    ).toBe("/bg");
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-reload": "true",
+      }).props.disabled,
+    ).not.toBe(true);
+
+    await act(async () => {
+      result.resolve({
+        status: "committed",
+        reconciliation: "canonical_response",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(mocks.publishCommitted).not.toHaveBeenCalled();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    await unmount(renderer);
+    vi.useRealTimers();
   });
 });
 
