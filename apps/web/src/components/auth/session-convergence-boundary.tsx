@@ -11,6 +11,7 @@ import {
   classifySessionConfirmation,
   localizedPublicRoot,
   prepareCurrentSessionSignOut,
+  signOutCurrentSessionOnce,
   type PreparedCurrentSessionSignOut,
 } from "@/lib/auth/sign-out-contract";
 import {
@@ -43,6 +44,7 @@ const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
 const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS = 1_000;
+export const FALLBACK_SIGN_OUT_TIMEOUT_MS = 10_000;
 
 type SessionRecheckFence = {
   epoch: number;
@@ -84,6 +86,10 @@ export function SessionConvergenceBoundary({
   >("checking");
   const [remotePreparationPending, setRemotePreparationPending] =
     useState(false);
+  const [fallbackExitState, setFallbackExitState] = useState<
+    "idle" | "pending" | "failed"
+  >("idle");
+  const [fallbackExitAvailable, setFallbackExitAvailable] = useState(false);
   useInterfaceLocaleChangeFormState({
     id: "session-convergence-lifecycle",
     dirty: false,
@@ -101,6 +107,8 @@ export function SessionConvergenceBoundary({
   const operationLastSeenAtRef = useRef(new Map<string, number>());
   const operationPreparationRoundsRef = useRef(new Map<string, string>());
   const terminalOperationIdsRef = useRef(new Map<string, string>());
+  const fallbackExitRef = useRef<() => void>(() => undefined);
+  const fallbackExitActionRef = useRef<HTMLButtonElement | null>(null);
   const readAuthoritativeSession = useCallback(
     () =>
       authoritativeSessionRead
@@ -108,6 +116,12 @@ export function SessionConvergenceBoundary({
         : authClient.getSession(AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS),
     [authoritativeSessionRead],
   );
+
+  useEffect(() => {
+    if (fallbackExitState === "failed") {
+      fallbackExitActionRef.current?.focus();
+    }
+  }, [fallbackExitState]);
 
   useEffect(() => {
     let disposed = false;
@@ -182,6 +196,7 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (baselinePreparedSession && baselineOwnerUserId && !disposed) {
+        setFallbackExitAvailable(true);
         // Visual-fixture routes use synthetic owners and must not open the
         // real offline IndexedDB lane — Dexie hydration can wedge Playwright
         // Chromium and is not part of fixture evidence.
@@ -237,6 +252,7 @@ export function SessionConvergenceBoundary({
             // document baseline before hydration.
             baselinePreparedSession = freshPreparedSession;
             baselineOwnerUserId = freshOwnerUserId;
+            setFallbackExitAvailable(true);
           } else if (
             baselinePreparedSession === null ||
             baselinePreparedSession.binding !== freshPreparedSession.binding ||
@@ -562,6 +578,65 @@ export function SessionConvergenceBoundary({
       startBestEffort(finalizeChangedSessionActivity);
       window.location.reload();
     };
+
+    const beginFallbackChangedSessionTransition = () => {
+      if (disposed || authoritativeNavigationStarted) return;
+      authoritativeNavigationStarted = true;
+      hideAuthenticatedTree();
+      activeOperationIds.clear();
+      operationLastSeenAt.clear();
+      operationPreparationRounds.clear();
+      updateRemotePreparationFence();
+      startBestEffort(finalizeChangedSessionActivity);
+      window.location.reload();
+    };
+
+    let fallbackExitInFlight = false;
+    let fallbackExitAttempt = 0;
+    const requestFallbackExit = () => {
+      if (fallbackExitInFlight || disposed || authoritativeNavigationStarted) {
+        return;
+      }
+      const preparedCurrentSession = baselinePreparedSession;
+      if (!preparedCurrentSession) {
+        setFallbackExitState("failed");
+        return;
+      }
+
+      fallbackExitInFlight = true;
+      const attempt = ++fallbackExitAttempt;
+      setFallbackExitState("pending");
+      void requireSettledWithin(
+        () =>
+          signOutCurrentSessionOnce(preparedCurrentSession, {
+            getSession: () => readAuthoritativeSession(),
+            signOut: (options) => authClient.signOut(options),
+          }),
+        FALLBACK_SIGN_OUT_TIMEOUT_MS,
+      ).then(
+        (result) => {
+          if (disposed || attempt !== fallbackExitAttempt) return;
+          fallbackExitInFlight = false;
+          if (result.status === "committed") {
+            const tabId = tabLease?.tabId ?? fallbackUnregisteredTabId;
+            publishCommittedSessionInvalidation(createSignOutOperationId(), tabId);
+            beginSignedOutTransition();
+            return;
+          }
+          if (result.reason === "session_changed") {
+            beginFallbackChangedSessionTransition();
+            return;
+          }
+          setFallbackExitState("failed");
+        },
+        () => {
+          if (disposed || attempt !== fallbackExitAttempt) return;
+          fallbackExitInFlight = false;
+          setFallbackExitState("failed");
+        },
+      );
+    };
+    fallbackExitRef.current = requestFallbackExit;
 
     const releasePartialPreparation = async (
       pauseHandle: OwnerOfflineActivityPauseHandle | null,
@@ -1041,6 +1116,7 @@ export function SessionConvergenceBoundary({
     return () => {
       disposed = true;
       retryHydrationRef.current = () => undefined;
+      fallbackExitRef.current = () => undefined;
       unsubscribe();
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("focus", recheckAuthoritativeSession);
@@ -1135,6 +1211,30 @@ export function SessionConvergenceBoundary({
             <p className="text-sm leading-6 text-muted-foreground">
               {copy.localCheckError}
             </p>
+            {fallbackExitAvailable ? (
+              <div className="grid justify-items-center gap-2">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {copy.fallbackExitDescription}
+                </p>
+                <Button
+                  ref={fallbackExitActionRef}
+                  type="button"
+                  variant="outline"
+                  data-session-convergence-fallback-sign-out="true"
+                  disabled={fallbackExitState === "pending"}
+                  onClick={() => fallbackExitRef.current()}
+                >
+                  {fallbackExitState === "pending"
+                    ? copy.fallbackExitPending
+                    : copy.fallbackExitAction}
+                </Button>
+                {fallbackExitState === "failed" ? (
+                  <p role="status" className="text-sm text-muted-foreground">
+                    {copy.fallbackExitUnconfirmedError}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div>
               <Button
                 type="button"

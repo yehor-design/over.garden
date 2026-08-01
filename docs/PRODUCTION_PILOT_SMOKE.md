@@ -257,6 +257,15 @@ may be refreshed:
   excluded only after the `1500 ms` exact-round liveness acknowledgement bound;
   a peer that acknowledges stays behind the existing `ready` or `failed`
   preparation gate and cannot be silently bypassed;
+- when owner-local hydration is blocked after an exact current-session binding
+  was prepared, the private tree remains hidden but the recovery surface offers
+  one localized exit that explicitly states it does not delete local changes;
+  it must reuse the bound canonical Better Auth sign-out and a fresh confirmed
+  signed-out result before redirecting to the locale public root;
+- a missing, changed, still-active, or `10000 ms`-bounded fallback result keeps
+  local data untouched, must not report completed sign-out, and leaves the
+  public-reading/reload recovery controls usable; retain only redacted state
+  classes for this path;
 - retain only redacted confirmation, liveness, redirect, guest-navigation, and
   exact deployment/SHA result classes. Never retain a credential, cookie,
   email, account/tab identifier, local draft, storage value, or private
