@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -423,6 +425,16 @@ describe("OVE-208 typography browser contract", () => {
       "fallback-duration",
       "fallback-cls",
     ]);
+  });
+
+  it("does not permit the browser runner to suppress an evaluated fallback failure", () => {
+    const browserVerifier = readFileSync(
+      new URL("../../../scripts/verify-typography-browser.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(browserVerifier).not.toContain("KNOWN_FALLBACK_RUNNER_ARTIFACTS");
+    expect(browserVerifier).not.toContain("suppressedFailures");
   });
 
   it("gates the guarded local global-error typography surface", () => {

@@ -639,30 +639,17 @@ in family, full-name, and PostScript spellings. Arial is absent on Linux and on
 some Android builds, and `local()` matches by font name rather than through
 fontconfig aliasing, so an Arial-only source left the face unresolved there.
 
-## Known Runner Artifacts (OVE-233, tracked by OVE-245)
+## Fallback Gate Sensitivity (OVE-245)
 
-`KNOWN_FALLBACK_RUNNER_ARTIFACTS` in `scripts/verify-typography-browser.ts`
-lists fallback-probe codes that the GitHub-hosted runner produces without a
-matching product defect. They stay measured and are reported as
-`suppressedFailures`; they never vanish from the evidence.
+The fallback probe reports every code returned by
+`evaluateTypographyFallbackObservation` through `failures`; no runner-specific
+exception is allowed. GitHub Actions run `30703332118` used the existing
+`fonts-liberation` and Playwright `--with-deps` setup and its complete fallback
+artifact had zero formerly exempt cases. That current evidence invalidated the
+historical runner-artifact diagnosis, so retaining an exception would reduce
+the gate's ability to detect a future real regression.
 
-Chromium `fallback-cls`. With Liberation Sans backing the face, the runner's
-Chromium renders the sample at 360.0px against an unscaled 359.625px, so it is
-not applying `size-adjust`. Firefox and WebKit apply it on the same runner, and
-the same browser, font, and CSS on a developer machine renders 355.89px:
-
-| Environment | Backing font | Sample width | Fallback CLS |
-| --- | --- | --- | --- |
-| Local, real Arial | Arial 359.625 | 355.89 | 0.0004 |
-| Local, Liberation Sans first | Liberation Sans 359.625 | 355.89 | 0.0004 |
-| Runner, Chromium | Liberation Sans 359.625 | 360.00 | 0.0354 |
-| Runner, Firefox | Liberation Sans 359.53 | 355.93 | 0 |
-| Runner, WebKit | Liberation Sans 359.625 | 355.86 | 0 |
-
-WebKit `fallback-not-visible-within-1s` and `fallback-delay-window`. Bimodal on
-the runner: ~1505ms across six of seven runs and 142ms once, always at 0 layout
-shift, against 69ms locally. That is runner scheduling, not a font contract
-failure.
-
-Do not extend the list to hide a regression. Every entry requires a
-cross-engine or local measurement showing the product itself is correct.
+Do not add a tolerance or allowlist. An exact-head CI result that produces a
+new environmental false positive requires a redacted engine/route/viewport/code
+receipt, an isolated revert, and a reopened decision branch; it never justifies
+changing the typography asset, metric, CSS, route coverage, or threshold.
