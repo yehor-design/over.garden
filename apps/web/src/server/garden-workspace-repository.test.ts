@@ -20,6 +20,7 @@ import {
   buildGardenWorkspaceRecentEntriesQuery,
   buildGardenWorkspaceSpaceSummariesQuery,
   loadGardenWorkspace,
+  WORKSPACE_SECTION_DEADLINE_MS,
   WORKSPACE_INVENTORY_PAGE_SIZE,
   WORKSPACE_INVENTORY_PREVIEW_SIZE,
   WORKSPACE_RECENT_LIMIT,
@@ -190,6 +191,33 @@ describe("garden workspace read model", () => {
     expect(workspace.allFailed).toBe(false);
     expect(JSON.stringify(workspace)).not.toContain("recent unavailable");
     expect(JSON.stringify(workspace)).not.toContain(OTHER_OWNER_ID);
+  });
+
+  it("settles one never-ending section at the deadline without admitting its late result", async () => {
+    vi.useFakeTimers();
+    let resolveRecent: (() => void) | undefined;
+    const sources = workspaceSources();
+    sources.recent.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRecent = () => resolve([]);
+        }),
+    );
+
+    const pending = loadGardenWorkspace(
+      scope,
+      { inventoryExpanded: false, inventoryPage: 1, spacesExpanded: false },
+      sources,
+    );
+    await vi.advanceTimersByTimeAsync(WORKSPACE_SECTION_DEADLINE_MS);
+    const workspace = await pending;
+
+    expect(workspace.recent).toEqual({ status: "error" });
+    expect(workspace.inventory.status).toBe("ready");
+    resolveRecent?.();
+    await Promise.resolve();
+    expect(workspace.recent).toEqual({ status: "error" });
+    vi.useRealTimers();
   });
 
   it("supports deterministic section faults without invoking the affected source", async () => {

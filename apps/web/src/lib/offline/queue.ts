@@ -134,9 +134,55 @@ export interface OfflineDraftRecord<TPayload = unknown> {
   updatedAt: number;
 }
 
+/**
+ * A deliberately payload-free device-local projection for the garden workspace.
+ * It is not a recovery record: composers and sync always read the canonical
+ * draft/mutation tables. Keeping this narrow record in a separate table means
+ * the workspace never has to hydrate private prose or photo bytes merely to
+ * tell an owner that local work exists.
+ */
+export interface OfflineDraftSummary {
+  id: string;
+  ownerUserId: string;
+  kind: OfflineDraftKind;
+  createdAt: number;
+  updatedAt: number;
+  entryDate: string | null;
+  targetObjectId: string | null;
+  targetSpaceId: string | null;
+}
+
+export interface OfflineMutationSummary {
+  id: string;
+  ownerUserId: string;
+  kind: OfflineMutationKind;
+  status: OfflineMutationStatus;
+  /** Numeric because IndexedDB compound keys do not support boolean values. */
+  workspaceVisible: 0 | 1;
+  createdAt: number;
+  updatedAt: number;
+  target: JournalEntryTarget | null;
+  targetObjectId: string | null;
+  targetSpaceId: string | null;
+}
+
+export interface OfflineSummaryPage<T> {
+  items: T[];
+  hasMore: boolean;
+  page: number;
+  pageSize: number;
+}
+
+export const OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE = 24;
+const MAX_OFFLINE_WORKSPACE_SUMMARY_PAGE = 100;
+const SUMMARY_TIMESTAMP_MIN = Number.MIN_SAFE_INTEGER;
+const SUMMARY_TIMESTAMP_MAX = Number.MAX_SAFE_INTEGER;
+
 class OverGardenOfflineDb extends Dexie {
   mutations!: Table<OfflineMutation, string>;
   drafts!: Table<OfflineDraftRecord, [string, string]>;
+  mutationSummaries!: Table<OfflineMutationSummary, [string, string]>;
+  draftSummaries!: Table<OfflineDraftSummary, [string, string]>;
   ownerActivity!: Table<OfflineOwnerActivity, string>;
 
   constructor() {
@@ -170,6 +216,37 @@ class OverGardenOfflineDb extends Dexie {
         "[ownerUserId+id], ownerUserId, [ownerUserId+kind], createdAt, updatedAt",
       ownerActivity: "ownerUserId, expiresAt",
     });
+    this.version(5)
+      .stores({
+        mutations:
+          "id, ownerUserId, &[ownerUserId+idempotencyKey], [ownerUserId+status], createdAt, updatedAt",
+        drafts:
+          "[ownerUserId+id], ownerUserId, [ownerUserId+kind], createdAt, updatedAt",
+        mutationSummaries:
+          "[ownerUserId+id], ownerUserId, [ownerUserId+status+createdAt], [ownerUserId+workspaceVisible+updatedAt], [ownerUserId+updatedAt]",
+        draftSummaries:
+          "[ownerUserId+id], ownerUserId, [ownerUserId+kind+updatedAt], [ownerUserId+updatedAt]",
+        ownerActivity: "ownerUserId, expiresAt",
+      })
+      .upgrade(async (transaction) => {
+        const drafts = transaction.table("drafts");
+        const mutations = transaction.table("mutations");
+        const draftSummaries = transaction.table("draftSummaries");
+        const mutationSummaries = transaction.table("mutationSummaries");
+
+        await Promise.all([
+          drafts
+            .toCollection()
+            .each((record: OfflineDraftRecord) =>
+              draftSummaries.put(offlineDraftSummary(record)),
+            ),
+          mutations
+            .toCollection()
+            .each((record: OfflineMutation) =>
+              mutationSummaries.put(offlineMutationSummary(record)),
+            ),
+        ]);
+      });
   }
 }
 
@@ -190,6 +267,7 @@ export async function enqueueOfflineMutation(
   const result = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       await assertOwnerOfflineActivityAllowed(ownerUserId);
@@ -209,7 +287,7 @@ export async function enqueueOfflineMutation(
             lastError: undefined,
             syncLeaseExpiresAt: null,
           };
-          await offlineDb.mutations.put(updated);
+          await putOfflineMutationWithSummary(offlineDb, updated);
           return { mutation: updated, changed: true };
         }
 
@@ -229,6 +307,7 @@ export async function enqueueOfflineMutation(
       };
 
       await offlineDb.mutations.add(mutation);
+      await offlineDb.mutationSummaries.put(offlineMutationSummary(mutation));
       return { mutation, changed: true };
     },
   );
@@ -263,6 +342,43 @@ export async function listOfflineMutations(
   return mutations.sort((left, right) => left.createdAt - right.createdAt);
 }
 
+export async function listOfflineMutationSummaries(
+  ownerUserId: string,
+  options: {
+    page?: number;
+    statuses?: readonly OfflineMutationStatus[];
+  } = {},
+): Promise<OfflineSummaryPage<OfflineMutationSummary>> {
+  const database = offlineDb;
+  const page = normalizeWorkspaceSummaryPage(options.page);
+  const statuses = normalizeSummaryStatuses(options.statuses);
+  const owner = normalizedOwnerUserId(ownerUserId);
+  if (!database || !owner || statuses.length === 0) {
+    return emptyOfflineSummaryPage(page);
+  }
+
+  const rows = await database.mutationSummaries
+    .where("[ownerUserId+workspaceVisible+updatedAt]")
+    .between(
+      [owner, 1, SUMMARY_TIMESTAMP_MIN],
+      [owner, 1, SUMMARY_TIMESTAMP_MAX],
+      true,
+      true,
+    )
+    .reverse()
+    .offset((page - 1) * OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE)
+    .limit(OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE + 1)
+    .toArray();
+  const allowed = rows.filter((row) => statuses.includes(row.status));
+
+  return {
+    items: allowed.slice(0, OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE),
+    hasMore: allowed.length > OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+    page,
+    pageSize: OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+  };
+}
+
 export async function getOfflineMutation(
   ownerUserId: string,
   id: string,
@@ -288,6 +404,7 @@ export async function updateOfflineMutationStatus(
   const updated = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       await assertOwnerOfflineActivityAllowed(owner);
@@ -302,7 +419,7 @@ export async function updateOfflineMutationStatus(
         syncLeaseExpiresAt:
           status === "syncing" ? Date.now() + OFFLINE_SYNC_LEASE_MS : null,
       };
-      await offlineDb.mutations.put(next);
+      await putOfflineMutationWithSummary(offlineDb, next);
       return next;
     },
   );
@@ -321,13 +438,14 @@ export async function updateOfflineMutationPayload(
   const updated = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       await assertOwnerOfflineActivityAllowed(owner);
       const mutation = await offlineDb.mutations.get(id);
       if (!mutation || mutation.ownerUserId !== owner) return undefined;
       const next = { ...mutation, payload, updatedAt: Date.now() };
-      await offlineDb.mutations.put(next);
+      await putOfflineMutationWithSummary(offlineDb, next);
       return next;
     },
   );
@@ -346,6 +464,7 @@ export async function claimOfflineMutationForSync(
   const claimed = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       await assertOwnerOfflineActivityAllowed(owner);
@@ -366,7 +485,7 @@ export async function claimOfflineMutationForSync(
         lastError: undefined,
         syncLeaseExpiresAt: now + OFFLINE_SYNC_LEASE_MS,
       };
-      await offlineDb.mutations.put(next);
+      await putOfflineMutationWithSummary(offlineDb, next);
       return next;
     },
   );
@@ -395,6 +514,7 @@ export async function settleClaimedOfflineMutationFailure(
   const updated = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       const activity = normalizeOwnerActivity(
@@ -431,7 +551,7 @@ export async function settleClaimedOfflineMutationFailure(
         lastError: boundedOfflineSyncError(options.lastError),
         syncLeaseExpiresAt: null,
       };
-      await offlineDb.mutations.put(next);
+      await putOfflineMutationWithSummary(offlineDb, next);
       return next;
     },
   );
@@ -452,6 +572,7 @@ export async function completeOfflineMutation(
   const completed = await offlineDb.transaction(
     "rw",
     offlineDb.mutations,
+    offlineDb.mutationSummaries,
     offlineDb.ownerActivity,
     async () => {
       await assertOwnerOfflineActivityAllowed(owner);
@@ -466,7 +587,7 @@ export async function completeOfflineMutation(
         syncResult: options.syncResult,
         syncLeaseExpiresAt: null,
       };
-      await offlineDb.mutations.put(next);
+      await putOfflineMutationWithSummary(offlineDb, next);
       return next;
     },
   );
@@ -562,10 +683,132 @@ export function setLocalOwnerActivitySessionGeneration(
   );
 }
 
+export function offlineDraftSummary(
+  record: OfflineDraftRecord,
+): OfflineDraftSummary {
+  const payload = asRecord(record.payload);
+  const draft = asRecord(payload?.draft);
+
+  return {
+    id: record.id,
+    ownerUserId: record.ownerUserId,
+    kind: record.kind,
+    createdAt: record.createdAt,
+    updatedAt: record.updatedAt,
+    entryDate: normalizedSummaryDate(draft?.entryDate),
+    targetObjectId:
+      record.kind === "follow_up_entry"
+        ? normalizedSummaryReference(payload?.plantObjectId)
+        : null,
+    targetSpaceId:
+      record.kind === "space_entry"
+        ? normalizedSummaryReference(payload?.spaceId)
+        : record.kind === "first_entry"
+          ? normalizedSummaryReference(draft?.spaceId)
+          : null,
+  };
+}
+
+export function offlineMutationSummary(
+  mutation: OfflineMutation,
+): OfflineMutationSummary {
+  const payload = asRecord(mutation.payload);
+  const target = normalizedJournalEntryTarget(payload?.target);
+
+  return {
+    id: mutation.id,
+    ownerUserId: mutation.ownerUserId,
+    kind: mutation.kind,
+    status: mutation.status,
+    workspaceVisible: mutation.status === "synced" ? 0 : 1,
+    createdAt: mutation.createdAt,
+    updatedAt: mutation.updatedAt,
+    target,
+    targetObjectId:
+      target === "plant_object_entry"
+        ? normalizedSummaryReference(payload?.plantObjectId)
+        : null,
+    targetSpaceId:
+      target === "space_entry" || target === "first_plant_entry"
+        ? normalizedSummaryReference(payload?.spaceId)
+        : null,
+  };
+}
+
+async function putOfflineMutationWithSummary(
+  database: OverGardenOfflineDb,
+  mutation: OfflineMutation,
+) {
+  await database.mutations.put(mutation);
+  await database.mutationSummaries.put(offlineMutationSummary(mutation));
+}
+
+function emptyOfflineSummaryPage<T>(page: number): OfflineSummaryPage<T> {
+  return {
+    items: [],
+    hasMore: false,
+    page,
+    pageSize: OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+  };
+}
+
+function normalizeWorkspaceSummaryPage(value: number | undefined) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(
+    MAX_OFFLINE_WORKSPACE_SUMMARY_PAGE,
+    Math.max(1, Math.trunc(value ?? 1)),
+  );
+}
+
+function normalizeSummaryStatuses(
+  values: readonly OfflineMutationStatus[] | undefined,
+): OfflineMutationStatus[] {
+  const allowed = new Set<OfflineMutationStatus>([
+    "queued",
+    "syncing",
+    "failed",
+    "synced",
+  ]);
+  const requested = values ?? ["queued", "syncing", "failed"];
+  return [...new Set(requested.filter((value) => allowed.has(value)))];
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function normalizedSummaryReference(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= 160 ? normalized : null;
+}
+
+function normalizedSummaryDate(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function normalizedJournalEntryTarget(
+  value: unknown,
+): JournalEntryTarget | null {
+  return value === "first_plant_entry" ||
+    value === "plant_object_entry" ||
+    value === "space_entry"
+    ? value
+    : null;
+}
+
 function requireOwnerUserId(ownerUserId: string) {
   const normalized = ownerUserId.trim();
   if (!normalized) throw new Error("Offline data requires an owner user id.");
   return normalized;
+}
+
+function normalizedOwnerUserId(ownerUserId: string) {
+  const normalized = ownerUserId.trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
 function boundedOfflineSyncError(value: string) {

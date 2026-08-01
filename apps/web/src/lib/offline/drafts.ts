@@ -10,11 +10,15 @@ import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   assertOwnerOfflineActivityAllowed,
   offlineDb,
+  offlineDraftSummary,
+  OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
   readLocalOwnerActivitySessionGeneration,
   type OfflineOwnerActivity,
   type OfflineDraftKind,
   type OfflineDraftRecord,
+  type OfflineDraftSummary,
   type OfflineJournalCoverPayload,
+  type OfflineSummaryPage,
   type OfflinePhotoIntent,
 } from "./queue";
 import type {
@@ -118,6 +122,7 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
   const record = await database.transaction(
     "rw",
     database.drafts,
+    database.draftSummaries,
     database.ownerActivity,
     async () => {
       await assertOfflineDraftWriteAllowed(
@@ -135,6 +140,7 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
       };
 
       await database.drafts.put(next);
+      await database.draftSummaries.put(offlineDraftSummary(next));
       return next;
     },
   );
@@ -171,6 +177,43 @@ export async function listOfflineDrafts(
   );
 }
 
+export async function listOfflineDraftSummaries(
+  ownerUserId: string,
+  options: { page?: number } = {},
+): Promise<OfflineSummaryPage<OfflineDraftSummary>> {
+  const owner = normalizedOwnerUserId(ownerUserId);
+  const page = normalizeWorkspaceSummaryPage(options.page);
+  const database = offlineDb;
+  if (!database || !owner) {
+    return {
+      items: [],
+      hasMore: false,
+      page,
+      pageSize: OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+    };
+  }
+
+  const records = await database.draftSummaries
+    .where("[ownerUserId+updatedAt]")
+    .between(
+      [owner, Number.MIN_SAFE_INTEGER],
+      [owner, Number.MAX_SAFE_INTEGER],
+      true,
+      true,
+    )
+    .reverse()
+    .offset((page - 1) * OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE)
+    .limit(OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE + 1)
+    .toArray();
+
+  return {
+    items: records.slice(0, OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE),
+    hasMore: records.length > OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+    page,
+    pageSize: OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
+  };
+}
+
 export async function deleteOfflineDraft(
   ownerUserId: string,
   id: string,
@@ -182,10 +225,12 @@ export async function deleteOfflineDraft(
   await database.transaction(
     "rw",
     database.drafts,
+    database.draftSummaries,
     database.ownerActivity,
     async () => {
       await assertOfflineDraftWriteAllowed(owner, options.offlineActivityScope);
       await database.drafts.delete([owner, id]);
+      await database.draftSummaries.delete([owner, id]);
     },
   );
   publishOfflineDraftsChanged();
@@ -308,4 +353,14 @@ function requireOwnerUserId(ownerUserId: string) {
   const normalized = ownerUserId.trim();
   if (!normalized) throw new Error("Offline data requires an owner user id.");
   return normalized;
+}
+
+function normalizedOwnerUserId(ownerUserId: string) {
+  const normalized = ownerUserId.trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeWorkspaceSummaryPage(value: number | undefined) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(1, Math.trunc(value ?? 1));
 }

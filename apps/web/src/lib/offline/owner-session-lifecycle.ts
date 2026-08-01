@@ -314,10 +314,7 @@ export async function pauseOwnerOfflineActivity(
   abortOwnerSyncAttempts(owner);
   let resumed = false;
   let commitFencePromoted = false;
-  let signedOutFinalization:
-    | "fenced"
-    | "generation_changed"
-    | null = null;
+  let signedOutFinalization: "fenced" | "generation_changed" | null = null;
   let hardReloadFinalized = false;
 
   const mutateOwnedOperation = async (
@@ -375,11 +372,10 @@ export async function pauseOwnerOfflineActivity(
       finalizeOwnerOfflineActivityForSessionChange(owner, sessionGeneration),
     finalizeForSignedOut: async () => {
       if (signedOutFinalization) return signedOutFinalization;
-      signedOutFinalization =
-        await finalizeOwnerOfflineActivityForSignedOut(
-          owner,
-          sessionGeneration,
-        );
+      signedOutFinalization = await finalizeOwnerOfflineActivityForSignedOut(
+        owner,
+        sessionGeneration,
+      );
       return signedOutFinalization;
     },
     finalizeForHardReload: async () => {
@@ -467,7 +463,9 @@ export async function purgeUnsyncedOwnerData(
   const result = await database.transaction(
     "rw",
     database.drafts,
+    database.draftSummaries,
     database.mutations,
+    database.mutationSummaries,
     database.ownerActivity,
     async () => {
       await assertOwnedActivityScope(database, owner, {
@@ -478,6 +476,7 @@ export async function purgeUnsyncedOwnerData(
         .where("ownerUserId")
         .equals(owner)
         .delete();
+      await database.draftSummaries.where("ownerUserId").equals(owner).delete();
       let mutationCount = 0;
 
       for (const status of UNSYNCED_MUTATION_STATUSES) {
@@ -486,6 +485,15 @@ export async function purgeUnsyncedOwnerData(
           .equals([owner, status])
           .delete();
       }
+      await database.mutationSummaries
+        .where("ownerUserId")
+        .equals(owner)
+        .and((summary) =>
+          UNSYNCED_MUTATION_STATUSES.includes(
+            summary.status as UnsyncedMutationStatus,
+          ),
+        )
+        .delete();
 
       return {
         draftCount,
@@ -519,14 +527,21 @@ export async function purgeErasedOwnerOfflineStore(
   const result = await database.transaction(
     "rw",
     database.drafts,
+    database.draftSummaries,
     database.mutations,
+    database.mutationSummaries,
     database.ownerActivity,
     async () => {
       const draftCount = await database.drafts
         .where("ownerUserId")
         .equals(owner)
         .delete();
+      await database.draftSummaries.where("ownerUserId").equals(owner).delete();
       const mutationCount = await database.mutations
+        .where("ownerUserId")
+        .equals(owner)
+        .delete();
+      await database.mutationSummaries
         .where("ownerUserId")
         .equals(owner)
         .delete();
@@ -763,9 +778,7 @@ function activeOwnerOperations(activity: OfflineOwnerActivity) {
     .map((operation) => ({ ...operation }));
 }
 
-function ownerActivityExpiry(
-  operations: OfflineOwnerActivity["operations"],
-) {
+function ownerActivityExpiry(operations: OfflineOwnerActivity["operations"]) {
   if (operations.length === 0) return Number.MAX_SAFE_INTEGER;
   return Math.max(...operations.map((operation) => operation.expiresAt));
 }

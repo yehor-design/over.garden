@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
   CloudUpload,
@@ -24,16 +24,14 @@ import { localizedPath } from "@/lib/public-localization";
 import {
   deleteOfflineDraft,
   FIRST_ENTRY_DRAFT_ID,
-  listOfflineDrafts,
+  listOfflineDraftSummaries,
   OFFLINE_DRAFTS_CHANGED_EVENT,
-  type FirstEntryDraftPayload,
-  type FollowUpEntryDraftPayload,
-  type JournalDraftRecord,
 } from "@/lib/offline/drafts";
 import {
-  listOfflineMutations,
+  listOfflineMutationSummaries,
   OFFLINE_QUEUE_CHANGED_EVENT,
-  type OfflineJournalEntryPayload,
+  type OfflineMutationSummary,
+  type OfflineDraftSummary,
   type OfflineMutationStatus,
 } from "@/lib/offline/queue";
 import type {
@@ -78,6 +76,24 @@ const EMPTY_LOCAL_STATE: GardenWorkspaceLocalStateSnapshot = {
   mutations: [],
 };
 
+interface GardenWorkspaceLocalPages {
+  drafts: number;
+  mutations: number;
+  draftsHasMore: boolean;
+  mutationsHasMore: boolean;
+  error: boolean;
+}
+
+const INITIAL_LOCAL_PAGES: GardenWorkspaceLocalPages = {
+  drafts: 1,
+  mutations: 1,
+  draftsHasMore: false,
+  mutationsHasMore: false,
+  error: false,
+};
+
+const LOCAL_SUMMARY_REFRESH_DEBOUNCE_MS = 100;
+
 export function GardenWorkspaceLocalState({
   ownerUserId,
   locale,
@@ -91,42 +107,128 @@ export function GardenWorkspaceLocalState({
   const [localState, setLocalState] = useState(
     initialState ?? EMPTY_LOCAL_STATE,
   );
+  const [localStateOwnerUserId, setLocalStateOwnerUserId] = useState(
+    initialState ? ownerUserId : null,
+  );
+  const [localPages, setLocalPages] = useState(INITIAL_LOCAL_PAGES);
   const [pendingLocalMutationCount, setPendingLocalMutationCount] = useState(0);
+  const mountedRef = useRef(false);
+  const ownerRef = useRef(ownerUserId);
+  const refreshInFlightRef = useRef(false);
+  const refreshRequestedRef = useRef(false);
+  const refreshTimerRef = useRef<number | null>(null);
+  const localPagesRef = useRef(INITIAL_LOCAL_PAGES);
+  const lastReadyPagesRef = useRef(INITIAL_LOCAL_PAGES);
+  const lastReadyOwnerRef = useRef<string | null>(
+    initialState ? ownerUserId : null,
+  );
+  const refreshRef = useRef<() => void>(() => undefined);
 
   const refresh = useCallback(async () => {
     if (initialState) return;
+    if (refreshInFlightRef.current) {
+      refreshRequestedRef.current = true;
+      return;
+    }
+
+    refreshInFlightRef.current = true;
+    const requestedOwner = ownerUserId;
+    const requestedPages = localPagesRef.current;
 
     try {
-      const [drafts, mutations] = await Promise.all([
-        listOfflineDrafts(ownerUserId, ["first_entry", "follow_up_entry"]),
-        listOfflineMutations(ownerUserId, ["queued", "syncing", "failed"]),
+      const [draftPage, mutationPage] = await Promise.all([
+        listOfflineDraftSummaries(requestedOwner, {
+          page: requestedPages.drafts,
+        }),
+        listOfflineMutationSummaries(requestedOwner, {
+          page: requestedPages.mutations,
+          statuses: ["queued", "syncing", "failed"],
+        }),
       ]);
 
+      if (!mountedRef.current || ownerRef.current !== requestedOwner) return;
+      setLocalStateOwnerUserId(requestedOwner);
       setLocalState({
         online: navigator.onLine,
-        drafts: drafts.map((draft) => summarizeDraft(draft, locale, copy)),
-        mutations: mutations.map((mutation) => ({
-          id: mutation.id,
-          title: mutationTitle(mutation.payload, copy),
-          status: mutation.status,
-          href: mutationHref(mutation.payload),
-        })),
+        drafts: draftPage.items.map((draft) =>
+          summarizeDraft(draft, locale, copy),
+        ),
+        mutations: mutationPage.items.map((mutation) =>
+          summarizeMutation(mutation, copy),
+        ),
       });
+      const nextPages = {
+        ...requestedPages,
+        draftsHasMore: draftPage.hasMore,
+        mutationsHasMore: mutationPage.hasMore,
+        error: false,
+      };
+      localPagesRef.current = nextPages;
+      lastReadyPagesRef.current = nextPages;
+      lastReadyOwnerRef.current = requestedOwner;
+      setLocalPages(nextPages);
     } catch {
-      setLocalState({ ...EMPTY_LOCAL_STATE, online: navigator.onLine });
+      if (!mountedRef.current || ownerRef.current !== requestedOwner) return;
+      if (lastReadyOwnerRef.current !== requestedOwner) {
+        setLocalStateOwnerUserId(requestedOwner);
+        setLocalState({ ...EMPTY_LOCAL_STATE, online: navigator.onLine });
+      }
+      const nextPages = { ...lastReadyPagesRef.current, error: true };
+      localPagesRef.current = nextPages;
+      setLocalPages(nextPages);
+    } finally {
+      refreshInFlightRef.current = false;
+      if (
+        refreshRequestedRef.current &&
+        mountedRef.current &&
+        refreshTimerRef.current === null
+      ) {
+        refreshRequestedRef.current = false;
+        refreshTimerRef.current = window.setTimeout(() => {
+          refreshTimerRef.current = null;
+          refreshRef.current();
+        }, LOCAL_SUMMARY_REFRESH_DEBOUNCE_MS);
+      }
     }
   }, [copy, initialState, locale, ownerUserId]);
+
+  useEffect(() => {
+    refreshRef.current = () => {
+      void refresh();
+    };
+  }, [refresh]);
+
+  const scheduleRefresh = useCallback(() => {
+    if (initialState || refreshTimerRef.current !== null) return;
+    refreshTimerRef.current = window.setTimeout(() => {
+      refreshTimerRef.current = null;
+      refreshRef.current();
+    }, LOCAL_SUMMARY_REFRESH_DEBOUNCE_MS);
+  }, [initialState]);
 
   const handleDiscardDraft = useCallback(
     async (id: string) => {
       setPendingLocalMutationCount((count) => count + 1);
       try {
-        await discardDraft(ownerUserId, id, refresh);
+        await discardDraft(ownerUserId, id, scheduleRefresh);
       } finally {
         setPendingLocalMutationCount((count) => Math.max(0, count - 1));
       }
     },
-    [ownerUserId, refresh],
+    [ownerUserId, scheduleRefresh],
+  );
+
+  const changePage = useCallback(
+    (key: "drafts" | "mutations", page: number) => {
+      const nextPages = {
+        ...localPagesRef.current,
+        [key]: Math.max(1, page),
+        error: false,
+      };
+      localPagesRef.current = nextPages;
+      scheduleRefresh();
+    },
+    [scheduleRefresh],
   );
 
   useInterfaceLocaleChangeFormState({
@@ -138,8 +240,12 @@ export function GardenWorkspaceLocalState({
   useEffect(() => {
     if (initialState) return;
 
-    const refreshTimer = window.setTimeout(() => void refresh(), 0);
-    const handleConnection = () => void refresh();
+    mountedRef.current = true;
+    ownerRef.current = ownerUserId;
+    localPagesRef.current = INITIAL_LOCAL_PAGES;
+    lastReadyPagesRef.current = INITIAL_LOCAL_PAGES;
+    scheduleRefresh();
+    const handleConnection = () => scheduleRefresh();
     window.addEventListener(OFFLINE_DRAFTS_CHANGED_EVENT, handleConnection);
     window.addEventListener(OFFLINE_QUEUE_CHANGED_EVENT, handleConnection);
     window.addEventListener("focus", handleConnection);
@@ -147,7 +253,12 @@ export function GardenWorkspaceLocalState({
     window.addEventListener("offline", handleConnection);
 
     return () => {
-      window.clearTimeout(refreshTimer);
+      mountedRef.current = false;
+      refreshRequestedRef.current = false;
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
       window.removeEventListener(
         OFFLINE_DRAFTS_CHANGED_EVENT,
         handleConnection,
@@ -157,7 +268,14 @@ export function GardenWorkspaceLocalState({
       window.removeEventListener("online", handleConnection);
       window.removeEventListener("offline", handleConnection);
     };
-  }, [initialState, refresh]);
+  }, [initialState, ownerUserId, scheduleRefresh]);
+
+  // The old owner's in-memory view must disappear in the render that receives
+  // a new owner, before the asynchronous IndexedDB summary read can complete.
+  const visibleLocalState =
+    localStateOwnerUserId === ownerUserId ? localState : EMPTY_LOCAL_STATE;
+  const visibleLocalPages =
+    localStateOwnerUserId === ownerUserId ? localPages : INITIAL_LOCAL_PAGES;
 
   const modules = useMemo(
     () =>
@@ -167,12 +285,13 @@ export function GardenWorkspaceLocalState({
         recent,
         inbox,
         media,
-        localState,
+        localState: visibleLocalState,
       }),
-    [inbox, localState, locale, media, nextAction, recent],
+    [inbox, locale, media, nextAction, recent, visibleLocalState],
   );
   const hasLocalWork =
-    localState.drafts.length > 0 || localState.mutations.length > 0;
+    visibleLocalState.drafts.length > 0 ||
+    visibleLocalState.mutations.length > 0;
 
   return (
     <>
@@ -194,24 +313,60 @@ export function GardenWorkspaceLocalState({
                 : copy.localState.clearTitle}
             </h2>
           </div>
-          <ConnectionState copy={copy} online={localState.online} />
+          <ConnectionState copy={copy} online={visibleLocalState.online} />
         </div>
+        <p className="sr-only" aria-live="polite">
+          {hasLocalWork
+            ? copy.localState.hasWorkTitle
+            : copy.localState.clearTitle}
+        </p>
 
         {hasLocalWork ? (
           <div className="mt-4 grid gap-5 lg:mt-2 lg:grid-cols-2 lg:gap-3">
             <LocalDraftList
               copy={copy}
-              drafts={localState.drafts}
+              drafts={visibleLocalState.drafts}
+              page={visibleLocalPages.drafts}
+              hasMore={visibleLocalPages.draftsHasMore}
               pending={pendingLocalMutationCount > 0}
               onDiscard={handleDiscardDraft}
+              onPrevious={() =>
+                changePage("drafts", visibleLocalPages.drafts - 1)
+              }
+              onNext={() => changePage("drafts", visibleLocalPages.drafts + 1)}
             />
-            <LocalMutationList copy={copy} mutations={localState.mutations} />
+            <LocalMutationList
+              copy={copy}
+              mutations={visibleLocalState.mutations}
+              page={visibleLocalPages.mutations}
+              hasMore={visibleLocalPages.mutationsHasMore}
+              onPrevious={() =>
+                changePage("mutations", visibleLocalPages.mutations - 1)
+              }
+              onNext={() =>
+                changePage("mutations", visibleLocalPages.mutations + 1)
+              }
+            />
           </div>
         ) : (
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {copy.localState.emptyDescription}
           </p>
         )}
+
+        {visibleLocalPages.error ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <GardenWorkspaceLocalStateError locale={locale} />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={scheduleRefresh}
+            >
+              {copy.workspace.sectionError.retry}
+            </Button>
+          </div>
+        ) : null}
 
         {media && (media.processingCount > 0 || media.failedCount > 0) ? (
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 border-t border-border pt-3 text-xs text-muted-foreground lg:mt-2 lg:pt-2">
@@ -254,13 +409,21 @@ export function GardenWorkspaceLocalState({
 function LocalDraftList({
   copy,
   drafts,
+  page,
+  hasMore,
   pending,
   onDiscard,
+  onPrevious,
+  onNext,
 }: {
   copy: GardenWorkspaceCopy;
   drafts: GardenWorkspaceDraftView[];
+  page: number;
+  hasMore: boolean;
   pending: boolean;
   onDiscard: (id: string) => Promise<void>;
+  onPrevious: () => void;
+  onNext: () => void;
 }) {
   return (
     <div className="min-w-0">
@@ -308,6 +471,14 @@ function LocalDraftList({
           {copy.localState.drafts.empty}
         </p>
       )}
+      <WorkspaceSummaryPagination
+        copy={copy}
+        page={page}
+        hasMore={hasMore}
+        section={copy.localState.drafts.title}
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />
     </div>
   );
 }
@@ -315,9 +486,17 @@ function LocalDraftList({
 function LocalMutationList({
   copy,
   mutations,
+  page,
+  hasMore,
+  onPrevious,
+  onNext,
 }: {
   copy: GardenWorkspaceCopy;
   mutations: GardenWorkspaceMutationView[];
+  page: number;
+  hasMore: boolean;
+  onPrevious: () => void;
+  onNext: () => void;
 }) {
   return (
     <div className="min-w-0">
@@ -358,6 +537,63 @@ function LocalMutationList({
           {copy.localState.queue.empty}
         </p>
       )}
+      <WorkspaceSummaryPagination
+        copy={copy}
+        page={page}
+        hasMore={hasMore}
+        section={copy.localState.queue.title}
+        onPrevious={onPrevious}
+        onNext={onNext}
+      />
+    </div>
+  );
+}
+
+function WorkspaceSummaryPagination({
+  copy,
+  page,
+  hasMore,
+  section,
+  onPrevious,
+  onNext,
+}: {
+  copy: GardenWorkspaceCopy;
+  page: number;
+  hasMore: boolean;
+  section: string;
+  onPrevious: () => void;
+  onNext: () => void;
+}) {
+  if (page === 1 && !hasMore) return null;
+
+  return (
+    <div
+      className="mt-3 flex items-center gap-2"
+      aria-label={formatGardenWorkspaceTemplate(
+        copy.workspace.pagination.ariaLabel,
+        {
+          section,
+        },
+      )}
+    >
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={page === 1}
+        onClick={onPrevious}
+      >
+        {copy.workspace.pagination.previous}
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={!hasMore}
+        onClick={onNext}
+      >
+        {copy.workspace.pagination.next}
+      </Button>
     </div>
   );
 }
@@ -386,31 +622,24 @@ function ConnectionState({
 async function discardDraft(
   ownerUserId: string,
   id: string,
-  refresh: () => Promise<void>,
+  refresh: () => void,
 ) {
   await deleteOfflineDraft(ownerUserId, id);
-  await refresh();
+  refresh();
 }
 
 function summarizeDraft(
-  draft: JournalDraftRecord,
+  draft: OfflineDraftSummary,
   locale: InterfaceLocale,
   copy: GardenWorkspaceCopy,
 ): GardenWorkspaceDraftView {
   if (draft.id === FIRST_ENTRY_DRAFT_ID && draft.kind === "first_entry") {
-    const payload = draft.payload as FirstEntryDraftPayload;
     return {
       id: draft.id,
-      title:
-        firstNonEmpty(
-          payload.draft.title,
-          payload.draft.plantName,
-          payload.selectedCatalogItem?.displayName,
-          payload.userAddedCatalogName,
-        ) ?? copy.localState.drafts.firstEntryDraft,
+      title: copy.localState.drafts.firstEntryDraft,
       subtitle: [
         copy.localState.drafts.firstObject,
-        draftDate(payload.draft.entryDate, locale),
+        draftDate(draft.entryDate, locale),
       ]
         .filter(Boolean)
         .join(" · "),
@@ -418,32 +647,39 @@ function summarizeDraft(
     };
   }
 
-  const payload = draft.payload as FollowUpEntryDraftPayload;
   return {
     id: draft.id,
     title:
-      firstNonEmpty(payload.draft.title) ??
-      copy.localState.drafts.followUpDraft,
+      draft.kind === "space_entry"
+        ? copy.localState.drafts.firstEntryDraft
+        : copy.localState.drafts.followUpDraft,
     subtitle: [
-      copy.localState.drafts.objectUpdate,
-      draftDate(payload.draft.entryDate, locale),
+      draft.kind === "space_entry"
+        ? copy.localState.drafts.firstEntry
+        : copy.localState.drafts.objectUpdate,
+      draftDate(draft.entryDate, locale),
     ]
       .filter(Boolean)
       .join(" · "),
-    href: `/garden/objects/${encodeURIComponent(payload.plantObjectId)}#follow-up-composer`,
+    href: draft.targetObjectId
+      ? `/garden/objects/${encodeURIComponent(draft.targetObjectId)}#follow-up-composer`
+      : "/garden#first-entry-composer",
   };
 }
 
-function mutationTitle(payload: unknown, copy: GardenWorkspaceCopy) {
-  const candidate = payload as Partial<OfflineJournalEntryPayload>;
-  return firstNonEmpty(candidate.title) ?? copy.localState.queue.fallbackTitle;
-}
-
-function mutationHref(payload: unknown) {
-  const candidate = payload as Partial<OfflineJournalEntryPayload>;
-  return candidate.target === "plant_object_entry" && candidate.plantObjectId
-    ? `/garden/objects/${encodeURIComponent(candidate.plantObjectId)}#follow-up-composer`
-    : "/garden#first-entry-composer";
+function summarizeMutation(
+  mutation: OfflineMutationSummary,
+  copy: GardenWorkspaceCopy,
+): GardenWorkspaceMutationView {
+  return {
+    id: mutation.id,
+    title: copy.localState.queue.fallbackTitle,
+    status: mutation.status,
+    href:
+      mutation.target === "plant_object_entry" && mutation.targetObjectId
+        ? `/garden/objects/${encodeURIComponent(mutation.targetObjectId)}#follow-up-composer`
+        : "/garden#first-entry-composer",
+  };
 }
 
 function mutationStatusLabel(
@@ -460,10 +696,6 @@ function mutationStatusLabel(
     case "synced":
       return copy.localState.queue.statuses.synced;
   }
-}
-
-function firstNonEmpty(...values: Array<string | null | undefined>) {
-  return values.find((value) => (value ?? "").trim().length > 0)?.trim();
 }
 
 function buildContextModules({

@@ -67,7 +67,9 @@ const payload: OfflineJournalEntryPayload = {
 describe("offline journal entry sync", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
+    await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.draftSummaries.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,

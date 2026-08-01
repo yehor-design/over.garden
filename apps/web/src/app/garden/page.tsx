@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { BookOpenText, CirclePlus, Compass, Sprout } from "lucide-react";
 
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
@@ -45,9 +46,12 @@ import type {
   VisualFixtureWorkspaceScenarioEvidence,
 } from "@/lib/visual-fixtures/manifest";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
-import { recordAnalyticsEventSafely } from "@/server/analytics-events";
 import { findSelectableCatalogItemByPublicSlug } from "@/server/catalog-repository";
-import { loadGardenWorkspace } from "@/server/garden-workspace-repository";
+import {
+  loadGardenWorkspace,
+  withGardenWorkspaceDeadline,
+} from "@/server/garden-workspace-repository";
+import { scheduleGardenWorkspaceActivationAnalytics } from "@/server/garden-workspace-after-response";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import {
   getMySpaceJournalTimeline,
@@ -105,7 +109,6 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
     visualFixtureEnvironment?.target === "local" &&
     isInterfaceServerActionPendingVisualFixtureSearchParams(params),
   );
-  const workspaceCopy = getGardenWorkspaceCopy(locale);
   const creationScenario = resolveVisualJournalCreationScenario(
     params.visualCreate,
     "first-entry",
@@ -197,19 +200,19 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
       : null;
   const selectedSpaceId =
     requestedSpaceId || creationScenario?.spaceId || defaultSpaceId;
-  const selectedSpaceTimeline = selectedSpaceId
-    ? await getMySpaceJournalTimeline(scope, selectedSpaceId, {
-        objectLimit: 20,
-        entryLimit: 5,
-      })
-    : null;
+  const initialSpace =
+    workspaceForView.spaces.status === "ready"
+      ? (workspaceForView.spaces.value.spaces.find(
+          (space) => space.id === selectedSpaceId,
+        ) ?? null)
+      : null;
   const today =
     visualScenario || creationScenario
       ? "2026-07-12"
       : new Date().toISOString().slice(0, 10);
 
   if (!visualScenario && !creationScenario) {
-    await recordAnalyticsEventSafely(scope, {
+    scheduleGardenWorkspaceActivationAnalytics(scope, {
       eventName: "activation_started",
       properties: {
         activation_source: activationSource,
@@ -240,31 +243,40 @@ export default async function GardenPage({ searchParams }: GardenPageProps) {
             locale={locale}
           />
         ) : null}
-        {writeAccess.canWrite &&
-        normalizeSaveProgressMomentKind(params.saveProgress) ===
-          "space-entry" ? (
-          <SaveProgressMoment
-            locale={locale}
-            kind="space-entry"
-            entryCount={selectedSpaceTimeline?.entries.length ?? 0}
-            spaceName={selectedSpaceTimeline?.space.display_name}
-            primaryHref="#space-journal"
-            primaryLabel={workspaceCopy.page.postSave.returnToSpaceJournal}
-            secondaryHref="#first-entry-composer"
-            secondaryLabel={workspaceCopy.page.postSave.addAnotherObject}
-          />
-        ) : null}
         <GardenWriteTools
           canWrite={writeAccess.canWrite}
           today={today}
           locale={locale}
           activationSource={activationSource}
           initialCatalogItem={initialCatalogItem}
-          selectedSpaceTimeline={selectedSpaceTimeline}
+          initialSpace={
+            initialSpace
+              ? { id: initialSpace.id, displayName: initialSpace.displayName }
+              : null
+          }
           visualScenario={creationScenario}
           enableOfflinePersistence={!visualScenario && !creationScenario}
           ownerUserId={userId}
-        />
+        >
+          {selectedSpaceId ? (
+            <Suspense fallback={null}>
+              <GardenSelectedSpaceTimeline
+                canWrite={writeAccess.canWrite}
+                locale={locale}
+                ownerUserId={userId}
+                scope={scope}
+                spaceId={selectedSpaceId}
+                today={today}
+                enableOfflinePersistence={!visualScenario && !creationScenario}
+                showSaveProgress={
+                  writeAccess.canWrite &&
+                  normalizeSaveProgressMomentKind(params.saveProgress) ===
+                    "space-entry"
+                }
+              />
+            </Suspense>
+          ) : null}
+        </GardenWriteTools>
       </GardenWorkspaceView>
     </>
   );
@@ -447,9 +459,10 @@ function GardenWriteTools({
   locale,
   activationSource,
   initialCatalogItem,
-  selectedSpaceTimeline,
+  initialSpace,
   visualScenario,
   enableOfflinePersistence,
+  children,
 }: {
   ownerUserId: string;
   canWrite: boolean;
@@ -459,9 +472,10 @@ function GardenWriteTools({
     typeof FirstEntryComposer
   >[0]["activationSource"];
   initialCatalogItem: FirstEntryCatalogSelection | null;
-  selectedSpaceTimeline: SpaceJournalTimeline | null;
+  initialSpace: { id: string; displayName: string } | null;
   visualScenario: VisualFixtureCreationScenarioEvidence | null;
   enableOfflinePersistence: boolean;
+  children?: React.ReactNode;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   return (
@@ -484,14 +498,7 @@ function GardenWriteTools({
               key={initialCatalogItem?.id ?? "first-entry"}
               today={today}
               initialClientMutationId={crypto.randomUUID()}
-              initialSpace={
-                selectedSpaceTimeline
-                  ? {
-                      id: selectedSpaceTimeline.space.id,
-                      displayName: selectedSpaceTimeline.space.display_name,
-                    }
-                  : null
-              }
+              initialSpace={initialSpace}
               initialCatalogItem={initialCatalogItem}
               activationSource={activationSource}
               visualScenario={visualScenario}
@@ -503,17 +510,62 @@ function GardenWriteTools({
         </div>
       </section>
 
-      {selectedSpaceTimeline ? (
-        <SpaceJournalTools
-          canWrite={canWrite}
+      {children}
+    </div>
+  );
+}
+
+async function GardenSelectedSpaceTimeline({
+  canWrite,
+  locale,
+  ownerUserId,
+  scope,
+  spaceId,
+  today,
+  enableOfflinePersistence,
+  showSaveProgress,
+}: {
+  canWrite: boolean;
+  locale: InterfaceLocale;
+  ownerUserId: string;
+  scope: ReturnType<typeof scopedToUser>;
+  spaceId: string;
+  today: string;
+  enableOfflinePersistence: boolean;
+  showSaveProgress: boolean;
+}) {
+  const timeline = await withGardenWorkspaceDeadline(() =>
+    getMySpaceJournalTimeline(scope, spaceId, {
+      objectLimit: 20,
+      entryLimit: 5,
+    }),
+  ).catch(() => null);
+  if (!timeline) return null;
+
+  const copy = getGardenWorkspaceCopy(locale);
+  return (
+    <>
+      {showSaveProgress ? (
+        <SaveProgressMoment
           locale={locale}
-          ownerUserId={ownerUserId}
-          timeline={selectedSpaceTimeline}
-          today={today}
-          enableOfflinePersistence={enableOfflinePersistence}
+          kind="space-entry"
+          entryCount={timeline.entries.length}
+          spaceName={timeline.space.display_name}
+          primaryHref="#space-journal"
+          primaryLabel={copy.page.postSave.returnToSpaceJournal}
+          secondaryHref="#first-entry-composer"
+          secondaryLabel={copy.page.postSave.addAnotherObject}
         />
       ) : null}
-    </div>
+      <SpaceJournalTools
+        canWrite={canWrite}
+        locale={locale}
+        ownerUserId={ownerUserId}
+        timeline={timeline}
+        today={today}
+        enableOfflinePersistence={enableOfflinePersistence}
+      />
+    </>
   );
 }
 
