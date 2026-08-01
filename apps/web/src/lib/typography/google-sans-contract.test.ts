@@ -93,4 +93,19 @@ describe("Google Sans asset contract", () => {
     ).toHaveLength(4);
     expect(GOOGLE_SANS_FONT_FACE_CSS).not.toContain("oblique");
   });
+
+  it("prioritizes direct Linux fallback names before the Arial alias", () => {
+    const liberationSource = 'local("Liberation Sans")';
+    const arialSource = 'local("Arial")';
+
+    expect(GOOGLE_SANS_FONT_FACE_CSS.indexOf(liberationSource)).toBeGreaterThan(
+      -1,
+    );
+    expect(GOOGLE_SANS_FONT_FACE_CSS.indexOf(arialSource)).toBeGreaterThan(
+      -1,
+    );
+    expect(GOOGLE_SANS_FONT_FACE_CSS.indexOf(liberationSource)).toBeLessThan(
+      GOOGLE_SANS_FONT_FACE_CSS.indexOf(arialSource),
+    );
+  });
 });

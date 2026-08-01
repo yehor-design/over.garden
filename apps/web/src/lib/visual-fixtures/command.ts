@@ -136,7 +136,12 @@ export async function runVisualFixtureCommand(
       });
     }
 
-    return verifyVisualFixtures(runtime, environment, options.rootDirectory);
+    return verifyVisualFixtures(
+      runtime,
+      environment,
+      options.rootDirectory,
+      options.env,
+    );
   } finally {
     await runtime.close();
   }
@@ -170,6 +175,7 @@ async function verifyVisualFixtures(
   runtime: VisualFixtureRuntime,
   environment: VisualFixtureEnvironment,
   rootDirectory: string,
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
 ): Promise<VisualFixtureCommandSummary> {
   await uploadVisualFixtureMedia(
     runtime.store,
@@ -248,9 +254,11 @@ async function verifyVisualFixtures(
     );
 
     const mediaReachability = await Promise.all(
-      VISUAL_FIXTURE_MANIFEST.media.map((item) => {
+      VISUAL_FIXTURE_MANIFEST.media.map(async (item) => {
         assertFixtureStorageKey(item.derivativeKey);
-        return runtime.store.hasPublicObject(item.derivativeKey);
+        return canReadPublicFixtureMedia(
+          publicFixtureMediaUrl(env, item.derivativeKey),
+        );
       }),
     );
     const mediaReachable = mediaReachability.filter(Boolean).length;
@@ -287,6 +295,36 @@ async function verifyVisualFixtures(
       runtime.store.deletePublicObject(SENTINEL_MEDIA_KEY),
     ]);
   }
+}
+
+function publicFixtureMediaUrl(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+  key: string,
+): URL {
+  assertFixtureStorageKey(key);
+  const base = new URL(requiredFixtureEnv(env, "R2_PUBLIC_BASE_URL"));
+  base.pathname = `${base.pathname.replace(/\/$/u, "")}/${key}`;
+  return base;
+}
+
+async function canReadPublicFixtureMedia(url: URL): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    return response.ok && response.headers.get("content-type") === "image/webp";
+  } catch {
+    return false;
+  }
+}
+
+function requiredFixtureEnv(
+  env: NodeJS.ProcessEnv | Record<string, string | undefined>,
+  name: string,
+): string {
+  const value = env[name]?.trim();
+  if (!value) throw new Error(`${name} is required for visual fixtures.`);
+  return value;
 }
 
 async function upsertVerificationMediaSentinel(

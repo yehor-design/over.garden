@@ -156,15 +156,13 @@ describe("visual fixture repository query contracts", () => {
     expect(compiled[3].parameters).toEqual([...communityIds, ...actorIds]);
     expect(compiled[4].parameters).toEqual([...communityIds, ...actorIds]);
     expect(compiled[5].parameters).toEqual([...actorIds, ...actorIds]);
-    expect(compiled[6].parameters).toEqual(
-      VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
-    );
+    expect(compiled[6].parameters).toEqual(actorIds);
     expect(compiled[7].parameters).toEqual(
       VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),
     );
   });
 
-  it("builds a manifest-bounded reset in reverse dependency order", () => {
+  it("builds a fixture-owner-bounded reset in reverse dependency order", () => {
     const queries = buildVisualFixtureResetQueries(
       testDb,
       VISUAL_FIXTURE_MANIFEST,
@@ -233,7 +231,7 @@ describe("visual fixture repository query contracts", () => {
       VISUAL_FIXTURE_MANIFEST.profileReports.map(({ id }) => id),
       [...actorIds, ...actorIds],
       VISUAL_FIXTURE_MANIFEST.profileFollows.map(({ id }) => id),
-      VISUAL_FIXTURE_MANIFEST.media.map(({ id }) => id),
+      actorIds,
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.topics.map(({ id }) => id),
       VISUAL_FIXTURE_MANIFEST.entries.map(({ id }) => id),

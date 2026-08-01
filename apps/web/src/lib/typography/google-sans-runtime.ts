@@ -37,11 +37,11 @@ export interface GoogleSansRuntimeAssetV1 {
 export const GOOGLE_SANS_RUNTIME_FALLBACK = {
   family: GOOGLE_SANS_FALLBACK_FAMILY,
   sourceFamily: "Arial",
-  // Arial is absent on Linux and on some Android builds, and `local()` matches
-  // by font name rather than through fontconfig aliasing, so an Arial-only
-  // source leaves the face unresolved there: the overrides below never apply
-  // and text reflows when the real font swaps in. Liberation Sans and Arimo are
-  // metrically identical to Arial, so the same overrides stay correct.
+  // Arial is absent on Linux and on some Android builds. Prioritize the direct
+  // metric-compatible names instead of relying on an Arial alias: Chromium on
+  // Linux can resolve that alias before it applies this face's overrides.
+  // Liberation Sans and Arimo are metrically identical to Arial, so the same
+  // overrides stay correct.
   //
   // Both spellings are required. WebKit matches the family name, while Chromium
   // matches the PostScript name, which carries no space. Listing only the
@@ -222,8 +222,8 @@ function renderFallbackFontFace(): string {
 
 function renderFallbackLocalSources(): string {
   return [
-    GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily,
     ...GOOGLE_SANS_RUNTIME_FALLBACK.metricCompatibleFamilies,
+    GOOGLE_SANS_RUNTIME_FALLBACK.sourceFamily,
   ]
     .map((family) => `local("${family}")`)
     .join(", ");

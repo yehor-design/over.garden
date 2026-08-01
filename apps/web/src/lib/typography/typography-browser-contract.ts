@@ -230,6 +230,7 @@ export interface TypographyFallbackObservation {
   fallbackFontAvailableBeforeRelease: boolean;
   computedFallbackFamily: string;
   blockedFontRequestCount: number;
+  blockedFontResourceTimingCount: number;
   configuredDelayMs: number;
   blockedDurationMs: number;
   fallbackDurationMs: number;
@@ -544,8 +545,8 @@ export function evaluateTypographyFallbackObservation(
   if (observation.firstContentfulPaintMs > 1_000) {
     failures.push("fallback-fcp-after-1s");
   }
-  // Wall-clock visibility after DCL absorbs waitForFunction timer granularity
-  // and CI scheduling noise; FCP above remains the strict 1s paint budget.
+  // Browser-timeline visibility after DCL proves that meaningful fallback text
+  // reached the visitor. Controller wall-clock timestamps are never evidence.
   if (
     observation.visibleAfterDomContentLoadedMs < 0 ||
     observation.visibleAfterDomContentLoadedMs > 1_500
@@ -566,6 +567,9 @@ export function evaluateTypographyFallbackObservation(
   }
   if (observation.blockedFontRequestCount < 1) {
     failures.push("fallback-no-blocked-font-request");
+  }
+  if (observation.blockedFontResourceTimingCount < 1) {
+    failures.push("fallback-no-font-resource-timing");
   }
   if (
     observation.blockedDurationMs < observation.configuredDelayMs - 25 ||
