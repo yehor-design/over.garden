@@ -1,6 +1,7 @@
 /**
- * Node 20 lacks Object.groupBy (ES2024). Shared polyfill for Vitest and
- * Node scripts that load visual-fixture / localization matrices.
+ * Node 20 lacks Object.groupBy (ES2024). The repository runtime guard requires
+ * Node 22+ for builds; this remains the one compatibility owner for isolated
+ * Vitest and script imports that intentionally exercise an older runtime.
  */
 export function ensureObjectGroupByPolyfill() {
   if (typeof Object.groupBy === "function") return;
