@@ -2,6 +2,8 @@ import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { normalizePublicJournalSlug } from "@/lib/garden/public-journal-slug";
+
 const CANONICAL_ORIGIN = "https://over.garden";
 const DIRECTORY_ROUTES = [
   "/bg",
@@ -130,12 +132,12 @@ export async function runDrive2ProductionSmoke(
 
   const objectPath = extractInternalHref(
     feedHtml,
-    /^\/lineage\/objects\/[0-9a-f-]{36}$/,
+    (href) => /^\/lineage\/objects\/[0-9a-f-]{36}$/.test(href),
     "living-object passport",
   );
   const journalPath = extractInternalHref(
     feedHtml,
-    /^\/(?:(?:uk|bg|ru)\/)?journal\/[a-z0-9][a-z0-9-]{0,95}$/,
+    isCanonicalPublicJournalEntryPath,
     "journal entry",
   );
   const profilePath = normalizeProfilePath(options.profilePath);
@@ -364,15 +366,20 @@ function assertSelectedLocaleFoundation(
 
 function extractInternalHref(
   html: string,
-  allowed: RegExp,
+  allowed: (href: string) => boolean,
   label: string,
 ): string {
   const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map(
     ([, href]) => href.replaceAll("&amp;", "&").split("?")[0],
   );
-  const match = hrefs.find((href) => allowed.test(href));
+  const match = hrefs.find(allowed);
   if (!match) throw new Error(`Production feed has no ${label} continuation.`);
   return match;
+}
+
+function isCanonicalPublicJournalEntryPath(href: string) {
+  const match = /^\/(?:(?:uk|bg|ru)\/)?journal\/([^/?#]+)$/.exec(href);
+  return match !== null && normalizePublicJournalSlug(match[1]) !== null;
 }
 
 function normalizeProfilePath(value: string) {
