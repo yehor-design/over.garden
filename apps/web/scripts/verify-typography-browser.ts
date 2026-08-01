@@ -2439,7 +2439,14 @@ async function runFallbackCase(input: {
             blockedAtMs: firstBlockedBrowserTimelineMs,
             delayMs: FALLBACK_DELAY_MS,
           },
-          { timeout: FALLBACK_DELAY_MS + 2_000 },
+          {
+            // Headless WebKit may throttle requestAnimationFrame while a font
+            // request is paused. A bounded timer poll keeps release aligned to
+            // the browser timeline instead of adding an engine-dependent RAF
+            // delay to the deliberately fixed 600 ms test window.
+            polling: 20,
+            timeout: FALLBACK_DELAY_MS + 2_000,
+          },
         )
         .catch(() => undefined);
     }
