@@ -549,6 +549,10 @@ Project:
 - Framework: `nextjs`
 - Vercel project live flag: `false` at verification time
 - Node version reported by project API: `24.x`
+- OVE-246 repository runtime floor: Node `22`. Authenticated Vercel CLI
+  read-back on 2026-08-01 reported project Node `24.x`, which satisfies the
+  declared floor. The platform setting is recorded, not mutated by this
+  repository remediation.
 - Authenticated Vercel billing read-back on 2026-07-29: `Hobby`. This plan
   accepts daily Cron expressions only; it must not be configured with an
   hourly or sub-hourly recovery schedule.
