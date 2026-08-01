@@ -29,6 +29,7 @@ import {
   createProvenanceEdge,
 } from "@/server/lineage-repository";
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
+import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { scopedToUser } from "@/server/request-scope";
 
@@ -44,7 +45,11 @@ export async function createPlantObjectJournalEntryAction(formData: FormData) {
     mediaAssetId: String(formData.get("mediaAssetId") ?? ""),
   });
 
-  await recordPlantObjectJournalEntryEvents(scope, result);
+  if (result.isNewEntry) {
+    scheduleLearningAttributionDrain(async () => {
+      await recordPlantObjectJournalEntryEvents(scope, result);
+    });
+  }
 
   revalidatePath("/garden");
   revalidatePath(`/garden/objects/${result.plantObject.id}`);

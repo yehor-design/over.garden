@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   listMyRecentJournalEntries: vi.fn(),
   requireCurrentUserId: vi.fn(),
   requireWriteEligibleRequestScope: vi.fn(),
+  scheduleLearningAttributionDrain: vi.fn(),
   tryResolveWalkingSkeletonEnvironment: vi.fn(),
 }));
 
@@ -33,6 +34,9 @@ vi.mock("@/server/journal-repository", () => ({
 }));
 vi.mock("@/server/search/public-projection-outbox", () => ({
   convergePublicProjectionsNow: mocks.convergePublicProjectionsNow,
+}));
+vi.mock("@/server/mvp-learning/attribution-after-response", () => ({
+  scheduleLearningAttributionDrain: mocks.scheduleLearningAttributionDrain,
 }));
 
 import { GET, POST } from "./route";
@@ -81,14 +85,17 @@ describe("walking-skeleton journal API", () => {
       getRequest("localhost:3000", "developer-tunnel.example.test"),
     );
     const postResponse = await POST(
-      new Request("https://developer-tunnel.example.test/api/skeleton/journal", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          host: "localhost:3000",
+      new Request(
+        "https://developer-tunnel.example.test/api/skeleton/journal",
+        {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            host: "localhost:3000",
+          },
+          body: JSON.stringify({ body: "Entry" }),
         },
-        body: JSON.stringify({ body: "Entry" }),
-      }),
+      ),
     );
 
     expect(getResponse.status).toBe(404);
@@ -141,8 +148,14 @@ describe("walking-skeleton journal API", () => {
     ["array", jsonRequest([])],
     ["missing body", jsonRequest({ visibility: "private" })],
     ["empty body", jsonRequest({ body: "  " })],
-    ["invalid visibility", jsonRequest({ body: "Entry", visibility: "friends" })],
-    ["invalid mutation id", jsonRequest({ body: "Entry", clientMutationId: "" })],
+    [
+      "invalid visibility",
+      jsonRequest({ body: "Entry", visibility: "friends" }),
+    ],
+    [
+      "invalid mutation id",
+      jsonRequest({ body: "Entry", clientMutationId: "" }),
+    ],
     ["unknown field", jsonRequest({ body: "Entry", userId: "another-user" })],
   ])("returns fixed 400 for %s", async (_label, invalidRequest) => {
     const response = await POST(invalidRequest);
@@ -272,10 +285,7 @@ function request(body: string, contentType: string) {
   });
 }
 
-function getRequest(
-  urlHost = "localhost:3000",
-  rawHost = "localhost:3000",
-) {
+function getRequest(urlHost = "localhost:3000", rawHost = "localhost:3000") {
   return new Request(`http://${urlHost}/api/skeleton/journal`, {
     headers: { host: rawHost },
   });

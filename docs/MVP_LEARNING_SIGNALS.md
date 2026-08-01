@@ -26,7 +26,7 @@ Canonical write set:
 
 Legacy event property aliases still readable: `self_serve` → `real_self_serve`, `closed_pilot` → `real_closed_pilot`, `editorial` → `editorial_seed`.
 
-Durable rows live in `learning_actor_attributions` (user_id, actor_class, source). Resolve order: durable row → pilot grant → producer override → `real_self_serve` default. Unclassified analytics activity fails the decision gate closed.
+Durable rows live in `learning_actor_attributions` (`user_id`, bounded `actor_class`, source). OVE-219 makes attribution asynchronous and transactional: every successful canonical journal create/edit advances one non-identifying `learning_attribution_outbox` intent in the same database transaction; the response is not allowed to wait for attribution reads or writes. A monotonic desired generation guarantees that an event committed after an earlier consumer settlement is backfilled by a later lease; reopening terminal work resets the retry budget for that new generation. The leased consumer resolves durable row → optional pilot grant → `real_self_serve` default, then backfills only missing bounded `actor_class` properties on that owner's existing analytics. A post-response drain is best effort; protected `/api/cron/learning-attribution` is the normal recovery path. `pending`, `processing`, `failed`, or `dead` outbox work, any missing durable class for an active journal owner, and any analytics class inconsistent with its durable row all fail the decision gate closed; documented historical analytics aliases (`self_serve`, `closed_pilot`, `editorial`) normalize before this comparison. The outbox stores only user id plus enum cohort/segment; never an invite token, email, URL, request metadata, or content.
 
 ## Metric rules
 

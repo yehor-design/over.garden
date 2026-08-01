@@ -52,6 +52,7 @@ import {
   persistJournalEntryTopicSignals,
   refreshJournalEntryTopicSignalsForPlantObject,
 } from "@/server/journal-topic-repository";
+import { enqueueLearningAttributionIntent } from "@/server/mvp-learning/attribution-outbox";
 import type { RequestScope } from "@/server/request-scope";
 import { FIRST_PUBLICATION_DISCLOSURE_VERSION } from "@/lib/privacy/disclosures";
 import { assertNoPreciseLocationText } from "@/lib/privacy/precise-location-text";
@@ -710,6 +711,7 @@ export async function createFirstPlantEntry(
         journalEntryId: entry.id,
         explicitTagLabels: normalized.topicTags,
       });
+      await enqueueLearningAttributionIntent(trx, scope);
 
       return {
         space: {
@@ -1395,6 +1397,7 @@ export async function createPlantObjectJournalEntry(
         journalEntryId: entry.id,
         explicitTagLabels: normalized.topicTags,
       });
+      await enqueueLearningAttributionIntent(trx, scope);
 
       return {
         space: {
@@ -1612,6 +1615,7 @@ export async function createSpaceJournalEntry(
         journalEntryId: entry.id,
         explicitTagLabels: normalized.topicTags,
       });
+      await enqueueLearningAttributionIntent(trx, scope);
 
       return {
         space,
@@ -2032,6 +2036,8 @@ export async function updateJournalEntryAggregate(
         ),
       });
     }
+
+    await enqueueLearningAttributionIntent(trx, scope);
 
     const priorRead = readJournalDocumentFromEntry(existing);
     const priorDocument =

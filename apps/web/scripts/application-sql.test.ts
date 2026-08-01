@@ -22,6 +22,7 @@ describe("versioned application SQL bootstrap", () => {
       "0015_ove241_auth_email_outbox.sql",
       "0016_ove235_comment_moderation.sql",
       "0017_ove237_interaction_admission.sql",
+      "0018_ove219_learning_attribution_outbox.sql",
     ]);
     expect(migrations.every(({ sql }) => sql.trim().length > 0)).toBe(true);
   });

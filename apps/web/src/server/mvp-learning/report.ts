@@ -23,6 +23,10 @@ import {
   MVP_LEARNING_POLICY_VERSION,
 } from "@/lib/mvp-learning/policy";
 import { RETENTION_POLICY_VERSION } from "@/server/media/retention-executor";
+import {
+  getLearningAttributionOutboxCounts,
+  type LearningAttributionOutboxCounts,
+} from "@/server/mvp-learning/attribution-outbox";
 
 type QueryExecutor = Kysely<Database> | Transaction<Database>;
 
@@ -67,6 +71,7 @@ export interface MvpLearningReport {
     real_closed_pilot: MvpLearningCohortSignals;
   };
   exclusions: MvpLearningExclusionCounts;
+  attributionOutbox: LearningAttributionOutboxCounts;
   unclassifiedEventCount: number;
   unclassifiedActiveGardenerCount: number;
   editorialPublicTrafficProxy: number;
@@ -94,20 +99,28 @@ export async function getMvpLearningReport(
   const now = options.now ?? new Date();
   const since = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
 
-  const [selfServe, closedPilot, exclusions, unclassified, editorialPublic] =
-    await Promise.all([
-      loadCohortSignals(executor, REAL_SELF_SERVE_ACTOR_CLASS, since),
-      loadCohortSignals(executor, REAL_CLOSED_PILOT_ACTOR_CLASS, since),
-      loadExclusionCounts(executor, since),
-      loadUnclassifiedCounts(executor, since),
-      loadEditorialPublicProxy(executor, since),
-    ]);
+  const [
+    selfServe,
+    closedPilot,
+    exclusions,
+    unclassified,
+    editorialPublic,
+    attributionOutbox,
+  ] = await Promise.all([
+    loadCohortSignals(executor, REAL_SELF_SERVE_ACTOR_CLASS, since),
+    loadCohortSignals(executor, REAL_CLOSED_PILOT_ACTOR_CLASS, since),
+    loadExclusionCounts(executor, since),
+    loadUnclassifiedCounts(executor, since),
+    loadEditorialPublicProxy(executor, since),
+    getLearningAttributionOutboxCounts(executor),
+  ]);
 
   const decisionGate = evaluateDecisionGate({
     selfServe,
     closedPilot,
     unclassifiedEventCount: unclassified.events,
     unclassifiedActiveGardenerCount: unclassified.gardeners,
+    attributionOutbox,
   });
 
   return {
@@ -122,6 +135,7 @@ export async function getMvpLearningReport(
       real_closed_pilot: closedPilot,
     },
     exclusions,
+    attributionOutbox,
     unclassifiedEventCount: unclassified.events,
     unclassifiedActiveGardenerCount: unclassified.gardeners,
     editorialPublicTrafficProxy: editorialPublic,
@@ -132,6 +146,7 @@ export async function getMvpLearningReport(
       "Closed-pilot and self-serve cohorts are never mixed into one denominator.",
       "Synthetic/editorial/bot classes are exclusion counts only and cannot drive continue/iterate/stop.",
       "Unclassified activity fails the decision gate closed rather than defaulting to real.",
+      "Pending, retried, or dead learning-attribution work keeps the decision gate closed until durable classification converges.",
     ],
   };
 }
@@ -162,10 +177,15 @@ function evaluateDecisionGate(input: {
   closedPilot: MvpLearningCohortSignals;
   unclassifiedEventCount: number;
   unclassifiedActiveGardenerCount: number;
+  attributionOutbox: LearningAttributionOutboxCounts;
 }): MvpLearningDecisionGate {
   if (
     input.unclassifiedEventCount > 0 ||
-    input.unclassifiedActiveGardenerCount > 0
+    input.unclassifiedActiveGardenerCount > 0 ||
+    input.attributionOutbox.pending > 0 ||
+    input.attributionOutbox.processing > 0 ||
+    input.attributionOutbox.failed > 0 ||
+    input.attributionOutbox.dead > 0
   ) {
     return "unclassified";
   }
@@ -271,27 +291,6 @@ function eligibleActorPredicate(cohort: MvpLearningCohortKey) {
       where attribution.user_id = journal_entries.owner_user_id
         and attribution.actor_class = ${cohort}
     )
-    or (
-      not exists (
-        select 1
-        from learning_actor_attributions as any_attribution
-        where any_attribution.user_id = journal_entries.owner_user_id
-      )
-      and ${
-        cohort === REAL_CLOSED_PILOT_ACTOR_CLASS
-          ? sql`exists (
-              select 1
-              from pilot_invite_grants as grant_row
-              where grant_row.user_id = journal_entries.owner_user_id
-                and grant_row.cohort = 'closed_pilot'
-            )`
-          : sql`not exists (
-              select 1
-              from pilot_invite_grants as grant_row
-              where grant_row.user_id = journal_entries.owner_user_id
-            )`
-      }
-    )
   )`;
 }
 
@@ -313,11 +312,9 @@ async function loadExclusionCounts(
       ),
     ])
     .where("journal_entries.created_at", ">=", since)
-    .where(
-      "learning_actor_attributions.actor_class",
-      "in",
-      [...EXCLUDED_LEARNING_ACTOR_CLASSES],
-    )
+    .where("learning_actor_attributions.actor_class", "in", [
+      ...EXCLUDED_LEARNING_ACTOR_CLASSES,
+    ])
     .groupBy("learning_actor_attributions.actor_class")
     .execute();
 
@@ -335,26 +332,36 @@ async function loadUnclassifiedCounts(
   since: Date,
 ): Promise<{ events: number; gardeners: number }> {
   const row = await sql<{ events: number; gardeners: number }>`
-    select
-      count(*)::int as events,
-      count(distinct owner_user_id)::int as gardeners
-    from analytics_events
-    where created_at >= ${since}
-      and (
-        properties ->> 'actor_class' is null
-        or properties ->> 'actor_class' not in (
-          'real_self_serve',
-          'real_closed_pilot',
-          'founder_rehearsal',
-          'production_smoke',
-          'visual_fixture',
-          'editorial_seed',
-          'automated_bot',
-          'self_serve',
-          'closed_pilot',
-          'editorial'
+    with unclassified_events as (
+      select analytics_events.id, analytics_events.owner_user_id
+      from analytics_events
+      left join learning_actor_attributions as attribution
+        on attribution.user_id = analytics_events.owner_user_id
+      where analytics_events.created_at >= ${since}
+        and (
+          attribution.user_id is null
+          or case analytics_events.properties ->> 'actor_class'
+            when 'self_serve' then 'real_self_serve'
+            when 'closed_pilot' then 'real_closed_pilot'
+            when 'editorial' then 'editorial_seed'
+            else analytics_events.properties ->> 'actor_class'
+          end is distinct from attribution.actor_class
         )
-      )
+    ), unclassified_journal_owners as (
+      select distinct journal_entries.owner_user_id
+      from journal_entries
+      left join learning_actor_attributions as attribution
+        on attribution.user_id = journal_entries.owner_user_id
+      where journal_entries.created_at >= ${since}
+        and attribution.user_id is null
+    ), unclassified_owners as (
+      select owner_user_id from unclassified_events
+      union
+      select owner_user_id from unclassified_journal_owners
+    )
+    select
+      (select count(*)::int from unclassified_events) as events,
+      (select count(*)::int from unclassified_owners) as gardeners
   `.execute(executor);
 
   const first = row.rows[0];

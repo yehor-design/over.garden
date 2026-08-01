@@ -11,6 +11,7 @@ import {
   listMyRecentJournalEntries,
 } from "@/server/journal-repository";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
+import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
   PilotWriteAccessError,
   requireWriteEligibleRequestScope,
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
 
   try {
     const entry = await createJournalEntry(scope, input);
+    scheduleLearningAttributionDrain();
 
     // OVE-242: createJournalEntry commits the public-projection intent with
     // the entry itself; this only attempts immediate convergence.

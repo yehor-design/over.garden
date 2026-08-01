@@ -1,6 +1,5 @@
 import "server-only";
 
-import type { ActorClass } from "@/lib/garden/actor-class";
 import type { JournalCoverSource } from "@/lib/garden/journal-cover-contract";
 import {
   blockCountBucket,
@@ -16,7 +15,6 @@ import {
 import type { RequestScope } from "@/server/request-scope";
 
 export interface ComposerLearningSignalInput {
-  actorClass: ActorClass;
   journalEntryId: string;
   plantObjectId?: string | null;
   spaceId?: string | null;
@@ -39,7 +37,6 @@ export async function recordComposerLearningSignalsSafely(
   input: ComposerLearningSignalInput,
 ): Promise<void> {
   const shared: AnalyticsEventProperties = {
-    actor_class: input.actorClass,
     photo_count_bucket: photoCountBucket(
       journalDocumentImageCount(input.document),
     ),
@@ -83,6 +80,8 @@ export async function recordComposerLearningSignalsSafely(
   }
 }
 
-export function blockOrderHashFromDocument(document: JournalDocumentV1): string {
+export function blockOrderHashFromDocument(
+  document: JournalDocumentV1,
+): string {
   return document.blocks.map((block) => block.id).join("|");
 }
