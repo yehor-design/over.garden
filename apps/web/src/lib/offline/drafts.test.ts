@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createOfflinePhotoIntent,
   enqueueOfflineMutation as enqueueOwnedOfflineMutation,
+  listOfflineMutationSummaries,
   listQueuedMutations as listOwnedQueuedMutations,
   offlineDb,
   type OfflineDraftRecord,
@@ -21,6 +22,7 @@ import {
   hasPersistableFirstEntryDraft,
   hasPersistableFollowUpDraft,
   listOfflineDrafts as listOwnedOfflineDrafts,
+  listOfflineDraftSummaries,
   upsertOfflineDraft as upsertOwnedOfflineDraft,
   type FirstEntryDraftPayload,
   type FollowUpEntryDraftPayload,
@@ -79,7 +81,9 @@ describe("offline journal drafts", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     await offlineDb?.mutations.clear();
+    await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.draftSummaries.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,
@@ -190,6 +194,124 @@ describe("offline journal drafts", () => {
     expect(drafts).toHaveLength(2);
     expect(drafts[0]?.id).toBe(followUpEntryDraftId("object-2"));
     expect(hasPersistableFollowUpDraft(secondPayload, "2026-07-04")).toBe(true);
+  });
+
+  it("maintains a 24-plus-one blob-free summary page beside the canonical draft", async () => {
+    const photo = await createOfflinePhotoIntent(
+      new File(["private photo bytes"], "private.webp", {
+        type: "image/webp",
+      }),
+    );
+    for (let index = 0; index < 25; index += 1) {
+      await upsertOfflineDraft({
+        id: followUpEntryDraftId(`object-${index}`),
+        kind: "follow_up_entry",
+        payload: {
+          clientMutationId: `summary-draft-${index}`,
+          plantObjectId: `object-${index}`,
+          draft: {
+            title: `Private draft ${index}`,
+            body: `Private body ${index}`,
+            entryDate: "2026-08-01",
+          },
+          photoIntent: index === 0 ? photo : null,
+        },
+      });
+    }
+
+    const page = await listOfflineDraftSummaries(OWNER_A);
+
+    expect(page.items).toHaveLength(24);
+    expect(page.hasMore).toBe(true);
+    expect(page.items[0]).toMatchObject({
+      ownerUserId: OWNER_A,
+      kind: "follow_up_entry",
+      entryDate: "2026-08-01",
+    });
+    expect(JSON.stringify(page)).not.toContain("Private body");
+    expect(JSON.stringify(page)).not.toContain("private photo bytes");
+    expect(JSON.stringify(page)).not.toContain("clientMutationId");
+
+    const first = page.items[0];
+    if (!first) throw new Error("Expected a summary row.");
+    await deleteOfflineDraft(first.id);
+    expect(
+      await offlineDb?.draftSummaries.get([OWNER_A, first.id]),
+    ).toBeUndefined();
+  });
+
+  it("reads only fixed owner-scoped pages from a 5,000 plus 5,000 summary fixture", async () => {
+    const database = offlineDb;
+    if (!database) return;
+
+    await database.draftSummaries.bulkPut(
+      Array.from({ length: 5_000 }, (_, index) => ({
+        id: `dense-draft-${index}`,
+        ownerUserId: OWNER_A,
+        kind: "follow_up_entry" as const,
+        createdAt: index,
+        updatedAt: index,
+        entryDate: "2026-08-01",
+        targetObjectId: `object-${index}`,
+        targetSpaceId: null,
+      })),
+    );
+    await database.mutationSummaries.bulkPut([
+      ...Array.from({ length: 5_000 }, (_, index) => ({
+        id: `dense-mutation-${index}`,
+        ownerUserId: OWNER_A,
+        kind: "journal_entry" as const,
+        status: "queued" as const,
+        workspaceVisible: 1 as const,
+        createdAt: index,
+        updatedAt: index,
+        target: "plant_object_entry" as const,
+        targetObjectId: `object-${index}`,
+        targetSpaceId: null,
+      })),
+      {
+        id: "other-owner-sentinel",
+        ownerUserId: OWNER_B,
+        kind: "journal_entry" as const,
+        status: "queued" as const,
+        workspaceVisible: 1 as const,
+        createdAt: 9_999,
+        updatedAt: 9_999,
+        target: "plant_object_entry" as const,
+        targetObjectId: "other-owner-object",
+        targetSpaceId: null,
+      },
+    ]);
+
+    const [
+      firstDraftPage,
+      secondDraftPage,
+      firstMutationPage,
+      secondMutationPage,
+    ] = await Promise.all([
+      listOfflineDraftSummaries(OWNER_A),
+      listOfflineDraftSummaries(OWNER_A, { page: 2 }),
+      listOfflineMutationSummaries(OWNER_A),
+      listOfflineMutationSummaries(OWNER_A, { page: 2 }),
+    ]);
+
+    for (const page of [
+      firstDraftPage,
+      secondDraftPage,
+      firstMutationPage,
+      secondMutationPage,
+    ]) {
+      expect(page.items).toHaveLength(24);
+      expect(page.hasMore).toBe(true);
+      expect(JSON.stringify(page)).not.toMatch(/payload|blob|body|private/i);
+    }
+    expect(firstDraftPage.items[0]?.id).toBe("dense-draft-4999");
+    expect(secondDraftPage.items[0]?.id).toBe("dense-draft-4975");
+    expect(firstMutationPage.items[0]?.id).toBe("dense-mutation-4999");
+    expect(secondMutationPage.items[0]?.id).toBe("dense-mutation-4975");
+    expect(firstMutationPage.items.map((item) => item.ownerUserId)).toEqual(
+      Array(24).fill(OWNER_A),
+    );
   });
 
   it("persists voice-transcribed text as ordinary draft body text only", async () => {

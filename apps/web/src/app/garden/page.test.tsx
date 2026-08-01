@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   loadGardenWorkspace: vi.fn(),
   getMySpaceJournalTimeline: vi.fn(),
   findSelectableCatalogItemByPublicSlug: vi.fn(),
-  recordAnalyticsEventSafely: vi.fn(),
+  scheduleGardenWorkspaceActivationAnalytics: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
   resolveVisualGardenWorkspaceScenario: vi.fn(),
   resolveVisualJournalCreationScenario: vi.fn(),
@@ -32,6 +32,12 @@ vi.mock("@/server/pilot-write-access", () => ({
 
 vi.mock("@/server/garden-workspace-repository", () => ({
   loadGardenWorkspace: mocks.loadGardenWorkspace,
+  withGardenWorkspaceDeadline: (load: () => Promise<unknown>) => load(),
+}));
+
+vi.mock("@/server/garden-workspace-after-response", () => ({
+  scheduleGardenWorkspaceActivationAnalytics:
+    mocks.scheduleGardenWorkspaceActivationAnalytics,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -41,10 +47,6 @@ vi.mock("@/server/journal-repository", () => ({
 vi.mock("@/server/catalog-repository", () => ({
   findSelectableCatalogItemByPublicSlug:
     mocks.findSelectableCatalogItemByPublicSlug,
-}));
-
-vi.mock("@/server/analytics-events", () => ({
-  recordAnalyticsEventSafely: mocks.recordAnalyticsEventSafely,
 }));
 
 vi.mock("@/server/interface-localization", () => ({
@@ -120,7 +122,7 @@ describe("/garden workspace V2", () => {
       actorClass: "real_self_serve",
     });
     mocks.findSelectableCatalogItemByPublicSlug.mockResolvedValue(null);
-    mocks.recordAnalyticsEventSafely.mockResolvedValue(undefined);
+    mocks.scheduleGardenWorkspaceActivationAnalytics.mockReturnValue(undefined);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
     mocks.resolveVisualGardenWorkspaceScenario.mockReturnValue(null);
     mocks.resolveVisualJournalCreationScenario.mockReturnValue(null);
@@ -157,8 +159,14 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("First entry composer");
     expect(html).toContain('data-initial-space-id="space-1"');
     expect(html).toContain('data-initial-space-name="Balcony"');
-    expect(html).toContain("Інструменти журналу простору");
-    expect(html).toContain("Shared morning round");
+    // Timeline work is a deferred server boundary: first-entry composition is
+    // already present in the initial response instead of waiting for it.
+    expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
+      expect.anything(),
+      "space-1",
+      { objectLimit: 20, entryLimit: 5 },
+    );
+    expect(html).not.toContain("Інструменти журналу простору");
     expect(html).not.toContain("Sign-in methods");
     expect(html).not.toContain("Social account link panel");
     expect(html).not.toContain("gardener@example.com");
@@ -187,12 +195,15 @@ describe("/garden workspace V2", () => {
     });
   });
 
-  it("rejects a malformed requested space before the owner query", async () => {
+  it("falls back to the preview space when the requested space is malformed", async () => {
     const { default: GardenPage } = await import("./page");
-    await GardenPage({
-      searchParams: Promise.resolve({ space: "not-a-uuid" }),
-    });
+    const html = renderToStaticMarkup(
+      await GardenPage({
+        searchParams: Promise.resolve({ space: "not-a-uuid" }),
+      }),
+    );
 
+    expect(html).toContain('data-initial-space-id="space-1"');
     expect(mocks.getMySpaceJournalTimeline).toHaveBeenCalledWith(
       expect.anything(),
       "space-1",
@@ -298,7 +309,9 @@ describe("/garden workspace V2", () => {
     expect(html).toContain("Очікує синхронізації");
     expect(html).not.toContain("Garden auth panel");
     expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
-    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+    expect(
+      mocks.scheduleGardenWorkspaceActivationAnalytics,
+    ).not.toHaveBeenCalled();
   });
 
   it("renders deterministic loading without querying owner rows", async () => {
@@ -343,7 +356,9 @@ describe("/garden workspace V2", () => {
       { objectLimit: 20, entryLimit: 5 },
     );
     expect(mocks.resolvePilotWriteAccess).not.toHaveBeenCalled();
-    expect(mocks.recordAnalyticsEventSafely).not.toHaveBeenCalled();
+    expect(
+      mocks.scheduleGardenWorkspaceActivationAnalytics,
+    ).not.toHaveBeenCalled();
   });
 });
 

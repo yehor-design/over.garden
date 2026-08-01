@@ -24,6 +24,7 @@ export const WORKSPACE_INVENTORY_PAGE_SIZE = 10;
 export const WORKSPACE_SPACE_PREVIEW_SIZE = 4;
 export const WORKSPACE_SPACE_PAGE_SIZE = 4;
 export const WORKSPACE_RECENT_LIMIT = 8;
+export const WORKSPACE_SECTION_DEADLINE_MS = 1_200;
 
 const MAX_WORKSPACE_QUERY_LIMIT = 25;
 
@@ -286,7 +287,43 @@ function runWorkspaceSource<T>(
   if (faultSections.has(section)) {
     return Promise.reject(new Error("Deterministic workspace section fault."));
   }
-  return load();
+  return withGardenWorkspaceDeadline(load);
+}
+
+/**
+ * Workspace sections are independent support surfaces. A slow dependency must
+ * settle as the caller's generic error state, while a later completion remains
+ * unable to alter that completed read model.
+ */
+export function withGardenWorkspaceDeadline<T>(
+  load: () => Promise<T>,
+  deadlineMs = WORKSPACE_SECTION_DEADLINE_MS,
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error("Garden workspace section deadline exceeded."));
+    }, deadlineMs);
+
+    void Promise.resolve()
+      .then(load)
+      .then(
+        (value) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(value);
+        },
+        (error: unknown) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          reject(error);
+        },
+      );
+  });
 }
 
 export function buildGardenWorkspaceInventorySummaryQuery(

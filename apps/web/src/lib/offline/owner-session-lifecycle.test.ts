@@ -40,7 +40,9 @@ const pauseHandles: OwnerOfflineActivityPauseHandle[] = [];
 describe("owner offline session lifecycle", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
+    await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.draftSummaries.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,
@@ -466,9 +468,8 @@ describe("owner offline session lifecycle", () => {
       payload: journalPayload("establish activity generation"),
       idempotencyKey: "establish-generation",
     });
-    const sessionGeneration = (
-      await offlineDb!.ownerActivity.get(OWNER_A)
-    )?.sessionGeneration;
+    const sessionGeneration = (await offlineDb!.ownerActivity.get(OWNER_A))
+      ?.sessionGeneration;
     expect(sessionGeneration).toBeTruthy();
 
     const first = await pauseOwnerOfflineActivity(OWNER_A, {
@@ -536,10 +537,7 @@ describe("owner offline session lifecycle", () => {
     ).rejects.toBeInstanceOf(OwnerOfflineActivityPausedError);
 
     await expect(
-      hydrateOwnerOfflineActivitySession(
-        OWNER_A,
-        activity!.sessionGeneration,
-      ),
+      hydrateOwnerOfflineActivitySession(OWNER_A, activity!.sessionGeneration),
     ).resolves.toBe("ready");
     // A real crashed initiator has no surviving module-local pause token. This
     // explicit resume clears the test process's retained handle to model that
@@ -706,14 +704,12 @@ describe("owner offline session lifecycle", () => {
   });
 
   it("expires a stale cross-tab pause instead of permanently blocking work", async () => {
-    await offlineDb!.ownerActivity.put(
-      {
-        ownerUserId: OWNER_A,
-        pauseToken: "stale-token",
-        pausedAt: Date.now() - 10_000,
-        expiresAt: Date.now() - 1,
-      } as never,
-    );
+    await offlineDb!.ownerActivity.put({
+      ownerUserId: OWNER_A,
+      pauseToken: "stale-token",
+      pausedAt: Date.now() - 10_000,
+      expiresAt: Date.now() - 1,
+    } as never);
 
     await expect(
       enqueueOfflineMutation({
@@ -811,9 +807,7 @@ describe("owner offline session lifecycle", () => {
     for (const outcome of outcomes) {
       expect(outcome.status).toBe("rejected");
       if (outcome.status === "rejected") {
-        expect(outcome.reason).toBeInstanceOf(
-          OwnerOfflineActivityPausedError,
-        );
+        expect(outcome.reason).toBeInstanceOf(OwnerOfflineActivityPausedError);
       }
     }
     expect(

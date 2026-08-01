@@ -1,3 +1,4 @@
+import Dexie from "dexie";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -6,6 +7,7 @@ import {
   enqueueOfflineMutation as enqueueOwnedOfflineMutation,
   getOfflineMutation as getOwnedOfflineMutation,
   listOfflineMutations as listOwnedOfflineMutations,
+  listOfflineMutationSummaries,
   listQueuedMutations as listOwnedQueuedMutations,
   OFFLINE_QUEUE_CHANGED_EVENT,
   offlineDb,
@@ -66,7 +68,9 @@ function updateOfflineMutationPayload(
 describe("offline queue", () => {
   beforeEach(async () => {
     await offlineDb?.mutations.clear();
+    await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
+    await offlineDb?.draftSummaries.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,
@@ -164,6 +168,56 @@ describe("offline queue", () => {
     expect(failed?.lastError).toBe("Network failed.");
     expect(failed?.idempotencyKey).toBe("entry-1");
     expect(failed?.payload).toEqual(payload);
+  });
+
+  it("keeps the workspace summary paired, bounded, and free of payload fields", async () => {
+    const mutation = await enqueueOfflineMutation({
+      kind: "journal_entry",
+      payload: {
+        target: "plant_object_entry",
+        plantObjectId: "object-summary",
+        title: "Private queued title",
+        body: "Private queued body",
+        entryDate: "2026-08-01",
+        clientMutationId: "private-summary-key",
+        photoIntent: {
+          fileName: "private.jpg",
+          contentType: "image/jpeg",
+          size: 1,
+          blob: new Blob(["private photo bytes"], { type: "image/jpeg" }),
+        },
+      },
+      idempotencyKey: "private-summary-key",
+    });
+
+    const page = await listOfflineMutationSummaries(OWNER_A);
+    const summary = page.items[0];
+
+    expect(summary).toEqual({
+      id: mutation.id,
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      status: "queued",
+      workspaceVisible: 1,
+      createdAt: mutation.createdAt,
+      updatedAt: mutation.updatedAt,
+      target: "plant_object_entry",
+      targetObjectId: "object-summary",
+      targetSpaceId: null,
+    });
+    expect(JSON.stringify(page)).not.toMatch(
+      /Private queued|private photo|private-summary-key|payload|blob/i,
+    );
+
+    await updateOfflineMutationStatus(mutation.id, "synced", {
+      syncResult: { privateReceipt: "never projected" },
+    });
+    expect(await listOfflineMutationSummaries(OWNER_A)).toEqual({
+      items: [],
+      hasMore: false,
+      page: 1,
+      pageSize: 24,
+    });
   });
 
   it("copies file bytes into an in-memory blob for the offline photo intent", async () => {
@@ -397,5 +451,78 @@ describe("offline queue", () => {
     ).rejects.toThrow("paused for sign-out");
     expect((await getOfflineMutation(mutation.id))?.status).toBe("syncing");
     await pauseHandle.resume();
+  });
+
+  it("backfills payload-free summary rows while upgrading a version 4 local database", async () => {
+    if (!offlineDb) return;
+
+    offlineDb.close();
+    await offlineDb.delete();
+
+    const legacy = new Dexie("overgarden-offline");
+    legacy.version(4).stores({
+      mutations:
+        "id, ownerUserId, &[ownerUserId+idempotencyKey], [ownerUserId+status], createdAt, updatedAt",
+      drafts:
+        "[ownerUserId+id], ownerUserId, [ownerUserId+kind], createdAt, updatedAt",
+      ownerActivity: "ownerUserId, expiresAt",
+    });
+    await legacy.open();
+    await legacy.table("drafts").add({
+      id: "follow-up-entry:legacy-object",
+      ownerUserId: OWNER_A,
+      kind: "follow_up_entry",
+      createdAt: 1,
+      updatedAt: 2,
+      payload: {
+        clientMutationId: "legacy-private-draft",
+        plantObjectId: "legacy-object",
+        draft: {
+          title: "Legacy private title",
+          body: "Legacy private body",
+          entryDate: "2026-08-01",
+        },
+        photoIntent: null,
+      },
+    });
+    await legacy.table("mutations").add({
+      id: "legacy-mutation",
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      idempotencyKey: "legacy-private-mutation",
+      status: "failed",
+      createdAt: 3,
+      updatedAt: 4,
+      payload: {
+        target: "plant_object_entry",
+        plantObjectId: "legacy-object",
+        title: "Legacy private title",
+        body: "Legacy private body",
+        entryDate: "2026-08-01",
+        clientMutationId: "legacy-private-mutation",
+      },
+    });
+    legacy.close();
+
+    await offlineDb.open();
+    const [draft, mutation] = await Promise.all([
+      offlineDb.draftSummaries.get([OWNER_A, "follow-up-entry:legacy-object"]),
+      offlineDb.mutationSummaries.get([OWNER_A, "legacy-mutation"]),
+    ]);
+
+    expect(draft).toMatchObject({
+      ownerUserId: OWNER_A,
+      targetObjectId: "legacy-object",
+      entryDate: "2026-08-01",
+    });
+    expect(mutation).toMatchObject({
+      ownerUserId: OWNER_A,
+      status: "failed",
+      workspaceVisible: 1,
+      targetObjectId: "legacy-object",
+    });
+    expect(JSON.stringify({ draft, mutation })).not.toMatch(
+      /Legacy private|legacy-private|payload|body/i,
+    );
   });
 });
