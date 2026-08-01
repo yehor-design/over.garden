@@ -89,7 +89,6 @@ export function SessionConvergenceBoundary({
   const [fallbackExitState, setFallbackExitState] = useState<
     "idle" | "pending" | "failed"
   >("idle");
-  const [fallbackExitAvailable, setFallbackExitAvailable] = useState(false);
   useInterfaceLocaleChangeFormState({
     id: "session-convergence-lifecycle",
     dirty: false,
@@ -196,7 +195,6 @@ export function SessionConvergenceBoundary({
         return;
       }
       if (baselinePreparedSession && baselineOwnerUserId && !disposed) {
-        setFallbackExitAvailable(true);
         // Visual-fixture routes use synthetic owners and must not open the
         // real offline IndexedDB lane — Dexie hydration can wedge Playwright
         // Chromium and is not part of fixture evidence.
@@ -252,7 +250,6 @@ export function SessionConvergenceBoundary({
             // document baseline before hydration.
             baselinePreparedSession = freshPreparedSession;
             baselineOwnerUserId = freshOwnerUserId;
-            setFallbackExitAvailable(true);
           } else if (
             baselinePreparedSession === null ||
             baselinePreparedSession.binding !== freshPreparedSession.binding ||
@@ -593,13 +590,36 @@ export function SessionConvergenceBoundary({
 
     let fallbackExitInFlight = false;
     let fallbackExitAttempt = 0;
+    const prepareActionTimeFallbackSession = async () => {
+      if (baselinePreparedSession) {
+        return {
+          status: "prepared" as const,
+          prepared: baselinePreparedSession,
+        };
+      }
+
+      const freshSessionResult = await readAuthoritativeSession();
+      const freshPreparedSession = await prepareCurrentSessionSignOut(
+        freshSessionResult,
+      );
+      if (freshPreparedSession === null) {
+        return { status: "already_signed_out" as const };
+      }
+
+      const freshOwnerUserId = readOwnerUserId(freshSessionResult);
+      if (!freshOwnerUserId) {
+        throw new Error("Action-time current session owner unavailable.");
+      }
+
+      // The document never admits authenticated children from this recovery
+      // path. Retaining the fresh pair only gives existing terminal fencing a
+      // current owner/session generation after a failed initial baseline.
+      baselinePreparedSession = freshPreparedSession;
+      baselineOwnerUserId = freshOwnerUserId;
+      return { status: "prepared" as const, prepared: freshPreparedSession };
+    };
     const requestFallbackExit = () => {
       if (fallbackExitInFlight || disposed || authoritativeNavigationStarted) {
-        return;
-      }
-      const preparedCurrentSession = baselinePreparedSession;
-      if (!preparedCurrentSession) {
-        setFallbackExitState("failed");
         return;
       }
 
@@ -607,16 +627,23 @@ export function SessionConvergenceBoundary({
       const attempt = ++fallbackExitAttempt;
       setFallbackExitState("pending");
       void requireSettledWithin(
-        () =>
-          signOutCurrentSessionOnce(preparedCurrentSession, {
+        async () => {
+          const target = await prepareActionTimeFallbackSession();
+          if (target.status === "already_signed_out") return target;
+          return signOutCurrentSessionOnce(target.prepared, {
             getSession: () => readAuthoritativeSession(),
             signOut: (options) => authClient.signOut(options),
-          }),
+          });
+        },
         FALLBACK_SIGN_OUT_TIMEOUT_MS,
       ).then(
         (result) => {
           if (disposed || attempt !== fallbackExitAttempt) return;
           fallbackExitInFlight = false;
+          if (result.status === "already_signed_out") {
+            beginSignedOutTransition();
+            return;
+          }
           if (result.status === "committed") {
             const tabId = tabLease?.tabId ?? fallbackUnregisteredTabId;
             publishCommittedSessionInvalidation(createSignOutOperationId(), tabId);
@@ -1211,30 +1238,28 @@ export function SessionConvergenceBoundary({
             <p className="text-sm leading-6 text-muted-foreground">
               {copy.localCheckError}
             </p>
-            {fallbackExitAvailable ? (
-              <div className="grid justify-items-center gap-2">
-                <p className="text-sm leading-6 text-muted-foreground">
-                  {copy.fallbackExitDescription}
+            <div className="grid justify-items-center gap-2">
+              <p className="text-sm leading-6 text-muted-foreground">
+                {copy.fallbackExitDescription}
+              </p>
+              <Button
+                ref={fallbackExitActionRef}
+                type="button"
+                variant="outline"
+                data-session-convergence-fallback-sign-out="true"
+                disabled={fallbackExitState === "pending"}
+                onClick={() => fallbackExitRef.current()}
+              >
+                {fallbackExitState === "pending"
+                  ? copy.fallbackExitPending
+                  : copy.fallbackExitAction}
+              </Button>
+              {fallbackExitState === "failed" ? (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {copy.fallbackExitUnconfirmedError}
                 </p>
-                <Button
-                  ref={fallbackExitActionRef}
-                  type="button"
-                  variant="outline"
-                  data-session-convergence-fallback-sign-out="true"
-                  disabled={fallbackExitState === "pending"}
-                  onClick={() => fallbackExitRef.current()}
-                >
-                  {fallbackExitState === "pending"
-                    ? copy.fallbackExitPending
-                    : copy.fallbackExitAction}
-                </Button>
-                {fallbackExitState === "failed" ? (
-                  <p role="status" className="text-sm text-muted-foreground">
-                    {copy.fallbackExitUnconfirmedError}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
+              ) : null}
+            </div>
             <div>
               <Button
                 type="button"

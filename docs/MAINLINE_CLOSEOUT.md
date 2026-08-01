@@ -64,8 +64,9 @@ OVE-205 is now the stable mainline prerequisite for OVE-202, OVE-193, and OVE-18
 OVE-249 is reopened and has no current closeout receipt: an observed production
 owner-local recovery failure preserved private-data gating but prevented a
 current-session exit. It must remain outside the ledger and cannot be marked
-Done until its bound no-deletion fallback, exact-main containment, deployment,
-and redacted browser proof are all read back.
+Done until its action-time-bound, no-deletion fallback is present even when the
+initial baseline is unavailable, and exact-main containment, deployment, and
+redacted browser proof are all read back.
 
 OVE-171 production proof used Vercel deployment `dpl_EJWtcF3nyyqN6VWVhTB9EtWKR67C`, which reached `READY` for the exact behavior commit and owned the canonical `over.garden` aliases. The redacted canonical smoke proved seven guest-readable directory routes, real public passport/journal/profile continuation, comment/follow/bookmark/create auth-intent boundaries, Production fixture refusal, clean sitemap/public HTML, no-store privacy, selected-locale foundations, and exact tested/deployed SHA equality. The Cisco Umbrella mismatch recorded during that historical closeout was isolated to OVE-188 and did not invalidate localization proof.
 
