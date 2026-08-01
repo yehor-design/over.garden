@@ -2232,7 +2232,6 @@ async function runFallbackCase(input: {
   let consoleErrorCount = 0;
   let blockedFontRequestCount = 0;
   let firstBlockedBrowserTimelineMs: number | null = null;
-  let firstBlockedControllerAt: number | null = null;
   let releaseBrowserTimelineMs: number | null = null;
   let released = false;
   let signalFirstBlocked: () => void = () => undefined;
@@ -2275,8 +2274,7 @@ async function runFallbackCase(input: {
       return;
     }
     blockedFontRequestCount += 1;
-    if (firstBlockedControllerAt === null) {
-      firstBlockedControllerAt = Date.now();
+    if (firstBlockedBrowserTimelineMs === null) {
       firstBlockedBrowserTimelineMs = await page
         .evaluate(() => performance.now())
         .catch(() => null);
@@ -2423,20 +2421,27 @@ async function runFallbackCase(input: {
       },
     );
 
-    if (firstBlockedControllerAt === null) {
+    if (firstBlockedBrowserTimelineMs === null) {
       await Promise.race([
         firstBlocked,
         new Promise<void>((resolve) => setTimeout(resolve, 250)),
       ]);
     }
-    if (firstBlockedControllerAt !== null) {
-      const remainingDelay =
-        FALLBACK_DELAY_MS - (Date.now() - firstBlockedControllerAt);
-      if (remainingDelay > 0) {
-        await new Promise<void>((resolve) =>
-          setTimeout(resolve, remainingDelay),
-        );
-      }
+    if (firstBlockedBrowserTimelineMs !== null) {
+      // Wait on the page's own clock: the proof and release boundary must use
+      // one timeline. Controller wall-clock time can run ahead or behind in
+      // Firefox/WebKit under CI load and falsely shorten the blocked window.
+      await page
+        .waitForFunction(
+          ({ blockedAtMs, delayMs }) =>
+            performance.now() >= blockedAtMs + delayMs,
+          {
+            blockedAtMs: firstBlockedBrowserTimelineMs,
+            delayMs: FALLBACK_DELAY_MS,
+          },
+          { timeout: FALLBACK_DELAY_MS + 2_000 },
+        )
+        .catch(() => undefined);
     }
     releaseBrowserTimelineMs = await page
       .evaluate(() => performance.now())
