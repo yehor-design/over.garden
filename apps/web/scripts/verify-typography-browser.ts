@@ -2316,19 +2316,55 @@ async function runFallbackCase(input: {
         { timeout: 1_500 },
       )
       .catch(() => undefined);
+    await page.evaluate(
+      ({ sampleText, targetFamily }) => {
+        type TargetFontProbe = {
+          facesLength: number;
+          settled: boolean;
+        };
+        const target = window as typeof window & {
+          __ove208TargetFontProbe?: TargetFontProbe;
+        };
+        // Start the target-face probe without awaiting it. Its settlement is
+        // observed below before release, so a paused resource proves the
+        // target is unavailable without a WebKit-throttled diagnostic timer.
+        target.__ove208TargetFontProbe = { facesLength: 0, settled: false };
+        void document.fonts
+          .load(`normal 400 17px "${targetFamily}"`, sampleText)
+          .then((faces) => {
+            target.__ove208TargetFontProbe = {
+              facesLength: faces.length,
+              settled: true,
+            };
+          })
+          .catch(() => {
+            target.__ove208TargetFontProbe = { facesLength: 0, settled: true };
+          });
+      },
+      { sampleText: sample, targetFamily: input.expectedFamily },
+    );
     const beforeRelease = await page.evaluate(
-      async ({ fallbackFamily, sampleText, targetFamily }) => {
+      async ({ fallbackFamily, sampleText }) => {
         type FallbackPerformanceState = {
           cls: number;
           domContentLoadedMs: number;
           fcpMs: number;
           visibleMeaningfulTextMs: number;
         };
+        type TargetFontProbe = {
+          facesLength: number;
+          settled: boolean;
+        };
         const state = (
           window as typeof window & {
             __ove208TypographyFallback?: FallbackPerformanceState;
           }
         ).__ove208TypographyFallback;
+        const targetProbe = (
+          window as typeof window & {
+            __ove208TargetFontProbe?: TargetFontProbe;
+          }
+        ).__ove208TargetFontProbe;
         const visibleMeaningfulText = Array.from(
           document.querySelectorAll<HTMLElement>(
             "main h1, main h2, main p, main a, main button, h1, h2, p",
@@ -2350,14 +2386,8 @@ async function runFallbackCase(input: {
           performance.getEntriesByName("first-contentful-paint")[0]
             ?.startTime ??
           0;
-        const targetFontAvailableBeforeRelease = await Promise.race([
-          document.fonts
-            .load(`normal 400 17px "${targetFamily}"`, sampleText)
-            .then((faces) => faces.length > 0),
-          new Promise<boolean>((resolve) =>
-            setTimeout(() => resolve(false), 75),
-          ),
-        ]);
+        const targetFontAvailableBeforeRelease =
+          targetProbe?.settled === true && targetProbe.facesLength > 0;
         const computedFontStack = getComputedStyle(document.body).fontFamily;
         const orderedFallbackFamily =
           computedFontStack.split(",")[1]?.replaceAll(/["']/gu, "").trim() ??
@@ -2417,7 +2447,6 @@ async function runFallbackCase(input: {
       {
         fallbackFamily: GOOGLE_SANS_FALLBACK_FAMILY,
         sampleText: sample,
-        targetFamily: input.expectedFamily,
       },
     );
 
