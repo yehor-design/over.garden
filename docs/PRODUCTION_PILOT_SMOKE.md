@@ -125,6 +125,44 @@ preservation/exposure proof above. Retired data disposition remains an exact-pla
 and explicit-sign-off operation under OVE-195/OVE-199/OVE-200. Never record the
 retired values, any user identifier, content, object key, URL, or provider secret.
 
+## OVE-224 Internal Namespace Boundary
+
+Goal: prove that the production proxy rejects every canonical and encoded
+visual-fixture or walking-skeleton representation before app routing can create
+a soft 404, locale/session side effect, or internal route signal.
+
+Binding exact-SHA production proof:
+
+- Confirm the Vercel production deployment is `READY` for the merged
+  implementation SHA before sending any probe. This is a read-only deployment
+  read-back; do not mutate Vercel, DNS, fixture state, or cache state.
+- Probe canonical, trailing, nested, API, percent-encoded underscore,
+  mixed-case-hex, encoded-separator, double-encoded, malformed, `HEAD`, RSC,
+  and prefetch variants of `__visual-fixtures` and `skeleton`. Record only the
+  path class, method/header class, HTTP status, named response headers, and
+  body byte length.
+- Every probe returns `404`, `Cache-Control: private, no-store, max-age=0,
+  s-maxage=0, must-revalidate`, and `X-Robots-Tag: noindex, nofollow`; it has
+  an empty body and no `Set-Cookie` or `Content-Language`. A `200`, redirect,
+  RSC payload, app-shell byte, or non-empty body fails the proof.
+- Do not retain query strings, request cookies, response bodies, fixture data,
+  user data, media keys, precise location, or provider secrets in the receipt.
+
+Redacted command pattern:
+
+```bash
+SMOKE_BASE_URL="https://over.garden"
+
+curl --silent --show-error --output /dev/null --dump-header - \
+  "$SMOKE_BASE_URL/%5F%5Fvisual-fixtures"
+curl --silent --show-error --output /dev/null --dump-header - \
+  --head "$SMOKE_BASE_URL/api/%73keleton/journal"
+curl --silent --show-error --output /dev/null --dump-header - \
+  --header "RSC: 1" "$SMOKE_BASE_URL/%252F__visual-fixtures"
+curl --silent --show-error --output /dev/null --dump-header - \
+  --header "next-router-prefetch: 1" "$SMOKE_BASE_URL/%5f%5fvisual-fixtures/intent/ove174-i001"
+```
+
 ## OVE-203 Automatic Public Identity
 
 Goal: prove that every supported Better Auth creation path receives exactly one
