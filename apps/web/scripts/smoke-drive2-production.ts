@@ -161,7 +161,9 @@ export async function runDrive2ProductionSmoke(
   );
   htmlBodies.push(objectResult.html, journalResult.html, profileResult.html);
 
-  const journalRef = journalPath.split("/").at(-1);
+  const journalRef = normalizePublicJournalSlug(
+    journalPath.split("/").at(-1) ?? "",
+  );
   const objectRef = objectPath.split("/").at(-1);
   if (!journalRef || !objectRef) {
     throw new Error("OVE-186 could not derive public mutation targets.");

@@ -20,6 +20,10 @@ type FetchOverrides = {
     | "POST /api/skeleton/journal";
   fixtureExposed?: boolean;
   journalPath?: string;
+  onEngagementRequest?: (input: {
+    endpoint: string;
+    targetRef: string | null;
+  }) => void;
   onSkeletonResponse?: (response: Response) => void;
 };
 
@@ -64,6 +68,14 @@ function createFetch(overrides: FetchOverrides = {}) {
     }
 
     if (method === "POST" && url.pathname.startsWith("/api/engagement/")) {
+      const targetRef =
+        init?.body instanceof FormData
+          ? (init.body.get("targetRef") as string | null)
+          : null;
+      overrides.onEngagementRequest?.({
+        endpoint: url.pathname,
+        targetRef,
+      });
       return response(
         null,
         {
@@ -233,11 +245,30 @@ describe("OVE-186 canonical production smoke", () => {
   });
 
   it("follows a percent-encoded localized public journal continuation", async () => {
+    const engagementRequests: Array<{
+      endpoint: string;
+      targetRef: string | null;
+    }> = [];
     const report = await runDrive2ProductionSmoke(
-      options(createFetch({ journalPath: LOCALIZED_JOURNAL_PATH })),
+      options(
+        createFetch({
+          journalPath: LOCALIZED_JOURNAL_PATH,
+          onEngagementRequest: (request) => engagementRequests.push(request),
+        }),
+      ),
     );
 
     expect(report.guestRead.journalEntry).toBe(true);
+    expect(
+      engagementRequests.filter(
+        ({ endpoint }) => endpoint === "/api/engagement/comments",
+      ),
+    ).toEqual([
+      {
+        endpoint: "/api/engagement/comments",
+        targetRef: "избрана-корица",
+      },
+    ]);
   });
 
   it("fails closed when an encoded separator attempts to escape the journal slug", async () => {
