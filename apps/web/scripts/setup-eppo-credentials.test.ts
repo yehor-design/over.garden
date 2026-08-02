@@ -9,6 +9,7 @@ import {
 } from "./verify-eppo-api-access";
 import {
   type EppoCredentialTarget,
+  encodeVercelCredentialInput,
   EppoRuntimeProjectionPendingError,
   setupEppoCredentials,
 } from "./setup-eppo-credentials";
@@ -91,6 +92,26 @@ function dependencies(target: EppoCredentialTarget) {
 }
 
 describe("EPPO credential setup", () => {
+  it("preserves validated credential bytes for Vercel stdin without a terminal newline", () => {
+    const source = Buffer.from(FIXTURE_CREDENTIAL, "utf8");
+    const encoded = encodeVercelCredentialInput(source);
+
+    expect(encoded).not.toBe(source);
+    expect(encoded.equals(source)).toBe(true);
+    expect(encoded.includes(10)).toBe(false);
+    expect(encoded.includes(13)).toBe(false);
+    try {
+      encodeVercelCredentialInput(
+        Buffer.from(`${FIXTURE_CREDENTIAL}\n`, "utf8"),
+      );
+      throw new Error("newline credential unexpectedly accepted");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "invalid_credential" });
+    }
+    source.fill(0);
+    encoded.fill(0);
+  });
+
   it("prints a zero-secret plan before apply and never mutates the target", async () => {
     const target = targetFixture();
     const result = await setupEppoCredentials(
