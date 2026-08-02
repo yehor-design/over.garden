@@ -103,6 +103,17 @@ export class EppoCredentialSetupError extends Error {
   }
 }
 
+/**
+ * Vercel acknowledged a credential write but a subsequent `env run` received
+ * no canonical variable yet. This is the sole retryable post-write state.
+ */
+export class EppoRuntimeProjectionPendingError extends Error {
+  constructor() {
+    super("EPPO runtime credential projection is not ready");
+    this.name = "EppoRuntimeProjectionPendingError";
+  }
+}
+
 let setupInProgress = false;
 
 export async function setupEppoCredentials(
@@ -310,6 +321,9 @@ async function verifyRuntimeWithPropagationRetry(
       return receipt;
     } catch (error) {
       lastError = error;
+      if (!(error instanceof EppoRuntimeProjectionPendingError)) {
+        throw error;
+      }
       if (attempt === EPPO_RUNTIME_VERIFICATION_ATTEMPTS) break;
       assertWithinDeadline(startedAt, now);
       await sleep(EPPO_RUNTIME_VERIFICATION_RETRY_DELAY_MS * attempt);
@@ -602,6 +616,13 @@ export function createVercelEppoCredentialTarget(): EppoCredentialTarget {
       ]);
       try {
         if (result.exitCode !== 0) {
+          if (
+            result.stderr
+              .toString("utf8")
+              .includes("eppo_api_access=failed code=missing_credential")
+          ) {
+            throw new EppoRuntimeProjectionPendingError();
+          }
           throw new EppoCredentialSetupError("runtime_verification_failed");
         }
         const lines = result.stdout.toString("utf8").trim().split("\n");

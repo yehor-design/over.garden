@@ -9,6 +9,7 @@ import {
 } from "./verify-eppo-api-access";
 import {
   type EppoCredentialTarget,
+  EppoRuntimeProjectionPendingError,
   setupEppoCredentials,
 } from "./setup-eppo-credentials";
 
@@ -165,7 +166,7 @@ describe("EPPO credential setup", () => {
     ).rejects.toMatchObject({ code: "runtime_verification_failed" });
     expect(target.value).toBe(REPLACEMENT_CREDENTIAL);
     expect(target.writes).toBe(2);
-    expect(runtimeAttempts).toBe(3);
+    expect(runtimeAttempts).toBe(1);
   });
 
   it("retries a delayed Vercel runtime projection without a second secret write", async () => {
@@ -173,7 +174,9 @@ describe("EPPO credential setup", () => {
     const waits: number[] = [];
     const target = targetFixture(undefined, async () => {
       runtimeAttempts += 1;
-      if (runtimeAttempts === 1) throw new Error("projection not ready");
+      if (runtimeAttempts === 1) {
+        throw new EppoRuntimeProjectionPendingError();
+      }
       return apiReceipt();
     });
 
@@ -196,6 +199,30 @@ describe("EPPO credential setup", () => {
     expect(target.writes).toBe(1);
     expect(runtimeAttempts).toBe(2);
     expect(waits).toEqual([1_000]);
+  });
+
+  it("rolls back after the bounded Vercel propagation retry budget", async () => {
+    let runtimeAttempts = 0;
+    const target = targetFixture(undefined, async () => {
+      runtimeAttempts += 1;
+      throw new EppoRuntimeProjectionPendingError();
+    });
+
+    await expect(
+      setupEppoCredentials(
+        {
+          environment: "production",
+          confirmEnvironment: "production",
+          apply: true,
+          credential: FIXTURE_CREDENTIAL,
+        },
+        dependencies(target),
+      ),
+    ).rejects.toMatchObject({ code: "runtime_verification_failed" });
+
+    expect(runtimeAttempts).toBe(3);
+    expect(target.value).toBeUndefined();
+    expect(target.removes).toBe(1);
   });
 
   it("removes a newly written key when runtime verification fails without a prior value", async () => {
