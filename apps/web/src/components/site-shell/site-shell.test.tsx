@@ -158,6 +158,25 @@ describe("production site shell", () => {
     expect(html).not.toContain("data-sign-out-control");
   });
 
+  it("keeps the server-authorized erasure owner review outside the local garden gate", async () => {
+    mocks.pathname = "/garden/privacy/erasure-requests";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated>
+        <main>Erasure owner review</main>
+      </SiteShell>,
+    );
+
+    expect(html).toContain('data-site-shell="safe-exit"');
+    expect(html).toContain('data-session-convergence-safe-exit="erasure"');
+    expect(html).toContain("Erasure owner review");
+    expect(html).not.toContain('data-session-convergence-boundary="true"');
+    expect(html).not.toContain('data-authenticated-utility-region="true"');
+    expect(html).not.toContain('data-site-shell-region="sidebar"');
+    expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
+    expect(html).not.toContain("data-sign-out-control");
+  });
+
   it("keeps the deterministic visual environment outside the product shell", async () => {
     mocks.pathname = "/__visual-fixtures";
     const { SiteShell } = await import("./site-shell");

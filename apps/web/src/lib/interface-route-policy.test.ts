@@ -84,13 +84,13 @@ describe("interface route policy", () => {
     ).toBe("site-shell");
   });
 
-  it("allows only the native erasure route to leave the local session gate", () => {
+  it("allows only native erasure request and owner-review routes to leave the local session gate", () => {
     expect(isSessionConvergenceSafeExitRoute("/erasure")).toBe(true);
     expect(isSessionConvergenceSafeExitRoute("/ru/erasure")).toBe(true);
-    expect(isSessionConvergenceSafeExitRoute("/garden/profile")).toBe(false);
     expect(
       isSessionConvergenceSafeExitRoute("/garden/privacy/erasure-requests"),
-    ).toBe(false);
+    ).toBe(true);
+    expect(isSessionConvergenceSafeExitRoute("/garden/profile")).toBe(false);
     expect(isSessionConvergenceSafeExitRoute("/erasure/untrusted")).toBe(false);
   });
 
