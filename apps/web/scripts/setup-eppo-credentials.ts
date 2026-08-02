@@ -426,6 +426,23 @@ function destroyCommandResult(result: CommandResult) {
   result.stderr.fill(0);
 }
 
+/**
+ * Vercel's stdin transport preserves bytes literally: a newline is data, not
+ * a line terminator. Copy the validated single-line credential exactly so the
+ * remote runtime receives the same opaque value that passed the EPPO probe.
+ */
+export function encodeVercelCredentialInput(credential: Buffer): Buffer {
+  if (
+    credential.length === 0 ||
+    credential.includes(0) ||
+    credential.includes(10) ||
+    credential.includes(13)
+  ) {
+    throw new EppoCredentialSetupError("invalid_credential");
+  }
+  return Buffer.from(credential);
+}
+
 function commandSucceeded(result: CommandResult): boolean {
   const succeeded = result.exitCode === 0;
   destroyCommandResult(result);
@@ -579,7 +596,7 @@ export function createVercelEppoCredentialTarget(): EppoCredentialTarget {
           "--yes",
           "--no-color",
         ],
-        Buffer.concat([credential, Buffer.from("\n")]),
+        encodeVercelCredentialInput(credential),
       );
       if (!commandSucceeded(result)) {
         throw new EppoCredentialSetupError("target_write_failed");

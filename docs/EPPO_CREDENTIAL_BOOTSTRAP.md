@@ -36,7 +36,8 @@ The command:
 4. prompts once for a hidden, single-line API key;
 5. validates that candidate directly against
    `GET /taxons/taxon/LYPES/overview` using the documented `X-Api-Key` header;
-6. writes the standard encrypted Vercel Production environment variable, never
+6. writes the validated credential bytes exactly once to the standard encrypted
+   Vercel Production environment variable, without a terminal newline and never
    a public variable or a Vercel Sensitive variable;
 7. re-runs the same verifier through `vercel env run -e production`, allowing
    at most three bounded read-backs for Vercel environment propagation without
