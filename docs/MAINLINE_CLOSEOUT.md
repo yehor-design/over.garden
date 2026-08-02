@@ -61,12 +61,24 @@ This guard makes the next-agent starting point explicit:
 
 OVE-205 is now the stable mainline prerequisite for OVE-202, OVE-193, and OVE-186. OVE-208 is the shared typography prerequisite for OVE-202/206/207. OVE-202, OVE-206, and OVE-207 closeouts complete the structured-composer locale-transition chain. OVE-192 closes current-schema erasure against the OVE-203/OVE-207 schema under the same Vercel READY budget-freeze gate. OVE-194 closes bounded queue recovery with production matching activation under the Actions budget freeze. OVE-195 closes media lifecycle revocation/retention under the same gate. OVE-193 closes invite-free self-serve first journal under the same gate. OVE-196 closes public-journal Meilisearch parity under the same gate. OVE-197 closes subject-aware media presentation under the same gate without changing OVE-207 cover identity or Meili schema. OVE-198 closes the production Meilisearch version pin under dual-volume rebuild/cutover without deleting the legacy volume. OVE-209 closes the two-kind object category decision as docs-only canon under the same Vercel READY budget-freeze gate. OVE-210 closes the pre-collapse production inventory go/no-go under the same gate. OVE-211 closes the mechanical `{plant, animal}` kind collapse under the same gate. OVE-212 closes product-research corpus reconciliation (annotate-don't-delete) under the same gate. OVE-200 closes trustworthy MVP learning (dual-cohort H1/H4, fail-closed unclassified, cover/reorder analytics) under the same gate. OVE-201 closes managed disposable PITR recovery (RPO≤1h/RTO≤4h, exact teardown) under the same gate. OVE-225 closes the identifiers-only job queue payload contract under the same gate and is the prerequisite that lets OVE-233 claim a genuinely green Python gate and OVE-234 consume an exact queue shape. OVE-242 closes transactional public-projection revocation and is the prerequisite that lets OVE-215, OVE-221 and OVE-186 claim a public corpus with no silently lost removals. The OVE-51 -> OVE-52 -> OVE-53 sequence is the historical recovery order retained by the baseline entries above.
 
-OVE-249 is reopened and has no current closeout receipt: an observed production
-owner-local recovery failure preserved private-data gating but prevented a
-current-session exit. It must remain outside the ledger and cannot be marked
-Done until its action-time-bound, no-deletion fallback is present even when the
-initial baseline is unavailable, and exact-main containment, deployment, and
-redacted browser proof are all read back.
+OVE-249 behavior commit `7b425b448a3bfb7dfcfee3166d23f87202af4457` is
+contained in `main` through merge commit
+`b14ab629549b0c5b1b9e5502010b5127886846a3`. It fixes the observed production
+recovery failure where an unavailable initial session baseline preserved the
+private-data gate but withheld every current-session exit. The localized,
+no-deletion fallback is now present for every blocked recovery state and binds
+the canonical sign-out to a freshly read session only when the gardener selects
+it. Exact-head CI run `30723874288`, exact-main CI run `30724506722`, and
+matching-image release run `30724506725` passed. Vercel deployment
+`dpl_8PEJ44U57dBnKA1NJwZTdnyayys8` reached `READY` for the exact merge SHA,
+owns `over.garden` and `www.over.garden`, and is GitHub deployment
+`5709447341` / status `16236897566` Production success. One bounded redacted
+browser proof reproduced the blocked recovery state, found exactly one
+fallback action, selected it once, and observed the recovery screen and
+private UI disappear in favor of the localized public signed-out surface. No
+local data was deleted or inspected, and no credential, cookie, account
+identifier, private content, media key, request metadata, or precise location
+is retained in this receipt.
 
 OVE-171 production proof used Vercel deployment `dpl_EJWtcF3nyyqN6VWVhTB9EtWKR67C`, which reached `READY` for the exact behavior commit and owned the canonical `over.garden` aliases. The redacted canonical smoke proved seven guest-readable directory routes, real public passport/journal/profile continuation, comment/follow/bookmark/create auth-intent boundaries, Production fixture refusal, clean sitemap/public HTML, no-store privacy, selected-locale foundations, and exact tested/deployed SHA equality. The Cisco Umbrella mismatch recorded during that historical closeout was isolated to OVE-188 and did not invalidate localization proof.
 
