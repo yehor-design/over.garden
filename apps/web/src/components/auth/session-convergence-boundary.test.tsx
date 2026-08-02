@@ -50,6 +50,13 @@ vi.mock("@/components/site-shell/interface-locale-change-boundary", () => ({
 vi.mock("@/components/ui/button", () => ({
   Button: (props: React.ComponentProps<"button">) => <button {...props} />,
 }));
+vi.mock("./blocked-session-account-methods", () => ({
+  BlockedSessionAccountMethods: ({ locale }: { locale: string }) => (
+    <section data-session-convergence-account-methods="true" lang={locale}>
+      Guarded account methods
+    </section>
+  ),
+}));
 
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
@@ -999,6 +1006,11 @@ describe("session convergence boundary", () => {
     expect(
       renderer.root.findAllByProps({
         "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-account-methods": "true",
       }),
     ).toHaveLength(1);
     expect(

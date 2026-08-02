@@ -40,6 +40,8 @@ import {
 } from "@/lib/offline/owner-session-lifecycle";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
+import { BlockedSessionAccountMethods } from "./blocked-session-account-methods";
+
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
@@ -1238,6 +1240,7 @@ export function SessionConvergenceBoundary({
             <p className="text-sm leading-6 text-muted-foreground">
               {copy.localCheckError}
             </p>
+            <BlockedSessionAccountMethods locale={locale} />
             <div className="grid justify-items-center gap-2">
               <p className="text-sm leading-6 text-muted-foreground">
                 {copy.fallbackExitDescription}

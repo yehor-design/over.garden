@@ -177,6 +177,13 @@ const UK_COPY = {
     fallbackExitPending: "Завершуємо сеанс без видалення локальних змін…",
     fallbackExitUnconfirmedError:
       "Не вдалося підтвердити завершення сеансу. Локальні зміни не видалено. Спробуйте ще раз.",
+    blockedAccountMethodsRegionLabel: "Керування способами входу",
+    blockedAccountMethodsDescription:
+      "Сад поки недоступний, але ви можете безпечно змінити спосіб входу.",
+    blockedAccountMethodsAction: "Керувати способами входу",
+    blockedAccountMethodsPending: "Перевіряємо способи входу…",
+    blockedAccountMethodsUnavailable:
+      "Не вдалося безпечно перевірити способи входу. Нічого не змінено. Спробуйте ще раз або вийдіть з облікового запису.",
     purgeError:
       "Не вдалося видалити локальні зміни. Нічого не підтверджено як видалене, і ви залишаєтеся в обліковому записі.",
     signOutActiveError:
@@ -668,6 +675,13 @@ const BG_COPY = {
     fallbackExitPending: "Прекратяваме сесията без изтриване на локалните промени…",
     fallbackExitUnconfirmedError:
       "Прекратяването на сесията не можа да бъде потвърдено. Локалните промени не са изтрити. Опитайте отново.",
+    blockedAccountMethodsRegionLabel: "Управление на начините за вход",
+    blockedAccountMethodsDescription:
+      "Градината засега не е достъпна, но можете безопасно да промените начина си за вход.",
+    blockedAccountMethodsAction: "Управление на начините за вход",
+    blockedAccountMethodsPending: "Проверяваме начините за вход…",
+    blockedAccountMethodsUnavailable:
+      "Начините за вход не можаха да бъдат проверени безопасно. Нищо не е променено. Опитайте отново или излезте от профила.",
     purgeError:
       "Локалните промени не можаха да бъдат изтрити. Нищо не е потвърдено като изтрито и оставате в профила.",
     signOutActiveError:
@@ -1149,6 +1163,13 @@ const RU_COPY = {
     fallbackExitPending: "Завершаем сеанс без удаления локальных изменений…",
     fallbackExitUnconfirmedError:
       "Не удалось подтвердить завершение сеанса. Локальные изменения не удалены. Попробуйте ещё раз.",
+    blockedAccountMethodsRegionLabel: "Управление способами входа",
+    blockedAccountMethodsDescription:
+      "Сад пока недоступен, но вы можете безопасно изменить способ входа.",
+    blockedAccountMethodsAction: "Управление способами входа",
+    blockedAccountMethodsPending: "Проверяем способы входа…",
+    blockedAccountMethodsUnavailable:
+      "Не удалось безопасно проверить способы входа. Ничего не изменено. Попробуйте ещё раз или выйдите из аккаунта.",
     purgeError:
       "Не удалось удалить локальные изменения. Ничего не подтверждено как удалённое, и вы остаётесь в аккаунте.",
     signOutActiveError:
