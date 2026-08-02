@@ -78,6 +78,38 @@ describe("Facebook OAuth configuration", () => {
     });
   });
 
+  it("treats the configured canonical public origin as production when runtime markers are unavailable", () => {
+    const productionEnv = {
+      FACEBOOK_CLIENT_ID: "facebook-app-id",
+      FACEBOOK_CLIENT_SECRET: "secret",
+      PUBLIC_SITE_URL: "https://over.garden",
+    };
+
+    expect(isFacebookSignInEnabled(productionEnv)).toBe(false);
+    expect(resolveFacebookSocialProviderConfig(productionEnv)).toBeNull();
+    expect(facebookOAuthConfigurationState(productionEnv)).toMatchObject({
+      configured: true,
+      publicLaunchReady: false,
+      providerEnabled: false,
+    });
+  });
+
+  it("honors an explicit disabled gate outside production", () => {
+    const disabledEnv = {
+      FACEBOOK_CLIENT_ID: "facebook-app-id",
+      FACEBOOK_CLIENT_SECRET: "secret",
+      FACEBOOK_LOGIN_PUBLIC_READY: "false",
+    };
+
+    expect(isFacebookSignInEnabled(disabledEnv)).toBe(false);
+    expect(resolveFacebookSocialProviderConfig(disabledEnv)).toBeNull();
+    expect(facebookOAuthConfigurationState(disabledEnv)).toMatchObject({
+      configured: true,
+      publicLaunchReady: false,
+      providerEnabled: false,
+    });
+  });
+
   it("keeps OAuth credentials out of safe configuration state", () => {
     const provider = resolveFacebookSocialProviderConfig({
       FACEBOOK_CLIENT_ID: "facebook-app-id",

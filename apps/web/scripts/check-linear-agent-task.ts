@@ -4900,7 +4900,7 @@ function getStructuredFieldValues(source: string, label: string) {
 
 function stripStructuredUxContractLines(source: string) {
   const labels = UX_CONTRACT_LABELS.map(escapeRegExp).join("|");
-  const pattern = new RegExp(`^ {0,3}-\\s+(?:${labels}):`);
+  const pattern = new RegExp(`^ {0,3}[-*+]\\s+(?:${labels}):`);
   return scanMarkdown(semanticMarkdownText(source))
     .lines.filter(
       (line) => line.insideFence || line.isFence || !pattern.test(line.text),
