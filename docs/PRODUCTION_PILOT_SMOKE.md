@@ -65,12 +65,11 @@ or precise location; finish through native account/media/projection cleanup
 before considering the proof terminal.
 
 When `FACEBOOK_LOGIN_PUBLIC_READY` is absent or false, the guest Facebook
-control and provider route must be absent on the serving production deployment.
-An explicit false-like value disables it in every runtime. The production
-fallback is also fail-closed when a Vercel runtime marker is unavailable: the
-explicit canonical public origin is a serving-production boundary. Only an
-explicit public-ready value plus the separate non-role browser proof may expose
-Facebook.
+control and provider route must be absent in every runtime, including local
+development and a serving production deployment. Local provider testing must
+set the flag explicitly to true; credentials alone never enable Facebook. Only
+an explicit public-ready value plus the separate non-role browser proof may
+expose Facebook in production.
 
 ## OVE-191 Production Scaffold Isolation
 
