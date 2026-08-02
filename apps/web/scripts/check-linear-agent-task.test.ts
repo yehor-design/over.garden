@@ -3914,6 +3914,16 @@ describe("Linear list-marker normalization", () => {
     expect(validateLinearAgentTask(asteriskSource).errors).toEqual([]);
   });
 
+  it("keeps asterisk UX no-wedge fields out of the residual conflict scan", () => {
+    const dashSource = validVerticalExecutionTask();
+    const asteriskSource = toAsteriskBullets(dashSource);
+    const report = validateLinearAgentTask(asteriskSource);
+
+    expect(report.errors.map((error) => error.code)).not.toContain(
+      "no_wedge_positive_conflict",
+    );
+  });
+
   it("validates a saved description whose issue mentions are `<issue>` tags", () => {
     const issueTag =
       '<issue id="abc" href="https://linear.app/overgarden/issue/OVE-195/x">OVE-195</issue>';
