@@ -44,13 +44,10 @@ function resolveFacebookSurface(env: NodeJS.ProcessEnv) {
   const clientSecretConfigured = configured(env.FACEBOOK_CLIENT_SECRET);
   const publicLaunchReady = facebookPublicReady(env);
   const configuredBoth = clientIdConfigured && clientSecretConfigured;
-  const vercelProduction =
-    env.VERCEL_ENV === "production" ||
-    env.NEXT_PUBLIC_VERCEL_ENV === "production";
   return {
     configured: configuredBoth,
     publicLaunchReady,
-    providerEnabled: configuredBoth && (!vercelProduction || publicLaunchReady),
+    providerEnabled: false,
   };
 }
 
@@ -141,39 +138,38 @@ async function main() {
     /facebook-sign-in-button/i.test(gardenHtml) ||
     /facebookSignInEnabled.:true/.test(gardenHtml);
 
-  let facebookStartClass: "2xx_or_3xx" | "failed" | "skipped_hidden" =
-    "skipped_hidden";
-  let facebookAuthorizationUrlPresent = false;
-  if (gardenFacebookVisible) {
-    const facebookStart = await fetch(
-      new URL("/api/auth/sign-in/social", baseUrl),
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          origin: baseUrl,
-        },
-        body: JSON.stringify({
-          provider: "facebook",
-          callbackURL: "/garden",
-        }),
-        redirect: "manual",
+  assert(
+    !intentFacebookVisible && !gardenFacebookVisible,
+    "Hard-disabled Facebook must be absent from every guest surface",
+  );
+  const facebookStart = await fetch(
+    new URL("/api/auth/sign-in/social", baseUrl),
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: baseUrl,
       },
-    );
-    facebookStartClass =
-      facebookStart.status >= 200 && facebookStart.status < 400
-        ? "2xx_or_3xx"
-        : "failed";
-    const facebookBody = await facebookStart.text();
-    const facebookLocation = facebookStart.headers.get("location") ?? "";
-    facebookAuthorizationUrlPresent =
-      /facebook\.com|fb\.com/i.test(facebookBody) ||
-      /facebook\.com|fb\.com/i.test(facebookLocation);
-    assert(
-      facebookAuthorizationUrlPresent,
-      "Enabled Facebook must expose a Meta authorization URL",
-    );
-  }
+      body: JSON.stringify({
+        provider: "facebook",
+        callbackURL: "/garden",
+      }),
+      redirect: "manual",
+    },
+  );
+  const facebookStartClass =
+    facebookStart.status >= 200 && facebookStart.status < 400
+      ? "2xx_or_3xx"
+      : "rejected";
+  const facebookBody = await facebookStart.text();
+  const facebookLocation = facebookStart.headers.get("location") ?? "";
+  const facebookAuthorizationUrlPresent =
+    /facebook\.com|fb\.com/i.test(facebookBody) ||
+    /facebook\.com|fb\.com/i.test(facebookLocation);
+  assert(
+    !facebookAuthorizationUrlPresent,
+    "Hard-disabled Facebook must not expose a Meta authorization URL",
+  );
 
   console.log(
     JSON.stringify(
