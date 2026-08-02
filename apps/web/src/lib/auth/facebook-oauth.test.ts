@@ -7,7 +7,7 @@ import {
 } from "./facebook-oauth";
 
 describe("Facebook OAuth configuration", () => {
-  it("enables Facebook outside production only when both non-placeholder credentials are present", () => {
+  it("requires explicit readiness in every runtime", () => {
     expect(isFacebookSignInEnabled({})).toBe(false);
     expect(
       isFacebookSignInEnabled({
@@ -24,6 +24,13 @@ describe("Facebook OAuth configuration", () => {
       isFacebookSignInEnabled({
         FACEBOOK_CLIENT_ID: "facebook-app-id",
         FACEBOOK_CLIENT_SECRET: "secret",
+      }),
+    ).toBe(false);
+    expect(
+      isFacebookSignInEnabled({
+        FACEBOOK_CLIENT_ID: "facebook-app-id",
+        FACEBOOK_CLIENT_SECRET: "secret",
+        FACEBOOK_LOGIN_PUBLIC_READY: "true",
       }),
     ).toBe(true);
   });
@@ -62,7 +69,7 @@ describe("Facebook OAuth configuration", () => {
     });
   });
 
-  it("fails closed for a production Next server even when Vercel markers are unavailable", () => {
+  it("fails closed when production runtime markers are unavailable", () => {
     const productionEnv = {
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "secret",
@@ -78,7 +85,7 @@ describe("Facebook OAuth configuration", () => {
     });
   });
 
-  it("treats the configured canonical public origin as production when runtime markers are unavailable", () => {
+  it("fails closed for a configured canonical public origin", () => {
     const productionEnv = {
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "secret",
@@ -114,10 +121,12 @@ describe("Facebook OAuth configuration", () => {
     const provider = resolveFacebookSocialProviderConfig({
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "facebook-secret-that-must-not-leak",
+      FACEBOOK_LOGIN_PUBLIC_READY: "true",
     });
     const state = facebookOAuthConfigurationState({
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "facebook-secret-that-must-not-leak",
+      FACEBOOK_LOGIN_PUBLIC_READY: "true",
     });
 
     expect(provider).toMatchObject({
@@ -131,7 +140,7 @@ describe("Facebook OAuth configuration", () => {
       configured: true,
       clientIdConfigured: true,
       clientSecretConfigured: true,
-      publicLaunchReady: false,
+      publicLaunchReady: true,
       providerEnabled: true,
       productionRedirectUri: "https://over.garden/api/auth/callback/facebook",
     });
