@@ -156,6 +156,33 @@ describe("account methods panel", () => {
     await act(async () => renderer.unmount());
   });
 
+  it("delegates a guarded account-method refresh instead of releasing private UI", async () => {
+    const onMethodsChanged = vi.fn();
+    mocks.setCurrentAccountPassword.mockResolvedValue({ status: "success" });
+    const renderer = await render(
+      <AccountMethodsPanel
+        {...DEFAULT_PROPS}
+        hasGoogle
+        onMethodsChanged={onMethodsChanged}
+      />,
+    );
+
+    await openDisconnectDialog(renderer, "google");
+    await act(async () => {
+      renderer.root
+        .findByProps({ id: "disconnect-account-method-password" })
+        .props.onChange({ target: { value: "safe-password" } });
+    });
+    mocks.unlinkAccount.mockResolvedValue({ error: null });
+    await act(async () => {
+      await submitDisconnectForm(renderer);
+    });
+
+    expect(onMethodsChanged).toHaveBeenCalledOnce();
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    await act(async () => renderer.unmount());
+  });
+
   it("retains both methods and shows a generic receipt when final-provider unlink fails after password creation", async () => {
     mocks.setCurrentAccountPassword.mockResolvedValue({ status: "success" });
     mocks.unlinkAccount.mockResolvedValue({ error: { code: "UNLINK_FAILED" } });

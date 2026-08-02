@@ -606,10 +606,24 @@ zero unlink submit. A non-final provider must require an explicit scoped
 confirmation. Cancel, Escape, outside dismissal, invalid password, and a failed
 unlink preserve every existing method; after credential success plus unlink
 failure, record only the class `credential-success-unlink-failed` and retain both
-methods. The native erasure path cleans up the exact disposable account after the
-proof. Retain only redacted state classes, exact commit/deployment identifiers,
-and pass/fail outcomes—never an email, password, provider subject, callback URL,
-token, cookie, account identifier, journal data, media key, or precise location.
+methods.
+
+If the existing payload-free session-convergence guard is blocking garden
+hydration, that same screen must offer a localized **Manage sign-in methods**
+action without mounting the profile or garden tree. It must make no account-method
+request before an explicit click. On that click, the browser obtains a fresh
+authoritative session binding and the server compares it with the current request
+before returning only the boolean projection `hasCredential`, `hasGoogle`,
+`hasFacebook`, and `canSetPassword`. A missing, changed, malformed, rejected, or
+timed-out session remains on the guard with a generic localized unavailable state;
+it exposes no identity, account, garden, offline, or local-data payload. The
+in-place panel may use the existing password bridge and final unlink protocol, but
+must not expose social-link controls or route away from the guard. After the
+account-method proof, obtain fresh action-time consent before the native erasure
+path cleans up the exact disposable account. Retain only redacted state classes,
+exact commit/deployment identifiers, and pass/fail outcomes—never an email,
+password, provider subject, callback URL, token, cookie, account identifier,
+journal data, media key, or precise location.
 
 ### OVE-249 recoverable account exit proof
 

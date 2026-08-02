@@ -67,6 +67,7 @@ export interface AccountMethodsPanelProps extends AccountMethodProjection {
   googleSignInEnabled: boolean;
   initialMessage?: string | null;
   locale: InterfaceLocale;
+  onMethodsChanged?: () => void;
 }
 
 export function AccountMethodsPanel({
@@ -78,6 +79,7 @@ export function AccountMethodsPanel({
   canSetPassword,
   initialMessage = null,
   locale,
+  onMethodsChanged,
 }: AccountMethodsPanelProps) {
   const router = useRouter();
   const copy = getTrustSurfaceCopy(locale).authPanel.methods;
@@ -105,6 +107,13 @@ export function AccountMethodsPanel({
   };
   const connectedMethodCount =
     Number(hasCredential) + Number(hasFacebook) + Number(hasGoogle);
+  const refreshMethods = () => {
+    if (onMethodsChanged) {
+      onMethodsChanged();
+      return;
+    }
+    router.refresh();
+  };
 
   function openDisconnectDialog(
     event: MouseEvent<HTMLButtonElement>,
@@ -203,7 +212,7 @@ export function AccountMethodsPanel({
 
     setPendingAction(null);
     closeDisconnectDialog();
-    router.refresh();
+    refreshMethods();
   }
 
   async function setPasswordAndDisconnect() {
@@ -242,12 +251,12 @@ export function AccountMethodsPanel({
             provider: disconnectIntent.label,
           }),
         );
-        router.refresh();
+        refreshMethods();
         return;
       }
 
       closeDisconnectDialog();
-      router.refresh();
+      refreshMethods();
     } catch {
       setDisconnectMessage(copy.passwordError);
     } finally {
@@ -268,7 +277,7 @@ export function AccountMethodsPanel({
       }
 
       setPasswordValue("");
-      router.refresh();
+      refreshMethods();
     } catch {
       setMessage(copy.passwordError);
     } finally {
