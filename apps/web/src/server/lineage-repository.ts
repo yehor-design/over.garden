@@ -524,11 +524,11 @@ export async function resolveLineageInvitationClaim(
   scope: RequestScope,
   input: ResolveLineageInvitationClaimInput,
 ): Promise<ResolveLineageInvitationClaimResult> {
+  const decision = normalizeLineageClaimDecision(input.decision);
   const verified = verifyLineageInviteToken(input.token);
   if (!verified) {
     throw new Error("Lineage invitation is invalid or expired.");
   }
-  const decision = normalizeLineageClaimDecision(input.decision);
   const inviteState = decision === "confirmed" ? "claimed" : "declined";
   const now = new Date();
 
