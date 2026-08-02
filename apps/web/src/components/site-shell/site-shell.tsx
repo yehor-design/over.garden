@@ -41,7 +41,10 @@ import {
   type InterfaceLocale,
 } from "@/lib/interface-localization";
 import type { InterfaceMarket } from "@/lib/interface-market";
-import { getInterfaceLanguageControlPlacement } from "@/lib/interface-route-policy";
+import {
+  getInterfaceLanguageControlPlacement,
+  isSessionConvergenceSafeExitRoute,
+} from "@/lib/interface-route-policy";
 import {
   getSiteShellNavigation,
   getSiteShellRouteContext,
@@ -75,6 +78,8 @@ export function SiteShell({
   communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
+  const isSessionConvergenceSafeExit =
+    isSessionConvergenceSafeExitRoute(pathname);
   const [routeContextModules, setRouteContextModules] = useState<
     SiteShellContextRailModule[] | null
   >(null);
@@ -92,6 +97,23 @@ export function SiteShell({
         externallyDisabled
       />
     ) : undefined;
+
+  if (isSessionConvergenceSafeExit) {
+    // The native erasure page intentionally contains no garden payload or
+    // authenticated navigation. Keeping this escape hatch outside the local
+    // owner-hydration guard prevents a failed local check from trapping a
+    // person in an account while the private workspace remains sealed.
+    return (
+      <SiteShellLocaleProvider locale={locale}>
+        <div
+          data-site-shell="safe-exit"
+          data-session-convergence-safe-exit="erasure"
+        >
+          {children}
+        </div>
+      </SiteShellLocaleProvider>
+    );
+  }
 
   if (languageControlPlacement !== "site-shell") {
     const showUtility =

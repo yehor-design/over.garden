@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { AccountMethodsPanel } from "@/app/garden/account-methods-panel";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
   prepareCurrentSessionSignOut,
@@ -95,6 +96,13 @@ export function BlockedSessionAccountMethods({
               ? copy.blockedAccountMethodsPending
               : copy.blockedAccountMethodsAction}
           </Button>
+          <Link
+            href="/erasure"
+            className={buttonVariants({ variant: "outline" })}
+            data-session-convergence-erasure-request="true"
+          >
+            {copy.blockedAccountErasureAction}
+          </Link>
           {state.kind === "unavailable" ? (
             <p
               role="status"

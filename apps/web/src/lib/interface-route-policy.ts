@@ -28,6 +28,14 @@ export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/garden/privacy/erasure-requests",
 ] as const;
 
+/**
+ * A small allow-list of routes that remain useful while the local garden
+ * ownership check is fail-closed. These routes must not render garden payloads
+ * or authenticated navigation; they exist only to let a person leave or start
+ * the already-established native account-erasure flow.
+ */
+const SESSION_CONVERGENCE_SAFE_EXIT_PATHS = ["/erasure"] as const;
+
 export interface InterfaceRoutePolicy {
   id: string;
   mode: InterfaceRouteMode;
@@ -313,6 +321,13 @@ export function getInterfaceLanguageControlPlacement(
     return "utility";
   }
   return "site-shell";
+}
+
+export function isSessionConvergenceSafeExitRoute(pathname: string) {
+  const basePath = normalizeBasePath(pathname);
+  return SESSION_CONVERGENCE_SAFE_EXIT_PATHS.some(
+    (safeExitPath) => basePath === safeExitPath,
+  );
 }
 
 export function sanitizeInterfaceRouteSearch(

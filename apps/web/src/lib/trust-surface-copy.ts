@@ -182,6 +182,7 @@ const UK_COPY = {
       "Сад поки недоступний, але ви можете безпечно змінити спосіб входу.",
     blockedAccountMethodsAction: "Керувати способами входу",
     blockedAccountMethodsPending: "Перевіряємо способи входу…",
+    blockedAccountErasureAction: "Надіслати запит на видалення даних",
     blockedAccountMethodsUnavailable:
       "Не вдалося безпечно перевірити способи входу. Нічого не змінено. Спробуйте ще раз або вийдіть з облікового запису.",
     purgeError:
@@ -672,7 +673,8 @@ const BG_COPY = {
     fallbackExitDescription:
       "Можете да излезете, без да изтривате локалните промени. Те няма да бъдат показани на друг профил.",
     fallbackExitAction: "Изход без изтриване на локалните промени",
-    fallbackExitPending: "Прекратяваме сесията без изтриване на локалните промени…",
+    fallbackExitPending:
+      "Прекратяваме сесията без изтриване на локалните промени…",
     fallbackExitUnconfirmedError:
       "Прекратяването на сесията не можа да бъде потвърдено. Локалните промени не са изтрити. Опитайте отново.",
     blockedAccountMethodsRegionLabel: "Управление на начините за вход",
@@ -680,6 +682,7 @@ const BG_COPY = {
       "Градината засега не е достъпна, но можете безопасно да промените начина си за вход.",
     blockedAccountMethodsAction: "Управление на начините за вход",
     blockedAccountMethodsPending: "Проверяваме начините за вход…",
+    blockedAccountErasureAction: "Изпращане на заявка за изтриване на данни",
     blockedAccountMethodsUnavailable:
       "Начините за вход не можаха да бъдат проверени безопасно. Нищо не е променено. Опитайте отново или излезте от профила.",
     purgeError:
@@ -1168,6 +1171,7 @@ const RU_COPY = {
       "Сад пока недоступен, но вы можете безопасно изменить способ входа.",
     blockedAccountMethodsAction: "Управление способами входа",
     blockedAccountMethodsPending: "Проверяем способы входа…",
+    blockedAccountErasureAction: "Отправить запрос на удаление данных",
     blockedAccountMethodsUnavailable:
       "Не удалось безопасно проверить способы входа. Ничего не изменено. Попробуйте ещё раз или выйдите из аккаунта.",
     purgeError:
