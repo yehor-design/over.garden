@@ -787,6 +787,18 @@ function checkFacebookOAuthConfiguration(env: EnvLike): PilotSmokeCheck {
   const state = facebookOAuthConfigurationState(env);
   const isProduction = isProductionVercel(env);
 
+  if (state.hardDisabled) {
+    return {
+      id: "facebook-oauth-provider",
+      label: "Facebook Login provider",
+      severity: "manual",
+      summary:
+        "Facebook Login is hard-disabled in this release, so email and Google remain the only supported self-serve sign-in paths.",
+      evidence:
+        "Do not enable Facebook through environment configuration. A separate reviewed code change must first retain a redacted real non-role browser proof for the exact production callback and same-garden continuity.",
+    };
+  }
+
   if (isProduction && !state.publicLaunchReady) {
     return {
       id: "facebook-oauth-provider",

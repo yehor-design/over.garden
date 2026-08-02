@@ -7,7 +7,7 @@ import {
 } from "./facebook-oauth";
 
 describe("Facebook OAuth configuration", () => {
-  it("requires explicit readiness in every runtime", () => {
+  it("hard-disables Facebook in every runtime even with public-ready credentials", () => {
     expect(isFacebookSignInEnabled({})).toBe(false);
     expect(
       isFacebookSignInEnabled({
@@ -32,10 +32,10 @@ describe("Facebook OAuth configuration", () => {
         FACEBOOK_CLIENT_SECRET: "secret",
         FACEBOOK_LOGIN_PUBLIC_READY: "true",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("hides Facebook Login in Vercel production until real non-role readiness is explicitly approved", () => {
+  it("does not let production readiness override the hard disable", () => {
     const productionEnv = {
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "secret",
@@ -56,7 +56,7 @@ describe("Facebook OAuth configuration", () => {
         ...productionEnv,
         FACEBOOK_LOGIN_PUBLIC_READY: "true",
       }),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       facebookOAuthConfigurationState({
         ...productionEnv,
@@ -65,7 +65,8 @@ describe("Facebook OAuth configuration", () => {
     ).toMatchObject({
       configured: true,
       publicLaunchReady: true,
-      providerEnabled: true,
+      hardDisabled: true,
+      providerEnabled: false,
     });
   });
 
@@ -101,7 +102,7 @@ describe("Facebook OAuth configuration", () => {
     });
   });
 
-  it("honors an explicit disabled gate outside production", () => {
+  it("remains hard-disabled when the readiness value is false", () => {
     const disabledEnv = {
       FACEBOOK_CLIENT_ID: "facebook-app-id",
       FACEBOOK_CLIENT_SECRET: "secret",
@@ -129,11 +130,7 @@ describe("Facebook OAuth configuration", () => {
       FACEBOOK_LOGIN_PUBLIC_READY: "true",
     });
 
-    expect(provider).toMatchObject({
-      clientId: "facebook-app-id",
-      clientSecret: "facebook-secret-that-must-not-leak",
-      disableIdTokenSignIn: true,
-    });
+    expect(provider).toBeNull();
     expect(JSON.stringify(state)).not.toContain("facebook-app-id");
     expect(JSON.stringify(state)).not.toContain("facebook-secret");
     expect(state).toMatchObject({
@@ -141,7 +138,8 @@ describe("Facebook OAuth configuration", () => {
       clientIdConfigured: true,
       clientSecretConfigured: true,
       publicLaunchReady: true,
-      providerEnabled: true,
+      hardDisabled: true,
+      providerEnabled: false,
       productionRedirectUri: "https://over.garden/api/auth/callback/facebook",
     });
   });

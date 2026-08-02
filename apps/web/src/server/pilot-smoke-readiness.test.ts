@@ -408,7 +408,7 @@ describe("pilot smoke readiness", () => {
     expect(blockedReadout.overall).toBe("blocked");
   });
 
-  it("keeps Facebook Login hidden in production until public non-role readiness is approved", () => {
+  it("keeps Facebook Login hard-disabled until a separately reviewed re-enable", () => {
     const readyReadout = buildPilotSmokeReadiness({
       env: productionLikeEnv,
       databaseProbe: { reachable: true },
@@ -420,8 +420,8 @@ describe("pilot smoke readiness", () => {
 
     expect(findCheck(readyChecks, "facebook-oauth-provider")).toMatchObject({
       severity: "manual",
-      summary: expect.stringContaining("fallback is active"),
-      evidence: expect.stringContaining("FACEBOOK_LOGIN_PUBLIC_READY"),
+      summary: expect.stringContaining("hard-disabled"),
+      evidence: expect.stringContaining("Do not enable Facebook"),
     });
     expect(JSON.stringify(readyReadout)).not.toContain(
       "facebook-secret-that-must-not-leak",
@@ -449,10 +449,8 @@ describe("pilot smoke readiness", () => {
       ),
     ).toMatchObject({
       severity: "manual",
-      summary: expect.stringContaining("public-ready flag and env are present"),
-      evidence: expect.stringContaining(
-        "https://over.garden/api/auth/callback/facebook",
-      ),
+      summary: expect.stringContaining("hard-disabled"),
+      evidence: expect.stringContaining("Do not enable Facebook"),
     });
 
     const blockedReadout = buildPilotSmokeReadiness({
@@ -471,8 +469,11 @@ describe("pilot smoke readiness", () => {
         blockedReadout.sections.flatMap((section) => section.checks),
         "facebook-oauth-provider",
       ),
-    ).toMatchObject({ severity: "fail" });
-    expect(blockedReadout.overall).toBe("blocked");
+    ).toMatchObject({
+      severity: "manual",
+      summary: expect.stringContaining("hard-disabled"),
+    });
+    expect(blockedReadout.overall).toBe("ready");
   });
 
   it("accepts Vercel deployment URL as the effective public/auth URL outside production", () => {

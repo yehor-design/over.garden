@@ -64,12 +64,12 @@ credential, token, email, private text, media bytes, object key, stable identity
 or precise location; finish through native account/media/projection cleanup
 before considering the proof terminal.
 
-When `FACEBOOK_LOGIN_PUBLIC_READY` is absent or false, the guest Facebook
-control and provider route must be absent in every runtime, including local
-development and a serving production deployment. Local provider testing must
-set the flag explicitly to true; credentials alone never enable Facebook. Only
-an explicit public-ready value plus the separate non-role browser proof may
-expose Facebook in production.
+Facebook is hard-disabled in every runtime for this release: the guest control
+and provider route must be absent even when credentials or
+`FACEBOOK_LOGIN_PUBLIC_READY` are present. Email and Google remain the
+supported self-serve paths. Re-enabling Facebook requires a separate reviewed
+code change after the non-role production browser proof; an environment change
+alone must never expose it.
 
 ## OVE-191 Production Scaffold Isolation
 
