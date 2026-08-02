@@ -611,6 +611,23 @@ proof. Retain only redacted state classes, exact commit/deployment identifiers,
 and pass/fail outcomes—never an email, password, provider subject, callback URL,
 token, cookie, account identifier, journal data, media key, or precise location.
 
+### OVE-249 recoverable account exit proof
+
+When session convergence cannot complete because an initial session read or
+owner-local preservation check is unavailable, the private product tree remains
+fenced and no local data is deleted. The recovery screen must still offer one
+localized **Sign out without deleting local changes** action. On activation, it
+obtains the current authoritative session binding at that moment, performs at
+most one canonical server sign-out for that binding, and then routes to the
+selected public locale. If the fresh read says the session has already ended,
+it routes public without publishing a false sign-out receipt. If action-time
+verification or sign-out cannot be confirmed within the declared bound, it
+keeps the screen and offers a retry; it never deletes, pauses, aborts, exposes,
+or rehydrates owner-local data merely to enable exit. Production evidence must
+show the action appeared in the initial-read failure state and, after one
+activation, that the recovery screen and private UI disappeared. Retain only
+the state class, exact commit/deployment identifiers, and pass/fail outcome.
+
 Current public-product smoke coverage:
 
 - First entry, media derivative, same-object follow-up, publish, public journal SSR, public variety activation, archive-to-410, and pilot-health readback remain covered by the canonical OVE-51 browser smoke and OVE-37 current-main closure unless the deployed app, R2 media path, auth path, public route semantics, worker/search env, or publication/archive code changes.

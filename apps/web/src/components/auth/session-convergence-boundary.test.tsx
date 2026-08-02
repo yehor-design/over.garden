@@ -1093,6 +1093,72 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
+  it("offers action-time bound exit when the initial baseline was unavailable", async () => {
+    mocks.getSession
+      .mockRejectedValueOnce(new Error("initial proof unavailable"))
+      .mockResolvedValueOnce(activeSession());
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+    expect(mocks.hydrate).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.canonicalSignOut).toHaveBeenCalledOnce());
+    expect(mocks.canonicalSignOut).toHaveBeenCalledWith(
+      {
+        version: 1,
+        binding: "opaque-binding-for-session-a",
+      },
+      expect.objectContaining({
+        getSession: expect.any(Function),
+        signOut: expect.any(Function),
+      }),
+    );
+    expect(mocks.getSession).toHaveBeenCalledTimes(2);
+    expect(mocks.prepareComposer).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.publishCommitted).toHaveBeenCalledWith(
+      "op-fallback-fence-1234",
+      "tab-boundary-test-1234",
+    );
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expectPrivateSignOutDialogAbsent(renderer);
+    await unmount(renderer);
+  });
+
+  it("routes a freshly absent session public without a false sign-out receipt", async () => {
+    mocks.getSession
+      .mockRejectedValueOnce(new Error("initial proof unavailable"))
+      .mockResolvedValueOnce({ data: null, error: null });
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const fallbackExit = renderer.root.findByProps({
+      "data-session-convergence-fallback-sign-out": "true",
+    });
+
+    await act(async () => {
+      fallbackExit.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/bg"));
+    expect(mocks.canonicalSignOut).not.toHaveBeenCalled();
+    expect(mocks.publishCommitted).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    await unmount(renderer);
+  });
+
   it("never rehydrates baseline A when a gate retry authoritatively observes session B", async () => {
     mocks.hydrate.mockResolvedValueOnce("blocked");
     mocks.getSession
