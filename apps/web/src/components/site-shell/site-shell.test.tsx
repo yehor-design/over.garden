@@ -19,7 +19,7 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
     localeControlFallback?: React.ReactNode;
   }) => {
     mocks.localeControlFallback = localeControlFallback ?? null;
-    return children;
+    return <div data-session-convergence-boundary="true">{children}</div>;
   },
 }));
 
@@ -136,6 +136,25 @@ describe("production site shell", () => {
 
     expect(html).toContain('data-site-shell="excluded"');
     expect(html).not.toContain('data-authenticated-utility-region="true"');
+    expect(html).not.toContain("data-sign-out-control");
+  });
+
+  it("keeps native erasure reachable without mounting private navigation or the local session gate", async () => {
+    mocks.pathname = "/erasure";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated>
+        <main>Native erasure request</main>
+      </SiteShell>,
+    );
+
+    expect(html).toContain('data-site-shell="safe-exit"');
+    expect(html).toContain('data-session-convergence-safe-exit="erasure"');
+    expect(html).toContain("Native erasure request");
+    expect(html).not.toContain('data-session-convergence-boundary="true"');
+    expect(html).not.toContain('data-authenticated-utility-region="true"');
+    expect(html).not.toContain('data-site-shell-region="sidebar"');
+    expect(html).not.toContain('data-site-shell-region="mobile-navigation"');
     expect(html).not.toContain("data-sign-out-control");
   });
 

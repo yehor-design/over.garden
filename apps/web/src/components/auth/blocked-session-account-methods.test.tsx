@@ -11,6 +11,12 @@ vi.mock("@/components/ui/button", () => ({
   Button: ({ children, ...props }: React.ComponentProps<"button">) => (
     <button {...props}>{children}</button>
   ),
+  buttonVariants: () => "button-variant",
+}));
+vi.mock("next/link", () => ({
+  default: ({ children, ...props }: React.ComponentProps<"a">) => (
+    <a {...props}>{children}</a>
+  ),
 }));
 vi.mock("@/lib/auth-client", () => ({
   authClient: { getSession: mocks.getSession },
@@ -58,7 +64,9 @@ describe("blocked session account methods", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("IS_REACT_ACT_ENVIRONMENT", true);
-    mocks.getSession.mockResolvedValue({ data: { session: { id: "session-a" } } });
+    mocks.getSession.mockResolvedValue({
+      data: { session: { id: "session-a" } },
+    });
     mocks.prepareCurrentSessionSignOut.mockResolvedValue({
       version: 1,
       binding: "binding-for-session-a",
@@ -84,6 +92,14 @@ describe("blocked session account methods", () => {
         "data-session-convergence-account-methods-open": "true",
       }),
     ).not.toHaveLength(0);
+    const erasureLinks = renderer.root
+      .findAllByType("a")
+      .filter(
+        (link) =>
+          link.props["data-session-convergence-erasure-request"] === "true",
+      );
+    expect(erasureLinks).toHaveLength(1);
+    expect(erasureLinks[0]?.props.href).toBe("/erasure");
     await unmount(renderer);
   });
 
@@ -124,7 +140,9 @@ describe("blocked session account methods", () => {
       }),
     ).toHaveLength(1);
     expect(
-      renderer.root.findAllByProps({ "data-blocked-methods": expect.anything() }),
+      renderer.root.findAllByProps({
+        "data-blocked-methods": expect.anything(),
+      }),
     ).toHaveLength(0);
     await unmount(renderer);
   });
