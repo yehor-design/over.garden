@@ -64,6 +64,12 @@ credential, token, email, private text, media bytes, object key, stable identity
 or precise location; finish through native account/media/projection cleanup
 before considering the proof terminal.
 
+When `FACEBOOK_LOGIN_PUBLIC_READY` is absent or false, the guest Facebook
+control and provider route must be absent on the serving production deployment.
+This fallback is fail-closed on a production Next runtime even if a Vercel
+runtime marker is unavailable; only an explicit public-ready value plus the
+separate non-role browser proof may expose Facebook.
+
 ## OVE-191 Production Scaffold Isolation
 
 Goal: keep the historical walking-skeleton integration proof available to a

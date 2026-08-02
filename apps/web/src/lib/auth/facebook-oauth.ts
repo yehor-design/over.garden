@@ -18,10 +18,7 @@ export function resolveFacebookSocialProviderConfig(
   const clientSecret = configuredEnvValue(env[FACEBOOK_CLIENT_SECRET_ENV]);
 
   if (!clientId || !clientSecret) return null;
-  if (
-    isVercelProductionRuntime(env) &&
-    !isFacebookLoginPublicReady(env)
-  ) {
+  if (isFacebookProductionRuntime(env) && !isFacebookLoginPublicReady(env)) {
     return null;
   }
 
@@ -52,10 +49,18 @@ export function facebookOAuthConfigurationState(env: EnvLike = process.env) {
     clientSecretConfigured,
     publicLaunchReady,
     providerEnabled:
-      configured && (!isVercelProductionRuntime(env) || publicLaunchReady),
+      configured && (!isFacebookProductionRuntime(env) || publicLaunchReady),
     localRedirectUri: FACEBOOK_OAUTH_LOCAL_REDIRECT_URI,
     productionRedirectUri: FACEBOOK_OAUTH_PRODUCTION_REDIRECT_URI,
   };
+}
+
+function isFacebookProductionRuntime(env: EnvLike): boolean {
+  // Vercel's serving environment must never expose Facebook just because one
+  // of its runtime markers is unavailable to a server function. `NODE_ENV` is
+  // the fail-closed fallback for a production Next server; development still
+  // permits explicitly configured provider testing.
+  return isVercelProductionRuntime(env) || env.NODE_ENV === "production";
 }
 
 function isFacebookLoginPublicReady(env: EnvLike): boolean {

@@ -62,6 +62,22 @@ describe("Facebook OAuth configuration", () => {
     });
   });
 
+  it("fails closed for a production Next server even when Vercel markers are unavailable", () => {
+    const productionEnv = {
+      FACEBOOK_CLIENT_ID: "facebook-app-id",
+      FACEBOOK_CLIENT_SECRET: "secret",
+      NODE_ENV: "production",
+    };
+
+    expect(isFacebookSignInEnabled(productionEnv)).toBe(false);
+    expect(resolveFacebookSocialProviderConfig(productionEnv)).toBeNull();
+    expect(facebookOAuthConfigurationState(productionEnv)).toMatchObject({
+      configured: true,
+      publicLaunchReady: false,
+      providerEnabled: false,
+    });
+  });
+
   it("keeps OAuth credentials out of safe configuration state", () => {
     const provider = resolveFacebookSocialProviderConfig({
       FACEBOOK_CLIENT_ID: "facebook-app-id",
