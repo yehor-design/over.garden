@@ -7,10 +7,12 @@ import {
   EPPO_LYPES_PATH,
   EPPO_OPENAPI_URL,
   EppoApiAccessError,
+  eppoApiAccessFailureCode,
   type EppoFetch,
   inspectOfficialEppoOpenApi,
   verifyEppoApiAccess,
 } from "./verify-eppo-api-access";
+import { EppoCredentialError } from "../src/server/catalog-source/eppo-credentials";
 
 const FIXTURE_CREDENTIAL = "eppo_fixture_credential_4fd9d606a6b74d9a";
 
@@ -63,6 +65,15 @@ function response(input: {
 }
 
 describe("EPPO API v2 verifier", () => {
+  it("keeps canonical credential policy failures observable without exposing a value", () => {
+    expect(
+      eppoApiAccessFailureCode(new EppoCredentialError("missing_credential")),
+    ).toBe("missing_credential");
+    expect(eppoApiAccessFailureCode(new Error("credential=do-not-print"))).toBe(
+      "unexpected_failure",
+    );
+  });
+
   it("pins the official host, header, LYPES taxon operation, and schema", async () => {
     const seen: Array<{ input: string; init: RequestInit }> = [];
     const fetcher: EppoFetch = async (input, init) => {

@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import {
+  EppoCredentialError,
   assertValidEppoCredential,
   eppoCredentialFingerprintPrefix,
   resolveEppoCredential,
@@ -317,6 +318,23 @@ function cliArguments() {
   return { runtime: args.includes("--runtime"), json: args.includes("--json") };
 }
 
+export function eppoApiAccessFailureCode(
+  error: unknown,
+):
+  | EppoApiAccessErrorCode
+  | "missing_credential"
+  | "invalid_credential"
+  | "legacy_alias_configured"
+  | "unexpected_failure" {
+  if (
+    error instanceof EppoApiAccessError ||
+    error instanceof EppoCredentialError
+  ) {
+    return error.code;
+  }
+  return "unexpected_failure";
+}
+
 async function runCli() {
   const args = cliArguments();
   const result = args.runtime
@@ -345,8 +363,7 @@ if (
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   runCli().catch((error: unknown) => {
-    const code =
-      error instanceof EppoApiAccessError ? error.code : "unexpected_failure";
+    const code = eppoApiAccessFailureCode(error);
     process.stderr.write(`eppo_api_access=failed code=${code}\n`);
     process.exitCode = 1;
   });
