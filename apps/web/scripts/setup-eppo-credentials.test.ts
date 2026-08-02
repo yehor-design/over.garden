@@ -85,6 +85,7 @@ function dependencies(target: EppoCredentialTarget) {
     inspectOpenApi: async () => CONTRACT,
     verifyCandidate: async () => apiReceipt(),
     now: () => 100,
+    sleep: async () => {},
   };
 }
 
@@ -146,7 +147,9 @@ describe("EPPO credential setup", () => {
   });
 
   it("restores the prior target value if runtime verification fails", async () => {
+    let runtimeAttempts = 0;
     const target = targetFixture(REPLACEMENT_CREDENTIAL, async () => {
+      runtimeAttempts += 1;
       throw new Error("runtime unavailable");
     });
     await expect(
@@ -162,6 +165,37 @@ describe("EPPO credential setup", () => {
     ).rejects.toMatchObject({ code: "runtime_verification_failed" });
     expect(target.value).toBe(REPLACEMENT_CREDENTIAL);
     expect(target.writes).toBe(2);
+    expect(runtimeAttempts).toBe(3);
+  });
+
+  it("retries a delayed Vercel runtime projection without a second secret write", async () => {
+    let runtimeAttempts = 0;
+    const waits: number[] = [];
+    const target = targetFixture(undefined, async () => {
+      runtimeAttempts += 1;
+      if (runtimeAttempts === 1) throw new Error("projection not ready");
+      return apiReceipt();
+    });
+
+    const result = await setupEppoCredentials(
+      {
+        environment: "production",
+        confirmEnvironment: "production",
+        apply: true,
+        credential: FIXTURE_CREDENTIAL,
+      },
+      {
+        ...dependencies(target),
+        sleep: async (milliseconds) => {
+          waits.push(milliseconds);
+        },
+      },
+    );
+
+    expect(result).toMatchObject({ class: "completed", cleanup: "completed" });
+    expect(target.writes).toBe(1);
+    expect(runtimeAttempts).toBe(2);
+    expect(waits).toEqual([1_000]);
   });
 
   it("removes a newly written key when runtime verification fails without a prior value", async () => {

@@ -23,6 +23,8 @@ import {
 export const EPPO_SETUP_ENVIRONMENT = "production";
 export const EPPO_SETUP_DEADLINE_MS = 90_000;
 export const EPPO_SETUP_LOCK_ENV = "EPPO_DATA_PORTAL_API_KEY_SETUP_LOCK";
+export const EPPO_RUNTIME_VERIFICATION_ATTEMPTS = 3;
+export const EPPO_RUNTIME_VERIFICATION_RETRY_DELAY_MS = 1_000;
 
 export type EppoCredentialSetupResult =
   | EppoCredentialSetupPlan
@@ -74,6 +76,7 @@ export interface EppoCredentialSetupDependencies {
   inspectOpenApi?: () => Promise<EppoOpenApiContract>;
   verifyCandidate?: (credential: string) => Promise<EppoApiAccessReceipt>;
   now?: () => number;
+  sleep?: (milliseconds: number) => Promise<void>;
 }
 
 export interface EppoCredentialSetupInput {
@@ -118,6 +121,7 @@ export async function setupEppoCredentials(
   try {
     assertProductionEnvironment(input);
     const now = dependencies.now ?? Date.now;
+    const sleep = dependencies.sleep ?? defaultSleep;
     const startedAt = now();
     const targetState = await dependencies.target.inspect();
     if (targetState.legacyAliasConfigured) {
@@ -161,7 +165,12 @@ export async function setupEppoCredentials(
         eppoCredentialFingerprintPrefix(previous) ===
         eppoCredentialFingerprintPrefix(credential)
       ) {
-        const runtimeReceipt = await dependencies.target.verifyRuntime();
+        const runtimeReceipt = await verifyRuntimeWithPropagationRetry(
+          dependencies.target,
+          startedAt,
+          now,
+          sleep,
+        );
         return completedReceipt(
           "already_configured_and_verified",
           plan,
@@ -182,7 +191,12 @@ export async function setupEppoCredentials(
     assertWithinDeadline(startedAt, now);
 
     try {
-      const runtimeReceipt = await dependencies.target.verifyRuntime();
+      const runtimeReceipt = await verifyRuntimeWithPropagationRetry(
+        dependencies.target,
+        startedAt,
+        now,
+        sleep,
+      );
       return completedReceipt(
         "completed",
         plan,
@@ -266,6 +280,43 @@ function assertWithinDeadline(startedAt: number, now: () => number) {
   if (now() - startedAt > EPPO_SETUP_DEADLINE_MS) {
     throw new EppoCredentialSetupError("credential_setup_deadline_exceeded");
   }
+}
+
+function defaultSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+/**
+ * A Vercel environment write is strongly ordered but its `env run` projection
+ * can briefly lag the write acknowledgement. Retry only this local read-back,
+ * never the credential write or candidate authentication, and retain the
+ * enclosing 90-second deadline and rollback behavior.
+ */
+async function verifyRuntimeWithPropagationRetry(
+  target: EppoCredentialTarget,
+  startedAt: number,
+  now: () => number,
+  sleep: (milliseconds: number) => Promise<void>,
+): Promise<EppoApiAccessReceipt> {
+  let lastError: unknown;
+  for (
+    let attempt = 1;
+    attempt <= EPPO_RUNTIME_VERIFICATION_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      const receipt = await target.verifyRuntime();
+      assertWithinDeadline(startedAt, now);
+      return receipt;
+    } catch (error) {
+      lastError = error;
+      if (attempt === EPPO_RUNTIME_VERIFICATION_ATTEMPTS) break;
+      assertWithinDeadline(startedAt, now);
+      await sleep(EPPO_RUNTIME_VERIFICATION_RETRY_DELAY_MS * attempt);
+      assertWithinDeadline(startedAt, now);
+    }
+  }
+  throw lastError;
 }
 
 function createPlan(

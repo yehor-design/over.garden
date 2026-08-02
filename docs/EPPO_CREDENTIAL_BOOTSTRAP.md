@@ -38,7 +38,9 @@ The command:
    `GET /taxons/taxon/LYPES/overview` using the documented `X-Api-Key` header;
 6. writes the standard encrypted Vercel Production environment variable, never
    a public variable or a Vercel Sensitive variable;
-7. re-runs the same verifier through `vercel env run -e production`; and
+7. re-runs the same verifier through `vercel env run -e production`, allowing
+   at most three bounded read-backs for Vercel environment propagation without
+   ever repeating the secret write; and
 8. returns a redacted receipt only.
 
 Stop if the plan reports an unexpected target state, a legacy EPPO alias, an
