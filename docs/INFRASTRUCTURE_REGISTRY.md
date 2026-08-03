@@ -130,6 +130,22 @@ R2_ACCESS_KEY_ID="..."
 R2_SECRET_ACCESS_KEY="..."
 ```
 
+## Pl@ntNet species identification
+
+- OVE-269 uses only the server-side Pl@ntNet single-species endpoint. The
+  provider key is a Sensitive Vercel environment variable named
+  `PLANTNET_API_KEY`; it is never a browser variable, repository value, Linear
+  receipt or chat artifact.
+- `PLANTNET_SPECIES_IDENTIFICATION_ENABLED=false` is required until a contained
+  exact-SHA deployment is `READY`, the provider account's current capability,
+  quota, terms and billing class have been read back, and an approved
+  rights-clean controlled canary is about to run.
+- The app reads only a processed, original-absent R2 derivative internally and
+  creates a new JPEG for the outbound request. Neither an R2 object key nor URL
+  leaves the server boundary.
+- Production provider setup and rollback details are in
+  `docs/PLANTNET_SPECIES_IDENTIFICATION.md`.
+
 Where secrets belong:
 
 - Local app development: `apps/web/.env.local`

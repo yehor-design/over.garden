@@ -44,6 +44,10 @@ import type {
   MediaAssets as MediaAssetsTable,
   NotificationPreferences as NotificationPreferencesTable,
   NotificationReceipts as NotificationReceiptsTable,
+  PlantIdentificationCandidates as PlantIdentificationCandidatesTable,
+  PlantIdentificationDecisions as PlantIdentificationDecisionsTable,
+  PlantIdentificationRequests as PlantIdentificationRequestsTable,
+  PlantIdentificationSubmissionSlots as PlantIdentificationSubmissionSlotsTable,
   PilotInviteGrants as PilotInviteGrantsTable,
   PilotInterviewLearnings as PilotInterviewLearningsTable,
   PlantObjects as PlantObjectsTable,
@@ -330,6 +334,22 @@ export type LineageQuestion = Selectable<LineageQuestionsTable>;
 export type NewLineageQuestion = Insertable<LineageQuestionsTable>;
 export type MediaAsset = Selectable<MediaAssetsTable>;
 export type NewMediaAsset = Insertable<MediaAssetsTable>;
+export type PlantIdentificationRequest =
+  Selectable<PlantIdentificationRequestsTable>;
+export type NewPlantIdentificationRequest =
+  Insertable<PlantIdentificationRequestsTable>;
+export type PlantIdentificationCandidate =
+  Selectable<PlantIdentificationCandidatesTable>;
+export type NewPlantIdentificationCandidate =
+  Insertable<PlantIdentificationCandidatesTable>;
+export type PlantIdentificationDecision =
+  Selectable<PlantIdentificationDecisionsTable>;
+export type NewPlantIdentificationDecision =
+  Insertable<PlantIdentificationDecisionsTable>;
+export type PlantIdentificationSubmissionSlot =
+  Selectable<PlantIdentificationSubmissionSlotsTable>;
+export type NewPlantIdentificationSubmissionSlot =
+  Insertable<PlantIdentificationSubmissionSlotsTable>;
 export type PilotInviteGrant = Selectable<PilotInviteGrantsTable>;
 export type NewPilotInviteGrant = Insertable<PilotInviteGrantsTable>;
 export type UserPublicProfile = Selectable<UserPublicProfilesTable>;

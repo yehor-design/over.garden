@@ -75,6 +75,7 @@ import { FollowUpValuePulse } from "./follow-up-value-pulse";
 import { LocationPrivacyControl } from "./location-privacy-control";
 import { ObjectProgressMoment } from "./object-progress-moment";
 import { SaveProgressMoment } from "../../save-progress-moment";
+import { PlantIdentificationPanel } from "@/components/garden/plant-identification-panel";
 
 export const dynamic = "force-dynamic";
 
@@ -349,6 +350,21 @@ export default async function PlantObjectReadbackPage({
                 page.plantObject.variety_state as VarietyState
               }
               action={resolvePlantObjectCatalogAction}
+            />
+          </div>
+        ) : null}
+
+        {writeAccess.canWrite &&
+        page.plantObject.object_kind === "plant" &&
+        canResolveCatalogState(page.plantObject.variety_state) ? (
+          <div id="passport-photo-identification" className="min-w-0">
+            <PlantIdentificationPanel
+              locale={locale}
+              objectId={page.plantObject.id}
+              media={page.gallery_media.map((item) => ({
+                id: item.id,
+                publicUrl: item.publicUrl,
+              }))}
             />
           </div>
         ) : null}

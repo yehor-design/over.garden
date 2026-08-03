@@ -106,6 +106,36 @@ export async function getQuarantineObjectBuffer(
   return Buffer.from(bytes);
 }
 
+/**
+ * Reads a processed derivative for a server-to-server transform. Callers must
+ * prove the asset's owner, readiness and original-absence state before calling
+ * this helper; object keys are never exposed to the browser or an external API.
+ */
+export async function getPublicDerivativeObjectBuffer(
+  objectKey: string,
+  maxBytes: number,
+  abortSignal?: AbortSignal,
+): Promise<Buffer> {
+  const response = await r2Client().send(
+    new GetObjectCommand({
+      Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
+      Key: objectKey,
+    }),
+    { abortSignal: boundedMediaProviderSignal(abortSignal) },
+  );
+
+  if ((response.ContentLength ?? 0) > maxBytes) {
+    throw new Error("Public derivative exceeds the allowed image size.");
+  }
+
+  const bytes = await response.Body?.transformToByteArray();
+  if (!bytes) throw new Error("Public derivative has no body.");
+  if (bytes.byteLength > maxBytes) {
+    throw new Error("Public derivative exceeds the allowed image size.");
+  }
+  return Buffer.from(bytes);
+}
+
 export async function putPublicDerivativeObject(
   objectKey: string,
   body: Buffer,
@@ -156,7 +186,10 @@ export async function deleteQuarantineObject(
       Bucket: requiredServerEnv("R2_QUARANTINE_BUCKET"),
       Key: objectKey,
     }),
-    { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
+    {
+      abortSignal:
+        abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    },
   );
 }
 
@@ -200,7 +233,10 @@ export async function deletePublicDerivativeObject(
       Bucket: requiredServerEnv("R2_PUBLIC_BUCKET"),
       Key: objectKey,
     }),
-    { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
+    {
+      abortSignal:
+        abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+    },
   );
 }
 
@@ -218,7 +254,10 @@ async function probeObjectState(
   try {
     await r2Client().send(
       new HeadObjectCommand({ Bucket: bucket, Key: objectKey }),
-      { abortSignal: abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS) },
+      {
+        abortSignal:
+          abortSignal ?? AbortSignal.timeout(MEDIA_PROVIDER_REQUEST_TIMEOUT_MS),
+      },
     );
     return "present";
   } catch (error) {
