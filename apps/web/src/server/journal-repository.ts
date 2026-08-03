@@ -187,6 +187,18 @@ export interface ResolvePlantObjectCatalogInput {
   catalogItemId: string;
 }
 
+export interface ResolvePlantObjectCatalogOptions {
+  /**
+   * Allows an owner-scoped adjacent receipt to commit with catalog resolution.
+   * Callers may not perform external effects here.
+   */
+  afterResolve?: (input: {
+    transaction: Transaction<Database>;
+    plantObjectId: string;
+    catalogItemId: string;
+  }) => Promise<void>;
+}
+
 export interface UpdatePlantObjectLocationInput {
   plantObjectId: string;
   locationVisibility?: string | null;
@@ -678,14 +690,10 @@ export async function createFirstPlantEntry(
     });
 
     if (entry) {
-      const mediaAttached = await claimOrderedInlineMediaForEntry(
-        trx,
-        scope,
-        {
-          journalEntryId: entry.id,
-          orderedMediaAssetIds: normalized.orderedMediaAssetIds,
-        },
-      );
+      const mediaAttached = await claimOrderedInlineMediaForEntry(trx, scope, {
+        journalEntryId: entry.id,
+        orderedMediaAssetIds: normalized.orderedMediaAssetIds,
+      });
       await claimJournalEntryCover(trx, scope, {
         journalEntryId: entry.id,
         cover: normalized.cover,
@@ -1659,6 +1667,7 @@ export async function createSpaceJournalEntry(
 export async function resolvePlantObjectCatalog(
   scope: RequestScope,
   input: ResolvePlantObjectCatalogInput,
+  options: ResolvePlantObjectCatalogOptions = {},
 ): Promise<PlantObjectCatalogResolutionResult> {
   const normalized = normalizeResolvePlantObjectCatalogInput(input);
 
@@ -1697,6 +1706,11 @@ export async function resolvePlantObjectCatalog(
       varietyText: selectedCatalogItem.canonicalName,
       now: new Date(),
     }).executeTakeFirstOrThrow();
+    await options.afterResolve?.({
+      transaction: trx,
+      plantObjectId: resolved.id,
+      catalogItemId: selectedCatalogItem.id,
+    });
     await refreshJournalEntryTopicSignalsForPlantObject(trx, scope, {
       plantObjectId: resolved.id,
     });
@@ -2432,12 +2446,8 @@ export function serializePublicJournalEntryPage(input: {
       publicUrl: getPublicDerivativeUrl(row.derivativeKey),
       altText: row.altText,
       caption: row.caption,
-      focalX: Number(
-        "focalX" in row && row.focalX != null ? row.focalX : 0.5,
-      ),
-      focalY: Number(
-        "focalY" in row && row.focalY != null ? row.focalY : 0.5,
-      ),
+      focalX: Number("focalX" in row && row.focalX != null ? row.focalX : 0.5),
+      focalY: Number("focalY" in row && row.focalY != null ? row.focalY : 0.5),
       intrinsicWidth:
         "intrinsicWidth" in row ? (row.intrinsicWidth as number | null) : null,
       intrinsicHeight:

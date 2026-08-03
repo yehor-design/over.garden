@@ -77,6 +77,10 @@ export interface SelectableCatalogItem {
   source: string;
 }
 
+export type ExactSpeciesMapping =
+  | { status: "mapped"; item: SelectableCatalogItem }
+  | { status: "unmapped" | "ambiguous" };
+
 export interface UserAddedCatalogCandidate {
   id: string;
   displayName: string;
@@ -254,6 +258,53 @@ export async function findSelectableCatalogItemByPublicSlug(
     locale: row.locale,
     status: row.status as SelectableCatalogStatus,
     source: row.source,
+  };
+}
+
+/**
+ * Pl@ntNet names are evidence, not catalog authority. Only one global,
+ * selectable species with an exact normalized canonical name is eligible for
+ * confirmation; aliases, fuzzy matches and homonyms deliberately fail closed.
+ */
+export async function findExactSelectableSpeciesByScientificName(
+  scientificName: string,
+  executor: QueryExecutor = db,
+): Promise<ExactSpeciesMapping> {
+  const normalizedName = normalizeCatalogQuery(scientificName);
+  if (!normalizedName) return { status: "unmapped" };
+
+  const rows = await executor
+    .selectFrom("catalog_items")
+    .select([
+      "id",
+      "canonical_name as canonicalName",
+      "public_slug as publicSlug",
+      "catalog_kind as catalogKind",
+      "locale",
+      "status",
+      "source",
+    ])
+    .where("catalog_kind", "=", "species")
+    .where("status", "in", [...SELECTABLE_CATALOG_STATUSES])
+    .where("created_by_user_id", "is", null)
+    .where("normalized_name", "=", normalizedName)
+    .limit(2)
+    .execute();
+
+  if (rows.length === 0) return { status: "unmapped" };
+  if (rows.length !== 1) return { status: "ambiguous" };
+  const item = rows[0]!;
+  return {
+    status: "mapped",
+    item: {
+      id: item.id,
+      canonicalName: item.canonicalName,
+      publicSlug: item.publicSlug,
+      catalogKind: "species",
+      locale: item.locale,
+      status: item.status as SelectableCatalogStatus,
+      source: item.source,
+    },
   };
 }
 

@@ -784,6 +784,28 @@ export const ERASURE_SCHEMA_COVERAGE: readonly ErasureCoverageEntry[] = [
     executionOwned: true,
   },
   {
+    id: "plant_identification_requests.owner_user_id",
+    table: "plant_identification_requests",
+    columnOrPath: "owner_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Private provider request receipts cascade with the erased owner and retain no public projection.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
+    id: "plant_identification_decisions.owner_user_id",
+    table: "plant_identification_decisions",
+    columnOrPath: "owner_user_id",
+    kind: "fk",
+    disposition: "delete",
+    rationale:
+      "Explicit identity decisions are private owner records and cascade with account erasure.",
+    dryRunOwned: true,
+    executionOwned: true,
+  },
+  {
     id: "job_queue.payload.userId",
     table: "job_queue",
     columnOrPath: "payload.userId",
