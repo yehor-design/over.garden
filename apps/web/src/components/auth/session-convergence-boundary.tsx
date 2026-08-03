@@ -45,7 +45,12 @@ import { BlockedSessionAccountMethods } from "./blocked-session-account-methods"
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
-const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS = 1_000;
+// A live no-cache session read plus owner IndexedDB hydration may legitimately
+// take longer than one second. Keep the private tree payload-free for the
+// complete convergence phase instead of timing out after a fence has begun
+// but before this document can safely release it.
+export const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS =
+  SESSION_CONVERGENCE_PHASE_TIMEOUT_MS;
 export const FALLBACK_SIGN_OUT_TIMEOUT_MS = 10_000;
 const HARD_RELOAD_FINALIZATION_TIMEOUT_MS =
   SESSION_CONVERGENCE_PHASE_TIMEOUT_MS;
