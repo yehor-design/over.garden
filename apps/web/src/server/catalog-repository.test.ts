@@ -18,6 +18,7 @@ import { scopedToUser } from "@/server/request-scope";
 import {
   buildCatalogTypeaheadReindexRowsQuery,
   buildEnqueueCatalogMatchSuggestionsRefreshJobQuery,
+  buildFindExactSelectableSpeciesByScientificNameQuery,
   buildEnqueueCatalogTypeaheadReindexJobQuery,
   buildFindUserAddedCatalogItemQuery,
   buildCatalogTypeaheadQuery,
@@ -97,6 +98,40 @@ describe("catalog repository query contracts", () => {
       "чері",
       "чері%",
       5,
+    ]);
+  });
+
+  it("maps only exact canonical or accepted scientific species names", () => {
+    const compiled = buildFindExactSelectableSpeciesByScientificNameQuery(
+      testDb,
+      "solanum lycopersicum",
+    ).compile();
+
+    expect(compiled.sql).toContain('from "catalog_items"');
+    expect(compiled.sql).toContain(
+      'left join "catalog_alias_projections" on "catalog_alias_projections"."catalog_item_id" = "catalog_items"."id"',
+    );
+    expect(compiled.sql).toContain('"catalog_items"."catalog_kind" = $1');
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."normalized_name" = $5',
+    );
+    expect(compiled.sql).toContain('"catalog_alias_projections"."status" = $6');
+    expect(compiled.sql).toContain(
+      '"catalog_alias_projections"."alias_kind" = $7',
+    );
+    expect(compiled.sql).toContain("select distinct");
+    expect(compiled.sql).not.toContain("catalog_item_names");
+    expect(compiled.sql).not.toContain("catalog_source_records");
+    expect(compiled.sql).not.toContain("raw_payload");
+    expect(compiled.parameters).toEqual([
+      "species",
+      "seeded",
+      "confirmed",
+      "solanum lycopersicum",
+      "solanum lycopersicum",
+      "accepted",
+      "accepted_scientific_name",
+      2,
     ]);
   });
 
