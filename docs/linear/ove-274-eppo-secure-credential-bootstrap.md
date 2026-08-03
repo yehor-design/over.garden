@@ -12,9 +12,9 @@ Deliver one secure operator journey in which a founder runs one prepared command
 * Repository change: yes
 * Live deployment required: no
 * Direct production-state mutation: yes
-* Authorization status: pending
+* Authorization status: approved
 * Baseline SHA: 50a8089a2516661f5dffe5a4232c3d3b831c4d8e
-* Evidence captured: 2026-08-02
+* Evidence captured: 2026-08-03
 * Touches: server, auth, infrastructure, deployment, tests, docs
 * Sensitive boundaries: secrets, external-effects
 * External systems: EPPO Data Portal, EPPO Global Database API v2, Vercel, GitHub, Linear
@@ -332,10 +332,16 @@ Start from current main on `codex/ove-274-eppo-secure-credential-bootstrap`. Pre
 
 # Open maintainer authorization gates
 
-* Authorization status: pending
+* Authorization status: approved
 * Gate: write or rotate EPPO_DATA_PORTAL_API_KEY in the Vercel Production server-side environment and perform the real authenticated documented LYPES read-only operation.
-* Required approval artifact: the setup command's zero-secret plan containing current-main SHA, OpenAPI digest, operation identity, Vercel Production environment class, secret name, rollback method, and redaction statement.
-* Approval receipt: pending
-* Work allowed before approval: code, fake-secret tests, documentation, official public OpenAPI inspection, Vercel project identity read-back, and a no-value secret-name classification.
+* Required approval artifact: immutable zero-secret prepared-command plan sha256:63e4947cdd8dfa396936d32b59c391a9dee9ac9cda787bfaef594587ddc336fd containing current-main SHA, OpenAPI digest, operation identity, Vercel Production environment class, secret name, rollback method, and redaction statement.
+* Approval receipt: maintainer: Yehor; approved scope: run the prepared OVE-274 production credential bootstrap and its bounded authenticated LYPES verification; timestamp: 2026-08-03T07:32:49Z; environment: Vercel Production EPPO_DATA_PORTAL_API_KEY; provenance: OVE-274 founder terminal receipt in this Codex task; sha256:63e4947cdd8dfa396936d32b59c391a9dee9ac9cda787bfaef594587ddc336fd.
+* Work allowed before approval: code, fake-secret tests, documentation, official public OpenAPI inspection, Vercel project identity read-back, and a no-value secret-name classification; the completed receipt is the sole authority for the approved mutation.
 * Work forbidden before approval: real key entry, local or Vercel real secret write, authenticated EPPO request, provider key rotation or revocation, catalog import, database mutation, and Meilisearch mutation.
-* Stop/read-back condition: target environment, OpenAPI digest, operation identity, secret name, rollback method, cleanup result, or provider read-back drift invalidates the plan and preserves the previous target state.
+* Stop/read-back condition: target environment, OpenAPI digest, operation identity, secret name, rollback method, cleanup result, or provider read-back drift invalidates the plan and preserves the previous target state. The completed action read back only one encrypted Production EPPO_DATA_PORTAL_API_KEY metadata record, with no legacy alias or setup lock.
+
+* Completed authorization and runtime receipt — prepared-command plan: current-main SHA `42b2893a4a023edd4a01380b7341c78806f20dc9`; official OpenAPI SHA-256 `c76c883dfc251ffcc026f85ae18b65f0dacd0e0f844c6f92ee19199f0dd42d13`; operation `getGDTaxon`; environment `production`; secret name `EPPO_DATA_PORTAL_API_KEY`; initial target state `missing`; rollback `remove_new_value_or_restore_previous_value`; plan digest `63e4947cdd8dfa396936d32b59c391a9dee9ac9cda787bfaef594587ddc336fd`.
+* Completed result: candidate HTTP status class `2xx`; Vercel runtime HTTP status class `2xx`; duration `9872 ms`; cleanup `completed`; credential fingerprint prefix `feb1b39f98fd`. The founder entered the value only through the masked local terminal prompt; this receipt contains no credential, authorization header, request body, response body, or account secret.
+* Provider read-back: after the completed operation, authenticated Vercel Production metadata lists exactly one EPPO-prefixed variable: `EPPO_DATA_PORTAL_API_KEY`, type `encrypted`, target `production`. No legacy EPPO alias or setup lock remains.
+* Main containment: the initial OVE-274 implementation commit `f3b0b2930a82d064063fd6316d33cae6c69c52c0` and credential-byte preservation commit `024e428b7c2efbf6b948273bbbba9c6446e2f29f` are ancestors of `origin/main` at `42b2893a4a023edd4a01380b7341c78806f20dc9`; `pnpm mainline:closeout:check` passes from `apps/web` at that SHA.
+* Final task read-back: after this redacted contract receipt is merged to `main`, save the exact body to Linear, verify its SHA-256 against the saved description, and read the OVE-274 to OVE-253 blocker relation before OVE-253 begins.
