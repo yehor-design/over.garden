@@ -121,6 +121,8 @@
     "typography:performance": "tsx scripts/verify-typography-performance.ts",
     "linear:task:check": "tsx scripts/check-linear-agent-task.ts",
     "linear:task:standard:check": "vitest run scripts/check-linear-agent-task.test.ts scripts/check-mainline-closeout.test.ts --testTimeout 60000",
+    "plantnet:benchmark": "NODE_OPTIONS=--conditions=react-server tsx scripts/benchmark-plantnet-species.ts",
+    "plantnet:production-proof": "NODE_OPTIONS=--conditions=react-server tsx scripts/prove-plantnet-production.ts",
     "test:plantnet:integration": "RUN_OVE269_DATABASE_INTEGRATION=true NODE_OPTIONS=--conditions=react-server ../../infra/run-with-local-infra-env pnpm exec vitest run src/server/plant-identification-repository.test.ts",
     "test": "vitest run",
     "test:watch": "vitest",
