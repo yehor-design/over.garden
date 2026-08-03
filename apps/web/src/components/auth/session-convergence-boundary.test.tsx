@@ -225,6 +225,8 @@ describe("session convergence boundary", () => {
     expect(source).toContain("publishSignOutPreparationReceived");
     expect(source).toContain("publishSignOutPreparationReady");
     expect(source).toContain("publishSignOutPreparationFailed");
+    expect(source).toContain("finalizeSessionRecheckFenceForHardReload");
+    expect(source).toContain("finalizeForHardReload");
     expect(source).toContain('window.addEventListener("pageshow"');
     expect(source).toContain('window.addEventListener("focus"');
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
@@ -407,8 +409,13 @@ describe("session convergence boundary", () => {
     expect(reload.props.disabled).not.toBe(true);
     await act(async () => {
       reload.props.onClick();
+      await Promise.resolve();
     });
-    expect(mocks.reload).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(mocks.finalizeHardReload).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
+    expect(mocks.finalizeHardReload.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.reload.mock.invocationCallOrder[0]!,
+    );
 
     await act(async () => {
       confirmation.resolve(activeSession());
@@ -417,6 +424,78 @@ describe("session convergence boundary", () => {
     });
     expectPrivateSignOutDialogAbsent(renderer);
     expect(mocks.hydrate).toHaveBeenCalledOnce();
+    await unmount(renderer);
+    vi.useRealTimers();
+  });
+
+  it("keeps the private tree fenced when reload cannot finalize its owner recheck fence", async () => {
+    mocks.finalizeHardReload.mockRejectedValueOnce(
+      new Error("IndexedDB finalization unavailable"),
+    );
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    const reload = renderer.root.findByProps({
+      "data-session-convergence-reload": "true",
+    });
+    await act(async () => {
+      reload.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await vi.waitFor(() => expect(mocks.finalizeHardReload).toHaveBeenCalledOnce());
+    expect(mocks.reload).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-reload": "true",
+      }).props.disabled,
+    ).not.toBe(true);
+    await unmount(renderer);
+  });
+
+  it("bounds hard-reload finalization and leaves its recovery exits usable", async () => {
+    vi.useFakeTimers();
+    const finalization = deferred<void>();
+    mocks.finalizeHardReload.mockReturnValueOnce(finalization.promise);
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    const reload = renderer.root.findByProps({
+      "data-session-convergence-reload": "true",
+    });
+    await act(async () => {
+      reload.props.onClick();
+      await Promise.resolve();
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(3_000);
+    });
+
+    expect(mocks.finalizeHardReload).toHaveBeenCalledOnce();
+    expect(mocks.reload).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findByProps({
+        "data-session-convergence-reload": "true",
+      }).props.disabled,
+    ).not.toBe(true);
+
+    finalization.resolve();
     await unmount(renderer);
     vi.useRealTimers();
   });

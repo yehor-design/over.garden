@@ -47,6 +47,8 @@ const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
 export const SESSION_CONVERGENCE_PHASE_TIMEOUT_MS = 3_000;
 const AUTHORITATIVE_SESSION_READ_TIMEOUT_MS = 1_000;
 export const FALLBACK_SIGN_OUT_TIMEOUT_MS = 10_000;
+const HARD_RELOAD_FINALIZATION_TIMEOUT_MS =
+  SESSION_CONVERGENCE_PHASE_TIMEOUT_MS;
 
 type SessionRecheckFence = {
   epoch: number;
@@ -97,6 +99,7 @@ export function SessionConvergenceBoundary({
     pending: activityGate !== "ready" || remotePreparationPending,
   });
   const retryHydrationRef = useRef<() => void>(() => undefined);
+  const reloadSessionGateRef = useRef<() => void>(() => undefined);
   const pauseHandleRef = useRef<OwnerOfflineActivityPauseHandle | null>(null);
   const composerPreparationRef = useRef<OwnerComposerPreparationHandle | null>(
     null,
@@ -140,6 +143,7 @@ export function SessionConvergenceBoundary({
     const terminalOperationIds = terminalOperationIdsRef.current;
     let authoritativeRecheck: Promise<void> | null = null;
     let staleOperationRecheck: Promise<void> | null = null;
+    let hardReloadInFlight: Promise<void> | null = null;
     let sessionRecheckEpoch = 0;
     const sessionRecheckFences = new Map<number, SessionRecheckFence>();
     const committedOperationsInFlight = new Set<string>();
@@ -417,6 +421,60 @@ export function SessionConvergenceBoundary({
         fence.terminal = terminal;
         startBestEffort(() => finalizeSessionRecheckFence(fence, terminal));
       }
+    };
+
+    const finalizeSessionRecheckFenceForHardReload = async (
+      fence: SessionRecheckFence,
+    ) => {
+      if (fence.status === "preparing") {
+        try {
+          await fence.ready;
+        } catch {
+          // A composer-side failure can leave the durable owner pause handle
+          // available. Finalize that retained handle instead of stranding it.
+        }
+      }
+      const pauseHandle = fence.pauseHandle;
+      if (!pauseHandle) {
+        throw new Error("Session recheck owner fence is unavailable.");
+      }
+      await pauseHandle.finalizeForHardReload();
+      fence.pauseHandle = null;
+      sessionRecheckFences.delete(fence.epoch);
+    };
+
+    const reloadAfterSessionRecheckFence = () => {
+      if (hardReloadInFlight || authoritativeNavigationStarted) return;
+
+      authoritativeNavigationStarted = true;
+      sessionRecheckEpoch += 1;
+      beginPayloadFreeSessionCheck();
+      const fences = [...sessionRecheckFences.values()];
+      const reload = (async () => {
+        try {
+          await requireSettledWithin(
+            () =>
+              Promise.all(
+                fences.map((fence) =>
+                  finalizeSessionRecheckFenceForHardReload(fence),
+                ),
+              ),
+            HARD_RELOAD_FINALIZATION_TIMEOUT_MS,
+          );
+        } catch {
+          // Do not replace the document while its owner-scoped durable fence
+          // might still belong to this session. The payload-free UI remains
+          // available for a later explicit recovery action.
+          authoritativeNavigationStarted = false;
+          setActivityGate("blocked");
+          return;
+        }
+        window.location.reload();
+      })();
+      hardReloadInFlight = reload;
+      void reload.finally(() => {
+        if (hardReloadInFlight === reload) hardReloadInFlight = null;
+      });
     };
 
     const startSessionRecheckFence = (epoch: number) => {
@@ -1022,6 +1080,7 @@ export function SessionConvergenceBoundary({
     };
 
     retryHydrationRef.current = recheckAuthoritativeSession;
+    reloadSessionGateRef.current = reloadAfterSessionRecheckFence;
 
     const recheckStaleOperations = () => {
       if (disposed || staleOperationRecheck) return;
@@ -1127,7 +1186,7 @@ export function SessionConvergenceBoundary({
 
     const handlePageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
-      window.location.reload();
+      reloadAfterSessionRecheckFence();
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -1145,6 +1204,7 @@ export function SessionConvergenceBoundary({
     return () => {
       disposed = true;
       retryHydrationRef.current = () => undefined;
+      reloadSessionGateRef.current = () => undefined;
       fallbackExitRef.current = () => undefined;
       unsubscribe();
       window.removeEventListener("pageshow", handlePageShow);
@@ -1230,6 +1290,7 @@ export function SessionConvergenceBoundary({
               locale={locale}
               publicHomeLabel={trustCopy.authIntent.returnToReading}
               reloadLabel={copy.reloadAndRecheck}
+              onReloadAndRecheck={() => reloadSessionGateRef.current()}
             />
           </>
         ) : (
@@ -1276,6 +1337,7 @@ export function SessionConvergenceBoundary({
               locale={locale}
               publicHomeLabel={trustCopy.authIntent.returnToReading}
               reloadLabel={copy.reloadAndRecheck}
+              onReloadAndRecheck={() => reloadSessionGateRef.current()}
             />
           </>
         )}
@@ -1289,10 +1351,12 @@ function SessionConvergenceSafeExits({
   locale,
   publicHomeLabel,
   reloadLabel,
+  onReloadAndRecheck,
 }: {
   locale: InterfaceLocale;
   publicHomeLabel: string;
   reloadLabel: string;
+  onReloadAndRecheck: () => void;
 }) {
   return (
     <div className="flex flex-wrap justify-center gap-2">
@@ -1307,7 +1371,7 @@ function SessionConvergenceSafeExits({
         type="button"
         variant="outline"
         data-session-convergence-reload="true"
-        onClick={() => window.location.reload()}
+        onClick={onReloadAndRecheck}
       >
         {reloadLabel}
       </Button>

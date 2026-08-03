@@ -109,8 +109,12 @@ current epoch, a settled matching pause/composer fence, and successful
 owner-generation hydration may reopen the tree. A signed-out or changed
 session uses the existing terminal finalizers. A malformed, rejected, unknown,
 or timed-out result remains `blocked`, does not retry automatically, and keeps
-both enabled payload-free escapes: public-home navigation and current-page
-reload. A late session, hydration, composer, or sync continuation cannot
+both enabled payload-free escapes: public-home navigation and reload-and-
+recheck. Before a user-triggered or BFCache reload replaces the document, the
+boundary finalizes only its own retained owner-session-recheck fence through
+`finalizeForHardReload`. If that bounded three-second finalization cannot
+settle, no reload occurs: the private tree remains hidden and the same recovery
+controls stay available. A late session, hydration, composer, or sync continuation cannot
 override a later epoch or release a terminal fence.
 
 The browser race harness is deliberately local and synthetic. Its route is
