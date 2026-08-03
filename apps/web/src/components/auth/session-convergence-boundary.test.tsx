@@ -123,7 +123,11 @@ vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
   pauseOwnerOfflineActivity: mocks.pause,
 }));
 
-import { SessionConvergenceBoundary } from "./session-convergence-boundary";
+import {
+  AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+  SESSION_CONVERGENCE_PHASE_TIMEOUT_MS,
+  SessionConvergenceBoundary,
+} from "./session-convergence-boundary";
 
 describe("session convergence boundary", () => {
   beforeEach(() => {
@@ -211,6 +215,12 @@ describe("session convergence boundary", () => {
     mocks.finalizeHardReload.mockResolvedValue(undefined);
     mocks.renew.mockResolvedValue(undefined);
     mocks.promote.mockResolvedValue(undefined);
+  });
+
+  it("uses one bounded payload-free phase for authoritative reads and hydration", () => {
+    expect(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS).toBe(
+      SESSION_CONVERGENCE_PHASE_TIMEOUT_MS,
+    );
   });
 
   it("subscribes to identity-free preparation, acknowledgement and terminal signals", async () => {
@@ -389,7 +399,7 @@ describe("session convergence boundary", () => {
 
     await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
 
     expectPrivateSignOutDialogAbsent(renderer);
@@ -544,7 +554,7 @@ describe("session convergence boundary", () => {
 
     await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
     expectPrivateSignOutDialogAbsent(renderer);
 
@@ -1121,7 +1131,7 @@ describe("session convergence boundary", () => {
     const renderer = await renderBoundary();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
     });
 
     expect(
