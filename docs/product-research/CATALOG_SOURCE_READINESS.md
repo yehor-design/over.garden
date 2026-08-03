@@ -1,7 +1,7 @@
 # Catalog Source Readiness Gate
 
-Status: OVE-55 live gate plus OVE-79 full-import readiness gate plus OVE-100 EU OJ/EUR-Lex source-path approval plus OVE-87 PGR/genebank source-use gate plus OVE-89 entity-resolution QA gate plus OVE-105 EU OJ production landing gate
-Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01; OVE-100 EUR-Lex path check on 2026-07-01; OVE-87 PGR/genebank check on 2026-07-02; OVE-105 production landing on 2026-07-02
+Status: OVE-55 live gate plus OVE-79 full-import readiness gate plus OVE-100 EU OJ/EUR-Lex source-path approval plus OVE-87 PGR/genebank source-use gate plus OVE-89 entity-resolution QA gate plus OVE-105 EU OJ production landing gate plus OVE-253 EPPO full-corpus source-contract decision (`blocked_manifest`)
+Verification date: OVE-55 on 2026-06-29; OVE-79 full-import recheck on 2026-07-01; OVE-100 EUR-Lex path check on 2026-07-01; OVE-87 PGR/genebank check on 2026-07-02; OVE-105 production landing on 2026-07-02; OVE-253 EPPO decision on 2026-08-03
 Machine-readable manifest: `docs/product-research/CATALOG_SOURCE_READINESS_MANIFEST.json`
 Repeatable verifier: `cd apps/web && pnpm catalog:sources:verify`
 Full-import dry-run: `cd apps/web && pnpm catalog:sources:dry-run -- --environment local --confirm-environment local`
@@ -20,7 +20,7 @@ Approved first ingestion sources:
 - `catalogue-of-life-checklistbank` - USE. Species backbone. Current live release proof: COL26.6, DOI `10.48580/dgy4k`, CC-BY.
 - `world-flora-online` - USE. Plant species backbone. Current live release proof: World Flora Online Plant List June 2026, DOI `10.5281/zenodo.20782718`, CC0.
 - `gbif-backbone` - USE. Species backbone. Current dataset proof: GBIF Backbone Taxonomy, DOI `10.15468/39omei`, CC-BY 4.0. Occurrence data is not approved for product projection by this gate.
-- `eppo-codes` - USE. Species/code backbone and possible common-name support. Attribution is mandatory; distribution metadata is raw/source-only.
+- `eppo-codes` - USE only for the existing bounded species/code proof. Attribution is mandatory and distribution metadata is raw/source-only. OVE-253 blocks full EPPO-corpus acquisition and projection until EPPO publishes an official versioned checksum manifest and complete closure method.
 - `wikidata` - USE. Supplemental aliases/entity IDs under CC0. Use as corroborating source, not sole canonical truth.
 - `grin-global` - USE. Supplemental taxonomy/economic-plant backbone plus OVE-87-cleared GRIN/NPGS candidate path. Use official export/dump paths or bounded curated proof files later; do not scrape interactive pages. Product projection is curator-only and must carry GRIN/NPGS provenance.
 - `vertebrate-breed-ontology` - USE. Vertebrate breed backbone only. It is English-only and does not cover bees.
@@ -38,6 +38,23 @@ Conditional or blocked:
 - `genesys-pgr` - INTERNAL-VALIDATION-ONLY. Terms page reachable and includes redistribution restriction; legal basis or written permission is required before any raw bulk capture or product ingestion.
 - `vendor-marketplace-paths` - REJECT. No scraping or bulk vendor ingestion without partner feed, official API contract, or written permission.
 
+## OVE-253 EPPO Full-Corpus Source Contract
+
+Verdict: `blocked_manifest`. The 2026-08-03 serial, read-only verifier confirmed the official OpenAPI and Open Licence document, plus documented list, overview, names, and taxonomy capability classes. It recorded only digests, class status, and the aggregate current taxonomy count in `fullImportReadiness.eppoFullCorpusContract`.
+
+That proof is deliberately insufficient to mirror the corpus. The documented API pagination does not supply an official versioned checksum manifest or a complete-corpus closure method. Therefore `rawCorpusAcquisitionAllowed = false` and `productProjectionAllowed = false` in the separate full-corpus contract; OVE-254 and OVE-255 remain blocked. The historical bounded EPPO code/name path is unaffected. No browser-session export, undocumented endpoint, HTML scraping, corpus enumeration, parser, source snapshot, database write, search write, or product projection is authorized for a new complete corpus by this decision.
+
+This does not revoke the historical bounded species/code evidence or alter existing gardener behavior. It stops only a new full-corpus path. Reopen OVE-253 after EPPO publishes the missing official authority; a fresh `contract_approved` receipt must update the manifest before downstream work starts.
+
+The repeatable operator command is:
+
+```bash
+cd apps/web
+pnpm eppo:source-contract:verify -- --mode live-contract --timeout-ms 21600000 --max-attempts 2 --concurrency 1
+```
+
+Run it only through an environment that injects `EPPO_DATA_PORTAL_API_KEY` without printing or writing the value. The command is serial, temporary-lock guarded, cancellation-fenced, and emits no raw payload, identifier, header, credential, location, or product data.
+
 ## OVE-79 Full-Import Waves
 
 The machine-readable `fullImportReadiness` section is the current import-wave contract for OVE-80 through OVE-90:
@@ -53,7 +70,7 @@ Import order:
 
 1. OVE-80 must run dry-run row counts, projection counts, duplicate-risk checks, and forbidden-field leak checks before any full-volume mutation.
 2. OVE-81 may expand the UA State Register only after full-file checksum, row count, UTF-16LE parser proof, and dry-run leak proof.
-3. OVE-82 may expand the species backbone only after CoL/WFO/GBIF/EPPO release/export checks, source attribution, coordinate exclusion, and OVE-89 entity-resolution QA.
+3. OVE-82 remains the historical bounded species-backbone proof. A new full EPPO corpus cannot start until OVE-253 changes its `blocked_manifest` contract to `contract_approved`; OVE-254 and OVE-255 then own schema and acquisition respectively, alongside CoL/WFO/GBIF release/export, attribution, coordinate-exclusion, and OVE-89 entity-resolution gates.
 4. OVE-83 may expand product aliases only through approved Wikidata/EPPO-backed species records with machine-checked language, claim, license, and ambiguity filters. EOL/iNaturalist vernacular data remains out of product projection until a later gate explicitly clears its parser/license boundary.
 5. OVE-100 closes the legal-source path decision for EU OJ/EUR-Lex. OVE-103 may import official EU Common Catalogue variety rows only from rows satisfying the `eu-oj-eur-lex-common-catalogue` policy; OVE-85 consumes that same approved path as the BG official-varieties subset proof. IASAS and EU Plant Variety Portal-only rows remain blocked until a later gate clears them.
 6. OVE-86 may expand breed concepts only for source/object-kind mappings cleared by the manifest; DAD-IS/EFABIS remains internal validation only until legal clearance.
