@@ -109,8 +109,42 @@ type FullImportReadiness = {
   waveLegend: Record<ImportWave, string>;
   importWaves: Record<ImportWave, string[]>;
   bgOfficialVarietyBulkGate: BgOfficialVarietyBulkGate;
+  eppoFullCorpusContract: EppoFullCorpusContract;
   pgrGenebankBulkGate: PgrGenebankBulkGate;
   sourceVerdicts: FullImportSourceVerdict[];
+};
+
+type EppoFullCorpusContract = {
+  issue: "OVE-253";
+  contractVersion: 1;
+  verifiedAt: string;
+  baselineSha: string;
+  decisionId: string;
+  terminalState:
+    | "contract_approved"
+    | "blocked_manifest"
+    | "blocked_rights"
+    | "blocked_capability"
+    | "blocked_schema"
+    | "blocked_rate_limit"
+    | "blocked_timeout";
+  openApiDigest: string;
+  licenseDocumentDigest: string;
+  sourceClasses: {
+    taxon_list: "supported" | "not_checked";
+    taxon_overview: "supported" | "not_checked";
+    taxon_names: "supported" | "not_checked";
+    taxon_taxonomy: "supported" | "not_checked";
+  };
+  taxonomyCount: number;
+  releaseIdentity: string;
+  closureMethod: string;
+  rightsEvidence: string;
+  missingAuthority: string;
+  rawCorpusAcquisitionAllowed: boolean;
+  productProjectionAllowed: boolean;
+  blocks: ["OVE-254", "OVE-255"];
+  reopenIssue: "OVE-253";
 };
 
 type BgOfficialVarietyBulkGate = {
@@ -733,6 +767,7 @@ function validateFullImportReadiness(manifest: Manifest): void {
     }
   }
 
+  validateEppoFullCorpusContract(readiness, verdictBySlug);
   validatePgrGenebankBulkGate(readiness, sourceBySlug, verdictBySlug);
 
   for (const wave of REQUIRED_IMPORT_WAVES) {
@@ -742,6 +777,124 @@ function validateFullImportReadiness(manifest: Manifest): void {
         fail(`Wave ${wave} lists ${slug}, but source verdict does not`);
       }
     }
+  }
+}
+
+function validateEppoFullCorpusContract(
+  readiness: FullImportReadiness,
+  verdictBySlug: Map<string, FullImportSourceVerdict>,
+): void {
+  const contract = readiness.eppoFullCorpusContract;
+  if (!contract || contract.issue !== "OVE-253") {
+    fail("fullImportReadiness.eppoFullCorpusContract.issue must be OVE-253");
+  }
+  if (contract.contractVersion !== 1) {
+    fail("eppoFullCorpusContract.contractVersion must be 1");
+  }
+  assertString(contract.verifiedAt, "eppoFullCorpusContract.verifiedAt");
+  if (!/^[a-f0-9]{40}$/u.test(contract.baselineSha)) {
+    fail("eppoFullCorpusContract.baselineSha must be a SHA-1");
+  }
+  if (!/^[a-f0-9]{64}$/u.test(contract.decisionId)) {
+    fail("eppoFullCorpusContract.decisionId must be SHA-256");
+  }
+  if (
+    ![
+      "contract_approved",
+      "blocked_manifest",
+      "blocked_rights",
+      "blocked_capability",
+      "blocked_schema",
+      "blocked_rate_limit",
+      "blocked_timeout",
+    ].includes(contract.terminalState)
+  ) {
+    fail(
+      `Invalid eppoFullCorpusContract terminal state: ${contract.terminalState}`,
+    );
+  }
+  for (const [name, value] of Object.entries({
+    openApiDigest: contract.openApiDigest,
+    licenseDocumentDigest: contract.licenseDocumentDigest,
+  })) {
+    if (!/^[a-f0-9]{64}$/u.test(value)) {
+      fail(`eppoFullCorpusContract.${name} must be SHA-256`);
+    }
+  }
+  for (const sourceClass of [
+    "taxon_list",
+    "taxon_overview",
+    "taxon_names",
+    "taxon_taxonomy",
+  ] as const) {
+    if (
+      !(["supported", "not_checked"] as const).includes(
+        contract.sourceClasses?.[sourceClass],
+      )
+    ) {
+      fail(`Invalid eppo source class status: ${sourceClass}`);
+    }
+  }
+  if (
+    !Number.isSafeInteger(contract.taxonomyCount) ||
+    contract.taxonomyCount < 1
+  ) {
+    fail(
+      "eppoFullCorpusContract.taxonomyCount must be a positive safe integer",
+    );
+  }
+  for (const [name, value] of Object.entries({
+    releaseIdentity: contract.releaseIdentity,
+    closureMethod: contract.closureMethod,
+    rightsEvidence: contract.rightsEvidence,
+    missingAuthority: contract.missingAuthority,
+  })) {
+    assertString(value, `eppoFullCorpusContract.${name}`);
+  }
+  assertBoolean(
+    contract.rawCorpusAcquisitionAllowed,
+    "eppoFullCorpusContract.rawCorpusAcquisitionAllowed",
+  );
+  assertBoolean(
+    contract.productProjectionAllowed,
+    "eppoFullCorpusContract.productProjectionAllowed",
+  );
+  if (
+    !Array.isArray(contract.blocks) ||
+    contract.blocks.length !== 2 ||
+    contract.blocks[0] !== "OVE-254" ||
+    contract.blocks[1] !== "OVE-255"
+  ) {
+    fail("eppoFullCorpusContract must block OVE-254 and OVE-255 in order");
+  }
+  if (contract.reopenIssue !== "OVE-253") {
+    fail("eppoFullCorpusContract.reopenIssue must be OVE-253");
+  }
+
+  if (contract.terminalState === "contract_approved") return;
+
+  const eppo = verdictBySlug.get("eppo-codes");
+  if (
+    !eppo ||
+    !eppo.rawQuarantineAllowed ||
+    !eppo.productProjectionAllowed ||
+    eppo.productProjectionMode !== "codes_and_safe_aliases"
+  ) {
+    fail(
+      "blocked EPPO contract must preserve only the historical bounded code/name path",
+    );
+  }
+  if (
+    !readiness.importWaves.raw_quarantine_allowed.includes("eppo-codes") ||
+    !readiness.importWaves.product_projection_allowed.includes("eppo-codes")
+  ) {
+    fail("blocked EPPO contract must preserve historical bounded EPPO waves");
+  }
+  if (
+    contract.rawCorpusAcquisitionAllowed ||
+    contract.productProjectionAllowed
+  ) {
+    fail("blocked EPPO contract must close only the new full-corpus path");
   }
 }
 

@@ -468,10 +468,10 @@ describe("mainline closeout guard", () => {
       "origin",
       "+refs/heads/main:refs/remotes/origin/main",
     ]);
-    expect(observedTimeout).toBe(30_000);
+    expect(observedTimeout).toBe(120_000);
     expect(observedEnvironment.GIT_TERMINAL_PROMPT).toBe("0");
     expect(observedEnvironment.GCM_INTERACTIVE).toBe("Never");
-    expect(failures.join("\n")).toMatch(/30 seconds.*ETIMEDOUT/);
+    expect(failures.join("\n")).toMatch(/120 seconds.*ETIMEDOUT/);
   });
 
   it("defines Git-clean as no tracked or non-ignored untracked porcelain", () => {

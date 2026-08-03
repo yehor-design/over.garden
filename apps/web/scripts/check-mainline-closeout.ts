@@ -73,7 +73,10 @@ export const REQUIRED_LEDGER_ISSUES = [
 
 export const CANONICAL_ORIGIN_URL =
   "https://github.com/yehor-design/over.garden";
-export const FETCH_TIMEOUT_MS = 30_000;
+// GitHub-hosted checkout of this repository can exceed 30 seconds during
+// transient Git transport congestion. Keep the freshness requirement strict,
+// but allow a bounded interval that is consistent with the CI job budget.
+export const FETCH_TIMEOUT_MS = 120_000;
 export const CI_PROOF_TIMEOUT_MS = 30_000;
 export const CANONICAL_LEDGER_DOC = "docs/MAINLINE_CLOSEOUT.md";
 export const CANONICAL_NEXT_AGENT_COMMAND =

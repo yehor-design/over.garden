@@ -48,6 +48,28 @@ describe("catalog source readiness manifest", () => {
     );
   });
 
+  it("fails closed on full EPPO corpus work without an official closure manifest", () => {
+    const manifest = cloneManifest();
+    const contract = manifest.fullImportReadiness.eppoFullCorpusContract;
+    const eppo = manifest.fullImportReadiness.sourceVerdicts.find(
+      (source) => source.slug === "eppo-codes",
+    );
+
+    expect(contract).toMatchObject({
+      issue: "OVE-253",
+      terminalState: "blocked_manifest",
+      rawCorpusAcquisitionAllowed: false,
+      productProjectionAllowed: false,
+      blocks: ["OVE-254", "OVE-255"],
+    });
+    expect(eppo).toMatchObject({
+      rawQuarantineAllowed: true,
+      productProjectionAllowed: true,
+      productProjectionMode: "codes_and_safe_aliases",
+      importWaves: ["raw_quarantine_allowed", "product_projection_allowed"],
+    });
+  });
+
   it("keeps rejected and legally blocked sources out of product projection", () => {
     const manifest = cloneManifest();
     const verdictBySlug = new Map(

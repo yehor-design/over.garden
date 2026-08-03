@@ -7,6 +7,12 @@ OVE-58 proves one canonical species path through the real gardener flow: typeahe
 
 OVE-82 expands that proof into the full planned species wave for the current catalog rollout: `Solanum lycopersicum L.`, `Cucumis sativus L.`, `Helianthus annuus L.`, and `Ocimum basilicum L.`. OVE-83 expands reviewed vernacular aliases on top of the same source-backed wave so local Ukrainian, Bulgarian, English, and scientific/synonym lookup names resolve to the same canonical concepts without promoting ambiguous, rejected, or generated aliases. This is a full planned import for the approved MVP species backbone wave, not a blind full global taxonomy dump. CoL/WFO/GBIF/EPPO/Wikidata remain approved source families, but each product-visible concept must pass the deterministic projection, alias review, attribution, and leak-check rules below.
 
+## EPPO Full-Corpus Boundary (OVE-253)
+
+The existing EPPO role remains a bounded, source-backed code/name corroboration path for the planned MVP wave. It is not a full EPPO taxonomy mirror. OVE-253's 2026-08-03 official read-only decision is `blocked_manifest`: the documented API supports bounded list, overview, names, and taxonomy capability checks, but does not expose an official versioned checksum manifest or complete-corpus closure method. Accordingly, no new EPPO corpus enumeration, raw snapshot, parser, source-row write, product projection, or search projection may begin; OVE-254 and OVE-255 stay blocked until a fresh OVE-253 `contract_approved` receipt appears in `CATALOG_SOURCE_READINESS_MANIFEST.json`.
+
+This boundary does not change the current four-species wave, its reviewed aliases, its attribution, or the prohibition on distribution/native-range text. It forbids treating that bounded evidence as a completeness claim or using a portal browser session, undocumented endpoint, or HTML scrape as a substitute for official release authority.
+
 ## Source Precedence
 
 For every planned OVE-82 species concept, OverGarden uses these source roles:

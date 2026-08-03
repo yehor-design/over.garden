@@ -167,6 +167,31 @@
         ]
       }
     },
+    "eppoFullCorpusContract": {
+      "issue": "OVE-253",
+      "contractVersion": 1,
+      "verifiedAt": "2026-08-03",
+      "baselineSha": "534e8d18ef402095ae1e77880e03749536066f6f",
+      "decisionId": "d947b21f6f5e783b2bc04c79214e557b5c3a411c4b6438a5c446b350e377eae6",
+      "terminalState": "blocked_manifest",
+      "openApiDigest": "c76c883dfc251ffcc026f85ae18b65f0dacd0e0f844c6f92ee19199f0dd42d13",
+      "licenseDocumentDigest": "ecb6d92ce35c7e5bafd1b13d974b4774d2d06909a858f0d2d94fdf9c9550d812",
+      "sourceClasses": {
+        "taxon_list": "supported",
+        "taxon_overview": "supported",
+        "taxon_names": "supported",
+        "taxon_taxonomy": "supported"
+      },
+      "taxonomyCount": 129188,
+      "releaseIdentity": "missing_official_versioned_checksum_manifest",
+      "closureMethod": "not_authorized_without_official_release_manifest",
+      "rightsEvidence": "official_open_licence_document_fetched_attribution_required",
+      "missingAuthority": "official versioned checksum manifest and full-corpus closure method",
+      "rawCorpusAcquisitionAllowed": false,
+      "productProjectionAllowed": false,
+      "blocks": ["OVE-254", "OVE-255"],
+      "reopenIssue": "OVE-253"
+    },
     "pgrGenebankBulkGate": {
       "issue": "OVE-87",
       "title": "PGR/genebank bulk legal and source-use gate",
@@ -431,11 +456,11 @@
       },
       {
         "slug": "eppo-codes",
-        "sourceVersionOrExport": "EPPO Open Data Licence and Global Database taxon pages verified live",
-        "exportPathOrAccessMethod": "EPPO Data Services / Global Database taxon pages; preserve Open Data Licence attribution.",
+        "sourceVersionOrExport": "EPPO Open Data Licence and Global Database taxon pages verified live; OVE-253 separately blocks only a new full taxonomy corpus without an official release/checksum manifest.",
+        "exportPathOrAccessMethod": "EPPO Data Services / Global Database taxon pages for the existing bounded code/name path; preserve Open Data Licence attribution. The OVE-253 contract separately forbids a full-corpus enumeration or mirror.",
         "license": "EPPO Codes Open Data Licence",
         "attributionRequired": true,
-        "volumeEstimate": "EPPO code/name backbone subset relevant to garden plants and pests.",
+        "volumeEstimate": "EPPO code/name backbone subset relevant to garden plants and pests. This historical bounded path is not a full taxonomy corpus claim.",
         "parserRisk": "medium",
         "rawQuarantineAllowed": true,
         "productProjectionAllowed": true,
@@ -444,7 +469,8 @@
         "sourceOnlyFields": [
           "distribution metadata",
           "regulated-organism notes unless explicitly modeled",
-          "non-reviewed common-name candidates"
+          "non-reviewed common-name candidates",
+          "any new full-corpus response before the OVE-253 official release/checksum manifest is approved"
         ],
         "productProjectionFields": [
           "EPPO code",
@@ -454,11 +480,12 @@
           "mandatory attribution"
         ],
         "unblockingEvidence": [
-          "OVE-82/OVE-83 parser coverage report",
+          "OVE-82/OVE-83 bounded parser coverage report",
           "attribution rendering proof",
-          "distribution-field exclusion test"
+          "distribution-field exclusion test",
+          "a fresh OVE-253 contract_approved receipt before any new complete-corpus work begins"
         ],
-        "nextIssueDependency": "OVE-82, OVE-83"
+        "nextIssueDependency": "OVE-82, OVE-83 for the bounded path; OVE-253 rerun after EPPO publishes the missing official manifest for complete-corpus work"
       },
       {
         "slug": "wikidata",
@@ -1079,7 +1106,8 @@
       "knownBlockers": [
         "Attribution is mandatory.",
         "Measure UA/BG common-name coverage before relying on EPPO as a vernacular source.",
-        "Do not project distribution data into product UI/search in v0."
+        "Do not project distribution data into product UI/search in v0.",
+        "OVE-253 blocks full-corpus acquisition and projection until EPPO publishes an official versioned checksum manifest and complete closure method."
       ],
       "nextAllowedIssue": "OVE-58",
       "liveChecks": [
