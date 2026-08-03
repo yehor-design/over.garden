@@ -64,6 +64,51 @@ This command creates only synthetic `*.invalid` local Better Auth users and
 removes them through the ordinary account-delete cascade in its `afterEach`.
 It never calls Pl@ntNet or R2.
 
+## Controlled provider evidence
+
+The repository deliberately contains no benchmark photos or benchmark manifest.
+Committing any derivative, path, filename or source record would turn a release
+receipt into a retention surface. Before an external call, an operator prepares
+one local-only manifest with at least one rights-clean operator fixture for each
+of UA and BG. The manifest declares that it excludes production gardener data,
+uses only relative JPEG/PNG paths, and pins each fixture by SHA-256. Neither
+paths nor hashes are emitted by the commands below.
+
+The default benchmark is a read-only plan and cannot spend quota:
+
+```bash
+cd apps/web
+pnpm plantnet:benchmark -- --manifest /secure/operator-fixtures/manifest.json
+```
+
+Only after the Pl@ntNet account capability, current terms, quota and billing
+class have been reviewed in the native provider UI, run the bounded benchmark
+through Vercel's production environment. `--allow-external-call` is required
+so an accidental local command cannot submit a fixture:
+
+```bash
+vercel env run -e production -- pnpm --dir apps/web plantnet:benchmark -- \
+  --manifest /secure/operator-fixtures/manifest.json \
+  --execute --environment production --confirm-environment production \
+  --allow-external-call
+```
+
+After the exact implementation SHA is contained in `origin/main`, Vercel is
+`READY`, the key is server-only and the feature switch is enabled, make exactly
+one provider canary. This command creates no product rows, uploads no media to
+OverGarden and clears its in-memory fixture buffers; it prints only a redacted
+status/count/duration receipt. It is not a substitute for the separate
+authenticated gardener creation-and-correction journey, which must be proven
+and cleaned up in the native UI before Linear `Done`.
+
+```bash
+vercel env run -e production -- pnpm --dir apps/web plantnet:production-proof -- \
+  --environment production --confirm-environment production \
+  --implementation-sha "$OVE269_IMPLEMENTATION_SHA" \
+  --benchmark-manifest /secure/operator-fixtures/manifest.json \
+  --fixture-id ua-operator-leaf --allow-external-call
+```
+
 Rollback is one server-side change: set
 `PLANTNET_SPECIES_IDENTIFICATION_ENABLED=false`, redeploy, and verify no route
 can make a provider call. This preserves media, local catalog selection,
