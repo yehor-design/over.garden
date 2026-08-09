@@ -151,8 +151,11 @@ describe("Pl@ntNet species adapter", () => {
       { enabled: true, apiKey: "test-key", fetchImpl },
     );
 
+    const rejection = expect(pending).rejects.toMatchObject({
+      code: "provider_timeout",
+    });
     await vi.advanceTimersByTimeAsync(15_000);
-    await expect(pending).rejects.toMatchObject({ code: "provider_timeout" });
+    await rejection;
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 });
