@@ -2,16 +2,12 @@ import "server-only";
 
 import { headers } from "next/headers";
 
-import {
-  FACEBOOK_PROVIDER_ID,
-  GOOGLE_PROVIDER_ID,
-} from "@/lib/auth/social-oauth";
+import { GOOGLE_PROVIDER_ID } from "@/lib/auth/social-oauth";
 import { auth } from "@/lib/auth";
 import { getCurrentSession } from "@/server/auth-session";
 
 export interface AccountMethodProjection {
   hasCredential: boolean;
-  hasFacebook: boolean;
   hasGoogle: boolean;
   canSetPassword: boolean;
 }
@@ -30,7 +26,6 @@ export async function getCurrentAccountMethodProjection(): Promise<AccountMethod
 
   return {
     hasCredential,
-    hasFacebook: providerIds.has(FACEBOOK_PROVIDER_ID),
     hasGoogle: providerIds.has(GOOGLE_PROVIDER_ID),
     canSetPassword: !hasCredential && session.user.emailVerified === true,
   };

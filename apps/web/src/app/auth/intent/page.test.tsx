@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  isFacebookSignInEnabled: vi.fn(),
   isGoogleSignInEnabled: vi.fn(),
   redirect: vi.fn(),
   verifyAuthIntentToken: vi.fn(),
@@ -16,9 +15,6 @@ vi.mock("@/server/auth-session", () => ({
 }));
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
-}));
-vi.mock("@/lib/auth/facebook-oauth", () => ({
-  isFacebookSignInEnabled: mocks.isFacebookSignInEnabled,
 }));
 vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: mocks.isGoogleSignInEnabled,
@@ -43,7 +39,6 @@ describe("/auth/intent page", () => {
     vi.clearAllMocks();
     mocks.getCurrentSession.mockResolvedValue(null);
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
-    mocks.isFacebookSignInEnabled.mockReturnValue(false);
     mocks.isGoogleSignInEnabled.mockReturnValue(true);
     mocks.verifyAuthIntentToken.mockReturnValue({
       version: 1,
@@ -68,7 +63,7 @@ describe("/auth/intent page", () => {
     );
     expect(html).toContain("intent-surface");
     expect(html).toContain("&quot;googleSignInEnabled&quot;:true");
-    expect(html).not.toMatch(/GOOGLE_CLIENT_SECRET|FACEBOOK_CLIENT_SECRET/);
+    expect(html).not.toContain("GOOGLE_CLIENT_SECRET");
   });
 
   it("sends an already-authenticated visitor through the resume validator", async () => {

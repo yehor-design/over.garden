@@ -46,19 +46,12 @@ describe("social OAuth client helpers", () => {
     ).toContain("https://accounts.google.com/");
     expect(
       getSafeOAuthAuthorizationUrl(
-        "facebook",
-        "https://www.facebook.com/v19.0/dialog/oauth?state=opaque",
-      ),
-    ).toContain("https://www.facebook.com/");
-
-    expect(
-      getSafeOAuthAuthorizationUrl(
         "google",
-        "https://www.facebook.com/v19.0/dialog/oauth",
+        "https://untrusted-idp.example/oauth",
       ),
     ).toBeNull();
     expect(
-      getSafeOAuthAuthorizationUrl("facebook", "http://www.facebook.com/"),
+      getSafeOAuthAuthorizationUrl("google", "http://accounts.google.com/"),
     ).toBeNull();
     expect(getSafeOAuthAuthorizationUrl("google", "not-a-url")).toBeNull();
   });

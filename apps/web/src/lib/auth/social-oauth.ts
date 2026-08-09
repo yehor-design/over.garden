@@ -1,15 +1,10 @@
 export const GOOGLE_PROVIDER_ID = "google";
-export const FACEBOOK_PROVIDER_ID = "facebook";
-
-export type SocialProviderId =
-  | typeof GOOGLE_PROVIDER_ID
-  | typeof FACEBOOK_PROVIDER_ID;
+export type SocialProviderId = typeof GOOGLE_PROVIDER_ID;
 
 type QueryValue = string | string[] | undefined;
 
 const OAUTH_AUTHORIZATION_HOSTS: Record<SocialProviderId, string> = {
   [GOOGLE_PROVIDER_ID]: "accounts.google.com",
-  [FACEBOOK_PROVIDER_ID]: "www.facebook.com",
 };
 
 export const OAUTH_ERROR_CODES = [

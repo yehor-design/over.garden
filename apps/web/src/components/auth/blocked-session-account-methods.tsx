@@ -75,7 +75,6 @@ export function BlockedSessionAccountMethods({
       {state.kind === "ready" ? (
         <AccountMethodsPanel
           {...state.methods}
-          facebookSignInEnabled={false}
           googleSignInEnabled={false}
           locale={locale}
           onMethodsChanged={() => void requestMethods()}

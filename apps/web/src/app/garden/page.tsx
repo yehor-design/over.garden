@@ -18,7 +18,6 @@ import {
   normalizeAuthIntentResumeControl,
 } from "@/lib/auth/auth-intent-contract";
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
-import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 import {
@@ -398,7 +397,6 @@ function GuestGardenEntry({
             embedded
             activationSource={activationSource}
             catalogName={catalogName}
-            facebookSignInEnabled={isFacebookSignInEnabled()}
             googleSignInEnabled={isGoogleSignInEnabled()}
             initialMessage={initialMessage}
             locale={locale}

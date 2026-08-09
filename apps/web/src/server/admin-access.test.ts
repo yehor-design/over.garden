@@ -91,7 +91,7 @@ describe("admin access gate", () => {
       scopedToUser(OWNER_ID),
       fakeAdminDb({
         role: "admin",
-        accounts: [{ providerId: "facebook", password: null }],
+        accounts: [{ providerId: "google", password: null }],
       }),
     );
 

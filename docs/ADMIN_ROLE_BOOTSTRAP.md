@@ -8,7 +8,7 @@ name, provider, cookies, or client state.
 OVE-113 seals the admin boundary to one configured owner account:
 `OVERGARDEN_ADMIN_OWNER_USER_ID` must match the single `admin_user_roles.owner`
 row. The owner account must have a verified email and exactly one
-email/password (`credential`) account with a password hash. Google and Facebook
+email/password (`credential`) account with a password hash. Google or any other
 remain gardener sign-in options, but a user with any linked social provider
 account is denied by `/admin`, and no social-created or social-linked user can
 become an admin-capable account.
@@ -63,7 +63,7 @@ role rows are treated as drift and are not accepted by the runtime gate.
 
 1. Complete the normal Better Auth email/password sign-up and email-verification
    flow so the owner user exists with `emailVerified = true`. Do not bootstrap
-   an unverified, Google-created, Facebook-created, social-linked, passwordless,
+   an unverified, Google-created, other social-linked, passwordless,
    or duplicate-credential account.
 2. Obtain the user id from a secure operator-only channel. Do not paste it into
    docs, Linear, screenshots, logs, commits, or chat.

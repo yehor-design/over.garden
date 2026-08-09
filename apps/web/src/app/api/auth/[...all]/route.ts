@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
+import { denyRetiredSocialProviderRequest } from "@/lib/auth/retired-social-provider";
 import {
   equalizePasswordResetAdmission,
   isTrustedPasswordResetOrigin,
@@ -18,12 +19,18 @@ export const maxDuration = 60;
 const handler = toNextJsHandler(auth);
 
 export async function GET(request: Request) {
+  const retiredProviderDenial = await denyRetiredSocialProviderRequest(request);
+  if (retiredProviderDenial) return retiredProviderDenial;
+
   return handler.GET(await bridgeLegacyEmailVerificationRequest(request));
 }
 
 export const { PATCH, PUT, DELETE } = handler;
 
 export async function POST(request: Request) {
+  const retiredProviderDenial = await denyRetiredSocialProviderRequest(request);
+  if (retiredProviderDenial) return retiredProviderDenial;
+
   if (isPasswordResetRequest(request)) {
     return await requestPasswordReset(request);
   }

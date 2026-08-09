@@ -296,8 +296,6 @@ export function poisonOperatorEnv(): Record<string, string> {
     BETTER_AUTH_CURRENT_SECRET_VERSION: "2",
     GOOGLE_CLIENT_ID: POISON.googleClientId,
     GOOGLE_CLIENT_SECRET: POISON.googleClientSecret,
-    FACEBOOK_CLIENT_ID: POISON.facebookClientId,
-    FACEBOOK_CLIENT_SECRET: POISON.facebookClientSecret,
     RESEND_API_KEY: POISON.resendApiKey,
     RESEND_AUTH_FROM: "OverGarden <auth@over.garden>",
     DATABASE_URL: POISON.databaseUrl,

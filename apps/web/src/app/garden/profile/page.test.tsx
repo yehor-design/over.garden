@@ -28,16 +28,12 @@ vi.mock("../garden-auth-panel", () => ({
 vi.mock("../account-methods-panel", () => ({
   AccountMethodsPanel: ({
     hasCredential,
-    hasFacebook,
     hasGoogle,
   }: {
     hasCredential: boolean;
-    hasFacebook: boolean;
     hasGoogle: boolean;
   }) => (
-    <section
-      data-account-methods={`${hasCredential}:${hasFacebook}:${hasGoogle}`}
-    >
+    <section data-account-methods={`${hasCredential}:${hasGoogle}`}>
       Account sign-in methods
     </section>
   ),
@@ -110,7 +106,6 @@ describe("/garden/profile", () => {
     mocks.getOwnerProfileWorkspace.mockResolvedValue(WORKSPACE);
     mocks.getCurrentAccountMethodProjection.mockResolvedValue({
       hasCredential: true,
-      hasFacebook: false,
       hasGoogle: true,
       canSetPassword: false,
     });
@@ -133,7 +128,7 @@ describe("/garden/profile", () => {
     expect(html).toContain('href="/@green_thumb"');
     expect(html).toContain("Blocked Keeper");
     expect(html).toContain("Account sign-in methods");
-    expect(html).toContain('data-account-methods="true:false:true"');
+    expect(html).toContain('data-account-methods="true:true"');
     expect(mocks.getCurrentAccountMethodProjection).toHaveBeenCalledOnce();
     expect(html).toContain("Обліковий запис і безпека");
     expect(html).toContain('data-sign-out-control="profile"');

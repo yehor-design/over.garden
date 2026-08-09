@@ -103,27 +103,27 @@ describe("garden auth duplicate-account avoidance", () => {
     expect(message).not.toContain("Invalid email or password");
   });
 
-  it("renders social sign-in only when server configuration enables it", () => {
-    const disabledHtml = renderToStaticMarkup(<GardenAuthPanel />);
-    const enabledHtml = renderToStaticMarkup(
-      <GardenAuthPanel
-        facebookSignInEnabled
-        googleSignInEnabled
-        initialMessage="Соціальний вхід не завершився."
-        locale="uk"
-      />,
-    );
+  it.each(["uk", "bg", "ru"] as const)(
+    "renders Google-only social sign-in for %s when server configuration enables it",
+    (locale) => {
+      const disabledHtml = renderToStaticMarkup(<GardenAuthPanel />);
+      const enabledHtml = renderToStaticMarkup(
+        <GardenAuthPanel
+          googleSignInEnabled
+          initialMessage="Соціальний вхід не завершився."
+          locale={locale}
+        />,
+      );
 
-    expect(disabledHtml).not.toContain("Continue with Google");
-    expect(disabledHtml).not.toContain("Continue with Facebook");
-    expect(enabledHtml).toContain("Продовжити через Google");
-    expect(enabledHtml).toContain("Продовжити через Facebook");
-    expect(enabledHtml).toContain("Соціальний вхід не завершився.");
-    expect(enabledHtml).toContain('role="alert"');
-    expect(enabledHtml).toContain('aria-live="assertive"');
-    expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
-    expect(enabledHtml).not.toContain("FACEBOOK_CLIENT_SECRET");
-  });
+      expect(disabledHtml).not.toContain("Continue with Google");
+      expect(enabledHtml).toContain("Google");
+      expect(enabledHtml).not.toMatch(/facebook/i);
+      expect(enabledHtml).toContain("Соціальний вхід не завершився.");
+      expect(enabledHtml).toContain('role="alert"');
+      expect(enabledHtml).toContain('aria-live="assertive"');
+      expect(enabledHtml).not.toContain("GOOGLE_CLIENT_SECRET");
+    },
+  );
 
   it("owns guest provider navigation explicitly instead of relying on the redirect plugin", () => {
     const source = readFileSync(
