@@ -142,7 +142,7 @@ async function main() {
 
     const directMutationRejected = await proveDirectMutationRejected(
       database,
-      accounts[2].userId,
+      loser.userId,
     );
     assert(directMutationRejected);
 
