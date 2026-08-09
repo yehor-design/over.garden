@@ -11,10 +11,10 @@ import type { ActivationSource } from "@/lib/garden/entry-contracts";
 import { PILOT_AUTH_HELP_PATH } from "@/lib/auth/pilot-auth-recovery";
 import { PRIVATE_AUTH_COMPATIBILITY_NAME } from "@/lib/auth/public-identity-compatibility";
 import {
-  FACEBOOK_PROVIDER_ID,
   GOOGLE_PROVIDER_ID,
   navigateToOAuthAuthorization,
   oauthCallbackPath,
+  type SocialProviderId,
 } from "@/lib/auth/social-oauth";
 import { authClient } from "@/lib/auth-client";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -28,7 +28,6 @@ import {
 } from "@/lib/trust-surface-copy";
 import { cn } from "@/lib/utils";
 
-type SocialProviderId = typeof GOOGLE_PROVIDER_ID | typeof FACEBOOK_PROVIDER_ID;
 type AuthPanelMessage = {
   kind: "error" | "status";
   text: string;
@@ -41,12 +40,6 @@ const SOCIAL_PROVIDER_OPTIONS = [
     signInTestId: "google-sign-in-button",
     linkTestId: "google-link-button",
   },
-  {
-    id: FACEBOOK_PROVIDER_ID,
-    label: "Facebook",
-    signInTestId: "facebook-sign-in-button",
-    linkTestId: "facebook-link-button",
-  },
 ] as const;
 
 interface GardenAuthPanelProps {
@@ -54,7 +47,6 @@ interface GardenAuthPanelProps {
   autoFocusEmail?: boolean;
   catalogName?: string | null;
   embedded?: boolean;
-  facebookSignInEnabled?: boolean;
   googleSignInEnabled?: boolean;
   initialMessage?: string | null;
   locale?: InterfaceLocale;
@@ -68,7 +60,6 @@ export function GardenAuthPanel({
   autoFocusEmail = false,
   catalogName,
   embedded = false,
-  facebookSignInEnabled = false,
   googleSignInEnabled = false,
   initialMessage = null,
   locale: localeOverride,
@@ -95,7 +86,6 @@ export function GardenAuthPanel({
     revision: localeDirtyRevision,
   });
   const socialSignInOptions = availableSocialProviderOptions({
-    facebookSignInEnabled,
     googleSignInEnabled,
   });
 
@@ -349,15 +339,9 @@ export function resolveAuthCallbackPath(
 }
 
 function availableSocialProviderOptions({
-  facebookSignInEnabled,
   googleSignInEnabled,
 }: {
-  facebookSignInEnabled: boolean;
   googleSignInEnabled: boolean;
 }) {
-  return SOCIAL_PROVIDER_OPTIONS.filter((provider) => {
-    if (provider.id === GOOGLE_PROVIDER_ID) return googleSignInEnabled;
-    if (provider.id === FACEBOOK_PROVIDER_ID) return facebookSignInEnabled;
-    return false;
-  });
+  return googleSignInEnabled ? SOCIAL_PROVIDER_OPTIONS : [];
 }

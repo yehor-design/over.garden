@@ -1,7 +1,7 @@
 /**
- * OVE-193 production provider surface smoke (redacted).
- * Proves enabled providers expose start URLs, Facebook stays hidden unless
- * FACEBOOK_LOGIN_PUBLIC_READY is set, and guest auth copy is not invite-gated.
+ * OVE-296 production provider surface smoke (redacted).
+ * Proves the supported Google provider exposes a start URL, credential entry
+ * remains present, and guest auth copy is not invite-gated.
  * Never prints secrets, emails, tokens, or object paths.
  */
 import { createRequire } from "node:module";
@@ -29,28 +29,6 @@ function readFlagValue(flag: string) {
   return process.argv[index + 1];
 }
 
-function configured(value: string | undefined) {
-  const trimmed = value?.trim();
-  return Boolean(trimmed && trimmed.length > 0 && !trimmed.includes("REPLACE"));
-}
-
-function facebookPublicReady(env: NodeJS.ProcessEnv) {
-  const value = env.FACEBOOK_LOGIN_PUBLIC_READY?.trim().toLowerCase();
-  return value === "1" || value === "true" || value === "yes";
-}
-
-function resolveFacebookSurface(env: NodeJS.ProcessEnv) {
-  const clientIdConfigured = configured(env.FACEBOOK_CLIENT_ID);
-  const clientSecretConfigured = configured(env.FACEBOOK_CLIENT_SECRET);
-  const publicLaunchReady = facebookPublicReady(env);
-  const configuredBoth = clientIdConfigured && clientSecretConfigured;
-  return {
-    configured: configuredBoth,
-    publicLaunchReady,
-    providerEnabled: false,
-  };
-}
-
 async function main() {
   const environment = readFlagValue("--environment");
   const confirm = readFlagValue("--confirm-environment");
@@ -75,13 +53,6 @@ async function main() {
   loadEnv({ path: ".env.local", override: false });
 
   const baseUrl = "https://over.garden";
-  // Local env cannot authoritatively know production FACEBOOK_LOGIN_PUBLIC_READY.
-  // Treat the live control as the source of truth and report local env class separately.
-  const localFacebookState = resolveFacebookSurface({
-    ...process.env,
-    VERCEL_ENV: "production",
-  });
-
   const gardenResponse = await fetch(new URL("/garden", baseUrl), {
     redirect: "manual",
   });
@@ -93,6 +64,7 @@ async function main() {
         : "other";
   const gardenHtml =
     gardenResponse.status === 200 ? await gardenResponse.text() : "";
+  assert(gardenStatusClass === "200", "signed-out garden must be reachable");
 
   const authHelp = await fetch(new URL("/auth/help", baseUrl));
   assert(authHelp.ok, "auth help must be reachable");
@@ -104,18 +76,21 @@ async function main() {
     "auth help must not claim invite-only public MVP",
   );
 
-  const googleStart = await fetch(new URL("/api/auth/sign-in/social", baseUrl), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      origin: baseUrl,
+  const googleStart = await fetch(
+    new URL("/api/auth/sign-in/social", baseUrl),
+    {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: baseUrl,
+      },
+      body: JSON.stringify({
+        provider: "google",
+        callbackURL: "/garden",
+      }),
+      redirect: "manual",
     },
-    body: JSON.stringify({
-      provider: "google",
-      callbackURL: "/garden",
-    }),
-    redirect: "manual",
-  });
+  );
   const googleStartClass =
     googleStart.status >= 200 && googleStart.status < 400
       ? "2xx_or_3xx"
@@ -125,71 +100,39 @@ async function main() {
   const googleHasAuthUrl =
     /accounts\.google\.com|google\.com\/o\/oauth/i.test(googleBody) ||
     /accounts\.google\.com|google\.com\/o\/oauth/i.test(googleLocation);
-  assert(googleHasAuthUrl, "Google social start must expose an authorization URL");
+  assert(
+    googleHasAuthUrl,
+    "Google social start must expose an authorization URL",
+  );
 
   const intentPage = await fetch(new URL("/auth/intent", baseUrl));
   assert(intentPage.ok, "auth intent page must be reachable");
-  const intentHtml = await intentPage.text();
-  const intentFacebookVisible = intentHtml.includes(
-    'data-testid="facebook-sign-in-button"',
+  await intentPage.body?.cancel();
+  const gardenGoogleVisible = gardenHtml.includes(
+    'data-testid="google-sign-in-button"',
   );
-  const gardenFacebookVisible =
-    gardenHtml.includes('data-testid="facebook-sign-in-button"') ||
-    /facebook-sign-in-button/i.test(gardenHtml) ||
-    /facebookSignInEnabled.:true/.test(gardenHtml);
-
+  const credentialEntryVisible =
+    gardenHtml.includes('type="email"') &&
+    gardenHtml.includes('type="password"');
   assert(
-    !intentFacebookVisible && !gardenFacebookVisible,
-    "Hard-disabled Facebook must be absent from every guest surface",
-  );
-  const facebookStart = await fetch(
-    new URL("/api/auth/sign-in/social", baseUrl),
-    {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        origin: baseUrl,
-      },
-      body: JSON.stringify({
-        provider: "facebook",
-        callbackURL: "/garden",
-      }),
-      redirect: "manual",
-    },
-  );
-  const facebookStartClass =
-    facebookStart.status >= 200 && facebookStart.status < 400
-      ? "2xx_or_3xx"
-      : "rejected";
-  const facebookBody = await facebookStart.text();
-  const facebookLocation = facebookStart.headers.get("location") ?? "";
-  const facebookAuthorizationUrlPresent =
-    /facebook\.com|fb\.com/i.test(facebookBody) ||
-    /facebook\.com|fb\.com/i.test(facebookLocation);
-  assert(
-    !facebookAuthorizationUrlPresent,
-    "Hard-disabled Facebook must not expose a Meta authorization URL",
+    gardenGoogleVisible && credentialEntryVisible,
+    "credential and Google entry points must remain available",
   );
 
   console.log(
     JSON.stringify(
       {
         ok: true,
-        issue: "OVE-193",
-        evidenceClass: "production_provider_surface",
+        issue: "OVE-296",
+        evidenceClass: "production_supported_provider_surface",
         expectedCommitSha: expectedCommit,
         gardenGuestStatusClass: gardenStatusClass,
         googleSocialStartClass: googleStartClass,
         googleAuthorizationUrlPresent: googleHasAuthUrl,
-        facebook: {
-          localEnvConfigured: localFacebookState.configured,
-          localEnvPublicLaunchReady: localFacebookState.publicLaunchReady,
-          liveButtonVisibleOnIntent: intentFacebookVisible,
-          liveButtonVisibleOnGardenGuestShell: gardenFacebookVisible,
-          socialStartClass: facebookStartClass,
-          authorizationUrlPresent: facebookAuthorizationUrlPresent,
-          fallbackWhenHidden: "email_and_google",
-        },
+        supportedProviderClass: "credential_and_google_only",
+        credentialEntryVisible,
+        googleVisibleOnGardenGuestShell: gardenGoogleVisible,
+        authIntentRecoveryReachable: true,
         authHelpInviteOnlyClaimAbsent: true,
         evidenceSafety: EVIDENCE_SAFETY,
       },
@@ -203,7 +146,7 @@ main().catch((error) => {
   console.error(
     JSON.stringify({
       ok: false,
-      issue: "OVE-193",
+      issue: "OVE-296",
       error: "self_serve_providers_smoke_failed",
       evidenceSafety: EVIDENCE_SAFETY,
       message: error instanceof Error ? error.message : "unknown",

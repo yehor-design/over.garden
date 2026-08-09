@@ -91,10 +91,8 @@ describe("auth locale mutation fences", () => {
     const renderer = await render(
       <AccountMethodsPanel
         canSetPassword={false}
-        facebookSignInEnabled={false}
         googleSignInEnabled
         hasCredential
-        hasFacebook={false}
         hasGoogle={false}
         locale="ru"
       />,

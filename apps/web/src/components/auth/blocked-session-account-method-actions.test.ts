@@ -31,7 +31,6 @@ describe("blocked session account-method action", () => {
     mocks.deriveCurrentSessionBinding.mockResolvedValue("binding-for-a");
     mocks.getCurrentAccountMethodProjection.mockResolvedValue({
       hasCredential: false,
-      hasFacebook: false,
       hasGoogle: true,
       canSetPassword: true,
     });
@@ -44,7 +43,6 @@ describe("blocked session account-method action", () => {
       status: "ready",
       methods: {
         hasCredential: false,
-        hasFacebook: false,
         hasGoogle: true,
         canSetPassword: true,
       },

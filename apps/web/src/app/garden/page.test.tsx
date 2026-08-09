@@ -63,10 +63,6 @@ vi.mock("@/lib/visual-fixtures/journal-creation-scenarios", () => ({
     mocks.resolveVisualJournalCreationScenario,
 }));
 
-vi.mock("@/lib/auth/facebook-oauth", () => ({
-  isFacebookSignInEnabled: () => false,
-}));
-
 vi.mock("@/lib/auth/google-oauth", () => ({
   isGoogleSignInEnabled: () => false,
 }));

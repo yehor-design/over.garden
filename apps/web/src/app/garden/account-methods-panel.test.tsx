@@ -64,7 +64,6 @@ vi.mock("@/lib/auth-client", () => ({
   },
 }));
 vi.mock("@/lib/auth/social-oauth", () => ({
-  FACEBOOK_PROVIDER_ID: "facebook",
   GOOGLE_PROVIDER_ID: "google",
   navigateToOAuthAuthorization: mocks.navigateToOAuthAuthorization,
   oauthCallbackPath: () => "/garden/profile",
@@ -77,10 +76,8 @@ import { AccountMethodsPanel } from "./account-methods-panel";
 
 const DEFAULT_PROPS = {
   canSetPassword: true,
-  facebookSignInEnabled: true,
   googleSignInEnabled: true,
   hasCredential: false,
-  hasFacebook: false,
   hasGoogle: false,
   locale: "uk" as const,
 };
@@ -104,7 +101,7 @@ describe("account methods panel", () => {
     expect(html).toContain("Підключено");
     expect(html).toContain("Відв&#x27;язати Google");
     expect(html).not.toContain("Підключити Google");
-    expect(html).toContain("Підключити Facebook");
+    expect(html).not.toMatch(/facebook/i);
     expect(html).toContain("Пароль встановлено");
     expect(html).not.toMatch(/email|accountId|token|passwordHash/i);
   });
@@ -325,7 +322,7 @@ describe("account methods panel", () => {
     await act(async () => renderer.unmount());
   });
 
-  it("deduplicates a pending non-final unlink while leaving another provider control usable", async () => {
+  it("deduplicates a pending non-final unlink", async () => {
     const unlink = deferred<{ error: null }>();
     mocks.unlinkAccount.mockReturnValue(unlink.promise);
     const renderer = await render(
@@ -341,10 +338,6 @@ describe("account methods panel", () => {
     });
 
     expect(mocks.unlinkAccount).toHaveBeenCalledOnce();
-    expect(
-      renderer.root.findByProps({ "data-testid": "facebook-link-button" }).props
-        .disabled,
-    ).toBe(false);
     expect(
       renderer.root.findByProps({ "data-testid": "confirm-disconnect-button" })
         .props.disabled,
@@ -387,10 +380,6 @@ describe("account methods panel", () => {
       disableRedirect: true,
     });
     expect(
-      renderer.root.findByProps({ "data-testid": "facebook-link-button" }).props
-        .disabled,
-    ).toBe(false);
-    expect(
       renderer.root.findByProps({ "data-testid": "set-password-button" }).props
         .disabled,
     ).toBe(false);
@@ -424,6 +413,7 @@ describe("account methods panel", () => {
 
       expect(html).toContain(title);
       expect(html).toContain(passwordAction);
+      expect(html).not.toMatch(/facebook/i);
       expect(html).not.toMatch(/accountId|providerId|emailVerified|token/i);
     },
   );
@@ -431,7 +421,7 @@ describe("account methods panel", () => {
 
 async function openDisconnectDialog(
   renderer: ReactTestRenderer,
-  provider: "google" | "facebook",
+  provider: "google",
 ) {
   await act(async () => {
     renderer.root

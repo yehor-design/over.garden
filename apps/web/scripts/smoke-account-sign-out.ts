@@ -31,7 +31,7 @@ export const CURRENT_SESSION_BINDING_HEADER =
 
 const SIGN_UP_PATH = "/api/auth/sign-up/email";
 const SIGN_IN_PATH = "/api/auth/sign-in/email";
-const LINKED_PROVIDER_IDS = ["credential", "google", "facebook"] as const;
+const LINKED_PROVIDER_IDS = ["credential", "google"] as const;
 
 const ALLOWED_EVIDENCE_KEYS = new Set([
   "ok",

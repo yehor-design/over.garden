@@ -12,7 +12,7 @@ import {
 import type { Database } from "../src/db/types";
 
 const GENERATED_HANDLE_PATTERN = /^gardener_[a-f0-9]{16}(?:_[1-9][0-9]?)?$/;
-const PROVIDER_IDS = ["credential", "google", "facebook"] as const;
+const PROVIDER_IDS = ["credential", "google"] as const;
 const EVIDENCE_SAFETY =
   "redacted_counts_and_booleans_no_emails_user_ids_handles_terms_or_rows";
 
@@ -142,7 +142,7 @@ async function main() {
 
     const directMutationRejected = await proveDirectMutationRejected(
       database,
-      accounts[2].userId,
+      loser.userId,
     );
     assert(directMutationRejected);
 

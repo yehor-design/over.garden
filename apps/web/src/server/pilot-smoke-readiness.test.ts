@@ -16,8 +16,6 @@ const productionLikeEnv = {
   CATALOG_CURATOR_USER_IDS: "operator-user-id-that-must-not-leak",
   GOOGLE_CLIENT_ID: "google-client-id.apps.googleusercontent.com",
   GOOGLE_CLIENT_SECRET: "google-secret-that-must-not-leak",
-  FACEBOOK_CLIENT_ID: "facebook-app-id-that-must-not-leak",
-  FACEBOOK_CLIENT_SECRET: "facebook-secret-that-must-not-leak",
   RESEND_API_KEY: "resend-secret-that-must-not-leak",
   RESEND_AUTH_FROM: "OverGarden <auth@over.garden>",
   DATABASE_URL:
@@ -43,6 +41,26 @@ const productionLikeEnv = {
 };
 
 describe("pilot smoke readiness", () => {
+  it("ignores stale retired-provider env without recreating readiness surface", () => {
+    const readout = buildPilotSmokeReadiness({
+      env: {
+        ...productionLikeEnv,
+        FACEBOOK_CLIENT_ID: "stale-app-id",
+        FACEBOOK_CLIENT_SECRET: "stale-secret",
+        FACEBOOK_LOGIN_PUBLIC_READY: "true",
+      },
+      databaseProbe: { reachable: true },
+      generatedAt: new Date("2026-08-10T00:00:00.000Z"),
+    });
+
+    expect(JSON.stringify(readout)).not.toMatch(/facebook/i);
+    expect(
+      readout.sections
+        .flatMap((section) => section.checks)
+        .map((check) => check.id),
+    ).toContain("google-oauth-provider");
+  });
+
   it("keeps secret values out of operator readout output", () => {
     const readout = buildPilotSmokeReadiness({
       env: productionLikeEnv,
@@ -56,8 +74,6 @@ describe("pilot smoke readiness", () => {
     expect(serialized).not.toContain("operator-user-id-that-must-not-leak");
     expect(serialized).not.toContain("google-client-id");
     expect(serialized).not.toContain("google-secret-that-must-not-leak");
-    expect(serialized).not.toContain("facebook-app-id-that-must-not-leak");
-    expect(serialized).not.toContain("facebook-secret-that-must-not-leak");
     expect(serialized).not.toContain("resend-secret-that-must-not-leak");
     expect(serialized).not.toContain("database-secret");
     expect(serialized).not.toContain("direct-database-secret");
@@ -406,74 +422,6 @@ describe("pilot smoke readiness", () => {
       ),
     ).toMatchObject({ severity: "fail" });
     expect(blockedReadout.overall).toBe("blocked");
-  });
-
-  it("keeps Facebook Login hard-disabled until a separately reviewed re-enable", () => {
-    const readyReadout = buildPilotSmokeReadiness({
-      env: productionLikeEnv,
-      databaseProbe: { reachable: true },
-      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
-    });
-    const readyChecks = readyReadout.sections.flatMap(
-      (section) => section.checks,
-    );
-
-    expect(findCheck(readyChecks, "facebook-oauth-provider")).toMatchObject({
-      severity: "manual",
-      summary: expect.stringContaining("hard-disabled"),
-      evidence: expect.stringContaining("Do not enable Facebook"),
-    });
-    expect(JSON.stringify(readyReadout)).not.toContain(
-      "facebook-secret-that-must-not-leak",
-    );
-    expect(
-      readyReadout.smokeSteps.some(
-        (step) =>
-          step.includes("Facebook Login") && step.includes("hides Facebook"),
-      ),
-    ).toBe(true);
-
-    const publicReadyReadout = buildPilotSmokeReadiness({
-      env: {
-        ...productionLikeEnv,
-        FACEBOOK_LOGIN_PUBLIC_READY: "true",
-      },
-      databaseProbe: { reachable: true },
-      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
-    });
-
-    expect(
-      findCheck(
-        publicReadyReadout.sections.flatMap((section) => section.checks),
-        "facebook-oauth-provider",
-      ),
-    ).toMatchObject({
-      severity: "manual",
-      summary: expect.stringContaining("hard-disabled"),
-      evidence: expect.stringContaining("Do not enable Facebook"),
-    });
-
-    const blockedReadout = buildPilotSmokeReadiness({
-      env: {
-        ...productionLikeEnv,
-        FACEBOOK_LOGIN_PUBLIC_READY: "true",
-        FACEBOOK_CLIENT_ID: undefined,
-        FACEBOOK_CLIENT_SECRET: undefined,
-      },
-      databaseProbe: { reachable: true },
-      generatedAt: new Date("2026-07-02T00:00:00.000Z"),
-    });
-
-    expect(
-      findCheck(
-        blockedReadout.sections.flatMap((section) => section.checks),
-        "facebook-oauth-provider",
-      ),
-    ).toMatchObject({
-      severity: "manual",
-      summary: expect.stringContaining("hard-disabled"),
-    });
-    expect(blockedReadout.overall).toBe("ready");
   });
 
   it("accepts Vercel deployment URL as the effective public/auth URL outside production", () => {

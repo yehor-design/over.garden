@@ -653,11 +653,6 @@ async function verifyAuthSurfaces(
       'data-testid="google-sign-in-button"',
       "production Google sign-in option",
     );
-    assertIncludes(
-      garden.text,
-      'data-testid="facebook-sign-in-button"',
-      "production Facebook sign-in option",
-    );
   }
 
   const authedGarden = await htmlResponse(base, jar, "/garden");
@@ -668,7 +663,6 @@ async function verifyAuthSurfaces(
     signedOutGardenBoundary: true,
     credentialAuthPath: true,
     googleProviderVisible: recoveryMode ? false : true,
-    facebookProviderVisible: recoveryMode ? false : true,
     signedInGardenReadback: true,
   };
 }

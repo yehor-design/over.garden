@@ -7,7 +7,6 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/db";
 import { resolveBetterAuthSecretOptions } from "@/lib/auth-secret";
 import { logBetterAuth } from "@/lib/auth/better-auth-logger";
-import { resolveFacebookSocialProviderConfig } from "@/lib/auth/facebook-oauth";
 import { resolveGoogleSocialProviderConfig } from "@/lib/auth/google-oauth";
 import {
   createRetiredSharedIdentityDatabaseHooks,
@@ -22,10 +21,8 @@ import {
 import { getAuthBaseUrl } from "@/lib/runtime-url";
 
 const googleProvider = resolveGoogleSocialProviderConfig();
-const facebookProvider = resolveFacebookSocialProviderConfig();
 const socialProviders = {
   ...(googleProvider ? { google: googleProvider } : {}),
-  ...(facebookProvider ? { facebook: facebookProvider } : {}),
 };
 
 export const auth = betterAuth({

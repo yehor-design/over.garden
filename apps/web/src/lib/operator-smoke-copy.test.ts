@@ -19,7 +19,12 @@ describe("operator smoke copy", () => {
     expect(operatorSmokeCheckLabel("ru", "env-PUBLIC_SITE_URL")).toContain(
       "env-PUBLIC_SITE_URL",
     );
-    expect(getOperatorSmokeCopy("uk").smokeSteps).toHaveLength(19);
+    expect(getOperatorSmokeCopy("uk").smokeSteps).toHaveLength(17);
+    for (const locale of ["uk", "bg", "ru"] as const) {
+      expect(JSON.stringify(getOperatorSmokeCopy(locale))).not.toMatch(
+        /facebook/i,
+      );
+    }
   });
 });
 

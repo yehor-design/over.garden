@@ -40,7 +40,6 @@ describe("current account-method projection", () => {
 
     await expect(getCurrentAccountMethodProjection()).resolves.toEqual({
       hasCredential: true,
-      hasFacebook: false,
       hasGoogle: true,
       canSetPassword: false,
     });
@@ -49,12 +48,12 @@ describe("current account-method projection", () => {
     });
   });
 
-  it("makes password setup available only to a verified current social user", async () => {
+  it("ignores a retired provider row while preserving the credential bridge", async () => {
     mocks.listUserAccounts.mockResolvedValue([{ providerId: "facebook" }]);
 
     await expect(getCurrentAccountMethodProjection()).resolves.toMatchObject({
       hasCredential: false,
-      hasFacebook: true,
+      hasGoogle: false,
       canSetPassword: true,
     });
 

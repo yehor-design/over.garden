@@ -4,7 +4,6 @@ import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { buttonVariants } from "@/components/ui/button";
-import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -127,7 +126,6 @@ export default async function GardenPublicProfilePage({
 
       <section className="border-t border-border pt-7">
         <AccountMethodsPanel
-          facebookSignInEnabled={isFacebookSignInEnabled()}
           googleSignInEnabled={isGoogleSignInEnabled()}
           initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
           locale={locale}

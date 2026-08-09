@@ -62,3 +62,5 @@ pnpm-debug.log*
 # exact local volume identifiers and synthetic smoke handles here.
 infra/.runtime/
 apps/web/.runtime/
+apps/web/test-results/
+apps/web/playwright-report/

@@ -14,7 +14,6 @@ interface AuthIntentSurfaceProps {
   intent: AuthIntentDraft | null;
   token: string | null;
   state: AuthIntentSurfaceState;
-  facebookSignInEnabled: boolean;
   googleSignInEnabled: boolean;
   initialMessage?: string | null;
 }
@@ -24,7 +23,6 @@ export function AuthIntentSurface({
   intent,
   token,
   state,
-  facebookSignInEnabled,
   googleSignInEnabled,
   initialMessage = null,
 }: AuthIntentSurfaceProps) {
@@ -72,7 +70,6 @@ export function AuthIntentSurface({
               prompt={copy.panelPrompt}
               postAuthPath={`/auth/intent/resume?intent=${encodeURIComponent(token)}`}
               initialMessage={initialMessage}
-              facebookSignInEnabled={facebookSignInEnabled}
               googleSignInEnabled={googleSignInEnabled}
             />
 

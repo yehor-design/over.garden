@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { isFacebookSignInEnabled } from "@/lib/auth/facebook-oauth";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import type { AuthIntentDraft } from "@/lib/auth/auth-intent-contract";
 import {
@@ -76,7 +75,6 @@ export default async function AuthIntentPage({
       intent={intent}
       token={state === "ready" ? token : null}
       state={state}
-      facebookSignInEnabled={isFacebookSignInEnabled()}
       googleSignInEnabled={isGoogleSignInEnabled()}
       initialMessage={getLocalizedOAuthErrorMessage(locale, params.error)}
     />

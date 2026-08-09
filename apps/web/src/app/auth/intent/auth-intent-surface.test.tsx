@@ -21,7 +21,6 @@ describe("AuthIntentSurface", () => {
         }}
         token="opaque-intent-token"
         state="ready"
-        facebookSignInEnabled
         googleSignInEnabled
       />,
     );
@@ -54,7 +53,6 @@ describe("AuthIntentSurface", () => {
           intent={null}
           token={null}
           state={state}
-          facebookSignInEnabled={false}
           googleSignInEnabled={false}
         />,
       );

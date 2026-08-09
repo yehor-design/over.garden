@@ -10,7 +10,7 @@ describe("social account policy", () => {
     expect(policy.accountLinking).toMatchObject({
       enabled: true,
       disableImplicitLinking: true,
-      trustedProviders: ["google", "facebook"],
+      trustedProviders: ["google"],
       allowDifferentEmails: true,
       allowUnlinkingAll: false,
       updateUserInfoOnLink: false,

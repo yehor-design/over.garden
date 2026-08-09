@@ -26,7 +26,7 @@ Required names:
 - `META_CONVERSIONS_API_TEST_EVENT_CODE`: optional Test Events code for redacted smoke.
 - `META_CONVERSIONS_API_GRAPH_VERSION`: optional Graph API version. The code default is `v23.0`; re-check Meta before live campaign launch if the dashboard recommends a newer version.
 
-Facebook Login uses `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`, and `FACEBOOK_LOGIN_PUBLIC_READY`. Those are intentionally separate from Meta Ads measurement.
+OVE-296 removes the former Meta social sign-in surface. Meta Ads measurement remains a separate consent-first system with only the env names defined below; it does not provide authentication.
 
 ## Consent Behavior
 

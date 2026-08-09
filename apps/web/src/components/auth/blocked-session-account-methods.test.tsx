@@ -33,24 +33,20 @@ vi.mock("./blocked-session-account-method-actions", () => ({
 }));
 vi.mock("@/app/garden/account-methods-panel", () => ({
   AccountMethodsPanel: ({
-    facebookSignInEnabled,
     googleSignInEnabled,
     hasCredential,
-    hasFacebook,
     hasGoogle,
     onMethodsChanged,
   }: {
-    facebookSignInEnabled: boolean;
     googleSignInEnabled: boolean;
     hasCredential: boolean;
-    hasFacebook: boolean;
     hasGoogle: boolean;
     onMethodsChanged(): void;
   }) => (
     <button
       type="button"
-      data-blocked-methods={`${hasCredential}:${hasFacebook}:${hasGoogle}`}
-      data-blocked-linking={`${facebookSignInEnabled}:${googleSignInEnabled}`}
+      data-blocked-methods={`${hasCredential}:${hasGoogle}`}
+      data-blocked-linking={String(googleSignInEnabled)}
       onClick={onMethodsChanged}
     >
       Guarded methods
@@ -75,7 +71,6 @@ describe("blocked session account methods", () => {
       status: "ready",
       methods: {
         hasCredential: false,
-        hasFacebook: false,
         hasGoogle: true,
         canSetPassword: true,
       },
@@ -117,12 +112,12 @@ describe("blocked session account methods", () => {
     await vi.waitFor(() =>
       expect(
         renderer.root.findAllByProps({
-          "data-blocked-methods": "false:false:true",
+          "data-blocked-methods": "false:true",
         }),
       ).not.toHaveLength(0),
     );
     expect(
-      renderer.root.findAllByProps({ "data-blocked-linking": "false:false" }),
+      renderer.root.findAllByProps({ "data-blocked-linking": "false" }),
     ).not.toHaveLength(0);
     await unmount(renderer);
   });
@@ -153,7 +148,6 @@ describe("blocked session account methods", () => {
       status: "ready";
       methods: {
         hasCredential: boolean;
-        hasFacebook: boolean;
         hasGoogle: boolean;
         canSetPassword: boolean;
       };
@@ -164,7 +158,6 @@ describe("blocked session account methods", () => {
         status: "ready",
         methods: {
           hasCredential: true,
-          hasFacebook: false,
           hasGoogle: false,
           canSetPassword: false,
         },
@@ -194,7 +187,7 @@ describe("blocked session account methods", () => {
     await vi.waitFor(() =>
       expect(
         renderer.root.findAllByProps({
-          "data-blocked-methods": "true:false:false",
+          "data-blocked-methods": "true:false",
         }),
       ).not.toHaveLength(0),
     );
@@ -204,7 +197,6 @@ describe("blocked session account methods", () => {
         status: "ready",
         methods: {
           hasCredential: false,
-          hasFacebook: false,
           hasGoogle: true,
           canSetPassword: true,
         },
@@ -213,7 +205,7 @@ describe("blocked session account methods", () => {
     });
     expect(
       renderer.root.findAllByProps({
-        "data-blocked-methods": "true:false:false",
+        "data-blocked-methods": "true:false",
       }),
     ).not.toHaveLength(0);
     await unmount(renderer);

@@ -1,7 +1,7 @@
 # Production Pilot Smoke
 
-Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111/OVE-112 social OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247/OVE-248 account-method continuity plus OVE-249 canonical sign-out convergence
-Last updated: 2026-07-29
+Status: live smoke contract for OVE-27 plus OVE-36 worker/search proof plus OVE-37 current-main public-pilot closure plus OVE-38 iOS Safari offline entry + photo field proof plus OVE-39 backup/PITR + worker recovery durability proof plus OVE-41 closed-cohort invite loop plus OVE-48 closed-pilot auth recovery plus OVE-51 canonical `over.garden` pilot origin plus OVE-54 founder-only pilot rehearsal separation plus OVE-91 app-layer HTML no-store guardrail plus OVE-111 Google OAuth continuity plus OVE-131 owner/public-smoke redacted proof plus OVE-143 canonical launch smoke plus OVE-163 deterministic matching rollout readiness plus OVE-190 immutable matching release parity and rollback proof plus OVE-191 production scaffold isolation plus OVE-203 automatic public identity plus OVE-226 exact-SHA self-serve runtime proof plus OVE-247/OVE-248 Google account-method continuity plus OVE-249 canonical sign-out convergence plus OVE-296 retired-provider surface removal
+Last updated: 2026-08-10
 
 This document defines the production or preview pilot smoke that must pass before OverGarden can treat the live environment as ready for a first real pilot user. It is intentionally narrow: it proves one deployed first-user path end to end, not every future production concern.
 
@@ -20,13 +20,13 @@ Verified through the connected Vercel app and provider CLIs on 2026-06-29.
 - Canonical app domains `over.garden` and `www.over.garden` are attached to the Vercel project and point to Vercel through DNS-only Cloudflare A records.
 - Earlier on 2026-06-27, fetching `/health` on the production deployment returned HTTP `302` to Vercel SSO, not OverGarden HTML.
 - Later on 2026-06-27, `https://over-garden.vercel.app/health`, `/`, and `/privacy` returned HTTP `200` OverGarden HTML without Vercel SSO.
-- Deployment env has the Better Auth versioned policy pair `BETTER_AUTH_SECRETS` (Sensitive ordered entries) and `BETTER_AUTH_CURRENT_SECRET_VERSION` (non-secret current-version metadata). A historical singular `BETTER_AUTH_SECRET` is read only during its bounded compatibility grace; an inadmissible or expired value is clean-cut from auth reads while the active versioned key is passed explicitly to Better Auth. It also has R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. OVE-111 adds Google OAuth env names `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; OVE-112 adds Facebook Login env names `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`; values are never recorded. OVE-142 gates production Facebook exposure behind the non-secret `FACEBOOK_LOGIN_PUBLIC_READY` class, so credentials alone no longer render or register Facebook in production. Runtime auth fails closed in production-like environments unless the ordered versioned secret set is syntactically valid, its first version equals the declared current version, and the active value is a canonical 32-byte encoded key class; it also fails closed for Google OAuth env missing for production social sign-in smoke, Facebook explicitly public-ready without credentials, or a legacy `.vercel.app` auth/public origin. Internal operator surfaces use durable `admin_user_roles` capabilities and credential-only owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
+- Deployment env has the Better Auth versioned policy pair `BETTER_AUTH_SECRETS` (Sensitive ordered entries) and `BETTER_AUTH_CURRENT_SECRET_VERSION` (non-secret current-version metadata). A historical singular `BETTER_AUTH_SECRET` is read only during its bounded compatibility grace; an inadmissible or expired value is clean-cut from auth reads while the active versioned key is passed explicitly to Better Auth. It also has R2 runtime env, `DATABASE_SSL=true`, `DATABASE_URL`, `DIRECT_URL`, `DATABASE_SSL_CA`, `PILOT_INVITE_SIGNING_SECRET`, and canonical production `PUBLIC_SITE_URL=https://over.garden` / `BETTER_AUTH_URL=https://over.garden` installed in Vercel. Google OAuth uses `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; values are never recorded. OVE-296 removes the former Meta social sign-in surface and its repository configuration/readiness contract. Runtime auth fails closed in production-like environments unless the ordered versioned secret set is syntactically valid, its first version equals the declared current version, and the active value is a canonical 32-byte encoded key class; it also fails closed for Google OAuth env missing for production social sign-in smoke or a legacy `.vercel.app` auth/public origin. Internal operator surfaces use durable `admin_user_roles` capabilities and credential-only owner bootstrap through `pnpm admin:bootstrap-owner`; `CATALOG_CURATOR_USER_IDS` is no longer the primary long-term admin model.
 - Production managed Postgres is provisioned in DigitalOcean `FRA1`, reachable through public TLS with the configured CA, and bootstrapped with the app schema plus Better Auth tables. OVE-51 reran the non-destructive app bootstrap and confirmed the closed-pilot `pilot_invite_grants` table exists before the canonical invited-gardener smoke.
 - OVE-27 branch preview `codex/ove-27-production-pilot-smoke` was redeployed after setting branch-specific `PUBLIC_SITE_URL` / `BETTER_AUTH_URL` to the branch alias and adding that alias to the R2 quarantine CORS origins.
 - On 2026-06-27, that branch preview passed the browser pilot smoke through homepage first-entry with photo, derivative-only authenticated readback, same-object follow-up, public SSR journal readback, public variety CTA back to `/garden`, archive to `410 Gone`, and authenticated `/garden/pilot-health` aggregate readout.
 - On 2026-06-28, OVE-36 provisioned the production worker/Meilisearch runtime at `matching.over.garden` and `meili.over.garden`, installed the production Vercel worker/search env names, and passed a redacted live journal index/unindex smoke against production Postgres and Meilisearch.
 - On 2026-07-02, OVE-111 deployed Google OAuth sign-in continuity on production commit `183962c13a026f2a215951c171b5095b455feae3`. Redacted provider smoke proved `https://over.garden/garden` renders the Google option, Better Auth starts Google OAuth successfully, the generated callback is exactly `https://over.garden/api/auth/callback/google`, and Google does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. Client id, client secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Google-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
-- On 2026-07-02, OVE-112 deployed Facebook Login sign-in continuity on production commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`. Production deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY` and aliased to `https://over.garden`. Redacted provider smoke proved production Vercel env has non-placeholder `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET`, Better Auth starts Facebook Login successfully, the generated callback is exactly `https://over.garden/api/auth/callback/facebook`, and Meta does not reject the start with `redirect_uri_mismatch`, `INVALID_ORIGIN`, or `origin_mismatch`. App id, app secret, state, cookies, tokens, and callback query parameters were not recorded. OVE-113 later narrowed admin access so Facebook-linked accounts remain valid gardener accounts but cannot satisfy `/admin`.
+- Historical note: on 2026-07-02, OVE-112 deployed the then-current Meta social sign-in continuity on commit `e5496c3e2454c5c2dcf7c39a785f51697b81f33e`; deployment `dpl_49ThewAMcDKZKxRPJDv3NuoViScg` was `READY`. OVE-296 supersedes that surface completely. This line is provenance, not a current provider/env/smoke instruction; OVE-297 separately owns bounded production-state cleanup.
 
 Implication: the OVE-27 preview proved the internal live-path contract against managed Postgres and R2; OVE-37 moved that proof to current `main` on the public Vercel production alias; OVE-51 makes `https://over.garden` the selected pilot origin. A protected preview is acceptable for internal deployment inspection, but it does not replace public visitor/crawler validation for H6 on the canonical domain.
 
@@ -55,21 +55,19 @@ matching full lowercase SHA values, and rendered guest `/garden` plus
 JSON receipt intentionally contains only status, elapsed time, and boolean
 classes. It does not create an account, accept media, or prove provider identity
 by itself. The subsequent browser journey must use disposable non-personal
-provider identities: begin one first-time Google or Facebook account normally,
-confirm that the profile records it as connected, add a password for the
-provider-supplied verified email, then explicitly connect the other provider
-and prove that either social method or email/password returns to the same
-garden. A matching email alone must never merge an existing garden. Retain no
+provider identities: begin one first-time Google account normally, confirm that
+the profile records it as connected, add a password for the provider-supplied
+verified email, and prove that either Google or email/password returns to the
+same garden. A matching email alone must never merge an existing garden. Retain no
 credential, token, email, private text, media bytes, object key, stable identity,
 or precise location; finish through native account/media/projection cleanup
 before considering the proof terminal.
 
-Facebook is hard-disabled in every runtime for this release: the guest control
-and provider route must be absent even when credentials or
-`FACEBOOK_LOGIN_PUBLIC_READY` are present. Email and Google remain the
-supported self-serve paths. Re-enabling Facebook requires a separate reviewed
-code change after the non-role production browser proof; an environment change
-alone must never expose it.
+OVE-296 retires the former Meta social provider rather than merely hiding it:
+registration, UI, env/readiness/smoke configuration, and current operator copy
+are absent. Email and Google remain the supported self-serve paths. One generic
+no-effect auth-boundary denial protects stale initiation/callback traffic; no
+environment change can re-enable the retired surface.
 
 ## OVE-191 Production Scaffold Isolation
 
@@ -149,7 +147,7 @@ Binding exact-SHA production proof:
   path class, method/header class, HTTP status, named response headers, and
   body byte length.
 - Every probe returns `404`, `Cache-Control: private, no-store, max-age=0,
-  s-maxage=0, must-revalidate`, and `X-Robots-Tag: noindex, nofollow`; it has
+s-maxage=0, must-revalidate`, and `X-Robots-Tag: noindex, nofollow`; it has
   an empty body and no `Set-Cookie` or `Content-Language`. A `200`, redirect,
   RSC payload, app-shell byte, or non-empty body fails the proof.
 - Do not retain query strings, request cookies, response bodies, fixture data,
@@ -183,9 +181,8 @@ Binding exact-SHA production proof:
   `docs/PUBLIC_IDENTITY_MIGRATION_RUNBOOK.md` against the current deployed SHA;
 - require zero missing profiles/current claims, duplicate or mismatched claims,
   unresolved legacy references, and pending policy reviews;
-- prove new credential/Google/Facebook accounts converge on the same generated
-  grammar locally/CI, while production provider-start continuity remains bound
-  to the existing OVE-111/OVE-112 provider gates;
+- prove new credential/Google accounts converge on the same generated grammar
+  locally/CI, while production Google start continuity remains bound to OVE-111;
 - prove no-name credential signup and duplicate-signup preservation through the
   canonical auth endpoint without recording email, user id, handle, cookie, or
   provider payload;
@@ -210,7 +207,7 @@ Result on 2026-07-18: pass.
 - Database expand and migration: the exact-SHA additive bootstrap ran before code cutover. Dry-run reported `64` users, `6` existing profiles/current claims, `58` missing profiles/current claims, and two legacy review sets of `6`; rollback proof left aggregate state unchanged. First apply provisioned `58` identities and cleared both review sets. Second apply had zero mutations. Verify returned `64` users, `64` profiles, `64` current claims, zero retired claims, and zero missing, duplicate, mismatch, unresolved-review, or legacy-mention gaps.
 - Canonical runtime: `/` and `/health` returned `200`; health reported configured auth and a successful database ping. Guest `/garden/profile` returned `200`, rendered credential fields without a name/nickname input, kept the owner editor absent, and remained `noindex`. A current public profile returned `200`, profile-v2 markup, and no private markers.
 - Synthetic flow: one generated, non-PII test identity proved credential signup `2xx`, exactly one generated profile/current claim, duplicate signup `2xx` without mutation, verified sign-in, authenticated My Account, immediate custom rename, persisted cooldown, current route `200`, retired route `410` with `noindex` and no redirect, current mention readback, and retired mention exclusion. The synthetic account and its current/retired claims were deleted immediately; final verification returned the unchanged `64`/`64`/`64` zero-gap state.
-- Provider parity: the provider-independent SQL creation trigger and Better Auth database hook are proven locally/CI for credential, Google, and Facebook creation. Production Google/Facebook start continuity remains bound to the existing OVE-111/OVE-112 gates; OVE-203 neither copied provider names into public identity nor changed provider configuration.
+- Provider parity at the time included an additional provider that OVE-296 has since retired. The enduring result is the provider-independent SQL creation trigger/database hook; current product proof covers credential and Google only. OVE-203 neither copied provider names into public identity nor controls current provider registration.
 - Evidence safety: only aggregate counts, booleans, status/header classes, policy version, CI/deployment state, and exact code/deployment identifiers were retained. No email, UUID, handle, rejected moderation value, session cookie, token, provider payload, private content, or precise location was printed or recorded.
 
 ## OVE-204 Reliable Current-Session Sign-out
@@ -549,7 +546,7 @@ Execution notes:
 Redacted production evidence from the final pass:
 
 - Canonical origin: `https://over.garden`, public access without Vercel SSO.
-- Signed-out `/garden`: auth boundary rendered; Google and Facebook auth options visible.
+- Signed-out `/garden`: the historical run rendered the then-current auth options. OVE-296 supersedes that snapshot; current proof requires credential and Google only.
 - Signed-in `/garden`: authenticated garden shell rendered with the production-issued auth cookie.
 - Journal write: first entry saved and read back; a same-object follow-up saved on the same object.
 - Media: private original upload accepted; server processing returned a readable public WebP copy on the `media.over.garden` host class. No quarantine key, derivative key, signed upload URL, or original object key is recorded.
@@ -585,7 +582,7 @@ Founder-confirmed owner/admin smoke, redacted:
 - Signed-out `/admin`: pass. A signed-out request shows the auth boundary, not admin dashboard links.
 - Normal signed-in `/admin`: pass. A non-owner signed-in user is denied before admin links or role rows render.
 - Owner `/admin`: pass. The owner dashboard opens through the sealed owner credential-only gate.
-- Social auth to admin: pass by policy and prior OVE-113 proof. Google/Facebook-linked accounts remain valid gardener accounts but do not satisfy `/admin`.
+- Social auth to admin: pass by policy and prior OVE-113 proof. Google-linked or dormant retired-provider accounts remain gardener accounts but do not satisfy `/admin`.
 
 Live public probes, redacted:
 
@@ -599,7 +596,7 @@ Auth and account continuity evidence:
 
 - Email/password auth, email verification, and password-reset delivery are covered by OVE-127's Resend-backed auth email implementation and OVE-141's 2026-07-04 redacted production delivery proof. Provider class: Resend transactional email. Sender-domain class: `over.garden`. Visible verification/reset link origin class: `https://over.garden`. Account-continuity class: pass.
 - Google OAuth production continuity is covered by OVE-111 redacted provider smoke on 2026-07-02.
-- Facebook Login provider-start continuity is covered by OVE-112 redacted provider smoke on 2026-07-02. OVE-142 adds the public launch gate: until `FACEBOOK_LOGIN_PUBLIC_READY` is explicitly true after real non-role Meta proof, production intentionally hides/disables Facebook Login and keeps email/Google as the usable fallback.
+- OVE-112's 2026-07-02 Meta-provider start receipt is historical only. OVE-296 removes that product surface; current account continuity is email/password plus Google, and OVE-297 owns any dormant production-state cleanup.
 - No provider ids, provider secrets, callback query parameters, message ids, reset links, verification links, cookies, or tokens are recorded here.
 
 ### OVE-248 final social-method recovery proof
@@ -620,8 +617,8 @@ hydration, that same screen must offer a localized **Manage sign-in methods**
 action without mounting the profile or garden tree. It must make no account-method
 request before an explicit click. On that click, the browser obtains a fresh
 authoritative session binding and the server compares it with the current request
-before returning only the boolean projection `hasCredential`, `hasGoogle`,
-`hasFacebook`, and `canSetPassword`. A missing, changed, malformed, rejected, or
+before returning only the boolean projection `hasCredential`, `hasGoogle`, and
+`canSetPassword`. A missing, changed, malformed, rejected, or
 timed-out session remains on the guard with a generic localized unavailable state;
 it exposes no identity, account, garden, offline, or local-data payload. The
 in-place panel may use the existing password bridge and final unlink protocol, but
@@ -1196,7 +1193,7 @@ Forbidden evidence:
 - Auth secret values. Evidence may only say present, missing, placeholder-like, or local-fallback.
 - Google client secrets, OAuth tokens, callback query parameters, provider token responses, or signed cookies. Evidence may name only env presence and exact authorized redirect URI presence.
 - Google Analytics / Google Tag Manager cookies, client IDs, session IDs, IP/user-agent values, referrers, private route paths, auth callback params, or Google Analytics report rows containing user-level data. Evidence may name only the public measurement id, public GTM container id, consent-banner presence, public-route script presence/absence after consent, route class, and HTTP status class.
-- Facebook App Secret values, OAuth tokens, callback query parameters, provider token responses, app access tokens, user access tokens, signed cookies, Meta user ids, or personal emails. Evidence may name only env presence, `FACEBOOK_LOGIN_PUBLIC_READY` false/true by class, exact Valid OAuth Redirect URI presence, and Meta app mode class.
+- Retired-provider credentials, OAuth tokens, callback query parameters, provider token responses, app/user access tokens, signed cookies, provider subjects, or personal emails. OVE-296 evidence may retain only source digests, zero-reference counts, bounded boundary classes, exact commit/deployment class, and generic denial status.
 - Meta Ads attribution CAPI access tokens, Test Events codes, Meta cookies, client ids, user ids, emails, IP/user-agent values, raw URLs/referrers, callback params, private route paths, event payloads containing private garden data, or Meta report rows containing user-level data. Evidence may name only env enabled/disabled class, public Pixel id presence class, marketing consent state, public-route Pixel script presence/absence after consent, safe event class delivery, and CAPI success/failure class.
 
 ## Preflight
@@ -1204,7 +1201,7 @@ Forbidden evidence:
 1. Pick one smoke URL:
    - Production public URL once deployment protection is disabled for the pilot audience.
    - Protected preview only when the goal is internal deployment inspection, not public H6 validation.
-2. Complete email verification for the dedicated owner account, then set `OVERGARDEN_ADMIN_OWNER_USER_ID` for the target environment and bootstrap the owner role only through `pnpm admin:bootstrap-owner`; do not copy the user id into evidence. The script must fail before role mutation unless the account has `emailVerified = true`, exactly one credential row with a password hash, and no Google/Facebook or other linked account.
+2. Complete email verification for the dedicated owner account, then set `OVERGARDEN_ADMIN_OWNER_USER_ID` for the target environment and bootstrap the owner role only through `pnpm admin:bootstrap-owner`; do not copy the user id into evidence. The script must fail before role mutation unless the account has `emailVerified = true`, exactly one credential row with a password hash, and no linked social account.
 3. Open `/garden/pilot-smoke` as the dedicated owner account. No other role is accepted for operator access.
 4. Treat any `fail` check as a blocker for live pilot.
 5. Treat `warn` checks as explicit degraded state that must be named in the Linear/GitHub handoff.
@@ -1213,13 +1210,7 @@ Forbidden evidence:
    - Google Cloud OAuth client type is Web application.
    - Authorized redirect URIs include `http://localhost:3000/api/auth/callback/google` for local testing and `https://over.garden/api/auth/callback/google` for production.
    - Vercel production has `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` present; do not record either value.
-8. Confirm Facebook Login provider setup for the selected environment:
-   - Meta app has `over.garden` as an app domain and `https://over.garden` as the public website origin.
-   - Facebook Login Valid OAuth Redirect URIs include `http://localhost:3000/api/auth/callback/facebook` for local testing and `https://over.garden/api/auth/callback/facebook` for production.
-   - Requested permissions remain basic sign-in only: `email` and `public_profile`; no posting, groups, friends, ads, or social-graph permissions.
-   - Development mode smoke is valid only for app role/test users. Real production gardener login requires the Meta app mode/configuration to allow non-role users.
-   - Vercel production has `FACEBOOK_CLIENT_ID` and `FACEBOOK_CLIENT_SECRET` present if Facebook is being tested; do not record either value.
-   - `FACEBOOK_LOGIN_PUBLIC_READY` must stay absent/false unless a real non-role production smoke passed. When absent/false, production must hide Facebook Login and keep email/Google available.
+8. Run the OVE-296 static and browser retirement checks. Confirm current guest/account-method surfaces expose credential and Google only, and stale retired-provider initiation/callback traffic returns the generic no-effect denial without a provider URL, account/session/cookie mutation, or secret-bearing evidence. Do not mutate provider console or production state in this code-surface smoke; OVE-297 owns that separate operation.
 9. Confirm Google Analytics consent-first tag scope:
    - authored public, legal, and support pages render the analytics consent banner;
    - after analytics acceptance, those pages can render the Google Tag Manager container `GTM-W979KSX3` and expose the GA4 measurement id `G-71LP7XZ5NE` for the container;
@@ -1240,7 +1231,7 @@ Forbidden evidence:
 13. Open `/admin` as the dedicated email/password owner account and confirm it renders `Role: Owner`, `Gate: sealed_owner_credential_only`, admin links, owner-only hints, and no raw journal text, user emails, cookies, tokens, IP/user-agent fields, media keys, precise coordinates, or env values.
 14. Open `/admin/users` as the owner and confirm the sealed owner assignment plus recent audit rows render with bounded role/action/reason labels only. There must be no grant or revoke form.
 15. Open `/admin/users` as a normal signed-in user; it must show `Access denied.` before assignments or audit rows.
-16. Open `/admin` as a user with any linked Google/Facebook account; it must show `Access denied.` before admin links.
+16. Open `/admin` as a user with any linked social account; it must show `Access denied.` before admin links.
 
 Header probes:
 
@@ -1271,12 +1262,11 @@ Public visitor/crawler prerequisite:
    - Start "Continue with Google" from `/garden` and confirm Google accepts the callback without `redirect_uri_mismatch` or `INVALID_ORIGIN`.
    - For an existing gardener email/password account, sign in once, use "Link Google sign-in" from `/garden`, sign out, return with Google, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
    - Open `/admin` as a normal Google-created or Google-linked user and confirm `Access denied.`; Google must not be a path to admin capability.
-5. For Facebook Login:
-   - If `FACEBOOK_LOGIN_PUBLIC_READY` is absent/false, confirm `/garden` does not render "Continue with Facebook" or "Link Facebook sign-in"; email/Google must remain available and OAuth provider errors must point back to a usable fallback path.
-   - If `FACEBOOK_LOGIN_PUBLIC_READY=true`, start "Continue with Facebook" from `/garden` as a real non-role user and confirm Meta accepts the callback without redirect/origin errors.
-   - When enabled, for an existing gardener email/password account, sign in once, use "Link Facebook sign-in" from `/garden`, sign out, return with Facebook, and confirm the same garden data and invite grant remain attached to the same OverGarden user id.
-   - When enabled, open `/admin` as a normal Facebook-created or Facebook-linked user and confirm `Access denied.`; Facebook must not be a path to admin capability.
-   - If the Meta app is still in Development mode, keep `FACEBOOK_LOGIN_PUBLIC_READY` false and record the result as intentional production fallback, not production gardener proof.
+5. For the OVE-296 retired-provider boundary:
+   - confirm Ukrainian, Bulgarian, and Russian guest/auth-intent surfaces expose credential and Google entry points only;
+   - confirm `/garden/profile` exposes only credential and Google account methods;
+   - send bounded stale initiation and callback requests and require a generic empty `404`, `private, no-store`, no `Set-Cookie`, no provider authorization URL, and no Better Auth/provider effect;
+   - retain only the `FacebookSurfaceRetirementReceiptV1` counts/digests/classes and exact deployment identifiers; do not attempt a real retired-provider login or provider-console mutation.
 6. For Meta Ads attribution, only if `NEXT_PUBLIC_META_MARKETING_MEASUREMENT_ENABLED=true` for the smoke window:
    - verify a public route does not load Pixel before marketing consent;
    - accept marketing measurement and confirm only the allowlisted public event class appears in Meta Test Events;

@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
-  FACEBOOK_PROVIDER_ID,
   GOOGLE_PROVIDER_ID,
   navigateToOAuthAuthorization,
   oauthCallbackPath,
@@ -35,7 +34,7 @@ import {
 
 type AccountMethodState = Pick<
   AccountMethodsPanelProps,
-  "facebookSignInEnabled" | "googleSignInEnabled" | "hasFacebook" | "hasGoogle"
+  "googleSignInEnabled" | "hasGoogle"
 >;
 
 const PROVIDERS = [
@@ -44,12 +43,6 @@ const PROVIDERS = [
     label: "Google",
     enabled: (methods: AccountMethodState) => methods.googleSignInEnabled,
     connected: (methods: AccountMethodState) => methods.hasGoogle,
-  },
-  {
-    id: FACEBOOK_PROVIDER_ID,
-    label: "Facebook",
-    enabled: (methods: AccountMethodState) => methods.facebookSignInEnabled,
-    connected: (methods: AccountMethodState) => methods.hasFacebook,
   },
 ] as const;
 
@@ -63,7 +56,6 @@ type DisconnectIntent = {
 };
 
 export interface AccountMethodsPanelProps extends AccountMethodProjection {
-  facebookSignInEnabled: boolean;
   googleSignInEnabled: boolean;
   initialMessage?: string | null;
   locale: InterfaceLocale;
@@ -71,10 +63,8 @@ export interface AccountMethodsPanelProps extends AccountMethodProjection {
 }
 
 export function AccountMethodsPanel({
-  facebookSignInEnabled,
   googleSignInEnabled,
   hasCredential,
-  hasFacebook,
   hasGoogle,
   canSetPassword,
   initialMessage = null,
@@ -99,14 +89,11 @@ export function AccountMethodsPanel({
     pending: pendingAction !== null,
   });
   const methods = {
-    facebookSignInEnabled,
     googleSignInEnabled,
     hasCredential,
-    hasFacebook,
     hasGoogle,
   };
-  const connectedMethodCount =
-    Number(hasCredential) + Number(hasFacebook) + Number(hasGoogle);
+  const connectedMethodCount = Number(hasCredential) + Number(hasGoogle);
   const refreshMethods = () => {
     if (onMethodsChanged) {
       onMethodsChanged();

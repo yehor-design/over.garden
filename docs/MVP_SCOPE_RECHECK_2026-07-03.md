@@ -37,7 +37,7 @@ User job and trust concern: gardeners need a durable, low-friction growing memor
   Canonical unprefixed product/auth/garden/operator routes retain their URLs
   and persist a Bulgaria-market `bg|ru` choice through a narrow POST boundary.
   UGC is never translated.
-- Self-serve auth is MVP. Email auth uses Resend. Google and Facebook auth are already part of the active auth surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
+- Self-serve auth is MVP. Email auth uses Resend and Google is the supported social sign-in provider. OVE-296 removes the former Meta social sign-in surface; OVE-297 owns bounded provider-state cleanup without making dormant rows part of the product surface. Apple Sign-In is not MVP after the 2026-07-04 founder decision to avoid AppleID login for launch; revisit it only after MVP if native App Store distribution or a fresh sign-in access requirement makes it necessary.
 - Full M:N journaling is MVP: a space-level entry can mention multiple objects and appear in the relevant timelines without duplicated entries.
 - Composer friction work is MVP now: draft persistence, draft-through-auth, photo-start, title prefill, and voice-to-text.
 - MVP legal/privacy copy is founder-approved for MVP, written/generated internally, with lawyer review deferred until after MVP. Public support contact is `support.overgarden@gmail.com`.
