@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  requireCurrentRequestScope: vi.fn(),
+  admitDocumentMutation: vi.fn(),
   assertCatalogCuratorAccess: vi.fn(),
   enqueueCatalogAliasSuggestionsRefresh: vi.fn(),
   approveCatalogAliasSuggestion: vi.fn(),
@@ -24,8 +24,11 @@ vi.mock("next/cache", () => ({
   revalidatePath: mocks.revalidatePath,
 }));
 
-vi.mock("@/server/auth-session", () => ({
-  requireCurrentRequestScope: mocks.requireCurrentRequestScope,
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn((formData: FormData) =>
+    formData.get("__overgardenDocumentGeneration"),
+  ),
 }));
 
 vi.mock("@/server/catalog-curator-auth", () => ({
@@ -71,9 +74,12 @@ vi.mock("@/lib/garden/public-paths", () => ({
 describe("catalog curation actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireCurrentRequestScope.mockResolvedValue({
-      userId: "00000000-0000-4000-8000-000000000999",
-      sessionId: "non-operator-session",
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000999",
+        sessionId: "non-operator-session",
+      },
     });
     mocks.assertCatalogCuratorAccess.mockResolvedValue({
       mode: "sealed_owner_credential_only",
@@ -205,7 +211,7 @@ describe("catalog curation actions", () => {
   it("queues the global fuzzy QA refresh behind the operator gate", async () => {
     const { refreshCatalogFuzzyDuplicateQaAction } = await import("./actions");
 
-    const result = await refreshCatalogFuzzyDuplicateQaAction();
+    const result = await refreshCatalogFuzzyDuplicateQaAction(new FormData());
 
     expect(mocks.assertCatalogCuratorAccess).toHaveBeenCalledOnce();
     expect(mocks.enqueueCatalogFuzzyDuplicateQaRefresh).toHaveBeenCalledOnce();
@@ -406,6 +412,9 @@ describe("catalog curation actions", () => {
 
     const result = await approveCatalogMatchSuggestionAction(formData);
 
+    if ("documentMutationAdmission" in result) {
+      throw new Error("Expected a catalog suggestion result.");
+    }
     expect(result.outcome).toBe("stale");
     expect(result.message).toContain("Nothing was applied");
     expect(mocks.revalidatePath).toHaveBeenCalledWith(

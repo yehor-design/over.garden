@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { GardenAuthPanel } from "@/app/garden/garden-auth-panel";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import type { OperatorCopy } from "@/lib/operator-copy";
 import {
@@ -113,7 +114,7 @@ export default async function CommunityModerationPage({
             )}
           </p>
         </div>
-        <form action={setCommunityParticipationAction}>
+        <DocumentMutationActionForm action={setCommunityParticipationAction}>
           <ModeratorFields
             slug={slug}
             reason="rule_violation"
@@ -133,7 +134,7 @@ export default async function CommunityModerationPage({
               ? copy.community.closeParticipation
               : copy.community.openParticipation}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       </section>
 
       <section id="moderation-queue" className="grid gap-3">
@@ -294,7 +295,7 @@ function ModerationForm({
   stateValue,
   label,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
   slug: string;
   item: {
     reportId: string;
@@ -308,7 +309,7 @@ function ModerationForm({
   label: string;
 }) {
   return (
-    <form action={action}>
+    <DocumentMutationActionForm action={action}>
       <ModeratorFields
         slug={slug}
         reason={item.reportReason}
@@ -321,7 +322,7 @@ function ModerationForm({
       <button className={buttonVariants({ variant: "outline", size: "sm" })}>
         {label}
       </button>
-    </form>
+    </DocumentMutationActionForm>
   );
 }
 

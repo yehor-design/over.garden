@@ -26,7 +26,6 @@ import {
   createLineageInvitation,
   createProvenanceEdge,
 } from "@/server/lineage-repository";
-import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
@@ -61,7 +60,13 @@ export async function createPlantObjectJournalEntryAction(
 }
 
 export async function resolvePlantObjectCatalogAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await resolvePlantObjectCatalog(scope, {
     plantObjectId: String(formData.get("objectId") ?? ""),
     catalogItemId: String(formData.get("catalogItemId") ?? ""),
@@ -75,7 +80,13 @@ export async function resolvePlantObjectCatalogAction(formData: FormData) {
 }
 
 export async function updatePlantObjectLocationAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await updatePlantObjectLocation(scope, {
     plantObjectId: String(formData.get("objectId") ?? ""),
     locationVisibility: String(formData.get("locationVisibility") ?? ""),
@@ -90,7 +101,13 @@ export async function updatePlantObjectLocationAction(formData: FormData) {
 }
 
 export async function createProvenanceEdgeAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await createProvenanceEdge(scope, {
     subjectPlantObjectId: String(formData.get("objectId") ?? ""),
     sourceKind: String(formData.get("sourceKind") ?? ""),
@@ -108,7 +125,13 @@ export async function createProvenanceEdgeAction(formData: FormData) {
 }
 
 export async function createLineageInvitationAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await createLineageInvitation(scope, {
     subjectPlantObjectId: String(formData.get("objectId") ?? ""),
     pendingSourceLabel: String(formData.get("pendingSourceLabel") ?? ""),

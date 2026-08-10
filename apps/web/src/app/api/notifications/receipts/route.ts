@@ -2,7 +2,11 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 import { normalizeInternalReturnPath } from "@/lib/navigation/internal-return-path";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import {
   markNotificationEventsRead,
   setNotificationReceipt,
@@ -12,19 +16,25 @@ import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/socia
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const session = await getCurrentSession();
   const visualActor = resolveVisualSocialMutationActor(formData, [
     "notifications",
   ]);
-  const userId = visualActor?.actorId ?? session?.user?.id;
   const returnTo = notificationReturnTo(formData.get("returnTo"));
-  if (!userId)
-    return NextResponse.redirect(new URL(returnTo, request.url), 303);
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromRequest(request),
+      });
+  if (admission?.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      return NextResponse.redirect(new URL(returnTo, request.url), 303);
+    }
+    return documentMutationAdmissionResponse(admission);
+  }
 
-  const scope = scopedToUser(
-    userId,
-    visualActor ? null : getSessionId(session),
-  );
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const keys = formData
     .getAll("eventKey")
     .map(String)

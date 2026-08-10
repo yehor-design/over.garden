@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 
 import { SignOutControl } from "@/components/auth/sign-out-control";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { isGoogleSignInEnabled } from "@/lib/auth/google-oauth";
 import { publicProfilePath } from "@/lib/garden/public-paths";
@@ -187,7 +188,7 @@ export default async function GardenPublicProfilePage({
                     @{profile.handle}
                   </p>
                 </div>
-                <form action={unblockProfileAction}>
+                <DocumentMutationActionForm action={unblockProfileAction}>
                   <input type="hidden" name="blockId" value={profile.blockId} />
                   <button
                     type="submit"
@@ -198,7 +199,7 @@ export default async function GardenPublicProfilePage({
                   >
                     {copy.unblock}
                   </button>
-                </form>
+                </DocumentMutationActionForm>
               </li>
             ))}
           </ul>

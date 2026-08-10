@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import {
   MySocialLayout,
   SocialEmptyState,
@@ -258,7 +259,9 @@ function WishlistRow({
           </Link>
         ) : null}
         {item.catalog.publicSlug ? (
-          <form action={removeCatalogPublicSlugFromWishlistAction}>
+          <DocumentMutationActionForm
+            action={removeCatalogPublicSlugFromWishlistAction}
+          >
             <input
               type="hidden"
               name="catalogPublicSlug"
@@ -280,7 +283,7 @@ function WishlistRow({
               <Trash2 className="size-4" />
               <span className="sr-only">{copy.common.remove}</span>
             </button>
-          </form>
+          </DocumentMutationActionForm>
         ) : null}
       </div>
     </li>

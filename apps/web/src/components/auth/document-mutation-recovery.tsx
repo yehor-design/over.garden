@@ -17,10 +17,10 @@ import {
   DOCUMENT_MUTATION_GENERATION_HEADER,
   DOCUMENT_OWNER_CHANGED_EVENT,
   isDocumentMutationAdmissionTransportResult,
-  type DocumentMutationActionStateV1,
   type DocumentMutationAdmissionTransportResultV1,
 } from "@/lib/auth/document-mutation-generation-transport";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import { RemainingDocumentMutationTransportBoundary } from "./remaining-document-mutation-recovery";
 
 export { DOCUMENT_OWNER_CHANGED_EVENT };
 
@@ -234,6 +234,11 @@ export function DocumentMutationGenerationProvider({
 
   return (
     <DocumentMutationGenerationContext.Provider value={value}>
+      <RemainingDocumentMutationTransportBoundary
+        transport={transport}
+        handleTransportResult={handleTransportResult}
+        confirmOwnerContinuity={confirmDocumentMutationOwnerContinuity}
+      />
       {children}
       {recoveryState !== "idle" && recoveryState !== "owner_changed" ? (
         <p
@@ -286,38 +291,40 @@ export function DocumentMutationActionForm({
   children,
   ...props
 }: Omit<React.ComponentProps<"form">, "action"> & {
-  action: (
-    formData: FormData,
-  ) => Promise<DocumentMutationActionStateV1 | undefined>;
+  action: (formData: FormData) => Promise<unknown>;
 }) {
   const recovery = useOptionalDocumentMutationGeneration();
-  const handledStateRef = useRef<DocumentMutationActionStateV1 | undefined>(
-    undefined,
-  );
-  const [state, formAction] = useActionState(
-    async (
-      _previousState: DocumentMutationActionStateV1 | undefined,
-      formData: FormData,
-    ) => action(formData),
+  const handledStateRef = useRef<unknown>(undefined);
+  const [state, formAction] = useActionState<unknown, FormData>(
+    async (_previousState: unknown, formData: FormData) => action(formData),
     undefined,
   );
 
   useEffect(() => {
-    if (
-      state?.documentMutationAdmission &&
-      handledStateRef.current !== state
-    ) {
+    const admission = readDocumentMutationActionAdmission(state);
+    if (admission && handledStateRef.current !== state) {
       handledStateRef.current = state;
-      recovery?.handleTransportResult(state.documentMutationAdmission);
+      recovery?.handleTransportResult(admission);
     }
   }, [recovery, state]);
 
   return (
-    <form {...props} action={formAction}>
+    <form {...props} action={formAction} data-document-mutation-managed="true">
       <DocumentMutationGenerationFormField />
       {children}
     </form>
   );
+}
+
+function readDocumentMutationActionAdmission(
+  state: unknown,
+): DocumentMutationAdmissionTransportResultV1 | null {
+  if (!state || typeof state !== "object") return null;
+  const admission = (state as { documentMutationAdmission?: unknown })
+    .documentMutationAdmission;
+  return isDocumentMutationAdmissionTransportResult(admission)
+    ? admission
+    : null;
 }
 
 export async function readDocumentMutationAdmissionResult(
@@ -334,7 +341,7 @@ export async function readDocumentMutationAdmissionResult(
   }
 }
 
-async function confirmDocumentMutationOwnerContinuity(
+export async function confirmDocumentMutationOwnerContinuity(
   sourceTransport: string,
   signal: AbortSignal,
 ): Promise<DocumentMutationAdmissionTransportResultV1> {

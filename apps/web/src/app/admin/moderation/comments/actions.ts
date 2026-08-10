@@ -2,24 +2,29 @@
 
 import { revalidatePath } from "next/cache";
 
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import {
   moderateEngagementCommentReport,
   type EngagementModerationAction,
 } from "@/server/engagement-repository";
-import { scopedToUser } from "@/server/request-scope";
 
 export async function moderateCommentReportAction(formData: FormData) {
-  const session = await getCurrentSession();
-  if (!session?.user?.id) return;
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
   try {
-    await moderateEngagementCommentReport(
-      scopedToUser(session.user.id, getSessionId(session)),
-      {
-        reportId: String(formData.get("reportId") ?? ""),
-        action: String(formData.get("action") ?? "") as EngagementModerationAction,
-      },
-    );
+    await moderateEngagementCommentReport(admission.scope, {
+      reportId: String(formData.get("reportId") ?? ""),
+      action: String(
+        formData.get("action") ?? "",
+      ) as EngagementModerationAction,
+    });
     revalidatePath("/admin/moderation/comments");
     return;
   } catch {

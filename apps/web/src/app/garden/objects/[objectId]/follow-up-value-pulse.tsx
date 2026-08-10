@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
+import {
   FOLLOW_UP_USEFULNESS_OPTIONS,
   FOLLOW_UP_USEFULNESS_REASON_OPTIONS,
   type FollowUpUsefulness,
@@ -31,6 +35,7 @@ export function FollowUpValuePulse({
 }: FollowUpValuePulseProps) {
   const copy = getOwnerObjectCopy(locale).valuePulse;
   const router = useRouter();
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const [phase, setPhase] = useState<PulsePhase>("prompt");
   const [usefulness, setUsefulness] = useState<FollowUpUsefulness | null>(null);
   const [usefulnessReason, setUsefulnessReason] =
@@ -49,7 +54,10 @@ export function FollowUpValuePulse({
     try {
       const response = await fetch("/api/garden/value-pulse", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...createDocumentMutationRequestHeaders(documentMutation?.transport),
+        },
         body: JSON.stringify({
           plantObjectId: objectId,
           journalEntryId,
@@ -59,6 +67,7 @@ export function FollowUpValuePulse({
         }),
       });
 
+      if (await documentMutation?.handleResponse(response)) return;
       if (!response.ok) {
         throw new Error(copy.error);
       }

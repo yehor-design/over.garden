@@ -1,6 +1,10 @@
 import { revalidatePath } from "next/cache";
 
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { setEngagementBookmark } from "@/server/engagement-repository";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
@@ -15,21 +19,25 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const target = parseEngagementTarget(formData);
   const returnTo = parseEngagementReturnTo(formData, target);
-  const session = await getCurrentSession();
   const visualActor = resolveVisualSocialMutationActor(formData, [
     "journal",
     "bookmarks",
   ]);
-  const userId = visualActor?.actorId ?? session?.user?.id;
-
-  if (!userId) {
-    return redirectToEngagementAuth(request, target, returnTo, "bookmark");
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromRequest(request),
+      });
+  if (admission?.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      return redirectToEngagementAuth(request, target, returnTo, "bookmark");
+    }
+    return documentMutationAdmissionResponse(admission);
   }
 
-  const scope = scopedToUser(
-    userId,
-    visualActor ? null : getSessionId(session),
-  );
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   const bookmarkState = String(formData.get("bookmarkState") ?? "");
   const result = await setEngagementBookmark(scope, {
     target,

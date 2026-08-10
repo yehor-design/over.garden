@@ -5,10 +5,16 @@ import { sealPublicHandleMentionTarget } from "@/server/public-handle-mention-to
 const mocks = vi.hoisted(() => ({
   requireCurrentRequestScope: vi.fn(),
   searchJournalMentionSuggestions: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
   requireCurrentRequestScope: mocks.requireCurrentRequestScope,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: vi.fn(),
+  documentMutationGenerationFromRequest: vi.fn(() => null),
 }));
 
 vi.mock("@/server/journal-mention-repository", () => ({
@@ -26,6 +32,13 @@ describe("GET /api/garden/mentions/typeahead", () => {
     mocks.requireCurrentRequestScope.mockResolvedValue({
       userId: AUDIENCE_USER_ID,
       sessionId: "session-1",
+    });
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: AUDIENCE_USER_ID,
+        sessionId: "session-1",
+      },
     });
   });
 
@@ -76,7 +89,7 @@ describe("GET /api/garden/mentions/typeahead", () => {
     });
     expect(responseText).not.toContain(TARGET_USER_ID);
     expect(responseText).not.toContain("must-not-reach-http");
-    expect(mocks.requireCurrentRequestScope).toHaveBeenCalledOnce();
+    expect(mocks.admitDocumentMutation).toHaveBeenCalledOnce();
     expect(mocks.searchJournalMentionSuggestions).toHaveBeenCalledWith(
       { userId: AUDIENCE_USER_ID, sessionId: "session-1" },
       "green",

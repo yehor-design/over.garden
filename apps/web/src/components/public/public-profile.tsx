@@ -17,6 +17,7 @@ import {
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthIntentFocus } from "@/components/auth/auth-intent-focus";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { SubjectAwareMediaImage } from "@/components/media/subject-aware-media-image";
 import {
   SiteShellContextRailRegistration,
@@ -382,7 +383,10 @@ function ProfileActions({
           id="lineage-follow"
         />
       ) : viewer.kind === "following" ? (
-        <form action={unfollowProfileAction} id="lineage-follow">
+        <DocumentMutationActionForm
+          action={unfollowProfileAction}
+          id="lineage-follow"
+        >
           {hiddenFields}
           <button
             type="submit"
@@ -392,9 +396,12 @@ function ProfileActions({
             <UserMinus aria-hidden="true" />
             {copy.unfollow}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       ) : (
-        <form action={followProfileAction} id="lineage-follow">
+        <DocumentMutationActionForm
+          action={followProfileAction}
+          id="lineage-follow"
+        >
           {hiddenFields}
           <button
             type="submit"
@@ -404,7 +411,7 @@ function ProfileActions({
             <UserPlus aria-hidden="true" />
             {copy.follow}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       )}
 
       <details
@@ -453,7 +460,10 @@ function ProfileActions({
             </>
           ) : (
             <>
-              <form action={reportProfileAction} className="grid gap-2">
+              <DocumentMutationActionForm
+                action={reportProfileAction}
+                className="grid gap-2"
+              >
                 {hiddenFields}
                 <label className="grid gap-1 text-xs font-medium text-foreground">
                   {copy.reportTitle}
@@ -483,8 +493,11 @@ function ProfileActions({
                   <Flag aria-hidden="true" />
                   {copy.reportSubmit}
                 </button>
-              </form>
-              <form action={blockProfileAction} id="profile-block">
+              </DocumentMutationActionForm>
+              <DocumentMutationActionForm
+                action={blockProfileAction}
+                id="profile-block"
+              >
                 {hiddenFields}
                 <button
                   type="submit"
@@ -498,7 +511,7 @@ function ProfileActions({
                   <ShieldBan aria-hidden="true" />
                   {copy.block}
                 </button>
-              </form>
+              </DocumentMutationActionForm>
             </>
           )}
         </div>
@@ -683,7 +696,8 @@ function ObjectKindIcon({
 }: {
   kind: PublicProfileObjectEvidence["objectKind"];
 }) {
-  if (kind === "animal") return <PawPrint className="size-4" aria-hidden="true" />;
+  if (kind === "animal")
+    return <PawPrint className="size-4" aria-hidden="true" />;
   return <Sprout className="size-4" aria-hidden="true" />;
 }
 

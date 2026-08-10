@@ -18,6 +18,11 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: vi.fn(() => null),
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
+  documentMutationGenerationFromFormData: vi.fn(),
+}));
 vi.mock("@/server/interface-localization", () => ({
   getRequestInterfaceLocale: mocks.getRequestInterfaceLocale,
 }));

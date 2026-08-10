@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import type { InterfaceLocale } from "@/lib/interface-localization";
 
 type Organ = "auto" | "leaf" | "flower" | "fruit" | "bark";
@@ -35,6 +39,7 @@ export function PlantIdentificationPanel({
   media: readonly MediaOption[];
 }) {
   const copy = COPY[locale];
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const [selectedIds, setSelectedIds] = useState<string[]>(() =>
     media.slice(0, 1).map((item) => item.id),
   );
@@ -70,13 +75,17 @@ export function PlantIdentificationPanel({
     try {
       const response = await fetch("/api/garden/plant-identification", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...createDocumentMutationRequestHeaders(documentMutation?.transport),
+        },
         body: JSON.stringify({
           plantObjectId: objectId,
           mediaAssetIds: selectedMedia.map((item) => item.id),
           organs: selectedMedia.map((item) => organsById[item.id] ?? "auto"),
         }),
       });
+      if (await documentMutation?.handleResponse(response)) return;
       setReceipt((await response.json()) as Receipt);
       setShowAllCandidates(false);
     } catch {
@@ -99,7 +108,12 @@ export function PlantIdentificationPanel({
         "/api/garden/plant-identification/decision",
         {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            ...createDocumentMutationRequestHeaders(
+              documentMutation?.transport,
+            ),
+          },
           body: JSON.stringify({
             requestId: receipt.id,
             decision,
@@ -108,6 +122,7 @@ export function PlantIdentificationPanel({
           }),
         },
       );
+      if (await documentMutation?.handleResponse(response)) return;
       if (!response.ok) throw new Error("decision unavailable");
       if (fallbackHash) {
         window.location.assign(fallbackHash);
@@ -203,7 +218,11 @@ export function PlantIdentificationPanel({
         >
           {pending ? copy.identifying : copy.identify}
         </button>
-        <IdentificationFallbacks copy={copy} receipt={receipt} decide={decide} />
+        <IdentificationFallbacks
+          copy={copy}
+          receipt={receipt}
+          decide={decide}
+        />
       </div>
 
       {receipt ? (
@@ -217,28 +236,32 @@ export function PlantIdentificationPanel({
             {receiptMessage(copy, receipt.state)}
           </p>
           {receipt.canConfirm && receipt.candidates?.length ? (
-            <div className="grid gap-2" role="list" aria-label={copy.candidates}>
+            <div
+              className="grid gap-2"
+              role="list"
+              aria-label={copy.candidates}
+            >
               {receipt.candidates
                 .slice(0, showAllCandidates ? 5 : 3)
                 .map((candidate) => (
-                <div
-                  key={candidate.rank}
-                  role="listitem"
-                  className="flex flex-wrap items-center justify-between gap-3 rounded border border-border p-2"
-                >
-                  <span className="text-sm text-foreground">
-                    {candidate.scientificName}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => void decide("confirmed", candidate)}
-                    disabled={pending}
-                    className="rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+                  <div
+                    key={candidate.rank}
+                    role="listitem"
+                    className="flex flex-wrap items-center justify-between gap-3 rounded border border-border p-2"
                   >
-                    {copy.confirm}
-                  </button>
-                </div>
-              ))}
+                    <span className="text-sm text-foreground">
+                      {candidate.scientificName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void decide("confirmed", candidate)}
+                      disabled={pending}
+                      className="rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+                    >
+                      {copy.confirm}
+                    </button>
+                  </div>
+                ))}
               {receipt.candidates.length > 3 ? (
                 <button
                   type="button"

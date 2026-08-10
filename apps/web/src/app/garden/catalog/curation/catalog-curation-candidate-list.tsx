@@ -12,6 +12,11 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 
+import {
+  DocumentMutationActionForm,
+  DocumentMutationGenerationFormField,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -23,6 +28,7 @@ import {
   formatOperatorDate,
   formatOperatorTemplate,
 } from "@/lib/operator-copy";
+import type { CatalogMatchSuggestionActionResult } from "./actions";
 
 interface CatalogCurationCandidate {
   id: string;
@@ -70,15 +76,15 @@ interface CatalogMatchSuggestion {
 interface CatalogCurationCandidateListProps {
   locale: InterfaceLocale;
   candidates: CatalogCurationCandidate[];
-  confirmAction: (formData: FormData) => void | Promise<void>;
-  mergeAction: (formData: FormData) => void | Promise<void>;
-  rejectAction: (formData: FormData) => void | Promise<void>;
-  rescanAction: (formData: FormData) => void | Promise<void>;
+  confirmAction: (formData: FormData) => Promise<unknown>;
+  mergeAction: (formData: FormData) => Promise<unknown>;
+  rejectAction: (formData: FormData) => Promise<unknown>;
+  rescanAction: (formData: FormData) => Promise<unknown>;
   approveSuggestionAction: CatalogMatchSuggestionAction;
   rejectSuggestionAction: CatalogMatchSuggestionAction;
 }
 
-interface CatalogMatchSuggestionActionResult {
+interface CatalogMatchSuggestionFeedback {
   outcome: "approved" | "rejected" | "stale";
   message: string;
 }
@@ -141,10 +147,10 @@ export function CatalogCurationCandidateList({
 interface CatalogCurationCandidateCardProps {
   locale: InterfaceLocale;
   candidate: CatalogCurationCandidate;
-  confirmAction: (formData: FormData) => void | Promise<void>;
-  mergeAction: (formData: FormData) => void | Promise<void>;
-  rejectAction: (formData: FormData) => void | Promise<void>;
-  rescanAction: (formData: FormData) => void | Promise<void>;
+  confirmAction: (formData: FormData) => Promise<unknown>;
+  mergeAction: (formData: FormData) => Promise<unknown>;
+  rejectAction: (formData: FormData) => Promise<unknown>;
+  rescanAction: (formData: FormData) => Promise<unknown>;
   approveSuggestionAction: CatalogMatchSuggestionAction;
   rejectSuggestionAction: CatalogMatchSuggestionAction;
 }
@@ -155,7 +161,7 @@ function CatalogCurationCandidateCard({
   confirmAction,
   mergeAction,
   rejectAction,
-  rescanAction,
+  rescanAction: executeRescanAction,
   approveSuggestionAction,
   rejectSuggestionAction,
 }: CatalogCurationCandidateCardProps) {
@@ -240,6 +246,18 @@ function CatalogCurationCandidateCard({
     setStatus("idle");
   }
 
+  async function rescanAction(formData: FormData) {
+    const result = await executeRescanAction(formData);
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("documentMutationAdmission" in result)
+    ) {
+      setRefreshQueued(true);
+    }
+    return result;
+  }
+
   return (
     <article
       className={`grid gap-4 rounded-lg border p-4 ${
@@ -295,17 +313,17 @@ function CatalogCurationCandidateCard({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <form action={rescanAction} onSubmit={() => setRefreshQueued(true)}>
+          <DocumentMutationActionForm action={rescanAction}>
             <input type="hidden" name="candidateId" value={candidate.id} />
             <CatalogRescanButton locale={locale} queued={refreshQueued} />
-          </form>
-          <form action={confirmAction}>
+          </DocumentMutationActionForm>
+          <DocumentMutationActionForm action={confirmAction}>
             <input type="hidden" name="candidateId" value={candidate.id} />
             <button type="submit" className={buttonVariants()}>
               <CheckCircle2 className="size-4" />
               {copy.candidate.confirm}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </div>
       </div>
 
@@ -317,7 +335,7 @@ function CatalogCurationCandidateCard({
       />
 
       <div className="grid gap-3 border-t border-border pt-4">
-        <form action={mergeAction} className="grid gap-3">
+        <DocumentMutationActionForm action={mergeAction} className="grid gap-3">
           <input type="hidden" name="candidateId" value={candidate.id} />
           <input
             type="hidden"
@@ -429,9 +447,12 @@ function CatalogCurationCandidateCard({
             <GitMerge className="size-4" />
             {copy.candidate.merge}
           </button>
-        </form>
+        </DocumentMutationActionForm>
 
-        <form action={rejectAction} className="border-t border-border pt-3">
+        <DocumentMutationActionForm
+          action={rejectAction}
+          className="border-t border-border pt-3"
+        >
           <input type="hidden" name="candidateId" value={candidate.id} />
           <button
             type="submit"
@@ -443,7 +464,7 @@ function CatalogCurationCandidateCard({
             <XCircle className="size-4" />
             {copy.candidate.reject}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       </div>
     </article>
   );
@@ -667,9 +688,10 @@ function CatalogMatchSuggestionDecisionControls({
   rejectAction: CatalogMatchSuggestionAction;
 }) {
   const copy = getOperatorCurationCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const router = useRouter();
   const [feedback, setFeedback] = useState<
-    | CatalogMatchSuggestionActionResult
+    | CatalogMatchSuggestionFeedback
     | { outcome: "error"; message: string }
     | null
   >(null);
@@ -686,6 +708,12 @@ function CatalogMatchSuggestionDecisionControls({
     startDecision(async () => {
       try {
         const result = await action(formData);
+        if ("documentMutationAdmission" in result) {
+          documentMutation?.handleTransportResult(
+            result.documentMutationAdmission,
+          );
+          return;
+        }
         setFeedback({
           ...result,
           message: matchActionFeedback(copy, result.outcome),
@@ -703,7 +731,11 @@ function CatalogMatchSuggestionDecisionControls({
   return (
     <div className="grid gap-2 border-t border-border pt-3">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-        <form onSubmit={(event) => submitDecision(event, approveAction)}>
+        <form
+          onSubmit={(event) => submitDecision(event, approveAction)}
+          data-document-mutation-managed="true"
+        >
+          <DocumentMutationGenerationFormField />
           <input type="hidden" name="suggestionId" value={suggestionId} />
           <button
             type="submit"
@@ -720,7 +752,9 @@ function CatalogMatchSuggestionDecisionControls({
         <form
           onSubmit={(event) => submitDecision(event, rejectAction)}
           className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-end"
+          data-document-mutation-managed="true"
         >
+          <DocumentMutationGenerationFormField />
           <input type="hidden" name="suggestionId" value={suggestionId} />
           <label className="grid min-w-0 flex-1 gap-1 text-xs font-medium text-foreground">
             {copy.common.rejectionReason}
@@ -778,7 +812,7 @@ function CatalogMatchSuggestionDecisionControls({
 
 function matchActionFeedback(
   copy: ReturnType<typeof getOperatorCurationCopy>,
-  outcome: CatalogMatchSuggestionActionResult["outcome"],
+  outcome: CatalogMatchSuggestionFeedback["outcome"],
 ) {
   switch (outcome) {
     case "approved":

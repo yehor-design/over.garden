@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { moderateCommentReportAction } from "@/app/admin/moderation/comments/actions";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { getOperatorCopy } from "@/lib/operator-copy";
 import { getCurrentSession, getSessionId } from "@/server/auth-session";
@@ -27,7 +28,9 @@ export default async function CommentModerationPage() {
     : null;
   const access = await resolveAdminCapabilityAccess(scope, "operator:mutate");
   if (access.status !== "allowed" || !scope) {
-    return <main className="mx-auto max-w-4xl p-6">{copy.common.accessDenied}</main>;
+    return (
+      <main className="mx-auto max-w-4xl p-6">{copy.common.accessDenied}</main>
+    );
   }
   const queue = await listEngagementCommentModerationQueue(scope);
   return (
@@ -41,26 +44,43 @@ export default async function CommentModerationPage() {
       {queue.length ? (
         <ul className="grid gap-3">
           {queue.map((item) => (
-            <li key={item.reportId} className="grid gap-3 rounded-md border p-4">
+            <li
+              key={item.reportId}
+              className="grid gap-3 rounded-md border p-4"
+            >
               <p className="text-sm text-muted-foreground">
                 {item.targetKind} · {item.reason} · {item.reportState}
               </p>
               <div className="flex flex-wrap gap-2">
                 {(["review", "dismiss", "remove"] as const).map((action) => (
-                  <form key={action} action={moderateCommentReportAction}>
-                    <input type="hidden" name="reportId" value={item.reportId} />
+                  <DocumentMutationActionForm
+                    key={action}
+                    action={moderateCommentReportAction}
+                  >
+                    <input
+                      type="hidden"
+                      name="reportId"
+                      value={item.reportId}
+                    />
                     <input type="hidden" name="action" value={action} />
-                    <button className={buttonVariants({ variant: "outline", size: "sm" })}>
+                    <button
+                      className={buttonVariants({
+                        variant: "outline",
+                        size: "sm",
+                      })}
+                    >
                       {action}
                     </button>
-                  </form>
+                  </DocumentMutationActionForm>
                 ))}
               </div>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">{copy.common.accessDenied}</p>
+        <p className="text-sm text-muted-foreground">
+          {copy.common.accessDenied}
+        </p>
       )}
     </main>
   );

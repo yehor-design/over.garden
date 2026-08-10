@@ -41,6 +41,10 @@ vi.mock("@/server/pilot-write-access", () => ({
 vi.mock("@/server/lineage-interactions-repository", () => ({
   listLineageInteractionTargets: mocks.listLineageInteractionTargets,
 }));
+vi.mock("./actions", () => ({
+  askLineageQuestionAction: vi.fn(),
+  followLineageNodeAction: vi.fn(),
+}));
 
 const objectId = "00000000-0000-4000-8000-000000000101";
 const sourceObjectId = "00000000-0000-4000-8000-000000000102";
@@ -184,7 +188,11 @@ describe("/lineage/objects/[objectId]", () => {
     mocks.getPublicObjectPassportPage.mockResolvedValue(objectPassportPage);
     mocks.getPublicLineageGraphPage.mockResolvedValue(lineageGraphPage);
     mocks.getRequestInterfaceLocale.mockResolvedValue("bg");
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: true, invited: false, actorClass: "real_self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({
+      canWrite: true,
+      invited: false,
+      actorClass: "real_self_serve",
+    });
     mocks.listLineageInteractionTargets.mockResolvedValue([
       {
         edgeId: lineageGraphPage.edges[0].id,
@@ -292,7 +300,11 @@ describe("/lineage/objects/[objectId]", () => {
       user: { id: "00000000-0000-4000-8000-000000000001" },
       session: { id: "session-1" },
     });
-    mocks.resolvePilotWriteAccess.mockResolvedValue({ canWrite: false, invited: false, actorClass: "real_self_serve" });
+    mocks.resolvePilotWriteAccess.mockResolvedValue({
+      canWrite: false,
+      invited: false,
+      actorClass: "real_self_serve",
+    });
     const followControl = createAuthIntentControlRef(
       "follow",
       `${lineageGraphPage.edges[0].id}:${sourceObjectId}`,

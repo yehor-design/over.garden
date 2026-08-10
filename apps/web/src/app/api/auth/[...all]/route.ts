@@ -13,11 +13,28 @@ import {
 } from "@/server/auth/auth-email-outbox";
 import { drainAuthEmailOutbox } from "@/server/auth/auth-email-outbox-consumer";
 import { bridgeLegacyEmailVerificationRequest } from "@/server/auth/legacy-email-verification-bridge";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const handler = toNextJsHandler(auth);
+const AUTHENTICATED_ACCOUNT_MUTATION_PATHS = new Set([
+  "/api/auth/change-email",
+  "/api/auth/change-password",
+  "/api/auth/delete-user",
+  "/api/auth/revoke-other-sessions",
+  "/api/auth/revoke-session",
+  "/api/auth/revoke-sessions",
+  "/api/auth/set-password",
+  "/api/auth/unlink-account",
+  "/api/auth/update-session",
+  "/api/auth/update-user",
+]);
 
 export async function GET(request: Request) {
   const retiredProviderDenial = await denyRetiredSocialProviderRequest(request);
@@ -51,6 +68,15 @@ export async function POST(request: Request) {
     return result.response;
   }
 
+  if (isAuthenticatedAccountMutationRequest(request)) {
+    const admission = await admitDocumentMutation({
+      transport: documentMutationGenerationFromRequest(request),
+    });
+    if (admission.status === "rejected") {
+      return documentMutationAdmissionResponse(admission);
+    }
+  }
+
   return handler.POST(request);
 }
 
@@ -62,6 +88,14 @@ function isPasswordResetRequest(request: Request): boolean {
 
 function isCurrentSessionSignOutRequest(request: Request): boolean {
   return new URL(request.url).pathname === "/api/auth/sign-out";
+}
+
+export function isAuthenticatedAccountMutationRequest(
+  request: Request,
+): boolean {
+  return AUTHENTICATED_ACCOUNT_MUTATION_PATHS.has(
+    new URL(request.url).pathname,
+  );
 }
 
 async function requestPasswordReset(request: Request): Promise<Response> {

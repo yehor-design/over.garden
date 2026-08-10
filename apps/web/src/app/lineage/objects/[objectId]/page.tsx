@@ -5,6 +5,7 @@ import { cache } from "react";
 import { BellPlus, GitBranch } from "lucide-react";
 
 import { PublicEngagementPanel } from "@/app/engagement/public-engagement-panel";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import {
   LivingObjectPassportContextRail,
@@ -60,10 +61,10 @@ const EMPTY_PUBLIC_LINEAGE_SEARCH_PARAMS: Record<
   string | string[] | undefined
 > = {};
 
-const getCachedPublicObjectPassportPage = cache((
-  objectId: string,
-  locale: InterfaceLocale,
-) => getPublicObjectPassportPage(objectId, undefined, locale));
+const getCachedPublicObjectPassportPage = cache(
+  (objectId: string, locale: InterfaceLocale) =>
+    getPublicObjectPassportPage(objectId, undefined, locale),
+);
 
 const getCachedPublicLineageGraphPage = cache((objectId: string) =>
   getPublicLineageGraphPage(objectId),
@@ -369,7 +370,7 @@ function LineageInteractionPanel({
 
       {canInteract ? (
         <div className="grid gap-3 md:grid-cols-2">
-          <form action={followLineageNodeAction}>
+          <DocumentMutationActionForm action={followLineageNodeAction}>
             <input type="hidden" name="edgeId" value={edge.id} />
             <input
               type="hidden"
@@ -398,9 +399,12 @@ function LineageInteractionPanel({
             >
               {copy.passport.followUpdates}
             </button>
-          </form>
+          </DocumentMutationActionForm>
 
-          <form action={askLineageQuestionAction} className="grid gap-2">
+          <DocumentMutationActionForm
+            action={askLineageQuestionAction}
+            className="grid gap-2"
+          >
             <input type="hidden" name="edgeId" value={edge.id} />
             <input
               type="hidden"
@@ -436,7 +440,7 @@ function LineageInteractionPanel({
             >
               {copy.passport.sendQuestion}
             </button>
-          </form>
+          </DocumentMutationActionForm>
         </div>
       ) : isAuthenticated ? (
         <p

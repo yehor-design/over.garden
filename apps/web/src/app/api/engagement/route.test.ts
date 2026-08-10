@@ -15,6 +15,8 @@ const mocks = vi.hoisted(() => ({
   createAuthIntentToken: vi.fn(),
   createAuthIntentControlRef: vi.fn(),
   resolveVisualSocialMutationActor: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -30,10 +32,18 @@ vi.mock("@/server/auth-session", () => ({
   getSessionId: mocks.getSessionId,
 }));
 
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn((request: Request) =>
+    request.headers.get("x-overgarden-document-generation"),
+  ),
+}));
+
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: vi.fn((userId: string, sessionId: string) => ({
     userId,
-    sessionId,
+    sessionId: sessionId ?? null,
   })),
 }));
 
@@ -84,6 +94,7 @@ describe("engagement routes", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mocks.getCurrentSession.mockReset();
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.getCurrentSession.mockResolvedValue({
       user: { id: "00000000-0000-4000-8000-000000000001" },
@@ -111,6 +122,29 @@ describe("engagement routes", () => {
     mocks.createAuthIntentToken.mockReturnValue("opaque-intent-token");
     mocks.createAuthIntentControlRef.mockReturnValue("reply-a7d8f9c012345678");
     mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
+    mocks.admitDocumentMutation.mockImplementation(async () => {
+      const session = await mocks.getCurrentSession();
+      if (!session?.user?.id) {
+        return {
+          status: "rejected",
+          transportResult: "AUTHENTICATION_REQUIRED",
+          statusCode: 401,
+        };
+      }
+      return {
+        status: "admitted",
+        scope: {
+          userId: session.user.id,
+          sessionId: mocks.getSessionId(session),
+        },
+      };
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
   });
 
   it("resumes a signed-out reply at the exact opaque reply control", async () => {
@@ -209,7 +243,6 @@ describe("engagement routes", () => {
 
   it("posts an isolated visual-fixture comment in the manifest actor scope", async () => {
     const actorId = "18700001-0000-4000-8000-000000000003";
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
     mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
       actorId,
       scenario: { id: "comments-dense" },

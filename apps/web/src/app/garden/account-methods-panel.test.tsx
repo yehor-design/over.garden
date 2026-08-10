@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
   setCurrentAccountPassword: vi.fn(),
   unlinkAccount: vi.fn(),
+  handleTransportResult: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -56,6 +57,14 @@ vi.mock("@/components/ui/alert-dialog", () => ({
   }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
     <button {...props}>{children}</button>
   ),
+}));
+vi.mock("@/components/auth/document-mutation-recovery", () => ({
+  createDocumentMutationRequestHeaders: (transport: string | null) =>
+    transport ? { "x-overgarden-document-generation": transport } : {},
+  useOptionalDocumentMutationGeneration: () => ({
+    transport: "opaque-generation-a",
+    handleTransportResult: mocks.handleTransportResult,
+  }),
 }));
 vi.mock("@/lib/auth-client", () => ({
   authClient: {
@@ -144,8 +153,16 @@ describe("account methods panel", () => {
     expect(mocks.setCurrentAccountPassword).toHaveBeenCalledTimes(1);
     expect(mocks.setCurrentAccountPassword).toHaveBeenCalledWith(
       "safe-password",
+      "opaque-generation-a",
     );
-    expect(mocks.unlinkAccount).toHaveBeenCalledWith({ providerId: "google" });
+    expect(mocks.unlinkAccount).toHaveBeenCalledWith(
+      { providerId: "google" },
+      {
+        headers: {
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+      },
+    );
     expect(
       mocks.setCurrentAccountPassword.mock.invocationCallOrder[0],
     ).toBeLessThan(mocks.unlinkAccount.mock.invocationCallOrder[0]);
@@ -276,7 +293,14 @@ describe("account methods panel", () => {
       await Promise.resolve();
     });
 
-    expect(mocks.unlinkAccount).toHaveBeenCalledWith({ providerId: "google" });
+    expect(mocks.unlinkAccount).toHaveBeenCalledWith(
+      { providerId: "google" },
+      {
+        headers: {
+          "x-overgarden-document-generation": "opaque-generation-a",
+        },
+      },
+    );
     expect(mocks.refresh).toHaveBeenCalledOnce();
     await act(async () => renderer.unmount());
   });
@@ -355,6 +379,32 @@ describe("account methods panel", () => {
       await Promise.resolve();
     });
     expect(mocks.refresh).toHaveBeenCalledOnce();
+    await act(async () => renderer.unmount());
+  });
+
+  it("keeps the dialog open and routes an admission rejection to shared recovery", async () => {
+    mocks.unlinkAccount.mockResolvedValue({
+      error: { code: "DOCUMENT_OWNER_CHANGED" },
+    });
+    const renderer = await render(
+      <AccountMethodsPanel {...DEFAULT_PROPS} hasCredential hasGoogle />,
+    );
+
+    await openDisconnectDialog(renderer, "google");
+    await act(async () => {
+      renderer.root
+        .findByProps({ "data-testid": "confirm-disconnect-button" })
+        .props.onClick();
+      await Promise.resolve();
+    });
+
+    expect(mocks.handleTransportResult).toHaveBeenCalledWith(
+      "DOCUMENT_OWNER_CHANGED",
+    );
+    expect(renderer.root.findAllByProps({ role: "alertdialog" })).toHaveLength(
+      1,
+    );
+    expect(mocks.refresh).not.toHaveBeenCalled();
     await act(async () => renderer.unmount());
   });
 

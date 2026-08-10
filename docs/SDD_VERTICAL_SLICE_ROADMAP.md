@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-10 (OVE-290 high-risk stale-document admission execution; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-11 (OVE-291 remainder stale-document admission execution; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -122,6 +122,29 @@ the rebound enforcement receipt preserves all baseline 36 high-risk
 entrypoints, 281 consumer edges, and 24 admission boundaries. Exact-head CI,
 current-main containment, READY exact-SHA deployment, immutable smoke, and
 authenticated Linear read-back remain the closeout gates before OVE-287.
+
+On 2026-08-11, OVE-291 was selected only after OVE-287 reached authenticated
+`Done` and its implementation was contained in clean baseline
+`964a4a7e7c86fa95b0e15e98852b008f42613f09`. The shared OVE-290 classifier now
+guards all 124 remaining authenticated mutation entrypoints and 347 consumer
+edges at 65 declared pre-effect boundaries, including exact Better Auth
+account/session POSTs while preserving ordinary Google authentication and the
+five-entrypoint, 15-edge explicit-link partition for OVE-295. Shared native
+form and fetch recovery retains intent without automatic replay. The final
+source graph contains 615 production sources, 2,618 source nodes, 314
+entrypoints, 181 true effect boundaries, 656 consumer edges, one retired
+provider denial, and zero unresolved findings; registry/source/receipt digests
+are respectively
+`633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda`,
+`00a143bb0639d55836f71cb374a79dc22ae06fbb8a9f6b4f2c98d878cb9f4187`, and
+`664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a`.
+The runtime read-back imports only the bounded deployment receipt
+`fe61f044ca6623a774709a2e55475a774cf8aed43db1f4c125e3b05e243fe340`;
+the full registry and enforcement artifacts remain excluded from production
+chunks.
+Exact-head CI, current-main containment, READY exact-SHA deployment,
+reject-only native-UI/provider proof, and authenticated Linear read-back remain
+the closeout gates before OVE-289.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,

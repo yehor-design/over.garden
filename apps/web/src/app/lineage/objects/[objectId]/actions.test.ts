@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  requireWriteEligibleRequestScope: vi.fn(),
+  admitDocumentMutation: vi.fn(),
   followLineageNode: vi.fn(),
   askLineageQuestion: vi.fn(),
   revalidatePath: vi.fn(),
@@ -18,12 +18,9 @@ vi.mock("next/navigation", () => ({
   redirect: mocks.redirect,
 }));
 
-vi.mock("@/server/auth-session", () => ({
-  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-}));
-
-vi.mock("@/server/pilot-write-access", () => ({
-  requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn(() => null),
 }));
 
 vi.mock("@/server/lineage-interactions-repository", () => ({
@@ -42,9 +39,12 @@ vi.mock("@/server/auth-intent-control", () => ({
 describe("/lineage/objects/[objectId] actions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.requireWriteEligibleRequestScope.mockResolvedValue({
-      userId: "00000000-0000-4000-8000-000000000001",
-      sessionId: "session-1",
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
     });
     mocks.followLineageNode.mockResolvedValue({
       follow: { id: "00000000-0000-4000-8000-000000000301" },
@@ -70,7 +70,7 @@ describe("/lineage/objects/[objectId] actions", () => {
 
     await followLineageNodeAction(formData);
 
-    expect(mocks.requireWriteEligibleRequestScope).toHaveBeenCalledOnce();
+    expect(mocks.admitDocumentMutation).toHaveBeenCalledOnce();
     expect(mocks.followLineageNode).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000001",
@@ -137,30 +137,30 @@ describe("/lineage/objects/[objectId] actions", () => {
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
-  it("does not mutate when the viewer is not write eligible", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
-      new Error("write access required"),
-    );
+  it("does not mutate when owner admission is unavailable", async () => {
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "rejected",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+    });
 
     const { followLineageNodeAction } = await import("./actions");
     const formData = new FormData();
     formData.set("edgeId", "00000000-0000-4000-8000-000000000201");
     formData.set("targetPlantObjectId", "00000000-0000-4000-8000-000000000102");
 
-    await expect(followLineageNodeAction(formData)).rejects.toThrow(
-      /write access required/i,
-    );
+    await expect(followLineageNodeAction(formData)).resolves.toEqual({
+      documentMutationAdmission: "MUTATION_ADMISSION_UNAVAILABLE",
+    });
 
     expect(mocks.followLineageNode).not.toHaveBeenCalled();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("resumes an exact follow control when the session expires", async () => {
-    const { AuthenticationRequiredError } =
-      await import("@/server/auth-session");
-    mocks.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new AuthenticationRequiredError(),
-    );
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "AUTHENTICATION_REQUIRED",
+    });
     const { followLineageNodeAction } = await import("./actions");
     const formData = new FormData();
     formData.set("edgeId", "00000000-0000-4000-8000-000000000201");
@@ -187,9 +187,9 @@ describe("/lineage/objects/[objectId] actions", () => {
     expect(mocks.followLineageNode).not.toHaveBeenCalled();
   });
 
-  it("does not convert write-permission failures into auth redirects", async () => {
+  it("does not convert operational admission failures into auth redirects", async () => {
     const failure = new Error("write access required");
-    mocks.requireWriteEligibleRequestScope.mockRejectedValueOnce(failure);
+    mocks.admitDocumentMutation.mockRejectedValueOnce(failure);
     const { followLineageNodeAction } = await import("./actions");
     const formData = new FormData();
     formData.set("edgeId", "00000000-0000-4000-8000-000000000201");

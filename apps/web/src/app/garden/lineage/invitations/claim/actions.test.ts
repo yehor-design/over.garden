@@ -9,10 +9,7 @@ const mocks = vi.hoisted(() => ({
   unsealLineageClaimToken: vi.fn(),
   createAuthIntentToken: vi.fn(),
   getRequestInterfaceLocale: vi.fn(),
-  requireCurrentRequestScope: vi.fn(async () => ({
-    userId: "00000000-0000-4000-8000-000000000777",
-    sessionId: "session-1",
-  })),
+  admitDocumentMutation: vi.fn(),
   resolveLineageInvitationClaim: vi.fn(async () => ({
     edge: {
       subject_plant_object_id: "00000000-0000-4000-8000-000000000101",
@@ -26,9 +23,11 @@ vi.mock("next/cache", () => ({
 }));
 vi.mock("next/headers", () => ({ cookies: mocks.cookies }));
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("@/server/auth-session", () => ({
-  AuthenticationRequiredError: class AuthenticationRequiredError extends Error {},
-  requireCurrentRequestScope: mocks.requireCurrentRequestScope,
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: vi.fn((formData: FormData) =>
+    formData.get("__overgardenDocumentGeneration"),
+  ),
 }));
 vi.mock("@/server/auth-intent-token", () => ({
   createAuthIntentToken: mocks.createAuthIntentToken,
@@ -56,6 +55,13 @@ describe("/garden/lineage/invitations/claim actions", () => {
     );
     mocks.createAuthIntentToken.mockReturnValue("opaque-claim-intent");
     mocks.getRequestInterfaceLocale.mockResolvedValue("uk");
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000777",
+        sessionId: "session-1",
+      },
+    });
     mocks.redirect.mockImplementation((url: string) => {
       throw new Error(`NEXT_REDIRECT:${url}`);
     });
@@ -64,11 +70,13 @@ describe("/garden/lineage/invitations/claim actions", () => {
   it("confirms using only the server-readable encrypted cookie", async () => {
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
-    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
+    await expect(
+      confirmLineageInvitationClaimAction(new FormData()),
+    ).rejects.toThrow(
       "NEXT_REDIRECT:/garden/lineage/claims?invitation=confirmed",
     );
 
-    expect(mocks.requireCurrentRequestScope).toHaveBeenCalledOnce();
+    expect(mocks.admitDocumentMutation).toHaveBeenCalledOnce();
     expect(mocks.resolveLineageInvitationClaim).toHaveBeenCalledWith(
       {
         userId: "00000000-0000-4000-8000-000000000777",
@@ -91,7 +99,9 @@ describe("/garden/lineage/invitations/claim actions", () => {
   it("declines without accepting a token from form data", async () => {
     const { declineLineageInvitationClaimAction } = await import("./actions");
 
-    await expect(declineLineageInvitationClaimAction()).rejects.toThrow(
+    await expect(
+      declineLineageInvitationClaimAction(new FormData()),
+    ).rejects.toThrow(
       "NEXT_REDIRECT:/garden/lineage/claims?invitation=declined",
     );
 
@@ -109,26 +119,25 @@ describe("/garden/lineage/invitations/claim actions", () => {
     mocks.unsealLineageClaimToken.mockReturnValueOnce(null);
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
-    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
-      "Запрошення щодо походження недоступне.",
-    );
+    await expect(
+      confirmLineageInvitationClaimAction(new FormData()),
+    ).rejects.toThrow("Запрошення щодо походження недоступне.");
 
     expect(mocks.resolveLineageInvitationClaim).not.toHaveBeenCalled();
     expect(mocks.cookieDelete).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();
   });
 
-  it("resumes the claim after a session expires without moving the invite token", async () => {
-    const { AuthenticationRequiredError } =
-      await import("@/server/auth-session");
-    mocks.requireCurrentRequestScope.mockRejectedValueOnce(
-      new AuthenticationRequiredError(),
-    );
+  it("resumes the claim after admission reports that authentication is required", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "AUTHENTICATION_REQUIRED",
+    });
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
-    await expect(confirmLineageInvitationClaimAction()).rejects.toThrow(
-      "NEXT_REDIRECT:/auth/intent?intent=opaque-claim-intent",
-    );
+    await expect(
+      confirmLineageInvitationClaimAction(new FormData()),
+    ).rejects.toThrow("NEXT_REDIRECT:/auth/intent?intent=opaque-claim-intent");
 
     expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
       action: "claim",
@@ -141,12 +150,14 @@ describe("/garden/lineage/invitations/claim actions", () => {
     );
   });
 
-  it("does not misclassify an operational scope failure as authentication", async () => {
+  it("does not misclassify an operational admission failure as authentication", async () => {
     const failure = new Error("session store unavailable");
-    mocks.requireCurrentRequestScope.mockRejectedValueOnce(failure);
+    mocks.admitDocumentMutation.mockRejectedValueOnce(failure);
     const { confirmLineageInvitationClaimAction } = await import("./actions");
 
-    await expect(confirmLineageInvitationClaimAction()).rejects.toBe(failure);
+    await expect(
+      confirmLineageInvitationClaimAction(new FormData()),
+    ).rejects.toBe(failure);
 
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
     expect(mocks.redirect).not.toHaveBeenCalled();

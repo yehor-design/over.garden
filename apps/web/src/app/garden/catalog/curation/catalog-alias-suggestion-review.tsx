@@ -10,6 +10,10 @@ import {
 import { useRouter } from "next/navigation";
 import { useState, useTransition, type FormEvent } from "react";
 
+import {
+  DocumentMutationGenerationFormField,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import { buildGardenCatalogTrustMetadata } from "@/lib/garden-workspace-copy";
 import type { InterfaceLocale } from "@/lib/interface-localization";
@@ -26,6 +30,7 @@ import type { CatalogAliasSuggestionActionResult } from "./actions";
 type AliasAction = (
   formData: FormData,
 ) => Promise<CatalogAliasSuggestionActionResult>;
+type AliasOutcome = "queued" | "approved" | "rejected" | "stale" | "collision";
 
 interface CatalogAliasSuggestionReviewProps {
   locale: InterfaceLocale;
@@ -334,6 +339,7 @@ function AliasGenerateControl({
   generateAction: AliasAction;
 }) {
   const copy = getOperatorCurationCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const router = useRouter();
   const [feedback, setFeedback] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -346,6 +352,12 @@ function AliasGenerateControl({
     startTransition(async () => {
       try {
         const result = await generateAction(formData);
+        if ("documentMutationAdmission" in result) {
+          documentMutation?.handleTransportResult(
+            result.documentMutationAdmission,
+          );
+          return;
+        }
         setFeedback(aliasActionFeedback(copy, result.outcome));
         router.refresh();
       } catch {
@@ -356,7 +368,8 @@ function AliasGenerateControl({
 
   return (
     <div className="grid gap-2">
-      <form onSubmit={submit}>
+      <form onSubmit={submit} data-document-mutation-managed="true">
+        <DocumentMutationGenerationFormField />
         <input type="hidden" name="catalogItemId" value={catalogItemId} />
         <button type="submit" disabled={pending} className={buttonVariants()}>
           <WandSparkles className="size-4" />
@@ -384,12 +397,12 @@ function AliasDecisionControls({
   rejectAction: AliasAction;
 }) {
   const copy = getOperatorCurationCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const router = useRouter();
-  const [feedback, setFeedback] = useState<
-    | CatalogAliasSuggestionActionResult
-    | { outcome: "error"; message: string }
-    | null
-  >(null);
+  const [feedback, setFeedback] = useState<{
+    outcome: AliasOutcome | "error";
+    message: string;
+  } | null>(null);
   const [pending, startTransition] = useTransition();
 
   function submit(event: FormEvent<HTMLFormElement>, action: AliasAction) {
@@ -400,6 +413,12 @@ function AliasDecisionControls({
     startTransition(async () => {
       try {
         const result = await action(formData);
+        if ("documentMutationAdmission" in result) {
+          documentMutation?.handleTransportResult(
+            result.documentMutationAdmission,
+          );
+          return;
+        }
         setFeedback({
           ...result,
           message: aliasActionFeedback(copy, result.outcome),
@@ -417,7 +436,11 @@ function AliasDecisionControls({
   return (
     <div className="flex min-w-0 flex-col gap-2 sm:flex-row lg:w-64 lg:flex-col">
       {suggestion.status === "generated" ? (
-        <form onSubmit={(event) => submit(event, approveAction)}>
+        <form
+          onSubmit={(event) => submit(event, approveAction)}
+          data-document-mutation-managed="true"
+        >
+          <DocumentMutationGenerationFormField />
           <input type="hidden" name="aliasProjectionId" value={suggestion.id} />
           <button type="submit" disabled={pending} className={buttonVariants()}>
             <CheckCircle2 className="size-4" />
@@ -429,7 +452,9 @@ function AliasDecisionControls({
       <form
         onSubmit={(event) => submit(event, rejectAction)}
         className="grid min-w-0 gap-2"
+        data-document-mutation-managed="true"
       >
+        <DocumentMutationGenerationFormField />
         <input type="hidden" name="aliasProjectionId" value={suggestion.id} />
         <label className="grid gap-1 text-xs font-medium text-muted-foreground">
           {copy.common.rejectionReason}
@@ -493,7 +518,7 @@ function formatConfidence(value: number, fallback: string) {
 
 function aliasActionFeedback(
   copy: ReturnType<typeof getOperatorCurationCopy>,
-  outcome: CatalogAliasSuggestionActionResult["outcome"],
+  outcome: AliasOutcome,
 ) {
   switch (outcome) {
     case "queued":

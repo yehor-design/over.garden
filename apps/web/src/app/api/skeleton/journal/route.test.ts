@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   requireWriteEligibleRequestScope: vi.fn(),
   scheduleLearningAttributionDrain: vi.fn(),
   tryResolveWalkingSkeletonEnvironment: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("@/lib/walking-skeleton/environment", () => ({
@@ -27,6 +29,11 @@ vi.mock("@/server/auth-session", () => ({
 vi.mock("@/server/pilot-write-access", () => ({
   PilotWriteAccessError: mocks.PilotWriteAccessError,
   requireWriteEligibleRequestScope: mocks.requireWriteEligibleRequestScope,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn(() => null),
 }));
 vi.mock("@/server/journal-repository", () => ({
   createJournalEntry: mocks.createJournalEntry,
@@ -59,6 +66,16 @@ describe("walking-skeleton journal API", () => {
     });
     mocks.requireCurrentUserId.mockResolvedValue(scope.userId);
     mocks.requireWriteEligibleRequestScope.mockResolvedValue(scope);
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope,
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
     mocks.listMyRecentJournalEntries.mockResolvedValue([entry]);
     mocks.createJournalEntry.mockResolvedValue(entry);
     mocks.convergePublicProjectionsNow.mockResolvedValue(undefined);
@@ -108,9 +125,11 @@ describe("walking-skeleton journal API", () => {
     mocks.requireCurrentUserId.mockRejectedValueOnce(
       new mocks.AuthenticationRequiredError("private auth detail"),
     );
-    mocks.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new mocks.AuthenticationRequiredError("private cookie detail"),
-    );
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
 
     const getResponse = await GET(getRequest());
     const postResponse = await POST(request("not-json", "text/plain"));
@@ -120,23 +139,23 @@ describe("walking-skeleton journal API", () => {
     expect(getResponse.status).toBe(401);
     expect(postResponse.status).toBe(401);
     expect(getBody).toEqual({ error: "Sign in to continue." });
-    expect(postBody).toEqual({ error: "Sign in to continue." });
+    expect(postBody).toEqual({ code: "AUTHENTICATION_REQUIRED" });
     expect(JSON.stringify([getBody, postBody])).not.toContain("private");
     expect(mocks.createJournalEntry).not.toHaveBeenCalled();
   });
 
-  it("returns fixed 403 for an authenticated but ineligible account", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new mocks.PilotWriteAccessError("private invite detail"),
-    );
+  it("fails closed when admission cannot attach write eligibility", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
 
     const response = await POST(jsonRequest({ body: "Entry" }));
     const body = await response.json();
 
-    expect(response.status).toBe(403);
-    expect(body).toEqual({
-      error: "This account cannot use this local diagnostic.",
-    });
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ code: "MUTATION_ADMISSION_UNAVAILABLE" });
     expect(JSON.stringify(body)).not.toContain("invite");
     expect(mocks.createJournalEntry).not.toHaveBeenCalled();
   });
@@ -183,15 +202,17 @@ describe("walking-skeleton journal API", () => {
   });
 
   it("does not misclassify or expose unexpected auth failures", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new Error("private session-store outage"),
-    );
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
 
     const response = await POST(jsonRequest({ body: "Entry" }));
     const body = await response.json();
 
-    expect(response.status).toBe(500);
-    expect(body).toEqual({ error: "The request could not be completed." });
+    expect(response.status).toBe(503);
+    expect(body).toEqual({ code: "MUTATION_ADMISSION_UNAVAILABLE" });
     expect(JSON.stringify(body)).not.toContain("session-store");
   });
 

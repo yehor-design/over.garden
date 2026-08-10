@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   readPlantIdentificationTarget: vi.fn(),
   recordPlantIdentificationDecision: vi.fn(),
   recordPlantIdentificationDecisionInTransaction: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -19,6 +21,11 @@ vi.mock("@/server/auth-session", () => ({
 }));
 vi.mock("@/server/auth-intent-http", () => ({
   authIntentRequiredResponse: mocks.authIntentRequiredResponse,
+}));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn(() => null),
 }));
 vi.mock("@/server/pilot-write-access", () => ({
   PilotWriteAccessError: mocks.PilotWriteAccessError,
@@ -48,6 +55,16 @@ describe("POST /api/garden/plant-identification/decision", () => {
       userId: ownerId,
       sessionId: "session-1",
     });
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: { userId: ownerId, sessionId: "session-1" },
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
     mocks.readPlantIdentificationTarget.mockResolvedValue(objectId);
     mocks.readPlantIdentificationReceipt.mockResolvedValue({
       id: requestId,
@@ -141,7 +158,12 @@ describe("POST /api/garden/plant-identification/decision", () => {
     expect(mocks.resolvePlantObjectCatalog).not.toHaveBeenCalled();
     expect(mocks.recordPlantIdentificationDecision).toHaveBeenCalledWith(
       expect.objectContaining({ userId: ownerId }),
-      { requestId, decision: "manual", selectedCandidateRank: null, selectedCatalogItemId: null },
+      {
+        requestId,
+        decision: "manual",
+        selectedCandidateRank: null,
+        selectedCatalogItemId: null,
+      },
     );
   });
 });

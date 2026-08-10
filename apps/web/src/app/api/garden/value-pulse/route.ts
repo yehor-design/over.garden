@@ -1,7 +1,9 @@
+import { recordFollowUpValuePulseResponse } from "@/server/follow-up-value-pulse";
 import {
-  recordFollowUpValuePulseResponse,
-} from "@/server/follow-up-value-pulse";
-import { requireCurrentRequestScope } from "@/server/auth-session";
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 
 export const runtime = "nodejs";
 
@@ -14,15 +16,19 @@ interface ValuePulseRequestBody {
 }
 
 export async function POST(request: Request) {
-  let scope;
-  try {
-    scope = await requireCurrentRequestScope();
-  } catch {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
+      return documentMutationAdmissionResponse(admission);
+    }
     return Response.json(
       { error: "Sign in to save feedback." },
       { status: 401 },
     );
   }
+  const scope = admission.scope;
 
   const body = (await request
     .json()

@@ -7,6 +7,7 @@ import type { AuthenticatedMutationRegistryV3 } from "./authenticated-mutation-r
 import {
   assertBaselineHighRiskTopology,
   assertHighRiskAdmissionBoundaryEvidence,
+  buildAuthenticatedMutationDeploymentReceiptArtifact,
   buildAuthenticatedMutationEnforcementReceipt,
   canonicalizeAuthenticatedMutationEnforcementReceipt,
 } from "./authenticated-mutation-enforcement-receipt";
@@ -71,6 +72,44 @@ describe("authenticated mutation enforcement receipt", () => {
         sourceRegistryReceiptDigest: SOURCE_RECEIPT_DIGEST,
       }),
     ).toThrow("canonical registry digest");
+  });
+
+  it("generates a bounded deployment receipt without graph payloads", () => {
+    const enforcementReceipt = buildAuthenticatedMutationEnforcementReceipt({
+      registry,
+      registryDigest: REGISTRY_DIGEST,
+      sourceRegistryReceiptDigest: SOURCE_RECEIPT_DIGEST,
+    });
+    const receipt = buildAuthenticatedMutationDeploymentReceiptArtifact({
+      registry,
+      enforcementReceipt,
+    });
+    const serialized = JSON.stringify(receipt);
+
+    expect(receipt).toMatchObject({
+      schemaVersion: "overgarden.authenticated-mutation-deployment-receipt.v1",
+      registry: {
+        digest: REGISTRY_DIGEST,
+        sourceReceiptDigest: SOURCE_RECEIPT_DIGEST,
+        entrypointCount: registry.entrypoints.length,
+        consumerEdgeCount: registry.consumerEdges.length,
+      },
+      enforcement: {
+        receiptDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+        ove291EntrypointCount: 124,
+        ove291ConsumerEdgeCount: 347,
+      },
+      explicitGoogleLink: {
+        ownershipDigest:
+          "9f9273ac6222c4e04cc77069dc14bfebc3860218d6791623055c27420687adad",
+        entrypointCount: 5,
+        consumerEdgeCount: 15,
+      },
+    });
+    expect(serialized).not.toContain(
+      "overgarden.authenticated-mutation-registry.v3",
+    );
+    expect(serialized).not.toMatch(/entrypointId|consumerEdgeId|\.tsx?/);
   });
 
   it("fails closed if a baseline entrypoint or edge binding drifts", () => {

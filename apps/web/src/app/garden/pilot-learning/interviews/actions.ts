@@ -2,14 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { assertFounderInterviewMutationAccess } from "@/server/founder-interview-access";
 import { createFounderInterviewLearning } from "@/server/founder-interview-repository";
 
 const FOUNDER_INTERVIEWS_PATH = "/garden/pilot-learning/interviews";
 
 export async function createFounderInterviewLearningAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertFounderInterviewMutationAccess(scope);
 
   await createFounderInterviewLearning(scope, {

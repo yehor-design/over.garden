@@ -1,7 +1,11 @@
 import { getPublicDerivativeObjectBuffer } from "@/lib/storage";
-import { AuthenticationRequiredError } from "@/server/auth-session";
 import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import { findExactSelectableSpeciesByScientificName } from "@/server/catalog-repository";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { getPlantObjectPage } from "@/server/journal-repository";
 import { findMediaAssetForOwner } from "@/server/media/media-repository";
 import {
@@ -24,10 +28,6 @@ import {
   type IdentificationCandidateInput,
   type PlantIdentificationErrorClass,
 } from "@/server/plant-identification-repository";
-import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
 
 export const runtime = "nodejs";
 
@@ -35,20 +35,20 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function POST(request: Request) {
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ state: "forbidden" }, { status: 403 });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
+      return documentMutationAdmissionResponse(admission);
     }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
     return authIntentRequiredResponse(request, {
       action: "save",
       fallbackReturnTo: "/garden",
       message: "Sign in to identify this plant photo.",
     });
   }
+  const scope = admission.scope;
 
   const input = parseIdentificationInput(
     await request.json().catch(() => null),
@@ -65,9 +65,7 @@ export async function POST(request: Request) {
   if (
     !objectPage ||
     objectPage.plantObject.object_kind !== "plant" ||
-    !["unknown", "user_added"].includes(
-      objectPage.plantObject.variety_state,
-    )
+    !["unknown", "user_added"].includes(objectPage.plantObject.variety_state)
   ) {
     return Response.json({ state: "invalid_media" }, { status: 422 });
   }

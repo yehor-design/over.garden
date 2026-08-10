@@ -4,6 +4,11 @@ import Image from "next/image";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { AtSign, Eye, ImageOff, Save } from "lucide-react";
 
+import {
+  DocumentMutationActionForm,
+  DocumentMutationGenerationFormField,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import { PublicProfileView } from "@/components/public/public-profile";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -153,6 +158,7 @@ export function OwnerProfileEditor({
   locale: InterfaceLocale;
   status: string | null;
 }) {
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const copy = COPY[locale];
   const [editor, setEditor] = useState<OwnerPublicProfileEditor>(
     workspace.editor,
@@ -168,6 +174,18 @@ export function OwnerProfileEditor({
     updatePublicHandleAction,
     initialHandleState,
   );
+  const handledHandleAdmissionStateRef = useRef<unknown>(undefined);
+  useEffect(() => {
+    if (
+      handleState.documentMutationAdmission &&
+      handledHandleAdmissionStateRef.current !== handleState
+    ) {
+      handledHandleAdmissionStateRef.current = handleState;
+      documentMutation?.handleTransportResult(
+        handleState.documentMutationAdmission,
+      );
+    }
+  }, [documentMutation, handleState]);
   const [handleCandidate, setHandleCandidate] = useState(
     workspace.handleRename.currentHandle,
   );
@@ -282,8 +300,10 @@ export function OwnerProfileEditor({
         <form
           action={handleFormAction}
           className="grid max-w-xl gap-3"
+          data-document-mutation-managed="true"
           noValidate
         >
+          <DocumentMutationGenerationFormField />
           <label
             htmlFor="public-handle-candidate"
             className="text-sm font-medium text-foreground"
@@ -342,7 +362,10 @@ export function OwnerProfileEditor({
         <h2 className="text-xl font-semibold text-foreground">
           {copy.editorTitle}
         </h2>
-        <form action={updatePublicProfileAction} className="grid gap-6">
+        <DocumentMutationActionForm
+          action={updatePublicProfileAction}
+          className="grid gap-6"
+        >
           <fieldset className="grid gap-3">
             <legend className="text-sm font-semibold text-foreground">
               {copy.avatar}
@@ -574,7 +597,7 @@ export function OwnerProfileEditor({
             <Save aria-hidden="true" />
             {copy.save}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       </section>
 
       <section

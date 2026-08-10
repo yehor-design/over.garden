@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   updateNotificationPreferences: vi.fn(),
   revalidatePath: vi.fn(),
   resolveVisualSocialMutationActor: vi.fn(),
+  admitDocumentMutation: vi.fn(),
+  documentMutationAdmissionResponse: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -15,10 +17,17 @@ vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationAdmissionResponse: mocks.documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest: vi.fn((request: Request) =>
+    request.headers.get("x-overgarden-document-generation"),
+  ),
+}));
 vi.mock("@/server/request-scope", () => ({
   scopedToUser: vi.fn((userId: string, sessionId: string) => ({
     userId,
-    sessionId,
+    sessionId: sessionId ?? null,
   })),
 }));
 vi.mock("@/server/social-return-repository", () => ({
@@ -39,12 +48,30 @@ describe("notification mutation routes", () => {
   beforeEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    mocks.getCurrentSession.mockReset();
     mocks.getSessionId.mockReturnValue(scope.sessionId);
     mocks.getCurrentSession.mockResolvedValue({
       user: { id: scope.userId },
       session: { id: scope.sessionId },
     });
     mocks.resolveVisualSocialMutationActor.mockReturnValue(null);
+    mocks.admitDocumentMutation.mockImplementation(async () => {
+      const session = await mocks.getCurrentSession();
+      if (!session?.user?.id) {
+        return {
+          status: "rejected",
+          transportResult: "AUTHENTICATION_REQUIRED",
+          statusCode: 401,
+        };
+      }
+      return { status: "admitted", scope };
+    });
+    mocks.documentMutationAdmissionResponse.mockImplementation((admission) =>
+      Response.json(
+        { code: admission.transportResult },
+        { status: admission.statusCode },
+      ),
+    );
   });
 
   it("updates every explicit preference and keeps locale return bounded", async () => {
@@ -141,7 +168,6 @@ describe("notification mutation routes", () => {
 
   it("updates an isolated fixture receipt without an account session", async () => {
     const actorId = "18700001-0000-4000-8000-000000000001";
-    mocks.getCurrentSession.mockResolvedValueOnce(null);
     mocks.resolveVisualSocialMutationActor.mockReturnValueOnce({
       actorId,
       scenario: { id: "notifications-dense" },

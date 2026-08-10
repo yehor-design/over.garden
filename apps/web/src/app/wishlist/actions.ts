@@ -11,7 +11,10 @@ import {
   localizedPath,
   type PublicLocale,
 } from "@/lib/public-localization";
-import { getCurrentSession, getSessionId } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { scopedToUser } from "@/server/request-scope";
 import { resolveVisualSocialMutationActor } from "@/server/visual-fixtures/social-actor";
 import {
@@ -31,10 +34,13 @@ export async function addCatalogPublicSlugToWishlistAction(formData: FormData) {
     publicSlug,
     locale,
   );
-  const session = await getCurrentSession();
-  const userId = session?.user?.id;
-
-  if (!userId) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
+      return { documentMutationAdmission: admission.transportResult };
+    }
     return redirect(
       `/garden?wishlist=${encodeURIComponent(publicSlug)}&returnTo=${encodeURIComponent(
         returnTo,
@@ -42,7 +48,7 @@ export async function addCatalogPublicSlugToWishlistAction(formData: FormData) {
     );
   }
 
-  const scope = scopedToUser(userId, getSessionId(session));
+  const scope = admission.scope;
   const result = await addCatalogPublicSlugToWishlist(scope, {
     publicSlug,
     sourceSurface: "public_variety",
@@ -59,20 +65,24 @@ export async function removeCatalogPublicSlugFromWishlistAction(
     formData.get("catalogPublicSlug"),
   );
   const locale = normalizeLocaleField(formData.get("locale"));
-  const session = await getCurrentSession();
   const visualActor = resolveVisualSocialMutationActor(formData, ["wishlist"]);
-  const userId = visualActor?.actorId ?? session?.user?.id;
-
-  if (!userId) {
+  const admission = visualActor
+    ? null
+    : await admitDocumentMutation({
+        transport: documentMutationGenerationFromFormData(formData),
+      });
+  if (admission?.status === "rejected") {
+    if (admission.transportResult !== "AUTHENTICATION_REQUIRED") {
+      return { documentMutationAdmission: admission.transportResult };
+    }
     return redirect(
       `/garden?wishlist=${encodeURIComponent(publicSlug)}&source=wishlist`,
     );
   }
 
-  const scope = scopedToUser(
-    userId,
-    visualActor ? null : getSessionId(session),
-  );
+  const scope = visualActor
+    ? scopedToUser(visualActor.actorId)
+    : admission!.scope;
   await removeCatalogPublicSlugFromWishlist(scope, publicSlug);
 
   revalidateWishlistPaths(locale, publicSlug);

@@ -87,6 +87,8 @@
     "smoke:exact-sha-self-serve": "tsx scripts/smoke-exact-sha-self-serve.ts",
     "facebook-login:external-cleanup": "tsx scripts/verify-facebook-login-external-cleanup.ts",
     "mutation:surface:audit": "tsx scripts/audit-authenticated-mutation-surface.ts",
+    "mutation:surface:enforce": "vitest run scripts/enforce-authenticated-mutation-registry.test.ts src/server/remaining-document-mutation-admission.integration.test.ts",
+    "smoke:remaining-document-mutation-admission": "tsx scripts/smoke-remaining-document-mutation-admission.ts",
     "auth:security:check": "tsx scripts/verify-better-auth-security.ts",
     "smoke:public-index-parity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity.ts",
     "smoke:public-projection-revocation": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-projection-revocation.ts --environment local --confirm-environment local",

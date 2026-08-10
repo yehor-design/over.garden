@@ -1,7 +1,7 @@
 # Authenticated Mutation Admission
 
-Status: OVE-285 registry, OVE-290 high-risk enforcement, and OVE-286 bounded browser rollout — ready
-Baseline: `5c403444cddc2e195690808de08304d14fe41fd3`  
+Status: OVE-285 registry, OVE-290 high-risk enforcement, OVE-286 bounded browser rollout, and OVE-291 remainder enforcement — ready
+Baseline: `964a4a7e7c86fa95b0e15e98852b008f42613f09`
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
 ## Decision
@@ -28,29 +28,29 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                608 |
-| Source nodes                    |                                                              2,568 |
-| Logical entrypoints             |                                                                316 |
-| Effect boundaries               |                                                                184 |
-| Consumer edges                  |                                                                660 |
-| Excluded entrypoints            |                                                                139 |
+| Production source files         |                                                                615 |
+| Source nodes                    |                                                              2,618 |
+| Logical entrypoints             |                                                                314 |
+| Effect boundaries               |                                                                181 |
+| Consumer edges                  |                                                                656 |
+| Excluded entrypoints            |                                                                141 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `30edfe26aef3191d1339b791e0ebc0192b1898df79e4569a0fa7878a6b37bea0` |
-| Source-evidence digest          | `faaf957a24ccf600b8dd567fa731b99776985861862959657a9768f06a19a50b` |
-| Receipt digest                  | `5b9840061318b2de10e00207f8a51ca104988533ac09324b5ff5700e7ccf032b` |
-| Artifact file SHA-256           | `a6e3640fb1fdf55d19a0f3d5da6e4554d908ed7ab4012243655e0b4c4acad297` |
+| Registry digest                 | `633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda` |
+| Source-evidence digest          | `00a143bb0639d55836f71cb374a79dc22ae06fbb8a9f6b4f2c98d878cb9f4187` |
+| Receipt digest                  | `664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a` |
+| Artifact file SHA-256           | `6661e2d55b21fb4aad39531d721516933e999c0363c99ffa0474b803c43fd1c4` |
 
 The independently pinned Better Auth semantic adapter produced:
 
-- manifest digest `c370aab0583381f75c9741793ed6a5da8198a0f411c592d348bd6854bc0a0f92`;
-- semantic source-evidence digest `61268c682d2fcfbf0a7da1da2dfa5f5e8d7ff25af863400ac703983341f649b6`;
-- semantic receipt digest `77d24c8d4582867ee8cf2ef89edc7db3e212332c2a241798a58646506e6e1cdb`.
+- manifest digest `76e7539a7872d7a68215d32108d2b7ffb95deeb8c0b62e94cfd2ea87c53ec9b2`;
+- semantic source-evidence digest `b6564c613795ed4c088259907ebbf721509471428752279a9b3848ab3db876a2`;
+- semantic receipt digest `716b016d842e0d920710a140a9f38a437562dd9ced790715eaf2207af22399a9`.
 
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
 canonical registry bytes. A change to any bound input changes the receipt. The
-values above are the deterministic OVE-286 topology-only regeneration; the
+values above are the deterministic OVE-291 enforcement regeneration; the
 original OVE-285 and OVE-290 terminal receipts remain preserved in their Linear
 closeouts and the execution roadmap.
 
@@ -77,15 +77,27 @@ cross-origin R2 PUT.
 
 The separate enforcement artifact is
 `contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
-`39fbfd66383a98525a6f8a5af8a1ce64e75276aa8e96894667f3c9daa9a7be5e`).
+`7e3d7cf4d61c6a68a143f78a133ca1048d0e42d4fb037cd74ccfbd5cee4a1725`).
 It binds registry digest
-`30edfe26aef3191d1339b791e0ebc0192b1898df79e4569a0fa7878a6b37bea0`
+`633f9071fd4f2ef30f4036e5faed5b295590a90b82f3a518a3080bcba67bcdda`
 and source receipt digest
-`5b9840061318b2de10e00207f8a51ca104988533ac09324b5ff5700e7ccf032b`.
+`664fe875da2c9c9ff986aac430962a572823bb7377ea013f217767ec92185b7a`.
 All baseline 36 high-risk entrypoints and 281 consumer edges are
-`enforced_ove_290` at the same 24 admission boundaries; OVE-291 and OVE-295
-partitions retain their separate states, while OVE-286 capability-runtime
-paths remain excluded from this rollout rather than being pre-implemented.
+`enforced_ove_290` at the same 24 admission boundaries. All 124 remainder
+entrypoints and 347 consumer edges are `enforced_ove_291` at their 65 declared
+admission boundaries. The five-entrypoint, 15-edge OVE-295 partition remains
+reserved with ownership digest
+`9f9273ac6222c4e04cc77069dc14bfebc3860218d6791623055c27420687adad`;
+OVE-286 capability-runtime paths remain distinct from mutation enforcement.
+
+Production imports only the generated bounded receipt
+`contracts/auth/authenticated-mutation-deployment-receipt.v1.json` (SHA-256
+`3aeaa72567a990e798bdbe8bd11257fd1cfcdc9176799eb0b499ce6113d4a72d`,
+canonical receipt digest
+`fe61f044ca6623a774709a2e55475a774cf8aed43db1f4c125e3b05e243fe340`).
+It contains the deployment-receipt schema, counts, and digests only. The full
+registry and enforcement graph remain build-time artifacts and their schema
+sentinels are forbidden from Next.js runtime chunks.
 
 Matching work preserves existing behavior. A valid owner transition emits one
 payload-free `DOCUMENT_OWNER_CHANGED` event into the existing terminal session
@@ -117,6 +129,35 @@ policy only after its checked graph reports zero remaining entrypoints and its
 browser proof covers every newly reachable protected effect. A forward rollback
 returns the pure route matcher to `compatibility_fenced` for all paths while
 retaining the terminal invalidation marker and all OVE-290 enforcement.
+
+## OVE-291 remainder enforcement
+
+Every remaining authenticated user, moderator, administrator, founder,
+profile, social, lineage, notification, curation, lifecycle, and account
+disconnect mutation now calls the same OVE-290 admission classifier before its
+first effect. Existing role, approval, scoped-repository, transaction, outbox,
+media, erasure, and final-provider controls still run after admission and remain
+the canonical authorization rules. Better Auth POST guarding uses an exact
+account/session-mutation allowlist; ordinary sign-in, sign-up, password reset,
+sign-out, session read, Google sign-in, and explicit Google linking are not
+reclassified as document mutations.
+
+Native and Server Action forms carry the current generation through one shared
+recovery-aware form wrapper. Remaining same-origin fetch clients use the same
+header and bounded recovery state. Recoverable failures retain the current
+intent and require an explicit retry; a confirmed owner change emits the
+existing payload-free terminal event. The strict graph test proves every
+remainder entrypoint and consumer edge reaches its declared live boundary,
+while the production smoke submits a real elevated owner form after an A-to-B
+cookie switch with an intentionally invalid no-write payload. It also probes a
+user mutation and provider disconnect, verifies unchanged effect-count digests,
+checks ordinary Google authentication and the exact retired-Facebook denial,
+and fails if an explicit-link path is invoked.
+
+The deployment read-back route exposes only schema versions, counts, and
+digests derived from the bundled registry and enforcement artifacts. It never
+returns graph paths, identifiers, sessions, generations, content, provider
+state, or other protected evidence.
 
 ## Closed source policy
 
@@ -193,9 +234,9 @@ owner:
 - `capability_runtime_ove_286`: 7 owner-session and owner-composer capability
   paths;
 - `owned_by_ove_295`: 5 explicit-linking paths;
-- `remaining_ove_291`: 128 remaining effectful paths.
+- `remaining_ove_291`: 124 remainder effectful paths, now enforced.
 
-The remaining 140 non-effectful paths are `excluded_with_reason`, including the
+The remaining 142 non-effectful paths are `excluded_with_reason`, including the
 one retired-provider entrypoint. Owner sets are disjoint by construction and
 validation.
 
@@ -219,15 +260,30 @@ checking is
 byte-deterministic after path, source text, set-like field, and collection
 normalization.
 
-OVE-290 enforcement checking is separate from graph generation:
+Runtime enforcement checking is separate from graph generation:
 
 ```bash
 pnpm exec tsx scripts/authenticated-mutation-enforcement-receipt.ts --check
 ```
 
 It verifies final registry/source-receipt digest binding, the complete baseline
-36/281 stable-ID sets, all 24 live pre-effect guard bodies, deterministic bytes,
-and the committed enforcement artifact.
+36/281 high-risk and 124/347 remainder stable-ID sets, all 24 high-risk and 65
+remainder live pre-effect guard bodies, deterministic bytes, the frozen
+explicit-Google-link partition, and the committed enforcement artifact.
+
+The exact-SHA production smoke is reject-only and requires two private
+synthetic sessions supplied outside logs and chat:
+
+```bash
+pnpm smoke:remaining-document-mutation-admission -- \
+  --environment production \
+  --mode reject-only \
+  --base-url "$OVE291_IMMUTABLE_DEPLOYMENT_URL" \
+  --expected-sha "$OVE291_IMPLEMENTATION_SHA" \
+  --families remainder,account-disconnect,provider-authority-negative \
+  --exclude-explicit-google-link \
+  --redacted
+```
 
 After a production build, run the separate isolation check:
 

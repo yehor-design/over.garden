@@ -835,7 +835,9 @@ function expandAuthorityVariants(
   if (!hasVisualBranch && !hasGuestAuthIntentBranch) {
     return hasDocumentMutationAdmission &&
       discovery.path !== "src/app/garden/actions.ts"
-      ? [withAuthorityVariant(discovery, "authenticated_user")]
+      ? BASELINE_AUTHENTICATED_AUTHORITY_VARIANT_PATHS.has(discovery.path)
+        ? [withAuthorityVariant(discovery, "authenticated_user")]
+        : [{ ...discovery, forcedAuthority: "authenticated_user" }]
       : [discovery];
   }
 
@@ -862,6 +864,21 @@ function expandAuthorityVariants(
   }
   return variants;
 }
+
+// These paths already carried the explicit authenticated-authority suffix in
+// the checked OVE-285 graph before OVE-291. Preserve those stable IDs while
+// newly admitted single-authority remainder paths keep their original IDs.
+const BASELINE_AUTHENTICATED_AUTHORITY_VARIANT_PATHS = new Set([
+  "src/app/api/document-mutation-admission/continuity/route.ts",
+  "src/app/api/garden/entries/[entryId]/route.ts",
+  "src/app/api/garden/entries/route.ts",
+  "src/app/api/media/[mediaAssetId]/focal/route.ts",
+  "src/app/api/media/process/route.ts",
+  "src/app/api/media/uploads/route.ts",
+  "src/app/garden/lineage/invitations/claim/actions.ts",
+  "src/app/garden/objects/[objectId]/actions.ts",
+  "src/app/lineage/objects/[objectId]/actions.ts",
+]);
 
 function withAuthorityVariant(
   discovery: ExpandedDiscoveryInput,
@@ -1237,6 +1254,27 @@ function exclusionFor(
     return {
       classification: "excluded_distinct_authority",
       reason: "public_or_guest_capability_has_distinct_authority",
+    };
+  }
+  if (
+    (discovery.path === "src/app/join/actions.ts" &&
+      discovery.symbol === "claimPilotInviteAction") ||
+    discovery.path === "src/app/join/page.tsx"
+  ) {
+    return {
+      classification: "excluded_distinct_authority",
+      reason: "guest_pilot_invite_handoff_has_no_authenticated_document",
+    };
+  }
+  if (
+    discovery.transport === "route_handler" &&
+    discovery.symbol === "GET" &&
+    (discovery.path === "src/app/api/public/objects/suggestions/route.ts" ||
+      discovery.path === "src/app/api/garden/catalog/typeahead/route.ts")
+  ) {
+    return {
+      classification: "read_only",
+      reason: "catalog_lookup_has_no_owner_scoped_effect",
     };
   }
   if (

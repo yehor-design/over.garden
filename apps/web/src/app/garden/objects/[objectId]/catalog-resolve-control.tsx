@@ -3,6 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { buttonVariants } from "@/components/ui/button";
 import type { VarietyState } from "@/db/schema";
 import {
@@ -24,7 +25,7 @@ interface CatalogResolveControlProps {
   objectId: string;
   currentVarietyText: string | null;
   currentVarietyState: VarietyState;
-  action: (formData: FormData) => void | Promise<void>;
+  action: (formData: FormData) => Promise<unknown>;
 }
 
 type CatalogStatus = "idle" | "loading" | "ready" | "failed";
@@ -131,7 +132,10 @@ export function CatalogResolveControl({
         </p>
       </div>
 
-      <form action={action} className="grid min-w-0 gap-3">
+      <DocumentMutationActionForm
+        action={action}
+        className="grid min-w-0 gap-3"
+      >
         <input type="hidden" name="objectId" value={objectId} />
         <input
           type="hidden"
@@ -232,7 +236,7 @@ export function CatalogResolveControl({
         >
           {copy.save}
         </button>
-      </form>
+      </DocumentMutationActionForm>
     </section>
   );
 }

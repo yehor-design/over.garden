@@ -2,13 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { resolveLineageClaim } from "@/server/lineage-repository";
-import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 
 const LINEAGE_CLAIMS_PATH = "/garden/lineage/claims";
 
 export async function confirmLineageClaimAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await resolveLineageClaim(scope, {
     edgeId: String(formData.get("edgeId") ?? ""),
     decision: "confirmed",
@@ -18,7 +27,13 @@ export async function confirmLineageClaimAction(formData: FormData) {
 }
 
 export async function declineLineageClaimAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await resolveLineageClaim(scope, {
     edgeId: String(formData.get("edgeId") ?? ""),
     decision: "declined",

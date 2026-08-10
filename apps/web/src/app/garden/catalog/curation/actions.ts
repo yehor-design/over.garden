@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
 import { publicVarietyPath } from "@/lib/garden/public-paths";
 import { assertCatalogCuratorAccess } from "@/server/catalog-curator-auth";
 import {
@@ -25,23 +26,36 @@ import {
   type CatalogSourceCandidateDecisionResult,
 } from "@/server/catalog-source/candidate-review-repository";
 import { enqueueCatalogFuzzyDuplicateQaRefresh } from "@/server/catalog-source/fuzzy-duplicate-qa-job-repository";
-import { requireCurrentRequestScope } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { upsertVarietySeedProof } from "@/server/variety-seed-proof-repository";
 
 const CURATION_PATH = "/garden/catalog/curation";
 
-export interface CatalogMatchSuggestionActionResult {
-  outcome: "approved" | "rejected" | "stale";
-  message: string;
-}
+export type CatalogMatchSuggestionActionResult =
+  | {
+      outcome: "approved" | "rejected" | "stale";
+      message: string;
+    }
+  | DocumentMutationActionStateV1;
 
-export interface CatalogAliasSuggestionActionResult {
-  outcome: "queued" | "approved" | "rejected" | "stale" | "collision";
-  message: string;
-}
+export type CatalogAliasSuggestionActionResult =
+  | {
+      outcome: "queued" | "approved" | "rejected" | "stale" | "collision";
+      message: string;
+    }
+  | DocumentMutationActionStateV1;
 
-export async function refreshCatalogFuzzyDuplicateQaAction(): Promise<void> {
-  const scope = await requireCurrentRequestScope();
+export async function refreshCatalogFuzzyDuplicateQaAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   await enqueueCatalogFuzzyDuplicateQaRefresh();
@@ -51,7 +65,13 @@ export async function refreshCatalogFuzzyDuplicateQaAction(): Promise<void> {
 export async function generateCatalogAliasSuggestionsAction(
   formData: FormData,
 ): Promise<CatalogAliasSuggestionActionResult> {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   await enqueueCatalogAliasSuggestionsRefresh({
@@ -68,7 +88,13 @@ export async function generateCatalogAliasSuggestionsAction(
 export async function approveCatalogAliasSuggestionAction(
   formData: FormData,
 ): Promise<CatalogAliasSuggestionActionResult> {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await approveCatalogAliasSuggestion(scope, {
@@ -100,7 +126,13 @@ export async function approveCatalogAliasSuggestionAction(
 export async function rejectCatalogAliasSuggestionAction(
   formData: FormData,
 ): Promise<CatalogAliasSuggestionActionResult> {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogAliasSuggestion(scope, {
@@ -123,7 +155,13 @@ export async function rejectCatalogAliasSuggestionAction(
 }
 
 export async function confirmCatalogCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await confirmCatalogCurationCandidate(scope, {
@@ -134,7 +172,13 @@ export async function confirmCatalogCandidateAction(formData: FormData) {
 }
 
 export async function mergeCatalogCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await mergeCatalogCurationCandidate(scope, {
@@ -146,7 +190,13 @@ export async function mergeCatalogCandidateAction(formData: FormData) {
 }
 
 export async function rejectCatalogCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogCurationCandidate(scope, {
@@ -157,7 +207,13 @@ export async function rejectCatalogCandidateAction(formData: FormData) {
 }
 
 export async function rescanCatalogMatchSuggestionsAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   await enqueueCatalogMatchSuggestionsRefresh({
@@ -170,7 +226,13 @@ export async function rescanCatalogMatchSuggestionsAction(formData: FormData) {
 export async function approveCatalogMatchSuggestionAction(
   formData: FormData,
 ): Promise<CatalogMatchSuggestionActionResult> {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await approveCatalogMatchSuggestion(scope, {
@@ -195,7 +257,13 @@ export async function approveCatalogMatchSuggestionAction(
 export async function rejectCatalogMatchSuggestionAction(
   formData: FormData,
 ): Promise<CatalogMatchSuggestionActionResult> {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogMatchSuggestion(scope, {
@@ -220,7 +288,13 @@ export async function rejectCatalogMatchSuggestionAction(
 }
 
 export async function upsertVarietySeedProofAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await upsertVarietySeedProof(scope, {
@@ -237,7 +311,13 @@ export async function upsertVarietySeedProofAction(formData: FormData) {
 }
 
 export async function promoteCatalogSourceCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await promoteCatalogSourceCandidate(scope, {
@@ -248,7 +328,13 @@ export async function promoteCatalogSourceCandidateAction(formData: FormData) {
 }
 
 export async function holdCatalogSourceCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await holdCatalogSourceCandidate(scope, {
@@ -259,7 +345,13 @@ export async function holdCatalogSourceCandidateAction(formData: FormData) {
 }
 
 export async function rejectCatalogSourceCandidateAction(formData: FormData) {
-  const scope = await requireCurrentRequestScope();
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   await assertCatalogCuratorAccess(scope);
 
   const result = await rejectCatalogSourceCandidate(scope, {

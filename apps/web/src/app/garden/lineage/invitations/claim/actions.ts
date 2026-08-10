@@ -9,27 +9,48 @@ import {
   LINEAGE_INVITATION_CLAIM_PATH,
 } from "@/lib/lineage/claim-handoff";
 import { getOwnerLineageCopy } from "@/lib/owner-lineage-copy";
-import {
-  AuthenticationRequiredError,
-  requireCurrentRequestScope,
-} from "@/server/auth-session";
 import { createAuthIntentToken } from "@/server/auth-intent-token";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { unsealLineageClaimToken } from "@/server/lineage-claim-cookie";
 import { resolveLineageInvitationClaim } from "@/server/lineage-repository";
+import type { RequestScope } from "@/server/request-scope";
 
 const LINEAGE_CLAIMS_PATH = "/garden/lineage/claims";
 
-export async function confirmLineageInvitationClaimAction() {
-  return resolveInvitationClaim("confirmed");
+export async function confirmLineageInvitationClaimAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      redirectToClaimAuthentication();
+    }
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  return resolveInvitationClaim("confirmed", admission.scope);
 }
 
-export async function declineLineageInvitationClaimAction() {
-  return resolveInvitationClaim("declined");
+export async function declineLineageInvitationClaimAction(formData: FormData) {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    if (admission.transportResult === "AUTHENTICATION_REQUIRED") {
+      redirectToClaimAuthentication();
+    }
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  return resolveInvitationClaim("declined", admission.scope);
 }
 
-async function resolveInvitationClaim(decision: "confirmed" | "declined") {
-  const scope = await requireClaimScope();
+async function resolveInvitationClaim(
+  decision: "confirmed" | "declined",
+  scope: RequestScope,
+) {
   const cookieStore = await cookies();
   const token = unsealLineageClaimToken(
     cookieStore.get(LINEAGE_CLAIM_COOKIE_NAME)?.value,
@@ -52,18 +73,12 @@ async function resolveInvitationClaim(decision: "confirmed" | "declined") {
   redirect(`${LINEAGE_CLAIMS_PATH}?invitation=${decision}`);
 }
 
-async function requireClaimScope() {
-  try {
-    return await requireCurrentRequestScope();
-  } catch (error) {
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-
-    const token = createAuthIntentToken({
-      action: "claim",
-      returnTo: LINEAGE_INVITATION_CLAIM_PATH,
-    });
-    redirect(`/auth/intent?intent=${encodeURIComponent(token)}`);
-  }
+function redirectToClaimAuthentication(): never {
+  const token = createAuthIntentToken({
+    action: "claim",
+    returnTo: LINEAGE_INVITATION_CLAIM_PATH,
+  });
+  redirect(`/auth/intent?intent=${encodeURIComponent(token)}`);
 }
 
 function revalidateLineageInvitationClaimPaths(subjectPlantObjectId: string) {

@@ -2,6 +2,8 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
+
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { useFormStatus } from "react-dom";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -10,7 +12,7 @@ import { getOperatorCurationCopy } from "@/lib/operator-curation-copy";
 
 interface FuzzyDuplicateRefreshFormProps {
   locale: InterfaceLocale;
-  refreshAction: () => Promise<void>;
+  refreshAction: (formData: FormData) => Promise<unknown>;
 }
 
 export function FuzzyDuplicateRefreshForm({
@@ -19,15 +21,22 @@ export function FuzzyDuplicateRefreshForm({
 }: FuzzyDuplicateRefreshFormProps) {
   const [queued, setQueued] = useState(false);
 
-  async function queueRefresh() {
-    await refreshAction();
-    setQueued(true);
+  async function queueRefresh(formData: FormData) {
+    const result = await refreshAction(formData);
+    if (
+      !result ||
+      typeof result !== "object" ||
+      !("documentMutationAdmission" in result)
+    ) {
+      setQueued(true);
+    }
+    return result;
   }
 
   return (
-    <form action={queueRefresh}>
+    <DocumentMutationActionForm action={queueRefresh}>
       <FuzzyDuplicateRefreshButton locale={locale} queued={queued} />
-    </form>
+    </DocumentMutationActionForm>
   );
 }
 
