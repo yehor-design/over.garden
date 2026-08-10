@@ -444,14 +444,17 @@ describe("legacy owner-vault migration", () => {
   it.skipIf(process.env.OVERGARDEN_SKIP_OWNER_VAULT_PERFORMANCE === "1")(
     "keeps the 10,000-row owner_vault_operation_duration within the bounded target",
     async () => {
+      // Keep the benchmark at the aggregate row cap with fixed-size canonical
+      // records. Payload/Blob byte fidelity and every table shape are proved
+      // separately, so this wall-clock gate measures bounded row processing
+      // instead of an arbitrary user-authored payload-size distribution.
       const rows = Array.from({ length: 10_000 }, (_, index) =>
-        draft(
+        composerDurability(
           OWNER_A,
           `load-${index.toString().padStart(5, "0")}`,
-          `row-${index}`,
         ),
       );
-      await offlineDb?.drafts.bulkAdd(rows);
+      await offlineDb?.composerDurability.bulkAdd(rows);
       const target = new OwnerVaultDb(BINDING_A);
       await target.open();
       const startedAt = performance.now();
@@ -466,7 +469,7 @@ describe("legacy owner-vault migration", () => {
 
       expect(result).toEqual(expect.objectContaining({ status: "activated" }));
       expect(ownerVaultOperationDuration).toBeLessThanOrEqual(3_000);
-      await expect(target.drafts.count()).resolves.toBe(10_000);
+      await expect(target.composerDurability.count()).resolves.toBe(10_000);
       target.close();
     },
     10_000,
