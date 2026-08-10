@@ -1,5 +1,8 @@
+import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
 
@@ -10,7 +13,6 @@ import {
   discoverAuthenticatedMutationEntrypoints,
   expandBetterAuthSemanticVariants,
   runAuthenticatedMutationOperationWithinDeadline,
-  runAuthenticatedMutationSurfaceAudit,
 } from "./audit-authenticated-mutation-surface";
 import {
   buildAuthenticatedMutationRegistry,
@@ -27,6 +29,17 @@ const OVE_296_PREREQUISITE = [
       "d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152",
   },
 ] as const;
+
+const execFileAsync = promisify(execFile);
+
+interface AuthenticatedMutationAuditCliReport {
+  state: "ready" | "inconclusive";
+  artifactState: "matching" | "missing" | "drifted" | "written";
+  elapsedBucket: string;
+  registryDigest?: string;
+  sourceEvidenceDigest?: string;
+  receiptDigest?: string;
+}
 
 describe("authenticated mutation surface AST discovery", () => {
   it("excludes exact test/spec/fixture segments while keeping similarly named production paths", () => {
@@ -1324,25 +1337,46 @@ describe("authenticated mutation audit deadline and determinism", () => {
       );
       const before = await readFile(artifactPath, "utf8").catch(() => null);
       const reports = await Promise.all(
-        Array.from({ length: 4 }, () =>
-          runAuthenticatedMutationSurfaceAudit({ appRoot }),
-        ),
+        Array.from({ length: 4 }, async () => {
+          const { stdout } = await execFileAsync(
+            path.join(appRoot, "node_modules", ".bin", "tsx"),
+            ["scripts/audit-authenticated-mutation-surface.ts", "--check"],
+            {
+              cwd: appRoot,
+              encoding: "utf8",
+              maxBuffer: 1024 * 1024,
+              timeout: AUTHENTICATED_MUTATION_AUDIT_DEADLINE_MS + 5_000,
+            },
+          );
+
+          return JSON.parse(
+            String(stdout),
+          ) as AuthenticatedMutationAuditCliReport;
+        }),
       );
       const after = await readFile(artifactPath, "utf8").catch(() => null);
 
-      expect(reports.every((report) => report.terminalState === "ready")).toBe(
-        true,
-      );
+      expect(reports.every((report) => report.state === "ready")).toBe(true);
+      expect(
+        reports.every((report) => report.artifactState === "matching"),
+      ).toBe(true);
+      expect(
+        reports.every((report) =>
+          [
+            report.registryDigest,
+            report.sourceEvidenceDigest,
+            report.receiptDigest,
+          ].every((digest) => /^[0-9a-f]{64}$/.test(digest ?? "")),
+        ),
+      ).toBe(true);
       expect(
         new Set(
-          reports.flatMap((report) =>
-            report.receipt
-              ? [
-                  report.receipt.registryDigest,
-                  report.receipt.sourceEvidenceDigest,
-                  report.receipt.receiptDigest,
-                ].join(":")
-              : [],
+          reports.map((report) =>
+            [
+              report.registryDigest,
+              report.sourceEvidenceDigest,
+              report.receiptDigest,
+            ].join(":"),
           ),
         ).size,
       ).toBe(1);
