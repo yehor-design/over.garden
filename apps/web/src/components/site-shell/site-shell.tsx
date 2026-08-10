@@ -44,6 +44,7 @@ import {
 import type { InterfaceMarket } from "@/lib/interface-market";
 import {
   getInterfaceLanguageControlPlacement,
+  getSessionRecheckMode,
   isSessionConvergenceSafeExitRoute,
 } from "@/lib/interface-route-policy";
 import {
@@ -83,6 +84,7 @@ export function SiteShell({
   const pathname = usePathname() || "/";
   const isSessionConvergenceSafeExit =
     isSessionConvergenceSafeExitRoute(pathname);
+  const sessionRecheckMode = getSessionRecheckMode(pathname);
   const [routeContextModules, setRouteContextModules] = useState<
     SiteShellContextRailModule[] | null
   >(null);
@@ -97,7 +99,6 @@ export function SiteShell({
         market={market}
         pathname={pathname}
         compact={languageControlPlacement === "utility"}
-        externallyDisabled
       />
     ) : undefined;
 
@@ -146,6 +147,7 @@ export function SiteShell({
       <SessionConvergenceBoundary
         locale={locale}
         localeControlFallback={sessionConvergenceLocaleControl}
+        recheckMode={sessionRecheckMode}
       >
         <DocumentMutationGenerationProvider
           locale={locale}
@@ -579,6 +581,7 @@ export function SiteShell({
     <SessionConvergenceBoundary
       locale={locale}
       localeControlFallback={sessionConvergenceLocaleControl}
+      recheckMode={sessionRecheckMode}
     >
       <DocumentMutationGenerationProvider
         locale={locale}

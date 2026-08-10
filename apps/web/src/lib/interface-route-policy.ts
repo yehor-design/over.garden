@@ -18,6 +18,10 @@ export type InterfaceLanguageControlPlacement =
   | "utility"
   | "none";
 
+export type SessionRecheckMode =
+  | "compatibility_fenced"
+  | "effect_closed_non_fencing";
+
 export const INTERFACE_UTILITY_CONTROL_PREFIXES = [
   "/admin",
   "/health",
@@ -333,6 +337,18 @@ export function isSessionConvergenceSafeExitRoute(pathname: string) {
   return SESSION_CONVERGENCE_SAFE_EXIT_PATHS.some(
     (safeExitPath) => basePath === safeExitPath,
   );
+}
+
+/**
+ * OVE-286 admits only the existing-entry editor whose complete owner-data
+ * effect closure already passes OVE-290 generation admission. OVE-291 owns
+ * every later expansion, so this matcher intentionally has no prefix mode.
+ */
+export function getSessionRecheckMode(pathname: string): SessionRecheckMode {
+  const match = pathname.match(/^\/garden\/entries\/([^/]+)\/edit$/);
+  return match?.[1] && UUID_PATH_SEGMENT.test(match[1])
+    ? "effect_closed_non_fencing"
+    : "compatibility_fenced";
 }
 
 export function sanitizeInterfaceRouteSearch(

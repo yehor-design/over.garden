@@ -104,6 +104,25 @@ boundaries. Exact-main containment, READY exact-SHA deployment, reject-only
 production zero-effect proof, and authenticated Linear read-back remain the
 closeout gates before OVE-286 starts.
 
+On 2026-08-10, OVE-286 was selected only after those OVE-290 gates passed on
+clean baseline `63878e7591ff22f0b32c7585e5f212d16411a484`. Its route policy
+admits only `/garden/entries/{valid UUID}/edit` to non-fencing ordinary session
+rechecks; every other authenticated route retains the OVE-236 compatibility
+fence until OVE-291. One payload-free persistent invalidation marker closes
+sleeping/BFCache documents, terminal evidence never reopens the old document,
+and a same-owner new session reloads without a false owner-change transition
+before fresh authoritative owner-activity rebind. The topology-only registry
+regeneration contains 608 production sources, 2,568 source nodes, 316
+entrypoints, 184 true effect boundaries, 660 consumer edges, and zero
+unresolved findings; registry/source/receipt digests are respectively
+`30edfe26aef3191d1339b791e0ebc0192b1898df79e4569a0fa7878a6b37bea0`,
+`faaf957a24ccf600b8dd567fa731b99776985861862959657a9768f06a19a50b`, and
+`5b9840061318b2de10e00207f8a51ca104988533ac09324b5ff5700e7ccf032b`;
+the rebound enforcement receipt preserves all baseline 36 high-risk
+entrypoints, 281 consumer edges, and 24 admission boundaries. Exact-head CI,
+current-main containment, READY exact-SHA deployment, immutable smoke, and
+authenticated Linear read-back remain the closeout gates before OVE-287.
+
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,
 was saved and read back, moved to `In Progress`, and closed on `main` through

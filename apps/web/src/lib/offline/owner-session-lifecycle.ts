@@ -591,13 +591,24 @@ export async function hydrateOwnerOfflineActivitySession(
   ownerUserId: string,
   sessionGeneration: string,
   ownerVaultBinding?: string,
-  options: { signal?: AbortSignal } = {},
+  options: {
+    signal?: AbortSignal;
+    /**
+     * Fresh server-document bootstrap only. Ordinary callers must keep the
+     * default so a stale document can never rebind its own generation.
+     */
+    allowAuthoritativeSessionRebind?: boolean;
+  } = {},
 ): Promise<OwnerActivitySessionHydrationResult> {
   throwIfOwnerVaultHydrationCancelled(options.signal);
   const owner = requireOwnerUserId(ownerUserId);
   const generation = requireSessionGeneration(sessionGeneration);
   const localGeneration = readLocalOwnerActivitySessionGeneration(owner);
-  if (localGeneration && localGeneration !== generation) {
+  if (
+    localGeneration &&
+    localGeneration !== generation &&
+    !options.allowAuthoritativeSessionRebind
+  ) {
     return "document_session_changed";
   }
 

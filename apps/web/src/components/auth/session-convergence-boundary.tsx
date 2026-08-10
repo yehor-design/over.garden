@@ -26,7 +26,14 @@ import {
   SESSION_CONVERGENCE_SIGNALS,
   subscribeToSessionConvergence,
 } from "@/lib/auth/session-convergence";
+import {
+  clearSessionInvalidationMarkerIfCurrent,
+  commitSessionInvalidationMarker,
+  readSessionInvalidationMarker,
+  subscribeToSessionInvalidationMarker,
+} from "@/lib/auth/session-invalidation-marker";
 import type { InterfaceLocale } from "@/lib/interface-localization";
+import type { SessionRecheckMode } from "@/lib/interface-route-policy";
 import {
   prepareOwnerComposerParticipants,
   type OwnerComposerPreparationHandle,
@@ -72,11 +79,11 @@ type SessionRecheckFence = {
 
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
-  const params = new URLSearchParams(window.location.search);
-  for (const key of params.keys()) {
-    if (key.startsWith("visual")) return true;
+  if (window.location.pathname !== "/__visual-fixtures/session-recheck") {
+    return false;
   }
-  return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get("visualSessionConvergence") === "true";
 }
 
 export function SessionConvergenceBoundary({
@@ -84,6 +91,7 @@ export function SessionConvergenceBoundary({
   locale,
   localeControlFallback,
   authoritativeSessionRead,
+  recheckMode = "compatibility_fenced",
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
@@ -91,6 +99,8 @@ export function SessionConvergenceBoundary({
   localeControlFallback?: React.ReactNode;
   /** Local visual-fixture seam; production callers use Better Auth directly. */
   authoritativeSessionRead?: () => Promise<unknown>;
+  /** Route-scoped OVE-286 rollout; all unproven routes retain the OVE-236 fence. */
+  recheckMode?: SessionRecheckMode;
 }) {
   // Mount Better Auth's session atom so its built-in session signal and the
   // product's explicit offline-safe convergence signal are both active.
@@ -106,7 +116,7 @@ export function SessionConvergenceBoundary({
   useInterfaceLocaleChangeFormState({
     id: "session-convergence-lifecycle",
     dirty: false,
-    pending: activityGate !== "ready" || remotePreparationPending,
+    pending: activityGate === "ready" && remotePreparationPending,
   });
   const retryHydrationRef = useRef<() => void>(() => undefined);
   const reloadSessionGateRef = useRef<() => void>(() => undefined);
@@ -140,12 +150,38 @@ export function SessionConvergenceBoundary({
   useEffect(() => {
     let disposed = false;
     let authoritativeNavigationStarted = false;
+    let authenticatedTreeAdmitted = false;
+    let terminalInvalidationObserved = false;
+    const bootstrapInvalidationMarker = readSessionInvalidationMarker();
+    const bootstrapRequiresVerifiedHydration =
+      bootstrapInvalidationMarker.status === "present" ||
+      bootstrapInvalidationMarker.status === "unknown";
+    let bootstrapMarkerReleased = false;
+    const setDocumentGate = (gate: "checking" | "ready" | "blocked") => {
+      if (gate === "ready" && terminalInvalidationObserved) {
+        authenticatedTreeAdmitted = false;
+        setActivityGate("blocked");
+        return;
+      }
+      authenticatedTreeAdmitted = gate === "ready";
+      setActivityGate(gate);
+    };
+    const releaseBootstrapInvalidationMarker = () => {
+      if (terminalInvalidationObserved) return false;
+      if (bootstrapMarkerReleased) return true;
+      const result = clearSessionInvalidationMarkerIfCurrent(
+        bootstrapInvalidationMarker,
+      );
+      if (result !== "cleared" && result !== "absent") return false;
+      bootstrapMarkerReleased = true;
+      return true;
+    };
     const hideAuthenticatedTree = () => {
       if (disposed) return;
       // A hard navigation can begin in the same microtask as the state change.
       // Commit the privacy gate first so the old private tree cannot remain
       // painted while navigation is delayed, mocked, or rejected.
-      flushSync(() => setActivityGate("blocked"));
+      flushSync(() => setDocumentGate("blocked"));
     };
     const activeOperationIds = activeOperationIdsRef.current;
     const operationLastSeenAt = operationLastSeenAtRef.current;
@@ -162,7 +198,7 @@ export function SessionConvergenceBoundary({
       // The ordinary focus/visibility path is an identity boundary too. Commit
       // the payload-free checking gate before any asynchronous session or
       // owner-store work can observe the potentially changed cookie.
-      flushSync(() => setActivityGate("checking"));
+      flushSync(() => setDocumentGate("checking"));
     };
     const updateRemotePreparationFence = () => {
       if (disposed) return;
@@ -190,6 +226,12 @@ export function SessionConvergenceBoundary({
       | null
       | undefined;
     let baselineOwnerUserId: string | null = null;
+    let terminalOwnerSyncAborted = false;
+    const abortTerminalOwnerSync = () => {
+      if (terminalOwnerSyncAborted || !baselineOwnerUserId) return;
+      terminalOwnerSyncAborted = true;
+      abortOwnerSyncAttempts(baselineOwnerUserId);
+    };
     const baselineReady = (async () => {
       try {
         // Better Auth's client atom commonly starts as pending with data:null.
@@ -206,7 +248,14 @@ export function SessionConvergenceBoundary({
         baselineOwnerUserId = null;
       }
       if (baselinePreparedSession === null && !disposed) {
+        authoritativeNavigationStarted = true;
+        terminalInvalidationObserved = true;
+        commitSessionInvalidationMarker();
         hideAuthenticatedTree();
+        activeOperationIds.clear();
+        operationLastSeenAt.clear();
+        operationPreparationRounds.clear();
+        updateRemotePreparationFence();
         window.location.replace(localizedPublicRoot(locale));
         return;
       }
@@ -215,12 +264,18 @@ export function SessionConvergenceBoundary({
         // real offline IndexedDB lane — Dexie hydration can wedge Playwright
         // Chromium and is not part of fixture evidence.
         if (isVisualFixtureBrowserRequest()) {
-          setActivityGate("ready");
+          setDocumentGate(
+            releaseBootstrapInvalidationMarker() ? "ready" : "blocked",
+          );
           return;
         }
         const hydration = await hydrateBoundedOwnerOfflineActivitySession(
           baselineOwnerUserId,
           baselinePreparedSession.binding,
+          {
+            allowAuthoritativeSessionRebind: true,
+            requireVerifiedHydration: bootstrapRequiresVerifiedHydration,
+          },
         ).catch(() => "blocked" as const);
         if (disposed) return;
         if (hydration === "document_session_changed") {
@@ -228,11 +283,15 @@ export function SessionConvergenceBoundary({
           window.location.reload();
           return;
         }
-        setActivityGate(hydration === "ready" ? "ready" : "blocked");
+        setDocumentGate(
+          hydration === "ready" && releaseBootstrapInvalidationMarker()
+            ? "ready"
+            : "blocked",
+        );
         return;
       }
       if (!disposed && baselinePreparedSession !== null) {
-        setActivityGate("blocked");
+        setDocumentGate("blocked");
       }
     })();
 
@@ -241,7 +300,7 @@ export function SessionConvergenceBoundary({
       if (activityGateRefresh) return activityGateRefresh;
       const refresh = (async () => {
         await baselineReady;
-        if (disposed) {
+        if (disposed || terminalInvalidationObserved) {
           return false;
         }
         try {
@@ -250,6 +309,7 @@ export function SessionConvergenceBoundary({
           const sessionResult = await readBoundedAuthoritativeSession(
             readAuthoritativeSession,
           );
+          if (disposed || terminalInvalidationObserved) return false;
           const freshPreparedSession =
             await prepareBoundedSessionSignOut(sessionResult);
           const freshOwnerUserId = readOwnerUserId(sessionResult);
@@ -260,18 +320,24 @@ export function SessionConvergenceBoundary({
           }
           if (!freshOwnerUserId) throw new Error("Session owner unavailable.");
 
+          let establishesDocumentBaseline = false;
           if (baselinePreparedSession === undefined) {
             // No authenticated children were mounted while the initial proof was
             // unavailable. A successful retry may safely establish the immutable
             // document baseline before hydration.
             baselinePreparedSession = freshPreparedSession;
             baselineOwnerUserId = freshOwnerUserId;
+            establishesDocumentBaseline = true;
           } else if (
             baselinePreparedSession === null ||
-            baselinePreparedSession.binding !== freshPreparedSession.binding ||
             baselineOwnerUserId !== freshOwnerUserId
           ) {
             beginChangedSessionTransition();
+            return false;
+          } else if (
+            baselinePreparedSession.binding !== freshPreparedSession.binding
+          ) {
+            beginSameOwnerSessionReload();
             return false;
           }
 
@@ -280,21 +346,29 @@ export function SessionConvergenceBoundary({
             : await hydrateBoundedOwnerOfflineActivitySession(
                 freshOwnerUserId,
                 freshPreparedSession.binding,
+                establishesDocumentBaseline
+                  ? {
+                      allowAuthoritativeSessionRebind: true,
+                      requireVerifiedHydration:
+                        bootstrapRequiresVerifiedHydration,
+                    }
+                  : undefined,
               );
-          if (disposed) return false;
+          if (disposed || terminalInvalidationObserved) return false;
           if (hydration === "document_session_changed") {
-            hideAuthenticatedTree();
-            window.location.reload();
+            beginSameOwnerSessionReload();
             return false;
           }
           if (sessionRecheckFences.size > 0) {
-            setActivityGate("blocked");
+            setDocumentGate("blocked");
             return false;
           }
-          setActivityGate(hydration === "ready" ? "ready" : "blocked");
-          return hydration === "ready";
+          const ready =
+            hydration === "ready" && releaseBootstrapInvalidationMarker();
+          setDocumentGate(ready ? "ready" : "blocked");
+          return ready;
         } catch {
-          if (!disposed) setActivityGate("blocked");
+          if (!disposed) setDocumentGate("blocked");
           return false;
         }
       })();
@@ -320,10 +394,11 @@ export function SessionConvergenceBoundary({
       }
       if (baselinePreparedSession === null) return "changed" as const;
       const freshOwnerUserId = readOwnerUserId(sessionResult);
-      return baselinePreparedSession.binding === freshPreparedSession.binding &&
-        baselineOwnerUserId === freshOwnerUserId
+      if (!freshOwnerUserId) return "unavailable" as const;
+      if (baselineOwnerUserId !== freshOwnerUserId) return "changed" as const;
+      return baselinePreparedSession.binding === freshPreparedSession.binding
         ? ("matches" as const)
-        : ("changed" as const);
+        : ("same_owner_new_session" as const);
     };
 
     const publishPreparationResult = (
@@ -476,7 +551,7 @@ export function SessionConvergenceBoundary({
           // might still belong to this session. The payload-free UI remains
           // available for a later explicit recovery action.
           authoritativeNavigationStarted = false;
-          setActivityGate("blocked");
+          setDocumentGate("blocked");
           return;
         }
         window.location.reload();
@@ -628,7 +703,10 @@ export function SessionConvergenceBoundary({
     const beginSignedOutTransition = () => {
       if (disposed || authoritativeNavigationStarted) return;
       authoritativeNavigationStarted = true;
+      terminalInvalidationObserved = true;
+      commitSessionInvalidationMarker();
       hideAuthenticatedTree();
+      abortTerminalOwnerSync();
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
@@ -640,7 +718,10 @@ export function SessionConvergenceBoundary({
     const beginChangedSessionTransition = () => {
       if (disposed || authoritativeNavigationStarted) return;
       authoritativeNavigationStarted = true;
+      terminalInvalidationObserved = true;
+      commitSessionInvalidationMarker();
       hideAuthenticatedTree();
+      abortTerminalOwnerSync();
       publishChangedSessionInvalidation();
       startBestEffort(finalizeChangedSessionActivity);
       window.location.reload();
@@ -649,12 +730,24 @@ export function SessionConvergenceBoundary({
     const beginFallbackChangedSessionTransition = () => {
       if (disposed || authoritativeNavigationStarted) return;
       authoritativeNavigationStarted = true;
+      terminalInvalidationObserved = true;
+      commitSessionInvalidationMarker();
       hideAuthenticatedTree();
+      abortTerminalOwnerSync();
       activeOperationIds.clear();
       operationLastSeenAt.clear();
       operationPreparationRounds.clear();
       updateRemotePreparationFence();
       startBestEffort(finalizeChangedSessionActivity);
+      window.location.reload();
+    };
+
+    const beginSameOwnerSessionReload = () => {
+      if (disposed || authoritativeNavigationStarted) return;
+      // The authenticated owner is unchanged. Let the fresh document perform
+      // the authoritative generation rebind; do not manufacture a terminal
+      // owner-change marker or pre-hide this still-authorized owner's UI.
+      authoritativeNavigationStarted = true;
       window.location.reload();
     };
 
@@ -788,6 +881,12 @@ export function SessionConvergenceBoundary({
         if (sessionComparison === "changed") {
           beginChangedSessionTransition();
           throw new Error("Cross-tab session changed during preparation.");
+        }
+        if (sessionComparison === "same_owner_new_session") {
+          beginSameOwnerSessionReload();
+          throw new Error(
+            "Cross-tab session generation changed during preparation.",
+          );
         }
         if (sessionComparison !== "matches") {
           throw new Error("Cross-tab session confirmation is unavailable.");
@@ -926,10 +1025,14 @@ export function SessionConvergenceBoundary({
 
     const convergeCommittedSession = async (operationId: string) => {
       // A peer terminal signal means the cookie may already represent signed
-      // out or session B. Remove session A's private React tree synchronously,
-      // before waiting for an in-flight preparation or any network proof. Only
-      // an authoritative exact-A confirmation plus recovery may reopen it.
+      // out or session B. Persist the document-kill marker and remove session
+      // A's private React tree synchronously before any network proof. A
+      // terminal document is never reopened, even if an eventual read still
+      // observes exact session A.
+      terminalInvalidationObserved = true;
+      commitSessionInvalidationMarker();
       hideAuthenticatedTree();
+      abortTerminalOwnerSync();
       committedOperationsInFlight.add(operationId);
       updateRemotePreparationFence();
       rememberTerminalOperation(
@@ -941,6 +1044,8 @@ export function SessionConvergenceBoundary({
       operationLastSeenAtRef.current.delete(operationId);
       operationPreparationRoundsRef.current.delete(operationId);
       await preparationPromiseRef.current?.catch(() => undefined);
+      await baselineReady;
+      abortTerminalOwnerSync();
 
       try {
         const sessionResult = await readBoundedAuthoritativeSession(
@@ -958,25 +1063,88 @@ export function SessionConvergenceBoundary({
             beginChangedSessionTransition();
             return;
           }
-          if (sessionComparison !== "matches") return;
-          if (activeOperationIdsRef.current.size === 0) {
-            await resumeRemotePreparation();
+          if (sessionComparison === "same_owner_new_session") {
+            startBestEffort(finalizeChangedSessionActivity);
+            beginSameOwnerSessionReload();
           }
           return;
         }
-        // Unknown after a terminal signal stays frozen until a later
-        // authoritative focus/watchdog recheck establishes signed-out,
-        // changed, or the exact same baseline session.
+        // Unknown after a terminal signal stays frozen for this document.
       } catch {
         // A terminal recheck failure must never release old-session memory.
       } finally {
+        if (!authoritativeNavigationStarted) {
+          startBestEffort(finalizeChangedSessionActivity);
+        }
         committedOperationsInFlight.delete(operationId);
         updateRemotePreparationFence();
       }
     };
 
     const recheckAuthoritativeSession = () => {
-      if (disposed || authoritativeNavigationStarted || authoritativeRecheck) {
+      if (
+        disposed ||
+        terminalInvalidationObserved ||
+        authoritativeNavigationStarted ||
+        authoritativeRecheck
+      ) {
+        return;
+      }
+      if (recheckMode === "effect_closed_non_fencing") {
+        const recheck = (async () => {
+          try {
+            const sessionResult = await readBoundedAuthoritativeSession(
+              readAuthoritativeSession,
+            );
+            if (
+              disposed ||
+              terminalInvalidationObserved ||
+              authoritativeNavigationStarted
+            ) {
+              return;
+            }
+            const confirmation = classifySessionConfirmation(sessionResult);
+            if (confirmation === "signed_out") {
+              beginSignedOutTransition();
+              return;
+            }
+            if (confirmation !== "authenticated") return;
+
+            const sessionComparison =
+              await compareFreshSessionToBaseline(sessionResult);
+            if (
+              disposed ||
+              terminalInvalidationObserved ||
+              authoritativeNavigationStarted
+            ) {
+              return;
+            }
+            if (sessionComparison === "changed") {
+              beginChangedSessionTransition();
+              return;
+            }
+            if (sessionComparison === "same_owner_new_session") {
+              beginSameOwnerSessionReload();
+              return;
+            }
+            if (
+              sessionComparison === "unavailable" ||
+              !authenticatedTreeAdmitted
+            ) {
+              await refreshActivityGate();
+            }
+            // Exact-owner success and any unknown/timeout failure are ordinary
+            // background observations. They do not pause owner activity,
+            // rehydrate IndexedDB, or replace already-authorized private UI.
+          } catch {
+            // The effect-closed route remains usable on an inconclusive
+            // background observation. Mutations still perform their own
+            // action-time admission checks before any durable effect.
+          } finally {
+            authoritativeRecheck = null;
+          }
+        })();
+        authoritativeRecheck = recheck;
         return;
       }
       const epoch = sessionRecheckEpoch + 1;
@@ -987,6 +1155,7 @@ export function SessionConvergenceBoundary({
       const recheck = (async () => {
         const isCurrentEpoch = () =>
           !disposed &&
+          !terminalInvalidationObserved &&
           !authoritativeNavigationStarted &&
           sessionRecheckEpoch === epoch;
         try {
@@ -996,6 +1165,7 @@ export function SessionConvergenceBoundary({
           if (!isCurrentEpoch()) return;
           const confirmation = classifySessionConfirmation(sessionResult);
           if (confirmation === "authenticated") {
+            let establishesDocumentBaseline = false;
             let sessionComparison =
               await compareFreshSessionToBaseline(sessionResult);
             if (!isCurrentEpoch()) return;
@@ -1012,19 +1182,24 @@ export function SessionConvergenceBoundary({
               const freshOwnerUserId = readOwnerUserId(sessionResult);
               if (!isCurrentEpoch()) return;
               if (!freshPreparedSession || !freshOwnerUserId) {
-                setActivityGate("blocked");
+                setDocumentGate("blocked");
                 return;
               }
               baselinePreparedSession = freshPreparedSession;
               baselineOwnerUserId = freshOwnerUserId;
+              establishesDocumentBaseline = true;
               sessionComparison = "matches";
             }
             if (sessionComparison === "changed") {
               beginChangedSessionTransition();
               return;
             }
+            if (sessionComparison === "same_owner_new_session") {
+              beginSameOwnerSessionReload();
+              return;
+            }
             if (sessionComparison !== "matches") {
-              setActivityGate("blocked");
+              setDocumentGate("blocked");
               return;
             }
 
@@ -1046,13 +1221,13 @@ export function SessionConvergenceBoundary({
               composerPreparationRef.current ||
               !(await releaseReadySessionRecheckFences())
             ) {
-              setActivityGate("blocked");
+              setDocumentGate("blocked");
               return;
             }
 
             const ownerUserId = readOwnerUserId(sessionResult);
             if (!ownerUserId || !baselinePreparedSession) {
-              setActivityGate("blocked");
+              setDocumentGate("blocked");
               return;
             }
             const hydration = isVisualFixtureBrowserRequest()
@@ -1060,13 +1235,24 @@ export function SessionConvergenceBoundary({
               : await hydrateBoundedOwnerOfflineActivitySession(
                   ownerUserId,
                   baselinePreparedSession.binding,
+                  establishesDocumentBaseline
+                    ? {
+                        allowAuthoritativeSessionRebind: true,
+                        requireVerifiedHydration:
+                          bootstrapRequiresVerifiedHydration,
+                      }
+                    : undefined,
                 );
             if (!isCurrentEpoch()) return;
             if (hydration === "document_session_changed") {
-              beginChangedSessionTransition();
+              beginSameOwnerSessionReload();
               return;
             }
-            setActivityGate(hydration === "ready" ? "ready" : "blocked");
+            setDocumentGate(
+              hydration === "ready" && releaseBootstrapInvalidationMarker()
+                ? "ready"
+                : "blocked",
+            );
             return;
           }
           if (!isCurrentEpoch()) return;
@@ -1075,12 +1261,12 @@ export function SessionConvergenceBoundary({
             if (isCurrentEpoch()) beginSignedOutTransition();
             return;
           }
-          setActivityGate("blocked");
+          setDocumentGate("blocked");
         } catch {
           // A timeout, malformed response, failed owner fence, or stale
           // continuation remains payload-free until the user explicitly
           // starts a newer epoch.
-          if (isCurrentEpoch()) setActivityGate("blocked");
+          if (isCurrentEpoch()) setDocumentGate("blocked");
         } finally {
           authoritativeRecheck = null;
         }
@@ -1088,7 +1274,12 @@ export function SessionConvergenceBoundary({
       authoritativeRecheck = recheck;
     };
 
-    retryHydrationRef.current = recheckAuthoritativeSession;
+    retryHydrationRef.current =
+      recheckMode === "effect_closed_non_fencing"
+        ? () => {
+            void refreshActivityGate();
+          }
+        : recheckAuthoritativeSession;
     reloadSessionGateRef.current = reloadAfterSessionRecheckFence;
 
     const recheckStaleOperations = () => {
@@ -1131,6 +1322,10 @@ export function SessionConvergenceBoundary({
             await compareFreshSessionToBaseline(sessionResult);
           if (sessionComparison === "changed") {
             beginChangedSessionTransition();
+            return;
+          }
+          if (sessionComparison === "same_owner_new_session") {
+            beginSameOwnerSessionReload();
             return;
           }
           if (sessionComparison !== "matches") return;
@@ -1192,9 +1387,28 @@ export function SessionConvergenceBoundary({
         void convergeCommittedSession(payload.operationId);
       }
     });
+    const unsubscribeInvalidationMarker = subscribeToSessionInvalidationMarker(
+      (snapshot) => {
+        if (snapshot.status === "present" || snapshot.status === "unknown") {
+          // Storage delivery is itself a terminal current-document fact. The
+          // originating tab already broadcast the identity-free operation, so
+          // this receiver reloads without amplifying another operation.
+          beginFallbackChangedSessionTransition();
+        }
+      },
+    );
 
     const handlePageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
+      const marker = readSessionInvalidationMarker();
+      if (marker.status === "present" || marker.status === "unknown") {
+        beginFallbackChangedSessionTransition();
+        return;
+      }
+      if (recheckMode === "effect_closed_non_fencing") {
+        recheckAuthoritativeSession();
+        return;
+      }
       reloadAfterSessionRecheckFence();
     };
     const handleVisibilityChange = () => {
@@ -1223,6 +1437,7 @@ export function SessionConvergenceBoundary({
       reloadSessionGateRef.current = () => undefined;
       fallbackExitRef.current = () => undefined;
       unsubscribe();
+      unsubscribeInvalidationMarker();
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("focus", recheckAuthoritativeSession);
       window.removeEventListener(
@@ -1282,7 +1497,7 @@ export function SessionConvergenceBoundary({
       }
       tabLease?.release();
     };
-  }, [locale, readAuthoritativeSession]);
+  }, [locale, readAuthoritativeSession, recheckMode]);
 
   if (activityGate !== "ready") {
     const trustCopy = getTrustSurfaceCopy(locale);
@@ -1460,12 +1675,31 @@ async function prepareBoundedSessionSignOut(sessionResult: unknown) {
 async function hydrateBoundedOwnerOfflineActivitySession(
   ownerUserId: string,
   sessionGeneration: string,
+  options?: {
+    allowAuthoritativeSessionRebind?: boolean;
+    requireVerifiedHydration?: boolean;
+  },
 ) {
-  const ownerVaultBinding = await requireSettledWithin(
-    () => fetchAuthenticatedOwnerVaultBinding(sessionGeneration),
-    AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
-  ).catch(() => null);
+  let ownerVaultBinding: string | null;
+  try {
+    ownerVaultBinding = await requireSettledWithin(
+      () => fetchAuthenticatedOwnerVaultBinding(sessionGeneration),
+      AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
+    );
+  } catch {
+    if (options?.requireVerifiedHydration) {
+      await deactivatePhysicalOwnerVault(ownerUserId).catch(() => undefined);
+      return "blocked" as const;
+    }
+    ownerVaultBinding = null;
+  }
   const controller = new AbortController();
+  const lifecycleOptions = options?.allowAuthoritativeSessionRebind
+    ? {
+        signal: controller.signal,
+        allowAuthoritativeSessionRebind: true,
+      }
+    : { signal: controller.signal };
   try {
     return await requireSettledWithin(
       () =>
@@ -1474,20 +1708,22 @@ async function hydrateBoundedOwnerOfflineActivitySession(
               ownerUserId,
               sessionGeneration,
               ownerVaultBinding,
-              { signal: controller.signal },
+              lifecycleOptions,
             )
           : hydrateOwnerOfflineActivitySession(
               ownerUserId,
               sessionGeneration,
               undefined,
-              { signal: controller.signal },
+              lifecycleOptions,
             ),
       AUTHORITATIVE_SESSION_READ_TIMEOUT_MS,
     );
   } catch {
     controller.abort();
     await deactivatePhysicalOwnerVault(ownerUserId).catch(() => undefined);
-    return "ready" as const;
+    return options?.requireVerifiedHydration
+      ? ("blocked" as const)
+      : ("ready" as const);
   } finally {
     controller.abort();
   }

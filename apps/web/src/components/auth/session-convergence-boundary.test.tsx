@@ -18,6 +18,11 @@ const mocks = vi.hoisted(() => ({
   publishReady: vi.fn(),
   publishFailed: vi.fn(),
   publishCommitted: vi.fn(),
+  commitMarker: vi.fn(),
+  readMarker: vi.fn(),
+  clearMarker: vi.fn(),
+  subscribeMarker: vi.fn(),
+  markerListener: null as null | ((snapshot: MarkerSnapshot) => void),
   prepareComposer: vi.fn(),
   composerBindScope: vi.fn(),
   composerFlush: vi.fn(),
@@ -92,11 +97,18 @@ vi.mock("@/lib/auth/sign-out-contract", () => ({
     return "unknown";
   },
   prepareCurrentSessionSignOut: async (result: unknown) => {
-    const data = (result as { data?: { user?: { id?: string } } | null })?.data;
+    const data = (
+      result as {
+        data?: {
+          session?: { id?: string };
+          user?: { id?: string };
+        } | null;
+      }
+    )?.data;
     if (data === null) return null;
-    const id = data?.user?.id;
-    if (!id) throw new Error("unavailable");
-    return { version: 1, binding: `opaque-binding-for-${id}` };
+    const sessionId = data?.session?.id;
+    if (!sessionId || !data?.user?.id) throw new Error("unavailable");
+    return { version: 1, binding: `opaque-binding-for-${sessionId}` };
   },
   localizedPublicRoot: (locale: string) =>
     locale === "uk" ? "/" : `/${locale}`,
@@ -119,6 +131,12 @@ vi.mock("@/lib/auth/session-convergence", () => ({
   publishSignOutPreparationFailed: mocks.publishFailed,
   publishCommittedSessionInvalidation: mocks.publishCommitted,
   subscribeToSessionConvergence: mocks.subscribe,
+}));
+vi.mock("@/lib/auth/session-invalidation-marker", () => ({
+  commitSessionInvalidationMarker: mocks.commitMarker,
+  readSessionInvalidationMarker: mocks.readMarker,
+  clearSessionInvalidationMarkerIfCurrent: mocks.clearMarker,
+  subscribeToSessionInvalidationMarker: mocks.subscribeMarker,
 }));
 vi.mock("@/lib/offline/owner-composer-participants", () => ({
   prepareOwnerComposerParticipants: mocks.prepareComposer,
@@ -184,6 +202,7 @@ describe("session convergence boundary", () => {
       clearInterval: vi.fn(),
     });
     mocks.listener = null;
+    mocks.markerListener = null;
     mocks.subscribe.mockImplementation(
       (listener: (payload: SessionSignal) => void) => {
         mocks.listener = listener;
@@ -191,6 +210,15 @@ describe("session convergence boundary", () => {
       },
     );
     mocks.useSession.mockReturnValue({ data: null, isPending: true });
+    mocks.commitMarker.mockReturnValue({ status: "persisted" });
+    mocks.readMarker.mockReturnValue({ status: "absent", persistence: "none" });
+    mocks.clearMarker.mockReturnValue("absent");
+    mocks.subscribeMarker.mockImplementation(
+      (listener: (snapshot: MarkerSnapshot) => void) => {
+        mocks.markerListener = listener;
+        return vi.fn();
+      },
+    );
     mocks.acquireLease.mockReturnValue({
       tabId: "tab-boundary-test-1234",
       release: mocks.releaseLease,
@@ -255,6 +283,12 @@ describe("session convergence boundary", () => {
     expect(source).toContain("finalizeForHardReload");
     expect(source).toContain('window.addEventListener("pageshow"');
     expect(source).toContain('window.addEventListener("focus"');
+    expect(source).toContain(
+      'window.location.pathname !== "/__visual-fixtures/session-recheck"',
+    );
+    expect(source).toContain(
+      'params.get("visualSessionConvergence") === "true"',
+    );
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
   });
 
@@ -287,6 +321,150 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
+  it("commits the terminal marker before navigating an initially signed-out document", async () => {
+    mocks.getSession.mockResolvedValueOnce({ data: null });
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.commitMarker).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expect(mocks.commitMarker.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.replace.mock.invocationCallOrder[0]!,
+    );
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    await unmount(renderer);
+  });
+
+  it("clears the exact bootstrap invalidation marker only after authoritative hydration", async () => {
+    const capturedMarker = {
+      status: "present" as const,
+      persistence: "persistent" as const,
+    };
+    mocks.readMarker.mockReturnValueOnce(capturedMarker);
+    mocks.clearMarker.mockReturnValueOnce("cleared");
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.readMarker).toHaveBeenCalledOnce();
+    expect(mocks.clearMarker).toHaveBeenCalledWith(capturedMarker);
+    expect(mocks.hydrate.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.clearMarker.mock.invocationCallOrder[0]!,
+    );
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(1);
+    await unmount(renderer);
+  });
+
+  it("does not admit private children when a newer invalidation marker wins bootstrap compare-clear", async () => {
+    mocks.readMarker.mockReturnValueOnce({
+      status: "present",
+      persistence: "persistent",
+    });
+    mocks.clearMarker.mockReturnValueOnce("changed");
+
+    const renderer = await renderBoundary();
+
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    expect(mocks.reload).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("never compare-clears the captured marker after terminal evidence wins an in-flight bootstrap", async () => {
+    mocks.readMarker.mockReturnValueOnce({
+      status: "present",
+      persistence: "persistent",
+    });
+    const hydration = deferred<"ready">();
+    mocks.hydrate.mockReturnValueOnce(hydration.promise);
+    const renderer = await renderBoundary();
+
+    await act(async () => {
+      mocks.markerListener?.({
+        status: "present",
+        persistence: "persistent",
+      });
+      hydration.resolve("ready");
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.clearMarker).not.toHaveBeenCalled();
+    expect(mocks.reload).toHaveBeenCalledOnce();
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    await unmount(renderer);
+  });
+
+  it("keeps a terminal bootstrap marker when owner-vault hydration cannot be verified", async () => {
+    mocks.readMarker.mockReturnValueOnce({
+      status: "present",
+      persistence: "persistent",
+    });
+    mocks.hydrate.mockRejectedValueOnce(
+      new Error("synthetic owner-vault hydration failure"),
+    );
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.clearMarker).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAllByProps({
+        "data-session-convergence-gate": "blocked",
+      }),
+    ).toHaveLength(1);
+    await unmount(renderer);
+  });
+
+  it("deactivates the physical owner vault when a terminal marker binding cannot be verified", async () => {
+    mocks.readMarker.mockReturnValueOnce({
+      status: "present",
+      persistence: "persistent",
+    });
+    mocks.fetchOwnerVaultBinding.mockRejectedValueOnce(
+      new Error("synthetic owner-vault binding failure"),
+    );
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.deactivateOwnerVault).toHaveBeenCalledWith("session-a");
+    expect(mocks.clearMarker).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    await unmount(renderer);
+  });
+
+  it("synchronously terminal-gates the current document when a marker storage event arrives", async () => {
+    const renderer = await renderBoundary(privateSignOutDialog("waiting"));
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+
+    await act(async () => {
+      mocks.markerListener?.({
+        status: "present",
+        persistence: "persistent",
+      });
+      await Promise.resolve();
+    });
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.reload).toHaveBeenCalledOnce();
+    await unmount(renderer);
+  });
+
   it("hydrates the physical vault only with the binding tied to the fresh session generation", async () => {
     const ownerBinding = "B".repeat(43);
     mocks.fetchOwnerVaultBinding.mockResolvedValueOnce(ownerBinding);
@@ -300,7 +478,10 @@ describe("session convergence boundary", () => {
       "session-a",
       "opaque-binding-for-session-a",
       ownerBinding,
-      { signal: expect.any(AbortSignal) },
+      {
+        signal: expect.any(AbortSignal),
+        allowAuthoritativeSessionRebind: true,
+      },
     );
     await unmount(renderer);
   });
@@ -316,7 +497,10 @@ describe("session convergence boundary", () => {
       "session-a",
       "opaque-binding-for-session-a",
       undefined,
-      { signal: expect.any(AbortSignal) },
+      {
+        signal: expect.any(AbortSignal),
+        allowAuthoritativeSessionRebind: true,
+      },
     );
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -360,19 +544,19 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("publishes a payload-free locale fence until local session hydration is ready", async () => {
+  it("keeps payload-free locale navigation available while local session hydration is blocked", async () => {
     mocks.hydrate.mockResolvedValue("blocked");
     const renderer = await renderBoundary();
 
     expect(mocks.localeFormState).toHaveBeenCalledWith({
       id: "session-convergence-lifecycle",
       dirty: false,
-      pending: true,
+      pending: false,
     });
     expect(mocks.localeFormState).not.toHaveBeenCalledWith({
       id: "session-convergence-lifecycle",
       dirty: false,
-      pending: false,
+      pending: true,
     });
     await unmount(renderer);
   });
@@ -474,6 +658,150 @@ describe("session convergence boundary", () => {
       await unmount(renderer);
     },
   );
+
+  it.each([
+    ["focus", () => mocks.windowListeners.get("focus")],
+    [
+      "visible-page recovery",
+      () => mocks.documentListeners.get("visibilitychange"),
+    ],
+  ])(
+    "keeps private content and owner activity live during a deferred non-fencing %s recheck",
+    async (_name, readListener) => {
+      const renderer = await renderBoundary(
+        privateSignOutDialog("waiting"),
+        undefined,
+        "effect_closed_non_fencing",
+      );
+      const confirmation = deferred<ReturnType<typeof activeSession>>();
+      mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+      await dispatchAuthoritativeRecheck(readListener());
+
+      expectPrivateSignOutDialogPresent(renderer, "waiting");
+      expect(mocks.abort).not.toHaveBeenCalled();
+      expect(mocks.prepareComposer).not.toHaveBeenCalled();
+      expect(mocks.pause).not.toHaveBeenCalled();
+
+      await act(async () => {
+        confirmation.resolve(activeSession());
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expectPrivateSignOutDialogPresent(renderer, "waiting");
+      expect(mocks.hydrate).toHaveBeenCalledOnce();
+      expect(mocks.reload).not.toHaveBeenCalled();
+      await unmount(renderer);
+    },
+  );
+
+  it("keeps private content usable when a non-fencing focus recheck times out", async () => {
+    vi.useFakeTimers();
+    const renderer = await renderBoundary(
+      privateSignOutDialog("waiting"),
+      undefined,
+      "effect_closed_non_fencing",
+    );
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(AUTHORITATIVE_SESSION_READ_TIMEOUT_MS);
+    });
+
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.prepareComposer).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.reload).not.toHaveBeenCalled();
+    await unmount(renderer);
+    vi.useRealTimers();
+  });
+
+  it("coalesces twenty non-fencing focus and visibility signals into one read with zero owner transitions", async () => {
+    const renderer = await renderBoundary(
+      privateSignOutDialog("waiting"),
+      undefined,
+      "effect_closed_non_fencing",
+    );
+    const confirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => confirmation.promise);
+    const focus = mocks.windowListeners.get("focus");
+    const visible = mocks.documentListeners.get("visibilitychange");
+
+    await act(async () => {
+      for (let index = 0; index < 10; index += 1) {
+        focus?.(new Event("focus"));
+        visible?.(new Event("visibilitychange"));
+      }
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mocks.getSession).toHaveBeenCalledTimes(2);
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.prepareComposer).not.toHaveBeenCalled();
+    expect(mocks.pause).not.toHaveBeenCalled();
+    expect(mocks.commitMarker).not.toHaveBeenCalled();
+
+    await act(async () => {
+      confirmation.resolve(activeSession());
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    await unmount(renderer);
+  });
+
+  it("reloads a non-fencing document for a new same-owner session without pre-hiding or terminal publication", async () => {
+    const renderer = await renderBoundary(
+      privateSignOutDialog("waiting"),
+      undefined,
+      "effect_closed_non_fencing",
+    );
+    mocks.getSession.mockResolvedValueOnce(sameOwnerNewSession());
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    await vi.waitFor(() => expect(mocks.reload).toHaveBeenCalledOnce());
+
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+    expect(mocks.commitMarker).not.toHaveBeenCalled();
+    expect(mocks.publishCommitted).not.toHaveBeenCalled();
+    expect(mocks.finalizeSessionChange).not.toHaveBeenCalled();
+    expect(mocks.finalizeSessionChangeStandalone).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
+
+  it("rejects a late non-fencing exact-session completion after a peer terminal signal", async () => {
+    const renderer = await renderBoundary(
+      privateSignOutDialog("waiting"),
+      undefined,
+      "effect_closed_non_fencing",
+    );
+    const ordinaryConfirmation = deferred<ReturnType<typeof activeSession>>();
+    mocks.getSession.mockImplementationOnce(() => ordinaryConfirmation.promise);
+
+    await dispatchAuthoritativeRecheck(mocks.windowListeners.get("focus"));
+    expectPrivateSignOutDialogPresent(renderer, "waiting");
+
+    await emit("session_invalidation_committed", "op-racing-terminal-1234");
+    expectPrivateSignOutDialogAbsent(renderer);
+
+    await act(async () => {
+      ordinaryConfirmation.resolve(activeSession());
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.hydrate).toHaveBeenCalledOnce();
+    expect(mocks.resume).not.toHaveBeenCalled();
+    await unmount(renderer);
+  });
 
   it("never admits A or B private content when a focus recheck confirms account B", async () => {
     const renderer = await renderBoundary(privateSignOutDialog("waiting"));
@@ -1002,7 +1330,7 @@ describe("session convergence boundary", () => {
     await unmount(renderer);
   });
 
-  it("reopens private children only after deferred confirmation proves exact session A and recovery succeeds", async () => {
+  it("never reopens private children after a terminal peer signal, even when exact session A later appears", async () => {
     const operationId = "op-exact-a-commit-proof-1234";
     const renderer = await renderBoundary(privateSignOutDialog("waiting"));
     expectPrivateSignOutDialogPresent(renderer, "waiting");
@@ -1020,29 +1348,29 @@ describe("session convergence boundary", () => {
       await Promise.resolve();
       await Promise.resolve();
     });
-    await vi.waitFor(() => expect(mocks.resume).toHaveBeenCalledOnce());
-    await vi.waitFor(() => expect(mocks.composerResume).toHaveBeenCalledOnce());
-    await vi.waitFor(() =>
-      expectPrivateSignOutDialogPresent(renderer, "waiting"),
-    );
+    expect(mocks.resume).not.toHaveBeenCalled();
+    expect(mocks.composerResume).not.toHaveBeenCalled();
+    expectPrivateSignOutDialogAbsent(renderer);
+    expect(mocks.commitMarker).toHaveBeenCalled();
     expect(mocks.reload).not.toHaveBeenCalled();
     expect(mocks.replace).not.toHaveBeenCalled();
     await unmount(renderer);
   });
 
-  it("durably resumes the cross-tab pause after the exact same authenticated session is confirmed", async () => {
+  it("keeps the cross-tab pause terminal after the exact same authenticated session is confirmed", async () => {
     const renderer = await renderBoundary();
     await emit("sign_out_preparation");
     await vi.waitFor(() => expect(mocks.publishReady).toHaveBeenCalledOnce());
     mocks.getSession.mockResolvedValue(activeSession());
 
     await emit("session_invalidation_committed");
-    await vi.waitFor(() => expect(mocks.resume).toHaveBeenCalledOnce());
-    await vi.waitFor(() => expect(mocks.composerResume).toHaveBeenCalledOnce());
+    expect(mocks.resume).not.toHaveBeenCalled();
+    expect(mocks.composerResume).not.toHaveBeenCalled();
 
     expect(mocks.finalize).not.toHaveBeenCalled();
     expect(mocks.replace).not.toHaveBeenCalled();
     expect(mocks.reload).not.toHaveBeenCalled();
+    expect(mocks.commitMarker).toHaveBeenCalled();
     await unmount(renderer);
   });
 
@@ -1299,7 +1627,10 @@ describe("session convergence boundary", () => {
       "session-a",
       "opaque-binding-for-session-a",
       undefined,
-      { signal: expect.any(AbortSignal) },
+      {
+        signal: expect.any(AbortSignal),
+        allowAuthoritativeSessionRebind: true,
+      },
     );
     expect(
       renderer.root.findAllByProps({ children: "Private surface" }),
@@ -1342,7 +1673,7 @@ describe("session convergence boundary", () => {
     expect(mocks.getSession).toHaveBeenCalledTimes(2);
     expect(mocks.prepareComposer).not.toHaveBeenCalled();
     expect(mocks.pause).not.toHaveBeenCalled();
-    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.abort).toHaveBeenCalledWith("session-a");
     expect(mocks.publishCommitted).toHaveBeenCalledWith(
       "op-fallback-fence-1234",
       "tab-boundary-test-1234",
@@ -1464,7 +1795,7 @@ describe("session convergence boundary", () => {
     );
     expect(mocks.prepareComposer).not.toHaveBeenCalled();
     expect(mocks.pause).not.toHaveBeenCalled();
-    expect(mocks.abort).not.toHaveBeenCalled();
+    expect(mocks.abort).toHaveBeenCalledWith("session-a");
     expect(mocks.publishCommitted).toHaveBeenCalledWith(
       "op-fallback-fence-1234",
       "tab-boundary-test-1234",
@@ -1592,6 +1923,16 @@ function activeSession(id = "session-a") {
   return { data: { session: { id }, user: { id } }, error: null };
 }
 
+function sameOwnerNewSession() {
+  return {
+    data: {
+      session: { id: "session-b" },
+      user: { id: "session-a" },
+    },
+    error: null,
+  };
+}
+
 function deferred<T>() {
   let resolve!: (value: T | PromiseLike<T>) => void;
   let reject!: (reason?: unknown) => void;
@@ -1605,6 +1946,9 @@ function deferred<T>() {
 async function renderBoundary(
   children: React.ReactNode = <p>Private surface</p>,
   localeControlFallback?: React.ReactNode,
+  recheckMode:
+    | "compatibility_fenced"
+    | "effect_closed_non_fencing" = "compatibility_fenced",
 ) {
   let renderer: ReactTestRenderer | undefined;
   await act(async () => {
@@ -1612,6 +1956,7 @@ async function renderBoundary(
       <SessionConvergenceBoundary
         locale="bg"
         localeControlFallback={localeControlFallback}
+        recheckMode={recheckMode}
       >
         {children}
       </SessionConvergenceBoundary>,
@@ -1716,6 +2061,11 @@ interface SessionSignal {
   operationId: string;
   tabId: string;
   preparationRoundId: string | null;
+}
+
+interface MarkerSnapshot {
+  status: "absent" | "present" | "unknown" | "unavailable";
+  persistence: "none" | "persistent" | "volatile_only" | "unavailable";
 }
 
 function textContent(value: unknown): string {

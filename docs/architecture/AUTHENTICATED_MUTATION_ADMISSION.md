@@ -1,6 +1,6 @@
 # Authenticated Mutation Admission
 
-Status: OVE-285 decision receipt plus OVE-290 high-risk enforcement — ready
+Status: OVE-285 registry, OVE-290 high-risk enforcement, and OVE-286 bounded browser rollout — ready
 Baseline: `5c403444cddc2e195690808de08304d14fe41fd3`  
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
@@ -28,18 +28,18 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                607 |
-| Source nodes                    |                                                              2,563 |
+| Production source files         |                                                                608 |
+| Source nodes                    |                                                              2,568 |
 | Logical entrypoints             |                                                                316 |
 | Effect boundaries               |                                                                184 |
 | Consumer edges                  |                                                                660 |
 | Excluded entrypoints            |                                                                139 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `77f0959509cdba4bfda547d2196309386ca81af3ed05bb93df863b481aaf604a` |
-| Source-evidence digest          | `5fff648efe50ebe2187e0ab1ff5942e445155f62e1803e26319b791566f822e6` |
-| Receipt digest                  | `cabe55f210ddc164c527b7f28c7e6ca406217e5cd639cb6df0c541587b24c5db` |
-| Artifact file SHA-256           | `fe331f3b9dd31c407f0cb19a9c7e3f49551e37b40c985dcd266cb060f3d17d4c` |
+| Registry digest                 | `30edfe26aef3191d1339b791e0ebc0192b1898df79e4569a0fa7878a6b37bea0` |
+| Source-evidence digest          | `faaf957a24ccf600b8dd567fa731b99776985861862959657a9768f06a19a50b` |
+| Receipt digest                  | `5b9840061318b2de10e00207f8a51ca104988533ac09324b5ff5700e7ccf032b` |
+| Artifact file SHA-256           | `a6e3640fb1fdf55d19a0f3d5da6e4554d908ed7ab4012243655e0b4c4acad297` |
 
 The independently pinned Better Auth semantic adapter produced:
 
@@ -50,9 +50,9 @@ The independently pinned Better Auth semantic adapter produced:
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
 canonical registry bytes. A change to any bound input changes the receipt. The
-values above are the deterministic OVE-290 downstream regeneration; the
-original OVE-285 terminal receipt remains preserved in its Linear closeout and
-the execution roadmap.
+values above are the deterministic OVE-286 topology-only regeneration; the
+original OVE-285 and OVE-290 terminal receipts remain preserved in their Linear
+closeouts and the execution roadmap.
 
 ## OVE-290 runtime enforcement
 
@@ -77,11 +77,11 @@ cross-origin R2 PUT.
 
 The separate enforcement artifact is
 `contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
-`369b35eb1af9fb94ebd6b7a648cebfab6576b2b33032912b79b094a06636c9e0`).
+`39fbfd66383a98525a6f8a5af8a1ce64e75276aa8e96894667f3c9daa9a7be5e`).
 It binds registry digest
-`77f0959509cdba4bfda547d2196309386ca81af3ed05bb93df863b481aaf604a`
+`30edfe26aef3191d1339b791e0ebc0192b1898df79e4569a0fa7878a6b37bea0`
 and source receipt digest
-`cabe55f210ddc164c527b7f28c7e6ca406217e5cd639cb6df0c541587b24c5db`.
+`5b9840061318b2de10e00207f8a51ca104988533ac09324b5ff5700e7ccf032b`.
 All baseline 36 high-risk entrypoints and 281 consumer edges are
 `enforced_ove_290` at the same 24 admission boundaries; OVE-291 and OVE-295
 partitions retain their separate states, while OVE-286 capability-runtime
@@ -98,6 +98,25 @@ retry. Native/edit/publish/media actions never auto-replay. Explicit rollback
 sets `DOCUMENT_MUTATION_ADMISSION_ENABLED=false`, which disables envelope
 issuance and enforcement together while retaining Better Auth, request scope,
 owner predicates, media safety, and offline vault fences.
+
+## OVE-286 bounded non-fencing rollout
+
+OVE-290 closes the complete protected-effect surface reachable from the
+existing-entry editor, so OVE-286 may keep that exact editor mounted through an
+ordinary focus or visible-page session observation. The browser policy admits
+only `/garden/entries/{valid UUID}/edit`; every adjacent, locale-prefixed,
+encoded, query-bearing, malformed, or other authenticated path remains on the
+OVE-236 compatibility fence. Background session-read failure never grants
+mutation authority: the journal and media calls still require their current
+OVE-290 document-generation envelope plus canonical Better Auth authorization.
+
+The authoritative mutation graph remains the expansion gate. OVE-286 does not
+promote any of the 128 `remaining_ove_291` entrypoints and does not reinterpret
+capability-runtime paths as mutation admission. OVE-291 may expand the route
+policy only after its checked graph reports zero remaining entrypoints and its
+browser proof covers every newly reachable protected effect. A forward rollback
+returns the pure route matcher to `compatibility_fenced` for all paths while
+retaining the terminal invalidation marker and all OVE-290 enforcement.
 
 ## Closed source policy
 
