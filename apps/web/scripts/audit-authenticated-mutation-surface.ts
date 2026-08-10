@@ -914,12 +914,21 @@ export async function runAuthenticatedMutationOperationWithinDeadline<T>(
     throw new Error("mutation audit deadline must be a positive finite value");
   }
   const controller = new AbortController();
+  const startedAt = performance.now();
   return new Promise((resolve) => {
     let settled = false;
     const finish = (result: AuthenticatedMutationDeadlineResult<T>) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      if (
+        result.terminalState !== "timed_out" &&
+        performance.now() - startedAt >= deadlineMs
+      ) {
+        controller.abort();
+        resolve({ terminalState: "timed_out" });
+        return;
+      }
       resolve(result);
     };
     const timeout = setTimeout(() => {

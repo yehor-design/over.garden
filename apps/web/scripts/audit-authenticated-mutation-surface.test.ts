@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  AUTHENTICATED_MUTATION_AUDIT_DEADLINE_MS,
   AUTHENTICATED_MUTATION_REGISTRY_ARTIFACT_PATH,
   auditAuthenticatedMutationSourcePolicy,
   discoverAuthenticatedMutationEntrypoints,
@@ -1348,8 +1349,22 @@ describe("authenticated mutation audit deadline and determinism", () => {
       );
       expect(after).toBe(before);
     },
-    30_000,
+    AUTHENTICATED_MUTATION_AUDIT_DEADLINE_MS + 15_000,
   );
+
+  it("refuses a late result even when synchronous work delays the deadline timer", async () => {
+    const result = await runAuthenticatedMutationOperationWithinDeadline(
+      async () => {
+        const blockedUntil = performance.now() + 20;
+        let spins = 0;
+        while (performance.now() < blockedUntil) spins += 1;
+        return spins;
+      },
+      5,
+    );
+
+    expect(result).toEqual({ terminalState: "timed_out" });
+  });
 
   it("settles once on deadline, keeps wait-safe controls responsive, and ignores a late result", async () => {
     let release: (() => void) | undefined;
