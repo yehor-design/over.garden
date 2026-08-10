@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   deleteOfflineDraft: vi.fn(),
   listOfflineDraftSummaries: vi.fn(),
   listOfflineMutationSummaries: vi.fn(),
+  registerContextRail: vi.fn(),
   listeners: new Map<string, () => void>(),
   timers: [] as Array<() => void>,
 }));
@@ -23,7 +24,10 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@/components/site-shell/site-shell-context-rail", () => ({
-  SiteShellContextRailRegistration: () => null,
+  SiteShellContextRailRegistration: ({ modules }: { modules: unknown }) => {
+    mocks.registerContextRail(modules);
+    return null;
+  },
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -177,6 +181,34 @@ describe("garden workspace local summaries", () => {
         textContent(candidate.props.children).includes("Спробувати"),
       );
     expect(retry?.props.disabled).not.toBe(true);
+    await act(async () => renderer.unmount());
+  });
+
+  it("reports an unavailable vault without translating it into empty or synchronized work", async () => {
+    mocks.listOfflineDraftSummaries.mockRejectedValue(
+      new Error("owner vault unavailable"),
+    );
+    mocks.listOfflineMutationSummaries.mockRejectedValue(
+      new Error("owner vault unavailable"),
+    );
+
+    const renderer = await renderWorkspace();
+    await runTimer();
+
+    expect(text(renderer)).toContain("Локальний стан недоступний");
+    expect(text(renderer)).not.toContain(
+      "На цьому пристрої все синхронізовано",
+    );
+    expect(text(renderer)).not.toContain(
+      "Локальних чернеток або змін у черзі немає",
+    );
+    const modules = mocks.registerContextRail.mock.calls.at(-1)?.[0] as Array<{
+      key: string;
+      items: Array<{ meta?: string }>;
+    }>;
+    const localModule = modules.find((module) => module.key === "garden-local");
+    expect(localModule?.items.map((item) => item.meta)).toContain("—");
+    expect(localModule?.items.map((item) => item.meta)).not.toContain("0");
     await act(async () => renderer.unmount());
   });
 

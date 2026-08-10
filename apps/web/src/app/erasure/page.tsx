@@ -18,6 +18,7 @@ import { getRequestInterfaceLocale } from "@/server/interface-localization";
 import { scopedToUser } from "@/server/request-scope";
 import { GardenAuthPanel } from "../garden/garden-auth-panel";
 import { submitErasureRequestAction } from "./actions";
+import { ErasureLocalCleanup } from "./erasure-local-cleanup";
 
 export async function generateMetadata(): Promise<Metadata> {
   const copy = getTrustSurfaceCopy(await getRequestInterfaceLocale()).erasure;
@@ -88,62 +89,68 @@ export default async function ErasureRequestPage() {
       </div>
 
       {userId ? (
-        <section className="grid gap-4 rounded-lg border border-border p-4">
-          <div className="grid gap-1">
-            <h2 className="text-lg font-semibold text-foreground">
-              {copy.requestTitle}
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {copy.intakeVersion} {ERASURE_REQUEST_INTAKE_VERSION}
-            </p>
-          </div>
-
-          {latestRequest && latestStatus ? (
-            <div className="grid gap-2 rounded-md border border-border p-3 text-sm">
-              <p className="font-medium text-foreground">
-                {latestStatus.label}
+        <>
+          <section className="grid gap-4 rounded-lg border border-border p-4">
+            <div className="grid gap-1">
+              <h2 className="text-lg font-semibold text-foreground">
+                {copy.requestTitle}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {copy.intakeVersion} {ERASURE_REQUEST_INTAKE_VERSION}
               </p>
-              <p className="text-muted-foreground">
-                {latestStatus.description}
-              </p>
-              <p className="text-muted-foreground">
-                {copy.submitted} {formatDate(locale, latestRequest.submittedAt)}
-                . {copy.reference}{" "}
-                <span className="font-mono">
-                  {formatErasureRequestReference(latestRequest.id)}
-                </span>
-              </p>
-              {latestStatus.handled ? (
-                <p className="text-muted-foreground">
-                  {copy.outcome} {latestStatus.handled.label}.{" "}
-                  {latestStatus.handled.description}
-                </p>
-              ) : null}
             </div>
-          ) : null}
 
-          {hasOpenRequest ? (
-            <p className="text-sm text-muted-foreground">{copy.openRequest}</p>
-          ) : (
-            <form action={submitErasureRequestAction} className="grid gap-4">
-              <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
-                <input
-                  type="checkbox"
-                  name="erasureAcknowledgementAccepted"
-                  required
-                  className="mt-1 size-4 rounded border-border"
-                />
-                <span>{copy.acknowledgement}</span>
-              </label>
-              <button
-                type="submit"
-                className={buttonVariants({ className: "self-start" })}
-              >
-                {copy.submit}
-              </button>
-            </form>
-          )}
-        </section>
+            {latestRequest && latestStatus ? (
+              <div className="grid gap-2 rounded-md border border-border p-3 text-sm">
+                <p className="font-medium text-foreground">
+                  {latestStatus.label}
+                </p>
+                <p className="text-muted-foreground">
+                  {latestStatus.description}
+                </p>
+                <p className="text-muted-foreground">
+                  {copy.submitted}{" "}
+                  {formatDate(locale, latestRequest.submittedAt)}.{" "}
+                  {copy.reference}{" "}
+                  <span className="font-mono">
+                    {formatErasureRequestReference(latestRequest.id)}
+                  </span>
+                </p>
+                {latestStatus.handled ? (
+                  <p className="text-muted-foreground">
+                    {copy.outcome} {latestStatus.handled.label}.{" "}
+                    {latestStatus.handled.description}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {hasOpenRequest ? (
+              <p className="text-sm text-muted-foreground">
+                {copy.openRequest}
+              </p>
+            ) : (
+              <form action={submitErasureRequestAction} className="grid gap-4">
+                <label className="flex items-start gap-2 text-xs leading-5 text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    name="erasureAcknowledgementAccepted"
+                    required
+                    className="mt-1 size-4 rounded border-border"
+                  />
+                  <span>{copy.acknowledgement}</span>
+                </label>
+                <button
+                  type="submit"
+                  className={buttonVariants({ className: "self-start" })}
+                >
+                  {copy.submit}
+                </button>
+              </form>
+            )}
+          </section>
+          <ErasureLocalCleanup locale={locale} />
+        </>
       ) : (
         <section className="grid gap-4 rounded-lg border border-border p-4">
           <h2 className="text-lg font-semibold text-foreground">

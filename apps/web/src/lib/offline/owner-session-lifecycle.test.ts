@@ -1,3 +1,4 @@
+import Dexie from "dexie";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -33,6 +34,12 @@ import {
   type OwnerWorkInspectionSource,
   type OwnerOfflineActivityPauseHandle,
 } from "./owner-session-lifecycle";
+import {
+  offlineOwnerVaultDatabaseName,
+  OWNER_VAULT_CONTROL_DATABASE,
+  OwnerVaultDb,
+  resolveOwnerOfflineDatabase,
+} from "./owner-vault";
 
 const OWNER_A = "00000000-0000-4000-8000-0000000000a1";
 const OWNER_B = "00000000-0000-4000-8000-0000000000b2";
@@ -780,6 +787,47 @@ describe("owner offline session lifecycle", () => {
         operations: [],
       }),
     );
+  });
+
+  it("closes a physical owner handle on sign-out while retaining the exact vault", async () => {
+    const binding = "R".repeat(43);
+    const generation = "test-session-generation-owner-a-1234";
+    await upsertOfflineDraft({
+      ownerUserId: OWNER_A,
+      id: "retained-physical-draft",
+      kind: "first_entry",
+      payload: firstEntryDraftPayload("retained after sign-out"),
+    });
+
+    await expect(
+      hydrateOwnerOfflineActivitySession(OWNER_A, generation, binding),
+    ).resolves.toBe("ready");
+    expect(resolveOwnerOfflineDatabase(OWNER_A)).toBeInstanceOf(OwnerVaultDb);
+
+    await expect(
+      finalizeOwnerOfflineActivityForSignedOut(OWNER_A, generation),
+    ).resolves.toBe("fenced");
+    expect(resolveOwnerOfflineDatabase(OWNER_A)).toBeUndefined();
+    await expect(
+      Dexie.exists(offlineOwnerVaultDatabaseName(binding)),
+    ).resolves.toBe(true);
+
+    const retained = new OwnerVaultDb(binding);
+    await retained.open();
+    await expect(
+      retained.drafts.get([OWNER_A, "retained-physical-draft"]),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          draft: expect.objectContaining({
+            body: "retained after sign-out",
+          }),
+        }),
+      }),
+    );
+    retained.close();
+    await Dexie.delete(offlineOwnerVaultDatabaseName(binding));
+    await Dexie.delete(OWNER_VAULT_CONTROL_DATABASE);
   });
 
   it("distinguishes a fenced session change from an already-replaced generation", async () => {

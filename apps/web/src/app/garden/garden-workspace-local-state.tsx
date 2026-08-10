@@ -286,12 +286,26 @@ export function GardenWorkspaceLocalState({
         inbox,
         media,
         localState: visibleLocalState,
+        localStateUnavailable: visibleLocalPages.error,
       }),
-    [inbox, locale, media, nextAction, recent, visibleLocalState],
+    [
+      inbox,
+      locale,
+      media,
+      nextAction,
+      recent,
+      visibleLocalPages.error,
+      visibleLocalState,
+    ],
   );
   const hasLocalWork =
     visibleLocalState.drafts.length > 0 ||
     visibleLocalState.mutations.length > 0;
+  const localStateTitle = visibleLocalPages.error
+    ? copy.localState.error
+    : hasLocalWork
+      ? copy.localState.hasWorkTitle
+      : copy.localState.clearTitle;
 
   return (
     <>
@@ -308,17 +322,13 @@ export function GardenWorkspaceLocalState({
               {copy.localState.eyebrow}
             </p>
             <h2 className="mt-1 text-base font-semibold text-foreground">
-              {hasLocalWork
-                ? copy.localState.hasWorkTitle
-                : copy.localState.clearTitle}
+              {localStateTitle}
             </h2>
           </div>
           <ConnectionState copy={copy} online={visibleLocalState.online} />
         </div>
         <p className="sr-only" aria-live="polite">
-          {hasLocalWork
-            ? copy.localState.hasWorkTitle
-            : copy.localState.clearTitle}
+          {localStateTitle}
         </p>
 
         {hasLocalWork ? (
@@ -348,11 +358,11 @@ export function GardenWorkspaceLocalState({
               }
             />
           </div>
-        ) : (
+        ) : !visibleLocalPages.error ? (
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {copy.localState.emptyDescription}
           </p>
-        )}
+        ) : null}
 
         {visibleLocalPages.error ? (
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -705,6 +715,7 @@ function buildContextModules({
   inbox,
   media,
   localState,
+  localStateUnavailable,
 }: {
   locale: InterfaceLocale;
   nextAction: { href: string; label: string };
@@ -712,6 +723,7 @@ function buildContextModules({
   inbox: GardenWorkspaceInboxSummary | null;
   media: GardenWorkspaceMediaSummary | null;
   localState: GardenWorkspaceLocalStateSnapshot;
+  localStateUnavailable: boolean;
 }) {
   const copy = getGardenWorkspaceCopy(locale);
   const pendingMutations = localState.mutations.filter(
@@ -750,14 +762,14 @@ function buildContextModules({
               {
                 href: "/garden#drafts",
                 label: copy.localState.context.drafts,
-                meta: "0",
+                meta: localStateUnavailable ? "—" : "0",
               },
             ]
           : []),
         {
           href: "/garden#drafts",
           label: copy.localState.context.queuedOrFailed,
-          meta: String(pendingMutations.length),
+          meta: localStateUnavailable ? "—" : String(pendingMutations.length),
         },
         ...(media?.processingCount
           ? [

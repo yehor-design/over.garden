@@ -9,7 +9,6 @@ import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
 import type { JournalMentionSelection } from "@/lib/garden/journal-mentions";
 import {
   assertOwnerOfflineActivityAllowed,
-  offlineDb,
   offlineDraftSummary,
   OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
   readLocalOwnerActivitySessionGeneration,
@@ -38,6 +37,12 @@ import type {
   OwnerComposerOfflineActivityScope,
   OwnerComposerPersistenceWriteContext,
 } from "./owner-composer-participants";
+import {
+  requireOwnerOfflineDatabase,
+  resolveOwnerOfflineDatabase,
+  withOwnerVaultWriterLease,
+  type OwnerOfflineDatabase,
+} from "./owner-vault";
 
 export const FIRST_ENTRY_DRAFT_ID = "first-entry";
 export const OFFLINE_DRAFTS_CHANGED_EVENT = "overgarden-offline-drafts-changed";
@@ -143,7 +148,8 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
 ): Promise<
   OfflineDraftRecord<TPayload> | OwnerComposerDurabilityReceipt | undefined
 > {
-  const database = offlineDb;
+  const ownerUserId = requireOwnerUserId(input.ownerUserId);
+  const database = resolveOwnerOfflineDatabase(ownerUserId);
   const durability = options.durability
     ? requireOwnerComposerDurabilityExpectation(options.durability)
     : undefined;
@@ -155,7 +161,6 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
   }
 
   const now = Date.now();
-  const ownerUserId = requireOwnerUserId(input.ownerUserId);
   if (
     durability &&
     (durability.ownerUserId !== ownerUserId || durability.draftId !== input.id)
@@ -165,47 +170,57 @@ export async function upsertOfflineDraft<TPayload extends JournalDraftPayload>(
   const fingerprint = durability
     ? await fingerprintOwnerComposerPayload(input.payload)
     : undefined;
-  const record = await database.transaction(
-    "rw",
-    database.drafts,
-    database.draftSummaries,
-    database.composerDurability,
-    database.ownerActivity,
-    async () => {
-      await assertOfflineDraftWriteAllowed(
-        ownerUserId,
-        options.offlineActivityScope,
-      );
-      const existing = await database.drafts.get([ownerUserId, input.id]);
-      const next: OfflineDraftRecord<TPayload> = {
-        id: input.id,
-        ownerUserId,
-        kind: input.kind,
-        payload: input.payload,
-        createdAt: existing?.createdAt ?? now,
-        updatedAt: now,
-      };
-
-      await database.drafts.put(next);
-      await database.draftSummaries.put(offlineDraftSummary(next));
-      if (durability && fingerprint) {
-        await database.composerDurability.put(
-          composerDurabilityRecord({
+  const record = await withOwnerVaultWriterLease(
+    ownerUserId,
+    (activeDatabase) =>
+      activeDatabase.transaction(
+        "rw",
+        activeDatabase.drafts,
+        activeDatabase.draftSummaries,
+        activeDatabase.composerDurability,
+        activeDatabase.ownerActivity,
+        async () => {
+          await assertOfflineDraftWriteAllowed(
             ownerUserId,
-            draftId: input.id,
-            expectation: durability,
-            disposition: "stored",
-            fingerprint,
+            options.offlineActivityScope,
+          );
+          const existing = await activeDatabase.drafts.get([
+            ownerUserId,
+            input.id,
+          ]);
+          const next: OfflineDraftRecord<TPayload> = {
+            id: input.id,
+            ownerUserId,
+            kind: input.kind,
+            payload: input.payload,
+            createdAt: existing?.createdAt ?? now,
             updatedAt: now,
-          }),
-        );
-      } else {
-        // A write without exact generation evidence invalidates any older
-        // receipt in the same transaction.
-        await database.composerDurability.delete([ownerUserId, input.id]);
-      }
-      return next;
-    },
+          };
+
+          await activeDatabase.drafts.put(next);
+          await activeDatabase.draftSummaries.put(offlineDraftSummary(next));
+          if (durability && fingerprint) {
+            await activeDatabase.composerDurability.put(
+              composerDurabilityRecord({
+                ownerUserId,
+                draftId: input.id,
+                expectation: durability,
+                disposition: "stored",
+                fingerprint,
+                updatedAt: now,
+              }),
+            );
+          } else {
+            // A write without exact generation evidence invalidates any older
+            // receipt in the same transaction.
+            await activeDatabase.composerDurability.delete([
+              ownerUserId,
+              input.id,
+            ]);
+          }
+          return next;
+        },
+      ),
   );
   publishOfflineDraftsChanged();
   if (durability && fingerprint) {
@@ -224,8 +239,9 @@ export async function getOfflineDraft<TPayload extends JournalDraftPayload>(
   ownerUserId: string,
   id: string,
 ): Promise<OfflineDraftRecord<TPayload> | undefined> {
-  if (!offlineDb) return undefined;
-  return offlineDb.drafts.get([requireOwnerUserId(ownerUserId), id]) as Promise<
+  const owner = requireOwnerUserId(ownerUserId);
+  const database = requireOwnerOfflineDatabase(owner);
+  return database.drafts.get([owner, id]) as Promise<
     OfflineDraftRecord<TPayload> | undefined
   >;
 }
@@ -234,9 +250,9 @@ export async function listOfflineDrafts(
   ownerUserId: string,
   kinds?: OfflineDraftKind[],
 ): Promise<JournalDraftRecord[]> {
-  if (!offlineDb) return [];
   const owner = requireOwnerUserId(ownerUserId);
-  const records = await offlineDb.drafts
+  const database = requireOwnerOfflineDatabase(owner);
+  const records = await database.drafts
     .where("ownerUserId")
     .equals(owner)
     .filter(
@@ -255,8 +271,7 @@ export async function listOfflineDraftSummaries(
 ): Promise<OfflineSummaryPage<OfflineDraftSummary>> {
   const owner = normalizedOwnerUserId(ownerUserId);
   const page = normalizeWorkspaceSummaryPage(options.page);
-  const database = offlineDb;
-  if (!database || !owner) {
+  if (!owner) {
     return {
       items: [],
       hasMore: false,
@@ -264,6 +279,7 @@ export async function listOfflineDraftSummaries(
       pageSize: OFFLINE_WORKSPACE_SUMMARY_PAGE_SIZE,
     };
   }
+  const database = requireOwnerOfflineDatabase(owner);
 
   const records = await database.draftSummaries
     .where("[ownerUserId+updatedAt]")
@@ -301,7 +317,8 @@ export async function deleteOfflineDraft(
   id: string,
   options: OwnerComposerDraftWriteOptions = {},
 ): Promise<void | OwnerComposerDurabilityReceipt> {
-  const database = offlineDb;
+  const owner = requireOwnerUserId(ownerUserId);
+  const database = resolveOwnerOfflineDatabase(owner);
   const durability = options.durability
     ? requireOwnerComposerDurabilityExpectation(options.durability)
     : undefined;
@@ -311,7 +328,6 @@ export async function deleteOfflineDraft(
     }
     return;
   }
-  const owner = requireOwnerUserId(ownerUserId);
   if (
     durability &&
     (durability.ownerUserId !== owner || durability.draftId !== id)
@@ -322,31 +338,36 @@ export async function deleteOfflineDraft(
     ? await deletedOwnerComposerFingerprint()
     : undefined;
   const now = Date.now();
-  await database.transaction(
-    "rw",
-    database.drafts,
-    database.draftSummaries,
-    database.composerDurability,
-    database.ownerActivity,
-    async () => {
-      await assertOfflineDraftWriteAllowed(owner, options.offlineActivityScope);
-      await database.drafts.delete([owner, id]);
-      await database.draftSummaries.delete([owner, id]);
-      if (durability && fingerprint) {
-        await database.composerDurability.put(
-          composerDurabilityRecord({
-            ownerUserId: owner,
-            draftId: id,
-            expectation: durability,
-            disposition: "deleted",
-            fingerprint,
-            updatedAt: now,
-          }),
+  await withOwnerVaultWriterLease(owner, (activeDatabase) =>
+    activeDatabase.transaction(
+      "rw",
+      activeDatabase.drafts,
+      activeDatabase.draftSummaries,
+      activeDatabase.composerDurability,
+      activeDatabase.ownerActivity,
+      async () => {
+        await assertOfflineDraftWriteAllowed(
+          owner,
+          options.offlineActivityScope,
         );
-      } else {
-        await database.composerDurability.delete([owner, id]);
-      }
-    },
+        await activeDatabase.drafts.delete([owner, id]);
+        await activeDatabase.draftSummaries.delete([owner, id]);
+        if (durability && fingerprint) {
+          await activeDatabase.composerDurability.put(
+            composerDurabilityRecord({
+              ownerUserId: owner,
+              draftId: id,
+              expectation: durability,
+              disposition: "deleted",
+              fingerprint,
+              updatedAt: now,
+            }),
+          );
+        } else {
+          await activeDatabase.composerDurability.delete([owner, id]);
+        }
+      },
+    ),
   );
   publishOfflineDraftsChanged();
   if (durability && fingerprint) {
@@ -383,7 +404,7 @@ function composerDurabilityRecord(input: {
 }
 
 async function verifyStoredComposerDurability(
-  database: NonNullable<typeof offlineDb>,
+  database: OwnerOfflineDatabase,
   ownerUserId: string,
   draftId: string,
   expectation: OwnerComposerDurabilityExpectation,
@@ -424,7 +445,7 @@ async function verifyStoredComposerDurability(
 }
 
 async function verifyDeletedComposerDurability(
-  database: NonNullable<typeof offlineDb>,
+  database: OwnerOfflineDatabase,
   ownerUserId: string,
   draftId: string,
   expectation: OwnerComposerDurabilityExpectation,
@@ -587,10 +608,11 @@ async function assertOfflineDraftWriteAllowed(
   ownerUserId: string,
   scope?: OwnerComposerOfflineActivityScope,
 ) {
-  if (scope && offlineDb) {
+  const database = resolveOwnerOfflineDatabase(ownerUserId);
+  if (scope && database) {
     const localGeneration =
       readLocalOwnerActivitySessionGeneration(ownerUserId);
-    const activity = (await offlineDb.ownerActivity.get(ownerUserId)) as
+    const activity = (await database.ownerActivity.get(ownerUserId)) as
       | OfflineOwnerActivity
       | undefined;
     const ownsActivePreparation =

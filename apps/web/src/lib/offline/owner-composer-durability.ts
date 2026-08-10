@@ -4,6 +4,7 @@ export const OWNER_COMPOSER_DURABILITY_PROTOCOL =
   "ove293.owner-composer-durability.v1" as const;
 export const OFFLINE_VAULT_GENERATION = "ove293-shared-v6" as const;
 export const MAX_OWNER_COMPOSER_FINGERPRINT_NODES = 10_000;
+const MAX_OWNER_VAULT_FINGERPRINT_NODES = 1_000_000;
 
 export type OwnerComposerDurabilityDisposition = "stored" | "deleted";
 
@@ -111,18 +112,47 @@ export function createOwnerComposerParticipantNonce(): string {
 export async function fingerprintOwnerComposerPayload(
   value: unknown,
 ): Promise<OwnerComposerPayloadFingerprint> {
+  return fingerprintStructuredClonePayload(
+    value,
+    MAX_OWNER_COMPOSER_FINGERPRINT_NODES,
+  );
+}
+
+/**
+ * Vault migration fingerprints at most 10,000 rows in one Web Crypto pass.
+ * The larger aggregate node ceiling avoids 10,000 per-row digest calls while
+ * preserving the same structured-clone/Blob canonical encoding.
+ */
+export async function fingerprintOwnerVaultPayload(
+  value: unknown,
+): Promise<OwnerComposerPayloadFingerprint> {
+  return fingerprintStructuredClonePayload(
+    value,
+    MAX_OWNER_VAULT_FINGERPRINT_NODES,
+  );
+}
+
+async function fingerprintStructuredClonePayload(
+  value: unknown,
+  maxNodes: number,
+): Promise<OwnerComposerPayloadFingerprint> {
   const parts: BlobPart[] = [];
+  let bufferedText = "";
   const references = new WeakMap<object, number>();
   let referenceCount = 0;
 
   const appendText = (text: string) => {
-    const bytes = new TextEncoder().encode(text);
-    parts.push(bytes);
+    bufferedText += text;
+  };
+  const flushText = () => {
+    if (!bufferedText) return;
+    parts.push(bufferedText);
+    bufferedText = "";
   };
   const appendString = (valueToAppend: string) => {
     const bytes = new TextEncoder().encode(valueToAppend);
     appendText(`s${bytes.byteLength}:`);
-    parts.push(bytes);
+    appendText(valueToAppend);
   };
 
   const visit = (current: unknown): void => {
@@ -173,7 +203,7 @@ export async function fingerprintOwnerComposerPayload(
       return;
     }
     referenceCount += 1;
-    if (referenceCount >= MAX_OWNER_COMPOSER_FINGERPRINT_NODES) {
+    if (referenceCount >= maxNodes) {
       throw new OwnerComposerDurabilityUnconfirmedError("inventory_bounded");
     }
     references.set(current, referenceCount);
@@ -183,6 +213,7 @@ export async function fingerprintOwnerComposerPayload(
       appendText("blob:");
       appendString(current.type);
       appendText(`bytes:${current.size};`);
+      flushText();
       parts.push(current);
       return;
     }
@@ -195,6 +226,7 @@ export async function fingerprintOwnerComposerPayload(
     }
     if (current instanceof ArrayBuffer) {
       appendText(`array-buffer:${current.byteLength};`);
+      flushText();
       parts.push(new Uint8Array(current));
       return;
     }
@@ -206,6 +238,7 @@ export async function fingerprintOwnerComposerPayload(
       );
       appendString(current.constructor.name);
       appendText(`view:${bytes.byteLength};`);
+      flushText();
       parts.push(Uint8Array.from(bytes).buffer);
       return;
     }
@@ -234,6 +267,7 @@ export async function fingerprintOwnerComposerPayload(
 
   try {
     visit(value);
+    flushText();
     const bytes = await new Blob(parts).arrayBuffer();
     return {
       storedByteLength: bytes.byteLength,

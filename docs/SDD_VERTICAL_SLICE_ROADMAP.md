@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-10 (OVE-293 owner-work inspection and composer durability execution; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-10 (OVE-288 physical owner-vault execution; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -61,6 +61,26 @@ findings; its registry/source/receipt digests are respectively
 Exact implementation containment, READY deployment identity, terminal
 relations, and saved-description digest remain authenticated closeout/read-back
 requirements before selecting OVE-288.
+
+On 2026-08-10, OVE-288 was selected only after terminal OVE-293 authenticated
+read-back and a clean `e6f59c87e7c4fa6cc4136665223e75e292c79049` baseline.
+Its `ove288.owner-vault-binding.v1` same-session server receipt activates one
+opaque physical Dexie vault per owner only after bounded exact-owner legacy
+copy, target close/reopen fingerprint read-back, and exclusive writer
+convergence. Ordinary sign-out retains both verified and uncertain work;
+binding or IndexedDB failure degrades only offline capability. The separate
+localized current-device erasure control reports success only after the exact
+target and exact-owner legacy residue are independently absent. The downstream
+OVE-285 registry regeneration closes 600 production files into 2,550 source
+nodes, 325 entrypoints, 184 true effect boundaries, and 660 consumer edges with
+zero source-policy, registry, semantic, or unresolved findings; its
+registry/source/receipt digests are respectively
+`94e9c7d449f3ab9446882f9efd970b5b138330906c102bacbfbed463f61f7f36`,
+`86d5eb35f38a2f2ae4e261c3a72580657c8bf7b98ea3476969c4b829f5d5ff91`, and
+`fe551283ceefd2cee5fd9b8b63a3fabd9d9357aa26b5ebac39565f8b94919c4e`.
+OVE-290 may be selected only after OVE-288 exact-main containment, READY
+deployment identity, terminal relations, and saved-description digest are read
+back through the authenticated closeout.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,
