@@ -104,9 +104,9 @@ import {
   type FirstEntryDraftPayload,
 } from "@/lib/offline/drafts";
 import {
-  createOwnerComposerPersistenceController,
+  createDurableOwnerComposerPersistenceController,
   type OwnerComposerPersistenceController,
-  type OwnerComposerPersistenceWriteContext,
+  type OwnerComposerDurabilityWriteContext,
 } from "@/lib/offline/owner-composer-participants";
 import {
   JournalEntrySyncError,
@@ -294,12 +294,11 @@ export function FirstEntryComposer({
     if (!offlinePersistenceEnabled) return;
 
     const controller =
-      createOwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot>(
+      createDurableOwnerComposerPersistenceController<FirstEntryComposerPersistenceSnapshot>(
         {
           ownerUserId,
-          persist: async (snapshot, context) => {
-            await persistFirstEntryComposerSnapshot(snapshot, context);
-          },
+          draftId: FIRST_ENTRY_DRAFT_ID,
+          persist: persistFirstEntryComposerSnapshot,
           shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
         },
       );
@@ -1836,7 +1835,7 @@ export function FirstEntryComposer({
 
 async function persistFirstEntryComposerSnapshot(
   snapshot: FirstEntryComposerPersistenceSnapshot,
-  context: OwnerComposerPersistenceWriteContext,
+  context: OwnerComposerDurabilityWriteContext,
 ) {
   if (!snapshot.hydrated) {
     throw new Error("The first-entry draft is not hydrated yet.");
@@ -1851,7 +1850,7 @@ async function persistFirstEntryComposerSnapshot(
       : snapshot.payload;
 
   if (hasPersistableFirstEntryDraft(payload, snapshot.defaultEntryDate)) {
-    await upsertOfflineDraft(
+    return upsertOfflineDraft(
       {
         ownerUserId: snapshot.ownerUserId,
         id: FIRST_ENTRY_DRAFT_ID,
@@ -1860,10 +1859,13 @@ async function persistFirstEntryComposerSnapshot(
       },
       context,
     );
-    return;
   }
 
-  await deleteOfflineDraft(snapshot.ownerUserId, FIRST_ENTRY_DRAFT_ID, context);
+  return deleteOfflineDraft(
+    snapshot.ownerUserId,
+    FIRST_ENTRY_DRAFT_ID,
+    context,
+  );
 }
 
 function statusIcon(status: OfflineMutation["status"]) {

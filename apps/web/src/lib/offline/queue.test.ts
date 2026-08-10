@@ -71,6 +71,7 @@ describe("offline queue", () => {
     await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
     await offlineDb?.draftSummaries.clear();
+    await offlineDb?.composerDurability.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,
@@ -521,6 +522,7 @@ describe("offline queue", () => {
       workspaceVisible: 1,
       targetObjectId: "legacy-object",
     });
+    expect(await offlineDb.composerDurability.count()).toBe(0);
     expect(JSON.stringify({ draft, mutation })).not.toMatch(
       /Legacy private|legacy-private|payload|body/i,
     );

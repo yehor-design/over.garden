@@ -84,9 +84,9 @@ import {
   type FollowUpEntryDraftPayload,
 } from "@/lib/offline/drafts";
 import {
-  createOwnerComposerPersistenceController,
+  createDurableOwnerComposerPersistenceController,
   type OwnerComposerPersistenceController,
-  type OwnerComposerPersistenceWriteContext,
+  type OwnerComposerDurabilityWriteContext,
 } from "@/lib/offline/owner-composer-participants";
 import { buildFollowUpValuePulseReadbackUrl } from "@/lib/garden/follow-up-value-pulse";
 import {
@@ -246,12 +246,11 @@ export function FollowUpEntryComposer({
     if (visualScenario) return;
 
     const controller =
-      createOwnerComposerPersistenceController<FollowUpComposerPersistenceSnapshot>(
+      createDurableOwnerComposerPersistenceController<FollowUpComposerPersistenceSnapshot>(
         {
           ownerUserId,
-          persist: async (snapshot, context) => {
-            await persistFollowUpComposerSnapshot(snapshot, context);
-          },
+          draftId,
+          persist: persistFollowUpComposerSnapshot,
           shouldPersistAutomatically: () => !draftPersistencePausedRef.current,
         },
       );
@@ -269,7 +268,7 @@ export function FollowUpEntryComposer({
       persistenceFrozenRef.current = false;
       controller.dispose();
     };
-  }, [ownerUserId, visualScenario]);
+  }, [draftId, ownerUserId, visualScenario]);
 
   const refreshQueue = useCallback(async () => {
     try {
@@ -1315,7 +1314,7 @@ function isObjectEntryMutationForObject(
 
 async function persistFollowUpComposerSnapshot(
   snapshot: FollowUpComposerPersistenceSnapshot,
-  context: OwnerComposerPersistenceWriteContext,
+  context: OwnerComposerDurabilityWriteContext,
 ) {
   if (!snapshot.hydrated) {
     throw new Error("The follow-up draft is not hydrated yet.");
@@ -1330,7 +1329,7 @@ async function persistFollowUpComposerSnapshot(
       : snapshot.payload;
 
   if (hasPersistableFollowUpDraft(payload, snapshot.defaultEntryDate)) {
-    await upsertOfflineDraft(
+    return upsertOfflineDraft(
       {
         ownerUserId: snapshot.ownerUserId,
         id: snapshot.draftId,
@@ -1339,10 +1338,9 @@ async function persistFollowUpComposerSnapshot(
       },
       context,
     );
-    return;
   }
 
-  await deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
+  return deleteOfflineDraft(snapshot.ownerUserId, snapshot.draftId, context);
 }
 
 function statusIcon(status: OfflineMutation["status"]) {

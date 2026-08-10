@@ -28,7 +28,9 @@ import {
   purgeUnsyncedOwnerData,
   registerOwnerPreviewObjectUrl,
   runOwnerSyncAttempt,
-  summarizeUnsyncedOwnerData,
+  inspectOwnerWork,
+  inspectOwnerWorkFromSource,
+  type OwnerWorkInspectionSource,
   type OwnerOfflineActivityPauseHandle,
 } from "./owner-session-lifecycle";
 
@@ -43,6 +45,7 @@ describe("owner offline session lifecycle", () => {
     await offlineDb?.mutationSummaries.clear();
     await offlineDb?.drafts.clear();
     await offlineDb?.draftSummaries.clear();
+    await offlineDb?.composerDurability.clear();
     await offlineDb?.ownerActivity.clear();
     await hydrateOwnerOfflineActivitySession(
       OWNER_A,
@@ -65,70 +68,236 @@ describe("owner offline session lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("summarizes only the active owner's unsynced status classes", async () => {
-    await upsertOfflineDraft({
-      ownerUserId: OWNER_A,
-      id: "first-entry",
-      kind: "first_entry",
-      payload: firstEntryDraftPayload("Owner A private draft"),
-    });
-    await upsertOfflineDraft({
-      ownerUserId: OWNER_B,
-      id: "first-entry",
-      kind: "first_entry",
-      payload: firstEntryDraftPayload("Owner B private draft"),
-    });
-
-    const queued = await enqueueOfflineMutation({
+  it("returns a complete payload-free exact-owner inventory with privacy-blocked rows", async () => {
+    const photo = new Blob(["draft-photo"], { type: "image/webp" });
+    await upsertOfflineDraft(
+      {
+        ownerUserId: OWNER_A,
+        id: "durable-first-entry",
+        kind: "first_entry",
+        payload: {
+          ...firstEntryDraftPayload("Owner A private durable draft"),
+          photoIntent: {
+            fileName: "private.webp",
+            contentType: "image/webp",
+            size: photo.size,
+            blob: photo,
+          },
+        },
+      },
+      {
+        durability: {
+          ownerUserId: OWNER_A,
+          draftId: "durable-first-entry",
+          participantNonce: "participant-owner-a-000000000001",
+          generation: 4,
+        },
+      },
+    );
+    await enqueueOfflineMutation({
       ownerUserId: OWNER_A,
       kind: "journal_entry",
       payload: journalPayload("queued-private"),
-      idempotencyKey: "queued-a",
+      idempotencyKey: "inspection-queued-a",
     });
     const syncing = await enqueueOfflineMutation({
       ownerUserId: OWNER_A,
       kind: "journal_entry",
       payload: journalPayload("syncing-private"),
-      idempotencyKey: "syncing-a",
+      idempotencyKey: "inspection-syncing-a",
     });
     await updateOfflineMutationStatus(OWNER_A, syncing.id, "syncing");
     const failed = await enqueueOfflineMutation({
       ownerUserId: OWNER_A,
       kind: "journal_entry",
       payload: journalPayload("failed-private"),
-      idempotencyKey: "failed-a",
+      idempotencyKey: "inspection-failed-a",
     });
-    await updateOfflineMutationStatus(OWNER_A, failed.id, "failed", {
-      lastError: "private adapter failure",
-    });
+    await updateOfflineMutationStatus(OWNER_A, failed.id, "failed");
     const synced = await enqueueOfflineMutation({
       ownerUserId: OWNER_A,
       kind: "journal_entry",
-      payload: journalPayload("synced-private"),
-      idempotencyKey: "synced-a",
+      payload: {
+        ...journalPayload("synced-private"),
+        photoIntent: {
+          fileName: "must-not-be-inspected.webp",
+          contentType: "image/webp",
+          size: 5,
+          blob: new Blob(["synced"], { type: "image/webp" }),
+        },
+      },
+      idempotencyKey: "inspection-synced-a",
     });
     await updateOfflineMutationStatus(OWNER_A, synced.id, "synced");
     await enqueueOfflineMutation({
       ownerUserId: OWNER_B,
       kind: "journal_entry",
-      payload: journalPayload("owner-b-private"),
-      idempotencyKey: "queued-b",
+      payload: journalPayload("another-owner-private"),
+      idempotencyKey: "inspection-owner-b",
     });
 
-    const summary = await summarizeUnsyncedOwnerData(OWNER_A);
+    const inspection = await inspectOwnerWork(OWNER_A);
 
-    expect(summary).toEqual({
-      hasUnsyncedData: true,
-      totalCount: 4,
-      draftCount: 1,
-      mutationCount: 3,
-      mediaCount: 0,
-      statusCounts: { queued: 1, syncing: 1, failed: 1 },
+    expect(inspection).toEqual({
+      status: "complete",
+      inventoryComplete: true,
+      inspectionRevision: expect.any(String),
+      vaultGeneration: expect.any(String),
+      counts: {
+        drafts: 1,
+        queued: 1,
+        syncing: 1,
+        failed: 1,
+        media: 1,
+        privacyBlocked: 1,
+      },
+      composerReceipts: [
+        expect.objectContaining({
+          generation: 4,
+          disposition: "stored",
+          storedByteLength: expect.any(Number),
+          storedDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
+        }),
+      ],
     });
-    expect(JSON.stringify(summary)).not.toMatch(
-      /private|adapter|owner-b|00000000|queued-a|synced-a/i,
+    expect(JSON.stringify(inspection)).not.toMatch(
+      /private|owner-a|owner-b|\.webp|inspection-|00000000/i,
     );
-    expect(queued.status).toBe("queued");
+  });
+
+  it.each([
+    [null, "storage_unavailable"],
+    [
+      inspectionSource({ drafts: [{ ownerUserId: OWNER_B }] }),
+      "corrupt_record",
+    ],
+    [
+      inspectionSource({
+        drafts: [validInspectionDraft(deepInventoryGraph(9_999))],
+      }),
+      "inventory_bounded",
+    ],
+    [inspectionSource({ inventoryBoundContact: true }), "inventory_bounded"],
+    [
+      inspectionSource({ drafts: [validInspectionDraft({ body: "x" })] }),
+      "flush_unconfirmed",
+    ],
+    [
+      {
+        readOwnerSnapshot: async () => {
+          throw new Error("IndexedDB read denied");
+        },
+        readComposerEvidenceRevision: () => 1,
+      },
+      "storage_read_failed",
+    ],
+  ] as const)(
+    "classifies unavailable storage honestly without counts (%s)",
+    async (source, reason) => {
+      const inspection = await inspectOwnerWorkFromSource(
+        OWNER_A,
+        source as OwnerWorkInspectionSource | null,
+      );
+
+      expect(inspection).toEqual({
+        status: "unavailable",
+        inventoryComplete: false,
+        reason,
+      });
+      expect("counts" in inspection).toBe(false);
+      expect("composerReceipts" in inspection).toBe(false);
+    },
+  );
+
+  it("classifies an unavailable Blob API without inventing complete counts", async () => {
+    vi.stubGlobal("Blob", undefined);
+
+    await expect(
+      inspectOwnerWorkFromSource(OWNER_A, inspectionSource({})),
+    ).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "blob_unavailable",
+    });
+  });
+
+  it("settles once at the deadline and rejects a late source result", async () => {
+    vi.useFakeTimers();
+    let release:
+      | ((value: ReturnType<typeof emptyInspectionSnapshot>) => void)
+      | undefined;
+    const source: OwnerWorkInspectionSource = {
+      readOwnerSnapshot: () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      readComposerEvidenceRevision: () => 1,
+    };
+
+    const pending = inspectOwnerWorkFromSource(OWNER_A, source, {
+      deadlineMs: 5_000,
+    });
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(pending).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "deadline_exceeded",
+    });
+    release?.(emptyInspectionSnapshot());
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "deadline_exceeded",
+    });
+  });
+
+  it("rejects evidence when the participant set or generation changes mid-inspection", async () => {
+    const revision = vi.fn().mockReturnValueOnce(7).mockReturnValueOnce(8);
+    const source: OwnerWorkInspectionSource = {
+      readOwnerSnapshot: async () => emptyInspectionSnapshot(),
+      readComposerEvidenceRevision: revision,
+    };
+
+    await expect(inspectOwnerWorkFromSource(OWNER_A, source)).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "participant_set_unstable",
+    });
+  });
+
+  it("settles immediately on explicit cancellation and ignores the late storage result", async () => {
+    vi.useFakeTimers();
+    let release:
+      | ((value: ReturnType<typeof emptyInspectionSnapshot>) => void)
+      | undefined;
+    const source: OwnerWorkInspectionSource = {
+      readOwnerSnapshot: () =>
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      readComposerEvidenceRevision: () => 1,
+    };
+    const controller = new AbortController();
+
+    const pending = inspectOwnerWorkFromSource(OWNER_A, source, {
+      signal: controller.signal,
+    });
+    controller.abort();
+
+    await expect(pending).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "participant_set_unstable",
+    });
+    expect(vi.getTimerCount()).toBe(0);
+    release?.(emptyInspectionSnapshot());
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({
+      status: "unavailable",
+      inventoryComplete: false,
+      reason: "participant_set_unstable",
+    });
   });
 
   it("atomically purges owner A drafts, unsynced mutations, and nested media only", async () => {
@@ -201,12 +370,6 @@ describe("owner offline session lifecycle", () => {
       payload: journalPayload("Owner B queued body"),
       idempotencyKey: "preserve-queued-b",
     });
-
-    const summary = await summarizeUnsyncedOwnerData(OWNER_A);
-    expect(summary.mediaCount).toBe(12);
-    expect(JSON.stringify(summary)).not.toMatch(
-      /inline|cover|caption|private-a|\.jpg|block-/i,
-    );
 
     vi.stubGlobal("window", new EventTarget());
     const draftsChanged = vi.fn();
@@ -890,4 +1053,41 @@ function journalPayload(body: string): OfflineJournalEntryPayload {
     entryDate: "2026-07-18",
     clientMutationId: crypto.randomUUID(),
   };
+}
+
+function emptyInspectionSnapshot() {
+  return {
+    drafts: [] as unknown[],
+    mutations: [] as unknown[],
+    composerDurability: [] as unknown[],
+    vaultGeneration: "ove293-shared-v6",
+    inventoryBoundContact: false,
+  };
+}
+
+function inspectionSource(
+  overrides: Partial<ReturnType<typeof emptyInspectionSnapshot>>,
+): OwnerWorkInspectionSource {
+  return {
+    readOwnerSnapshot: async () => ({
+      ...emptyInspectionSnapshot(),
+      ...overrides,
+    }),
+    readComposerEvidenceRevision: () => 1,
+  };
+}
+
+function validInspectionDraft(payload: unknown) {
+  return {
+    ownerUserId: OWNER_A,
+    id: "inspection-draft",
+    kind: "first_entry",
+    payload,
+    createdAt: 1,
+    updatedAt: 1,
+  };
+}
+
+function deepInventoryGraph(size: number) {
+  return Array.from({ length: size }, (_, index) => ({ index }));
 }

@@ -15536,6 +15536,81 @@
     {
       "authority": "authenticated_user",
       "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#createOwnerComposerParticipantNonce:browser_storage:createOwnerComposerParticipantNonce",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "createOwnerComposerParticipantNonce",
+      "transport": "offline_replay",
+      "variant": "browser_storage:createOwnerComposerParticipantNonce"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#deletedOwnerComposerFingerprint:browser_storage:deletedOwnerComposerFingerprint",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "deletedOwnerComposerFingerprint",
+      "transport": "offline_replay",
+      "variant": "browser_storage:deletedOwnerComposerFingerprint"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#fingerprintOwnerComposerPayload:browser_storage:fingerprintOwnerComposerPayload",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "fingerprintOwnerComposerPayload",
+      "transport": "offline_replay",
+      "variant": "browser_storage:fingerprintOwnerComposerPayload"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#isExactOwnerComposerDurabilityReceipt:browser_storage:isExactOwnerComposerDurabilityReceipt",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "isExactOwnerComposerDurabilityReceipt",
+      "transport": "offline_replay",
+      "variant": "browser_storage:isExactOwnerComposerDurabilityReceipt"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-durability.ts#requireOwnerComposerDurabilityExpectation:browser_storage:requireOwnerComposerDurabilityExpectation",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "symbol": "requireOwnerComposerDurabilityExpectation",
+      "transport": "offline_replay",
+      "variant": "browser_storage:requireOwnerComposerDurabilityExpectation"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
       "entrypointId": "offline_replay:src/lib/offline/owner-composer-locale-change-participant.ts#createOwnerComposerLocaleChangeParticipant:browser_storage:createOwnerComposerLocaleChangeParticipant",
       "evidencePaths": [
         "src/lib/offline/owner-composer-locale-change-participant.ts"
@@ -15547,6 +15622,21 @@
       "symbol": "createOwnerComposerLocaleChangeParticipant",
       "transport": "offline_replay",
       "variant": "browser_storage:createOwnerComposerLocaleChangeParticipant"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#createDurableOwnerComposerPersistenceController:browser_storage:createDurableOwnerComposerPersistenceController",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "symbol": "createDurableOwnerComposerPersistenceController",
+      "transport": "offline_replay",
+      "variant": "browser_storage:createDurableOwnerComposerPersistenceController"
     },
     {
       "authority": "authenticated_user",
@@ -15607,6 +15697,21 @@
       "symbol": "prepareOwnerComposerTransitionParticipants",
       "transport": "offline_replay",
       "variant": "browser_storage:prepareOwnerComposerTransitionParticipants"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-composer-participants.ts#readOwnerComposerEvidenceRevision:browser_storage:readOwnerComposerEvidenceRevision",
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "symbol": "readOwnerComposerEvidenceRevision",
+      "transport": "offline_replay",
+      "variant": "browser_storage:readOwnerComposerEvidenceRevision"
     },
     {
       "authority": "authenticated_user",
@@ -15685,6 +15790,36 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#inspectOwnerWork:browser_storage:inspectOwnerWork",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "symbol": "inspectOwnerWork",
+      "transport": "offline_replay",
+      "variant": "browser_storage:inspectOwnerWork"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#inspectOwnerWorkFromSource:browser_storage:inspectOwnerWorkFromSource",
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "symbol": "inspectOwnerWorkFromSource",
+      "transport": "offline_replay",
+      "variant": "browser_storage:inspectOwnerWorkFromSource"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#pauseOwnerOfflineActivity:browser_storage:pauseOwnerOfflineActivity",
       "evidencePaths": [
@@ -15757,21 +15892,6 @@
       "symbol": "runOwnerSyncAttempt",
       "transport": "offline_replay",
       "variant": "browser_storage:runOwnerSyncAttempt"
-    },
-    {
-      "authority": "authenticated_user",
-      "classification": "read_only",
-      "entrypointId": "offline_replay:src/lib/offline/owner-session-lifecycle.ts#summarizeUnsyncedOwnerData:browser_storage:summarizeUnsyncedOwnerData",
-      "evidencePaths": [
-        "src/lib/offline/owner-session-lifecycle.ts"
-      ],
-      "exclusionReason": "source_graph_proves_no_mutating_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/lib/offline/owner-session-lifecycle.ts",
-      "symbol": "summarizeUnsyncedOwnerData",
-      "transport": "offline_replay",
-      "variant": "browser_storage:summarizeUnsyncedOwnerData"
     },
     {
       "authority": "authenticated_user",
@@ -18927,6 +19047,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:055aac837bd9d78a8ecc",
+      "symbol": "OwnerComposerDurabilityReceipt"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
         "src/components/garden/journal-cover-controls.tsx"
       ],
@@ -20437,6 +20569,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:isExactOwnerComposerDurabilityReceipt",
+      "sourceNodeId": "source:130abd970239a1ce4e8e",
+      "symbol": "isExactOwnerComposerDurabilityReceipt"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-repository.ts",
         "src/server/journal-mention-repository.ts"
       ],
@@ -21276,6 +21419,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:createDurableOwnerComposerPersistenceController",
+      "sourceNodeId": "source:1a2aeae1f68df267d4b5",
+      "symbol": "createDurableOwnerComposerPersistenceController"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/journal-mentions.ts",
         "src/lib/offline/drafts.ts"
       ],
@@ -21369,6 +21523,17 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:1ad0cfd1701a6336d8a8",
       "symbol": "publicVarietyPath"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:inspectOwnerWorkFromSource",
+      "sourceNodeId": "source:1aeab676774e5a99f393",
+      "symbol": "inspectOwnerWorkFromSource"
     },
     {
       "evidencePaths": [
@@ -21748,6 +21913,18 @@
       "semanticVariant": "from:@/server/mvp-learning/attribution-after-response",
       "sourceNodeId": "source:1e8678fd3f09e47e78f0",
       "symbol": "scheduleLearningAttributionDrain"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:1e9232374be47b2d4812",
+      "symbol": "requireOwnerComposerDurabilityExpectation"
     },
     {
       "evidencePaths": [
@@ -23297,6 +23474,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:2a3767bff0591f06ef83",
+      "symbol": "isExactOwnerComposerDurabilityReceipt"
+    },
+    {
+      "evidencePaths": [
         "src/app/join/actions.ts",
         "src/app/join/page.tsx"
       ],
@@ -23746,6 +23935,18 @@
       "semanticVariant": "from:@/components/ui/menu",
       "sourceNodeId": "source:2dd6f47045feca345f57",
       "symbol": "Menu"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
+      "sourceNodeId": "source:2de50caf4e2310b8d593",
+      "symbol": "createDurableOwnerComposerPersistenceController"
     },
     {
       "evidencePaths": [
@@ -24204,6 +24405,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:32b4020085a1d5c5867d",
+      "symbol": "OfflineComposerDurabilityRecord"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/public-object-catalog-repository.ts"
       ],
@@ -24465,18 +24678,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/first-entry-composer.tsx",
-        "src/lib/offline/owner-composer-participants.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/first-entry-composer.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
-      "sourceNodeId": "source:361448eb9bd50456ec49",
-      "symbol": "createOwnerComposerPersistenceController"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/communities/[slug]/actions.ts",
         "src/components/public/public-community.tsx"
       ],
@@ -24670,17 +24871,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/offline/owner-session-lifecycle.ts"
-      ],
-      "nodeKind": "offline_producer",
-      "path": "src/lib/offline/owner-session-lifecycle.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "browser_storage:summarizeUnsyncedOwnerData",
-      "sourceNodeId": "source:38143e1c3335a58772af",
-      "symbol": "summarizeUnsyncedOwnerData"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/drafts.ts"
       ],
       "nodeKind": "offline_producer",
@@ -24858,6 +25048,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/first-entry-composer.tsx",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/first-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
+      "sourceNodeId": "source:3a93a47432d9e40f8179",
+      "symbol": "createDurableOwnerComposerPersistenceController"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/lib/visual-fixtures/journal-creation-scenarios.ts"
       ],
@@ -24913,6 +25115,18 @@
       "semanticVariant": "database-transaction-1",
       "sourceNodeId": "source:3ae44b74c1351927336b",
       "symbol": "moderateCommunityContribution"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:3afc5fbc4ba298a27388",
+      "symbol": "OwnerComposerDurabilityUnconfirmedError"
     },
     {
       "evidencePaths": [
@@ -27084,6 +27298,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:readOwnerComposerEvidenceRevision",
+      "sourceNodeId": "source:4d094aeaf9efd5a3d95b",
+      "symbol": "readOwnerComposerEvidenceRevision"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/comments/route.ts",
         "src/app/api/engagement/shared.ts"
       ],
@@ -28861,6 +29086,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:createOwnerComposerParticipantNonce",
+      "sourceNodeId": "source:5dfc7f2d9fe75aa58948",
+      "symbol": "createOwnerComposerParticipantNonce"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/server/public-surface-indexing-policy.ts"
       ],
@@ -28918,6 +29154,18 @@
       "semanticVariant": "from:@/server/engagement-repository",
       "sourceNodeId": "source:5e91505a7feb9021b56e",
       "symbol": "toggleAnonymousEngagementLike"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-participants",
+      "sourceNodeId": "source:5e9c5e67445db3d12175",
+      "symbol": "OwnerComposerDurabilityWriteContext"
     },
     {
       "evidencePaths": [
@@ -29877,6 +30125,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:66d27253f7e01ff787cf",
+      "symbol": "OwnerComposerDurabilityUnconfirmedError"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/lineage/claims/page.tsx",
         "src/lib/owner-lineage-copy.ts"
       ],
@@ -30136,6 +30396,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:69ccc443aeb4d77c8a5c",
+      "symbol": "OwnerComposerDurabilityUnconfirmedError"
+    },
+    {
+      "evidencePaths": [
         "src/lib/garden/actor-class.ts",
         "src/server/analytics-events.ts"
       ],
@@ -30265,6 +30537,18 @@
       "semanticVariant": "from:@/components/social/my-social-layout",
       "sourceNodeId": "source:6b1cd09863520c961e7c",
       "symbol": "MySocialLayout"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:6b38ecafb73e6c720332",
+      "symbol": "requireOwnerComposerDurabilityExpectation"
     },
     {
       "evidencePaths": [
@@ -31013,6 +31297,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:71158a3dd250ab1fa254",
+      "symbol": "OwnerComposerDurabilityExpectation"
+    },
+    {
+      "evidencePaths": [
         "src/lib/pilot/interview-learning.ts",
         "src/server/founder-interview-repository.ts"
       ],
@@ -31710,6 +32006,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:7816436cb312a33cf5d3",
       "symbol": "RequestScope"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:7824cff2b39797937e80",
+      "symbol": "OfflineDraftRecord"
     },
     {
       "evidencePaths": [
@@ -32690,6 +32998,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:81901e5bdb4ffb14e513",
+      "symbol": "OwnerComposerDurabilityDisposition"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/community-repository.ts"
       ],
@@ -32747,6 +33067,18 @@
       "semanticVariant": "from:@/server/auth/legacy-email-verification-bridge",
       "sourceNodeId": "source:8218c8b3947d5efc96ee",
       "symbol": "bridgeLegacyEmailVerificationRequest"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/first-entry-composer.tsx",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/first-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
+      "sourceNodeId": "source:823489d8a15a8fccd838",
+      "symbol": "OwnerComposerDurabilityWriteContext"
     },
     {
       "evidencePaths": [
@@ -32877,6 +33209,18 @@
       "semanticVariant": "POST:visual_fixture",
       "sourceNodeId": "source:839092fb74cc898dd6f5",
       "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:83f92867d85d7b681cc2",
+      "symbol": "deletedOwnerComposerFingerprint"
     },
     {
       "evidencePaths": [
@@ -33858,6 +34202,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:8b45882383f50f078ab0",
+      "symbol": "OWNER_COMPOSER_DURABILITY_PROTOCOL"
+    },
+    {
+      "evidencePaths": [
         "src/app/catalog-evidence-route.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -34611,6 +34967,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:90d5d6aeac0200d8e939",
+      "symbol": "OWNER_COMPOSER_DURABILITY_PROTOCOL"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
@@ -34739,6 +35107,18 @@
       "semanticVariant": "from:@/server/wishlist-repository",
       "sourceNodeId": "source:9176ffa9df4f463faadf",
       "symbol": "removeCatalogPublicSlugFromWishlist"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:91809240196c16f34346",
+      "symbol": "deletedOwnerComposerFingerprint"
     },
     {
       "evidencePaths": [
@@ -35207,6 +35587,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:96615c06b3c8ab424196",
+      "symbol": "fingerprintOwnerComposerPayload"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -35655,6 +36047,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/queue.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:99d03c6003064e7121dc",
+      "symbol": "OFFLINE_VAULT_GENERATION"
+    },
+    {
+      "evidencePaths": [
         "src/server/community-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -35872,6 +36276,17 @@
       "semanticVariant": "from:@/server/visual-fixtures/community-actor",
       "sourceNodeId": "source:9b5f9e38c04dbdb1669f",
       "symbol": "resolveVisualCommunityMutationActor"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:inspectOwnerWork",
+      "sourceNodeId": "source:9b70d69205360d9d5ba9",
+      "symbol": "inspectOwnerWork"
     },
     {
       "evidencePaths": [
@@ -36111,6 +36526,18 @@
       "semanticVariant": "from:@/lib/garden/follow-up-value-pulse",
       "sourceNodeId": "source:9e20cad7f2584c0ab83f",
       "symbol": "FOLLOW_UP_USEFULNESS_OPTIONS"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
+      "sourceNodeId": "source:9e50028652c821b1958b",
+      "symbol": "OwnerComposerDurabilityWriteContext"
     },
     {
       "evidencePaths": [
@@ -36426,6 +36853,18 @@
       "semanticVariant": "from:@/lib/public-surface-localization",
       "sourceNodeId": "source:a0f088fafd1a94b274bb",
       "symbol": "formatPublicCount"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:a0f7bc79b8c30a64cd91",
+      "symbol": "OfflineComposerDurabilityRecord"
     },
     {
       "evidencePaths": [
@@ -36846,6 +37285,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-composer-participants.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-composer-participants.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:a4a55107270cdf5be060",
+      "symbol": "createOwnerComposerParticipantNonce"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/privacy/erasure-requests/actions.ts",
         "src/server/erasure-request-access.ts"
       ],
@@ -37234,6 +37685,18 @@
       "semanticVariant": "from:@/lib/interface-localization",
       "sourceNodeId": "source:a7e64f9da049a5607eae",
       "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:a7fc6ebe00089c736929",
+      "symbol": "OFFLINE_VAULT_GENERATION"
     },
     {
       "evidencePaths": [
@@ -38301,6 +38764,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-session-lifecycle.ts",
+        "src/lib/offline/queue.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./queue",
+      "sourceNodeId": "source:b092e6303b58d8d922d7",
+      "symbol": "OfflineMutation"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/queue.ts"
       ],
       "nodeKind": "offline_producer",
@@ -38418,6 +38893,17 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:deletedOwnerComposerFingerprint",
+      "sourceNodeId": "source:b1fbe840a37ae23619f8",
+      "symbol": "deletedOwnerComposerFingerprint"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/first-entry-composer.tsx",
         "src/lib/garden/journal-cover-controls-copy.ts"
       ],
@@ -38439,6 +38925,18 @@
       "semanticVariant": "from:@/lib/garden/pilot-invite",
       "sourceNodeId": "source:b2036a2f41e63f9aae00",
       "symbol": "signPilotInviteToken"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:b206caceec9c85566001",
+      "symbol": "OWNER_COMPOSER_DURABILITY_PROTOCOL"
     },
     {
       "evidencePaths": [
@@ -39730,18 +40228,6 @@
     {
       "evidencePaths": [
         "src/app/garden/first-entry-composer.tsx",
-        "src/lib/offline/owner-composer-participants.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/first-entry-composer.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
-      "sourceNodeId": "source:bcabdaedf63b1a20b300",
-      "symbol": "OwnerComposerPersistenceWriteContext"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/first-entry-composer.tsx",
         "src/lib/garden/journal-title-prefill.ts"
       ],
       "nodeKind": "import",
@@ -40863,6 +41349,30 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:c5dd98ccbab64c71003b",
+      "symbol": "OwnerComposerDurabilityReceipt"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:c5eceff8a83d030330da",
+      "symbol": "OwnerComposerPayloadFingerprint"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/catalog/typeahead/route.ts",
         "src/server/auth-session.ts"
       ],
@@ -41229,6 +41739,18 @@
     },
     {
       "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:c8e2745fd555fda486bd",
+      "symbol": "fingerprintOwnerComposerPayload"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -41462,6 +41984,18 @@
       "semanticVariant": "from:../../garden-auth-panel",
       "sourceNodeId": "source:cb4ffe99b5b5f226cf57",
       "symbol": "GardenAuthPanel"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:cb8b43a2b401bc02d8c9",
+      "symbol": "OwnerComposerDurabilityExpectation"
     },
     {
       "evidencePaths": [
@@ -41876,6 +42410,17 @@
       "semanticVariant": "GET",
       "sourceNodeId": "source:d051178589e5d60bc040",
       "symbol": "GET"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:fingerprintOwnerComposerPayload",
+      "sourceNodeId": "source:d05f87958532111f838c",
+      "symbol": "fingerprintOwnerComposerPayload"
     },
     {
       "evidencePaths": [
@@ -42509,6 +43054,18 @@
       "semanticVariant": "from:@/lib/garden/pilot-invite",
       "sourceNodeId": "source:d5cc21351d4d22db40b5",
       "symbol": "verifyPilotInviteToken"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-participants.ts",
+        "src/lib/offline/owner-session-lifecycle.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/owner-session-lifecycle.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-participants",
+      "sourceNodeId": "source:d6050651c4a411bf96fd",
+      "symbol": "readOwnerComposerEvidenceRevision"
     },
     {
       "evidencePaths": [
@@ -43380,18 +43937,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-        "src/lib/offline/owner-composer-participants.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
-      "sourceNodeId": "source:deb814521b81b0486147",
-      "symbol": "OwnerComposerPersistenceWriteContext"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/page.tsx"
       ],
@@ -44232,18 +44777,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-        "src/lib/offline/owner-composer-participants.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/offline/owner-composer-participants",
-      "sourceNodeId": "source:e605c6e2807a2a964737",
-      "symbol": "createOwnerComposerPersistenceController"
-    },
-    {
-      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/server/auth-intent-control.ts"
       ],
@@ -44955,6 +45488,17 @@
       "semanticVariant": "from:../../shared",
       "sourceNodeId": "source:ecd3ca421045d568895f",
       "symbol": "redirectWithEngagementStatus"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "offline_producer",
+      "path": "src/lib/offline/owner-composer-durability.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "browser_storage:requireOwnerComposerDurabilityExpectation",
+      "sourceNodeId": "source:ece1b1759d0d77c4cfb5",
+      "symbol": "requireOwnerComposerDurabilityExpectation"
     },
     {
       "evidencePaths": [
@@ -45939,6 +46483,18 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:f59119d6705432d8b8ac",
       "symbol": "findSelectableCatalogItem"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/offline/drafts.ts",
+        "src/lib/offline/owner-composer-durability.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/drafts.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:./owner-composer-durability",
+      "sourceNodeId": "source:f5bd0eca31d987ac9f91",
+      "symbol": "OFFLINE_VAULT_GENERATION"
     },
     {
       "evidencePaths": [
