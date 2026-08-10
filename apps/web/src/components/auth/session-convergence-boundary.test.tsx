@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   useSession: vi.fn(),
   canonicalSignOut: vi.fn(),
+  reconcileLocalExit: vi.fn(),
   subscribe: vi.fn(),
   listener: null as null | ((payload: SessionSignal) => void),
   acquireLease: vi.fn(),
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   publishFailed: vi.fn(),
   publishCommitted: vi.fn(),
   commitMarker: vi.fn(),
+  commitLocalExitMarker: vi.fn(),
   readMarker: vi.fn(),
   clearMarker: vi.fn(),
   subscribeMarker: vi.fn(),
@@ -30,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   hydrate: vi.fn(),
   fetchOwnerVaultBinding: vi.fn(),
   deactivateOwnerVault: vi.fn(),
+  sealVaultsForLocalExit: vi.fn(),
   pause: vi.fn(),
   abort: vi.fn(),
   drain: vi.fn(),
@@ -113,6 +116,7 @@ vi.mock("@/lib/auth/sign-out-contract", () => ({
   localizedPublicRoot: (locale: string) =>
     locale === "uk" ? "/" : `/${locale}`,
   signOutCurrentSessionOnce: mocks.canonicalSignOut,
+  reconcileLocalExitSession: mocks.reconcileLocalExit,
 }));
 vi.mock("@/lib/auth/session-convergence", () => ({
   SESSION_CONVERGENCE_SIGNALS: {
@@ -122,6 +126,7 @@ vi.mock("@/lib/auth/session-convergence", () => ({
     failed: "sign_out_preparation_failed",
     cancellation: "sign_out_preparation_cancelled",
     committed: "session_invalidation_committed",
+    localExitCommitted: "local_exit_committed",
   },
   acquireAuthenticatedSessionTabLease: mocks.acquireLease,
   createSessionTabId: () => "tab-unregistered-test-1234",
@@ -134,6 +139,7 @@ vi.mock("@/lib/auth/session-convergence", () => ({
 }));
 vi.mock("@/lib/auth/session-invalidation-marker", () => ({
   commitSessionInvalidationMarker: mocks.commitMarker,
+  commitLocalExitInvalidationMarker: mocks.commitLocalExitMarker,
   readSessionInvalidationMarker: mocks.readMarker,
   clearSessionInvalidationMarkerIfCurrent: mocks.clearMarker,
   subscribeToSessionInvalidationMarker: mocks.subscribeMarker,
@@ -152,6 +158,7 @@ vi.mock("@/lib/offline/owner-session-lifecycle", () => ({
 vi.mock("@/lib/offline/owner-vault", () => ({
   fetchAuthenticatedOwnerVaultBinding: mocks.fetchOwnerVaultBinding,
   deactivatePhysicalOwnerVault: mocks.deactivateOwnerVault,
+  sealActiveOwnerVaultsForLocalExit: mocks.sealVaultsForLocalExit,
 }));
 
 import {
@@ -211,6 +218,14 @@ describe("session convergence boundary", () => {
     );
     mocks.useSession.mockReturnValue({ data: null, isPending: true });
     mocks.commitMarker.mockReturnValue({ status: "persisted" });
+    mocks.commitLocalExitMarker.mockReturnValue({
+      status: "persisted",
+      marker: {
+        status: "present",
+        persistence: "persistent",
+        kind: "local_exit",
+      },
+    });
     mocks.readMarker.mockReturnValue({ status: "absent", persistence: "none" });
     mocks.clearMarker.mockReturnValue("absent");
     mocks.subscribeMarker.mockImplementation(
@@ -228,6 +243,8 @@ describe("session convergence boundary", () => {
       status: "committed",
       reconciliation: "canonical_response",
     });
+    mocks.reconcileLocalExit.mockResolvedValue("response_observed");
+    mocks.sealVaultsForLocalExit.mockReturnValue(1);
     mocks.prepareComposer.mockResolvedValue({
       isActive: () => true,
       bindOfflineActivityScope: mocks.composerBindScope,
@@ -267,6 +284,175 @@ describe("session convergence boundary", () => {
     );
   });
 
+  it("bootstraps a persisted local exit without admitting private UI and reloads only after a response", async () => {
+    const marker: MarkerSnapshot = {
+      status: "present",
+      persistence: "persistent",
+      kind: "local_exit",
+    };
+    mocks.readMarker.mockReturnValue(marker);
+
+    const renderer = await renderBoundary();
+
+    expect(mocks.sealVaultsForLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.reconcileLocalExit).toHaveBeenCalledWith(
+      "B".repeat(43),
+      marker,
+    );
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(
+      renderer.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    expect(
+      renderer.root.findAll(
+        (node) => node.props.role === "status" || node.props.role === "alert",
+      ),
+    ).toHaveLength(0);
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    await unmount(renderer);
+  });
+
+  it("keeps a failed or binding-free local-exit bootstrap on the public-safe surface", async () => {
+    const marker: MarkerSnapshot = {
+      status: "present",
+      persistence: "persistent",
+      kind: "local_exit",
+    };
+    mocks.readMarker.mockReturnValue(marker);
+    mocks.reconcileLocalExit.mockResolvedValue("transport_unavailable");
+
+    const transportFailure = await renderBoundary();
+    expect(mocks.replace).not.toHaveBeenCalled();
+    expect(
+      transportFailure.root.findAllByProps({
+        "data-local-exit-public-safe": "true",
+      }),
+    ).toHaveLength(1);
+    await unmount(transportFailure);
+
+    vi.clearAllMocks();
+    mocks.readMarker.mockReturnValue(marker);
+    mocks.subscribe.mockImplementation(
+      (listener: (payload: SessionSignal) => void) => {
+        mocks.listener = listener;
+        return vi.fn();
+      },
+    );
+    mocks.subscribeMarker.mockImplementation(
+      (listener: (snapshot: MarkerSnapshot) => void) => {
+        mocks.markerListener = listener;
+        return vi.fn();
+      },
+    );
+    const noBinding = await renderBoundary(
+      undefined,
+      undefined,
+      undefined,
+      null,
+    );
+    expect(mocks.reconcileLocalExit).not.toHaveBeenCalled();
+    expect(mocks.getSession).not.toHaveBeenCalled();
+    expect(
+      noBinding.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+    await unmount(noBinding);
+  });
+
+  it("consumes peer, storage and BFCache local-exit evidence through the immediate public exit", async () => {
+    const localExitMarker: MarkerSnapshot = {
+      status: "present",
+      persistence: "persistent",
+      kind: "local_exit",
+    };
+    const peer = await renderBoundary();
+    await act(async () => {
+      mocks.listener?.({
+        signal: "local_exit_committed",
+        operationId: "op-peer-local-exit-1234",
+        tabId: "tab-peer-local-exit-1234",
+        preparationRoundId: null,
+      });
+    });
+    expect(mocks.sealVaultsForLocalExit).toHaveBeenCalledOnce();
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expect(
+      peer.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+    await unmount(peer);
+
+    vi.clearAllMocks();
+    mocks.readMarker.mockReturnValue({
+      status: "absent",
+      persistence: "none",
+      kind: "none",
+    });
+    mocks.getSession.mockResolvedValue(activeSession());
+    mocks.hydrate.mockResolvedValue("ready");
+    mocks.acquireLease.mockReturnValue({
+      tabId: "tab-boundary-test-1234",
+      release: mocks.releaseLease,
+    });
+    mocks.subscribe.mockImplementation(
+      (listener: (payload: SessionSignal) => void) => {
+        mocks.listener = listener;
+        return vi.fn();
+      },
+    );
+    mocks.subscribeMarker.mockImplementation(
+      (listener: (snapshot: MarkerSnapshot) => void) => {
+        mocks.markerListener = listener;
+        return vi.fn();
+      },
+    );
+    const storage = await renderBoundary();
+    await act(async () => mocks.markerListener?.(localExitMarker));
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expect(
+      storage.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+    await unmount(storage);
+
+    vi.clearAllMocks();
+    mocks.readMarker
+      .mockReturnValueOnce({
+        status: "absent",
+        persistence: "none",
+        kind: "none",
+      })
+      .mockReturnValue(localExitMarker);
+    mocks.getSession.mockResolvedValue(activeSession());
+    mocks.hydrate.mockResolvedValue("ready");
+    mocks.acquireLease.mockReturnValue({
+      tabId: "tab-boundary-test-1234",
+      release: mocks.releaseLease,
+    });
+    mocks.subscribe.mockImplementation(
+      (listener: (payload: SessionSignal) => void) => {
+        mocks.listener = listener;
+        return vi.fn();
+      },
+    );
+    mocks.subscribeMarker.mockImplementation(
+      (listener: (snapshot: MarkerSnapshot) => void) => {
+        mocks.markerListener = listener;
+        return vi.fn();
+      },
+    );
+    const bfcache = await renderBoundary();
+    await act(async () => {
+      mocks.windowListeners.get("pageshow")?.({ persisted: true } as never);
+    });
+    expect(mocks.reload).not.toHaveBeenCalled();
+    expect(mocks.replace).toHaveBeenCalledWith("/bg");
+    expect(
+      bfcache.root.findAllByProps({ "data-local-exit-public-safe": "true" }),
+    ).toHaveLength(1);
+    await unmount(bfcache);
+  });
+
   it("subscribes to identity-free preparation, acknowledgement and terminal signals", async () => {
     const source = await readFile(
       fileURLToPath(
@@ -289,6 +475,10 @@ describe("session convergence boundary", () => {
     expect(source).toContain(
       'params.get("visualSessionConvergence") === "true"',
     );
+    expect(source).toContain(
+      'window.location.pathname !== "/__visual-fixtures/account-sign-out"',
+    );
+    expect(source).toContain('params.get("visualAccountSignOut") === "true"');
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
   });
 
@@ -1949,6 +2139,7 @@ async function renderBoundary(
   recheckMode:
     | "compatibility_fenced"
     | "effect_closed_non_fencing" = "compatibility_fenced",
+  currentSessionBinding: string | null = "B".repeat(43),
 ) {
   let renderer: ReactTestRenderer | undefined;
   await act(async () => {
@@ -1957,6 +2148,7 @@ async function renderBoundary(
         locale="bg"
         localeControlFallback={localeControlFallback}
         recheckMode={recheckMode}
+        currentSessionBinding={currentSessionBinding}
       >
         {children}
       </SessionConvergenceBoundary>,
@@ -2066,6 +2258,7 @@ interface SessionSignal {
 interface MarkerSnapshot {
   status: "absent" | "present" | "unknown" | "unavailable";
   persistence: "none" | "persistent" | "volatile_only" | "unavailable";
+  kind?: "none" | "terminal_invalidation" | "local_exit" | "unknown";
 }
 
 function textContent(value: unknown): string {

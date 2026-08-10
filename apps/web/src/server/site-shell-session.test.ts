@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   getAuthoritativeCurrentSession: vi.fn(),
   issueDocumentMutationGeneration: vi.fn(),
+  deriveCurrentSessionBinding: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -18,10 +19,17 @@ vi.mock("@/lib/auth/document-mutation-generation-contract", () => ({
   issueDocumentMutationGeneration: mocks.issueDocumentMutationGeneration,
 }));
 
+vi.mock("@/lib/auth/sign-out-hardening", () => ({
+  deriveServerCurrentSessionBinding: mocks.deriveCurrentSessionBinding,
+}));
+
 describe("site shell session boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.unstubAllEnvs();
+    mocks.deriveCurrentSessionBinding.mockReturnValue(
+      "opaque-current-session-binding",
+    );
   });
 
   it("serializes only authentication state and the opaque signed generation", async () => {
@@ -43,6 +51,7 @@ describe("site shell session boundary", () => {
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: true,
       documentMutationGeneration: "opaque-signed-document-generation",
+      currentSessionBinding: "opaque-current-session-binding",
     });
     expect(mocks.issueDocumentMutationGeneration).toHaveBeenCalledWith({
       ownerUserId: "private-user-id",
@@ -64,6 +73,7 @@ describe("site shell session boundary", () => {
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: false,
       documentMutationGeneration: null,
+      currentSessionBinding: null,
     });
   });
 
@@ -76,6 +86,7 @@ describe("site shell session boundary", () => {
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: false,
       documentMutationGeneration: null,
+      currentSessionBinding: null,
     });
   });
 
@@ -92,6 +103,7 @@ describe("site shell session boundary", () => {
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: true,
       documentMutationGeneration: null,
+      currentSessionBinding: "opaque-current-session-binding",
     });
   });
 
@@ -106,6 +118,7 @@ describe("site shell session boundary", () => {
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: true,
       documentMutationGeneration: null,
+      currentSessionBinding: "opaque-current-session-binding",
     });
     expect(mocks.issueDocumentMutationGeneration).not.toHaveBeenCalled();
   });

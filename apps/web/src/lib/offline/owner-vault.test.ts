@@ -13,6 +13,7 @@ import {
   OWNER_VAULT_DATABASE_PREFIX,
   readActiveOwnerVaultLifetimeSignal,
   resolveOwnerOfflineDatabase,
+  sealActiveOwnerVaultsForLocalExit,
   waitForOwnerVaultWritersToSettle,
   withOwnerVaultWriterLease,
 } from "./owner-vault";
@@ -84,6 +85,32 @@ describe("physical owner vault", () => {
     await expect(reopened.drafts.get([OWNER_A, "retained-a"])).resolves.toEqual(
       expect.objectContaining({ id: "retained-a" }),
     );
+  });
+
+  it("synchronously seals every active handle for local exit while retaining exact-owner rows", async () => {
+    const ownerA = await activatePhysicalOwnerVault(OWNER_A, BINDING_A);
+    await activatePhysicalOwnerVault(OWNER_B, BINDING_B);
+    const lifetimeA = readActiveOwnerVaultLifetimeSignal(OWNER_A, BINDING_A);
+    const lifetimeB = readActiveOwnerVaultLifetimeSignal(OWNER_B, BINDING_B);
+    await ownerA.drafts.add({
+      ownerUserId: OWNER_A,
+      id: "retained-a-sync-seal",
+      kind: "first_entry",
+      payload: {},
+      createdAt: 1,
+      updatedAt: 1,
+    });
+
+    expect(sealActiveOwnerVaultsForLocalExit()).toBe(2);
+    expect(resolveOwnerOfflineDatabase(OWNER_A)).toBeUndefined();
+    expect(resolveOwnerOfflineDatabase(OWNER_B)).toBeUndefined();
+    expect(lifetimeA?.aborted).toBe(true);
+    expect(lifetimeB?.aborted).toBe(true);
+
+    const reopenedA = await activatePhysicalOwnerVault(OWNER_A, BINDING_A);
+    await expect(
+      reopenedA.drafts.get([OWNER_A, "retained-a-sync-seal"]),
+    ).resolves.toEqual(expect.objectContaining({ id: "retained-a-sync-seal" }));
   });
 
   it("accepts only a no-store receipt for the immediately verified session generation", async () => {

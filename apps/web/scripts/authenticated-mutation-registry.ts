@@ -1127,8 +1127,7 @@ function exclusionFor(
   const key = `${discovery.path}\0${discovery.symbol}\0${discovery.variant}`;
   if (
     discovery.transport === "same_origin_fetch" &&
-    discovery.variant ===
-      "POST:/api/document-mutation-admission/continuity"
+    discovery.variant === "POST:/api/document-mutation-admission/continuity"
   ) {
     return {
       classification: "read_only",
@@ -1203,7 +1202,10 @@ function exclusionFor(
   }
   if (
     discovery.variant === "authenticated_sign_out" ||
-    discovery.variant === "auth_client.signOut"
+    discovery.variant === "auth_client.signOut" ||
+    (discovery.transport === "route_handler" &&
+      discovery.path === "src/app/api/auth/local-exit-reconcile/route.ts" &&
+      discovery.symbol === "POST")
   ) {
     return {
       classification: "excluded_distinct_authority",

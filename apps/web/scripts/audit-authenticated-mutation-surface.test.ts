@@ -54,7 +54,8 @@ describe("authenticated mutation surface AST discovery", () => {
       },
       {
         relativePath: "src/app/fixtures/actions.ts",
-        sourceText: '"use server"; export async function hiddenFixtureAction() {}',
+        sourceText:
+          '"use server"; export async function hiddenFixtureAction() {}',
       },
       {
         relativePath: "src/app/page.ts",
@@ -339,16 +340,14 @@ describe("authenticated mutation surface AST discovery", () => {
   it("expands Better Auth GET and POST into the closed logical callback partition without treating POST normalization as the GET pipeline", () => {
     const variants = expandBetterAuthSemanticVariants([
       {
-        entrypointId:
-          "route_handler:src/app/api/auth/[...all]/route.ts#GET",
+        entrypointId: "route_handler:src/app/api/auth/[...all]/route.ts#GET",
         path: "src/app/api/auth/[...all]/route.ts",
         symbol: "GET",
         variant: "GET",
         transport: "route_handler",
       },
       {
-        entrypointId:
-          "route_handler:src/app/api/auth/[...all]/route.ts#POST",
+        entrypointId: "route_handler:src/app/api/auth/[...all]/route.ts#POST",
         path: "src/app/api/auth/[...all]/route.ts",
         symbol: "POST",
         variant: "POST",
@@ -356,7 +355,9 @@ describe("authenticated mutation surface AST discovery", () => {
       },
     ]);
 
-    expect(variants.map(({ transport, variant }) => ({ transport, variant }))).toEqual([
+    expect(
+      variants.map(({ transport, variant }) => ({ transport, variant })),
+    ).toEqual([
       {
         transport: "better_auth_callback",
         variant: "authenticated_account_session_mutation",
@@ -619,13 +620,11 @@ describe("authenticated mutation registry v3", () => {
           effectFamilies: [...boundary.effectFamilies].reverse(),
           evidencePaths: [...boundary.evidencePaths, ...boundary.evidencePaths],
         })),
-      consumerEdges: [...graph.consumerEdges]
-        .reverse()
-        .map((edge) => ({
-          ...edge,
-          predecessorEdgeIds: [...edge.predecessorEdgeIds].reverse(),
-          evidencePaths: [...edge.evidencePaths].reverse(),
-        })),
+      consumerEdges: [...graph.consumerEdges].reverse().map((edge) => ({
+        ...edge,
+        predecessorEdgeIds: [...edge.predecessorEdgeIds].reverse(),
+        evidencePaths: [...edge.evidencePaths].reverse(),
+      })),
     };
 
     expect(canonicalizeAuthenticatedMutationRegistry(reversed)).toBe(
@@ -677,21 +676,23 @@ describe("authenticated mutation registry v3", () => {
     expect(receipt.registryDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(receipt.sourceEvidenceDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(receipt.receiptDigest).toMatch(/^[a-f0-9]{64}$/);
-    expect(new Set(Object.values(receipt).filter((value) => /^[a-f0-9]{64}$/.test(value)))).toHaveLength(3);
+    expect(
+      new Set(
+        Object.values(receipt).filter((value) => /^[a-f0-9]{64}$/.test(value)),
+      ),
+    ).toHaveLength(3);
 
     expect(
       buildAuthenticatedMutationRegistryReceipt({
         registry: graph,
         baselineSha: "5c403444cddc2e195690808de08304d14fe41fd3",
-        sourceEvidence: [...sourceEvidence]
-          .reverse()
-          .map((evidence) => ({
-            ...evidence,
-            sourceText:
-              evidence.path === "src/z.ts"
-                ? "line1\nline2\n"
-                : evidence.sourceText,
-          })),
+        sourceEvidence: [...sourceEvidence].reverse().map((evidence) => ({
+          ...evidence,
+          sourceText:
+            evidence.path === "src/z.ts"
+              ? "line1\nline2\n"
+              : evidence.sourceText,
+        })),
         decisionState: "ready",
       }),
     ).toEqual(receipt);
@@ -722,7 +723,9 @@ describe("authenticated mutation registry v3", () => {
       }),
     ).toThrow(/registry/i);
     expect(() => buildReady({ baselineSha: "not-a-sha" })).toThrow(/baseline/i);
-    expect(() => buildReady({ sourceEvidence: [] })).toThrow(/source evidence/i);
+    expect(() => buildReady({ sourceEvidence: [] })).toThrow(
+      /source evidence/i,
+    );
     expect(() =>
       buildReady({
         sourceEvidence: sourceEvidence.filter(
@@ -739,7 +742,8 @@ describe("authenticated mutation registry v3", () => {
     const registry = buildAuthenticatedMutationRegistry({
       discoveries: [
         {
-          entrypointId: "route_handler:src/app/api/garden/entries/route.ts#POST",
+          entrypointId:
+            "route_handler:src/app/api/garden/entries/route.ts#POST",
           path: "src/app/api/garden/entries/route.ts",
           symbol: "POST",
           variant: "POST",
@@ -754,7 +758,8 @@ describe("authenticated mutation registry v3", () => {
           transport: "same_origin_fetch",
         },
         {
-          entrypointId: "server_action:src/app/garden/profile/actions.ts#updateProfileAction",
+          entrypointId:
+            "server_action:src/app/garden/profile/actions.ts#updateProfileAction",
           path: "src/app/garden/profile/actions.ts",
           symbol: "updateProfileAction",
           variant: "updateProfileAction",
@@ -785,6 +790,14 @@ describe("authenticated mutation registry v3", () => {
           transport: "better_auth_callback",
         },
         {
+          entrypointId:
+            "route_handler:src/app/api/auth/local-exit-reconcile/route.ts#POST",
+          path: "src/app/api/auth/local-exit-reconcile/route.ts",
+          symbol: "POST",
+          variant: "POST",
+          transport: "route_handler",
+        },
+        {
           entrypointId: "route_handler:src/app/api/cron/media/route.ts#POST",
           path: "src/app/api/cron/media/route.ts",
           symbol: "POST",
@@ -806,6 +819,10 @@ describe("authenticated mutation registry v3", () => {
         },
         { path: "src/app/garden/profile/page.tsx", sourceText: "" },
         { path: "src/app/api/auth/[...all]/route.ts", sourceText: "" },
+        {
+          path: "src/app/api/auth/local-exit-reconcile/route.ts",
+          sourceText: "export async function POST() {}",
+        },
         { path: "src/app/api/cron/media/route.ts", sourceText: "" },
         {
           path: "src/server/journal-repository.ts",
@@ -823,15 +840,19 @@ describe("authenticated mutation registry v3", () => {
     });
 
     const byId = new Map(
-      registry.entrypoints.map((entrypoint) => [entrypoint.entrypointId, entrypoint]),
+      registry.entrypoints.map((entrypoint) => [
+        entrypoint.entrypointId,
+        entrypoint,
+      ]),
     );
     expect(
       byId.get("route_handler:src/app/api/garden/entries/route.ts#POST")
         ?.executionOwner,
     ).toBe("high_risk_ove_290");
     expect(
-      byId.get("server_action:src/app/garden/profile/actions.ts#updateProfileAction")
-        ?.executionOwner,
+      byId.get(
+        "server_action:src/app/garden/profile/actions.ts#updateProfileAction",
+      )?.executionOwner,
     ).toBe("remaining_ove_291");
     expect(
       byId.get(
@@ -848,7 +869,20 @@ describe("authenticated mutation registry v3", () => {
     });
     expect(
       byId.get("route_handler:src/app/api/cron/media/route.ts#POST"),
-    ).toMatchObject({ authority: "bearer_cron", classification: "excluded_distinct_authority" });
+    ).toMatchObject({
+      authority: "bearer_cron",
+      classification: "excluded_distinct_authority",
+    });
+    expect(
+      byId.get(
+        "route_handler:src/app/api/auth/local-exit-reconcile/route.ts#POST",
+      ),
+    ).toMatchObject({
+      authority: "authenticated_user",
+      classification: "excluded_distinct_authority",
+      executionOwner: "excluded_with_reason",
+      exclusionReason: "current_session_exit_is_owned_by_ove_287",
+    });
 
     const routeEffects = registry.consumerEdges
       .filter(
@@ -1040,9 +1074,9 @@ describe("authenticated mutation registry v3", () => {
     );
     const byFamily = new Map(
       edges.map((edge) => [
-        registry.effectBoundaries.find(
-          (effect) => effect.effectBoundaryId === edge.effectBoundaryId,
-        )?.effectFamilies.join("+"),
+        registry.effectBoundaries
+          .find((effect) => effect.effectBoundaryId === edge.effectBoundaryId)
+          ?.effectFamilies.join("+"),
         edge,
       ]),
     );
@@ -1050,7 +1084,9 @@ describe("authenticated mutation registry v3", () => {
       predecessorEdgeIds: [],
       executionMode: "required",
     });
-    expect(byFamily.get("public_projection")?.predecessorEdgeIds).toHaveLength(1);
+    expect(byFamily.get("public_projection")?.predecessorEdgeIds).toHaveLength(
+      1,
+    );
     expect(byFamily.get("analytics_event")).toMatchObject({
       executionMode: "best_effort_after_commit",
     });
@@ -1324,9 +1360,7 @@ describe("authenticated mutation registry v3", () => {
 describe("authenticated mutation audit deadline and determinism", () => {
   const appRoot = fileURLToPath(new URL("../", import.meta.url));
 
-  it.skipIf(
-    process.env.OVERGARDEN_SKIP_MUTATION_AUDIT_CONCURRENCY === "1",
-  )(
+  it.skipIf(process.env.OVERGARDEN_SKIP_MUTATION_AUDIT_CONCURRENCY === "1")(
     "returns four identical three-digest receipts without mutating the checked artifact",
     async () => {
       const artifactPath = fileURLToPath(
@@ -1380,9 +1414,9 @@ describe("authenticated mutation audit deadline and determinism", () => {
           ),
         ).size,
       ).toBe(1);
-      expect(reports.every((report) => report.elapsedBucket !== "timed_out")).toBe(
-        true,
-      );
+      expect(
+        reports.every((report) => report.elapsedBucket !== "timed_out"),
+      ).toBe(true);
       expect(after).toBe(before);
     },
     AUTHENTICATED_MUTATION_AUDIT_DEADLINE_MS + 15_000,
@@ -1430,12 +1464,9 @@ describe("authenticated mutation audit deadline and determinism", () => {
 
   it("distinguishes a scanner failure from a deadline", async () => {
     await expect(
-      runAuthenticatedMutationOperationWithinDeadline(
-        async () => {
-          throw new Error("unsupported syntax fixture");
-        },
-        30_000,
-      ),
+      runAuthenticatedMutationOperationWithinDeadline(async () => {
+        throw new Error("unsupported syntax fixture");
+      }, 30_000),
     ).resolves.toEqual({ terminalState: "failed" });
   });
 });

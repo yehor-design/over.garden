@@ -25,11 +25,13 @@ import { ServiceWorkerRegister } from "./sw-register";
 type SiteShellSessionState = {
   isAuthenticated: boolean;
   documentMutationGeneration: string | null;
+  currentSessionBinding: string | null;
 };
 
 const ROOT_LAYOUT_GUEST_SESSION_STATE: SiteShellSessionState = {
   isAuthenticated: false,
   documentMutationGeneration: null,
+  currentSessionBinding: null,
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -91,6 +93,7 @@ export default async function RootLayout({
             market={market}
             isAuthenticated={shellSession.isAuthenticated}
             documentMutationGeneration={shellSession.documentMutationGeneration}
+            currentSessionBinding={shellSession.currentSessionBinding}
             communitiesReady={communitiesReady}
           >
             {children}

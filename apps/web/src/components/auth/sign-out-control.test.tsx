@@ -6,14 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 const mocks = vi.hoisted(() => ({
-  requestSignOut: vi.fn(async () => undefined),
+  requestSignOut: vi.fn(),
   beforeRequest: vi.fn(),
-  phase: "idle" as
-    | "idle"
-    | "awaiting-confirmation"
-    | "checking"
-    | "signing-out"
-    | "error",
+  phase: "idle" as "idle" | "awaiting-confirmation" | "committed",
 }));
 
 vi.mock("./sign-out-provider", () => ({
@@ -43,14 +38,15 @@ describe("shared sign-out control", () => {
     expect(html).not.toMatch(/user[-_ ]?id|session[-_ ]?id|email|token/i);
   });
 
-  it("exposes truthful pending labels and disables duplicate activation", async () => {
-    mocks.phase = "checking";
+  it("never renders post-confirm progress or recovery state", async () => {
+    mocks.phase = "committed";
     const { SignOutControl } = await import("./sign-out-control");
     const html = renderToStaticMarkup(<SignOutControl />);
 
-    expect(html).toContain("Перевіряємо локальні зміни…");
-    expect(html).toContain('aria-busy="true"');
-    expect(html).toContain("disabled");
+    expect(html).toContain("Вийти з облікового запису");
+    expect(html).not.toContain('aria-busy="true"');
+    expect(html).not.toContain(" disabled=");
+    expect(html).not.toMatch(/Перевіряємо|Завершуємо|помилка|повтор/i);
   });
 
   it("keeps the initiating control available while the confirmation owns the decision", async () => {
@@ -63,36 +59,35 @@ describe("shared sign-out control", () => {
     expect(html).not.toContain(" disabled=");
   });
 
-  it("keeps durability ordered while inspection stays invisible and non-blocking", async () => {
+  it("commits the retain-only local exit synchronously before navigation and background reconciliation", async () => {
     const source = await readSource("sign-out-provider.tsx");
-    const pause = source.indexOf(
-      "const pauseHandle = await pauseOwnerOfflineActivity(ownerUserId",
+    const marker = source.indexOf(
+      "const committed = commitLocalExitInvalidationMarker();",
     );
-    const preparation = source.indexOf(
-      "await awaitRemotePreparation(operationId, tabId)",
-    );
-    const drain = source.indexOf("await pauseHandle.waitForSyncDrain()");
-    const inspection = source.indexOf(
-      "startBestEffort(() => inspectOwnerWork(ownerUserId))",
-    );
-    const canonical = source.indexOf(
-      "await performCanonicalSignOut();",
-      inspection,
+    const seal = source.indexOf("sealActiveOwnerVaultsForLocalExit();", marker);
+    const publish = source.indexOf("publishLocalExitCommitted(", seal);
+    const flush = source.indexOf("flushSync(() => setPhase", publish);
+    const replace = source.indexOf("window.location.replace(", flush);
+    const reconcile = source.indexOf(
+      "dispatchLocalExitReconciliation(",
+      replace,
     );
 
-    expect(pause).toBeGreaterThan(-1);
-    expect(pause).toBeLessThan(drain);
-    expect(drain).toBeLessThan(preparation);
-    expect(preparation).toBeLessThan(inspection);
-    expect(inspection).toBeLessThan(canonical);
+    expect(marker).toBeGreaterThan(-1);
+    expect(marker).toBeLessThan(seal);
+    expect(seal).toBeLessThan(publish);
+    expect(publish).toBeLessThan(flush);
+    expect(flush).toBeLessThan(replace);
+    expect(replace).toBeLessThan(reconcile);
+    expect(source).not.toContain("pauseOwnerOfflineActivity");
+    expect(source).not.toContain("waitForSyncDrain");
+    expect(source).not.toContain("awaitRemotePreparation");
     expect(source).not.toContain("await inspectOwnerWork");
     expect(source).not.toContain("summarizeUnsyncedOwnerData");
     expect(source).not.toContain("purgeUnsyncedOwnerData");
     expect(source).not.toMatch(
       /copy\.(staySignedIn|syncFirst|discardAndSignOut|dialogTitle)/,
     );
-    expect(source).toContain("pauseHandle.finalizeForSignedOut()");
-    expect(source).toContain("window.location.replace(window.location.href)");
     expect(source).not.toMatch(
       /localStorage\.clear|indexedDB\.deleteDatabase|caches\.delete/,
     );
@@ -102,7 +97,7 @@ describe("shared sign-out control", () => {
     const source = await readSource("sign-out-control.tsx");
 
     expect(source.indexOf("onBeforeRequest?.();")).toBeLessThan(
-      source.indexOf("void requestSignOut();"),
+      source.indexOf("requestSignOut();"),
     );
   });
 });

@@ -6,11 +6,13 @@ import { flushSync } from "react-dom";
 import { useInterfaceLocaleChangeFormState } from "@/components/site-shell/interface-locale-change-boundary";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { runBrowserAuthMutation } from "@/lib/auth/browser-auth-mutation-coordinator";
 import {
   AUTHORITATIVE_SESSION_CONFIRMATION_OPTIONS,
   classifySessionConfirmation,
   localizedPublicRoot,
   prepareCurrentSessionSignOut,
+  reconcileLocalExitSession,
   signOutCurrentSessionOnce,
   type PreparedCurrentSessionSignOut,
 } from "@/lib/auth/sign-out-contract";
@@ -28,6 +30,7 @@ import {
 } from "@/lib/auth/session-convergence";
 import {
   clearSessionInvalidationMarkerIfCurrent,
+  commitLocalExitInvalidationMarker,
   commitSessionInvalidationMarker,
   readSessionInvalidationMarker,
   subscribeToSessionInvalidationMarker,
@@ -49,10 +52,12 @@ import {
 import {
   deactivatePhysicalOwnerVault,
   fetchAuthenticatedOwnerVaultBinding,
+  sealActiveOwnerVaultsForLocalExit,
 } from "@/lib/offline/owner-vault";
 import { getTrustSurfaceCopy } from "@/lib/trust-surface-copy";
 
 import { BlockedSessionAccountMethods } from "./blocked-session-account-methods";
+import { LocalExitPublicSafeSurface } from "./local-exit-public-safe-surface";
 
 const REMOTE_PREPARATION_STALE_MS = 2 * 60_000;
 const REMOTE_PREPARATION_WATCHDOG_MS = 15_000;
@@ -79,11 +84,16 @@ type SessionRecheckFence = {
 
 function isVisualFixtureBrowserRequest(): boolean {
   if (typeof window === "undefined") return false;
-  if (window.location.pathname !== "/__visual-fixtures/session-recheck") {
+  if (
+    window.location.pathname !== "/__visual-fixtures/session-recheck" &&
+    window.location.pathname !== "/__visual-fixtures/account-sign-out"
+  ) {
     return false;
   }
   const params = new URLSearchParams(window.location.search);
-  return params.get("visualSessionConvergence") === "true";
+  return window.location.pathname === "/__visual-fixtures/session-recheck"
+    ? params.get("visualSessionConvergence") === "true"
+    : params.get("visualAccountSignOut") === "true";
 }
 
 export function SessionConvergenceBoundary({
@@ -91,6 +101,7 @@ export function SessionConvergenceBoundary({
   locale,
   localeControlFallback,
   authoritativeSessionRead,
+  currentSessionBinding = null,
   recheckMode = "compatibility_fenced",
 }: {
   children: React.ReactNode;
@@ -99,6 +110,8 @@ export function SessionConvergenceBoundary({
   localeControlFallback?: React.ReactNode;
   /** Local visual-fixture seam; production callers use Better Auth directly. */
   authoritativeSessionRead?: () => Promise<unknown>;
+  /** Immutable binding derived by the server for this admitted document. */
+  currentSessionBinding?: string | null;
   /** Route-scoped OVE-286 rollout; all unproven routes retain the OVE-236 fence. */
   recheckMode?: SessionRecheckMode;
 }) {
@@ -108,6 +121,7 @@ export function SessionConvergenceBoundary({
   const [activityGate, setActivityGate] = useState<
     "checking" | "ready" | "blocked"
   >("checking");
+  const [localExitCommitted, setLocalExitCommitted] = useState(false);
   const [remotePreparationPending, setRemotePreparationPending] =
     useState(false);
   const [fallbackExitState, setFallbackExitState] = useState<
@@ -152,7 +166,32 @@ export function SessionConvergenceBoundary({
     let authoritativeNavigationStarted = false;
     let authenticatedTreeAdmitted = false;
     let terminalInvalidationObserved = false;
+    let localExitTransitionStarted = false;
     const bootstrapInvalidationMarker = readSessionInvalidationMarker();
+    if (bootstrapInvalidationMarker.kind === "local_exit") {
+      terminalInvalidationObserved = true;
+      localExitTransitionStarted = true;
+      sealActiveOwnerVaultsForLocalExit();
+      // The initial render is already payload-free (`checking`), so ordinary
+      // effect state is sufficient here and avoids flushSync inside a lifecycle
+      // method. Event-driven peer/BFCache transitions still flush synchronously.
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- fail-closed marker bootstrap must replace the checking gate before any async continuation
+      setLocalExitCommitted(true);
+      setActivityGate("blocked");
+      if (currentSessionBinding) {
+        void reconcileLocalExitSession(
+          currentSessionBinding,
+          bootstrapInvalidationMarker,
+        ).then((result) => {
+          if (!disposed && result === "response_observed") {
+            window.location.replace(localizedPublicRoot(locale));
+          }
+        });
+      }
+      return () => {
+        disposed = true;
+      };
+    }
     const bootstrapRequiresVerifiedHydration =
       bootstrapInvalidationMarker.status === "present" ||
       bootstrapInvalidationMarker.status === "unknown";
@@ -231,6 +270,30 @@ export function SessionConvergenceBoundary({
       if (terminalOwnerSyncAborted || !baselineOwnerUserId) return;
       terminalOwnerSyncAborted = true;
       abortOwnerSyncAttempts(baselineOwnerUserId);
+    };
+    const beginLocalExitTransition = () => {
+      if (disposed || localExitTransitionStarted) return;
+      localExitTransitionStarted = true;
+      authoritativeNavigationStarted = true;
+      terminalInvalidationObserved = true;
+      const committed = commitLocalExitInvalidationMarker();
+      sealActiveOwnerVaultsForLocalExit();
+      flushSync(() => {
+        authenticatedTreeAdmitted = false;
+        setActivityGate("blocked");
+        setLocalExitCommitted(true);
+      });
+      abortTerminalOwnerSync();
+      activeOperationIds.clear();
+      operationLastSeenAt.clear();
+      operationPreparationRounds.clear();
+      updateRemotePreparationFence();
+      // A volatile-only marker cannot survive a document replacement. Keep
+      // this document on its public-safe surface until the shared cookie is
+      // authoritatively changed instead of risking a private repaint.
+      if (committed.status === "persisted") {
+        window.location.replace(localizedPublicRoot(locale));
+      }
     };
     const baselineReady = (async () => {
       try {
@@ -791,10 +854,17 @@ export function SessionConvergenceBoundary({
       void requireSettledWithin(async () => {
         const target = await prepareActionTimeFallbackSession();
         if (target.status === "already_signed_out") return target;
-        return signOutCurrentSessionOnce(target.prepared, {
-          getSession: () => readAuthoritativeSession(),
-          signOut: (options) => authClient.signOut(options),
+        const mutation = await runBrowserAuthMutation({
+          kind: "session_exit",
+          operation: () =>
+            signOutCurrentSessionOnce(target.prepared, {
+              getSession: () => readAuthoritativeSession(),
+              signOut: (options) => authClient.signOut(options),
+            }),
         });
+        return mutation.status === "completed"
+          ? mutation.value
+          : ({ status: "failed", reason: "session_changed" } as const);
       }, FALLBACK_SIGN_OUT_TIMEOUT_MS).then(
         (result) => {
           if (disposed || attempt !== fallbackExitAttempt) return;
@@ -1385,10 +1455,18 @@ export function SessionConvergenceBoundary({
         void cancelPreparation(payload.operationId);
       } else if (payload.signal === SESSION_CONVERGENCE_SIGNALS.committed) {
         void convergeCommittedSession(payload.operationId);
+      } else if (
+        payload.signal === SESSION_CONVERGENCE_SIGNALS.localExitCommitted
+      ) {
+        beginLocalExitTransition();
       }
     });
     const unsubscribeInvalidationMarker = subscribeToSessionInvalidationMarker(
       (snapshot) => {
+        if (snapshot.kind === "local_exit") {
+          beginLocalExitTransition();
+          return;
+        }
         if (snapshot.status === "present" || snapshot.status === "unknown") {
           // Storage delivery is itself a terminal current-document fact. The
           // originating tab already broadcast the identity-free operation, so
@@ -1401,6 +1479,10 @@ export function SessionConvergenceBoundary({
     const handlePageShow = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       const marker = readSessionInvalidationMarker();
+      if (marker.kind === "local_exit") {
+        beginLocalExitTransition();
+        return;
+      }
       if (marker.status === "present" || marker.status === "unknown") {
         beginFallbackChangedSessionTransition();
         return;
@@ -1451,6 +1533,7 @@ export function SessionConvergenceBoundary({
       operationPreparationRounds.clear();
       preparationGenerationRef.current += 1;
       if (
+        localExitTransitionStarted ||
         committedOperationsInFlight.size > 0 ||
         [...terminalOperationIds.values()].includes(
           SESSION_CONVERGENCE_SIGNALS.committed,
@@ -1497,7 +1580,11 @@ export function SessionConvergenceBoundary({
       }
       tabLease?.release();
     };
-  }, [locale, readAuthoritativeSession, recheckMode]);
+  }, [currentSessionBinding, locale, readAuthoritativeSession, recheckMode]);
+
+  if (localExitCommitted) {
+    return <LocalExitPublicSafeSurface locale={locale} />;
+  }
 
   if (activityGate !== "ready") {
     const trustCopy = getTrustSurfaceCopy(locale);

@@ -8,11 +8,14 @@ import {
   hasCurrentSessionBinding,
   isBoundedCurrentSessionId,
 } from "./current-session-binding";
+import type { SessionInvalidationMarkerRead } from "./session-invalidation-marker";
+import { runBrowserAuthMutation } from "./browser-auth-mutation-coordinator";
 
 export { deriveCurrentSessionBinding } from "./current-session-binding";
 
 export const CURRENT_SESSION_BINDING_HEADER =
   "x-overgarden-current-session-binding";
+export const LOCAL_EXIT_RECONCILIATION_PATH = "/api/auth/local-exit-reconcile";
 
 export interface PreparedCurrentSessionSignOut {
   readonly version: 1;
@@ -58,6 +61,69 @@ export type ConfirmedSignOutResult =
 
 export function localizedPublicRoot(locale: InterfaceLocale) {
   return localizedPath(locale, "/");
+}
+
+export type LocalExitReconciliationDispatch = "dispatched" | "unconfirmed";
+
+export type LocalExitReconciliationResult =
+  | "response_observed"
+  | "transport_unavailable"
+  | "not_applicable";
+
+export async function reconcileLocalExitSession(
+  currentSessionBinding: string | null,
+  marker: SessionInvalidationMarkerRead,
+  fetcher: typeof fetch = globalThis.fetch,
+): Promise<LocalExitReconciliationResult> {
+  if (
+    !hasCurrentSessionBinding(currentSessionBinding) ||
+    marker.kind !== "local_exit" ||
+    typeof fetcher !== "function"
+  ) {
+    return "not_applicable";
+  }
+
+  try {
+    await runBrowserAuthMutation({
+      kind: "session_exit",
+      localExitMarker: marker,
+      operation: () =>
+        fetcher(LOCAL_EXIT_RECONCILIATION_PATH, {
+          method: "POST",
+          cache: "no-store",
+          credentials: "same-origin",
+          keepalive: true,
+          headers: {
+            [CURRENT_SESSION_BINDING_HEADER]: currentSessionBinding,
+          },
+        }),
+    });
+    return "response_observed";
+  } catch {
+    return "transport_unavailable";
+  }
+}
+
+/**
+ * Start one bodyless, same-origin, keepalive reconciliation after the local UI
+ * exit has already committed. The promise is deliberately unobserved by UI;
+ * only a response compare-clears the exact captured local-exit generation.
+ */
+export function dispatchLocalExitReconciliation(
+  currentSessionBinding: string | null,
+  marker: SessionInvalidationMarkerRead,
+  fetcher: typeof fetch = globalThis.fetch,
+): LocalExitReconciliationDispatch {
+  if (
+    !hasCurrentSessionBinding(currentSessionBinding) ||
+    marker.kind !== "local_exit" ||
+    typeof fetcher !== "function"
+  ) {
+    return "unconfirmed";
+  }
+
+  void reconcileLocalExitSession(currentSessionBinding, marker, fetcher);
+  return "dispatched";
 }
 
 export async function prepareCurrentSessionSignOut(
@@ -126,6 +192,24 @@ export async function signOutCurrentSessionOnce(
     };
   }
 
+  if (client === CANONICAL_AUTH_CLIENT) {
+    const mutation = await runBrowserAuthMutation({
+      kind: "session_exit",
+      operation: () =>
+        executeCurrentSessionSignOut(preparedCurrentSession, client),
+    });
+    return mutation.status === "completed"
+      ? mutation.value
+      : { status: "failed", reason: "session_changed" };
+  }
+
+  return executeCurrentSessionSignOut(preparedCurrentSession, client);
+}
+
+async function executeCurrentSessionSignOut(
+  preparedCurrentSession: PreparedCurrentSessionSignOut,
+  client: CurrentSessionSignOutClient,
+): Promise<ConfirmedSignOutResult> {
   const beforeRequest = await confirmPreparedCurrentSession(
     preparedCurrentSession,
     client,

@@ -72,6 +72,7 @@ export function SiteShell({
   market,
   isAuthenticated,
   documentMutationGeneration = null,
+  currentSessionBinding = null,
   communitiesReady = false,
 }: {
   children: React.ReactNode;
@@ -79,6 +80,7 @@ export function SiteShell({
   market: InterfaceMarket;
   isAuthenticated: boolean;
   documentMutationGeneration?: string | null;
+  currentSessionBinding?: string | null;
   communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
@@ -147,13 +149,19 @@ export function SiteShell({
       <SessionConvergenceBoundary
         locale={locale}
         localeControlFallback={sessionConvergenceLocaleControl}
+        currentSessionBinding={currentSessionBinding}
         recheckMode={sessionRecheckMode}
       >
         <DocumentMutationGenerationProvider
           locale={locale}
           transport={documentMutationGeneration}
         >
-          <SignOutProvider locale={locale}>{excludedShell}</SignOutProvider>
+          <SignOutProvider
+            locale={locale}
+            currentSessionBinding={currentSessionBinding}
+          >
+            {excludedShell}
+          </SignOutProvider>
         </DocumentMutationGenerationProvider>
       </SessionConvergenceBoundary>
     );
@@ -581,13 +589,19 @@ export function SiteShell({
     <SessionConvergenceBoundary
       locale={locale}
       localeControlFallback={sessionConvergenceLocaleControl}
+      currentSessionBinding={currentSessionBinding}
       recheckMode={sessionRecheckMode}
     >
       <DocumentMutationGenerationProvider
         locale={locale}
         transport={documentMutationGeneration}
       >
-        <SignOutProvider locale={locale}>{shell}</SignOutProvider>
+        <SignOutProvider
+          locale={locale}
+          currentSessionBinding={currentSessionBinding}
+        >
+          {shell}
+        </SignOutProvider>
       </DocumentMutationGenerationProvider>
     </SessionConvergenceBoundary>
   );

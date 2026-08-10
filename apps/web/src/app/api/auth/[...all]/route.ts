@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 
 import { auth } from "@/lib/auth";
+import { executeCurrentSessionExit } from "@/lib/auth/sign-out-hardening";
 import { denyRetiredSocialProviderRequest } from "@/lib/auth/retired-social-provider";
 import {
   equalizePasswordResetAdmission,
@@ -35,6 +36,21 @@ export async function POST(request: Request) {
     return await requestPasswordReset(request);
   }
 
+  if (isCurrentSessionSignOutRequest(request)) {
+    let canonicalHttpAttemptStarted = false;
+    const result = await executeCurrentSessionExit(
+      request.headers,
+      (context) => {
+        if (!canonicalHttpAttemptStarted) {
+          canonicalHttpAttemptStarted = true;
+          return handler.POST(request);
+        }
+        return auth.api.signOut(context);
+      },
+    );
+    return result.response;
+  }
+
   return handler.POST(request);
 }
 
@@ -42,6 +58,10 @@ function isPasswordResetRequest(request: Request): boolean {
   return new URL(request.url).pathname.endsWith(
     "/api/auth/request-password-reset",
   );
+}
+
+function isCurrentSessionSignOutRequest(request: Request): boolean {
+  return new URL(request.url).pathname === "/api/auth/sign-out";
 }
 
 async function requestPasswordReset(request: Request): Promise<Response> {

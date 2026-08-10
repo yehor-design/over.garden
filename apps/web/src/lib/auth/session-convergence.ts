@@ -13,6 +13,7 @@ export const SESSION_CONVERGENCE_SIGNALS = {
   failed: "sign_out_preparation_failed",
   cancellation: "sign_out_preparation_cancelled",
   committed: "session_invalidation_committed",
+  localExitCommitted: "local_exit_committed",
 } as const;
 
 export type SessionConvergenceSignal =
@@ -25,6 +26,7 @@ export const SESSION_CONVERGENCE_PHASE_RANK = {
   [SESSION_CONVERGENCE_SIGNALS.failed]: 2,
   [SESSION_CONVERGENCE_SIGNALS.cancellation]: 3,
   [SESSION_CONVERGENCE_SIGNALS.committed]: 3,
+  [SESSION_CONVERGENCE_SIGNALS.localExitCommitted]: 3,
 } as const satisfies Record<SessionConvergenceSignal, 1 | 2 | 3>;
 
 export interface SessionConvergencePayload {
@@ -420,6 +422,15 @@ export function publishCommittedSessionInvalidation(
   commitSessionInvalidationMarker();
   return publishSessionConvergenceSignal(
     SESSION_CONVERGENCE_SIGNALS.committed,
+    operationId,
+    tabId,
+    null,
+  );
+}
+
+export function publishLocalExitCommitted(operationId: string, tabId: string) {
+  return publishSessionConvergenceSignal(
+    SESSION_CONVERGENCE_SIGNALS.localExitCommitted,
     operationId,
     tabId,
     null,
