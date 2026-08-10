@@ -16,6 +16,7 @@ import {
   SESSION_CONVERGENCE_STORAGE_KEY,
   subscribeToSessionConvergence,
 } from "./session-convergence";
+import { SESSION_INVALIDATION_MARKER_STORAGE_KEY } from "./session-invalidation-marker";
 
 describe("session convergence signals", () => {
   afterEach(() => {
@@ -140,6 +141,20 @@ describe("session convergence signals", () => {
         "tabId",
         "version",
       ].sort(),
+    );
+  });
+
+  it("commits the persistent invalidation marker before terminal broadcast", () => {
+    const harness = installBrowserHarness();
+
+    publishCommittedSessionInvalidation(
+      "op-marker-order-tab-1234",
+      "tab-marker-order-tab-1234",
+    );
+
+    expect(harness.markerAtBroadcast).toHaveLength(1);
+    expect(harness.markerAtBroadcast[0]).toMatch(
+      /^\{"v":1,"g":"[A-Za-z0-9_-]{22}"\}$/,
     );
   });
 
@@ -513,9 +528,13 @@ function installBrowserHarness(options: { broadcast?: boolean } = {}) {
   const windowListeners = new Map<string, Set<(event: Event) => void>>();
   const documentListeners = new Map<string, Set<EventListener>>();
   const posted: unknown[] = [];
+  const markerAtBroadcast: Array<string | null> = [];
 
   class TestBroadcastChannel {
     postMessage(value: unknown) {
+      markerAtBroadcast.push(
+        storage.getItem(SESSION_INVALIDATION_MARKER_STORAGE_KEY),
+      );
       posted.push(value);
       for (const listener of broadcastListeners) {
         listener({ data: value } as MessageEvent);
@@ -560,6 +579,7 @@ function installBrowserHarness(options: { broadcast?: boolean } = {}) {
   return {
     storage,
     posted,
+    markerAtBroadcast,
     emitBroadcast(value: unknown) {
       for (const listener of broadcastListeners) {
         listener({ data: value } as MessageEvent);

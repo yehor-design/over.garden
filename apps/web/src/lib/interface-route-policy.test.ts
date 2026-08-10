@@ -4,6 +4,7 @@ import {
   buildLocalizedInterfaceTarget,
   getInterfaceLanguageControlPlacement,
   getInterfaceRoutePolicy,
+  getSessionRecheckMode,
   INTERFACE_UTILITY_CONTROL_PREFIXES,
   isSessionConvergenceSafeExitRoute,
   sanitizeInterfaceRouteFragment,
@@ -11,6 +12,30 @@ import {
 } from "./interface-route-policy";
 
 describe("interface route policy", () => {
+  it("admits non-fencing rechecks only for an exact existing-entry editor path", () => {
+    const entryId = "00000000-0000-4000-8000-000000000123";
+
+    expect(getSessionRecheckMode(`/garden/entries/${entryId}/edit`)).toBe(
+      "effect_closed_non_fencing",
+    );
+
+    for (const pathname of [
+      "/garden",
+      `/garden/entries/${entryId}`,
+      `/garden/entries/${entryId}/edit/`,
+      `/garden/entries/${entryId}/edit/extra`,
+      `/garden/entries/not-a-uuid/edit`,
+      `/garden/entries/${entryId}%2Fedit`,
+      `/bg/garden/entries/${entryId}/edit`,
+      `/garden/entries/${entryId}/edit?source=private`,
+      `/garden/entries/${entryId}/edit#draft`,
+    ]) {
+      expect(getSessionRecheckMode(pathname), pathname).toBe(
+        "compatibility_fenced",
+      );
+    }
+  });
+
   it("classifies localized, canonical unprefixed, and non-UI routes", () => {
     expect(getInterfaceRoutePolicy("/topics/care-checks").mode).toBe(
       "localized-link",

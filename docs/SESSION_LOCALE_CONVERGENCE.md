@@ -1,6 +1,6 @@
 # Session and locale convergence
 
-Status: OVE-214 canonical protocol; OVE-236 ordinary-recheck privacy fence
+Status: OVE-214 canonical locale protocol; OVE-286 route-scoped session convergence
 
 This document owns the bounded recovery contract for an authenticated session
 gate and a Bulgaria `bg`/`ru` interface transition. It is deliberately a
@@ -12,9 +12,12 @@ cookie value, request body, timing sample, or private route.
 A gardener can always leave a slow local persistence or session read without
 losing the current owner-scoped in-memory work. During an ordinary locale
 handoff, the current locale and private tree remain in place until a current
-operation has made a guarded handoff. During a focus, visible-page, or explicit
-session retry, the old private tree is synchronously replaced by a payload-free
-gate before any asynchronous identity read; only exact-A proof may re-admit it.
+operation has made a guarded handoff. On the OVE-290 effect-closed
+existing-entry editor, focus and visible-page session observations keep the
+already-authorized editor mounted and interactive until terminal evidence
+exists. Every other authenticated route retains the OVE-236 payload-free
+compatibility fence until OVE-291 closes and promotes its remaining mutation
+surface.
 Shell navigation and the existing sign-out control are not disabled by a locale
 wait.
 
@@ -95,36 +98,57 @@ cd apps/web
 pnpm smoke:session-locale-convergence -- --environment production --confirm-environment production --base-url https://over.garden --expected-commit "$OVE214_IMPLEMENTATION_SHA"
 ```
 
-## OVE-236 ordinary recheck fence
+## OVE-286 route-scoped session convergence
 
-Focus, visible-page, and explicit recovery retries are identity boundaries. The
-boundary increments an in-memory epoch and synchronously commits the
-payload-free `checking` gate before its no-cache session read or owner-local
-work begins. It aborts owner-A sync attempts and starts the existing
-owner-A composer/offline pause path; no new queue, session, or sign-out owner
-exists.
+`getSessionRecheckMode` is the only rollout authority. Exactly the normalized
+unprefixed pathname `/garden/entries/{valid UUID}/edit` receives
+`effect_closed_non_fencing`. Locale-prefixed, query-bearing, encoded,
+malformed, adjacent, and every other authenticated pathname receive
+`compatibility_fenced`. The allowlist is narrow because OVE-290 already guards
+all journal edit, upload, process, and focal mutations reachable from that
+editor. OVE-291 owns the remaining authenticated mutation entrypoints and is
+the only task that may later expand this rollout.
 
-Only an authoritative result matching the immutable document-A baseline, a
-current epoch, a settled matching pause/composer fence, and successful
-owner-generation hydration may reopen the tree. A signed-out or changed
-session uses the existing terminal finalizers. A malformed, rejected, unknown,
-or timed-out result remains `blocked`, does not retry automatically, and keeps
-both enabled payload-free escapes: public-home navigation and reload-and-
-recheck. Before a user-triggered or BFCache reload replaces the document, the
-boundary finalizes only its own retained owner-session-recheck fence through
-`finalizeForHardReload`. If that bounded three-second finalization cannot
-settle, no reload occurs: the private tree remains hidden and the same recovery
-controls stay available. A late session, hydration, composer, or sync continuation cannot
-override a later epoch or release a terminal fence.
+On the admitted editor, one bounded no-cache read is coalesced across focus and
+visible-page signals. Exact-session success changes nothing. Timeout, malformed
+data, unknown classification, or network failure is a silent nonterminal
+`background_unavailable` observation: the private React tree, form controls,
+composer, owner sync, and offline activity remain unchanged. The compatibility
+mode retains the prior eager `checking` gate, composer fence, sync abort, and
+owner-activity pause before the session await.
 
-The browser race harness is deliberately local and synthetic. Its route is
-inside the already fail-closed visual-fixture environment, its only private
-markup is labelled synthetic, and the runner accepts loopback origins only. It
-does not read production accounts, cookies, drafts, queues, media, or service
-credentials.
+A same-owner new session binding is a fresh-document refresh, not an owner
+change. It writes no terminal marker, publishes no terminal signal, shows no
+owner-change message, and reloads once without pre-hiding the editor. Only the
+fresh bounded bootstrap may pass
+`allowAuthoritativeSessionRebind: true`; that path updates the same owner's
+local activity generation without moving, deleting, or reassigning vault,
+draft, queue, or owner-activity rows. Ordinary stale-document callers remain
+closed.
+
+Terminal evidence is a confirmed local exit/account switch, peer committed
+signal, present or malformed marker, authoritative signed-out/different-owner
+result, or `DOCUMENT_OWNER_CHANGED`. It synchronously commits the single
+payload-free v1 invalidation marker before terminal publication or any await,
+removes the old private tree, and latches the document terminal. No exact old
+session completion may reopen it. BroadcastChannel is the fast path;
+localStorage is the sleeping-tab and BFCache recovery path. The marker contains
+only a version and cryptographically random opaque generation. A fresh
+authoritative bootstrap captures the marker before asynchronous work and
+compare-clears only that byte-identical snapshot after session and owner-vault
+hydration; a newer marker always wins.
+
+The deterministic fixture remains local/isolated-preview only and contains
+synthetic markup. Production must return 404 for it. The browser matrix proves
+uk/bg/ru, twenty coalesced signals, degraded reads, compatibility fencing,
+same-owner refresh, marker reload/BFCache races, irreversible peer invalidation,
+responsive controls, and at most 100 ms terminal private-tree removal. No
+production account, cookie, draft, queue, media, identity, or marker generation
+enters its receipt.
 
 ```bash
 cd apps/web
-pnpm smoke:session-recheck-fence -- --browser chromium --base-url http://127.0.0.1:3000
-pnpm smoke:session-recheck-fence -- --browser safari-technology-preview --base-url http://127.0.0.1:3000
+pnpm exec playwright test tests/session-convergence.spec.ts
+pnpm smoke:session-convergence
+BASE_URL="$OVE286_IMMUTABLE_URL" pnpm smoke:session-convergence
 ```

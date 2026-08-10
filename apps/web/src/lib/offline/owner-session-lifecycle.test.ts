@@ -966,6 +966,49 @@ describe("owner offline session lifecycle", () => {
     ).resolves.toBe("document_session_changed");
   });
 
+  it("rebinds a fresh same-owner document without moving its drafts or queue", async () => {
+    const oldGeneration = "test-session-generation-owner-a-1234";
+    const newGeneration = "test-session-generation-owner-a-new-5678";
+    const mutation = await enqueueOfflineMutation({
+      ownerUserId: OWNER_A,
+      kind: "journal_entry",
+      payload: journalPayload("survives same-owner rebind"),
+      idempotencyKey: "same-owner-rebind-mutation",
+    });
+    await upsertOfflineDraft({
+      ownerUserId: OWNER_A,
+      id: "same-owner-rebind-draft",
+      kind: "first_entry",
+      payload: firstEntryDraftPayload("survives same-owner rebind"),
+    });
+
+    await expect(
+      hydrateOwnerOfflineActivitySession(OWNER_A, newGeneration),
+    ).resolves.toBe("document_session_changed");
+    await expect(
+      hydrateOwnerOfflineActivitySession(OWNER_A, newGeneration, undefined, {
+        allowAuthoritativeSessionRebind: true,
+      }),
+    ).resolves.toBe("ready");
+
+    expect(await offlineDb!.ownerActivity.get(OWNER_A)).toEqual(
+      expect.objectContaining({
+        ownerUserId: OWNER_A,
+        sessionGeneration: newGeneration,
+        lifecycle: "active",
+      }),
+    );
+    expect(
+      await offlineDb!.drafts.get([OWNER_A, "same-owner-rebind-draft"]),
+    ).toEqual(expect.objectContaining({ ownerUserId: OWNER_A }));
+    expect(await offlineDb!.mutations.get(mutation.id)).toEqual(
+      expect.objectContaining({ ownerUserId: OWNER_A, status: "queued" }),
+    );
+    await expect(
+      hydrateOwnerOfflineActivitySession(OWNER_A, oldGeneration),
+    ).resolves.toBe("document_session_changed");
+  });
+
   it("guards every draft and mutation write against a stale document generation", async () => {
     const mutation = await enqueueOfflineMutation({
       ownerUserId: OWNER_A,

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   pathname: "/",
   localeControlFallback: null as React.ReactNode,
+  sessionRecheckMode: null as string | null,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -14,12 +15,22 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
   SessionConvergenceBoundary: ({
     children,
     localeControlFallback,
+    recheckMode,
   }: {
     children: React.ReactNode;
     localeControlFallback?: React.ReactNode;
+    recheckMode: string;
   }) => {
     mocks.localeControlFallback = localeControlFallback ?? null;
-    return <div data-session-convergence-boundary="true">{children}</div>;
+    mocks.sessionRecheckMode = recheckMode;
+    return (
+      <div
+        data-session-convergence-boundary="true"
+        data-session-recheck-mode={recheckMode}
+      >
+        {children}
+      </div>
+    );
   },
 }));
 vi.mock("@/components/auth/document-mutation-recovery", () => ({
@@ -40,6 +51,7 @@ describe("production site shell", () => {
   beforeEach(() => {
     mocks.pathname = "/";
     mocks.localeControlFallback = null;
+    mocks.sessionRecheckMode = null;
   });
 
   it("renders the guest desktop and mobile information architecture", async () => {
@@ -119,12 +131,29 @@ describe("production site shell", () => {
     expect(
       fallbackHtml.match(/data-interface-language-control=/g),
     ).toHaveLength(1);
-    expect(fallbackHtml).toContain('disabled=""');
+    expect(fallbackHtml).not.toContain('disabled=""');
     expect(html).not.toMatch(
       /private@example|private-user|private-session|owner_user_id/i,
     );
     expect(html).toContain(
       'data-document-mutation-generation="opaque-generation"',
+    );
+    expect(html).toContain('data-session-recheck-mode="compatibility_fenced"');
+  });
+
+  it("passes non-fencing mode only to the exact OVE-290-closed editor", async () => {
+    mocks.pathname =
+      "/garden/entries/00000000-0000-4000-8000-000000000123/edit";
+    const { SiteShell } = await import("./site-shell");
+    const html = renderToStaticMarkup(
+      <SiteShell locale="uk" market="ukraine" isAuthenticated>
+        <main>Existing entry editor</main>
+      </SiteShell>,
+    );
+
+    expect(mocks.sessionRecheckMode).toBe("effect_closed_non_fencing");
+    expect(html).toContain(
+      'data-session-recheck-mode="effect_closed_non_fencing"',
     );
   });
 
@@ -277,7 +306,7 @@ describe("production site shell", () => {
     );
     expect(
       source.match(
-        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s+recheckMode=\{sessionRecheckMode\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
       ),
     ).toHaveLength(2);
     expect(source).not.toMatch(

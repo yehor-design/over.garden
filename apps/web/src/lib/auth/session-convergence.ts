@@ -1,5 +1,7 @@
 "use client";
 
+import { commitSessionInvalidationMarker } from "./session-invalidation-marker";
+
 export const SESSION_CONVERGENCE_CHANNEL = "overgarden:session-convergence:v2";
 export const SESSION_CONVERGENCE_STORAGE_KEY =
   "overgarden:session-convergence-signal:v2";
@@ -199,23 +201,18 @@ export function createPreparationAcknowledgementBarrier(
         finish(new Error("Another tab could not prepare for sign-out."));
         return;
       }
-      if (
-        payload.signal !== SESSION_CONVERGENCE_SIGNALS.ready
-      ) {
+      if (payload.signal !== SESSION_CONVERGENCE_SIGNALS.ready) {
         return;
       }
       expectedTabIds.delete(payload.tabId);
       if (expectedTabIds.size === 0) finish();
     });
-    livenessTimeoutId = window.setTimeout(
-      () => {
-        for (const tabId of expectedTabIds) {
-          if (!acknowledgedTabIds.has(tabId)) expectedTabIds.delete(tabId);
-        }
-        startPreparationDeadline();
-      },
-      PREPARATION_LIVENESS_ACKNOWLEDGEMENT_TIMEOUT_MS,
-    );
+    livenessTimeoutId = window.setTimeout(() => {
+      for (const tabId of expectedTabIds) {
+        if (!acknowledgedTabIds.has(tabId)) expectedTabIds.delete(tabId);
+      }
+      startPreparationDeadline();
+    }, PREPARATION_LIVENESS_ACKNOWLEDGEMENT_TIMEOUT_MS);
   }
 
   return {
@@ -420,6 +417,7 @@ export function publishCommittedSessionInvalidation(
   operationId: string,
   tabId: string,
 ) {
+  commitSessionInvalidationMarker();
   return publishSessionConvergenceSignal(
     SESSION_CONVERGENCE_SIGNALS.committed,
     operationId,

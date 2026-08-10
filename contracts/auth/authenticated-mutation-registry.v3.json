@@ -21357,6 +21357,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/session-invalidation-marker.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/session-invalidation-marker",
+      "sourceNodeId": "source:16a4038324cfdcbe9eae",
+      "symbol": "clearSessionInvalidationMarkerIfCurrent"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/owner-vault-migration.ts"
       ],
       "nodeKind": "effect_owner",
@@ -26475,6 +26487,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/session-invalidation-marker.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/session-invalidation-marker",
+      "sourceNodeId": "source:4097f2bf2f55f5765f0a",
+      "symbol": "subscribeToSessionInvalidationMarker"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -28542,6 +28566,18 @@
       "semanticVariant": "action:setCommunityParticipationAction",
       "sourceNodeId": "source:51abaa575a0b0edffb3c",
       "symbol": "setCommunityParticipationAction"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/session-invalidation-marker.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/session-invalidation-marker",
+      "sourceNodeId": "source:51ad78038770a77963c4",
+      "symbol": "commitSessionInvalidationMarker"
     },
     {
       "evidencePaths": [
@@ -37373,6 +37409,18 @@
     {
       "evidencePaths": [
         "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/interface-route-policy.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/interface-route-policy",
+      "sourceNodeId": "source:9cbf2e0e85a34798a9cf",
+      "symbol": "SessionRecheckMode"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
         "src/lib/offline/owner-session-lifecycle.ts"
       ],
       "nodeKind": "import",
@@ -43277,6 +43325,18 @@
       "semanticVariant": "from:@/server/engagement-repository",
       "sourceNodeId": "source:cc73027f98f4e9f82a1a",
       "symbol": "EngagementBookmarkShelfItem"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/session-invalidation-marker.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/session-invalidation-marker",
+      "sourceNodeId": "source:cce3584d43262ddb9102",
+      "symbol": "readSessionInvalidationMarker"
     },
     {
       "evidencePaths": [
