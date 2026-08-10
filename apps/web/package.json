@@ -85,6 +85,7 @@
     "smoke:self-serve-mvp": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-self-serve-mvp.ts",
     "smoke:self-serve-providers": "tsx scripts/smoke-self-serve-providers.ts",
     "smoke:exact-sha-self-serve": "tsx scripts/smoke-exact-sha-self-serve.ts",
+    "facebook-login:external-cleanup": "tsx scripts/verify-facebook-login-external-cleanup.ts",
     "auth:security:check": "tsx scripts/verify-better-auth-security.ts",
     "smoke:public-index-parity": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-index-parity.ts",
     "smoke:public-projection-revocation": "NODE_OPTIONS=--conditions=react-server tsx scripts/smoke-public-projection-revocation.ts --environment local --confirm-environment local",
