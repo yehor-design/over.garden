@@ -9,6 +9,11 @@ import {
   type JournalDocumentV1,
 } from "@/lib/garden/journal-document";
 import { AUTH_INTENT_RETURN_HEADER } from "@/lib/auth/auth-intent-http-contract";
+import {
+  DOCUMENT_MUTATION_GENERATION_HEADER,
+  isDocumentMutationAdmissionTransportResult,
+  type DocumentMutationAdmissionTransportResultV1,
+} from "@/lib/auth/document-mutation-generation-transport";
 import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
 import {
   claimOfflineMutationForSync,
@@ -47,12 +52,25 @@ const ALLOWED_IMAGE_TYPES = new Set([
 export class JournalEntrySyncError extends Error {
   readonly status: number;
   readonly authIntentUrl: string | null;
+  readonly documentMutationAdmission: Exclude<
+    DocumentMutationAdmissionTransportResultV1,
+    "MATCH"
+  > | null;
 
-  constructor(message: string, status: number, authIntentUrl: string | null) {
+  constructor(
+    message: string,
+    status: number,
+    authIntentUrl: string | null,
+    documentMutationAdmission: Exclude<
+      DocumentMutationAdmissionTransportResultV1,
+      "MATCH"
+    > | null = null,
+  ) {
     super(message);
     this.name = "JournalEntrySyncError";
     this.status = status;
     this.authIntentUrl = authIntentUrl;
+    this.documentMutationAdmission = documentMutationAdmission;
   }
 }
 
@@ -62,6 +80,7 @@ export async function submitJournalEntryPayload(
     idempotencyKey?: string;
     onProcessedMediaAsset?: (mediaAssetId: string) => Promise<void>;
     onResolvedPayload?: (next: OfflineJournalEntryPayload) => Promise<void>;
+    documentMutationGeneration?: string | null;
     signal?: AbortSignal;
   } = {},
 ): Promise<FirstPlantEntryResponse> {
@@ -70,6 +89,7 @@ export async function submitJournalEntryPayload(
   const resolved = await resolveOfflineMediaForJournalPayload(
     payload,
     authReturnTo,
+    options.documentMutationGeneration,
     options.signal,
   );
 
@@ -94,6 +114,7 @@ export async function submitJournalEntryPayload(
     headers: {
       "Content-Type": "application/json",
       [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+      ...documentMutationHeaders(options.documentMutationGeneration),
     },
     body: JSON.stringify(requestBody),
     signal: options.signal,
@@ -105,6 +126,7 @@ export async function submitJournalEntryPayload(
       error.message,
       response.status,
       error.authIntentUrl,
+      error.documentMutationAdmission,
     );
   }
 
@@ -132,7 +154,11 @@ interface SubmitOnlineJournalEntryDependencies {
 
 export async function submitOnlineJournalEntryPayload(
   payload: OfflineJournalEntryPayload,
-  options: { ownerUserId: string; idempotencyKey: string },
+  options: {
+    ownerUserId: string;
+    idempotencyKey: string;
+    documentMutationGeneration?: string | null;
+  },
   dependencies: SubmitOnlineJournalEntryDependencies = {},
 ) {
   const enqueueMutation =
@@ -152,6 +178,7 @@ export async function submitOnlineJournalEntryPayload(
     return runOwnerSyncAttempt(options.ownerUserId, (signal) =>
       submitDirect(payload, {
         idempotencyKey: options.idempotencyKey,
+        documentMutationGeneration: options.documentMutationGeneration,
         signal,
       }),
     );
@@ -161,12 +188,16 @@ export async function submitOnlineJournalEntryPayload(
     dependencies.syncMutation ?? syncOfflineJournalEntryMutation;
   return syncMutation(mutation, {
     expectedOwnerUserId: options.ownerUserId,
+    documentMutationGeneration: options.documentMutationGeneration,
   });
 }
 
 export async function syncOfflineJournalEntryMutation(
   mutation: OfflineMutation,
-  options: { expectedOwnerUserId: string },
+  options: {
+    expectedOwnerUserId: string;
+    documentMutationGeneration?: string | null;
+  },
 ): Promise<FirstPlantEntryResponse> {
   if (mutation.kind !== "journal_entry") {
     throw new Error("Only journal entry mutations can be synced here.");
@@ -189,6 +220,7 @@ export async function syncOfflineJournalEntryMutation(
     try {
       const result = await submitJournalEntryPayload(payload, {
         idempotencyKey: claimed.idempotencyKey,
+        documentMutationGeneration: options.documentMutationGeneration,
         signal,
         onProcessedMediaAsset: async (mediaAssetId) => {
           const latest = await getOfflineMutation(
@@ -365,6 +397,7 @@ function resolveCoverClaimForSync(
 async function resolveOfflineMediaForJournalPayload(
   payload: OfflineJournalEntryPayload,
   authReturnTo: string,
+  documentMutationGeneration?: string | null,
   signal?: AbortSignal,
 ): Promise<{
   payload: OfflineJournalEntryPayload;
@@ -377,7 +410,12 @@ async function resolveOfflineMediaForJournalPayload(
   };
 
   for (const [provisionalId, intent] of Object.entries(remainingIntents)) {
-    const realId = await processPhotoIntent(intent, authReturnTo, signal);
+    const realId = await processPhotoIntent(
+      intent,
+      authReturnTo,
+      documentMutationGeneration,
+      signal,
+    );
     if (!realId) continue;
     mediaIdMap.set(provisionalId, realId);
     delete remainingIntents[provisionalId];
@@ -388,6 +426,7 @@ async function resolveOfflineMediaForJournalPayload(
     primaryMediaAssetId = await processPhotoIntent(
       payload.photoIntent,
       authReturnTo,
+      documentMutationGeneration,
       signal,
     );
   }
@@ -401,6 +440,7 @@ async function resolveOfflineMediaForJournalPayload(
     const coverMediaAssetId = await processPhotoIntent(
       nextCover.photoIntent ?? null,
       authReturnTo,
+      documentMutationGeneration,
       signal,
     );
     if (coverMediaAssetId) {
@@ -471,6 +511,7 @@ async function resolveOfflineMediaForJournalPayload(
 async function processPhotoIntent(
   intent: OfflinePhotoIntent | null,
   authReturnTo: string,
+  documentMutationGeneration?: string | null,
   signal?: AbortSignal,
 ) {
   if (!intent) return null;
@@ -496,6 +537,7 @@ async function processPhotoIntent(
     headers: {
       "Content-Type": "application/json",
       [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+      ...documentMutationHeaders(documentMutationGeneration),
     },
     body: JSON.stringify({
       contentType: intent.contentType,
@@ -513,6 +555,7 @@ async function processPhotoIntent(
       error.message,
       uploadResponse.status,
       error.authIntentUrl,
+      error.documentMutationAdmission,
     );
   }
 
@@ -533,6 +576,7 @@ async function processPhotoIntent(
     headers: {
       "Content-Type": "application/json",
       [AUTH_INTENT_RETURN_HEADER]: authReturnTo,
+      ...documentMutationHeaders(documentMutationGeneration),
     },
     body: JSON.stringify({ mediaAssetId: upload.mediaAssetId }),
     signal,
@@ -547,6 +591,7 @@ async function processPhotoIntent(
       error.message,
       processResponse.status,
       error.authIntentUrl,
+      error.documentMutationAdmission,
     );
   }
 
@@ -562,15 +607,22 @@ async function processPhotoIntent(
 export async function uploadComposerPhotoIntent(
   intent: OfflinePhotoIntent,
   authReturnTo: string,
+  documentMutationGeneration?: string | null,
   signal?: AbortSignal,
 ) {
-  return processPhotoIntent(intent, authReturnTo, signal);
+  return processPhotoIntent(
+    intent,
+    authReturnTo,
+    documentMutationGeneration,
+    signal,
+  );
 }
 
 async function readSafeSyncError(response: Response, fallback: string) {
   const body = (await response.json().catch(() => null)) as {
     error?: unknown;
     authIntentUrl?: unknown;
+    code?: unknown;
   } | null;
   const candidate =
     typeof body?.authIntentUrl === "string" ? body.authIntentUrl : "";
@@ -583,7 +635,18 @@ async function readSafeSyncError(response: Response, fallback: string) {
   return {
     message: typeof body?.error === "string" ? body.error : fallback,
     authIntentUrl,
+    documentMutationAdmission:
+      isDocumentMutationAdmissionTransportResult(body?.code) &&
+      body.code !== "MATCH"
+        ? body.code
+        : null,
   };
+}
+
+function documentMutationHeaders(
+  transport: string | null | undefined,
+): Record<string, string> {
+  return transport ? { [DOCUMENT_MUTATION_GENERATION_HEADER]: transport } : {};
 }
 
 function normalizeError(error: unknown) {

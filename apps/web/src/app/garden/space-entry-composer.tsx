@@ -16,6 +16,7 @@ import {
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import {
   createEmptyJournalDocument,
@@ -79,6 +80,7 @@ export function SpaceEntryComposer({
   enableOfflinePersistence = true,
 }: SpaceEntryComposerProps) {
   const copy = getGardenWorkspaceCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const labels = getStructuredJournalComposerLabels(locale);
   const draftId = spaceEntryDraftId(spaceId);
   const structuredComposerRef = useRef<StructuredJournalComposerHandle | null>(
@@ -281,6 +283,7 @@ export function SpaceEntryComposer({
       const result = await submitOnlineJournalEntryPayload(payload, {
         ownerUserId,
         idempotencyKey: clientMutationId,
+        documentMutationGeneration: documentMutation?.transport,
       });
       await deleteOfflineDraft(ownerUserId, draftId);
       setClientMutationId(crypto.randomUUID());
@@ -296,6 +299,17 @@ export function SpaceEntryComposer({
       setSubmitState("idle");
       window.location.assign(result.readbackUrl);
     } catch (error) {
+      if (
+        error instanceof JournalEntrySyncError &&
+        error.documentMutationAdmission
+      ) {
+        documentMutation?.handleTransportResult(
+          error.documentMutationAdmission,
+        );
+        setSubmitState("failed");
+        setMessage(labels.failureBody);
+        return;
+      }
       if (error instanceof JournalEntrySyncError && error.authIntentUrl) {
         setSubmitState("idle");
         setMessage(copy.composer.messages.signInToContinue);

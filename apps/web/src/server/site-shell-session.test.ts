@@ -4,20 +4,28 @@ import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  getCurrentSession: vi.fn(),
+  getAuthoritativeCurrentSession: vi.fn(),
+  issueDocumentMutationGeneration: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
-  getCurrentSession: mocks.getCurrentSession,
+  getAuthoritativeCurrentSession: mocks.getAuthoritativeCurrentSession,
+  getSessionId: (session: { session?: { id?: unknown } } | null) =>
+    typeof session?.session?.id === "string" ? session.session.id : null,
+}));
+
+vi.mock("@/lib/auth/document-mutation-generation-contract", () => ({
+  issueDocumentMutationGeneration: mocks.issueDocumentMutationGeneration,
 }));
 
 describe("site shell session boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.unstubAllEnvs();
   });
 
-  it("serializes only an authentication boolean", async () => {
-    mocks.getCurrentSession.mockResolvedValue({
+  it("serializes only authentication state and the opaque signed generation", async () => {
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
       user: {
         id: "private-user-id",
         email: "private@example.com",
@@ -27,29 +35,79 @@ describe("site shell session boundary", () => {
         id: "private-session-id",
       },
     });
+    mocks.issueDocumentMutationGeneration.mockReturnValue({
+      transport: "opaque-signed-document-generation",
+    });
     const { getSiteShellSessionState } = await import("./site-shell-session");
 
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: true,
+      documentMutationGeneration: "opaque-signed-document-generation",
     });
+    expect(mocks.issueDocumentMutationGeneration).toHaveBeenCalledWith({
+      ownerUserId: "private-user-id",
+      sessionId: "private-session-id",
+      issuedAtSeconds: expect.any(Number),
+    });
+    expect(JSON.stringify(await getSiteShellSessionState())).not.toContain(
+      "private-user-id",
+    );
+    expect(JSON.stringify(await getSiteShellSessionState())).not.toContain(
+      "private-session-id",
+    );
   });
 
   it("returns the same bounded shape for a guest", async () => {
-    mocks.getCurrentSession.mockResolvedValue(null);
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue(null);
     const { getSiteShellSessionState } = await import("./site-shell-session");
 
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: false,
+      documentMutationGeneration: null,
     });
   });
 
   it("degrades to guest navigation when session resolution is unavailable", async () => {
-    mocks.getCurrentSession.mockRejectedValue(new Error("auth unavailable"));
+    mocks.getAuthoritativeCurrentSession.mockRejectedValue(
+      new Error("auth unavailable"),
+    );
     const { getSiteShellSessionState } = await import("./site-shell-session");
 
     await expect(getSiteShellSessionState()).resolves.toEqual({
       isAuthenticated: false,
+      documentMutationGeneration: null,
     });
+  });
+
+  it("keeps authentication truth but closes mutation transport when signing is unavailable", async () => {
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
+      user: { id: "private-user-id" },
+      session: { id: "private-session-id" },
+    });
+    mocks.issueDocumentMutationGeneration.mockImplementation(() => {
+      throw new Error("secret unavailable");
+    });
+    const { getSiteShellSessionState } = await import("./site-shell-session");
+
+    await expect(getSiteShellSessionState()).resolves.toEqual({
+      isAuthenticated: true,
+      documentMutationGeneration: null,
+    });
+  });
+
+  it("omits the client adapter when the exact rollback flag is disabled", async () => {
+    vi.stubEnv("DOCUMENT_MUTATION_ADMISSION_ENABLED", "false");
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
+      user: { id: "private-user-id" },
+      session: { id: "private-session-id" },
+    });
+    const { getSiteShellSessionState } = await import("./site-shell-session");
+
+    await expect(getSiteShellSessionState()).resolves.toEqual({
+      isAuthenticated: true,
+      documentMutationGeneration: null,
+    });
+    expect(mocks.issueDocumentMutationGeneration).not.toHaveBeenCalled();
   });
 
   it("cannot import owner-scoped product loaders", () => {

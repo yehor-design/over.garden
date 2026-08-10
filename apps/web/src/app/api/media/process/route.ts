@@ -1,5 +1,3 @@
-import { AuthenticationRequiredError } from "@/server/auth-session";
-import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import { getPublicDerivativeUrl } from "@/lib/storage";
 import {
   claimMediaAssetForProcessing,
@@ -20,27 +18,21 @@ import {
 import { revokeMediaObjectBytes } from "@/server/media/lifecycle-revoke";
 import { isPublicMediaEligible } from "@/server/media/public-media-eligibility";
 import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: error.message }, { status: 403 });
-    }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    return authIntentRequiredResponse(request, {
-      action: "save",
-      fallbackReturnTo: "/garden",
-      message: "Sign in to continue this photo save.",
-    });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope = admission.scope;
   const body = (await request.json()) as { mediaAssetId?: string };
 
   if (!body.mediaAssetId) {
@@ -67,7 +59,8 @@ export async function POST(request: Request) {
       publicObjectId: asset.public_object_id,
       qualityPolicyVersion: asset.quality_policy_version,
       qualityClass: asset.quality_class,
-    }) && asset.derivative_key
+    }) &&
+    asset.derivative_key
   ) {
     return Response.json({
       mediaAsset: { id: asset.id, status: asset.status },

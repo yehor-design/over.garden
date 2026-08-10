@@ -69,6 +69,7 @@ import {
   resolvePlantObjectCatalogAction,
   updatePlantObjectLocationAction,
 } from "./actions";
+import { DocumentMutationActionForm } from "@/components/auth/document-mutation-recovery";
 import { CatalogResolveControl } from "./catalog-resolve-control";
 import { FollowUpEntryComposer } from "./follow-up-entry-composer";
 import { FollowUpValuePulse } from "./follow-up-value-pulse";
@@ -210,8 +211,9 @@ export default async function PlantObjectReadbackPage({
   // OVE-242: an archived entry may claim public removal only after the public
   // projection has verifiably converged. Until then the owner is told the
   // removal is still finishing rather than that it is already done.
-  const pendingPublicRemovalEntryIds =
-    await listPendingPublicRemovalEntryIds(page.entries);
+  const pendingPublicRemovalEntryIds = await listPendingPublicRemovalEntryIds(
+    page.entries,
+  );
 
   return (
     <main
@@ -427,9 +429,7 @@ function OwnerEntryActions({
         </span>
         {entry.public_gone_at ? (
           <span
-            data-public-removal={
-              publicRemovalPending ? "pending" : "converged"
-            }
+            data-public-removal={publicRemovalPending ? "pending" : "converged"}
             className="text-xs text-muted-foreground"
             aria-live="polite"
           >
@@ -465,7 +465,7 @@ function OwnerEntryActions({
         >
           {actionCopy.openPage}
         </Link>
-        <form
+        <DocumentMutationActionForm
           action={archiveJournalEntryAction}
           className="flex w-full flex-col gap-3 pt-1"
         >
@@ -490,7 +490,7 @@ function OwnerEntryActions({
           >
             {actionCopy.archiveButton}
           </button>
-        </form>
+        </DocumentMutationActionForm>
       </div>
     );
   }
@@ -500,7 +500,7 @@ function OwnerEntryActions({
     resumeAction === "publish" && resumeControl === publishControl;
 
   return (
-    <form
+    <DocumentMutationActionForm
       data-owner-entry-controls="private"
       action={publishJournalEntryAction}
       className="flex flex-col gap-3"
@@ -546,7 +546,7 @@ function OwnerEntryActions({
       >
         {actionCopy.publishButton}
       </button>
-    </form>
+    </DocumentMutationActionForm>
   );
 }
 

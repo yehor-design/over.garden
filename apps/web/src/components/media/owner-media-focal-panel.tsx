@@ -4,6 +4,10 @@ import { useCallback, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
+import {
   FocalPointControl,
   type FocalPointControlCopy,
 } from "@/components/media/focal-point-control";
@@ -41,6 +45,7 @@ export function OwnerMediaFocalPanel({
   disabled = false,
   onSaved,
 }: OwnerMediaFocalPanelProps) {
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const [focal, setFocal] = useState<MediaFocalPoint>(
     normalizeFocalPoint(initialFocal),
   );
@@ -54,13 +59,22 @@ export function OwnerMediaFocalPanel({
       try {
         const response = await fetch(`/api/media/${mediaAssetId}/focal`, {
           method: "PATCH",
-          headers: { "content-type": "application/json" },
+          headers: {
+            "content-type": "application/json",
+            ...createDocumentMutationRequestHeaders(
+              documentMutation?.transport,
+            ),
+          },
           body: JSON.stringify({
             focalX: focal.x,
             focalY: focal.y,
             expectedRevision: revision,
           }),
         });
+        if (await documentMutation?.handleResponse(response)) {
+          setStatus("error");
+          return;
+        }
         if (!response.ok) {
           setStatus("error");
           return;
@@ -92,7 +106,7 @@ export function OwnerMediaFocalPanel({
         setStatus("error");
       }
     });
-  }, [focal.x, focal.y, mediaAssetId, onSaved, revision]);
+  }, [documentMutation, focal.x, focal.y, mediaAssetId, onSaved, revision]);
 
   return (
     <div className="grid gap-3" data-owner-media-focal-panel="true">

@@ -10,11 +10,9 @@ import type {
   FirstPlantEntryResponse,
 } from "@/lib/garden/entry-contracts";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
-import { AuthenticationRequiredError } from "@/server/auth-session";
 import { INTERFACE_LOCALE_REQUEST_HEADER } from "@/lib/interface-localization";
 import { preciseLocationRejectionMessage } from "@/lib/privacy/precise-location-copy";
 import { isPreciseLocationTextError } from "@/lib/privacy/precise-location-text";
-import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import type {
   EntryScope,
   EntrySyncStatus,
@@ -28,9 +26,10 @@ import {
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
 import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import type { RequestScope } from "@/server/request-scope";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
@@ -42,20 +41,13 @@ import {
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  let scope: RequestScope;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: error.message }, { status: 403 });
-    }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    return authIntentRequiredResponse(request, {
-      action: "save",
-      fallbackReturnTo: "/garden",
-      message: "Sign in to save an entry.",
-    });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope: RequestScope = admission.scope;
 
   const body = (await request
     .json()

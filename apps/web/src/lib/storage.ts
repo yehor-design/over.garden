@@ -10,11 +10,14 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import {
-  booleanServerEnv,
-  numberServerEnv,
-  requiredServerEnv,
-} from "@/lib/env";
+import { booleanServerEnv, requiredServerEnv } from "@/lib/env";
+
+export const MAX_R2_PRESIGN_TTL_SECONDS = 900;
+
+export interface R2UploadUrlTtlConfiguration {
+  source: "environment" | "default";
+  effectiveSeconds: number;
+}
 
 export interface CreateQuarantineUploadUrlInput {
   objectKey: string;
@@ -58,7 +61,7 @@ export async function createQuarantineUploadUrl({
   objectKey,
   contentType,
   contentLength,
-  expiresInSeconds = numberServerEnv("R2_UPLOAD_URL_TTL_SECONDS", 900),
+  expiresInSeconds = resolveR2UploadUrlTtlConfiguration().effectiveSeconds,
 }: CreateQuarantineUploadUrlInput): Promise<QuarantineUploadUrl> {
   const bucket = requiredServerEnv("R2_QUARANTINE_BUCKET");
   const command = new PutObjectCommand({
@@ -79,6 +82,45 @@ export async function createQuarantineUploadUrl({
     bucket,
     expiresInSeconds,
   };
+}
+
+export function resolveR2UploadUrlTtlConfiguration(
+  env: Record<string, string | undefined> = process.env,
+): R2UploadUrlTtlConfiguration {
+  const raw = env.R2_UPLOAD_URL_TTL_SECONDS;
+  if (raw === undefined || raw.trim() === "") {
+    return { source: "default", effectiveSeconds: MAX_R2_PRESIGN_TTL_SECONDS };
+  }
+  if (!/^[1-9]\d*$/.test(raw)) {
+    throw new Error("R2 upload URL TTL configuration is invalid.");
+  }
+  const effectiveSeconds = Number(raw);
+  if (
+    !Number.isSafeInteger(effectiveSeconds) ||
+    effectiveSeconds !== MAX_R2_PRESIGN_TTL_SECONDS
+  ) {
+    throw new Error("R2 upload URL TTL configuration is invalid.");
+  }
+  return { source: "environment", effectiveSeconds };
+}
+
+export function resolveEffectiveR2PresignTtlSeconds(input: {
+  configuration: R2UploadUrlTtlConfiguration;
+  envelopeExpiresAtSeconds: number;
+  nowSeconds: number;
+}): number {
+  const remainingEnvelopeSeconds = Math.floor(
+    input.envelopeExpiresAtSeconds - input.nowSeconds,
+  );
+  const effectiveSeconds = Math.min(
+    input.configuration.effectiveSeconds,
+    MAX_R2_PRESIGN_TTL_SECONDS,
+    remainingEnvelopeSeconds,
+  );
+  if (!Number.isSafeInteger(effectiveSeconds) || effectiveSeconds <= 0) {
+    throw new Error("R2 presign lifetime is unavailable.");
+  }
+  return effectiveSeconds;
 }
 
 export async function getQuarantineObjectBuffer(

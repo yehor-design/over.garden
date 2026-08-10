@@ -16738,6 +16738,36 @@
     },
     {
       "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/document-mutation-admission/continuity/route.ts#POST:authority:authenticated_user",
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/continuity/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/document-mutation-admission/continuity/route.ts",
+      "symbol": "POST",
+      "transport": "route_handler",
+      "variant": "POST:authenticated_user"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "route_handler:src/app/api/document-mutation-admission/readback/route.ts#GET",
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts"
+      ],
+      "exclusionReason": "source_graph_proves_no_mutating_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "symbol": "GET",
+      "transport": "route_handler",
+      "variant": "GET"
+    },
+    {
+      "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/engagement/bookmarks/route.ts#POST:authority:authenticated_user",
       "evidencePaths": [
@@ -16962,21 +16992,6 @@
       "variant": "PATCH:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/garden/entries/[entryId]/route.ts#PATCH:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "symbol": "PATCH",
-      "transport": "route_handler",
-      "variant": "PATCH:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:authenticated_user:behavior:first_plant_entry",
@@ -17023,21 +17038,6 @@
       "symbol": "POST",
       "transport": "route_handler",
       "variant": "POST:authenticated_user:behavior:space_entry"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/garden/entries/route.ts#POST:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/garden/entries/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:guest_auth_intent"
     },
     {
       "authority": "authenticated_user",
@@ -17190,21 +17190,6 @@
       "variant": "PATCH:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/media/[mediaAssetId]/focal/route.ts#PATCH:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "symbol": "PATCH",
-      "transport": "route_handler",
-      "variant": "PATCH:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:authenticated_user",
@@ -17220,21 +17205,6 @@
       "variant": "POST:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/media/process/route.ts#POST:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/media/process/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/media/process/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:authenticated_user",
@@ -17248,21 +17218,6 @@
       "symbol": "POST",
       "transport": "route_handler",
       "variant": "POST:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "route_handler:src/app/api/media/uploads/route.ts#POST:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/api/media/uploads/route.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/api/media/uploads/route.ts",
-      "symbol": "POST",
-      "transport": "route_handler",
-      "variant": "POST:guest_auth_intent"
     },
     {
       "authority": "guest",
@@ -17535,6 +17490,21 @@
       "symbol": "submitResponse",
       "transport": "same_origin_fetch",
       "variant": "POST:/api/garden/value-pulse"
+    },
+    {
+      "authority": "authenticated_user",
+      "classification": "read_only",
+      "entrypointId": "same_origin_fetch:src/components/auth/document-mutation-recovery.tsx#confirmDocumentMutationOwnerContinuity:POST:/api/document-mutation-admission/continuity",
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "exclusionReason": "document_owner_continuity_rechecks_authority_without_a_product_effect",
+      "executionOwner": "excluded_with_reason",
+      "generationRequirement": "not_applicable",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "symbol": "confirmDocumentMutationOwnerContinuity",
+      "transport": "same_origin_fetch",
+      "variant": "POST:/api/document-mutation-admission/continuity"
     },
     {
       "authority": "authenticated_user",
@@ -18283,21 +18253,6 @@
       "variant": "archiveJournalEntryAction:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#archiveJournalEntryAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "archiveJournalEntryAction",
-      "transport": "server_action",
-      "variant": "archiveJournalEntryAction:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:authenticated_user",
@@ -18311,21 +18266,6 @@
       "symbol": "createLineageInvitationAction",
       "transport": "server_action",
       "variant": "createLineageInvitationAction:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createLineageInvitationAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "createLineageInvitationAction",
-      "transport": "server_action",
-      "variant": "createLineageInvitationAction:guest_auth_intent"
     },
     {
       "authority": "authenticated_user",
@@ -18343,21 +18283,6 @@
       "variant": "createPlantObjectJournalEntryAction:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createPlantObjectJournalEntryAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "createPlantObjectJournalEntryAction",
-      "transport": "server_action",
-      "variant": "createPlantObjectJournalEntryAction:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createProvenanceEdgeAction:authority:authenticated_user",
@@ -18371,21 +18296,6 @@
       "symbol": "createProvenanceEdgeAction",
       "transport": "server_action",
       "variant": "createProvenanceEdgeAction:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#createProvenanceEdgeAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "createProvenanceEdgeAction",
-      "transport": "server_action",
-      "variant": "createProvenanceEdgeAction:guest_auth_intent"
     },
     {
       "authority": "authenticated_user",
@@ -18403,21 +18313,6 @@
       "variant": "publishJournalEntryAction:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#publishJournalEntryAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "publishJournalEntryAction",
-      "transport": "server_action",
-      "variant": "publishJournalEntryAction:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:authenticated_user",
@@ -18433,21 +18328,6 @@
       "variant": "resolvePlantObjectCatalogAction:authenticated_user"
     },
     {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#resolvePlantObjectCatalogAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "resolvePlantObjectCatalogAction",
-      "transport": "server_action",
-      "variant": "resolvePlantObjectCatalogAction:guest_auth_intent"
-    },
-    {
       "authority": "authenticated_user",
       "classification": "effectful",
       "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#updatePlantObjectLocationAction:authority:authenticated_user",
@@ -18461,21 +18341,6 @@
       "symbol": "updatePlantObjectLocationAction",
       "transport": "server_action",
       "variant": "updatePlantObjectLocationAction:authenticated_user"
-    },
-    {
-      "authority": "guest",
-      "classification": "excluded_distinct_authority",
-      "entrypointId": "server_action:src/app/garden/objects/[objectId]/actions.ts#updatePlantObjectLocationAction:authority:guest_auth_intent",
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "exclusionReason": "guest_auth_intent_branch_has_no_authenticated_document_effect",
-      "executionOwner": "excluded_with_reason",
-      "generationRequirement": "not_applicable",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "symbol": "updatePlantObjectLocationAction",
-      "transport": "server_action",
-      "variant": "updatePlantObjectLocationAction:guest_auth_intent"
     },
     {
       "authority": "founder_operator",
@@ -19221,6 +19086,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:03655f17c7bc55791583",
+      "symbol": "DocumentMutationActionStateV1"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/profile/owner-profile-editor.tsx",
         "src/lib/garden/regions.ts"
       ],
@@ -19336,6 +19213,18 @@
       "semanticVariant": "database_transaction_at_17850",
       "sourceNodeId": "source:043de598c7b6fd281fa1",
       "symbol": "moderateEngagementCommentReport"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/continuity/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/continuity/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:0463e6224ddba3092546",
+      "symbol": "documentMutationAdmissionResponse"
     },
     {
       "evidencePaths": [
@@ -20180,18 +20069,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/process/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/process/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:0b8bbd531df73e0eec6c",
-      "symbol": "requireWriteEligibleRequestScope"
-    },
-    {
-      "evidencePaths": [
         "src/server/profile-interaction-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -20517,6 +20394,17 @@
       "semanticVariant": "from:@/server/media/media-repository",
       "sourceNodeId": "source:0e67a0c568e06b44a394",
       "symbol": "releaseMediaProcessingClaim"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "GET",
+      "sourceNodeId": "source:0ea049ac2ce8361bae6d",
+      "symbol": "GET"
     },
     {
       "evidencePaths": [
@@ -21075,6 +20963,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:13606b3eb9124e79324b",
+      "symbol": "documentMutationAdmissionResponse"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/interface/locale/route.ts",
         "src/lib/interface-request-guard.ts"
       ],
@@ -21178,6 +21078,18 @@
       "semanticVariant": "from:./owner-vault",
       "sourceNodeId": "source:1465906412c9a87575b9",
       "symbol": "OwnerVaultControlState"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/process/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/process/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:146fb4197c5ce9752cb9",
+      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [
@@ -21298,6 +21210,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:1592e81c8beb27b3650f",
       "symbol": "Database"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/uploads/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/uploads/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:159314a760155b046285",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -21492,17 +21416,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:guest_auth_intent",
-      "sourceNodeId": "source:16de3af8615ad498b591",
-      "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
         "src/app/admin/communities/[slug]/page.tsx",
         "src/lib/operator-copy.ts"
       ],
@@ -21688,6 +21601,18 @@
       "semanticVariant": "from:@/server/community-repository",
       "sourceNodeId": "source:1855cabd02f5358cbd9b",
       "symbol": "setCommunityMembership"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/page.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/page.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:186b293ddf9312a82a29",
+      "symbol": "DocumentMutationActionForm"
     },
     {
       "evidencePaths": [
@@ -22066,6 +21991,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:1b6b98b094f774515d64",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
       "nodeKind": "contextual_transaction",
@@ -22275,17 +22212,6 @@
       "semanticVariant": "action:updatePublicProfileAction",
       "sourceNodeId": "source:1d45c549eb11b0d0382e",
       "symbol": "updatePublicProfileAction"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/process/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/media/process/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:guest_auth_intent",
-      "sourceNodeId": "source:1d470042f9ba23f29378",
-      "symbol": "POST"
     },
     {
       "evidencePaths": [
@@ -22622,18 +22548,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:1fea2ccd543e60b9f687",
-      "symbol": "PilotWriteAccessError"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/pilot-learning/interviews/page.tsx",
         "src/lib/operator-copy.ts"
       ],
@@ -22762,18 +22676,6 @@
       "semanticVariant": "from:@/lib/env",
       "sourceNodeId": "source:2113339d657bba85eea0",
       "symbol": "requiredServerEnv"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:21770edc6be732dc80b5",
-      "symbol": "PilotWriteAccessError"
     },
     {
       "evidencePaths": [
@@ -22964,18 +22866,6 @@
       "semanticVariant": "from:./queue",
       "sourceNodeId": "source:22bc4c033488ce2bcd8a",
       "symbol": "OfflineOwnerActivity"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/actions.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:22c28c7bb66ddb657dea",
-      "symbol": "requireWriteEligibleRequestScope"
     },
     {
       "evidencePaths": [
@@ -23248,6 +23138,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:2473cc196627ab24a43a",
+      "symbol": "documentMutationGenerationFromRequest"
+    },
+    {
+      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/components/public/public-profile.tsx"
       ],
@@ -23281,6 +23183,18 @@
       "semanticVariant": "from:@/lib/interface-request-guard",
       "sourceNodeId": "source:24bab5dab1fa27c79e4e",
       "symbol": "INTERFACE_API_CACHE_CONTROL"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:24bfada9cf74e6d0f5d5",
+      "symbol": "DocumentMutationAdmissionTransportResultV1"
     },
     {
       "evidencePaths": [
@@ -23340,18 +23254,6 @@
       "semanticVariant": "browser_storage:updateOfflineMutationStatus",
       "sourceNodeId": "source:2526eda801fdd939efdf",
       "symbol": "updateOfflineMutationStatus"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:252c2bbc3c32a5f8e03a",
-      "symbol": "AuthenticationRequiredError"
     },
     {
       "evidencePaths": [
@@ -23471,6 +23373,18 @@
       "semanticVariant": "from:@/lib/auth/pilot-auth-recovery",
       "sourceNodeId": "source:2608cb6e0a374eb67175",
       "symbol": "pilotPasswordResetRedirectUrl"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:26117cc6eb00a6a2deff",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -23674,6 +23588,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:2735485a699fd76ded8f",
+      "symbol": "DocumentMutationActionStateV1"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -23777,6 +23703,18 @@
       "semanticVariant": "from:@/lib/owner-object-copy",
       "sourceNodeId": "source:282158f85223dfe108ae",
       "symbol": "formatOwnerObjectTemplate"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/continuity/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/continuity/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:2828c054b43c8ccff8a9",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -24334,6 +24272,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:2cfef70c21b9de6ca1c5",
+      "symbol": "DOCUMENT_OWNER_CHANGED_EVENT"
+    },
+    {
+      "evidencePaths": [
         "src/app/engagement/public-engagement-panel.tsx",
         "src/server/engagement-repository.ts"
       ],
@@ -24837,17 +24787,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/uploads/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/media/uploads/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "POST:guest_auth_intent",
-      "sourceNodeId": "source:318f64676dbc550c498e",
-      "symbol": "POST"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/objects/[objectId]/page.tsx",
         "src/server/lineage-repository.ts"
       ],
@@ -24869,6 +24808,18 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:3197a70536815c2a824b",
       "symbol": "moderateCommunityDiscussionAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts",
+        "src/lib/auth/document-mutation-generation-contract.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-contract",
+      "sourceNodeId": "source:31bb22efda297909592a",
+      "symbol": "DOCUMENT_MUTATION_GENERATION_PROTOCOL"
     },
     {
       "evidencePaths": [
@@ -24977,6 +24928,18 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:3301a82862579f17340d",
       "symbol": "updatePublicHandleAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:3301e986edf091a63e21",
+      "symbol": "createDocumentMutationRequestHeaders"
     },
     {
       "evidencePaths": [
@@ -25134,6 +25097,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/interface-localization.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/interface-localization",
+      "sourceNodeId": "source:343dab3f6f03355332b7",
+      "symbol": "InterfaceLocale"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/auth/[...all]/route.ts",
         "src/server/auth/auth-email-outbox.ts"
       ],
@@ -25286,6 +25261,18 @@
       "semanticVariant": "from:@/server/interface-localization",
       "sourceNodeId": "source:36bbd21b5427924117ee",
       "symbol": "getRequestInterfaceLocale"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/storage",
+      "sourceNodeId": "source:36d550b01de1eebcff12",
+      "symbol": "resolveR2UploadUrlTtlConfiguration"
     },
     {
       "evidencePaths": [
@@ -25646,6 +25633,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:3adb0169f070be50e007",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/lineage/objects/[objectId]/page.tsx",
         "src/lib/auth/auth-intent-contract.ts"
       ],
@@ -25726,6 +25725,18 @@
       "semanticVariant": "from:@/lib/auth/google-oauth",
       "sourceNodeId": "source:3b1f4826e909dbb5dae3",
       "symbol": "isGoogleSignInEnabled"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/continuity/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/continuity/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:3b4a90b2db5633dba324",
+      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [
@@ -26380,18 +26391,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/auth-intent-token.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-token",
-      "sourceNodeId": "source:402de3d3e8c049ceb64c",
-      "symbol": "createAuthIntentToken"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/garden/plant-identification/route.ts",
         "src/server/plantnet-species-adapter.ts"
       ],
@@ -26661,17 +26660,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:4246d5ad821f3dd95fe0",
       "symbol": "Database"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "archiveJournalEntryAction:guest_auth_intent",
-      "sourceNodeId": "source:4250b787ed65d91434f2",
-      "symbol": "archiveJournalEntryAction"
     },
     {
       "evidencePaths": [
@@ -27001,6 +26989,17 @@
       "semanticVariant": "from:@/server/social-return-repository",
       "sourceNodeId": "source:44840b0bed8cadc7707a",
       "symbol": "NotificationEvent"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "same_origin_call",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST:/api/document-mutation-admission/continuity",
+      "sourceNodeId": "source:4499d07dca3fa80e8c3b",
+      "symbol": "confirmDocumentMutationOwnerContinuity"
     },
     {
       "evidencePaths": [
@@ -27402,17 +27401,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "createProvenanceEdgeAction:guest_auth_intent",
-      "sourceNodeId": "source:46fbdbc2253486e099cd",
-      "symbol": "createProvenanceEdgeAction"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/app/wishlist/actions.ts"
       ],
@@ -27515,18 +27503,6 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:47dfebdd25a88a6080e7",
       "symbol": "JournalEntryTopicPublicMembershipState"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:47f4b5467988a83992a6",
-      "symbol": "AuthenticationRequiredError"
     },
     {
       "evidencePaths": [
@@ -27704,6 +27680,18 @@
       "semanticVariant": "database_transaction_at_8948",
       "sourceNodeId": "source:4a6787b512684c5b58ee",
       "symbol": "settlePlantIdentificationFailure"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/storage",
+      "sourceNodeId": "source:4a892d205f03df4bc7f7",
+      "symbol": "MAX_R2_PRESIGN_TTL_SECONDS"
     },
     {
       "evidencePaths": [
@@ -28903,17 +28891,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "PATCH:guest_auth_intent",
-      "sourceNodeId": "source:54fa42f1fb0c03c7e526",
-      "symbol": "PATCH"
-    },
-    {
-      "evidencePaths": [
         "src/components/public/public-community.tsx",
         "src/lib/public-localization.ts"
       ],
@@ -29020,18 +28997,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:55fe50a1a8df854c20ed",
-      "symbol": "requireWriteEligibleRequestScope"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/catalog-alias-curation-repository.ts"
       ],
@@ -29077,6 +29042,18 @@
       "semanticVariant": "from:./actions",
       "sourceNodeId": "source:566c1e33a6961655338b",
       "symbol": "resolvePlantObjectCatalogAction"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:568d4bdd3d326b6e0bbc",
+      "symbol": "DOCUMENT_MUTATION_GENERATION_HEADER"
     },
     {
       "evidencePaths": [
@@ -29148,6 +29125,18 @@
       "semanticVariant": "from:@/lib/catalog/genebank-long-tail",
       "sourceNodeId": "source:570270c7ad9827dfd79e",
       "symbol": "genebankLongTailSnapshotChecksum"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:570f72298347670eb5cf",
+      "symbol": "documentMutationGenerationFromFormData"
     },
     {
       "evidencePaths": [
@@ -29726,18 +29715,6 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:5c7d51cd9b8918dd6a48",
       "symbol": "buildEnqueueCatalogMatchSuggestionsRefreshJobQuery"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/uploads/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/uploads/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:5cbcbac0628d8b518cf6",
-      "symbol": "authIntentRequiredResponse"
     },
     {
       "evidencePaths": [
@@ -30565,18 +30542,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/process/route.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/process/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:63ef2bcfb6deddf6b746",
-      "symbol": "AuthenticationRequiredError"
-    },
-    {
-      "evidencePaths": [
         "src/lib/storage.ts",
         "src/server/journal-repository.ts"
       ],
@@ -30703,6 +30668,18 @@
       "semanticVariant": "from:@/lib/auth/auth-intent-contract",
       "sourceNodeId": "source:648d06c424be575897ce",
       "symbol": "normalizeAuthIntentResumeAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/[mediaAssetId]/focal/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:648fa887931c72b1af47",
+      "symbol": "documentMutationAdmissionResponse"
     },
     {
       "evidencePaths": [
@@ -31035,6 +31012,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:67c795e166eca009012f",
       "symbol": "PlantObjectKind"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:67d922dfecc3e14d44d4",
+      "symbol": "DOCUMENT_MUTATION_GENERATION_HEADER"
     },
     {
       "evidencePaths": [
@@ -31891,6 +31880,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/components/media/owner-media-focal-panel.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/media/owner-media-focal-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:6ee34bf3c8b60f9a9cbd",
+      "symbol": "useOptionalDocumentMutationGeneration"
+    },
+    {
+      "evidencePaths": [
         "src/server/engagement-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -31911,6 +31912,18 @@
       "semanticVariant": "from:@/server/catalog-repository",
       "sourceNodeId": "source:6ef5e6659c3b04874770",
       "symbol": "SELECTABLE_CATALOG_STATUSES"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/components/media/owner-media-focal-panel.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/media/owner-media-focal-panel.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:6f4d3b8389196e10eca5",
+      "symbol": "createDocumentMutationRequestHeaders"
     },
     {
       "evidencePaths": [
@@ -32589,6 +32602,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/session-convergence-boundary.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/session-convergence-boundary.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:75c53eac7abb3a6545dc",
+      "symbol": "DOCUMENT_OWNER_CHANGED_EVENT"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/catalog-source-candidate-review-list.tsx",
         "src/server/catalog-source/candidate-review-repository.ts"
       ],
@@ -32753,6 +32778,18 @@
       "semanticVariant": "from:@/server/auth-session",
       "sourceNodeId": "source:779506b28ff17935d6dc",
       "symbol": "getSessionId"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/follow-up-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:77aaf4ec78f924ad44e7",
+      "symbol": "useOptionalDocumentMutationGeneration"
     },
     {
       "evidencePaths": [
@@ -33095,6 +33132,18 @@
       "semanticVariant": "from:@/server/request-scope",
       "sourceNodeId": "source:7a299938a61c5ee2d464",
       "symbol": "scopedToUser"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/uploads/route.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/uploads/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/storage",
+      "sourceNodeId": "source:7a3a2a28ffdd5218e392",
+      "symbol": "resolveR2UploadUrlTtlConfiguration"
     },
     {
       "evidencePaths": [
@@ -33551,18 +33600,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/uploads/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/uploads/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:7f3f9894b4fcd6071a0d",
-      "symbol": "requireWriteEligibleRequestScope"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/variety-seed-proof-editor.tsx",
         "src/lib/operator-curation-copy.ts"
       ],
@@ -33790,6 +33827,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/uploads/route.ts",
+        "src/lib/storage.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/uploads/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/storage",
+      "sourceNodeId": "source:811e320899802ae564ee",
+      "symbol": "resolveEffectiveR2PresignTtlSeconds"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/notifications/receipts/route.ts",
         "src/server/request-scope.ts"
       ],
@@ -33883,6 +33932,18 @@
       "semanticVariant": "from:@/db/schema",
       "sourceNodeId": "source:8192650886f480f4a35a",
       "symbol": "CommunityModerationAction"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/[entryId]/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/[entryId]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:81bc167d933b8c9ea445",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -34159,17 +34220,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "createPlantObjectJournalEntryAction:guest_auth_intent",
-      "sourceNodeId": "source:8445a43a89f02b9cbe1d",
-      "symbol": "createPlantObjectJournalEntryAction"
-    },
-    {
-      "evidencePaths": [
         "src/lib/offline/owner-session-lifecycle.ts",
         "src/lib/offline/owner-vault.ts"
       ],
@@ -34309,18 +34359,6 @@
       "semanticVariant": "from:@/server/founder-interview-repository",
       "sourceNodeId": "source:85555fc2b74ce034d84b",
       "symbol": "createFounderInterviewLearning"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/uploads/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/uploads/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:855835133b46fc557ebb",
-      "symbol": "PilotWriteAccessError"
     },
     {
       "evidencePaths": [
@@ -35575,17 +35613,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "createLineageInvitationAction:guest_auth_intent",
-      "sourceNodeId": "source:8e7cd9bab29914e0d3fe",
-      "symbol": "createLineageInvitationAction"
-    },
-    {
-      "evidencePaths": [
         "src/server/catalog-repository.ts"
       ],
       "nodeKind": "effect_owner",
@@ -36118,17 +36145,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts"
-      ],
-      "nodeKind": "route_handler",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "PATCH:guest_auth_intent",
-      "sourceNodeId": "source:91e80d81caf292c8b684",
-      "symbol": "PATCH"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
         "src/app/garden/catalog/curation/page.tsx"
@@ -36223,18 +36239,6 @@
       "semanticVariant": "from:@/server/public-journal-directory-repository",
       "sourceNodeId": "source:92d991a502cce8ab3f48",
       "symbol": "PublicJournalDirectoryPage"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/auth-intent-control.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-control",
-      "sourceNodeId": "source:92e1bcfa4e36db8042f0",
-      "symbol": "createAuthIntentControlRef"
     },
     {
       "evidencePaths": [
@@ -36558,6 +36562,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:968acdfced7d7394fc99",
+      "symbol": "documentMutationGenerationFromFormData"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/catalog/curation/actions.ts",
         "src/app/garden/catalog/curation/catalog-curation-candidate-list.tsx",
         "src/app/garden/catalog/curation/page.tsx"
@@ -36592,6 +36608,18 @@
       "semanticVariant": "from:@/lib/garden/public-paths",
       "sourceNodeId": "source:96b8f86846e9fe2d867c",
       "symbol": "gardenFirstEntryPreselectionPath"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:96bafc9c93a1069dd956",
+      "symbol": "isDocumentMutationAdmissionTransportResult"
     },
     {
       "evidencePaths": [
@@ -36955,18 +36983,6 @@
       "semanticVariant": "from:@/lib/auth/auth-intent-contract",
       "sourceNodeId": "source:998a33ff7a09a402e274",
       "symbol": "buildAuthIntentAnchor"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:99ab2c6aafa579be0d48",
-      "symbol": "requireWriteEligibleRequestScope"
     },
     {
       "evidencePaths": [
@@ -37416,18 +37432,6 @@
     },
     {
       "evidencePaths": [
-        "src/lib/env.ts",
-        "src/lib/storage.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/lib/storage.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/lib/env",
-      "sourceNodeId": "source:9d95176b4048b2b91042",
-      "symbol": "numberServerEnv"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/variety-seed-proof-repository.ts"
       ],
@@ -37485,6 +37489,18 @@
       "semanticVariant": "from:@/lib/garden/follow-up-value-pulse",
       "sourceNodeId": "source:9e20cad7f2584c0ab83f",
       "symbol": "FOLLOW_UP_USEFULNESS_OPTIONS"
+    },
+    {
+      "evidencePaths": [
+        "src/lib/auth/document-mutation-generation-transport.ts",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/lib/offline/journal-entry-sync.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:9e3ece6f6805dcfd08a5",
+      "symbol": "DocumentMutationAdmissionTransportResultV1"
     },
     {
       "evidencePaths": [
@@ -37547,15 +37563,15 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/process/route.ts",
-        "src/server/auth-intent-http.ts"
+        "src/app/api/media/uploads/route.ts",
+        "src/server/document-mutation-admission.ts"
       ],
       "nodeKind": "import",
-      "path": "src/app/api/media/process/route.ts",
+      "path": "src/app/api/media/uploads/route.ts",
       "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:9eb616b85e1b3bb0746e",
-      "symbol": "authIntentRequiredResponse"
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:9ec158cba654752bf85e",
+      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [
@@ -37862,18 +37878,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:a12cab57dffaa99fcd46",
-      "symbol": "authIntentRequiredResponse"
-    },
-    {
-      "evidencePaths": [
         "src/app/api/engagement/comments/block/route.ts"
       ],
       "nodeKind": "route_handler",
@@ -37918,6 +37922,18 @@
       "semanticVariant": "from:@/components/ui/button",
       "sourceNodeId": "source:a182d86db26396344b37",
       "symbol": "buttonVariants"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/uploads/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/uploads/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:a19670ad8481b73f172d",
+      "symbol": "documentMutationAdmissionResponse"
     },
     {
       "evidencePaths": [
@@ -39169,6 +39185,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/document-mutation-admission/readback/route.ts",
+        "src/server/document-mutation-admission-config.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/document-mutation-admission/readback/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission-config",
+      "sourceNodeId": "source:aac2d71dcbbae346acff",
+      "symbol": "isDocumentMutationAdmissionEnabled"
+    },
+    {
+      "evidencePaths": [
         "src/server/media/media-lifecycle-enqueue.ts"
       ],
       "nodeKind": "effect_owner",
@@ -39652,18 +39680,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:afb1c72cf12fc5db2161",
-      "symbol": "authIntentRequiredResponse"
-    },
-    {
-      "evidencePaths": [
         "src/lib/auth/current-session-binding.ts",
         "src/lib/auth/sign-out-contract.ts"
       ],
@@ -39699,18 +39715,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:affbd01c7ab916c4a28c",
-      "symbol": "PilotWriteAccessError"
-    },
-    {
-      "evidencePaths": [
         "src/app/engagement/public-engagement-panel.tsx",
         "src/components/auth/auth-intent-trigger.tsx"
       ],
@@ -39731,17 +39735,6 @@
       "semanticVariant": "canonical-row:buildFindExistingEntryByClientMutationQuery",
       "sourceNodeId": "source:b05bfbcd08113ee6b7e4",
       "symbol": "findJournalEntryByClientMutation"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "publishJournalEntryAction:guest_auth_intent",
-      "sourceNodeId": "source:b05e6e94a4417f0b5d5c",
-      "symbol": "publishJournalEntryAction"
     },
     {
       "evidencePaths": [
@@ -40027,18 +40020,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:b25ba85e088b7c91c0f2",
-      "symbol": "AuthenticationRequiredError"
-    },
-    {
-      "evidencePaths": [
         "src/app/[locale]/[profileHandle]/actions.ts",
         "src/lib/public-localization.ts"
       ],
@@ -40048,6 +40029,18 @@
       "semanticVariant": "from:@/lib/public-localization",
       "sourceNodeId": "source:b285e33ffc29186aee5e",
       "symbol": "DEFAULT_PUBLIC_LOCALE"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:b2abfb5a8a9420f654ad",
+      "symbol": "useOptionalDocumentMutationGeneration"
     },
     {
       "evidencePaths": [
@@ -40156,6 +40149,18 @@
       "semanticVariant": "from:@/components/garden/structured-journal-composer",
       "sourceNodeId": "source:b39c9dea29fa7eb89c78",
       "symbol": "StructuredJournalComposer"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/media/process/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/process/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:b3caa5b684922658753d",
+      "symbol": "admitDocumentMutation"
     },
     {
       "evidencePaths": [
@@ -41076,6 +41081,17 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/document-mutation-admission/continuity/route.ts"
+      ],
+      "nodeKind": "route_handler",
+      "path": "src/app/api/document-mutation-admission/continuity/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "POST:authenticated_user",
+      "sourceNodeId": "source:bacd0f4a7545b224b147",
+      "symbol": "POST"
+    },
+    {
+      "evidencePaths": [
         "src/app/garden/account-methods-panel.tsx",
         "src/components/site-shell/interface-locale-change-boundary.tsx"
       ],
@@ -41655,6 +41671,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:bfc05c0e459b181a9b74",
+      "symbol": "isDocumentMutationAdmissionTransportResult"
+    },
+    {
+      "evidencePaths": [
         "src/server/journal-mention-repository.ts",
         "src/server/lineage-repository.ts"
       ],
@@ -41949,18 +41977,6 @@
       "semanticVariant": "from:@/components/media/owner-media-focal-panel",
       "sourceNodeId": "source:c1ec4a05a528a92e46bf",
       "symbol": "OwnerMediaFocalPanel"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:c1f39fbd6a0ec89f3f9d",
-      "symbol": "requireCurrentUserId"
     },
     {
       "evidencePaths": [
@@ -42777,17 +42793,6 @@
       "semanticVariant": "browser_storage:resumeOwnerOfflineActivityLocally",
       "sourceNodeId": "source:c7cb6ff402df9cb1a8ef",
       "symbol": "resumeOwnerOfflineActivityLocally"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "updatePlantObjectLocationAction:guest_auth_intent",
-      "sourceNodeId": "source:c7e95e1609107b6a3812",
-      "symbol": "updatePlantObjectLocationAction"
     },
     {
       "evidencePaths": [
@@ -43823,18 +43828,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/uploads/route.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/uploads/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:d353f27fdf0927654933",
-      "symbol": "AuthenticationRequiredError"
-    },
-    {
-      "evidencePaths": [
         "src/app/garden/page.tsx",
         "src/lib/garden-workspace-copy.ts"
       ],
@@ -43940,18 +43933,6 @@
       "semanticVariant": "from:@/server/profile-interaction-repository",
       "sourceNodeId": "source:d3bf3f69f40ef8e19096",
       "symbol": "ProfileViewerState"
-    },
-    {
-      "evidencePaths": [
-        "src/app/api/media/process/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/process/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:d3cc55cad1e0cedb2199",
-      "symbol": "PilotWriteAccessError"
     },
     {
       "evidencePaths": [
@@ -44086,6 +44067,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/objects/[objectId]/actions.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/objects/[objectId]/actions.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:d4e4003006b612299171",
+      "symbol": "admitDocumentMutation"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/garden/plant-identification/decision/route.ts",
         "src/server/plant-identification-repository.ts"
       ],
@@ -44154,18 +44147,6 @@
       "semanticVariant": "from:@/server/social-return-repository",
       "sourceNodeId": "source:d54f347f98d1edebb014",
       "symbol": "listNotificationCenterPage"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts",
-        "src/server/request-scope.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/request-scope",
-      "sourceNodeId": "source:d573c0d5cc8221d6ba08",
-      "symbol": "scopedToUser"
     },
     {
       "evidencePaths": [
@@ -44606,6 +44587,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/api/media/process/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/media/process/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:d95152e84b885dbfab13",
+      "symbol": "documentMutationAdmissionResponse"
+    },
+    {
+      "evidencePaths": [
         "src/app/api/engagement/comments/route.ts",
         "src/lib/privacy/precise-location-text.ts"
       ],
@@ -44651,6 +44644,18 @@
       "semanticVariant": "from:../shared",
       "sourceNodeId": "source:d9a942eaa85702fa8620",
       "symbol": "parseEngagementReturnTo"
+    },
+    {
+      "evidencePaths": [
+        "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+        "src/lib/offline/journal-entry-sync.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/entries/[entryId]/edit/journal-entry-edit-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/offline/journal-entry-sync",
+      "sourceNodeId": "source:d9cbb716faacbc9c408c",
+      "symbol": "JournalEntrySyncError"
     },
     {
       "evidencePaths": [
@@ -44709,6 +44714,18 @@
       "semanticVariant": "POST:/api/garden/value-pulse",
       "sourceNodeId": "source:da778cd6c3c94a41c8c9",
       "symbol": "submitResponse"
+    },
+    {
+      "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:da88e0934b9c22f5ce25",
+      "symbol": "DocumentMutationActionStateV1"
     },
     {
       "evidencePaths": [
@@ -45674,6 +45691,18 @@
     },
     {
       "evidencePaths": [
+        "src/app/garden/first-entry-composer.tsx",
+        "src/components/auth/document-mutation-recovery.tsx"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/garden/first-entry-composer.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/components/auth/document-mutation-recovery",
+      "sourceNodeId": "source:e3503de3e2d19ed57a54",
+      "symbol": "useOptionalDocumentMutationGeneration"
+    },
+    {
+      "evidencePaths": [
         "src/lib/offline/owner-vault-migration.ts",
         "src/lib/offline/owner-vault.ts"
       ],
@@ -46015,17 +46044,6 @@
       "semanticVariant": "from:@/server/visual-fixtures/social-actor",
       "sourceNodeId": "source:e64481dea39e8a76b1c0",
       "symbol": "resolveVisualSocialMutationActor"
-    },
-    {
-      "evidencePaths": [
-        "src/app/garden/objects/[objectId]/actions.ts"
-      ],
-      "nodeKind": "server_action",
-      "path": "src/app/garden/objects/[objectId]/actions.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "resolvePlantObjectCatalogAction:guest_auth_intent",
-      "sourceNodeId": "source:e658b5ca0290dbc3207e",
-      "symbol": "resolvePlantObjectCatalogAction"
     },
     {
       "evidencePaths": [
@@ -46660,6 +46678,18 @@
       "semanticVariant": "callback_get_ordinary_sign_in_existing_account",
       "sourceNodeId": "source:ebeaa47fd6229f9d209e",
       "symbol": "GET"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/[entryId]/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/[entryId]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:ebfa3b73cc10e273e3b8",
+      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [
@@ -47585,6 +47615,18 @@
     },
     {
       "evidencePaths": [
+        "src/components/auth/document-mutation-recovery.tsx",
+        "src/lib/auth/document-mutation-generation-transport.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/components/auth/document-mutation-recovery.tsx",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/lib/auth/document-mutation-generation-transport",
+      "sourceNodeId": "source:f3f3858b55581dadd149",
+      "symbol": "DOCUMENT_MUTATION_GENERATION_FORM_FIELD"
+    },
+    {
+      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/community-repository.ts"
       ],
@@ -47854,6 +47896,18 @@
       "semanticVariant": "from:@/lib/offline/owner-session-lifecycle",
       "sourceNodeId": "source:f6c29df589105e0b0ea1",
       "symbol": "finalizeOwnerOfflineActivityForSessionChange"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/[entryId]/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/[entryId]/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:f6edd9a210c7f7cd36eb",
+      "symbol": "documentMutationAdmissionResponse"
     },
     {
       "evidencePaths": [
@@ -48224,18 +48278,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/route.ts",
-        "src/server/pilot-write-access.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/pilot-write-access",
-      "sourceNodeId": "source:f96dd30828d478cc5203",
-      "symbol": "requireWriteEligibleRequestScope"
-    },
-    {
-      "evidencePaths": [
         "src/server/journal-mention-repository.ts",
         "src/server/launch-corpus/public-surface.ts"
       ],
@@ -48486,18 +48528,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/media/[mediaAssetId]/focal/route.ts",
-        "src/server/auth-intent-http.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/media/[mediaAssetId]/focal/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-intent-http",
-      "sourceNodeId": "source:fb2db41dad6089578de9",
-      "symbol": "authIntentRequiredResponse"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/catalog-curation-repository.ts"
       ],
@@ -48724,18 +48754,6 @@
     },
     {
       "evidencePaths": [
-        "src/app/api/garden/entries/[entryId]/route.ts",
-        "src/server/auth-session.ts"
-      ],
-      "nodeKind": "import",
-      "path": "src/app/api/garden/entries/[entryId]/route.ts",
-      "resolutionState": "resolved",
-      "semanticVariant": "from:@/server/auth-session",
-      "sourceNodeId": "source:fd00e83c5beab718c921",
-      "symbol": "AuthenticationRequiredError"
-    },
-    {
-      "evidencePaths": [
         "src/db/schema.ts",
         "src/server/journal-repository.ts"
       ],
@@ -48934,6 +48952,18 @@
       "semanticVariant": "auth_client.signUp.email",
       "sourceNodeId": "source:ff45289db3098f23abe5",
       "symbol": "signUp"
+    },
+    {
+      "evidencePaths": [
+        "src/app/api/garden/entries/route.ts",
+        "src/server/document-mutation-admission.ts"
+      ],
+      "nodeKind": "import",
+      "path": "src/app/api/garden/entries/route.ts",
+      "resolutionState": "resolved",
+      "semanticVariant": "from:@/server/document-mutation-admission",
+      "sourceNodeId": "source:ff510c416e8b8d2681c5",
+      "symbol": "documentMutationGenerationFromRequest"
     },
     {
       "evidencePaths": [

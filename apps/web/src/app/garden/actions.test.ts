@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -36,6 +37,11 @@ vi.mock("@/server/analytics-events", () => ({
   recordAnalyticsEventSafely: mocks.recordAnalyticsEventSafely,
   recordEntryLoggedEventSafely: mocks.recordEntryLoggedEventSafely,
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: (formData: FormData) =>
+    formData.get("__overgardenDocumentGeneration"),
+}));
 
 describe("garden entry actions", () => {
   beforeEach(() => {
@@ -46,6 +52,14 @@ describe("garden entry actions", () => {
       sessionId: "session-1",
     });
     mocks.isBackdatedEntryDate.mockReturnValue(false);
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+      envelopeExpiresAtSeconds: 1_786_381_200,
+    });
     mocks.createSpaceJournalEntry.mockResolvedValue({
       space: {
         id: "space-1",
@@ -63,6 +77,24 @@ describe("garden entry actions", () => {
       mentionedObjects: [{ id: "object-1" }],
       isNewEntry: true,
     });
+  });
+
+  it("returns the closed result and performs zero effect on owner change", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "OWNER_TRANSITION_CONFIRMED",
+      transportResult: "DOCUMENT_OWNER_CHANGED",
+      statusCode: 409,
+    });
+    const { createSpaceJournalEntryAction } = await import("./actions");
+
+    await expect(
+      createSpaceJournalEntryAction(new FormData()),
+    ).resolves.toEqual({
+      documentMutationAdmission: "DOCUMENT_OWNER_CHANGED",
+    });
+    expect(mocks.createSpaceJournalEntry).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 
   it("redirects a saved space entry to the local progress moment", async () => {

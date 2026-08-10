@@ -1,12 +1,11 @@
-import { AuthenticationRequiredError } from "@/server/auth-session";
-import { authIntentRequiredResponse } from "@/server/auth-intent-http";
 import { revalidatePath } from "next/cache";
 
 import { updateMediaAssetFocalForOwner } from "@/server/media/media-repository";
 import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 import { normalizeFocalPoint } from "@/lib/media/presentation-contract";
 
@@ -17,24 +16,20 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: error.message }, { status: 403 });
-    }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    return authIntentRequiredResponse(request, {
-      action: "save",
-      fallbackReturnTo: "/garden",
-      message: "Sign in to adjust this photo.",
-    });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope = admission.scope;
 
   const { mediaAssetId } = await context.params;
   if (!mediaAssetId) {
-    return Response.json({ error: "mediaAssetId is required." }, { status: 400 });
+    return Response.json(
+      { error: "mediaAssetId is required." },
+      { status: 400 },
+    );
   }
 
   const body = (await request.json()) as {

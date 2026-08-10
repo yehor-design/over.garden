@@ -12,6 +12,10 @@ import { OwnerMediaFocalPanel } from "@/components/media/owner-media-focal-panel
 import { StructuredJournalComposer } from "@/components/garden/structured-journal-composer";
 import type { StructuredJournalComposerHandle } from "@/components/garden/structured-journal-composer";
 import { Button } from "@/components/ui/button";
+import {
+  createDocumentMutationRequestHeaders,
+  useOptionalDocumentMutationGeneration,
+} from "@/components/auth/document-mutation-recovery";
 import { getJournalCoverControlsCopy } from "@/lib/garden/journal-cover-controls-copy";
 import { getOwnerMediaFocalPanelCopy } from "@/lib/media/owner-media-focal-copy";
 import type { JournalDocumentV1 } from "@/lib/garden/journal-document";
@@ -21,7 +25,10 @@ import {
 } from "@/lib/garden/journal-document";
 import { createComposerPhotoIntent } from "@/lib/garden/composer-photo-selection";
 import { useInlineMediaSelection } from "@/lib/garden/use-inline-media-selection";
-import { uploadComposerPhotoIntent } from "@/lib/offline/journal-entry-sync";
+import {
+  JournalEntrySyncError,
+  uploadComposerPhotoIntent,
+} from "@/lib/offline/journal-entry-sync";
 import type { PublicLocale } from "@/lib/public-localization";
 import { getStructuredJournalComposerLabels } from "@/lib/structured-journal-composer-copy";
 
@@ -47,6 +54,7 @@ export function JournalEntryEditComposer({
   initialCoverMediaAssetId?: string | null;
 }) {
   const router = useRouter();
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const composerRef = useRef<StructuredJournalComposerHandle | null>(null);
   const inlineMedia = useInlineMediaSelection(entryId);
   const [title, setTitle] = useState(initialTitle);
@@ -124,7 +132,10 @@ export function JournalEntryEditComposer({
       }
       const response = await fetch(`/api/garden/entries/${entryId}`, {
         method: "PATCH",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...createDocumentMutationRequestHeaders(documentMutation?.transport),
+        },
         body: JSON.stringify({
           title,
           entryDate,
@@ -135,6 +146,10 @@ export function JournalEntryEditComposer({
           cover: journalCoverSelectionToClaimInput(cover),
         }),
       });
+      if (await documentMutation?.handleResponse(response)) {
+        setMessage(labels.failureBody);
+        return;
+      }
       const payload = (await response.json().catch(() => null)) as {
         error?: string;
         currentRevision?: number;
@@ -205,12 +220,21 @@ export function JournalEntryEditComposer({
             const mediaAssetId = await uploadComposerPhotoIntent(
               intent,
               `/garden/entries/${entryId}/edit`,
+              documentMutation?.transport,
             );
             if (!mediaAssetId) throw new Error(labels.failureBody);
             const previewUrl = URL.createObjectURL(file);
             inlineMedia.commit(reservation, blockId, previewUrl);
             return { mediaAssetId, previewUrl };
           } catch (error) {
+            if (
+              error instanceof JournalEntrySyncError &&
+              error.documentMutationAdmission
+            ) {
+              documentMutation?.handleTransportResult(
+                error.documentMutationAdmission,
+              );
+            }
             inlineMedia.release(reservation);
             throw error;
           }

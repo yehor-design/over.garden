@@ -63,7 +63,13 @@ const NON_PRODUCTION_SOURCE_SEGMENTS = new Set([
   "node_modules",
 ]);
 
-const AUDITED_ROUTE_METHODS = new Set(["DELETE", "GET", "PATCH", "POST", "PUT"]);
+const AUDITED_ROUTE_METHODS = new Set([
+  "DELETE",
+  "GET",
+  "PATCH",
+  "POST",
+  "PUT",
+]);
 const AUTH_CLIENT_READ_METHODS = new Set([
   "getSession",
   "useSession",
@@ -197,7 +203,8 @@ export function auditAuthenticatedMutationSourcePolicy(
         node.arguments.length === 1 &&
         ts.isStringLiteralLike(node.arguments[0]) &&
         (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-          (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+          (ts.isIdentifier(node.expression) &&
+            node.expression.text === "require"))
       ) {
         inspectSpecifier(node.arguments[0].text);
       }
@@ -316,14 +323,18 @@ function discoverServerActions(
   relativePath: string,
   discoveries: AuthenticatedMutationDiscovery[],
 ): void {
-  const fileIsServerActionModule = hasDirective(sourceFile.statements, "use server");
+  const fileIsServerActionModule = hasDirective(
+    sourceFile.statements,
+    "use server",
+  );
 
   for (const statement of sourceFile.statements) {
     if (ts.isFunctionDeclaration(statement)) {
       if (
         statement.name &&
         isExported(statement) &&
-        (fileIsServerActionModule || hasFunctionDirective(statement, "use server"))
+        (fileIsServerActionModule ||
+          hasFunctionDirective(statement, "use server"))
       ) {
         discoveries.push(
           createDiscovery(relativePath, statement.name.text, "server_action"),
@@ -340,7 +351,11 @@ function discoverServerActions(
           hasFunctionDirective(declaration.initializer, "use server")
         ) {
           discoveries.push(
-            createDiscovery(relativePath, declaration.name.text, "server_action"),
+            createDiscovery(
+              relativePath,
+              declaration.name.text,
+              "server_action",
+            ),
           );
         }
       }
@@ -418,24 +433,34 @@ function discoverClientMutationEntrypoints(
     if (ts.isJsxAttribute(node)) {
       const attributeName = node.name.getText(sourceFile);
       const intrinsicName = intrinsicElementNameForAttribute(node);
+      const componentName = componentElementNameForAttribute(node);
       const expression = jsxAttributeExpression(node);
       if (
         (attributeName === "action" || attributeName === "formAction") &&
         ((attributeName === "action" && intrinsicName === "form") ||
+          (attributeName === "action" &&
+            componentName === "DocumentMutationActionForm") ||
           (attributeName === "formAction" &&
             (intrinsicName === "button" || intrinsicName === "input")))
       ) {
         const stringTarget = jsxAttributeString(node);
         if (expression) {
           const target = expressionName(expression, sourceFile);
-          discoveries.push(
-            createDiscovery(
-              relativePath,
-              nextSymbol,
-              "native_form",
-              `${attributeName}:${target}`,
-            ),
-          );
+          const isDocumentMutationFormForwarder =
+            relativePath ===
+              "src/components/auth/document-mutation-recovery.tsx" &&
+            nextSymbol === "DocumentMutationActionForm" &&
+            target === "formAction";
+          if (!isDocumentMutationFormForwarder) {
+            discoveries.push(
+              createDiscovery(
+                relativePath,
+                nextSymbol,
+                "native_form",
+                `${attributeName}:${target}`,
+              ),
+            );
+          }
         } else if (
           attributeName === "action" &&
           stringTarget &&
@@ -463,8 +488,12 @@ function discoverClientMutationEntrypoints(
           sourceIndex,
         );
         if (url?.startsWith("/")) {
-          const method = objectStringProperty(node.arguments[1], "method") ?? "GET";
-          const keepalive = objectBooleanProperty(node.arguments[1], "keepalive");
+          const method =
+            objectStringProperty(node.arguments[1], "method") ?? "GET";
+          const keepalive = objectBooleanProperty(
+            node.arguments[1],
+            "keepalive",
+          );
           if (method !== "GET" || keepalive) {
             discoveries.push(
               createDiscovery(
@@ -538,6 +567,22 @@ function intrinsicElementNameForAttribute(
     : undefined;
 }
 
+function componentElementNameForAttribute(
+  attribute: ts.JsxAttribute,
+): string | undefined {
+  const element = attribute.parent.parent;
+  if (
+    !ts.isJsxOpeningElement(element) &&
+    !ts.isJsxSelfClosingElement(element)
+  ) {
+    return undefined;
+  }
+  return ts.isIdentifier(element.tagName) &&
+    element.tagName.text !== element.tagName.text.toLowerCase()
+    ? element.tagName.text
+    : undefined;
+}
+
 function jsxAttributeExpression(
   attribute: ts.JsxAttribute,
 ): ts.Expression | undefined {
@@ -557,10 +602,7 @@ function jsxStringAttribute(
   name: string,
 ): string | undefined {
   for (const candidate of attribute.parent.properties) {
-    if (
-      ts.isJsxAttribute(candidate) &&
-      candidate.name.getText() === name
-    ) {
+    if (ts.isJsxAttribute(candidate) && candidate.name.getText() === name) {
       return jsxAttributeString(candidate);
     }
   }
@@ -603,7 +645,7 @@ function hasDirective(
 function isExported(node: ts.Node): boolean {
   return Boolean(
     ts.getCombinedModifierFlags(node as ts.Declaration) &
-      ts.ModifierFlags.Export,
+    ts.ModifierFlags.Export,
   );
 }
 
@@ -654,7 +696,9 @@ function compareDiscoveries(
 function deduplicateDiscoveries(
   discoveries: readonly AuthenticatedMutationDiscovery[],
 ): AuthenticatedMutationDiscovery[] {
-  return [...new Map(discoveries.map((item) => [item.entrypointId, item])).values()];
+  return [
+    ...new Map(discoveries.map((item) => [item.entrypointId, item])).values(),
+  ];
 }
 
 function declaredSymbol(node: ts.Node): string | undefined {
@@ -680,7 +724,10 @@ function declaredSymbol(node: ts.Node): string | undefined {
   return undefined;
 }
 
-function expressionName(node: ts.Expression, sourceFile: ts.SourceFile): string {
+function expressionName(
+  node: ts.Expression,
+  sourceFile: ts.SourceFile,
+): string {
   return node.getText(sourceFile).trim();
 }
 
@@ -759,7 +806,10 @@ function resolveStringArgument(
     if (!importedPath) return undefined;
     const imported = sourceIndex.get(importedPath);
     if (!imported) return undefined;
-    const initializer = findVariableInitializer(imported.sourceFile, importedName);
+    const initializer = findVariableInitializer(
+      imported.sourceFile,
+      importedName,
+    );
     return initializer
       ? resolveStringArgument(
           initializer,
@@ -800,7 +850,9 @@ function resolveSourceModulePath(
   const base = specifier.startsWith("@/")
     ? `src/${specifier.slice(2)}`
     : specifier.startsWith(".")
-      ? path.posix.normalize(path.posix.join(path.posix.dirname(fromPath), specifier))
+      ? path.posix.normalize(
+          path.posix.join(path.posix.dirname(fromPath), specifier),
+        )
       : null;
   if (!base) return undefined;
   for (const candidate of [
@@ -945,12 +997,14 @@ export async function runAuthenticatedMutationOperationWithinDeadline<T>(
   });
 }
 
-export async function runAuthenticatedMutationSurfaceAudit(input: {
-  appRoot?: string;
-  baselineSha?: string;
-  deadlineMs?: number;
-  now?: () => number;
-} = {}): Promise<AuthenticatedMutationAuditResult> {
+export async function runAuthenticatedMutationSurfaceAudit(
+  input: {
+    appRoot?: string;
+    baselineSha?: string;
+    deadlineMs?: number;
+    now?: () => number;
+  } = {},
+): Promise<AuthenticatedMutationAuditResult> {
   const appRoot = path.resolve(input.appRoot ?? DEFAULT_APP_WEB_ROOT);
   const baselineSha =
     input.baselineSha ?? AUTHENTICATED_MUTATION_AUDIT_BASELINE_SHA;
@@ -1033,9 +1087,8 @@ async function scanAuthenticatedMutationSurface(input: {
     input.appRoot,
     input.signal,
   );
-  const semanticReceipt = validateAuthenticatedMutationSemanticEvidence(
-    semanticEvidence,
-  );
+  const semanticReceipt =
+    validateAuthenticatedMutationSemanticEvidence(semanticEvidence);
   const semanticFindings = semanticReceipt.findings;
   const terminalState =
     sourcePolicyFindings.length === 0 &&
@@ -1044,7 +1097,10 @@ async function scanAuthenticatedMutationSurface(input: {
       ? "ready"
       : "inconclusive";
 
-  const sourceEvidenceByPath = new Map<string, AuthenticatedMutationSourceEvidence>();
+  const sourceEvidenceByPath = new Map<
+    string,
+    AuthenticatedMutationSourceEvidence
+  >();
   for (const source of [...productionSources, ...semanticEvidence.sources]) {
     sourceEvidenceByPath.set(source.path, {
       path: source.path,
@@ -1104,9 +1160,7 @@ async function readAuthenticatedMutationSourceInventory(
     ...(await listFilesRecursively(path.join(appRoot, "sql"), signal)),
     path.join(appRoot, "public/sw.js"),
   ]
-    .filter((absolutePath) =>
-      /(?:\.[cm]?[jt]sx?|\.sql)$/.test(absolutePath),
-    )
+    .filter((absolutePath) => /(?:\.[cm]?[jt]sx?|\.sql)$/.test(absolutePath))
     .sort(byteCompare);
   return Promise.all(
     sourcePaths.map(async (absolutePath) => ({
@@ -1135,7 +1189,8 @@ async function readAuthenticatedMutationSemanticEvidence(
     ),
   );
   const lockText =
-    sources.find((source) => source.path === "pnpm-lock.yaml")?.sourceText ?? "";
+    sources.find((source) => source.path === "pnpm-lock.yaml")?.sourceText ??
+    "";
   return {
     sources,
     packages: AUTHENTICATED_MUTATION_SEMANTIC_ADAPTER_MANIFEST.packages.flatMap(
@@ -1146,7 +1201,13 @@ async function readAuthenticatedMutationSemanticEvidence(
           requirement.version,
         );
         return integrity
-          ? [{ name: requirement.name, version: requirement.version, integrity }]
+          ? [
+              {
+                name: requirement.name,
+                version: requirement.version,
+                integrity,
+              },
+            ]
           : [];
       },
     ),
@@ -1164,7 +1225,9 @@ function readPnpmLockIntegrity(
   const start = lockText.indexOf(key);
   if (start < 0) return null;
   const block = lockText.slice(start, start + 1_000);
-  return /\n\s+resolution:\s+\{integrity:\s+([^}\s]+)\}/.exec(block)?.[1] ?? null;
+  return (
+    /\n\s+resolution:\s+\{integrity:\s+([^}\s]+)\}/.exec(block)?.[1] ?? null
+  );
 }
 
 async function listFilesRecursively(
@@ -1188,9 +1251,11 @@ async function listFilesRecursively(
   return files;
 }
 
-export async function verifyAuthenticatedMutationRuntimeIsolation(input: {
-  appRoot?: string;
-} = {}) {
+export async function verifyAuthenticatedMutationRuntimeIsolation(
+  input: {
+    appRoot?: string;
+  } = {},
+) {
   const appRoot = path.resolve(input.appRoot ?? DEFAULT_APP_WEB_ROOT);
   const controller = new AbortController();
   const rawSources = await readAuthenticatedMutationSourceInventory(
@@ -1235,13 +1300,13 @@ export async function verifyAuthenticatedMutationRuntimeIsolation(input: {
 
   let buildReport:
     | Awaited<ReturnType<typeof scanAuthenticatedMutationNextBuildSentinels>>
-    | { state: "inconclusive"; errors: readonly [{ code: "build_output_missing" }] };
+    | {
+        state: "inconclusive";
+        errors: readonly [{ code: "build_output_missing" }];
+      };
   const nextRoot = path.join(appRoot, ".next");
   try {
-    const buildPaths = await listFilesRecursively(
-      nextRoot,
-      controller.signal,
-    );
+    const buildPaths = await listFilesRecursively(nextRoot, controller.signal);
     const repositoryPaths = buildPaths.map((absolutePath) =>
       toRepositoryPath(nextRoot, absolutePath),
     );
@@ -1360,11 +1425,12 @@ function elapsedReceipt(result: AuthenticatedMutationAuditResult) {
 async function main(): Promise<void> {
   const appRoot = DEFAULT_APP_WEB_ROOT;
   const result = await runAuthenticatedMutationSurfaceAudit({ appRoot });
-  let artifactState: "matching" | "missing" | "drifted" | "written" =
-    "missing";
+  let artifactState: "matching" | "missing" | "drifted" | "written" = "missing";
   if (result.registry && process.argv.includes("--write-artifact")) {
     if (result.terminalState !== "ready") {
-      throw new Error("an inconclusive mutation audit cannot write an artifact");
+      throw new Error(
+        "an inconclusive mutation audit cannot write an artifact",
+      );
     }
     await writeAuthenticatedMutationRegistryArtifact(appRoot, result.registry);
     artifactState = "written";

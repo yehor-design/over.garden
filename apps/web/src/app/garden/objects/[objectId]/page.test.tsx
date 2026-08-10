@@ -3,9 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCurrentSession: vi.fn(),
+  getAuthoritativeCurrentSession: vi.fn(),
   getSessionId: vi.fn(),
   scopedToUser: vi.fn(),
   resolvePilotWriteAccess: vi.fn(),
+  attachWriteEligibilityHint: vi.fn(),
   getPlantObjectPage: vi.fn(),
   getObjectProvenancePanel: vi.fn(),
   resolveFollowUpValuePulsePrompt: vi.fn(),
@@ -18,6 +20,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/server/auth-session", () => ({
   getCurrentSession: mocks.getCurrentSession,
+  getAuthoritativeCurrentSession: mocks.getAuthoritativeCurrentSession,
   getSessionId: mocks.getSessionId,
 }));
 
@@ -27,6 +30,7 @@ vi.mock("@/server/request-scope", () => ({
 
 vi.mock("@/server/pilot-write-access", () => ({
   resolvePilotWriteAccess: mocks.resolvePilotWriteAccess,
+  attachWriteEligibilityHint: mocks.attachWriteEligibilityHint,
 }));
 
 vi.mock("@/server/journal-repository", () => ({
@@ -100,6 +104,13 @@ describe("/garden/objects/[objectId]", () => {
         email: "gardener@example.com",
       },
     });
+    mocks.getAuthoritativeCurrentSession.mockResolvedValue({
+      user: {
+        id: "00000000-0000-4000-8000-000000000001",
+        email: "gardener@example.com",
+      },
+    });
+    mocks.attachWriteEligibilityHint.mockImplementation(async (scope) => scope);
     mocks.getSessionId.mockReturnValue("session-1");
     mocks.scopedToUser.mockImplementation(
       (userId: string, sessionId: string | null) => ({ userId, sessionId }),

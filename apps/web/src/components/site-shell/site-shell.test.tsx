@@ -22,6 +22,19 @@ vi.mock("@/components/auth/session-convergence-boundary", () => ({
     return <div data-session-convergence-boundary="true">{children}</div>;
   },
 }));
+vi.mock("@/components/auth/document-mutation-recovery", () => ({
+  DocumentMutationGenerationProvider: ({
+    children,
+    transport,
+  }: {
+    children: React.ReactNode;
+    transport: string | null;
+  }) => (
+    <div data-document-mutation-generation={transport ?? "missing"}>
+      {children}
+    </div>
+  ),
+}));
 
 describe("production site shell", () => {
   beforeEach(() => {
@@ -73,7 +86,12 @@ describe("production site shell", () => {
     mocks.pathname = "/garden";
     const { SiteShell } = await import("./site-shell");
     const html = renderToStaticMarkup(
-      <SiteShell locale="bg" market="bulgaria" isAuthenticated={true}>
+      <SiteShell
+        locale="bg"
+        market="bulgaria"
+        isAuthenticated={true}
+        documentMutationGeneration="opaque-generation"
+      >
         <article>Лично съдържание</article>
       </SiteShell>,
     );
@@ -104,6 +122,9 @@ describe("production site shell", () => {
     expect(fallbackHtml).toContain('disabled=""');
     expect(html).not.toMatch(
       /private@example|private-user|private-session|owner_user_id/i,
+    );
+    expect(html).toContain(
+      'data-document-mutation-generation="opaque-generation"',
     );
   });
 
@@ -256,7 +277,7 @@ describe("production site shell", () => {
     );
     expect(
       source.match(
-        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s*>[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
+        /<SessionConvergenceBoundary\s+locale=\{locale\}\s+localeControlFallback=\{sessionConvergenceLocaleControl\}\s*>[\s\S]*?<DocumentMutationGenerationProvider[\s\S]*?<SignOutProvider locale=\{locale\}>[\s\S]*?<\/SignOutProvider>[\s\S]*?<\/DocumentMutationGenerationProvider>[\s\S]*?<\/SessionConvergenceBoundary>/g,
       ),
     ).toHaveLength(2);
     expect(source).not.toMatch(

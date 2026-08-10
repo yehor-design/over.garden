@@ -330,7 +330,10 @@ export function buildAuthenticatedMutationRegistry(input: {
     const entrypoint = classified[index]!;
     if (entrypoint.classification !== "unresolved") {
       if (entrypoint.classification === "effectful") {
-        admissionByEntrypoint.set(entrypoint.entrypointId, entrypoint.entrypointId);
+        admissionByEntrypoint.set(
+          entrypoint.entrypointId,
+          entrypoint.entrypointId,
+        );
       }
       continue;
     }
@@ -344,7 +347,10 @@ export function buildAuthenticatedMutationRegistry(input: {
     if (!admission) continue;
     classified[index] = classifyConsumerFromAdmission(entrypoint, admission);
     if (admission.classification === "effectful") {
-      admissionByEntrypoint.set(entrypoint.entrypointId, admission.entrypointId);
+      admissionByEntrypoint.set(
+        entrypoint.entrypointId,
+        admission.entrypointId,
+      );
     }
   }
   classifiedById = new Map(
@@ -392,10 +398,7 @@ export function buildAuthenticatedMutationRegistry(input: {
       const effect = spec.effect;
       const consumerEdgeId = `edge:${stableId(entrypoint.entrypointId)}:${index + 1}:${stableId(effect.effectBoundaryId)}`;
       const predecessorEdgeIds = lastRequiredEdgeId ? [lastRequiredEdgeId] : [];
-      const branchConditionClass = branchConditionFor(
-        entrypoint,
-        spec,
-      );
+      const branchConditionClass = branchConditionFor(entrypoint, spec);
       consumerEdges.push({
         consumerEdgeId,
         entrypointId: entrypoint.entrypointId,
@@ -430,8 +433,12 @@ export function buildAuthenticatedMutationRegistry(input: {
     schemaVersion: AUTHENTICATED_MUTATION_REGISTRY_SCHEMA_VERSION,
     toolchain: { ...input.toolchain },
     sourcePolicy: {
-      excludedPathSegments: [...AUTHENTICATED_MUTATION_SOURCE_POLICY.excludedPathSegments],
-      productionRoots: [...AUTHENTICATED_MUTATION_SOURCE_POLICY.productionRoots],
+      excludedPathSegments: [
+        ...AUTHENTICATED_MUTATION_SOURCE_POLICY.excludedPathSegments,
+      ],
+      productionRoots: [
+        ...AUTHENTICATED_MUTATION_SOURCE_POLICY.productionRoots,
+      ],
     },
     prerequisiteReceipts: [...(input.prerequisiteReceipts ?? [])]
       .map((receipt) => ({ ...receipt }))
@@ -646,9 +653,12 @@ function buildStructuralSourceNodes(
           statement.moduleSpecifier.text,
           sourcePaths,
         );
-        const symbols = statement.exportClause && ts.isNamedExports(statement.exportClause)
-          ? statement.exportClause.elements.map((element) => element.name.text)
-          : ["*"];
+        const symbols =
+          statement.exportClause && ts.isNamedExports(statement.exportClause)
+            ? statement.exportClause.elements.map(
+                (element) => element.name.text,
+              )
+            : ["*"];
         for (const symbol of symbols) {
           addNode(
             "re_export",
@@ -688,8 +698,13 @@ function importedBindingNames(declaration: ts.ImportDeclaration): string[] {
   const names: string[] = [];
   if (clause.name) names.push(clause.name.text);
   if (clause.namedBindings && ts.isNamedImports(clause.namedBindings)) {
-    names.push(...clause.namedBindings.elements.map((element) => element.name.text));
-  } else if (clause.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+    names.push(
+      ...clause.namedBindings.elements.map((element) => element.name.text),
+    );
+  } else if (
+    clause.namedBindings &&
+    ts.isNamespaceImport(clause.namedBindings)
+  ) {
     names.push(clause.namedBindings.name.text);
   }
   return names.length > 0 ? names : ["<side-effect>"];
@@ -739,7 +754,10 @@ function structuralScriptKind(repositoryPath: string): ts.ScriptKind {
 function isContextualTransactionExecute(
   node: ts.Node,
 ): node is ts.CallExpression {
-  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) {
+  if (
+    !ts.isCallExpression(node) ||
+    !ts.isPropertyAccessExpression(node.expression)
+  ) {
     return false;
   }
   if (node.expression.name.text !== "execute") return false;
@@ -805,11 +823,21 @@ function expandAuthorityVariants(
   ) {
     return [discovery];
   }
-  const hasVisualBranch = sourceText.includes("resolveVisualSocialMutationActor");
+  const hasVisualBranch = sourceText.includes(
+    "resolveVisualSocialMutationActor",
+  );
   const hasGuestAuthIntentBranch =
     sourceText.includes("authIntentRequiredResponse") ||
     sourceText.includes("AuthenticationRequiredError");
-  if (!hasVisualBranch && !hasGuestAuthIntentBranch) return [discovery];
+  const hasDocumentMutationAdmission = sourceText.includes(
+    "admitDocumentMutation",
+  );
+  if (!hasVisualBranch && !hasGuestAuthIntentBranch) {
+    return hasDocumentMutationAdmission &&
+      discovery.path !== "src/app/garden/actions.ts"
+      ? [withAuthorityVariant(discovery, "authenticated_user")]
+      : [discovery];
+  }
 
   const variants: ExpandedDiscoveryInput[] = [
     withAuthorityVariant(discovery, "authenticated_user"),
@@ -855,7 +883,8 @@ function expandBehaviorVariants(
   const isJournalAdmission =
     discovery.path === "src/app/api/garden/entries/route.ts" &&
     discovery.symbol === "POST" &&
-    discovery.forcedAuthority === "authenticated_user" &&
+    (discovery.forcedAuthority === undefined ||
+      discovery.forcedAuthority === "authenticated_user") &&
     sourceText.includes("createSpaceJournalEntry") &&
     sourceText.includes("createPlantObjectJournalEntry") &&
     sourceText.includes("createFirstPlantEntry");
@@ -910,8 +939,7 @@ function journalConsumerBehaviorTargets(
   if (
     discovery.transport === "same_origin_fetch" &&
     discovery.path === "src/lib/offline/journal-entry-sync.ts" &&
-    discovery.variant.replace(/:keepalive$/, "") ===
-      "POST:/api/garden/entries"
+    discovery.variant.replace(/:keepalive$/, "") === "POST:/api/garden/entries"
   ) {
     return ["space_entry", "plant_object_entry", "first_plant_entry"];
   }
@@ -992,7 +1020,8 @@ function classifyIntrinsicDiscovery(
   sourceGraph: AuthenticatedMutationSourceGraph,
 ): AuthenticatedMutationEntrypointV2 {
   const sourceText = sourceGraph.sourceText(discovery.path);
-  const exclusion = discovery.forcedExclusion ?? exclusionFor(discovery, sourceText);
+  const exclusion =
+    discovery.forcedExclusion ?? exclusionFor(discovery, sourceText);
   const authority = discovery.forcedAuthority ?? authorityFor(discovery);
   const evidencePaths = normalizeSet(discovery.evidencePaths);
   if (exclusion) {
@@ -1097,6 +1126,17 @@ function exclusionFor(
 } | null {
   const key = `${discovery.path}\0${discovery.symbol}\0${discovery.variant}`;
   if (
+    discovery.transport === "same_origin_fetch" &&
+    discovery.variant ===
+      "POST:/api/document-mutation-admission/continuity"
+  ) {
+    return {
+      classification: "read_only",
+      reason:
+        "document_owner_continuity_rechecks_authority_without_a_product_effect",
+    };
+  }
+  if (
     discovery.transport === "better_auth_callback" &&
     discovery.variant === "retired_facebook_request"
   ) {
@@ -1118,7 +1158,7 @@ function exclusionFor(
     discovery.path.includes("%5F%5Fvisual-fixtures") ||
     discovery.path.includes("/__visual-fixtures/") ||
     /visual(?:[-_ ]|Fixture)/i.test(key) ||
-    sourceText.includes("data-interface-locale-form=\"ignore\"")
+    sourceText.includes('data-interface-locale-form="ignore"')
   ) {
     return {
       classification: "excluded_distinct_authority",
@@ -1133,7 +1173,8 @@ function exclusionFor(
   ) {
     return {
       classification: "excluded_distinct_authority",
-      reason: "installed_better_auth_core_has_no_configured_endpoint_for_this_method",
+      reason:
+        "installed_better_auth_core_has_no_configured_endpoint_for_this_method",
     };
   }
   if (discovery.path.includes("/api/cron/")) {
@@ -1196,8 +1237,14 @@ function exclusionFor(
       reason: "public_or_guest_capability_has_distinct_authority",
     };
   }
-  if (discovery.transport === "native_form" && isNativeNavigation(discovery.variant)) {
-    return { classification: "read_only", reason: "native_form_submits_a_get_navigation" };
+  if (
+    discovery.transport === "native_form" &&
+    isNativeNavigation(discovery.variant)
+  ) {
+    return {
+      classification: "read_only",
+      reason: "native_form_submits_a_get_navigation",
+    };
   }
   return null;
 }
@@ -1247,10 +1294,14 @@ function authorityFor(
   }
   if (/visual[-_ ]fixture/i.test(key)) return "visual_fixture";
   if (discovery.path.includes("/api/cron/")) return "bearer_cron";
-  if (discovery.path.includes("/admin/") || /Catalog.*(?:Action|Candidate)/.test(key)) {
+  if (
+    discovery.path.includes("/admin/") ||
+    /Catalog.*(?:Action|Candidate)/.test(key)
+  ) {
     return "admin";
   }
-  if (/moderate|moderation|resolveCommunityReport/.test(key)) return "moderator";
+  if (/moderate|moderation|resolveCommunityReport/.test(key))
+    return "moderator";
   if (/pilot-learning|erasure-requests/.test(key)) return "founder_operator";
   if (
     discovery.variant.startsWith("guest_") ||
@@ -1340,7 +1391,8 @@ function resolveAdmissionBoundary(
   }
   if (
     entrypoint.transport === "same_origin_fetch" ||
-    (entrypoint.transport === "native_form" && entrypoint.variant.startsWith("POST:"))
+    (entrypoint.transport === "native_form" &&
+      entrypoint.variant.startsWith("POST:"))
   ) {
     const normalizedVariant = entrypoint.variant
       .replace(/:behavior:[^:]+$/, "")
@@ -1477,19 +1529,30 @@ function inferAdmissionEffects(
       admission.variant === "authenticated_account_session_mutation"
     ) {
       effects.push(
-        createBetterAuthEffect(admission, "provider", "provider_operation", ["external_call"]),
+        createBetterAuthEffect(admission, "provider", "provider_operation", [
+          "external_call",
+        ]),
       );
     }
     effects.push(
-      createBetterAuthEffect(admission, "auth-account", "auth_adapter_commit", ["auth_account"]),
+      createBetterAuthEffect(admission, "auth-account", "auth_adapter_commit", [
+        "auth_account",
+      ]),
     );
     if (admission.variant === "authenticated_account_session_mutation") {
       effects.push(
-        createBetterAuthEffect(admission, "auth-session", "auth_adapter_commit", ["auth_session"]),
+        createBetterAuthEffect(
+          admission,
+          "auth-session",
+          "auth_adapter_commit",
+          ["auth_session"],
+        ),
       );
     }
     effects.push(
-      createBetterAuthEffect(admission, "cookie", "cookie_commit", ["browser_cookie"]),
+      createBetterAuthEffect(admission, "cookie", "cookie_commit", [
+        "browser_cookie",
+      ]),
     );
     return effects;
   }
@@ -1555,7 +1618,10 @@ function sourceRefKey(ownerPath: string, ownerSymbol: string): string {
 }
 
 function slugify(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function routePathMatchesUrl(routePath: string, url: string): boolean {
@@ -1588,7 +1654,9 @@ export function validateAuthenticatedMutationRegistry(
 ): AuthenticatedMutationRegistryFinding[] {
   const findings: AuthenticatedMutationRegistryFinding[] = [];
 
-  if (registry.schemaVersion !== AUTHENTICATED_MUTATION_REGISTRY_SCHEMA_VERSION) {
+  if (
+    registry.schemaVersion !== AUTHENTICATED_MUTATION_REGISTRY_SCHEMA_VERSION
+  ) {
     findings.push({
       code: "schema_version",
       subjectId: registry.schemaVersion,
@@ -1609,7 +1677,8 @@ export function validateAuthenticatedMutationRegistry(
     findings.push({
       code: "source_policy_mismatch",
       subjectId: registry.schemaVersion,
-      message: "The v3 production roots and excluded path segments must match the closed source policy.",
+      message:
+        "The v3 production roots and excluded path segments must match the closed source policy.",
     });
   }
   const prerequisiteIssueIds = new Set<string>();
@@ -1622,7 +1691,8 @@ export function validateAuthenticatedMutationRegistry(
       findings.push({
         code: "invalid_prerequisite_receipt",
         subjectId: receipt.issueId || registry.schemaVersion,
-        message: "Prerequisite receipts require unique OVE issue IDs and exact SHA-256 digests.",
+        message:
+          "Prerequisite receipts require unique OVE issue IDs and exact SHA-256 digests.",
       });
     }
     prerequisiteIssueIds.add(receipt.issueId);
@@ -1631,7 +1701,8 @@ export function validateAuthenticatedMutationRegistry(
     findings.push({
       code: "missing_prerequisite_receipt",
       subjectId: "OVE-296",
-      message: "The checked v3 registry must bind the terminal OVE-296 retirement receipt.",
+      message:
+        "The checked v3 registry must bind the terminal OVE-296 retirement receipt.",
     });
   }
 
@@ -1645,7 +1716,11 @@ export function validateAuthenticatedMutationRegistry(
       });
     }
     sourceNodeIds.add(sourceNode.sourceNodeId);
-    validateEvidence(sourceNode.sourceNodeId, sourceNode.evidencePaths, findings);
+    validateEvidence(
+      sourceNode.sourceNodeId,
+      sourceNode.evidencePaths,
+      findings,
+    );
     if (
       ![
         "typed_action_prop",
@@ -1667,7 +1742,8 @@ export function validateAuthenticatedMutationRegistry(
       findings.push({
         code: "source_policy_mismatch",
         subjectId: sourceNode.sourceNodeId,
-        message: "Source nodes must use a closed kind and an allowed production source path.",
+        message:
+          "Source nodes must use a closed kind and an allowed production source path.",
       });
     }
     if (sourceNode.resolutionState === "unresolved") {
@@ -1682,7 +1758,8 @@ export function validateAuthenticatedMutationRegistry(
     findings.push({
       code: "empty_registry",
       subjectId: registry.schemaVersion,
-      message: "A checked registry must contain at least one discovered entrypoint.",
+      message:
+        "A checked registry must contain at least one discovered entrypoint.",
     });
   }
 
@@ -1705,7 +1782,10 @@ export function validateAuthenticatedMutationRegistry(
     findings,
   );
 
-  const edgesByEntrypoint = new Map<string, AuthenticatedMutationConsumerEdgeV2[]>();
+  const edgesByEntrypoint = new Map<
+    string,
+    AuthenticatedMutationConsumerEdgeV2[]
+  >();
   for (const edge of registry.consumerEdges) {
     const current = edgesByEntrypoint.get(edge.entrypointId) ?? [];
     current.push(edge);
@@ -1713,7 +1793,11 @@ export function validateAuthenticatedMutationRegistry(
   }
 
   for (const entrypoint of registry.entrypoints) {
-    validateEvidence(entrypoint.entrypointId, entrypoint.evidencePaths, findings);
+    validateEvidence(
+      entrypoint.entrypointId,
+      entrypoint.evidencePaths,
+      findings,
+    );
     const reachableEdges = edgesByEntrypoint.get(entrypoint.entrypointId) ?? [];
     if (entrypoint.classification === "unresolved") {
       findings.push({
@@ -1771,7 +1855,8 @@ export function validateAuthenticatedMutationRegistry(
       findings.push({
         code: "orphan_effect_boundary",
         subjectId: effect.effectBoundaryId,
-        message: "Every effect boundary must be reachable from at least one edge.",
+        message:
+          "Every effect boundary must be reachable from at least one edge.",
       });
     }
     if (
@@ -1786,7 +1871,8 @@ export function validateAuthenticatedMutationRegistry(
       findings.push({
         code: "missing_source_node",
         subjectId: effect.effectBoundaryId,
-        message: "Every effect boundary must own one resolved effect-owner source node.",
+        message:
+          "Every effect boundary must own one resolved effect-owner source node.",
       });
     }
   }
@@ -1812,7 +1898,8 @@ export function validateAuthenticatedMutationRegistry(
       findings.push({
         code: "invalid_branch_contract",
         subjectId: edge.consumerEdgeId,
-        message: "Every consumer edge requires one closed branch ID and condition class.",
+        message:
+          "Every consumer edge requires one closed branch ID and condition class.",
       });
     }
     if (!entrypoints.has(edge.entrypointId)) {
@@ -1862,15 +1949,16 @@ export function validateAuthenticatedMutationRegistry(
   }
 
   return findings.sort((left, right) =>
-    byteCompare(`${left.code}\0${left.subjectId}`, `${right.code}\0${right.subjectId}`),
+    byteCompare(
+      `${left.code}\0${left.subjectId}`,
+      `${right.code}\0${right.subjectId}`,
+    ),
   );
 }
 
 function isRegistryProductionPath(repositoryPath: string): boolean {
   const normalized = normalizeRepositoryPath(repositoryPath);
-  if (
-    /\.(?:test|spec|fixture|snapshot)\.[cm]?[jt]sx?$/.test(normalized)
-  ) {
+  if (/\.(?:test|spec|fixture|snapshot)\.[cm]?[jt]sx?$/.test(normalized)) {
     return false;
   }
   const disallowedSegments = new Set([
@@ -1881,7 +1969,9 @@ function isRegistryProductionPath(repositoryPath: string): boolean {
     "generated",
     "node_modules",
   ]);
-  if (normalized.split("/").some((segment) => disallowedSegments.has(segment))) {
+  if (
+    normalized.split("/").some((segment) => disallowedSegments.has(segment))
+  ) {
     return false;
   }
   return (
@@ -1938,9 +2028,13 @@ export function canonicalizeAuthenticatedMutationRegistry(
         executionOwner: item.executionOwner,
         generationRequirement: item.generationRequirement,
         exclusionReason: item.exclusionReason,
-        evidencePaths: normalizeSet(item.evidencePaths.map(normalizeRepositoryPath)),
+        evidencePaths: normalizeSet(
+          item.evidencePaths.map(normalizeRepositoryPath),
+        ),
       }))
-      .sort((left, right) => byteCompare(left.entrypointId, right.entrypointId)),
+      .sort((left, right) =>
+        byteCompare(left.entrypointId, right.entrypointId),
+      ),
     effectBoundaries: [...registry.effectBoundaries]
       .map((item) => ({
         effectBoundaryId: item.effectBoundaryId,
@@ -1950,7 +2044,9 @@ export function canonicalizeAuthenticatedMutationRegistry(
         atomicity: item.atomicity,
         effectFamilies: normalizeSet(item.effectFamilies),
         idempotencyOwner: item.idempotencyOwner,
-        evidencePaths: normalizeSet(item.evidencePaths.map(normalizeRepositoryPath)),
+        evidencePaths: normalizeSet(
+          item.evidencePaths.map(normalizeRepositoryPath),
+        ),
       }))
       .sort((left, right) =>
         byteCompare(left.effectBoundaryId, right.effectBoundaryId),
@@ -1966,9 +2062,13 @@ export function canonicalizeAuthenticatedMutationRegistry(
         predecessorEdgeIds: normalizeSet(item.predecessorEdgeIds),
         admissionBoundaryId: item.admissionBoundaryId,
         executionMode: item.executionMode,
-        evidencePaths: normalizeSet(item.evidencePaths.map(normalizeRepositoryPath)),
+        evidencePaths: normalizeSet(
+          item.evidencePaths.map(normalizeRepositoryPath),
+        ),
       }))
-      .sort((left, right) => byteCompare(left.consumerEdgeId, right.consumerEdgeId)),
+      .sort((left, right) =>
+        byteCompare(left.consumerEdgeId, right.consumerEdgeId),
+      ),
   };
   return canonicalJson(normalized);
 }
@@ -1981,7 +2081,9 @@ export function buildAuthenticatedMutationRegistryReceipt(input: {
   decisionState: "ready" | "inconclusive";
 }): AuthenticatedMutationRegistryReceiptV3 {
   if (!/^[a-f0-9]{40}$/.test(input.baselineSha)) {
-    throw new Error("Baseline SHA must be an exact lowercase 40-character Git SHA.");
+    throw new Error(
+      "Baseline SHA must be an exact lowercase 40-character Git SHA.",
+    );
   }
   const findings = validateAuthenticatedMutationRegistry(input.registry);
   if (input.decisionState === "ready" && findings.length > 0) {
@@ -1999,7 +2101,9 @@ export function buildAuthenticatedMutationRegistryReceipt(input: {
     normalizedEvidencePaths.some((evidencePath) => !evidencePath) ||
     new Set(normalizedEvidencePaths).size !== normalizedEvidencePaths.length
   ) {
-    throw new Error("Source evidence paths must be unique and repository-relative.");
+    throw new Error(
+      "Source evidence paths must be unique and repository-relative.",
+    );
   }
   const evidencePathSet = new Set(normalizedEvidencePaths);
   if (input.decisionState === "ready") {
@@ -2044,15 +2148,21 @@ export function buildAuthenticatedMutationRegistryReceipt(input: {
       "Receipt prerequisite evidence must be non-empty and match the registry.",
     );
   }
-  const registryJson = canonicalizeAuthenticatedMutationRegistry(input.registry);
+  const registryJson = canonicalizeAuthenticatedMutationRegistry(
+    input.registry,
+  );
   const registryDigest = sha256Hex(registryJson);
   const normalizedSourceEvidence = input.sourceEvidence
     .map((evidence) => ({
       path: normalizeRepositoryPath(evidence.path),
-      normalizedSourceSha256: sha256Hex(normalizeSourceText(evidence.sourceText)),
+      normalizedSourceSha256: sha256Hex(
+        normalizeSourceText(evidence.sourceText),
+      ),
     }))
     .sort((left, right) => byteCompare(left.path, right.path));
-  const sourceEvidenceDigest = sha256Hex(canonicalJson(normalizedSourceEvidence));
+  const sourceEvidenceDigest = sha256Hex(
+    canonicalJson(normalizedSourceEvidence),
+  );
   const receiptDigest = sha256Hex(
     `overgarden.authenticated-mutation-registry.receipt.v3\0${canonicalJson({
       baselineSha: input.baselineSha,
@@ -2095,13 +2205,16 @@ function normalizePrerequisiteReceipts(
     new Set(normalized.map((receipt) => receipt.issueId)).size !==
       normalized.length
   ) {
-    throw new Error("Prerequisite receipts must use unique issue IDs and SHA-256 digests.");
+    throw new Error(
+      "Prerequisite receipts must use unique issue IDs and SHA-256 digests.",
+    );
   }
   return normalized;
 }
 
 export function normalizeSourceText(sourceText: string): string {
-  const withoutBom = sourceText.charCodeAt(0) === 0xfeff ? sourceText.slice(1) : sourceText;
+  const withoutBom =
+    sourceText.charCodeAt(0) === 0xfeff ? sourceText.slice(1) : sourceText;
   return withoutBom.replace(/\r\n?/g, "\n");
 }
 

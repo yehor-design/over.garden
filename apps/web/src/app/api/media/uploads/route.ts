@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { createQuarantineUploadUrl } from "@/lib/storage";
-import { AuthenticationRequiredError } from "@/server/auth-session";
-import { authIntentRequiredResponse } from "@/server/auth-intent-http";
+import {
+  createQuarantineUploadUrl,
+  resolveEffectiveR2PresignTtlSeconds,
+  resolveR2UploadUrlTtlConfiguration,
+} from "@/lib/storage";
 import { createQuarantinedMediaAsset } from "@/server/media/media-repository";
 import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import { isAllowedComposerImageSize } from "@/lib/media/image-limits";
 
 export const runtime = "nodejs";
@@ -20,20 +23,13 @@ const ALLOWED_CONTENT_TYPES = new Set([
 ]);
 
 export async function POST(request: Request) {
-  let scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: error.message }, { status: 403 });
-    }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    return authIntentRequiredResponse(request, {
-      action: "save",
-      fallbackReturnTo: "/garden",
-      message: "Sign in to continue this photo save.",
-    });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope = admission.scope;
   const body = (await request.json()) as {
     contentType?: string;
     sizeBytes?: number;
@@ -67,6 +63,12 @@ export async function POST(request: Request) {
   const uploadGenerationId = randomUUID();
   const publicObjectId = randomUUID();
   const objectKey = `quarantine/${uploadGenerationId}.${extension}`;
+  const ttlConfiguration = resolveR2UploadUrlTtlConfiguration();
+  const expiresInSeconds = resolveEffectiveR2PresignTtlSeconds({
+    configuration: ttlConfiguration,
+    envelopeExpiresAtSeconds: admission.envelopeExpiresAtSeconds,
+    nowSeconds: Math.floor(Date.now() / 1_000),
+  });
   const mediaAsset = await createQuarantinedMediaAsset(scope, {
     quarantineKey: objectKey,
     declaredMediaType: contentType,
@@ -78,11 +80,14 @@ export async function POST(request: Request) {
     objectKey,
     contentType,
     contentLength: sizeBytes,
+    expiresInSeconds,
   });
 
   return Response.json({
     mediaAssetId: mediaAsset.id,
     uploadUrl: upload.uploadUrl,
     expiresInSeconds: upload.expiresInSeconds,
+    uploadUrlTtlSource: ttlConfiguration.source,
+    uploadUrlTtlConfiguredSeconds: ttlConfiguration.effectiveSeconds,
   });
 }

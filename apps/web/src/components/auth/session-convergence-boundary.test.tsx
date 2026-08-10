@@ -141,6 +141,7 @@ import {
   SESSION_CONVERGENCE_PHASE_TIMEOUT_MS,
   SessionConvergenceBoundary,
 } from "./session-convergence-boundary";
+import { DOCUMENT_OWNER_CHANGED_EVENT } from "@/lib/auth/document-mutation-generation-transport";
 
 describe("session convergence boundary", () => {
   beforeEach(() => {
@@ -255,6 +256,24 @@ describe("session convergence boundary", () => {
     expect(source).toContain('window.addEventListener("pageshow"');
     expect(source).toContain('window.addEventListener("focus"');
     expect(source).not.toMatch(/payload\.(?:user|session|account|owner)/);
+  });
+
+  it("consumes the payload-free owner-change result through the existing terminal path", async () => {
+    const renderer = await renderBoundary();
+    const listener = mocks.windowListeners.get(DOCUMENT_OWNER_CHANGED_EVENT);
+
+    expect(listener).toBeTypeOf("function");
+    await act(async () => {
+      listener?.(new Event(DOCUMENT_OWNER_CHANGED_EVENT));
+      listener?.(new Event(DOCUMENT_OWNER_CHANGED_EVENT));
+      await Promise.resolve();
+    });
+
+    expect(mocks.reload).toHaveBeenCalledOnce();
+    expect(
+      renderer.root.findAllByProps({ children: "Private surface" }),
+    ).toHaveLength(0);
+    await unmount(renderer);
   });
 
   it("does not treat Better Auth's pending null hook snapshot as signed out", async () => {

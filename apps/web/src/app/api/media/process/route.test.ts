@@ -23,6 +23,9 @@ const authIntentMock = vi.hoisted(() => ({
     ),
   ),
 }));
+const admissionMock = vi.hoisted(() => ({
+  admitDocumentMutation: vi.fn(),
+}));
 
 const mediaRepositoryMock = vi.hoisted(() => ({
   claimMediaAssetForProcessing: vi.fn(),
@@ -59,6 +62,19 @@ vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/server/media/processor", () => processorMock);
 vi.mock("@/lib/storage", () => storageMock);
 vi.mock("@/server/media/lifecycle-revoke", () => lifecycleMock);
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: admissionMock.admitDocumentMutation,
+  documentMutationGenerationFromRequest: (request: Request) =>
+    request.headers.get("x-overgarden-document-generation"),
+  documentMutationAdmissionResponse: (admission: {
+    transportResult: string;
+    statusCode: number;
+  }) =>
+    Response.json(
+      { code: admission.transportResult },
+      { status: admission.statusCode },
+    ),
+}));
 
 import { POST } from "./route";
 
@@ -71,12 +87,23 @@ describe("media process API", () => {
     mediaRepositoryMock.releaseMediaProcessingClaim.mockResolvedValue(
       undefined,
     );
+    admissionMock.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-0000-0000-000000000001",
+        sessionId: "session-1",
+      },
+      envelopeExpiresAtSeconds: 1_786_381_200,
+    });
   });
 
-  it("returns an opaque authentication intent before reading a private media id", async () => {
-    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new authMock.AuthenticationRequiredError(),
-    );
+  it("returns a closed authentication result before reading a private media id", async () => {
+    admissionMock.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "SIGNED_OUT",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
     const request = new Request("http://localhost/api/media/process", {
       method: "POST",
       headers: {
@@ -91,35 +118,36 @@ describe("media process API", () => {
     const serialized = JSON.stringify(await response.json());
 
     expect(response.status).toBe(401);
-    expect(authIntentMock.authIntentRequiredResponse).toHaveBeenCalledWith(
-      request,
-      expect.objectContaining({ action: "save", fallbackReturnTo: "/garden" }),
-    );
-    expect(serialized).toContain("opaque-media-intent");
+    expect(serialized).toContain("AUTHENTICATION_REQUIRED");
     expect(serialized).not.toContain("00000000-0000-4000-8000-000000000099");
     expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
-  it("does not misclassify an operational authentication failure", async () => {
-    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new Error("session storage unavailable"),
-    );
+  it("maps an operational authentication failure to unavailable", async () => {
+    admissionMock.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
 
-    await expect(
-      POST(
-        new Request("http://localhost/api/media/process", {
-          method: "POST",
-          body: JSON.stringify({ mediaAssetId: "media-1" }),
-        }),
-      ),
-    ).rejects.toThrow("session storage unavailable");
-    expect(authIntentMock.authIntentRequiredResponse).not.toHaveBeenCalled();
+    const response = await POST(
+      new Request("http://localhost/api/media/process", {
+        method: "POST",
+        body: JSON.stringify({ mediaAssetId: "media-1" }),
+      }),
+    );
+    expect(response.status).toBe(503);
+    expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
-  it("still maps unexpected write-boundary errors to opaque 403", async () => {
-    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new pilotMock.PilotWriteAccessError("Write boundary failed."),
-    );
+  it("maps a protocol refresh before any media effect", async () => {
+    admissionMock.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "DOCUMENT_PROTOCOL_REFRESH_REQUIRED",
+      transportResult: "DOCUMENT_PROTOCOL_REFRESH_REQUIRED",
+      statusCode: 409,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/media/process", {
@@ -128,7 +156,7 @@ describe("media process API", () => {
       }),
     );
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(409);
     expect(mediaRepositoryMock.findMediaAssetForOwner).not.toHaveBeenCalled();
   });
 
@@ -159,18 +187,26 @@ describe("media process API", () => {
         intrinsicHeight: 600,
       };
     });
-    mediaRepositoryMock.markClaimedMediaDerivativeWritten.mockImplementation(async () => {
-      calls.push("mark-derivative-written");
-      return { ...asset, derivative_key: "derivatives/opaque.webp" };
-    });
+    mediaRepositoryMock.markClaimedMediaDerivativeWritten.mockImplementation(
+      async () => {
+        calls.push("mark-derivative-written");
+        return { ...asset, derivative_key: "derivatives/opaque.webp" };
+      },
+    );
     lifecycleMock.revokeMediaObjectBytes.mockImplementation(async () => {
       calls.push("prove-original-gone");
       return { outcome: "confirmed_gone" };
     });
-    mediaRepositoryMock.settleClaimedMediaPublicReady.mockImplementation(async () => {
-      calls.push("settle-public-ready");
-      return { ...asset, derivative_key: "derivatives/opaque.webp", status: "processed" };
-    });
+    mediaRepositoryMock.settleClaimedMediaPublicReady.mockImplementation(
+      async () => {
+        calls.push("settle-public-ready");
+        return {
+          ...asset,
+          derivative_key: "derivatives/opaque.webp",
+          status: "processed",
+        };
+      },
+    );
 
     const response = await POST(
       new Request("http://localhost/api/media/process", {
@@ -202,7 +238,9 @@ describe("media process API", () => {
     expect(await response.json()).toEqual({
       error: "Media asset is unavailable.",
     });
-    expect(mediaRepositoryMock.claimMediaAssetForProcessing).not.toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.claimMediaAssetForProcessing,
+    ).not.toHaveBeenCalled();
   });
 
   it("recovers derivative-written state without reading the deleted original again", async () => {
@@ -238,7 +276,9 @@ describe("media process API", () => {
       bucket: "quarantine",
       objectKey: "quarantine/recovery.jpg",
     });
-    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.settleClaimedMediaPublicReady,
+    ).toHaveBeenCalled();
   });
 
   it("keeps a written derivative recoverable when original absence is indeterminate", async () => {
@@ -279,12 +319,12 @@ describe("media process API", () => {
     );
 
     expect(response.status).toBe(500);
-    expect(mediaRepositoryMock.releaseMediaProcessingClaim).toHaveBeenCalledWith(
-      expect.anything(),
-      claim,
-      false,
-    );
-    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.releaseMediaProcessingClaim,
+    ).toHaveBeenCalledWith(expect.anything(), claim, false);
+    expect(
+      mediaRepositoryMock.settleClaimedMediaPublicReady,
+    ).not.toHaveBeenCalled();
   });
 
   it("deletes an unreachable stale derivative when claim settlement loses", async () => {
@@ -324,7 +364,9 @@ describe("media process API", () => {
       bucket: "public_derivative",
       objectKey: "derivatives/stale.webp",
     });
-    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.settleClaimedMediaPublicReady,
+    ).not.toHaveBeenCalled();
   });
 
   it("returns an idempotent receipt when media is already public-ready", async () => {
@@ -350,7 +392,9 @@ describe("media process API", () => {
 
     expect(response.status).toBe(200);
     expect(processorMock.processQuarantinedImage).not.toHaveBeenCalled();
-    expect(mediaRepositoryMock.claimMediaAssetForProcessing).not.toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.claimMediaAssetForProcessing,
+    ).not.toHaveBeenCalled();
   });
 
   it("persists the fenced review receipt before terminal replacement guidance", async () => {
@@ -393,11 +437,11 @@ describe("media process API", () => {
       claim,
       quality,
     );
-    expect(mediaRepositoryMock.releaseMediaProcessingClaim).toHaveBeenCalledWith(
-      expect.anything(),
-      claim,
-      true,
-    );
-    expect(mediaRepositoryMock.settleClaimedMediaPublicReady).not.toHaveBeenCalled();
+    expect(
+      mediaRepositoryMock.releaseMediaProcessingClaim,
+    ).toHaveBeenCalledWith(expect.anything(), claim, true);
+    expect(
+      mediaRepositoryMock.settleClaimedMediaPublicReady,
+    ).not.toHaveBeenCalled();
   });
 });

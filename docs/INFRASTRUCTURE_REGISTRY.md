@@ -1,7 +1,7 @@
 # Infrastructure Registry
 
 Status: live operational source of truth
-Last verified: 2026-07-30 for the OVE-237 versioned-auth runtime recovery and interaction-admission schema rollout; 2026-07-22 for the OVE-188 protective-DNS closeout; 2026-07-18 for the OVE-204 exact-main current-session sign-out rollout, OVE-203 production public-identity rollout and release-preview auth-env repair, production matching release, sealed-owner env recovery, and OVE-191 scaffold-boundary implementation; other provider verification dates remain recorded per section
+Last verified: 2026-08-10 for the OVE-290 R2 presign TTL preflight and stale-document media contract; 2026-07-30 for the OVE-237 versioned-auth runtime recovery and interaction-admission schema rollout; 2026-07-22 for the OVE-188 protective-DNS closeout; other provider verification dates remain recorded per section
 Owner: founder/operator
 
 This document records non-secret infrastructure settings, stable identifiers, URLs, and operational links for OverGarden. It exists so future AI agents do not ask for the same values repeatedly and do not invent provider-specific configuration.
@@ -173,6 +173,14 @@ OVE-244 safe media admission contract:
 - Every S3-compatible Get/Put/Copy/Delete/Head call has a finite request timeout. Actual-byte admission precedes Sharp decode, and only token-fenced `public_ready` rows with provider-confirmed original absence are public-serializable.
 - Local proof: `../../infra/run-with-local-infra-env pnpm smoke:safe-media-admission -- --environment local --confirm-environment local`.
 - Production proof is allowed exactly once for the approved plan digest and exact READY deployment: `vercel env run -e production -- pnpm smoke:safe-media-admission -- --environment production --confirm-environment production --plan-digest 3585dce4442abdb93c108ef9908586a30888c7c0f3ba84097606d52f3c743a18`. It creates one random synthetic generation, proves one CAS winner, actual-byte admission, authoritative original absence and stale replay non-current, then invalidates and authoritatively removes all synthetic objects and the synthetic row in `finally`. It never selects real-user media and emits class-only evidence.
+
+OVE-290 document-generation media contract:
+
+- Authenticated Vercel production preflight on 2026-08-10 found no `R2_UPLOAD_URL_TTL_SECONDS` override. The source class is therefore `default` and the effective configured value is `900` seconds; no provider or environment mutation was required.
+- Runtime rejects any explicit malformed, non-positive, or non-900 override. Effective presign lifetime is additionally capped at 900 seconds and the remaining signed document-envelope lifetime.
+- `DOCUMENT_MUTATION_ADMISSION_ENABLED` is absent by default and therefore enforcement is enabled. Setting it to the exact value `false` or `0` is the bounded rollback; it is not a permanent relaxed configuration.
+- `/api/document-mutation-admission/readback` exposes only protocol, enforcement class, deployment SHA, and the non-secret TTL source/effective/maximum tuple with `no-store`. It never exposes environment inventory, credentials, cookies, generations, keys, or capability URLs.
+- Production closeout runs `scripts/smoke-document-mutation-admission.ts` in `reject-only` mode against the immutable exact-SHA deployment. Private A1/A2/B session cookies and the A1 document generation are supplied only through process environment, discarded after the run, and never printed or committed. The smoke performs read-only pre/post database counts and no successful product mutation.
 
 ### Quarantine Bucket
 

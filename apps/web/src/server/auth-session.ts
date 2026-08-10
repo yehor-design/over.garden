@@ -14,7 +14,25 @@ export class AuthenticationRequiredError extends Error {
 }
 
 export async function getCurrentSession() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  return readCurrentSession(false);
+}
+
+/**
+ * Sensitive mutation admission must bypass Better Auth's cookie cache. The
+ * returned object is the one request snapshot used to derive repository scope.
+ */
+export async function getAuthoritativeCurrentSession() {
+  return readCurrentSession(true);
+}
+
+async function readCurrentSession(disableCookieCache: boolean) {
+  const requestHeaders = await headers();
+  const session = disableCookieCache
+    ? await auth.api.getSession({
+        headers: requestHeaders,
+        query: { disableCookieCache: true },
+      })
+    : await auth.api.getSession({ headers: requestHeaders });
   const email = session?.user.email;
 
   if (typeof email === "string" && isRetiredSharedIdentityEmail(email)) {

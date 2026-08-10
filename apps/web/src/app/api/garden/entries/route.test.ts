@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   recordEntryLoggedEventSafely: vi.fn(),
   isBackdatedEntryDate: vi.fn(),
   createAuthIntentToken: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("@/server/auth-session", () => ({
@@ -45,6 +46,23 @@ vi.mock("@/server/auth-intent-token", () => ({
   createAuthIntentToken: mocks.createAuthIntentToken,
 }));
 
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromRequest: (request: Request) =>
+    request.headers.get("x-overgarden-document-generation"),
+  documentMutationAdmissionResponse: (admission: {
+    transportResult: string;
+    statusCode: number;
+  }) =>
+    Response.json(
+      { code: admission.transportResult },
+      {
+        status: admission.statusCode,
+        headers: { "Cache-Control": "private, no-store" },
+      },
+    ),
+}));
+
 describe("POST /api/garden/entries save progress readback", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -55,12 +73,25 @@ describe("POST /api/garden/entries save progress readback", () => {
     });
     mocks.isBackdatedEntryDate.mockReturnValue(false);
     mocks.createAuthIntentToken.mockReturnValue("opaque-save-intent");
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      internalResult: "MATCH",
+      transportResult: "MATCH",
+      envelopeExpiresAtSeconds: 1_786_381_200,
+      scope: {
+        userId: "00000000-0000-4000-8000-000000000001",
+        sessionId: "session-1",
+      },
+    });
   });
 
-  it("returns only an opaque save intent when the session expired before parsing the draft", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
-      new mocks.AuthenticationRequiredError("Authentication is required."),
-    );
+  it("returns only the closed authentication class before parsing the draft", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "SIGNED_OUT",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
     const { POST } = await import("./route");
     const response = await POST(
       jsonRequest({
@@ -73,24 +104,21 @@ describe("POST /api/garden/entries save progress readback", () => {
     const body = await response.json();
 
     expect(response.status).toBe(401);
-    expect(body).toEqual({
-      error: "Sign in to save an entry.",
-      authIntentUrl: "/auth/intent?intent=opaque-save-intent",
-    });
-    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
-      action: "save",
-      returnTo: "/garden",
-    });
-    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+    expect(body).toEqual({ code: "AUTHENTICATION_REQUIRED" });
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+    expect(JSON.stringify(mocks.admitDocumentMutation.mock.calls)).not.toMatch(
       /Private title|Private draft|42\.0/i,
     );
     expect(mocks.createFirstPlantEntry).not.toHaveBeenCalled();
   });
 
-  it("preserves a safe follow-up route without parsing or serializing draft text", async () => {
-    mocks.requireWriteEligibleRequestScope.mockRejectedValue(
-      new mocks.AuthenticationRequiredError("Authentication is required."),
-    );
+  it("rejects an owner transition without parsing or serializing draft text", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "OWNER_TRANSITION_CONFIRMED",
+      transportResult: "DOCUMENT_OWNER_CHANGED",
+      statusCode: 409,
+    });
     const objectId = "00000000-0000-4000-8000-000000000901";
     const { POST } = await import("./route");
     const response = await POST(
@@ -104,25 +132,29 @@ describe("POST /api/garden/entries save progress readback", () => {
       ),
     );
 
-    expect(response.status).toBe(401);
-    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
-      action: "save",
-      returnTo: `/garden/objects/${objectId}`,
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      code: "DOCUMENT_OWNER_CHANGED",
     });
     expect(
-      JSON.stringify(mocks.createAuthIntentToken.mock.calls),
+      JSON.stringify(mocks.admitDocumentMutation.mock.calls),
     ).not.toContain("Private follow-up draft");
   });
 
-  it("does not misclassify operational auth infrastructure failures as sign-out", async () => {
-    const failure = new Error("Database connection failed");
-    mocks.requireWriteEligibleRequestScope.mockRejectedValue(failure);
+  it("maps operational auth infrastructure failure to unavailable", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
     const { POST } = await import("./route");
 
-    await expect(
-      POST(jsonRequest({ target: "first_plant_entry" })),
-    ).rejects.toBe(failure);
-    expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
+    const response = await POST(jsonRequest({ target: "first_plant_entry" }));
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toEqual({
+      code: "MUTATION_ADMISSION_UNAVAILABLE",
+    });
   });
 
   it("returns a first-save progress readback URL and safe aggregate events", async () => {
