@@ -8,6 +8,7 @@ import {
 
 const signOut = vi.hoisted(() => vi.fn());
 const authHandler = vi.hoisted(() => vi.fn());
+const warn = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth", () => ({
   auth: { handler: authHandler, api: { signOut } },
@@ -20,6 +21,8 @@ describe("local-exit reconciliation route", () => {
     vi.resetModules();
     signOut.mockReset();
     authHandler.mockReset();
+    warn.mockReset();
+    vi.spyOn(console, "warn").mockImplementation(warn);
   });
 
   it("re-enters Better Auth through the canonical HTTP boundary for the exact-session delete", async () => {
@@ -40,6 +43,9 @@ describe("local-exit reconciliation route", () => {
     );
     expect(await canonicalRequest.json()).toEqual({});
     expect(signOut).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      "[auth] local-exit reconciliation outcome: revoked_confirmed",
+    );
   });
 
   it("returns a bodyless receipt with the library cookie expiry for the exact current session", async () => {
@@ -102,6 +108,9 @@ describe("local-exit reconciliation route", () => {
     expect(response.headers.get("set-cookie")).toBeNull();
     expect(authHandler).toHaveBeenCalledOnce();
     expect(signOut).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith(
+      "[auth] local-exit reconciliation outcome: stale_operation",
+    );
   });
 
   it.each([

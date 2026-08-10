@@ -28,6 +28,9 @@ export async function POST(request: Request): Promise<Response> {
       return auth.api.signOut(context);
     },
   );
+  console.warn(
+    `[auth] local-exit reconciliation outcome: ${result.outcome}`,
+  );
   const headers = new Headers(RESPONSE_HEADERS);
   for (const cookie of readSetCookieHeaders(result.response.headers)) {
     headers.append("set-cookie", cookie);
