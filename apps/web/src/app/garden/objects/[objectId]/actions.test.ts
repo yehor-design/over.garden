@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   convergePublicProjectionsNow: vi.fn(),
   arePublicProjectionsConverged: vi.fn(),
   revalidatePath: vi.fn(),
+  admitDocumentMutation: vi.fn(),
 }));
 
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
@@ -53,6 +54,11 @@ vi.mock("@/server/analytics-events", () => ({
   recordAnalyticsEventSafely: vi.fn(),
   recordEntryLoggedEventSafely: vi.fn(),
 }));
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: mocks.admitDocumentMutation,
+  documentMutationGenerationFromFormData: (formData: FormData) =>
+    formData.get("__overgardenDocumentGeneration"),
+}));
 
 import { publishJournalEntryAction } from "./actions";
 
@@ -60,7 +66,7 @@ const ENTRY_ID = "00000000-0000-4000-8000-000000000301";
 const OBJECT_ID = "00000000-0000-4000-8000-000000000201";
 const USER_ID = "00000000-0000-4000-8000-000000000101";
 
-describe("publishJournalEntryAction authentication intent", () => {
+describe("publishJournalEntryAction document admission", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.createAuthIntentControlRef.mockReturnValue("publish-opaque-ref");
@@ -70,40 +76,41 @@ describe("publishJournalEntryAction authentication intent", () => {
     });
     mocks.convergePublicProjectionsNow.mockResolvedValue(undefined);
     mocks.arePublicProjectionsConverged.mockResolvedValue(true);
+    mocks.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: { userId: USER_ID, sessionId: "session-1" },
+      envelopeExpiresAtSeconds: 1_786_381_200,
+    });
   });
 
-  it("redirects an expired session through an opaque intent for the exact publish control", async () => {
-    mocks.requireCurrentUserId.mockRejectedValueOnce(
-      new mocks.AuthenticationRequiredError(),
-    );
+  it("returns the closed authentication result without reading private form fields", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "SIGNED_OUT",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
     const formData = publishFormData();
 
-    await expect(publishJournalEntryAction(formData)).rejects.toThrow(
-      "NEXT_REDIRECT:/auth/intent?intent=opaque-publish-intent",
-    );
-
-    expect(mocks.createAuthIntentControlRef).toHaveBeenCalledWith(
-      "publish",
-      ENTRY_ID,
-    );
-    expect(mocks.createAuthIntentToken).toHaveBeenCalledWith({
-      action: "publish",
-      returnTo: `/garden/objects/${OBJECT_ID}`,
-      control: "publish-opaque-ref",
+    await expect(publishJournalEntryAction(formData)).resolves.toEqual({
+      documentMutationAdmission: "AUTHENTICATION_REQUIRED",
     });
-    expect(JSON.stringify(mocks.createAuthIntentToken.mock.calls)).not.toMatch(
+    expect(JSON.stringify(mocks.admitDocumentMutation.mock.calls)).not.toMatch(
       new RegExp(`${ENTRY_ID}|private journal text`, "i"),
     );
     expect(mocks.publishJournalEntry).not.toHaveBeenCalled();
   });
 
-  it("does not misclassify an operational session failure as sign-in required", async () => {
-    mocks.requireCurrentUserId.mockRejectedValueOnce(
-      new Error("session storage unavailable"),
-    );
+  it("keeps an unavailable boundary distinct from authentication", async () => {
+    mocks.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
 
-    await expect(publishJournalEntryAction(publishFormData())).rejects.toThrow(
-      "session storage unavailable",
+    await expect(publishJournalEntryAction(publishFormData())).resolves.toEqual(
+      { documentMutationAdmission: "MUTATION_ADMISSION_UNAVAILABLE" },
     );
 
     expect(mocks.createAuthIntentToken).not.toHaveBeenCalled();
@@ -111,8 +118,6 @@ describe("publishJournalEntryAction authentication intent", () => {
   });
 
   it("publishes normally when the session is valid", async () => {
-    mocks.requireCurrentUserId.mockResolvedValueOnce(USER_ID);
-    mocks.scopedToUser.mockReturnValueOnce({ userId: USER_ID });
     mocks.publishJournalEntry.mockResolvedValueOnce({
       entry: { id: ENTRY_ID },
       publicUrl: "/journal/first-flowers",
@@ -121,7 +126,7 @@ describe("publishJournalEntryAction authentication intent", () => {
     await publishJournalEntryAction(publishFormData());
 
     expect(mocks.publishJournalEntry).toHaveBeenCalledWith(
-      { userId: USER_ID },
+      { userId: USER_ID, sessionId: "session-1" },
       { entryId: ENTRY_ID, disclosureAccepted: true },
     );
     // OVE-242: the projection intent committed with the publish itself; the

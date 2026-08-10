@@ -63,6 +63,26 @@ daily (`0 3 * * *`); operators can also drain via smokes/CLI.
   `media.over.garden` proof; see `docs/INFRASTRUCTURE_REGISTRY.md`.
 - Evidence must stay aggregate/class-only (no object paths, identities, secrets).
 
+## OVE-290 stale-document media admission
+
+Upload initiation, processing, and focal mutation authenticate once and verify
+the rendered document generation before parsing the request body or touching a
+media row/provider effect. The same-origin generation header is never copied to
+the direct R2 PUT. A stale upload-initiation request creates neither a media row
+nor a presign; stale process/focal/publish creates no derivative, public
+eligibility change, projection, or another-owner effect.
+
+`R2_UPLOAD_URL_TTL_SECONDS` has a closed effective value of exactly 900 seconds.
+The actual presign TTL is
+`min(configured effective seconds, 900, floor(envelope expiry - now))` and must
+remain positive. A malformed, non-positive, or non-900 configured value blocks
+admission. An A presign issued before an account transition may still write one
+private A-quarantine original; it never becomes a B asset or public derivative
+and remains owned by the existing actual-byte cleanup lifecycle. Production
+read-back is the non-secret
+`/api/document-mutation-admission/readback` receipt plus the exact-SHA
+reject-only smoke; capability URLs and object keys are never evidence.
+
 ## Fail gates
 
 - Page `410` but derivative still `200`

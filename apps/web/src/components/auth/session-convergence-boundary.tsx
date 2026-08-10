@@ -14,6 +14,7 @@ import {
   signOutCurrentSessionOnce,
   type PreparedCurrentSessionSignOut,
 } from "@/lib/auth/sign-out-contract";
+import { DOCUMENT_OWNER_CHANGED_EVENT } from "@/lib/auth/document-mutation-generation-transport";
 import {
   acquireAuthenticatedSessionTabLease,
   createSessionTabId,
@@ -1201,8 +1202,15 @@ export function SessionConvergenceBoundary({
         recheckAuthoritativeSession();
       }
     };
+    const handleDocumentOwnerChanged = () => {
+      beginChangedSessionTransition();
+    };
     window.addEventListener("pageshow", handlePageShow);
     window.addEventListener("focus", recheckAuthoritativeSession);
+    window.addEventListener(
+      DOCUMENT_OWNER_CHANGED_EVENT,
+      handleDocumentOwnerChanged,
+    );
     document.addEventListener("visibilitychange", handleVisibilityChange);
     const watchdogInterval = window.setInterval(
       recheckStaleOperations,
@@ -1217,6 +1225,10 @@ export function SessionConvergenceBoundary({
       unsubscribe();
       window.removeEventListener("pageshow", handlePageShow);
       window.removeEventListener("focus", recheckAuthoritativeSession);
+      window.removeEventListener(
+        DOCUMENT_OWNER_CHANGED_EVENT,
+        handleDocumentOwnerChanged,
+      );
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.clearInterval(watchdogInterval);
       activeOperationIds.clear();

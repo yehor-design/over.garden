@@ -2,7 +2,7 @@
 
 Status: living execution roadmap
 Date: 2026-06-26
-Last operational update: 2026-08-10 (OVE-288 physical owner-vault execution; authenticated Linear remains primary queue authority)
+Last operational update: 2026-08-10 (OVE-290 high-risk stale-document admission execution; authenticated Linear remains primary queue authority)
 Owner: founder
 Repo source of truth: `AGENTS.md`, `docs/LINEAR_AI_EXECUTION_TASK_STANDARD.md`, `docs/TECH_STACK_DECISIONS.md`, `docs/adr/ADR-0014-agentic-stack-realignment.md`, `docs/WALKING_SKELETON.md`, `docs/SCAFFOLD_STATUS.md`, `docs/INFRASTRUCTURE_REGISTRY.md`, `docs/product-research/README.md`
 
@@ -81,6 +81,28 @@ registry/source/receipt digests are respectively
 OVE-290 may be selected only after OVE-288 exact-main containment, READY
 deployment identity, terminal relations, and saved-description digest are read
 back through the authenticated closeout.
+
+On 2026-08-10, OVE-290 was selected only after those OVE-288 gates passed on
+clean baseline `b48d98918a5f6c8edacf479963750050cc626ec2`. Its signed
+`DocumentMutationGenerationV1` performs one no-cache Better Auth snapshot and
+fences garden create/edit/publish, offline replay, media upload/process, and
+focal mutation before the first canonical/provider effect. Owner changes,
+same-owner new sessions, invalid/old protocol, signed-out state, and resolver
+failure retain distinct closed results; only one already-durable idempotent
+offline row may retry after a fresh same-owner generation. The R2 header is
+structurally omitted from direct PUTs and effective presign TTL is positive and
+at most both 900 seconds and remaining envelope life. The final OVE-285 graph
+contains 607 production sources, 2,563 source nodes, 316 entrypoints, 184 true
+effect boundaries, 660 consumer edges, and zero unresolved findings; its
+registry/source/receipt digests are respectively
+`77f0959509cdba4bfda547d2196309386ca81af3ed05bb93df863b481aaf604a`,
+`5fff648efe50ebe2187e0ab1ff5942e445155f62e1803e26319b791566f822e6`, and
+`cabe55f210ddc164c527b7f28c7e6ca406217e5cd639cb6df0c541587b24c5db`.
+The separate enforcement receipt marks all baseline 36 high-risk entrypoints
+and 281 associated consumer edges enforced at the same 24 admission
+boundaries. Exact-main containment, READY exact-SHA deployment, reject-only
+production zero-effect proof, and authenticated Linear read-back remain the
+closeout gates before OVE-286 starts.
 
 On 2026-07-28, OVE-242 was re-audited and materially rewritten against current
 `main` (`dd3b7a6906d5dbf215627d7b6a1de6348befcd16`), passed final validation,

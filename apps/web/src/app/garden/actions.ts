@@ -9,20 +9,32 @@ import type {
   LocationVisibility,
 } from "@/db/schema";
 import { buildSaveProgressReadbackUrl } from "@/lib/garden/save-progress-moment";
+import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
 import {
   isBackdatedEntryDate,
   recordAnalyticsEventSafely,
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
-import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
+import {
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import {
   createSpaceJournalEntry,
   type SpaceJournalEntryResult,
 } from "@/server/journal-repository";
 
-export async function createSpaceJournalEntryAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+export async function createSpaceJournalEntryAction(
+  formData: FormData,
+): Promise<DocumentMutationActionStateV1 | undefined> {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const result = await createSpaceJournalEntry(scope, {
     spaceId: String(formData.get("spaceId") ?? ""),
     mentionedPlantObjectIds: formData
@@ -52,7 +64,7 @@ export async function createSpaceJournalEntryAction(formData: FormData) {
 }
 
 async function recordSpaceJournalEntryEvents(
-  scope: Awaited<ReturnType<typeof requireWriteEligibleRequestScope>>,
+  scope: import("@/server/request-scope").RequestScope,
   result: SpaceJournalEntryResult,
 ) {
   if (!result.isNewEntry) return;

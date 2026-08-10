@@ -22,6 +22,11 @@ const storageMock = vi.hoisted(() => ({
   createQuarantineUploadUrl: vi.fn(async () => ({
     uploadUrl: "https://uploads.example.test/quarantine-photo",
   })),
+  resolveR2UploadUrlTtlConfiguration: vi.fn(() => ({
+    source: "default" as const,
+    effectiveSeconds: 900,
+  })),
+  resolveEffectiveR2PresignTtlSeconds: vi.fn(() => 900),
 }));
 
 const authIntentMock = vi.hoisted(() => ({
@@ -36,23 +41,51 @@ const authIntentMock = vi.hoisted(() => ({
   ),
 }));
 
+const admissionMock = vi.hoisted(() => ({
+  admitDocumentMutation: vi.fn(),
+}));
+
 vi.mock("@/server/auth-session", () => authMock);
 vi.mock("@/server/pilot-write-access", () => pilotMock);
 vi.mock("@/server/media/media-repository", () => mediaRepositoryMock);
 vi.mock("@/lib/storage", () => storageMock);
 vi.mock("@/server/auth-intent-http", () => authIntentMock);
+vi.mock("@/server/document-mutation-admission", () => ({
+  admitDocumentMutation: admissionMock.admitDocumentMutation,
+  documentMutationGenerationFromRequest: (request: Request) =>
+    request.headers.get("x-overgarden-document-generation"),
+  documentMutationAdmissionResponse: (admission: {
+    transportResult: string;
+    statusCode: number;
+  }) =>
+    Response.json(
+      { code: admission.transportResult },
+      { status: admission.statusCode },
+    ),
+}));
 
 import { POST } from "./route";
 
 describe("media upload API", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    admissionMock.admitDocumentMutation.mockResolvedValue({
+      status: "admitted",
+      scope: {
+        userId: "00000000-0000-0000-0000-000000000001",
+        sessionId: "session-1",
+      },
+      envelopeExpiresAtSeconds: 1_786_381_200,
+    });
   });
 
-  it("returns an opaque authentication intent before reading a private upload body", async () => {
-    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new authMock.AuthenticationRequiredError(),
-    );
+  it("returns a closed authentication result before reading a private upload body", async () => {
+    admissionMock.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "SIGNED_OUT",
+      transportResult: "AUTHENTICATION_REQUIRED",
+      statusCode: 401,
+    });
     const privateBody = JSON.stringify({
       contentType: "image/jpeg",
       privateCaption: "A private balcony note",
@@ -66,21 +99,20 @@ describe("media upload API", () => {
     const serialized = JSON.stringify(await response.json());
 
     expect(response.status).toBe(401);
-    expect(authIntentMock.authIntentRequiredResponse).toHaveBeenCalledWith(
-      request,
-      expect.objectContaining({ action: "save", fallbackReturnTo: "/garden" }),
-    );
-    expect(serialized).toContain("opaque-media-intent");
+    expect(serialized).toContain("AUTHENTICATION_REQUIRED");
     expect(serialized).not.toMatch(/private balcony|caption/i);
     expect(
       mediaRepositoryMock.createQuarantinedMediaAsset,
     ).not.toHaveBeenCalled();
   });
 
-  it("still maps unexpected write-boundary errors to opaque 403", async () => {
-    pilotMock.requireWriteEligibleRequestScope.mockRejectedValueOnce(
-      new pilotMock.PilotWriteAccessError("Write boundary failed."),
-    );
+  it("maps an unavailable admission boundary to a closed 503", async () => {
+    admissionMock.admitDocumentMutation.mockResolvedValueOnce({
+      status: "rejected",
+      internalResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      transportResult: "MUTATION_ADMISSION_UNAVAILABLE",
+      statusCode: 503,
+    });
 
     const response = await POST(
       new Request("http://localhost/api/media/uploads", {
@@ -89,7 +121,7 @@ describe("media upload API", () => {
       }),
     );
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(503);
     expect(
       mediaRepositoryMock.createQuarantinedMediaAsset,
     ).not.toHaveBeenCalled();
@@ -137,19 +169,20 @@ describe("media upload API", () => {
     const createMediaCall = mediaRepositoryMock.createQuarantinedMediaAsset.mock
       .calls[0] as unknown[];
     expect(createMediaCall).toHaveLength(2);
-    expect(createMediaCall[1]).toEqual(expect.objectContaining({
-      quarantineKey: expect.stringMatching(/^quarantine\/[0-9a-f-]+\.webp$/),
-      declaredMediaType: "image/webp",
-      declaredSizeBytes: 123,
-      uploadGenerationId: expect.any(String),
-      publicObjectId: expect.any(String),
-    }));
+    expect(createMediaCall[1]).toEqual(
+      expect.objectContaining({
+        quarantineKey: expect.stringMatching(/^quarantine\/[0-9a-f-]+\.webp$/),
+        declaredMediaType: "image/webp",
+        declaredSizeBytes: 123,
+        uploadGenerationId: expect.any(String),
+        publicObjectId: expect.any(String),
+      }),
+    );
     expect(storageMock.createQuarantineUploadUrl).toHaveBeenCalledWith({
-      objectKey: expect.stringMatching(
-        /^quarantine\/[0-9a-f-]+\.webp$/,
-      ),
+      objectKey: expect.stringMatching(/^quarantine\/[0-9a-f-]+\.webp$/),
       contentType: "image/webp",
       contentLength: 123,
+      expiresInSeconds: 900,
     });
   });
 

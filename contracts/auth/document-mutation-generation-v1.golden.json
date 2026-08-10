@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "overgarden.document-mutation-generation.golden.v1",
+  "activeVersion": 7,
+  "fallbackVersion": 6,
+  "secrets": {
+    "active": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "fallback": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"
+  },
+  "vectors": [
+    {
+      "secretClass": "active",
+      "secretVersion": 7,
+      "ownerUserId": "00000000-0000-4000-8000-0000000000a1",
+      "sessionId": "better-auth-session-a1",
+      "issuedAtSeconds": 1786377600,
+      "expiresAtSeconds": 1786381200,
+      "documentNonceHex": "000102030405060708090a0b0c0d0e0f",
+      "envelope": {
+        "protocol": "overgarden.document-mutation-generation.v1",
+        "secretVersion": 7,
+        "issuedAtSeconds": 1786377600,
+        "expiresAtSeconds": 1786381200,
+        "ownerGeneration": "8pn-b05EmIEtUUWGKqzNwP-Dypas2tM9mb2Aqq8s-S8",
+        "sessionGeneration": "ZmghQKje541iWnHA1Bz5INCsWtpmF-cMKTQWZdh2F5Y",
+        "documentNonce": "AAECAwQFBgcICQoLDA0ODw",
+        "mac": "FxL9w0Dm_NXqt4_Y_mFsc70CNrodmhH2oiVOF3gPRLk"
+      },
+      "unsignedPayloadHex": "6f76657267617264656e2e646f63756d656e742d6d75746174696f6e2d67656e65726174696f6e2e76310a370a313738363337373630300a313738363338313230300a38706e2d623035456d494574555557474b717a4e77502d447970617332744d396d623241717138732d53380a5a6d6768514b6a6535343169576e484131427a35494e43735774706d462d634d4b5451575a6468324635590a41414543417751464267634943516f4c4441304f4477",
+      "transport": "WyJvdmVyZ2FyZGVuLmRvY3VtZW50LW11dGF0aW9uLWdlbmVyYXRpb24udjEiLDcsMTc4NjM3NzYwMCwxNzg2MzgxMjAwLCI4cG4tYjA1RW1JRXRVVVdHS3F6TndQLUR5cGFzMnRNOW1iMkFxcThzLVM4IiwiWm1naFFLamU1NDFpV25IQTFCejVJTkNzV3RwbUYtY01LVFFXWmRoMkY1WSIsIkFBRUNBd1FGQmdjSUNRb0xEQTBPRHciLCJGeEw5dzBEbV9OWHF0NF9ZX21Gc2M3MENOcm9kbWhIMm9pVk9GM2dQUkxrIl0"
+    },
+    {
+      "secretClass": "fallback",
+      "secretVersion": 6,
+      "ownerUserId": "00000000-0000-4000-8000-0000000000a1",
+      "sessionId": "better-auth-session-a1",
+      "issuedAtSeconds": 1786377600,
+      "expiresAtSeconds": 1786420800,
+      "documentNonceHex": "f0e0d0c0b0a090807060504030201000",
+      "envelope": {
+        "protocol": "overgarden.document-mutation-generation.v1",
+        "secretVersion": 6,
+        "issuedAtSeconds": 1786377600,
+        "expiresAtSeconds": 1786420800,
+        "ownerGeneration": "sFiKNnM_6NWqsfkud_2U5A5NtYJ5QSHJzmkDn26Q1yE",
+        "sessionGeneration": "2sBE-c89T0uWoi7mu7FJ7ZM3Tmy8aXRo0634iqPLuhM",
+        "documentNonce": "8ODQwLCgkIBwYFBAMCAQAA",
+        "mac": "_HLa3l-fjBPNwn41kmShc_3AFSHUWWTBaFQLDy-_yAE"
+      },
+      "unsignedPayloadHex": "6f76657267617264656e2e646f63756d656e742d6d75746174696f6e2d67656e65726174696f6e2e76310a360a313738363337373630300a313738363432303830300a7346694b4e6e4d5f364e577173666b75645f32553541354e74594a355153484a7a6d6b446e3236513179450a327342452d633839543075576f69376d7537464a375a4d33546d79386158526f303633346971504c75684d0a384f4451774c43676b494277594642414d4341514141",
+      "transport": "WyJvdmVyZ2FyZGVuLmRvY3VtZW50LW11dGF0aW9uLWdlbmVyYXRpb24udjEiLDYsMTc4NjM3NzYwMCwxNzg2NDIwODAwLCJzRmlLTm5NXzZOV3FzZmt1ZF8yVTVBNU50WUo1UVNISnpta0RuMjZRMXlFIiwiMnNCRS1jODlUMHVXb2k3bXU3Rko3Wk0zVG15OGFYUm8wNjM0aXFQTHVoTSIsIjhPRFF3TENna0lCd1lGQkFNQ0FRQUEiLCJfSExhM2wtZmpCUE53bjQxa21TaGNfM0FGU0hVV1dUQmFGUUxEeS1feUFFIl0"
+    }
+  ]
+}

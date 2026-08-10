@@ -5,17 +5,16 @@ import {
   DEFAULT_PUBLIC_LOCALE,
   localizedPath,
 } from "@/lib/public-localization";
-import { authIntentRequiredResponse } from "@/server/auth-intent-http";
-import { AuthenticationRequiredError } from "@/server/auth-session";
+import {
+  admitDocumentMutation,
+  documentMutationAdmissionResponse,
+  documentMutationGenerationFromRequest,
+} from "@/server/document-mutation-admission";
 import {
   JournalAggregateConflictError,
   updateJournalEntryAggregate,
 } from "@/server/journal-repository";
 import { recordComposerLearningSignalsSafely } from "@/server/mvp-learning/composer-signals";
-import {
-  PilotWriteAccessError,
-  requireWriteEligibleRequestScope,
-} from "@/server/pilot-write-access";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
 
@@ -27,20 +26,13 @@ export async function PATCH(
 ) {
   const { entryId } = await context.params;
 
-  let scope;
-  try {
-    scope = await requireWriteEligibleRequestScope();
-  } catch (error) {
-    if (error instanceof PilotWriteAccessError) {
-      return Response.json({ error: error.message }, { status: 403 });
-    }
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    return authIntentRequiredResponse(request, {
-      action: "save",
-      fallbackReturnTo: `/garden/entries/${entryId}/edit`,
-      message: "Sign in to edit an entry.",
-    });
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromRequest(request),
+  });
+  if (admission.status === "rejected") {
+    return documentMutationAdmissionResponse(admission);
   }
+  const scope = admission.scope;
 
   const body = (await request.json().catch(() => null)) as {
     title?: string;

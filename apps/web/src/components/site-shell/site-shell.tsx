@@ -15,6 +15,7 @@ import { useState } from "react";
 
 import { AuthIntentTrigger } from "@/components/auth/auth-intent-trigger";
 import { AuthenticatedUtilityRegion } from "@/components/auth/authenticated-utility-region";
+import { DocumentMutationGenerationProvider } from "@/components/auth/document-mutation-recovery";
 import { SessionConvergenceBoundary } from "@/components/auth/session-convergence-boundary";
 import { SignOutControl } from "@/components/auth/sign-out-control";
 import { SignOutProvider } from "@/components/auth/sign-out-provider";
@@ -69,12 +70,14 @@ export function SiteShell({
   locale,
   market,
   isAuthenticated,
+  documentMutationGeneration = null,
   communitiesReady = false,
 }: {
   children: React.ReactNode;
   locale: InterfaceLocale;
   market: InterfaceMarket;
   isAuthenticated: boolean;
+  documentMutationGeneration?: string | null;
   communitiesReady?: boolean;
 }) {
   const pathname = usePathname() || "/";
@@ -144,7 +147,12 @@ export function SiteShell({
         locale={locale}
         localeControlFallback={sessionConvergenceLocaleControl}
       >
-        <SignOutProvider locale={locale}>{excludedShell}</SignOutProvider>
+        <DocumentMutationGenerationProvider
+          locale={locale}
+          transport={documentMutationGeneration}
+        >
+          <SignOutProvider locale={locale}>{excludedShell}</SignOutProvider>
+        </DocumentMutationGenerationProvider>
       </SessionConvergenceBoundary>
     );
   }
@@ -572,7 +580,12 @@ export function SiteShell({
       locale={locale}
       localeControlFallback={sessionConvergenceLocaleControl}
     >
-      <SignOutProvider locale={locale}>{shell}</SignOutProvider>
+      <DocumentMutationGenerationProvider
+        locale={locale}
+        transport={documentMutationGeneration}
+      >
+        <SignOutProvider locale={locale}>{shell}</SignOutProvider>
+      </DocumentMutationGenerationProvider>
     </SessionConvergenceBoundary>
   );
 }

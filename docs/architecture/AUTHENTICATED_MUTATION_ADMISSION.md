@@ -1,6 +1,6 @@
 # Authenticated Mutation Admission
 
-Status: OVE-285 decision receipt — ready  
+Status: OVE-285 decision receipt plus OVE-290 high-risk enforcement — ready
 Baseline: `5c403444cddc2e195690808de08304d14fe41fd3`  
 Prerequisite: OVE-296 receipt `d05c0124f59c95b1db6db4d6e444c95d125218355b27ee87a793a7d31a08e152`
 
@@ -13,7 +13,7 @@ entrypoint, admission boundary, true effect boundary, branch, predecessor, and
 execution owner. It is the handoff contract for OVE-293 through OVE-295; it is
 not itself an admission implementation.
 
-OVE-285 is report-only. It changes no application runtime, database schema,
+OVE-285 itself is report-only. It changes no application runtime, database schema,
 provider state, production data, authentication behavior, cookie, offline
 record, search document, media object, analytics event, or deployment setting.
 The test-only effect oracle is unreachable from production modules, and the
@@ -28,18 +28,18 @@ The checked artifact is
 
 | Field                           |                                                      Checked value |
 | ------------------------------- | -----------------------------------------------------------------: |
-| Production source files         |                                                                593 |
-| Source nodes                    |                                                              2,476 |
-| Logical entrypoints             |                                                                303 |
-| Effect boundaries               |                                                                183 |
-| Consumer edges                  |                                                                655 |
-| Excluded entrypoints            |                                                                128 |
+| Production source files         |                                                                607 |
+| Source nodes                    |                                                              2,563 |
+| Logical entrypoints             |                                                                316 |
+| Effect boundaries               |                                                                184 |
+| Consumer edges                  |                                                                660 |
+| Excluded entrypoints            |                                                                139 |
 | Retired-provider entrypoints    |                                                                  1 |
 | Unresolved nodes or entrypoints |                                                                  0 |
-| Registry digest                 | `c49e5e22e4c1f1cba678fbae18e829bbdc0c793a4af746d4c0aba1de67a2da92` |
-| Source-evidence digest          | `3f5620a5d7fb7a31836ce53a253054b81fbfa0d45e62e351c6cb8cf863a43f4a` |
-| Receipt digest                  | `868e076ae689950edd9b0d3dbe5191ec61ffcd4d07abcd7e0399806ad65ffd34` |
-| Artifact file SHA-256           | `d5daa0f0c94bae4186a7f9dee2505f11e515190b275fb44920e7d669b26d216a` |
+| Registry digest                 | `77f0959509cdba4bfda547d2196309386ca81af3ed05bb93df863b481aaf604a` |
+| Source-evidence digest          | `5fff648efe50ebe2187e0ab1ff5942e445155f62e1803e26319b791566f822e6` |
+| Receipt digest                  | `cabe55f210ddc164c527b7f28c7e6ca406217e5cd639cb6df0c541587b24c5db` |
+| Artifact file SHA-256           | `fe331f3b9dd31c407f0cb19a9c7e3f49551e37b40c985dcd266cb060f3d17d4c` |
 
 The independently pinned Better Auth semantic adapter produced:
 
@@ -50,9 +50,54 @@ The independently pinned Better Auth semantic adapter produced:
 The receipt binds the exact baseline, TypeScript and Better Auth toolchain,
 OVE-296 prerequisite receipt, normalized production-source evidence, and
 canonical registry bytes. A change to any bound input changes the receipt. The
-values above are the deterministic OVE-293 downstream regeneration; the
+values above are the deterministic OVE-290 downstream regeneration; the
 original OVE-285 terminal receipt remains preserved in its Linear closeout and
 the execution roadmap.
+
+## OVE-290 runtime enforcement
+
+`DocumentMutationGenerationV1` binds a rendered authenticated document to an
+opaque owner generation, session generation, random document nonce, issue and
+expiry times, and a versioned HMAC. Its canonical golden vectors are committed
+at `contracts/auth/document-mutation-generation-v1.golden.json` (SHA-256
+`045fdbbd61e11a34133c794683a7c4c8a538314e97f6088ad3b1def76f9850f2`).
+The transport is not authorization: every guarded request still performs one
+no-cache Better Auth read and passes the resulting `RequestScope` to the
+existing scoped repository.
+
+The server admits only an exact owner/session match. Closed client results are
+`DOCUMENT_OWNER_CHANGED`, `DOCUMENT_SESSION_REFRESH_REQUIRED`,
+`DOCUMENT_PROTOCOL_REFRESH_REQUIRED`, `AUTHENTICATION_REQUIRED`, and
+`MUTATION_ADMISSION_UNAVAILABLE`; responses are private and `no-store` and
+contain no identity or generation material. The 3,000-millisecond admission
+deadline settles once and fences late results. Native forms use
+`__overgardenDocumentGeneration`; same-origin fetches use
+`x-overgarden-document-generation`; the header is deliberately absent from the
+cross-origin R2 PUT.
+
+The separate enforcement artifact is
+`contracts/auth/authenticated-mutation-enforcement.v1.json` (SHA-256
+`369b35eb1af9fb94ebd6b7a648cebfab6576b2b33032912b79b094a06636c9e0`).
+It binds registry digest
+`77f0959509cdba4bfda547d2196309386ca81af3ed05bb93df863b481aaf604a`
+and source receipt digest
+`cabe55f210ddc164c527b7f28c7e6ca406217e5cd639cb6df0c541587b24c5db`.
+All baseline 36 high-risk entrypoints and 281 consumer edges are
+`enforced_ove_290` at the same 24 admission boundaries; OVE-291 and OVE-295
+partitions retain their separate states, while OVE-286 capability-runtime
+paths remain excluded from this rollout rather than being pre-implemented.
+
+Matching work preserves existing behavior. A valid owner transition emits one
+payload-free `DOCUMENT_OWNER_CHANGED` event into the existing terminal session
+invalidation path. A same-owner session refresh may automatically retry only
+one already-durable idempotent offline row, once, with the same owner and key;
+the read-only private/no-store continuity endpoint rechecks the old generation
+against the authoritative refreshed session before that retry, so a refresh
+resolved under another owner emits the owner-change result and performs no
+retry. Native/edit/publish/media actions never auto-replay. Explicit rollback
+sets `DOCUMENT_MUTATION_ADMISSION_ENABLED=false`, which disables envelope
+issuance and enforcement together while retaining Better Auth, request scope,
+owner predicates, media safety, and offline vault fences.
 
 ## Closed source policy
 
@@ -125,15 +170,15 @@ re-audited.
 The registry assigns every effectful entrypoint to exactly one downstream
 owner:
 
-- `high_risk_ove_290`: 34 journal/media/offline mutation paths;
+- `high_risk_ove_290`: 36 journal/media/offline mutation paths;
 - `capability_runtime_ove_286`: 7 owner-session and owner-composer capability
   paths;
 - `owned_by_ove_295`: 5 explicit-linking paths;
 - `remaining_ove_291`: 128 remaining effectful paths.
 
-The remaining 129 non-effectful paths are `excluded_with_reason` (128 ordinary
-exclusions plus the one retired-provider entrypoint). Owner sets are disjoint by
-construction and validation.
+The remaining 140 non-effectful paths are `excluded_with_reason`, including the
+one retired-provider entrypoint. Owner sets are disjoint by construction and
+validation.
 
 ## Determinism and bounded execution
 
@@ -154,6 +199,16 @@ each scanner receives an independent event loop and deadline timer. Artifact
 checking is
 byte-deterministic after path, source text, set-like field, and collection
 normalization.
+
+OVE-290 enforcement checking is separate from graph generation:
+
+```bash
+pnpm exec tsx scripts/authenticated-mutation-enforcement-receipt.ts --check
+```
+
+It verifies final registry/source-receipt digest binding, the complete baseline
+36/281 stable-ID sets, all 24 live pre-effect guard bodies, deterministic bytes,
+and the committed enforcement artifact.
 
 After a production build, run the separate isolation check:
 

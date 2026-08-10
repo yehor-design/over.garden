@@ -22,6 +22,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { useOptionalDocumentMutationGeneration } from "@/components/auth/document-mutation-recovery";
 import {
   JournalCoverControls,
   journalCoverSelectionToOfflinePayload,
@@ -144,6 +145,7 @@ export function FollowUpEntryComposer({
   visualScenario = null,
 }: FollowUpEntryComposerProps) {
   const workspaceCopy = getGardenWorkspaceCopy(locale);
+  const documentMutation = useOptionalDocumentMutationGeneration();
   const ownerCopy = getOwnerObjectCopy(locale);
   useScrollToHashOnMount("follow-up-composer");
   const router = useRouter();
@@ -497,6 +499,7 @@ export function FollowUpEntryComposer({
         const result = await submitOnlineJournalEntryPayload(payload, {
           ownerUserId,
           idempotencyKey: clientMutationId,
+          documentMutationGeneration: documentMutation?.transport,
         });
         if (isComposerPersistenceFrozen()) return;
         draftPersistencePausedRef.current = true;
@@ -513,6 +516,17 @@ export function FollowUpEntryComposer({
         );
         router.refresh();
       } catch (error) {
+        if (
+          error instanceof JournalEntrySyncError &&
+          error.documentMutationAdmission
+        ) {
+          documentMutation?.handleTransportResult(
+            error.documentMutationAdmission,
+          );
+          setSubmitState("failed");
+          setMessage(localizedJournalSaveErrorMessage(locale, error));
+          return;
+        }
         if (await resumeAuthentication(error, payload)) return;
         setSubmitState("failed");
         setMessage(localizedJournalSaveErrorMessage(locale, error));
@@ -651,7 +665,11 @@ export function FollowUpEntryComposer({
     await refreshQueue();
   }
 
-  async function handleSync(mutation: OfflineMutation) {
+  async function handleSync(
+    mutation: OfflineMutation,
+    documentMutationGeneration = documentMutation?.transport,
+    allowAutomaticSessionRetry = true,
+  ) {
     beginLocaleMutation();
     setSubmitState("syncing");
     setMessage(workspaceCopy.composer.messages.sending);
@@ -659,6 +677,7 @@ export function FollowUpEntryComposer({
     try {
       const result = await syncOfflineJournalEntryMutation(mutation, {
         expectedOwnerUserId: ownerUserId,
+        documentMutationGeneration,
       });
       if (isComposerPersistenceFrozen()) return;
       draftPersistencePausedRef.current = true;
@@ -676,6 +695,31 @@ export function FollowUpEntryComposer({
       );
       router.refresh();
     } catch (error) {
+      if (
+        error instanceof JournalEntrySyncError &&
+        error.documentMutationAdmission
+      ) {
+        const result = error.documentMutationAdmission;
+        const handledWithIdempotentRecovery =
+          allowAutomaticSessionRetry &&
+          documentMutation &&
+          result === "DOCUMENT_SESSION_REFRESH_REQUIRED";
+        if (handledWithIdempotentRecovery) {
+          documentMutation.handleIdempotentTransportResult({
+            retryKey: mutation.id,
+            result,
+            retry: (freshTransport) => {
+              void handleSync(mutation, freshTransport, false);
+            },
+          });
+        } else {
+          documentMutation?.handleTransportResult(result);
+        }
+        setSubmitState("failed");
+        setMessage(localizedJournalSaveErrorMessage(locale, error));
+        await refreshQueue();
+        return;
+      }
       if (await resumeAuthentication(error)) return;
       setSubmitState("failed");
       setMessage(localizedJournalSaveErrorMessage(locale, error));

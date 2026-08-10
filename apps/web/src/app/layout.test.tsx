@@ -35,17 +35,20 @@ vi.mock("@/components/site-shell/site-shell", () => ({
     locale,
     market,
     isAuthenticated,
+    documentMutationGeneration,
   }: {
     children: React.ReactNode;
     locale: string;
     market: string;
     isAuthenticated: boolean;
+    documentMutationGeneration: string | null;
   }) => (
     <div
       data-testid="site-shell"
       data-locale={locale}
       data-market={market}
       data-authenticated={String(isAuthenticated)}
+      data-document-generation={documentMutationGeneration ?? "none"}
     >
       {children}
     </div>
@@ -98,6 +101,7 @@ describe("root document locale", () => {
     });
     mocks.getSiteShellSessionState.mockResolvedValue({
       isAuthenticated: true,
+      documentMutationGeneration: "opaque-document-generation",
     });
     mocks.hasReadyCommunityNavigation.mockResolvedValue(true);
     const { default: RootLayout } = await import("./layout");
@@ -116,6 +120,9 @@ describe("root document locale", () => {
     expect(html).toContain('data-locale="ru"');
     expect(html).toContain('data-market="bulgaria"');
     expect(html).toContain('data-authenticated="true"');
+    expect(html).toContain(
+      'data-document-generation="opaque-document-generation"',
+    );
     expect(mocks.getSiteShellSessionState).toHaveBeenCalledTimes(1);
     expect(mocks.hasReadyCommunityNavigation).toHaveBeenCalledTimes(1);
   });

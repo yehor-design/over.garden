@@ -207,6 +207,17 @@ export async function ensurePilotWriteEligible(
  */
 export async function requireWriteEligibleRequestScope(): Promise<RequestScope> {
   const scope = await requireCurrentRequestScope();
+  return attachWriteEligibilityHint(scope);
+}
+
+/**
+ * Adds optional cohort attribution to an already authenticated request scope.
+ * Callers that establish a stronger one-snapshot admission boundary use this
+ * helper instead of reading the Better Auth session a second time.
+ */
+export async function attachWriteEligibilityHint(
+  scope: RequestScope,
+): Promise<RequestScope> {
   // OVE-219: authenticated journal writes must not await attribution reads or
   // writes. Cookie verification is pure and only supplies bounded metadata for
   // the transactionally committed outbox intent.

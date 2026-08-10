@@ -1,21 +1,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import type { EntryScope, LocationVisibility, VarietyState } from "@/db/schema";
+import type { DocumentMutationActionStateV1 } from "@/lib/auth/document-mutation-generation-transport";
 import {
   isBackdatedEntryDate,
   recordAnalyticsEventSafely,
   recordEntryLoggedEventSafely,
 } from "@/server/analytics-events";
+import { requireCurrentRequestScope } from "@/server/auth-session";
 import {
-  AuthenticationRequiredError,
-  requireCurrentRequestScope,
-  requireCurrentUserId,
-} from "@/server/auth-session";
-import { createAuthIntentControlRef } from "@/server/auth-intent-control";
-import { createAuthIntentToken } from "@/server/auth-intent-token";
+  admitDocumentMutation,
+  documentMutationGenerationFromFormData,
+} from "@/server/document-mutation-admission";
 import {
   archiveJournalEntry,
   createPlantObjectJournalEntry,
@@ -31,10 +29,17 @@ import {
 import { requireWriteEligibleRequestScope } from "@/server/pilot-write-access";
 import { scheduleLearningAttributionDrain } from "@/server/mvp-learning/attribution-after-response";
 import { convergePublicProjectionsNow } from "@/server/search/public-projection-outbox";
-import { scopedToUser } from "@/server/request-scope";
 
-export async function createPlantObjectJournalEntryAction(formData: FormData) {
-  const scope = await requireWriteEligibleRequestScope();
+export async function createPlantObjectJournalEntryAction(
+  formData: FormData,
+): Promise<DocumentMutationActionStateV1 | undefined> {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const objectId = String(formData.get("objectId") ?? "");
   const result = await createPlantObjectJournalEntry(scope, {
     plantObjectId: objectId,
@@ -114,11 +119,18 @@ export async function createLineageInvitationAction(formData: FormData) {
   revalidatePath(`/garden/objects/${result.subjectObject.id}`);
 }
 
-export async function publishJournalEntryAction(formData: FormData) {
+export async function publishJournalEntryAction(
+  formData: FormData,
+): Promise<DocumentMutationActionStateV1 | undefined> {
   const entryId = String(formData.get("entryId") ?? "");
   const objectId = String(formData.get("objectId") ?? "");
-  const userId = await requireUserForPublishIntent({ entryId, objectId });
-  const scope = scopedToUser(userId);
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
+  }
+  const scope = admission.scope;
   const disclosureAccepted =
     formData.get("publicationDisclosureAccepted") === "on";
 
@@ -134,43 +146,16 @@ export async function publishJournalEntryAction(formData: FormData) {
   revalidatePath(result.publicUrl);
 }
 
-async function requireUserForPublishIntent({
-  entryId,
-  objectId,
-}: {
-  entryId: string;
-  objectId: string;
-}) {
-  try {
-    return await requireCurrentUserId();
-  } catch (error) {
-    if (!(error instanceof AuthenticationRequiredError)) throw error;
-    if (!UUID_PATTERN.test(entryId)) {
-      throw new Error(
-        "A valid journal entry is required to resume publishing.",
-      );
-    }
-
-    const returnTo = UUID_PATTERN.test(objectId)
-      ? `/garden/objects/${objectId}`
-      : "/garden";
-    const control = createAuthIntentControlRef("publish", entryId);
-    const token = createAuthIntentToken({
-      action: "publish",
-      returnTo,
-      control,
-    });
-
-    redirect(`/auth/intent?intent=${encodeURIComponent(token)}`);
+export async function archiveJournalEntryAction(
+  formData: FormData,
+): Promise<DocumentMutationActionStateV1 | undefined> {
+  const admission = await admitDocumentMutation({
+    transport: documentMutationGenerationFromFormData(formData),
+  });
+  if (admission.status === "rejected") {
+    return { documentMutationAdmission: admission.transportResult };
   }
-}
-
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-export async function archiveJournalEntryAction(formData: FormData) {
-  const userId = await requireCurrentUserId();
-  const scope = scopedToUser(userId);
+  const scope = admission.scope;
   const entryId = String(formData.get("entryId") ?? "");
   const objectId = String(formData.get("objectId") ?? "");
   const archiveAccepted = formData.get("archiveAccepted") === "on";
