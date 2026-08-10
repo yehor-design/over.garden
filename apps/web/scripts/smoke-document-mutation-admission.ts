@@ -2,6 +2,16 @@ import { createHash, randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { Kysely, PostgresDialect } from "kysely";
+import { Pool } from "pg";
+
+import {
+  resolveDatabaseConnection,
+  resolveDatabaseSslConfig,
+  resolvePgConnectionString,
+} from "../src/db/connection";
+import type { Database } from "../src/db/types";
+
 const ADMISSION_HEADER = "x-overgarden-document-generation";
 const READBACK_PATH = "/api/document-mutation-admission/readback";
 const MUTATION_PATH = "/api/garden/entries";
@@ -398,28 +408,32 @@ function parseCliOptions(argv: string[]) {
   };
 }
 
-async function main() {
-  const cli = parseCliOptions(process.argv.slice(2));
+export async function runDocumentMutationAdmissionSmokeCli(input: {
+  argv: string[];
+  env: Record<string, string | undefined>;
+}): Promise<DocumentMutationAdmissionSmokeReport> {
+  const cli = parseCliOptions(input.argv);
   const sessions = {
-    ownerA1Cookie: process.env.OVE290_SESSION_A1_COOKIE ?? "",
-    ownerA2Cookie: process.env.OVE290_SESSION_A2_COOKIE ?? "",
-    ownerBCookie: process.env.OVE290_SESSION_B_COOKIE ?? "",
-    ownerA1DocumentGeneration: process.env.OVE290_DOCUMENT_A1_GENERATION ?? "",
+    ownerA1Cookie: input.env.OVE290_SESSION_A1_COOKIE ?? "",
+    ownerA2Cookie: input.env.OVE290_SESSION_A2_COOKIE ?? "",
+    ownerBCookie: input.env.OVE290_SESSION_B_COOKIE ?? "",
+    ownerA1DocumentGeneration: input.env.OVE290_DOCUMENT_A1_GENERATION ?? "",
   };
-  const { db } = await import("../src/db");
+  let database: Kysely<Database> | undefined;
   try {
-    const report = await runDocumentMutationAdmissionSmoke({
+    return await runDocumentMutationAdmissionSmoke({
       ...cli,
       sessions,
-      protectionBypass: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+      protectionBypass: input.env.VERCEL_AUTOMATION_BYPASS_SECRET,
       readEffectCounts: async (clientMutationIds) => {
+        database ??= createSmokeDatabase(input.env);
         const [entries, receipts] = await Promise.all([
-          db
+          database
             .selectFrom("journal_entries")
             .select((builder) => builder.fn.countAll<number>().as("count"))
             .where("client_mutation_id", "in", [...clientMutationIds])
             .executeTakeFirstOrThrow(),
-          db
+          database
             .selectFrom("journal_entry_mutation_receipts")
             .select((builder) => builder.fn.countAll<number>().as("count"))
             .where("client_mutation_id", "in", [...clientMutationIds])
@@ -431,10 +445,47 @@ async function main() {
         };
       },
     });
-    process.stdout.write(`${JSON.stringify(report)}\n`);
   } finally {
-    await db.destroy();
+    await database?.destroy();
   }
+}
+
+function createSmokeDatabase(
+  env: Record<string, string | undefined>,
+): Kysely<Database> {
+  const resolution = resolveDatabaseConnection(env);
+  const connectionString = resolvePgConnectionString(env, resolution);
+  if (!connectionString) {
+    throw new Error("OVE-290 production database connection is required.");
+  }
+
+  const hostname = new URL(connectionString).hostname.toLowerCase();
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "0.0.0.0"
+  ) {
+    throw new Error("OVE-290 production smoke refuses a loopback database.");
+  }
+
+  return new Kysely<Database>({
+    dialect: new PostgresDialect({
+      pool: new Pool({
+        connectionString,
+        max: 2,
+        ssl: resolveDatabaseSslConfig(env, resolution),
+      }),
+    }),
+  });
+}
+
+async function main() {
+  const report = await runDocumentMutationAdmissionSmokeCli({
+    argv: process.argv.slice(2),
+    env: process.env,
+  });
+  process.stdout.write(`${JSON.stringify(report)}\n`);
 }
 
 const isDirectExecution =
@@ -443,11 +494,20 @@ const isDirectExecution =
 
 if (isDirectExecution) {
   void main().catch((error) => {
+    const message = error instanceof Error ? error.message : "";
+    const safeDetail =
+      message.startsWith("OVE-290 ") ||
+      message.startsWith("A distinct public authority ") ||
+      message.startsWith("A public authority ") ||
+      message.startsWith("A bounded ")
+        ? message
+        : undefined;
     process.stderr.write(
       `${JSON.stringify({
         issue: "OVE-290",
         state: "inconclusive",
         errorClass: error instanceof Error ? error.name : "unknown_error",
+        ...(safeDetail ? { safeDetail } : {}),
         evidenceSafety: "no_cookie_generation_identity_or_payload",
       })}\n`,
     );
