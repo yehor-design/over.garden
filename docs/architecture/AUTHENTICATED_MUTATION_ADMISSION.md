@@ -144,8 +144,11 @@ pnpm mutation:surface:audit -- --write-artifact
 The operation has one 30-second deadline, settles once, propagates an abort
 signal, distinguishes `deadline` from `scan_error`, and waits safely for late
 work. Tests run four scanners concurrently and require stable identical output
-within the deadline. Artifact checking is byte-deterministic after path, source
-text, set-like field, and collection normalization.
+within the deadline. `pnpm test:mutation-surface-concurrency` runs that
+CPU-heavy proof in isolation before the broad `pnpm test` suite, so unrelated
+Vitest workers cannot starve the deadline timer. Artifact checking is
+byte-deterministic after path, source text, set-like field, and collection
+normalization.
 
 After a production build, run the separate isolation check:
 

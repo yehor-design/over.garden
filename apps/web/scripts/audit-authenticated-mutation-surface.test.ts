@@ -1311,7 +1311,9 @@ describe("authenticated mutation registry v3", () => {
 describe("authenticated mutation audit deadline and determinism", () => {
   const appRoot = fileURLToPath(new URL("../", import.meta.url));
 
-  it(
+  it.skipIf(
+    process.env.OVERGARDEN_SKIP_MUTATION_AUDIT_CONCURRENCY === "1",
+  )(
     "returns four identical three-digest receipts without mutating the checked artifact",
     async () => {
       const artifactPath = fileURLToPath(
